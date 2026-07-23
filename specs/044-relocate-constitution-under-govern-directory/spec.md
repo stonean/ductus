@@ -2,8 +2,8 @@
 status: in-progress
 dependencies: [027-bootstrap-migration-registry, 042-consolidate-govern-per-project-files-under-govern-directory]
 review:
-  last-run: null
-  reviewed-against: null
+  last-run: 2026-07-23T03:19:20Z
+  reviewed-against: 500498bf9d37df47db706f557fcda5325a993b63
   must-violations: 0
   should-violations: 0
   low-confidence: 0
