@@ -58,6 +58,6 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 8. Publish gvrn-v0.24.0
 
-- [ ] Tag and publish the `gvrn-v0.24.0` release so the registry entry's `introduced_in` references a published release
+- [x] Tag and publish the `gvrn-v0.24.0` release so the registry entry's `introduced_in` references a published release
 
 - **Done when**: the `gvrn-v0.24.0` release is published and `framework/migrations.toml`'s entry points at a live version.
