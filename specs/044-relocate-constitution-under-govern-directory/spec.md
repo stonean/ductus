@@ -1,5 +1,5 @@
 ---
-status: planned
+status: in-progress
 dependencies: [027-bootstrap-migration-registry, 042-consolidate-govern-per-project-files-under-govern-directory]
 review:
   last-run: null
