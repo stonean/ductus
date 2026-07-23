@@ -1,10 +1,12 @@
 # 019 — Config-Persisted Decisions Data Model
 
-Schema declaration for the `.govern.toml` file. This file is the canonical reference for the framework; the README documents the same schema for adopters.
+Schema declaration for the `.govern/config.toml` file. This file is the canonical reference for the framework; the README documents the same schema for adopters.
+
+> **Note (post-completion):** paths in the live schema below reflect [042-consolidate-govern-per-project-files-under-govern-directory](../042-consolidate-govern-per-project-files-under-govern-directory/spec.md) (`.govern.toml` → `.govern/config.toml`) and [044-relocate-constitution-under-govern-directory](../044-relocate-constitution-under-govern-directory/spec.md) (the pinned example's constitution path). The `[workflows]` section below is historical — removed by [043-workflows-sunset](../043-workflows-sunset/spec.md); see the post-completion note in [spec.md](spec.md). Its prose (including the `.govern.toml` literals inside it) is left as the decision-time record.
 
 ## File location and lifecycle
 
-- Path: `.govern.toml` at the project root (sibling to `.gitignore`, `README.md`, etc.).
+- Path: `.govern/config.toml` (inside the committed `.govern/` directory at the project root).
 - Optional. If absent, `/govern` uses default behavior for every key.
 - Created lazily by `/govern` when a user picks `Skip and don't ask again` and no file yet exists.
 - Adopters may commit it (durable across clones) or `.gitignore` it (per-clone). Both are coherent.
@@ -26,7 +28,7 @@ Unchanged by this spec. Documented here for completeness because it's a sibling 
 [pinned]
 files = [
   ".claude/commands/myapp/implement.md",
-  "constitution.md",
+  ".govern/constitution.md",
 ]
 ```
 
@@ -84,12 +86,12 @@ Adopters are not expected to author future sections by hand. Each future section
 
 ## Schema validation
 
-`/govern` does not run a schema validator over `.govern.toml`. Validation is per-key, ad-hoc, at the point each section is consumed:
+`/govern` does not run a schema validator over `.govern/config.toml`. Validation is per-key, ad-hoc, at the point each section is consumed:
 
 - `[pinned] files` — entries that don't match a known manifest path are silently no-op (today's behavior, unchanged).
 - `[workflows] declined_categories` — entries that don't match a registry-derived category name are surfaced in the post-scaffolding summary (per this spec).
 
-There is no commit hook or `/gov:analyze` rule for `.govern.toml`. The post-scaffolding summary is the only enforcement layer, by design.
+There is no commit hook or `/gov:analyze` rule for `.govern/config.toml`. The post-scaffolding summary is the only enforcement layer, by design.
 
 ## Backwards compatibility
 
