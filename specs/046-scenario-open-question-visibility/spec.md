@@ -1,5 +1,5 @@
 ---
-status: planned
+status: in-progress
 dependencies: [009-scenario-targeting, 022-deterministic-runtime]
 review:
   last-run: null

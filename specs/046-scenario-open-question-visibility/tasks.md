@@ -6,12 +6,12 @@ Tasks 2–8 are authored as scenarios under [022 — Deterministic Runtime](../0
 
 ## 1. Fix the open-question parser
 
-- [ ] Switch `parse_open_questions` from the plain section walker to the comment- and fence-aware one, matching the acceptance-criteria parser
-- [ ] Widen the placeholder guard from an exact match to a set covering both the spec placeholder and the scenario placeholder
-- [ ] Add a regression test: a spec scaffolded from the shipped template reports zero open questions
-- [ ] Add a regression test: a question inside a fenced code block and one inside an HTML comment are both uncounted
-- [ ] Add a regression test: each placeholder is skipped, including when authored as a list bullet
-- [ ] Confirm `append-question`'s dedup still agrees with the reader after the change
+- [x] Switch `parse_open_questions` from the plain section walker to the comment- and fence-aware one, matching the acceptance-criteria parser
+- [x] Widen the placeholder guard from an exact match to a set covering both the spec placeholder and the scenario placeholder
+- [x] Add a regression test: a spec scaffolded from the shipped template reports zero open questions
+- [x] Add a regression test: a question inside a fenced code block and one inside an HTML comment are both uncounted
+- [x] Add a regression test: each placeholder is skipped, including when authored as a list bullet
+- [x] Confirm `append-question`'s dedup still agrees with the reader after the change
 
 - **Done when**: `read-spec` on a freshly-scaffolded spec returns zero open questions, and the full runtime test suite passes.
 

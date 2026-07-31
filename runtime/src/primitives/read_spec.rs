@@ -4,7 +4,7 @@ use std::path::Path;
 
 use crate::primitives::{
     PrimitiveError, Result, checkbox, parse_atx_heading, read_text, rel_path, section_line_indices,
-    section_lines, split_frontmatter,
+    split_frontmatter,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -135,14 +135,29 @@ fn parse_checkboxes(body: &str, section_heading: &str) -> Vec<AcceptanceCriterio
 }
 
 /// Parse the `- ` bullet entries of the named questions section
-/// (continuation lines fold in; the `*None — all resolved.*` placeholder
-/// is skipped). `pub(crate)`: shared with `append-question`, whose dedup
-/// must see exactly the entries this reader reports.
+/// (continuation lines fold in; the placeholder lines in
+/// [`QUESTION_PLACEHOLDERS`] are skipped). `pub(crate)`: shared with
+/// `append-question`, whose dedup must see exactly the entries this
+/// reader reports.
+///
+/// Walks [`section_line_indices`] — the comment- and fence-aware section
+/// helper [`parse_checkboxes`] already uses — so the example questions a
+/// freshly-scaffolded spec carries inside its template guidance comment,
+/// and any question shown inside a fenced block, are not read as real
+/// entries. Blank lines are still yielded by that helper, so the
+/// blank-line terminator below is unaffected (spec 046).
+///
+/// A comment that opens and closes on one line stays *inline* per
+/// [`SkipScanner`](super::SkipScanner)'s documented exemption, so a
+/// standalone one-line comment after a question folds into that
+/// question's text as a lazy list continuation. It adds no entry, so the
+/// count this feeds is correct either way.
 pub(crate) fn parse_open_questions(body: &str, section_heading: &str) -> Vec<OpenQuestion> {
     let mut out = Vec::new();
     let mut current: Option<String> = None;
-    for line in section_lines(body, section_heading) {
-        let trimmed = line.trim_start();
+    let lines: Vec<&str> = body.lines().collect();
+    for idx in section_line_indices(&lines, section_heading) {
+        let trimmed = lines[idx].trim_start();
         if let Some(rest) = trimmed.strip_prefix("- ") {
             if let Some(prev) = current.take() {
                 push_question(&mut out, &prev);
@@ -166,9 +181,20 @@ pub(crate) fn parse_open_questions(body: &str, section_heading: &str) -> Vec<Ope
     out
 }
 
+/// The "no entries here" placeholder lines a questions section may carry:
+/// the spec template's, and the one `create-scenario` compiles into every
+/// new scenario. Neither is authored as a `- ` bullet today, so the guard
+/// is belt-and-braces — but the set means the behavior no longer depends
+/// on that (spec 046).
+const QUESTION_PLACEHOLDERS: [&str; 3] = [
+    "*None — all resolved.*",
+    "*None — captured during scenario authoring.*",
+    "*None yet.*",
+];
+
 fn push_question(out: &mut Vec<OpenQuestion>, text: &str) {
     let trimmed = text.trim();
-    if trimmed.is_empty() || trimmed == "*None — all resolved.*" {
+    if trimmed.is_empty() || QUESTION_PLACEHOLDERS.contains(&trimmed) {
         return;
     }
     out.push(OpenQuestion {
@@ -385,5 +411,117 @@ mod tests {
         )
         .unwrap_err();
         assert!(matches!(err, PrimitiveError::FeatureNotFound { .. }));
+    }
+
+    #[test]
+    fn commented_out_example_questions_are_not_counted() {
+        // The shipped spec template carries its example questions inside an
+        // HTML comment. A freshly-scaffolded spec must report zero open
+        // questions — before spec 046 the non-comment-aware walker read all
+        // three as real, so every new spec looked like it had questions.
+        let body = "\
+## Open Questions
+
+<!-- Uncertainties, unresolved decisions, and areas needing investigation.
+
+- Should rate limits be configurable per tenant or fixed globally?
+- What is the retention policy for audit log entries?
+- What happens when the sessions table grows unbounded?
+
+     When a question is resolved, move it to a \"Resolved Questions\" section.
+-->
+";
+        assert!(parse_open_questions(body, "Open Questions").is_empty());
+    }
+
+    #[test]
+    fn fenced_questions_are_not_counted() {
+        let body = "\
+## Open Questions
+
+```markdown
+- A question shown as an example, not asked
+```
+
+- A real question
+";
+        let questions = parse_open_questions(body, "Open Questions");
+        assert_eq!(questions.len(), 1);
+        assert_eq!(questions[0].text, "A real question");
+    }
+
+    #[test]
+    fn single_line_comment_after_a_question_does_not_change_the_count() {
+        // A comment opening and closing on one line is *inline* by
+        // SkipScanner's documented exemption — the line is not skipped, so
+        // its surrounding markdown survives (that exemption is what keeps
+        // `- [ ] criterion <!-- note -->` intact). A standalone one-line
+        // comment after a question therefore folds into that question's
+        // text as a lazy list continuation. The entry count — the value the
+        // spec 046 completion gate reads — is unaffected, which is the
+        // contract that matters here.
+        let body = "\
+## Open Questions
+
+- A real question
+<!-- an authoring note -->
+";
+        let questions = parse_open_questions(body, "Open Questions");
+        assert_eq!(questions.len(), 1, "count must not gain a phantom entry");
+        assert!(questions[0].text.starts_with("A real question"));
+    }
+
+    #[test]
+    fn every_placeholder_is_skipped_even_as_a_bullet() {
+        for placeholder in QUESTION_PLACEHOLDERS {
+            let plain = format!("## Open Questions\n\n{placeholder}\n");
+            assert!(
+                parse_open_questions(&plain, "Open Questions").is_empty(),
+                "bare placeholder not skipped: {placeholder}"
+            );
+
+            let bulleted = format!("## Open Questions\n\n- {placeholder}\n");
+            assert!(
+                parse_open_questions(&bulleted, "Open Questions").is_empty(),
+                "bulleted placeholder not skipped: {placeholder}"
+            );
+        }
+    }
+
+    #[test]
+    fn wrapped_question_still_folds_its_continuation() {
+        // The blank-line terminator and continuation folding must survive
+        // the switch to the comment-aware walker.
+        let body = "\
+## Open Questions
+
+- A question that wraps
+  onto a second line
+
+- A second question
+";
+        let questions = parse_open_questions(body, "Open Questions");
+        assert_eq!(questions.len(), 2);
+        assert_eq!(
+            questions[0].text,
+            "A question that wraps onto a second line"
+        );
+        assert_eq!(questions[1].text, "A second question");
+    }
+
+    #[test]
+    fn resolved_questions_section_is_not_read_as_open() {
+        let body = "\
+## Open Questions
+
+- Still open
+
+## Resolved Questions
+
+- Already answered
+";
+        let questions = parse_open_questions(body, "Open Questions");
+        assert_eq!(questions.len(), 1);
+        assert_eq!(questions[0].text, "Still open");
     }
 }
