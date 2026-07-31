@@ -16,7 +16,8 @@ use std::path::Path;
 
 use crate::host::Host;
 use crate::primitives::{
-    PrimitiveError, Result, lint_markdown, read_text, split_frontmatter, validate_no_traversal,
+    PrimitiveError, Result, lint_markdown, read_spec, read_text, split_frontmatter,
+    validate_no_traversal,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -91,7 +92,13 @@ pub(crate) fn run_with_lint(
         });
     }
 
-    // Gate checks 2 and 3: the spec frontmatter `review:` block.
+    // Gate check 2: no scenario under this feature carries an unresolved
+    // open question (spec 046).
+    if let Some(blocked) = scenario_question_block(&feature_dir, repo, &args.feature) {
+        return Ok(blocked);
+    }
+
+    // Gate checks 3 and 4: the spec frontmatter `review:` block.
     let spec_path = feature_dir.join("spec.md");
     let content = read_text(&spec_path)?;
     let (fm_text, _body) = split_frontmatter(&content, &spec_path)?;
@@ -140,6 +147,52 @@ pub(crate) fn run_with_lint(
         blocked_by: None,
         message: None,
         guidance: None,
+        violations: vec![],
+    })
+}
+
+/// The scenario-open-questions gate check: `Some(blocked)` when any
+/// scenario under `feature_dir` carries an unresolved open question,
+/// `None` when the check passes.
+///
+/// A scenario is an organizational split of the spec — it exists to keep
+/// `spec.md` from becoming one huge document — so its questions are the
+/// spec's questions for the purpose of completeness, and the spec is not
+/// `done` while any remain (spec 046). Resolution stays independent:
+/// the guidance points at scenario-targeted clarify, the only command that
+/// can act on them.
+///
+/// Ordered ahead of the `review:` checks because an unresolved design
+/// question is the more upstream defect — reviewing a design that is about
+/// to change wastes the review.
+///
+/// Reads through `read-spec`'s collector rather than re-deriving the list,
+/// so the gate blocks on exactly the questions the user was shown.
+fn scenario_question_block(
+    feature_dir: &Path,
+    repo: &Path,
+    feature: &str,
+) -> Option<CheckReviewGateResult> {
+    let questions = read_spec::collect_scenario_open_questions(feature_dir);
+    if questions.is_empty() {
+        return None;
+    }
+    // Entries arrive grouped by scenario in shared scenario order, so
+    // `dedup` collapses each run into one name without disturbing it.
+    let mut scenarios: Vec<&str> = questions.iter().map(|q| q.scenario.as_str()).collect();
+    scenarios.dedup();
+    let project = Host::load(repo).project;
+    Some(CheckReviewGateResult {
+        passed: false,
+        blocked_by: Some(ReviewGateBlock::ScenarioOpenQuestions),
+        message: Some(format!(
+            "blocked: {} unresolved open question(s) in scenario(s) {} — resolve them before completing",
+            questions.len(),
+            scenarios.join(", ")
+        )),
+        guidance: Some(format!(
+            "Run /{project}:target {feature}/<scenario> then /{project}:clarify to resolve each scenario's questions in place."
+        )),
         violations: vec![],
     })
 }
@@ -361,6 +414,121 @@ mod tests {
         )
         .unwrap_err();
         assert!(matches!(err, PrimitiveError::FeatureNotFound { .. }));
+    }
+
+    /// Write a scenario file under the seeded feature.
+    fn seed_scenario(repo: &Path, name: &str, body: &str) {
+        let dir = repo.join("specs/007-gate/scenarios");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join(name), body).unwrap();
+    }
+
+    const SCENARIO_WITH_QUESTIONS: &str = "---\nsection: Behavior\n---\n\n# Wire contract\n\n## Open Questions\n\n- Bracket operator or empty operand?\n";
+
+    #[test]
+    fn blocks_on_unresolved_scenario_questions_naming_the_scenario() {
+        let tmp = tempdir().unwrap();
+        // Review is current and lint is clean — only the scenario question
+        // stands between this spec and `done`.
+        seed(tmp.path(), REVIEWED_CLEAN);
+        seed_scenario(tmp.path(), "wire-contract.md", SCENARIO_WITH_QUESTIONS);
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(!result.passed);
+        assert_eq!(
+            result.blocked_by,
+            Some(ReviewGateBlock::ScenarioOpenQuestions)
+        );
+        let message = result.message.unwrap();
+        assert!(
+            message.contains("wire-contract"),
+            "the blocked message must name the scenario, got: {message}"
+        );
+        assert!(message.contains('1'), "and the count, got: {message}");
+        // The guidance points at the command that can actually resolve
+        // them — scenario-targeted clarify, not feature-targeted.
+        assert!(result.guidance.unwrap().contains("/gov:clarify"));
+    }
+
+    #[test]
+    fn scenario_questions_do_not_block_when_all_are_resolved() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        seed_scenario(
+            tmp.path(),
+            "settled.md",
+            "---\nsection: Behavior\n---\n\n## Open Questions\n\n*None — captured during scenario authoring.*\n\n## Resolved Questions\n\n- **Answered** — yes.\n",
+        );
+        assert!(
+            run_with_lint(&args(), tmp.path(), clean_lint)
+                .unwrap()
+                .passed
+        );
+    }
+
+    #[test]
+    fn markdown_lint_still_wins_over_the_scenario_check() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        seed_scenario(tmp.path(), "wire-contract.md", SCENARIO_WITH_QUESTIONS);
+
+        // Both checks would block; gate order must report the first.
+        let dirty = |_: &LintMarkdownArgs, _: &Path| {
+            Ok(LintMarkdownResult {
+                violations: vec![MarkdownViolation {
+                    path: "specs/007-gate/spec.md".into(),
+                    line: 3,
+                    rule: "MD012".into(),
+                    message: "Multiple consecutive blank lines".into(),
+                }],
+                clean: false,
+                exit_code: 1,
+            })
+        };
+        let result = run_with_lint(&args(), tmp.path(), dirty).unwrap();
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::MarkdownLint));
+    }
+
+    #[test]
+    fn scenario_questions_are_reported_before_a_missing_review() {
+        let tmp = tempdir().unwrap();
+        // Never reviewed AND carrying a scenario question: the scenario
+        // check is ordered first, so the contributor resolves the design
+        // question before being sent to run a review that would go stale.
+        seed(tmp.path(), NEVER_REVIEWED);
+        seed_scenario(tmp.path(), "wire-contract.md", SCENARIO_WITH_QUESTIONS);
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(
+            result.blocked_by,
+            Some(ReviewGateBlock::ScenarioOpenQuestions)
+        );
+    }
+
+    #[test]
+    fn an_unparseable_scenario_never_blocks_the_gate() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        // Truncated frontmatter and no questions section: nothing can be
+        // proven about it, and an unknown is never escalated into a
+        // done-blocking finding.
+        seed_scenario(tmp.path(), "broken.md", "---\nsection: Behavior\n");
+        assert!(
+            run_with_lint(&args(), tmp.path(), clean_lint)
+                .unwrap()
+                .passed
+        );
+    }
+
+    #[test]
+    fn feature_without_scenarios_is_unaffected() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        assert!(
+            run_with_lint(&args(), tmp.path(), clean_lint)
+                .unwrap()
+                .passed
+        );
     }
 
     #[test]

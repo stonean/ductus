@@ -67,7 +67,12 @@ pub fn run(args: &ReadSpecArgs, repo: &Path) -> Result<ReadSpecResult> {
 /// scenario whose file cannot be read or has no questions section: nothing
 /// can be proven about a file that will not parse, and an unknown is never
 /// escalated into a `done`-blocking finding.
-fn collect_scenario_open_questions(feature_dir: &Path) -> Vec<ScenarioOpenQuestion> {
+///
+/// `pub(crate)`: shared with `check-review-gate`, whose completion check
+/// MUST block on exactly the list this reader reports. A second, private
+/// scenario-question reader could disagree with the count surfaced to the
+/// user, so there is deliberately only one (spec 046).
+pub(crate) fn collect_scenario_open_questions(feature_dir: &Path) -> Vec<ScenarioOpenQuestion> {
     let scenarios_dir = feature_dir.join("scenarios");
     let mut out = Vec::new();
     for name in list_scenario_files(&scenarios_dir) {

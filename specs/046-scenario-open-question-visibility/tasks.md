@@ -28,13 +28,13 @@ Tasks 2–8 are authored as scenarios under [022 — Deterministic Runtime](../0
 
 ## 3. Gate `done` on scenario questions
 
-- [ ] Add the scenario check to `check-review-gate` as a third ordered variant, between markdown lint and the `review:` block
-- [ ] Compose the blocked message so it names the scenarios carrying unresolved questions
-- [ ] Preserve first-failure-wins ordering
-- [ ] Update the `check-review-gate` schema section in 022's data-model
-- [ ] Test: a spec with a question-carrying scenario is blocked, with the scenario named
-- [ ] Test: a markdown-lint failure still wins over the scenario check
-- [ ] Test: an unreadable scenario file does not block
+- [x] Add the scenario check to `check-review-gate` as a third ordered variant, between markdown lint and the `review:` block
+- [x] Compose the blocked message so it names the scenarios carrying unresolved questions
+- [x] Preserve first-failure-wins ordering
+- [x] Update the `check-review-gate` schema section in 022's data-model
+- [x] Test: a spec with a question-carrying scenario is blocked, with the scenario named
+- [x] Test: a markdown-lint failure still wins over the scenario check
+- [x] Test: an unreadable scenario file does not block
 
 - **Done when**: the gate blocks the transition with a scenario-naming message, and existing gate tests are unchanged.
 

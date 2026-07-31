@@ -1931,6 +1931,12 @@ pub enum ReviewGateBlock {
     /// The feature directory's markdown files failed `markdownlint-cli2`
     /// (violations, or a non-zero exit the parser could not attribute).
     MarkdownLint,
+    /// One or more of the feature's scenarios carry unresolved open
+    /// questions. Ordered before the `review:` checks: an unresolved design
+    /// question is more upstream than a missing review, so surfacing it
+    /// first avoids sending a contributor to review a design that is about
+    /// to change (spec 046).
+    ScenarioOpenQuestions,
     /// The spec has no completed review: the `review:` block is absent or
     /// its `last-run` is null.
     NotReviewed,
