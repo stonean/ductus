@@ -184,10 +184,7 @@ fn scenario_question_block(
     if questions.is_empty() {
         return None;
     }
-    // Entries arrive grouped by scenario in shared scenario order, so
-    // `dedup` collapses each run into one name without disturbing it.
-    let mut scenarios: Vec<&str> = questions.iter().map(|q| q.scenario.as_str()).collect();
-    scenarios.dedup();
+    let scenarios = read_spec::scenario_names(&questions);
     let project = Host::load(repo).project;
     Some(CheckReviewGateResult {
         passed: false,

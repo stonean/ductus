@@ -378,10 +378,7 @@ fn check_scenario_open_questions(
     if questions.is_empty() {
         return;
     }
-    // Entries arrive grouped by scenario in shared scenario order, so
-    // `dedup` collapses each run into one name without disturbing it.
-    let mut scenarios: Vec<&str> = questions.iter().map(|q| q.scenario.as_str()).collect();
-    scenarios.dedup();
+    let scenarios = read_spec::scenario_names(&questions);
     let severity = if status == "done" {
         "blocking"
     } else {

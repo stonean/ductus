@@ -76,14 +76,14 @@ pub(crate) fn collect_scenario_open_questions(feature_dir: &Path) -> Vec<Scenari
     let scenarios_dir = feature_dir.join("scenarios");
     let mut out = Vec::new();
     for name in list_scenario_files(&scenarios_dir) {
-        let Ok(content) = read_text(&scenarios_dir.join(&name)) else {
+        let scenario_path = scenarios_dir.join(&name);
+        let Ok(content) = read_text(&scenario_path) else {
             continue;
         };
         // A scenario normally carries `section:` frontmatter, but a
         // hand-written one may not. Reuse the shared splitter and fall back
         // to the whole file when there is no frontmatter block — the
         // questions section is found by heading either way.
-        let scenario_path = scenarios_dir.join(&name);
         let body =
             split_frontmatter(&content, &scenario_path).map_or(content.as_str(), |(_, body)| body);
         let slug = Path::new(&name)
@@ -101,6 +101,24 @@ pub(crate) fn collect_scenario_open_questions(feature_dir: &Path) -> Vec<Scenari
         );
     }
     out
+}
+
+/// The distinct scenario slugs carrying questions, in the order they
+/// appear — the name list every surface that reports scenario questions
+/// renders.
+///
+/// `dedup` (not a sort-and-dedup) is correct because
+/// [`collect_scenario_open_questions`] walks scenarios in shared order and
+/// appends each file's questions together, so all entries for one scenario
+/// are contiguous. That precondition is the reason this lives beside the
+/// collector rather than being re-derived per call site: the gate, the
+/// analyze finding, and the dashboard must render the same names in the
+/// same order, and a change to the grouping has exactly one place to
+/// follow (spec 046).
+pub(crate) fn scenario_names(questions: &[ScenarioOpenQuestion]) -> Vec<&str> {
+    let mut names: Vec<&str> = questions.iter().map(|q| q.scenario.as_str()).collect();
+    names.dedup();
+    names
 }
 
 fn parse_sections(body: &str, include_body: bool) -> Vec<SpecSection> {
@@ -632,6 +650,31 @@ dependencies: []
         assert_eq!(
             result.scenario_open_questions[0].text,
             "Bracket operator or empty operand?"
+        );
+    }
+
+    #[test]
+    fn scenario_names_collapses_runs_and_keeps_collection_order() {
+        // The helper the gate, the analyze finding, and the dashboard all
+        // render from. `dedup` (not sort-and-dedup) is only correct while
+        // entries stay grouped by scenario, so pin both halves: adjacent
+        // duplicates collapse, and a scenario reappearing after another
+        // would NOT collapse — which is exactly why the collector must keep
+        // each file's questions contiguous.
+        let q = |scenario: &str| ScenarioOpenQuestion {
+            scenario: scenario.into(),
+            text: "?".into(),
+        };
+        assert_eq!(
+            scenario_names(&[q("alpha"), q("alpha"), q("beta"), q("beta"), q("beta")]),
+            vec!["alpha", "beta"]
+        );
+        assert!(scenario_names(&[]).is_empty());
+        // Ungrouped input is not silently repaired — the precondition is
+        // the collector's to hold, and this documents the consequence.
+        assert_eq!(
+            scenario_names(&[q("alpha"), q("beta"), q("alpha")]),
+            vec!["alpha", "beta", "alpha"]
         );
     }
 

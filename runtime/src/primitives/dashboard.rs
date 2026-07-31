@@ -465,13 +465,10 @@ fn load_one_spec(specs_dir: &Path, root: &str, slug: &str) -> Result<DashboardSp
     // view, the completion gate, and the analyze finding can never report
     // different counts for the same feature (spec 046).
     let scenario_questions = read_spec::collect_scenario_open_questions(&feature_dir);
-    let mut scenarios_with_questions: Vec<String> = scenario_questions
-        .iter()
-        .map(|q| q.scenario.clone())
+    let scenarios_with_questions: Vec<String> = read_spec::scenario_names(&scenario_questions)
+        .into_iter()
+        .map(ToString::to_string)
         .collect();
-    // Entries arrive grouped by scenario in shared scenario order, so
-    // `dedup` collapses each run into one name without disturbing it.
-    scenarios_with_questions.dedup();
     Ok(DashboardSpec {
         slug: slug.to_string(),
         status: frontmatter.status,

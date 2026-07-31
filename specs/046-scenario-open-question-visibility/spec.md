@@ -2,10 +2,10 @@
 status: in-progress
 dependencies: [009-scenario-targeting, 022-deterministic-runtime]
 review:
-  last-run: null
-  reviewed-against: null
+  last-run: 2026-07-31T01:42:26Z
+  reviewed-against: 96c97e5b571cec68cb0f5d1618b272b62ed6496d
   must-violations: 0
-  should-violations: 0
+  should-violations: 3
   low-confidence: 0
   blocking: false
 ---
@@ -102,7 +102,7 @@ What stays with this spec: the constitution amendments to §spec-lifecycle's `do
 
 - **No `scenarios/` directory, or scenarios with no `## Open Questions` section** — zero outstanding questions. No signal, no gate block, no finding, no change to any readout.
 - **A scenario whose Open Questions section holds only a placeholder** — zero, per the placeholder rule above.
-- **An unreadable or malformed scenario file** — never blocks the `done` gate and never produces a blocking finding. Nothing can be proven about a file that cannot be parsed, and an unknown is not escalated to a defect; it surfaces as informational, matching how an unreadable cross-reference target is classified. The defect is the file's, and lint owns it.
+- **An unreadable or malformed scenario file** — contributes no questions, so it never blocks the `done` gate and never produces a finding at any severity. Nothing can be proven about a file that cannot be parsed, and an unknown is not escalated to a defect. It is **not** separately surfaced: the malformed file is markdown lint's to report, and lint runs ahead of the scenario check in the same gate, so the contributor sees it there rather than twice.
 - **Non-`.md` files, and case-varying filenames, under `scenarios/`** — the shared scenario-file listing defines the set, so this feature inherits its behavior rather than defining a second rule.
 - **Many scenarios carrying questions** — all are listed, with no cap and no truncation. A bounded readout that silently dropped scenarios would read as "these are the ones that need attention" while hiding others.
 - **A question resolved between the gate check and the status write** — the gate re-reads the scenarios at check time, and `set-status` guards only the `from` status. A resolution landing inside that window is accepted: it can only turn a block into a pass, and the next gate run agrees.
