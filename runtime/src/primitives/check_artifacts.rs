@@ -1,10 +1,11 @@
 //! `check-artifacts` — the residual deterministic check families from
 //! `/gov:analyze`'s markdown-only reference, mechanized for one feature.
 //!
-//! Owns four families (spec 022, scenario analyze-artifact-checks). Each
-//! family MIRRORS `framework/commands/analyze.md`'s markdown-only
-//! reference — severity tiers and skip rules come from the reference, the
-//! primitive introduces no policy of its own:
+//! Owns five families (spec 022, scenarios analyze-artifact-checks and
+//! scenario-open-question-signal). Each family MIRRORS
+//! `framework/commands/analyze.md`'s markdown-only reference — severity
+//! tiers and skip rules come from the reference, the primitive introduces
+//! no policy of its own:
 //!
 //! - **artifact-completeness** (blocking) — reference §"Artifact
 //!   completeness (blocking)": `plan.md` and
@@ -32,6 +33,14 @@
 //!   `review.last-run` unset, or `review.blocking: true`, drifted. The
 //!   grandfather rule applies: a `done` spec with no `review:` block at
 //!   all predates `/gov:review` and is exempt.
+//! - **scenario-open-questions** (blocking at `done`, advisory otherwise)
+//!   — a scenario is an organizational split of the spec, so its
+//!   unresolved questions are the spec's questions for completeness. At
+//!   `done` that state contradicts the completion rule outright; before
+//!   `done` the questions are real remaining work but not yet a defect.
+//!   Deliberately **no grandfather rule**, unlike review-state drift: an
+//!   unresolved question is a present-tense defect whenever it arrived
+//!   (spec 046).
 //!
 //! Parsing reuses the shared machinery — `split_frontmatter` for the spec
 //! frontmatter and [`crate::primitives::read_tasks`] for the task list —
@@ -41,7 +50,8 @@
 use std::path::Path;
 
 use crate::primitives::{
-    PrimitiveError, Result, list_scenario_files, read_tasks, read_text, rel_path, split_frontmatter,
+    PrimitiveError, Result, list_scenario_files, read_spec, read_tasks, read_text, rel_path,
+    scenario_name_cmp, split_frontmatter,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -105,6 +115,7 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
         tasks.as_ref().map(|t| t.tasks.as_slice()),
     );
     check_review_drift(&mut findings, &frontmatter, &status, &spec_path, repo);
+    check_scenario_open_questions(&mut findings, &feature_dir, &status, &spec_path, repo);
 
     let clean = findings.is_empty();
     Ok(CheckArtifactsResult {
@@ -248,7 +259,9 @@ fn scenario_slugs(feature_dir: &Path) -> Vec<String> {
                 .map(str::to_string)
         })
         .collect();
-    slugs.sort();
+    // Same comparator every scenario-presenting surface uses, so stripping
+    // the extension here cannot reintroduce a second order (spec 046).
+    slugs.sort_by(|a, b| scenario_name_cmp(a, b));
     slugs
 }
 
@@ -335,6 +348,55 @@ fn check_review_drift(
             path: spec_rel,
         });
     }
+}
+
+/// (e) Scenario open questions — a scenario is an organizational split of
+/// the spec, so its unresolved questions are the spec's questions for the
+/// purpose of completeness. **Blocking at `done`**: that state directly
+/// contradicts the completion rule, and `--fix` reverts it the way it
+/// reverts review-state drift. **Advisory otherwise**: the questions are
+/// real remaining work, but a spec still in flight is allowed to carry
+/// them.
+///
+/// Deliberately **no grandfather rule**, unlike [`check_review_drift`]. An
+/// absent `review:` block genuinely marks a spec as predating that
+/// feature; an unresolved scenario question is a present-tense defect
+/// whenever it arrived, and exempting it would preserve exactly the state
+/// this check exists to surface (spec 046).
+///
+/// Reads through `read-spec`'s collector so this finding, the
+/// `check-review-gate` block, and the count surfaced to the user can never
+/// disagree.
+fn check_scenario_open_questions(
+    findings: &mut Vec<ArtifactFinding>,
+    feature_dir: &Path,
+    status: &str,
+    spec_path: &Path,
+    repo: &Path,
+) {
+    let questions = read_spec::collect_scenario_open_questions(feature_dir);
+    if questions.is_empty() {
+        return;
+    }
+    // Entries arrive grouped by scenario in shared scenario order, so
+    // `dedup` collapses each run into one name without disturbing it.
+    let mut scenarios: Vec<&str> = questions.iter().map(|q| q.scenario.as_str()).collect();
+    scenarios.dedup();
+    let severity = if status == "done" {
+        "blocking"
+    } else {
+        "advisory"
+    };
+    findings.push(ArtifactFinding {
+        family: "scenario-open-questions".into(),
+        severity: severity.into(),
+        message: format!(
+            "{} unresolved open question(s) in scenario(s) {} — a spec is not complete while its scenarios carry questions",
+            questions.len(),
+            scenarios.join(", ")
+        ),
+        path: rel_path(spec_path, repo),
+    });
 }
 
 #[cfg(test)]
@@ -727,5 +789,118 @@ mod tests {
             ]
         );
         assert!(!result.clean);
+    }
+
+    // --- scenario open questions ----------------------------------------------
+
+    const CLEAN_REVIEW: &str = "  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc\n  must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n  blocking: false";
+
+    const SCENARIO_ASKING: &str = "---\nsection: Behavior\n---\n\n# Retry on timeout\n\n## Open Questions\n\n- Retry budget per call or per request?\n";
+
+    /// Seed a feature at `status` whose single scenario carries one
+    /// unresolved question, with plan/tasks present so completeness and
+    /// task-consistency stay quiet and the assertion isolates this family.
+    fn seed_with_questioning_scenario(repo: &Path, status: &str) {
+        write(
+            repo,
+            &format!("specs/{FEATURE}/spec.md"),
+            &spec(status, Some(CLEAN_REVIEW)),
+        );
+        write(repo, &format!("specs/{FEATURE}/plan.md"), "# Demo Plan\n");
+        write(repo, &format!("specs/{FEATURE}/tasks.md"), GOOD_TASKS);
+        write(
+            repo,
+            &format!("specs/{FEATURE}/scenarios/retry-on-timeout.md"),
+            SCENARIO_ASKING,
+        );
+    }
+
+    #[test]
+    fn scenario_questions_are_blocking_on_a_done_spec() {
+        let tmp = tempdir().unwrap();
+        seed_with_questioning_scenario(tmp.path(), "done");
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(
+            families(&result),
+            vec![("scenario-open-questions", "blocking")]
+        );
+        let message = &result.findings[0].message;
+        assert!(
+            message.contains("retry-on-timeout"),
+            "the finding names the scenario, got: {message}"
+        );
+    }
+
+    #[test]
+    fn scenario_questions_are_advisory_before_done() {
+        for status in ["draft", "clarified", "planned", "in-progress"] {
+            let tmp = tempdir().unwrap();
+            seed_with_questioning_scenario(tmp.path(), status);
+            let result = run(&args(), tmp.path()).unwrap();
+            assert!(
+                families(&result).contains(&("scenario-open-questions", "advisory")),
+                "expected an advisory finding at {status}, got {:?}",
+                families(&result)
+            );
+        }
+    }
+
+    #[test]
+    fn a_done_spec_predating_this_check_is_not_grandfathered() {
+        // Unlike review-state drift, where an absent `review:` block marks
+        // a spec as predating that feature, an unresolved scenario question
+        // is a present-tense defect whenever it arrived (spec 046).
+        let tmp = tempdir().unwrap();
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/spec.md"),
+            &spec("done", None),
+        );
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/plan.md"),
+            "# Demo Plan\n",
+        );
+        write(tmp.path(), &format!("specs/{FEATURE}/tasks.md"), GOOD_TASKS);
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/scenarios/retry-on-timeout.md"),
+            SCENARIO_ASKING,
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(
+            families(&result).contains(&("scenario-open-questions", "blocking")),
+            "no review block must not exempt the scenario check, got {:?}",
+            families(&result)
+        );
+    }
+
+    #[test]
+    fn scenarios_without_questions_produce_no_finding() {
+        let tmp = tempdir().unwrap();
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/spec.md"),
+            &spec("done", Some(CLEAN_REVIEW)),
+        );
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/plan.md"),
+            "# Demo Plan\n",
+        );
+        write(tmp.path(), &format!("specs/{FEATURE}/tasks.md"), GOOD_TASKS);
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/scenarios/retry-on-timeout.md"),
+            "---\nsection: Behavior\n---\n\n## Open Questions\n\n*None — captured during scenario authoring.*\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(
+            !families(&result)
+                .iter()
+                .any(|(f, _)| *f == "scenario-open-questions"),
+            "got {:?}",
+            families(&result)
+        );
     }
 }

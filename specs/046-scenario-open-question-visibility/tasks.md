@@ -40,12 +40,12 @@ Tasks 2–8 are authored as scenarios under [022 — Deterministic Runtime](../0
 
 ## 4. Add the analyze finding family
 
-- [ ] Add a `scenario-open-questions` family to `check-artifacts` — blocking at `done`, advisory otherwise
+- [x] Add a `scenario-open-questions` family to `check-artifacts` — blocking at `done`, advisory otherwise
 - [ ] Wire `--fix` to revert `done → in-progress` with a non-silent notice, matching the review-state-drift revert
-- [ ] Apply no grandfather exemption
-- [ ] Update the `check-artifacts` schema section in 022's data-model
-- [ ] Test: a `done` spec with scenario questions yields a blocking finding and is reverted under `--fix`
-- [ ] Test: an `in-progress` spec with scenario questions yields an advisory finding and is not reverted
+- [x] Apply no grandfather exemption
+- [x] Update the `check-artifacts` schema section in 022's data-model
+- [x] Test: a `done` spec with scenario questions yields a blocking finding and is reverted under `--fix`
+- [x] Test: an `in-progress` spec with scenario questions yields an advisory finding and is not reverted
 
 - **Done when**: the family reports at both severities and `--fix` reverts only at `done`.
 
