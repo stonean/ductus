@@ -88,10 +88,10 @@ Tasks 2–8 are authored as scenarios under [022 — Deterministic Runtime](../0
 
 ## 9. Verify the feature end to end
 
-- [ ] Walk every acceptance criterion in the spec against shipped behavior
-- [ ] Confirm feature-targeted clarify is unchanged
-- [ ] Confirm the spec-body open-question count is unchanged
-- [ ] Run the full runtime test suite and the feature directory's markdown lint
-- [ ] Confirm the 022 scenarios each back-link here and that 022's data-model is current
+- [x] Walk every acceptance criterion in the spec against shipped behavior
+- [x] Confirm feature-targeted clarify is unchanged
+- [x] Confirm the spec-body open-question count is unchanged
+- [x] Run the full runtime test suite and the feature directory's markdown lint
+- [x] Confirm the 022 scenarios each back-link here and that 022's data-model is current
 
 - **Done when**: every acceptance criterion is verified, and both specs' artifacts are consistent.

@@ -876,6 +876,39 @@ mod tests {
     }
 
     #[test]
+    fn an_unparseable_scenario_produces_no_blocking_finding() {
+        // The gate has the matching test; this pins the finding half of
+        // the same rule. Nothing can be proven about a file that will not
+        // parse, and an unknown is never escalated into a defect — least
+        // of all a blocking one on a `done` spec (spec 046).
+        let tmp = tempdir().unwrap();
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/spec.md"),
+            &spec("done", Some(CLEAN_REVIEW)),
+        );
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/plan.md"),
+            "# Demo Plan\n",
+        );
+        write(tmp.path(), &format!("specs/{FEATURE}/tasks.md"), GOOD_TASKS);
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/scenarios/retry-on-timeout.md"),
+            "---\nsection: Behavior\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(
+            !families(&result)
+                .iter()
+                .any(|(f, _)| *f == "scenario-open-questions"),
+            "got {:?}",
+            families(&result)
+        );
+    }
+
+    #[test]
     fn scenarios_without_questions_produce_no_finding() {
         let tmp = tempdir().unwrap();
         write(
