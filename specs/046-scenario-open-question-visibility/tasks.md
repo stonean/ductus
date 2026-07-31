@@ -41,7 +41,7 @@ Tasks 2–8 are authored as scenarios under [022 — Deterministic Runtime](../0
 ## 4. Add the analyze finding family
 
 - [x] Add a `scenario-open-questions` family to `check-artifacts` — blocking at `done`, advisory otherwise
-- [ ] Wire `--fix` to revert `done → in-progress` with a non-silent notice, matching the review-state-drift revert
+- [x] Wire `--fix` to revert `done → in-progress` with a non-silent notice, matching the review-state-drift revert
 - [x] Apply no grandfather exemption
 - [x] Update the `check-artifacts` schema section in 022's data-model
 - [x] Test: a `done` spec with scenario questions yields a blocking finding and is reverted under `--fix`
@@ -61,28 +61,28 @@ Tasks 2–8 are authored as scenarios under [022 — Deterministic Runtime](../0
 
 ## 6. Report outstanding questions at feature-level target
 
-- [ ] Report the count and name the carrying scenarios when a feature is targeted without a scenario
-- [ ] List every carrying scenario in case-insensitive filename order, recommending none
-- [ ] Recommend scenario-targeted clarification rather than implement
-- [ ] Leave the scenario-targeted path unchanged
+- [x] Report the count and name the carrying scenarios when a feature is targeted without a scenario
+- [x] List every carrying scenario in case-insensitive filename order, recommending none
+- [x] Recommend scenario-targeted clarification rather than implement
+- [x] Leave the scenario-targeted path unchanged
 
 - **Done when**: a feature-level target names its question-carrying scenarios and routes to clarification.
 
 ## 7. Update the command documentation
 
-- [ ] `target.md` — feature-level readout and routing
-- [ ] `status.md` — column suffix, Next Action override, callout, precedence rule
-- [ ] `implement.md` — completion-gate step names the third check
-- [ ] `analyze.md` — new family and its `--fix` behavior in the markdown-only reference
-- [ ] Verify each markdown-only path matches the runtime behavior it mirrors
+- [x] `target.md` — feature-level readout and routing
+- [x] `status.md` — column suffix, Next Action override, callout, precedence rule
+- [x] `implement.md` — completion-gate step names the third check
+- [x] `analyze.md` — new family and its `--fix` behavior in the markdown-only reference
+- [x] Verify each markdown-only path matches the runtime behavior it mirrors
 
 - **Done when**: every changed behavior is documented on both the runtime and markdown-only paths.
 
 ## 8. Amend the constitution
 
-- [ ] §spec-lifecycle — the `done` row states that no scenario may carry unresolved questions
-- [ ] §readiness-check — "All open questions are resolved" states that scenario questions are included
-- [ ] Confirm the scenario back-edge description still reads correctly given resolved question 1
+- [x] §spec-lifecycle — the `done` row states that no scenario may carry unresolved questions
+- [x] §readiness-check — "All open questions are resolved" states that scenario questions are included
+- [x] Confirm the scenario back-edge description still reads correctly given resolved question 1
 
 - **Done when**: both sections state the rule, and `resolve-anchor` reports every anchor still resolving.
 

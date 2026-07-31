@@ -53,7 +53,7 @@ If `--all` is not present, use the feature identifier if provided, otherwise fal
 
 7. Invoke `lint-markdown` against the markdown files in the feature directory. Each returned violation is surfaced as an advisory finding.
 
-8. Invoke `check-artifacts` against the feature to run the four residual deterministic check families: artifact completeness per status tier (plan.md/tasks.md required at planned+ — the *conditional* data-model.md requirement is a semantic judgment and stays on the markdown-only path), task numbering and done-when consistency (the "tasks reference the plan" link is a semantic judgment and stays on the markdown-only path), scenario→task mapping (a spent task pruned per §tasks-phase never counts against its scenario, and the family is **skipped entirely on a `done` spec**, whose tasks may already be pruned), and review-state drift on done specs. Each returned finding carries its family, severity tier, and location. The primitive mechanizes the **deterministic subset** of the markdown-only reference's Artifact completeness, Task consistency, Scenario consistency, and Review state drift sections; the semantic items noted above (data-model necessity, tasks-reference-plan, and a scenario's own Context/Behavior sections) stay on the markdown-only path, as does Command-frontmatter completeness (Project-level consistency), which reads the host's command directory the runtime does not own.
+8. Invoke `check-artifacts` against the feature to run the five residual deterministic check families: artifact completeness per status tier (plan.md/tasks.md required at planned+ — the *conditional* data-model.md requirement is a semantic judgment and stays on the markdown-only path), task numbering and done-when consistency (the "tasks reference the plan" link is a semantic judgment and stays on the markdown-only path), scenario→task mapping (a spent task pruned per §tasks-phase never counts against its scenario, and the family is **skipped entirely on a `done` spec**, whose tasks may already be pruned), review-state drift on done specs, and scenario open questions (blocking at `done`, advisory otherwise — no grandfather rule). Each returned finding carries its family, severity tier, and location. The primitive mechanizes the **deterministic subset** of the markdown-only reference's Artifact completeness, Task consistency, Scenario consistency, Scenario open questions, and Review state drift sections; the semantic items noted above (data-model necessity, tasks-reference-plan, and a scenario's own Context/Behavior sections) stay on the markdown-only path, as does Command-frontmatter completeness (Project-level consistency), which reads the host's command directory the runtime does not own.
 
 9. <!-- llm:assessSpecQuality --> For every loaded MUST-tier rule whose Verification trigger fires against the spec, request a semantic assessment via the extension point. The host responds with a structured finding carrying severity, rule-id, location, and message. MUST-tier findings join the Blocking tier in the rendered report. Otherwise, fall back to the markdown-only path.
 
@@ -73,7 +73,7 @@ If `--all` is not present, use the feature identifier if provided, otherwise fal
 
 ## Markdown-only reference
 
-The full set of checks (frontmatter schema, spec integrity, artifact completeness, plan consistency, task consistency, scenario consistency, cross-spec references, review state drift, rule integrity, project-level consistency, severity classification, and report shape) is documented below for the markdown-only path. The numbered steps above invoke the mechanical primitives that automate the deterministic checks; the host applies the same checks against the markdown-only path when the runtime is unavailable.
+The full set of checks (frontmatter schema, spec integrity, artifact completeness, plan consistency, task consistency, scenario consistency, scenario open questions, cross-spec references, review state drift, rule integrity, project-level consistency, severity classification, and report shape) is documented below for the markdown-only path. The numbered steps above invoke the mechanical primitives that automate the deterministic checks; the host applies the same checks against the markdown-only path when the runtime is unavailable.
 
 ### Frontmatter schema (hard fail)
 
@@ -96,7 +96,7 @@ Reference: the schema is canonically declared in `framework/constitution.md` §t
 
 - Acceptance criteria section exists with at least one checkbox item
 - No placeholder or empty acceptance criteria
-- Open questions consistent with status (`clarified` or later must have none). When this check fails — a spec at `clarified` / `planned` / `in-progress` with one or more open questions in the body — the spec is in the recovery state defined by spec 014. Suggested fix: run `/{project}:clarify` (its recovery path will revert status to `draft` and walk the questions), or `/{project}:amend` on a fresh question (which performs the back-edge automatically).
+- Open questions consistent with status — the **spec body's** `## Open Questions` (`clarified` or later must have none). Scenario open questions are a separate signal with their own check (see Scenario open questions below) and never count here. When this check fails — a spec at `clarified` / `planned` / `in-progress` with one or more open questions in the body — the spec is in the recovery state defined by spec 014. Suggested fix: run `/{project}:clarify` (its recovery path will revert status to `draft` and walk the questions), or `/{project}:amend` on a fresh question (which performs the back-edge automatically).
 - No implementation code blocks (function signatures, package paths, language-specific snippets) in the spec — those belong in plan.md. Format examples, directory structures, and user-facing commands are acceptable when they define behavioral contracts.
 
 ### Artifact completeness (blocking)
@@ -139,6 +139,19 @@ Suggested fix per finding: ground the claim (read the code, query the dev databa
 - Every scenario file has Context and Behavior sections (frontmatter `spec-ref` is checked under Frontmatter schema above)
 - Every scenario file in `scenarios/` has a corresponding task in `tasks.md` **only while that task is still pending**. `tasks.md` is an ephemeral tracking artifact (§tasks-phase) that `/{project}:prune` reduces once work is complete, so a *missing* scenario task is a finding only when the scenario is unimplemented; do NOT flag a scenario whose task was completed and pruned, and do NOT flag any scenario under a `done` spec (its tasks may have been pruned, or the file reset to template state). The durable record of an implemented scenario is the scenario file, the code, and git history — not a retained checkbox.
 - A scenario task that is *still present* in `tasks.md` is marked complete when the spec status is `done`; an absent (pruned) scenario task is not treated as incomplete.
+
+### Scenario open questions (blocking at `done`, advisory otherwise)
+
+A scenario exists to organize information — to keep `spec.md` from becoming one huge document — so its unresolved questions are the spec's questions for the purpose of completeness. Report a finding when any `scenarios/*.md` under the feature carries entries in its `## Open Questions` section, naming the count and the scenarios carrying them.
+
+- **Blocking on a `done` spec.** That state directly contradicts the completion rule in §spec-lifecycle: a spec is not complete while its scenarios carry questions.
+- **Advisory otherwise.** The questions are real remaining work, but a spec still in flight is allowed to carry them.
+- **No grandfather rule**, unlike Review state drift below. An absent `review:` block genuinely marks a spec as predating `/{project}:review`; an unresolved scenario question is a present-tense defect whenever it arrived, and exempting it would preserve exactly the state this check exists to surface.
+- Only `## Open Questions` counts. Per §spec-requirements an open question is an **undecided blocker**; a question deferred pending a condition ("not now; revisit when X lands") is resolved *with a condition* and belongs in that scenario's `## Resolved Questions` with its trigger recorded. This is a convention rather than a skip marker on purpose — an exemptible section would let anything blocking be relabelled to ship past the check.
+
+Suggested fix per finding, offering both exits: resolve each question via `/{project}:target {feature}/<scenario>` then `/{project}:clarify` (scenario-targeted), **or** — when the question is deferred rather than undecided — move it to the scenario's `## Resolved Questions` with the condition that will settle it.
+
+When `--fix` is set, this check additionally reverts affected specs from `done` to `in-progress` — via `set-status` (`from: done`, `to: in-progress`) on the runtime path, a direct frontmatter edit on the markdown-only path — and emits a one-line notice for each (`reverted: specs/{feature}/{file} from done to in-progress — unresolved scenario questions in {scenarios}`). The revert is never silent. Specs below `done` are not reverted: their finding is advisory, so there is no drifted state to correct. See [046 — Scenario open-question visibility](../../specs/046-scenario-open-question-visibility/spec.md).
 
 ### Cross-spec references (advisory)
 

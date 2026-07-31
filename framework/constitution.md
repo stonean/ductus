@@ -95,7 +95,7 @@ The top-level directory name (`specs` above) is the documented default; a projec
 
 - Every spec includes a **Status** indicator: `draft`, `clarified`, `planned`, `in-progress`, or `done`
 - Every spec includes **Acceptance Criteria** — concrete, testable conditions that define "done"
-- Every spec includes **Open Questions** — uncertainties and unresolved decisions
+- Every spec includes **Open Questions** — uncertainties and unresolved decisions. An open question is an **undecided blocker**: a decision deferred pending a condition ("not now; revisit when X lands") is resolved *with* a condition and belongs in Resolved Questions with its trigger recorded, not left open
 - Every spec lists **Dependencies** — other specs this feature depends on
 - Open questions must be resolved before moving to the plan phase
 - Specs describe behavior and contracts, not implementation
@@ -110,7 +110,7 @@ The top-level directory name (`specs` above) is the documented default; a projec
 | `clarified` | All open questions resolved, acceptance criteria are concrete and testable |
 | `planned` | Plan and tasks exist, readiness check passed |
 | `in-progress` | Implementation has started |
-| `done` | All acceptance criteria verified, code merged |
+| `done` | All acceptance criteria verified, code merged, and no scenario under the spec carries unresolved open questions |
 
 ```text
 draft ──/clarify──▶ clarified ──/plan──▶ planned ──/implement──▶ in-progress ──[/review gate]──▶ done
@@ -119,7 +119,7 @@ draft ──/clarify──▶ clarified ──/plan──▶ planned ──/impl
 Forward edges only — `/clarify` raises status to `clarified`, `/plan` to `planned`, `/implement` to `in-progress` and then to `done`. The `in-progress → done` transition is gated by `/review`: `/implement` MUST NOT write `status: done` while the spec's `review.last-run` is unset or `review.blocking` is `true`. `/review` is a gate, not a state transition — it records findings and updates the `review:` frontmatter block, but does not change `status`. The gate composes with `/analyze` (which flags drifted `done` specs) and the shipped CI template (which fails PRs that bypass the local checks) per the **Design Principles** rule: never depend on human diligence. Three back-edges exist:
 
 - **Backward via new questions** — `clarified` / `planned` / `in-progress` → `draft` when `/amend` records a new open question; the next `/clarify` resolves the question and the spec advances forward again. `draft` is the only status that tolerates open questions, so it is the destination; `/amend` performs the status mutation in the same write that records the question.
-- **Backward via new scenario** — `done` → `in-progress` when `/amend` records a scenario. The scenario's task is implemented and the spec returns to `done`.
+- **Backward via new scenario** — `done` → `in-progress` when `/amend` records a scenario. The scenario's task is implemented and the spec returns to `done`. A scenario that *carries open questions* takes this same edge, **not** the question edge above: that edge exists because `draft` is the only status tolerating open questions **in the spec body**, and a scenario's questions are a separate signal that leaves the body untouched. Reverting to `draft` would assert a body state that is not true and route to feature-targeted `/clarify`, which does not read scenarios. The questions still bind — a spec does not reach `done` while any remain (see the `done` row above) — but the routing pressure comes from that gate, not from the status.
 - **Backward via meaningful body edit** — `done` → `in-progress` when any artifact under `specs/{feature}/` is edited *meaningfully*. An edit is **mechanical** (no back-edge) in either of two diff-determinable cases: **(a)** every change in the diff is the same find-and-replace token substitution, applied uniformly across all live artifacts per the `AGENTS.md` rename rule's scope, mapping a deprecated label (slug, capability, command, identifier, parenthetical descriptor) to its current label; or **(b)** every change in the diff adds, removes, or rewrites a **cross-service reference** — an inline body link whose target resolves to a registered `.govern/config.toml` `[services]` entry, together with the regenerated `references:` frontmatter that harvests it — because such references are informative cross-service navigation, never dependencies, acceptance criteria, or behavior (spec 030). Anything else — new scope, changed semantics, factual corrections, restructuring, edits scoped to a single spec — is a **meaningful edit** and triggers the back-edge via the same `/amend` flow used for scenarios. The distinction is determinable from the diff alone, so the rule does not depend on author judgment.
 
 This avoids spec proliferation; scenarios evolve the existing spec rather than spawning a new one. Spec bodies are living documents that represent current state — git history is the historical record of what was written when.
@@ -171,7 +171,7 @@ Before implementation begins, verify the feature is ready to build. This is a qu
 
 - [ ] Spec status is `planned`
 - [ ] Acceptance criteria are concrete and testable — no empty placeholders
-- [ ] All open questions are resolved
+- [ ] All open questions are resolved — the spec body's **and** those carried by any scenario under it
 - [ ] Data model exists if the feature introduces or modifies domain entities or data structures
 - [ ] Plan does not conflict with `system.md` or other feature specs
 - [ ] Tasks are ordered and each has a clear definition of done

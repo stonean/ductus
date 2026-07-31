@@ -16,7 +16,7 @@ Establishes which feature spec all subsequent `/{project}:*` commands operate on
 
 ## Scope Boundaries
 
-- Read `.govern/constitution.md` once per session and the targeted feature's `spec.md` frontmatter and open-question count. Read the targeted scenario file only when one is specified.
+- Read `.govern/constitution.md` once per session and the targeted feature's `spec.md` frontmatter and open-question count. `read-spec` also returns the feature's scenario open questions (a separate field; it reads `scenarios/*.md` to derive them), which step 9 reports. Read a targeted scenario file directly only when one is specified.
 - Do NOT read plan files, tasks, source code, test files, or unrelated specs' bodies.
 - Do NOT modify any spec, plan, scenario, or source file. The only file written is the session file (`.govern/session.toml`). Status transitions belong to the pipeline commands (`/{project}:clarify`, `/{project}:plan`, `/{project}:implement`) and to `/{project}:amend` (the documented back-edges: `clarified|planned|in-progress → draft` on a new question, and `done → in-progress` on a new scenario).
 - Reference: §spec-lifecycle, §scenarios, §concurrent-features, §text-first-artifacts.
@@ -45,7 +45,18 @@ Establishes which feature spec all subsequent `/{project}:*` commands operate on
 8. Invoke `write-session` with the feature slug as the feature argument, the repo-relative spec directory — under the configured `[paths] specs-root` (default `specs`; spec 040) — as the path argument, and the scenario slug plus its file path as the scenario and scenario-path arguments when one is targeted (omit both to clear any previously set scenario). This is a *target write*: the primitive sets feature/path/(scenario) and stamps a fresh set-at while **preserving** any cli-config-dir already in the file (the per-contributor agent identity written by `/govern`), at `.govern/session.toml` (repo root; gitignored; same path for every adopter regardless of AI CLI or project name), and applies tempfile + rename atomic-write semantics. On the markdown-only path (no runtime on `PATH`), the host first reads any existing `.govern/session.toml` to capture its cli-config-dir, then writes the TOML directly — top-level keys feature, path, optional scenario, optional scenario-path, set-at (ISO 8601 UTC), then the preserved cli-config-dir (when present) — through the same tempfile + rename pattern.
 
 <!-- audit:ignore-promotion -->
-9. Display the resolved target: feature name and current status, scenario detail when present, the artifacts list (which of spec.md, plan.md, tasks.md, and data-model.md exist), the dependency status from step 5, the open-question count, and the next pipeline step per the Status → next action table below.
+9. Display the resolved target: feature name and current status, scenario detail when present, the artifacts list (which of spec.md, plan.md, tasks.md, and data-model.md exist), the dependency status from step 5, the open-question count, the outstanding scenario questions per **Scenario open questions** below, and the next pipeline step per the Status → next action table below.
+
+## Scenario open questions
+
+`read-spec` (step 6) returns scenario open questions as a field separate from the spec body's open-question count, each entry tagged with its source scenario. Report them whenever the count is non-zero, **including when no scenario is targeted** — a contributor who targets the feature is exactly the one who cannot otherwise see them.
+
+- Display the total and name every scenario carrying questions, in the order `read-spec` returns them (the shared scenario-file listing's case-insensitive filename order). List them **all**, with no cap: a truncated list reads as "these are the ones that need attention" while hiding others.
+- Recommend no specific scenario. Nothing mechanical can rank them — question count is not importance, and one wire-contract decision outweighs three cosmetic ones. The recommended *action* is singular (scenario-targeted clarification); which scenario to target is the contributor's choice. This mirrors the unmatched-slug path in step 7, which lists the available scenarios and asks the user to choose.
+- The recommended next step for a feature with outstanding scenario questions is `/{project}:clarify` (scenario-targeted) rather than `/{project}:implement` — see the Status → next action table's override below.
+- A question deferred rather than undecided ("not now; revisit when X lands") is resolved *with a condition* and belongs in the scenario's `## Resolved Questions` with its trigger recorded; only `## Open Questions` entries count. See [046 — Scenario open-question visibility](../../specs/046-scenario-open-question-visibility/spec.md).
+
+The scenario-targeted path (step 7) is unchanged: when a scenario is targeted, its own detail and open-question count are displayed as before.
 
 ## Status → next action
 
@@ -58,3 +69,5 @@ Establishes which feature spec all subsequent `/{project}:*` commands operate on
 | done | any | confirm complete; run /{project}:amend to record a scenario and reopen |
 
 When the status is clarified, planned, or in-progress AND the open-question count is at least one, the next step is `/{project}:clarify` (recovery). This state usually arises from a manual frontmatter edit; the normal back-edge via `/{project}:amend` keeps status and open-question presence in sync.
+
+When the feature has one or more **scenario** open questions, the next step is `/{project}:clarify` (scenario-targeted) — at any status, including `done`, since a spec is not complete while its scenarios carry questions (§spec-lifecycle). Recovery takes precedence when both apply: spec-body questions at `clarified` or later are the more upstream defect, and clearing them reverts the spec to `draft` with the scenario questions still there to resolve afterward. The scenario questions are still reported in either case.
