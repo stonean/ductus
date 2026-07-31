@@ -19,15 +19,9 @@
 # one place the literal must not reappear.
 
 set -uo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT"
-
-drift=0
-
-emit() {
-  echo "runtime-hardcoded-paths | $1 | $2 | $3"
-  drift=1
-}
+# shellcheck source-path=SCRIPTDIR source=lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
+audit_family runtime-hardcoded-paths
 
 # 13a — Scan runtime/src for any literal `.claude/commands/gov/`.
 # This is the exact string the parameterization scenario eliminated.

@@ -37,16 +37,11 @@
 # macOS bash 3.2: no associative arrays, no mapfile.
 
 set -uo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT"
+# shellcheck source-path=SCRIPTDIR source=lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
+audit_family runtime-probe-parity
 
 GOVERN="framework/bootstrap/govern.md"
-
-drift=0
-emit() {
-  echo "runtime-probe-parity | $1 | $2 | $3"
-  drift=1
-}
 
 if [ ! -f "$GOVERN" ]; then
   emit "$GOVERN" "agent registry source missing" "restore $GOVERN"

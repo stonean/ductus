@@ -27,15 +27,9 @@
 # once.
 
 set -uo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT"
-
-drift=0
-
-emit() {
-  echo "consolidation-pair | $1 | $2 | $3"
-  drift=1
-}
+# shellcheck source-path=SCRIPTDIR source=lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
+audit_family consolidation-pair
 
 # 11a — Extract SESSION_FILE from schema/paths.rs (moved there from
 # write_session.rs by spec 042's resolver consolidation). The constant is

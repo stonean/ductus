@@ -47,8 +47,9 @@
 # a concrete duplicate to write the pattern against.
 
 set -uo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT"
+# shellcheck source-path=SCRIPTDIR source=lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
+audit_family ssot-invariants
 
 # v1: no findings emitted. Header documents the curated list. Exit 0.
 exit 0

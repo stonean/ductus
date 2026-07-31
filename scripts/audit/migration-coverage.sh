@@ -18,18 +18,12 @@
 # parsing — Python 3.11+ ships with `tomllib`.
 
 set -uo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT"
+# shellcheck source-path=SCRIPTDIR source=lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
+audit_family migration-coverage
 
 REGISTRY="framework/migrations.toml"
 PROCEDURES_DIR="framework/migrations"
-
-drift=0
-
-emit() {
-  echo "migration-coverage | $1 | $2 | $3"
-  drift=1
-}
 
 if [ ! -f "$REGISTRY" ]; then
   emit "$REGISTRY" "registry file missing" "create $REGISTRY per spec 027"

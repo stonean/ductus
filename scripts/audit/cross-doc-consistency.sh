@@ -22,15 +22,9 @@
 # exits 0 when no findings, 1 when any sub-check produced findings.
 
 set -uo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT"
-
-drift=0
-
-emit() {
-  echo "cross-doc | $1 | $2 | $3"
-  drift=1
-}
+# shellcheck source-path=SCRIPTDIR source=lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
+audit_family cross-doc
 
 # -- 1b: Pipeline-diagram status sequence -----------------------------------
 

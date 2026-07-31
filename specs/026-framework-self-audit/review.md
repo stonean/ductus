@@ -13,7 +13,7 @@ skipped-passes: []
 
 ## Summary
 
-Reviewed `/audit` and its nine family check scripts (Phase B/C/D + the Family 9 pulled in mid-implement). Stack: text-first markdown + bash with one Rust touch to `gen-claude-commands.sh` (a new `--check` flag added during Phase A to close check-zero's gap). Loaded rule files: `configuration-cross.md` only — none of its CFG-* triggers fire against the diff (no env-var lookups, operator-tunable constants, or shared cross-module values introduced). All five passes ran. 0 MUST, 1 SHOULD (acknowledged boilerplate across the nine family scripts), 1 low-confidence (bash function variable scoping in primitive-promotion-candidates). `blocking: no`.
+Reviewed `/audit` and its nine family check scripts (Phase B/C/D + the Family 9 pulled in mid-implement). Stack: text-first markdown + bash with one Rust touch to `gen-claude-commands.sh` (a new `--check` flag added during Phase A to close check-zero's gap). Loaded rule files: `configuration-cross.md` only — none of its CFG-* triggers fire against the diff (no env-var lookups, operator-tunable constants, or shared cross-module values introduced). All five passes ran. 0 MUST, 1 SHOULD (acknowledged boilerplate across the nine family scripts — **since fixed**, see §Resolved after the review run), 1 low-confidence (bash function variable scoping in primitive-promotion-candidates). `blocking: no`.
 
 **Scope.** `framework/commands/audit.md` + generated mirror; `scripts/audit/` (10 scripts — check-zero, run-all, 8 family scripts + Family 9 — plus README); `scripts/gen-claude-commands.sh` (--check mode added); `.github/workflows/{markdown-only-pipeline,runtime-release}.yml` (v1 soft-launch advisory steps); spec + tasks edits.
 
@@ -23,14 +23,21 @@ _None._
 
 ## SHOULD violations (advisory)
 
-### SHOULD: REUSE-001 — boilerplate duplication across family scripts
+_None open._ The one finding this run produced (REUSE-001) was fixed later — see §Resolved after the review run. The frontmatter counts describe what the run against `b160cfb` found and stay in lockstep with the `review:` block in `spec.md`; a future `/gov:review` re-run against `HEAD` is what moves them.
+
+## Resolved after the review run
+
+### SHOULD: REUSE-001 — boilerplate duplication across family scripts (fixed 2026-07-30)
 
 - **File**: `scripts/audit/*.sh` (cross-doc-consistency, manifest-parity, registry-equivalence, placeholder-roundtrip, template-alignment, ssot-invariants, sibling-coupling, introducing-drift, primitive-promotion-candidates)
 - **Rule**: AGENTS.md §design-principles ("Never design framework features that depend on human diligence") — by extension, "Don't Repeat Yourself" applied to the framework's own auditor.
 - **Finding**: Each family script repeats the same boilerplate: `set -uo pipefail`, `ROOT=...`, `cd "$ROOT"`, `drift=0`, an `emit()` function with the same pipe-separated output shape. ~10 lines × 9 scripts = ~90 lines of structurally-identical code. A shared `scripts/audit/lib.sh` would let each family script `source` the boilerplate.
 - **Auto-fixable**: yes (mechanical extraction)
-- **Suggested fix**: Extract the shared boilerplate to `scripts/audit/lib.sh` exposing `audit_emit FAMILY LOCATION MESSAGE FIX` and the `ROOT/cd` setup; each family script `source`s the lib and uses `audit_emit` instead of the local `emit()`. Per-family contract (stdout findings, exit 0/1, read-only) stays unchanged.
-- **Trade-off accepted for v1**: shared lib couples the nine scripts and reduces their stand-alone-invocation ergonomics (`bash scripts/audit/X.sh` would require lib.sh on relative path). Per-script standalone invocation is documented in `scripts/audit/README.md` as the per-family contract — useful for triaging a single check failure in CI. Extracting the lib is an option, not a blocker.
+- **Trade-off accepted at the time**: shared lib couples the nine scripts and reduces their stand-alone-invocation ergonomics (`bash scripts/audit/X.sh` would require lib.sh on relative path). Per-script standalone invocation is documented in `scripts/audit/README.md` as the per-family contract — useful for triaging a single check failure in CI. Extracting the lib was an option, not a blocker.
+- **Resolution**: extracted to `scripts/audit/lib.sh`, which owns `ROOT`/`cd`, the `drift` accumulator, and `emit LOCATION MESSAGE SUGGESTED-FIX`; `audit_family NAME` sets the leading column so the call sites keep their three-argument shape. Every script in the directory sources it — the fifteen families plus `check-zero.sh` (whose hand-rolled finding line is now an `emit` call) and `run-all.sh` (which uses `drift` but renders per-family headers rather than finding lines). The boilerplate that had grown to ~10 lines × 17 scripts is now one four-line header apiece. `installer-registry-parity.sh` held a second copy of the finding shape inside its python heredoc; that python now prints tab-separated records the shell renders through `emit`, matching `migration-coverage.sh`, so the pipe-separated line exists in exactly one place.
+- **Fails closed**: the source line carries `|| exit 1`. Without it a missing `lib.sh` left `ssot-invariants.sh` — the always-`exit 0` stub — reporting clean while its `stderr` was swallowed by the aggregator (which only prints captured output for non-zero families). The other scripts failed closed only incidentally, via `set -u` on the unbound `drift` at their final `exit`.
+- **Standalone-invocation ergonomics preserved**: the lib path is derived from `${BASH_SOURCE[0]}`, not the caller's `cwd`, so `bash scripts/audit/X.sh` works from the repo root, from an absolute path in any directory, and as `./X.sh` from inside `scripts/audit/`. The per-family contract in `scripts/audit/README.md` is unchanged and now documents the shared header.
+- **Verified**: all seventeen scripts were run pre- and post-refactor against paired pristine `git archive HEAD` copies — clean, then with identical injected drift (broken placeholders, deleted templates/registry/`govern.md`/constitution, removed MCP permission line, stale `` `/capture` `` reference, hardcoded runtime path, prose-only command step, perturbed `install.sh` settings seed) — and produced identical stdout, stderr, and exit codes in every case. Across the drift rounds every script except `ssot-invariants.sh` (the stub, which never emits) and `sibling-coupling.sh` (needs a specific two-spec configuration) rendered real findings through the shared `emit`. `run-all.sh` against the repo is byte-identical to the pre-refactor baseline (clean, exit 0). Also checked: every script under macOS system bash 3.2 with no stderr; `shellcheck -x` clean from any working directory (`source-path=SCRIPTDIR`); and with `lib.sh` removed, every script — `ssot-invariants.sh` included — exits 1.
 
 ## Low-confidence findings
 
@@ -58,7 +65,7 @@ No security rules apply at the framework level for the diff in scope. The bash s
 
 ### Reuse
 
-One SHOULD finding (REUSE-001 above) on boilerplate duplication across the nine family scripts. The repeated pattern is intentional per the per-family standalone-invocation contract; extracting a shared lib is a v2 option, not a v1 blocker. Other extractor helpers (`extract_claude_mcp`, `extract_auggie_mcp`, `extract_paths`, etc.) appear similar at a glance but have meaningful per-family differences in regex shape and field semantics — not deduplicable without an awk-level abstraction that would obscure the per-family intent.
+One SHOULD finding (REUSE-001 above) on boilerplate duplication across the nine family scripts. Deferred at the time as intentional per the per-family standalone-invocation contract; since fixed by `scripts/audit/lib.sh`, which keeps that contract intact. Other extractor helpers (`extract_claude_mcp`, `extract_auggie_mcp`, `extract_paths`, etc.) appear similar at a glance but have meaningful per-family differences in regex shape and field semantics — not deduplicable without an awk-level abstraction that would obscure the per-family intent.
 
 ### Quality
 

@@ -21,15 +21,9 @@
 # Requires `python3` (3.11+) for TOML parsing.
 
 set -uo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT"
-
-drift=0
-
-emit() {
-  echo "fixture-session-shape | $1 | $2 | $3"
-  drift=1
-}
+# shellcheck source-path=SCRIPTDIR source=lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
+audit_family fixture-session-shape
 
 if ! command -v python3 >/dev/null 2>&1; then
   emit "(precondition)" "python3 not on PATH — cannot parse TOML" \

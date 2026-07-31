@@ -32,16 +32,11 @@
 # check actionable while the canonical fields are stable.
 
 set -uo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT"
+# shellcheck source-path=SCRIPTDIR source=lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
+audit_family template-alignment
 
 TEMPLATE_DIR="framework/templates/spec"
-drift=0
-
-emit() {
-  echo "template-alignment | $1 | $2 | $3"
-  drift=1
-}
 
 check_file_exists() {
   local file="$1"

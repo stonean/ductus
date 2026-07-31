@@ -37,8 +37,9 @@
 # authors touch those specs for other reasons.
 
 set -uo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT"
+# shellcheck source-path=SCRIPTDIR source=lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
+audit_family introducing-drift
 
 # Old-name tokens to scan for. Each entry is `old-name|new-name|fix-hint`
 # (pipe-separated). To add a rename here: include the slash-prefixed form
@@ -55,13 +56,6 @@ RENAMED_TOKENS=(
   "/gov:ask|/gov:amend|renamed to /amend (slash-command clarity)"
   "gov-rt:|gvrn:|MCP server name changed (spec 022 task 28)"
 )
-
-drift=0
-
-emit() {
-  echo "introducing-drift | $1 | $2 | $3"
-  drift=1
-}
 
 # Iterate done spec bodies. A "done" spec has `status: done` in its
 # frontmatter.

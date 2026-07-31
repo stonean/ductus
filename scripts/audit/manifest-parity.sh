@@ -27,15 +27,9 @@
 #     emerges from real maintenance experience.
 
 set -uo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT"
-
-drift=0
-
-emit() {
-  echo "manifest-parity | $1 | $2 | $3"
-  drift=1
-}
+# shellcheck source-path=SCRIPTDIR source=lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
+audit_family manifest-parity
 
 # Extract the set of MCP tool names from each agent's configure file,
 # stripping the agent-specific prefix so the sets are directly comparable.

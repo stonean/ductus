@@ -34,15 +34,9 @@
 # resolution is a follow-on framework refactor.
 
 set -uo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT"
-
-drift=0
-
-emit() {
-  echo "placeholder-roundtrip | $1 | $2 | $3"
-  drift=1
-}
+# shellcheck source-path=SCRIPTDIR source=lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
+audit_family placeholder-roundtrip
 
 # Walk every framework/commands/*.md file, looking for the three patterns.
 # Per-file: skip lines preceded by the ignore comment.

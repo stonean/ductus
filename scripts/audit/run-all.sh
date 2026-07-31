@@ -14,11 +14,11 @@
 # per-step argument binding for procedural commands).
 
 set -uo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT"
+# shellcheck source-path=SCRIPTDIR source=lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
 
-drift=0
-
+# The aggregator renders per-family headers rather than finding lines, so it
+# uses `drift` from the lib directly instead of `emit`.
 run_check() {
   local label="$1" script="$2"
   if [ ! -x "$script" ]; then

@@ -34,17 +34,12 @@
 # "never depend on human diligence" design principle.
 
 set -uo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT"
+# shellcheck source-path=SCRIPTDIR source=lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
+audit_family installer-registry-parity
 
 GOVERN="framework/bootstrap/govern.md"
 INSTALLER="install.sh"
-
-drift=0
-emit() {
-  echo "installer-registry-parity | $1 | $2 | $3"
-  drift=1
-}
 
 if [ ! -f "$GOVERN" ]; then
   emit "$GOVERN" "agent registry source missing" "restore $GOVERN"
@@ -201,36 +196,41 @@ def norm(x):
         return sorted((norm(i) for i in x), key=lambda e: json.dumps(e, sort_keys=True))
     return x
 
-def emit(loc, msg, fix):
-    print(f"installer-registry-parity | {loc} | {msg} | {fix}")
+# One tab-separated `location<TAB>message<TAB>fix` record per finding. The
+# shell renders them through `emit` below, so the finding line shape stays
+# defined once in lib.sh (same hand-off as migration-coverage.sh).
+def finding(loc, msg, fix):
+    print(f"{loc}\t{msg}\t{fix}")
 
 for key, (path, body) in seeds.items():
     if key not in rows:
-        emit(f"{installer} ({path})",
-             f"seeds settings for '{key}' but '{key}' is not in the agent registry",
-             f"add '{key}' to the §Agent Registry table in {govern}, or remove its seed from {installer}")
+        finding(f"{installer} ({path})",
+                f"seeds settings for '{key}' but '{key}' is not in the agent registry",
+                f"add '{key}' to the §Agent Registry table in {govern}, or remove its seed from {installer}")
         continue
     try:
         reg = norm(json.loads(rows[key]))
     except json.JSONDecodeError as e:
-        emit(f"{govern} (agent {key})", f"settings_template is not valid JSON: {e}",
-             "repair the registry settings_template cell")
+        finding(f"{govern} (agent {key})", f"settings_template is not valid JSON: {e}",
+                "repair the registry settings_template cell")
         continue
     try:
         seed = norm(json.loads(body))
     except json.JSONDecodeError as e:
-        emit(f"{installer} ({path})", f"seeded settings JSON is malformed: {e}",
-             "repair the install.sh heredoc")
+        finding(f"{installer} ({path})", f"seeded settings JSON is malformed: {e}",
+                "repair the install.sh heredoc")
         continue
     if reg != seed:
-        emit(f"{installer} ({path})",
-             f"settings seed for '{key}' drifts from the registry settings_template",
-             f"re-sync the '{path}' heredoc in {installer} with the '{key}' row in {govern} §Agent Registry")
+        finding(f"{installer} ({path})",
+                f"settings seed for '{key}' drifts from the registry settings_template",
+                f"re-sync the '{path}' heredoc in {installer} with the '{key}' row in {govern} §Agent Registry")
 PY
 )"
 if [ -n "$seed_drift" ]; then
-  printf '%s\n' "$seed_drift"
-  drift=1
+  while IFS="$(printf '\t')" read -r loc msg fix; do
+    [ -z "$loc" ] && continue
+    emit "$loc" "$msg" "$fix"
+  done <<< "$seed_drift"
 fi
 
 exit "$drift"

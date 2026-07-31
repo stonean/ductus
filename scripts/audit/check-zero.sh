@@ -12,9 +12,9 @@
 # fresh `dependencies:` frontmatter if anything was out of sync.
 
 set -uo pipefail
-
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT"
+# shellcheck source-path=SCRIPTDIR source=lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
+audit_family check-zero
 
 # Each entry is `script arg1 arg2 ...`. Run in order. Generators use the
 # flag they support (`--dry-run` for the older generators; `--check` was
@@ -31,17 +31,15 @@ checks=(
   "scripts/lint-tool-coverage.sh"
 )
 
-drift=0
 for entry in "${checks[@]}"; do
   # Capture stdout+stderr; only print on failure to keep clean runs quiet.
   output="$(eval "$entry" 2>&1)" && status=0 || status=$?
   if [ "$status" -ne 0 ]; then
-    drift=1
     script="${entry%% *}"
     # One pipe-separated finding line, plus the captured output indented
     # for readability. The aggregator surfaces the finding line; humans
     # read the indented output to diagnose.
-    echo "check-zero | $script | precondition failed (exit $status) | re-run the script, fix what it reports, commit, and re-invoke /audit"
+    emit "$script" "precondition failed (exit $status)" "re-run the script, fix what it reports, commit, and re-invoke /audit"
     while IFS= read -r line; do
       echo "             $line"
     done <<< "$output"

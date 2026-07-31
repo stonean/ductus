@@ -21,18 +21,12 @@
 #      annotation on the previous content line, emit a finding.
 
 set -uo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT"
+# shellcheck source-path=SCRIPTDIR source=lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
+audit_family primitive-promotion
 
 MANIFEST="framework/runtime-tools.txt"
 LEGACY_ALLOWLIST="runtime/legacy-prose-commands.txt"
-
-drift=0
-
-emit() {
-  echo "primitive-promotion | $1 | $2 | $3"
-  drift=1
-}
 
 # Load primitive names (skip blank lines and # comments).
 primitives=()

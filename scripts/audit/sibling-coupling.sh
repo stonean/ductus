@@ -22,15 +22,9 @@
 # surfaced the pair at 025's draft time.
 
 set -uo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT"
-
-drift=0
-
-emit() {
-  echo "sibling-coupling | $1 | $2 | $3"
-  drift=1
-}
+# shellcheck source-path=SCRIPTDIR source=lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
+audit_family sibling-coupling
 
 # Collect non-done spec directories.
 non_done_specs=()

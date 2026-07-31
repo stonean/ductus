@@ -25,18 +25,13 @@
 # a second prose list.
 
 set -uo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT"
+# shellcheck source-path=SCRIPTDIR source=lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
+audit_family installer-command-parity
 
 GOVERN="framework/bootstrap/govern.md"
 SRC_DIR="framework/commands"
 SECTION="$GOVERN §Per-Agent Scaffolding → Slash commands"
-
-drift=0
-emit() {
-  echo "installer-command-parity | $1 | $2 | $3"
-  drift=1
-}
 
 if [ ! -f "$GOVERN" ]; then
   emit "$GOVERN" "bootstrap file not found" "restore framework/bootstrap/govern.md"

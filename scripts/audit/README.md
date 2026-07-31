@@ -10,10 +10,28 @@ Every script in this directory follows the same contract:
 - **Exit code.** `0` when no findings; `1` when any finding is present. Aggregated by `/audit` via logical OR — any family with findings makes the whole audit fail.
 - **Read-only.** No file modifications. Scripts may write to `$TMPDIR` for intermediate computation but must not touch the working tree.
 - **Idempotent.** Same inputs produce identical output across runs.
-- **Self-contained.** Each script can be invoked directly (`bash scripts/audit/{family}.sh`) without orchestration — useful when triaging a specific check.
+- **Self-contained.** Each script can be invoked directly (`bash scripts/audit/{family}.sh`) from any working directory, without orchestration — useful when triaging a specific check.
+
+The contract's mechanics live in `lib.sh`, which every script sources before doing any work:
+
+```bash
+set -uo pipefail
+# shellcheck source-path=SCRIPTDIR source=lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
+audit_family {family}
+```
+
+Sourcing resolves the repo root and `cd`s into it, seeds the `drift` accumulator, and defines `emit LOCATION MESSAGE SUGGESTED-FIX` — which renders the finding line above and sets `drift=1`. `audit_family` names the leading column. A script ends with `exit "$drift"`.
+
+Three properties this buys, each of which the shape above is load-bearing for:
+
+- **Direct invocation keeps working.** The lib path is derived from the script's own location, not the caller's working directory.
+- **The finding shape is defined once.** A change to the output format is a one-file edit. Where a check computes findings in python (`installer-registry-parity.sh`, `migration-coverage.sh`), python prints tab-separated `location<TAB>message<TAB>fix` records and the shell renders them through `emit` — the pipe-separated shape never appears in the python.
+- **A missing `lib.sh` fails closed.** `|| exit 1` on the source line makes the script exit non-zero instead of continuing without `emit` (which would otherwise let a stub family report clean).
 
 ## Scripts
 
+- `lib.sh` — shared boilerplate (repo root, `drift`, `emit`). Sourced by every script here; not a check itself.
 - `check-zero.sh` — generator/lint precondition pass. Run before family checks; halts `/audit` on failure to avoid misleading findings against known-stale generator output.
 - `cross-doc-consistency.sh` — Family 1.
 - `manifest-parity.sh` — Family 2.
