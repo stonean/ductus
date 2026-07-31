@@ -61,6 +61,16 @@ The spec-reading surface reports scenario open questions as their own field, dis
 A spec does not reach `done` while any scenario under it has unresolved open questions. This joins the existing `/{project}:review` gate on the `in-progress → done` transition rather than replacing
 it: both must pass. §spec-lifecycle's definition of `done` and §readiness-check's "All open questions are resolved" state explicitly that scenario questions are included.
 
+### What counts as an open question
+
+The gate rests on an existing definition rather than a new one. §spec-requirements states that open questions must be resolved before the plan phase, and §spec-lifecycle makes `draft` the status that tolerates them: an **open question is an undecided blocker**. A question that would survive into `done` was never one.
+
+A question deferred pending a condition — "not now; revisit when X lands" — is therefore **resolved, with a condition**, and belongs in the scenario's `## Resolved Questions`, whose template describes it as holding answers preserved for context. Deciding not to decide yet, and recording what will settle it, is an answer. The question stays next to the behavior it concerns; only its section changes.
+
+This is deliberately a **convention, not machinery**. A `## Deferred Questions` section that the gate skipped, or a skip marker, would be a sanctioned hiding place: anything blocking could be relabelled to ship past the gate, which is the failure this spec exists to prevent, reintroduced under an approved name. The trade-off is accepted with its cost stated — classification is the author's judgment and nothing mechanical verifies it. A convention that can be misapplied is safer than a mechanism that legitimises the misapplication.
+
+Both exits are surfaced wherever the gate or the finding fires: resolve the question, or record it as deferred with its trigger.
+
 ### Remaining work surfaces
 
 `/{project}:target` and `/{project}:status` report outstanding scenario questions for a feature even when no scenario is targeted, and name the scenarios carrying them so the contributor can target one.
@@ -124,6 +134,9 @@ What stays with this spec: the constitution amendments to §spec-lifecycle's `do
 - [ ] An unreadable or malformed scenario file never blocks the `done` gate and never produces a blocking finding
 - [ ] A `done` spec carrying unresolved scenario questions when this feature ships is reported and reverted with no grandfather exemption
 - [ ] All scenarios carrying questions are listed with no cap or truncation
+- [ ] The gate's guidance and the analyze finding's suggested fix both offer two exits — resolve the question, or record it in `## Resolved Questions` as deferred with its trigger condition
+- [ ] A question recorded under `## Resolved Questions` never blocks `done`, whether or not it names a deferral condition
+- [ ] No section or marker exists that exempts a question from the gate while it remains under `## Open Questions`
 - [ ] The primitive-level changes land as scenarios under `022-deterministic-runtime`, each back-linking to this spec, with 022's data-model updated for the new field and finding family
 - [ ] The constitution amendments to §spec-lifecycle and §readiness-check land with this spec, not with 022
 - [ ] `/{project}:analyze --fix` reverts a `done` spec with unresolved scenario questions to `in-progress`, matching the review-state-drift revert, and emits a non-silent notice naming the spec

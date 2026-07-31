@@ -162,6 +162,13 @@ pub(crate) fn run_with_lint(
 /// the guidance points at scenario-targeted clarify, the only command that
 /// can act on them.
 ///
+/// Only `## Open Questions` counts. Per §spec-requirements an open
+/// question is an *undecided blocker*; one deferred pending a condition is
+/// resolved-with-a-condition and belongs in `## Resolved Questions`, which
+/// the parser does not read. That is a convention rather than a skip
+/// marker on purpose — an exemptible section would let anything blocking
+/// be relabelled to ship past this gate.
+///
 /// Ordered ahead of the `review:` checks because an unresolved design
 /// question is the more upstream defect — reviewing a design that is about
 /// to change wastes the review.
@@ -191,7 +198,10 @@ fn scenario_question_block(
             scenarios.join(", ")
         )),
         guidance: Some(format!(
-            "Run /{project}:target {feature}/<scenario> then /{project}:clarify to resolve each scenario's questions in place."
+            "Run /{project}:target {feature}/<scenario> then /{project}:clarify to resolve each \
+             scenario's questions in place. A question that is deferred rather than undecided \
+             (\"not now; revisit when X lands\") is resolved with a condition — move it to the \
+             scenario's Resolved Questions with its trigger recorded."
         )),
         violations: vec![],
     })
@@ -502,6 +512,43 @@ mod tests {
         assert_eq!(
             result.blocked_by,
             Some(ReviewGateBlock::ScenarioOpenQuestions)
+        );
+    }
+
+    #[test]
+    fn a_question_deferred_into_resolved_questions_does_not_block() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        // The convention spec 046 settles on: a question that is deferred
+        // rather than undecided is resolved *with a condition* and lives in
+        // Resolved Questions. There is deliberately no exemptible section
+        // under Open Questions — that would let anything blocking be
+        // relabelled to ship past this gate.
+        seed_scenario(
+            tmp.path(),
+            "deferred.md",
+            "---\nsection: Behavior\n---\n\n## Open Questions\n\n*None — all resolved.*\n\n## Resolved Questions\n\n- **Should Family 10 enforce uniqueness?** Deferred — revisit when the first sunset commit lands.\n",
+        );
+        assert!(
+            run_with_lint(&args(), tmp.path(), clean_lint)
+                .unwrap()
+                .passed
+        );
+    }
+
+    #[test]
+    fn the_gate_guidance_offers_both_exits() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        seed_scenario(tmp.path(), "wire-contract.md", SCENARIO_WITH_QUESTIONS);
+        let guidance = run_with_lint(&args(), tmp.path(), clean_lint)
+            .unwrap()
+            .guidance
+            .unwrap();
+        assert!(guidance.contains("clarify"), "resolve exit: {guidance}");
+        assert!(
+            guidance.contains("Resolved Questions"),
+            "defer exit: {guidance}"
         );
     }
 
