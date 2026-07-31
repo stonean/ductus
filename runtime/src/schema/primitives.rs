@@ -353,6 +353,20 @@ pub struct OpenQuestion {
     pub text: String,
 }
 
+/// One unresolved open question carried by a scenario, tagged with the
+/// scenario it came from. Distinct from [`OpenQuestion`] (the spec body's
+/// own list) on purpose: spec-level and scenario-level questions are
+/// independent concerns for resolution, so the two lists are never merged
+/// (spec 046).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ScenarioOpenQuestion {
+    /// Slug of the scenario carrying the question (filename without `.md`).
+    pub scenario: String,
+    /// Question text.
+    pub text: String,
+}
+
 /// Result for `read-spec`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -363,8 +377,15 @@ pub struct ReadSpecResult {
     pub sections: Vec<SpecSection>,
     /// Acceptance-criteria checkboxes.
     pub acceptance_criteria: Vec<AcceptanceCriterion>,
-    /// Open Questions list.
+    /// Open Questions list, from the spec body only. Unchanged in meaning
+    /// and value by spec 046 — every existing consumer keeps its behavior.
     pub open_questions: Vec<OpenQuestion>,
+    /// Unresolved questions carried by this feature's scenarios, in shared
+    /// scenario order, each tagged with its source scenario. A sibling
+    /// signal to `open-questions`, never merged into it: merging would
+    /// route a feature-level target to feature-targeted clarify, which does
+    /// not read scenarios (spec 046).
+    pub scenario_open_questions: Vec<ScenarioOpenQuestion>,
     /// Repo-relative path to the spec file.
     pub path: String,
 }
@@ -2163,9 +2184,10 @@ mod tests {
         MigrateSessionFileArgs, MigrateSessionFileResult, OpenQuestion, PruneAction, PruneGate,
         PruneMode, PruneSection, PruneTasksArgs, PruneTasksResult, ReadSpecArgs, ReadSpecResult,
         ReadTasksArgs, ReadTasksResult, ResolveAnchorArgs, ResolveAnchorResult, ReviewBlock,
-        RuleCitation, RunGeneratorArgs, RunGeneratorResult, SetStatusArgs, SetStatusResult,
-        SizeSummary, SpecSection, Subtask, Task, TraverseDepsArgs, TraverseDepsResult,
-        ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteSessionArgs, WriteSessionResult,
+        RuleCitation, RunGeneratorArgs, RunGeneratorResult, ScenarioOpenQuestion, SetStatusArgs,
+        SetStatusResult, SizeSummary, SpecSection, Subtask, Task, TraverseDepsArgs,
+        TraverseDepsResult, ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteSessionArgs,
+        WriteSessionResult,
     };
 
     fn round_trip<T>(value: &T) -> T
@@ -2207,11 +2229,21 @@ mod tests {
                 text: "A single binary builds…".into(),
             }],
             open_questions: vec![OpenQuestion { text: "?".into() }],
+            scenario_open_questions: vec![ScenarioOpenQuestion {
+                scenario: "framework-list-dedup".into(),
+                text: "Format argument or separate primitive?".into(),
+            }],
             path: "specs/022-deterministic-runtime/spec.md".into(),
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert!(value.get("acceptance-criteria").is_some());
         assert!(value.get("open-questions").is_some());
+        // The scenario signal is a sibling key, never folded into
+        // `open-questions` (spec 046).
+        assert_eq!(
+            value["scenario-open-questions"][0]["scenario"],
+            "framework-list-dedup"
+        );
         assert_eq!(round_trip(&result), result);
     }
 

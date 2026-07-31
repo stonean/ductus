@@ -1229,11 +1229,16 @@ pub(crate) fn list_feature_dirs(specs_dir: &Path) -> Vec<String> {
 }
 
 /// List the scenario markdown files directly under `scenarios_dir`, sorted
-/// by filename. Matches the `.md` extension CASE-INSENSITIVELY so `FOO.MD`
-/// and `foo.md` are both scenarios — the two consuming surfaces
-/// (`dashboard` counts, `check-artifacts` derives slugs) must agree on the
-/// same set. Subdirectories and non-markdown files are excluded; an absent
-/// or unreadable directory yields an empty list.
+/// CASE-INSENSITIVELY by filename. Matches the `.md` extension
+/// case-insensitively too, so `FOO.MD` and `foo.md` are both scenarios —
+/// the consuming surfaces (`dashboard` counts, `check-artifacts` derives
+/// slugs, `read-spec` collects scenario open questions) must agree on the
+/// same set AND the same order. Subdirectories and non-markdown files are
+/// excluded; an absent or unreadable directory yields an empty list.
+///
+/// Ordering uses [`scenario_name_cmp`] — one comparator shared by every
+/// surface that presents scenarios, so a reader never sees two different
+/// orders for the same directory (spec 046).
 pub(crate) fn list_scenario_files(scenarios_dir: &Path) -> Vec<String> {
     let Ok(entries) = std::fs::read_dir(scenarios_dir) else {
         return Vec::new();
@@ -1248,8 +1253,20 @@ pub(crate) fn list_scenario_files(scenarios_dir: &Path) -> Vec<String> {
                 .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
         })
         .collect();
-    files.sort();
+    files.sort_by(|a, b| scenario_name_cmp(a, b));
     files
+}
+
+/// Order two scenario names case-insensitively, breaking ties on the raw
+/// bytes. The tiebreak is load-bearing: `read_dir` yields entries in
+/// filesystem order, so `ALPHA.MD` and `alpha.md` — equal under a
+/// lowercase-only key — would otherwise sort nondeterministically across
+/// machines. Shared by every surface that orders scenarios so the rule is
+/// stated once (spec 046).
+pub(crate) fn scenario_name_cmp(a: &str, b: &str) -> std::cmp::Ordering {
+    a.to_lowercase()
+        .cmp(&b.to_lowercase())
+        .then_with(|| a.cmp(b))
 }
 
 /// Scenario frontmatter shape: `section` is the post-017 field; `spec-ref`
@@ -1510,12 +1527,28 @@ mod tests {
             std::fs::write(dir.join(name), "x").unwrap();
         }
         std::fs::create_dir_all(dir.join("nested.md")).unwrap(); // a dir, excluded
+        // Case-insensitive ORDER as well as case-insensitive extension
+        // matching: `alpha.md` precedes `BETA.MD` (spec 046). A byte-order
+        // sort would put every uppercase name first.
         assert_eq!(
             list_scenario_files(&dir),
-            vec!["BETA.MD".to_string(), "alpha.md".to_string()]
+            vec!["alpha.md".to_string(), "BETA.MD".to_string()]
         );
         // Absent directory degrades to empty.
         assert!(list_scenario_files(&tmp.path().join("missing")).is_empty());
+    }
+
+    #[test]
+    fn scenario_name_cmp_breaks_case_ties_deterministically() {
+        use std::cmp::Ordering;
+        // Case-insensitive primary ordering.
+        assert_eq!(scenario_name_cmp("alpha.md", "BETA.MD"), Ordering::Less);
+        assert_eq!(scenario_name_cmp("BETA.MD", "alpha.md"), Ordering::Greater);
+        // Names differing only in case are ordered by raw bytes rather than
+        // left to read_dir's filesystem-dependent order.
+        assert_eq!(scenario_name_cmp("ALPHA.MD", "alpha.md"), Ordering::Less);
+        assert_eq!(scenario_name_cmp("alpha.md", "ALPHA.MD"), Ordering::Greater);
+        assert_eq!(scenario_name_cmp("alpha.md", "alpha.md"), Ordering::Equal);
     }
 
     #[test]

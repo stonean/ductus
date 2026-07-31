@@ -3,12 +3,13 @@
 use std::path::Path;
 
 use crate::primitives::{
-    PrimitiveError, Result, checkbox, parse_atx_heading, read_text, rel_path, section_line_indices,
-    split_frontmatter,
+    PrimitiveError, Result, checkbox, list_scenario_files, parse_atx_heading, read_text, rel_path,
+    section_line_indices, split_frontmatter,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    AcceptanceCriterion, Frontmatter, OpenQuestion, ReadSpecArgs, ReadSpecResult, SpecSection,
+    AcceptanceCriterion, Frontmatter, OpenQuestion, ReadSpecArgs, ReadSpecResult,
+    ScenarioOpenQuestion, SpecSection,
 };
 
 /// Execute the `read-spec` primitive against the given repo root.
@@ -41,14 +42,60 @@ pub fn run(args: &ReadSpecArgs, repo: &Path) -> Result<ReadSpecResult> {
     let sections = parse_sections(body, args.include_body);
     let acceptance_criteria = parse_checkboxes(body, "Acceptance Criteria");
     let open_questions = parse_open_questions(body, "Open Questions");
+    let scenario_open_questions = collect_scenario_open_questions(&feature_dir);
 
     Ok(ReadSpecResult {
         frontmatter,
         sections,
         acceptance_criteria,
         open_questions,
+        scenario_open_questions,
         path: rel_path(&spec_path, repo),
     })
+}
+
+/// Collect every unresolved question from this feature's `scenarios/*.md`,
+/// tagged with its source scenario slug, in shared scenario order.
+///
+/// Enumerates through [`list_scenario_files`] so the set and the order
+/// match every other scenario-aware surface, and parses each file's
+/// `## Open Questions` with the same [`parse_open_questions`] the spec body
+/// uses — so one parser decides what counts as a question everywhere
+/// (spec 046).
+///
+/// An absent `scenarios/` directory yields an empty list. So does a
+/// scenario whose file cannot be read or has no questions section: nothing
+/// can be proven about a file that will not parse, and an unknown is never
+/// escalated into a `done`-blocking finding.
+fn collect_scenario_open_questions(feature_dir: &Path) -> Vec<ScenarioOpenQuestion> {
+    let scenarios_dir = feature_dir.join("scenarios");
+    let mut out = Vec::new();
+    for name in list_scenario_files(&scenarios_dir) {
+        let Ok(content) = read_text(&scenarios_dir.join(&name)) else {
+            continue;
+        };
+        // A scenario normally carries `section:` frontmatter, but a
+        // hand-written one may not. Reuse the shared splitter and fall back
+        // to the whole file when there is no frontmatter block — the
+        // questions section is found by heading either way.
+        let scenario_path = scenarios_dir.join(&name);
+        let body =
+            split_frontmatter(&content, &scenario_path).map_or(content.as_str(), |(_, body)| body);
+        let slug = Path::new(&name)
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .unwrap_or(name.as_str())
+            .to_string();
+        out.extend(
+            parse_open_questions(body, "Open Questions")
+                .into_iter()
+                .map(|q| ScenarioOpenQuestion {
+                    scenario: slug.clone(),
+                    text: q.text,
+                }),
+        );
+    }
+    out
 }
 
 fn parse_sections(body: &str, include_body: bool) -> Vec<SpecSection> {
@@ -507,6 +554,138 @@ mod tests {
             "A question that wraps onto a second line"
         );
         assert_eq!(questions[1].text, "A second question");
+    }
+
+    /// Build a throwaway repo with one feature, optionally seeding
+    /// `scenarios/` files as `(filename, contents)` pairs. Kept local to
+    /// these tests so the shared `sample-repo` fixture — which several
+    /// other primitives enumerate — gains no new feature directory.
+    fn seed_feature(spec_body: &str, scenarios: &[(&str, &str)]) -> tempfile::TempDir {
+        let tmp = tempfile::tempdir().unwrap();
+        let feature = tmp.path().join("specs/046-probe");
+        std::fs::create_dir_all(&feature).unwrap();
+        std::fs::write(feature.join("spec.md"), spec_body).unwrap();
+        if !scenarios.is_empty() {
+            let dir = feature.join("scenarios");
+            std::fs::create_dir_all(&dir).unwrap();
+            for (name, body) in scenarios {
+                std::fs::write(dir.join(name), body).unwrap();
+            }
+        }
+        tmp
+    }
+
+    fn probe(tmp: &tempfile::TempDir) -> ReadSpecResult {
+        run(
+            &ReadSpecArgs {
+                feature: "046-probe".into(),
+                include_body: false,
+            },
+            tmp.path(),
+        )
+        .unwrap()
+    }
+
+    const SPEC_NO_QUESTIONS: &str = "\
+---
+status: in-progress
+dependencies: []
+---
+
+# 046 — Probe
+
+## Open Questions
+
+*None — all resolved.*
+";
+
+    #[test]
+    fn scenario_questions_are_reported_separately_from_the_body_count() {
+        let tmp = seed_feature(
+            SPEC_NO_QUESTIONS,
+            &[(
+                "wire-contract.md",
+                "---\nsection: Behavior\n---\n\n# Wire contract\n\n## Open Questions\n\n- Bracket operator or empty operand?\n- Does the filter apply to joins?\n",
+            )],
+        );
+        let result = probe(&tmp);
+
+        // The spec body's own count is untouched — this is the whole point
+        // of keeping the two signals separate.
+        assert!(
+            result.open_questions.is_empty(),
+            "spec-body count must stay zero"
+        );
+        assert_eq!(result.scenario_open_questions.len(), 2);
+        assert!(
+            result
+                .scenario_open_questions
+                .iter()
+                .all(|q| q.scenario == "wire-contract"),
+            "each entry carries its source scenario slug"
+        );
+        assert_eq!(
+            result.scenario_open_questions[0].text,
+            "Bracket operator or empty operand?"
+        );
+    }
+
+    #[test]
+    fn feature_without_scenarios_reports_no_scenario_questions() {
+        let tmp = seed_feature(SPEC_NO_QUESTIONS, &[]);
+        assert!(probe(&tmp).scenario_open_questions.is_empty());
+    }
+
+    #[test]
+    fn scenario_placeholder_and_resolved_sections_yield_no_questions() {
+        // What `create-scenario` compiles into every new scenario must read
+        // as zero, or every scenario would block its parent spec's `done`.
+        let tmp = seed_feature(
+            SPEC_NO_QUESTIONS,
+            &[(
+                "fresh.md",
+                "---\nsection: Behavior\n---\n\n# Fresh\n\n## Open Questions\n\n*None — captured during scenario authoring.*\n\n## Resolved Questions\n\n*None yet.*\n",
+            )],
+        );
+        assert!(probe(&tmp).scenario_open_questions.is_empty());
+    }
+
+    #[test]
+    fn scenario_questions_follow_shared_case_insensitive_order() {
+        let tmp = seed_feature(
+            SPEC_NO_QUESTIONS,
+            &[
+                (
+                    "Beta.md",
+                    "---\nsection: B\n---\n\n## Open Questions\n\n- from beta\n",
+                ),
+                (
+                    "alpha.md",
+                    "---\nsection: A\n---\n\n## Open Questions\n\n- from alpha\n",
+                ),
+            ],
+        );
+        let result = probe(&tmp);
+        let slugs: Vec<&str> = result
+            .scenario_open_questions
+            .iter()
+            .map(|q| q.scenario.as_str())
+            .collect();
+        // Case-insensitive: `alpha` precedes `Beta`. A byte-order sort would
+        // invert these.
+        assert_eq!(slugs, vec!["alpha", "Beta"]);
+    }
+
+    #[test]
+    fn scenario_without_a_questions_section_contributes_nothing() {
+        let tmp = seed_feature(
+            SPEC_NO_QUESTIONS,
+            &[(
+                "plain.md",
+                "---\nsection: Behavior\n---\n\n# Plain\n\n## Behavior\n\nNo questions section at all.\n",
+            )],
+        );
+        assert!(probe(&tmp).scenario_open_questions.is_empty());
     }
 
     #[test]

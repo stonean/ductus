@@ -17,12 +17,12 @@ Tasks 2–8 are authored as scenarios under [022 — Deterministic Runtime](../0
 
 ## 2. Add the scenario-open-question field to the spec reader
 
-- [ ] Read each `scenarios/*.md` through the shared scenario-file listing and parse its Open Questions with the task-1 parser
-- [ ] Return the entries as a field parallel to `open-questions`, each tagged with its source scenario
-- [ ] Leave `open-questions` untouched in meaning and value
-- [ ] Update the `read-spec` schema section in 022's data-model
-- [ ] Test: a feature whose scenario carries questions reports them in the new field and still reports zero in `open-questions`
-- [ ] Test: a feature with no `scenarios/` directory reports an empty field
+- [x] Read each `scenarios/*.md` through the shared scenario-file listing and parse its Open Questions with the task-1 parser
+- [x] Return the entries as a field parallel to `open-questions`, each tagged with its source scenario
+- [x] Leave `open-questions` untouched in meaning and value
+- [x] Update the `read-spec` schema section in 022's data-model
+- [x] Test: a feature whose scenario carries questions reports them in the new field and still reports zero in `open-questions`
+- [x] Test: a feature with no `scenarios/` directory reports an empty field
 
 - **Done when**: the new field is populated and documented, and no existing `open-questions` assertion changes.
 

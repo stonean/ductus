@@ -150,9 +150,18 @@ Result:
     { "checked": false, "text": "A single binary builds..." }
   ],
   "open-questions": [],
+  "scenario-open-questions": [
+    { "scenario": "framework-list-dedup", "text": "Format argument or separate primitive?" }
+  ],
   "path": "specs/022-deterministic-runtime/spec.md"
 }
 ```
+
+`open-questions` comes from the **spec body only** and is unchanged in meaning and value by spec 046 — every existing consumer keeps its behavior, and feature-targeted `/{project}:clarify` still reads exactly this list.
+
+`scenario-open-questions` is a **sibling** signal, never merged into it: the unresolved questions carried by `scenarios/*.md`, each tagged with its source scenario slug, in the shared scenario order. The two lists stay separate because spec-level and scenario-level questions are independent concerns for *resolution* — merging them would route a feature-level target to feature-targeted clarify, which does not read scenarios and would arrive with nothing to act on. Completion is where they join: a spec does not reach `done` while this list is non-empty ([046 — Scenario open-question visibility](../046-scenario-open-question-visibility/spec.md)).
+
+Both lists come from the same parser, which is comment- and fence-aware: questions inside an HTML comment or a fenced block are not entries, so a spec scaffolded from the shipped template reports zero rather than its commented-out examples. Scenario enumeration and ordering use the shared scenario-file listing, so the set and order match `check-artifacts` and `dashboard`. An absent `scenarios/` directory, an unreadable scenario, or one with no questions section each contribute nothing — an unknown is never escalated into a `done`-blocking finding.
 
 ### `read-tasks` — parse tasks.md into structured task list
 
