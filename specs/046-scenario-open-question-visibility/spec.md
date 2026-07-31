@@ -2,8 +2,8 @@
 status: done
 dependencies: [009-scenario-targeting, 022-deterministic-runtime]
 review:
-  last-run: 2026-07-31T01:49:27Z
-  reviewed-against: ddba6a401faf977d43d6d8c5d0f27edc9dfc7df2
+  last-run: 2026-07-31T02:10:51Z
+  reviewed-against: 931cfee1e2b94b40860a2f7c7740560a7c17106e
   must-violations: 0
   should-violations: 0
   low-confidence: 0
