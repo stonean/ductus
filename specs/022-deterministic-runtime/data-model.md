@@ -422,6 +422,14 @@ The dashboard payload's full shape is canonical in [scenarios/dashboard-primitiv
 { "rendered-markdown": "Target: 042-widget / planned / next: /gov:implement\n\n| Feature | Status | … |\n…" }
 ```
 
+The scenario-open-question-signal scenario adds two per-spec fields (spec 046):
+
+```json
+{ "scenario-open-question-count": 3, "scenarios-with-questions": ["audit-ci-hard-gate", "family-10-migration-coverage"] }
+```
+
+`scenario-open-question-count` is the total unresolved questions across the spec's scenarios, and `scenarios-with-questions` names the scenarios carrying them in shared scenario order. Both are distinct from `open-question-count`, which stays spec-body-only; the two signals are never summed. They drive three rendering changes: the existing Scenarios column gains a `{count} ({n} open)` suffix when non-zero (unchanged otherwise, so the glance table grows no ninth column), the Next Action cell overrides to `clarify (scenario)`, and a callout below the table names every affected spec with its carrying scenarios — no cap, since a truncated list reads as "these are the ones needing attention" while hiding others. When a spec is in recovery state *and* carries scenario questions, `clarify (recovery)` wins the cell — it is the more upstream defect — but **both** callouts render, because the scenario questions still need resolving after the recovery walk.
+
 The full pipeline view pre-rendered as one markdown fragment, in `/gov:status`'s documented order: preamble, dashboard table, counts and callouts, and the cross-service references readout (blocks separated by blank lines; the readout omitted when no spec declares references). The runtime resolves each spec's `references:` index internally for the readout — the same classification `resolve-references` exposes, with the matched service's `description` appended from the `[services]` registry — so one `dashboard` call covers the whole view on the runtime path. `/{project}:…` next actions and callout texts substitute the adopter's `[host] project` namespace. Returned data the host may restyle, never stdout printing (§runtime-boundary: no user-facing rendering owned by the runtime); the structured fields stay authoritative for hosts that render their own view. The canonical piece-by-piece formats live in `/gov:status`'s Rendering reference, which is also the markdown-only path.
 
 ### `resolve-feature` — resolve an identifier to a feature directory

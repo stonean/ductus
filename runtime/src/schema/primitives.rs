@@ -735,6 +735,14 @@ pub struct DashboardSpec {
     /// Count of `*.md` files under `specs/{slug}/scenarios/` (0 when the
     /// directory is absent).
     pub scenarios_count: u32,
+    /// Total unresolved questions across this spec's scenarios. Distinct
+    /// from `open-question-count`, which stays spec-body-only: the two are
+    /// separate signals and are never summed (spec 046).
+    pub scenario_open_question_count: u32,
+    /// Slugs of the scenarios carrying those questions, in shared scenario
+    /// order. Empty when the count is zero. The caller renders the callout
+    /// straight from this array — a table cell cannot hold scenario names.
+    pub scenarios_with_questions: Vec<String>,
     /// Dependency slugs whose own `status` is below `clarified`; empty when
     /// every dependency is at `clarified` or later. The caller renders the
     /// "blocked specs" callout straight from a non-empty array.

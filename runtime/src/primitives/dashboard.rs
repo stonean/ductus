@@ -21,7 +21,7 @@ use crate::host::Host;
 use crate::primitives::resolve_references::{self, load_services};
 use crate::primitives::{
     PrimitiveError, Result, ScenarioFrontmatter, feature_number, list_feature_dirs,
-    list_scenario_files, read_text, section_lines, split_frontmatter,
+    list_scenario_files, read_spec, read_text, section_lines, split_frontmatter,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -169,7 +169,7 @@ fn render_table(
             mark(spec.has_plan),
             mark(spec.has_tasks),
             mark(spec.has_data_model),
-            spec.scenarios_count,
+            scenarios_cell(spec),
             dependency_prefixes(&spec.dependencies),
             next_action(spec, project),
         ));
@@ -234,6 +234,33 @@ fn render_callouts(
              questions; the spec reverts to draft and advances forward again.",
             recovery.len(),
             recovery.join(", ")
+        ));
+    }
+    // Scenario-question callout. Rendered independently of the recovery
+    // callout above: when a spec is in both states only the Next Action
+    // cell is exclusive, and suppressing this line would hide questions
+    // that still need resolving after the recovery walk (spec 046). Every
+    // carrying scenario is named, with no cap — a truncated list reads as
+    // "these are the ones needing attention" while hiding others.
+    let with_questions: Vec<&DashboardSpec> = specs
+        .iter()
+        .filter(|s| s.scenario_open_question_count >= 1)
+        .collect();
+    if !with_questions.is_empty() {
+        let total: u32 = with_questions
+            .iter()
+            .map(|s| s.scenario_open_question_count)
+            .sum();
+        let detail: Vec<String> = with_questions
+            .iter()
+            .map(|s| format!("{} ({})", s.slug, s.scenarios_with_questions.join(", ")))
+            .collect();
+        lines.push(format!(
+            "{total} unresolved scenario question(s) in {} spec(s): {}. Run /{project}:target \
+             <feature>/<scenario> then /{project}:clarify on each; a spec is not complete while \
+             its scenarios carry questions.",
+            with_questions.len(),
+            detail.join("; ")
         ));
     }
     if !tags_union.is_empty() {
@@ -321,7 +348,14 @@ fn reference_line(record: &ResolutionRecord, services: &Services, project: &str)
 /// flagging it).
 fn next_action(spec: &DashboardSpec, project: &str) -> String {
     if in_recovery(spec) {
+        // Recovery wins the cell when both apply: spec-body questions at
+        // `clarified` or later are the more upstream defect, and clearing
+        // them reverts the spec to `draft` with the scenario questions
+        // still there to resolve afterward (spec 046).
         return "clarify (recovery)".to_string();
+    }
+    if spec.scenario_open_question_count >= 1 {
+        return "clarify (scenario)".to_string();
     }
     match spec.status.as_str() {
         "draft" => format!("/{project}:clarify"),
@@ -339,6 +373,20 @@ fn in_recovery(spec: &DashboardSpec) -> bool {
         spec.status.as_str(),
         "clarified" | "planned" | "in-progress"
     ) && spec.open_question_count >= 1
+}
+
+/// The Scenarios cell: the count, suffixed with the outstanding
+/// question total when there is one. Reusing the existing column keeps the
+/// glance table from growing a ninth one; a spec whose scenarios carry no
+/// questions renders exactly as before (spec 046).
+fn scenarios_cell(spec: &DashboardSpec) -> String {
+    if spec.scenario_open_question_count == 0 {
+        return spec.scenarios_count.to_string();
+    }
+    format!(
+        "{} ({} open)",
+        spec.scenarios_count, spec.scenario_open_question_count
+    )
 }
 
 /// Artifact-existence table mark.
@@ -413,6 +461,17 @@ fn load_one_spec(specs_dir: &Path, root: &str, slug: &str) -> Result<DashboardSp
         })?;
     let open_question_count = count_open_questions(body);
     let scenarios_dir = feature_dir.join("scenarios");
+    // Scenario questions come from `read-spec`'s collector so the glance
+    // view, the completion gate, and the analyze finding can never report
+    // different counts for the same feature (spec 046).
+    let scenario_questions = read_spec::collect_scenario_open_questions(&feature_dir);
+    let mut scenarios_with_questions: Vec<String> = scenario_questions
+        .iter()
+        .map(|q| q.scenario.clone())
+        .collect();
+    // Entries arrive grouped by scenario in shared scenario order, so
+    // `dedup` collapses each run into one name without disturbing it.
+    scenarios_with_questions.dedup();
     Ok(DashboardSpec {
         slug: slug.to_string(),
         status: frontmatter.status,
@@ -423,6 +482,8 @@ fn load_one_spec(specs_dir: &Path, root: &str, slug: &str) -> Result<DashboardSp
         has_tasks: feature_dir.join("tasks.md").is_file(),
         has_data_model: feature_dir.join("data-model.md").is_file(),
         scenarios_count: count_scenario_files(&scenarios_dir),
+        scenario_open_question_count: u32::try_from(scenario_questions.len()).unwrap_or(u32::MAX),
+        scenarios_with_questions,
         blocked_by: Vec::new(),
     })
 }
@@ -1234,6 +1295,121 @@ reason = "Deferred until v2 perf budget lands."
                 "- api/999-gone → broken reference (target spec missing; also reported by /gov:analyze) — Main API service"
             ),
             "{rendered}"
+        );
+    }
+
+    // --- scenario open questions (spec 046) -----------------------------------
+
+    /// Seed a scenario under `slug` carrying `questions` verbatim inside
+    /// its `## Open Questions` section.
+    fn write_scenario(repo: &Path, slug: &str, name: &str, questions: &str) {
+        let dir = repo.join("specs").join(slug).join("scenarios");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join(name),
+            format!("---\nsection: Behavior\n---\n\n## Open Questions\n\n{questions}\n"),
+        )
+        .unwrap();
+    }
+
+    const PLANNED_FM: &str = "status: planned\ndependencies: []\n";
+
+    #[test]
+    fn scenarios_cell_gains_a_suffix_only_when_questions_exist() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_spec(tmp.path(), "001-quiet", PLANNED_FM, "");
+        write_scenario(
+            tmp.path(),
+            "001-quiet",
+            "settled.md",
+            "*None — all resolved.*",
+        );
+        write_spec(tmp.path(), "002-asking", PLANNED_FM, "");
+        write_scenario(
+            tmp.path(),
+            "002-asking",
+            "wire.md",
+            "- Which operator?\n- Which encoding?",
+        );
+
+        let result = run(&DashboardArgs {}, tmp.path()).unwrap();
+        let rendered = result.rendered_markdown;
+        // Unchanged cell for the quiet spec: one scenario, no suffix.
+        assert!(
+            rendered.contains("| 001-quiet | planned | — | — | — | 1 |"),
+            "{rendered}"
+        );
+        // Suffixed cell, and the Next Action overridden.
+        assert!(
+            rendered.contains("| 002-asking | planned | — | — | — | 1 (2 open) |"),
+            "{rendered}"
+        );
+        assert!(rendered.contains("clarify (scenario)"), "{rendered}");
+    }
+
+    #[test]
+    fn callout_names_every_spec_and_its_carrying_scenarios() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_spec(tmp.path(), "002-asking", PLANNED_FM, "");
+        write_scenario(tmp.path(), "002-asking", "alpha.md", "- One?");
+        write_scenario(tmp.path(), "002-asking", "beta.md", "- Two?");
+
+        let rendered = run(&DashboardArgs {}, tmp.path())
+            .unwrap()
+            .rendered_markdown;
+        assert!(
+            rendered.contains(
+                "2 unresolved scenario question(s) in 1 spec(s): 002-asking (alpha, beta)"
+            ),
+            "{rendered}"
+        );
+    }
+
+    #[test]
+    fn recovery_wins_the_cell_but_both_callouts_render() {
+        let tmp = tempfile::tempdir().unwrap();
+        // Spec-body questions at `planned` (recovery) AND a scenario
+        // question: the cell is exclusive, the callouts are not.
+        write_spec(tmp.path(), "003-both", PLANNED_FM, "- A body question?");
+        write_scenario(tmp.path(), "003-both", "wire.md", "- A scenario question?");
+
+        let rendered = run(&DashboardArgs {}, tmp.path())
+            .unwrap()
+            .rendered_markdown;
+        assert!(rendered.contains("clarify (recovery)"), "{rendered}");
+        assert!(
+            !rendered.contains("clarify (scenario)"),
+            "the cell is exclusive: {rendered}"
+        );
+        assert!(rendered.contains("in recovery state"), "{rendered}");
+        assert!(
+            rendered.contains("unresolved scenario question(s)"),
+            "both callouts render: {rendered}"
+        );
+    }
+
+    #[test]
+    fn a_spec_without_scenario_questions_renders_exactly_as_before() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_spec(tmp.path(), "001-quiet", PLANNED_FM, "");
+        // Pin the command namespace: it otherwise defaults to the
+        // tempdir's random basename.
+        std::fs::write(
+            tmp.path().join(".govern.toml"),
+            "[host]\nproject = \"gov\"\n",
+        )
+        .unwrap();
+        let rendered = run(&DashboardArgs {}, tmp.path())
+            .unwrap()
+            .rendered_markdown;
+        assert!(
+            rendered.contains("| 001-quiet | planned | — | — | — | 0 |"),
+            "{rendered}"
+        );
+        assert!(rendered.contains("/gov:implement"), "{rendered}");
+        assert!(
+            !rendered.contains("unresolved scenario question(s)"),
+            "no callout when nothing is outstanding: {rendered}"
         );
     }
 }

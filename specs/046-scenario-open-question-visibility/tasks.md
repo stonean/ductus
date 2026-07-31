@@ -51,11 +51,11 @@ Tasks 2–8 are authored as scenarios under [022 — Deterministic Runtime](../0
 
 ## 5. Surface outstanding questions in the dashboard
 
-- [ ] Suffix the existing Scenarios column with the outstanding count, leaving the cell unchanged at zero
-- [ ] Override the Next Action cell to scenario-targeted clarify
-- [ ] Render a callout below the table naming the specs and their question-carrying scenarios, with no cap
-- [ ] Let recovery state win the Next Action cell when both apply, while rendering both callouts
-- [ ] Test: the precedence case renders the recovery action and both callouts
+- [x] Suffix the existing Scenarios column with the outstanding count, leaving the cell unchanged at zero
+- [x] Override the Next Action cell to scenario-targeted clarify
+- [x] Render a callout below the table naming the specs and their question-carrying scenarios, with no cap
+- [x] Let recovery state win the Next Action cell when both apply, while rendering both callouts
+- [x] Test: the precedence case renders the recovery action and both callouts
 
 - **Done when**: all three surfaces render, and a spec with no scenario questions renders exactly as before.
 
