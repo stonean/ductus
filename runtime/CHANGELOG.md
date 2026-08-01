@@ -2,6 +2,25 @@
 
 All notable changes to the `govern` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `gvrn-v<MAJOR>.<MINOR>.<PATCH>` scheme distinct from framework tags (was `runtime-v*` before v0.2.0 — see the v0.2.0 rename entry below).
 
+## [0.25.0] — 2026-08-01
+
+Spec 022 tasks 70-71, from two scenarios grooming routed. An uncommitted spec directory stops being a crash and becomes a domain outcome, and `mark-task` reconciles the checkbox-form `Done when` clause it deliberately excludes from the subtask index.
+
+### Changed
+
+- **`derive-boundary` no longer errors on an uncommitted spec dir** — a spec directory with no commit touching it yields the spec-dir glob alone plus a new optional `guidance` string, instead of `no commits found that touch {root}/{feature}`. The boundary is *unknowable*, not broken, so the walk reaches a legible next-step (commit the directory, or seed a `write-boundary`) rather than dying at `/gov:implement` step 2. Enforcement stays fail-closed on that result. `PrimitiveError::NoSpecHistory` is removed — nothing raises it.
+- **`diff-cross-spec` degrades the same way** — it raised the identical error at implement steps 7 and 12, so fixing only `derive-boundary` would have relocated the crash rather than removed it. It now returns an empty window carrying `guidance`, because bare empty lists are contractually *"no cross-spec impact"* and would otherwise assert a clean bill of health the primitive cannot vouch for.
+- **Unborn HEAD is the same no-history state** — a repo with no commits at all (the fresh-repo case where `/gov:specify` and `/gov:plan` both run before the first commit) previously crashed. Probed with `Repository::is_empty`, since libgit2 reports a missing HEAD ref through more than one error code and matching on the code alone is brittle.
+- **`mark-task` ticks an unchecked checkbox-form `Done when` clause** once the flip completes every real subtask, in the same atomic write. The clause remains outside the subtask index space (the read/mark contract is unchanged), but the block a reader sees no longer shows an unchecked box under a task the tally calls complete. Tick-only: unchecking a subtask does not untick the clause. The write guard now compares rebuilt content against the file as read, so an already-coherent block produces no write.
+- **`read-tasks` reports `done-when-checked`** for the checkbox form only — the signal that lets a host distinguish "all subtasks checked" from "task block fully checked". `None` for the canonical bold and bulletless forms, which carry no checkbox and can never disagree with the tally.
+
+### Framework
+
+- `/gov:plan`'s validation gate gains "the spec directory is committed" as its first substantive readiness check, with both evaluation paths (`derive-boundary`'s `guidance`, or `git log -1 --` markdown-only). That is the gate that creates the state, so it is where the precondition belongs.
+- `/gov:implement`'s steps 2, 6, 8, 12, the markdown-only walk, and the completion-gate tally document the new outcomes.
+
+Both new schema fields are `Option` with `skip_serializing_if`, so they are absent from every ordinary result and no existing consumer or golden sees a new key.
+
 ## [0.24.0] — 2026-07-22
 
 Spec 044: the shipped constitution relocates from the adopter repo root to `.govern/constitution.md`. The paired `constitution-relocate` migration (`introduced_in = 0.24.0`, no sunset) moves an existing adopter's root `constitution.md`, re-points the `CLAUDE.md` import, the `AGENTS.md` / `README.md` links, and any `[pinned] files` entry, and converges a stale root copy.
