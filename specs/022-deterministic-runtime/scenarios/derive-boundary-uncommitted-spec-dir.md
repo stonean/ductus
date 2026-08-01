@@ -14,7 +14,7 @@ The fail-closed rule is correct and is **not** the defect. The defect is twofold
 
 ## Behavior
 
-**`/gov:plan`'s validation gate checks the spec directory is committed before advancing `clarified → planned`.** The precondition surfaces at the gate that creates it, as a domain outcome naming the fix (`commit specs/{feature} before planning`) rather than an operational error. This is the primary fix: per [§design-principles](../../framework/constitution.md#design-principles) "never depend on human diligence", the pipeline should not reach `planned` in a state where `/gov:implement` provably cannot start.
+**`/gov:plan`'s validation gate checks the spec directory is committed before advancing `clarified → planned`.** The precondition surfaces at the gate that creates it, as a domain outcome naming the fix (`commit specs/{feature} before planning`) rather than an operational error. This is the primary fix: per [§design-principles](../../../AGENTS.md#design-principles) "never depend on human diligence", the pipeline should not reach `planned` in a state where `/gov:implement` provably cannot start.
 
 **`derive-boundary` returns an empty-boundary domain outcome instead of erroring.** With no commit touching the spec directory, the boundary is *unknowable*, not *broken* — so the primitive reports an empty boundary plus guidance ("commit the spec directory, or seed a `write-boundary` in the session"), matching how the rest of the runtime treats provable-vs-unknowable states. Enforcement stays fail-closed on the empty result: the first out-of-spec `writeCode` edit halts with `out-of-boundary-edit` and a legible next-step, rather than the walk dying at step 2.
 

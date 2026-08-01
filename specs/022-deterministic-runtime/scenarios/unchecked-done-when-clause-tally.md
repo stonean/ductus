@@ -21,7 +21,7 @@ The completion tally must never report a task fully checked while an unchecked c
 - **`mark-task` ticks the clause line when the task's real subtasks all complete.** The clause is not addressable by subtask index — that contract is unchanged — but the primitive that completes a task owns leaving the block visually coherent, so the file a human reads agrees with the tally a machine computes.
 - **The tally never claims more than the file shows.** Until the clause line is ticked, `/gov:implement`'s per-task report distinguishes "all subtasks checked" from "task block fully checked", so an unticked clause is surfaced rather than rounded up.
 
-Per [§design-principles](../../framework/constitution.md#design-principles) "never depend on human diligence", the fix is not to tell adopters to author the canonical form — the `tasks.md` template and `/gov:plan` reference already point at it (`done-when-authoring-forms`, Prevention), and the checkbox form is authored anyway.
+Per [§design-principles](../../../AGENTS.md#design-principles) "never depend on human diligence", the fix is not to tell adopters to author the canonical form — the `tasks.md` template and `/gov:plan` reference already point at it (`done-when-authoring-forms`, Prevention), and the checkbox form is authored anyway.
 
 ## Edge Cases
 
