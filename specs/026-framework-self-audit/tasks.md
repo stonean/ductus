@@ -191,3 +191,9 @@ Pulled in from the original Future Considerations during the autonomous implemen
 - [x] Remove `continue-on-error: true` from `.github/workflows/markdown-only-pipeline.yml`'s `/audit` step and from `.github/workflows/runtime-release.yml`'s `audit` job. Preconditions verified 2026-05-17: `bash scripts/audit/run-all.sh` exits 0 against `main` at HEAD; Families 4, 8, and 9 each exit 0 (resolved in commit `1aca768`).
 
 - **Done when**: `/audit` is a hard PR-check and a hard pre-tag release gate; the next PR-check workflow run passes with the audit step blocking-eligible.
+
+### 21. Implement scenario: [host-namespace-parity](scenarios/host-namespace-parity.md)
+
+- [ ] Implement the behavior described in `scenarios/host-namespace-parity.md`
+
+- **Done when**: `/gov:audit` gains a host-namespace-parity family that resolves the effective namespace the way `Host::load` does (`[host] project`, else repo dir basename) and compares it against the installed `{cli-config-dir}/commands/<ns>/` directories, emitting a finding that names both values and the one-block fix; a repo with no installed commands dir and a repo whose basename fallback already matches both pass without a finding; `.govern/config.toml` in this repo gains `[host]` / `project = "gov"` so the family is green and every rendered next-action names `/gov:*`; `bash scripts/audit/run-all.sh` exits 0.

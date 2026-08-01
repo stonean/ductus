@@ -34,9 +34,9 @@ The CHANGELOG.md archived-entry parsing piece of 10b is deferred until the first
 
 ## Open Questions
 
-- **Should Family 10 enforce procedure-file uniqueness (no two entries share a `procedure_file`)?** Currently not checked. The bootstrap loop's duplicate-id guard makes shared procedure files inconsistent at runtime, so the practical risk is small. Defer until a real case surfaces.
-- **CHANGELOG.md archived-entry format**. The first sunset commit establishes the heading shape and the `target_paths` placement; once that's committed, Family 10's CHANGELOG parser can be implemented against a real example rather than a speculative one. Track via the spec 027 known-limitations section.
+*None — all resolved.*
 
 ## Resolved Questions
 
-*None.*
+- **Should Family 10 enforce procedure-file uniqueness (no two entries share a `procedure_file`)?** **Resolved with a condition: not enforced in v1.** The bootstrap loop's duplicate-id guard already makes shared procedure files inconsistent at read time, so the drift Family 10 would catch is caught one layer down and the practical risk is small; a 10d sub-check stays captured as future work (see the Edge Cases entry above). *Trigger to revisit:* a real registry lands two entries sharing a `procedure_file` and the duplicate-id guard does not surface it legibly.
+- **CHANGELOG.md archived-entry format**. **Resolved with a condition: implement the parser against a real example, not a speculative one.** The first sunset commit establishes the heading shape and the `target_paths` placement; writing the parser before that commit would encode a guess. Tracked meanwhile via spec 027's known-limitations section. *Trigger to revisit:* the first sunset commit lands, fixing the archived-entry format on disk.

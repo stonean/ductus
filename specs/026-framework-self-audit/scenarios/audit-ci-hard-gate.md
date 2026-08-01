@@ -30,8 +30,8 @@ Verification: `bash scripts/audit/run-all.sh` exits 0 on `main` at HEAD (already
 
 ## Open Questions
 
-- **Should the flip ship as one PR or three** (one per family clearance)? Default: one PR after all three clear, since the gate is binary. Resolve by inspection when the third family closes.
+*None — all resolved.*
 
 ## Resolved Questions
 
-*None.*
+- **Should the flip ship as one PR or three** (one per family clearance)? **Resolved with a condition: one PR, after all three families clear.** The gate is binary — `continue-on-error` is either set or not — so three PRs would flip nothing until the last one landed, buying sequencing ceremony for no earlier enforcement. *Trigger to revisit:* if the three families clear far apart in time and one wants its own regression protection before the others are ready, split at that point by inspection.
