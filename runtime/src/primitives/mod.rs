@@ -91,14 +91,6 @@ pub enum PrimitiveError {
     /// Git operation failed.
     #[error("git error: {0}")]
     Git(#[from] git2::Error),
-    /// Repository contains no commits that touch the requested spec dir.
-    #[error("no commits found that touch {root}/{feature}")]
-    NoSpecHistory {
-        /// Configured spec-root directory name (default `specs`; spec 040).
-        root: String,
-        /// Requested feature name.
-        feature: String,
-    },
     /// Requested task number not found in `tasks.md`.
     #[error("task '{task_number}' not found in {root}/{feature}/tasks.md")]
     TaskNotFound {

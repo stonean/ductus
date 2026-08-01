@@ -97,6 +97,7 @@ pub fn run(args: &ReadTasksArgs, repo: &Path) -> Result<ReadTasksResult> {
                         heading: title,
                         subtasks: Vec::new(),
                         done_when: None,
+                        done_when_checked: None,
                         phase: current_phase.clone(),
                     });
                 }
@@ -114,6 +115,13 @@ pub fn run(args: &ReadTasksArgs, repo: &Path) -> Result<ReadTasksResult> {
         // `mark-task`'s subtask-exclusion (the read/mark index contract).
         if let Some(done) = parse_done_when(line) {
             task.done_when = Some(done);
+            // Record the clause's checked state only for the checkbox form.
+            // That is the one shape whose box is visible to a reader while
+            // sitting outside the subtask index space, so it is the only
+            // one that can disagree with the tally
+            // (scenario unchecked-done-when-clause-tally).
+            task.done_when_checked =
+                checkbox::parse_checkbox_line(line).map(|(checked, _)| checked);
             continue;
         }
         // Subtask recognition shares the mark-side checkbox grammar
@@ -225,6 +233,41 @@ mod tests {
     }
 
     // --- done-when authoring forms -------------------------------------------
+
+    #[test]
+    fn checkbox_form_clause_reports_its_checked_state() {
+        // Scenario unchecked-done-when-clause-tally: the host needs to tell
+        // "all subtasks checked" from "task block fully checked". Only the
+        // checkbox form can differ, so only it carries a state.
+        let tmp = tempdir().unwrap();
+        let feature_dir = tmp.path().join("specs/feat");
+        fs::create_dir_all(&feature_dir).unwrap();
+        let body = "# feat\n\n## 1. Unchecked clause\n\n- [x] done subtask\n- [ ] Done when: not yet ticked\n\n## 2. Checked clause\n\n- [x] done subtask\n- [x] Done when: ticked\n\n## 3. Bold form\n\n- [x] done subtask\n- **Done when**: no checkbox at all\n";
+        fs::write(feature_dir.join("tasks.md"), body).unwrap();
+
+        let result = run(
+            &ReadTasksArgs {
+                feature: "feat".into(),
+            },
+            tmp.path(),
+        )
+        .unwrap();
+
+        // Every subtask is checked in all three tasks; only task 1 has an
+        // unchecked box still visible in its block.
+        assert!(
+            result
+                .tasks
+                .iter()
+                .all(|t| t.subtasks.iter().all(|s| s.checked))
+        );
+        assert_eq!(result.tasks[0].done_when_checked, Some(false));
+        assert_eq!(result.tasks[1].done_when_checked, Some(true));
+        assert_eq!(
+            result.tasks[2].done_when_checked, None,
+            "no checkbox to disagree with the tally"
+        );
+    }
 
     #[test]
     fn recognizes_all_done_when_authoring_forms() {

@@ -121,6 +121,7 @@ Before creating the plan, load only the cross-spec context this feature actually
 
 Before proposing the status transition, run the readiness check. The substantive checks must pass — failures block the transition:
 
+- **The spec directory is committed** — at least one commit touches `{specs-root}/{feature}`. `/{project}:implement` derives its write boundary from that history, so a spec that reaches `planned` with an uncommitted directory provably cannot start: the gap would surface one command later, as a failure to begin work rather than a failure to plan. Evaluate it with `derive-boundary` (a result carrying `guidance` is the no-history signal) or, markdown-only, with `git log -1 -- {specs-root}/{feature}`. On failure, report the guidance — commit the spec directory, or seed a `write-boundary` in the session — and do not advance.
 - Acceptance criteria are concrete and testable
 - All open questions are resolved
 - Data model exists if the feature introduces or modifies domain entities or data structures

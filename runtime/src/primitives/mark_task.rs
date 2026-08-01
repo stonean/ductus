@@ -64,7 +64,7 @@ pub fn run(args: &MarkTaskArgs, repo: &Path) -> Result<CheckboxToggleResult> {
             task_number: args.task_number.clone(),
         })?;
 
-    let checkbox_lines = collect_checkbox_line_indices(&lines, &skip_mask, task_range);
+    let checkbox_lines = collect_checkbox_line_indices(&lines, &skip_mask, task_range.clone());
     let (line_idx, marker_idx) = *checkbox_lines.get(args.subtask_index).ok_or_else(|| {
         PrimitiveError::SubtaskOutOfRange {
             feature: args.feature.clone(),
@@ -75,9 +75,35 @@ pub fn run(args: &MarkTaskArgs, repo: &Path) -> Result<CheckboxToggleResult> {
     })?;
 
     let (previous, new_line) = flip_checkbox_at(lines[line_idx], marker_idx, args.checked);
-    let new_content = rebuild_with_replacement(&lines, line_idx, &new_line);
+    let mut replacements = vec![(line_idx, new_line)];
 
-    if previous != args.checked {
+    // Scenario unchecked-done-when-clause-tally: once this flip completes
+    // every *real* subtask, tick an unchecked checkbox-form done-when clause
+    // too. The clause stays outside the subtask index space — that contract
+    // is unchanged — but the primitive that completes a task owns leaving the
+    // block visually coherent, so the file a human reads agrees with the
+    // tally a machine computes. Without this, `/gov:implement` reports the
+    // task complete while a visibly unchecked box sits underneath it.
+    //
+    // Tick-only, deliberately: unchecking a subtask does not untick the
+    // clause. The scenario specifies the completion direction alone, and
+    // inventing the inverse here would be unspecified behavior.
+    if args.checked
+        && completes_every_subtask(&lines, &checkbox_lines, args.subtask_index)
+        && let Some((clause_idx, clause_marker)) =
+            find_unchecked_done_when_clause(&lines, &skip_mask, task_range)
+    {
+        let (_was, ticked) = flip_checkbox_at(lines[clause_idx], clause_marker, true);
+        replacements.push((clause_idx, ticked));
+    }
+
+    let new_content = rebuild_with_replacements(&lines, &replacements);
+
+    // Compare against the file as read rather than against `previous`
+    // alone: the clause tick can be the only change (re-marking an
+    // already-checked last subtask), and an unchanged block must produce
+    // no write at all so a re-run is a clean no-op.
+    if new_content != content {
         write_atomic(&tasks_path, &new_content)?;
     }
 
@@ -177,13 +203,48 @@ fn collect_checkbox_line_indices(
     out
 }
 
-fn rebuild_with_replacement(lines: &[&str], target_idx: usize, replacement: &str) -> String {
+/// Whether flipping the subtask at `flipped_index` to checked leaves every
+/// real subtask of the task checked. The flipped line is taken as checked by
+/// definition; the rest are read from the file as they stand.
+fn completes_every_subtask(
+    lines: &[&str],
+    checkbox_lines: &[(usize, usize)],
+    flipped_index: usize,
+) -> bool {
+    checkbox_lines
+        .iter()
+        .enumerate()
+        .all(|(index, (line_idx, marker_idx))| {
+            index == flipped_index
+                || matches!(lines[*line_idx].as_bytes()[*marker_idx], b'x' | b'X')
+        })
+}
+
+/// The task's done-when clause when it is authored in **checkbox form and
+/// currently unchecked** — the only shape that can disagree with the tally.
+/// The canonical bold form and the bulletless form carry no checkbox, and an
+/// already-ticked clause has nothing to reconcile, so both yield `None`.
+fn find_unchecked_done_when_clause(
+    lines: &[&str],
+    skip_mask: &[bool],
+    range: std::ops::Range<usize>,
+) -> Option<(usize, usize)> {
+    range.into_iter().find_map(|idx| {
+        if skip_mask[idx] {
+            return None;
+        }
+        parse_done_when(lines[idx])?;
+        let (_bracket, marker_idx) = find_checkbox_line(lines[idx])?;
+        matches!(lines[idx].as_bytes()[marker_idx], b' ').then_some((idx, marker_idx))
+    })
+}
+
+fn rebuild_with_replacements(lines: &[&str], replacements: &[(usize, String)]) -> String {
     let mut out = String::new();
     for (idx, line) in lines.iter().enumerate() {
-        if idx == target_idx {
-            out.push_str(replacement);
-        } else {
-            out.push_str(line);
+        match replacements.iter().find(|(target, _)| *target == idx) {
+            Some((_, replacement)) => out.push_str(replacement),
+            None => out.push_str(line),
         }
     }
     out
@@ -369,6 +430,151 @@ mod tests {
             PrimitiveError::SubtaskOutOfRange { total, .. } => assert_eq!(total, 2),
             other => panic!("expected SubtaskOutOfRange, got {other:?}"),
         }
+    }
+
+    /// A task authored the way `/gov:plan` tends to: two real subtasks and
+    /// an **unchecked** checkbox-form done-when clause.
+    fn write_unchecked_clause_fixture(tmp: &std::path::Path) -> std::path::PathBuf {
+        let feature_dir = tmp.join("specs/feat");
+        fs::create_dir_all(&feature_dir).unwrap();
+        let body = "# feat\n\n## 1. Checkbox task\n\n- [ ] first subtask\n- [ ] second subtask\n- [ ] Done when: the condition holds\n\n## 2. Other task\n\n- [ ] untouched\n- [ ] Done when: something else\n";
+        fs::write(feature_dir.join("tasks.md"), body).unwrap();
+        feature_dir.join("tasks.md")
+    }
+
+    fn mark(
+        tmp: &std::path::Path,
+        task: &str,
+        index: usize,
+        checked: bool,
+    ) -> CheckboxToggleResult {
+        run(
+            &MarkTaskArgs {
+                feature: "feat".into(),
+                task_number: task.into(),
+                subtask_index: index,
+                checked,
+            },
+            tmp,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn completing_a_task_ticks_its_unchecked_checkbox_form_clause() {
+        // Scenario unchecked-done-when-clause-tally: the clause sits outside
+        // the subtask index space, so completing every real subtask would
+        // otherwise leave a visibly unchecked box under a task the tally
+        // calls complete.
+        let tmp = tempdir().unwrap();
+        let tasks_path = write_unchecked_clause_fixture(tmp.path());
+
+        // First subtask: the task is not complete yet, so the clause stays.
+        mark(tmp.path(), "1", 0, true);
+        let mid = fs::read_to_string(&tasks_path).unwrap();
+        assert!(
+            mid.contains("- [ ] Done when: the condition holds"),
+            "clause untouched while a real subtask is still open:\n{mid}"
+        );
+
+        // Second (last) subtask completes the task — the clause ticks with it.
+        mark(tmp.path(), "1", 1, true);
+        let after = fs::read_to_string(&tasks_path).unwrap();
+        assert!(after.contains("- [x] second subtask"));
+        assert!(
+            after.contains("- [x] Done when: the condition holds"),
+            "clause ticked once every real subtask is checked:\n{after}"
+        );
+        // A sibling task's clause is never touched.
+        assert!(after.contains("- [ ] Done when: something else"));
+    }
+
+    #[test]
+    fn ticking_the_clause_leaves_the_subtask_index_space_unchanged() {
+        // The read/mark contract the clause exclusion exists to protect: the
+        // clause must stay unaddressable after it has been ticked, or every
+        // index past it would skew.
+        let tmp = tempdir().unwrap();
+        write_unchecked_clause_fixture(tmp.path());
+        mark(tmp.path(), "1", 0, true);
+        mark(tmp.path(), "1", 1, true);
+
+        let err = run(
+            &MarkTaskArgs {
+                feature: "feat".into(),
+                task_number: "1".into(),
+                subtask_index: 2,
+                checked: true,
+            },
+            tmp.path(),
+        )
+        .unwrap_err();
+        match err {
+            PrimitiveError::SubtaskOutOfRange { total, .. } => {
+                assert_eq!(total, 2, "two real subtasks, clause excluded");
+            }
+            other => panic!("expected SubtaskOutOfRange, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn completing_an_already_complete_task_produces_no_diff() {
+        // Idempotence: re-running /gov:implement over a finished task must
+        // not rewrite the file, so a repeat run shows no diff.
+        let tmp = tempdir().unwrap();
+        let tasks_path = write_unchecked_clause_fixture(tmp.path());
+        mark(tmp.path(), "1", 0, true);
+        mark(tmp.path(), "1", 1, true);
+
+        let settled = fs::read_to_string(&tasks_path).unwrap();
+        let mtime_before = fs::metadata(&tasks_path).unwrap().modified().unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(15));
+
+        // Re-mark the already-checked last subtask: same state, ticked
+        // clause already reconciled — nothing left to write.
+        mark(tmp.path(), "1", 1, true);
+
+        assert_eq!(settled, fs::read_to_string(&tasks_path).unwrap());
+        assert_eq!(
+            mtime_before,
+            fs::metadata(&tasks_path).unwrap().modified().unwrap(),
+            "no rewrite when the block is already coherent"
+        );
+    }
+
+    #[test]
+    fn non_checkbox_clause_forms_are_untouched() {
+        // The canonical bold form and the bulletless form carry no checkbox,
+        // so there is nothing to reconcile and no diff to produce.
+        let tmp = tempdir().unwrap();
+        let feature_dir = tmp.path().join("specs/feat");
+        fs::create_dir_all(&feature_dir).unwrap();
+        let body = "# feat\n\n## 1. Bold form\n\n- [ ] only subtask\n- **Done when**: it holds.\n\n## 2. Bulletless form\n\n- [ ] only subtask\nDone when: it also holds.\n";
+        fs::write(feature_dir.join("tasks.md"), body).unwrap();
+
+        mark(tmp.path(), "1", 0, true);
+        mark(tmp.path(), "2", 0, true);
+
+        let after = fs::read_to_string(feature_dir.join("tasks.md")).unwrap();
+        assert!(after.contains("- **Done when**: it holds."));
+        assert!(after.contains("Done when: it also holds."));
+        assert!(after.contains("- [x] only subtask"));
+    }
+
+    #[test]
+    fn already_checked_clause_is_left_alone() {
+        // The settled `- [x] Done when: …` shape from
+        // done-when-authoring-forms: nothing to reconcile, no write.
+        let tmp = tempdir().unwrap();
+        let feature_dir = tmp.path().join("specs/feat");
+        fs::create_dir_all(&feature_dir).unwrap();
+        let body = "# feat\n\n## 1. Task\n\n- [ ] only subtask\n- [x] Done when: already ticked\n";
+        fs::write(feature_dir.join("tasks.md"), body).unwrap();
+
+        mark(tmp.path(), "1", 0, true);
+        let after = fs::read_to_string(feature_dir.join("tasks.md")).unwrap();
+        assert!(after.contains("- [x] Done when: already ticked"));
+        assert!(after.contains("- [x] only subtask"));
     }
 
     fn write_phased_fixture(tmp: &std::path::Path) {

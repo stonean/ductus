@@ -24,8 +24,14 @@ use crate::schema::primitives::{DeriveBoundaryArgs, DeriveBoundaryResult};
 /// # Errors
 ///
 /// Returns [`PrimitiveError::FeatureNotFound`] when the feature directory
-/// is absent, [`PrimitiveError::NoSpecHistory`] when no commit touches the
-/// spec dir, and [`PrimitiveError::Git`] for any libgit2 failure.
+/// is absent and [`PrimitiveError::Git`] for any libgit2 failure.
+///
+/// A spec dir with no commit touching it is **not** an error (scenario
+/// derive-boundary-uncommitted-spec-dir): the boundary is unknowable, not
+/// broken, so the primitive returns the spec-dir glob alone plus
+/// [`uncommitted_guidance`]. Enforcement stays fail-closed on that result —
+/// the first out-of-spec edit halts with `out-of-boundary-edit` — while the
+/// walk itself reaches a legible next-step instead of dying at step 2.
 pub fn run(args: &DeriveBoundaryArgs, repo: &Path) -> Result<DeriveBoundaryResult> {
     super::validate_no_traversal(&args.feature)?;
     let layout = paths::Paths::load(repo);
@@ -38,14 +44,26 @@ pub fn run(args: &DeriveBoundaryArgs, repo: &Path) -> Result<DeriveBoundaryResul
     }
     let repository = Repository::discover(repo)?;
     let spec_prefix = format!("{}/{}/", layout.specs_root, args.feature);
+    // The spec-dir glob needs no history — it is the feature's own zone —
+    // so it is the whole boundary in the no-history case below.
+    let spec_glob = format!("{}/{}/**", layout.specs_root, args.feature);
 
-    let first_commit = first_commit_for_prefix(&repository, &spec_prefix)?.ok_or_else(|| {
-        PrimitiveError::NoSpecHistory {
-            root: layout.specs_root.clone(),
-            feature: args.feature.clone(),
-        }
-    })?;
-    let head_oid = repository.head()?.peel_to_commit()?.id();
+    // `zip` collapses two independent no-history shapes into one arm: a
+    // spec dir with no commit touching it, and an unborn HEAD (a repo with
+    // no commits at all — the fresh-repo case where `/gov:specify` and
+    // `/gov:plan` both run before the first commit). `head` is resolved
+    // once so the no-history arm can still report it when it exists.
+    let head = head_oid(&repository)?;
+    let Some((first_commit, head_oid)) =
+        first_commit_for_prefix(&repository, &spec_prefix)?.zip(head)
+    else {
+        return Ok(DeriveBoundaryResult {
+            boundary: vec![spec_glob],
+            first_commit: String::new(),
+            current_head: head.map(|oid| oid.to_string()).unwrap_or_default(),
+            guidance: Some(uncommitted_guidance(&layout.specs_root, &args.feature)),
+        });
+    };
 
     let first = repository.find_commit(first_commit)?;
     let first_tree = first.tree()?;
@@ -55,7 +73,7 @@ pub fn run(args: &DeriveBoundaryArgs, repo: &Path) -> Result<DeriveBoundaryResul
     let mut boundary: BTreeSet<String> = BTreeSet::new();
     // Always include the spec dir glob so the boundary covers files inside
     // the feature's own folder even when they aren't on disk yet.
-    boundary.insert(format!("{}/{}/**", layout.specs_root, args.feature));
+    boundary.insert(spec_glob);
 
     diff.foreach(
         &mut |delta, _| {
@@ -80,7 +98,35 @@ pub fn run(args: &DeriveBoundaryArgs, repo: &Path) -> Result<DeriveBoundaryResul
         boundary: boundary.into_iter().collect(),
         first_commit: first_commit.to_string(),
         current_head: head_oid.to_string(),
+        guidance: None,
     })
+}
+
+/// Next-step text for a spec dir with no commit touching it. Names both
+/// escapes so the operator does not have to rediscover the derivation rule:
+/// commit the directory (the fix `/{project}:plan`'s gate wants), or seed a
+/// `write-boundary` in the session (the deliberate grant the walker unions
+/// with the derivation).
+fn uncommitted_guidance(root: &str, feature: &str) -> String {
+    format!(
+        "no commit touches {root}/{feature} yet, so the write boundary cannot be derived \
+         from history — commit the spec directory, or seed a write-boundary in the session. \
+         Enforcement stays fail-closed until then: only edits inside {root}/{feature}/ are permitted."
+    )
+}
+
+/// `HEAD`'s commit id, or `None` on an unborn HEAD (a repo with no commits).
+/// libgit2 reports the unborn case as an error, but for this primitive it is
+/// an ordinary state — a brand-new repo whose spec dir was never committed.
+fn head_oid(repo: &Repository) -> Result<Option<git2::Oid>> {
+    // `is_empty` is the reliable unborn probe. libgit2 reports a missing
+    // HEAD ref through more than one error code (observed: a generic
+    // reference error, not `UnbornBranch`), so matching on the code alone
+    // is brittle across versions.
+    if repo.is_empty()? {
+        return Ok(None);
+    }
+    Ok(Some(repo.head()?.peel_to_commit()?.id()))
 }
 
 /// The boundary entry a changed path contributes: its parent directory as
@@ -102,6 +148,12 @@ pub(crate) fn first_commit_for_prefix(
     repo: &Repository,
     prefix: &str,
 ) -> Result<Option<git2::Oid>> {
+    // An unborn HEAD (repo with no commits) has nothing to walk — that is
+    // "no history", the same outcome as a walk that finds no touching
+    // commit, not a failure. Callers treat both as the uncommitted case.
+    if repo.is_empty()? {
+        return Ok(None);
+    }
     let mut walk = repo.revwalk()?;
     walk.push_head()?;
     walk.set_sorting(Sort::TOPOLOGICAL | Sort::REVERSE)?;
@@ -294,7 +346,10 @@ mod tests {
     }
 
     #[test]
-    fn missing_spec_history_errors() {
+    fn uncommitted_spec_dir_is_a_domain_outcome_not_an_error() {
+        // Scenario derive-boundary-uncommitted-spec-dir: the boundary is
+        // unknowable, not broken. The walk must reach a legible next-step
+        // instead of dying at /gov:implement step 2.
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
         write(&tmp.path().join("README.md"), "# repo\n");
@@ -310,13 +365,76 @@ mod tests {
                 feature: "030-orphan".into(),
             },
             tmp.path(),
+        )
+        .expect("uncommitted spec dir is not an error");
+
+        // Fail-closed: the feature's own zone and nothing else, so the first
+        // out-of-spec writeCode edit still halts with out-of-boundary-edit.
+        assert_eq!(result.boundary, vec!["specs/030-orphan/**".to_string()]);
+        assert_eq!(result.first_commit, "", "no history to point at");
+        assert!(
+            !result.current_head.is_empty(),
+            "HEAD exists and is reported"
         );
-        match result {
-            Err(PrimitiveError::NoSpecHistory { feature, root }) => {
-                assert_eq!(feature, "030-orphan");
-                assert_eq!(root, "specs");
-            }
-            other => panic!("expected NoSpecHistory, got {other:?}"),
-        }
+
+        let guidance = result.guidance.expect("guidance names the next step");
+        assert!(guidance.contains("specs/030-orphan"));
+        assert!(
+            guidance.contains("commit the spec directory"),
+            "names the fix /gov:plan's gate wants: {guidance}"
+        );
+        assert!(
+            guidance.contains("seed a write-boundary"),
+            "names the session escape hatch: {guidance}"
+        );
+    }
+
+    #[test]
+    fn unborn_head_is_the_same_domain_outcome() {
+        // The fresh-repo case: /gov:init, /gov:specify and /gov:plan all run
+        // before the first commit exists, so HEAD is unborn. libgit2 reports
+        // that as an error; for this primitive it is ordinary no-history.
+        let tmp = tempfile::tempdir().unwrap();
+        Repository::init(tmp.path()).unwrap();
+        write(
+            &tmp.path().join("specs/030-orphan/spec.md"),
+            "---\nstatus: planned\n---\n\n# 030\n",
+        );
+
+        let result = run(
+            &DeriveBoundaryArgs {
+                feature: "030-orphan".into(),
+            },
+            tmp.path(),
+        )
+        .expect("unborn HEAD is not an error");
+
+        assert_eq!(result.boundary, vec!["specs/030-orphan/**".to_string()]);
+        assert_eq!(result.first_commit, "");
+        assert_eq!(result.current_head, "", "no HEAD to report");
+        assert!(result.guidance.is_some());
+    }
+
+    #[test]
+    fn committed_spec_dir_carries_no_guidance() {
+        // The guidance field is the signal /gov:plan's gate refuses on, so
+        // it must be absent on every ordinary derivation.
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(
+            &tmp.path().join("specs/020-demo/spec.md"),
+            "---\nstatus: planned\n---\n\n# 020\n",
+        );
+        commit_all(&repo, "feat(020): plan");
+
+        let result = run(
+            &DeriveBoundaryArgs {
+                feature: "020-demo".into(),
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert!(result.guidance.is_none());
+        assert!(!result.first_commit.is_empty());
     }
 }

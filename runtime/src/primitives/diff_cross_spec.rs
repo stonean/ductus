@@ -36,8 +36,13 @@ use crate::schema::primitives::{DiffCrossSpecArgs, DiffCrossSpecResult};
 /// # Errors
 ///
 /// Returns [`PrimitiveError::FeatureNotFound`] when the feature directory
-/// is absent, [`PrimitiveError::NoSpecHistory`] when no commit touches the
-/// spec dir, and [`PrimitiveError::Git`] for any libgit2 failure.
+/// is absent and [`PrimitiveError::Git`] for any libgit2 failure.
+///
+/// A spec dir with no commit touching it yields the empty result rather
+/// than an error (scenario derive-boundary-uncommitted-spec-dir): there is
+/// no window to diff, so there is nothing to report. Erroring here would
+/// only relocate the halt `derive-boundary` no longer raises — the same
+/// `/{project}:implement` walk hits this primitive at steps 7 and 12.
 pub fn run(args: &DiffCrossSpecArgs, repo: &Path) -> Result<DiffCrossSpecResult> {
     super::validate_no_traversal(&args.feature)?;
     let layout = paths::Paths::load(repo);
@@ -53,12 +58,23 @@ pub fn run(args: &DiffCrossSpecArgs, repo: &Path) -> Result<DiffCrossSpecResult>
     let spec_prefix = format!("{}/{}/", layout.specs_root, args.feature);
     let inbox_rel = format!("{}/inbox.md", layout.specs_root);
 
-    let first_commit = first_commit_for_prefix(&repository, &spec_prefix)?.ok_or_else(|| {
-        PrimitiveError::NoSpecHistory {
-            root: layout.specs_root.clone(),
-            feature: args.feature.clone(),
-        }
-    })?;
+    let Some(first_commit) = first_commit_for_prefix(&repository, &spec_prefix)? else {
+        return Ok(DiffCrossSpecResult {
+            first_commit: String::new(),
+            current_head: String::new(),
+            cross_spec_paths: Vec::new(),
+            inbox_additions: Vec::new(),
+            // Empty lists alone would read as "no cross-spec impact". They
+            // carry guidance instead, so the caller reports "unknowable"
+            // rather than a clean bill this primitive cannot vouch for.
+            guidance: Some(format!(
+                "no commit touches {}/{} yet, so there is no window to diff — \
+                 cross-spec impact is unknown, not absent. Commit the spec directory \
+                 to get a real answer.",
+                layout.specs_root, args.feature
+            )),
+        });
+    };
     let head_oid = repository.head()?.peel_to_commit()?.id();
     let first_tree = repository.find_commit(first_commit)?.tree()?;
 
@@ -120,6 +136,7 @@ pub fn run(args: &DiffCrossSpecArgs, repo: &Path) -> Result<DiffCrossSpecResult>
         current_head: head_oid.to_string(),
         cross_spec_paths: cross_spec.into_iter().collect(),
         inbox_additions,
+        guidance: None,
     })
 }
 
@@ -296,7 +313,10 @@ mod tests {
     }
 
     #[test]
-    fn missing_spec_history_errors() {
+    fn missing_spec_history_is_the_empty_result() {
+        // Scenario derive-boundary-uncommitted-spec-dir: erroring here would
+        // relocate the halt `derive-boundary` no longer raises, since the
+        // same /gov:implement walk reaches this primitive at steps 7 and 12.
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
         write(&tmp.path().join("README.md"), "# repo\n");
@@ -305,8 +325,39 @@ mod tests {
             &tmp.path().join("specs/030-orphan/spec.md"),
             "---\nstatus: planned\n---\n\n# 030\n",
         );
-        let err = run(&args("030-orphan"), tmp.path()).unwrap_err();
-        assert!(matches!(err, PrimitiveError::NoSpecHistory { .. }));
+        let result = run(&args("030-orphan"), tmp.path()).unwrap();
+        assert_eq!(result.first_commit, "");
+        assert_eq!(result.current_head, "");
+        assert!(result.cross_spec_paths.is_empty());
+        assert!(result.inbox_additions.is_empty());
+
+        // The empty lists must not read as a clean bill of health: guidance
+        // is what separates "no impact" from "impact unknowable".
+        let guidance = result
+            .guidance
+            .expect("empty-window result carries guidance");
+        assert!(guidance.contains("specs/030-orphan"));
+        assert!(
+            guidance.contains("unknown, not absent"),
+            "names the distinction the empty lists would otherwise hide: {guidance}"
+        );
+    }
+
+    #[test]
+    fn a_real_window_carries_no_guidance() {
+        // Guidance presence is the caller's signal, so an ordinary run must
+        // never set it — otherwise every report would hedge.
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(
+            &tmp.path().join("specs/020-demo/spec.md"),
+            "---\nstatus: in-progress\n---\n\n# 020\n",
+        );
+        commit_all(&repo, "feat(020): plan");
+
+        let result = run(&args("020-demo"), tmp.path()).unwrap();
+        assert!(result.guidance.is_none());
+        assert!(!result.first_commit.is_empty());
     }
 
     #[test]

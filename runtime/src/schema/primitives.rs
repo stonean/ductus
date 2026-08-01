@@ -424,6 +424,19 @@ pub struct Task {
     /// `Done when:` clause, if present.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub done_when: Option<String>,
+    /// Checked state of the done-when clause when it is authored in
+    /// **checkbox form** (`- [ ] Done when: …`), which `/{project}:plan`'s
+    /// task breakdown tends to produce. `None` for the canonical bold and
+    /// bulletless forms, which carry no checkbox and so can never disagree
+    /// with the subtask tally.
+    ///
+    /// The clause is never an addressable subtask (the read/mark index
+    /// contract), so a `Some(false)` here is the one case where every
+    /// subtask can be checked while an unchecked box is still visible in
+    /// the block — the signal `/{project}:implement` reports rather than
+    /// rounding up (scenario unchecked-done-when-clause-tally).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub done_when_checked: Option<bool>,
     /// Phase container heading text, when the task lives under a `## …`
     /// phase (e.g., `Phase A — Refactor`). `None` for flat-structure tasks
     /// declared directly at level 2 (`## N. Title`). Absent from the JSON
@@ -538,10 +551,21 @@ pub struct DeriveBoundaryArgs {
 pub struct DeriveBoundaryResult {
     /// Boundary entries (glob patterns and concrete paths).
     pub boundary: Vec<String>,
-    /// First commit that touched the spec dir.
+    /// First commit that touched the spec dir. Empty when no commit
+    /// touches it yet — the boundary is then unknowable rather than
+    /// broken, and `guidance` carries the next step (scenario
+    /// derive-boundary-uncommitted-spec-dir).
     pub first_commit: String,
-    /// Current `HEAD` sha at derivation time.
+    /// Current `HEAD` sha at derivation time. Empty on an unborn HEAD
+    /// (a repo with no commits at all).
     pub current_head: String,
+    /// Next-step guidance, present only when the derivation found no
+    /// spec history. Its presence is the machine-readable signal that
+    /// `/{project}:plan`'s validation gate refuses to advance on and
+    /// that `/{project}:implement` surfaces before the walk proceeds
+    /// fail-closed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub guidance: Option<String>,
 }
 
 // -- check-stuck -------------------------------------------------------------
@@ -2066,6 +2090,14 @@ pub struct DiffCrossSpecResult {
     /// additions (the heading, blanks when the whole file is new) never
     /// report as captured items.
     pub inbox_additions: Vec<String>,
+    /// Next-step guidance, present only when no commit touches the spec
+    /// dir. Without it the empty lists above would read as *"no cross-spec
+    /// impact"* — a positive claim — when the truth is that there is no
+    /// window to diff and the impact is **unknowable**. Its presence tells
+    /// the caller to report the difference rather than the reassurance
+    /// (scenario derive-boundary-uncommitted-spec-dir).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub guidance: Option<String>,
 }
 
 // -- append-inbox --------------------------------------------------------------
@@ -2272,6 +2304,7 @@ mod tests {
                     checked: true,
                 }],
                 done_when: Some("cargo build succeeds".into()),
+                done_when_checked: None,
                 phase: None,
             }],
             path: "specs/022-deterministic-runtime/tasks.md".into(),
@@ -2299,6 +2332,7 @@ mod tests {
                 heading: "Wire up".into(),
                 subtasks: vec![],
                 done_when: None,
+                done_when_checked: None,
                 phase: Some("Phase A — Bootstrap".into()),
             }],
             path: "specs/022-deterministic-runtime/tasks.md".into(),
@@ -2436,11 +2470,25 @@ mod tests {
             ],
             first_commit: "d398083".into(),
             current_head: "6f0f54e".into(),
+            guidance: None,
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert_eq!(value["first-commit"], "d398083");
         assert_eq!(value["current-head"], "6f0f54e");
+        // Absent on an ordinary derivation, so no existing consumer or
+        // golden sees a new key (scenario derive-boundary-uncommitted-spec-dir).
+        assert!(value.get("guidance").is_none());
         assert_eq!(round_trip(&result), result);
+
+        let uncommitted = DeriveBoundaryResult {
+            boundary: vec!["specs/022-deterministic-runtime/**".into()],
+            first_commit: String::new(),
+            current_head: "6f0f54e".into(),
+            guidance: Some("commit the spec directory".into()),
+        };
+        let value: serde_json::Value = serde_json::to_value(&uncommitted).unwrap();
+        assert_eq!(value["guidance"], "commit the spec directory");
+        assert_eq!(round_trip(&uncommitted), uncommitted);
     }
 
     #[test]
@@ -3226,9 +3274,12 @@ mod tests {
             current_head: "def456".into(),
             cross_spec_paths: vec!["specs/007-sibling/spec.md".into()],
             inbox_additions: vec!["- security: token logged in plaintext".into()],
+            guidance: None,
         };
         let rv: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert_eq!(rv["cross-spec-paths"][0], "specs/007-sibling/spec.md");
+        // Absent on an ordinary window, so no existing consumer sees a new key.
+        assert!(rv.get("guidance").is_none());
         assert_eq!(
             rv["inbox-additions"][0],
             "- security: token logged in plaintext"

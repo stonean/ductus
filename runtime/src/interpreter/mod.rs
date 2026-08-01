@@ -1203,6 +1203,73 @@ mod tests {
     }
 
     #[test]
+    fn uncommitted_spec_dir_derivation_leaves_the_seeded_grant_intact() {
+        // Scenario derive-boundary-uncommitted-spec-dir: on an uncommitted
+        // spec dir the derivation carries the spec glob alone plus guidance.
+        // The union must leave a seeded grant standing — that seed is the
+        // documented escape hatch the guidance string points the operator at,
+        // so it is what admits the walk when history cannot supply a zone.
+        let procedure = Procedure {
+            command: "implement".into(),
+            steps: vec![],
+        };
+        let mut reader = Cursor::new(String::new());
+        let mut writer: Vec<u8> = Vec::new();
+        let mut context = Map::new();
+        context.insert(
+            "write-boundary".into(),
+            Value::Array(vec![Value::String("runtime/**".into())]),
+        );
+        let mut walker = Walker::new(
+            &procedure,
+            fixture_repo(),
+            context,
+            &mut reader,
+            &mut writer,
+        );
+        walker.merge_primitive_result(
+            "derive-boundary",
+            serde_json::json!({
+                "boundary": ["specs/004-implement/**"],
+                "first-commit": "",
+                "current-head": "def",
+                "guidance": "commit the spec directory, or seed a write-boundary in the session",
+            }),
+        );
+        assert_eq!(
+            walker.context.get("write-boundary"),
+            Some(&serde_json::json!(["runtime/**", "specs/004-implement/**"])),
+            "seed survives an empty derivation"
+        );
+
+        // With no seed at all the same result is fail-closed: the feature's
+        // own zone and nothing else, so the first out-of-spec edit halts.
+        let mut reader = Cursor::new(String::new());
+        let mut writer: Vec<u8> = Vec::new();
+        let mut walker = Walker::new(
+            &procedure,
+            fixture_repo(),
+            Map::new(),
+            &mut reader,
+            &mut writer,
+        );
+        walker.merge_primitive_result(
+            "derive-boundary",
+            serde_json::json!({
+                "boundary": ["specs/004-implement/**"],
+                "first-commit": "",
+                "current-head": "def",
+                "guidance": "commit the spec directory, or seed a write-boundary in the session",
+            }),
+        );
+        assert_eq!(
+            walker.context.get("write-boundary"),
+            Some(&serde_json::json!(["specs/004-implement/**"])),
+            "fail-closed without a seed"
+        );
+    }
+
+    #[test]
     fn derive_boundary_result_populates_unseeded_write_boundary() {
         let procedure = Procedure {
             command: "implement".into(),
