@@ -39,3 +39,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Declare the `GROUND` category in the `quality-cross.md` file header and register it in `data-model.md` (category table + `QUAL-GROUND` namespace).
 - [x] Add `QUAL-GROUND-001` (SHOULD) to `quality-cross.md` following the canonical schema — the code-side counterpart to `/gov:analyze`'s grounding check, enforcing constitution §grounding.
 - Done when: `scripts/lint-rule-ids.sh` accepts `QUAL-GROUND-001`, markdownlint and `scripts/audit/*` pass, and the rule is registered in both the file header and the data-model. Re-run `/gov:review` before advancing 036 back to `done`.
+
+## 7. Add QUAL-CLAIM-001 (unsubstantiated clean results)
+
+- [x] Declare the `CLAIM` category in the `quality-cross.md` file header and register it in `data-model.md` (category table + `QUAL-CLAIM` namespace).
+- [x] Add `QUAL-CLAIM-001` (SHOULD) to `quality-cross.md` following the canonical schema, with the promotion criterion to MUST documented alongside the Verification paragraph.
+- [x] Cite the four originating instances in the rule's Source paragraph so the rule is traceable to observed defects rather than speculation.
+
+- **Done when**: `scripts/lint-rule-ids.sh` accepts `QUAL-CLAIM-001`; the category appears in both the `quality-cross.md` header and `data-model.md` (table + namespace section); markdownlint and `bash scripts/audit/run-all.sh` pass; `/gov:review` is re-run before 036 advances back to `done`.
