@@ -2,8 +2,8 @@
 status: in-progress
 dependencies: [008-security-rules, 016-cross-cutting-rules, 017-derive-dont-ask, 024-rule-loader, 033-rule-surface-setting]
 review:
-  last-run: 2026-08-02T23:39:49Z
-  reviewed-against: afc811bfd091eb138a0b9c785836c9521c3f0d6a
+  last-run: 2026-08-02T23:41:12Z
+  reviewed-against: 6e84c2a5ff4ef012a265af79ad46919c4ade3901
   must-violations: 0
   should-violations: 0
   low-confidence: 0
@@ -37,6 +37,7 @@ Inaugural rule:
 ### Added categories
 
 - **`GROUND`** (`QUAL-GROUND-001`, SHOULD) — code whose correctness depends on an external contract it does not own (database schema, external API shape, config key, file/wire format) should bind to it so a wrong assumption fails loudly, rather than silently encoding a guess. The code-side counterpart to `/gov:analyze`'s artifact-grounding check; both enforce constitution §grounding. Added after the inaugural delivery per the category-growth policy (`data-model.md` §Category abbreviations), consolidating the code-side grounding enforcement into this existing `QUAL`-surface home rather than a new spec.
+- **`CLAIM`** (`QUAL-CLAIM-001`, SHOULD) — a clean, empty, or in-sync result should distinguish *"examined the subject and found nothing"* from *"could not examine the subject"*, rather than emitting the same value for both. Where `STUB` governs unimplemented paths returning success and `GROUND` governs unverified assumptions inside logic, `CLAIM` governs a fully-implemented path whose **output** overstates what it verified — absence of evidence rendered as evidence of absence. Added per the same category-growth policy, derived from four instances observed in `govern`'s own tooling rather than proposed speculatively, one of which was an adopter report.
 
 ## Acceptance Criteria
 
