@@ -2,8 +2,8 @@
 status: in-progress
 dependencies: [008-security-rules, 016-cross-cutting-rules, 017-derive-dont-ask, 024-rule-loader, 033-rule-surface-setting]
 review:
-  last-run: 2026-07-18T22:09:18Z
-  reviewed-against: b723c17e55ac6efce05befceac1535bb0b291fdd
+  last-run: 2026-08-02T23:39:49Z
+  reviewed-against: afc811bfd091eb138a0b9c785836c9521c3f0d6a
   must-violations: 0
   should-violations: 0
   low-confidence: 0
@@ -48,6 +48,7 @@ Inaugural rule:
 - [x] Rules whose surface overlaps an existing rule cite it rather than restating it (`BE-SCHEMA-002` for the build-time fail-loud case).
 - [x] The file is added to the `/govern` **Shared Files** manifest in `framework/bootstrap/govern.md` (slotted between `performance-frontend.md` and `security-backend.md`) and is auto-selected for every stack via the `-cross.md` suffix ([024-rule-loader](../024-rule-loader/spec.md)), composing with [033-rule-surface-setting](../033-rule-surface-setting/spec.md).
 - [x] `QUAL-GROUND-001` (SHOULD) is present with Statement / Rationale / Verification, the `GROUND` category is declared in the file header and registered in the data-model, and the rule is enforced by `/gov:review`'s quality pass as the code-side counterpart to `/gov:analyze`'s grounding check (constitution §grounding).
+- [x] `QUAL-CLAIM-001` (SHOULD) is present with Statement / Rationale / Verification, the `CLAIM` category is declared in the file header and registered in the data-model, and its Rationale states the discriminator against `QUAL-STUB-001` and `QUAL-GROUND-001` so a reviewer choosing between the three has the distinction in hand. Its Verification carries a promotion criterion to MUST, and its Source cites the observed instances it was derived from — naming which are confirmed and which are unassessed, so the rule does not itself assert more than was verified.
 
 ## Open Questions
 
