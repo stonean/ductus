@@ -1,12 +1,12 @@
 ---
-status: in-progress
+status: done
 dependencies: [017-derive-dont-ask, 022-deterministic-runtime, 023-govern-refinement, 024-rule-loader, 025-rule-opt-out]
 review:
-  last-run: 2026-05-18T01:30:00Z
-  reviewed-against: b160cfb
+  last-run: 2026-08-02T02:29:53Z
+  reviewed-against: e7296cb9dc1d58c6c193d3a50f11a0abe4ea01ae
   must-violations: 0
   should-violations: 1
-  low-confidence: 1
+  low-confidence: 0
   blocking: false
 ---
 
@@ -26,7 +26,7 @@ A separate problem surfaced 2026-05-17 when [024](../024-rule-loader/spec.md) an
 
 ### Check families
 
-The eight families below are the v1 scope. Each is described by what it checks, where it reads, and what a finding looks like.
+Nine families were the v1 scope, described below by what each checks, where it reads, and what a finding looks like. **Family 3 has since been retired** — spec `043-workflows-sunset` sunset the workflows feature and deleted the artifacts it compared — so eight of the nine ship today. Family numbers are permanent identifiers: 3 is not reused, and the families added by later scenarios continue from 10.
 
 #### 1. Cross-doc claim consistency
 
@@ -43,9 +43,11 @@ Two installer paths (`/govern` for greenfield bootstrap; `/gov:init` for adopter
 - **Installer manifest parity.** Compare the file list scaffolded by `/govern` against `/gov:init`. Any file in one but not the other is a finding.
 - **Permission set parity.** Extract the canonical permission set from each configure source. Differences are findings — same semantic permission must appear in both, in each agent's native format.
 
-#### 3. Registry equivalence
+#### 3. Registry equivalence — retired
 
-`framework/workflows/registry.json` and `framework/workflows/*.md` must agree: every registry entry references a real workflow file, every workflow file appears in the registry, and registry descriptions match the workflow file's frontmatter `description:`.
+Implemented in v1 as `scripts/audit/registry-equivalence.sh`, which checked that `framework/workflows/registry.json` and `framework/workflows/*.md` agreed: every registry entry referenced a real workflow file, every workflow file appeared in the registry, and registry descriptions matched the workflow file's frontmatter `description:`.
+
+Retired by spec `043-workflows-sunset`, which sunset the workflows feature and deleted `framework/workflows/` along with the check script (commit `531e3ea`). It is referenced by name rather than inline link because 026 does not depend on 043 — the reverse-chronological relationship would induce a `026 → 043 → 027 → 026` cycle in the derived dependency graph. Nothing remains for the family to compare, so it is no longer registered in `scripts/audit/run-all.sh`. The number stays reserved rather than reused.
 
 #### 4. Placeholder roundtrip
 
@@ -114,10 +116,10 @@ The maintainer reviews findings and routes each to a fix path:
 ## Acceptance Criteria
 
 - [x] A new slash command `/audit` exists at `framework/commands/audit.md` (and its generated `.claude/commands/gov/audit.md` mirror). The command runs without a session target and audits the framework's own cross-cutting artifacts.
-- [x] The nine check families listed in Behavior are implemented. Each produces at least one finding shape with severity, location, what failed, and a suggested fix.
+- [x] The check families listed in Behavior are implemented — all nine at v1, eight today after Family 3's retirement (see Behavior §3). Each produces at least one finding shape with severity, location, what failed, and a suggested fix.
 - [x] **Cross-doc claim consistency** check #1 (README spec-status table) is implemented by invoking `scripts/gen-readme-table.sh --check` and reporting non-zero exit as a finding. Check #2 (pipeline diagrams) and check #3 (back-edge wording) extract the relevant textual blocks from each doc and report differences.
 - [x] **Manifest parity** compares the file list scaffolded by `/govern` against `/gov:init` (extracted from each command's source body, not from runtime execution); compares the canonical permission set in `configure/claude.md` against `configure/auggie.md` (extracted in each agent's native format, normalized to a comparable shape).
-- [x] **Registry equivalence** verifies every entry in `framework/workflows/registry.json` references a real workflow file in `framework/workflows/*.md`, every workflow file is registered, and registry descriptions match workflow file frontmatter `description:`.
+- [x] **Registry equivalence** verified every entry in `framework/workflows/registry.json` referenced a real workflow file in `framework/workflows/*.md`, every workflow file was registered, and registry descriptions matched workflow file frontmatter `description:`. Met at v1 and **since retired** — spec `043-workflows-sunset` deleted the workflows feature and this check with it (see Behavior §3). Retained as a record of what shipped, not as a live requirement.
 - [x] **Placeholder roundtrip** scans `framework/commands/*.md` for hardcoded `.claude/`, `gov:`, or other tokens that should be placeholders per spec 012's multi-agent contract.
 - [x] **Template-validate alignment** enumerates blocking checks in `framework/commands/analyze.md` and confirms each has a corresponding scaffolding element in the spec/plan/tasks/scenario templates.
 - [x] **Single-source-of-truth invariants** detects when a normative rule (e.g., the open-question counting rule) appears textually in multiple locations and reports cases where the rule should be referenced rather than restated.
