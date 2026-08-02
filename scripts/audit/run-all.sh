@@ -59,5 +59,6 @@ run_check "Family 13 — runtime hardcoded paths" "scripts/audit/runtime-hardcod
 run_check "Family 14 — installer/registry parity" "scripts/audit/installer-registry-parity.sh"
 run_check "Family 15 — runtime probe parity" "scripts/audit/runtime-probe-parity.sh"
 run_check "Family 16 — installer/command parity" "scripts/audit/installer-command-parity.sh"
+run_check "Family 17 — host namespace parity" "scripts/audit/host-namespace-parity.sh"
 
 exit "$drift"

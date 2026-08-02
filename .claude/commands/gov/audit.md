@@ -53,6 +53,8 @@ When the runtime is not on `PATH`, walk the same scripts directly. Each prints f
 15. Run `scripts/audit/runtime-probe-parity.sh` (Family 15 — the gvrn binary probe is in parity between each agent's **Agent Registry** `settings_template` seed and its `configure/{key}.md` set: present in both or neither, never one only).
 16. Run `scripts/audit/installer-command-parity.sh` (Family 16 — the `/govern` **Per-Agent Scaffolding** slash-command manifest lists exactly the `framework/commands/*.md` files, minus the maintainer-only commands (`audit`) intentionally not shipped to adopters).
 
+17. Run `scripts/audit/host-namespace-parity.sh` (Family 17 — the namespace the runtime renders (`[host] project`, else the repo directory basename, as `Host::load` resolves it) matches a namespace actually installed under an agent config dir, so no rendered next-action names a namespace the operator cannot invoke).
+
 ## Boundary with `/gov:analyze`
 
 | Concern | Owner |

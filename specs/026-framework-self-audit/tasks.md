@@ -181,8 +181,8 @@ Pulled in from the original Future Considerations during the autonomous implemen
 
 ### 19. Implement scenario: audit-script-refactors
 
-- [ ] Extract `scripts/audit/lib.sh` exposing `audit_emit FAMILY LOCATION MESSAGE FIX` plus ROOT/cd setup; refactor the nine family check scripts to source it (REUSE-001).
-- [ ] Refactor `flush_step` in `scripts/audit/primitive-promotion-candidates.sh` to take state as explicit arguments and return the step list, eliminating caller-scope mutation (QUALITY-001).
+- [x] Extract `scripts/audit/lib.sh` exposing `audit_emit FAMILY LOCATION MESSAGE FIX` plus ROOT/cd setup; refactor the nine family check scripts to source it (REUSE-001).
+- [x] Refactor `flush_step` in `scripts/audit/primitive-promotion-candidates.sh` to take state as explicit arguments and return the step list, eliminating caller-scope mutation (QUALITY-001).
 
 - **Done when**: `bash scripts/audit/run-all.sh` exits 0 with stdout-row parity against the pre-refactor state; each family script is shorter by ~10 lines; `flush_step` no longer reads or mutates caller-scope variables.
 
@@ -194,6 +194,6 @@ Pulled in from the original Future Considerations during the autonomous implemen
 
 ### 21. Implement scenario: [host-namespace-parity](scenarios/host-namespace-parity.md)
 
-- [ ] Implement the behavior described in `scenarios/host-namespace-parity.md`
+- [x] Implement the behavior described in `scenarios/host-namespace-parity.md`
 
 - **Done when**: `/gov:audit` gains a host-namespace-parity family that resolves the effective namespace the way `Host::load` does (`[host] project`, else repo dir basename) and compares it against the installed `{cli-config-dir}/commands/<ns>/` directories, emitting a finding that names both values and the one-block fix; a repo with no installed commands dir and a repo whose basename fallback already matches both pass without a finding; `.govern/config.toml` in this repo gains `[host]` / `project = "gov"` so the family is green and every rendered next-action names `/gov:*`; `bash scripts/audit/run-all.sh` exits 0.

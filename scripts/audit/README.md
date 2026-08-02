@@ -48,5 +48,6 @@ Three properties this buys, each of which the shape above is load-bearing for:
 - `installer-registry-parity.sh` — Family 14.
 - `runtime-probe-parity.sh` — Family 15.
 - `installer-command-parity.sh` — Family 16. `/govern`'s §Per-Agent Scaffolding slash-command manifest must list exactly the `framework/commands/*.md` files, minus the maintainer-only commands (`audit`) intentionally withheld from adopters.
+- `host-namespace-parity.sh` — Family 17. The namespace the runtime *renders* (`[host] project`, else the repo directory basename, per `Host::load`) must match a namespace actually *installed* under an agent config dir (`{cli-config-dir}/commands/<ns>/`, or `command/<ns>/` for opencode). A mismatch means every rendered next-action names a namespace the operator cannot invoke. Not a finding when nothing is installed, or when the basename fallback already agrees — the check asserts agreement between two existing things, not the presence of the `[host]` block.
 
 Families 1–9 are described in detail in the [026 spec](../../specs/026-framework-self-audit/spec.md#check-families) and the [026 plan's Technical Decisions](../../specs/026-framework-self-audit/plan.md#per-family-script-designs); families 10+ were added incrementally and carry their rationale in each script's header comment.

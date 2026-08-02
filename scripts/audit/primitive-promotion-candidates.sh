@@ -63,6 +63,31 @@ is_legacy() {
   return 1
 }
 
+# report_step FILE START_LINE HAS_IGNORE HAS_PRIMITIVE HAS_LLM BUFFER
+#
+# Emit a finding when the described step is prose-only and not allowlisted.
+# A pure function of its arguments: it reads no caller-scope state and
+# clears none, so the walker below owns step state end-to-end and this
+# reporter can be reasoned about (and reused) in isolation. `emit` setting
+# the shared `drift` flag is lib.sh's documented contract, not caller-scope
+# mutation by this function.
+#
+# A START_LINE of 0 means "no step pending" — the no-op case at a section
+# boundary or EOF before any step was seen.
+report_step() {
+  local file="$1" start_line="$2" has_ignore="$3" has_primitive="$4" has_llm="$5" buffer="$6"
+  [ "$start_line" -eq 0 ] && return 0
+  [ "$has_ignore" -eq 1 ] && return 0
+  [ "$has_primitive" -eq 1 ] && return 0
+  [ "$has_llm" -eq 1 ] && return 0
+  # First-line summary of the step for the finding (truncate to 120 chars).
+  local summary
+  summary="$(printf '%s' "$buffer" | head -n 1 | cut -c 1-120)"
+  emit "$file:$start_line" \
+    "prose-only step without primitive call or <!-- llm:* --> marker: $summary" \
+    "either invoke a runtime primitive, add an <!-- llm:* --> marker, or annotate with <!-- audit:ignore-promotion --> on the preceding line"
+}
+
 # Walk each command file.
 for file in framework/commands/*.md; do
   if is_legacy "$file"; then
@@ -79,24 +104,7 @@ for file in framework/commands/*.md; do
   step_has_ignore=0
   line_no=0
 
-  flush_step() {
-    if [ "$step_start_line" -eq 0 ]; then
-      return
-    fi
-    if [ "$step_has_ignore" -eq 1 ]; then
-      :  # allowlisted
-    elif [ "$step_has_primitive" -eq 0 ] && [ "$step_has_llm_marker" -eq 0 ]; then
-      # First-line summary of the step for the finding (truncate to 120 chars).
-      summary="$(printf '%s' "$step_buffer" | head -n 1 | cut -c 1-120)"
-      emit "$file:$step_start_line" "prose-only step without primitive call or <!-- llm:* --> marker: $summary" "either invoke a runtime primitive, add an <!-- llm:* --> marker, or annotate with <!-- audit:ignore-promotion --> on the preceding line"
-    fi
-    step_start_line=0
-    step_buffer=""
-    step_has_primitive=0
-    step_has_llm_marker=0
-    step_has_ignore=0
-  }
-
+  # shellcheck disable=SC2094  # report_step takes "$file" as a label only; it writes to stdout via emit, never to the file this loop reads
   while IFS= read -r line; do
     line_no=$((line_no + 1))
     # Detect section boundaries.
@@ -107,7 +115,11 @@ for file in framework/commands/*.md; do
     # Any other H2 ends the Instructions section. Flush a pending step
     # before moving on.
     if [[ "$line" =~ ^##[[:space:]] ]] && [ "$in_instructions" -eq 1 ]; then
-      flush_step
+      report_step "$file" "$step_start_line" "$step_has_ignore" \
+        "$step_has_primitive" "$step_has_llm_marker" "$step_buffer"
+      # Clear the pending step so a later `## Instructions` in the same
+      # file starts from a clean slate rather than inheriting this one.
+      step_start_line=0
       in_instructions=0
       continue
     fi
@@ -124,13 +136,17 @@ for file in framework/commands/*.md; do
     # without leading whitespace for sub-steps, but we only care about
     # top-level for promotion candidates).
     if [[ "$line" =~ ^[0-9]+\.[[:space:]] ]]; then
-      flush_step
+      report_step "$file" "$step_start_line" "$step_has_ignore" \
+        "$step_has_primitive" "$step_has_llm_marker" "$step_buffer"
+      # Initialize state for the step just opened. Every field is assigned
+      # here rather than cleared by the reporter, which is what keeps the
+      # reporter pure — the walker owns step state end to end.
       step_start_line=$line_no
       step_buffer="$line"
-      if [ "$ignore_next" -eq 1 ]; then
-        step_has_ignore=1
-        ignore_next=0
-      fi
+      step_has_primitive=0
+      step_has_llm_marker=0
+      step_has_ignore=$ignore_next
+      ignore_next=0
       # Check the opening line for primitive backticks or llm marker.
       for prim in "${primitives[@]}"; do
         if [[ "$line" == *"\`${prim}\`"* ]]; then
@@ -160,8 +176,10 @@ for file in framework/commands/*.md; do
     fi
   done < "$file"
 
-  # Flush any final pending step at EOF.
-  flush_step
+  # Report any final pending step at EOF. No reset is needed — the next
+  # file iteration re-initializes every field at the top of the loop.
+  report_step "$file" "$step_start_line" "$step_has_ignore" \
+    "$step_has_primitive" "$step_has_llm_marker" "$step_buffer"
 done
 
 exit "$drift"
