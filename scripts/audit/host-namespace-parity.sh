@@ -104,21 +104,23 @@ for cli_dir in .claude .augment .opencode .agents; do
   # Both layouts: plural `commands/` (claude, auggie, antigravity) and
   # singular `command/` (opencode). An adopter installs into exactly one,
   # so collecting from both is safe.
-  installed=""
+  # An array, not a space-joined string: a namespace directory containing a
+  # space would otherwise be re-split into bogus entries by word splitting,
+  # and the count below would be wrong. Bash 3.2 compatible (indexed array).
+  installed=()
   for subdir in commands command; do
     [ -d "$cli_dir/$subdir" ] || continue
     for ns_path in "$cli_dir/$subdir"/*/; do
       [ -d "$ns_path" ] || continue
-      ns="$(basename "$ns_path")"
-      installed="$installed $ns"
+      installed+=("$(basename "$ns_path")")
     done
   done
 
   # Nothing installed under this agent dir — nothing to compare.
-  [ -z "$installed" ] && continue
+  [ "${#installed[@]}" -eq 0 ] && continue
 
   matched=0
-  for ns in $installed; do
+  for ns in "${installed[@]}"; do
     if [ "$ns" = "$project" ]; then
       matched=1
       break
@@ -126,15 +128,12 @@ for cli_dir in .claude .augment .opencode .agents; do
   done
 
   if [ "$matched" -eq 0 ]; then
-    # Trim the accumulator's leading space for a clean message.
-    installed_list="${installed# }"
-    installed_list="${installed_list// /, }"
+    installed_list="$(printf '%s, ' "${installed[@]}")"
+    installed_list="${installed_list%, }"
     # With exactly one installed namespace the fix is unambiguous, so name
     # it directly — the suggested-fix column is meant to be copy-pasteable,
     # and "<one of: gov>" would have to be edited before it works.
-    count=0
-    for ns in $installed; do count=$((count + 1)); done
-    if [ "$count" -eq 1 ]; then
+    if [ "${#installed[@]}" -eq 1 ]; then
       value="\"$installed_list\""
     else
       value="\"<one of: $installed_list>\""
