@@ -197,3 +197,9 @@ Pulled in from the original Future Considerations during the autonomous implemen
 - [x] Implement the behavior described in `scenarios/host-namespace-parity.md`
 
 - **Done when**: `/gov:audit` gains a host-namespace-parity family that resolves the effective namespace the way `Host::load` does (`[host] project`, else repo dir basename) and compares it against the installed `{cli-config-dir}/commands/<ns>/` directories, emitting a finding that names both values and the one-block fix; a repo with no installed commands dir and a repo whose basename fallback already matches both pass without a finding; `.govern/config.toml` in this repo gains `[host]` / `project = "gov"` so the family is green and every rendered next-action names `/gov:*`; `bash scripts/audit/run-all.sh` exits 0.
+
+### 22. Implement scenario: [family-17-contract-binding](scenarios/family-17-contract-binding.md)
+
+- [x] Implement the behavior described in `scenarios/family-17-contract-binding.md`
+
+- **Done when**: Family 17 derives its agent config-dir set from the Agent Registry table's `config_dir` column in `framework/bootstrap/govern.md` rather than hardcoding it, emits a finding and exits non-zero when that derivation yields nothing instead of falling back to a built-in list, and asserts the `commands`/`command` pair and `[host] project` key against `runtime/src/host.rs` and the new-wins config order against `runtime/src/schema/paths.rs`, each failing loudly with a suggested fix that names the runtime-exposed-namespace option; the derived set matches the four registered agents; `scripts/audit/run-all.sh` exits clean.

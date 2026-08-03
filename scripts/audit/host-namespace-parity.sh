@@ -95,10 +95,65 @@ if [ -z "$project" ]; then
   source_desc="repo directory basename (no [host] project key)"
 fi
 
+# --- 17a2: bind the borrowed contracts to their canonical sources ------------
+
+# This family reproduces `Host::load`'s namespace resolution in shell, so it
+# depends on four contracts it does not own. Encoding them as bare literals
+# made it a drift-detector that could itself drift: rename the key or add a
+# fifth agent and the family keeps exiting 0 while checking the wrong thing,
+# which reads as assurance rather than absence (QUAL-GROUND-001, surfaced by
+# 026's review 2026-08-02). Each is now either derived from its canonical
+# source or asserted against it, and a failed derivation is a finding rather
+# than a silent fallback.
+
+HOST_RS="$ROOT/runtime/src/host.rs"
+REGISTRY_MD="$ROOT/framework/bootstrap/govern.md"
+
+# The agent config dirs are DERIVED from the Agent Registry table in
+# framework/bootstrap/govern.md — the canonical source per the constitution's
+# canonical-sources map — rather than listed here. `config_dir` is the table's
+# third column, so with a leading `|` it is awk's field 4.
+CLI_DIRS=()
+while IFS= read -r dir; do
+  [ -n "$dir" ] && CLI_DIRS+=("$dir")
+done < <(awk -F'|' '
+  /^\| *`key` *\| *`name` *\| *`config_dir`/ { intable = 1; next }
+  intable && /^\| *-/                        { next }
+  intable && !/^\|/                          { exit }
+  intable { gsub(/[` ]/, "", $4); if ($4 != "") print $4 }
+' "$REGISTRY_MD" 2>/dev/null | sort -u)
+
+if [ "${#CLI_DIRS[@]}" -eq 0 ]; then
+  emit "framework/bootstrap/govern.md" \
+    "could not derive the agent config-dir set from the Agent Registry table — this family would otherwise check a hardcoded set and pass while ignoring real agents" \
+    "restore the Agent Registry table's \`config_dir\` column, or update this family's derivation to match its new shape"
+  exit 1
+fi
+
+# The remaining three contracts are single-site in the runtime, so they are
+# asserted rather than derived: if the assertion fails the literals above are
+# stale and every comparison below is meaningless.
+assert_contract() {
+  # assert_contract FILE PATTERN DESCRIPTION
+  grep -qF "$2" "$1" 2>/dev/null && return 0
+  emit "${1#"$ROOT"/}" \
+    "$3 is no longer present at its canonical source, so this family's mirrored copy has drifted" \
+    "re-read the canonical definition and update this family, or expose the resolved namespace from the runtime so the shell cannot diverge at all"
+  return 1
+}
+
+contracts_ok=1
+assert_contract "$HOST_RS" '["commands", "command"]' \
+  "the commands/command subdirectory pair (Host::command_file_candidates)" || contracts_ok=0
+assert_contract "$HOST_RS" 'project' \
+  "the [host] project key (HostBlock)" || contracts_ok=0
+assert_contract "$ROOT/runtime/src/schema/paths.rs" '.govern/config.toml' \
+  "the new-wins config resolution order (schema::paths)" || contracts_ok=0
+[ "$contracts_ok" -eq 1 ] || exit 1
+
 # --- 17b/17c: compare against the installed namespaces ----------------------
 
-# The four agent config dirs govern supports (spec 012 / 028 / 032).
-for cli_dir in .claude .augment .opencode .agents; do
+for cli_dir in "${CLI_DIRS[@]}"; do
   [ -d "$cli_dir" ] || continue
 
   # Both layouts: plural `commands/` (claude, auggie, antigravity) and
