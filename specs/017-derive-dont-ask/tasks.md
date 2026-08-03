@@ -364,3 +364,11 @@ Done when: this spec's artifacts have no `title:` or `tags:` frontmatter; valida
 - [x] Implement the behavior described in `scenarios/detect-dependency-cycles.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested. `gen-spec-deps.sh` exits non-zero and names the SCC(s) on stderr when the generated graph contains a cycle; the pre-commit hooks (`.githooks/govern-pre-commit` and shipped `framework/bootstrap/hooks/govern-pre-commit`) propagate the failure and block the commit; fixtures cover 2-cycle, 3-cycle (single SCC), mixed acyclic+cyclic, self-cycle, and the acyclic happy path.
+
+## Phase A — Follow-on scenarios
+
+### 35. Implement scenario: [generator-sync-claim-honesty](scenarios/generator-sync-claim-honesty.md)
+
+- [ ] Implement the behavior described in `scenarios/generator-sync-claim-honesty.md`
+
+- **Done when**: `gen-spec-deps.sh` and `gen-cross-service-refs.sh` report `No changes (N tracked specs in sync; M untracked spec(s) skipped — git add to include)` on a zero rewrite count, omitting the skipped clause when M is zero; the `list_specs()` tracked-files exclusion is byte-for-byte unchanged (`tracked-specs-not-worktree` still holds); `gen-help-tables.sh` and `gen-configure-mcp.sh` are each assessed against the same question and corrected only if their zero count can mean "did not examine"; the pre-commit hook and CI still pass.
