@@ -74,42 +74,42 @@ Tasks 3–10 are authored as scenarios under [022 — Deterministic Runtime](../
 
 ## 8. Implement the `criterion-path-existence` family
 
-- [ ] Gate the family to specs at `status: done`, reading acceptance criteria through `read-spec`'s parsed `acceptance-criteria` (AC17)
-- [ ] Extract candidate paths from inline code spans only, applying the grammar in [data-model.md](data-model.md) (AC16)
-- [ ] Resolve each candidate repo-root-relative, accepting a file or a directory and stripping a trailing `/`
-- [ ] Emit one advisory finding per unresolved path, naming the criterion text and the path
-- [ ] Test that body prose naming a deleted path produces no finding, so 026's own Behavior §3 retirement note stays clean (AC17)
-- [ ] Test the grammar's rejections: a slash-command reference, a `path:line` citation, a glob, a URL, a flag
+- [x] Gate the family to specs at `status: done`, reading acceptance criteria through `read-spec`'s parsed `acceptance-criteria` (AC17)
+- [x] Extract candidate paths from inline code spans only, applying the grammar in [data-model.md](data-model.md) (AC16)
+- [x] Resolve each candidate repo-root-relative, accepting a file or a directory and stripping a trailing `/`
+- [x] Emit one advisory finding per unresolved path, naming the criterion text and the path
+- [x] Test that body prose naming a deleted path produces no finding, so 026's own Behavior §3 retirement note stays clean (AC17)
+- [x] Test the grammar's rejections: a slash-command reference, a `path:line` citation, a glob, a URL, a flag
 
 - **Done when**: the family flags unresolved acceptance-criterion paths on `done` specs only, never flags body prose, and every grammar rejection is covered by a test.
 
 ## 9. Reproduce the originating case as a fixture test
 
-- [ ] Add a fixture reproducing 026's AC5 — a `done` spec whose acceptance criterion names `framework/workflows/registry.json` and `scripts/audit/registry-equivalence.sh`, neither present
-- [ ] Assert both paths produce findings (AC18)
-- [ ] Assert the same fixture at a non-`done` status produces none
+- [x] Add a fixture reproducing 026's AC5 — a `done` spec whose acceptance criterion names `framework/workflows/registry.json` and `scripts/audit/registry-equivalence.sh`, neither present
+- [x] Assert both paths produce findings (AC18)
+- [x] Assert the same fixture at a non-`done` status produces none
 
 - **Done when**: the fixture test fails against the pre-change runtime and passes after, demonstrating the check catches the case that motivated it.
 
 ## 10. Sweep the family lists that are already stale
 
-- [ ] Update `check_artifacts.rs` module docs from five families to seven, describing both additions
-- [ ] Update the `ArtifactFinding::family` doc comment, which currently names four families and predates 046's fifth
-- [ ] Update the `CheckArtifactsResult::findings` doc comment's family-order note
-- [ ] Update the `check-artifacts` `#[tool(description = …)]` in `runtime/src/mcp/server.rs`, which also names four
-- [ ] Grep `framework/`, `specs/`, `docs/`, and `README.md` for other family-count claims about `check-artifacts` and correct each
+- [x] Update `check_artifacts.rs` module docs from five families to seven, describing both additions
+- [x] Update the `ArtifactFinding::family` doc comment, which currently names four families and predates 046's fifth
+- [x] Update the `CheckArtifactsResult::findings` doc comment's family-order note
+- [x] Update the `check-artifacts` `#[tool(description = …)]` in `runtime/src/mcp/server.rs`, which also names four
+- [x] Grep `framework/`, `specs/`, `docs/`, and `README.md` for other family-count claims about `check-artifacts` and correct each
 
 - **Done when**: no live artifact states a `check-artifacts` family count or list that disagrees with the seven implemented families.
 
 ## 11. Document both checks in `analyze.md`
 
-- [ ] Update step 8's prose from five families to seven, naming both additions and their advisory severity
-- [ ] Add a `### Link-adjacent decision drift (advisory)` section to the markdown-only reference: the tell list, the block unit, the four exempt contexts, per-link evaluation, and the target-state mapping
-- [ ] Add a `### Acceptance-criterion path existence (advisory)` section: `done`-spec scope, code-span-only extraction, and why body prose is excluded
-- [ ] Document the shared promotion criterion once — 5+ findings across a repo on two consecutive `--all` runs **and** every finding in those runs confirmed a true positive — and state why the precision half is required here but not for the LLM-judged checks
-- [ ] Document that unexamined targets surface in the Informational tier, cross-referencing the cross-service unknowns that already sit there
-- [ ] Confirm the markdown-only prose is walkable without the runtime and states the same rules the primitive implements (AC15)
-- [ ] Keep placeholders unsubstituted in the source and let the pre-commit hook regenerate the deployed command file
+- [x] Update step 8's prose from five families to seven, naming both additions and their advisory severity
+- [x] Add a `### Link-adjacent decision drift (advisory)` section to the markdown-only reference: the tell list, the block unit, the four exempt contexts, per-link evaluation, and the target-state mapping
+- [x] Add a `### Acceptance-criterion path existence (advisory)` section: `done`-spec scope, code-span-only extraction, and why body prose is excluded
+- [x] Document the shared promotion criterion once — 5+ findings across a repo on two consecutive `--all` runs **and** every finding in those runs confirmed a true positive — and state why the precision half is required here but not for the LLM-judged checks
+- [x] Document that unexamined targets surface in the Informational tier, cross-referencing the cross-service unknowns that already sit there
+- [x] Confirm the markdown-only prose is walkable without the runtime and states the same rules the primitive implements (AC15)
+- [x] Keep placeholders unsubstituted in the source and let the pre-commit hook regenerate the deployed command file
 
 - **Done when**: `analyze.md` documents both checks and the shared promotion criterion alongside the existing advisory checks (AC10), the placeholder-roundtrip audit family passes, and the regenerated command file appears in the same commit.
 

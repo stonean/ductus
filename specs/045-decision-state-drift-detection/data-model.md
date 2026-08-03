@@ -54,7 +54,7 @@ Reuses the existing `ArtifactFinding` (`runtime/src/schema/primitives.rs:2189`) 
 | `path` | repo-relative path of the **citing** artifact | repo-relative path of the citing `spec.md` |
 | `message` | citing line number, the link target, every tell that fired in list order, and the target's contradicting state | the criterion text, the named path, and that it does not resolve |
 
-One finding per (block, link) pair; the message carries the line number, so AC4's "citing file and line" is satisfied without adding a field the other five families do not carry.
+One finding per (block, link) pair; the message carries the line number, so AC4's "citing file and line" is satisfied without adding a field the other families do not carry.
 
 ## `SkippedTarget`
 

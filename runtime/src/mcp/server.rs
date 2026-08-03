@@ -757,7 +757,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "check-artifacts",
-        description = "Run /gov:analyze's residual deterministic check families against one feature: artifact completeness per status tier (plan.md/tasks.md at planned+), task consistency (strictly-increasing numbering, Done-when presence), scenario→task mapping (honoring §tasks-phase pruning evidence), and review-state drift on done specs. Each finding carries family, severity, message, and path; severity tiers mirror the command's markdown-only reference."
+        description = "Run /gov:analyze's residual deterministic check families against one feature: artifact completeness per status tier (plan.md/tasks.md at planned+), task consistency (strictly-increasing numbering, Done-when presence), scenario→task mapping (honoring §tasks-phase pruning evidence), review-state drift on done specs, scenario open questions (blocking at done, advisory otherwise), link-adjacent decision drift (prose asserting an open state its own sibling link's target contradicts), and acceptance-criterion path existence on done specs. Each finding carries family, severity, message, and path; severity tiers mirror the command's markdown-only reference. Targets a family could not examine are reported separately in `skipped`, so a zero-finding result never reads as assurance the primitive cannot give."
     )]
     async fn check_artifacts(
         &self,

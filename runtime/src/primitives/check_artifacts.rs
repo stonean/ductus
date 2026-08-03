@@ -1,9 +1,9 @@
 //! `check-artifacts` — the residual deterministic check families from
 //! `/gov:analyze`'s markdown-only reference, mechanized for one feature.
 //!
-//! Owns six families (spec 022, scenarios analyze-artifact-checks,
-//! scenario-open-question-signal, and link-adjacent-drift-family). Each
-//! family MIRRORS
+//! Owns seven families (spec 022, scenarios analyze-artifact-checks,
+//! scenario-open-question-signal, link-adjacent-drift-family, and
+//! criterion-path-existence-family). Each family MIRRORS
 //! `framework/commands/analyze.md`'s markdown-only reference — severity
 //! tiers and skip rules come from the reference, the primitive introduces
 //! no policy of its own:
@@ -50,6 +50,13 @@
 //!   not that it is *true*, so a stale claim citing its source passes
 //!   (spec 045). Advisory at introduction, with a documented promotion
 //!   criterion in `analyze.md`.
+//! - **criterion-path-existence** (advisory) — a filesystem path named in a
+//!   `done` spec's acceptance criterion that no longer resolves. An AC is a
+//!   contract, so naming a path asserts it is part of the delivered system;
+//!   nothing re-verifies that after a later spec deletes the subject. Reads
+//!   **inside** inline code spans, the inverse of the family above — which
+//!   is why the two are separate families rather than one check with a flag
+//!   (spec 045).
 //!
 //! Parsing reuses the shared machinery — `split_frontmatter` for the spec
 //! frontmatter, [`crate::primitives::read_tasks`] for the task list,
@@ -68,7 +75,7 @@ use crate::primitives::{
 use crate::schema::paths;
 use crate::schema::primitives::{
     ArtifactFinding, CheckArtifactsArgs, CheckArtifactsResult, Frontmatter, ReadSpecArgs,
-    ReadTasksArgs, SkippedTarget, Task,
+    ReadSpecResult, ReadTasksArgs, SkippedTarget, Task,
 };
 use crate::schema::status::COMPATIBLE_STATUSES;
 
@@ -130,14 +137,22 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
     check_review_drift(&mut findings, &frontmatter, &status, &spec_path, repo);
     check_scenario_open_questions(&mut findings, &feature_dir, &status, &spec_path, repo);
 
-    let mut skipped: Vec<SkippedTarget> = Vec::new();
-    check_link_adjacent_drift(
-        &mut findings,
-        &mut skipped,
-        &feature_dir,
-        &args.feature,
+    // Read the feature's own spec state once, through `read-spec`, so the two
+    // families below, the scenario-open-questions family, and the count the
+    // user sees can never disagree.
+    let spec = read_spec::run(
+        &ReadSpecArgs {
+            feature: args.feature.clone(),
+            include_body: false,
+        },
         repo,
-    );
+    )
+    .ok();
+    let mut skipped: Vec<SkippedTarget> = Vec::new();
+    if let Some(spec) = &spec {
+        check_link_adjacent_drift(&mut findings, &mut skipped, &feature_dir, spec, repo);
+        check_criterion_path_existence(&mut findings, &status, spec, &spec_path, repo);
+    }
 
     let clean = findings.is_empty();
     Ok(CheckArtifactsResult {
@@ -490,21 +505,9 @@ fn check_link_adjacent_drift(
     findings: &mut Vec<ArtifactFinding>,
     skipped: &mut Vec<SkippedTarget>,
     feature_dir: &Path,
-    feature: &str,
+    spec: &ReadSpecResult,
     repo: &Path,
 ) {
-    // Read the feature's own state once — through `read-spec`, so this family,
-    // the scenario-open-questions family, and the count the user sees can
-    // never disagree.
-    let Ok(spec) = read_spec::run(
-        &ReadSpecArgs {
-            feature: feature.to_string(),
-            include_body: false,
-        },
-        repo,
-    ) else {
-        return;
-    };
     let spec_status = spec.frontmatter.status.clone();
     let spec_questions = spec.open_questions.len();
     let mut scenario_questions: HashMap<String, usize> = HashMap::new();
@@ -799,6 +802,89 @@ fn read_target_state(
         });
     }
     Ok(TargetState::Opaque)
+}
+
+// --- (g) acceptance-criterion path existence --------------------------------
+
+/// (g) Criterion path existence (advisory) — a filesystem path named in a
+/// `done` spec's acceptance criterion that no longer resolves.
+///
+/// Scoped to `## Acceptance Criteria` on `done` specs, and nothing else. An
+/// acceptance criterion is a **contract**: naming a path asserts that path is
+/// part of the delivered system. Body prose may name a dead path perfectly
+/// correctly while describing history — 026's own Behavior section records
+/// that spec 043 deleted `framework/workflows/` — so widening this check to
+/// whole spec bodies would flag true statements.
+///
+/// Reads **only inside** inline code spans, the inverse of
+/// [`check_link_adjacent_drift`]'s rule. Paths are backticked by convention,
+/// which is exactly the context the tell scan must ignore; one family cannot
+/// hold both rules coherently, which is why these are two.
+///
+/// The filesystem is always examinable, so this family records nothing in
+/// `skipped` — below `done` it is *not applicable*, which is distinct from
+/// tried-and-failed.
+fn check_criterion_path_existence(
+    findings: &mut Vec<ArtifactFinding>,
+    status: &str,
+    spec: &ReadSpecResult,
+    spec_path: &Path,
+    repo: &Path,
+) {
+    if status != "done" {
+        return;
+    }
+    let citing = rel_path(spec_path, repo);
+    for criterion in &spec.acceptance_criteria {
+        for candidate in candidate_paths(&criterion.text) {
+            // A trailing slash marks a directory reference; either kind of
+            // entry satisfies the criterion.
+            if repo.join(candidate.trim_end_matches('/')).exists() {
+                continue;
+            }
+            findings.push(ArtifactFinding {
+                family: "criterion-path-existence".into(),
+                severity: "advisory".into(),
+                message: format!(
+                    "acceptance criterion names `{candidate}`, which no longer resolves: \
+                     \"{}\"",
+                    criterion.text
+                ),
+                path: citing.clone(),
+            });
+        }
+    }
+}
+
+/// Candidate filesystem paths named inside `text`'s inline code spans, in
+/// first-appearance order.
+fn candidate_paths(text: &str) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for line in text.lines() {
+        for span in inline_code_spans(line) {
+            let content = line[span].trim();
+            if is_path_like(content) && !out.iter().any(|seen| seen == content) {
+                out.push(content.to_string());
+            }
+        }
+    }
+    out
+}
+
+/// The acceptance-criterion path grammar (spec 045 data-model).
+///
+/// Every exclusion earns its place against real criteria text in this repo:
+/// `:` rejects URLs, `path:line` citations, and every slash-command
+/// reference; the braces reject placeholders; the bracket and star forms
+/// reject globs; a leading `-` rejects flags; a leading `/` rejects an
+/// absolute path, since the check makes claims about this repository only.
+fn is_path_like(content: &str) -> bool {
+    const REJECTED: [char; 11] = ['{', '}', '*', '?', '[', ']', '<', '>', '$', '|', ':'];
+    content.contains('/')
+        && !content.starts_with('-')
+        && !content.starts_with('/')
+        && !content.chars().any(char::is_whitespace)
+        && !content.chars().any(|c| REJECTED.contains(&c))
 }
 
 #[cfg(test)]
@@ -1571,6 +1657,148 @@ mod tests {
             "{:?}",
             result.findings
         );
+    }
+
+    // --- criterion path existence ----------------------------------------------
+
+    /// A spec at `status` whose Acceptance Criteria section is supplied by the
+    /// test, with plan/tasks present so the other families stay quiet.
+    fn seed_with_criteria(repo: &Path, status: &str, criteria: &str) {
+        write(
+            repo,
+            &format!("specs/{FEATURE}/spec.md"),
+            &format!(
+                "{}\n## Acceptance Criteria\n\n{criteria}",
+                spec(status, Some(CLEAN_REVIEW))
+            ),
+        );
+        write(repo, &format!("specs/{FEATURE}/plan.md"), "# Demo Plan\n");
+        write(repo, &format!("specs/{FEATURE}/tasks.md"), GOOD_TASKS);
+    }
+
+    fn path_findings(result: &CheckArtifactsResult) -> Vec<&ArtifactFinding> {
+        result
+            .findings
+            .iter()
+            .filter(|f| f.family == "criterion-path-existence")
+            .collect()
+    }
+
+    /// The originating case: 026's AC5, after `531e3ea` deleted both subjects.
+    const ORIGINATING_CRITERION: &str = "- [x] Registry equivalence verifies every entry in `framework/workflows/registry.json` against `scripts/audit/registry-equivalence.sh`\n";
+
+    #[test]
+    fn the_originating_case_is_reproduced() {
+        // AC18. Both paths are absent from the fixture repo, exactly as they
+        // are absent from `govern` after spec 043 sunset the workflows feature.
+        let tmp = tempdir().unwrap();
+        seed_with_criteria(tmp.path(), "done", ORIGINATING_CRITERION);
+        let result = run(&args(), tmp.path()).unwrap();
+        let found = path_findings(&result);
+        assert_eq!(found.len(), 2, "{:?}", result.findings);
+        assert!(
+            found[0]
+                .message
+                .contains("framework/workflows/registry.json"),
+            "{}",
+            found[0].message
+        );
+        assert!(
+            found[1]
+                .message
+                .contains("scripts/audit/registry-equivalence.sh"),
+            "{}",
+            found[1].message
+        );
+        // AC7: advisory, and anchored on the citing spec.
+        assert_eq!(found[0].severity, "advisory");
+        assert_eq!(found[0].path, "specs/042-demo/spec.md");
+        // The criterion text is carried so the reader sees which contract broke.
+        assert!(found[0].message.contains("Registry equivalence"));
+    }
+
+    #[test]
+    fn a_spec_below_done_is_not_scanned() {
+        // Criteria below `done` describe work in flight, so a path that does
+        // not exist yet is expected rather than drifted.
+        for status in ["draft", "clarified", "planned", "in-progress"] {
+            let tmp = tempdir().unwrap();
+            seed_with_criteria(tmp.path(), status, ORIGINATING_CRITERION);
+            let result = run(&args(), tmp.path()).unwrap();
+            assert!(
+                path_findings(&result).is_empty(),
+                "expected no findings at {status}: {:?}",
+                result.findings
+            );
+        }
+        // …and being not-applicable is not the same as having tried and
+        // failed, so nothing is recorded as skipped either.
+        let tmp = tempdir().unwrap();
+        seed_with_criteria(tmp.path(), "in-progress", ORIGINATING_CRITERION);
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(
+            !result
+                .skipped
+                .iter()
+                .any(|s| s.family == "criterion-path-existence"),
+            "{:?}",
+            result.skipped
+        );
+    }
+
+    #[test]
+    fn body_prose_naming_a_deleted_path_is_not_flagged() {
+        // AC17, and the reason the check is scoped to criteria: 026's own
+        // Behavior section correctly records a path that is supposed to be
+        // gone. Widening the scope would flag a true statement.
+        let tmp = tempdir().unwrap();
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/spec.md"),
+            &format!(
+                "{}\n## Behavior\n\nRetired by spec 043, which deleted `framework/workflows/`.\n\n\
+                 ## Acceptance Criteria\n\n- [x] The audit runs in CI\n",
+                spec("done", Some(CLEAN_REVIEW))
+            ),
+        );
+        write(tmp.path(), &format!("specs/{FEATURE}/plan.md"), "# Plan\n");
+        write(tmp.path(), &format!("specs/{FEATURE}/tasks.md"), GOOD_TASKS);
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(path_findings(&result).is_empty(), "{:?}", result.findings);
+    }
+
+    #[test]
+    fn the_grammar_rejects_everything_that_is_not_a_path() {
+        // Each rejection is load-bearing against real criteria text: without
+        // it the check would be a noise generator rather than a signal.
+        let tmp = tempdir().unwrap();
+        seed_with_criteria(
+            tmp.path(),
+            "done",
+            "- [x] `/{project}:analyze` documents it, per `https://example.com/spec` and \
+             `runtime/src/primitives/mod.rs:841`, across `specs/*/spec.md`, passing `--exclude=a/b`\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(
+            path_findings(&result).is_empty(),
+            "no candidate should survive the grammar: {:?}",
+            result.findings
+        );
+    }
+
+    #[test]
+    fn a_resolving_path_produces_no_finding() {
+        let tmp = tempdir().unwrap();
+        seed_with_criteria(
+            tmp.path(),
+            "done",
+            "- [x] The generator lives at `scripts/gen-demo.sh` and its rules at `framework/rules/`\n",
+        );
+        write(tmp.path(), "scripts/gen-demo.sh", "#!/bin/sh\n");
+        // A directory reference, trailing slash and all, resolves too.
+        fs::create_dir_all(tmp.path().join("framework/rules")).unwrap();
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(path_findings(&result).is_empty(), "{:?}", result.findings);
     }
 
     #[test]

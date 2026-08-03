@@ -64,6 +64,6 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 
 ## 75. Implement scenario: [criterion-path-existence-family](scenarios/criterion-path-existence-family.md)
 
-- [ ] Implement the behavior described in `scenarios/criterion-path-existence-family.md`
+- [x] Implement the behavior described in `scenarios/criterion-path-existence-family.md`
 
 - **Done when**: `check-artifacts` gains an advisory `criterion-path-existence` family scanning `## Acceptance Criteria` on `done` specs only, reading through `read-spec`'s parsed criteria; candidate paths are taken from inline code spans only under the documented grammar, resolved repo-root-relative and satisfied by a file or a directory with a trailing slash stripped; body prose naming a deleted path produces no finding; the grammar's rejections (a slash-command reference, a `path:line` citation, a glob, a URL, a flag) are each covered by a test; a fixture reproducing 026's AC5 after `531e3ea` yields a finding for each of the two dead paths and none at a non-`done` status; `cargo test` green.
