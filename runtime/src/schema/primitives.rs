@@ -1975,6 +1975,17 @@ pub enum ReviewGateBlock {
     /// The last review left blocking MUST violations
     /// (`review.blocking: true`).
     MustViolations,
+    /// The review is **stale**: a file the spec's plan declares as its own
+    /// surface changed after `review.reviewed-against`, so the recorded
+    /// verdict describes a diff that no longer exists.
+    ///
+    /// Ordered last because it is the weakest claim — the other four say a
+    /// review is missing or failing, this one says a passing review is out
+    /// of date. Without it a review that predates the code it nominally
+    /// covers satisfies every other check, which is how `gvrn-v0.26.2`
+    /// shipped three commits of unreviewed runtime change (spec 022 review,
+    /// 2026-08-03).
+    ReviewStale,
 }
 
 /// Result for `check-review-gate`. A blocked gate is a domain outcome —

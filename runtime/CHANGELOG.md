@@ -2,6 +2,21 @@
 
 All notable changes to the `govern` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `gvrn-v<MAJOR>.<MINOR>.<PATCH>` scheme distinct from framework tags (was `runtime-v*` before v0.2.0 — see the v0.2.0 rename entry below).
 
+## [0.27.0] — 2026-08-03
+
+022 scenario `review-staleness-gate`. A minor rather than a patch because `check-review-gate` gains a blocking outcome adopters will see — a spec that passed the gate yesterday can be blocked by it today.
+
+### Added
+
+- **`ReviewGateBlock::ReviewStale` — the gate now asks whether a review still *applies*.** The four existing checks ask whether a review exists and whether it passed; none asked whether it covers the current code. So a review recorded against one commit and never re-run read as a pass forever, and hand-editing a `review.md` to mark findings resolved produced a record that satisfied every automated check while describing a diff that was gone. `gvrn-v0.26.2` shipped that way: tagged at `334907f` with spec 022's review reading `reviewed-against: 1f7ee722`, covering none of the adopter-scope suppression it released. Gate check 5 fires when a file the spec's plan declares under **Affected Files** changed between `reviewed-against` and `HEAD`, scoped to that declared surface rather than the repo — a repo-wide test would mark every review stale on the next unrelated commit. The spec's own `review.md` and `spec.md` are excluded as bookkeeping, since `write-review` touches both. `compute_review_scope::read_plan_affected` is now `pub(crate)` and shared rather than reimplemented.
+
+  The check **fails open** on anything it cannot determine — no git repository, an unresolvable `reviewed-against`, a plan with no Affected Files table. A gate that blocked on its own blindness is one people route around, and the four honest checks still run. This is deliberately the opposite posture from Family 17's derivation, where an empty result means *checking nothing* and so must fail closed; here an empty result means *blocking nothing*.
+
+### Framework
+
+- **`/gov:audit` Family 19 (`review-freshness`)** — the release-time half of the same rule, asking it of every `done` spec at once. Scoped to durable contracts (`scenarios/*.md`, `data-model.md`) after the two wider rules were measured against this repo and rejected: the plan's Affected Files flags 42 of 48 specs (old specs list shared surfaces every later spec touches), and the whole spec directory flags 31 of 48 (`tasks.md` churns on every ticked checkbox and is ephemeral by construction). The shipped rule flags 10 and catches both real failures, `gvrn-v0.26.1` and `gvrn-v0.26.2`. **Not wired into `run-all.sh`** — it reports 10 pre-existing stale reviews, so wiring it would block the next release tag until they are cleared; that freeze is a maintainer's call, not a side effect of landing the check.
+- AGENTS.md gains the canonical-table sync rule and the backtick-only-when-bindable rule, and **corrects** an entry that claimed `cargo build` can report `Finished` without recompiling. It cannot; the observation came from invoking `cargo build` twice in one shell command and reading only the second, no-op output.
+
 ## [0.26.2] — 2026-08-03
 
 022 scenario `criterion-adopter-scope-destinations`, plus a follow-on to `numbered-heading-grammar-single-source`. Takes `criterion-path-existence` from 21 findings on this repo to **0**, with every suppression recorded rather than dropped.
