@@ -71,6 +71,15 @@ it, because a check's value is its precision, not its coverage.
   compare and is skipped rather than flagged.
 - **Requires `git` and `python3`**, matching Families 17 and 18; a missing tool
   is a precondition finding, not a silent pass.
+- **Requires full git history, which CI does not give by default.** Resolving
+  `reviewed-against` needs the commits it names, and `actions/checkout` clones
+  shallow. The first release after this family was wired (`gvrn-v0.27.1`)
+  failed its gate with "not a commit in this repo" for all 48 specs and
+  skipped the publish — while passing locally on every run, because a
+  developer checkout has full history. Both workflows that run `run-all.sh`
+  now set `fetch-depth: 0` with a comment saying why. The unresolvable-sha
+  case stays a **finding** rather than a skip: with history present it means
+  a rewritten or bogus sha, which is worth reporting.
 
 ## Open Questions
 
