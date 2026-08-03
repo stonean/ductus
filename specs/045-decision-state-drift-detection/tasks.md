@@ -134,11 +134,11 @@ Tasks 3–10 are authored as scenarios under [022 — Deterministic Runtime](../
 
 ## 14. Release the runtime
 
-- [ ] Run `cargo fmt` and `cargo clippy` under `runtime/`, then the full `cargo test` suite
-- [ ] Run `scripts/audit/run-all.sh` locally — it is a hard release gate and any finding aborts the publish
-- [ ] Bump `runtime/Cargo.toml` to `0.26.0` and add the matching `runtime/CHANGELOG.md` section
+- [x] Run `cargo fmt` and `cargo clippy` under `runtime/`, then the full `cargo test` suite
+- [x] Run `scripts/audit/run-all.sh` locally — it is a hard release gate and any finding aborts the publish
+- [x] Bump `runtime/Cargo.toml` to `0.26.0` and add the matching `runtime/CHANGELOG.md` section
 - [ ] Commit to `main` and push, then tag `gvrn-v0.26.0` at that commit and push the tag
 - [ ] Confirm the `runtime-release` workflow completes green so the binaries and the crates.io publish actually land
-- [ ] Do not `BLESS=1` any golden — the parity goldens carry the `{{runtime-version}}` placeholder and no golden should change
+- [x] Do not `BLESS=1` any golden — the parity goldens carry the `{{runtime-version}}` placeholder and no golden should change
 
 - **Done when**: `gvrn-v0.26.0` is tagged, pushed, and published green, and the goldens are byte-identical to their pre-bump state.
