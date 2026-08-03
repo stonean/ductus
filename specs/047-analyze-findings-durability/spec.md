@@ -37,9 +37,8 @@ and `/{project}:review` as the surfacing gates. Two things were missing.
 `/{project}:analyze` was not among those gates, and the section addressed an
 agent noticing something *incidental to other work* — not a command whose
 **primary output is findings**. A command that exists to produce findings and
-then discards them was the failure the [Design
-Principles](../../framework/constitution.md#design-principles) rule names
-directly: it relied on the operator remembering.
+then discards them was the failure the **Design
+Principles** rule names directly: it relied on the operator remembering.
 
 ## Behavior
 
