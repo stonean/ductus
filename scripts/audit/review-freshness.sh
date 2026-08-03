@@ -39,9 +39,10 @@
 #     churns on every ticked checkbox and is ephemeral by construction
 #     (§tasks-phase), and `plan.md` churns as Affected Files are revised.
 # Both would have been disabled within a week. The durable-contract rule
-# flags 10, catches both real failures (`gvrn-v0.26.1` and `gvrn-v0.26.2`,
-# each of which added 022 scenarios after its review), and reports nothing
-# on a spec whose only movement was bookkeeping.
+# flagged 10 of 48 when it landed, caught both real failures (`gvrn-v0.26.1`
+# and `gvrn-v0.26.2`, each of which added 022 scenarios after its review), and
+# reported nothing on a spec whose only movement was bookkeeping. That count
+# is a snapshot, not a constant: it drains as reviews are refreshed.
 #
 # Deliberately NOT a finding:
 #   - A spec with no `review:` block. Grandfathered, matching the rule

@@ -42,6 +42,8 @@ caught by measuring against this repo before wiring anything:
 | The whole spec directory | 31 of 48 | `tasks.md` churns on every ticked checkbox and is ephemeral by construction ([§tasks-phase](../../framework/constitution.md#tasks-phase)); `plan.md` churns as Affected Files are revised |
 | **Durable contracts** | 10 of 48 | Ships |
 
+(The three counts are snapshots taken on 2026-08-03. The shipped rule's count drains as reviews are refreshed — it was 9 within the hour, once reviewing 026 cleared its own entry.)
+
 A gate firing on 87% of specs is one people disable in a week, which is worse
 than no gate — it trains the reader that findings are noise. The durable-contract
 rule was verified to catch both real failures: `gvrn-v0.26.1` and `gvrn-v0.26.2`
@@ -54,8 +56,8 @@ it, because a check's value is its precision, not its coverage.
 
 ## Edge Cases
 
-- **Deliberately not wired into `run-all.sh`.** It currently reports 10
-  pre-existing stale reviews, so wiring it would block the next `gvrn-v*` tag
+- **Deliberately not wired into `run-all.sh`.** It reported 10 pre-existing
+  stale reviews when it landed, so wiring it would block the next `gvrn-v*` tag
   until every one is re-reviewed. That is real debt and the findings are real,
   but imposing a release freeze is the maintainer's call, not a side effect of
   landing the check. Wiring is one `run_check` line once the debt is cleared.
