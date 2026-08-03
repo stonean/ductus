@@ -68,8 +68,10 @@ If `--all` is not present, use the feature identifier if provided, otherwise fal
 <!-- audit:ignore-promotion -->
 13. Scan the spec body (loaded in step 1) and `plan.md` (read it if present) for **ungrounded factual claims about the existing system** — assertions about how current code behaves, what a schema or interface contains, or what an external system returns, stated as fact but carrying neither a citation to a primary source (a `path:line` reference, a named query, a command, or a link to a substantiating artifact) nor an explicit assumption / Open Question marker. Descriptive claims about existing reality need grounding; **prescriptive requirements** about the feature under design (what it MUST do) are contracts, not claims, and are never flagged — the descriptive-vs-prescriptive call is the semantic judgment this step turns on. This is a *form* check: do NOT read source code to confirm a claim (out of scope; see Scope Boundaries), only verify the artifact sources or hedges it. Apply to the spec body at status `clarified` or later and to `plan.md` at `planned` or later; skip on a `draft` spec. Emit each as an **Advisory** finding per the **Grounding** section of the markdown-only reference below.
 
+14. Invoke `append-inbox` once per surviving finding to record it in `{specs-root}/inbox.md` before anything is rendered, so an audit's results outlive the session that ran it (§brownfield-inbox Automatic issue capture). A finding survives when it is still live at the end of the run: `--fix` resolved findings are not captured, and informational entries are not findings — the unexamined-target `skipped` list and cross-service reference unknowns report what could not be examined, not a defect to route. Each bullet takes the auto-capture form `{category}: {family} — {message} — {path} (captured during /{project}:analyze)`, and each append passes a **dedup prefix** of `{category}: {family} — {message}` — a true prefix of that bullet — so re-running the audit against an unchanged repo appends nothing. The message belongs in the key: a finding's `path` is the *citing* artifact, not the missing subject, so keying without the message merges every finding one `spec.md` produces and drops all but the first.
+
 <!-- audit:ignore-promotion -->
-14. Render the report (host responsibility): list hard-fail and blocking findings first, advisory findings next, then informational. For each finding, include what failed, what was expected, what was found, and a suggested fix. With `--fix` set, additionally revert any status-done spec whose review block has drifted to blocking — the guarded set-status revert (`from: done`, `to: in-progress`), detailed in the Review state drift section in the markdown-only reference below.
+15. Render the report (host responsibility): list hard-fail and blocking findings first, advisory findings next, then informational. For each finding, include what failed, what was expected, what was found, and a suggested fix. With `--fix` set, additionally revert any status-done spec whose review block has drifted to blocking — the guarded set-status revert (`from: done`, `to: in-progress`), detailed in the Review state drift section in the markdown-only reference below.
 
 ## Markdown-only reference
 
@@ -295,3 +297,43 @@ These are advisory, not blocking — they signal framework drift that the projec
 - **Blocking** — structural or content issues that must be fixed before the next pipeline gate fires.
 - **Advisory** — issues that should be fixed but do not block advancement.
 - **Informational** — observations that may warrant attention but are neither errors nor warnings.
+
+### Finding capture (durability)
+
+Findings are recorded to `{specs-root}/inbox.md` **before** the report is
+rendered. Rendering surfaces findings to whoever is watching; capture is what
+makes them survive the session, and a run interrupted between the two still
+leaves the record. This is the §brownfield-inbox *Automatic issue capture*
+contract applied to a command whose primary output is findings — a findings
+command that only prints is one whose results can be recovered solely by
+remembering to re-run it.
+
+- **Captured**: every finding still live at the end of the run — hard fail,
+  blocking, and advisory alike. Severity raises salience, not routing.
+- **Not captured**: findings `--fix` resolved in the same run (they no longer
+  exist to record), and everything in the **Informational** tier — the
+  unexamined-target list and cross-service reference unknowns state what could
+  not be examined rather than a defect to route.
+
+Each item is one bullet in the auto-capture form:
+
+```text
+- [ ] {category}: {family} — {message} — {path} (captured during /{project}:analyze)
+```
+
+Every append is guarded against what the inbox already holds, keyed on
+`{category}: {family} — {message}`. Re-running the audit against an unchanged
+repo therefore appends nothing and leaves `inbox.md` byte-identical.
+
+The message is part of the key because a finding's `path` is the **citing**
+artifact — the `spec.md` whose criterion or prose raised it — not the missing
+subject the finding is about. That subject appears only inside the message, so
+a key without it merges every finding one artifact produces and keeps only the
+first: a spec naming three missing paths would record one. The trade is that
+re-wording a check's message re-appends its findings once, which is the
+cheaper failure and a rare one.
+
+Capture never removes anything. A captured item leaves the inbox the way every
+other item does — `/{project}:groom` routes it, or the work that resolves it
+clears it. A resolved finding that fires again is captured again, because it is
+again true.

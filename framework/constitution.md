@@ -364,14 +364,15 @@ Inbox rules:
 
 #### Automatic issue capture
 
-While working a task, an agent surfaces issues that fall outside the current task's scope — a security weakness, a resource or memory leak, a violated convention, a latent bug in adjacent code. These MUST be captured, not dropped:
+Findings reach the inbox two ways, and both MUST be captured, not dropped. **Incidentally**: while working a task, an agent surfaces issues that fall outside the current task's scope — a security weakness, a resource or memory leak, a violated convention, a latent bug in adjacent code. **As primary output**: a command whose whole purpose is to produce findings — `/{project}:analyze` — records what it found rather than only printing it. A findings-producing command that discards its findings is the failure the **Design Principles** rule names directly, since recovering them then depends on someone remembering to re-run the audit.
 
 - **Capture automatically, without prompting.** When an agent identifies such an issue during any task work, it appends the issue to `specs/inbox.md` itself — the same mechanical append `/log` performs — without pausing to ask the user. Capture is not a pipeline gate; it never interrupts the task in flight.
 - **Record, do not derail.** The agent does not stop the current task to fix an out-of-scope issue. It records the finding and continues. An issue *inside* the current task's scope is fixed as part of the task, not logged.
 - **Severity raises salience, not the routing.** Security issues and memory or resource leaks are the cases most costly to lose, so they are captured first and flagged; convention violations and lesser findings are captured the same way. Everything routes through `/groom` later — capture itself is uninterpreted.
-- **Surface at completion.** Issues captured during a unit of work are presented back to the user when that work completes — as part of the `/{project}:implement` completion summary and the `/{project}:review` report. The surfacing step is the backstop that keeps capture from being silent: per the **Design Principles** rule, the framework does not rely on the agent *remembering* a mid-task finding, it makes every capture visible at the next gate.
+- **Surface at completion.** Issues captured during a unit of work are presented back to the user when that work completes — as part of the `/{project}:implement` completion summary, the `/{project}:review` report, and the `/{project}:analyze` report. The surfacing step is the backstop that keeps capture from being silent: per the **Design Principles** rule, the framework does not rely on the agent *remembering* a mid-task finding, it makes every capture visible at the next gate.
+- **Re-capture is idempotent.** A command that captures on every run guards each append against what the inbox already holds, so re-running an audit against an unchanged repo records nothing new. Without the guard, the honest choice between a growing backlog and a silent one would push toward silence.
 
-This keeps the agent's attention on the task while guaranteeing that incidental discoveries reach the inbox and, through `/groom`, the right artifact tier ([Bug Decision Tree](#bug-decision-tree)).
+This keeps the agent's attention on the task while guaranteeing that discoveries — incidental or audited — reach the inbox and, through `/groom`, the right artifact tier ([Bug Decision Tree](#bug-decision-tree)).
 
 <!-- §brownfield-process -->
 
