@@ -46,19 +46,19 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 
 ## 72. Implement scenario: [block-element-scanner](scenarios/block-element-scanner.md)
 
-- [ ] Implement the behavior described in `scenarios/block-element-scanner.md`
+- [x] Implement the behavior described in `scenarios/block-element-scanner.md`
 
 - **Done when**: a `pub(crate)` block splitter yields each table row, list item, and paragraph with its starting line number; every line passes through `SkipScanner` first so fenced code and HTML comments never reach a block, and `SkipScanner` itself is unmodified (the `tasks.md` parsers that share it are provably unaffected); blockquote lines are dropped by the splitter; `inline_code_spans` is `pub(crate)` with no behavior change; tests cover each block kind, all four exempt contexts, an unterminated fence running to EOF, and a bullet opening with no preceding blank line; `cargo test` green.
 
 ## 73. Implement scenario: [check-artifacts-skipped-targets](scenarios/check-artifacts-skipped-targets.md)
 
-- [ ] Implement the behavior described in `scenarios/check-artifacts-skipped-targets.md`
+- [x] Implement the behavior described in `scenarios/check-artifacts-skipped-targets.md`
 
 - **Done when**: `CheckArtifactsResult` carries `skipped` as a list of `{family, reason, path}` over the closed reason set `target-missing` / `target-unparseable` / `no-readable-state`; `clean` still means `findings.is_empty()`; the five pre-existing families return an empty `skipped` and no existing test expectation changes; a target skipped by two families yields one record per family while the same target skipped twice by one family yields one; tests cover the `clean: true` with non-empty `skipped` state as legal; `cargo test` green.
 
 ## 74. Implement scenario: [link-adjacent-drift-family](scenarios/link-adjacent-drift-family.md)
 
-- [ ] Implement the behavior described in `scenarios/link-adjacent-drift-family.md`
+- [x] Implement the behavior described in `scenarios/link-adjacent-drift-family.md`
 
 - **Done when**: `check-artifacts` gains an advisory `link-adjacent-drift` family scanning `spec.md`, `plan.md`, `tasks.md`, and `scenarios/*.md`; a sibling link is resolved lexically against the containing file's directory with no `canonicalize` call, URL-scheme and bare-fragment targets rejected; the six closed tells match only outside inline code spans; evaluation is per link and emits one finding per (block, link) pair naming the citing file and line, the target, the tells that fired in list order, and the contradicting state; a scenario target is evaluated on open-question count and existence only, with implementation-state tells producing nothing; unreadable targets land in `skipped` rather than `findings`; a consistent feature directory produces zero findings; repeat runs are byte-identical; `cargo test` green.
 

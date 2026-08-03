@@ -2188,15 +2188,41 @@ pub struct CheckArtifactsArgs {
 #[serde(rename_all = "kebab-case")]
 pub struct ArtifactFinding {
     /// Check family: `artifact-completeness`, `task-consistency`,
-    /// `scenario-consistency`, or `review-state-drift`.
+    /// `scenario-consistency`, `review-state-drift`,
+    /// `scenario-open-questions`, `link-adjacent-drift`, or
+    /// `criterion-path-existence`.
     pub family: String,
     /// Severity tier per the reference's assignments: `blocking`
-    /// (artifact completeness, task consistency, review state drift) or
-    /// `advisory` (scenario consistency).
+    /// (artifact completeness, task consistency, review state drift, and
+    /// scenario open questions at `done`) or `advisory` (scenario
+    /// consistency, scenario open questions below `done`, link-adjacent
+    /// drift, criterion path existence).
     pub severity: String,
     /// Human-readable description of the finding.
     pub message: String,
     /// Repo-relative path of the artifact the finding anchors to.
+    pub path: String,
+}
+
+/// One target a family could not examine.
+///
+/// Distinguishes *"examined the subject and found nothing"* from *"could not
+/// examine the subject"* (`QUAL-CLAIM-001`). The families added by spec 045
+/// read targets that may be unreadable — a link's destination, a criterion's
+/// path — and 045 forbids escalating an unreadable one into a finding. Without
+/// this list, a family that examined every target and found nothing would
+/// return exactly what a family that could examine nothing returns, and a
+/// caller would read the reassuring one.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct SkippedTarget {
+    /// Family that skipped it, matching [`ArtifactFinding::family`].
+    pub family: String,
+    /// Why it could not be examined — a closed set, so repeat runs over
+    /// unchanged inputs are byte-identical: `target-missing`,
+    /// `target-unparseable`, or `no-readable-state`.
+    pub reason: String,
+    /// Repo-relative path of the target that was not examined.
     pub path: String,
 }
 
@@ -2208,12 +2234,23 @@ pub struct CheckArtifactsResult {
     pub feature: String,
     /// Spec frontmatter `status` the tier classification ran against.
     pub status: String,
-    /// Findings across the four families, in family order
-    /// (completeness → task consistency → scenario consistency →
-    /// review drift).
+    /// Findings across the seven families, in family order (completeness →
+    /// task consistency → scenario consistency → review drift → scenario
+    /// open questions → link-adjacent drift → criterion path existence).
     pub findings: Vec<ArtifactFinding>,
     /// `true` when no family produced a finding.
+    ///
+    /// Deliberately **not** widened to account for [`Self::skipped`]:
+    /// redefining it would silently change the verdict the families
+    /// predating spec 045 produce. The assurance lives in the pair —
+    /// `clean` with an empty `skipped` is verified-clean, `clean` with a
+    /// non-empty `skipped` is partially examined.
     pub clean: bool,
+    /// Targets no family could examine. Empty for the five families
+    /// predating spec 045, whose subjects are fully examinable by
+    /// construction.
+    #[serde(default)]
+    pub skipped: Vec<SkippedTarget>,
     /// Repo-relative path to the spec file.
     pub path: String,
 }
@@ -3320,7 +3357,7 @@ mod tests {
 
     #[test]
     fn check_artifacts_round_trip() {
-        use super::{ArtifactFinding, CheckArtifactsArgs, CheckArtifactsResult};
+        use super::{ArtifactFinding, CheckArtifactsArgs, CheckArtifactsResult, SkippedTarget};
         let args = CheckArtifactsArgs {
             feature: "022-deterministic-runtime".into(),
         };
@@ -3336,6 +3373,11 @@ mod tests {
                 path: "specs/022-deterministic-runtime/plan.md".into(),
             }],
             clean: false,
+            skipped: vec![SkippedTarget {
+                family: "link-adjacent-drift".into(),
+                reason: "target-missing".into(),
+                path: "specs/022-deterministic-runtime/scenarios/renamed.md".into(),
+            }],
             path: "specs/022-deterministic-runtime/spec.md".into(),
         };
         let rv: serde_json::Value = serde_json::to_value(&result).unwrap();

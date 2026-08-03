@@ -7,6 +7,7 @@
 
 #![allow(clippy::module_name_repetitions)]
 
+use std::borrow::Cow;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -898,7 +899,11 @@ impl SkipScanner {
 /// `CommonMark` code-span rule. A backtick run with no later equal-length run
 /// is a literal backtick and opens no span; runs of a different length
 /// between a matched pair are ordinary span content.
-fn inline_code_spans(line: &str) -> Vec<std::ops::Range<usize>> {
+///
+/// Shared, so the consumers that must read *outside* code font and the ones
+/// that must read *inside* it agree on where the spans are rather than each
+/// rolling its own scan.
+pub(crate) fn inline_code_spans(line: &str) -> Vec<std::ops::Range<usize>> {
     let bytes = line.as_bytes();
     // Backtick runs as (start, len), left to right.
     let mut runs: Vec<(usize, usize)> = Vec::new();
@@ -951,6 +956,145 @@ fn find_outside_code(line: &str, needle: &str) -> Option<usize> {
         from = pos + 1;
     }
     None
+}
+
+/// One block-level element of a markdown document — the list item, table
+/// row, or paragraph a single authorial claim occupies.
+///
+/// The unit exists because a claim and the link it is about must be judged
+/// together, and markdown block boundaries are structural: the repo has no
+/// sentence splitter, and one that survives version strings, `e.g.`, and
+/// period-bearing code spans is its own project.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct MarkdownBlock {
+    /// 1-based line number the block starts on.
+    pub(crate) line: usize,
+    /// The block's lines, joined by `\n` exactly as they appear.
+    pub(crate) text: String,
+}
+
+/// Split `content` into its block-level elements, in document order.
+///
+/// Three kinds, decided in this order: a line whose trimmed form starts with
+/// `|` is a **table row** and is a block by itself; a line opening a list
+/// marker starts a **list item**; any other run of non-blank, non-heading
+/// lines is a **paragraph**. An open block ends at a blank line, a heading, a
+/// blockquote, or the start of another block.
+///
+/// Four contexts never reach a block, from two sources. Fenced code blocks
+/// and HTML comments are dropped by [`SkipScanner`], which every line passes
+/// through first; blockquote lines (`>`) are dropped here. The split is
+/// deliberately **not** pushed into `SkipScanner`: that scanner is shared by
+/// `read-tasks`, `mark-task`, `prune-tasks`, and the task-number walkers, so
+/// teaching it a fourth region would change how each of them reads a quoted
+/// task line. (Inline code spans are the fourth exempt context, but they are
+/// an *intra-line* concern — see [`inline_code_spans`] — so a consumer
+/// applies them to a block's text rather than the splitter dropping lines.)
+pub(crate) fn split_blocks(content: &str) -> Vec<MarkdownBlock> {
+    let mut skip = SkipScanner::default();
+    let mut blocks: Vec<MarkdownBlock> = Vec::new();
+    let mut open: Option<(usize, Vec<String>)> = None;
+
+    for (idx, line) in content.lines().enumerate() {
+        // `skip` runs first and unconditionally so the scanner advances over
+        // every line in order, including the ones dropped below.
+        let skipped = skip.skip(line);
+        // A comment opening and closing on one line is *not* skipped by
+        // `SkipScanner` — its surrounding content is real markdown — so the
+        // commented text is removed here instead. Without this, a term
+        // inside a one-line comment would reach a block.
+        let content_line = if skipped {
+            Cow::Borrowed("")
+        } else {
+            strip_inline_comments(line)
+        };
+        let trimmed = content_line.trim_start();
+        if skipped
+            || trimmed.is_empty()
+            || trimmed.starts_with('>')
+            || parse_atx_heading(&content_line).is_some()
+        {
+            close_block(&mut blocks, open.take());
+            continue;
+        }
+        if trimmed.starts_with('|') {
+            close_block(&mut blocks, open.take());
+            blocks.push(MarkdownBlock {
+                line: idx + 1,
+                text: content_line.into_owned(),
+            });
+            continue;
+        }
+        if opens_list_item(trimmed) {
+            close_block(&mut blocks, open.take());
+            open = Some((idx + 1, vec![content_line.into_owned()]));
+            continue;
+        }
+        match &mut open {
+            // A non-marker line continues whatever is open — the indented
+            // and lazy continuation forms are the same claim either way.
+            Some((_, lines)) => lines.push(content_line.into_owned()),
+            None => open = Some((idx + 1, vec![content_line.into_owned()])),
+        }
+    }
+    close_block(&mut blocks, open.take());
+    blocks
+}
+
+/// Push the currently-open block, if any, onto `blocks`.
+fn close_block(blocks: &mut Vec<MarkdownBlock>, open: Option<(usize, Vec<String>)>) {
+    if let Some((line, lines)) = open {
+        blocks.push(MarkdownBlock {
+            line,
+            text: lines.join("\n"),
+        });
+    }
+}
+
+/// Remove every inline HTML-comment span (one that opens *and* closes on the
+/// same line) from `line`, leaving the surrounding markdown intact.
+///
+/// [`SkipScanner`] deliberately reports such a line as *not* skipped, because
+/// its surrounding content is real — which would let the commented text reach
+/// a block. Delimiters inside a code span are inert here for the same reason
+/// they are inert there.
+fn strip_inline_comments(line: &str) -> Cow<'_, str> {
+    if !line.contains("<!--") {
+        return Cow::Borrowed(line);
+    }
+    let mut out = String::new();
+    let mut rest = line;
+    let mut stripped = false;
+    while let Some(open) = find_outside_code(rest, "<!--") {
+        let after = &rest[open + 4..];
+        let Some(close) = find_outside_code(after, "-->") else {
+            break;
+        };
+        out.push_str(&rest[..open]);
+        rest = &after[close + 3..];
+        stripped = true;
+    }
+    if !stripped {
+        return Cow::Borrowed(line);
+    }
+    out.push_str(rest);
+    Cow::Owned(out)
+}
+
+/// `true` when `trimmed` opens a list item — a `-`, `*`, or `+` bullet, or an
+/// `N.` ordered marker — followed by a space or nothing. A nested marker at
+/// deeper indentation still matches, so a sub-bullet is its own block rather
+/// than part of its parent's claim.
+fn opens_list_item(trimmed: &str) -> bool {
+    for marker in ['-', '*', '+'] {
+        if let Some(rest) = trimmed.strip_prefix(marker) {
+            return rest.is_empty() || rest.starts_with(' ');
+        }
+    }
+    let digits = trimmed.bytes().take_while(u8::is_ascii_digit).count();
+    digits > 0
+        && trimmed.as_bytes().get(digits) == Some(&b'.')
+        && matches!(trimmed.as_bytes().get(digits + 1), None | Some(b' '))
 }
 
 /// Walk `content` line by line, yielding the numeric prefix of every ATX
@@ -1910,5 +2054,144 @@ mod tests {
         assert_eq!(find_outside_code("x ``<!--`` y", "<!--"), None);
         // A delimiter outside any span is found even when another sits inside one.
         assert_eq!(find_outside_code("`<!--` then <!--", "<!--"), Some(12));
+    }
+
+    // --- split_blocks ---------------------------------------------------------
+
+    /// `(line, text)` pairs, the shape assertions read most clearly in.
+    fn blocks(content: &str) -> Vec<(usize, String)> {
+        split_blocks(content)
+            .into_iter()
+            .map(|b| (b.line, b.text))
+            .collect()
+    }
+
+    #[test]
+    fn each_block_kind_is_split_and_line_numbered() {
+        let doc = "# Heading\n\
+                   \n\
+                   A paragraph that\n\
+                   wraps onto two lines.\n\
+                   \n\
+                   - first bullet\n\
+                   - second bullet\n\
+                   \n\
+                   | a | b |\n\
+                   | --- | --- |\n";
+        assert_eq!(
+            blocks(doc),
+            vec![
+                (3, "A paragraph that\nwraps onto two lines.".to_string()),
+                (6, "- first bullet".to_string()),
+                (7, "- second bullet".to_string()),
+                (9, "| a | b |".to_string()),
+                (10, "| --- | --- |".to_string()),
+            ],
+            "headings are structure, not claims, and never yield a block"
+        );
+    }
+
+    #[test]
+    fn every_exempt_context_is_dropped() {
+        // One tell per exempt context plus one in live prose: only the live
+        // one survives as block text (spec 045, AC13). The inline-code case
+        // is intra-line and is asserted through `inline_code_spans` below.
+        let doc = "```\nstill open in a fence\n```\n\
+                   \n\
+                   <!-- still open in a comment -->\n\
+                   \n\
+                   > still open in a blockquote\n\
+                   \n\
+                   still open in live prose\n";
+        assert_eq!(
+            blocks(doc),
+            vec![(9, "still open in live prose".to_string())]
+        );
+    }
+
+    #[test]
+    fn an_inline_comment_is_stripped_but_its_line_survives() {
+        // `SkipScanner` reports a line whose comment opens and closes inline
+        // as *not* skipped, because the surrounding content is real markdown.
+        // The commented text must still not reach a block.
+        assert_eq!(
+            blocks("real prose <!-- still open --> more prose\n"),
+            vec![(1, "real prose  more prose".to_string())]
+        );
+        // A line that is nothing but a comment leaves no block at all.
+        assert!(blocks("<!-- still open -->\n").is_empty());
+        // A delimiter inside a code span is inert, so nothing is stripped.
+        assert_eq!(
+            blocks("prose about `<!--` markers\n"),
+            vec![(1, "prose about `<!--` markers".to_string())]
+        );
+    }
+
+    #[test]
+    fn an_unterminated_region_swallows_everything_after_it() {
+        let fence = "before\n\n```\nafter the opener\n";
+        assert_eq!(blocks(fence), vec![(1, "before".to_string())]);
+        let comment = "before\n\n<!-- opener\nafter the opener\n";
+        assert_eq!(blocks(comment), vec![(1, "before".to_string())]);
+    }
+
+    #[test]
+    fn a_marker_ends_the_open_block_without_a_blank_line() {
+        let doc = "a paragraph\n- a bullet right after it\n  continued\n1. an ordered item\n";
+        assert_eq!(
+            blocks(doc),
+            vec![
+                (1, "a paragraph".to_string()),
+                (2, "- a bullet right after it\n  continued".to_string()),
+                (4, "1. an ordered item".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_nested_bullet_is_its_own_block() {
+        // A claim in a sub-bullet is scoped to that sub-bullet, not merged
+        // into its parent's.
+        let doc = "- parent\n  - child\n";
+        assert_eq!(
+            blocks(doc),
+            vec![(1, "- parent".to_string()), (2, "  - child".to_string()),]
+        );
+    }
+
+    #[test]
+    fn a_table_row_inside_a_list_item_is_a_row() {
+        let doc = "- intro\n| a | b |\n";
+        assert_eq!(
+            blocks(doc),
+            vec![(1, "- intro".to_string()), (2, "| a | b |".to_string())]
+        );
+    }
+
+    #[test]
+    fn a_blockquote_interrupting_a_paragraph_ends_it() {
+        let doc = "before\n> quoted\nafter\n";
+        assert_eq!(
+            blocks(doc),
+            vec![(1, "before".to_string()), (3, "after".to_string())]
+        );
+    }
+
+    #[test]
+    fn a_document_with_no_block_content_yields_nothing() {
+        assert!(blocks("# Only\n\n## Headings\n").is_empty());
+        assert!(blocks("").is_empty());
+    }
+
+    #[test]
+    fn inline_code_spans_locate_the_fourth_exempt_context() {
+        // The intra-line half of AC13: a term inside backticks is inside a
+        // span, the same term outside them is not.
+        let line = "the `still open` tell versus still open prose";
+        let spans = inline_code_spans(line);
+        let inside = line.find("still open").unwrap();
+        let outside = line.rfind("still open").unwrap();
+        assert!(spans.iter().any(|s| s.contains(&inside)));
+        assert!(!spans.iter().any(|s| s.contains(&outside)));
     }
 }

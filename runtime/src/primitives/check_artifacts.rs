@@ -1,8 +1,9 @@
 //! `check-artifacts` — the residual deterministic check families from
 //! `/gov:analyze`'s markdown-only reference, mechanized for one feature.
 //!
-//! Owns five families (spec 022, scenarios analyze-artifact-checks and
-//! scenario-open-question-signal). Each family MIRRORS
+//! Owns six families (spec 022, scenarios analyze-artifact-checks,
+//! scenario-open-question-signal, and link-adjacent-drift-family). Each
+//! family MIRRORS
 //! `framework/commands/analyze.md`'s markdown-only reference — severity
 //! tiers and skip rules come from the reference, the primitive introduces
 //! no policy of its own:
@@ -41,21 +42,33 @@
 //!   Deliberately **no grandfather rule**, unlike review-state drift: an
 //!   unresolved question is a present-tense defect whenever it arrived
 //!   (spec 046).
+//! - **link-adjacent-drift** (advisory) — an artifact's own prose asserting
+//!   an open state that its own sibling link's target contradicts: the
+//!   question called open while the target reports none, the work called
+//!   absent while the target is `in-progress` or `done`. The grounding
+//!   check is structurally blind to this — it verifies a claim is *cited*,
+//!   not that it is *true*, so a stale claim citing its source passes
+//!   (spec 045). Advisory at introduction, with a documented promotion
+//!   criterion in `analyze.md`.
 //!
 //! Parsing reuses the shared machinery — `split_frontmatter` for the spec
-//! frontmatter and [`crate::primitives::read_tasks`] for the task list —
-//! so this primitive sees exactly the artifact structure every other
-//! primitive sees (no hand-rolled parsers).
+//! frontmatter, [`crate::primitives::read_tasks`] for the task list,
+//! [`crate::primitives::read_spec`] for spec state and scenario questions,
+//! and [`crate::primitives::split_blocks`] for the prose unit — so this
+//! primitive sees exactly the artifact structure every other primitive
+//! sees (no hand-rolled parsers).
 
-use std::path::Path;
+use std::collections::HashMap;
+use std::path::{Component, Path, PathBuf};
 
 use crate::primitives::{
-    PrimitiveError, Result, list_scenario_files, read_spec, read_tasks, read_text, rel_path,
-    scenario_name_cmp, split_frontmatter,
+    MarkdownBlock, PrimitiveError, Result, inline_code_spans, list_scenario_files, read_spec,
+    read_tasks, read_text, rel_path, scenario_name_cmp, split_blocks, split_frontmatter,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    ArtifactFinding, CheckArtifactsArgs, CheckArtifactsResult, Frontmatter, ReadTasksArgs, Task,
+    ArtifactFinding, CheckArtifactsArgs, CheckArtifactsResult, Frontmatter, ReadSpecArgs,
+    ReadTasksArgs, SkippedTarget, Task,
 };
 use crate::schema::status::COMPATIBLE_STATUSES;
 
@@ -117,12 +130,22 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
     check_review_drift(&mut findings, &frontmatter, &status, &spec_path, repo);
     check_scenario_open_questions(&mut findings, &feature_dir, &status, &spec_path, repo);
 
+    let mut skipped: Vec<SkippedTarget> = Vec::new();
+    check_link_adjacent_drift(
+        &mut findings,
+        &mut skipped,
+        &feature_dir,
+        &args.feature,
+        repo,
+    );
+
     let clean = findings.is_empty();
     Ok(CheckArtifactsResult {
         feature: args.feature.clone(),
         status,
         findings,
         clean,
+        skipped,
         path: rel_path(&spec_path, repo),
     })
 }
@@ -394,6 +417,388 @@ fn check_scenario_open_questions(
         ),
         path: rel_path(spec_path, repo),
     });
+}
+
+// --- (f) link-adjacent decision drift ---------------------------------------
+
+/// The six closed open-state tells (spec 045), each with the class of target
+/// state it contradicts. Framework-fixed with no per-project configuration
+/// surface: the promotion criterion counts findings across a repo, so a
+/// per-project list would make that threshold measure configuration rather
+/// than drift. `TBD` and `deferred` were dropped from the seed list — the
+/// first asserts nothing about the *target*, the second contradicts the
+/// convention that a deferral is a resolution with a condition.
+const TELLS: [(&str, TellClass); 6] = [
+    ("open question", TellClass::Question),
+    ("unresolved", TellClass::Question),
+    ("still open", TellClass::Question),
+    ("not yet", TellClass::Implementation),
+    ("does not exist", TellClass::Existence),
+    ("left unimplemented", TellClass::Implementation),
+];
+
+/// The kind of target state a tell makes a claim about.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum TellClass {
+    /// "this question is open" — contradicted by a zero question count.
+    Question,
+    /// "this work is unbuilt" — contradicted by a spec at `in-progress`/`done`.
+    Implementation,
+    /// "this thing is absent" — contradicted by a target file that is present.
+    Existence,
+}
+
+/// What a resolved link target can be read for. A scenario deliberately has
+/// no status: deriving one from its task checkbox was rejected because a
+/// spent task pruned per §tasks-phase leaves the same absence as an
+/// unimplemented one.
+enum TargetState {
+    Spec {
+        status: String,
+        open_questions: usize,
+    },
+    Scenario {
+        open_questions: usize,
+    },
+    /// A sibling artifact carrying neither a status nor questions
+    /// (`plan.md`, `tasks.md`, `data-model.md`): existence only.
+    Opaque,
+}
+
+/// Outcome of testing one tell class against one target's readable state.
+enum Contradiction {
+    /// The state contradicts the tell; the string describes it for the message.
+    Yes(String),
+    /// The state is readable and agrees with the tell.
+    No,
+    /// The target carries no state this class can be evaluated against.
+    Unreadable,
+}
+
+/// (f) Link-adjacent decision drift (advisory) — an artifact's own prose
+/// asserting an open state that its own sibling link's target contradicts.
+///
+/// Scans `spec.md`, `plan.md`, `tasks.md`, and `scenarios/*.md`. For each
+/// block-level element carrying at least one tell, every sibling link in that
+/// block is evaluated independently, so a block with three links fires only
+/// for the target whose state actually contradicts.
+///
+/// An unreadable target is recorded in `skipped`, never escalated into a
+/// finding: an unknown is not a defect (spec 045), but a family that emits
+/// nothing because it could not look must say so (`QUAL-CLAIM-001`).
+fn check_link_adjacent_drift(
+    findings: &mut Vec<ArtifactFinding>,
+    skipped: &mut Vec<SkippedTarget>,
+    feature_dir: &Path,
+    feature: &str,
+    repo: &Path,
+) {
+    // Read the feature's own state once — through `read-spec`, so this family,
+    // the scenario-open-questions family, and the count the user sees can
+    // never disagree.
+    let Ok(spec) = read_spec::run(
+        &ReadSpecArgs {
+            feature: feature.to_string(),
+            include_body: false,
+        },
+        repo,
+    ) else {
+        return;
+    };
+    let spec_status = spec.frontmatter.status.clone();
+    let spec_questions = spec.open_questions.len();
+    let mut scenario_questions: HashMap<String, usize> = HashMap::new();
+    for question in read_spec::collect_scenario_open_questions(feature_dir) {
+        *scenario_questions.entry(question.scenario).or_insert(0) += 1;
+    }
+
+    for artifact in scanned_artifacts(feature_dir) {
+        let Ok(content) = read_text(&artifact) else {
+            continue;
+        };
+        let Some(from_dir) = artifact.parent() else {
+            continue;
+        };
+        let citing = rel_path(&artifact, repo);
+        for block in split_blocks(&content) {
+            let fired = fired_tells(&block.text);
+            if fired.is_empty() {
+                continue;
+            }
+            for target in sibling_targets(&block, from_dir, feature_dir) {
+                let state = read_target_state(
+                    &target,
+                    feature_dir,
+                    &spec_status,
+                    spec_questions,
+                    &scenario_questions,
+                );
+                let target_rel = rel_path(&target, repo);
+                match state {
+                    Err(reason) => record_skip(skipped, reason, &target_rel),
+                    Ok(state) => evaluate(
+                        findings,
+                        skipped,
+                        &fired,
+                        &state,
+                        &block,
+                        &citing,
+                        &target_rel,
+                    ),
+                }
+            }
+        }
+    }
+}
+
+/// Emit at most one finding for one (block, link) pair, or record the skip.
+fn evaluate(
+    findings: &mut Vec<ArtifactFinding>,
+    skipped: &mut Vec<SkippedTarget>,
+    fired: &[usize],
+    state: &TargetState,
+    block: &MarkdownBlock,
+    citing: &str,
+    target_rel: &str,
+) {
+    let mut contradicting: Vec<&str> = Vec::new();
+    let mut description: Option<String> = None;
+    let mut unreadable = false;
+    // `fired` is in TELLS order, so the rendered list is stable across runs.
+    for &idx in fired {
+        let (tell, class) = TELLS[idx];
+        match contradiction(class, state) {
+            Contradiction::Yes(desc) => {
+                contradicting.push(tell);
+                description.get_or_insert(desc);
+            }
+            Contradiction::No => {}
+            Contradiction::Unreadable => unreadable = true,
+        }
+    }
+    if contradicting.is_empty() {
+        // Only a tell that could not be evaluated is worth recording — a tell
+        // the target simply agrees with is an ordinary clean result.
+        if unreadable {
+            record_skip(skipped, "no-readable-state", target_rel);
+        }
+        return;
+    }
+    let tells = contradicting
+        .iter()
+        .map(|t| format!("`{t}`"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let desc = description.unwrap_or_default();
+    findings.push(ArtifactFinding {
+        family: "link-adjacent-drift".into(),
+        severity: "advisory".into(),
+        message: format!(
+            "line {}: prose asserting {tells} is contradicted by its link target \
+             {target_rel}, which {desc}",
+            block.line
+        ),
+        path: citing.to_string(),
+    });
+}
+
+/// Test one tell class against one target's readable state.
+fn contradiction(class: TellClass, state: &TargetState) -> Contradiction {
+    match (class, state) {
+        (
+            TellClass::Question,
+            TargetState::Spec { open_questions, .. } | TargetState::Scenario { open_questions },
+        ) => {
+            if *open_questions == 0 {
+                Contradiction::Yes("reports zero open questions".into())
+            } else {
+                Contradiction::No
+            }
+        }
+        (TellClass::Implementation, TargetState::Spec { status, .. }) => {
+            if status == "in-progress" || status == "done" {
+                Contradiction::Yes(format!("is `{status}`"))
+            } else {
+                Contradiction::No
+            }
+        }
+        // The target resolved to a file on disk, so an absence claim about it
+        // is contradicted by construction.
+        (TellClass::Existence, _) => Contradiction::Yes("exists".into()),
+        // An implementation-state tell against a scenario or an opaque
+        // artifact: nothing readable to judge it by (spec 045, AC14).
+        _ => Contradiction::Unreadable,
+    }
+}
+
+/// Record a skipped target once. The fact is about the target, so the same
+/// target reached twice by this family collapses to one entry.
+fn record_skip(skipped: &mut Vec<SkippedTarget>, reason: &str, path: &str) {
+    if skipped
+        .iter()
+        .any(|s| s.family == "link-adjacent-drift" && s.reason == reason && s.path == path)
+    {
+        return;
+    }
+    skipped.push(SkippedTarget {
+        family: "link-adjacent-drift".into(),
+        reason: reason.into(),
+        path: path.into(),
+    });
+}
+
+/// The artifacts this family scans, in a fixed order (spec 045, AC6).
+///
+/// `review.md` is deliberately absent: a review record is pinned to its
+/// `reviewed-against` sha and describes the state at that commit, so its prose
+/// is correct as written and would flag systematically.
+fn scanned_artifacts(feature_dir: &Path) -> Vec<PathBuf> {
+    let mut out: Vec<PathBuf> = ["spec.md", "plan.md", "tasks.md"]
+        .iter()
+        .map(|name| feature_dir.join(name))
+        .filter(|path| path.is_file())
+        .collect();
+    let scenarios_dir = feature_dir.join("scenarios");
+    out.extend(
+        list_scenario_files(&scenarios_dir)
+            .iter()
+            .map(|name| scenarios_dir.join(name)),
+    );
+    out
+}
+
+/// The distinct sibling-link targets in `block`, in first-appearance order.
+fn sibling_targets(block: &MarkdownBlock, from_dir: &Path, feature_dir: &Path) -> Vec<PathBuf> {
+    let mut out: Vec<PathBuf> = Vec::new();
+    for line in block.text.lines() {
+        for href in link_hrefs(line) {
+            if let Some(path) = resolve_sibling(&href, from_dir, feature_dir)
+                && !out.contains(&path)
+            {
+                out.push(path);
+            }
+        }
+    }
+    out
+}
+
+/// Inline-link hrefs in `line` that sit outside every inline-code span.
+fn link_hrefs(line: &str) -> Vec<String> {
+    let spans = inline_code_spans(line);
+    let mut out = Vec::new();
+    let mut from = 0;
+    while let Some(rel) = line[from..].find("](") {
+        let open = from + rel + 2;
+        let Some(close_rel) = line[open..].find(')') else {
+            break;
+        };
+        if !spans.iter().any(|span| span.contains(&open)) {
+            out.push(line[open..open + close_rel].to_string());
+        }
+        from = open + close_rel + 1;
+    }
+    out
+}
+
+/// Resolve a link href against the citing file's directory, keeping it only
+/// when it lands inside the feature directory.
+///
+/// Resolution is **lexical**: a target may legitimately not exist, and
+/// `canonicalize` both fails on a missing path and makes the answer depend on
+/// symlinks — which would break the repeat-run determinism guarantee.
+fn resolve_sibling(href: &str, from_dir: &Path, feature_dir: &Path) -> Option<PathBuf> {
+    // A fragment on a sibling target is stripped and the file part used; a
+    // bare fragment names no file at all.
+    let file_part = href.split('#').next()?.trim();
+    if file_part.is_empty() {
+        return None;
+    }
+    // A scheme-bearing target (`https:`, `mailto:`) is not a sibling. Testing
+    // before the first `/` keeps a path containing a colon from being mistaken
+    // for one.
+    let head = file_part.split('/').next().unwrap_or(file_part);
+    if head.contains(':') {
+        return None;
+    }
+    let mut resolved = from_dir.to_path_buf();
+    for component in Path::new(file_part).components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                resolved.pop();
+            }
+            Component::Normal(part) => resolved.push(part),
+            Component::RootDir | Component::Prefix(_) => return None,
+        }
+    }
+    resolved.starts_with(feature_dir).then_some(resolved)
+}
+
+/// Indices into [`TELLS`] whose tell appears in `text` outside every
+/// inline-code span, in `TELLS` order. The code-span exemption is what lets a
+/// document *describe* this check without tripping it.
+fn fired_tells(text: &str) -> Vec<usize> {
+    let mut fired = Vec::new();
+    for (idx, (tell, _)) in TELLS.iter().enumerate() {
+        if text.lines().any(|line| contains_outside_code(line, tell)) {
+            fired.push(idx);
+        }
+    }
+    fired
+}
+
+/// `true` when `needle` appears in `line` outside every inline-code span.
+/// Matching is ASCII-case-insensitive; `to_ascii_lowercase` preserves byte
+/// length, so offsets into the lowered copy still index the original's spans.
+fn contains_outside_code(line: &str, needle: &str) -> bool {
+    let lowered = line.to_ascii_lowercase();
+    if !lowered.contains(needle) {
+        return false;
+    }
+    let spans = inline_code_spans(line);
+    let mut from = 0;
+    while let Some(rel) = lowered[from..].find(needle) {
+        let pos = from + rel;
+        if !spans.iter().any(|span| span.contains(&pos)) {
+            return true;
+        }
+        from = pos + 1;
+    }
+    false
+}
+
+/// Read whatever state `target` carries, or the reason it cannot be examined.
+fn read_target_state(
+    target: &Path,
+    feature_dir: &Path,
+    spec_status: &str,
+    spec_questions: usize,
+    scenario_questions: &HashMap<String, usize>,
+) -> std::result::Result<TargetState, &'static str> {
+    if !target.is_file() {
+        return Err("target-missing");
+    }
+    if target == feature_dir.join("spec.md") {
+        return Ok(TargetState::Spec {
+            status: spec_status.to_string(),
+            open_questions: spec_questions,
+        });
+    }
+    if target.parent() == Some(feature_dir.join("scenarios").as_path()) {
+        // The collector tolerates absent or malformed frontmatter and still
+        // finds the questions section, so only an unreadable file is opaque.
+        if read_text(target).is_err() {
+            return Err("target-unparseable");
+        }
+        let slug = target
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .unwrap_or_default();
+        return Ok(TargetState::Scenario {
+            open_questions: scenario_questions.get(slug).copied().unwrap_or(0),
+        });
+    }
+    Ok(TargetState::Opaque)
 }
 
 #[cfg(test)]
@@ -902,6 +1307,269 @@ mod tests {
                 .any(|(f, _)| *f == "scenario-open-questions"),
             "got {:?}",
             families(&result)
+        );
+    }
+
+    // --- link-adjacent drift ---------------------------------------------------
+
+    const SCENARIO_SETTLED: &str = "---\nsection: Behavior\n---\n\n# Retry on timeout\n\n## Open Questions\n\n*None — captured during scenario authoring.*\n";
+
+    /// Seed an `in-progress` feature whose one scenario carries no questions,
+    /// with `plan.md` supplied by the test. `in-progress` keeps review drift
+    /// exempt and lets the scenario→task mapping stay satisfied, so the
+    /// assertions isolate this family.
+    fn seed_for_drift(repo: &Path, plan_body: &str) {
+        write(
+            repo,
+            &format!("specs/{FEATURE}/spec.md"),
+            &spec("in-progress", Some(CLEAN_REVIEW)),
+        );
+        write(repo, &format!("specs/{FEATURE}/plan.md"), plan_body);
+        write(repo, &format!("specs/{FEATURE}/tasks.md"), GOOD_TASKS);
+        write(
+            repo,
+            &format!("specs/{FEATURE}/scenarios/retry-on-timeout.md"),
+            SCENARIO_SETTLED,
+        );
+    }
+
+    fn drift(result: &CheckArtifactsResult) -> Vec<&ArtifactFinding> {
+        result
+            .findings
+            .iter()
+            .filter(|f| f.family == "link-adjacent-drift")
+            .collect()
+    }
+
+    #[test]
+    fn a_stale_open_question_claim_yields_an_advisory_finding() {
+        let tmp = tempdir().unwrap();
+        seed_for_drift(
+            tmp.path(),
+            "# Plan\n\nThe [retry scenario](scenarios/retry-on-timeout.md) still has an open question.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        let found = drift(&result);
+        assert_eq!(found.len(), 1, "{:?}", result.findings);
+        // AC7: advisory, never blocking.
+        assert_eq!(found[0].severity, "advisory");
+        // AC4: the citing file and line, the target, and the contradicting state.
+        assert_eq!(found[0].path, "specs/042-demo/plan.md");
+        let message = &found[0].message;
+        assert!(message.contains("line 3"), "{message}");
+        assert!(
+            message.contains("specs/042-demo/scenarios/retry-on-timeout.md"),
+            "{message}"
+        );
+        assert!(message.contains("zero open questions"), "{message}");
+        assert!(message.contains("`open question`"), "{message}");
+    }
+
+    #[test]
+    fn prose_matching_its_link_targets_produces_nothing() {
+        // AC5, and the result that has to stay quiet for the check to be
+        // worth running.
+        let tmp = tempdir().unwrap();
+        seed_for_drift(
+            tmp.path(),
+            "# Plan\n\nThe [retry scenario](scenarios/retry-on-timeout.md) is settled.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(drift(&result).is_empty(), "{:?}", result.findings);
+        assert!(result.skipped.is_empty(), "{:?}", result.skipped);
+    }
+
+    #[test]
+    fn a_multi_link_block_fires_only_for_the_contradicting_target() {
+        // AC12: evaluation is per link.
+        let tmp = tempdir().unwrap();
+        seed_for_drift(
+            tmp.path(),
+            "# Plan\n\n- The [asking one](scenarios/asking.md) and the \
+             [settled one](scenarios/retry-on-timeout.md) still have an open question.\n",
+        );
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/scenarios/asking.md"),
+            "---\nsection: Behavior\n---\n\n# Asking\n\n## Open Questions\n\n- Which budget?\n",
+        );
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/tasks.md"),
+            "# T\n\n## 1. Both\n\n- [ ] `scenarios/retry-on-timeout.md` and `scenarios/asking.md`\n\n- **Done when**: done.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        let found = drift(&result);
+        assert_eq!(found.len(), 1, "{:?}", result.findings);
+        assert!(
+            found[0].message.contains("retry-on-timeout.md"),
+            "only the settled target contradicts: {}",
+            found[0].message
+        );
+    }
+
+    #[test]
+    fn a_tell_in_an_exempt_context_produces_no_finding() {
+        // AC13: fenced code, HTML comment, blockquote, inline code span.
+        let tmp = tempdir().unwrap();
+        seed_for_drift(
+            tmp.path(),
+            "# Plan\n\n\
+             ```\n[a](scenarios/retry-on-timeout.md) is still open\n```\n\n\
+             <!-- [b](scenarios/retry-on-timeout.md) is still open -->\n\n\
+             > [c](scenarios/retry-on-timeout.md) is still open\n\n\
+             The [d](scenarios/retry-on-timeout.md) tell `still open` sits in code font.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(drift(&result).is_empty(), "{:?}", result.findings);
+    }
+
+    #[test]
+    fn an_implementation_tell_against_a_scenario_is_skipped_not_flagged() {
+        // AC14 applying AC9: a scenario carries no lifecycle status, so a
+        // tell needing one has nothing to be judged against.
+        let tmp = tempdir().unwrap();
+        seed_for_drift(
+            tmp.path(),
+            "# Plan\n\nThe [retry scenario](scenarios/retry-on-timeout.md) is not yet implemented.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(drift(&result).is_empty(), "{:?}", result.findings);
+        assert_eq!(result.skipped.len(), 1, "{:?}", result.skipped);
+        assert_eq!(result.skipped[0].family, "link-adjacent-drift");
+        assert_eq!(result.skipped[0].reason, "no-readable-state");
+        assert_eq!(
+            result.skipped[0].path,
+            "specs/042-demo/scenarios/retry-on-timeout.md"
+        );
+    }
+
+    #[test]
+    fn a_missing_target_is_skipped_not_flagged() {
+        let tmp = tempdir().unwrap();
+        seed_for_drift(
+            tmp.path(),
+            "# Plan\n\nThe [gone](scenarios/gone.md) question is still open.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(drift(&result).is_empty(), "{:?}", result.findings);
+        assert_eq!(result.skipped.len(), 1, "{:?}", result.skipped);
+        assert_eq!(result.skipped[0].reason, "target-missing");
+        // The honesty contract: nothing was found, and the result says the
+        // subject could not be examined rather than reading as clean.
+        assert!(result.clean, "no finding was produced");
+    }
+
+    #[test]
+    fn cross_feature_and_external_links_are_out_of_scope() {
+        let tmp = tempdir().unwrap();
+        seed_for_drift(
+            tmp.path(),
+            "# Plan\n\nSee [other](../099-other/spec.md) and [web](https://example.com/x) \
+             — the question is still open.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(drift(&result).is_empty(), "{:?}", result.findings);
+        assert!(
+            result.skipped.is_empty(),
+            "a non-sibling is not a skipped target: {:?}",
+            result.skipped
+        );
+    }
+
+    #[test]
+    fn every_artifact_kind_in_the_feature_directory_is_scanned() {
+        // AC6: spec.md, plan.md, tasks.md, scenarios/*.md.
+        let tmp = tempdir().unwrap();
+        seed_for_drift(
+            tmp.path(),
+            "# Plan\n\nThe [scenario](scenarios/retry-on-timeout.md) still has an open question.\n",
+        );
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/spec.md"),
+            &format!(
+                "{}\nThe [scenario](scenarios/retry-on-timeout.md) still has an open question.\n",
+                spec("in-progress", Some(CLEAN_REVIEW))
+            ),
+        );
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/tasks.md"),
+            "# T\n\n## 1. Retry\n\n- [ ] The [scenario](scenarios/retry-on-timeout.md) still has an open question.\n\n- **Done when**: done.\n",
+        );
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/scenarios/retry-on-timeout.md"),
+            "---\nsection: Behavior\n---\n\n# Retry on timeout\n\nThe [spec](../spec.md) still has an open question.\n\n## Open Questions\n\n*None — captured during scenario authoring.*\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        let citing: Vec<&str> = drift(&result).iter().map(|f| f.path.as_str()).collect();
+        assert_eq!(
+            citing,
+            vec![
+                "specs/042-demo/spec.md",
+                "specs/042-demo/plan.md",
+                "specs/042-demo/tasks.md",
+                "specs/042-demo/scenarios/retry-on-timeout.md",
+            ],
+            "{:?}",
+            result.findings
+        );
+    }
+
+    #[test]
+    fn repeat_runs_produce_identical_findings_and_skips() {
+        // AC8. Nothing on this path reads wall-clock time or raw directory
+        // order, so two runs over an unchanged tree must agree exactly.
+        let tmp = tempdir().unwrap();
+        seed_for_drift(
+            tmp.path(),
+            "# Plan\n\nThe [retry scenario](scenarios/retry-on-timeout.md) still has an open question, \
+             and the [gone one](scenarios/gone.md) is not yet built.\n",
+        );
+        let first = run(&args(), tmp.path()).unwrap();
+        let second = run(&args(), tmp.path()).unwrap();
+        assert_eq!(first.findings, second.findings);
+        assert_eq!(first.skipped, second.skipped);
+        assert!(
+            !first.findings.is_empty(),
+            "the fixture must produce output"
+        );
+        assert!(!first.skipped.is_empty(), "the fixture must produce skips");
+    }
+
+    #[test]
+    fn a_changed_section_behind_a_working_link_is_not_flagged() {
+        // The recorded non-goal: the link resolves, but the cited section no
+        // longer says what the prose claims. Verifying that needs a fragment
+        // anchor or semantic reading, so the check has no opinion.
+        let tmp = tempdir().unwrap();
+        seed_for_drift(
+            tmp.path(),
+            "# Plan\n\nSee the note in [tasks](tasks.md) about the retry budget.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(drift(&result).is_empty(), "{:?}", result.findings);
+    }
+
+    #[test]
+    fn no_new_family_can_block_a_gate() {
+        // AC7 as an invariant rather than a per-test assertion.
+        let tmp = tempdir().unwrap();
+        seed_for_drift(
+            tmp.path(),
+            "# Plan\n\nThe [retry scenario](scenarios/retry-on-timeout.md) still has an open question.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(
+            result
+                .findings
+                .iter()
+                .filter(|f| f.family == "link-adjacent-drift")
+                .all(|f| f.severity == "advisory"),
+            "{:?}",
+            result.findings
         );
     }
 

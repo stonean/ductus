@@ -26,49 +26,49 @@ Tasks 3–10 are authored as scenarios under [022 — Deterministic Runtime](../
 
 ## 3. Add the block-level splitter and expose the code-span helper
 
-- [ ] Promote `inline_code_spans` in `runtime/src/primitives/mod.rs` from private to `pub(crate)` with no behavior change
-- [ ] Add a `pub(crate)` block splitter yielding `(line_number, text)` for each block-level element: table row (line starting `|`), list item (bullet line plus indented continuations), paragraph (maximal run of other non-blank, non-heading lines)
-- [ ] Feed every line through `SkipScanner` so fenced code blocks and HTML comments are dropped; do **not** modify `SkipScanner` itself
-- [ ] Drop blockquote lines (trimmed form starting `>`) in the splitter
-- [ ] Unit-test each block kind, the four exempt contexts, and a mixed document where a tell appears once in each exempt context and once in live prose
+- [x] Promote `inline_code_spans` in `runtime/src/primitives/mod.rs` from private to `pub(crate)` with no behavior change
+- [x] Add a `pub(crate)` block splitter yielding `(line_number, text)` for each block-level element: table row (line starting `|`), list item (bullet line plus indented continuations), paragraph (maximal run of other non-blank, non-heading lines)
+- [x] Feed every line through `SkipScanner` so fenced code blocks and HTML comments are dropped; do **not** modify `SkipScanner` itself
+- [x] Drop blockquote lines (trimmed form starting `>`) in the splitter
+- [x] Unit-test each block kind, the four exempt contexts, and a mixed document where a tell appears once in each exempt context and once in live prose
 
 - **Done when**: the splitter's unit tests pass, `cargo test` is green across the existing `tasks.md` parsers (proving `SkipScanner`'s contract is untouched), and a tell inside a fence, an HTML comment, a blockquote, or a code span is provably not returned as live block text (AC13).
 
 ## 4. Add `SkippedTarget` and the `skipped` field
 
-- [ ] Add the `SkippedTarget` type to `runtime/src/schema/primitives.rs` per [data-model.md](data-model.md), with the closed `reason` set
-- [ ] Add `skipped: Vec<SkippedTarget>` to `CheckArtifactsResult`, leaving `clean` defined as `findings.is_empty()`
-- [ ] Document on the field why an unexaminable target is recorded rather than silently dropped, citing `QUAL-CLAIM-001`
-- [ ] Confirm the five existing families still return an empty `skipped` and that no existing test's expectations change
+- [x] Add the `SkippedTarget` type to `runtime/src/schema/primitives.rs` per [data-model.md](data-model.md), with the closed `reason` set
+- [x] Add `skipped: Vec<SkippedTarget>` to `CheckArtifactsResult`, leaving `clean` defined as `findings.is_empty()`
+- [x] Document on the field why an unexaminable target is recorded rather than silently dropped, citing `QUAL-CLAIM-001`
+- [x] Confirm the five existing families still return an empty `skipped` and that no existing test's expectations change
 
 - **Done when**: `CheckArtifactsResult` carries `skipped`, the existing `check_artifacts` test suite passes unmodified, and a result cannot report zero findings for an unexamined target without recording why.
 
 ## 5. Resolve sibling links and read target state
 
-- [ ] Add inline-link extraction over a block's text, skipping matches inside inline code spans
-- [ ] Resolve each target lexically against the containing file's directory; keep only targets landing inside the feature directory; strip a trailing `#fragment`
-- [ ] Reject URL-scheme targets (`http:`, `https:`, `mailto:`) and bare-fragment targets before resolution
-- [ ] Read target state per [data-model.md](data-model.md): `status` plus open-question count for `spec.md`, open-question count for a scenario, existence for the rest — reusing `read-spec` rather than a new parser
-- [ ] Unit-test that `../spec.md` from a scenario is a sibling and `../022-deterministic-runtime/spec.md` from `spec.md` is not
+- [x] Add inline-link extraction over a block's text, skipping matches inside inline code spans
+- [x] Resolve each target lexically against the containing file's directory; keep only targets landing inside the feature directory; strip a trailing `#fragment`
+- [x] Reject URL-scheme targets (`http:`, `https:`, `mailto:`) and bare-fragment targets before resolution
+- [x] Read target state per [data-model.md](data-model.md): `status` plus open-question count for `spec.md`, open-question count for a scenario, existence for the rest — reusing `read-spec` rather than a new parser
+- [x] Unit-test that `../spec.md` from a scenario is a sibling and `../022-deterministic-runtime/spec.md` from `spec.md` is not
 
 - **Done when**: sibling classification and target-state reads are unit-tested for all three target kinds, cross-feature and external links are provably excluded, and no `std::fs::canonicalize` call is on the path.
 
 ## 6. Implement the `link-adjacent-drift` family
 
-- [ ] Scan `spec.md`, `plan.md`, `tasks.md`, and `scenarios/*.md`, enumerating scenarios via `list_scenario_files` (AC6)
-- [ ] Match the six closed tells from [data-model.md](data-model.md) at offsets outside every code span (AC11)
-- [ ] Evaluate per link and emit at most one advisory finding per (block, link) pair, naming the citing file and line, the link target, the tells that fired in list order, and the target's contradicting state (ACs 3, 4, 12)
-- [ ] Apply the contradiction mapping so a scenario target evaluates question-state and existence tells only, and implementation-state tells against it emit nothing (AC14)
-- [ ] Record `no-readable-state`, `target-missing`, and `target-unparseable` skips rather than emitting findings (AC9)
-- [ ] Test a feature directory whose prose matches its link targets' state and assert zero findings (AC5)
+- [x] Scan `spec.md`, `plan.md`, `tasks.md`, and `scenarios/*.md`, enumerating scenarios via `list_scenario_files` (AC6)
+- [x] Match the six closed tells from [data-model.md](data-model.md) at offsets outside every code span (AC11)
+- [x] Evaluate per link and emit at most one advisory finding per (block, link) pair, naming the citing file and line, the link target, the tells that fired in list order, and the target's contradicting state (ACs 3, 4, 12)
+- [x] Apply the contradiction mapping so a scenario target evaluates question-state and existence tells only, and implementation-state tells against it emit nothing (AC14)
+- [x] Record `no-readable-state`, `target-missing`, and `target-unparseable` skips rather than emitting findings (AC9)
+- [x] Test a feature directory whose prose matches its link targets' state and assert zero findings (AC5)
 
 - **Done when**: the family emits the expected advisory findings for the observed case's first three rows, emits nothing for a consistent feature directory, and every unexaminable target appears in `skipped` instead of `findings`.
 
 ## 7. Prove determinism and pin the recorded limitation
 
-- [ ] Add a test running the family twice over an unchanged fixture and asserting byte-identical findings and skips (AC8)
-- [ ] Add a test pinning the recorded non-goal: a link whose target exists but whose cited section changed produces no finding
-- [ ] Assert every emitted finding carries `severity: advisory` and that `check-artifacts` reports no blocking finding from either new family (AC7)
+- [x] Add a test running the family twice over an unchanged fixture and asserting byte-identical findings and skips (AC8)
+- [x] Add a test pinning the recorded non-goal: a link whose target exists but whose cited section changed produces no finding
+- [x] Assert every emitted finding carries `severity: advisory` and that `check-artifacts` reports no blocking finding from either new family (AC7)
 
 - **Done when**: repeat runs are byte-identical, the documented semantic limitation is pinned by a test rather than only by prose, and no new family can block a gate.
 
