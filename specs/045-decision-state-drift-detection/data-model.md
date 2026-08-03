@@ -105,6 +105,23 @@ A span's whole trimmed content, with surrounding quotes and a leading `./` strip
 
 A candidate resolves when the repo-root-relative path exists as either a file or a directory; a trailing `/` is stripped before the test.
 
+### The criterion must be a live claim
+
+A path is only checked when its criterion actually claims the path is **present**. A criterion carrying any of these thirteen phrases is exempted whole, and each of its paths is recorded as `not-a-live-claim`:
+
+| Group | Phrases | Why the finding would be backwards |
+| --- | --- | --- |
+| deletion / retirement | `is deleted`, `are deleted`, `does not exist`, `no longer exists`, `is removed`, `are removed`, `since retired` | The criterion is *satisfied* by the path being gone |
+| rename | `is renamed to`, `are renamed to`, `renamed from` | The old path is named deliberately |
+| adopter scope | `in the project` | Describes a scaffolded checkout, not this one |
+| hedge / example | `if it exists`, `e.g.` | Claims nothing at all |
+
+This is the open-state tell list's co-occurrence design **inverted**. There, a phrase asserting an open state is contradicted by a target that is closed. Here, a phrase asserting *absence* is **confirmed** by a path that does not resolve. Same closed-list, framework-fixed discipline, for the same reason: a per-project list would make the promotion threshold measure configuration rather than drift.
+
+The phrases are matched as phrases, not words, and that is load-bearing: bare `adopter` would exempt 018's `runs the adopter-relevant generators (currently \`scripts/gen-spec-deps.sh\`)`, which is a genuine stale path.
+
+The whole criterion is exempted rather than the matched path, because a criterion about a transition names its endpoints together.
+
 An unresolved candidate emits a finding **only when its own top-level segment exists in this repo**. When that segment is absent, nothing can be proven — a framework repo's criteria legitimately name paths that live in an *adopter's* checkout (`.govern/…`, `.agents/…`) — so the candidate is recorded as `root-absent` instead. The rule self-corrects where it matters: in an adopter repo those roots do exist, so real drift beneath them is provable again.
 
 Worked example — 026's AC5 (AC18), after `531e3ea` deleted both subjects:
@@ -116,17 +133,29 @@ Worked example — 026's AC5 (AC18), after `531e3ea` deleted both subjects:
 
 Rejected by the grammar, and why each exclusion is load-bearing in this repo: `/{project}:analyze` (leading `/`, `{`, `:`), `https://example.com/x` (`:`), `runtime/src/primitives/mod.rs:841` (`:`), `specs/*/spec.md` (`*`), `--exclude=a/b` (leading `-`), `scenarios/` (no internal separator), `scripts/…` (non-ASCII), `specs/NNN-feature/review.md` (`NNN`).
 
-## Measured precision (2026-08-02)
+## Measured precision (2026-08-03)
 
-The first full-repo run, and the promotion criterion's first precision data point. Across 47 specs:
+Across all 47 specs, after the live-claim exemption landed:
 
-| | Findings | Skips | True | False |
-| --- | --- | --- | --- | --- |
-| `criterion-path-existence` | 51 | 26 `root-absent` | 35 | 16 |
-| `link-adjacent-drift` | 0 | 1 `no-readable-state` | — | — |
+| | Findings | Skips |
+| --- | --- | --- |
+| `criterion-path-existence` | 28 | 35 `not-a-live-claim`, 21 `root-absent` |
+| `link-adjacent-drift` | 0 | 1 `no-readable-state` |
 
-The 35 confirmed findings are real deletions and moves never swept from the criteria that name them — including the originating case, 026's `framework/workflows/registry.json`. The 16 false positives are one class: adopter-layout paths whose top-level segment happens to also exist in `govern`'s own checkout (`.githooks/govern-pre-commit`, `.govern/constitution.md`, `.claude/gov-session.json`, `specs/system.md`), so the `root-absent` rule does not catch them. That class is specific to a framework repo documenting adopter layout while also being its own adopter; in an ordinary adopter repo those criteria resolve.
+Triaging the 28 **by reading each criterion**, not by classifying its path:
 
-**Promotion verdict: do not promote.** The volume half of the criterion is met several times over; the precision half is not.
+| Class | Count | Verdict |
+| --- | --- | --- |
+| Real stale paths | 5 | True |
+| Paths `govern` creates *in an adopter project* | 19 | False here, would resolve there |
+| Residual | 4 | False |
 
-The originating case behaves better in the wild than the acceptance criterion anticipated. 026's AC5 has itself been rewritten since this spec was authored — it now reads in past tense and names only `framework/workflows/registry.json`, having moved `scripts/audit/registry-equivalence.sh` into its Behavior section. The run flags the criterion's dead path and leaves the Behavior mention alone, which is precisely the scope boundary §Behavior argued for, observed rather than asserted: a contract naming a deleted path is a defect, the same path named in past-tense narrative is a true statement. The unit test still pins both paths in the form the criterion had when the case was found.
+The five true positives are `specs/triage.md` in 006 (×2, renamed to `specs/inbox.md` alongside `/{project}:triage` → `/{project}:groom`), `scripts/gen-spec-deps.sh` in 018 (×2, moved to `.govern/scripts/` by 042), and 005's criterion still asserting a workflow registry `exists` after 043 sunset the feature.
+
+**The 19 are a dogfooding artifact, not a check defect.** `.govern/constitution.md`, `specs/rules/security-backend.md`, `specs/system.md`, `.githooks/govern-pre-commit`, `specs/templates/` — every one is a path `govern` *creates in an adopter's checkout*. They are absent here for the single reason that `govern` is the source rather than an adopter, and each criterion naming one is correct and satisfied in the repo it describes. `root-absent` cannot catch them because their top-level segments (`specs`, `.govern`, `.githooks`) do exist here. The class is structural to a framework repo documenting adopter layout while also being its own adopter, and it does not generalize to the projects this check ships to.
+
+**Promotion verdict: do not promote — and re-measure in an adopter repo before deciding.** The volume half of the criterion is met several times over. The precision half reads 5/28 (18%) here and roughly 5/9 (56%) once the framework-repo artifact is set aside, and neither number is the one that matters: this repo is the least representative sample the check will ever run against.
+
+**Correction to a prior record.** An earlier pass reported 35 true positives at 69% precision. That number came from classifying findings by *path prefix* without reading the criteria they came from, and it was wrong — most of what it counted were deletion criteria (`X is deleted`, satisfied *because* the path is gone), rename criteria naming their own source path, and adopter-scoped paths. Reading the criterion text is what produced both the live-claim exemption above and the honest figure here. The verdict happened to be right; the reasoning behind it was not.
+
+The originating case behaves better in the wild than the acceptance criterion anticipated. 026's AC5 has itself been rewritten since this spec was authored — it now reads in past tense (`verified … Met at v1 and since retired`), so the live-claim exemption now skips it rather than flagging it. That is the correct outcome and the scope boundary §Behavior argued for, observed rather than asserted: a contract claiming a path is present is a defect when it is gone, the same path in a past-tense record is a true statement. The unit test pins both paths in the present-tense form the criterion had when the case was found, which is what AC18 specifies.

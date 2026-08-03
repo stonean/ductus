@@ -849,9 +849,8 @@ fn read_target_state(
 /// which is exactly the context the tell scan must ignore; one family cannot
 /// hold both rules coherently, which is why these are two.
 ///
-/// The filesystem is always examinable, so this family records nothing in
-/// `skipped` — below `done` it is *not applicable*, which is distinct from
-/// tried-and-failed.
+/// A criterion only counts as a live assertion when it actually claims the
+/// path is *present* — see [`NON_ASSERTION_MARKERS`].
 fn check_criterion_path_existence(
     findings: &mut Vec<ArtifactFinding>,
     skipped: &mut Vec<SkippedTarget>,
@@ -865,7 +864,24 @@ fn check_criterion_path_existence(
     }
     let citing = rel_path(spec_path, repo);
     for criterion in &spec.acceptance_criteria {
+        let asserts = is_live_assertion(&criterion.text);
         for candidate in candidate_paths(&criterion.text) {
+            // A criterion that describes a deletion, a rename, an adopter's
+            // checkout, or an example is not claiming its paths are present
+            // here, so a path that fails to resolve confirms it or is
+            // irrelevant to it — never contradicts it. Recorded rather than
+            // silently dropped, the same way `root-absent` is.
+            if !asserts {
+                let entry = SkippedTarget {
+                    family: "criterion-path-existence".into(),
+                    reason: "not-a-live-claim".into(),
+                    path: candidate.clone(),
+                };
+                if !skipped.contains(&entry) {
+                    skipped.push(entry);
+                }
+                continue;
+            }
             // A trailing slash marks a directory reference; either kind of
             // entry satisfies the criterion.
             let trimmed = candidate.trim_end_matches('/');
@@ -905,6 +921,59 @@ fn check_criterion_path_existence(
             });
         }
     }
+}
+
+/// Phrases that make a criterion something other than a live claim that its
+/// paths are present. Closed and framework-fixed, for the same reason the
+/// open-state tell list is: the promotion criterion counts findings across a
+/// repo, so a per-project list would make that threshold measure
+/// configuration rather than drift.
+///
+/// This is the tell scan's co-occurrence design inverted. There, a phrase
+/// asserting an open state is contradicted by a target that is closed. Here, a
+/// phrase asserting *absence* — or scoping the path to somewhere other than
+/// this repo — is **confirmed** by a path that does not resolve, so the finding
+/// would be exactly backwards. Four groups, each earned against real criteria
+/// in this repo's `done` specs:
+///
+/// - **deletion / retirement** — `framework/commands/capture.md is deleted` is
+///   satisfied *because* the path is gone;
+/// - **rename** — `framework/rules/configuration.md is renamed to …-cross.md`
+///   names the old path deliberately;
+/// - **adopter scope** — `writes it to specs/rules/security-backend.md in the
+///   project` describes a scaffolded checkout, not this one;
+/// - **hedge / example** — `(e.g., docs/rules/internal-api.md)` and
+///   `scripts/lint-govern-toml.sh (if it exists)` claim nothing at all.
+///
+/// The whole criterion is exempted, not just the matched path: these phrases
+/// describe a *transition*, and a criterion about a transition names its
+/// endpoints together. Erring toward silence matches how the rest of this
+/// family already errs (code-spans only, `root-absent`).
+const NON_ASSERTION_MARKERS: [&str; 13] = [
+    "is deleted",
+    "are deleted",
+    "does not exist",
+    "no longer exists",
+    "is removed",
+    "are removed",
+    "since retired",
+    "is renamed to",
+    "are renamed to",
+    "renamed from",
+    "in the project",
+    "if it exists",
+    "e.g.",
+];
+
+/// `true` when the criterion claims its paths are present — i.e. it carries
+/// none of [`NON_ASSERTION_MARKERS`]. Matching is ASCII-case-insensitive over
+/// the whole criterion, code spans included: a marker is prose, and a criterion
+/// that carries one anywhere is describing a transition throughout.
+fn is_live_assertion(text: &str) -> bool {
+    let lowered = text.to_ascii_lowercase();
+    !NON_ASSERTION_MARKERS
+        .iter()
+        .any(|marker| lowered.contains(marker))
 }
 
 /// Candidate filesystem paths named inside `text`'s inline code spans, in
@@ -1930,6 +1999,58 @@ mod tests {
             "- [x] The constitution ships to `.govern/constitution.md`\n",
         );
         fs::create_dir_all(tmp.path().join(".govern")).unwrap();
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(path_findings(&result).len(), 1, "{:?}", result.findings);
+    }
+
+    #[test]
+    fn a_criterion_that_is_not_a_live_claim_is_skipped_not_flagged() {
+        // The sharpest of the four: a deletion criterion is *satisfied* by the
+        // path being gone, so flagging it is exactly backwards. All four
+        // groups are covered here because they share one exemption.
+        for criterion in [
+            "- [x] `framework/commands/capture.md` is deleted; its generated copy is regenerated as deleted.\n",
+            "- [x] `framework/workflows/` does not exist, and no live artifact references it.\n",
+            "- [x] `framework/rules/configuration.md` is renamed to `framework/rules/configuration-cross.md`.\n",
+            "- [x] The govern command writes it to `specs/rules/security-backend.md` in the project.\n",
+            "- [x] Project-local rule files outside the rule dir (e.g., `docs/rules/internal-api.md`) still load.\n",
+            "- [x] The key is validated by `scripts/lint-govern-toml.sh` (if it exists).\n",
+        ] {
+            let tmp = tempdir().unwrap();
+            seed_with_criteria(tmp.path(), "done", criterion);
+            fs::create_dir_all(tmp.path().join("framework/rules")).unwrap();
+            fs::create_dir_all(tmp.path().join("specs/rules")).unwrap();
+            fs::create_dir_all(tmp.path().join("docs/rules")).unwrap();
+            let result = run(&args(), tmp.path()).unwrap();
+            assert!(
+                path_findings(&result).is_empty(),
+                "not a live claim, must not flag: {criterion} -> {:?}",
+                result.findings
+            );
+            assert!(
+                result
+                    .skipped
+                    .iter()
+                    .any(|s| s.reason == "not-a-live-claim"),
+                "the exemption must be recorded, not silent: {criterion} -> {:?}",
+                result.skipped
+            );
+        }
+    }
+
+    #[test]
+    fn a_live_claim_alongside_a_transition_word_still_flags() {
+        // The marker list is closed and phrase-shaped on purpose: "adopter"
+        // alone must not exempt a criterion, or 018's real stale path
+        // ("runs the adopter-relevant generators (currently
+        // `scripts/gen-spec-deps.sh`)") would go unreported.
+        let tmp = tempdir().unwrap();
+        seed_with_criteria(
+            tmp.path(),
+            "done",
+            "- [x] The hook runs the adopter-relevant generators (currently `scripts/gen-spec-deps.sh`).\n",
+        );
+        fs::create_dir_all(tmp.path().join("scripts")).unwrap();
         let result = run(&args(), tmp.path()).unwrap();
         assert_eq!(path_findings(&result).len(), 1, "{:?}", result.findings);
     }
