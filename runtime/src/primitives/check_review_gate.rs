@@ -12,12 +12,13 @@
 //! guidance. A blocked gate is a domain outcome the host acts on (halt,
 //! do not propose the transition), never an operational error.
 
+use std::collections::BTreeSet;
 use std::path::Path;
 
 use crate::host::Host;
 use crate::primitives::{
-    PrimitiveError, Result, compute_review_scope, lint_markdown, read_spec, read_text,
-    split_frontmatter, validate_no_traversal,
+    PrimitiveError, Result, lint_markdown, read_spec, read_text, split_frontmatter,
+    validate_no_traversal,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -143,13 +144,9 @@ pub(crate) fn run_with_lint(
     }
 
     // Gate check 5: the recorded review still describes the current code.
-    if let Some(stale) = stale_review_block(
-        repo,
-        &feature_dir,
-        &rel_dir,
-        review.reviewed_against.as_deref(),
-        &project,
-    ) {
+    if let Some(stale) =
+        stale_review_block(repo, &rel_dir, review.reviewed_against.as_deref(), &project)
+    {
         return Ok(stale);
     }
 
@@ -162,8 +159,9 @@ pub(crate) fn run_with_lint(
     })
 }
 
-/// The staleness gate check: `Some(blocked)` when a file the spec's plan
-/// declares as its own surface changed after `reviewed-against`.
+/// The staleness gate check: `Some(blocked)` when one of the spec's
+/// **durable contracts** — a `scenarios/*.md` file or `data-model.md` —
+/// changed after `reviewed-against`.
 ///
 /// The other four checks ask whether a review exists and whether it passed.
 /// None of them asks whether it still *applies*. A review recorded against
@@ -173,33 +171,35 @@ pub(crate) fn run_with_lint(
 /// hypothetical: `gvrn-v0.26.2` shipped with 022's review pointing three
 /// commits behind the tag, and nothing noticed.
 ///
-/// Scoped to the plan's **Affected Files** rather than the whole repo. A
-/// repo-wide test would mark every review stale on the next unrelated
-/// commit, which is the fastest way to teach people to ignore a gate. An
-/// entry naming a directory matches anything beneath it, matching how
-/// `compute-review-scope` reads the same list.
+/// Scoped to the durable contracts, and that scoping was corrected under
+/// measurement rather than reasoned about. The first cut used the plan's
+/// **Affected Files**; run across this repo it blocked **34 of 48** specs,
+/// because old specs list shared surfaces (`AGENTS.md`, `README.md`,
+/// `framework/bootstrap/govern.md`) that every later spec also touches — so
+/// completing spec 004 was blocked by spec 042 having edited `AGENTS.md`.
+/// A gate that blocks seven specs in eight is one people route around.
+/// `tasks.md` and `plan.md` are excluded for the same reason: the first is
+/// ephemeral by construction (§tasks-phase), the second churns as Affected
+/// Files are revised. This is now the identical rule `/{project}:audit`
+/// Family 19 applies at release time, which is the point — two enforcement
+/// moments, one definition of stale.
 ///
-/// Two exclusions, both bookkeeping rather than subject matter: the spec's
-/// own `review.md` and `spec.md`. `write-review` touches both, so counting
-/// them would make every review stale the instant it was committed.
+/// `review.md` and `spec.md` are not contracts for this purpose:
+/// `write-review` touches both, so counting them would make every review
+/// stale the instant it was recorded.
 ///
 /// Fails **open** on anything it cannot determine — no git repo, an
-/// unparseable `reviewed-against`, a plan with no Affected Files table.
-/// A gate that blocks on its own inability to check would be a gate people
-/// route around; the honest checks above still run.
+/// unparseable `reviewed-against`. A gate that blocks on its own inability
+/// to check would be a gate people route around; the honest checks above
+/// still run.
 fn stale_review_block(
     repo: &Path,
-    feature_dir: &Path,
     rel_dir: &str,
     reviewed_against: Option<&str>,
     project: &str,
 ) -> Option<CheckReviewGateResult> {
     let base = reviewed_against?.trim();
     if base.is_empty() {
-        return None;
-    }
-    let affected = compute_review_scope::read_plan_affected(feature_dir);
-    if affected.is_empty() {
         return None;
     }
     let repository = git2::Repository::discover(repo).ok()?;
@@ -213,19 +213,16 @@ fn stale_review_block(
         .diff_tree_to_tree(Some(&base_tree), Some(&head_tree), None)
         .ok()?;
 
-    let review_md = format!("{rel_dir}/review.md");
-    let spec_md = format!("{rel_dir}/spec.md");
-    let mut stale: Vec<String> = Vec::new();
+    let prefix = format!("{rel_dir}/");
+    let mut stale: BTreeSet<String> = BTreeSet::new();
     diff.foreach(
         &mut |delta, _| {
             if let Some(path) = delta.new_file().path().or_else(|| delta.old_file().path()) {
                 let path = path.to_string_lossy().replace('\\', "/");
-                if path != review_md
-                    && path != spec_md
-                    && affected.iter().any(|entry| in_scope(&path, entry))
-                    && !stale.contains(&path)
+                if let Some(rest) = path.strip_prefix(&prefix)
+                    && is_durable_contract(rest)
                 {
-                    stale.push(path);
+                    stale.insert(path);
                 }
             }
             true
@@ -239,7 +236,6 @@ fn stale_review_block(
     if stale.is_empty() {
         return None;
     }
-    stale.sort();
     let shown: Vec<&str> = stale.iter().take(3).map(String::as_str).collect();
     let more = stale.len().saturating_sub(shown.len());
     let tail = if more > 0 {
@@ -251,8 +247,7 @@ fn stale_review_block(
         passed: false,
         blocked_by: Some(ReviewGateBlock::ReviewStale),
         message: Some(format!(
-            "blocked: review is stale — {} file(s) in this spec's Affected Files changed since \
-             reviewed-against {}: {}{tail}",
+            "blocked: review is stale — {} durable contract(s) changed since reviewed-against {}: {}{tail}",
             stale.len(),
             &base[..base.len().min(8)],
             shown.join(", ")
@@ -264,12 +259,13 @@ fn stale_review_block(
     })
 }
 
-/// `true` when `path` is covered by an Affected Files `entry` — an exact
-/// match, or anything beneath it when the entry names a directory (with or
-/// without a trailing slash).
-fn in_scope(path: &str, entry: &str) -> bool {
-    let entry = entry.trim_end_matches('/');
-    path == entry || path.starts_with(&format!("{entry}/"))
+/// A scenario or the data model — the artifacts a review actually reads.
+/// Mirrors `scripts/audit/review-freshness.sh`'s rule exactly.
+fn is_durable_contract(rel_within_feature: &str) -> bool {
+    let is_md = Path::new(rel_within_feature)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"));
+    (rel_within_feature.starts_with("scenarios/") && is_md) || rel_within_feature == "data-model.md"
 }
 
 /// The scenario-open-questions gate check: `Some(blocked)` when any
@@ -420,25 +416,28 @@ mod tests {
         // a change to the spec's own surface. Every other check passes.
         let tmp = tempdir().unwrap();
         seed(tmp.path(), REVIEWED_CLEAN);
+        fs::create_dir_all(tmp.path().join("specs/007-gate/scenarios")).unwrap();
         fs::write(
-            tmp.path().join("specs/007-gate/plan.md"),
-            "# Plan\n\n## Affected Files\n\n| File | Action | Purpose |\n| --- | --- | --- |\n| `runtime/src/` | Modify | the surface |\n",
+            tmp.path().join("specs/007-gate/scenarios/retry.md"),
+            "# Retry\n\n## Open Questions\n\n*None.*\n",
         )
         .unwrap();
-        fs::create_dir_all(tmp.path().join("runtime/src")).unwrap();
-        fs::write(tmp.path().join("runtime/src/lib.rs"), "// v1\n").unwrap();
         let base = git_commit_all(tmp.path(), "base");
 
         seed_reviewed_at(tmp.path(), &base);
-        fs::write(tmp.path().join("runtime/src/lib.rs"), "// v2\n").unwrap();
-        git_commit_all(tmp.path(), "change the reviewed surface");
+        fs::write(
+            tmp.path().join("specs/007-gate/scenarios/retry.md"),
+            "# Retry\n\nNew contract text.\n\n## Open Questions\n\n*None.*\n",
+        )
+        .unwrap();
+        git_commit_all(tmp.path(), "change a durable contract");
 
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
         assert!(!result.passed, "{result:?}");
         assert_eq!(result.blocked_by, Some(ReviewGateBlock::ReviewStale));
         let message = result.message.unwrap();
         assert!(message.contains("review is stale"), "{message}");
-        assert!(message.contains("runtime/src/lib.rs"), "{message}");
+        assert!(message.contains("scenarios/retry.md"), "{message}");
         assert!(
             result.guidance.unwrap().contains("/gov:review"),
             "guidance must name the command that clears it"
@@ -446,23 +445,23 @@ mod tests {
     }
 
     #[test]
-    fn a_change_outside_the_affected_files_leaves_the_review_current() {
+    fn bookkeeping_churn_leaves_the_review_current() {
         // Scope discipline: a repo-wide test would mark every review stale on
         // the next unrelated commit, which teaches people to ignore the gate.
         let tmp = tempdir().unwrap();
         seed(tmp.path(), REVIEWED_CLEAN);
-        fs::write(
-            tmp.path().join("specs/007-gate/plan.md"),
-            "# Plan\n\n## Affected Files\n\n| File | Action | Purpose |\n| --- | --- | --- |\n| `runtime/src/` | Modify | the surface |\n",
-        )
-        .unwrap();
-        fs::create_dir_all(tmp.path().join("runtime/src")).unwrap();
-        fs::write(tmp.path().join("runtime/src/lib.rs"), "// v1\n").unwrap();
         let base = git_commit_all(tmp.path(), "base");
 
         seed_reviewed_at(tmp.path(), &base);
+        // tasks.md is ephemeral by construction and plan.md churns; neither is
+        // a durable contract, so ticking a checkbox must not block completion.
+        fs::write(
+            tmp.path().join("specs/007-gate/tasks.md"),
+            "# T\n\n- [x] done\n",
+        )
+        .unwrap();
         fs::write(tmp.path().join("unrelated.md"), "elsewhere\n").unwrap();
-        git_commit_all(tmp.path(), "touch something else entirely");
+        git_commit_all(tmp.path(), "bookkeeping only");
 
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
         assert!(result.passed, "{result:?}");
@@ -474,11 +473,6 @@ mod tests {
         // counting them would make every review stale the instant it landed.
         let tmp = tempdir().unwrap();
         seed(tmp.path(), REVIEWED_CLEAN);
-        fs::write(
-            tmp.path().join("specs/007-gate/plan.md"),
-            "# Plan\n\n## Affected Files\n\n| File | Action | Purpose |\n| --- | --- | --- |\n| `specs/007-gate/` | Modify | its own dir |\n",
-        )
-        .unwrap();
         let base = git_commit_all(tmp.path(), "base");
 
         seed_reviewed_at(tmp.path(), &base);
@@ -490,18 +484,24 @@ mod tests {
     }
 
     #[test]
-    fn staleness_fails_open_without_a_plan() {
-        // No Affected Files table means nothing to scope against. A gate that
-        // blocked on its own inability to check is one people route around.
+    fn staleness_fails_open_on_an_unresolvable_sha() {
+        // A gate that blocked on its own inability to check is one people
+        // route around, so an unparseable `reviewed-against` passes.
         let tmp = tempdir().unwrap();
-        seed(tmp.path(), REVIEWED_CLEAN);
-        fs::create_dir_all(tmp.path().join("runtime/src")).unwrap();
-        fs::write(tmp.path().join("runtime/src/lib.rs"), "// v1\n").unwrap();
-        let base = git_commit_all(tmp.path(), "base");
-
-        seed_reviewed_at(tmp.path(), &base);
-        fs::write(tmp.path().join("runtime/src/lib.rs"), "// v2\n").unwrap();
-        git_commit_all(tmp.path(), "change with no plan to scope it");
+        seed(tmp.path(), REVIEWED_CLEAN); // reviewed-against: abc123
+        fs::create_dir_all(tmp.path().join("specs/007-gate/scenarios")).unwrap();
+        fs::write(
+            tmp.path().join("specs/007-gate/scenarios/retry.md"),
+            "# Retry\n\n## Open Questions\n\n*None.*\n",
+        )
+        .unwrap();
+        git_commit_all(tmp.path(), "base");
+        fs::write(
+            tmp.path().join("specs/007-gate/scenarios/retry.md"),
+            "# Retry\n\nchanged\n\n## Open Questions\n\n*None.*\n",
+        )
+        .unwrap();
+        git_commit_all(tmp.path(), "change a contract");
 
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
         assert!(result.passed, "{result:?}");

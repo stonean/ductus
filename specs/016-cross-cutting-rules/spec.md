@@ -4,8 +4,8 @@ status: done
 dependencies: [006-bug-workflow, 008-security-rules]
 tags: [format, process, pipeline]
 review:
-  last-run: 2026-05-17T23:25:00Z
-  reviewed-against: ef96450
+  last-run: 2026-08-03T15:03:53Z
+  reviewed-against: 1eda6f6f626eb368473b1dcae957392ba0e210d0
   must-violations: 0
   should-violations: 0
   low-confidence: 0

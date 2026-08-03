@@ -2,11 +2,11 @@
 status: done
 dependencies: [013-text-first-artifacts, 022-deterministic-runtime, 046-scenario-open-question-visibility]
 review:
-  last-run: 2026-08-03T03:05:16Z
-  reviewed-against: d99df57ecd05936029a1d29d08706ff48904ae01
+  last-run: 2026-08-03T15:03:53Z
+  reviewed-against: 1eda6f6f626eb368473b1dcae957392ba0e210d0
   must-violations: 0
   should-violations: 0
-  low-confidence: 1
+  low-confidence: 0
   blocking: false
 ---
 

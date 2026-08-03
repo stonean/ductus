@@ -159,7 +159,7 @@ fn inbox_at(repo: &Repository, tree: &git2::Tree<'_>, inbox_rel: &str) -> Option
 /// paths, using the shared canonical-table parser (`parse_affected_files`) so
 /// `compute-review-scope` and the writeCode plan reader agree on one format.
 /// Returns an empty list when `plan.md` is absent or has no such section.
-pub(crate) fn read_plan_affected(feature_dir: &Path) -> Vec<String> {
+fn read_plan_affected(feature_dir: &Path) -> Vec<String> {
     let Ok(content) = std::fs::read_to_string(feature_dir.join("plan.md")) else {
         return Vec::new();
     };

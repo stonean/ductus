@@ -27,21 +27,31 @@ A fifth gate check, ordered last because it is the weakest claim: the other
 four say a review is missing or failing, this one says a passing review is out
 of date.
 
-`ReviewGateBlock::ReviewStale` fires when a file the spec's plan declares under
-**Affected Files** changed between `review.reviewed-against` and `HEAD`. The
-message names the count, the short sha, and up to three paths; the guidance
-names the command that clears it.
+`ReviewGateBlock::ReviewStale` fires when one of the spec's **durable
+contracts** — a `scenarios/*.md` file or `data-model.md` — changed between
+`review.reviewed-against` and `HEAD`. The message names the count, the short
+sha, and up to three paths; the guidance names the command that clears it.
 
-Scoped to the plan's declared surface rather than the repo. A repo-wide test
-would mark every review stale on the next unrelated commit, which is the
-fastest way to teach people to route around a gate. An entry naming a directory
-matches everything beneath it, matching how `compute-review-scope` reads the
-same list — `read_plan_affected` is now `pub(crate)` and shared rather than
-reimplemented.
+**The scope was wrong on the first cut and measurement caught it.** The
+initial version used the plan's **Affected Files**, reasoning that Family 19
+could afford a narrow rule (it judges every spec at release) while the gate
+could afford a wide one (it judges one spec at completion). That reasoning was
+never tested. Run across this repo, the Affected-Files rule blocked **34 of 48**
+specs — old specs list shared surfaces (`AGENTS.md`, `README.md`,
+`framework/bootstrap/govern.md`) that every later spec also touches, so
+completing spec 004 was blocked by spec 042 having edited `AGENTS.md`. A gate
+that blocks seven specs in eight is one people route around, which is the
+failure this scenario's own prose warned about. The durable-contract rule
+blocks **0 of 48** once reviews are current.
 
-Two exclusions, both bookkeeping rather than subject matter: the spec's own
-`review.md` and `spec.md`. `write-review` touches both, so counting them would
-make every review stale the instant it was recorded.
+So the two enforcement points now apply the *identical* rule rather than
+deliberately different ones — `is_durable_contract` here mirrors
+`scripts/audit/review-freshness.sh` exactly. `tasks.md` and `plan.md` are
+excluded because the first is ephemeral by construction
+([§tasks-phase](../../framework/constitution.md#tasks-phase)) and the second
+churns as Affected Files are revised; `review.md` and `spec.md` because
+`write-review` touches both, so counting them would make every review stale the
+instant it was recorded.
 
 ## Edge Cases
 
@@ -64,8 +74,8 @@ make every review stale the instant it was recorded.
   (`review-freshness`), which asks the same question of every `done` spec at
   once. Two enforcement points for one rule, matching how blocking semantics is
   already built from three mutually reinforcing mechanisms rather than one.
-  They deliberately scope differently — see that family for why the
-  release-time rule reads durable contracts instead of Affected Files.
+  They now share one definition of stale; an earlier draft scoped them
+  differently and that difference was the defect, not the design.
 
 ## Open Questions
 

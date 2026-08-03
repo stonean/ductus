@@ -2,6 +2,16 @@
 
 All notable changes to the `govern` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `gvrn-v<MAJOR>.<MINOR>.<PATCH>` scheme distinct from framework tags (was `runtime-v*` before v0.2.0 — see the v0.2.0 rename entry below).
 
+## [0.27.1] — 2026-08-03
+
+### Fixed
+
+- **`ReviewGateBlock::ReviewStale` blocked 34 of 48 specs.** v0.27.0 scoped the staleness test to the plan's **Affected Files**, on the reasoning that Family 19 could afford a narrow rule (it judges every spec at release) while the gate could afford a wide one (it judges one spec at completion). That reasoning was never measured. Old specs list shared surfaces — `AGENTS.md`, `README.md`, `framework/bootstrap/govern.md` — that every later spec also touches, so completing spec 004 was blocked by spec 042 having edited `AGENTS.md`. A gate that blocks seven specs in eight is one people route around, which is the failure v0.27.0's own doc comment warned about.
+
+  The gate now applies the **identical** rule `/gov:audit` Family 19 already uses: a review is stale when one of the spec's durable contracts — `scenarios/*.md` or `data-model.md` — changed since `reviewed-against`. `tasks.md` and `plan.md` are excluded because the first is ephemeral by construction and the second churns as Affected Files are revised. Measured across this repo: **34 of 48 blocked → 0**. Two enforcement moments, one definition of stale; the earlier difference between them was the defect, not the design.
+
+  Simpler as well as more precise — the gate no longer parses plans at all, so `compute_review_scope::read_plan_affected` reverts to private and the Affected-Files matcher is gone.
+
 ## [0.27.0] — 2026-08-03
 
 022 scenario `review-staleness-gate`. A minor rather than a patch because `check-review-gate` gains a blocking outcome adopters will see — a spec that passed the gate yesterday can be blocked by it today.

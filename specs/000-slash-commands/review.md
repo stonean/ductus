@@ -1,8 +1,7 @@
 ---
 spec: 000-slash-commands
-scenario: implement-skips-planned-prompt
-reviewed-at: 2026-06-28T00:00:00Z
-reviewed-against: 98f859520f2672b58830911d891f6f9eeb14a98e
+reviewed-at: 2026-08-03T15:03:53Z
+reviewed-against: 1eda6f6f626eb368473b1dcae957392ba0e210d0
 diff-base: 98f859520f2672b58830911d891f6f9eeb14a98e
 must-violations: 0
 should-violations: 0
@@ -11,89 +10,32 @@ captured-issues: 0
 skipped-passes: []
 ---
 
-# Review — 000-slash-commands (scenario: implement-skips-planned-prompt)
+# Review — 000-slash-commands
 
 ## Summary
 
-Clean across all five passes — 0 MUST, 0 SHOULD, 0 low-confidence. The change
-removes the planned → in-progress confirmation gate from `/gov:implement`: the
-prose gate trigger in `framework/commands/implement.md` step 4 is gone (merged
-into the `set-status` step), the `--auto` carve-out now lists only
-`in-progress → done`, the generated `.claude/commands/gov/implement.md` mirror
-is regenerated, the runtime golden/fixtures that encoded the old gate are
-re-blessed, and a §cross-spec-impact signpost is recorded on
-`010-agent-autonomy`. Loaded rules (configuration-cross, security-backend,
-api-backend, performance-backend) target application code — constants/env-vars,
-HTTP API design, auth/input security, query performance — none of which this
-change introduces; the in-scope artifacts are command-prose markdown, Rust
-**test** fixtures, and one test-file edit. The full runtime test suite passes
-(391 lib + 16 + 10 + 7 + 3 + 2 + 1, zero failures) and all touched markdown
-lints clean. Not blocking.
+Re-review triggered by /gov:audit Family 19, which flagged this spec's review as predating its own durable contracts. **0 MUST, 0 SHOULD — not blocking.** The diff since the recorded review is markdown only, confined to the `implement-skips-planned-prompt` scenario, added to record a change that had already shipped: no source file, no command procedure, and no schema changed, so the loaded backend + cross rule set has no surface to evaluate — security, api, concurrency, performance, observability, and reliability are all N/A by scope rather than by inspection. What a review can check here is whether the artifact still describes shipped behavior, and it does: `framework/commands/implement.md` contains no `gate-confirm` step, which is exactly the removal the scenario documents. Verification at this HEAD: 864 lib tests plus 11 suites green, clippy -D warnings and fmt clean, markdownlint clean across 390 files, check-artifacts clean on this spec, and the 19-family self-audit green apart from the freshness backlog this review is clearing.
 
 ## MUST violations (blocking)
 
-_None._
+*None.*
 
 ## SHOULD violations (advisory)
 
-_None._
+*None.*
 
 ## Low-confidence findings
 
-_None._
+*None.*
 
 ## Waived findings
 
-_None._
+*None.*
 
-## Captured issues (pending /gov:groom)
+## Captured issues
 
-_None — no issues were appended to `specs/inbox.md` during this work._
+*None.*
 
 ## Skipped passes
 
-_None._ All five passes ran.
-
-## Pass notes
-
-### Security
-
-No auth, input-handling, HTTP, persistence, or crypto surface in the diff — the
-shipped `security-backend` rules find nothing to flag. Notably, the edited
-out-of-boundary parity test (`runtime/tests/parity.rs`) still feeds a writeCode
-edit that escapes the write boundary and still asserts the `out-of-boundary-edit`
-rejection; only the now-absent gate-response line was removed and the request id
-shifted to `req-1`. The write-boundary enforcement coverage is intact.
-
-### Reuse
-
-No duplicated logic. The removed gate step folds into the existing `set-status`
-step rather than introducing a parallel path; the regenerated Claude mirror
-flows through the canonical `scripts/gen-claude-commands.sh` generator, not a
-hand edit.
-
-### Quality
-
-Correct and consistent. Step renumbering (4–7) leaves no dangling
-cross-references: the carve-out's "see step 4" resolves to the `set-status`
-step, and "step 2" (Scope Boundaries) still resolves to `derive-boundary`. The
-re-blessed golden shows the `gate-confirm` envelope and its progress line
-removed, steps flowing 1–6, and writeCode at `req-1`; the parity test asserts it
-byte-for-byte and passes. `stdin.jsonl` and the fixture spec's pipeline
-description were aligned before re-blessing. Full suite green.
-
-### Efficiency
-
-N/A — prose and test-data edits; no loops, queries, or hot paths.
-
-### Simplicity
-
-A net simplification: one fewer procedure step and one fewer runtime gate. The
-carve-out parenthetical is concise and the rationale is stated inline. No new
-flags, args, config keys, or state shapes.
-
-### Out of scope (informational)
-
-The planned → in-progress `set-status` guard (`from: planned`) and the
-already-`in-progress` resume path are unchanged by this work; the scenario
-documents resume behavior as unchanged. Not a finding against this change.
+*None.*

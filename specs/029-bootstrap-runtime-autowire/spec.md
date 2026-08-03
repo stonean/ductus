@@ -2,8 +2,8 @@
 status: done
 dependencies: [003-bootstrap-automation, 021-runtime-boundary, 022-deterministic-runtime, 028-antigravity-agent]
 review:
-  last-run: 2026-06-11T22:15:00Z
-  reviewed-against: f85565f0fa2709d15df059208cb4c2b0ca1c07c7
+  last-run: 2026-08-03T15:03:53Z
+  reviewed-against: 1eda6f6f626eb368473b1dcae957392ba0e210d0
   must-violations: 0
   should-violations: 0
   low-confidence: 0

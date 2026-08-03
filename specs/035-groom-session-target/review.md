@@ -1,8 +1,7 @@
 ---
 spec: 035-groom-session-target
-scenario: confirmation-names-reopen
-reviewed-at: 2026-06-29T01:23:45Z
-reviewed-against: c97c5b9d64f6ce110ff8d9a447d0df8e21240dda
+reviewed-at: 2026-08-03T15:03:53Z
+reviewed-against: 1eda6f6f626eb368473b1dcae957392ba0e210d0
 diff-base: c97c5b9d64f6ce110ff8d9a447d0df8e21240dda
 must-violations: 0
 should-violations: 0
@@ -15,49 +14,28 @@ skipped-passes: []
 
 ## Summary
 
-Scenario-targeted run (`confirmation-names-reopen`). Markdown-tier change set:
-prose edits to one slash-command source (`framework/commands/groom.md`) and its
-regenerated `.claude/commands/gov/groom.md` copy, plus the new scenario file — no
-application code. Task 6 closes the transparency gap the prior review
-(`reviewed-against: acffa85`) raised as low-confidence: when groom's Step 4
-routes a scenario to a `done` spec, the per-item routing confirmation now names
-the `done → in-progress` reopen, so the operator consents to the status change
-before it happens — matching `/gov:amend`'s practice. No loaded rule's
-Verification trigger fires against command-source prose, and the
-reuse/efficiency/simplicity passes find nothing actionable: the confirmation
-extends the existing single-prompt pattern and the reworded bullet cross-references
-the Step 4 example rather than duplicating it. The quality pass confirms the
-implementation is consistent across the item-4 confirmation, the "No separate
-prompt, but the reopen is named" bullet, the Completion line, and the scenario;
-the cross-doc-consistency audit passes. **0 MUST violations — not blocking; the
-spec may advance to `done`.**
-
-Rule-file selection for this run: `[rules] surfaces` unset in govern's own
-`.govern.toml`, so step 5 fell back to detected-stack derivation;
-`[review] tech-stack-verified = true` skipped the alignment check.
+Re-review triggered by /gov:audit Family 19, which flagged this spec's review as predating its own durable contracts. **0 MUST, 0 SHOULD — not blocking.** The diff since the recorded review is markdown only, confined to the `confirmation-names-reopen` scenario, added to record shipped behavior: no source file, no command procedure, and no schema changed, so the loaded backend + cross rule set has no surface to evaluate — security, api, concurrency, performance, observability, and reliability are all N/A by scope rather than by inspection. What a review can check here is whether the artifact still describes shipped behavior, and it does: `framework/commands/groom.md` names the reopen in its Step 4 confirmation, which is what the scenario specifies. Verification at this HEAD: 864 lib tests plus 11 suites green, clippy -D warnings and fmt clean, markdownlint clean across 390 files, check-artifacts clean on this spec, and the 19-family self-audit green apart from the freshness backlog this review is clearing.
 
 ## MUST violations (blocking)
 
-_None._
+*None.*
 
 ## SHOULD violations (advisory)
 
-_None._
+*None.*
 
 ## Low-confidence findings
 
-_None. The prior review's low-confidence finding (done-spec reopen not named in
-the routing confirmation) is resolved: the Step 4 confirmation now names the
-reopen for `done` specs and is unchanged for non-`done` specs._
+*None.*
 
 ## Waived findings
 
-_None._
+*None.*
 
-## Captured issues (pending /gov:groom)
+## Captured issues
 
-_None — no inbox additions since diff-base._
+*None.*
 
 ## Skipped passes
 
-_None — all five passes ran._
+*None.*

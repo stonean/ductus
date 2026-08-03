@@ -1,11 +1,12 @@
 ---
 spec: 014-reclarify-backedge
-reviewed-at: 2026-05-24T21:40:00Z
-reviewed-against: 36461bdd3456c3cd666546aeeedf21452c072640
-diff-base: 1aca7680000000000000000000000000000000000
+reviewed-at: 2026-08-03T15:03:53Z
+reviewed-against: 1eda6f6f626eb368473b1dcae957392ba0e210d0
+diff-base: 36461bdd3456c3cd666546aeeedf21452c072640
 must-violations: 0
 should-violations: 0
 low-confidence: 0
+captured-issues: 0
 skipped-passes: []
 ---
 
@@ -13,55 +14,28 @@ skipped-passes: []
 
 ## Summary
 
-Re-review after Task 8 (Options A + B for the reopen-after-informal-edits scenario) landed in `36461bd`. Scope: `framework/commands/amend.md` (new "Re-open precondition" section), `.claude/commands/gov/amend.md` (regenerated mirror), `AGENTS.md` (Workflow entry for the agent-side `set-status` shortcut), and the new scenario file. Pure markdown; the only rule file that applies to a markdown scope is `configuration-cross.md`, which has no triggers in prose. One SHOULD finding caught and fixed in this same review: the decline branch of the new precondition contradicted the scenario's "Delta exists but the user intends to add a new scenario" edge case. `blocking: no`.
+Re-review triggered by /gov:audit Family 19, which flagged this spec's review as predating its own durable contracts. **0 MUST, 0 SHOULD — not blocking.** The diff since the recorded review is markdown only, confined to the `reopen-after-informal-edits` scenario: no source file, no command procedure, and no schema changed, so the loaded backend + cross rule set has no surface to evaluate — security, api, concurrency, performance, observability, and reliability are all N/A by scope rather than by inspection. What a review can check here is whether the artifact still describes shipped behavior, and it does: `framework/commands/amend.md` carries the Option B decline branch that continues to **Gather the input**, matching the scenario's edge case. Verification at this HEAD: 864 lib tests plus 11 suites green, clippy -D warnings and fmt clean, markdownlint clean across 390 files, check-artifacts clean on this spec, and the 19-family self-audit green apart from the freshness backlog this review is clearing.
 
 ## MUST violations (blocking)
 
-_None._
+*None.*
 
 ## SHOULD violations (advisory)
 
-_None remaining._ The finding below was fixed in-review and is **resolved**.
-
-### SHOULD: SCENARIO-CONTRACT — decline branch contradicted edge case (fixed in-review) — **RESOLVED**
-
-- **File**: `framework/commands/amend.md:66`
-- **Rule**: Scenario-documented contract: `specs/014-reclarify-backedge/scenarios/reopen-after-informal-edits.md` Edge Cases — _"Delta exists but the user intends to add a new scenario — Option B's prompt is offered before classification, so the user can decline the re-open prompt and continue into the scenario branch with the new input."_
-- **Finding**: The initial Option B implementation wrote step 5 as "On **decline**, exit without modifying any file." That terminates `/amend` entirely, which contradicts the scenario's edge case requiring the user to be able to decline the re-open and still route a new scenario input. The contradiction is internal to the same section — the trailing paragraph already promised the opt-out-and-continue behavior.
-- **Auto-fixable**: yes
-- **Suggested fix**: replace "On **decline**, exit without modifying any file" with "On **decline**, continue to **Gather the input** without modifying any file" plus the disambiguating sentence about empty vs. new input.
-- **Status**: **resolved**. Fixed in this review run and committed; `framework/commands/amend.md:66` now reads "On **decline**, continue to **Gather the input** without modifying any file", and the trailing paragraph's opt-out-and-continue promise is honored. Verified against `main` 2026-08-02.
+*None.*
 
 ## Low-confidence findings
 
-_None._
+*None.*
 
 ## Waived findings
 
-_None._
+*None.*
+
+## Captured issues
+
+*None.*
 
 ## Skipped passes
 
-_None._
-
-## Pass notes
-
-### Security
-
-Markdown command-spec edits, no executable surface. The new `git status --porcelain` invocation is scoped to specific paths inside the feature directory; no user-controlled input flows into the command line.
-
-### Reuse
-
-The "detect on-disk delta, prompt user, mutate status" shape echoes `/gov:clarify`'s recovery path from Tasks 1–2 (status + open-question-count → prompt → revert). No shared helper is warranted in a markdown-spec framework, but the pattern is now applied symmetrically across `/amend` and `/clarify` — operators can predict it from one to the other.
-
-### Quality
-
-Found the one SHOULD finding above and fixed it. The status-mutation table picked up a new row for the precondition path; the row's placement after the existing `done | scenario` row is acceptable because each row is independently descriptive. The `set-status` primitive used by the runtime path matches the markdown-only path's direct frontmatter edit — same observable outcome.
-
-### Efficiency
-
-`git status --porcelain` is the canonical machine-parseable interface, scoped to three paths. O(small) on every `done`-spec `/amend` invocation; the cost is justified by the user-visible re-open shortcut.
-
-### Simplicity
-
-Option A is a single AGENTS.md Workflow entry — no new primitive, no new command flag. Option B adds one section, one table row, and one scope-boundary note to `framework/commands/amend.md`. No premature abstraction.
+*None.*

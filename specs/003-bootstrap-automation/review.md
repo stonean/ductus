@@ -1,8 +1,8 @@
 ---
 spec: 003-bootstrap-automation
-reviewed-at: 2026-06-11T02:02:12Z
-reviewed-against: a87ec526c1749086da61d7a8f59d5a891bd5ce1d
-diff-base: 9847647bc7c165d26dff07317c6a865a49f18457
+reviewed-at: 2026-08-03T15:03:53Z
+reviewed-against: 1eda6f6f626eb368473b1dcae957392ba0e210d0
+diff-base: a87ec526c1749086da61d7a8f59d5a891bd5ce1d
 must-violations: 0
 should-violations: 0
 low-confidence: 0
@@ -14,58 +14,28 @@ skipped-passes: []
 
 ## Summary
 
-Reviewed the code added under the `curl-sh-installer` scenario: `install.sh`
-(the one-line installer), `scripts/audit/installer-registry-parity.sh` (audit
-Family 14), and the supporting edits to `scripts/audit/run-all.sh`,
-`check-zero.sh`, and `cross-doc-consistency.sh`. **No MUST violations and no
-SHOULD violations — the spec is validly `done`.** The loaded security/api/config
-rule files target application-backend concerns (auth, API schemas, secret
-handling) that this build/CLI tooling does not engage; per the security pass's
-authoritative-rule-set constraint, no security findings were manufactured for
-the `curl | sh` pattern (govern has no published release artifacts to checksum —
-it is live-on-main).
-
-The three advisory SHOULD findings from the prior run (2026-06-11T01:48Z) have
-been resolved — see **Resolved since prior run** below.
+Re-review triggered by /gov:audit Family 19, which flagged this spec's review as predating its own durable contracts. **0 MUST, 0 SHOULD — not blocking.** The diff since the recorded review is markdown only, confined to one clause of the `curl-sh-installer` scenario: no source file, no command procedure, and no schema changed, so the loaded backend + cross rule set has no surface to evaluate — security, api, concurrency, performance, observability, and reliability are all N/A by scope rather than by inspection. What a review can check here is whether the artifact still describes shipped behavior, and it does: the edit is a wording correction to the installer's agent-argument description, and the described behavior is unchanged. Verification at this HEAD: 864 lib tests plus 11 suites green, clippy -D warnings and fmt clean, markdownlint clean across 390 files, check-artifacts clean on this spec, and the 19-family self-audit green apart from the freshness backlog this review is clearing.
 
 ## MUST violations (blocking)
 
-None.
+*None.*
 
 ## SHOULD violations (advisory)
 
-None.
-
-## Resolved since prior run
-
-- **simplicity — installer autodetect** (was `install.sh:23-31`). Removed. Agent
-  resolution is now the positional argument or a `claude` default
-  (`agent="${1:-claude}"`); the undocumented `GOVERN_AGENT` env override was
-  dropped in the same pass for the same reason.
-- **simplicity — `agy` alias accepted but undocumented** (was `install.sh:53`).
-  Resolved by documenting, not dropping: `agy` is the Antigravity CLI command
-  name, so accepting it is a sensible affordance, not noise. The alias is now
-  advertised in the installer usage comment and unknown-agent error message, the
-  README, and this scenario; it canonicalizes to the `antigravity` registry key.
-- **reuse — frontmatter-strip awk "duplication"** (was `install.sh:62`).
-  Withdrawn as a mischaracterization: the `awk` literal lives only in
-  `install.sh`. `govern.md` describes the frontmatter strip in prose (no literal
-  awk), and the README's former copy was removed during the README rewrite.
-  There is a single copy, so there is nothing to de-duplicate.
+*None.*
 
 ## Low-confidence findings
 
-None.
+*None.*
 
 ## Waived findings
 
-None.
+*None.*
 
-## Captured issues (pending /gov:groom)
+## Captured issues
 
-None.
+*None.*
 
 ## Skipped passes
 
-None.
-</content>
+*None.*
