@@ -1,7 +1,7 @@
 ---
 spec: 045-decision-state-drift-detection
-reviewed-at: 2026-08-03T01:50:52Z
-reviewed-against: 0857f07d6af648759126208401ef856ffccf3fb7
+reviewed-at: 2026-08-03T02:44:40Z
+reviewed-against: 8891da925ff7b5f8d5c2892ffd1689bb8f8d4915
 diff-base: 5103cd3a32fa53b07a9536200d609f3632e57a71
 must-violations: 0
 should-violations: 0
@@ -14,7 +14,7 @@ skipped-passes: []
 
 ## Summary
 
-Second pass, against `0857f07`. The first run (`c11bbb1`) reported 0 MUST, 3 SHOULD, 2 low-confidence; all three SHOULD findings were fixed rather than shipped, and the fix for the double-parse also removed the `.ok()` swallow the first low-confidence finding named. What remains is one low-confidence observation about the deliberate lexical-vs-canonical path resolution. Posture: no blocking violations, no advisory violations, one recorded trade-off. The code under review is a read-only, locally-invoked markdown analyzer with no network, persistence, authentication, or concurrency surface, so the api / observability / concurrency / reliability rule sets load but have no applicable subject.
+Third pass, re-run because the two prior ones (`c11bbb1`, `0857f07`) predate the live-claim exemption and the `mark-task` symmetry change. The first pass reported 0 MUST and 3 SHOULD, all fixed rather than shipped; the fix for the duplicated spec parse also removed the `.ok()` swallow a fourth, low-confidence finding named. Since then the `criterion-path-existence` family gained the live-claim exemption — thirteen closed phrases marking a criterion as a deletion, rename, adopter-scope, or hedge statement, so a path that fails to resolve confirms it rather than contradicting it. That change was itself prompted by a measurement error worth recording in a review: an earlier triage classified findings by path prefix without reading their criteria and reported 35 true positives at 69% precision, when the real figure was 5 of 28. The corrected measurement and the reasoning are in `data-model.md`. What remains is one low-confidence trade-off, unchanged from the second pass and re-verified against the current code.
 
 ## MUST violations (blocking)
 
@@ -40,7 +40,7 @@ Second pass, against `0857f07`. The first run (`c11bbb1`) reported 0 MUST, 3 SHO
 
 ## Captured issues
 
-- [ ] **35 stale acceptance-criterion paths across 18 `done` specs, surfaced by 045's first full-repo run (2026-08-02).** The `criterion-path-existence` family flagged 51 paths named in `done` specs' `## Acceptance Criteria` that no longer resolve; 35 are confirmed true positives and need the `done → in-progress` back-edge to correct. Routing options and the 16 known false positives are recorded in the item.
+- [ ] bug: `compute-review-scope` returns an unusable scope and a polluted captured-issues list — plan-affected is not parsed as a table, and captured-issues takes raw added lines rather than the shared comment-aware bullet grammar.
 
 ## Skipped passes
 

@@ -1,11 +1,12 @@
 ---
 spec: 017-derive-dont-ask
-reviewed-at: 2026-05-10T00:00:00Z
-reviewed-against: 3d7c50beb1aa9e82783cb2a7f9ed5b0540068625
-diff-base: 3d7c50beb1aa9e82783cb2a7f9ed5b0540068625
+reviewed-at: 2026-08-03T02:44:40Z
+reviewed-against: 8891da925ff7b5f8d5c2892ffd1689bb8f8d4915
+diff-base: 096dbc0cf65a2322c91bfa895a825ea60c5a23f8
 must-violations: 0
 should-violations: 0
 low-confidence: 0
+captured-issues: 1
 skipped-passes: []
 ---
 
@@ -13,46 +14,28 @@ skipped-passes: []
 
 ## Summary
 
-Largest cross-cutting change in the project: removes discipline-dependent frontmatter (`title`, `tags`, `[simple]`), introduces four `scripts/gen-*.sh` generators (`gen-readme-table`, `gen-help-tables`, `gen-spec-deps`, `install-hooks`), `.githooks/pre-commit` hook orchestration, the `framework/rules/configuration-cross.md` rule file, CI workflow (`generators.yml`), and migration of dogfood specs. The generator scripts and CI workflow constitute the only "real code" in govern; all were audited globally. All five passes ran; no findings. `blocking: no`.
+Reopened by the scenario back-edge for `generator-sync-claim-honesty` (task 35). The change is bash: a new `untracked_specs()` and `report_no_changes()` in `.govern/scripts/lib/specs-root.sh`, a drifted-but-unwritten counter in `gen-spec-deps.sh`, and both generators' zero-rewrite message routed through the shared reporter. The `list_specs` git-ls-files exclusion is byte-for-byte unchanged, which was the point: the adopter report's proposed remedy (revert it) would have restored the worse bug 017 fixed, and only the reporting was ever wrong. Reviewing the fix surfaced a residual instance of the same defect one level in — `gen-spec-deps.sh` enumerates every tracked spec but writes only its rewrite targets, so a drifted unstaged spec was examined and then reported "in sync" — which is fixed and verified end to end in the same window rather than logged. Shell-injection surface was checked and is unchanged: both new functions interpolate only `$SPECS_ROOT`, already constrained to `[A-Za-z0-9_-]` by `specs_root_of` for exactly this reason, and `$ROOT`, which is passed to `git -C` rather than to a shell. All five passes ran; no findings.
 
 ## MUST violations (blocking)
 
-_None._
+*None.*
 
 ## SHOULD violations (advisory)
 
-_None._
+*None.*
 
 ## Low-confidence findings
 
-_None._
+*None.*
 
 ## Waived findings
 
-_None._
+*None.*
+
+## Captured issues
+
+- [ ] bug: `compute-review-scope` returns an unusable scope and a polluted captured-issues list — plan-affected is not parsed as a table, and captured-issues takes raw added lines rather than the shared comment-aware bullet grammar.
 
 ## Skipped passes
 
-_None._
-
-## Pass notes
-
-### Security
-
-Each generator uses `set -euo pipefail`, no `eval`, no network, no user-controlled input — they iterate spec frontmatter from the repo itself. `install-hooks.sh` modifies `git config core.hooksPath .githooks`, which is local to the repo; `chmod +x` is scoped to `.githooks/pre-commit`. CI workflow uses `actions/checkout@v4` with `contents: read` permissions. The shipped adopter pre-commit hook is split (per 018) so adopters own the outer file and govern owns the inner — no silent overwrites.
-
-### Reuse
-
-The `gen-*.sh` script convention establishes the pattern reused by spec 021's `lint-*.sh` scripts. The marker-comment splice pattern (`<!-- generated:...:start --><!-- generated:...:end -->`) is shared across `gen-help-tables.sh` and `gen-readme-table.sh`.
-
-### Quality
-
-Generators handle the missing-marker case explicitly (non-zero exit with named error). `gen-spec-deps.sh` correctly skips fenced code blocks and blockquote-prefixed lines when extracting body links — preventing forward-pointer signposts on done specs from polluting the derived dependency list. The "frozen archaeology" rule on done-spec frontmatter (no migration of dogfood specs' title/tags) prevents unnecessary churn on historic state.
-
-### Efficiency
-
-Insertion sort in `gen-spec-deps.sh` is appropriate for n<30 specs. Generators run in dry-run mode in CI; the pre-commit hook stages outputs so commits are self-contained.
-
-### Simplicity
-
-This spec embodies the §design-principles "never depend on human diligence" rule — it removed every input that required the author to remember to fill it in (title, tags, `[simple]`, frontmatter dependencies as the source of truth). Replaced each with a derived signal: filename → title, body inline links → dependencies, body content → README and help tables.
+*None.*

@@ -2,8 +2,8 @@
 status: in-progress
 dependencies: []
 review:
-  last-run: 2026-05-10T00:00:00Z
-  reviewed-against: 3d7c50beb1aa9e82783cb2a7f9ed5b0540068625
+  last-run: 2026-08-03T02:44:40Z
+  reviewed-against: 8891da925ff7b5f8d5c2892ffd1689bb8f8d4915
   must-violations: 0
   should-violations: 0
   low-confidence: 0
@@ -91,7 +91,7 @@ Validate severity changes:
 
 ## Migration
 
-Existing `govern` repo dogfood specs (000–016) and any adopter projects already on the current schema will have stale `title:`, `tags:`, `spec-ref:`, `track:` fields and `[simple]` task markers. Per constitution §done-specs-are-frozen-archaeology, done specs are not rewritten retroactively.
+Existing `govern` repo dogfood specs (000–016) and any adopter projects already on the current schema will have stale `title:`, `tags:`, `spec-ref:`, `track:` fields and `[simple]` task markers. Per constitution §spec-lifecycle, done specs are not rewritten retroactively: a meaningful body edit reopens a spec through the back-edge, so a bulk retroactive migration would reopen every one of them.
 
 - Existing `done` specs: no migration. Stale fields remain; the open-schema rule (constitution §text-first-artifacts) ignores unknown fields. Validate stops checking them, so they cause no findings.
 - New specs created after this lands: no longer have the deleted fields.
