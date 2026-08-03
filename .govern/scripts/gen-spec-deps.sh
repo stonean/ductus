@@ -75,6 +75,7 @@ is_write_target() {
 }
 
 changed=0
+unwritten=0
 while IFS= read -r spec; do
   [ -f "$spec" ] || continue
   own_slug="$(basename "$(dirname "$spec")")"
@@ -168,7 +169,12 @@ while IFS= read -r spec; do
   else
     # Either already in sync, or (under --staged) a non-staged spec whose
     # derived field has drifted — left untouched on disk; its edges still
-    # feed the cycle graph below from the worktree body.
+    # feed the cycle graph below from the worktree body. Count that second
+    # case: it was examined and found drifted, so reporting it as "in sync"
+    # would assert the opposite of what was observed.
+    if ! cmp -s "$spec" "$tmp"; then
+      unwritten=$((unwritten + 1))
+    fi
     rm "$tmp"
   fi
 
@@ -178,7 +184,7 @@ while IFS= read -r spec; do
 done < <(list_specs)
 
 if [ "$changed" -eq 0 ]; then
-  report_no_changes
+  report_no_changes "$unwritten"
 fi
 
 # Cycle check: runs after the frontmatter rewrite so any diff is visible in the

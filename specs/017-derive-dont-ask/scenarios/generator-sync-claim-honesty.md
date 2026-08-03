@@ -24,6 +24,14 @@ No changes (N tracked specs in sync; M untracked spec(s) skipped — git add to 
 
 The `M` clause is omitted when nothing was skipped, so the ordinary all-tracked case stays a clean one-line message. The exclusion itself is unchanged — this is a counting and reporting change, not a behavior change.
 
+**A third state exists and is reported too.** `gen-spec-deps.sh` enumerates every *tracked* spec (its cycle check needs the whole graph) but writes only its rewrite targets, which under `--staged` are the staged specs alone. A tracked-but-unstaged spec whose derived field has drifted is therefore examined, found drifted, and deliberately left alone — neither "in sync" nor "not examined". A zero rewrite count reported it as the first, which is the same defect one level in:
+
+```text
+No changes (N tracked spec(s) in sync; D drifted spec(s) left unwritten — not staged; M untracked spec(s) skipped — git add to include)
+```
+
+Each clause appears only when its count is non-zero. This case is specific to `gen-spec-deps.sh`: `gen-cross-service-refs.sh` writes every spec it enumerates, so for it "enumerated" and "written" are the same set and its claim was already sound.
+
 **`gen-cross-service-refs.sh` gets the same treatment.** It enumerates through the same `list_specs()` and prints the same shape of claim about references, so it carries the identical defect and the identical fix.
 
 **The other two are assessed, not assumed.** `gen-help-tables.sh` ("help.md in sync") and `gen-configure-mcp.sh` ("mcp-allow blocks in sync") share the message *shape* but regenerate from fixed sources rather than through `list_specs()`. Each is checked against the same question — can its zero count ever mean "did not examine?" — and its message is corrected only if the answer is yes. A uniform edit applied without that check would be its own unfounded claim.

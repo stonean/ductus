@@ -101,15 +101,25 @@ untracked_specs() {
 
 # Render the honest no-change line for a generator whose enumeration is
 # list_specs-scoped: what was examined, and what was skipped.
+#
+# `$1` (optional, default 0) is the count of specs the generator examined and
+# found drifted but deliberately did NOT rewrite — the `--staged` case, where a
+# tracked-but-unstaged spec's derived field has drifted and is left alone so
+# committing one spec never rewrites another. Those are neither "in sync" nor
+# "not examined", and a zero rewrite count would otherwise report them as the
+# former.
 report_no_changes() {
-  local tracked untracked
+  local unwritten="${1:-0}" tracked untracked line
   tracked=$(list_specs | wc -l | tr -d ' ')
   untracked=$(untracked_specs | wc -l | tr -d ' ')
-  if [ "$untracked" -gt 0 ]; then
-    echo "No changes ($tracked tracked spec(s) in sync; $untracked untracked spec(s) skipped — git add to include)"
-  else
-    echo "No changes ($tracked tracked spec(s) in sync)"
+  line="No changes ($((tracked - unwritten)) tracked spec(s) in sync"
+  if [ "$unwritten" -gt 0 ]; then
+    line="$line; $unwritten drifted spec(s) left unwritten — not staged"
   fi
+  if [ "$untracked" -gt 0 ]; then
+    line="$line; $untracked untracked spec(s) skipped — git add to include"
+  fi
+  echo "$line)"
 }
 
 # Feature-spec files staged in the git index for the pending commit — the
