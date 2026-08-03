@@ -19,7 +19,8 @@ use std::path::Path;
 
 use crate::primitives::{
     PrimitiveError, Result, SkipScanner, TasksStructure, checkbox, detect_tasks_structure,
-    parse_atx_heading, parse_done_when, read_text, rel_path,
+    heading_is_numeric, parse_atx_heading, parse_done_when, read_text, rel_path,
+    split_numbered_heading,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{ReadTasksArgs, ReadTasksResult, Subtask, Task};
@@ -81,7 +82,7 @@ pub fn run(args: &ReadTasksArgs, repo: &Path) -> Result<ReadTasksResult> {
                     tasks.push(task);
                 }
                 current = None;
-                if !heading_starts_with_number(&heading) {
+                if !heading_is_numeric(&heading) {
                     current_phase = Some(heading);
                 }
                 continue;
@@ -93,8 +94,8 @@ pub fn run(args: &ReadTasksArgs, repo: &Path) -> Result<ReadTasksResult> {
                 }
                 if let Some((number, title)) = split_numbered_heading(&heading) {
                     current = Some(Task {
-                        number,
-                        heading: title,
+                        number: number.to_string(),
+                        heading: title.to_string(),
                         subtasks: Vec::new(),
                         done_when: None,
                         done_when_checked: None,
@@ -142,42 +143,6 @@ pub fn run(args: &ReadTasksArgs, repo: &Path) -> Result<ReadTasksResult> {
     })
 }
 
-/// `true` when `heading` begins with `N.` (decimal digits, then a literal
-/// dot). Mirrors the helper in `primitives::mod` but kept module-local to
-/// avoid widening the crate-internal surface.
-fn heading_starts_with_number(heading: &str) -> bool {
-    let bytes = heading.as_bytes();
-    let mut i = 0;
-    while i < bytes.len() && bytes[i].is_ascii_digit() {
-        i += 1;
-    }
-    i > 0 && i < bytes.len() && bytes[i] == b'.'
-}
-
-fn split_numbered_heading(heading: &str) -> Option<(String, String)> {
-    let mut chars = heading.char_indices();
-    let mut end_num: Option<usize> = None;
-    let mut have_digit = false;
-    for (idx, ch) in chars.by_ref() {
-        if ch.is_ascii_digit() {
-            have_digit = true;
-            continue;
-        }
-        end_num = Some(idx);
-        break;
-    }
-    if !have_digit {
-        return None;
-    }
-    let end_num = end_num.unwrap_or(heading.len());
-    let (number, after) = heading.split_at(end_num);
-    // Require the `.` that marks a task heading (`## N. Title`); a prose
-    // heading like `## 3 quick wins` is not a task, so it must not parse as
-    // one (matching append-task/prune-tasks number grammar).
-    let after = after.strip_prefix('.')?;
-    Some((number.to_string(), after.trim_start().to_string()))
-}
-
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -217,20 +182,8 @@ mod tests {
         assert_eq!(second.done_when.as_deref(), Some("the subtask is checked."));
     }
 
-    #[test]
-    fn split_numbered_heading_extracts_number_and_title() {
-        assert_eq!(
-            split_numbered_heading("12. Implement the parser"),
-            Some(("12".into(), "Implement the parser".into()))
-        );
-        assert_eq!(
-            split_numbered_heading("3. Wire CLI"),
-            Some(("3".into(), "Wire CLI".into()))
-        );
-        assert_eq!(split_numbered_heading("Not numbered"), None);
-        // A prose heading whose digits are not followed by `.` is not a task.
-        assert_eq!(split_numbered_heading("3 quick wins"), None);
-    }
+    // `split_numbered_heading` moved to `primitives::mod` (scenario
+    // numbered-heading-grammar-single-source); its unit tests moved with it.
 
     // --- done-when authoring forms -------------------------------------------
 

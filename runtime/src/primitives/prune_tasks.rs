@@ -23,7 +23,8 @@ use std::path::Path;
 
 use crate::primitives::{
     PrimitiveError, Result, SkipScanner, TasksStructure, checkbox, detect_tasks_structure,
-    parse_atx_heading, read_text, rel_path, split_frontmatter, write_atomic,
+    parse_atx_heading, read_text, rel_path, split_frontmatter, split_numbered_heading,
+    write_atomic,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -227,11 +228,13 @@ fn segment(content: &str) -> Vec<Block> {
                 current_phase_idx = Some(blocks.len() - 1);
             }
 
-            let is_task = level == task_level && heading_is_numeric(&heading);
-            let is_phase = phased && level == 2 && !heading_is_numeric(&heading);
-            if is_task {
+            // One parse, not a predicate followed by a re-parse: the `Some`
+            // arm *is* the task test at the task level.
+            let numbered = split_numbered_heading(&heading)
+                .map(|(number, title)| (number.to_string(), title.to_string()));
+            let is_phase = phased && level == 2 && numbered.is_none();
+            if let Some((number, title)) = numbered.filter(|_| level == task_level) {
                 cur.kind = Kind::Task;
-                let (number, title) = split_numbered_heading(&heading);
                 cur.number = number;
                 cur.heading = title;
                 cur.phase.clone_from(&current_phase_name);
@@ -400,29 +403,6 @@ fn size_of(content: &str) -> SizeSummary {
         lines: content.lines().count(),
         bytes: content.len(),
     }
-}
-
-/// `true` when `heading` begins with `N.` (decimal digits, then a dot).
-fn heading_is_numeric(heading: &str) -> bool {
-    let bytes = heading.as_bytes();
-    let mut i = 0;
-    while i < bytes.len() && bytes[i].is_ascii_digit() {
-        i += 1;
-    }
-    i > 0 && i < bytes.len() && bytes[i] == b'.'
-}
-
-/// Split a numbered heading (`"12. Title"`) into `(number, title)`. Returns
-/// an empty title when there is no text after the number.
-fn split_numbered_heading(heading: &str) -> (String, String) {
-    let bytes = heading.as_bytes();
-    let mut i = 0;
-    while i < bytes.len() && bytes[i].is_ascii_digit() {
-        i += 1;
-    }
-    let number = heading[..i].to_string();
-    let after = heading[i..].strip_prefix('.').unwrap_or(&heading[i..]);
-    (number, after.trim_start().to_string())
 }
 
 #[cfg(test)]

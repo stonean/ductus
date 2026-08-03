@@ -4,7 +4,7 @@ reviewed-at: 2026-05-24T21:40:00Z
 reviewed-against: 36461bdd3456c3cd666546aeeedf21452c072640
 diff-base: 1aca7680000000000000000000000000000000000
 must-violations: 0
-should-violations: 1
+should-violations: 0
 low-confidence: 0
 skipped-passes: []
 ---
@@ -21,14 +21,16 @@ _None._
 
 ## SHOULD violations (advisory)
 
-### SHOULD: SCENARIO-CONTRACT — decline branch contradicted edge case (fixed in-review)
+_None remaining._ The finding below was fixed in-review and is **resolved**.
+
+### SHOULD: SCENARIO-CONTRACT — decline branch contradicted edge case (fixed in-review) — **RESOLVED**
 
 - **File**: `framework/commands/amend.md:66`
 - **Rule**: Scenario-documented contract: `specs/014-reclarify-backedge/scenarios/reopen-after-informal-edits.md` Edge Cases — _"Delta exists but the user intends to add a new scenario — Option B's prompt is offered before classification, so the user can decline the re-open prompt and continue into the scenario branch with the new input."_
 - **Finding**: The initial Option B implementation wrote step 5 as "On **decline**, exit without modifying any file." That terminates `/amend` entirely, which contradicts the scenario's edge case requiring the user to be able to decline the re-open and still route a new scenario input. The contradiction is internal to the same section — the trailing paragraph already promised the opt-out-and-continue behavior.
 - **Auto-fixable**: yes
 - **Suggested fix**: replace "On **decline**, exit without modifying any file" with "On **decline**, continue to **Gather the input** without modifying any file" plus the disambiguating sentence about empty vs. new input.
-- **Status**: **fixed in this review run** (no separate commit yet — fix is in the working tree alongside this report).
+- **Status**: **resolved**. Fixed in this review run and committed; `framework/commands/amend.md:66` now reads "On **decline**, continue to **Gather the input** without modifying any file", and the trailing paragraph's opt-out-and-continue promise is honored. Verified against `main` 2026-08-02.
 
 ## Low-confidence findings
 

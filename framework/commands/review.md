@@ -379,6 +379,27 @@ the review" half of the capture contract: it makes mid-task captures visible at
 the gate so none is forgotten. When the inbox shows no additions in the window,
 write `captured-issues: 0` and leave the section empty.
 
+A captured issue is a **mirror of an inbox line, not a second home for it**.
+The inbox is the live list; this section is a snapshot of what was added during
+one review window. So when a re-review finds an item no longer in
+`specs/inbox.md` — `/{project}:groom` routed it, or the work resolved it in
+window — say so on the entry (tick its checkbox, name the commit or scenario
+that closed it) and recount `captured-issues` against what is still outstanding.
+Leaving a groomed item written as open is the failure mode this rule exists to
+prevent: the snapshot ages into a list of issues that read as pending years
+after they were closed, and a reader cannot tell which are real without
+re-deriving every one against the inbox.
+
+The same reconciliation applies to the finding sections. A SHOULD or
+low-confidence entry whose disposition is "keep as-is" belongs under **Waived
+findings** with its rationale, not under its original heading — an accepted
+trade-off left filed as a violation is indistinguishable from unfinished work.
+An entry fixed after the report was written keeps its place, gains a
+**Status** line naming the commit or scenario that closed it, and drops out of
+the frontmatter count. The counts state what is _outstanding_, so they and the
+body must agree; do not invent frontmatter fields to track dispositions —
+`write-review` emits a fixed field set and would drop them on the next run.
+
 Each finding follows this shape:
 
 ```markdown

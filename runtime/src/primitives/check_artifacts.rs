@@ -533,7 +533,14 @@ fn check_link_adjacent_drift(
     let scenarios_dir = feature_dir.join("scenarios");
     let readable_scenarios: HashSet<String> = list_scenario_files(&scenarios_dir)
         .iter()
-        .filter(|name| read_text(&scenarios_dir.join(name)).is_ok())
+        // The symlink test short-circuits the read: a linked entry is never
+        // opened, so its destination is never touched. It lands in the
+        // `target-unparseable` outcome downstream, the same as a file that
+        // cannot be read.
+        .filter(|name| {
+            let path = scenarios_dir.join(name);
+            !traverses_symlink(&path, feature_dir) && read_text(&path).is_ok()
+        })
         .map(|name| Path::new(name).file_stem().unwrap_or_default())
         .filter_map(|stem| stem.to_str().map(str::to_string))
         .collect();
@@ -761,6 +768,39 @@ fn resolve_sibling(href: &str, from_dir: &Path, feature_dir: &Path) -> Option<Pa
     resolved.starts_with(feature_dir).then_some(resolved)
 }
 
+/// `true` when any component of `target` at or below `base` is a symbolic
+/// link.
+///
+/// [`resolve_sibling`] resolves lexically and tests containment on the result,
+/// which closes the escape a link *target* could attempt — `..` is consumed by
+/// `PathBuf::pop`, so `../../../etc/passwd` never passes `starts_with`. What
+/// lexical resolution cannot see is a symlink committed **inside** the feature
+/// directory (`scenarios/evil.md -> /etc/shadow`): it resolves inside the base
+/// and would then be opened.
+///
+/// Testing for a link rather than canonicalizing is deliberate. Canonicalizing
+/// fails on a legitimately-missing target and makes the answer depend on where
+/// a link points, which would break the repeat-run determinism AC8 requires.
+/// This test depends only on *whether* a component is a link, never on its
+/// destination, so a repeat run still yields the same answer.
+fn traverses_symlink(target: &Path, base: &Path) -> bool {
+    let Ok(rest) = target.strip_prefix(base) else {
+        return false;
+    };
+    let mut probe = base.to_path_buf();
+    for component in rest.components() {
+        probe.push(component);
+        match std::fs::symlink_metadata(&probe) {
+            Ok(meta) if meta.file_type().is_symlink() => return true,
+            Ok(_) => {}
+            // A component that does not exist cannot be a link. The
+            // missing-target outcome downstream reports it.
+            Err(_) => return false,
+        }
+    }
+    false
+}
+
 /// Indices into [`TELLS`] whose tell appears in `text` outside every
 /// inline-code span, in `TELLS` order. The code-span exemption is what lets a
 /// document *describe* this check without tripping it.
@@ -804,6 +844,11 @@ fn read_target_state(
     scenario_questions: &HashMap<&str, usize>,
     readable_scenarios: &HashSet<String>,
 ) -> std::result::Result<TargetState, &'static str> {
+    // Before `is_file`, which follows links: a symlinked sibling is reported
+    // as unexaminable rather than read through. See [`traverses_symlink`].
+    if traverses_symlink(target, feature_dir) {
+        return Err("target-unparseable");
+    }
     if !target.is_file() {
         return Err("target-missing");
     }
@@ -1673,6 +1718,48 @@ mod tests {
         assert_eq!(
             result.skipped[0].path,
             "specs/042-demo/scenarios/retry-on-timeout.md"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_sibling_is_skipped_not_read_through() {
+        // Scenario sibling-symlink-trust-boundary. Lexical resolution keeps a
+        // link *target* from escaping; this covers the other half — a link
+        // committed inside the feature dir pointing outside it. The check must
+        // report it as unexaminable, never follow it.
+        let tmp = tempdir().unwrap();
+        seed_for_drift(
+            tmp.path(),
+            "# Plan\n\nThe [linked](scenarios/linked.md) question is still open.\n",
+        );
+        let outside = tmp.path().join("outside-the-feature.md");
+        std::fs::write(&outside, "secret\n").unwrap();
+        std::os::unix::fs::symlink(
+            &outside,
+            tmp.path()
+                .join(format!("specs/{FEATURE}/scenarios/linked.md")),
+        )
+        .unwrap();
+
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(drift(&result).is_empty(), "{:?}", result.findings);
+        let skipped: Vec<_> = result
+            .skipped
+            .iter()
+            .filter(|s| s.path.ends_with("scenarios/linked.md"))
+            .collect();
+        assert_eq!(skipped.len(), 1, "{:?}", result.skipped);
+        assert_eq!(skipped[0].reason, "target-unparseable");
+        // The escape stays closed in the other direction too: a link whose
+        // target climbs out lexically is refused before any probe.
+        assert_eq!(
+            resolve_sibling(
+                "../../../etc/passwd",
+                &tmp.path().join(format!("specs/{FEATURE}/scenarios")),
+                &tmp.path().join(format!("specs/{FEATURE}")),
+            ),
+            None
         );
     }
 

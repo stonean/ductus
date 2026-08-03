@@ -71,7 +71,9 @@ fn classify(basename: &str) -> Surface {
 /// when the key is not a list of strings, or [`PrimitiveError::Io`] on
 /// filesystem failures listing the rule-file directory.
 pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFilesResult> {
-    let config = load_govern_toml(repo)?;
+    // Resolved once: the same probe backs both the read below and the
+    // provenance tag in the disabled-rule-file notice.
+    let (config, config_name) = load_govern_toml(repo)?;
     let (rules_dir_path, rules_dir_rel) = resolve_rules_dir(repo);
 
     let mut notices: Vec<String> = Vec::new();
@@ -108,7 +110,7 @@ pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFile
             &all,
             &mut selected,
             &mut notices,
-            paths::config_display_name(repo),
+            config_name,
         );
     }
 
@@ -342,14 +344,19 @@ fn collapse_whitespace(reason: &str) -> String {
     reason.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// Parse `.govern.toml`, returning defaults when the file is absent.
-fn load_govern_toml(repo: &Path) -> Result<GovernToml> {
-    let path = paths::config_path(repo);
+/// Parse the resolved config file, returning defaults when it is absent, plus
+/// the repo-relative name that resolution picked. Returning the name here —
+/// rather than re-probing at render time — is what keeps the parsed content
+/// and its provenance tag from disagreeing across a concurrent migration.
+fn load_govern_toml(repo: &Path) -> Result<(GovernToml, &'static str)> {
+    let (path, name) = paths::resolve_config(repo);
     if !path.is_file() {
-        return Ok(GovernToml::default());
+        return Ok((GovernToml::default(), name));
     }
     let content = read_text(&path)?;
-    toml::from_str(&content).map_err(|source| PrimitiveError::Toml { path, source })
+    let parsed =
+        toml::from_str(&content).map_err(|source| PrimitiveError::Toml { path, source })?;
+    Ok((parsed, name))
 }
 
 /// Minimal `.govern.toml` shape: the `[rules]` and `[review]` sections this

@@ -1195,7 +1195,7 @@ pub(crate) fn iter_phase_ranges(content: &str) -> Vec<PhaseRange> {
             // Skip numeric flat-task remnants: a heading whose text begins
             // with "N." (decimal digits, then dot) is a flat task, not a
             // phase container. Mixed files keep their phase set clean.
-            if heading_starts_with_number(&heading) {
+            if heading_is_numeric(&heading) {
                 continue;
             }
             // 1-based line numbers; close out the previous phase before
@@ -1214,15 +1214,32 @@ pub(crate) fn iter_phase_ranges(content: &str) -> Vec<PhaseRange> {
     phases
 }
 
-/// `true` when `heading` begins with `N.` (decimal digits, then a literal
-/// dot). Used to filter numeric task headings from phase containers.
-fn heading_starts_with_number(heading: &str) -> bool {
-    let bytes = heading.as_bytes();
-    let mut i = 0;
-    while i < bytes.len() && bytes[i].is_ascii_digit() {
-        i += 1;
+/// Split a numbered task heading (`"12. Title"`) into its number and title,
+/// both borrowed from `heading`. `None` when the heading does not open with
+/// the `N.` grammar every tasks-file parser shares — decimal digits followed
+/// by a literal dot. A prose heading like `## 3 quick wins` is deliberately
+/// not a task, so it must not parse as one.
+///
+/// This is the single home for the grammar: `read-tasks`, `prune-tasks`, and
+/// the phase scanner below all read the same tasks file, so a divergence here
+/// would let one primitive see a task another does not.
+pub(crate) fn split_numbered_heading(heading: &str) -> Option<(&str, &str)> {
+    let end = heading
+        .bytes()
+        .position(|b| !b.is_ascii_digit())
+        .unwrap_or(heading.len());
+    if end == 0 {
+        return None;
     }
-    i > 0 && i < bytes.len() && bytes[i] == b'.'
+    let (number, after) = heading.split_at(end);
+    Some((number, after.strip_prefix('.')?.trim_start()))
+}
+
+/// `true` when `heading` opens with the `N.` task-heading grammar — the
+/// predicate half of [`split_numbered_heading`], for callers that only need
+/// to classify a heading rather than take it apart.
+pub(crate) fn heading_is_numeric(heading: &str) -> bool {
+    split_numbered_heading(heading).is_some()
 }
 
 /// Parse an ATX heading line and return `(level, text)` when the line matches
@@ -1551,6 +1568,50 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+
+    // --- numbered task headings ----------------------------------------------
+    // Moved here with the helper (scenario numbered-heading-grammar-single-source).
+    // The cases below are the union of what the three former copies each
+    // covered, so collapsing them cannot silently drop a contract.
+
+    #[test]
+    fn split_numbered_heading_extracts_number_and_title() {
+        assert_eq!(
+            split_numbered_heading("12. Implement the parser"),
+            Some(("12", "Implement the parser"))
+        );
+        assert_eq!(
+            split_numbered_heading("3. Wire CLI"),
+            Some(("3", "Wire CLI"))
+        );
+        assert_eq!(split_numbered_heading("Not numbered"), None);
+        // A prose heading whose digits are not followed by `.` is not a task.
+        assert_eq!(split_numbered_heading("3 quick wins"), None);
+        // Bare digits with no dot at all — the `prune-tasks` copy tolerated
+        // this and returned an empty title; the shared grammar rejects it,
+        // which is what its only caller (guarded by the task level) expects.
+        assert_eq!(split_numbered_heading("12"), None);
+        // A number with the dot but no title is a task with an empty title.
+        assert_eq!(split_numbered_heading("12."), Some(("12", "")));
+    }
+
+    #[test]
+    fn heading_is_numeric_agrees_with_the_splitter() {
+        for heading in [
+            "12. Implement the parser",
+            "3 quick wins",
+            "Not numbered",
+            "12",
+            "12.",
+            "",
+        ] {
+            assert_eq!(
+                heading_is_numeric(heading),
+                split_numbered_heading(heading).is_some(),
+                "predicate and splitter disagreed on {heading:?}"
+            );
+        }
+    }
 
     #[cfg(unix)]
     #[test]

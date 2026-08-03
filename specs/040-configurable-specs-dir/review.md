@@ -6,7 +6,7 @@ diff-base: cfc1023ace626499343fc23a823905708e151955
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-captured-issues: 1
+captured-issues: 0
 skipped-passes: []
 ---
 
@@ -36,7 +36,10 @@ _None._
 
 ## Captured issues (pending /gov:groom)
 
-- Cross-service reference resolution assumes the _referenced_ service uses `specs/` — `gen-cross-service-refs.sh`'s URL matcher (`/specs/NNN-slug/`) targets another repo's layout, which this project's `[paths] specs-root` does not govern. Deferred from 040's scope (a referenced service that renamed _its_ root is a cross-repo concern); run `/gov:groom` to route.
+_None outstanding._ The single capture below is **resolved**; the checkbox-free
+form left it reading as pending after grooming had already routed it.
+
+- Cross-service reference resolution assumes the _referenced_ service uses `specs/` — `gen-cross-service-refs.sh`'s URL matcher (`/specs/NNN-slug/`) targets another repo's layout, which this project's `[paths] specs-root` does not govern. Deferred from 040's scope (a referenced service that renamed _its_ root is a cross-repo concern); run `/gov:groom` to route. — **Resolved**: `/gov:groom` routed it to [030's `referenced-service-spec-root` scenario](../030-cross-service-references/scenarios/referenced-service-spec-root.md). `.govern/scripts/gen-cross-service-refs.sh` now resolves the spec-root segment per registered service in two tiers — a reachable checkout's own govern config `[paths] specs-root` (via `specs_root_of`/`config_path_of`), and any single `[A-Za-z0-9_-]` segment when the checkout is unreachable — so the segment is no longer hardcoded to `specs`.
 
 ## Skipped passes
 

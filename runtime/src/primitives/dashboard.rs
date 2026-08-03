@@ -47,10 +47,19 @@ use crate::schema::status::{ALLOWED_STATUSES, UNBLOCKING_STATUSES};
 pub fn run(_args: &DashboardArgs, repo: &Path) -> Result<DashboardResult> {
     let specs = load_specs(repo)?;
     let tags_union = compute_tags_union(&specs);
-    let config = load_config(repo)?;
+    // Resolved once: `config_name` is the name the read below actually
+    // resolved, carried into the render so the provenance tag cannot name a
+    // different file than the one parsed.
+    let (config, config_name) = load_config(repo)?;
     let session_target = load_session_target(repo)?;
-    let rendered_markdown =
-        render_markdown(repo, &specs, &tags_union, &config, session_target.as_ref())?;
+    let rendered_markdown = render_markdown(
+        repo,
+        &specs,
+        &tags_union,
+        &config,
+        config_name,
+        session_target.as_ref(),
+    )?;
     Ok(DashboardResult {
         session_target,
         specs,
@@ -78,19 +87,14 @@ fn render_markdown(
     specs: &[DashboardSpec],
     tags_union: &[String],
     config: &DashboardConfig,
+    config_name: &str,
     session_target: Option<&DashboardSessionTarget>,
 ) -> Result<String> {
     let project = Host::load(repo).project;
     let mut blocks = vec![
         render_preamble(specs, session_target, &project),
         render_table(specs, session_target, &project),
-        render_callouts(
-            specs,
-            tags_union,
-            config,
-            &project,
-            paths::config_display_name(repo),
-        ),
+        render_callouts(specs, tags_union, config, &project, config_name),
     ];
     if let Some(readout) = render_references(repo, specs, &project)? {
         blocks.push(readout);
@@ -547,14 +551,20 @@ struct DisabledRuleFile {
     file: String,
 }
 
-/// Read `.govern.toml` and summarize the review-state for the dashboard.
-fn load_config(repo: &Path) -> Result<DashboardConfig> {
-    let toml_path = paths::config_path(repo);
+/// Read the resolved config file and summarize the review-state for the
+/// dashboard, returning the repo-relative name resolution picked alongside
+/// the summary. The name travels with the parsed content so the callout's
+/// provenance tag names the file that was actually read.
+fn load_config(repo: &Path) -> Result<(DashboardConfig, &'static str)> {
+    let (toml_path, name) = paths::resolve_config(repo);
     if !toml_path.is_file() {
-        return Ok(DashboardConfig {
-            present: false,
-            disabled_rule_files: Vec::new(),
-        });
+        return Ok((
+            DashboardConfig {
+                present: false,
+                disabled_rule_files: Vec::new(),
+            },
+            name,
+        ));
     }
     let content = read_text(&toml_path)?;
     let parsed: GovernConfig = toml::from_str(&content).map_err(|source| PrimitiveError::Toml {
@@ -568,10 +578,13 @@ fn load_config(repo: &Path) -> Result<DashboardConfig> {
         .into_iter()
         .map(|d| d.file)
         .collect();
-    Ok(DashboardConfig {
-        present: true,
-        disabled_rule_files,
-    })
+    Ok((
+        DashboardConfig {
+            present: true,
+            disabled_rule_files,
+        },
+        name,
+    ))
 }
 
 /// Minimal session-file shape. The runtime exec subcommand seeds walker

@@ -5,7 +5,7 @@ reviewed-against: d99df57ecd05936029a1d29d08706ff48904ae01
 diff-base: 5103cd3a32fa53b07a9536200d609f3632e57a71
 must-violations: 0
 should-violations: 0
-low-confidence: 1
+low-confidence: 0
 captured-issues: 0
 skipped-passes: []
 ---
@@ -26,13 +26,16 @@ Re-run to clear the same captured issue 017 carried — `compute-review-scope` r
 
 ## Low-confidence findings
 
-### LOW-CONFIDENCE: BE-INPUT-004 — sibling resolution is lexical, so an in-tree symlink can point outside the feature dir
+*None remaining.* The finding below is **resolved**.
+
+### LOW-CONFIDENCE: BE-INPUT-004 — sibling resolution is lexical, so an in-tree symlink can point outside the feature dir — **RESOLVED**
 
 - **File**: `runtime/src/primitives/check_artifacts.rs:700-732`
 - **Rule**: User-supplied values MUST NOT be used directly in filesystem paths. Filesystem operations MUST resolve the canonical path and verify it falls within the expected base directory before opening the file.
 - **Finding**: resolve_sibling performs the containment half of the rule — `..` is consumed by PathBuf::pop and the result must starts_with(feature_dir), so a link like ../../../etc/passwd is rejected — but not the canonical half. A symlink committed inside the feature directory (scenarios/evil.md -> /etc/shadow) resolves lexically inside the base and is then opened. Recorded low-confidence on applicability rather than mechanism: the hrefs come from repo-committed markdown carrying the same trust as the source, the primitive runs locally against the operator's own checkout and never over a network boundary, and the opened file's content is discarded after a readability test, so nothing is disclosed. Canonicalization was rejected deliberately — it fails on a missing target and makes the result symlink-dependent, which would break the repeat-run determinism AC8 requires.
 - **Auto-fixable**: no
 - **Suggested fix**: If the symlink case is judged in scope, keep the lexical resolution for the determinism guarantee and add a std::fs::symlink_metadata check on the resolved target, treating a symlink as target-unparseable. Otherwise record the trust boundary explicitly in the scenario's Edge Cases so the omission stays a decision rather than an oversight.
+- **Status**: **resolved 2026-08-02** — the first option, under 022's [sibling-symlink-trust-boundary](../022-deterministic-runtime/scenarios/sibling-symlink-trust-boundary.md) scenario (022 task 80). `traverses_symlink` tests every component at or below the feature directory with `symlink_metadata`, which does not follow links, so the answer depends only on *whether* a component is a link and never on its destination — AC8's repeat-run determinism is preserved and canonicalization is still avoided. Two gates use it: the up-front scenario-readability pass short-circuits before the read (so a linked entry's destination is never opened at all), and `read_target_state` tests before `is_file()`, returning the existing `target-unparseable` reason. The trust boundary is recorded in that scenario's Edge Cases either way, so the decision is documented as well as enforced.
 
 ## Waived findings
 

@@ -6,7 +6,7 @@ diff-base: 632325ef268d16f3e3443332ee831335d1875264
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-captured-issues: 1
+captured-issues: 0
 skipped-passes: []
 ---
 
@@ -33,6 +33,8 @@ Path-relocation sweep reviewed across all five dimensions against the 11 loaded 
 *None.*
 
 ## Captured issues
+
+*None outstanding.* The single capture below was resolved in-window.
 
 - [auto-capture, 044 task 7] `specs/019-config-decisions/data-model.md` canonical config-schema doc still described the pre-042 layout (`.govern.toml` paths; pinned example predating 044) — resolved in-window by 652d48c (user-directed mechanical sweep + post-completion note); inbox entry cleared by the same commit
 

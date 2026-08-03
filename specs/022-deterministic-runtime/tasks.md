@@ -79,3 +79,21 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] Implement the behavior described in `scenarios/review-scope-parse-fidelity.md`
 
 - **Done when**: `parse_affected_files` resets its header state at a non-table line so a section holding several tables emits no header row as a path, and a first cell carrying a qualifier yields its backticked span rather than the whole cell; `compute-review-scope`'s captured-issues intersects the diff's added lines with the bullets the shared comment-aware grammar finds in the post-image inbox, so comment lines are never counted; verified against the real 017 input (plan-affected 43 entries, zero malformed, captured-issues 1 real bullet, down from 8 bogus `File` entries and ~30 comment lines); tests cover the multi-table section, the qualified cell, and the comment-block case; `cargo test` green.
+
+## 78. Implement scenario: [numbered-heading-grammar-single-source](scenarios/numbered-heading-grammar-single-source.md)
+
+- [x] Implement the behavior described in `scenarios/numbered-heading-grammar-single-source.md`
+
+- **Done when**: `primitives/mod.rs` owns `split_numbered_heading` (borrowed `Option<(&str, &str)>`) and `heading_is_numeric` (defined as `.is_some()` on it) as the single `pub(crate)` home for the `N.` task-heading grammar; the three private copies in `read_tasks.rs`, `prune_tasks.rs`, and `mod.rs` are gone; `prune_tasks`'s task branch parses once rather than testing a predicate then re-parsing; the moved unit tests cover the union of what the three copies each asserted (`12. Title`, `3 quick wins`, `Not numbered`, bare `12`, `12.`) plus a predicate/splitter agreement check; `cargo test` green
+
+## 79. Implement scenario: [config-resolution-single-probe](scenarios/config-resolution-single-probe.md)
+
+- [x] Implement the behavior described in `scenarios/config-resolution-single-probe.md`
+
+- **Done when**: `schema/paths.rs` exposes `resolve_config(repo) -> (PathBuf, &'static str)` performing one existence probe for both the read path and the provenance name; `discover_rule_files::load_govern_toml` and `dashboard::load_config` each return the resolved name alongside the parsed content and their render paths consume it instead of re-probing via `config_display_name`; `DashboardConfig`'s serialized shape is unchanged so no MCP golden re-blesses; `config_path` / `config_display_name` survive for single-half callers with doc comments pointing both-halves callers at `resolve_config`; `cargo test` green
+
+## 80. Implement scenario: [sibling-symlink-trust-boundary](scenarios/sibling-symlink-trust-boundary.md)
+
+- [x] Implement the behavior described in `scenarios/sibling-symlink-trust-boundary.md`
+
+- **Done when**: `check_artifacts.rs` gains `traverses_symlink(target, base)` using `std::fs::symlink_metadata` over every component at or below the feature directory, so the answer never depends on a link's destination and repeat runs stay byte-identical; the up-front scenario-readability pass short-circuits the read for a linked entry so its destination is never opened; `read_target_state` tests before `is_file()` and returns the existing `target-unparseable` reason; lexical resolution and the `starts_with` containment test are unchanged; a `#[cfg(unix)]` regression test asserts a symlinked sibling lands in `skipped` with `target-unparseable` and that `../../../etc/passwd` still resolves to `None`; `cargo test` green

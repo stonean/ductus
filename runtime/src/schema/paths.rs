@@ -72,6 +72,10 @@ pub fn config_path(repo: &Path) -> PathBuf {
 /// render (`.govern/config.toml` post-migration, the legacy root
 /// `.govern.toml` before it). Display-only; readers resolve through
 /// [`config_path`].
+///
+/// A caller that needs **both** the path and the name must call
+/// [`resolve_config`] once instead of calling this and [`config_path`]
+/// separately — see that function for why.
 #[must_use]
 pub(crate) fn config_display_name(repo: &Path) -> &'static str {
     if repo.join(CONFIG_FILE).exists() {
@@ -79,6 +83,21 @@ pub(crate) fn config_display_name(repo: &Path) -> &'static str {
     } else {
         LEGACY_CONFIG_FILE
     }
+}
+
+/// The resolved project config file from a **single** existence probe: the
+/// path to read, and the repo-relative name to render as its provenance tag.
+///
+/// Callers that both read the config and name it must resolve once and reuse
+/// the answer. Calling [`config_path`] for the read and [`config_display_name`]
+/// for the tag probes the filesystem twice, and a `/govern` migration landing
+/// between the two probes would let them disagree — the primitive would read
+/// one file and attribute its contents to the other. One probe cannot
+/// straddle the migration (spec 042 review, `BE-RACE-001`).
+#[must_use]
+pub(crate) fn resolve_config(repo: &Path) -> (PathBuf, &'static str) {
+    let display_name = config_display_name(repo);
+    (repo.join(display_name), display_name)
 }
 
 /// Resolve the session file to *read*: `.govern/session.toml` when it exists,

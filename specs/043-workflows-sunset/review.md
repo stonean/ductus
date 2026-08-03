@@ -6,7 +6,7 @@ diff-base: 062e2d4521eb60b851ee0170409cc9ef62525872
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-captured-issues: 1
+captured-issues: 0
 skipped-passes: []
 ---
 
@@ -33,6 +33,8 @@ Pure-removal sweep reviewed across all five dimensions against the 11 loaded rul
 *None.*
 
 ## Captured issues
+
+*None outstanding.* The single capture below was resolved in-window.
 
 - Pre-commit hook produced a silently empty commit (b9ce6e5: staged runtime/ files vanished mid-hook; tree identical to parent). Captured 2026-07-22 during this review, classified a chore, and RESOLVED in-window: .githooks/pre-commit now aborts loudly when the index matches HEAD at hook-end (guard verified on both paths, commit f211919; GOVERN_ALLOW_EMPTY=1 escape hatch). Inbox entry cleared (6ed1774) — nothing left to groom.
 
