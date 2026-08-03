@@ -2,6 +2,27 @@
 
 All notable changes to the `govern` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `gvrn-v<MAJOR>.<MINOR>.<PATCH>` scheme distinct from framework tags (was `runtime-v*` before v0.2.0 — see the v0.2.0 rename entry below).
 
+## [0.26.0] — 2026-08-02
+
+Spec 045, landing as 022 scenarios `block-element-scanner`, `check-artifacts-skipped-targets`, `link-adjacent-drift-family`, and `criterion-path-existence-family`. `check-artifacts` gains two advisory families that catch an artifact still describing a decision that has since been made — and a way to say what it could not examine.
+
+### Added
+
+- **`link-adjacent-drift` (advisory)** — flags an artifact's own prose asserting an open state that its own sibling link's target contradicts: a question called open while the target reports none, work called unbuilt while the target is `in-progress` or `done`. Six closed tells, matched only outside inline code spans; the scanned unit is the enclosing block-level element; evaluation is per link, so a block with three links fires only for the target whose state actually contradicts. The grounding check cannot catch this class — it verifies a claim is *cited*, not that it is *true*.
+- **`criterion-path-existence` (advisory)** — flags a filesystem path named in a `done` spec's acceptance criterion that no longer resolves. An acceptance criterion is a contract, so naming a path asserts it is part of the delivered system, and nothing re-verified that after a later spec deleted the subject. Reads **inside** inline code spans, the inverse of the family above; that inversion is why the two are separate families rather than one check with a flag.
+- **`skipped` on `CheckArtifactsResult`** — a list of `{family, reason, path}` naming each target a family could not examine, over the closed reason set `target-missing` / `target-unparseable` / `no-readable-state` / `root-absent` / `artifact-unreadable`. Both new families read targets that may be unreadable, and spec 045 forbids escalating an unreadable one into a finding; without this list a family that examined every target and found nothing would return exactly what a family that could examine nothing returns (`QUAL-CLAIM-001`). `clean` keeps its meaning — the assurance now lives in the pair.
+- **`split_blocks`** — a shared block-level markdown splitter yielding each table row, list item, and paragraph with its starting line, plus `strip_inline_comments`. `SkipScanner` is deliberately unchanged: `read-tasks`, `mark-task`, `prune-tasks`, and the task-number walkers share it, so teaching it a fourth skip region would alter how each reads a quoted task line. `inline_code_spans` is now shared rather than private, and is the single span computation both new families use from opposite sides.
+
+### Changed
+
+- **`check-artifacts` reads its spec once, through `read-spec`.** It previously read and frontmatter-parsed `spec.md` itself and then called `read-spec` on the same file, leaving two independent notions of the spec's frontmatter in one function. The documented error contract is unchanged — `read-spec` raises the same variants on the same file.
+
+### Framework
+
+- `analyze.md` documents both checks, the unexamined-targets tier, and a shared promotion criterion: the house threshold (5+ findings on two consecutive `--all` runs) **and** a precision guard requiring every finding confirmed a true positive. The second half is required here and not for the LLM-judged checks because these are mechanical matches — a noisy implementation clears a volume threshold exactly as reliably as an accurate one.
+- Constitution §drift-prevention gains a *Decision resolution* subsection: resolving a decision carries the same audit obligation as editing a document, and a resolution is not complete while a sibling artifact still describes the prior state.
+- First full-repo run: 51 findings and 27 skips across 47 specs at 69% precision, including the originating case (026's `framework/workflows/registry.json`). Promotion verdict recorded as **do not promote**.
+
 ## [0.25.0] — 2026-08-01
 
 Spec 022 tasks 70-71, from two scenarios grooming routed. An uncommitted spec directory stops being a crash and becomes a domain outcome, and `mark-task` reconciles the checkbox-form `Done when` clause it deliberately excludes from the subtask index.
