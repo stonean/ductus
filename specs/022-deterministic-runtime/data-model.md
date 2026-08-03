@@ -641,13 +641,22 @@ Result:
     }
   ],
   "clean": false,
+  "skipped": [
+    {
+      "family": "link-adjacent-drift",
+      "reason": "target-missing",
+      "path": "specs/022-deterministic-runtime/scenarios/renamed.md"
+    }
+  ],
   "path": "specs/022-deterministic-runtime/spec.md"
 }
 ```
 
-Five families, mirroring `/gov:analyze`'s markdown-only reference exactly (severity tiers included — the primitive mechanizes the documented policy): `artifact-completeness` (blocking — `plan.md`/`tasks.md` required at `planned`/`in-progress`/`done`; `data-model.md` never required), `task-consistency` (blocking, when `tasks.md` exists — strictly-increasing numbering, `Done when` presence), `scenario-consistency` (advisory — every `scenarios/*.md` has a referencing task, skipped for `done` specs and satisfied by §tasks-phase pruning evidence: zero task sections or non-contiguous numbering), `review-state-drift` (blocking — a `done` spec with `review.last-run` unset or `review.blocking: true`; a `done` spec with no `review:` block is grandfathered), and `scenario-open-questions` (blocking at `done`, advisory otherwise). `--all` iteration stays with the caller. The command-frontmatter-completeness family stays in the markdown-only reference (it reads the host's command directory, which the runtime does not own).
+Seven families, mirroring `/gov:analyze`'s markdown-only reference exactly (severity tiers included — the primitive mechanizes the documented policy): `artifact-completeness` (blocking — `plan.md`/`tasks.md` required at `planned`/`in-progress`/`done`; `data-model.md` never required), `task-consistency` (blocking, when `tasks.md` exists — strictly-increasing numbering, `Done when` presence), `scenario-consistency` (advisory — every `scenarios/*.md` has a referencing task, skipped for `done` specs and satisfied by §tasks-phase pruning evidence: zero task sections or non-contiguous numbering), `review-state-drift` (blocking — a `done` spec with `review.last-run` unset or `review.blocking: true`; a `done` spec with no `review:` block is grandfathered), `scenario-open-questions` (blocking at `done`, advisory otherwise), `link-adjacent-drift` (advisory — prose asserting an open state that its own sibling link's target contradicts), and `criterion-path-existence` (advisory — a filesystem path named in a `done` spec's acceptance criterion that no longer resolves). `--all` iteration stays with the caller. The command-frontmatter-completeness family stays in the markdown-only reference (it reads the host's command directory, which the runtime does not own).
 
 `scenario-open-questions` reports when any `scenarios/*.md` carries an unresolved question, naming the count and the scenarios. At `done` that state contradicts the completion rule outright, so the finding is blocking and `/{project}:analyze --fix` reverts the spec `done → in-progress` with a non-silent notice, exactly as it does for review-state drift; before `done` the questions are real remaining work but not yet a defect, so the finding is advisory and `--fix` leaves the status alone. Unlike `review-state-drift` there is **no grandfather rule** — an absent `review:` block genuinely marks a spec as predating that feature, but an unresolved scenario question is a present-tense defect whenever it arrived, and exempting it would preserve the state the check exists to surface. The question list comes from `read-spec`'s collector, so this finding, the `check-review-gate` block, and the count surfaced to the user can never disagree ([046 — Scenario open-question visibility](../046-scenario-open-question-visibility/spec.md)).
+
+`skipped` records each target a family could not examine, as `{family, reason, path}` over the closed reason set `target-missing` / `target-unparseable` / `no-readable-state`. It exists because the two families added by [045 — Decision-state drift detection](../045-decision-state-drift-detection/spec.md) read *targets* — a link's destination, a criterion's path — and 045 forbids escalating an unreadable one into a finding. Without the list, a family that examined every target and found nothing would return exactly what a family that could examine nothing returns, which is the shape `QUAL-CLAIM-001` forbids. `clean` is unchanged and still means `findings.is_empty()`, so the assurance lives in the pair: `clean: true` with an empty `skipped` is verified-clean, `clean: true` with a non-empty `skipped` is partially examined. The five families predating 045 always return it empty — their subjects are fully examinable by construction — and hosts render its entries in the Informational tier, where the cross-service reference unknowns already sit.
 
 ## Extension-point schemas (initial release)
 

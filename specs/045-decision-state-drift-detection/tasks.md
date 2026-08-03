@@ -16,11 +16,11 @@ Tasks 3–10 are authored as scenarios under [022 — Deterministic Runtime](../
 
 ## 2. Open the 022 back-edge and author the four runtime scenarios
 
-- [ ] Revert `022-deterministic-runtime` from `done` to `in-progress` via `set-status`, matching the edge 046 took for the same reason
-- [ ] Author `scenarios/block-element-scanner.md`, `scenarios/check-artifacts-skipped-targets.md`, `scenarios/link-adjacent-drift-family.md`, and `scenarios/criterion-path-existence-family.md` under 022, each back-linking to this spec per §cross-spec-impact
-- [ ] Add a task to 022's `tasks.md` for each scenario so the scenario→task mapping family stays clean
-- [ ] Update 022's `data-model.md` `check-artifacts` section: the family paragraph goes from five to seven, and the result shape gains `skipped`
-- [ ] Confirm `traverse-deps` still reports 022 compatible for this spec at `in-progress`
+- [x] Revert `022-deterministic-runtime` from `done` to `in-progress` via `set-status`, matching the edge 046 took for the same reason
+- [x] Author `scenarios/block-element-scanner.md`, `scenarios/check-artifacts-skipped-targets.md`, `scenarios/link-adjacent-drift-family.md`, and `scenarios/criterion-path-existence-family.md` under 022, each back-linking to this spec per §cross-spec-impact
+- [x] Add a task to 022's `tasks.md` for each scenario so the scenario→task mapping family stays clean
+- [x] Update 022's `data-model.md` `check-artifacts` section: the family paragraph goes from five to seven, and the result shape gains `skipped`
+- [x] Confirm `traverse-deps` still reports 022 compatible for this spec at `in-progress`
 
 - **Done when**: 022 is `in-progress` with four back-linking scenarios and matching tasks, its data-model names seven families and the `skipped` field, and `check-artifacts` on 022 reports no scenario-mapping finding.
 
