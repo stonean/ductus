@@ -23,6 +23,8 @@ That is `QUAL-CLAIM-001` precisely: a fully-implemented path whose output overst
 | `target-missing` | the target path resolves to no file on disk |
 | `target-unparseable` | the target exists but its frontmatter will not parse |
 | `no-readable-state` | the target carries no state the check can be evaluated against |
+| `root-absent` | a criterion's path names a top-level segment this repo does not contain |
+| `artifact-unreadable` | a scanned artifact could not be read at all |
 
 **`clean` is unchanged.** It stays `findings.is_empty()`. Redefining it to account for skips would silently change the verdict four shipped families produce, which is a larger behavior change than the honesty problem warrants. The assurance therefore lives in the pair: `clean: true` with an empty `skipped` is a verified-clean result, and `clean: true` with a non-empty `skipped` is a partially-examined one.
 

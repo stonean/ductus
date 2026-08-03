@@ -65,12 +65,12 @@
 //! primitive sees exactly the artifact structure every other primitive
 //! sees (no hand-rolled parsers).
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Component, Path, PathBuf};
 
 use crate::primitives::{
     MarkdownBlock, PrimitiveError, Result, inline_code_spans, list_scenario_files, read_spec,
-    read_tasks, read_text, rel_path, scenario_name_cmp, split_blocks, split_frontmatter,
+    read_tasks, read_text, rel_path, scenario_name_cmp, split_blocks,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -100,13 +100,21 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
         });
     }
     let spec_path = feature_dir.join("spec.md");
-    let content = read_text(&spec_path)?;
-    let (fm_text, _body) = split_frontmatter(&content, &spec_path)?;
-    let frontmatter: Frontmatter =
-        serde_norway::from_str(fm_text).map_err(|source| PrimitiveError::Yaml {
-            path: spec_path.clone(),
-            source,
-        })?;
+    // One read of the spec, through `read-spec` — the same delegation the task
+    // list and the scenario questions already use. Parsing it a second time
+    // here would leave two independent notions of the spec's frontmatter in
+    // one function, which is the drift the no-hand-rolled-parsers constraint
+    // in the module docs exists to prevent. `read-spec` raises the same
+    // FeatureNotFound / MissingFrontmatter / Yaml / Io variants on the same
+    // file, so the documented error contract above is unchanged.
+    let spec = read_spec::run(
+        &ReadSpecArgs {
+            feature: args.feature.clone(),
+            include_body: false,
+        },
+        repo,
+    )?;
+    let frontmatter = &spec.frontmatter;
     let status = frontmatter.status.clone();
 
     let mut findings: Vec<ArtifactFinding> = Vec::new();
@@ -134,32 +142,19 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
         &status,
         tasks.as_ref().map(|t| t.tasks.as_slice()),
     );
-    check_review_drift(&mut findings, &frontmatter, &status, &spec_path, repo);
+    check_review_drift(&mut findings, frontmatter, &status, &spec_path, repo);
     check_scenario_open_questions(&mut findings, &feature_dir, &status, &spec_path, repo);
 
-    // Read the feature's own spec state once, through `read-spec`, so the two
-    // families below, the scenario-open-questions family, and the count the
-    // user sees can never disagree.
-    let spec = read_spec::run(
-        &ReadSpecArgs {
-            feature: args.feature.clone(),
-            include_body: false,
-        },
-        repo,
-    )
-    .ok();
     let mut skipped: Vec<SkippedTarget> = Vec::new();
-    if let Some(spec) = &spec {
-        check_link_adjacent_drift(&mut findings, &mut skipped, &feature_dir, spec, repo);
-        check_criterion_path_existence(
-            &mut findings,
-            &mut skipped,
-            &status,
-            spec,
-            &spec_path,
-            repo,
-        );
-    }
+    check_link_adjacent_drift(&mut findings, &mut skipped, &feature_dir, &spec, repo);
+    check_criterion_path_existence(
+        &mut findings,
+        &mut skipped,
+        &status,
+        &spec,
+        &spec_path,
+        repo,
+    );
 
     let clean = findings.is_empty();
     Ok(CheckArtifactsResult {
@@ -525,19 +520,34 @@ fn check_link_adjacent_drift(
 ) {
     let spec_status = spec.frontmatter.status.clone();
     let spec_questions = spec.open_questions.len();
-    let mut scenario_questions: HashMap<String, usize> = HashMap::new();
-    for question in read_spec::collect_scenario_open_questions(feature_dir) {
-        *scenario_questions.entry(question.scenario).or_insert(0) += 1;
+    // Both per-scenario signals are derived once, up front: the counts come
+    // from the `read-spec` result already in hand, and readability from one
+    // pass over the scenario directory. Testing either per link would re-open
+    // the same file once for every citation of it.
+    let mut scenario_questions: HashMap<&str, usize> = HashMap::new();
+    for question in &spec.scenario_open_questions {
+        *scenario_questions
+            .entry(question.scenario.as_str())
+            .or_insert(0) += 1;
     }
+    let scenarios_dir = feature_dir.join("scenarios");
+    let readable_scenarios: HashSet<String> = list_scenario_files(&scenarios_dir)
+        .iter()
+        .filter(|name| read_text(&scenarios_dir.join(name)).is_ok())
+        .map(|name| Path::new(name).file_stem().unwrap_or_default())
+        .filter_map(|stem| stem.to_str().map(str::to_string))
+        .collect();
 
     for artifact in scanned_artifacts(feature_dir) {
-        let Ok(content) = read_text(&artifact) else {
-            continue;
-        };
-        let Some(from_dir) = artifact.parent() else {
-            continue;
-        };
         let citing = rel_path(&artifact, repo);
+        let (Ok(content), Some(from_dir)) = (read_text(&artifact), artifact.parent()) else {
+            // The family could not read an artifact it was meant to scan.
+            // Dropping it silently would let a partially-scanned feature
+            // report exactly what a fully-scanned clean one reports
+            // (`QUAL-CLAIM-001`), so the gap is recorded instead.
+            record_skip(skipped, "artifact-unreadable", &citing);
+            continue;
+        };
         for block in split_blocks(&content) {
             let fired = fired_tells(&block.text);
             if fired.is_empty() {
@@ -546,10 +556,12 @@ fn check_link_adjacent_drift(
             for target in sibling_targets(&block, from_dir, feature_dir) {
                 let state = read_target_state(
                     &target,
+                    &scenarios_dir,
                     feature_dir,
                     &spec_status,
                     spec_questions,
                     &scenario_questions,
+                    &readable_scenarios,
                 );
                 let target_rel = rel_path(&target, repo);
                 match state {
@@ -785,10 +797,12 @@ fn contains_outside_code(line: &str, needle: &str) -> bool {
 /// Read whatever state `target` carries, or the reason it cannot be examined.
 fn read_target_state(
     target: &Path,
+    scenarios_dir: &Path,
     feature_dir: &Path,
     spec_status: &str,
     spec_questions: usize,
-    scenario_questions: &HashMap<String, usize>,
+    scenario_questions: &HashMap<&str, usize>,
+    readable_scenarios: &HashSet<String>,
 ) -> std::result::Result<TargetState, &'static str> {
     if !target.is_file() {
         return Err("target-missing");
@@ -799,16 +813,18 @@ fn read_target_state(
             open_questions: spec_questions,
         });
     }
-    if target.parent() == Some(feature_dir.join("scenarios").as_path()) {
-        // The collector tolerates absent or malformed frontmatter and still
-        // finds the questions section, so only an unreadable file is opaque.
-        if read_text(target).is_err() {
-            return Err("target-unparseable");
-        }
+    if target.parent() == Some(scenarios_dir) {
         let slug = target
             .file_stem()
             .and_then(|stem| stem.to_str())
             .unwrap_or_default();
+        // The question collector tolerates absent or malformed frontmatter and
+        // still finds the questions section, so only a file that cannot be read
+        // at all is opaque — and that was established in the single up-front
+        // pass rather than by re-opening the file here.
+        if !readable_scenarios.contains(slug) {
+            return Err("target-unparseable");
+        }
         return Ok(TargetState::Scenario {
             open_questions: scenario_questions.get(slug).copied().unwrap_or(0),
         });
@@ -1605,6 +1621,32 @@ mod tests {
         // The honesty contract: nothing was found, and the result says the
         // subject could not be examined rather than reading as clean.
         assert!(result.clean, "no finding was produced");
+    }
+
+    #[test]
+    fn an_unreadable_citing_artifact_is_recorded_not_dropped() {
+        // The citing side of QUAL-CLAIM-001: a scanned artifact the family
+        // could not read must not leave a partially-scanned feature looking
+        // exactly like a fully-scanned clean one.
+        let tmp = tempdir().unwrap();
+        seed_for_drift(tmp.path(), "# Plan\n\nNothing to see.\n");
+        // Invalid UTF-8 is the reachable form of unreadable here.
+        fs::write(
+            tmp.path()
+                .join(format!("specs/{FEATURE}/scenarios/broken.md")),
+            [0xff, 0xfe, 0xfd],
+        )
+        .unwrap();
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(drift(&result).is_empty(), "{:?}", result.findings);
+        let skips: Vec<_> = result
+            .skipped
+            .iter()
+            .filter(|s| s.reason == "artifact-unreadable")
+            .collect();
+        assert_eq!(skips.len(), 1, "{:?}", result.skipped);
+        assert_eq!(skips[0].family, "link-adjacent-drift");
+        assert_eq!(skips[0].path, "specs/042-demo/scenarios/broken.md");
     }
 
     #[test]
