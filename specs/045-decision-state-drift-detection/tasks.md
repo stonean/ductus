@@ -115,10 +115,10 @@ Tasks 3–10 are authored as scenarios under [022 — Deterministic Runtime](../
 
 ## 12. Dogfood both families across the repo
 
-- [ ] Run `check-artifacts` across all 47 specs and collect every finding from the two new families
-- [ ] Triage each finding as a true positive or a false positive, and record the tally as the promotion criterion's first precision data point
-- [ ] Fix any true positive found in `govern`'s own artifacts, or log it to the inbox when it belongs to a `done` spec and needs the back-edge
-- [ ] Confirm no false positive traces to a defect in the grammar or the exempt-context handling; if one does, fix the check rather than the artifact
+- [x] Run `check-artifacts` across all 47 specs and collect every finding from the two new families
+- [x] Triage each finding as a true positive or a false positive, and record the tally as the promotion criterion's first precision data point
+- [x] Fix any true positive found in `govern`'s own artifacts, or log it to the inbox when it belongs to a `done` spec and needs the back-edge
+- [x] Confirm no false positive traces to a defect in the grammar or the exempt-context handling; if one does, fix the check rather than the artifact
 
 - **Done when**: the full-repo run is triaged, the tally is recorded in the spec or the inbox, and every false positive is either eliminated or documented as an accepted limitation.
 

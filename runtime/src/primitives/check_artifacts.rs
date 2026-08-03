@@ -151,7 +151,14 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
     let mut skipped: Vec<SkippedTarget> = Vec::new();
     if let Some(spec) = &spec {
         check_link_adjacent_drift(&mut findings, &mut skipped, &feature_dir, spec, repo);
-        check_criterion_path_existence(&mut findings, &status, spec, &spec_path, repo);
+        check_criterion_path_existence(
+            &mut findings,
+            &mut skipped,
+            &status,
+            spec,
+            &spec_path,
+            repo,
+        );
     }
 
     let clean = findings.is_empty();
@@ -448,7 +455,7 @@ const TELLS: [(&str, TellClass); 6] = [
     ("unresolved", TellClass::Question),
     ("still open", TellClass::Question),
     ("not yet", TellClass::Implementation),
-    ("does not exist", TellClass::Existence),
+    ("does not exist", TellClass::Implementation),
     ("left unimplemented", TellClass::Implementation),
 ];
 
@@ -458,9 +465,17 @@ enum TellClass {
     /// "this question is open" — contradicted by a zero question count.
     Question,
     /// "this work is unbuilt" — contradicted by a spec at `in-progress`/`done`.
+    ///
+    /// `does not exist` belongs here rather than to a file-existence test. A
+    /// link that resolves always points at a present file, so testing presence
+    /// could only ever *fire*, never filter — a test that cannot fail is not a
+    /// test. The full-repo run confirmed it: the single finding it produced
+    /// across 47 specs was `017/detect-dependency-cycles.md`, whose prose says
+    /// an *override mechanism* "does not exist today" while linking to a
+    /// scenario that does. Judging the tell against the target's lifecycle
+    /// status is the reading in this spec's Behavior section, and the one that
+    /// can be wrong.
     Implementation,
-    /// "this thing is absent" — contradicted by a target file that is present.
-    Existence,
 }
 
 /// What a resolved link target can be read for. A scenario deliberately has
@@ -625,9 +640,6 @@ fn contradiction(class: TellClass, state: &TargetState) -> Contradiction {
                 Contradiction::No
             }
         }
-        // The target resolved to a file on disk, so an absence claim about it
-        // is contradicted by construction.
-        (TellClass::Existence, _) => Contradiction::Yes("exists".into()),
         // An implementation-state tell against a scenario or an opaque
         // artifact: nothing readable to judge it by (spec 045, AC14).
         _ => Contradiction::Unreadable,
@@ -826,6 +838,7 @@ fn read_target_state(
 /// tried-and-failed.
 fn check_criterion_path_existence(
     findings: &mut Vec<ArtifactFinding>,
+    skipped: &mut Vec<SkippedTarget>,
     status: &str,
     spec: &ReadSpecResult,
     spec_path: &Path,
@@ -839,7 +852,29 @@ fn check_criterion_path_existence(
         for candidate in candidate_paths(&criterion.text) {
             // A trailing slash marks a directory reference; either kind of
             // entry satisfies the criterion.
-            if repo.join(candidate.trim_end_matches('/')).exists() {
+            let trimmed = candidate.trim_end_matches('/');
+            if repo.join(trimmed).exists() {
+                continue;
+            }
+            // When the candidate's own top-level segment is absent, this repo
+            // has nothing to say about the path — a framework repo's criteria
+            // legitimately name paths that live in an *adopter's* checkout
+            // (`.govern/…`, `.agents/…`, `.githooks/…`), and calling those
+            // drifted would be asserting a defect from an absence of evidence.
+            // Recorded rather than exempted, so the report says what went
+            // unexamined instead of quietly reading as clean. In an adopter
+            // repo the root does exist, so real drift beneath it is still
+            // caught — the rule self-corrects where it matters.
+            let root = trimmed.split('/').next().unwrap_or(trimmed);
+            if !repo.join(root).exists() {
+                let entry = SkippedTarget {
+                    family: "criterion-path-existence".into(),
+                    reason: "root-absent".into(),
+                    path: candidate.clone(),
+                };
+                if !skipped.contains(&entry) {
+                    skipped.push(entry);
+                }
                 continue;
             }
             findings.push(ArtifactFinding {
@@ -862,13 +897,28 @@ fn candidate_paths(text: &str) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     for line in text.lines() {
         for span in inline_code_spans(line) {
-            let content = line[span].trim();
+            let content = normalize_candidate(line[span].trim());
             if is_path_like(content) && !out.iter().any(|seen| seen == content) {
                 out.push(content.to_string());
             }
         }
     }
     out
+}
+
+/// Strip the quoting a criterion may wrap a path in, and a leading `./` that
+/// names the same file as the bare form.
+fn normalize_candidate(content: &str) -> &str {
+    let unquoted = content
+        .strip_prefix('"')
+        .and_then(|rest| rest.strip_suffix('"'))
+        .or_else(|| {
+            content
+                .strip_prefix('\'')
+                .and_then(|rest| rest.strip_suffix('\''))
+        })
+        .unwrap_or(content);
+    unquoted.strip_prefix("./").unwrap_or(unquoted)
 }
 
 /// The acceptance-criterion path grammar (spec 045 data-model).
@@ -878,11 +928,22 @@ fn candidate_paths(text: &str) -> Vec<String> {
 /// reference; the braces reject placeholders; the bracket and star forms
 /// reject globs; a leading `-` rejects flags; a leading `/` rejects an
 /// absolute path, since the check makes claims about this repository only.
+///
+/// The separator must be **internal**: a token whose only `/` is its last
+/// character is a bare directory *name* used conceptually — "the feature's
+/// `scenarios/` directory" — not a path to resolve against the repo root.
+/// Two further rejections, both for tokens that are *written* as paths but
+/// name no file: a non-ASCII character, which in practice is the `…` of an
+/// elided path (`scripts/…`); and the framework's own spec-number placeholder
+/// `NNN` (`specs/NNN-feature/review.md`), the unbraced sibling of the `{…}`
+/// forms already excluded.
 fn is_path_like(content: &str) -> bool {
     const REJECTED: [char; 11] = ['{', '}', '*', '?', '[', ']', '<', '>', '$', '|', ':'];
-    content.contains('/')
+    content.trim_end_matches('/').contains('/')
         && !content.starts_with('-')
         && !content.starts_with('/')
+        && !content.contains("NNN")
+        && content.is_ascii()
         && !content.chars().any(char::is_whitespace)
         && !content.chars().any(|c| REJECTED.contains(&c))
 }
@@ -1689,10 +1750,16 @@ mod tests {
 
     #[test]
     fn the_originating_case_is_reproduced() {
-        // AC18. Both paths are absent from the fixture repo, exactly as they
-        // are absent from `govern` after spec 043 sunset the workflows feature.
+        // AC18. Both named paths are gone, exactly as they are gone from
+        // `govern` after spec 043 sunset the workflows feature — while their
+        // parent trees survive, which is what makes their absence provable
+        // rather than merely unknown. The fixture creates `framework/` and
+        // `scripts/` for that reason: without them the root-absent rule would
+        // (correctly) call the paths unexaminable instead.
         let tmp = tempdir().unwrap();
         seed_with_criteria(tmp.path(), "done", ORIGINATING_CRITERION);
+        fs::create_dir_all(tmp.path().join("framework")).unwrap();
+        fs::create_dir_all(tmp.path().join("scripts/audit")).unwrap();
         let result = run(&args(), tmp.path()).unwrap();
         let found = path_findings(&result);
         assert_eq!(found.len(), 2, "{:?}", result.findings);
@@ -1776,12 +1843,84 @@ mod tests {
             tmp.path(),
             "done",
             "- [x] `/{project}:analyze` documents it, per `https://example.com/spec` and \
-             `runtime/src/primitives/mod.rs:841`, across `specs/*/spec.md`, passing `--exclude=a/b`\n",
+             `runtime/src/primitives/mod.rs:841`, across `specs/*/spec.md`, passing `--exclude=a/b`, \
+             touching `scripts/…` and `specs/NNN-feature/review.md`\n",
         );
         let result = run(&args(), tmp.path()).unwrap();
         assert!(
             path_findings(&result).is_empty(),
             "no candidate should survive the grammar: {:?}",
+            result.findings
+        );
+    }
+
+    #[test]
+    fn a_path_whose_root_is_absent_is_skipped_not_flagged() {
+        // A framework repo's criteria legitimately name paths that live in an
+        // *adopter's* checkout. Calling those drifted would assert a defect
+        // from an absence of evidence — so they are recorded, not flagged.
+        let tmp = tempdir().unwrap();
+        seed_with_criteria(
+            tmp.path(),
+            "done",
+            "- [x] A freshly adopted project has the constitution at `.govern/constitution.md`\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(path_findings(&result).is_empty(), "{:?}", result.findings);
+        let skips: Vec<_> = result
+            .skipped
+            .iter()
+            .filter(|s| s.family == "criterion-path-existence")
+            .collect();
+        assert_eq!(skips.len(), 1, "{:?}", result.skipped);
+        assert_eq!(skips[0].reason, "root-absent");
+        assert_eq!(skips[0].path, ".govern/constitution.md");
+    }
+
+    #[test]
+    fn a_present_root_still_proves_a_missing_path() {
+        // The rule self-corrects: where the root exists — an adopter repo, or
+        // `framework/` here — a missing path beneath it is provable again.
+        let tmp = tempdir().unwrap();
+        seed_with_criteria(
+            tmp.path(),
+            "done",
+            "- [x] The constitution ships to `.govern/constitution.md`\n",
+        );
+        fs::create_dir_all(tmp.path().join(".govern")).unwrap();
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(path_findings(&result).len(), 1, "{:?}", result.findings);
+    }
+
+    #[test]
+    fn a_bare_directory_name_is_not_a_path() {
+        // "the feature's `scenarios/` directory" names a concept, not a path
+        // to resolve — the separator has to be internal to count.
+        let tmp = tempdir().unwrap();
+        seed_with_criteria(
+            tmp.path(),
+            "done",
+            "- [x] `target` reports no scenarios when the feature has no `scenarios/` directory\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(path_findings(&result).is_empty(), "{:?}", result.findings);
+        assert!(result.skipped.is_empty(), "{:?}", result.skipped);
+    }
+
+    #[test]
+    fn quoting_and_dot_slash_are_normalized_away() {
+        let tmp = tempdir().unwrap();
+        seed_with_criteria(
+            tmp.path(),
+            "done",
+            "- [x] The loader reads `\"framework/rules/demo-cross.md\"` and `./framework/rules/demo-cross.md`\n",
+        );
+        fs::create_dir_all(tmp.path().join("framework/rules")).unwrap();
+        write(tmp.path(), "framework/rules/demo-cross.md", "# Demo\n");
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(
+            path_findings(&result).is_empty(),
+            "both forms name the same present file: {:?}",
             result.findings
         );
     }
