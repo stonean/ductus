@@ -77,24 +77,27 @@ pub fn run(args: &MarkTaskArgs, repo: &Path) -> Result<CheckboxToggleResult> {
     let (previous, new_line) = flip_checkbox_at(lines[line_idx], marker_idx, args.checked);
     let mut replacements = vec![(line_idx, new_line)];
 
-    // Scenario unchecked-done-when-clause-tally: once this flip completes
-    // every *real* subtask, tick an unchecked checkbox-form done-when clause
-    // too. The clause stays outside the subtask index space — that contract
-    // is unchanged — but the primitive that completes a task owns leaving the
-    // block visually coherent, so the file a human reads agrees with the
-    // tally a machine computes. Without this, `/gov:implement` reports the
-    // task complete while a visibly unchecked box sits underneath it.
+    // Scenarios unchecked-done-when-clause-tally and
+    // mark-task-untick-symmetry: a checkbox-form done-when clause mirrors its
+    // task's tally in **both** directions — it ticks when this flip leaves
+    // every real subtask checked, and unticks when it leaves any unchecked.
+    // The clause stays outside the subtask index space (that contract is
+    // unchanged), but the primitive that changes a task's completeness owns
+    // leaving the block coherent, so the file a human reads agrees with the
+    // tally a machine computes.
     //
-    // Tick-only, deliberately: unchecking a subtask does not untick the
-    // clause. The scenario specifies the completion direction alone, and
-    // inventing the inverse here would be unspecified behavior.
-    if args.checked
-        && completes_every_subtask(&lines, &checkbox_lines, args.subtask_index)
-        && let Some((clause_idx, clause_marker)) =
-            find_unchecked_done_when_clause(&lines, &skip_mask, task_range)
+    // The first scenario specified only the ticking direction, which left a
+    // ticked clause sitting above an unchecked subtask — the mirror image of
+    // the incoherence it was written to remove. The second closed it.
+    if let Some((clause_idx, clause_marker, clause_checked)) =
+        find_done_when_checkbox(&lines, &skip_mask, task_range)
     {
-        let (_was, ticked) = flip_checkbox_at(lines[clause_idx], clause_marker, true);
-        replacements.push((clause_idx, ticked));
+        let desired =
+            every_subtask_checked(&lines, &checkbox_lines, args.subtask_index, args.checked);
+        if clause_checked != desired {
+            let (_was, flipped) = flip_checkbox_at(lines[clause_idx], clause_marker, desired);
+            replacements.push((clause_idx, flipped));
+        }
     }
 
     let new_content = rebuild_with_replacements(&lines, &replacements);
@@ -203,39 +206,47 @@ fn collect_checkbox_line_indices(
     out
 }
 
-/// Whether flipping the subtask at `flipped_index` to checked leaves every
-/// real subtask of the task checked. The flipped line is taken as checked by
-/// definition; the rest are read from the file as they stand.
-fn completes_every_subtask(
+/// Whether every real subtask of the task is checked once the subtask at
+/// `flipped_index` takes `flipped_checked`. The flipped line is taken at its
+/// new value; the rest are read from the file as they stand.
+fn every_subtask_checked(
     lines: &[&str],
     checkbox_lines: &[(usize, usize)],
     flipped_index: usize,
+    flipped_checked: bool,
 ) -> bool {
     checkbox_lines
         .iter()
         .enumerate()
         .all(|(index, (line_idx, marker_idx))| {
-            index == flipped_index
-                || matches!(lines[*line_idx].as_bytes()[*marker_idx], b'x' | b'X')
+            if index == flipped_index {
+                flipped_checked
+            } else {
+                matches!(lines[*line_idx].as_bytes()[*marker_idx], b'x' | b'X')
+            }
         })
 }
 
-/// The task's done-when clause when it is authored in **checkbox form and
-/// currently unchecked** — the only shape that can disagree with the tally.
-/// The canonical bold form and the bulletless form carry no checkbox, and an
-/// already-ticked clause has nothing to reconcile, so both yield `None`.
-fn find_unchecked_done_when_clause(
+/// The task's done-when clause when it is authored in **checkbox form**,
+/// with its current checked state — the only shape that can disagree with the
+/// tally in either direction. The canonical bold form and the bulletless form
+/// carry no checkbox and so yield `None`.
+fn find_done_when_checkbox(
     lines: &[&str],
     skip_mask: &[bool],
     range: std::ops::Range<usize>,
-) -> Option<(usize, usize)> {
+) -> Option<(usize, usize, bool)> {
     range.into_iter().find_map(|idx| {
         if skip_mask[idx] {
             return None;
         }
         parse_done_when(lines[idx])?;
         let (_bracket, marker_idx) = find_checkbox_line(lines[idx])?;
-        matches!(lines[idx].as_bytes()[marker_idx], b' ').then_some((idx, marker_idx))
+        Some((
+            idx,
+            marker_idx,
+            matches!(lines[idx].as_bytes()[marker_idx], b'x' | b'X'),
+        ))
     })
 }
 
@@ -411,8 +422,14 @@ mod tests {
         assert!(ok.current);
         let updated = fs::read_to_string(feature_dir.join("tasks.md")).unwrap();
         assert!(updated.contains("- [x] second subtask"));
-        // The done-when line is untouched by a subtask flip.
-        assert!(updated.contains("- [x] Done when: the condition holds"));
+        // The done-when line is not *indexable*, which is what this test is
+        // about — but it is still reconciled. The fixture starts with a ticked
+        // clause above two unchecked subtasks, and checking only the second
+        // leaves the first unchecked, so the clause unticks to match the tally
+        // (scenario mark-task-untick-symmetry). Before that scenario this
+        // asserted the clause was untouched, which preserved exactly the
+        // incoherence the reconciliation exists to remove.
+        assert!(updated.contains("- [ ] Done when: the condition holds"));
 
         // Index 2 — where the done-when checkbox physically sits — is out of
         // range: only two real subtasks exist.
@@ -487,6 +504,62 @@ mod tests {
         );
         // A sibling task's clause is never touched.
         assert!(after.contains("- [ ] Done when: something else"));
+    }
+
+    #[test]
+    fn reopening_a_task_unticks_its_clause() {
+        // Scenario mark-task-untick-symmetry: the clause mirrors the tally in
+        // both directions. Without this, unchecking a subtask left a ticked
+        // clause above it — the mirror image of the incoherence the ticking
+        // direction was written to remove.
+        let tmp = tempdir().unwrap();
+        let tasks_path = write_unchecked_clause_fixture(tmp.path());
+        mark(tmp.path(), "1", 0, true);
+        mark(tmp.path(), "1", 1, true);
+        assert!(
+            fs::read_to_string(&tasks_path)
+                .unwrap()
+                .contains("- [x] Done when: the condition holds")
+        );
+
+        // Reopen the first subtask — the task is no longer complete, so the
+        // clause must stop claiming it is.
+        mark(tmp.path(), "1", 0, false);
+        let after = fs::read_to_string(&tasks_path).unwrap();
+        assert!(after.contains("- [ ] first subtask"));
+        assert!(
+            after.contains("- [ ] Done when: the condition holds"),
+            "clause unticked once a real subtask reopened:\n{after}"
+        );
+        // A sibling task's clause is still never touched.
+        assert!(after.contains("- [ ] Done when: something else"));
+
+        // And the round trip closes: re-checking it ticks the clause again.
+        mark(tmp.path(), "1", 0, true);
+        assert!(
+            fs::read_to_string(&tasks_path)
+                .unwrap()
+                .contains("- [x] Done when: the condition holds")
+        );
+    }
+
+    #[test]
+    fn an_already_coherent_block_produces_no_write_in_either_direction() {
+        // The write guard holds for the untick direction too: re-marking a
+        // subtask that is already in the desired state leaves the file byte
+        // -identical, so a re-run is a clean no-op.
+        let tmp = tempdir().unwrap();
+        let tasks_path = write_unchecked_clause_fixture(tmp.path());
+        mark(tmp.path(), "1", 0, true);
+        mark(tmp.path(), "1", 1, true);
+        let complete = fs::read_to_string(&tasks_path).unwrap();
+        mark(tmp.path(), "1", 1, true);
+        assert_eq!(complete, fs::read_to_string(&tasks_path).unwrap());
+
+        mark(tmp.path(), "1", 0, false);
+        let reopened = fs::read_to_string(&tasks_path).unwrap();
+        mark(tmp.path(), "1", 0, false);
+        assert_eq!(reopened, fs::read_to_string(&tasks_path).unwrap());
     }
 
     #[test]

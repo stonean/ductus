@@ -6,7 +6,7 @@ title: "006-bug-workflow — plan"
 
 ## Overview
 
-Add scenario support, a bug decision tree, and brownfield triage to the governance framework. This involves creating two new templates, two new slash commands (`/gov:scenario` and `/gov:triage`), updating four existing commands and their templates, and updating the constitution and README. All artifacts are markdown files — no application code, no persistence.
+Add scenario support, a bug decision tree, and brownfield triage to the governance framework. This involves creating two new templates, two new slash commands (`/gov:scenario` and `/gov:groom`), updating four existing commands and their templates, and updating the constitution and README. All artifacts are markdown files — no application code, no persistence.
 
 ## Technical Decisions
 
@@ -22,7 +22,7 @@ The spec explicitly states Given/When/Then is not required. The template uses sp
 
 When a scenario is created, `/gov:scenario` also appends a task to the parent spec's `tasks.md`. If `tasks.md` does not exist, it creates one. This ensures every scenario has a corresponding implementation task that carries completion status.
 
-### `/gov:triage` operates on a flat `specs/triage.md` file
+### `/gov:groom` operates on a flat `specs/inbox.md` file
 
 Triage is a temporary inbox — a flat markdown list, not a directory structure. Each item is walked through the decision tree and migrated to the appropriate spec or scenario. Items are removed from `triage.md` as they are resolved. When `triage.md` is empty, the command reports triage is clean. The file is kept to preserve git history.
 

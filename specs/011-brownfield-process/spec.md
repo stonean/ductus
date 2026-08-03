@@ -103,7 +103,7 @@ No inbox item remains as a standalone artifact. The spec or scenario is the perm
 
 This spec renames `triage` to `inbox` throughout the framework:
 
-- `specs/triage.md` → `specs/inbox.md`
+- `specs/inbox.md` → `specs/inbox.md`
 - `templates/triage.md` → `templates/inbox.md`
 - `/triage` command → `/inbox` command
 - All references in constitution, sdd-context, README, and other commands

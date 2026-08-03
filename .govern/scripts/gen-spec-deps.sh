@@ -178,7 +178,7 @@ while IFS= read -r spec; do
 done < <(list_specs)
 
 if [ "$changed" -eq 0 ]; then
-  echo "No changes (all specs in sync)"
+  report_no_changes
 fi
 
 # Cycle check: runs after the frontmatter rewrite so any diff is visible in the

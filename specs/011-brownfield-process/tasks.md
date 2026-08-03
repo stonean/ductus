@@ -46,7 +46,7 @@ Add the capture command to the govern file manifests and add a triage → inbox 
 
 - [x] Add `commands/capture.md` to `govern/govern.md` slash command manifest with `update` strategy
 - [x] Add `commands/capture.md` to `govern/govern-auggie.md` slash command manifest with `update` strategy
-- [x] Add triage → inbox migration to `govern/govern.md`: rename `specs/triage.md` to `specs/inbox.md` if needed, merge if both exist, delete old triage command
+- [x] Add triage → inbox migration to `govern/govern.md`: rename `specs/inbox.md` to `specs/inbox.md` if needed, merge if both exist, delete old triage command
 - [x] Add triage → inbox migration to `govern/govern-auggie.md`: same migration with Auggie paths
 - [x] Migration is reported in post-scaffolding summary
 - [x] Add signpost to `specs/007-govern-workflow/spec.md` noting the govern command changes by this spec

@@ -86,7 +86,7 @@ If the user's tech stack selections match no registry entries (e.g., all categor
 
 ## Acceptance Criteria
 
-- [x] A workflow registry exists at `framework/workflows/registry.json` in governance, using JSON format
+- [x] A workflow registry existed at `framework/workflows/registry.json` in governance, using JSON format. Met at v1 and **since retired** — spec `043-workflows-sunset` deleted the workflows feature and this registry with it (see the sunset note above, which carries the link). Retained as a record of what shipped, not as a live requirement.
 - [x] Each registry entry specifies a single-field trigger, workflow name, category, template path, and description
 - [x] Categories are drawn from the fixed set: Testing, Linting, Formatting, Migrations, Code Review, Deployment
 - [x] During init, after tech stack selection, matched workflows are presented to the user grouped by category

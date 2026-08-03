@@ -81,6 +81,37 @@ list_specs() {
   fi
 }
 
+# Feature-spec files present in the worktree but NOT tracked by git — exactly
+# the set list_specs excludes by design (spec 017 / tracked-specs-not-worktree).
+#
+# Exists so a generator can say what it did not examine. A zero rewrite count
+# means "I rewrote nothing", not "everything is in sync": an untracked draft is
+# never enumerated, so a bare in-sync claim asserts a property of files the
+# generator cannot vouch for (QUAL-CLAIM-001, and the case an adopter lost time
+# to on 2026-08-01). Reporting only — the exclusion itself is unchanged.
+# Empty outside a git repo, where list_specs already falls back to a full
+# worktree glob and therefore examines everything.
+untracked_specs() {
+  if git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+    git -C "$ROOT" ls-files --others --exclude-standard -- "$SPECS_ROOT" \
+      | { grep -E "^$SPECS_ROOT/[0-9][0-9][0-9]-[^/]+/(spec|spec-and-plan)\.md$" || true; } \
+      | while IFS= read -r rel; do printf '%s/%s\n' "$ROOT" "$rel"; done
+  fi
+}
+
+# Render the honest no-change line for a generator whose enumeration is
+# list_specs-scoped: what was examined, and what was skipped.
+report_no_changes() {
+  local tracked untracked
+  tracked=$(list_specs | wc -l | tr -d ' ')
+  untracked=$(untracked_specs | wc -l | tr -d ' ')
+  if [ "$untracked" -gt 0 ]; then
+    echo "No changes ($tracked tracked spec(s) in sync; $untracked untracked spec(s) skipped — git add to include)"
+  else
+    echo "No changes ($tracked tracked spec(s) in sync)"
+  fi
+}
+
 # Feature-spec files staged in the git index for the pending commit — the
 # --staged rewrite set (the adopter pre-commit path), so committing one spec
 # never rewrites the derived frontmatter of unrelated specs. Empty outside a

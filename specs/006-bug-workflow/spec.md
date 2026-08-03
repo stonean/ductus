@@ -18,7 +18,7 @@ Bugs are unwritten scenarios. Rather than tracking defects in a separate system,
 
 Most projects adopting governance are not greenfield — they have existing code, existing bugs, and incomplete specifications. Scenarios are the primary mechanism for incrementally bringing brownfield projects under governance. Every bug fix, edge case discovery, or behavior clarification produces a scenario that makes the specs more precise over time.
 
-> **Note:** several commands introduced here were renamed by later specs. `/gov:scenario` is now `/gov:amend`, `/gov:triage` is now `/gov:groom` (operating on `specs/inbox.md` — see [011-brownfield-process](../011-brownfield-process/spec.md)), and `/gov:next` was retired. References to the original names appear below as historical context.
+> **Note:** several commands introduced here were renamed by later specs. `/gov:scenario` is now `/gov:amend`, `/gov:groom` is now `/gov:groom` (operating on `specs/inbox.md` — see [011-brownfield-process](../011-brownfield-process/spec.md)), and `/gov:next` was retired. References to the original names appear below as historical context.
 >
 > **Note:** path references below (`templates/scenario.md`, `templates/triage.md`, `templates/spec.md`) reflect the original layout. The repository was later reorganized so spec templates live in `framework/templates/spec/` and project-scaffolding templates in `framework/templates/project/`. The `triage.md` template was renamed to `inbox.md` by [011-brownfield-process](../011-brownfield-process/spec.md) (current path: `framework/templates/project/inbox.md`). The acceptance criteria below were satisfied at merge time under the original paths and names.
 
@@ -94,7 +94,7 @@ The rule: a bug file should never be the first artifact created. The spec or sce
 
 > **Note:** `triage` was renamed to `inbox` by [011-brownfield-process](../011-brownfield-process/spec.md). The artifact is `specs/inbox.md` and the command is `/{project}:groom`.
 
-For projects adopting governance incrementally, a `specs/triage.md` file serves as a temporary inbox for known issues not yet assigned to a feature spec.
+For projects adopting governance incrementally, a `specs/inbox.md` file serves as a temporary inbox for known issues not yet assigned to a feature spec.
 
 ### Triage rules
 
@@ -112,8 +112,8 @@ This feature produces the following changes to the governance framework:
 - **Updated template:** `templates/spec.md` — reference to scenarios directory convention
 - **Updated document:** `constitution.md` — bug handling section with decision tree and scenario lifecycle
 - **New command:** `/gov:scenario` — standalone command that requires an active session target (set via `/gov:target`), confirms the target is correct, walks the decision tree, creates scenario files in the correct feature's `scenarios/` directory, and appends a linked task to the parent spec's `tasks.md`
-- **New command:** `/gov:triage` — reviews `specs/triage.md`, walks each item through the decision tree, migrates items to the appropriate spec or scenario, and removes resolved items from triage
-- **Updated command:** `/gov:about` — documents `/gov:scenario`, `/gov:triage`, scenario conventions, and bug workflow
+- **New command:** `/gov:groom` — reviews `specs/inbox.md`, walks each item through the decision tree, migrates items to the appropriate spec or scenario, and removes resolved items from triage
+- **Updated command:** `/gov:about` — documents `/gov:scenario`, `/gov:groom`, scenario conventions, and bug workflow
 - **Updated command:** `/gov:status` — displays scenario counts per spec in the pipeline dashboard
 - **Updated command:** `/gov:next` — suggests `/gov:scenario` as a next action when appropriate (e.g., bug reported, spec is `in-progress`)
 - **Updated command:** `/gov:analyze` — checks that scenario-linked tasks are complete during validation
@@ -127,10 +127,10 @@ This feature produces the following changes to the governance framework:
 - [x] `constitution.md` includes a bug handling section with the decision tree
 - [x] `constitution.md` defines scenarios as part of the spec lifecycle
 - [x] `constitution.md` documents the scenario directory convention in the spec phase file structure
-- [x] `/gov:triage` command exists and walks each triage item through the decision tree
-- [x] `/gov:triage` migrates resolved items from `specs/triage.md` to the appropriate spec or scenario
-- [x] `/gov:triage` removes migrated items from `specs/triage.md`
-- [x] `/gov:about` documents `/gov:scenario`, `/gov:triage`, scenario conventions, and the bug workflow
+- [x] `/gov:groom` command exists and walks each triage item through the decision tree
+- [x] `/gov:groom` migrates resolved items from `specs/inbox.md` to the appropriate spec or scenario
+- [x] `/gov:groom` removes migrated items from `specs/inbox.md`
+- [x] `/gov:about` documents `/gov:scenario`, `/gov:groom`, scenario conventions, and the bug workflow
 - [x] `/gov:scenario` command exists and creates scenario files under the correct feature's `scenarios/` directory
 - [x] `/gov:scenario` requires an active session target and confirms the target before proceeding
 - [x] `/gov:scenario` follows the decision tree — checks for existing spec before creating a scenario
@@ -150,8 +150,8 @@ This feature produces the following changes to the governance framework:
 - **Triage item matches an existing spec** — migration path: move the item into a scenario under the matching spec and remove it from `triage.md`
 - **Bug spans multiple specs** — create a scenario under the most relevant spec; reference the other spec(s) in the scenario's spec-ref field
 - **No spec exists for the bug** — decision tree step 1: create the spec first via `/gov:specify`, then create the scenario
-- **`specs/triage.md` does not exist** — `/gov:triage` stops and reports nothing to triage
-- **`specs/triage.md` is empty** — `/gov:triage` reports triage is clean; the file is kept to preserve git history
+- **`specs/inbox.md` does not exist** — `/gov:groom` stops and reports nothing to triage
+- **`specs/inbox.md` is empty** — `/gov:groom` reports triage is clean; the file is kept to preserve git history
 
 ## Open Questions
 

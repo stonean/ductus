@@ -179,6 +179,6 @@ Done when: every `specs/*/spec.md` has a non-empty, coherent `tags` value and th
 
 ### 23. Implement scenario: [past-tense-motivation-convention](scenarios/past-tense-motivation-convention.md)
 
-- [ ] Implement the behavior described in `scenarios/past-tense-motivation-convention.md`
+- [x] Implement the behavior described in `scenarios/past-tense-motivation-convention.md`
 
 - **Done when**: `framework/templates/spec/spec.md`'s `## Motivation` section carries past-tense authoring guidance in its scaffolding comment; a freshly scaffolded spec shows the guidance without it appearing in the rendered body; no constitution amendment and no `AGENTS.md` entry is added; existing `done` specs are left unswept per the scenario's decision; `npx markdownlint-cli2` and the template-alignment audit family both pass.

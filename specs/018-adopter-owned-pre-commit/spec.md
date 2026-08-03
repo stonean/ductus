@@ -123,7 +123,7 @@ Adopters who edited their govern-installed pre-commit despite the sentinel: thei
 
 ## Acceptance Criteria
 
-- [x] AC1: `framework/bootstrap/hooks/govern-pre-commit` ships with the framework, contains the `# managed-by: govern` sentinel on line 2, and runs the adopter-relevant generators (currently `scripts/gen-spec-deps.sh`) plus the existing `git add` staging
+- [x] AC1: `framework/bootstrap/hooks/govern-pre-commit` ships with the framework, contains the `# managed-by: govern` sentinel on line 2, and runs the adopter-relevant generators (currently `.govern/scripts/gen-spec-deps.sh`) plus the existing `git add` staging
 - [x] AC2: A second shipped file (`framework/bootstrap/hooks/pre-commit`, replacing the file currently at that path) holds the initial content for the adopter-owned outer hook: invokes `./.githooks/govern-pre-commit` and contains no `# managed-by: govern` sentinel
 - [x] AC3: `framework/bootstrap/govern.md` §Shared Files manifest lists `framework/bootstrap/hooks/govern-pre-commit` → `.githooks/govern-pre-commit` with `update` strategy
 - [x] AC4: `framework/bootstrap/govern.md` §Shared Files manifest lists the new outer-hook source → `.githooks/pre-commit` with `create` strategy
@@ -135,7 +135,7 @@ Adopters who edited their govern-installed pre-commit despite the sentinel: thei
 - [x] AC10: Spec 017 carries a signpost block immediately after its H1 (before the lead paragraph) pointing at 018, naming the superseded surfaces (the adopter pre-commit ownership model; `framework/bootstrap/hooks/pre-commit` strategy; the new `govern-pre-commit` inner file; the `install.sh` deletion; AC21–AC23). The 017 body and ACs are not edited beyond the inserted signpost block, per the constitution's frozen-archaeology rule
 - [x] AC11: `/govern` end-to-end run executed against a sandbox adopter directory (existing-install case and fresh-install case) produces the file layouts described in AC8 and AC9 with no manual intervention
 - [x] AC12: `framework/bootstrap/hooks/install.sh` is deleted; its install actions (`git config core.hooksPath .githooks` and `chmod +x` on the two hook files) are inlined into `framework/bootstrap/govern.md` §Hook Installation; no other artifact references the deleted file
-- [x] AC13: `scripts/gen-spec-deps.sh` excludes block-quoted lines (lines matching `^[[:space:]]*>`) when extracting sibling-spec links from spec bodies. Signpost-style references inside a blockquote do not pollute the predecessor spec's `dependencies:` frontmatter. Effect: 017's `dependencies` returns to `[]` post-signpost, AND any pre-existing done spec whose `dependencies` was polluted by retroactively-added signpost blockquotes (000, 003, 006, 007, 008, 011) is corrected on the next generator run. The corrections remove forward-pointers to specs that were implemented later — those are signposts, not implement-time dependencies
+- [x] AC13: `.govern/scripts/gen-spec-deps.sh` excludes block-quoted lines (lines matching `^[[:space:]]*>`) when extracting sibling-spec links from spec bodies. Signpost-style references inside a blockquote do not pollute the predecessor spec's `dependencies:` frontmatter. Effect: 017's `dependencies` returns to `[]` post-signpost, AND any pre-existing done spec whose `dependencies` was polluted by retroactively-added signpost blockquotes (000, 003, 006, 007, 008, 011) is corrected on the next generator run. The corrections remove forward-pointers to specs that were implemented later — those are signposts, not implement-time dependencies
 
 ## Open Questions
 

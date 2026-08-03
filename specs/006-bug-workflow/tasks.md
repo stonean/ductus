@@ -30,13 +30,13 @@ Done when: `constitution.md` includes bug handling, scenario lifecycle, and upda
 
 Done when: both command files exist, `/gov:scenario` creates scenario files under the correct feature's `scenarios/` directory and appends linked tasks to `tasks.md`.
 
-## 4. Create `/gov:triage` command
+## 4. Create `/gov:groom` command
 
-- [x] Create `commands/triage.md` template: reads `specs/triage.md`, walks each item through the decision tree, migrates items to specs or scenarios, removes resolved items
+- [x] Create `commands/triage.md` template: reads `specs/inbox.md`, walks each item through the decision tree, migrates items to specs or scenarios, removes resolved items
 - [x] Handle edge cases: `triage.md` does not exist, `triage.md` is empty
 - [x] Create `.claude/commands/gov/triage.md` by copying template and replacing `{project}` with `gov`
 
-Done when: both command files exist, `/gov:triage` processes triage items and migrates them.
+Done when: both command files exist, `/gov:groom` processes triage items and migrates them.
 
 ## 5. Update existing command templates
 

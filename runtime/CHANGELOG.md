@@ -15,6 +15,7 @@ Spec 045, landing as 022 scenarios `block-element-scanner`, `check-artifacts-ski
 
 ### Changed
 
+- **`mark-task`'s done-when reconciliation is symmetric.** A checkbox-form `- [ ] Done when: …` clause now mirrors its task's tally in **both** directions — it ticks when a flip leaves every real subtask checked, and unticks when a flip leaves any unchecked. v0.25.0 shipped the ticking direction only, which left a ticked clause sitting above an unchecked subtask: the mirror image of the incoherence that change was made to remove. The clause is still outside the subtask index space, the bold and bulletless forms are still untouched, and an already-coherent block still produces no write.
 - **`check-artifacts` reads its spec once, through `read-spec`.** It previously read and frontmatter-parsed `spec.md` itself and then called `read-spec` on the same file, leaving two independent notions of the spec's frontmatter in one function. The documented error contract is unchanged — `read-spec` raises the same variants on the same file.
 
 ### Framework

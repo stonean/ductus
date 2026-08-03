@@ -18,7 +18,7 @@ The defect is a reporting one: the runtime's tally and the human's reading of th
 
 The completion tally must never report a task fully checked while an unchecked checkbox is visible in its block. When a task's `done_when` was parsed from an **unchecked** checkbox-form line, the runtime resolves the disagreement rather than ignoring it:
 
-- **`mark-task` ticks the clause line when the task's real subtasks all complete.** The clause is not addressable by subtask index — that contract is unchanged — but the primitive that completes a task owns leaving the block visually coherent, so the file a human reads agrees with the tally a machine computes.
+- **`mark-task` ticks the clause line when the task's real subtasks all complete.** The clause is not addressable by subtask index — that contract is unchanged — but the primitive that completes a task owns leaving the block visually coherent, so the file a human reads agrees with the tally a machine computes. *(Extended by [mark-task-untick-symmetry](mark-task-untick-symmetry.md): the clause mirrors the tally in both directions, unticking when a flip leaves any real subtask unchecked. This scenario specified only the ticking direction, which left a ticked clause above an unchecked subtask — the mirror image of the incoherence it was written to remove.)*
 - **The tally never claims more than the file shows.** Until the clause line is ticked, `/gov:implement`'s per-task report distinguishes "all subtasks checked" from "task block fully checked", so an unticked clause is surfaced rather than rounded up.
 
 Per [§design-principles](../../../AGENTS.md#design-principles) "never depend on human diligence", the fix is not to tell adopters to author the canonical form — the `tasks.md` template and `/gov:plan` reference already point at it (`done-when-authoring-forms`, Prevention), and the checkbox form is authored anyway.
@@ -28,7 +28,7 @@ Per [§design-principles](../../../AGENTS.md#design-principles) "never depend on
 - **Checked clause (`- [x] Done when: …`)** — unchanged from `done-when-authoring-forms`: excluded from the subtask index, nothing to tick, no report difference. This scenario adds behavior only on the unchecked path.
 - **Canonical bold form (`- **Done when**: …`)** — carries no checkbox at all, so there is nothing to tick and no visible discrepancy; the tally is unaffected.
 - **Bulletless form (`Done when: …`)** — same as the canonical form: no checkbox, no discrepancy.
-- **Unchecked clause with unchecked real subtasks** — the task is genuinely incomplete; `mark-task` does not tick the clause, because the condition for ticking it is that every real subtask is complete.
+- **Unchecked clause with unchecked real subtasks** — the task is genuinely incomplete; `mark-task` does not tick the clause, because the condition for ticking it is that every real subtask is complete. Under [mark-task-untick-symmetry](mark-task-untick-symmetry.md) a *ticked* clause in that same state is unticked, which is the case this scenario left unhandled.
 - **Subtask index contract** — ticking the clause must not shift the subtask index space. A task with two real subtasks still reports total 2, and `mark-task --subtask-index 2` remains out of range, ticked clause or not.
 - **Idempotence** — completing an already-complete task does not rewrite an already-ticked clause line, so re-running `/gov:implement` produces no diff.
 

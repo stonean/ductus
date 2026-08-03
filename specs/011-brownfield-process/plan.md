@@ -28,12 +28,12 @@ Both `govern/govern.md` and `govern/govern-auggie.md` reference `triage` in thre
 
 ### Govern migration for triage → inbox
 
-The govern command only creates and updates files — it does not delete files removed from the manifest. Projects that adopted governance before the rename will have orphaned `specs/triage.md` and `{cli-config-dir}/commands/{project}/triage.md` files after re-running `/govern`.
+The govern command only creates and updates files — it does not delete files removed from the manifest. Projects that adopted governance before the rename will have orphaned `specs/inbox.md` and `{cli-config-dir}/commands/{project}/triage.md` files after re-running `/govern`.
 
 A migration step is added to both govern files. Before the file manifest is processed, the command checks:
 
-- If `specs/triage.md` exists and `specs/inbox.md` does not → rename `specs/triage.md` to `specs/inbox.md`
-- If `specs/triage.md` exists and `specs/inbox.md` also exists → merge items from `triage.md` into `inbox.md`, then delete `triage.md`
+- If `specs/inbox.md` exists and `specs/inbox.md` does not → rename `specs/inbox.md` to `specs/inbox.md`
+- If `specs/inbox.md` exists and `specs/inbox.md` also exists → merge items from `triage.md` into `inbox.md`, then delete `triage.md`
 - If the old triage command exists at `{cli-config-dir}/commands/{project}/triage.md` → delete it
 
 The migration is reported in the post-scaffolding summary.

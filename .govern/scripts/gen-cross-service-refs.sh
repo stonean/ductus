@@ -328,7 +328,7 @@ while IFS= read -r spec; do
 done < <(enumerate_specs)
 
 if [ "$changed" -eq 0 ]; then
-  echo "No changes (all references in sync)"
+  report_no_changes
 fi
 
 if [ "$changed" -gt 0 ] && [ "$dry_run" -eq 1 ]; then
