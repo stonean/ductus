@@ -1,12 +1,12 @@
 ---
 spec: 045-decision-state-drift-detection
-reviewed-at: 2026-08-03T02:44:40Z
-reviewed-against: 8891da925ff7b5f8d5c2892ffd1689bb8f8d4915
+reviewed-at: 2026-08-03T03:05:16Z
+reviewed-against: d99df57ecd05936029a1d29d08706ff48904ae01
 diff-base: 5103cd3a32fa53b07a9536200d609f3632e57a71
 must-violations: 0
 should-violations: 0
 low-confidence: 1
-captured-issues: 1
+captured-issues: 0
 skipped-passes: []
 ---
 
@@ -14,7 +14,7 @@ skipped-passes: []
 
 ## Summary
 
-Third pass, re-run because the two prior ones (`c11bbb1`, `0857f07`) predate the live-claim exemption and the `mark-task` symmetry change. The first pass reported 0 MUST and 3 SHOULD, all fixed rather than shipped; the fix for the duplicated spec parse also removed the `.ok()` swallow a fourth, low-confidence finding named. Since then the `criterion-path-existence` family gained the live-claim exemption — thirteen closed phrases marking a criterion as a deletion, rename, adopter-scope, or hedge statement, so a path that fails to resolve confirms it rather than contradicting it. That change was itself prompted by a measurement error worth recording in a review: an earlier triage classified findings by path prefix without reading their criteria and reported 35 true positives at 69% precision, when the real figure was 5 of 28. The corrected measurement and the reasoning are in `data-model.md`. What remains is one low-confidence trade-off, unchanged from the second pass and re-verified against the current code.
+Re-run to clear the same captured issue 017 carried — `compute-review-scope` returning an unusable scope and a polluted captured-issues list. It is fixed under 022's `review-scope-parse-fidelity` scenario, not carried forward: a multi-table `## Affected Files` section no longer emits header rows as paths, a qualified first cell yields its backticked span, and both `compute-review-scope` and `diff-cross-spec` intersect their inbox additions against the shared comment-aware bullet grammar. The item is out of the inbox, so it is no longer a captured issue on either spec. 045's own surface is unchanged since the prior pass and re-reviewed: the two `check-artifacts` families, the `skipped` result field, the shared block splitter, the constitution amendment, and `analyze.md`'s documentation. What remains is the one low-confidence trade-off recorded across the previous two passes.
 
 ## MUST violations (blocking)
 
@@ -40,7 +40,7 @@ Third pass, re-run because the two prior ones (`c11bbb1`, `0857f07`) predate the
 
 ## Captured issues
 
-- [ ] bug: `compute-review-scope` returns an unusable scope and a polluted captured-issues list — plan-affected is not parsed as a table, and captured-issues takes raw added lines rather than the shared comment-aware bullet grammar.
+*None.*
 
 ## Skipped passes
 

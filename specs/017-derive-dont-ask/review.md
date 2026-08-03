@@ -1,12 +1,12 @@
 ---
 spec: 017-derive-dont-ask
-reviewed-at: 2026-08-03T02:44:40Z
-reviewed-against: 8891da925ff7b5f8d5c2892ffd1689bb8f8d4915
+reviewed-at: 2026-08-03T03:05:16Z
+reviewed-against: d99df57ecd05936029a1d29d08706ff48904ae01
 diff-base: 096dbc0cf65a2322c91bfa895a825ea60c5a23f8
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-captured-issues: 1
+captured-issues: 0
 skipped-passes: []
 ---
 
@@ -14,7 +14,7 @@ skipped-passes: []
 
 ## Summary
 
-Reopened by the scenario back-edge for `generator-sync-claim-honesty` (task 35). The change is bash: a new `untracked_specs()` and `report_no_changes()` in `.govern/scripts/lib/specs-root.sh`, a drifted-but-unwritten counter in `gen-spec-deps.sh`, and both generators' zero-rewrite message routed through the shared reporter. The `list_specs` git-ls-files exclusion is byte-for-byte unchanged, which was the point: the adopter report's proposed remedy (revert it) would have restored the worse bug 017 fixed, and only the reporting was ever wrong. Reviewing the fix surfaced a residual instance of the same defect one level in — `gen-spec-deps.sh` enumerates every tracked spec but writes only its rewrite targets, so a drifted unstaged spec was examined and then reported "in sync" — which is fixed and verified end to end in the same window rather than logged. Shell-injection surface was checked and is unchanged: both new functions interpolate only `$SPECS_ROOT`, already constrained to `[A-Za-z0-9_-]` by `specs_root_of` for exactly this reason, and `$ROOT`, which is passed to `git -C` rather than to a shell. All five passes ran; no findings.
+Re-run to clear the captured issue the prior pass recorded. That item — `compute-review-scope` returning an unusable scope and a polluted captured-issues list — has been fixed under 022's `review-scope-parse-fidelity` scenario rather than carried: a multi-table `## Affected Files` section no longer emits header rows as paths, a qualified first cell yields its backticked span, and both `compute-review-scope` and `diff-cross-spec` intersect their inbox additions against the shared comment-aware bullet grammar. The item is removed from the inbox, so it is no longer a captured issue here. 017's own change in this window is unchanged and re-reviewed: the honest no-change reporting in `gen-spec-deps.sh` and `gen-cross-service-refs.sh`, the shared `untracked_specs()` / `report_no_changes()` helpers, and the drifted-but-unwritten counter that a review of the fix itself surfaced. The `list_specs` git-ls-files exclusion remains byte-for-byte unchanged. No findings.
 
 ## MUST violations (blocking)
 
@@ -34,7 +34,7 @@ Reopened by the scenario back-edge for `generator-sync-claim-honesty` (task 35).
 
 ## Captured issues
 
-- [ ] bug: `compute-review-scope` returns an unusable scope and a polluted captured-issues list — plan-affected is not parsed as a table, and captured-issues takes raw added lines rather than the shared comment-aware bullet grammar.
+*None.*
 
 ## Skipped passes
 

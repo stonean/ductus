@@ -1,12 +1,12 @@
 ---
 spec: 013-text-first-artifacts
-reviewed-at: 2026-08-03T02:44:40Z
-reviewed-against: 8891da925ff7b5f8d5c2892ffd1689bb8f8d4915
+reviewed-at: 2026-08-03T03:05:16Z
+reviewed-against: d99df57ecd05936029a1d29d08706ff48904ae01
 diff-base: 096dbc0cf65a2322c91bfa895a825ea60c5a23f8
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-captured-issues: 1
+captured-issues: 0
 skipped-passes: []
 ---
 
@@ -14,7 +14,7 @@ skipped-passes: []
 
 ## Summary
 
-Reopened by the scenario back-edge for `past-tense-motivation-convention` (task 23). The change in this window is a single addition to the `## {Section}` scaffolding comment in `framework/templates/spec/spec.md` — authoring guidance telling a spec author to write `## Motivation` in the past tense, since a Motivation describes the world before the feature and its present-tense claims go false on ship. No code, no schema, no command behavior. All five passes ran and found nothing: there is no executable surface for the security, quality, efficiency, or reuse rules to bind to, and the addition is prose inside an HTML comment that never reaches a rendered spec body. Scope note: `compute-review-scope` selected a stale, malformed `plan-affected` set for this spec (it contains table-header cells and parenthetical prose, and the "larger set wins" rule chose it over the accurate `modified-since` set); the review was run against the files this window actually changed. That scope defect is logged to the inbox for routing under 022.
+Re-run to clear the captured issue the prior pass recorded — `compute-review-scope` returning an unusable scope and a polluted captured-issues list. It is fixed under 022's `review-scope-parse-fidelity` scenario rather than carried, and is out of the inbox, so it is no longer a captured issue here. 013's own change in this window is unchanged and re-reviewed: a single addition to the `## {Section}` scaffolding comment in `framework/templates/spec/spec.md` giving past-tense `## Motivation` authoring guidance. No code, no schema, no command behavior; the addition sits inside an HTML comment that never reaches a rendered spec body. All five passes ran; no findings.
 
 ## MUST violations (blocking)
 
@@ -34,7 +34,7 @@ Reopened by the scenario back-edge for `past-tense-motivation-convention` (task 
 
 ## Captured issues
 
-- [ ] bug: `compute-review-scope` returns an unusable scope and a polluted captured-issues list — plan-affected is not parsed as a table, and captured-issues takes raw added lines rather than the shared comment-aware bullet grammar.
+*None.*
 
 ## Skipped passes
 
