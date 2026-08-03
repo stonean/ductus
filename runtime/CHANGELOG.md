@@ -2,6 +2,19 @@
 
 All notable changes to the `govern` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `gvrn-v<MAJOR>.<MINOR>.<PATCH>` scheme distinct from framework tags (was `runtime-v*` before v0.2.0 — see the v0.2.0 rename entry below).
 
+## [0.26.1] — 2026-08-03
+
+022 scenario `criterion-non-assertion-phrasings`. A precision fix to `criterion-path-existence`, sized by reading every one of the 25 findings its repo-wide sweep produces rather than classifying them by path prefix.
+
+### Fixed
+
+- **Three non-assertion phrasings the marker list missed.** `deleted` replaces the narrower `is deleted` / `are deleted` pair, catching the past-tense-agent form a criterion uses when it names the commit that did the deleting (``after `531e3ea` deleted both`` — spec 045's own AC18). `(was` + space covers the parenthetical rename history (``(was` + space.claude/gov-session.json` pre-0.10.0)``), where the old path is named to date a change rather than to claim it is present; the opening paren keeps it from matching any past-tense `was`. `target paths` is a fifth group alongside the four already documented — a path named as the subject of a migration record is manifest data describing what to remove, not a delivery claim. Measured effect: 25 findings → 21, suppressing exactly the four residual false positives and nothing else, verified by diffing findings on `(spec, path)` keys.
+
+### Unchanged, deliberately
+
+- **The 19 adopter-scope findings stay.** Paths `govern` creates in an adopter's checkout (`.govern/constitution.md`, `specs/rules/*`, `.githooks/govern-pre-commit`, `specs/templates/`, `specs/system.md`) do not resolve in `govern`'s own repo, and spec 045 already triaged them as "a dogfooding artifact, not a check defect" whose class "does not generalize to the projects this check ships to". Suppressing them would ship `govern`-repo-only machinery keyed off a manifest no adopter has, so it would never engage where the check actually runs. 045's recorded verdict — do not promote, re-measure in an adopter repo — is unchanged.
+- **Two true positives remain reported**, which is the point of the family: spec 005's `framework/workflows/` (sunset by 043) and spec 025's `scripts/lint-govern-toml.sh` (never built). Both are spec-level drift, not check defects.
+
 ## [0.26.0] — 2026-08-02
 
 Spec 045, landing as 022 scenarios `block-element-scanner`, `check-artifacts-skipped-targets`, `link-adjacent-drift-family`, and `criterion-path-existence-family`. `check-artifacts` gains two advisory families that catch an artifact still describing a decision that has since been made — and a way to say what it could not examine.

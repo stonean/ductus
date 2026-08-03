@@ -107,14 +107,17 @@ A candidate resolves when the repo-root-relative path exists as either a file or
 
 ### The criterion must be a live claim
 
-A path is only checked when its criterion actually claims the path is **present**. A criterion carrying any of these thirteen phrases is exempted whole, and each of its paths is recorded as `not-a-live-claim`:
+A path is only checked when its criterion actually claims the path is **present**. A criterion carrying any of these fourteen phrases is exempted whole, and each of its paths is recorded as `not-a-live-claim`:
 
 | Group | Phrases | Why the finding would be backwards |
 | --- | --- | --- |
-| deletion / retirement | `is deleted`, `are deleted`, `does not exist`, `no longer exists`, `is removed`, `are removed`, `since retired` | The criterion is *satisfied* by the path being gone |
-| rename | `is renamed to`, `are renamed to`, `renamed from` | The old path is named deliberately |
+| deletion / retirement | `deleted`, `does not exist`, `no longer exists`, `is removed`, `are removed`, `since retired` | The criterion is *satisfied* by the path being gone |
+| rename | `is renamed to`, `are renamed to`, `renamed from`, `(was` + space | The old path is named deliberately |
+| migration subject | `target paths` | Manifest data naming what to remove, not a delivery claim |
 | adopter scope | `in the project` | Describes a scaffolded checkout, not this one |
 | hedge / example | `if it exists`, `e.g.` | Claims nothing at all |
+
+Three of these arrived after the first measurement, under 022's [criterion-non-assertion-phrasings](../022-deterministic-runtime/scenarios/criterion-non-assertion-phrasings.md) scenario: `deleted` subsumes the original `is deleted` / `are deleted` pair so the past-tense-agent form (``after `531e3ea` deleted both`` — this spec's own AC18) is caught; `(was` + space covers the parenthetical rename history; and `target paths` is a fifth group for a path named as the subject of a migration record. They cleared the four **residual** false positives in the triage below, taking the repo-wide sweep from 25 findings to 21.
 
 This is the open-state tell list's co-occurrence design **inverted**. There, a phrase asserting an open state is contradicted by a target that is closed. Here, a phrase asserting *absence* is **confirmed** by a path that does not resolve. Same closed-list, framework-fixed discipline, for the same reason: a per-project list would make the promotion threshold measure configuration rather than drift.
 
@@ -148,7 +151,7 @@ Triaging the 28 **by reading each criterion**, not by classifying its path:
 | --- | --- | --- |
 | Real stale paths | 5 | True |
 | Paths `govern` creates *in an adopter project* | 19 | False here, would resolve there |
-| Residual | 4 | False |
+| Residual | 4 | False — since cleared by the three added markers above |
 
 The five true positives are `specs/triage.md` in 006 (×2, renamed to `specs/inbox.md` alongside `/{project}:triage` → `/{project}:groom`), `scripts/gen-spec-deps.sh` in 018 (×2, moved to `.govern/scripts/` by 042), and 005's criterion still asserting a workflow registry `exists` after 043 sunset the feature.
 

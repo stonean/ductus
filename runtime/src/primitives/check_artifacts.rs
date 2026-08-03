@@ -978,13 +978,17 @@ fn check_criterion_path_existence(
 /// asserting an open state is contradicted by a target that is closed. Here, a
 /// phrase asserting *absence* — or scoping the path to somewhere other than
 /// this repo — is **confirmed** by a path that does not resolve, so the finding
-/// would be exactly backwards. Four groups, each earned against real criteria
+/// would be exactly backwards. Five groups, each earned against real criteria
 /// in this repo's `done` specs:
 ///
 /// - **deletion / retirement** — `framework/commands/capture.md is deleted` is
 ///   satisfied *because* the path is gone;
 /// - **rename** — `framework/rules/configuration.md is renamed to …-cross.md`
-///   names the old path deliberately;
+///   names the old path deliberately, as does the parenthetical history form
+///   `(was `.claude/gov-session.json` pre-0.10.0)`;
+/// - **migration subject** — `whose target paths cover …` names paths a
+///   migration exists to remove, i.e. manifest data rather than a delivery
+///   claim;
 /// - **adopter scope** — `writes it to specs/rules/security-backend.md in the
 ///   project` describes a scaffolded checkout, not this one;
 /// - **hedge / example** — `(e.g., docs/rules/internal-api.md)` and
@@ -993,10 +997,16 @@ fn check_criterion_path_existence(
 /// The whole criterion is exempted, not just the matched path: these phrases
 /// describe a *transition*, and a criterion about a transition names its
 /// endpoints together. Erring toward silence matches how the rest of this
-/// family already errs (code-spans only, `root-absent`).
-const NON_ASSERTION_MARKERS: [&str; 13] = [
-    "is deleted",
-    "are deleted",
+/// family already errs (code-spans only, `root-absent`). The groups are five,
+/// not four, since the migration-subject group was added.
+const NON_ASSERTION_MARKERS: [&str; 14] = [
+    // `deleted` subsumes the former `is deleted` / `are deleted` pair. The
+    // narrower forms missed the past-tense-agent phrasing a criterion reaches
+    // for when it names the commit that did the deleting — 045's own AC18,
+    // `… after `531e3ea` deleted both`, is the case that earned the widening.
+    // A criterion carrying the word at all is describing a removal, which is
+    // the group's whole premise.
+    "deleted",
     "does not exist",
     "no longer exists",
     "is removed",
@@ -1005,6 +1015,15 @@ const NON_ASSERTION_MARKERS: [&str; 13] = [
     "is renamed to",
     "are renamed to",
     "renamed from",
+    // The parenthetical-history form of a rename: `… for session state (was
+    // `.claude/gov-session.json` pre-0.10.0)`. The old path is named to date
+    // the change, never to claim it is still there. The opening paren keeps
+    // this from matching an ordinary past-tense `was`.
+    "(was ",
+    // A path named as the *subject of a migration record* — `whose target
+    // paths cover … `framework/workflows/`` — is data inside a manifest
+    // describing what to remove, not a claim that the path is delivered.
+    "target paths",
     "in the project",
     "if it exists",
     "e.g.",
@@ -2092,8 +2111,8 @@ mod tests {
 
     #[test]
     fn a_criterion_that_is_not_a_live_claim_is_skipped_not_flagged() {
-        // The sharpest of the four: a deletion criterion is *satisfied* by the
-        // path being gone, so flagging it is exactly backwards. All four
+        // The sharpest of the five: a deletion criterion is *satisfied* by the
+        // path being gone, so flagging it is exactly backwards. All five
         // groups are covered here because they share one exemption.
         for criterion in [
             "- [x] `framework/commands/capture.md` is deleted; its generated copy is regenerated as deleted.\n",
@@ -2102,6 +2121,14 @@ mod tests {
             "- [x] The govern command writes it to `specs/rules/security-backend.md` in the project.\n",
             "- [x] Project-local rule files outside the rule dir (e.g., `docs/rules/internal-api.md`) still load.\n",
             "- [x] The key is validated by `scripts/lint-govern-toml.sh` (if it exists).\n",
+            // Scenario criterion-non-assertion-phrasings — the three forms the
+            // narrower list missed, each earned against a real criterion in
+            // this repo. Past-tense agent (045 AC18):
+            "- [x] The check reproduces the case: 026's AC5 naming `framework/workflows/registry.json` after `531e3ea` deleted both.\n",
+            // Parenthetical rename history (003):
+            "- [x] Commands reference `.govern.session.toml` for session state (was `.claude/gov-session.json` pre-0.10.0).\n",
+            // Migration subject (043) — manifest data naming what to remove:
+            "- [x] `framework/migrations.toml` carries an entry whose target paths cover `framework/workflows/`.\n",
         ] {
             let tmp = tempdir().unwrap();
             seed_with_criteria(tmp.path(), "done", criterion);

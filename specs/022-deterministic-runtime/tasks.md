@@ -97,3 +97,9 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] Implement the behavior described in `scenarios/sibling-symlink-trust-boundary.md`
 
 - **Done when**: `check_artifacts.rs` gains `traverses_symlink(target, base)` using `std::fs::symlink_metadata` over every component at or below the feature directory, so the answer never depends on a link's destination and repeat runs stay byte-identical; the up-front scenario-readability pass short-circuits the read for a linked entry so its destination is never opened; `read_target_state` tests before `is_file()` and returns the existing `target-unparseable` reason; lexical resolution and the `starts_with` containment test are unchanged; a `#[cfg(unix)]` regression test asserts a symlinked sibling lands in `skipped` with `target-unparseable` and that `../../../etc/passwd` still resolves to `None`; `cargo test` green
+
+## 81. Implement scenario: [criterion-non-assertion-phrasings](scenarios/criterion-non-assertion-phrasings.md)
+
+- [x] Implement the behavior described in `scenarios/criterion-non-assertion-phrasings.md`
+
+- **Done when**: `NON_ASSERTION_MARKERS` carries `deleted` (replacing the narrower `is deleted` / `are deleted` pair), `(was` + space, and `target paths`, documented as five groups rather than four with the migration-subject group named; the exemption test covers all three new phrasings alongside the six existing ones; a repo-wide sweep drops `criterion-path-existence` from 25 findings to 21, suppressing exactly the four residual false positives (003's parenthetical rename, 043's migration targets, 045's two past-tense-agent paths) and nothing else, verified by diffing findings on `(spec, path)` keys; the 19 adopter-scope findings and the 2 true positives (005, 025) are untouched; `cargo test` green
