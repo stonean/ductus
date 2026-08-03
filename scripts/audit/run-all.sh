@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # scripts/audit/run-all.sh — `/audit` aggregator.
 #
-# Runs the check-zero precondition pass followed by the fifteen family
+# Runs the check-zero precondition pass followed by the seventeen family
 # check scripts. Aggregates findings to stdout under per-family headers
 # and exits 1 when any family (or check-zero) produced findings.
 # Family numbers are stable identifiers: Family 3 (registry equivalence)
@@ -60,5 +60,6 @@ run_check "Family 14 — installer/registry parity" "scripts/audit/installer-reg
 run_check "Family 15 — runtime probe parity" "scripts/audit/runtime-probe-parity.sh"
 run_check "Family 16 — installer/command parity" "scripts/audit/installer-command-parity.sh"
 run_check "Family 17 — host namespace parity" "scripts/audit/host-namespace-parity.sh"
+run_check "Family 18 — marker-list parity" "scripts/audit/marker-list-parity.sh"
 
 exit "$drift"

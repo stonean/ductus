@@ -203,3 +203,9 @@ Pulled in from the original Future Considerations during the autonomous implemen
 - [x] Implement the behavior described in `scenarios/family-17-contract-binding.md`
 
 - **Done when**: Family 17 derives its agent config-dir set from the Agent Registry table's `config_dir` column in `framework/bootstrap/govern.md` rather than hardcoding it, emits a finding and exits non-zero when that derivation yields nothing instead of falling back to a built-in list, and asserts the `commands`/`command` pair and `[host] project` key against `runtime/src/host.rs` and the new-wins config order against `runtime/src/schema/paths.rs`, each failing loudly with a suggested fix that names the runtime-exposed-namespace option; the derived set matches the four registered agents; `scripts/audit/run-all.sh` exits clean.
+
+### 23. Implement scenario: [family-18-marker-list-parity](scenarios/family-18-marker-list-parity.md)
+
+- [x] Implement the behavior described in `scenarios/family-18-marker-list-parity.md`
+
+- **Done when**: `scripts/audit/marker-list-parity.sh` derives the non-assertion marker set from the canonical table in 045's data-model and compares it against `NON_ASSERTION_MARKERS` in `check_artifacts.rs` and the shipped restatement in `analyze.md` in both directions, plus the declared array length and the spelled-out count in all three markdown homes; an empty derivation, a duplicate row, or a missing file is a finding rather than a silent pass; the `+ space` trailing-space convention and the all-code-span parenthesised-group filter are documented in the script; wired into `run-all.sh` as Family 18 with the family registries in `scripts/audit/README.md` and `framework/commands/audit.md` updated (and the stale "fifteen families" count corrected to seventeen in both, plus `run-all.sh`'s header); shellcheck clean; verified against five injected drift modes and the restored baseline; `scripts/audit/run-all.sh` exits 0

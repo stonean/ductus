@@ -16,7 +16,7 @@ Audit `govern`'s own framework artifacts for the kinds of drift `/gov:analyze` i
 
 `/audit` fills that gap. It loads no rule files — its checks are about *framework consistency*, not spec quality. Each check family produces structured findings on stdout. Exit code is binary: `0` when no findings, `1` when any finding is present. CI uses the exit code as a release gate.
 
-See [spec 026](../../specs/026-framework-self-audit/spec.md) for the design and the [026 plan](../../specs/026-framework-self-audit/plan.md) for the check families and the check-zero precondition pass. The family set has grown since the original design — `scripts/audit/run-all.sh` runs the fifteen families enumerated in the markdown-only reference below. Family numbers are stable identifiers: Family 3 (registry equivalence) was retired with the workflows feature (spec 043), leaving a numbering gap.
+See [spec 026](../../specs/026-framework-self-audit/spec.md) for the design and the [026 plan](../../specs/026-framework-self-audit/plan.md) for the check families and the check-zero precondition pass. The family set has grown since the original design — `scripts/audit/run-all.sh` runs the seventeen families enumerated in the markdown-only reference below. Family numbers are stable identifiers: Family 3 (registry equivalence) was retired with the workflows feature (spec 043), leaving a numbering gap.
 
 ## Scope Boundaries
 
@@ -54,6 +54,8 @@ When the runtime is not on `PATH`, walk the same scripts directly. Each prints f
 16. Run `scripts/audit/installer-command-parity.sh` (Family 16 — the `/govern` **Per-Agent Scaffolding** slash-command manifest lists exactly the `framework/commands/*.md` files, minus the maintainer-only commands (`audit`) intentionally not shipped to adopters).
 
 17. Run `scripts/audit/host-namespace-parity.sh` (Family 17 — the namespace the runtime renders (`[host] project`, else the repo directory basename, as `Host::load` resolves it) matches a namespace actually installed under an agent config dir, so no rendered next-action names a namespace the operator cannot invoke).
+
+18. Run `scripts/audit/marker-list-parity.sh` (Family 18 — the `criterion-path-existence` non-assertion marker list agrees across its canonical source, the runtime array, and the adopter-facing restatement in `analyze.md`, including the spelled-out counts; a derivation that yields no markers is a finding rather than a silent pass).
 
 ## Boundary with `/gov:analyze`
 
