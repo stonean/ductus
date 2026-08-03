@@ -6,11 +6,11 @@ Tasks 3–10 are authored as scenarios under [022 — Deterministic Runtime](../
 
 ## 1. Amend constitution §drift-prevention with the decision trigger
 
-- [ ] Add a `### Decision resolution` subsection to §drift-prevention in `framework/constitution.md`, immediately after `### Cross-document references`
-- [ ] State that resolving a decision carries the same audit obligation as editing a document, and name the recognizable events: closing an open question, shipping a scenario, advancing a status, adopting a previously-rejected option (AC1)
-- [ ] State that a resolution is incomplete while a sibling artifact still describes the prior state (AC2)
-- [ ] Add a Canonical sources row pointing the open-state tell list at `specs/045-decision-state-drift-detection/data-model.md`
-- [ ] Confirm no `§drift-prevention` anchor consumers break — the marker and section name are unchanged, only content is added
+- [x] Add a `### Decision resolution` subsection to §drift-prevention in `framework/constitution.md`, immediately after `### Cross-document references`
+- [x] State that resolving a decision carries the same audit obligation as editing a document, and name the recognizable events: closing an open question, shipping a scenario, advancing a status, adopting a previously-rejected option (AC1)
+- [x] State that a resolution is incomplete while a sibling artifact still describes the prior state (AC2)
+- [x] Add a Canonical sources row pointing the open-state tell list at `specs/045-decision-state-drift-detection/data-model.md`
+- [x] Confirm no `§drift-prevention` anchor consumers break — the marker and section name are unchanged, only content is added
 
 - **Done when**: `framework/constitution.md` §drift-prevention carries the decision trigger and the completion rule, the Canonical sources table names the tell list's owner, and `/gov:analyze`'s anchor resolution still resolves every `§drift-prevention` reference.
 

@@ -513,6 +513,7 @@ For every kind of fact described in multiple places, one location is authoritati
 | Configuration rule file format and ID conventions (`CFG-`) | `specs/017-derive-dont-ask/data-model.md` |
 | Service registry schema (`.govern/config.toml` `[services]`) | `specs/030-cross-service-references/data-model.md` |
 | Where contributor knowledge is recorded (git vs. per-user agent memory) | `framework/constitution.md` §drift-prevention (Shared knowledge stays in git) |
+| Open-state tell list and decision-drift check grammars | `specs/045-decision-state-drift-detection/data-model.md` |
 
 When adding a new kind of fact that may be referenced from multiple documents, name its canonical source explicitly here.
 
@@ -522,6 +523,21 @@ When document B describes content authored in document A, B includes a back-link
 
 - Changing A includes auditing every back-link to A. The audit is structured wherever it can be machine-checked (anchor resolution, help-table descriptions, registry-frontmatter equivalence), and a manual sweep otherwise.
 - Adding a fact that conceptually belongs in A but landing it in B is drift. Either move the fact to A and back-link, or extend A's scope explicitly.
+
+### Decision resolution
+
+Resolving a decision carries the same audit obligation as editing a document.
+
+The rule above triggers on *editing document A*, and audits the back-links to A. A resolution does edit some document, but the event a contributor recognizes is "the question got settled", not "a file changed" — and the artifacts that describe a decision's state are not always the ones that link to it. The recognizable events:
+
+- an open question is closed;
+- a scenario is implemented and ships;
+- a spec, scenario, or task advances its status;
+- a previously-rejected option is adopted.
+
+When one fires, every artifact that described the prior state is corrected in the same change. **A resolution is not complete while a sibling artifact still describes the prior state** — the question as open, the option as rejected, the work as unbuilt. Such an artifact does not read as stale, which is what makes it costly: a settled design decision still described as an open obligation reads as work owed, and an acceptance criterion naming a deleted path reads as a contract satisfied.
+
+The deterministic part of this audit is machine-checked by `/{project}:analyze`; the rest is a manual sweep, as above.
 
 ### Template-rule alignment
 

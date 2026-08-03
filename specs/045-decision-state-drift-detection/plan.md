@@ -108,11 +108,13 @@ Acceptance criteria come from `read_spec`'s parsed `acceptance_criteria` (each e
 
 ### Constitution amendment shape
 
-§drift-prevention gains `### Decision resolution` immediately after `### Cross-document references` (`framework/constitution.md:519-524`), which is the obligation it extends. It states the trigger list (closing an open question, shipping a scenario, advancing a status, adopting a previously-rejected option) and the completion rule (a resolution is incomplete while a sibling artifact still describes the prior state).
+§drift-prevention gains `### Decision resolution` immediately after its `### Cross-document references` subsection, which is the obligation it extends. It states the trigger list (closing an open question, shipping a scenario, advancing a status, adopting a previously-rejected option) and the completion rule (a resolution is incomplete while a sibling artifact still describes the prior state).
 
-The **Canonical sources** table (`constitution.md:500-516`) gains a row pointing the open-state tell list at this spec's `data-model.md`, matching the existing rows that point rule-ID conventions and the service-registry schema at a spec data-model (`:512-514`). Without it the tell list would be a fact described in the constitution, `analyze.md`, and the runtime with no named owner — the drift this section exists to prevent.
+§drift-prevention's **Canonical sources** table gains a row pointing the open-state tell list at this spec's `data-model.md`, matching the existing rows that point rule-ID conventions and the service-registry schema at a spec data-model. Without it the tell list would be a fact described in the constitution, `analyze.md`, and the runtime with no named owner — the drift this section exists to prevent.
 
-Template-rule alignment (`constitution.md:526-533`) is not triggered: it binds *blocking* checks to a template element, and both families are advisory at introduction (AC7).
+The subsection defers to `analyze.md` for the checks themselves rather than naming them, because §drift-prevention's own Canonical sources rule puts command behavior in the command's source. That also keeps the constitution from carrying a forward reference that stays false until task 11 lands.
+
+§drift-prevention's **Template-rule alignment** subsection is not triggered: it binds *blocking* checks to a template element, and both families are advisory at introduction (AC7).
 
 ### Release path
 
