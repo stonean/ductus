@@ -125,7 +125,34 @@ fn diff_since(
         }),
     )?;
 
-    Ok((files.into_iter().collect(), added))
+    // Keep only the added lines that are *real inbox bullets*. The raw added
+    // set includes anything the diff touched — restoring the shipped
+    // `<!-- Rules: … -->` guidance block reported ~30 "captured issues", one
+    // per comment line. The inbox primitives already share a comment- and
+    // fence-aware bullet grammar for exactly this; the authority on what
+    // counts is the post-image file, not the diff.
+    let real: std::collections::HashSet<String> = inbox_at(repo, &head_tree, inbox_rel)
+        .as_deref()
+        .map(|content| {
+            super::iter_bullets(content)
+                .map(|(_, text)| text)
+                .collect::<std::collections::HashSet<_>>()
+        })
+        .unwrap_or_default();
+    let captured = added
+        .into_iter()
+        .filter(|line| super::bullet_text(line).is_some_and(|text| real.contains(&text)))
+        .collect();
+
+    Ok((files.into_iter().collect(), captured))
+}
+
+/// The inbox file's contents at `tree`, or `None` when it is absent or not
+/// valid UTF-8 there.
+fn inbox_at(repo: &Repository, tree: &git2::Tree<'_>, inbox_rel: &str) -> Option<String> {
+    let entry = tree.get_path(Path::new(inbox_rel)).ok()?;
+    let blob = repo.find_blob(entry.id()).ok()?;
+    String::from_utf8(blob.content().to_vec()).ok()
 }
 
 /// Parse a feature's `plan.md` `## Affected Files` section into a list of file
@@ -254,6 +281,35 @@ mod tests {
         );
         // plan_affected (3) > modified_since (2: only.rs + plan.md) → plan wins.
         assert_eq!(result.scope, result.plan_affected);
+    }
+
+    #[test]
+    fn captured_issues_ignores_added_lines_that_are_not_real_bullets() {
+        // Restoring the shipped `<!-- Rules: … -->` guidance block reported one
+        // "captured issue" per comment line, including the bare `-` lines
+        // inside it. The inbox primitives already share a comment-aware bullet
+        // grammar; the authority is the post-image file, not the raw diff.
+        let (tmp, _sha) = repo_with_progress();
+        let repo = Repository::open(tmp.path()).unwrap();
+        let spec_path = tmp.path().join("specs/001-x/spec.md");
+        let inbox = tmp.path().join("specs/inbox.md");
+        write(&spec_path, &spec("planned"));
+        write(&inbox, "# Inbox\n\n- pre-existing item\n");
+        commit_all(&repo, "feat: plan");
+        write(&spec_path, &spec("in-progress"));
+        commit_all(&repo, "chore: begin");
+        write(
+            &inbox,
+            "# Inbox\n\n<!-- Rules:\n     - not an item\n     - also not an item\n-->\n\n\
+             - pre-existing item\n- captured: a real one\n",
+        );
+        commit_all(&repo, "chore: restore guidance and capture one issue");
+        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        assert_eq!(
+            result.captured_issues,
+            vec!["- captured: a real one".to_string()],
+            "comment lines are not captured issues"
+        );
     }
 
     #[test]

@@ -73,3 +73,9 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] Implement the behavior described in `scenarios/mark-task-untick-symmetry.md`
 
 - **Done when**: `mark-task` unticks a ticked checkbox-form `Done when` clause in the same atomic write whenever the flip leaves any real subtask of that task unchecked, mirroring the tick direction it already implements; the clause stays outside the subtask index space (a two-subtask task still reports total 2 and `--subtask-index 2` stays out of range); the canonical bold and bulletless forms are unaffected; an already-coherent block still produces no write; tests cover the untick, the round trip (tick → untick → tick), a task with no real subtasks, and index-contract invariance; `cargo test` green.
+
+## 77. Implement scenario: [review-scope-parse-fidelity](scenarios/review-scope-parse-fidelity.md)
+
+- [x] Implement the behavior described in `scenarios/review-scope-parse-fidelity.md`
+
+- **Done when**: `parse_affected_files` resets its header state at a non-table line so a section holding several tables emits no header row as a path, and a first cell carrying a qualifier yields its backticked span rather than the whole cell; `compute-review-scope`'s captured-issues intersects the diff's added lines with the bullets the shared comment-aware grammar finds in the post-image inbox, so comment lines are never counted; verified against the real 017 input (plan-affected 43 entries, zero malformed, captured-issues 1 real bullet, down from 8 bogus `File` entries and ~30 comment lines); tests cover the multi-table section, the qualified cell, and the comment-block case; `cargo test` green.

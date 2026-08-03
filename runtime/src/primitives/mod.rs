@@ -1499,6 +1499,13 @@ pub(crate) fn parse_affected_files(plan_content: &str) -> Vec<String> {
             continue;
         }
         if !trimmed.starts_with('|') {
+            // A non-table line ends the current table. Resetting here is what
+            // makes a section holding SEVERAL tables parse correctly: without
+            // it `saw_header` stays true past the first separator, so every
+            // later table's `| File | Action | … |` header is read as a data
+            // row and the literal word "File" lands in the path list. Spec
+            // 017's plan has eleven such tables, which is how it surfaced.
+            saw_header = false;
             continue;
         }
         // Skip the separator row (e.g., `| --- | --- | --- |`).
@@ -1519,11 +1526,22 @@ pub(crate) fn parse_affected_files(plan_content: &str) -> Vec<String> {
         let Some((cell, _)) = after_pipe.split_once('|') else {
             continue;
         };
-        let path = cell.trim().trim_matches('`').trim().to_string();
+        // A cell may carry a qualifier after the path (`` `constitution.md`
+        // (root) ``). When it holds a backticked span, that span IS the path;
+        // trimming stray backticks off the whole cell would keep the trailing
+        // prose and yield a path that cannot resolve.
+        let cell = cell.trim();
+        let path = match cell
+            .split_once('`')
+            .and_then(|(_, rest)| rest.split_once('`'))
+        {
+            Some((inner, _)) => inner.trim(),
+            None => cell.trim_matches('`').trim(),
+        };
         if path.is_empty() {
             continue;
         }
-        out.push(path);
+        out.push(path.to_string());
     }
     out
 }
@@ -1926,6 +1944,52 @@ mod tests {
     }
 
     #[test]
+    fn parse_affected_files_handles_several_tables_in_one_section() {
+        // A section may hold more than one table, each with its own header.
+        // `saw_header` used to survive the first separator, so every later
+        // header row was read as a data row and the literal "File" landed in
+        // the path list — eight times, against spec 017's plan.
+        let plan = "## Affected Files\n\n\
+                    Templates:\n\n\
+                    | File | Action |\n\
+                    | --- | --- |\n\
+                    | `framework/templates/spec/spec.md` | Edit |\n\n\
+                    Scripts:\n\n\
+                    | File | Action |\n\
+                    | --- | --- |\n\
+                    | `scripts/gen-help-tables.sh` | Create |\n";
+        let paths = parse_affected_files(plan);
+        assert_eq!(
+            paths,
+            vec![
+                "framework/templates/spec/spec.md".to_string(),
+                "scripts/gen-help-tables.sh".to_string(),
+            ],
+            "a header row must never be parsed as a path"
+        );
+        assert!(!paths.iter().any(|p| p == "File"));
+    }
+
+    #[test]
+    fn parse_affected_files_takes_the_backticked_path_from_a_qualified_cell() {
+        // A cell may carry a qualifier after the path. Trimming stray
+        // backticks off the whole cell kept the trailing prose and produced
+        // "constitution.md` (root)", which resolves to nothing.
+        let plan = "## Affected Files\n\n\
+                    | File | Action |\n\
+                    | --- | --- |\n\
+                    | `constitution.md` (root) | Edit |\n\
+                    | `specs/000-016/spec.md` (and one `spec-and-plan.md` if any) | Edit |\n";
+        assert_eq!(
+            parse_affected_files(plan),
+            vec![
+                "constitution.md".to_string(),
+                "specs/000-016/spec.md".to_string(),
+            ]
+        );
+    }
+
+    #[test]
     fn parse_affected_files_extracts_first_column_paths() {
         let plan = "# Plan\n\n\
                     ## Affected Files\n\n\
@@ -1935,6 +1999,7 @@ mod tests {
                     | `runtime/src/bar.rs` | Edit | Bar |\n\
                     | scripts/baz.sh | Create | Baz |\n\n\
                     ## Trade-offs\n\nIrrelevant.\n";
+        // (the multi-table and qualified-cell cases are pinned separately below)
         let paths = parse_affected_files(plan);
         assert_eq!(
             paths,

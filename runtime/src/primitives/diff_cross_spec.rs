@@ -27,7 +27,7 @@ use std::path::Path;
 use git2::{DiffLineType, DiffOptions, Repository};
 
 use crate::primitives::derive_boundary::first_commit_for_prefix;
-use crate::primitives::{PrimitiveError, Result, bullet_text};
+use crate::primitives::{PrimitiveError, Result, bullet_text, iter_bullets};
 use crate::schema::paths;
 use crate::schema::primitives::{DiffCrossSpecArgs, DiffCrossSpecResult};
 
@@ -88,6 +88,18 @@ pub fn run(args: &DiffCrossSpecArgs, repo: &Path) -> Result<DiffCrossSpecResult>
         .show_untracked_content(true);
     let diff = repository.diff_tree_to_workdir_with_index(Some(&first_tree), Some(&mut opts))?;
 
+    // The bullets the inbox actually holds after the window. The diff is
+    // tree-to-workdir, so the post-image is the file on disk. `bullet_text`
+    // alone is line-local and would accept a `- ` line sitting inside an HTML
+    // comment; `iter_bullets` is the comment- and fence-aware reader the
+    // inbox primitives share, and the file — not the diff — is the authority
+    // on what counts as an item.
+    let real_bullets: std::collections::HashSet<String> =
+        std::fs::read_to_string(repo.join(&inbox_rel))
+            .ok()
+            .map(|content| iter_bullets(&content).map(|(_, text)| text).collect())
+            .unwrap_or_default();
+
     let mut cross_spec: BTreeSet<String> = BTreeSet::new();
     let mut inbox_additions: Vec<String> = Vec::new();
     diff.foreach(
@@ -118,12 +130,12 @@ pub fn run(args: &DiffCrossSpecArgs, repo: &Path) -> Result<DiffCrossSpecResult>
                 && line.origin_value() == DiffLineType::Addition
                 && let Ok(text) = std::str::from_utf8(line.content())
             {
-                // Keep item bullets only (shared bullet grammar): a
-                // brand-new inbox file diffs with its heading and blank
-                // lines as additions too, and those are structure, not
-                // captured issues.
+                // Keep real item bullets only: a brand-new inbox file diffs
+                // with its heading and blank lines as additions too, and a
+                // restored `<!-- Rules: … -->` guidance block contributes its
+                // own `- ` lines. Neither is a captured issue.
                 let line_text = text.trim_end_matches(['\n', '\r']);
-                if bullet_text(line_text).is_some() {
+                if bullet_text(line_text).is_some_and(|t| real_bullets.contains(&t)) {
                     inbox_additions.push(line_text.to_string());
                 }
             }
