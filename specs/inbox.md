@@ -1,4 +1,36 @@
 # Inbox
 
+<!-- Rules:
+     - Do not frontfill bugs that are not being actively worked on.
+     - Write specs for areas being actively touched — let adoption spread naturally.
+     - As specs are written, items migrate from here into spec updates or new scenarios.
+     - Chores (project maintenance with no feature home — lint/formatting cleanup,
+       dependency cleanup, repo hygiene) also live here; /groom recognizes them and leaves
+       them in place. They clear when done, not by migrating to a spec.
+     - The brownfield backlog drains toward empty as adoption completes; incidental
+       capture is ongoing, so the file persists while work keeps surfacing issues.
+     - Status notes do NOT belong here. Every item must be routable by /groom to one of
+       its five routes (rule, spec, scenario, chore, discard); a "where things stand"
+       or "what to do next" note matches none of them, so it would be walked and
+       re-discarded on every pass forever. Pipeline state is derived — read it from
+       /status, tasks.md, and git — not narrated into the backlog.
+
+     Format each item as a checkbox list entry with a brief description and any relevant
+     context. Three forms are in use:
+
+     1. Manual entry (via /log) — the simple form below:
+        `- [ ] {Brief description of the issue and any relevant context}`
+
+     2. Auto-captured finding (an agent recorded this automatically while working a task,
+        per §brownfield-inbox Automatic issue capture). Lead with a category so /groom can
+        route it, and include a source pointer:
+        `- [ ] {category}: {summary} — {file:line or area} (captured during {NNN-feature})`
+        Categories: security, leak (memory/resource), convention, bug, perf, other.
+        Security issues and leaks are the highest-priority captures.
+
+     3. Audit finding written by /govern — stricter form (see
+        specs/008-security-rules/spec.md): `- [ ] {Rule ID}: {artifact} does not address — {summary}`.
+
+     When an item is migrated, remove it from this list. -->
+
 - Architectural exploration: re-frame the runtime's LLM extension points (`writeCode`, `writeSpecBody`, `assessSpecQuality`, future multi-turn points) as named Anthropic-style Skills the host loads at the seam, rather than ad-hoc JSON envelopes. Potential benefits: structural cache anchoring (Skills are a natural cache boundary); third-party hosts integrate against an emerging Skills protocol instead of govern-specific JSON; `constitution-excerpts` becomes a bundled resource rather than an inline string array. Speculative — depends on Anthropic's Skills protocol stabilizing and is a larger redesign than 022's current scope. Revisit after the writeCode payload-bundling scenario on 022 ships and the cache-anchored shape proves out the pattern. Surfaced 2026-05-19 during runtime-improvement investigation. **On hold per user 2026-07-11.**
-- [ ] **State of play (refreshed 2026-08-03) — `gvrn-v0.26.0` is staged and held; the tag is the only thing left.** `045-decision-state-drift-detection` is fully implemented: all 14 tasks done, all 18 acceptance criteria verified and checked, `/gov:review` clean (0 MUST, 0 SHOULD, 1 recorded low-confidence trade-off about lexical-vs-canonical sibling resolution). Two `check-artifacts` families shipped — `link-adjacent-drift` and `criterion-path-existence` — plus `skipped` on the result (QUAL-CLAIM-001), a shared `split_blocks` markdown splitter, constitution §drift-prevention's *Decision resolution* subsection, and `analyze.md`'s three new markdown-only sections. `runtime/Cargo.toml` is at `0.26.0` with a matching CHANGELOG section; 848 lib tests + all integration suites green, `scripts/audit/run-all.sh` clean with no family skipped, goldens byte-identical and unblessed. **Held deliberately: the push and the `gvrn-v0.26.0` tag**, because the tag triggers the crates.io publish and a published version can only be yanked. **Three specs are open and must land before that tag**, all routed here during the 2026-08-03 groom: `022` task 76 (`mark-task-untick-symmetry` — a `runtime/` change, so it must be in 0.26.0 rather than a second tag); `017` task 35 (`generator-sync-claim-honesty` — bash only, no runtime); `013` task 23 (`past-tense-motivation-convention` — template prose only, no runtime). `022`, `017`, and `013` are all `in-progress`; `045` is `in-progress` awaiting its done gate. **Sequence:** implement 022/76 → re-run the full suite and audit → push → tag → confirm `runtime-release` green → flip `045`, `022`, `017`, `013` to `done`. 017 and 013 can land before or after the tag since neither touches `runtime/`.

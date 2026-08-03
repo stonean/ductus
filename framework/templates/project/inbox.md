@@ -14,6 +14,11 @@ Items are migrated to their proper home by `/groom` (see the constitution,
        them in place. They clear when done, not by migrating to a spec.
      - The brownfield backlog drains toward empty as adoption completes; incidental
        capture is ongoing, so the file persists while work keeps surfacing issues.
+     - Status notes do NOT belong here. Every item must be routable by /groom to one of
+       its five routes (rule, spec, scenario, chore, discard); a "where things stand"
+       or "what to do next" note matches none of them, so it would be walked and
+       re-discarded on every pass forever. Pipeline state is derived — read it from
+       /status, tasks.md, and git — not narrated into the backlog.
 
      Format each item as a checkbox list entry with a brief description and any relevant
      context. Three forms are in use:
