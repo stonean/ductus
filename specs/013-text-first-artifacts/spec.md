@@ -1,6 +1,6 @@
 ---
 title: "013-text-first-artifacts — spec"
-status: in-progress
+status: done
 dependencies: [000-slash-commands, 007-govern-workflow, 012-multi-agent-govern]
 tags: [format, migration, pipeline]
 review:
@@ -100,7 +100,7 @@ This repo dogfoods the principle: every existing spec under `specs/` in this rep
 - [x] The frontmatter schema is declared as a markdown table in `framework/constitution.md`, listing required fields per artifact kind (specs: `status`, `dependencies`; scenarios: `spec-ref`), standard optional fields (`tags`), and the open-schema rule for additional fields.
 - [x] The constitution declares the schema applies to spec files and scenario files only; other artifacts (`system.md`, `errors.md`, `events.md`, `inbox.md`, plan files, tasks files, rule files) MAY include frontmatter when a consumer benefits but are not required to.
 - [x] The constitution publishes a starter `tags` vocabulary as guidance (not enforcement).
-- [x] `framework/templates/spec/spec.md` and `framework/templates/spec/spec-and-plan.md` use YAML frontmatter and include `tags: []` as a visible placeholder so authors see the field at every new spec.
+- [x] `framework/templates/spec/spec.md` uses YAML frontmatter and includes `tags: []` as a visible placeholder so authors see the field at every new spec. The same held for the spec-and-plan template until spec `023-govern-refinement` retired it.
 - [x] `framework/templates/spec/scenario.md` uses YAML frontmatter for `spec-ref` instead of bold-prefix.
 - [x] `/gov:specify` prompts for at least one tag at spec creation time, surfacing existing sibling specs' tags as suggestions; the author can decline (leaving the list empty) without blocking creation.
 - [x] `/gov:clarify` flags missing or empty `tags` as an advisory finding at the `draft → clarified` transition; the finding does not block the transition.

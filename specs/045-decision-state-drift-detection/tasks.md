@@ -128,7 +128,7 @@ Tasks 3–10 are authored as scenarios under [022 — Deterministic Runtime](../
 - [x] Confirm the five pre-existing families' behavior is unchanged
 - [x] Run the full runtime test suite, `scripts/audit/run-all.sh`, and the feature directory's markdown lint
 - [x] Confirm the four 022 scenarios each back-link here and that 022's data-model is current
-- [ ] Return 022 to `done` through its own completion gate
+- [x] Return 022 to `done` through its own completion gate
 
 - **Done when**: every acceptance criterion is verified against shipped behavior and both specs' artifacts are consistent.
 

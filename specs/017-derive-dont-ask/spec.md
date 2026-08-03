@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: []
 review:
   last-run: 2026-08-03T02:44:40Z
@@ -106,7 +106,7 @@ Per Q2 (twin constitutions collapsed) and Q7 (spec-deps derivation), three new g
 
 1. `scripts/gen-readme-table.sh` — rebuilds the Feature Specs table in the root `README.md` between marker comments from `specs/*/spec*.md` frontmatter.
 2. `scripts/gen-help-tables.sh` — rebuilds the command tables in `framework/commands/help.md` from each command file's frontmatter `description:`.
-3. `scripts/gen-spec-deps.sh` — scans every `specs/*/spec*.md` body for inline markdown links to sibling specs (excluding code fences, blockquote-prefixed lines, and `## See also` opt-out sections) and rewrites the frontmatter `dependencies` list to match. `## References` is *not* an opt-out (it is the canonical body-authored dep section per task 29's migration); only `## See also` suppresses edges. After the rewrite, the script runs an SCC-based cycle check across the full derived graph; any cycle (including self-cycles) is reported on stderr as `cycle: a -> b -> ... -> a` and exits the script non-zero, which the pre-commit hooks propagate to block the commit.
+3. `.govern/scripts/gen-spec-deps.sh` — scans every `specs/*/spec*.md` body for inline markdown links to sibling specs (excluding code fences, blockquote-prefixed lines, and `## See also` opt-out sections) and rewrites the frontmatter `dependencies` list to match. `## References` is *not* an opt-out (it is the canonical body-authored dep section per task 29's migration); only `## See also` suppresses edges. After the rewrite, the script runs an SCC-based cycle check across the full derived graph; any cycle (including self-cycles) is reported on stderr as `cycle: a -> b -> ... -> a` and exits the script non-zero, which the pre-commit hooks propagate to block the commit.
 
 (The fourth proposed generator, `gen-root-constitution.sh`, is *not* needed — Q2 collapsed the twin constitutions to a single canonical file at `framework/constitution.md`, removing the divergence the generator would have managed.)
 
@@ -118,7 +118,7 @@ Per Q2 (twin constitutions collapsed) and Q7 (spec-deps derivation), three new g
 
 `framework/bootstrap/hooks/pre-commit` ships with the framework. Runs only adopter-relevant generators — initially `gen-spec-deps.sh`. The slot is extensible for future adopter-relevant generators.
 
-`/govern` manages the adopter hook (see Q7 resolution for the install/update/skip behavior). `scripts/gen-spec-deps.sh` ships to adopters with `update` strategy so every `/govern` run refreshes it from upstream and adopters pick up generator fixes automatically; adopters who have customized the script can list it in `.govern.toml` `pinned.files` to opt out of overwrites.
+`/govern` manages the adopter hook (see Q7 resolution for the install/update/skip behavior). `.govern/scripts/gen-spec-deps.sh` ships to adopters with `update` strategy so every `/govern` run refreshes it from upstream and adopters pick up generator fixes automatically; adopters who have customized the script can list it in `.govern.toml` `pinned.files` to opt out of overwrites.
 
 ### CI safety net
 
@@ -127,7 +127,7 @@ Both repos run all generators in dry-run mode in CI; non-empty diff fails the bu
 ## Acceptance Criteria
 
 - [x] AC1: All six template files (spec, spec-and-plan, plan, tasks, data-model, research, scenario) have no `title:` field in frontmatter
-- [x] AC2: `framework/templates/spec/spec-and-plan.md` has no `track:` field and no comment about it
+- [x] AC2: the spec-and-plan template had no `track:` field and no comment about it. Met at v1 and **since retired** — spec `023-govern-refinement` deleted `framework/templates/spec/spec-and-plan.md`. Retained as a record of what shipped, not as a live requirement.
 - [x] AC3: Scenario template uses `section:` (not `spec-ref:`) and parent feature is no longer encoded in the field
 - [x] AC4: No template, command, or constitution section references `tags` as a frontmatter field; the "Starter Tag Vocabulary" table is removed from the constitution
 - [x] AC5: No template, command, or constitution section references the `[simple]` task marker; the §cost-levers reference is updated to remove the bullet
@@ -135,7 +135,7 @@ Both repos run all generators in dry-run mode in CI; non-empty diff fails the bu
 - [x] AC7: `framework/templates/spec/plan.md` does not contain an "Open Questions Resolved" section
 - [x] AC8: `AGENTS.md` does not contain the "mirror constitutions" or "run gen-claude-commands.sh" instructions
 - [x] AC9: `/specify`, `/plan`, and `/amend` each write the canonical filename-derived metadata (formerly `title:`) at scaffold time without prompting the author
-- [x] AC10: The README's "Feature Specs" table is bounded by marker comments and produced by `scripts/gen-readme-table.sh`; running the script on a fresh checkout produces no diff
+- [x] AC10: The README's "Feature Specs" table is bounded by marker comments and produced by a generator; running it on a fresh checkout produces no diff. Met at v1 with `scripts/gen-readme-table.sh`, **since retired** along with the generated table.
 - [x] AC11: `framework/commands/help.md` command tables are bounded by marker comments and produced by `scripts/gen-help-tables.sh`; running the script on a fresh checkout produces no diff
 - [x] AC12: A pre-commit hook at `.githooks/pre-commit` runs all four generators (claude-commands, readme-table, help-tables, spec-deps) and stages outputs; `scripts/install-hooks.sh` configures `core.hooksPath`. (No `root-constitution` generator — Q2 collapsed the twin constitutions to a single canonical file, removing the need.)
 - [x] AC13: `/clarify` and `/plan` scan the target spec body for sibling-spec links and propose missing `dependencies` entries; the author confirms or removes
@@ -146,9 +146,9 @@ Both repos run all generators in dry-run mode in CI; non-empty diff fails the bu
 - [x] AC18: A new rule file `framework/rules/configuration-cross.md` exists with rules covering shared constants, module-local constants, configurable values backed by env vars, env-var defaults, env-var validation, and unit-suffixed time variables; each rule has a Verification step `/analyze` runs; constitution §constants and §env-vars shrink to one-line pointers
 - [x] AC19: `/analyze` runs cleanly on every existing spec (000–016) plus this spec after migration — no new findings introduced by schema changes; stale fields in done specs are silently ignored per the open-schema rule
 - [x] AC20: This spec's own frontmatter has `title:` and `tags:` removed by the final task
-- [x] AC21: `framework/bootstrap/hooks/pre-commit` and `framework/bootstrap/hooks/install.sh` ship with the framework; the shipped hook calls only adopter-relevant generators (initially `gen-spec-deps.sh`)
+- [x] AC21: `framework/bootstrap/hooks/pre-commit` ships with the framework, as did `framework/bootstrap/hooks/install.sh`, which no longer exists — spec `018-adopter-owned-pre-commit` inlined its install actions into `framework/bootstrap/govern.md` §Hook Installation; the shipped hook calls only adopter-relevant generators (initially `gen-spec-deps.sh`)
 - [x] AC22: `/govern` installs the adopter hook on first run when no existing hook system is detected; updates on subsequent runs; warns and skips with a manual integration snippet when an existing hook system is detected (`.githooks/pre-commit` not from `/govern`, husky, lefthook, pre-commit-py, or `core.hooksPath` pointing elsewhere); respects `.govern.toml` pinning
-- [x] AC23: `scripts/gen-spec-deps.sh` ships to adopter projects with `update` strategy on every `/govern` run (pinnable via `.govern.toml`); the shipped pre-commit hook references it via the project-relative path
+- [x] AC23: `.govern/scripts/gen-spec-deps.sh` ships to adopter projects with `update` strategy on every `/govern` run (pinnable via `.govern.toml`); the shipped pre-commit hook references it via the project-relative path
 - [x] AC24: A CI workflow runs all generators in dry-run mode and fails the build on non-empty diff, in both this repo and (as a shipped example) adopter projects; protects against contributors or adopters whose hook was skipped or never installed
 
 ## Open Questions
@@ -163,7 +163,7 @@ Both repos run all generators in dry-run mode in CI; non-empty diff fails the bu
 - **Q4 (item #17, cross-spec scan precision):** Inline markdown links only — match `[label](../NNN-feature/...)` or paths to `specs/NNN-feature/`. Bare slug mentions in prose are treated as commentary, not cross-references, on two grounds: (1) prose references to other specs are common and would flood the proposal with false positives, and (2) "always write proper links" is a markdown convention authors already follow, not a govern-specific discipline. Rule-ID citations (e.g., `BE-AUTHN-001`) are out of scope here — those go through the existing rule-reference scan in `/analyze` (`analyze.md:163-166`).
 - **Q5 (item #18, configuration rule file naming):** Single file at `framework/rules/configuration-cross.md`. Both rule sets cover the same domain (operator-tunable values) and apply equally to backend and frontend code, so the security-files split-by-surface precedent does not apply. Splitting by topic would create artificial boundaries — env-var defaults *are* constants and `.env.example` is the manifest of env vars; they belong together.
 - **Q6 (item #18, configuration rule ID prefix):** `CFG-` with two categories: `CONST` (shared / module-local constants) and `ENV` (env-var rules). Format: `CFG-{CONST|ENV}-{NNN}`. Examples: `CFG-CONST-001` (shared constants in centralized location), `CFG-ENV-001` (every env var has a default constant), `CFG-ENV-002` (`.env.example` contains every introduced var), `CFG-ENV-003` (time variables include unit suffix in name and constant). Rule files declare their own ID format per `analyze.md:145`; this spec sets the configuration file's pattern.
-- **Q7 (item #13, dependencies derivation + sync mechanism):** Body is authoritative; frontmatter `dependencies` is fully derived. The derivation runs in two places: (a) a new generator `scripts/gen-spec-deps.sh` invoked by a pre-commit hook, which scans every `specs/*/spec*.md` body for inline markdown links to sibling specs (excluding code fences), recomputes the union, and rewrites the frontmatter list; (b) `/clarify`, `/plan`, `/implement`, `/amend`, and `/target` recompute on entry as an idempotent safety net for uncommitted body edits. The author maintains links in the body — there is no place to author the frontmatter list. To remove a dep, remove the inline link (or move it inside a code fence). To mention a spec without depending on it, use a bare slug per Q4.
+- **Q7 (item #13, dependencies derivation + sync mechanism):** Body is authoritative; frontmatter `dependencies` is fully derived. The derivation runs in two places: (a) a new generator `.govern/scripts/gen-spec-deps.sh` invoked by a pre-commit hook, which scans every `specs/*/spec*.md` body for inline markdown links to sibling specs (excluding code fences), recomputes the union, and rewrites the frontmatter list; (b) `/clarify`, `/plan`, `/implement`, `/amend`, and `/target` recompute on entry as an idempotent safety net for uncommitted body edits. The author maintains links in the body — there is no place to author the frontmatter list. To remove a dep, remove the inline link (or move it inside a code fence). To mention a spec without depending on it, use a bare slug per Q4.
 
   **Hooks are symmetric across govern and adopters; content is asymmetric.** govern's hook runs all four generators (`gen-claude-commands`, `gen-readme-table`, `gen-help-tables`, `gen-spec-deps`). Adopter projects' hook runs only adopter-relevant generators (initially just `gen-spec-deps`; the slot is extensible).
 
@@ -173,7 +173,7 @@ Both repos run all generators in dry-run mode in CI; non-empty diff fails the bu
   - `.githooks/pre-commit` exists from a prior `/govern` run → overwrite (`update` strategy, pinnable via `.govern.toml`).
   - Existing hook system detected (`.githooks/pre-commit` not from `/govern`, husky, lefthook, pre-commit-py, or `core.hooksPath` pointing elsewhere) → do not install; report a warning with a manual integration snippet; continue.
 
-  `scripts/gen-spec-deps.sh` ships to adopters with `update` strategy so every `/govern` run refreshes it from upstream and adopters pick up generator fixes automatically. Adopters who have customized the script can list it in `.govern.toml` `pinned.files` to opt out of overwrites. The shipped pre-commit hook calls it via the project-relative path.
+  `.govern/scripts/gen-spec-deps.sh` ships to adopters with `update` strategy so every `/govern` run refreshes it from upstream and adopters pick up generator fixes automatically. Adopters who have customized the script can list it in `.govern.toml` `pinned.files` to opt out of overwrites. The shipped pre-commit hook calls it via the project-relative path.
 
   **CI safety net for both surfaces.** The same generators run in dry-run mode in CI; non-empty diff fails the build. Catches contributors who never installed the hook locally and adopters whose hook was skipped due to existing-hook detection.
 
