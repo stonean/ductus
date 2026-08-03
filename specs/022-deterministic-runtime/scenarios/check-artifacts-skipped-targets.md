@@ -24,6 +24,7 @@ That is `QUAL-CLAIM-001` precisely: a fully-implemented path whose output overst
 | `target-unparseable` | the target exists but its frontmatter will not parse |
 | `no-readable-state` | the target carries no state the check can be evaluated against |
 | `root-absent` | a criterion's path names a top-level segment this repo does not contain |
+| `ships-to-adopter` | a criterion's path is a **Shared Files** manifest destination — a file this repo scaffolds into an adopter's checkout |
 | `artifact-unreadable` | a scanned artifact could not be read at all |
 | `not-a-live-claim` | the criterion naming a path does not claim the path is present |
 

@@ -5,7 +5,7 @@ reviewed-against: 1f7ee722e3c8ae91f7cd4d03aeeca9de7032c6b0
 diff-base: 2bd364ddd775cc1dd231601280e1529f4627ee84
 must-violations: 0
 should-violations: 0
-low-confidence: 2
+low-confidence: 0
 captured-issues: 0
 skipped-passes: []
 ---
@@ -35,6 +35,8 @@ Review of the four runtime scenarios landed since `2bd364d` — `numbered-headin
 
 ## Low-confidence findings
 
+*None remaining.* Both findings below are **resolved**.
+
 ### LOW-CONFIDENCE: QUAL-EFFICIENCY — the collapsed single parse allocates eagerly for numbered headings above the task level
 
 - **File**: `runtime/src/primitives/prune_tasks.rs:231-234`
@@ -42,6 +44,7 @@ Review of the four runtime scenarios landed since `2bd364d` — `numbered-headin
 - **Finding**: `segment` now maps `split_numbered_heading` to owned `String`s before testing the level, so a numbered heading at a level other than `task_level` (a flat-task remnant in a phased file) allocates two `String`s that are immediately discarded; the previous form tested the cheap `heading_is_numeric` predicate first and allocated only for real tasks. The owned map is deliberate — the borrowed return would hold a borrow of `heading` across the `if let`, whose else-arm moves that heading into the phase-name slot — so the alternative reintroduces either the double parse the scenario removed or an `unwrap`. Recorded low-confidence because the input is a single bounded `tasks.md` and the affected headings are rare.
 - **Auto-fixable**: no
 - **Suggested fix**: Leave as-is unless a large mixed-structure `tasks.md` shows up in profiling. If it does, hoist `let is_numbered = heading_is_numeric(&heading);` for the `is_phase` test and allocate inside the `level == task_level` branch.
+- **Status**: **resolved 2026-08-03** — fixed rather than deferred, since the fix is one `if`. `Option<(&str, &str)>` is `Copy`, so the phase test (`numbered.is_none()`) reads the borrowed split without allocating, and the `to_string()` pair moved inside the `level == task_level` branch. Classification of a numbered heading above the task level is now allocation-free, removing the regression against the pre-scenario code. Recorded in the scenario's Edge Cases; 860 lib tests and all 11 suites green.
 
 ### LOW-CONFIDENCE: QUAL-PROCESS — a done spec's data-model was edited without the back-edge
 
@@ -50,6 +53,7 @@ Review of the four runtime scenarios landed since `2bd364d` — `numbered-headin
 - **Finding**: 045 is `done`, and this change edited its `data-model.md` marker table (fourteen phrases, new migration-subject group) without reopening it. The edit is not optional — that table is the designated canonical source, so leaving it at thirteen would have made a done spec's canonical record contradict shipped behavior. But AGENTS.md's routing rule contemplates 022's `data-model.md` absorbing runtime changes, not the requiring spec's, so the correct handling of a canonical table that lives on a done spec is genuinely unspecified. Recorded low-confidence on the process question, not on the content.
 - **Auto-fixable**: no
 - **Suggested fix**: Either treat a canonical-source table sync as a mechanical edit (like a rename sweep, which explicitly keeps a spec at `done`) and say so in AGENTS.md §Workflow, or move the marker table to 022's `data-model.md` where runtime contracts already live and leave 045 pointing at it. The second is more consistent with the routing rule and would also collapse one of the four restatements the QUAL-GROUND-001 finding names.
+- **Status**: **resolved 2026-08-03** — the first option, codified in AGENTS.md §Workflow: a canonical table housed on a `done` spec is synced as a mechanical edit under §spec-lifecycle, no back-edge, with the *why* recorded in the 022 scenario that caused the change. The rule states its own limit — an edit that is more than a factual sync is a meaningful edit and does reopen the spec — and names the second option as the preferred escape once a table needs syncing more than once. Leaving the table stale was never available: it would have made a `done` spec's canonical record contradict shipped behavior, which is worse than the reopen it avoided.
 
 ## Waived findings
 

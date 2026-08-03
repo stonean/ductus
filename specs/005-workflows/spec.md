@@ -101,7 +101,7 @@ If the user's tech stack selections match no registry entries (e.g., all categor
 - [x] Init warns and skips individual workflows whose file is missing
 - [x] `/{project}:govern` updates the registry and offers new, unscaffolded workflows to the user
 - [x] Govern does not overwrite workflow files that already exist in the project
-- [x] Rename internal terminology from "skills" to "workflows" to free the term "skills" for Anthropic-style context-loaded instruction packs (signpost: driven by [010-agent-autonomy](../010-agent-autonomy/spec.md); the rename also flattens the framework directory — workflow files now sit directly under `framework/workflows/` instead of an inner `templates/` subdirectory)
+- [x] Rename internal terminology from "skills" to "workflows" to free the term "skills" for Anthropic-style context-loaded instruction packs (signpost: driven by [010-agent-autonomy](../010-agent-autonomy/spec.md); the rename also flattened the framework directory — workflow files sat directly under `framework/workflows/` rather than in an inner `templates/` subdirectory. Spec 043 later sunset the workflows feature, so that directory no longer exists)
 
 ## Resolved Questions
 

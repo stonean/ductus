@@ -2,6 +2,24 @@
 
 All notable changes to the `govern` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `gvrn-v<MAJOR>.<MINOR>.<PATCH>` scheme distinct from framework tags (was `runtime-v*` before v0.2.0 — see the v0.2.0 rename entry below).
 
+## [0.26.2] — 2026-08-03
+
+022 scenario `criterion-adopter-scope-destinations`, plus a follow-on to `numbered-heading-grammar-single-source`. Takes `criterion-path-existence` from 21 findings on this repo to **0**, with every suppression recorded rather than dropped.
+
+### Added
+
+- **`ships-to-adopter` skip reason.** `criterion-path-existence` reported 19 findings for paths `govern` creates in an *adopter's* checkout — `specs/templates/`, `specs/rules/*`, `specs/system.md`, `.githooks/govern-pre-commit`, `.govern/constitution.md`. Every criterion was correct and satisfied in the repo it describes; they failed only because this repo is the framework source. `root-absent` could not catch them (`specs`, `.govern`, `.githooks` all exist here), and the `in the project` marker only matched criteria that happened to use that phrasing. `adopter_destinations` now derives the destination set from the **Shared Files** manifest in `framework/bootstrap/govern.md` — the canonical registry of what lands where — and suppresses a candidate that equals a destination or is a directory containing one. An absent manifest (the adopter case) yields an empty set, so nothing is suppressed and findings are still emitted; in an adopter those paths resolve anyway. The check runs after the resolve and `root-absent` arms and records `skipped { reason: "ships-to-adopter" }`, so `clean: true` with a non-empty `skipped` keeps its `QUAL-CLAIM-001` meaning.
+
+### Fixed
+
+- **`prune-tasks` no longer allocates to classify a heading it discards.** `Option<(&str, &str)>` is `Copy`, so the phase test reads the borrowed split directly and the owned `String` pair is built only inside the task branch. A numbered heading above the task level — a flat-task remnant in a phased file — is now classified allocation-free, removing a regression against the code `numbered-heading-grammar-single-source` replaced.
+
+### Framework
+
+- `/gov:analyze` captures its findings to the inbox before rendering ([spec 047](../specs/047-analyze-findings-durability/spec.md)). `/gov:review` had a durable sink and analyze had none, so an audit's results lived only in the session that ran it. Prose-only — `append-inbox` already shipped with its dedup guard. Capture is a **host responsibility**: the primitive is named without backticks so the exec walker does not dispatch it, since per-finding arguments are not bindable per-step.
+- Constitution §Automatic issue capture widens from incidental capture to cover a command whose primary output is findings, names `/gov:analyze` as a surfacing gate, and adds an idempotency requirement.
+- Specs 005 and 025 had genuinely stale acceptance criteria — the two true positives the 19 false ones were hiding. 005 asserted workflow files sit under `framework/workflows/` (sunset by 043); 025 asserted a `scripts/lint-govern-toml.sh` that was never built. Both reworded; neither claim is live.
+
 ## [0.26.1] — 2026-08-03
 
 022 scenario `criterion-non-assertion-phrasings`. A precision fix to `criterion-path-existence`, sized by reading every one of the 25 findings its repo-wide sweep produces rather than classifying them by path prefix.

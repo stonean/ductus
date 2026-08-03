@@ -2221,7 +2221,7 @@ pub struct SkippedTarget {
     /// Why it could not be examined — a closed set, so repeat runs over
     /// unchanged inputs are byte-identical: `target-missing`,
     /// `target-unparseable`, `no-readable-state`, `root-absent`,
-    /// `artifact-unreadable`, or `not-a-live-claim`.
+    /// `ships-to-adopter`, `artifact-unreadable`, or `not-a-live-claim`.
     pub reason: String,
     /// Repo-relative path of the target that was not examined.
     pub path: String,

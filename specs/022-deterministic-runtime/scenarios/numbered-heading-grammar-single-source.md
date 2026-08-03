@@ -57,6 +57,14 @@ returned an empty title, but its only caller was already guarded by the
   heading across the `if let` in `prune_tasks`, whose else-arm moves that
   heading into the phase-name slot. The call site maps to owned `String`s
   immediately, keeping the borrow dead before the move.
+- **Allocation is confined to the branch that keeps the strings.** The first
+  cut mapped to owned `String`s before testing the level, so a numbered
+  heading *above* the task level — a flat-task remnant in a phased file —
+  allocated two `String`s it discarded. `Option<(&str, &str)>` is `Copy`, so
+  classification (`is_none()` for the phase test) is allocation-free and only
+  the task branch pays. Recorded as a low-confidence efficiency note by
+  `/gov:review` and closed rather than waived: the fix costs one `if` and
+  removes the regression against the code this scenario replaced.
 
 ## Open Questions
 

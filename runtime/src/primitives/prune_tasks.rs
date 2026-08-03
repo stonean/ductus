@@ -229,11 +229,20 @@ fn segment(content: &str) -> Vec<Block> {
             }
 
             // One parse, not a predicate followed by a re-parse: the `Some`
-            // arm *is* the task test at the task level.
-            let numbered = split_numbered_heading(&heading)
-                .map(|(number, title)| (number.to_string(), title.to_string()));
+            // arm *is* the task test at the task level. The split borrows from
+            // `heading` and is `Copy`, so classification is allocation-free;
+            // only the task branch — the one that keeps the strings — pays for
+            // them. A numbered heading above the task level (a flat-task
+            // remnant in a phased file) is classified without allocating two
+            // `String`s it would immediately discard.
+            let numbered = split_numbered_heading(&heading);
             let is_phase = phased && level == 2 && numbered.is_none();
-            if let Some((number, title)) = numbered.filter(|_| level == task_level) {
+            let task = if level == task_level {
+                numbered.map(|(number, title)| (number.to_string(), title.to_string()))
+            } else {
+                None
+            };
+            if let Some((number, title)) = task {
                 cur.kind = Kind::Task;
                 cur.number = number;
                 cur.heading = title;

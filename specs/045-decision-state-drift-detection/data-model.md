@@ -86,6 +86,7 @@ pub struct SkippedTarget {
 | `target-unparseable` | the target exists but its frontmatter will not parse |
 | `no-readable-state` | the target carries no state the tell's class can be evaluated against |
 | `root-absent` | a criterion's path names a top-level segment this repo does not contain |
+| `ships-to-adopter` | a criterion's path is a **Shared Files** manifest destination — a file this repo scaffolds into an adopter's checkout, so it resolves in the repo the criterion is about rather than this one |
 | `artifact-unreadable` | a scanned *citing* artifact could not be read at all |
 
 `clean` keeps its existing definition — `findings.is_empty()` — so no existing consumer changes. A non-empty `skipped` alongside `clean: true` is the state the host renders in the Informational tier.

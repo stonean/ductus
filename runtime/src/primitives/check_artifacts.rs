@@ -65,7 +65,7 @@
 //! primitive sees exactly the artifact structure every other primitive
 //! sees (no hand-rolled parsers).
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::{Component, Path, PathBuf};
 
 use crate::primitives::{
@@ -908,6 +908,9 @@ fn check_criterion_path_existence(
         return;
     }
     let citing = rel_path(spec_path, repo);
+    // Read once per feature, not per candidate: the manifest is one file and
+    // an empty set (the adopter case) costs a single failed open.
+    let ships_elsewhere = adopter_destinations(repo);
     for criterion in &spec.acceptance_criteria {
         let asserts = is_live_assertion(&criterion.text);
         for candidate in candidate_paths(&criterion.text) {
@@ -947,6 +950,25 @@ fn check_criterion_path_existence(
                 let entry = SkippedTarget {
                     family: "criterion-path-existence".into(),
                     reason: "root-absent".into(),
+                    path: candidate.clone(),
+                };
+                if !skipped.contains(&entry) {
+                    skipped.push(entry);
+                }
+                continue;
+            }
+            // The path resolves in the repo this criterion is *about*, which
+            // is not this one: it is a destination this repo declares it
+            // ships into an adopter's checkout. `root-absent` above cannot
+            // catch these — their top-level segments (`specs`, `.govern`,
+            // `.githooks`) all exist here — so without this arm a framework
+            // repo reports a defect for every file it correctly delivers
+            // elsewhere. Recorded, never dropped: the report still says the
+            // path went unexamined and why.
+            if ships_to_adopter(&ships_elsewhere, trimmed) {
+                let entry = SkippedTarget {
+                    family: "criterion-path-existence".into(),
+                    reason: "ships-to-adopter".into(),
                     path: candidate.clone(),
                 };
                 if !skipped.contains(&entry) {
@@ -1028,6 +1050,58 @@ const NON_ASSERTION_MARKERS: [&str; 14] = [
     "if it exists",
     "e.g.",
 ];
+
+/// Repo-relative destinations this repo declares it scaffolds into an
+/// adopter's checkout, derived from the **Shared Files** manifest tables in
+/// `framework/bootstrap/govern.md` — the canonical registry of what lands
+/// where, per the constitution's canonical-sources map.
+///
+/// Empty when that file is absent, which is the discriminator: an adopter
+/// checkout has no `framework/bootstrap/` (it receives the installed command,
+/// not the framework source), so the suppression below simply never engages
+/// there. That is the correct shape rather than a limitation — in an adopter
+/// these destinations *do* resolve, so they produce no finding to suppress.
+///
+/// Derivation failure yields an empty set, which fails toward **reporting**:
+/// a broken parse means findings are emitted, never silently swallowed.
+/// Family 18 of `/{project}:audit` guards the inverse direction for the marker
+/// list; here the safe default is built into the return value.
+fn adopter_destinations(repo: &Path) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    let Ok(text) = std::fs::read_to_string(repo.join("framework/bootstrap/govern.md")) else {
+        return out;
+    };
+    for line in text.lines() {
+        if !line.starts_with('|') {
+            continue;
+        }
+        let cols: Vec<&str> = line.trim().trim_matches('|').split('|').collect();
+        if cols.len() < 2 {
+            continue;
+        }
+        let cell = cols[1].trim();
+        // Exactly one backticked span, nothing else — skips header rows
+        // (`Destination Path`), separator rows, and prose cells.
+        let Some(inner) = cell.strip_prefix('`').and_then(|c| c.strip_suffix('`')) else {
+            continue;
+        };
+        if !inner.is_empty() && !inner.contains('`') {
+            out.insert(inner.to_string());
+        }
+    }
+    out
+}
+
+/// `true` when `candidate` is one of the adopter destinations, or is a
+/// directory containing one. The directory case is what lets a criterion name
+/// `specs/templates/` and match the six per-file template rows beneath it.
+fn ships_to_adopter(destinations: &BTreeSet<String>, candidate: &str) -> bool {
+    if destinations.contains(candidate) {
+        return true;
+    }
+    let prefix = format!("{candidate}/");
+    destinations.iter().any(|d| d.starts_with(&prefix))
+}
 
 /// `true` when the criterion claims its paths are present — i.e. it carries
 /// none of [`NON_ASSERTION_MARKERS`]. Matching is ASCII-case-insensitive over
@@ -1952,6 +2026,104 @@ mod tests {
         );
         write(repo, &format!("specs/{FEATURE}/plan.md"), "# Demo Plan\n");
         write(repo, &format!("specs/{FEATURE}/tasks.md"), GOOD_TASKS);
+    }
+
+    /// A minimal **Shared Files** manifest, enough for `adopter_destinations`
+    /// to derive from. Mirrors the real table's two-column shape.
+    fn seed_manifest(repo: &Path) {
+        write(
+            repo,
+            "framework/bootstrap/govern.md",
+            "# govern\n\n## Shared Files\n\n\
+             | Source Path | Destination Path |\n\
+             | --- | --- |\n\
+             | `framework/constitution.md` | `.govern/constitution.md` |\n\
+             | `framework/templates/spec/spec.md` | `specs/templates/spec.md` |\n\
+             | `framework/rules/security-backend.md` | `specs/rules/security-backend.md` |\n",
+        );
+    }
+
+    #[test]
+    fn a_path_this_repo_ships_to_adopters_is_skipped_not_flagged() {
+        // Scenario criterion-adopter-scope-destinations. `root-absent` cannot
+        // catch these — `specs` and `.govern` both exist here — so without the
+        // manifest check a framework repo reports a defect for every file it
+        // correctly delivers elsewhere.
+        for (criterion, subject) in [
+            (
+                "- [x] A freshly adopted project has the constitution at `.govern/constitution.md`.\n",
+                ".govern/constitution.md",
+            ),
+            (
+                "- [x] The \"Secure\" principle references `specs/rules/security-backend.md`.\n",
+                "specs/rules/security-backend.md",
+            ),
+            // The directory case: the criterion names a folder that contains
+            // manifest destinations rather than being one itself.
+            (
+                "- [x] Copies spec templates into `specs/templates/`.\n",
+                "specs/templates/",
+            ),
+        ] {
+            let tmp = tempdir().unwrap();
+            seed_with_criteria(tmp.path(), "done", criterion);
+            seed_manifest(tmp.path());
+            fs::create_dir_all(tmp.path().join(".govern")).unwrap();
+            let result = run(&args(), tmp.path()).unwrap();
+            assert!(
+                path_findings(&result).is_empty(),
+                "ships to an adopter, must not flag: {criterion} -> {:?}",
+                result.findings
+            );
+            assert!(
+                result
+                    .skipped
+                    .iter()
+                    .any(|s| s.reason == "ships-to-adopter" && s.path == subject),
+                "the skip must be recorded, not silent: {criterion} -> {:?}",
+                result.skipped
+            );
+        }
+    }
+
+    #[test]
+    fn without_a_manifest_nothing_is_suppressed() {
+        // The adopter case: no `framework/bootstrap/govern.md`, so derivation
+        // yields an empty set and the check reports as before. Fails toward
+        // reporting, never toward silence.
+        let tmp = tempdir().unwrap();
+        seed_with_criteria(
+            tmp.path(),
+            "done",
+            "- [x] A freshly adopted project has the constitution at `.govern/constitution.md`.\n",
+        );
+        fs::create_dir_all(tmp.path().join(".govern")).unwrap();
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(path_findings(&result).len(), 1, "{:?}", result.findings);
+        assert!(
+            !result
+                .skipped
+                .iter()
+                .any(|s| s.reason == "ships-to-adopter"),
+            "{:?}",
+            result.skipped
+        );
+    }
+
+    #[test]
+    fn a_genuinely_stale_path_still_flags_alongside_the_manifest() {
+        // The suppression must be scoped to declared destinations, not a
+        // blanket exemption: a path the manifest does not ship is still drift.
+        let tmp = tempdir().unwrap();
+        seed_with_criteria(
+            tmp.path(),
+            "done",
+            "- [x] The hygiene tool lives at `scripts/lint-govern-toml.sh`.\n",
+        );
+        seed_manifest(tmp.path());
+        fs::create_dir_all(tmp.path().join("scripts")).unwrap();
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(path_findings(&result).len(), 1, "{:?}", result.findings);
     }
 
     fn path_findings(result: &CheckArtifactsResult) -> Vec<&ArtifactFinding> {

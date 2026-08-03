@@ -6,7 +6,7 @@ review:
   reviewed-against: 1f7ee722e3c8ae91f7cd4d03aeeca9de7032c6b0
   must-violations: 0
   should-violations: 0
-  low-confidence: 2
+  low-confidence: 0
   blocking: false
 ---
 
