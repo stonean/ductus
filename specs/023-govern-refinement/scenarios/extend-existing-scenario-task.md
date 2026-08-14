@@ -74,4 +74,8 @@ Deciding from the unchecked set alone was rejected: it would append blind to a s
 
 The key widens `scenario-consistency`'s by one parameter rather than introducing a second linkage derivation. That family checks that "every `scenarios/*.md` has a referencing task", checkbox state ignored (`specs/022-deterministic-runtime/data-model.md`, the check-artifacts families). Same scenario listing, same task-reference matching, one added filter — the reuse discipline 046 applied to the question parser.
 
+"Same task-reference matching" is a binding requirement, not a description: a task references a scenario when the **slug** appears in the task's heading, a subtask line, or its `Done when` clause — deliberately tolerant of a hand-written task that names the scenario without the `scenarios/{slug}.md` path. A narrower rule on either surface (matching the full path, say) makes the two disagree, and the disagreement is not symmetric: the reconcile pass would offer a task for a scenario the family already considers mapped, producing exactly the duplicate this dedup exists to prevent.
+
+A shared primitive is **not** what makes the two agree. The markdown-only path has to state the matching rule in prose whatever the runtime exposes (§runtime-host-integration, two paths one contract), so the rule *is* the contract and any primitive is an accelerator over it. Correctness lives in both surfaces naming the same rule, which is why the command file states it inline and cites the family rather than deferring to an implementation.
+
 041 stays intact under this key: a pruned checked task and a present checked task both mean "no pending work", so pruning changes what the prompt can *say* but not what the pass offers.
