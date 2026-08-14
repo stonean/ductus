@@ -251,16 +251,24 @@ Then emit a single stdout line naming what was selected:
 loading rule files: <comma-separated basenames>
 ```
 
-New rule files are introduced via their own feature spec; the suffix governs which stacks see them at `/gov:review` time, but `/gov:analyze` loads them all unconditionally.
+Rule files reach the directory from two origins: those shipped by `govern` (introduced via their own feature spec) and those a project authors for itself (no introducing spec — see §rules Lifecycle in `.govern/constitution.md`). `/gov:analyze` treats both identically. The suffix governs which stacks see a file at `/gov:review` time, but `/gov:analyze` loads them all unconditionally.
 
 For each loaded rule file:
 
 - Every rule heading is level-3 and contains only the rule ID (no surrounding text)
 - Every rule has the three required fields: a block-quoted Statement, `**Rationale:**` paragraph, and `**Verification:**` paragraph
-- Every rule's ID matches the format declared in the rule file's introducing-spec data-model (`{BE|FE}-{CATEGORY}-{NNN}` for security files; `CFG-{CONST|ENV}-{NNN}` for configuration)
+- Every rule's ID matches the ID format that governs that file, resolved in the order below
 - No two rules in the same file share an ID
 
+**Which ID format governs a file.** Take the first source that applies:
+
+1. **The file's introducing-spec data-model**, when the file has one — `{BE|FE}-{CATEGORY}-{NNN}` for the security files (`specs/008-security-rules/data-model.md`), `CFG-{CONST|ENV}-{NNN}` for configuration (`specs/017-derive-dont-ask/data-model.md`).
+2. **The format the file declares in its own header**, which is where a rule file's ID prefix and category abbreviations are canonically declared (`.govern/constitution.md` §rules) — e.g. `quality-cross.md` declares `QUAL-{CATEGORY}-{NNN}` with categories `STUB`, `GROUND`, `CLAIM`.
+3. **The generic rule-ID grammar** — an uppercase prefix, an `[A-Z][A-Z0-9]*` category abbreviation, and a zero-padded sequence number, as declared in `specs/008-security-rules/data-model.md` §Rule ID format. This is the shape `check-rule-ids` resolves citations against, so an ID that fails it cannot be cited from a spec regardless of what any header says.
+
 If any check above fails, the affected rule file is treated as unloadable for the remainder of this analyze pass.
+
+A rule file is **never** unloadable merely for having no introducing spec, or for declaring no format in its header — those conditions select which tier governs, they are not themselves failures. A project-authored rule file has no introducing spec by construction; it is validated on exactly the same terms as a shipped one, at tier 2 when its header declares a format and tier 3 when it does not. Treating the absence of an introducing spec as a validation failure would make a supported adopter extension unloadable, silently dropping its rules from citation resolution and from the fired-rule set that steps 9 and 10 assess.
 
 #### Applicable Rules citation consistency (advisory)
 
