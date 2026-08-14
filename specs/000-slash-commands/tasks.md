@@ -120,3 +120,9 @@ Done when: the scenario's described behavior is correctly implemented; every gov
 - [x] Implement the behavior described in `scenarios/implement-skips-planned-prompt.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 17. Implement scenario: scenario-without-task-visibility
+
+- [ ] Implement the behavior described in `scenarios/scenario-without-task-visibility.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested; a committed, question-free scenario with no task surfaces on a `done` spec, while 041's pruned-task non-finding is preserved.

@@ -233,3 +233,9 @@ Done when: `/gov:review` returns clean and the spec frontmatter's `review.blocki
 - [x] Implement the behavior described in `scenarios/configure-dedup-permissions.md`
 
 - **Done when**: `/configure` writes a `.claude/settings.local.json` whose `permissions.allow` and `permissions.deny` arrays contain no exact-match duplicates after the run, including duplicates that pre-existed in the file. The behavior is implemented via a new deterministic `gvrn` primitive (added on spec 022) that `/configure` invokes; the `configure.md` command source and the generated `.claude/commands/gov/configure.md` reflect the inverted instruction (dedup is mandatory; reorder/rewrite of non-duplicate entries is still forbidden). The scenario's described behavior is correctly implemented and tested.
+
+### 20. Implement scenario: extend-existing-scenario-task
+
+- [x] Implement the behavior described in `scenarios/extend-existing-scenario-task.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested; an existing scenario that gains new behavior has a command route that appends a linked task without recreating the scenario file, and a `done` parent spec takes the `done → in-progress` back-edge on that route.

@@ -41,8 +41,8 @@ Three pieces, each independently testable.
 Slash command markdown files in `framework/commands/*.md` are rewritten so the existing Instructions section IS the procedure — no separate Procedure block, no twin maintenance. The runtime parses the prose directly, using these conventions:
 
 - **Numbered steps** (`1.`, `2.`, ...) are procedure steps. Sub-numbering (`1.1`, `1.2`) marks sub-steps.
-- **Backtick-quoted primitive names** inside a step (e.g., `` `read-spec` ``, `` `mark-task` ``, `` `derive-boundary` ``) are primitive calls. The full primitive set is enumerated in §The primitive library below.
-- **HTML-comment extension-point markers** (e.g., `<!-- llm:writeCode -->`, `<!-- llm:askClarifyQuestion -->`) mark the seams where the runtime invokes the LLM. The named identifier matches an entry in §LLM extension points.
+- **Backtick-quoted primitive names** inside a step (e.g., `` `read-spec` ``, `` `mark-task` ``, `` `derive-boundary` ``) are primitive calls. The full primitive set is enumerated in [The primitive library](#the-primitive-library) below.
+- **HTML-comment extension-point markers** (e.g., `<!-- llm:writeCode -->`, `<!-- llm:askClarifyQuestion -->`) mark the seams where the runtime invokes the LLM. The named identifier matches an entry in [LLM extension points](#llm-extension-points).
 
 A markdown-only adopter (no runtime on `PATH`) reads the prose as today — the conventions are unobtrusive and the prose stays human-readable. The runtime reads the same prose and extracts structure. There is no second source of truth to drift from.
 
@@ -87,7 +87,7 @@ The runtime binary exposes two interfaces. Agent hosts pick whichever they integ
 
 ### MCP server
 
-Invoked as `runtime mcp`. Exposes every primitive in §The primitive library as an MCP tool. Any MCP-capable agent host (Claude Code, Auggie, future hosts) connects without per-host integration code. The LLM walks the slash command prose as the orchestrator and calls MCP primitives for each operation that has one. Wall-clock improvement is moderate — each primitive call is microseconds instead of LLM-cognitive-seconds — but the LLM's decide-which-primitive-and-read-the-result orchestration loop remains.
+Invoked as `runtime mcp`. Exposes every primitive in [The primitive library](#the-primitive-library) as an MCP tool. Any MCP-capable agent host (Claude Code, Auggie, future hosts) connects without per-host integration code. The LLM walks the slash command prose as the orchestrator and calls MCP primitives for each operation that has one. Wall-clock improvement is moderate — each primitive call is microseconds instead of LLM-cognitive-seconds — but the LLM's decide-which-primitive-and-read-the-result orchestration loop remains.
 
 This surface satisfies §runtime-boundary principle 5 ("MCP is the seam"). It is the universal-compatibility face of the runtime.
 
@@ -181,8 +181,8 @@ Each command's rewrite:
 
 - Preserves the command's existing behavior — same primitives invoked, same gates, same order.
 - Adopts strict numbered-step format with sub-numbering for sub-steps.
-- Quotes every primitive call in backticks, using a name from §The primitive library.
-- Marks every LLM seam with an HTML-comment extension-point marker, using a name from §LLM extension points.
+- Quotes every primitive call in backticks, using a name from [The primitive library](#the-primitive-library).
+- Marks every LLM seam with an HTML-comment extension-point marker, using a name from [LLM extension points](#llm-extension-points).
 - Passes the parseability check after the edit.
 
 ## Install policy
@@ -214,7 +214,7 @@ Stable relationships post-rewrite:
 ## Acceptance Criteria
 
 - [x] A single binary builds from this repo and exposes two surfaces: `runtime mcp` (MCP server) and `runtime exec <command> [args...]` (subprocess interpreter).
-- [x] Every primitive in §The primitive library is exposed as an MCP tool by `runtime mcp`, named under the `gvrn:<verb>-<noun>` convention.
+- [x] Every primitive in [The primitive library](#the-primitive-library) is exposed as an MCP tool by `runtime mcp`, named under the `gvrn:<verb>-<noun>` convention.
 - [x] The subprocess interpreter's JSON-over-stdio message protocol is documented in the runtime's docs and stable enough for third-party agent hosts to integrate against.
 - [x] The six initial-release slash commands (`/gov:status`, `/gov:target`, `/gov:analyze`, `/gov:implement`, `/gov:plan`, `/gov:specify`) have their prose Instructions sections rewritten to follow the structural conventions and parse cleanly under the runtime parser. The remaining three (`/gov:clarify`, `/gov:review`, `/gov:groom`) are not rewritten in this spec — they ship as scenarios.
 - [x] The three initial-release LLM extension points (`assessSpecQuality`, `writeCode`, `writeSpecBody`) each have a request schema, response schema, and a corresponding HTML-comment marker in the relevant Instructions step.
