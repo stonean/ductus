@@ -2,6 +2,22 @@
 
 All notable changes to the `govern` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `gvrn-v<MAJOR>.<MINOR>.<PATCH>` scheme distinct from framework tags (was `runtime-v*` before v0.2.0 — see the v0.2.0 rename entry below).
 
+## [0.27.2] — 2026-08-14
+
+022 scenario `append-primitive-marker-normalization`. A patch: both fixes are corrective, and neither adds a blocking outcome an adopter will newly hit.
+
+### Fixed
+
+- **Every `append-*` primitive doubled a caller-supplied list marker.** Each renders its own marker — `append-inbox` and `append-task` a checkbox, `append-question` a plain bullet — so text arriving with one already attached was written as `- [ ] - [ ] text`. Nothing on the way in caught it: the caller cannot see the rendering, a doubled marker is valid markdown so `lint-markdown` passes, and the write is atomic. It surfaced only when a human read the file. Observed against this repo's own `specs/022-deterministic-runtime/tasks.md`, where an `append-task` call wrote six doubled checkboxes.
+
+  All four affected arguments now strip one leading marker before rendering, through the `bullet_text` helper `append-inbox`'s dedup and `remove-inbox-item`'s removal already share — reuse rather than a second matcher, so the write side and the dedup read side cannot disagree about which inputs carry a marker. One marker, never more: the failure mode is a single doubling, and stripping to exhaustion would eat content from text that legitimately begins with a dash (`--fix reverts a drifted done spec` is untouched, and tested).
+
+- **`append-inbox`'s `dedup-prefix` silently matched nothing when it carried a marker.** The more consequential half, and it was latent rather than newly introduced. `has_bullet_with_prefix` compares against `bullet_text`-extracted content, which has the marker already stripped — so a prefix like `- [ ] SEC-BE-014:` could never match any bullet, the guard no-opped, and the append went through on every run. That is the guard `/{project}:analyze`'s finding capture relies on for the §brownfield-inbox promise that *re-running an audit against an unchanged repo records nothing new*; a marker-bearing prefix quietly turned an idempotent audit into an accumulating one. The prefix is now normalized exactly as the text is.
+
+  Both arguments are normalized **before** the dedup comparison, not after, so an entry can never be stored in one form and matched in another.
+
+- Each affected argument's schema description now states that the primitive renders the marker and strips a caller-supplied one. An undocumented normalization is its own surprise, and the argument description is where a caller looks.
+
 ## [0.27.1] — 2026-08-03
 
 ### Fixed

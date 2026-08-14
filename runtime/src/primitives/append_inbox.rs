@@ -31,7 +31,7 @@ use std::path::Path;
 
 use crate::primitives::{
     PrimitiveError, Result, SkipScanner, bullet_text, count_inbox_bullets, iter_bullets, rel_path,
-    write_atomic,
+    strip_bullet_marker, write_atomic,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{AppendInboxArgs, AppendInboxResult};
@@ -82,9 +82,13 @@ pub fn run(args: &AppendInboxArgs, repo: &Path) -> Result<AppendInboxResult> {
     // Dedup applies only against a pre-existing file — a template base
     // has no real bullets to dedup against (its placeholder bullet must
     // not suppress the very first append).
+    // `has_bullet_with_prefix` compares against marker-stripped bullet text,
+    // so a marker-bearing prefix would match nothing and the guard would
+    // silently no-op — the guard /{project}:analyze's finding capture relies
+    // on for idempotence. Normalize the prefix the same way as the text.
     if !created
         && let Some(prefix) = &args.dedup_prefix
-        && has_bullet_with_prefix(&existing, prefix)
+        && has_bullet_with_prefix(&existing, &strip_bullet_marker(prefix))
     {
         return Ok(AppendInboxResult {
             path: rel_path(&inbox_path, repo),
@@ -94,7 +98,7 @@ pub fn run(args: &AppendInboxArgs, repo: &Path) -> Result<AppendInboxResult> {
         });
     }
 
-    let new_content = append_bullet(&existing, args.text.trim());
+    let new_content = append_bullet(&existing, &strip_bullet_marker(&args.text));
     write_atomic(&inbox_path, &new_content)?;
 
     Ok(AppendInboxResult {
@@ -385,6 +389,34 @@ mod tests {
         .unwrap();
         let result = run(&args("perf: slow scan again", Some("perf:")), tmp.path()).unwrap();
         assert!(result.deduped);
+    }
+
+    /// `has_bullet_with_prefix` compares against marker-stripped bullet
+    /// text, so a marker-bearing `dedup-prefix` would match nothing and the
+    /// guard would silently no-op — re-running an audit would append
+    /// duplicates. Both arguments are normalized the same way.
+    #[test]
+    fn marker_bearing_text_and_dedup_prefix_are_normalized() {
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("specs")).unwrap();
+        fs::write(tmp.path().join("specs/inbox.md"), "# Inbox\n").unwrap();
+
+        run(&args("- [ ] SEC-BE-014: token logging", None), tmp.path()).unwrap();
+        assert_eq!(
+            read_inbox(tmp.path()),
+            "# Inbox\n\n- [ ] SEC-BE-014: token logging\n",
+            "caller-supplied marker must not double"
+        );
+
+        let result = run(
+            &args(
+                "SEC-BE-014: token logging (rerun)",
+                Some("- [ ] SEC-BE-014:"),
+            ),
+            tmp.path(),
+        )
+        .unwrap();
+        assert!(result.deduped, "marker-bearing prefix must still match");
     }
 
     #[test]

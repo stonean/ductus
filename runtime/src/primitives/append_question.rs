@@ -35,7 +35,7 @@ use std::path::Path;
 use crate::primitives::set_status::locate_status_field;
 use crate::primitives::{
     PrimitiveError, Result, read_spec, read_text, rel_path, split_frontmatter_with_offset,
-    validate_no_traversal, validate_single_line, validate_slug, write_atomic,
+    strip_bullet_marker, validate_no_traversal, validate_single_line, validate_slug, write_atomic,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{AppendQuestionArgs, AppendQuestionResult};
@@ -72,7 +72,11 @@ const BACK_EDGE_STATUSES: [&str; 3] = ["clarified", "planned", "in-progress"];
 pub fn run(args: &AppendQuestionArgs, repo: &Path) -> Result<AppendQuestionResult> {
     validate_no_traversal(&args.feature)?;
     validate_single_line("append-question", "question", &args.question)?;
-    let question = args.question.trim();
+    // Normalize before the dedup comparison below, not after: the stripped
+    // form is both what is compared and what is written, so an entry can
+    // never be stored in one form and matched in another.
+    let question = strip_bullet_marker(&args.question);
+    let question = question.as_str();
     if question.is_empty() {
         return Err(PrimitiveError::InvalidArgument {
             primitive: "append-question".into(),
@@ -459,6 +463,33 @@ mod tests {
             "{content}"
         );
         assert!(read_spec_file(tmp.path()).contains("status: in-progress"));
+    }
+
+    /// The marker is stripped before the dedup comparison *and* before the
+    /// insert, so an entry can never be stored in one form and matched in
+    /// another: a marker-prefixed question dedups against its unmarked twin.
+    #[test]
+    fn marker_prefixed_question_is_stripped_and_dedups_against_its_twin() {
+        let tmp = tempdir().unwrap();
+        seed_spec(
+            tmp.path(),
+            "---\nstatus: draft\n---\n\n# 009\n\n## Open Questions\n",
+        );
+        let first = run(&args("- Does the marker survive?"), tmp.path()).unwrap();
+        assert!(first.appended);
+        let content = read_spec_file(tmp.path());
+        assert!(
+            !content.contains("- - Does"),
+            "marker was doubled: {content}"
+        );
+        assert!(content.contains("- Does the marker survive?"), "{content}");
+
+        let second = run(&args("Does the marker survive?"), tmp.path()).unwrap();
+        assert!(!second.appended, "unmarked twin must dedup against it");
+        assert_eq!(
+            second.duplicate_of.as_deref(),
+            Some("Does the marker survive?")
+        );
     }
 
     #[test]

@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use crate::primitives::{
     PhaseRange, PrimitiveError, Result, TasksStructure, detect_tasks_structure, iter_phase_ranges,
     iter_task_numbers_at_levels, parse_atx_heading, read_text, rel_path, split_frontmatter,
-    validate_no_traversal, validate_slug, write_atomic,
+    strip_bullet_marker, validate_no_traversal, validate_slug, write_atomic,
 };
 use crate::schema::primitives::{AppendTaskArgs, AppendTaskResult};
 
@@ -132,7 +132,7 @@ fn render_task_block(number: u32, args: &AppendTaskArgs, heading_level: u8) -> S
     let _ = writeln!(out, "{hashes} {number}. {}\n", args.title);
     if let Some(items) = &args.body {
         for item in items {
-            let _ = writeln!(out, "- [ ] {}", item.trim());
+            let _ = writeln!(out, "- [ ] {}", strip_bullet_marker(item));
         }
     } else if let Some(slug) = &args.slug {
         // Default single sub-item. The "scenarios/{slug}.md" pointer mirrors
@@ -421,6 +421,36 @@ mod tests {
         assert!(body.contains("## 2. Implement scenario: retry"));
         assert!(body.contains("- [ ] Implement the behavior described in `scenarios/retry.md`"));
         assert!(body.contains("- **Done when**: the scenario is implemented."));
+    }
+
+    /// A caller that prefixes its own `- [ ] ` must not produce
+    /// `- [ ] - [ ] text`: the primitive renders the marker, so a supplied
+    /// one is stripped. Content whose leading dash is not a list marker
+    /// (`--fix …`) survives untouched.
+    #[test]
+    fn body_items_strip_a_caller_supplied_marker() {
+        let tmp = tempdir().unwrap();
+        make_feature_with_spec(tmp.path(), "specs/042-foo", "042 — Foo");
+        let tasks_path = tmp.path().join("specs/042-foo/tasks.md");
+        fs::write(&tasks_path, "# 042 — Foo Tasks\n").unwrap();
+        let mut a = args("specs/042-foo", "Harden", "it is hardened.");
+        a.body = Some(vec![
+            "- [ ] already prefixed".into(),
+            "- [x] checked prefix".into(),
+            "- plain bullet prefix".into(),
+            "unprefixed".into(),
+            "--fix reverts a drifted done spec".into(),
+        ]);
+        run(&a, tmp.path()).unwrap();
+        let body = fs::read_to_string(&tasks_path).unwrap();
+        assert!(!body.contains("- [ ] - [ ]"), "marker was doubled: {body}");
+        assert!(body.contains("- [ ] already prefixed"));
+        // A checked box becomes unchecked: a newly appended task is
+        // unchecked by definition.
+        assert!(body.contains("- [ ] checked prefix"));
+        assert!(body.contains("- [ ] plain bullet prefix"));
+        assert!(body.contains("- [ ] unprefixed"));
+        assert!(body.contains("- [ ] --fix reverts a drifted done spec"));
     }
 
     #[test]

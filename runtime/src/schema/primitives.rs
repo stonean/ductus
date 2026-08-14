@@ -1363,8 +1363,10 @@ pub struct AppendTaskArgs {
     /// Body content for the task's `Done when:` clause.
     #[arg(long)]
     pub done_when: String,
-    /// Optional checkbox sub-items to render inside the task block. When
-    /// omitted, the primitive emits a single default
+    /// Optional checkbox sub-items to render inside the task block. Pass the
+    /// item *content* only — the primitive renders the `- [ ] ` marker, and a
+    /// caller-supplied leading marker (`- `, `- [ ] `, `- [x] `) is stripped
+    /// so it cannot double. When omitted, the primitive emits a single default
     /// `- [ ] Implement the behavior described in scenarios/{slug}.md`
     /// line using the explicit `slug` argument below.
     #[arg(long)]
@@ -2025,8 +2027,12 @@ pub struct AppendQuestionArgs {
     /// Feature directory name under the configured spec root.
     #[arg(long)]
     pub feature: String,
-    /// Refined question text, appended as a `- {question}` bullet.
-    /// Single-line; embedded newlines are rejected (structure injection).
+    /// Refined question text, appended as a `- {question}` bullet. Pass the
+    /// question text only — the primitive renders the `- ` marker, and a
+    /// caller-supplied leading marker is stripped before both the dedup
+    /// comparison and the write, so a marked and an unmarked form of the same
+    /// question are one entry. Single-line; embedded newlines are rejected
+    /// (structure injection).
     #[arg(long)]
     pub question: String,
     /// Optional scenario slug: the target artifact becomes
@@ -2120,13 +2126,17 @@ pub struct DiffCrossSpecResult {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct AppendInboxArgs {
-    /// Single-line bullet text, appended as `- {text}`. Embedded newlines
-    /// are rejected (structure injection into inbox.md).
+    /// Single-line bullet text, appended as `- [ ] {text}`. Pass the item
+    /// content only — the primitive renders the marker, and a caller-supplied
+    /// leading marker is stripped so it cannot double. Embedded newlines are
+    /// rejected (structure injection into inbox.md).
     #[arg(long)]
     pub text: String,
     /// Optional dedup guard: when an existing inbox bullet's text starts
     /// with this prefix, nothing is written and the result reports
-    /// `deduped: true`.
+    /// `deduped: true`. Compared against marker-stripped bullet text, so a
+    /// leading marker on the prefix is stripped too — otherwise the prefix
+    /// would match nothing and the guard would silently no-op.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
     pub dedup_prefix: Option<String>,

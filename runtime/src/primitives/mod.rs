@@ -770,6 +770,23 @@ pub(crate) fn bullet_text(line: &str) -> Option<String> {
     Some(rest.trim().to_string())
 }
 
+/// Strip one leading list marker from caller-supplied bullet *content*.
+///
+/// Every `append-*` primitive renders its own marker (`- ` or `- [ ] `), so
+/// a caller that includes one produces a doubled prefix (`- [ ] - [ ] text`).
+/// Nothing catches that on the way in: the caller cannot see the rendering,
+/// a doubled marker is valid markdown so `lint-markdown` passes, and the
+/// write is atomic — it surfaces only when a human reads the file.
+///
+/// Delegates to [`bullet_text`] rather than matching separately, so the
+/// write side and `append-inbox`'s dedup read side can never disagree about
+/// which inputs carry a marker. Strips **one** marker: the failure mode is a
+/// single doubling, and stripping to exhaustion would eat legitimate content
+/// from text that genuinely begins with a dash.
+pub(crate) fn strip_bullet_marker(text: &str) -> String {
+    bullet_text(text).unwrap_or_else(|| text.trim().to_string())
+}
+
 /// Iterate the real inbox/list bullets of `content` as `(line_index, text)`,
 /// skipping fenced code blocks and HTML-comment regions via [`SkipScanner`].
 /// The inbox template embeds `- ` lines inside its `<!-- Rules: … -->`
