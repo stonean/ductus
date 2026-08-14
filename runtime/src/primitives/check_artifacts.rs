@@ -1388,6 +1388,48 @@ mod tests {
     }
 
     #[test]
+    fn bare_slug_reference_satisfies_the_mapping() {
+        // The referencing-task rule is a SLUG match across heading,
+        // subtask text, and `Done when` — not a `scenarios/{slug}.md`
+        // path match. `mapped_scenario_produces_no_finding` covers the
+        // path form that `append-task`'s default body emits; this covers
+        // the hand-written form the rule deliberately tolerates. Both
+        // exist because a second surface applying the narrower path rule
+        // disagrees with this family asymmetrically: /gov:amend's
+        // reconcile pass would offer a task for a scenario already
+        // mapped here (specs/022-deterministic-runtime/data-model.md,
+        // registered canonical in constitution §drift-prevention).
+        let tmp = tempdir().unwrap();
+        write(
+            tmp.path(),
+            "specs/042-demo/spec.md",
+            &spec("in-progress", None),
+        );
+        write(tmp.path(), "specs/042-demo/plan.md", "# Plan\n");
+        let hand_written = "# Demo Tasks\n\n\
+            ## 1. Implement scenario: retry-on-timeout\n\n\
+            - [ ] wire the backoff\n\n\
+            - **Done when**: retries pass.\n\n\
+            ## 2. Wire CLI\n\n\
+            - [ ] sub\n\n\
+            - **Done when**: CLI works.\n";
+        write(tmp.path(), "specs/042-demo/tasks.md", hand_written);
+        write(
+            tmp.path(),
+            "specs/042-demo/scenarios/retry-on-timeout.md",
+            "---\nsection: \"X\"\n---\n\n# Retry\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(
+            !families(&result)
+                .iter()
+                .any(|(f, _)| *f == "scenario-consistency"),
+            "a task naming the scenario by bare slug is a reference: {:?}",
+            result.findings
+        );
+    }
+
+    #[test]
     fn pruned_gap_numbering_satisfies_the_mapping() {
         // Scenario edge case: a scenario whose task was pruned after
         // completion produces no finding. keep-pending pruning leaves

@@ -515,6 +515,7 @@ For every kind of fact described in multiple places, one location is authoritati
 | Service registry schema (`.govern/config.toml` `[services]`) | `specs/030-cross-service-references/data-model.md` |
 | Where contributor knowledge is recorded (git vs. per-user agent memory) | `framework/constitution.md` §drift-prevention (Shared knowledge stays in git) |
 | Open-state tell list and decision-drift check grammars | `specs/045-decision-state-drift-detection/data-model.md` |
+| Scenario→task referencing rule (what counts as a task referencing a scenario) | `specs/022-deterministic-runtime/data-model.md` (`scenario-consistency`) |
 
 When adding a new kind of fact that may be referenced from multiple documents, name its canonical source explicitly here.
 

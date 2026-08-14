@@ -57,9 +57,15 @@ Which half runs depends on status and input:
 1. Run `git status --porcelain -- specs/{feature}/scenarios/ specs/{feature}/spec.md specs/{feature}/tasks.md` and parse the output. The delta consists of:
    - Untracked files under `specs/{feature}/scenarios/` (status `??`).
    - Modified `specs/{feature}/spec.md` or `specs/{feature}/tasks.md` (any porcelain status code with `M` in either the index column or the working-tree column).
-2. If the delta is empty, skip this section and continue to **Gather the input**.
+2. If the delta is empty, emit one line naming what went unexamined, then continue to **Gather the input**. Silence here would read as "every scenario under this spec has a task", which the pass has no basis to claim — it examined none of them:
+
+   ```text
+   reconcile: no uncommitted scenario or task edits — {N} scenario(s) under this spec were not examined
+   ```
+
+   Omit the line when the feature has no `scenarios/` directory or no scenario files: there is no subject, so there is nothing to overstate.
 <!-- audit:ignore-promotion -->
-3. **Reconcile pass.** For each scenario file in the delta, read `specs/{feature}/tasks.md` and collect **every** task referencing that scenario — checked and unchecked alike. A task references the scenario when the **slug appears in the task's heading, in a subtask line, or in its `Done when` clause**; this is a slug match, not a path match, so a hand-written task naming the scenario without the `scenarios/{slug}.md` path counts. That rule is not new here — it is the one `/{project}:analyze`'s `scenario-consistency` family already applies, and both surfaces MUST answer "does a task reference this scenario?" the same way or the reconcile pass will offer a duplicate for a scenario the family considers mapped. The checkbox state selects the prompt, never whether to look; deciding from the unchecked set alone would append blind to a scenario that already carries a completed task.
+3. **Reconcile pass.** For each scenario file in the delta, read `specs/{feature}/tasks.md` and collect **every** task referencing that scenario — checked and unchecked alike. A task references the scenario when the **slug appears in the task's heading, in a subtask line, or in its `Done when` clause**; this is a slug match, not a path match, so a hand-written task naming the scenario without the `scenarios/{slug}.md` path counts. That rule is not new here — it is the one `/{project}:analyze`'s `scenario-consistency` family already applies, and it is canonical there (see [§drift-prevention](../../framework/constitution.md#drift-prevention)'s canonical-source map). Both surfaces MUST answer "does a task reference this scenario?" the same way or the reconcile pass will offer a duplicate for a scenario the family considers mapped. The checkbox state selects the prompt, never whether to look; deciding from the unchecked set alone would append blind to a scenario that already carries a completed task.
    - **A pending (unchecked) referencing task exists** — skip the scenario silently. The work is already queued, and the contributor working that task reads the updated scenario body; a second task would double-count it.
    - **Only completed (checked) referencing tasks exist** — offer, naming them. A checked task means "was implemented", which the new behavior has just invalidated, so it is not evidence against offering — but the operator decides with the existing tasks in view.
    - **No referencing task at all** — offer plainly.
@@ -73,6 +79,13 @@ Which half runs depends on status and input:
    ```
 
    On **confirm**, append the task with the append-task primitive, passing the scenario's `slug` and omitting `body` so the default `Implement the behavior described in scenarios/{slug}.md` line renders — the same shape the scenario route writes, so the `scenario-consistency` family reads the linkage identically whichever route produced it. Per-scenario arguments are host-supplied, so this call is host work rather than a walker-dispatched step. On **decline**, write nothing and move to the next candidate. The scenario file itself is never created, renamed, duplicated, or rewritten.
+
+   When the pass finishes without offering anything, say what it examined rather than going quiet — the same reason step 2 does:
+
+   ```text
+   reconcile: examined {N} scenario(s) in the delta; each already has a pending task
+   ```
+
 4. When the reconcile pass appended at least one task to a `done` spec, invoke `set-status` with `from: done`, `to: in-progress` as part of that same action — the prompt in step 3 named the reopen, so it is already consented (§spec-lifecycle, the scenario back-edge). Skip step 5's prompt in that case; the status already reflects the delta. On a `planned` or `in-progress` spec no status mutation occurs.
 5. If no task was appended and the status is `done`, display the prior status (`done`) and each delta path with its filesystem mtime, then prompt:
 
@@ -89,7 +102,7 @@ Which half runs depends on status and input:
 
 The status-flip prompt offers an opt-out so the user can decline and continue into the scenario branch with a new input — useful when the delta represents forward-looking work the user does *not* want to reflect in the spec's status yet. Declining a reconcile offer is likewise not recorded: the same candidate is offered on the next invocation while it remains in the delta, since no artifact holds per-scenario decline state.
 
-Scope note: the delta above is the working-tree definition this command has always used, so a **committed** hand-added scenario is not a candidate. Widening that signal — and the matching `/{project}:analyze` detection — belongs to spec 000's `scenario-without-task-visibility` scenario; this section consumes whatever delta that scenario defines rather than defining a second one. Nothing here distinguishes a scenario documenting already-shipped behavior from one describing unimplemented work, which is why every offer is a prompt: the operator is the discriminator until that scenario supplies a mechanical one.
+Scope note: the delta above is the working-tree definition this command has always used, so a **committed** hand-added scenario is not a candidate — which is what step 2's line reports rather than leaving implied. Widening that signal, and the matching `/{project}:analyze` detection, is upstream framework work; this section consumes whatever delta is defined for it rather than defining a second one. Nothing here distinguishes a scenario documenting already-shipped behavior from one describing unimplemented work, which is why every offer is a prompt: the operator is the discriminator until a mechanical one exists.
 
 ### Gather the input
 
