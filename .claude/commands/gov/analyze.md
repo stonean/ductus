@@ -1,5 +1,5 @@
 ---
-description: Audit artifacts against each other — spec, plan, tasks, scenarios, frontmatter, dependencies, rule IDs. Read-only by default; --fix reverts a drifted done spec.
+description: Audit artifacts against each other — spec, plan, tasks, scenarios, frontmatter, dependencies, rule IDs. Read-only by default; --fix reverts a done spec drifted by review state or unresolved scenario questions.
 argument-hint: "[--all] [--fix] [feature]"
 parity:
   semantic-fields:
@@ -15,7 +15,7 @@ Audit a feature's artifacts against each other and against the framework's rule 
 
 ## Purpose
 
-Audit a feature's spec, plan, tasks, and data model for consistency. Read-only by default — reports issues without modifying files. Use this to catch problems before the next pipeline gate fires. The one exception is the `--fix` flag, which reverts a status-`done` spec whose review block has drifted back to `in-progress` (the sole write this command performs; see Review state drift).
+Audit a feature's spec, plan, tasks, and data model for consistency. Read-only by default — reports issues without modifying files. Use this to catch problems before the next pipeline gate fires. The one exception is the `--fix` flag, which reverts a status-`done` spec back to `in-progress` on either of two triggers: a `review:` block drifted to blocking (see Review state drift), or unresolved open questions carried by the spec's scenarios (see Scenario open questions). Those reverts are the only writes this command performs, and neither is silent — each emits a notice naming the spec and what drifted.
 
 Renamed from `/validate` in spec 023 to align with the emerging spec-driven-development standard (GitHub Spec Kit uses `/analyze` for the same artifact-vs-artifact audit role). Complementary to `/gov:review`, which audits **code** against rules.
 
@@ -30,7 +30,7 @@ If `--all` is not present, use the feature identifier if provided, otherwise fal
 
 ## Scope Boundaries
 
-- Read-only by default — do NOT modify any files. The sole exception is `--fix`, which reverts a drifted `done` spec from `done` to `in-progress` via `set-status` (see Review state drift below); without `--fix`, no file is written.
+- Read-only by default — do NOT modify any files. The sole exception is `--fix`, which reverts a drifted `done` spec from `done` to `in-progress` via `set-status` on either trigger — review-state drift (see Review state drift below) or unresolved scenario open questions (see Scenario open questions below). Without `--fix`, no file is written.
 - Read only files within the target feature's directory, the cross-spec files needed for reference checks (`specs/system.md`, `specs/events.md`, `specs/errors.md`, dependency spec files), and the project's installed command-source frontmatter for the project-level consistency section below (`.claude/commands/gov/*.md` frontmatter only, plus `.claude/commands/govern.md` frontmatter for the bootstrap installer **if that file exists**). May invoke `scripts/gen-help-tables.sh --dry-run` and `.govern/scripts/gen-spec-deps.sh --dry-run` to surface generator drift, each only when that script exists in the project (`gen-help-tables.sh` is a govern-repo-only generator and is absent from adopters). Do NOT read source code or test files.
 - Resolving the target spec's cross-service `references:` index additionally reads `.govern/config.toml` (the `[services]` registry) and the registered local checkouts' linked `spec.md` files — and nothing else; the canonical repo URL is **never fetched**. On the runtime path the host calls the resolve-references primitive per referencing spec; on the markdown-only path it reads those files with host file tools (see **Cross-service references** in the markdown-only reference below). This stays read-only.
 - Reference: §spec-requirements, §grounding, §plan-phase, §tasks-phase, §readiness-check, §scenarios, §cross-spec-impact, §text-first-artifacts, §markdown-standards, §drift-prevention (constitution loaded by `/gov:target` — do not re-read). See [030 — Cross-Service References](../../specs/030-cross-service-references/spec.md) for the reference semantics surfaced here.
@@ -72,7 +72,7 @@ If `--all` is not present, use the feature identifier if provided, otherwise fal
 14. Capture the findings (host responsibility): call the append-inbox primitive once per surviving finding to record it in `{specs-root}/inbox.md` before anything is rendered, so an audit's results outlive the session that ran it (§brownfield-inbox Automatic issue capture). A finding survives when it is still live at the end of the run: `--fix` resolved findings are not captured, and informational entries are not findings — the unexamined-target `skipped` list and cross-service reference unknowns report what could not be examined, not a defect to route. Each bullet takes the auto-capture form `{category}: {family} — {message} — {path} (captured during /gov:analyze)`, and each append passes a **dedup prefix** of `{category}: {family} — {message}` — a true prefix of that bullet — so re-running the audit against an unchanged repo appends nothing. The message belongs in the key: a finding's `path` is the *citing* artifact, not the missing subject, so keying without the message merges every finding one `spec.md` produces and drops all but the first.
 
 <!-- audit:ignore-promotion -->
-15. Render the report (host responsibility): list hard-fail and blocking findings first, advisory findings next, then informational. For each finding, include what failed, what was expected, what was found, and a suggested fix. With `--fix` set, additionally revert any status-done spec whose review block has drifted to blocking — the guarded set-status revert (`from: done`, `to: in-progress`), detailed in the Review state drift section in the markdown-only reference below.
+15. Render the report (host responsibility): list hard-fail and blocking findings first, advisory findings next, then informational. For each finding, include what failed, what was expected, what was found, and a suggested fix. With `--fix` set, additionally revert any status-done spec either check found drifted — a `review:` block drifted to blocking, or unresolved open questions in the spec's scenarios — through the guarded set-status revert (`from: done`, `to: in-progress`), detailed in the Review state drift and Scenario open questions sections in the markdown-only reference below. Each revert emits its own non-silent notice.
 
 ## Markdown-only reference
 
