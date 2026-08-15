@@ -182,3 +182,9 @@ Done when: every `specs/*/spec.md` has a non-empty, coherent `tags` value and th
 - [x] Implement the behavior described in `scenarios/past-tense-motivation-convention.md`
 
 - **Done when**: `framework/templates/spec/spec.md`'s `## Motivation` section carries past-tense authoring guidance in its scaffolding comment; a freshly scaffolded spec shows the guidance without it appearing in the rendered body; no constitution amendment and no `AGENTS.md` entry is added; existing `done` specs are left unswept per the scenario's decision; `npx markdownlint-cli2` and the template-alignment audit family both pass.
+
+### 24. Implement scenario: criterion-identifiers
+
+- [ ] Implement the behavior described in `scenarios/criterion-identifiers.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested; an acceptance criterion carries a stable, permanent identifier readable in the artifact and resolvable by tooling, unlabeled criteria still parse and tick via the positional fallback, and the runtime-side changes (`mark-criterion` label addressing, the audit's duplicate/missing-label checks) land as scenarios under 022 back-linking here.
