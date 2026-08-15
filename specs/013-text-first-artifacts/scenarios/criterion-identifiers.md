@@ -74,7 +74,7 @@ The question framed this as author-written versus generator-maintained, and both
 
 Deriving it in the primitive avoids both: assignment is deterministic, in-band, and immediate.
 
-This follows the project's direction of putting deterministic work in the runtime rather than in the agent — the same direction [048 — Project-Local Runtime Binary](../../048-project-local-runtime-binary/spec.md) takes by making `gvrn` a per-project canonical artifact under `.govern/bin/` instead of an optional binary on `PATH`. A label is pure arithmetic over a file the runtime already parses; there is no judgment in it to leave with the LLM.
+This follows the project's direction of putting deterministic work in the runtime rather than in the agent — the same direction [048 — Govern-Acquired Runtime](../../048-govern-acquired-runtime/spec.md) takes by making `gvrn` an artifact the pipeline acquires and version-pins instead of an optional binary on `PATH`. A label is pure arithmetic over a file the runtime already parses; there is no judgment in it to leave with the LLM.
 
 Validation is separate from assignment and remains necessary, because a criterion typed by hand in an editor never touches a primitive. The artifact audit gains a check in the shape `check-rule-ids` already has for rule citations: a duplicate label within a spec is a defect, and a label at or below the current maximum is a reuse defect. Assignment is the runtime's, enforcement is the audit's, authoring is the agent's.
 
