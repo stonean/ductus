@@ -10,6 +10,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 10
 ---
 
 # 004 — Tech Stack Selection
@@ -55,15 +56,15 @@ Language-specific `.gitignore` patterns are fetched based on the language(s) sel
 
 ## Acceptance Criteria
 
-- [x] Init asks project type (backend, frontend, fullstack) before any language question
-- [x] Backend-only projects are not asked CSS/UI or frontend framework questions
-- [x] Frontend-only projects are not asked database or messaging questions
-- [x] Fullstack projects are asked backend questions first, then frontend questions
-- [x] Each category offers 2–4 common choices plus "Other" and "Skip"
-- [x] Selected technologies populate the AGENTS.md Tech Stack table with layer, technology, and role
-- [x] Skipping all categories produces the same AGENTS.md as today (backwards compatible)
-- [x] The single "primary language(s)" question is replaced by this flow — no duplicate language prompts
-- [x] `.gitignore` patterns are fetched for all languages selected during the flow
+- [x] AC1: Init asks project type (backend, frontend, fullstack) before any language question
+- [x] AC2: Backend-only projects are not asked CSS/UI or frontend framework questions
+- [x] AC3: Frontend-only projects are not asked database or messaging questions
+- [x] AC4: Fullstack projects are asked backend questions first, then frontend questions
+- [x] AC5: Each category offers 2–4 common choices plus "Other" and "Skip"
+- [x] AC6: Selected technologies populate the AGENTS.md Tech Stack table with layer, technology, and role
+- [x] AC7: Skipping all categories produces the same AGENTS.md as today (backwards compatible)
+- [x] AC8: The single "primary language(s)" question is replaced by this flow — no duplicate language prompts
+- [x] AC9: `.gitignore` patterns are fetched for all languages selected during the flow
 
 ## Open Questions
 

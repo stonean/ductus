@@ -8,6 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 14
 ---
 
 # 018 — Adopter-Owned Pre-Commit

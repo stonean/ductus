@@ -8,6 +8,7 @@ review:
   should-violations: 1
   low-confidence: 2
   blocking: false
+next-criterion: 15
 ---
 
 # 041 — Task Pruning
@@ -47,20 +48,20 @@ Prune formalizes that `tasks.md` is disposable, so the framework must treat it c
      deferred to Open Questions and resolved by /{project}:clarify. The criteria
      below capture the behavior that holds regardless of how those resolve. -->
 
-- [x] A `/{project}:prune` command exists and, with no argument, operates on the current session target's `tasks.md`.
-- [x] Running prune on a `tasks.md` that contains completed task sections produces a materially smaller file.
-- [x] Prune preserves every incomplete task section — a section with any unchecked checkbox is never silently removed.
-- [x] Prune's output is a valid `tasks.md`: it starts with the template's top-level heading, passes `npx markdownlint-cli2`, and passes the `/{project}:analyze` task-consistency checks for the feature's current status.
-- [x] Prune requires explicit user confirmation before writing the reduced file; declining leaves `tasks.md` unchanged.
-- [x] A full reset restores `tasks.md` to the template's initial state (heading plus guidance comment) with no residual task entries.
-- [x] Pruned content is recoverable only from git history — prune writes no backup file or gitignored sidecar.
-- [x] `/{project}:prune --reset` on a non-`done` spec refuses — naming the current status and pointing at the keep-pending default — and writes nothing unless `--force` is also supplied.
-- [x] Running prune when no task section is spent makes no write and reports that there is nothing to prune.
-- [x] Prune stops without writing when there is no session target (directs to `/{project}:target`) or the target has no `tasks.md` (directs to `/{project}:plan`).
-- [x] The reduction is produced and written by the deterministic runtime prune primitive, with the file body never round-tripped through agent context; the markdown-only fallback reaches identical bytes.
-- [x] The constitution canonically classifies `tasks.md` as an ephemeral work-tracking artifact, distinct from the durable spec / scenarios / rules — stated directly, not only by analogy to the chore durability test.
-- [x] The shared `tasks.md` parsers ignore content inside HTML comments (`<!-- … -->`): a reset (template-state) `tasks.md` parses to zero tasks via `read-tasks` and yields task number 1 from `append-task`, matching what a markdown reader sees.
-- [x] `/{project}:analyze` does not report a scenario-consistency inconsistency when a `done` spec's scenario-linked tasks have been pruned; the scenario→task linkage is not required to persist after the scenario is implemented.
+- [x] AC1: A `/{project}:prune` command exists and, with no argument, operates on the current session target's `tasks.md`.
+- [x] AC2: Running prune on a `tasks.md` that contains completed task sections produces a materially smaller file.
+- [x] AC3: Prune preserves every incomplete task section — a section with any unchecked checkbox is never silently removed.
+- [x] AC4: Prune's output is a valid `tasks.md`: it starts with the template's top-level heading, passes `npx markdownlint-cli2`, and passes the `/{project}:analyze` task-consistency checks for the feature's current status.
+- [x] AC5: Prune requires explicit user confirmation before writing the reduced file; declining leaves `tasks.md` unchanged.
+- [x] AC6: A full reset restores `tasks.md` to the template's initial state (heading plus guidance comment) with no residual task entries.
+- [x] AC7: Pruned content is recoverable only from git history — prune writes no backup file or gitignored sidecar.
+- [x] AC8: `/{project}:prune --reset` on a non-`done` spec refuses — naming the current status and pointing at the keep-pending default — and writes nothing unless `--force` is also supplied.
+- [x] AC9: Running prune when no task section is spent makes no write and reports that there is nothing to prune.
+- [x] AC10: Prune stops without writing when there is no session target (directs to `/{project}:target`) or the target has no `tasks.md` (directs to `/{project}:plan`).
+- [x] AC11: The reduction is produced and written by the deterministic runtime prune primitive, with the file body never round-tripped through agent context; the markdown-only fallback reaches identical bytes.
+- [x] AC12: The constitution canonically classifies `tasks.md` as an ephemeral work-tracking artifact, distinct from the durable spec / scenarios / rules — stated directly, not only by analogy to the chore durability test.
+- [x] AC13: The shared `tasks.md` parsers ignore content inside HTML comments (`<!-- … -->`): a reset (template-state) `tasks.md` parses to zero tasks via `read-tasks` and yields task number 1 from `append-task`, matching what a markdown reader sees.
+- [x] AC14: `/{project}:analyze` does not report a scenario-consistency inconsistency when a `done` spec's scenario-linked tasks have been pruned; the scenario→task linkage is not required to persist after the scenario is implemented.
 
 ## Edge Cases
 

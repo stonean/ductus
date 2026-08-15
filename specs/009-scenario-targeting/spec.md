@@ -10,6 +10,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 19
 ---
 
 # 009 — Scenario Targeting
@@ -119,24 +120,24 @@ When `clarify` is run with only a feature targeted (no scenario):
 
 ## Acceptance Criteria
 
-- [x] Session file supports an optional `scenario` and `scenarioPath` field
-- [x] `target` command accepts `{feature}/{scenario-slug}` syntax
-- [x] `target` command validates scenario existence and lists alternatives on mismatch
-- [x] `target` command displays scenario detail when one is targeted
-- [x] Scenario template includes `## Open Questions` and `## Resolved Questions` sections
-- [x] `question` command appends to the scenario's Open Questions when a scenario is targeted
-- [x] `question` command appends to the spec's Open Questions when no scenario is targeted
-- [x] `clarify` command resolves scenario-level open questions when a scenario is targeted
-- [x] `clarify` command resolves spec-level open questions when no scenario is targeted (unchanged)
-- [x] `scenario` command sets the newly created scenario as the session target
-- [x] `status` command shows scenario detail when a scenario is targeted
-- [x] Feature-only commands (specify, plan, validate) ignore the scenario field
-- [x] `target` command with no arguments displays the current target including scenario when set
-- [x] `target` command with no arguments informs user how to change focus
-- [x] `target` command reports no scenarios exist when the feature has no `scenarios/` directory
-- [x] `target` command reports feature not found when the feature does not exist
-- [x] Command file parity maintained between `commands/` and `.claude/commands/gov/`
-- [x] Govern file parity maintained across `govern/` variants
+- [x] AC1: Session file supports an optional `scenario` and `scenarioPath` field
+- [x] AC2: `target` command accepts `{feature}/{scenario-slug}` syntax
+- [x] AC3: `target` command validates scenario existence and lists alternatives on mismatch
+- [x] AC4: `target` command displays scenario detail when one is targeted
+- [x] AC5: Scenario template includes `## Open Questions` and `## Resolved Questions` sections
+- [x] AC6: `question` command appends to the scenario's Open Questions when a scenario is targeted
+- [x] AC7: `question` command appends to the spec's Open Questions when no scenario is targeted
+- [x] AC8: `clarify` command resolves scenario-level open questions when a scenario is targeted
+- [x] AC9: `clarify` command resolves spec-level open questions when no scenario is targeted (unchanged)
+- [x] AC10: `scenario` command sets the newly created scenario as the session target
+- [x] AC11: `status` command shows scenario detail when a scenario is targeted
+- [x] AC12: Feature-only commands (specify, plan, validate) ignore the scenario field
+- [x] AC13: `target` command with no arguments displays the current target including scenario when set
+- [x] AC14: `target` command with no arguments informs user how to change focus
+- [x] AC15: `target` command reports no scenarios exist when the feature has no `scenarios/` directory
+- [x] AC16: `target` command reports feature not found when the feature does not exist
+- [x] AC17: Command file parity maintained between `commands/` and `.claude/commands/gov/`
+- [x] AC18: Govern file parity maintained across `govern/` variants
 
 ## Open Questions
 

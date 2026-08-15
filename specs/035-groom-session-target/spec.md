@@ -8,6 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 8
 ---
 
 # 035 — Groom sets the session target from the routed item
@@ -34,13 +35,13 @@ The change is confined to `framework/commands/groom.md` (and its generated `.cla
 
 ## Acceptance Criteria
 
-- [x] When groom routes an item to a spec edit (Step 3) or a scenario under the matching spec (Step 4 durable branch), it sets `.govern.session.toml` to that feature.
-- [x] The per-item routing confirmation names the target it will set; groom adds no separate "set the target?" prompt.
-- [x] New-spec items, rule-file items (Step 1), and chores (Step 4 chore) do **not** set a session target via groom.
-- [x] Across a multi-item run, the session target follows the current item (the last spec-routed item is the final target).
-- [x] The session-target write preserves any existing `cli-config-dir` value.
-- [x] The completion summary names the resulting session target (or states it is unchanged when no item set one).
-- [x] `framework/commands/groom.md` documents the behavior, and its generated `.claude/commands/gov/groom.md` copy regenerates cleanly.
+- [x] AC1: When groom routes an item to a spec edit (Step 3) or a scenario under the matching spec (Step 4 durable branch), it sets `.govern.session.toml` to that feature.
+- [x] AC2: The per-item routing confirmation names the target it will set; groom adds no separate "set the target?" prompt.
+- [x] AC3: New-spec items, rule-file items (Step 1), and chores (Step 4 chore) do **not** set a session target via groom.
+- [x] AC4: Across a multi-item run, the session target follows the current item (the last spec-routed item is the final target).
+- [x] AC5: The session-target write preserves any existing `cli-config-dir` value.
+- [x] AC6: The completion summary names the resulting session target (or states it is unchanged when no item set one).
+- [x] AC7: `framework/commands/groom.md` documents the behavior, and its generated `.claude/commands/gov/groom.md` copy regenerates cleanly.
 
 ## Resolved Questions
 

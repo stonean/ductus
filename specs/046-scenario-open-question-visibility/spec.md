@@ -8,6 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 31
 ---
 
 # 046 — Scenario open-question visibility
@@ -112,36 +113,36 @@ What stays with this spec: the constitution amendments to §spec-lifecycle's `do
 
 ## Acceptance Criteria
 
-- [x] Scenario open questions are reported as a field distinct from the spec body's open-question count, with each entry tagged by its source scenario file
-- [x] The spec body's open-question count is unchanged in meaning and value by this feature
-- [x] Feature-targeted `/{project}:clarify` behavior is unchanged — it neither surfaces nor resolves scenario questions
-- [x] A spec with one or more unresolved scenario open questions cannot be advanced to `done`
-- [x] The `done` block is reported with the blocking scenario named, not as a generic gate failure
-- [x] A spec whose scenarios have no unresolved questions advances to `done` exactly as it does today
-- [x] §spec-lifecycle's `done` definition and §readiness-check state that scenario open questions are included
-- [x] `/{project}:target` on a feature with unresolved scenario questions reports their count and the scenarios carrying them, without a scenario being targeted
-- [x] When several scenarios carry questions, `/{project}:target` lists all of them in case-insensitive filename order and recommends no specific one
-- [x] `/{project}:target` on such a feature recommends scenario-targeted clarification rather than `/{project}:implement`
-- [x] `/{project}:status` shows the outstanding scenario-question count as a suffix on the existing Scenarios column, and leaves the cell unchanged when the count is zero
-- [x] `/{project}:status` overrides the Next Action cell to `clarify (scenario)` for a spec with outstanding scenario questions, and renders a callout below the table naming the specs and the scenarios carrying them
-- [x] A spec in recovery state with outstanding scenario questions renders `clarify (recovery)` in the Next Action cell and both callouts
-- [x] `/{project}:analyze` reports a finding for a spec with unresolved scenario questions — blocking at `done`, advisory otherwise
-- [x] A feature with no `scenarios/` directory, or with scenarios carrying no Open Questions section, produces no finding and no behavior change
-- [x] Scenario open questions are parsed by the same parser the spec body uses, with `## Resolved Questions` entries excluded
-- [x] Questions inside HTML comments or fenced code blocks are not counted, in a scenario or in a spec body — a spec scaffolded from the shipped template reports zero open questions, not the template's commented-out examples
-- [x] Both the spec placeholder (`*None — all resolved.*`) and the scenario placeholder (`*None — captured during scenario authoring.*`) are skipped, including when authored as a list bullet
-- [x] Recording a scenario that carries open questions on a `done` spec takes the scenario back-edge to `in-progress`, not the question back-edge to `draft`; the spec body's `## Open Questions` section is not written to
-- [x] The pre-done review gate evaluates scenario open questions as a third check, ordered after markdown lint and before the `review:` block, and the first failing check still wins
-- [x] The gate's blocked message names the scenarios carrying unresolved questions
-- [x] An unreadable or malformed scenario file never blocks the `done` gate and never produces a blocking finding
-- [x] A `done` spec carrying unresolved scenario questions when this feature ships is reported and reverted with no grandfather exemption
-- [x] All scenarios carrying questions are listed with no cap or truncation
-- [x] The gate's guidance and the analyze finding's suggested fix both offer two exits — resolve the question, or record it in `## Resolved Questions` as deferred with its trigger condition
-- [x] A question recorded under `## Resolved Questions` never blocks `done`, whether or not it names a deferral condition
-- [x] No section or marker exists that exempts a question from the gate while it remains under `## Open Questions`
-- [x] The primitive-level changes land as scenarios under `022-deterministic-runtime`, each back-linking to this spec, with 022's data-model updated for the new field and finding family
-- [x] The constitution amendments to §spec-lifecycle and §readiness-check land with this spec, not with 022
-- [x] `/{project}:analyze --fix` reverts a `done` spec with unresolved scenario questions to `in-progress`, matching the review-state-drift revert, and emits a non-silent notice naming the spec
+- [x] AC1: Scenario open questions are reported as a field distinct from the spec body's open-question count, with each entry tagged by its source scenario file
+- [x] AC2: The spec body's open-question count is unchanged in meaning and value by this feature
+- [x] AC3: Feature-targeted `/{project}:clarify` behavior is unchanged — it neither surfaces nor resolves scenario questions
+- [x] AC4: A spec with one or more unresolved scenario open questions cannot be advanced to `done`
+- [x] AC5: The `done` block is reported with the blocking scenario named, not as a generic gate failure
+- [x] AC6: A spec whose scenarios have no unresolved questions advances to `done` exactly as it does today
+- [x] AC7: §spec-lifecycle's `done` definition and §readiness-check state that scenario open questions are included
+- [x] AC8: `/{project}:target` on a feature with unresolved scenario questions reports their count and the scenarios carrying them, without a scenario being targeted
+- [x] AC9: When several scenarios carry questions, `/{project}:target` lists all of them in case-insensitive filename order and recommends no specific one
+- [x] AC10: `/{project}:target` on such a feature recommends scenario-targeted clarification rather than `/{project}:implement`
+- [x] AC11: `/{project}:status` shows the outstanding scenario-question count as a suffix on the existing Scenarios column, and leaves the cell unchanged when the count is zero
+- [x] AC12: `/{project}:status` overrides the Next Action cell to `clarify (scenario)` for a spec with outstanding scenario questions, and renders a callout below the table naming the specs and the scenarios carrying them
+- [x] AC13: A spec in recovery state with outstanding scenario questions renders `clarify (recovery)` in the Next Action cell and both callouts
+- [x] AC14: `/{project}:analyze` reports a finding for a spec with unresolved scenario questions — blocking at `done`, advisory otherwise
+- [x] AC15: A feature with no `scenarios/` directory, or with scenarios carrying no Open Questions section, produces no finding and no behavior change
+- [x] AC16: Scenario open questions are parsed by the same parser the spec body uses, with `## Resolved Questions` entries excluded
+- [x] AC17: Questions inside HTML comments or fenced code blocks are not counted, in a scenario or in a spec body — a spec scaffolded from the shipped template reports zero open questions, not the template's commented-out examples
+- [x] AC18: Both the spec placeholder (`*None — all resolved.*`) and the scenario placeholder (`*None — captured during scenario authoring.*`) are skipped, including when authored as a list bullet
+- [x] AC19: Recording a scenario that carries open questions on a `done` spec takes the scenario back-edge to `in-progress`, not the question back-edge to `draft`; the spec body's `## Open Questions` section is not written to
+- [x] AC20: The pre-done review gate evaluates scenario open questions as a third check, ordered after markdown lint and before the `review:` block, and the first failing check still wins
+- [x] AC21: The gate's blocked message names the scenarios carrying unresolved questions
+- [x] AC22: An unreadable or malformed scenario file never blocks the `done` gate and never produces a blocking finding
+- [x] AC23: A `done` spec carrying unresolved scenario questions when this feature ships is reported and reverted with no grandfather exemption
+- [x] AC24: All scenarios carrying questions are listed with no cap or truncation
+- [x] AC25: The gate's guidance and the analyze finding's suggested fix both offer two exits — resolve the question, or record it in `## Resolved Questions` as deferred with its trigger condition
+- [x] AC26: A question recorded under `## Resolved Questions` never blocks `done`, whether or not it names a deferral condition
+- [x] AC27: No section or marker exists that exempts a question from the gate while it remains under `## Open Questions`
+- [x] AC28: The primitive-level changes land as scenarios under `022-deterministic-runtime`, each back-linking to this spec, with 022's data-model updated for the new field and finding family
+- [x] AC29: The constitution amendments to §spec-lifecycle and §readiness-check land with this spec, not with 022
+- [x] AC30: `/{project}:analyze --fix` reverts a `done` spec with unresolved scenario questions to `in-progress`, matching the review-state-drift revert, and emits a non-silent notice naming the spec
 
 ## Open Questions
 

@@ -10,6 +10,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 18
 ---
 
 # 003 — Bootstrap Automation
@@ -86,26 +87,26 @@ Before scaffolding, verify the target directory does not already exist. If it do
 
 ### Standard pipeline commands
 
-- [x] All ten command templates copied to `.claude/commands/gov/` with `{project}` replaced by `gov`
-- [x] Commands reference `.govern.session.toml` for session state (was `.claude/gov-session.json` pre-0.10.0; consolidated in spec 022 task 40)
-- [x] Pipeline gates enforce status transitions (draft → clarified → planned → done)
-- [x] Dependency checks enforced via AGENTS.md boundary rule
+- [x] AC1: All ten command templates copied to `.claude/commands/gov/` with `{project}` replaced by `gov`
+- [x] AC2: Commands reference `.govern.session.toml` for session state (was `.claude/gov-session.json` pre-0.10.0; consolidated in spec 022 task 40)
+- [x] AC3: Pipeline gates enforce status transitions (draft → clarified → planned → done)
+- [x] AC4: Dependency checks enforced via AGENTS.md boundary rule
 
 ### /gov:init
 
-- [x] Command exists at `.claude/commands/gov/init.md`
-- [x] Command accepts project name, path, description, and primary language(s) as arguments or prompts for them
-- [x] Verifies the target directory does not exist before proceeding
-- [x] Creates a complete project directory with all governance files
-- [x] Replaces `{project}` placeholder in all copied templates
-- [x] Copies slash command templates into `.claude/commands/{project}/`
-- [x] Copies spec templates into `specs/templates/`
-- [x] Creates system spec stubs from templates
-- [x] Creates `.gitignore` from template and appends language-specific patterns fetched from github.com/github/gitignore
-- [x] Runs markdownlint on generated files
-- [x] Displays next steps directing the user to a new session and `/{project}:setup`
-- [x] Does not make git commits automatically
-- [x] Does not fill in project-specific content (AGENTS.md sections, system.md)
+- [x] AC5: Command exists at `.claude/commands/gov/init.md`
+- [x] AC6: Command accepts project name, path, description, and primary language(s) as arguments or prompts for them
+- [x] AC7: Verifies the target directory does not exist before proceeding
+- [x] AC8: Creates a complete project directory with all governance files
+- [x] AC9: Replaces `{project}` placeholder in all copied templates
+- [x] AC10: Copies slash command templates into `.claude/commands/{project}/`
+- [x] AC11: Copies spec templates into `specs/templates/`
+- [x] AC12: Creates system spec stubs from templates
+- [x] AC13: Creates `.gitignore` from template and appends language-specific patterns fetched from github.com/github/gitignore
+- [x] AC14: Runs markdownlint on generated files
+- [x] AC15: Displays next steps directing the user to a new session and `/{project}:setup`
+- [x] AC16: Does not make git commits automatically
+- [x] AC17: Does not fill in project-specific content (AGENTS.md sections, system.md)
 
 ## Resolved Questions
 

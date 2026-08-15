@@ -8,6 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 13
 ---
 
 # 048 — Project-Local Runtime Binary
@@ -80,18 +81,18 @@ Existing adopters have an MCP entry naming the bare `gvrn` command and, usually,
 
 ## Acceptance Criteria
 
-- [ ] A `/govern` run on a project with no runtime installed downloads the host-platform release asset, verifies its `.sha256` sidecar, and writes an executable `.govern/bin/gvrn` (`.govern/bin/gvrn.exe` on Windows)
-- [ ] `.govern/bin/` is present in the framework-managed `.gitignore` block, and a freshly bootstrapped project reports no untracked binary under `git status`
-- [ ] A checksum mismatch leaves `.govern/bin/` unwritten, emits a warning naming the expected and computed digests, and the run continues on the markdown path
-- [ ] A download failure (network error, missing asset for the host platform) emits a warning and completes the run on the markdown path — no abort, no partial binary
-- [ ] After acquisition on a `write-file` agent, the MCP config registers `.govern/bin/gvrn` — `.mcp.json` for Claude, the root `opencode.json` `mcp` block for OpenCode — additively, preserving every other server and top-level key
-- [ ] A second `/govern` run with the resolved version already installed performs no download and leaves `.govern/bin/gvrn` byte-unchanged
-- [ ] A `/govern` run whose resolved version differs from the installed binary's `--version` replaces the binary and reports the upgrade
-- [ ] An adopter whose MCP config names the bare `gvrn` command has it rewritten to the project-local path by the registered migration, and re-running the migration is a no-op
-- [ ] The pre-flight binary probe checks `.govern/bin/gvrn` rather than `PATH`, and the §Permission Setup seed grants exactly what that probe needs
-- [ ] An adopter with no runtime reaches the deterministic path in one `/govern` run plus one restart — acquisition, MCP wiring, and tool permissions all land in the same pre-flight pass and surface in one combined abort
-- [ ] The markdown-only CI job (`.github/workflows/markdown-only-pipeline.yml`) passes with `.govern/bin/` absent, exercising a full pipeline cycle without the runtime
-- [ ] No live artifact under `framework/` or `README.md` documents installing `gvrn` onto `PATH` as the supported path, and none registers a bare `gvrn` MCP command
+- [ ] AC1: A `/govern` run on a project with no runtime installed downloads the host-platform release asset, verifies its `.sha256` sidecar, and writes an executable `.govern/bin/gvrn` (`.govern/bin/gvrn.exe` on Windows)
+- [ ] AC2: `.govern/bin/` is present in the framework-managed `.gitignore` block, and a freshly bootstrapped project reports no untracked binary under `git status`
+- [ ] AC3: A checksum mismatch leaves `.govern/bin/` unwritten, emits a warning naming the expected and computed digests, and the run continues on the markdown path
+- [ ] AC4: A download failure (network error, missing asset for the host platform) emits a warning and completes the run on the markdown path — no abort, no partial binary
+- [ ] AC5: After acquisition on a `write-file` agent, the MCP config registers `.govern/bin/gvrn` — `.mcp.json` for Claude, the root `opencode.json` `mcp` block for OpenCode — additively, preserving every other server and top-level key
+- [ ] AC6: A second `/govern` run with the resolved version already installed performs no download and leaves `.govern/bin/gvrn` byte-unchanged
+- [ ] AC7: A `/govern` run whose resolved version differs from the installed binary's `--version` replaces the binary and reports the upgrade
+- [ ] AC8: An adopter whose MCP config names the bare `gvrn` command has it rewritten to the project-local path by the registered migration, and re-running the migration is a no-op
+- [ ] AC9: The pre-flight binary probe checks `.govern/bin/gvrn` rather than `PATH`, and the §Permission Setup seed grants exactly what that probe needs
+- [ ] AC10: An adopter with no runtime reaches the deterministic path in one `/govern` run plus one restart — acquisition, MCP wiring, and tool permissions all land in the same pre-flight pass and surface in one combined abort
+- [ ] AC11: The markdown-only CI job (`.github/workflows/markdown-only-pipeline.yml`) passes with `.govern/bin/` absent, exercising a full pipeline cycle without the runtime
+- [ ] AC12: No live artifact under `framework/` or `README.md` documents installing `gvrn` onto `PATH` as the supported path, and none registers a bare `gvrn` MCP command
 
 ## Open Questions
 

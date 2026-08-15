@@ -8,6 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 10
 ---
 
 # 024 — Stack-aware rule-file loader for `/gov:review`
@@ -27,15 +28,15 @@ The fix: derive rule-file selection from observable signals. Each rule file decl
 
 ## Acceptance Criteria
 
-- [x] Filename suffix is the surface signal: every `framework/rules/*.md` file MUST end in `-backend.md` (backend stacks), `-frontend.md` (frontend stacks), or `-cross.md` (all stacks; cross-cutting). The convention is documented in `framework/constitution.md` alongside the §rules anchor. `scripts/lint-rule-filenames.sh` enforces it in govern's CI.
-- [x] `/gov:review` rule-file selection is rewritten to iterate `framework/rules/*.md`, read each file's suffix, and load it when the suffix matches the project's detected stack (or the file is cross-cutting). The hardcoded names `security-backend.md` and `security-frontend.md` no longer appear in `framework/commands/review.md` as selection criteria — they are loaded by the same derivation as every other file.
-- [x] The three new rule files (`api-backend.md`, `accessibility-frontend.md`, `performance-frontend.md`) load automatically under the new derivation when their respective stacks are present — no `AGENTS.md` edit required.
-- [x] `framework/rules/configuration.md` is renamed to `framework/rules/configuration-cross.md` to match the closed-suffix policy. Rule IDs (`CFG-CONST-*`, `CFG-ENV-*`) are content-anchored and do not change; only the file path moves. Live references swept per AGENTS.md ("no dead references in live artifacts"); done-spec bodies stay as written and the rename is recorded in `specs/README.md` §Past Renames.
-- [x] The "load anything in `framework/rules/` referenced from `AGENTS.md`" fallback survives but narrows to its real purpose: project-local rule files placed outside `framework/rules/` (e.g., `docs/rules/internal-api.md`) that the framework cannot discover by directory walk. Files inside `framework/rules/` no longer need an `AGENTS.md` reference to be loaded.
-- [x] At runtime, a rule file whose name does not match the closed suffix set loads for every stack and emits a one-line stdout warning (`rule file <name> has unrecognized suffix — loading for all stacks; rename to -backend.md, -frontend.md, or -cross.md`). The over-apply-and-warn behavior is the safety net for adopter-local rule files outside govern's CI — the lint runs only in govern's repository. The default is "load + warn," never "silent skip."
-- [x] `/gov:review` emits a one-line `loading rule files: <list>` notice on stdout at the start of each run so adopters can see what was selected. The notice is the discoverability surface.
-- [x] `framework/commands/review.md` §Notes for adopters is updated to reflect the new selection algorithm; specifically, the line "`/gov:review` automatically loads anything in `framework/rules/` that's referenced from `AGENTS.md`" is rewritten to describe the new derivation and clarify the residual role of the `AGENTS.md` fallback.
-- [x] `framework/commands/analyze.md` uses the same suffix-based rule-file discovery as `/gov:review`. `/gov:analyze` consumes the full discovered set (no stack filtering) because rule-ID citation verification spans surfaces; `/gov:review` filters by detected stack on top of the shared discovery.
+- [x] AC1: Filename suffix is the surface signal: every `framework/rules/*.md` file MUST end in `-backend.md` (backend stacks), `-frontend.md` (frontend stacks), or `-cross.md` (all stacks; cross-cutting). The convention is documented in `framework/constitution.md` alongside the §rules anchor. `scripts/lint-rule-filenames.sh` enforces it in govern's CI.
+- [x] AC2: `/gov:review` rule-file selection is rewritten to iterate `framework/rules/*.md`, read each file's suffix, and load it when the suffix matches the project's detected stack (or the file is cross-cutting). The hardcoded names `security-backend.md` and `security-frontend.md` no longer appear in `framework/commands/review.md` as selection criteria — they are loaded by the same derivation as every other file.
+- [x] AC3: The three new rule files (`api-backend.md`, `accessibility-frontend.md`, `performance-frontend.md`) load automatically under the new derivation when their respective stacks are present — no `AGENTS.md` edit required.
+- [x] AC4: `framework/rules/configuration.md` is renamed to `framework/rules/configuration-cross.md` to match the closed-suffix policy. Rule IDs (`CFG-CONST-*`, `CFG-ENV-*`) are content-anchored and do not change; only the file path moves. Live references swept per AGENTS.md ("no dead references in live artifacts"); done-spec bodies stay as written and the rename is recorded in `specs/README.md` §Past Renames.
+- [x] AC5: The "load anything in `framework/rules/` referenced from `AGENTS.md`" fallback survives but narrows to its real purpose: project-local rule files placed outside `framework/rules/` (e.g., `docs/rules/internal-api.md`) that the framework cannot discover by directory walk. Files inside `framework/rules/` no longer need an `AGENTS.md` reference to be loaded.
+- [x] AC6: At runtime, a rule file whose name does not match the closed suffix set loads for every stack and emits a one-line stdout warning (`rule file <name> has unrecognized suffix — loading for all stacks; rename to -backend.md, -frontend.md, or -cross.md`). The over-apply-and-warn behavior is the safety net for adopter-local rule files outside govern's CI — the lint runs only in govern's repository. The default is "load + warn," never "silent skip."
+- [x] AC7: `/gov:review` emits a one-line `loading rule files: <list>` notice on stdout at the start of each run so adopters can see what was selected. The notice is the discoverability surface.
+- [x] AC8: `framework/commands/review.md` §Notes for adopters is updated to reflect the new selection algorithm; specifically, the line "`/gov:review` automatically loads anything in `framework/rules/` that's referenced from `AGENTS.md`" is rewritten to describe the new derivation and clarify the residual role of the `AGENTS.md` fallback.
+- [x] AC9: `framework/commands/analyze.md` uses the same suffix-based rule-file discovery as `/gov:review`. `/gov:analyze` consumes the full discovered set (no stack filtering) because rule-ID citation verification spans surfaces; `/gov:review` filters by detected stack on top of the shared discovery.
 
 ## Non-goals
 

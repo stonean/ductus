@@ -9,6 +9,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 14
 ---
 
 # 020 — `/gov:review` code review command with blocking gate
@@ -39,22 +40,22 @@ tools — a discipline dependency the framework should remove.
 
 ## Acceptance Criteria
 
-- [x] `/gov:review` exists as a verb-named slash command in the same shape as `/gov:analyze`, distributed through the standard `framework/commands/` → `.claude/commands/gov/` regeneration pipeline.
-- [x] Running `/gov:review` against an `in-progress` target produces `specs/NNN-feature/review.md` with findings categorized into MUST, SHOULD, and low-confidence sections.
-- [x] The command loads `framework/rules/security-backend.md` and `framework/rules/security-frontend.md` as authoritative security criteria. The five-dimension review model (security, reuse, quality, efficiency, simplicity) is applied to every targeted feature.
-- [x] Spec frontmatter gains a `review:` block populated by the command: `last-run`, `must-violations`, `should-violations`, `blocking`, optional `waivers`.
-- [x] **Blocking gate**: a spec with `review.blocking: true` cannot reach `done`.
+- [x] AC1: `/gov:review` exists as a verb-named slash command in the same shape as `/gov:analyze`, distributed through the standard `framework/commands/` → `.claude/commands/gov/` regeneration pipeline.
+- [x] AC2: Running `/gov:review` against an `in-progress` target produces `specs/NNN-feature/review.md` with findings categorized into MUST, SHOULD, and low-confidence sections.
+- [x] AC3: The command loads `framework/rules/security-backend.md` and `framework/rules/security-frontend.md` as authoritative security criteria. The five-dimension review model (security, reuse, quality, efficiency, simplicity) is applied to every targeted feature.
+- [x] AC4: Spec frontmatter gains a `review:` block populated by the command: `last-run`, `must-violations`, `should-violations`, `blocking`, optional `waivers`.
+- [x] AC5: **Blocking gate**: a spec with `review.blocking: true` cannot reach `done`.
   - `/gov:implement` halts before marking `done` and emits the blocking message.
   - `/gov:analyze` reports a violation when a spec at `status: done` has `review.blocking: true` or is missing `review.last-run`.
   - The shipped CI template includes a check that fails PRs in the same conditions.
-- [x] Re-running `/gov:review` against unchanged code produces identical `review.md` content modulo timestamp and SHA fields (idempotency invariant).
-- [x] `--fix` applies only conservative auto-fixes per the scope rules in the command file. Behavior-changing fixes are never auto-applied.
-- [x] Waivers require explicit `--waive <rule-id> --reason "..."`, are recorded in spec frontmatter, and expire automatically when the file location or rule ID they were attached to changes.
-- [x] Exit code is `0` when not blocking, `1` when blocking — for CI use.
-- [x] The README slash commands table lists `/gov:review` under **Pipeline (advance state)** with a one-line purpose.
-- [x] **Tech-stack alignment gate**: before running review passes, `/gov:review` confirms the project's `AGENTS.md` `Tech Stack` section exists and appears consistent with the implementation in scope. Misalignment or a missing/empty section is a blocking error, not a warning. Adopters can persist a successful check by setting `.govern.toml [review] tech-stack-verified = true`, after which subsequent runs skip the check until the operator manually clears the key.
-- [x] **Empty scope**: a target with an empty resolved scope (no implementation files) produces a `review.md` recording 0 findings across all five passes, `blocking: false`, and exits `0`.
-- [x] **Cross-pass dedupe**: when the same finding (matching rule ID, file, and overlapping line range) is produced by more than one pass, only the highest-severity instance is retained in `must-violations` and `should-violations`; lower-severity duplicates are dropped from the counts and report.
+- [x] AC6: Re-running `/gov:review` against unchanged code produces identical `review.md` content modulo timestamp and SHA fields (idempotency invariant).
+- [x] AC7: `--fix` applies only conservative auto-fixes per the scope rules in the command file. Behavior-changing fixes are never auto-applied.
+- [x] AC8: Waivers require explicit `--waive <rule-id> --reason "..."`, are recorded in spec frontmatter, and expire automatically when the file location or rule ID they were attached to changes.
+- [x] AC9: Exit code is `0` when not blocking, `1` when blocking — for CI use.
+- [x] AC10: The README slash commands table lists `/gov:review` under **Pipeline (advance state)** with a one-line purpose.
+- [x] AC11: **Tech-stack alignment gate**: before running review passes, `/gov:review` confirms the project's `AGENTS.md` `Tech Stack` section exists and appears consistent with the implementation in scope. Misalignment or a missing/empty section is a blocking error, not a warning. Adopters can persist a successful check by setting `.govern.toml [review] tech-stack-verified = true`, after which subsequent runs skip the check until the operator manually clears the key.
+- [x] AC12: **Empty scope**: a target with an empty resolved scope (no implementation files) produces a `review.md` recording 0 findings across all five passes, `blocking: false`, and exits `0`.
+- [x] AC13: **Cross-pass dedupe**: when the same finding (matching rule ID, file, and overlapping line range) is produced by more than one pass, only the highest-severity instance is retained in `must-violations` and `should-violations`; lower-severity duplicates are dropped from the counts and report.
 
 ## Non-goals
 

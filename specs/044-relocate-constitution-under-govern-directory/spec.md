@@ -8,6 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 11
 ---
 
 # 044 — Relocate the shipped constitution to `.govern/constitution.md`
@@ -63,16 +64,16 @@ A new entry in the [bootstrap migration registry](../027-bootstrap-migration-reg
 
 ## Acceptance Criteria
 
-- [x] A freshly adopted project (first `/govern` run) has the constitution at `.govern/constitution.md` (committed, `update` strategy, pinnable); no govern-owned `update`-strategy file other than the root-anchored `.markdownlint-cli2.jsonc` linter config (kept at root for markdownlint-cli2's config discovery) lands at the adopter repo root.
-- [x] The shipped `CLAUDE.md` seed imports `.govern/constitution.md`, and the shipped `AGENTS.md` / `README.md` seeds link the constitution at its new path; no shipped template references a root `constitution.md`.
-- [x] Every shipped command body that names the adopter constitution path reads `.govern/constitution.md`; `analyze`'s anchor-resolution rule resolves `framework/constitution.md` in govern's own repo and `.govern/constitution.md` at an adopter root.
-- [x] Running `/govern` in a project on the old layout moves root `constitution.md` → `.govern/constitution.md` with history preserved, under the existing batch migration consent with no per-file prompt, and is a no-op on a project already on the new layout.
-- [x] The migration rewrites the adopter's `CLAUDE.md` `@import` line and `AGENTS.md` / `README.md` constitution links when they match the shipped legacy form; in a seed file that exists, an absent or hand-altered reference it cannot rewrite is left unmodified and named in a warning, while a wholly absent seed file is silently skipped.
-- [x] A `[pinned] files` entry naming `constitution.md` is re-pointed to `.govern/constitution.md` and continues to protect the moved file from overwrite; a pinned command body still referencing the root path is left unmodified but named in a migration warning.
-- [x] On a destination collision the migration converges: an identical legacy root file is removed silently, a divergent one is removed with a prominent warning naming it, and no stale root copy remains.
-- [x] The migration is registered in `framework/migrations.toml` with `introduced_in = "0.24.0"` and no `sunset_after`, with a procedure file at `framework/migrations/{id}.md`, and the audit's migration-coverage invariants pass.
-- [x] The runtime's parity and golden fixtures that encode the shipped constitution destination reflect `.govern/constitution.md`, and the parity suite passes.
-- [x] No stale reference to the adopter-root `constitution.md` path remains in live artifacts (`framework/`, `runtime/`, `docs/`, `README.md`, `AGENTS.md`), per the no-dead-references rule; govern's own repo keeps importing `framework/constitution.md` unchanged.
+- [x] AC1: A freshly adopted project (first `/govern` run) has the constitution at `.govern/constitution.md` (committed, `update` strategy, pinnable); no govern-owned `update`-strategy file other than the root-anchored `.markdownlint-cli2.jsonc` linter config (kept at root for markdownlint-cli2's config discovery) lands at the adopter repo root.
+- [x] AC2: The shipped `CLAUDE.md` seed imports `.govern/constitution.md`, and the shipped `AGENTS.md` / `README.md` seeds link the constitution at its new path; no shipped template references a root `constitution.md`.
+- [x] AC3: Every shipped command body that names the adopter constitution path reads `.govern/constitution.md`; `analyze`'s anchor-resolution rule resolves `framework/constitution.md` in govern's own repo and `.govern/constitution.md` at an adopter root.
+- [x] AC4: Running `/govern` in a project on the old layout moves root `constitution.md` → `.govern/constitution.md` with history preserved, under the existing batch migration consent with no per-file prompt, and is a no-op on a project already on the new layout.
+- [x] AC5: The migration rewrites the adopter's `CLAUDE.md` `@import` line and `AGENTS.md` / `README.md` constitution links when they match the shipped legacy form; in a seed file that exists, an absent or hand-altered reference it cannot rewrite is left unmodified and named in a warning, while a wholly absent seed file is silently skipped.
+- [x] AC6: A `[pinned] files` entry naming `constitution.md` is re-pointed to `.govern/constitution.md` and continues to protect the moved file from overwrite; a pinned command body still referencing the root path is left unmodified but named in a migration warning.
+- [x] AC7: On a destination collision the migration converges: an identical legacy root file is removed silently, a divergent one is removed with a prominent warning naming it, and no stale root copy remains.
+- [x] AC8: The migration is registered in `framework/migrations.toml` with `introduced_in = "0.24.0"` and no `sunset_after`, with a procedure file at `framework/migrations/{id}.md`, and the audit's migration-coverage invariants pass.
+- [x] AC9: The runtime's parity and golden fixtures that encode the shipped constitution destination reflect `.govern/constitution.md`, and the parity suite passes.
+- [x] AC10: No stale reference to the adopter-root `constitution.md` path remains in live artifacts (`framework/`, `runtime/`, `docs/`, `README.md`, `AGENTS.md`), per the no-dead-references rule; govern's own repo keeps importing `framework/constitution.md` unchanged.
 
 ## Open Questions
 

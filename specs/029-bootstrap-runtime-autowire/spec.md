@@ -8,6 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 22
 ---
 
 # 029 — Bootstrap Runtime Auto-Detect and Wire
@@ -94,27 +95,27 @@ The README Runtime section, which currently frames the runtime as an entirely se
 
 ## Acceptance Criteria
 
-- [x] When `gvrn` MCP tools are callable in the session (State A), `/govern` takes the deterministic primitive path and emits no detection message.
-- [x] `gvrn` tools exposed lazily by the host (deferred schemas, not-yet-loaded) are classified as State A, not as absent.
-- [x] State A is reached by introspecting the agent's own tool inventory (per-host `gvrn` tool prefix) — no shell probe and no added permission are required to detect State A.
-- [x] When the binary probe cannot run (no shell granted) or is denied, the run is classified as State C — detection never hard-fails.
-- [x] The `command -v gvrn`-equivalent probe command is part of the bootstrap's pre-granted shell-command seed, so it does not prompt on routine runs.
-- [x] When the `gvrn` binary is discoverable but no `gvrn` MCP tools are available (State B), `/govern` writes the per-layout MCP-wiring file (`.mcp.json` for `claude-style`, `{config_dir}/mcp_config.json` for `antigravity`).
-- [x] In State B, the write preserves every pre-existing `mcpServers` entry and is idempotent — a wiring file that already contains a `gvrn` entry is left byte-unchanged.
-- [x] The gate wires `gvrn` on presence of the binary alone and performs no version-compatibility check (deferred to the runtime per spec 022 §Versioning enforcement).
-- [x] An existing wiring file with no `mcpServers` key gains the key with just the `gvrn` entry, preserving all other top-level keys.
-- [x] An existing wiring file that is not valid JSON is left untouched — the gate skips wiring, warns the user, and degrades to the markdown path (no clobber).
-- [x] In State B, `/govern` aborts before the archive fetch and instructs the user to start a new session and re-run, stating that `gvrn` reduces token use and naming every file it wrote. No archive is fetched and no scaffolding runs.
-- [x] State B performs no separate consent prompt before writing the wiring and permission entries (additive, idempotent); disclosure is the abort message's file list.
-- [x] In State B, the agent's per-layout settings file gains the permission entries needed to call `gvrn` tools, added additively (no existing entry removed or reordered).
-- [x] When the `gvrn` binary is not discoverable (State C), `/govern` proceeds on the markdown-only path and emits exactly one tip line pointing at the README Runtime section.
-- [x] `gvrn` detection and the govern.md self-update check run in one pre-flight phase before the archive fetch; their restart-requiring writes are batched into a single abort so the user restarts at most once even when both fire.
-- [x] Both the `claude-style` and `antigravity` layouts are covered by the above.
-- [x] The README Runtime section states that `/govern` auto-wires `gvrn` when the binary is detected.
-- [x] Project inputs (`name`, `description`, `languages`) are persisted in `.govern.toml`'s `[project]` table and resolved at §Collect Project Inputs after the Pre-flight Phase — reading existing values back and prompting only for what is missing — so they are asked at most once across the State B / stale-`govern.md` restart and never re-asked on update runs. (`host.project` is the derived runtime namespace, written from `project.name`.) *(scenario: [project-inputs-asked-once](scenarios/project-inputs-asked-once.md))*
-- [x] The markdown-path archive fetch uses the direct `codeload.github.com` endpoint (no 302 redirect), so the bootstrap's pre-granted `curl` permission covers it without a prompt. *(scenario: [archive-fetch-direct-codeload](scenarios/archive-fetch-direct-codeload.md))*
-- [x] State A (gvrn live) is a binding execution contract: every primitive-backed step is performed by calling its `gvrn` MCP tool, the shell commands under those steps are explicitly the State-B/C fallback spec (not to be executed), non-primitive steps (gitignore curl, git config, input prompts) run as shown in every state, and a primitive call that errors falls back to that one step's shell spec. *(scenario: [state-a-deterministic-path-forcing](scenarios/state-a-deterministic-path-forcing.md))*
-- [x] A `/audit` family (`scripts/audit/runtime-probe-parity.sh`, Family 15) guards that the gvrn binary probe stays in parity between each agent's §Agent Registry `settings_template` seed and its `configure/{key}.md` set — present in both or neither, a finding only when present in one side — as a fixed-string check in each agent's native grammar. *(scenario: [runtime-probe-parity-audit](scenarios/runtime-probe-parity-audit.md))*
+- [x] AC1: When `gvrn` MCP tools are callable in the session (State A), `/govern` takes the deterministic primitive path and emits no detection message.
+- [x] AC2: `gvrn` tools exposed lazily by the host (deferred schemas, not-yet-loaded) are classified as State A, not as absent.
+- [x] AC3: State A is reached by introspecting the agent's own tool inventory (per-host `gvrn` tool prefix) — no shell probe and no added permission are required to detect State A.
+- [x] AC4: When the binary probe cannot run (no shell granted) or is denied, the run is classified as State C — detection never hard-fails.
+- [x] AC5: The `command -v gvrn`-equivalent probe command is part of the bootstrap's pre-granted shell-command seed, so it does not prompt on routine runs.
+- [x] AC6: When the `gvrn` binary is discoverable but no `gvrn` MCP tools are available (State B), `/govern` writes the per-layout MCP-wiring file (`.mcp.json` for `claude-style`, `{config_dir}/mcp_config.json` for `antigravity`).
+- [x] AC7: In State B, the write preserves every pre-existing `mcpServers` entry and is idempotent — a wiring file that already contains a `gvrn` entry is left byte-unchanged.
+- [x] AC8: The gate wires `gvrn` on presence of the binary alone and performs no version-compatibility check (deferred to the runtime per spec 022 §Versioning enforcement).
+- [x] AC9: An existing wiring file with no `mcpServers` key gains the key with just the `gvrn` entry, preserving all other top-level keys.
+- [x] AC10: An existing wiring file that is not valid JSON is left untouched — the gate skips wiring, warns the user, and degrades to the markdown path (no clobber).
+- [x] AC11: In State B, `/govern` aborts before the archive fetch and instructs the user to start a new session and re-run, stating that `gvrn` reduces token use and naming every file it wrote. No archive is fetched and no scaffolding runs.
+- [x] AC12: State B performs no separate consent prompt before writing the wiring and permission entries (additive, idempotent); disclosure is the abort message's file list.
+- [x] AC13: In State B, the agent's per-layout settings file gains the permission entries needed to call `gvrn` tools, added additively (no existing entry removed or reordered).
+- [x] AC14: When the `gvrn` binary is not discoverable (State C), `/govern` proceeds on the markdown-only path and emits exactly one tip line pointing at the README Runtime section.
+- [x] AC15: `gvrn` detection and the govern.md self-update check run in one pre-flight phase before the archive fetch; their restart-requiring writes are batched into a single abort so the user restarts at most once even when both fire.
+- [x] AC16: Both the `claude-style` and `antigravity` layouts are covered by the above.
+- [x] AC17: The README Runtime section states that `/govern` auto-wires `gvrn` when the binary is detected.
+- [x] AC18: Project inputs (`name`, `description`, `languages`) are persisted in `.govern.toml`'s `[project]` table and resolved at §Collect Project Inputs after the Pre-flight Phase — reading existing values back and prompting only for what is missing — so they are asked at most once across the State B / stale-`govern.md` restart and never re-asked on update runs. (`host.project` is the derived runtime namespace, written from `project.name`.) *(scenario: [project-inputs-asked-once](scenarios/project-inputs-asked-once.md))*
+- [x] AC19: The markdown-path archive fetch uses the direct `codeload.github.com` endpoint (no 302 redirect), so the bootstrap's pre-granted `curl` permission covers it without a prompt. *(scenario: [archive-fetch-direct-codeload](scenarios/archive-fetch-direct-codeload.md))*
+- [x] AC20: State A (gvrn live) is a binding execution contract: every primitive-backed step is performed by calling its `gvrn` MCP tool, the shell commands under those steps are explicitly the State-B/C fallback spec (not to be executed), non-primitive steps (gitignore curl, git config, input prompts) run as shown in every state, and a primitive call that errors falls back to that one step's shell spec. *(scenario: [state-a-deterministic-path-forcing](scenarios/state-a-deterministic-path-forcing.md))*
+- [x] AC21: A `/audit` family (`scripts/audit/runtime-probe-parity.sh`, Family 15) guards that the gvrn binary probe stays in parity between each agent's §Agent Registry `settings_template` seed and its `configure/{key}.md` set — present in both or neither, a finding only when present in one side — as a fixed-string check in each agent's native grammar. *(scenario: [runtime-probe-parity-audit](scenarios/runtime-probe-parity-audit.md))*
 
 ## Open Questions
 

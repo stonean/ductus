@@ -10,6 +10,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 9
 ---
 
 # 016 — Cross-Cutting Rules
@@ -67,14 +68,14 @@ The artifact tier and validate plumbing already exist. This spec generalizes the
 
 ## Acceptance Criteria
 
-- [x] `framework/constitution.md` contains a `<!-- §rules -->` section that defines what a rule is, when to write one (the four-indicator promotion checklist: cross-cutting, citable, governance-recognized category, generalizable wording), when not to (situational → scenario; feature-wide → AC), the lifecycle (citation by ID, ID stability, deprecation), and the relationship to specs and scenarios. The section carries a short conceptual summary of the rule-file format (ID, Statement, Rationale, Verification; RFC 2119 language) and back-links to `specs/008-security-rules/data-model.md` for the canonical schema rather than duplicating it.
-- [x] §bug-handling in the constitution includes a fourth decision-tree route covering cross-cutting concerns. The "Three Tiers" framing above (or its equivalent) is reflected in the section.
-- [x] `framework/commands/analyze.md`'s "Security rules" section is renamed to "Rules." The loading logic discovers any rule file shipped under the manifest, not only `security-backend.md` and `security-frontend.md`. Existing per-rule verification, reference-checking, and severity behavior is unchanged.
-- [x] `framework/templates/spec/spec.md` includes an optional "Applicable Rules" section with prompt text explaining when to cite rule IDs (e.g., when the spec touches an area covered by a loaded rule file).
-- [x] `framework/commands/groom.md` includes "promote to rule" as a routing option in its decision-tree walk, alongside the existing spec/scenario routes.
-- [x] `specs/008-security-rules/spec.md` carries a top-of-file signpost noting it is the security instance of the general rules tier defined in 016.
-- [x] All modified markdown files pass `npx markdownlint-cli2`.
-- [x] `/gov:analyze --all` passes against the modified govern repo (no new findings introduced by the spec/template/validate changes themselves).
+- [x] AC1: `framework/constitution.md` contains a `<!-- §rules -->` section that defines what a rule is, when to write one (the four-indicator promotion checklist: cross-cutting, citable, governance-recognized category, generalizable wording), when not to (situational → scenario; feature-wide → AC), the lifecycle (citation by ID, ID stability, deprecation), and the relationship to specs and scenarios. The section carries a short conceptual summary of the rule-file format (ID, Statement, Rationale, Verification; RFC 2119 language) and back-links to `specs/008-security-rules/data-model.md` for the canonical schema rather than duplicating it.
+- [x] AC2: §bug-handling in the constitution includes a fourth decision-tree route covering cross-cutting concerns. The "Three Tiers" framing above (or its equivalent) is reflected in the section.
+- [x] AC3: `framework/commands/analyze.md`'s "Security rules" section is renamed to "Rules." The loading logic discovers any rule file shipped under the manifest, not only `security-backend.md` and `security-frontend.md`. Existing per-rule verification, reference-checking, and severity behavior is unchanged.
+- [x] AC4: `framework/templates/spec/spec.md` includes an optional "Applicable Rules" section with prompt text explaining when to cite rule IDs (e.g., when the spec touches an area covered by a loaded rule file).
+- [x] AC5: `framework/commands/groom.md` includes "promote to rule" as a routing option in its decision-tree walk, alongside the existing spec/scenario routes.
+- [x] AC6: `specs/008-security-rules/spec.md` carries a top-of-file signpost noting it is the security instance of the general rules tier defined in 016.
+- [x] AC7: All modified markdown files pass `npx markdownlint-cli2`.
+- [x] AC8: `/gov:analyze --all` passes against the modified govern repo (no new findings introduced by the spec/template/validate changes themselves).
 
 ## Open Questions
 

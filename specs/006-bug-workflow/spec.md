@@ -10,6 +10,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 20
 ---
 
 # 006 — Bug Workflow
@@ -121,25 +122,25 @@ This feature produces the following changes to the governance framework:
 
 ## Acceptance Criteria
 
-- [x] `templates/scenario.md` exists with spec-ref, Context, Behavior, and Edge Cases sections
-- [x] `templates/triage.md` exists with a flat inbox format and migration rules
-- [x] `templates/spec.md` references the scenarios directory convention
-- [x] `constitution.md` includes a bug handling section with the decision tree
-- [x] `constitution.md` defines scenarios as part of the spec lifecycle
-- [x] `constitution.md` documents the scenario directory convention in the spec phase file structure
-- [x] `/gov:groom` command exists and walks each triage item through the decision tree
-- [x] `/gov:groom` migrates resolved items from `specs/inbox.md` to the appropriate spec or scenario
-- [x] `/gov:groom` removes migrated items from `specs/inbox.md`
-- [x] `/gov:about` documents `/gov:scenario`, `/gov:groom`, scenario conventions, and the bug workflow
-- [x] `/gov:scenario` command exists and creates scenario files under the correct feature's `scenarios/` directory
-- [x] `/gov:scenario` requires an active session target and confirms the target before proceeding
-- [x] `/gov:scenario` follows the decision tree — checks for existing spec before creating a scenario
-- [x] `/gov:scenario` appends a task to the parent spec's `tasks.md` referencing the new scenario
-- [x] `/gov:status` displays scenario counts per spec in the pipeline dashboard
-- [x] `/gov:next` suggests `/gov:scenario` as a next action when context warrants it
-- [x] `/gov:analyze` checks that scenario-linked tasks in `tasks.md` are complete
-- [x] `README.md` documents the bug workflow and scenario conventions
-- [x] All new and modified markdown files pass `npx markdownlint-cli2`
+- [x] AC1: `templates/scenario.md` exists with spec-ref, Context, Behavior, and Edge Cases sections
+- [x] AC2: `templates/triage.md` exists with a flat inbox format and migration rules
+- [x] AC3: `templates/spec.md` references the scenarios directory convention
+- [x] AC4: `constitution.md` includes a bug handling section with the decision tree
+- [x] AC5: `constitution.md` defines scenarios as part of the spec lifecycle
+- [x] AC6: `constitution.md` documents the scenario directory convention in the spec phase file structure
+- [x] AC7: `/gov:groom` command exists and walks each triage item through the decision tree
+- [x] AC8: `/gov:groom` migrates resolved items from `specs/inbox.md` to the appropriate spec or scenario
+- [x] AC9: `/gov:groom` removes migrated items from `specs/inbox.md`
+- [x] AC10: `/gov:about` documents `/gov:scenario`, `/gov:groom`, scenario conventions, and the bug workflow
+- [x] AC11: `/gov:scenario` command exists and creates scenario files under the correct feature's `scenarios/` directory
+- [x] AC12: `/gov:scenario` requires an active session target and confirms the target before proceeding
+- [x] AC13: `/gov:scenario` follows the decision tree — checks for existing spec before creating a scenario
+- [x] AC14: `/gov:scenario` appends a task to the parent spec's `tasks.md` referencing the new scenario
+- [x] AC15: `/gov:status` displays scenario counts per spec in the pipeline dashboard
+- [x] AC16: `/gov:next` suggests `/gov:scenario` as a next action when context warrants it
+- [x] AC17: `/gov:analyze` checks that scenario-linked tasks in `tasks.md` are complete
+- [x] AC18: `README.md` documents the bug workflow and scenario conventions
+- [x] AC19: All new and modified markdown files pass `npx markdownlint-cli2`
 
 ## Edge Cases
 

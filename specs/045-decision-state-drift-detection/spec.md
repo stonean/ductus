@@ -8,6 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 19
 ---
 
 # 045 — Decision-state drift detection
@@ -102,24 +103,24 @@ Both ship as `check-artifacts` families on the runtime path, with the markdown-o
 
 ## Acceptance Criteria
 
-- [x] §drift-prevention names the decision trigger, not only the document-edit trigger, and lists the recognizable resolution events
-- [x] §drift-prevention states that a resolution is incomplete while a sibling artifact still describes the prior state
-- [x] `/{project}:analyze` emits an advisory finding when an artifact's link-adjacent prose asserts an open state that the link target's current state contradicts
-- [x] Each finding names the citing file and line, the link target, and the target's contradicting state
-- [x] A feature directory whose prose matches its link targets' state produces zero findings
-- [x] The link-adjacent check covers every artifact in a feature directory that carries inline sibling links — `spec.md`, `plan.md`, `tasks.md`, and `scenarios/*.md`
-- [x] Findings from both checks are advisory (non-blocking) at introduction and do not gate `done`
-- [x] Repeat runs over an unchanged feature directory produce identical findings
-- [x] A link whose target state cannot be read produces no finding (an unknown is never escalated to a defect, matching the `status-unreadable` precedent in cross-service reference classification)
-- [x] `analyze.md` documents both checks and their shared promotion criterion alongside the existing advisory checks
-- [x] The tell list is exactly the six closed entries, framework-fixed, with no per-project configuration surface
-- [x] The scanned unit is the enclosing block-level element (list item, table row, or paragraph), and evaluation is per link so a multi-link block fires only for the contradicting target
-- [x] A tell inside a fenced code block, an HTML comment, a blockquote, or an inline code span produces no finding
-- [x] A link targeting a scenario is evaluated on the scenario's open-question count and file existence; a tell requiring a lifecycle status produces no finding
-- [x] Both checks ship as `check-artifacts` families, with the markdown-only path performing the same procedure as prose
-- [x] `/{project}:analyze` emits an advisory finding for each filesystem path named in a `done` spec's acceptance criterion that no longer resolves, reading inside inline code spans
-- [x] The path-existence check is scoped to `## Acceptance Criteria` and does not scan body prose, so a correct historical mention of a deleted path produces no finding
-- [x] The path-existence check reproduces the originating case: 026's AC5 naming `framework/workflows/registry.json` and `scripts/audit/registry-equivalence.sh` after `531e3ea` deleted both
+- [x] AC1: §drift-prevention names the decision trigger, not only the document-edit trigger, and lists the recognizable resolution events
+- [x] AC2: §drift-prevention states that a resolution is incomplete while a sibling artifact still describes the prior state
+- [x] AC3: `/{project}:analyze` emits an advisory finding when an artifact's link-adjacent prose asserts an open state that the link target's current state contradicts
+- [x] AC4: Each finding names the citing file and line, the link target, and the target's contradicting state
+- [x] AC5: A feature directory whose prose matches its link targets' state produces zero findings
+- [x] AC6: The link-adjacent check covers every artifact in a feature directory that carries inline sibling links — `spec.md`, `plan.md`, `tasks.md`, and `scenarios/*.md`
+- [x] AC7: Findings from both checks are advisory (non-blocking) at introduction and do not gate `done`
+- [x] AC8: Repeat runs over an unchanged feature directory produce identical findings
+- [x] AC9: A link whose target state cannot be read produces no finding (an unknown is never escalated to a defect, matching the `status-unreadable` precedent in cross-service reference classification)
+- [x] AC10: `analyze.md` documents both checks and their shared promotion criterion alongside the existing advisory checks
+- [x] AC11: The tell list is exactly the six closed entries, framework-fixed, with no per-project configuration surface
+- [x] AC12: The scanned unit is the enclosing block-level element (list item, table row, or paragraph), and evaluation is per link so a multi-link block fires only for the contradicting target
+- [x] AC13: A tell inside a fenced code block, an HTML comment, a blockquote, or an inline code span produces no finding
+- [x] AC14: A link targeting a scenario is evaluated on the scenario's open-question count and file existence; a tell requiring a lifecycle status produces no finding
+- [x] AC15: Both checks ship as `check-artifacts` families, with the markdown-only path performing the same procedure as prose
+- [x] AC16: `/{project}:analyze` emits an advisory finding for each filesystem path named in a `done` spec's acceptance criterion that no longer resolves, reading inside inline code spans
+- [x] AC17: The path-existence check is scoped to `## Acceptance Criteria` and does not scan body prose, so a correct historical mention of a deleted path produces no finding
+- [x] AC18: The path-existence check reproduces the originating case: 026's AC5 naming `framework/workflows/registry.json` and `scripts/audit/registry-equivalence.sh` after `531e3ea` deleted both
 
 ## Open Questions
 

@@ -10,6 +10,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 17
 ---
 
 # 005 — Workflows
@@ -86,22 +87,22 @@ If the user's tech stack selections match no registry entries (e.g., all categor
 
 ## Acceptance Criteria
 
-- [x] A workflow registry existed at `framework/workflows/registry.json` in governance, using JSON format. Met at v1 and **since retired** — spec `043-workflows-sunset` deleted the workflows feature and this registry with it (see the sunset note above, which carries the link). Retained as a record of what shipped, not as a live requirement.
-- [x] Each registry entry specifies a single-field trigger, workflow name, category, template path, and description
-- [x] Categories are drawn from the fixed set: Testing, Linting, Formatting, Migrations, Code Review, Deployment
-- [x] During init, after tech stack selection, matched workflows are presented to the user grouped by category
-- [x] The user can accept or skip each category group — no workflows are scaffolded without consent
-- [x] Accepted workflow files are copied into `.claude/commands/{slug}/workflows/` with placeholders replaced
-- [x] Skipping all workflow recommendations produces the same project as today (backwards compatible)
-- [x] If no registry entries match the user's tech stack, the workflow step is skipped silently
-- [x] Workflow files use the naming convention `{tool}.md` (revised from the original `{workflow}-{language}-{tool}.md` post-completion; see preamble Note)
-- [x] Workflow files follow the same `.md` format and placeholder conventions as existing slash commands
-- [x] The registry is extensible — adding a new workflow requires only a registry entry and a workflow file
-- [x] Init warns and continues (does not fail) if the registry file is missing or malformed
-- [x] Init warns and skips individual workflows whose file is missing
-- [x] `/{project}:govern` updates the registry and offers new, unscaffolded workflows to the user
-- [x] Govern does not overwrite workflow files that already exist in the project
-- [x] Rename internal terminology from "skills" to "workflows" to free the term "skills" for Anthropic-style context-loaded instruction packs (signpost: driven by [010-agent-autonomy](../010-agent-autonomy/spec.md); the rename also flattened the framework directory — workflow files sat directly under `framework/workflows/` rather than in an inner `templates/` subdirectory. Spec 043 later sunset the workflows feature, so that directory no longer exists)
+- [x] AC1: A workflow registry existed at `framework/workflows/registry.json` in governance, using JSON format. Met at v1 and **since retired** — spec `043-workflows-sunset` deleted the workflows feature and this registry with it (see the sunset note above, which carries the link). Retained as a record of what shipped, not as a live requirement.
+- [x] AC2: Each registry entry specifies a single-field trigger, workflow name, category, template path, and description
+- [x] AC3: Categories are drawn from the fixed set: Testing, Linting, Formatting, Migrations, Code Review, Deployment
+- [x] AC4: During init, after tech stack selection, matched workflows are presented to the user grouped by category
+- [x] AC5: The user can accept or skip each category group — no workflows are scaffolded without consent
+- [x] AC6: Accepted workflow files are copied into `.claude/commands/{slug}/workflows/` with placeholders replaced
+- [x] AC7: Skipping all workflow recommendations produces the same project as today (backwards compatible)
+- [x] AC8: If no registry entries match the user's tech stack, the workflow step is skipped silently
+- [x] AC9: Workflow files use the naming convention `{tool}.md` (revised from the original `{workflow}-{language}-{tool}.md` post-completion; see preamble Note)
+- [x] AC10: Workflow files follow the same `.md` format and placeholder conventions as existing slash commands
+- [x] AC11: The registry is extensible — adding a new workflow requires only a registry entry and a workflow file
+- [x] AC12: Init warns and continues (does not fail) if the registry file is missing or malformed
+- [x] AC13: Init warns and skips individual workflows whose file is missing
+- [x] AC14: `/{project}:govern` updates the registry and offers new, unscaffolded workflows to the user
+- [x] AC15: Govern does not overwrite workflow files that already exist in the project
+- [x] AC16: Rename internal terminology from "skills" to "workflows" to free the term "skills" for Anthropic-style context-loaded instruction packs (signpost: driven by [010-agent-autonomy](../010-agent-autonomy/spec.md); the rename also flattened the framework directory — workflow files sat directly under `framework/workflows/` rather than in an inner `templates/` subdirectory. Spec 043 later sunset the workflows feature, so that directory no longer exists)
 
 ## Resolved Questions
 

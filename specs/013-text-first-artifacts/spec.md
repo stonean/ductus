@@ -10,6 +10,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 19
 ---
 
 # 013 — Text-First Artifacts
@@ -100,24 +101,24 @@ This repo dogfoods the principle: every existing spec under `specs/` in this rep
 
 ## Acceptance Criteria
 
-- [x] `framework/constitution.md` declares the text-first artifacts principle in a new section, including the frontmatter requirement, relative-link rule, and structured-derived-view caveat.
-- [x] The frontmatter schema is declared as a markdown table in `framework/constitution.md`, listing required fields per artifact kind (specs: `status`, `dependencies`; scenarios: `spec-ref`), standard optional fields (`tags`), and the open-schema rule for additional fields.
-- [x] The constitution declares the schema applies to spec files and scenario files only; other artifacts (`system.md`, `errors.md`, `events.md`, `inbox.md`, plan files, tasks files, rule files) MAY include frontmatter when a consumer benefits but are not required to.
-- [x] The constitution publishes a starter `tags` vocabulary as guidance (not enforcement).
-- [x] `framework/templates/spec/spec.md` uses YAML frontmatter and includes `tags: []` as a visible placeholder so authors see the field at every new spec. The same held for the spec-and-plan template until spec `023-govern-refinement` retired it.
-- [x] `framework/templates/spec/scenario.md` uses YAML frontmatter for `spec-ref` instead of bold-prefix.
-- [x] `/gov:specify` prompts for at least one tag at spec creation time, surfacing existing sibling specs' tags as suggestions; the author can decline (leaving the list empty) without blocking creation.
-- [x] `/gov:clarify` flags missing or empty `tags` as an advisory finding at the `draft → clarified` transition; the finding does not block the transition.
-- [x] Every existing spec in this repo's `specs/` directory uses frontmatter; no spec file contains both formats.
-- [x] Every slash command source under `framework/commands/` that reads or writes spec metadata parses frontmatter, not bold-prefix lines.
-- [x] `/gov:analyze` hard-fails on required-field violations (missing or invalid `status`, missing or invalid `dependencies`, malformed YAML, or no frontmatter block) and reports missing `tags`, unknown fields, and other discrepancies as advisory findings.
-- [x] `/govern` (the unified bootstrap from 012) detects pre-frontmatter spec files in adopted projects and migrates them on its next run.
-- [x] `/govern` migration is idempotent — running it twice on the same project produces no second-run changes.
-- [x] `/govern` migration prechecks `git status --porcelain` scoped to `specs/` and refuses to run on a dirty tree, instructing the user to commit or stash. No automatic backup directory is created; git is the recovery mechanism.
-- [x] `/govern` migration respects `.governance.toml` pinning — pinned files are skipped and surfaced in the post-run summary.
-- [x] The root `README.md` includes a "Viewing artifacts" section that documents `npx quartz` as the recommended viewer and notes that other PKM tools work unchanged. The recommendation lives in this repo only — the project-readme template is unchanged.
-- [x] `framework/bootstrap/govern.md` post-run output mentions `npx quartz specs/` as a one-line tip so adopters discover the viewer at bootstrap time without the recommendation being baked into their own README.
-- [x] All updated and migrated `.md` files pass `npx markdownlint-cli2`.
+- [x] AC1: `framework/constitution.md` declares the text-first artifacts principle in a new section, including the frontmatter requirement, relative-link rule, and structured-derived-view caveat.
+- [x] AC2: The frontmatter schema is declared as a markdown table in `framework/constitution.md`, listing required fields per artifact kind (specs: `status`, `dependencies`; scenarios: `spec-ref`), standard optional fields (`tags`), and the open-schema rule for additional fields.
+- [x] AC3: The constitution declares the schema applies to spec files and scenario files only; other artifacts (`system.md`, `errors.md`, `events.md`, `inbox.md`, plan files, tasks files, rule files) MAY include frontmatter when a consumer benefits but are not required to.
+- [x] AC4: The constitution publishes a starter `tags` vocabulary as guidance (not enforcement).
+- [x] AC5: `framework/templates/spec/spec.md` uses YAML frontmatter and includes `tags: []` as a visible placeholder so authors see the field at every new spec. The same held for the spec-and-plan template until spec `023-govern-refinement` retired it.
+- [x] AC6: `framework/templates/spec/scenario.md` uses YAML frontmatter for `spec-ref` instead of bold-prefix.
+- [x] AC7: `/gov:specify` prompts for at least one tag at spec creation time, surfacing existing sibling specs' tags as suggestions; the author can decline (leaving the list empty) without blocking creation.
+- [x] AC8: `/gov:clarify` flags missing or empty `tags` as an advisory finding at the `draft → clarified` transition; the finding does not block the transition.
+- [x] AC9: Every existing spec in this repo's `specs/` directory uses frontmatter; no spec file contains both formats.
+- [x] AC10: Every slash command source under `framework/commands/` that reads or writes spec metadata parses frontmatter, not bold-prefix lines.
+- [x] AC11: `/gov:analyze` hard-fails on required-field violations (missing or invalid `status`, missing or invalid `dependencies`, malformed YAML, or no frontmatter block) and reports missing `tags`, unknown fields, and other discrepancies as advisory findings.
+- [x] AC12: `/govern` (the unified bootstrap from 012) detects pre-frontmatter spec files in adopted projects and migrates them on its next run.
+- [x] AC13: `/govern` migration is idempotent — running it twice on the same project produces no second-run changes.
+- [x] AC14: `/govern` migration prechecks `git status --porcelain` scoped to `specs/` and refuses to run on a dirty tree, instructing the user to commit or stash. No automatic backup directory is created; git is the recovery mechanism.
+- [x] AC15: `/govern` migration respects `.governance.toml` pinning — pinned files are skipped and surfaced in the post-run summary.
+- [x] AC16: The root `README.md` includes a "Viewing artifacts" section that documents `npx quartz` as the recommended viewer and notes that other PKM tools work unchanged. The recommendation lives in this repo only — the project-readme template is unchanged.
+- [x] AC17: `framework/bootstrap/govern.md` post-run output mentions `npx quartz specs/` as a one-line tip so adopters discover the viewer at bootstrap time without the recommendation being baked into their own README.
+- [x] AC18: All updated and migrated `.md` files pass `npx markdownlint-cli2`.
 
 ## Open Questions
 

@@ -10,6 +10,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 8
 ---
 
 # 002 — Project Scaffolding Templates
@@ -58,13 +59,13 @@ A minimal file with `@import` directives:
 
 ## Acceptance Criteria
 
-- [x] `templates/project-readme.md` exists with placeholder sections for project name, quick start, getting started (referencing setup and status commands), documentation links, feature table, pipeline overview, and slash command reference
-- [x] `templates/gitignore` exists with minimal sections for secrets, claude settings, IDE files, and OS files — no language-specific patterns
-- [x] `templates/claude-md.md` exists with `@import` directives
-- [x] Each template uses `{project}` placeholder where the project name appears
-- [x] The README template includes a feature table matching the format used by constitution's spec numbering convention
-- [x] The .gitignore preserves `.claude/commands/` while excluding other `.claude/` contents
-- [x] All markdown templates pass markdownlint
+- [x] AC1: `templates/project-readme.md` exists with placeholder sections for project name, quick start, getting started (referencing setup and status commands), documentation links, feature table, pipeline overview, and slash command reference
+- [x] AC2: `templates/gitignore` exists with minimal sections for secrets, claude settings, IDE files, and OS files — no language-specific patterns
+- [x] AC3: `templates/claude-md.md` exists with `@import` directives
+- [x] AC4: Each template uses `{project}` placeholder where the project name appears
+- [x] AC5: The README template includes a feature table matching the format used by constitution's spec numbering convention
+- [x] AC6: The .gitignore preserves `.claude/commands/` while excluding other `.claude/` contents
+- [x] AC7: All markdown templates pass markdownlint
 
 ## Resolved Questions
 

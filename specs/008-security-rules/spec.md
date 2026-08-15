@@ -10,6 +10,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 29
 ---
 
 # 008 — Security Rules
@@ -201,49 +202,49 @@ How validate behaves when the inputs are unusual:
 
 ### Rule Files
 
-- [x] `framework/rules/security-backend.md` exists in the governance framework with categorized, numbered rules
-- [x] `framework/rules/security-frontend.md` exists in the governance framework with categorized, numbered rules
-- [x] Every rule has an ID, statement, rationale, and verification method
-- [x] Rule IDs follow the format `{surface}-{category}-{NNN}` with `{surface}` ∈ `{BE, FE}` and `{NNN}` zero-padded starting at `001`
-- [x] Rules use RFC 2119 language to distinguish enforced (MUST/MUST NOT) from advisory (SHOULD/SHOULD NOT)
+- [x] AC1: `framework/rules/security-backend.md` exists in the governance framework with categorized, numbered rules
+- [x] AC2: `framework/rules/security-frontend.md` exists in the governance framework with categorized, numbered rules
+- [x] AC3: Every rule has an ID, statement, rationale, and verification method
+- [x] AC4: Rule IDs follow the format `{surface}-{category}-{NNN}` with `{surface}` ∈ `{BE, FE}` and `{NNN}` zero-padded starting at `001`
+- [x] AC5: Rules use RFC 2119 language to distinguish enforced (MUST/MUST NOT) from advisory (SHOULD/SHOULD NOT)
 
 ### Govern Integration
 
-- [x] Both files appear in the govern file manifest with `update` strategy
-- [x] The govern command fetches `framework/rules/security-backend.md` and writes it to `specs/rules/security-backend.md` in the project
-- [x] The govern command fetches `framework/rules/security-frontend.md` and writes it to `specs/rules/security-frontend.md` in the project
-- [x] Re-running govern updates both files to the latest governance version
-- [x] Projects can pin either file in `.governance.toml` to skip updates
+- [x] AC6: Both files appear in the govern file manifest with `update` strategy
+- [x] AC7: The govern command fetches `framework/rules/security-backend.md` and writes it to `specs/rules/security-backend.md` in the project
+- [x] AC8: The govern command fetches `framework/rules/security-frontend.md` and writes it to `specs/rules/security-frontend.md` in the project
+- [x] AC9: Re-running govern updates both files to the latest governance version
+- [x] AC10: Projects can pin either file in `.governance.toml` to skip updates
 
 ### Validate Integration
 
-- [x] The validate command reads `specs/rules/security-backend.md` and `specs/rules/security-frontend.md` when present in the project
-- [x] MUST/MUST NOT violations are reported as errors (blocking)
-- [x] SHOULD/SHOULD NOT violations are reported as warnings (non-blocking)
-- [x] Rule IDs appear in validate output for each finding
-- [x] Rules apply contextually — a rule that no spec or plan content exercises produces no finding
+- [x] AC11: The validate command reads `specs/rules/security-backend.md` and `specs/rules/security-frontend.md` when present in the project
+- [x] AC12: MUST/MUST NOT violations are reported as errors (blocking)
+- [x] AC13: SHOULD/SHOULD NOT violations are reported as warnings (non-blocking)
+- [x] AC14: Rule IDs appear in validate output for each finding
+- [x] AC15: Rules apply contextually — a rule that no spec or plan content exercises produces no finding
 
 ### Edge-case behavior
 
-- [x] Validate emits a warning and continues when no security rule files are present
-- [x] Validate runs only over the present file when one of the two is pinned out, with no finding for the missing file
-- [x] Validate blocks with an error on a malformed rule file (missing required field, ID format violation, parse failure)
-- [x] Validate blocks with an error on a spec/plan reference to an unknown rule ID
-- [x] Validate emits a warning (not an error) on a spec/plan reference to a `DEPRECATED` rule ID
-- [x] Validate blocks with an error when a rule file contains duplicate IDs
+- [x] AC16: Validate emits a warning and continues when no security rule files are present
+- [x] AC17: Validate runs only over the present file when one of the two is pinned out, with no finding for the missing file
+- [x] AC18: Validate blocks with an error on a malformed rule file (missing required field, ID format violation, parse failure)
+- [x] AC19: Validate blocks with an error on a spec/plan reference to an unknown rule ID
+- [x] AC20: Validate emits a warning (not an error) on a spec/plan reference to a `DEPRECATED` rule ID
+- [x] AC21: Validate blocks with an error when a rule file contains duplicate IDs
 
 ### Brownfield Adoption
 
-- [x] On a govern run where a security rule file is newly created AND `specs/NNN-*` directories exist, govern audits the existing specs against the rule and writes one inbox item per finding to `specs/inbox.md`
-- [x] On a greenfield run (no existing `specs/NNN-*` directories), the audit is silently skipped
-- [x] On a routine re-run (rule files already present), the audit is silently skipped
-- [x] Inbox items follow the format `- [ ] {Rule ID}: {affected artifact path} does not address — {one-line summary}`
-- [x] Audit findings are deduplicated against existing inbox content (no duplicate items emitted on re-trigger)
-- [x] Govern's post-scaffolding output reports the count of new audit items added (omitted when zero)
+- [x] AC22: On a govern run where a security rule file is newly created AND `specs/NNN-*` directories exist, govern audits the existing specs against the rule and writes one inbox item per finding to `specs/inbox.md`
+- [x] AC23: On a greenfield run (no existing `specs/NNN-*` directories), the audit is silently skipped
+- [x] AC24: On a routine re-run (rule files already present), the audit is silently skipped
+- [x] AC25: Inbox items follow the format `- [ ] {Rule ID}: {affected artifact path} does not address — {one-line summary}`
+- [x] AC26: Audit findings are deduplicated against existing inbox content (no duplicate items emitted on re-trigger)
+- [x] AC27: Govern's post-scaffolding output reports the count of new audit items added (omitted when zero)
 
 ### Constitution Reference
 
-- [x] The "Secure" principle references `specs/rules/security-backend.md` and `specs/rules/security-frontend.md`
+- [x] AC28: The "Secure" principle references `specs/rules/security-backend.md` and `specs/rules/security-frontend.md`
 
 ## Open Questions
 

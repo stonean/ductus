@@ -8,6 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 30
 ---
 
 # 027 — Bootstrap Migration Registry
@@ -75,53 +76,53 @@ This family is the gate that makes the registry load-bearing: a maintainer who r
 
 ### Registry shape
 
-- [x] `framework/migrations.toml` exists with one `[[migrations]]` array-of-tables entry per active convention removal. Each entry carries the fields: `id` (slug), `introduced_in` (SemVer string), `sunset_after` (SemVer string or omitted), `summary` (one-line string), `target_paths` (array of strings), `procedure_file` (path string).
-- [x] Six back-filled entries cover every convention removal currently encoded in `framework/bootstrap/govern.md` Pre-run Migrations: `.governance.toml` rename, `# Governance` gitignore marker, `spec-and-plan.md` sunset, rule-file relocation (subsuming `configuration.md` → `configuration-cross.md`), legacy `skills/` directory, post-005 workflow filename rename.
-- [x] Each back-filled entry's `introduced_in` matches the gvrn version (or framework commit) where the removal actually shipped, derived from `git log` at registry-introduction time.
-- [x] Each back-filled entry's `sunset_after` is set to `registry_introduction_version + 2 minor versions` (uniform).
-- [x] Each back-filled entry has a corresponding `framework/migrations/{id}.md` procedure file containing the migration's prose logic (skip conditions, prompts, summary reporting). No declarative-step DSL is introduced.
+- [x] AC1: `framework/migrations.toml` exists with one `[[migrations]]` array-of-tables entry per active convention removal. Each entry carries the fields: `id` (slug), `introduced_in` (SemVer string), `sunset_after` (SemVer string or omitted), `summary` (one-line string), `target_paths` (array of strings), `procedure_file` (path string).
+- [x] AC2: Six back-filled entries cover every convention removal currently encoded in `framework/bootstrap/govern.md` Pre-run Migrations: `.governance.toml` rename, `# Governance` gitignore marker, `spec-and-plan.md` sunset, rule-file relocation (subsuming `configuration.md` → `configuration-cross.md`), legacy `skills/` directory, post-005 workflow filename rename.
+- [x] AC3: Each back-filled entry's `introduced_in` matches the gvrn version (or framework commit) where the removal actually shipped, derived from `git log` at registry-introduction time.
+- [x] AC4: Each back-filled entry's `sunset_after` is set to `registry_introduction_version + 2 minor versions` (uniform).
+- [x] AC5: Each back-filled entry has a corresponding `framework/migrations/{id}.md` procedure file containing the migration's prose logic (skip conditions, prompts, summary reporting). No declarative-step DSL is introduced.
 
 ### Adopter state
 
-- [x] `.govern.toml` schema documents a `[migrations]` section with a `last_applied` field (string, slug-valued). Absent field means "no migrations applied" — bootstrap runs every active entry.
-- [x] On `/govern` re-run against an adopter whose `last_applied` equals the newest active entry's `id`, the migration loop performs zero filesystem reads beyond loading the registry and reports zero migrations applied.
-- [x] On `/govern` re-run against an adopter whose `last_applied` is older than the newest entry, only entries newer than `last_applied` (per SemVer comparison on `introduced_in`, lexicographic tie-break on `id`) execute.
-- [x] After each migration completes successfully, `last_applied` is updated to that entry's `id` before the next entry begins. An aborted batch resumes from the next-pending entry on the following `/govern` run.
+- [x] AC6: `.govern.toml` schema documents a `[migrations]` section with a `last_applied` field (string, slug-valued). Absent field means "no migrations applied" — bootstrap runs every active entry.
+- [x] AC7: On `/govern` re-run against an adopter whose `last_applied` equals the newest active entry's `id`, the migration loop performs zero filesystem reads beyond loading the registry and reports zero migrations applied.
+- [x] AC8: On `/govern` re-run against an adopter whose `last_applied` is older than the newest entry, only entries newer than `last_applied` (per SemVer comparison on `introduced_in`, lexicographic tie-break on `id`) execute.
+- [x] AC9: After each migration completes successfully, `last_applied` is updated to that entry's `id` before the next entry begins. An aborted batch resumes from the next-pending entry on the following `/govern` run.
 
 ### Bootstrap loop
 
-- [x] `framework/bootstrap/govern.md` Pre-run Migrations section is replaced by a single procedure that iterates the registry; no per-migration prose blocks remain in `govern.md`.
-- [x] When pending migrations exist, bootstrap emits a single batch prompt listing each pending entry by `id` and `introduced_in`, then asks `Apply now? (Y/n)`. Decline emits a warning summary and makes no filesystem changes.
-- [x] The post-scaffolding summary lists each applied migration by its `summary` field. Entries with no work to do (target artifact absent) emit nothing — the procedure file's per-entry idempotency check is invariant.
+- [x] AC10: `framework/bootstrap/govern.md` Pre-run Migrations section is replaced by a single procedure that iterates the registry; no per-migration prose blocks remain in `govern.md`.
+- [x] AC11: When pending migrations exist, bootstrap emits a single batch prompt listing each pending entry by `id` and `introduced_in`, then asks `Apply now? (Y/n)`. Decline emits a warning summary and makes no filesystem changes.
+- [x] AC12: The post-scaffolding summary lists each applied migration by its `summary` field. Entries with no work to do (target artifact absent) emit nothing — the procedure file's per-entry idempotency check is invariant.
 
 ### Sunset and archive
 
-- [x] An entry whose `sunset_after` is older than or equal to the current gvrn release is excluded from `framework/migrations.toml` (removed at sunset commit) and its procedure-file content is appended to `CHANGELOG.md` at the repo root under a heading naming the entry's `id`, `introduced_in`, and `sunset_after` version.
-- [x] When a migration is sunsetted: the registry entry, the `framework/migrations/{id}.md` file, and the `CHANGELOG.md` append all land in the same commit. `framework/migrations/{id}.md` no longer exists after the sunset commit.
-- [x] The bootstrap loop never reads `CHANGELOG.md` (verified by tracing reads in the `/govern` procedure).
+- [x] AC13: An entry whose `sunset_after` is older than or equal to the current gvrn release is excluded from `framework/migrations.toml` (removed at sunset commit) and its procedure-file content is appended to `CHANGELOG.md` at the repo root under a heading naming the entry's `id`, `introduced_in`, and `sunset_after` version.
+- [x] AC14: When a migration is sunsetted: the registry entry, the `framework/migrations/{id}.md` file, and the `CHANGELOG.md` append all land in the same commit. `framework/migrations/{id}.md` no longer exists after the sunset commit.
+- [x] AC15: The bootstrap loop never reads `CHANGELOG.md` (verified by tracing reads in the `/govern` procedure).
 
 ### Audit (Family 10)
 
-- [x] A new `scripts/audit/migration-coverage.sh` (Family 10 of [026](../026-framework-self-audit/spec.md)) runs three static checks against current state:
-  - [x] **No orphan procedure files**: every `framework/migrations/{id}.md` has a matching TOML entry with `procedure_file` pointing at it. Failures: orphan files exist.
-  - [x] **No stale target paths**: every `target_paths` entry across `framework/migrations.toml` *and* archived entries in `CHANGELOG.md` refers to a path that does *not* exist in current `framework/`. Failures: a registry entry says "removed" but the path still exists.
-  - [x] **No broken procedure references**: every TOML entry's `procedure_file` field points at an existing `framework/migrations/{id}.md`. Failures: dangling references.
-- [x] Family 10 exits `0` when all three checks pass, `1` otherwise. Output format matches the other families (header + findings rows on stdout). The orchestrator `scripts/audit/run-all.sh` invokes Family 10.
+- [x] AC16: A new `scripts/audit/migration-coverage.sh` (Family 10 of [026](../026-framework-self-audit/spec.md)) runs three static checks against current state:
+  - [x] AC17: **No orphan procedure files**: every `framework/migrations/{id}.md` has a matching TOML entry with `procedure_file` pointing at it. Failures: orphan files exist.
+  - [x] AC18: **No stale target paths**: every `target_paths` entry across `framework/migrations.toml` *and* archived entries in `CHANGELOG.md` refers to a path that does *not* exist in current `framework/`. Failures: a registry entry says "removed" but the path still exists.
+  - [x] AC19: **No broken procedure references**: every TOML entry's `procedure_file` field points at an existing `framework/migrations/{id}.md`. Failures: dangling references.
+- [x] AC20: Family 10 exits `0` when all three checks pass, `1` otherwise. Output format matches the other families (header + findings rows on stdout). The orchestrator `scripts/audit/run-all.sh` invokes Family 10.
 
 ### Idempotency
 
-- [x] Every registry entry's procedure file is idempotent: re-running it against a state where the target artifact is already migrated or absent produces no filesystem changes, no error, and emits nothing to the post-scaffolding summary.
+- [x] AC21: Every registry entry's procedure file is idempotent: re-running it against a state where the target artifact is already migrated or absent produces no filesystem changes, no error, and emits nothing to the post-scaffolding summary.
 
 ### Edge cases and failure modes
 
-- [x] Empty registry (`framework/migrations.toml` exists but contains zero `[[migrations]]` entries): the bootstrap loop is a no-op, no batch prompt is emitted, no `last_applied` write occurs.
-- [x] `.govern.toml` exists but has no `[migrations]` section: treated as "no migrations applied" — bootstrap runs every active entry. Subsequent run writes the `[migrations]` section.
-- [x] `.govern.toml` `[migrations].last_applied` references an `id` that no longer exists in the active registry (sunsetted since the adopter's last run): bootstrap treats the field as "before the oldest active entry" and runs every active entry. A warning is emitted: `last_applied was "{id}" which has been retired; see CHANGELOG.md for its recipe`.
-- [x] Two TOML entries share the same `id`: bootstrap aborts at registry-parse time with a clear error. Family 10's no-orphan check would also fail on a subsequent `/audit`.
-- [x] Malformed `framework/migrations.toml` (TOML parse error): bootstrap aborts before running any migration, matching existing 022 TOML-parse-error semantics.
-- [x] `framework/migrations/{id}.md` referenced by a TOML entry does not exist in the fetched archive: bootstrap aborts the batch at that entry, reports `migration {id}: procedure file missing from archive`, and `last_applied` retains its prior value. Family 10's no-broken-references check would have caught this at maintainer time.
-- [x] User confirms the outer batch prompt but a per-entry inner prompt within a procedure file is declined: the procedure handles the decline (typically emits a warning and skips that file), the migration still "completes" from the loop's perspective, and `last_applied` advances. Behavior matches the existing prose migrations.
-- [x] Adopter's installed gvrn version is older than an entry's `introduced_in`: that should be impossible (the adopter's bootstrap is necessarily current-gvrn or newer than the registry it just fetched), but if observed (e.g., manual archive override), the entry runs anyway — `introduced_in` gates registry order, not adopter eligibility.
+- [x] AC22: Empty registry (`framework/migrations.toml` exists but contains zero `[[migrations]]` entries): the bootstrap loop is a no-op, no batch prompt is emitted, no `last_applied` write occurs.
+- [x] AC23: `.govern.toml` exists but has no `[migrations]` section: treated as "no migrations applied" — bootstrap runs every active entry. Subsequent run writes the `[migrations]` section.
+- [x] AC24: `.govern.toml` `[migrations].last_applied` references an `id` that no longer exists in the active registry (sunsetted since the adopter's last run): bootstrap treats the field as "before the oldest active entry" and runs every active entry. A warning is emitted: `last_applied was "{id}" which has been retired; see CHANGELOG.md for its recipe`.
+- [x] AC25: Two TOML entries share the same `id`: bootstrap aborts at registry-parse time with a clear error. Family 10's no-orphan check would also fail on a subsequent `/audit`.
+- [x] AC26: Malformed `framework/migrations.toml` (TOML parse error): bootstrap aborts before running any migration, matching existing 022 TOML-parse-error semantics.
+- [x] AC27: `framework/migrations/{id}.md` referenced by a TOML entry does not exist in the fetched archive: bootstrap aborts the batch at that entry, reports `migration {id}: procedure file missing from archive`, and `last_applied` retains its prior value. Family 10's no-broken-references check would have caught this at maintainer time.
+- [x] AC28: User confirms the outer batch prompt but a per-entry inner prompt within a procedure file is declined: the procedure handles the decline (typically emits a warning and skips that file), the migration still "completes" from the loop's perspective, and `last_applied` advances. Behavior matches the existing prose migrations.
+- [x] AC29: Adopter's installed gvrn version is older than an entry's `introduced_in`: that should be impossible (the adopter's bootstrap is necessarily current-gvrn or newer than the registry it just fetched), but if observed (e.g., manual archive override), the entry runs anyway — `introduced_in` gates registry order, not adopter eligibility.
 
 ### Out of scope (captured for follow-on)
 

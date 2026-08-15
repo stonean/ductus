@@ -10,6 +10,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 27
 ---
 
 # 014 — Re-clarify Back-Edge
@@ -121,44 +122,44 @@ Both back-edges then read as command-owned, status-mutating actions triggered by
 
 ### `/amend` back-edge
 
-- [x] `framework/commands/amend.md` reverts spec status to `draft` after appending an open question to a spec at `clarified`, `planned`, or `in-progress`
-- [x] On a `draft` spec, `/amend` records the question without status mutation (existing behavior preserved)
-- [x] On a `done` spec, `/amend` refuses and reports: "Spec is `done`. Run `/{project}:amend` to capture this as a scenario instead." No question is recorded; no status mutation occurs
-- [x] When `/amend` mutates status, it displays the prior status, plan artifacts that exist (with last-modified timestamps), and scenario files — so the user can see what may need re-review
-- [x] `/amend` does not prompt for separate yes/no confirmation before mutating status — the user's acceptance of the refined question is the consent
-- [x] When `/amend` targets a scenario (per spec 009), it appends to the scenario's `## Open Questions` and does not mutate any spec or scenario status (scenarios have no status field)
-- [x] `/amend`'s post-question hint is "Question recorded. Run `/{project}:clarify` to resolve it." in every case where a question is recorded
+- [x] AC1: `framework/commands/amend.md` reverts spec status to `draft` after appending an open question to a spec at `clarified`, `planned`, or `in-progress`
+- [x] AC2: On a `draft` spec, `/amend` records the question without status mutation (existing behavior preserved)
+- [x] AC3: On a `done` spec, `/amend` refuses and reports: "Spec is `done`. Run `/{project}:amend` to capture this as a scenario instead." No question is recorded; no status mutation occurs
+- [x] AC4: When `/amend` mutates status, it displays the prior status, plan artifacts that exist (with last-modified timestamps), and scenario files — so the user can see what may need re-review
+- [x] AC5: `/amend` does not prompt for separate yes/no confirmation before mutating status — the user's acceptance of the refined question is the consent
+- [x] AC6: When `/amend` targets a scenario (per spec 009), it appends to the scenario's `## Open Questions` and does not mutate any spec or scenario status (scenarios have no status field)
+- [x] AC7: `/amend`'s post-question hint is "Question recorded. Run `/{project}:clarify` to resolve it." in every case where a question is recorded
 
 ### `/clarify` gate
 
-- [x] `framework/commands/clarify.md` Gate branches on the spec's open-question count, not on a flag
-- [x] On a `draft` spec (with or without open questions), the existing behavior is preserved — walk questions if present, verify ACs, advance to `clarified`
-- [x] On a `clarified` / `planned` / `in-progress` spec with no open questions, the command stops with the existing "Spec is already `{status}`" message (lightly tightened to mention the next pipeline command)
-- [x] On a `done` spec (any open-question count), the command stops with "Spec is `done`. Run `/{project}:amend` to capture this as a scenario instead." and exits without mutation
-- [x] No downstream artifacts (`plan.md`, `tasks.md`, `data-model.md`, scenario files) are deleted or rewritten by `/clarify`
+- [x] AC8: `framework/commands/clarify.md` Gate branches on the spec's open-question count, not on a flag
+- [x] AC9: On a `draft` spec (with or without open questions), the existing behavior is preserved — walk questions if present, verify ACs, advance to `clarified`
+- [x] AC10: On a `clarified` / `planned` / `in-progress` spec with no open questions, the command stops with the existing "Spec is already `{status}`" message (lightly tightened to mention the next pipeline command)
+- [x] AC11: On a `done` spec (any open-question count), the command stops with "Spec is `done`. Run `/{project}:amend` to capture this as a scenario instead." and exits without mutation
+- [x] AC12: No downstream artifacts (`plan.md`, `tasks.md`, `data-model.md`, scenario files) are deleted or rewritten by `/clarify`
 
 ### `/clarify` recovery path
 
-- [x] On a `clarified` / `planned` / `in-progress` spec with one or more open questions (an inconsistent state usually arising from manual frontmatter edit), the command displays the current status, open-question titles, plan-artifact list with timestamps, and scenario-file list, then prompts: "Spec is `{status}` but has {N} unresolved open questions — revert status to `draft` and walk the questions?"
-- [x] On confirm, the spec's frontmatter `status` field is updated to `draft` before the standard clarify walk proceeds
-- [x] On decline, no files are modified — the spec retains its inconsistent state and open questions remain in `## Open Questions`
-- [x] Previously-resolved questions in `## Resolved Questions` are never re-walked — `/clarify` only processes items in `## Open Questions`
+- [x] AC13: On a `clarified` / `planned` / `in-progress` spec with one or more open questions (an inconsistent state usually arising from manual frontmatter edit), the command displays the current status, open-question titles, plan-artifact list with timestamps, and scenario-file list, then prompts: "Spec is `{status}` but has {N} unresolved open questions — revert status to `draft` and walk the questions?"
+- [x] AC14: On confirm, the spec's frontmatter `status` field is updated to `draft` before the standard clarify walk proceeds
+- [x] AC15: On decline, no files are modified — the spec retains its inconsistent state and open questions remain in `## Open Questions`
+- [x] AC16: Previously-resolved questions in `## Resolved Questions` are never re-walked — `/clarify` only processes items in `## Open Questions`
 
 ### `/plan` re-run safety
 
-- [x] `framework/commands/plan.md` detects whether `plan.md`, `tasks.md`, or `data-model.md` already exist in the feature directory before generating
-- [x] If any plan artifact exists, `/plan` lists the existing files with their last-modified timestamps and prompts the user to keep or replace
-- [x] On "keep" (default), `/plan` skips template copy, runs the existing readiness check on the kept artifacts, and advances status to `planned` only if all checks pass
-- [x] On "replace", `/plan` copies fresh templates over the existing files, then proceeds with the standard plan flow
-- [x] If no plan artifacts exist, `/plan` behavior is unchanged
-- [x] The protection applies to every `/plan` run, not only those triggered after a back-edge cycle
+- [x] AC17: `framework/commands/plan.md` detects whether `plan.md`, `tasks.md`, or `data-model.md` already exist in the feature directory before generating
+- [x] AC18: If any plan artifact exists, `/plan` lists the existing files with their last-modified timestamps and prompts the user to keep or replace
+- [x] AC19: On "keep" (default), `/plan` skips template copy, runs the existing readiness check on the kept artifacts, and advances status to `planned` only if all checks pass
+- [x] AC20: On "replace", `/plan` copies fresh templates over the existing files, then proceeds with the standard plan flow
+- [x] AC21: If no plan artifacts exist, `/plan` behavior is unchanged
+- [x] AC22: The protection applies to every `/plan` run, not only those triggered after a back-edge cycle
 
 ### Cross-spec deliverables
 
-- [x] `framework/constitution.md` §spec-lifecycle back-edge bullet for `/amend` is rewritten per the **Constitution Updates** section above (named `/amend` as the entry point, `draft` as the destination)
-- [x] `specs/000-slash-commands/spec.md` gains a signpost noting that `/amend` becomes the back-edge owner in 014 (mutating status to `draft` on non-`draft` specs), `/clarify` gains the open-questions-on-non-`draft`-spec recovery path in 014, and `/plan` gains overwrite-protection on existing artifacts in 014
-- [x] `.claude/commands/gov/amend.md`, `.claude/commands/gov/clarify.md`, and `.claude/commands/gov/plan.md` are regenerated via `scripts/gen-claude-commands.sh`
-- [x] All modified `.md` files pass `npx markdownlint-cli2`
+- [x] AC23: `framework/constitution.md` §spec-lifecycle back-edge bullet for `/amend` is rewritten per the **Constitution Updates** section above (named `/amend` as the entry point, `draft` as the destination)
+- [x] AC24: `specs/000-slash-commands/spec.md` gains a signpost noting that `/amend` becomes the back-edge owner in 014 (mutating status to `draft` on non-`draft` specs), `/clarify` gains the open-questions-on-non-`draft`-spec recovery path in 014, and `/plan` gains overwrite-protection on existing artifacts in 014
+- [x] AC25: `.claude/commands/gov/amend.md`, `.claude/commands/gov/clarify.md`, and `.claude/commands/gov/plan.md` are regenerated via `scripts/gen-claude-commands.sh`
+- [x] AC26: All modified `.md` files pass `npx markdownlint-cli2`
 
 ## Edge Cases
 

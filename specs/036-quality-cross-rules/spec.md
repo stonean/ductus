@@ -8,6 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 10
 ---
 
 # 036 — Cross-cutting code-quality rules
@@ -41,15 +42,15 @@ Inaugural rule:
 
 ## Acceptance Criteria
 
-- [x] `framework/rules/quality-cross.md` exists, ends in the `-cross.md` suffix, and follows the canonical rule schema (`### {ID}` headings; Statement / Rationale / Verification; RFC 2119 language) per [008-security-rules](../008-security-rules/spec.md)'s data-model.
-- [x] `QUAL-STUB-001` is present with a Statement (RFC 2119), a Rationale, and a Verification clause.
-- [x] Every rule ID uses the `QUAL-{CATEGORY}-{NNN}` format with the `QUAL` prefix and category abbreviation disjoint from the existing `BE-`/`FE-`/`CFG-` namespaces; `scripts/lint-rule-ids.sh` passes.
-- [x] The file header declares the `QUAL` category abbreviation(s) per the per-file category-declaration policy ([016-cross-cutting-rules](../016-cross-cutting-rules/spec.md)).
-- [x] The Verification clause is expressed as a check `/gov:review` can apply to code (silent passthrough vs. loud failure), and is scoped so legitimately-empty implementations are not flagged (the three-part discriminator and exemption list in Resolved Questions — Verification mechanism).
-- [x] Rules whose surface overlaps an existing rule cite it rather than restating it (`BE-SCHEMA-002` for the build-time fail-loud case).
-- [x] The file is added to the `/govern` **Shared Files** manifest in `framework/bootstrap/govern.md` (slotted between `performance-frontend.md` and `security-backend.md`) and is auto-selected for every stack via the `-cross.md` suffix ([024-rule-loader](../024-rule-loader/spec.md)), composing with [033-rule-surface-setting](../033-rule-surface-setting/spec.md).
-- [x] `QUAL-GROUND-001` (SHOULD) is present with Statement / Rationale / Verification, the `GROUND` category is declared in the file header and registered in the data-model, and the rule is enforced by `/gov:review`'s quality pass as the code-side counterpart to `/gov:analyze`'s grounding check (constitution §grounding).
-- [x] `QUAL-CLAIM-001` (SHOULD) is present with Statement / Rationale / Verification, the `CLAIM` category is declared in the file header and registered in the data-model, and its Rationale states the discriminator against `QUAL-STUB-001` and `QUAL-GROUND-001` so a reviewer choosing between the three has the distinction in hand. Its Verification carries a promotion criterion to MUST, and its Source cites the observed instances it was derived from — naming which are confirmed and which are unassessed, so the rule does not itself assert more than was verified.
+- [x] AC1: `framework/rules/quality-cross.md` exists, ends in the `-cross.md` suffix, and follows the canonical rule schema (`### {ID}` headings; Statement / Rationale / Verification; RFC 2119 language) per [008-security-rules](../008-security-rules/spec.md)'s data-model.
+- [x] AC2: `QUAL-STUB-001` is present with a Statement (RFC 2119), a Rationale, and a Verification clause.
+- [x] AC3: Every rule ID uses the `QUAL-{CATEGORY}-{NNN}` format with the `QUAL` prefix and category abbreviation disjoint from the existing `BE-`/`FE-`/`CFG-` namespaces; `scripts/lint-rule-ids.sh` passes.
+- [x] AC4: The file header declares the `QUAL` category abbreviation(s) per the per-file category-declaration policy ([016-cross-cutting-rules](../016-cross-cutting-rules/spec.md)).
+- [x] AC5: The Verification clause is expressed as a check `/gov:review` can apply to code (silent passthrough vs. loud failure), and is scoped so legitimately-empty implementations are not flagged (the three-part discriminator and exemption list in Resolved Questions — Verification mechanism).
+- [x] AC6: Rules whose surface overlaps an existing rule cite it rather than restating it (`BE-SCHEMA-002` for the build-time fail-loud case).
+- [x] AC7: The file is added to the `/govern` **Shared Files** manifest in `framework/bootstrap/govern.md` (slotted between `performance-frontend.md` and `security-backend.md`) and is auto-selected for every stack via the `-cross.md` suffix ([024-rule-loader](../024-rule-loader/spec.md)), composing with [033-rule-surface-setting](../033-rule-surface-setting/spec.md).
+- [x] AC8: `QUAL-GROUND-001` (SHOULD) is present with Statement / Rationale / Verification, the `GROUND` category is declared in the file header and registered in the data-model, and the rule is enforced by `/gov:review`'s quality pass as the code-side counterpart to `/gov:analyze`'s grounding check (constitution §grounding).
+- [x] AC9: `QUAL-CLAIM-001` (SHOULD) is present with Statement / Rationale / Verification, the `CLAIM` category is declared in the file header and registered in the data-model, and its Rationale states the discriminator against `QUAL-STUB-001` and `QUAL-GROUND-001` so a reviewer choosing between the three has the distinction in hand. Its Verification carries a promotion criterion to MUST, and its Source cites the observed instances it was derived from — naming which are confirmed and which are unassessed, so the rule does not itself assert more than was verified.
 
 ## Open Questions
 

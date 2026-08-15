@@ -10,6 +10,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 7
 ---
 
 # 001 — System Spec Templates
@@ -60,12 +61,12 @@ An event catalog — a registry of event types populated as features are built. 
 
 ## Acceptance Criteria
 
-- [x] `templates/system.md` exists with placeholder sections for configuration, lifecycle, request flow, shared infrastructure, and module pattern
-- [x] `templates/errors.md` exists with placeholder sections for error format, code convention, status mapping, validation errors, and logging
-- [x] `templates/events.md` exists with placeholder sections for event catalog, envelope format, naming convention, and a comment suggesting retry/dead-letter as feature specs
-- [x] Each template uses HTML comments with commented-out example content, consistent with existing template style
-- [x] Templates are technology-agnostic — no language-specific code or framework references
-- [x] Each template starts with a top-level heading and passes markdownlint
+- [x] AC1: `templates/system.md` exists with placeholder sections for configuration, lifecycle, request flow, shared infrastructure, and module pattern
+- [x] AC2: `templates/errors.md` exists with placeholder sections for error format, code convention, status mapping, validation errors, and logging
+- [x] AC3: `templates/events.md` exists with placeholder sections for event catalog, envelope format, naming convention, and a comment suggesting retry/dead-letter as feature specs
+- [x] AC4: Each template uses HTML comments with commented-out example content, consistent with existing template style
+- [x] AC5: Templates are technology-agnostic — no language-specific code or framework references
+- [x] AC6: Each template starts with a top-level heading and passes markdownlint
 
 ## Resolved Questions
 

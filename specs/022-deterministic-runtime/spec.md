@@ -8,6 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 20
 ---
 
 # 022 — Deterministic Runtime
@@ -213,25 +214,25 @@ Stable relationships post-rewrite:
 
 ## Acceptance Criteria
 
-- [x] A single binary builds from this repo and exposes two surfaces: `runtime mcp` (MCP server) and `runtime exec <command> [args...]` (subprocess interpreter).
-- [x] Every primitive in [The primitive library](#the-primitive-library) is exposed as an MCP tool by `runtime mcp`, named under the `gvrn:<verb>-<noun>` convention.
-- [x] The subprocess interpreter's JSON-over-stdio message protocol is documented in the runtime's docs and stable enough for third-party agent hosts to integrate against.
-- [x] The six initial-release slash commands (`/gov:status`, `/gov:target`, `/gov:analyze`, `/gov:implement`, `/gov:plan`, `/gov:specify`) have their prose Instructions sections rewritten to follow the structural conventions and parse cleanly under the runtime parser. The remaining three (`/gov:clarify`, `/gov:review`, `/gov:groom`) are not rewritten in this spec — they ship as scenarios.
-- [x] The three initial-release LLM extension points (`assessSpecQuality`, `writeCode`, `writeSpecBody`) each have a request schema, response schema, and a corresponding HTML-comment marker in the relevant Instructions step.
-- [x] A parseability check is added to `.github/workflows/markdown-only-pipeline.yml` and passes against every slash command file — the six rewritten ones under the new conventions, and the three not-yet-rewritten ones under the legacy prose-walk path (the parser tolerates files that do not yet declare a Procedure-shaped Instructions section).
-- [x] The binary executes each of the six initial-release commands end-to-end against a fixture repo and produces output consistent with the LLM-driven path against the same fixture, within the determinism bounds defined for each command.
-- [x] Median wall-clock time per invocation drops from minutes to seconds for each of the six initial-release commands when the runtime is present.
-- [x] The markdown-only path (no binary on `PATH`) continues to complete every pipeline cycle (greenfield, brownfield, reopen) as it did before this spec.
-- [x] `framework/runtime-tools.txt` is populated with every MCP tool name the binary exposes; `scripts/lint-tool-coverage.sh` passes against the rewritten slash command files.
-- [x] A new CI workflow at `.github/workflows/runtime.yml` builds the binary, runs its test suite, exercises every primitive against fixture inputs, and fails on any test failure.
-- [x] The existing `.github/workflows/markdown-only-pipeline.yml` workflow continues to pass with the runtime binary absent from `PATH`.
-- [x] State-modifying primitives (`mark-task`, `mark-criterion`, `set-status`) use filesystem-atomic writes (write to temp + atomic rename) so a runtime crash mid-write leaves coherent markdown.
-- [x] The runtime self-reports its build-time version via `runtime --version`; parse failures emit a descriptive `error` JSON message that includes the runtime version and notes version-mismatch as a possible cause.
-- [x] The binary is distributed via GitHub release artifacts cross-compiled for `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu` (and `x86_64-pc-windows-msvc` if cross-compilation is friction-free in CI), with sha256 checksums; adopter-facing install instructions exist in a README Runtime section.
-- [x] The `/govern` bootstrap command's completion output includes a one-line pointer to the README Runtime section, mentioning the runtime is optional.
-- [x] No slash command in `framework/commands/*.md` detects the missing runtime and prints an install nag on invocation; the markdown-only path remains a first-class path per §runtime-boundary principle 3.
-- [x] `/gov:analyze` against this spec passes with no hard-fail or blocking findings.
-- [x] `npx markdownlint-cli2` against all rewritten slash command files and new spec files passes.
+- [x] AC1: A single binary builds from this repo and exposes two surfaces: `runtime mcp` (MCP server) and `runtime exec <command> [args...]` (subprocess interpreter).
+- [x] AC2: Every primitive in [The primitive library](#the-primitive-library) is exposed as an MCP tool by `runtime mcp`, named under the `gvrn:<verb>-<noun>` convention.
+- [x] AC3: The subprocess interpreter's JSON-over-stdio message protocol is documented in the runtime's docs and stable enough for third-party agent hosts to integrate against.
+- [x] AC4: The six initial-release slash commands (`/gov:status`, `/gov:target`, `/gov:analyze`, `/gov:implement`, `/gov:plan`, `/gov:specify`) have their prose Instructions sections rewritten to follow the structural conventions and parse cleanly under the runtime parser. The remaining three (`/gov:clarify`, `/gov:review`, `/gov:groom`) are not rewritten in this spec — they ship as scenarios.
+- [x] AC5: The three initial-release LLM extension points (`assessSpecQuality`, `writeCode`, `writeSpecBody`) each have a request schema, response schema, and a corresponding HTML-comment marker in the relevant Instructions step.
+- [x] AC6: A parseability check is added to `.github/workflows/markdown-only-pipeline.yml` and passes against every slash command file — the six rewritten ones under the new conventions, and the three not-yet-rewritten ones under the legacy prose-walk path (the parser tolerates files that do not yet declare a Procedure-shaped Instructions section).
+- [x] AC7: The binary executes each of the six initial-release commands end-to-end against a fixture repo and produces output consistent with the LLM-driven path against the same fixture, within the determinism bounds defined for each command.
+- [x] AC8: Median wall-clock time per invocation drops from minutes to seconds for each of the six initial-release commands when the runtime is present.
+- [x] AC9: The markdown-only path (no binary on `PATH`) continues to complete every pipeline cycle (greenfield, brownfield, reopen) as it did before this spec.
+- [x] AC10: `framework/runtime-tools.txt` is populated with every MCP tool name the binary exposes; `scripts/lint-tool-coverage.sh` passes against the rewritten slash command files.
+- [x] AC11: A new CI workflow at `.github/workflows/runtime.yml` builds the binary, runs its test suite, exercises every primitive against fixture inputs, and fails on any test failure.
+- [x] AC12: The existing `.github/workflows/markdown-only-pipeline.yml` workflow continues to pass with the runtime binary absent from `PATH`.
+- [x] AC13: State-modifying primitives (`mark-task`, `mark-criterion`, `set-status`) use filesystem-atomic writes (write to temp + atomic rename) so a runtime crash mid-write leaves coherent markdown.
+- [x] AC14: The runtime self-reports its build-time version via `runtime --version`; parse failures emit a descriptive `error` JSON message that includes the runtime version and notes version-mismatch as a possible cause.
+- [x] AC15: The binary is distributed via GitHub release artifacts cross-compiled for `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu` (and `x86_64-pc-windows-msvc` if cross-compilation is friction-free in CI), with sha256 checksums; adopter-facing install instructions exist in a README Runtime section.
+- [x] AC16: The `/govern` bootstrap command's completion output includes a one-line pointer to the README Runtime section, mentioning the runtime is optional.
+- [x] AC17: No slash command in `framework/commands/*.md` detects the missing runtime and prints an install nag on invocation; the markdown-only path remains a first-class path per §runtime-boundary principle 3.
+- [x] AC18: `/gov:analyze` against this spec passes with no hard-fail or blocking findings.
+- [x] AC19: `npx markdownlint-cli2` against all rewritten slash command files and new spec files passes.
 
 ## Non-Goals
 

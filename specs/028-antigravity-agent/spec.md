@@ -8,6 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 12
 ---
 
 # 028 — Antigravity Agent Support
@@ -187,36 +188,36 @@ unchanged.
 
 ## Acceptance Criteria
 
-- [x] The Agent Registry expresses per-agent **command/skill location**,
+- [x] AC1: The Agent Registry expresses per-agent **command/skill location**,
       **invocation**, **MCP-wiring file**, **settings file + permission format**,
       **rules location**, and **native rules file** as derived values;
       Claude/Auggie keep their `.claude`/`.augment` layout, Antigravity is
       `config_dir = .agents` with the skill/`mcp_config.json`/`settings.json`/
       `rules` layout, and the unified procedure branches on registry values, not
       the agent name
-- [x] A `.claude`-style file-scaffold agent that reads `CLAUDE.md` can still be
+- [x] AC2: A `.claude`-style file-scaffold agent that reads `CLAUDE.md` can still be
       added by a single registry-row append + `configure/{key}.md` + README
       snippet (verified by a documented "add a hypothetical agent" checklist)
-- [x] Scaffolding Antigravity writes each pipeline command as
+- [x] AC3: Scaffolding Antigravity writes each pipeline command as
       `.agents/skills/{project}-<name>/SKILL.md` (dir-form skill, body = the
       command procedure with gates intact, `name` + `description` frontmatter),
       invocable as `/{project}-<name>`
-- [x] govern's domain rule files scaffold to `.agents/rules/<name>.md`
-- [x] gvrn is wired via `.agents/mcp_config.json` (local stdio server, additive)
+- [x] AC4: govern's domain rule files scaffold to `.agents/rules/<name>.md`
+- [x] AC5: gvrn is wired via `.agents/mcp_config.json` (local stdio server, additive)
       **and** `.agents/settings.json` allows `mcp(gvrn/*)`
-- [x] A `framework/bootstrap/configure/{key}.md` for Antigravity writes
+- [x] AC6: A `framework/bootstrap/configure/{key}.md` for Antigravity writes
       `.agents/settings.json` `permissions` in Antigravity's action grammar;
       `gen-configure-mcp.sh` emits the Antigravity MCP block
-- [x] Adopting Antigravity ships **no `CLAUDE.md`** and no new context file;
+- [x] AC7: Adopting Antigravity ships **no `CLAUDE.md`** and no new context file;
       `AGENTS.md` (already shipped) carries the context
-- [x] Each agent receives only its own permission format — Antigravity never
+- [x] AC8: Each agent receives only its own permission format — Antigravity never
       receives Claude's `permissions`/`Bash(...)` or Auggie's `toolPermissions`,
       and vice versa (the 012 format-leakage failure mode does not recur)
-- [x] Auto-detection recognizes an existing `.agents/` adoption and re-scaffolds
+- [x] AC9: Auto-detection recognizes an existing `.agents/` adoption and re-scaffolds
       on routine re-runs, consistent with the 012 detect path
-- [x] The README documents the Antigravity bootstrap (curl the `govern` skill
+- [x] AC10: The README documents the Antigravity bootstrap (curl the `govern` skill
       into `.agents/skills/govern/SKILL.md`, then run `/govern`)
-- [x] All shipped markdown passes `npx markdownlint-cli2`; the emitted
+- [x] AC11: All shipped markdown passes `npx markdownlint-cli2`; the emitted
       `.agents/mcp_config.json` and `.agents/settings.json` are valid JSON
 
 ## Open Questions

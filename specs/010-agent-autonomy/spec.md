@@ -10,6 +10,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 15
 ---
 
 # 010 — Agent Autonomy
@@ -116,26 +117,26 @@ No new artifact, no per-task estimates, no budget files. The cross-reference par
 
 ### Evaluation completeness
 
-- [x] Each capability has a recommendation: adopt, adapt, or decline
-- [x] Adopted/adapted capabilities have a clear description of what changes to governance artifacts
-- [x] Declined capabilities have a rationale explaining why they don't fit
-- [x] No capability introduces a runtime dependency or requires a specific AI platform
-- [x] Changes respect command file parity (commands/ and .claude/commands/gov/)
-- [x] Changes respect govern file parity (govern/ variants stay in sync)
+- [x] AC1: Each capability has a recommendation: adopt, adapt, or decline
+- [x] AC2: Adopted/adapted capabilities have a clear description of what changes to governance artifacts
+- [x] AC3: Declined capabilities have a rationale explaining why they don't fit
+- [x] AC4: No capability introduces a runtime dependency or requires a specific AI platform
+- [x] AC5: Changes respect command file parity (commands/ and .claude/commands/gov/)
+- [x] AC6: Changes respect govern file parity (govern/ variants stay in sync)
 
 ### Concrete deliverables (from adapted capabilities)
 
-- [x] `tasks.md` template documents the optional `[simple]` inline marker convention (one tier; no marker = default)
-- [x] `/gov:plan` command instructions include a step to propose `[simple]` markers on tasks the agent judges trivial
-- [x] `/gov:implement` command instructions include a stuck-detection step that reads `git log` for affected paths and `tasks.md` checkbox state, surfaces cycles, and suggests decomposition
-- [x] `/gov:implement` command accepts an `--auto` flag that skips per-task confirmations within a phase, with the documented gates (phase transitions, stuck detection, spec/plan edits, mid-implement discovery, risky actions) still firing
-- [x] Constitution `## Guiding Principles` → `Cost-conscious` (or a new dedicated subsection) gains a cross-reference paragraph naming governance's cost levers (lightweight track, `[simple]` marker, stuck detection, default-off autonomy) and pointing at platform tooling for runtime controls
-- [x] `AGENTS.md` project template gains an optional "Skills" index section listing available skill files and their activation conditions (empty by default)
-- [x] Documentation note added (constitution or `AGENTS.md` template) directing users to `git worktree` and platform isolation for concurrent feature work
+- [x] AC7: `tasks.md` template documents the optional `[simple]` inline marker convention (one tier; no marker = default)
+- [x] AC8: `/gov:plan` command instructions include a step to propose `[simple]` markers on tasks the agent judges trivial
+- [x] AC9: `/gov:implement` command instructions include a stuck-detection step that reads `git log` for affected paths and `tasks.md` checkbox state, surfaces cycles, and suggests decomposition
+- [x] AC10: `/gov:implement` command accepts an `--auto` flag that skips per-task confirmations within a phase, with the documented gates (phase transitions, stuck detection, spec/plan edits, mid-implement discovery, risky actions) still firing
+- [x] AC11: Constitution `## Guiding Principles` → `Cost-conscious` (or a new dedicated subsection) gains a cross-reference paragraph naming governance's cost levers (lightweight track, `[simple]` marker, stuck detection, default-off autonomy) and pointing at platform tooling for runtime controls
+- [x] AC12: `AGENTS.md` project template gains an optional "Skills" index section listing available skill files and their activation conditions (empty by default)
+- [x] AC13: Documentation note added (constitution or `AGENTS.md` template) directing users to `git worktree` and platform isolation for concurrent feature work
 
 ### Cross-spec deliverable
 
-- [x] If the skills capability is delivered, 005's concept is renamed from "skills" to "workflows" (cross-spec impact: reopens 005 to `in-progress` per §cross-spec-impact). Affected paths in governance: `framework/skills/` → `framework/workflows/` (flattened — registry and workflow files sit at the same level, no inner `templates/` directory), `skills/registry.json` → `workflows/registry.json`, `specs/005-skills-and-plugins/` → `specs/005-workflows/` (spec directory rename), and prose updates in 005's spec, plan, tasks, and any project templates that reference the term.
+- [x] AC14: If the skills capability is delivered, 005's concept is renamed from "skills" to "workflows" (cross-spec impact: reopens 005 to `in-progress` per §cross-spec-impact). Affected paths in governance: `framework/skills/` → `framework/workflows/` (flattened — registry and workflow files sit at the same level, no inner `templates/` directory), `skills/registry.json` → `workflows/registry.json`, `specs/005-skills-and-plugins/` → `specs/005-workflows/` (spec directory rename), and prose updates in 005's spec, plan, tasks, and any project templates that reference the term.
 
 ## Open Questions
 

@@ -8,6 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 9
 ---
 
 # 047 — Analyze Findings Durability
@@ -107,14 +108,14 @@ are unchanged in substance.
 
 ## Acceptance Criteria
 
-- [x] `framework/commands/analyze.md` carries a capture step that appends every surviving finding to the inbox via `append-inbox`, ordered before the report-render step, and the markdown-only reference documents the same behavior for the runtime-less path.
-- [x] Each captured bullet names the finding's category, family, message, and citing artifact path, and marks the capture source as `/{project}:analyze`.
-- [x] Re-running `/{project}:analyze` against an unchanged repo appends nothing — every bullet is dedup-guarded on category, family, and message — so `inbox.md` is byte-identical across consecutive runs.
-- [x] Two findings of the same family citing the same `spec.md` but naming different missing paths are captured as two bullets, not merged into one.
-- [x] A finding resolved by `--fix` within the same run is not captured.
-- [x] Informational entries — the `skipped` unexamined-target list and cross-service reference unknowns — are not captured.
-- [x] The constitution's **Surface at completion** bullet names `/{project}:analyze` alongside `/{project}:implement` and `/{project}:review`, and the section's scope covers a command whose primary output is findings.
-- [x] The generated `{cli-config-dir}/commands/{project}/analyze.md` mirror matches its source, and the full markdown lint passes.
+- [x] AC1: `framework/commands/analyze.md` carries a capture step that appends every surviving finding to the inbox via `append-inbox`, ordered before the report-render step, and the markdown-only reference documents the same behavior for the runtime-less path.
+- [x] AC2: Each captured bullet names the finding's category, family, message, and citing artifact path, and marks the capture source as `/{project}:analyze`.
+- [x] AC3: Re-running `/{project}:analyze` against an unchanged repo appends nothing — every bullet is dedup-guarded on category, family, and message — so `inbox.md` is byte-identical across consecutive runs.
+- [x] AC4: Two findings of the same family citing the same `spec.md` but naming different missing paths are captured as two bullets, not merged into one.
+- [x] AC5: A finding resolved by `--fix` within the same run is not captured.
+- [x] AC6: Informational entries — the `skipped` unexamined-target list and cross-service reference unknowns — are not captured.
+- [x] AC7: The constitution's **Surface at completion** bullet names `/{project}:analyze` alongside `/{project}:implement` and `/{project}:review`, and the section's scope covers a command whose primary output is findings.
+- [x] AC8: The generated `{cli-config-dir}/commands/{project}/analyze.md` mirror matches its source, and the full markdown lint passes.
 
 ## Open Questions
 

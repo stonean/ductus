@@ -8,6 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 9
 ---
 
 # 039 — Backend reliability rules
@@ -47,14 +48,14 @@ Reliability rules default to **SHOULD** where the approach is contextual. A rule
 
 ## Acceptance Criteria
 
-- [x] `framework/rules/reliability-backend.md` exists, ends in the `-backend.md` suffix, and follows the canonical rule schema (`### {ID}` headings; Statement / Rationale / Verification; RFC 2119 language) per [008-security-rules](../008-security-rules/spec.md)'s data-model.
-- [x] Every rule ID uses the `BE-{CATEGORY}-{NNN}` format with a reliability category disjoint from the `security-backend.md`, `api-backend.md`, and `performance-backend.md` category sets; `scripts/lint-rule-ids.sh` passes.
-- [x] The file header declares the reliability category abbreviations per the per-file category-declaration policy ([016-cross-cutting-rules](../016-cross-cutting-rules/spec.md)).
-- [x] The rule set covers, at minimum, deadlines/timeouts, bounded retries (backoff + jitter, idempotent only), circuit breakers, and graceful shutdown — each with a Verification clause expressed as a **design-time commitment** the spec/plan must make (not a code-pattern grep), consistent with how `/gov:analyze` audits artifacts.
-- [x] Each MUST rule is one whose absence is an availability/cascading-failure risk regardless of scale; contextual trade-offs are SHOULD. The split is evident from the Statements.
-- [x] Rules whose surface overlaps an existing rule cite it rather than restating it (`BE-POOL-002` for pooling, `BE-IDEMP` for retry safety, `BE-ASYNC` for offloaded work, `CFG-*` for tunable config).
-- [x] The file is added to the `/govern` **Shared Files** manifest in `framework/bootstrap/govern.md` and is selected under the `backend` surface by `/gov:review`, composing with [033-rule-surface-setting](../033-rule-surface-setting/spec.md) and [024-rule-loader](../024-rule-loader/spec.md).
-- [x] 034's forward-reference to a future `reliability-backend.md` resolves to this rule set (the deferred deadlines/timeouts/retries/circuit-breakers land here).
+- [x] AC1: `framework/rules/reliability-backend.md` exists, ends in the `-backend.md` suffix, and follows the canonical rule schema (`### {ID}` headings; Statement / Rationale / Verification; RFC 2119 language) per [008-security-rules](../008-security-rules/spec.md)'s data-model.
+- [x] AC2: Every rule ID uses the `BE-{CATEGORY}-{NNN}` format with a reliability category disjoint from the `security-backend.md`, `api-backend.md`, and `performance-backend.md` category sets; `scripts/lint-rule-ids.sh` passes.
+- [x] AC3: The file header declares the reliability category abbreviations per the per-file category-declaration policy ([016-cross-cutting-rules](../016-cross-cutting-rules/spec.md)).
+- [x] AC4: The rule set covers, at minimum, deadlines/timeouts, bounded retries (backoff + jitter, idempotent only), circuit breakers, and graceful shutdown — each with a Verification clause expressed as a **design-time commitment** the spec/plan must make (not a code-pattern grep), consistent with how `/gov:analyze` audits artifacts.
+- [x] AC5: Each MUST rule is one whose absence is an availability/cascading-failure risk regardless of scale; contextual trade-offs are SHOULD. The split is evident from the Statements.
+- [x] AC6: Rules whose surface overlaps an existing rule cite it rather than restating it (`BE-POOL-002` for pooling, `BE-IDEMP` for retry safety, `BE-ASYNC` for offloaded work, `CFG-*` for tunable config).
+- [x] AC7: The file is added to the `/govern` **Shared Files** manifest in `framework/bootstrap/govern.md` and is selected under the `backend` surface by `/gov:review`, composing with [033-rule-surface-setting](../033-rule-surface-setting/spec.md) and [024-rule-loader](../024-rule-loader/spec.md).
+- [x] AC8: 034's forward-reference to a future `reliability-backend.md` resolves to this rule set (the deferred deadlines/timeouts/retries/circuit-breakers land here).
 
 ## Open Questions
 

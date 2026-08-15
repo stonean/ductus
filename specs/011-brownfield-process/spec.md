@@ -10,6 +10,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+next-criterion: 20
 ---
 
 # 011 — Brownfield Process
@@ -133,25 +134,25 @@ For this spec specifically: 006-bug-workflow gets a signpost noting that `triage
 
 ## Acceptance Criteria
 
-- [x] `/specify` accepts freeform input and creates a sparse skeleton spec when AC are absent (brownfield outcome)
-- [x] `/specify` uses the standard `spec.md` template
-- [x] `/specify`'s brownfield path does not read existing code
-- [x] `/specify` does not create scenarios
-- [x] `/specify` sets the session target to the new feature
-- [x] `/specify` detects naming conflicts with existing spec directories
-- [x] Brownfield skeleton specs pass validation at `draft` status without requiring comprehensive acceptance criteria
-- [x] Bug fixes on a brownfield spec add either an acceptance criterion or a scenario
-- [x] Enhancements to a brownfield spec follow the normal pipeline (spec change before implementation)
-- [x] Inbox items migrate to acceptance criteria or scenarios — never remain standalone
-- [x] `/inbox` directs user to `/specify` when an item has no matching spec
-- [x] Scenario promotion pattern is documented in `constitution.md`
-- [x] `triage` is renamed to `inbox` across all governance artifacts (templates, commands, constitution, sdd-context, README)
-- [x] 006-bug-workflow spec includes a signpost noting the `triage` → `inbox` rename by this spec
-- [x] 007-govern-workflow spec includes a signpost noting the govern command gains a triage → inbox migration and brownfield-initialization handling by this spec
-- [x] Cross-spec impact pattern is documented in `constitution.md`
-- [x] The brownfield process is documented in `constitution.md` under brownfield adoption
-- [x] `sdd-context.md` is updated to reflect the brownfield process
-- [x] `README.md` brownfield section references the process
+- [x] AC1: `/specify` accepts freeform input and creates a sparse skeleton spec when AC are absent (brownfield outcome)
+- [x] AC2: `/specify` uses the standard `spec.md` template
+- [x] AC3: `/specify`'s brownfield path does not read existing code
+- [x] AC4: `/specify` does not create scenarios
+- [x] AC5: `/specify` sets the session target to the new feature
+- [x] AC6: `/specify` detects naming conflicts with existing spec directories
+- [x] AC7: Brownfield skeleton specs pass validation at `draft` status without requiring comprehensive acceptance criteria
+- [x] AC8: Bug fixes on a brownfield spec add either an acceptance criterion or a scenario
+- [x] AC9: Enhancements to a brownfield spec follow the normal pipeline (spec change before implementation)
+- [x] AC10: Inbox items migrate to acceptance criteria or scenarios — never remain standalone
+- [x] AC11: `/inbox` directs user to `/specify` when an item has no matching spec
+- [x] AC12: Scenario promotion pattern is documented in `constitution.md`
+- [x] AC13: `triage` is renamed to `inbox` across all governance artifacts (templates, commands, constitution, sdd-context, README)
+- [x] AC14: 006-bug-workflow spec includes a signpost noting the `triage` → `inbox` rename by this spec
+- [x] AC15: 007-govern-workflow spec includes a signpost noting the govern command gains a triage → inbox migration and brownfield-initialization handling by this spec
+- [x] AC16: Cross-spec impact pattern is documented in `constitution.md`
+- [x] AC17: The brownfield process is documented in `constitution.md` under brownfield adoption
+- [x] AC18: `sdd-context.md` is updated to reflect the brownfield process
+- [x] AC19: `README.md` brownfield section references the process
 
 ## Open Questions
 
