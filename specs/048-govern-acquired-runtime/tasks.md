@@ -17,9 +17,9 @@ Phase 1 is independently safe and lands first so later work is written against a
 
 ### 2. Gate the release publish on a complete asset set
 
-- [ ] Add a job to `.github/workflows/runtime-release.yml` that runs after the build matrix and asserts all five target assets plus sidecars are present before the release is published
-- [ ] Keep `fail-fast: false` on the build matrix — every target's failure must still be visible in one run
-- [ ] Verify the gate fails the workflow when one matrix leg fails, rather than publishing a partial release
+- [x] Add a job to `.github/workflows/runtime-release.yml` that runs after the build matrix and asserts all five target assets plus sidecars are present before the release is published
+- [x] Keep `fail-fast: false` on the build matrix — every target's failure must still be visible in one run
+- [x] Verify the gate fails the workflow when one matrix leg fails, rather than publishing a partial release
 
 - **Done when**: a simulated single-target failure blocks the publish and reports which asset is missing, and a complete matrix publishes exactly as before.
 

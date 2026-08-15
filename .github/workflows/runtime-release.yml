@@ -114,21 +114,92 @@ jobs:
           Compress-Archive -Path "gvrn.exe" -DestinationPath "gvrn-${{ matrix.target }}.zip"
           Get-FileHash "gvrn-${{ matrix.target }}.zip" -Algorithm SHA256 | Select-Object -ExpandProperty Hash > "gvrn-${{ matrix.target }}.zip.sha256"
 
-      - name: Upload Unix artifacts to release
-        if: matrix.os != 'windows-latest'
-        uses: softprops/action-gh-release@v3
+      # Assets are STAGED as workflow artifacts, never uploaded to the release
+      # from inside the matrix. `fail-fast: false` (deliberate — every target's
+      # failure must be visible in one run) means a failing leg would otherwise
+      # leave the release published with the other four assets and nothing
+      # saying so. Spec 048 makes the runtime required, so a platform missing
+      # its asset locks those adopters out of the pipeline entirely; the
+      # release-assets job below publishes only once the set is complete.
+      - name: Stage release assets
+        uses: actions/upload-artifact@v4
         with:
-          files: |
+          name: release-asset-${{ matrix.target }}
+          path: |
             runtime/target/${{ matrix.target }}/release/gvrn-${{ matrix.target }}.tar.gz
             runtime/target/${{ matrix.target }}/release/gvrn-${{ matrix.target }}.tar.gz.sha256
+            runtime/target/${{ matrix.target }}/release/gvrn-${{ matrix.target }}.zip
+            runtime/target/${{ matrix.target }}/release/gvrn-${{ matrix.target }}.zip.sha256
+          if-no-files-found: error
+          retention-days: 1
 
-      - name: Upload Windows artifacts to release
-        if: matrix.os == 'windows-latest'
+  # The publish gate: every target's assets are present, or the release gets
+  # none of them. `needs: build` already skips this job when a matrix leg
+  # fails outright; the explicit manifest below additionally catches a leg
+  # that SUCCEEDED without producing its asset, which the job graph cannot
+  # see. Spec 048, task 2.
+  #
+  # REQUIRED_TARGETS must match the build matrix. Drift in the safe direction
+  # (a target added to the matrix but not here) publishes an extra asset;
+  # drift in the dangerous direction (a target dropped from the matrix) fails
+  # this gate loudly, which is the direction that matters.
+  release-assets:
+    name: Publish release assets (complete set only)
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      REQUIRED_TARGETS: >-
+        aarch64-apple-darwin
+        x86_64-apple-darwin
+        x86_64-unknown-linux-gnu
+        aarch64-unknown-linux-gnu
+        x86_64-pc-windows-msvc
+    steps:
+      - name: Download staged assets
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-asset-*
+          path: staged
+          merge-multiple: true
+
+      - name: Assert the asset set is complete
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for target in $REQUIRED_TARGETS; do
+            archive=""
+            for candidate in "staged/gvrn-${target}.tar.gz" "staged/gvrn-${target}.zip"; do
+              [ -f "$candidate" ] && archive="$candidate"
+            done
+            if [ -z "$archive" ]; then
+              echo "::error::no release archive for ${target}"
+              missing=1
+              continue
+            fi
+            if [ ! -f "${archive}.sha256" ]; then
+              echo "::error::${archive} has no .sha256 sidecar"
+              missing=1
+              continue
+            fi
+            echo "ok: $(basename "$archive") + sidecar"
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "::error::release withheld — the asset set is incomplete."
+            echo "A partial release locks out every adopter on the missing platform."
+            exit 1
+          fi
+
+      - name: Upload the complete set to the release
         uses: softprops/action-gh-release@v3
         with:
           files: |
-            runtime/target/${{ matrix.target }}/release/gvrn-${{ matrix.target }}.zip
-            runtime/target/${{ matrix.target }}/release/gvrn-${{ matrix.target }}.zip.sha256
+            staged/*.tar.gz
+            staged/*.tar.gz.sha256
+            staged/*.zip
+            staged/*.zip.sha256
 
   # CycloneDX SBOM (BE-DEPS-003) — generated during the release build
   # from the resolved Cargo.lock graph and attached to the same release.
@@ -170,7 +241,10 @@ jobs:
 
   publish:
     name: Publish to crates.io
-    needs: [audit, build]
+    # Also gated on release-assets: publishing the crate while the GitHub
+    # release carries no downloadable binaries would leave the two halves of
+    # one release disagreeing about whether it happened (spec 048, task 2).
+    needs: [audit, build, release-assets]
     runs-on: ubuntu-latest
     defaults:
       run:
