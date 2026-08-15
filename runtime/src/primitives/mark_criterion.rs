@@ -39,14 +39,7 @@ pub fn run(args: &MarkCriterionArgs, repo: &Path) -> Result<CheckboxToggleResult
     let lines: Vec<&str> = content.split_inclusive('\n').collect();
 
     let checkbox_lines = collect_checkbox_line_indices(&lines);
-    let (line_idx, marker_idx) = *checkbox_lines.get(args.criterion_index).ok_or_else(|| {
-        PrimitiveError::CriterionOutOfRange {
-            root: root.clone(),
-            feature: args.feature.clone(),
-            criterion_index: args.criterion_index,
-            total: checkbox_lines.len(),
-        }
-    })?;
+    let (line_idx, marker_idx) = resolve_target(args, &checkbox_lines, &lines, &root)?;
 
     let (previous, new_line) = flip_checkbox_at(lines[line_idx], marker_idx, args.checked);
     let mut new_content = String::new();
@@ -67,6 +60,59 @@ pub fn run(args: &MarkCriterionArgs, repo: &Path) -> Result<CheckboxToggleResult
         current: args.checked,
         path: rel_path(&spec_path, repo),
     })
+}
+
+/// Resolve which criterion to flip, from exactly one of `criterion-index`
+/// or `label`.
+///
+/// The label path exists because an index is only valid against the list as
+/// it stood when the index was computed: inserting a criterion above the
+/// target silently redirects it. A label is stable across insertion,
+/// reordering, and removal (spec 013), so a caller holding a label is
+/// addressing the criterion it means. A label no criterion carries is an
+/// error rather than a no-op — a stale reference is precisely what labels
+/// exist to surface.
+fn resolve_target(
+    args: &MarkCriterionArgs,
+    checkbox_lines: &[(usize, usize)],
+    lines: &[&str],
+    root: &str,
+) -> Result<(usize, usize)> {
+    match (args.criterion_index, args.label.as_deref()) {
+        (Some(_), Some(_)) => Err(PrimitiveError::CriterionAddressAmbiguous {
+            detail: "both supplied".into(),
+        }),
+        (None, None) => Err(PrimitiveError::CriterionAddressAmbiguous {
+            detail: "neither supplied".into(),
+        }),
+        (Some(index), None) => {
+            checkbox_lines
+                .get(index)
+                .copied()
+                .ok_or_else(|| PrimitiveError::CriterionOutOfRange {
+                    root: root.to_string(),
+                    feature: args.feature.clone(),
+                    criterion_index: index,
+                    total: checkbox_lines.len(),
+                })
+        }
+        (None, Some(label)) => {
+            let wanted = label.trim().trim_start_matches("AC").parse::<u32>().ok();
+            checkbox_lines
+                .iter()
+                .find(|(line_idx, marker_idx)| {
+                    wanted.is_some()
+                        && super::label_criteria::parse_label(lines[*line_idx], *marker_idx)
+                            == wanted
+                })
+                .copied()
+                .ok_or_else(|| PrimitiveError::CriterionLabelNotFound {
+                    root: root.to_string(),
+                    feature: args.feature.clone(),
+                    label: label.to_string(),
+                })
+        }
+    }
 }
 
 /// Collect `(line_index, marker_index)` for every addressable checkbox in
@@ -107,7 +153,8 @@ mod tests {
         let result = run(
             &MarkCriterionArgs {
                 feature: "feat".into(),
-                criterion_index: 0,
+                criterion_index: Some(0),
+                label: None,
                 checked: true,
             },
             tmp.path(),
@@ -130,7 +177,8 @@ mod tests {
         let result = run(
             &MarkCriterionArgs {
                 feature: "feat".into(),
-                criterion_index: 1,
+                criterion_index: Some(1),
+                label: None,
                 checked: false,
             },
             tmp.path(),
@@ -142,6 +190,116 @@ mod tests {
         assert!(new_content.contains("- [ ] Second criterion (pre-checked)."));
     }
 
+    const LABELLED: &str = "---\nstatus: in-progress\ndependencies: []\nnext-criterion: 26\n---\n\n# feat\n\n## Acceptance Criteria\n\n- [ ] AC24: Labelled, first in body order.\n- [ ] AC7: Labelled, second in body order.\n- [ ] Unlabelled.\n";
+
+    fn write_labelled(tmp: &std::path::Path) {
+        let feature_dir = tmp.join("specs/feat");
+        fs::create_dir_all(&feature_dir).unwrap();
+        fs::write(feature_dir.join("spec.md"), LABELLED).unwrap();
+    }
+
+    #[test]
+    fn a_label_addresses_its_criterion_regardless_of_position() {
+        // AC7 sits second in body order — index 1 — so a label is not a
+        // synonym for a position. Addressing by label must follow the
+        // label, which is the whole reason the mode exists.
+        let tmp = tempdir().unwrap();
+        write_labelled(tmp.path());
+        run(
+            &MarkCriterionArgs {
+                feature: "feat".into(),
+                criterion_index: None,
+                label: Some("AC7".into()),
+                checked: true,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        let content = fs::read_to_string(tmp.path().join("specs/feat/spec.md")).unwrap();
+        assert!(content.contains("- [x] AC7: Labelled, second in body order."));
+        assert!(content.contains("- [ ] AC24: Labelled, first in body order."));
+    }
+
+    #[test]
+    fn a_bare_number_addresses_the_same_criterion_as_its_ac_form() {
+        let tmp = tempdir().unwrap();
+        write_labelled(tmp.path());
+        run(
+            &MarkCriterionArgs {
+                feature: "feat".into(),
+                criterion_index: None,
+                label: Some("24".into()),
+                checked: true,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        let content = fs::read_to_string(tmp.path().join("specs/feat/spec.md")).unwrap();
+        assert!(content.contains("- [x] AC24: Labelled, first in body order."));
+    }
+
+    #[test]
+    fn an_unknown_label_errors_rather_than_no_ops() {
+        let tmp = tempdir().unwrap();
+        write_labelled(tmp.path());
+        let err = run(
+            &MarkCriterionArgs {
+                feature: "feat".into(),
+                criterion_index: None,
+                label: Some("AC99".into()),
+                checked: true,
+            },
+            tmp.path(),
+        )
+        .unwrap_err();
+        assert!(matches!(err, PrimitiveError::CriterionLabelNotFound { .. }));
+        assert_eq!(
+            fs::read_to_string(tmp.path().join("specs/feat/spec.md")).unwrap(),
+            LABELLED,
+            "a stale reference writes nothing"
+        );
+    }
+
+    #[test]
+    fn supplying_both_addressing_modes_is_refused() {
+        let tmp = tempdir().unwrap();
+        write_labelled(tmp.path());
+        let err = run(
+            &MarkCriterionArgs {
+                feature: "feat".into(),
+                criterion_index: Some(0),
+                label: Some("AC7".into()),
+                checked: true,
+            },
+            tmp.path(),
+        )
+        .unwrap_err();
+        assert!(matches!(
+            err,
+            PrimitiveError::CriterionAddressAmbiguous { .. }
+        ));
+    }
+
+    #[test]
+    fn supplying_neither_addressing_mode_is_refused() {
+        let tmp = tempdir().unwrap();
+        write_labelled(tmp.path());
+        let err = run(
+            &MarkCriterionArgs {
+                feature: "feat".into(),
+                criterion_index: None,
+                label: None,
+                checked: true,
+            },
+            tmp.path(),
+        )
+        .unwrap_err();
+        assert!(matches!(
+            err,
+            PrimitiveError::CriterionAddressAmbiguous { .. }
+        ));
+    }
+
     #[test]
     fn out_of_range_index_errors() {
         let tmp = tempdir().unwrap();
@@ -149,7 +307,8 @@ mod tests {
         let err = run(
             &MarkCriterionArgs {
                 feature: "feat".into(),
-                criterion_index: 99,
+                criterion_index: Some(99),
+                label: None,
                 checked: true,
             },
             tmp.path(),
@@ -180,7 +339,8 @@ mod tests {
         let err = run(
             &MarkCriterionArgs {
                 feature: "feat".into(),
-                criterion_index: 0,
+                criterion_index: Some(0),
+                label: None,
                 checked: true,
             },
             tmp.path(),
@@ -211,7 +371,8 @@ mod tests {
         let result = run(
             &MarkCriterionArgs {
                 feature: "feat".into(),
-                criterion_index: 0,
+                criterion_index: Some(0),
+                label: None,
                 checked: true,
             },
             tmp.path(),

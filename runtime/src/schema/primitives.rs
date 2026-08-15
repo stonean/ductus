@@ -341,8 +341,15 @@ pub struct SpecSection {
 pub struct AcceptanceCriterion {
     /// Whether the checkbox is checked.
     pub checked: bool,
-    /// Criterion text.
+    /// Criterion text, with any `AC{n}:` label prefix retained — the label
+    /// is part of the criterion as authored, and stripping it here would
+    /// make the reported text differ from the file.
     pub text: String,
+    /// The criterion's stable `AC{n}` label, when it carries one. `None`
+    /// for a criterion the labelling pass has not reached (spec 013).
+    /// Callers should prefer this over the positional index when holding a
+    /// reference across edits.
+    pub label: Option<String>,
 }
 
 /// One open-question entry.
@@ -498,8 +505,16 @@ pub struct MarkCriterionArgs {
     #[arg(long)]
     pub feature: String,
     /// Acceptance criterion index (0-based, ordered as in the spec).
+    /// Mutually exclusive with `label`; supply exactly one.
     #[arg(long)]
-    pub criterion_index: usize,
+    pub criterion_index: Option<usize>,
+    /// Acceptance criterion label (e.g. `AC7`), the stable identifier a
+    /// criterion carries in its text. Preferred over `criterion-index`:
+    /// a label survives criteria being inserted, reordered, or removed,
+    /// while an index computed before such an edit silently addresses a
+    /// different criterion afterwards (spec 013).
+    #[arg(long)]
+    pub label: Option<String>,
     /// Desired checkbox state.
     #[arg(long)]
     pub checked: bool,
@@ -2372,6 +2387,7 @@ mod tests {
             acceptance_criteria: vec![AcceptanceCriterion {
                 checked: false,
                 text: "A single binary builds…".into(),
+                label: None,
             }],
             open_questions: vec![OpenQuestion { text: "?".into() }],
             scenario_open_questions: vec![ScenarioOpenQuestion {
@@ -2532,7 +2548,8 @@ mod tests {
     fn mark_criterion_round_trip() {
         let args = MarkCriterionArgs {
             feature: "022-deterministic-runtime".into(),
-            criterion_index: 3,
+            criterion_index: Some(3),
+            label: None,
             checked: true,
         };
         let value: serde_json::Value = serde_json::to_value(&args).unwrap();

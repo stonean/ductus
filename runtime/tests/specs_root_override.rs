@@ -134,7 +134,8 @@ fn mark_criterion_resolves_configured_root() {
     let result = primitives::mark_criterion::run(
         &MarkCriterionArgs {
             feature: "001-demo".into(),
-            criterion_index: 0,
+            criterion_index: Some(0),
+            label: None,
             checked: true,
         },
         tmp.path(),

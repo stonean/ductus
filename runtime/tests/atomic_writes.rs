@@ -124,7 +124,8 @@ fn mark_criterion_rename_is_atomic_under_parallel_reads() {
         primitives::mark_criterion::run(
             &MarkCriterionArgs {
                 feature: "atom".into(),
-                criterion_index: 0,
+                criterion_index: Some(0),
+                label: None,
                 checked,
             },
             &repo,

@@ -142,6 +142,26 @@ pub enum PrimitiveError {
         /// Number of acceptance criteria present.
         total: usize,
     },
+    /// `mark-criterion` was given a label no criterion carries. A stale
+    /// reference is surfaced rather than silently ignored — naming a
+    /// criterion that does not exist is the condition labels exist to
+    /// catch (spec 013).
+    #[error("no criterion labelled {label} in {root}/{feature}/spec.md")]
+    CriterionLabelNotFound {
+        /// Configured spec-root directory name.
+        root: String,
+        /// Feature whose spec was scanned.
+        feature: String,
+        /// The label requested.
+        label: String,
+    },
+    /// `mark-criterion` was given neither, or both, of `criterion-index`
+    /// and `label`.
+    #[error("mark-criterion needs exactly one of criterion-index or label ({detail})")]
+    CriterionAddressAmbiguous {
+        /// Which of the two degenerate forms was supplied.
+        detail: String,
+    },
     /// `set-status` was invoked with a `from` value that does not match disk.
     #[error("status mismatch in {root}/{feature}/spec.md: expected '{expected}', found '{actual}'")]
     StatusMismatch {

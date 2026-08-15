@@ -183,7 +183,19 @@ fn parse_checkboxes(body: &str, section_heading: &str) -> Vec<AcceptanceCriterio
     for idx in section_line_indices(&lines, section_heading) {
         let line = lines[idx];
         if let Some((checked, text)) = checkbox::parse_checkbox_line(line) {
-            out.push(AcceptanceCriterion { checked, text });
+            // The label comes from the shared parser `mark-criterion` and
+            // the labelling pass use, so every surface answering "what
+            // label does this criterion carry?" agrees (spec 013).
+            let label = checkbox::find_checkbox_line(line)
+                .and_then(|(_bracket, marker_idx)| {
+                    super::label_criteria::parse_label(line, marker_idx)
+                })
+                .map(|n| format!("AC{n}"));
+            out.push(AcceptanceCriterion {
+                checked,
+                text,
+                label,
+            });
             continue;
         }
         // Fold an indented, non-checkbox continuation line into the last

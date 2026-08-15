@@ -179,7 +179,13 @@ fn read_next_criterion(lines: &[&str], fm: &Frontmatter, spec_path: &Path) -> Re
 /// Parse the `AC{n}:` label immediately after the checkbox, if present.
 /// Anchored there so prose elsewhere in the line — "supersedes AC5 of 017"
 /// — is never mistaken for this criterion's own label.
-fn parse_label(line: &str, marker_idx: usize) -> Option<u32> {
+///
+/// Shared with `mark-criterion` and `read-spec` so every surface answering
+/// "what label does this criterion carry?" answers it identically. A second
+/// implementation is the drift this project has already been bitten by once
+/// (see `framework/commands/amend.md`'s reconcile pass and the
+/// `scenario-consistency` matching rule).
+pub(crate) fn parse_label(line: &str, marker_idx: usize) -> Option<u32> {
     let after_bracket = line.get(marker_idx + 2..)?;
     let rest = after_bracket.trim_start();
     let digits = rest.strip_prefix("AC")?;
