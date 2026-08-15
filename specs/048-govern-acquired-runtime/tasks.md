@@ -8,10 +8,10 @@ Phase 1 is independently safe and lands first so later work is written against a
 
 ### 1. Add the repo-root `version` file and its agreement audit
 
-- [ ] Create `version` at the repo root carrying the current runtime version, one SemVer line
-- [ ] Add `scripts/audit/version-agreement.sh`: `version`, `runtime/Cargo.toml`, and the newest `runtime/CHANGELOG.md` heading must agree; a newest-tag lag is expected (the release commit precedes the tag) and is not a finding
-- [ ] Register the family in `scripts/audit/run-all.sh` and in `framework/commands/audit.md`'s family list
-- [ ] Document the release-time bump in `AGENTS.md`'s runtime-release entry — the file joins `Cargo.toml` and the CHANGELOG in the same commit
+- [x] Create `version` at the repo root carrying the current runtime version, one SemVer line
+- [x] Add `scripts/audit/version-agreement.sh`: `version`, `runtime/Cargo.toml`, and the newest `runtime/CHANGELOG.md` heading must agree; a newest-tag lag is expected (the release commit precedes the tag) and is not a finding
+- [x] Register the family in `scripts/audit/run-all.sh` and in `framework/commands/audit.md`'s family list
+- [x] Document the release-time bump in `AGENTS.md`'s runtime-release entry — the file joins `Cargo.toml` and the CHANGELOG in the same commit
 
 - **Done when**: `version` exists and agrees with the other three artifacts, `scripts/audit/run-all.sh` exits 0 with the new family registered, and the family fails when `version` is edited out of agreement.
 

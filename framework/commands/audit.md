@@ -57,6 +57,10 @@ When the runtime is not on `PATH`, walk the same scripts directly. Each prints f
 
 18. Run `scripts/audit/marker-list-parity.sh` (Family 18 — the `criterion-path-existence` non-assertion marker list agrees across its canonical source, the runtime array, and the adopter-facing restatement in `analyze.md`, including the spelled-out counts; a derivation that yields no markers is a finding rather than a silent pass).
 
+19. Run `scripts/audit/review-freshness.sh` (Family 19 — no `done` spec ships with a review that predates its own code: a spec whose durable contracts changed since its `review.reviewed-against` sha is stale, which every other check passes because they assert only that a review exists and does not block).
+
+20. Run `scripts/audit/version-agreement.sh` (Family 20 — the repo-root `version` pin, `runtime/Cargo.toml`, and the newest `runtime/CHANGELOG.md` heading carry the same SemVer. The release tag is deliberately not compared: the release commit precedes the tag push, so asserting it here would fail every release mid-flight).
+
 ## Boundary with `/gov:analyze`
 
 | Concern | Owner |

@@ -62,5 +62,6 @@ run_check "Family 16 — installer/command parity" "scripts/audit/installer-comm
 run_check "Family 17 — host namespace parity" "scripts/audit/host-namespace-parity.sh"
 run_check "Family 18 — marker-list parity" "scripts/audit/marker-list-parity.sh"
 run_check "Family 19 — review freshness" "scripts/audit/review-freshness.sh"
+run_check "Family 20 — version agreement" "scripts/audit/version-agreement.sh"
 
 exit "$drift"
