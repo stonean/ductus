@@ -10,6 +10,9 @@ on:
       - 'runtime/**'
       - 'framework/commands/*.md'
       - '.github/workflows/runtime.yml'
+      # A packaging change in the release workflow re-runs the portability
+      # check below, which mirrors that sequence (spec 048, task 3).
+      - '.github/workflows/runtime-release.yml'
   push:
     branches:
       - main
@@ -17,6 +20,7 @@ on:
       - 'runtime/**'
       - 'framework/commands/*.md'
       - '.github/workflows/runtime.yml'
+      - '.github/workflows/runtime-release.yml'
 
 permissions:
   contents: read
@@ -62,6 +66,39 @@ jobs:
 
       - name: cargo test --release --locked
         run: cargo test --release --locked
+
+      # Packaging portability (spec 048, task 3). The release workflow packages
+      # every platform as `.tar.gz` and verifies the digest with whichever of
+      # `shasum` / `sha256sum` the image provides — but it runs only on a
+      # pushed `gvrn-v*` tag, so until now the Windows leg of that sequence
+      # could not be exercised before the release it was meant to protect.
+      # That is the wrong moment to discover Git Bash lacks a tool.
+      #
+      # This runs the identical sequence against the ordinary release build on
+      # all three images: package, verify, extract, execute. It proves the
+      # portability, not the artifact — the release workflow still produces
+      # and verifies the real assets.
+      - name: Packaging portability (tar + checksum + extract)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ext=""
+          [ "${{ matrix.os }}" = "windows-latest" ] && ext=".exe"
+          cd target/release
+          archive="gvrn-packaging-probe.tar.gz"
+          tar -czf "$archive" "gvrn${ext}"
+          if command -v shasum > /dev/null; then
+            shasum -a 256 "$archive" > "${archive}.sha256"
+            shasum -a 256 -c "${archive}.sha256"
+          else
+            sha256sum "$archive" > "${archive}.sha256"
+            sha256sum -c "${archive}.sha256"
+          fi
+          probe="$(mktemp -d)"
+          tar -xzf "$archive" -C "$probe"
+          test -f "$probe/gvrn${ext}"
+          "$probe/gvrn${ext}" --version
+          rm "$archive" "${archive}.sha256"
 
   # Dependency vulnerability scan (BE-DEPS-001). Fails on any RUSTSEC
   # advisory affecting the resolved Cargo.lock graph; a deliberate

@@ -98,21 +98,66 @@ jobs:
         run: |
           ./target/${{ matrix.target }}/release/gvrn${{ matrix.ext }} --version
 
-      - name: Package (tar.gz, Unix)
-        if: matrix.os != 'windows-latest'
+      # One archive format on every platform. Windows published `.zip` until
+      # spec 048; `.tar.gz` everywhere means acquisition extracts with `tar`
+      # on every platform, so `unzip` never enters any agent's permission
+      # grammar. Windows 10+ ships bsdtar as `tar`, and `tar` is already
+      # granted in all four bootstrap seeds.
+      #
+      # `shell: bash` on Windows is Git Bash, which supplies tar and shasum —
+      # so this is one step rather than a per-OS pair. The archived binary
+      # keeps its platform name (`gvrn.exe` on Windows), which acquisition
+      # relies on when it installs into the store.
+      - name: Package (tar.gz)
         shell: bash
         run: |
+          set -euo pipefail
           cd target/${{ matrix.target }}/release
-          tar -czf "gvrn-${{ matrix.target }}.tar.gz" gvrn
-          shasum -a 256 "gvrn-${{ matrix.target }}.tar.gz" > "gvrn-${{ matrix.target }}.tar.gz.sha256"
+          archive="gvrn-${{ matrix.target }}.tar.gz"
+          tar -czf "$archive" "gvrn${{ matrix.ext }}"
+          # No single checksum command spans the three runner images: macOS
+          # ships `shasum` and not `sha256sum`, Git Bash on windows-latest
+          # ships coreutils `sha256sum`, Linux has both. Probe rather than
+          # assume — the two produce byte-identical `<hash>  <file>` output,
+          # so the sidecar format is one format on every platform.
+          #
+          # It did not used to be. Windows packaged with `Get-FileHash`, whose
+          # output is a bare uppercase hash with no filename, so the sidecar
+          # format silently differed by platform. Acquisition parses these,
+          # so unifying the producer is what lets the consumer have one rule.
+          if command -v shasum > /dev/null; then
+            shasum -a 256 "$archive" > "${archive}.sha256"
+          else
+            sha256sum "$archive" > "${archive}.sha256"
+          fi
+          cat "${archive}.sha256"
 
-      - name: Package (zip, Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
+      # Prove the archive is usable on the platform that produced it, rather
+      # than assuming it. This is the same sequence acquisition performs in an
+      # adopter's bootstrap — verify the digest, extract with `tar`, execute
+      # the binary — so a packaging change that breaks acquisition fails here,
+      # on the release that introduced it, instead of in someone's first
+      # `/govern` run. It is the only place the Windows path can be exercised:
+      # the release workflow is the only job that runs on windows-latest.
+      - name: Verify the archive extracts and runs
+        shell: bash
         run: |
+          set -euo pipefail
           cd target/${{ matrix.target }}/release
-          Compress-Archive -Path "gvrn.exe" -DestinationPath "gvrn-${{ matrix.target }}.zip"
-          Get-FileHash "gvrn-${{ matrix.target }}.zip" -Algorithm SHA256 | Select-Object -ExpandProperty Hash > "gvrn-${{ matrix.target }}.zip.sha256"
+          archive="gvrn-${{ matrix.target }}.tar.gz"
+          if command -v shasum > /dev/null; then
+            shasum -a 256 -c "${archive}.sha256"
+          else
+            sha256sum -c "${archive}.sha256"
+          fi
+          probe="$(mktemp -d)"
+          tar -xzf "$archive" -C "$probe"
+          test -f "$probe/gvrn${{ matrix.ext }}"
+          # A cross-compiled binary cannot execute on the builder, matching
+          # the existing smoke test's condition.
+          if [ "${{ matrix.cross }}" != "true" ]; then
+            "$probe/gvrn${{ matrix.ext }}" --version
+          fi
 
       # Assets are STAGED as workflow artifacts, never uploaded to the release
       # from inside the matrix. `fail-fast: false` (deliberate — every target's
@@ -128,8 +173,6 @@ jobs:
           path: |
             runtime/target/${{ matrix.target }}/release/gvrn-${{ matrix.target }}.tar.gz
             runtime/target/${{ matrix.target }}/release/gvrn-${{ matrix.target }}.tar.gz.sha256
-            runtime/target/${{ matrix.target }}/release/gvrn-${{ matrix.target }}.zip
-            runtime/target/${{ matrix.target }}/release/gvrn-${{ matrix.target }}.zip.sha256
           if-no-files-found: error
           retention-days: 1
 
@@ -170,11 +213,8 @@ jobs:
           set -euo pipefail
           missing=0
           for target in $REQUIRED_TARGETS; do
-            archive=""
-            for candidate in "staged/gvrn-${target}.tar.gz" "staged/gvrn-${target}.zip"; do
-              [ -f "$candidate" ] && archive="$candidate"
-            done
-            if [ -z "$archive" ]; then
+            archive="staged/gvrn-${target}.tar.gz"
+            if [ ! -f "$archive" ]; then
               echo "::error::no release archive for ${target}"
               missing=1
               continue
@@ -198,8 +238,6 @@ jobs:
           files: |
             staged/*.tar.gz
             staged/*.tar.gz.sha256
-            staged/*.zip
-            staged/*.zip.sha256
 
   # CycloneDX SBOM (BE-DEPS-003) — generated during the release build
   # from the resolved Cargo.lock graph and attached to the same release.

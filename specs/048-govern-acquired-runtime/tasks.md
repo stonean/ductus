@@ -25,8 +25,8 @@ Phase 1 is independently safe and lands first so later work is written against a
 
 ### 3. Publish the Windows asset as `.tar.gz`
 
-- [ ] Change the Windows leg of `runtime-release.yml` to produce `gvrn-x86_64-pc-windows-msvc.tar.gz` plus its `.sha256` sidecar
-- [ ] Confirm the archive contains `gvrn.exe` and that `tar` extracts it on a `windows-latest` runner
+- [x] Change the Windows leg of `runtime-release.yml` to produce `gvrn-x86_64-pc-windows-msvc.tar.gz` plus its `.sha256` sidecar
+- [x] Confirm the archive contains `gvrn.exe` and that `tar` extracts it on a `windows-latest` runner
 
 - **Done when**: the Windows release asset is a `.tar.gz` extracting cleanly with `tar` on `windows-latest`, so `unzip` is needed on no platform.
 
