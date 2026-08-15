@@ -14,11 +14,12 @@ use gvrn::schema::primitives::{
     CheckReviewGateArgs, CheckRuleIdsArgs, CheckStuckArgs, ComputeReviewScopeArgs,
     CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs,
     DeriveBoundaryArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs,
-    ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, LintMarkdownArgs, MarkCriterionArgs,
-    MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs,
-    ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RemoveInboxItemArgs,
-    ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs, RunGeneratorArgs, SetStatusArgs,
-    TraverseDepsArgs, ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs,
+    ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, LabelCriteriaArgs, LintMarkdownArgs,
+    MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
+    MigrateSessionFileArgs, ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs,
+    RemoveInboxItemArgs, ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs,
+    RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteReviewArgs,
+    WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -117,6 +118,8 @@ enum Command {
     MigrateSessionFile(MigrateSessionFileArgs),
     /// Write a new scenarios/{slug}.md file under a feature with frontmatter and body.
     CreateScenario(CreateScenarioArgs),
+    /// Assign stable AC{n} labels to a spec's acceptance criteria (idempotent).
+    LabelCriteria(LabelCriteriaArgs),
     /// Scaffold the next {specs-root}/{NNN-slug}/ directory with a spec-template copy.
     CreateFeature(CreateFeatureArgs),
     /// Copy the plan/tasks (and optional data-model) templates into a feature directory.
@@ -507,6 +510,7 @@ fn main() -> ExitCode {
         Command::CreateScenario(args) => {
             emit_result(primitives::create_scenario::run(&args, &repo))
         }
+        Command::LabelCriteria(args) => emit_result(primitives::label_criteria::run(&args, &repo)),
         Command::CreateFeature(args) => emit_result(primitives::create_feature::run(&args, &repo)),
         Command::CreatePlanArtifacts(args) => {
             emit_result(primitives::create_plan_artifacts::run(&args, &repo))

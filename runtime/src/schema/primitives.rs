@@ -1348,6 +1348,46 @@ pub struct CreateScenarioResult {
     pub created: String,
 }
 
+// -- label-criteria ----------------------------------------------------------
+
+/// Args for `label-criteria`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct LabelCriteriaArgs {
+    /// Feature directory name under the configured spec root.
+    #[arg(long)]
+    pub feature: String,
+}
+
+/// One `AC{n}` label the pass assigned.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct LabelAssignment {
+    /// The assigned label (e.g., `AC7`).
+    pub label: String,
+    /// 0-based index of the criterion in body order — the same index
+    /// `read-spec` lists it at and `mark-criterion` addresses it by.
+    pub criterion_index: usize,
+}
+
+/// Result for `label-criteria`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct LabelCriteriaResult {
+    /// Labels assigned by this run, in body order. Empty when every
+    /// criterion was already labelled.
+    pub assigned: Vec<LabelAssignment>,
+    /// The counter written to frontmatter — the label the next criterion
+    /// will receive. Always greater than every label present in the body.
+    pub next_criterion: u32,
+    /// Repo-relative path of the spec examined.
+    pub path: String,
+    /// Whether the file was written. `false` distinguishes "already fully
+    /// labelled" from "labelled just now", so a caller can report the
+    /// no-op rather than an assignment it did not make.
+    pub changed: bool,
+}
+
 // -- append-task -------------------------------------------------------------
 
 /// Args for `append-task`.

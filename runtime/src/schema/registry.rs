@@ -41,6 +41,7 @@ pub(crate) const PRIMITIVE_REGISTRY: &[&str] = &[
     "migrate-session-file",
     "create-scenario",
     "append-task",
+    "label-criteria",
     "prune-tasks",
     "dashboard",
     "write-session",

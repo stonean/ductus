@@ -31,6 +31,7 @@ pub mod enforce_manifest;
 pub mod extract_archive;
 pub mod fetch_archive;
 pub mod gate_confirm;
+pub mod label_criteria;
 pub mod lint_markdown;
 pub mod mark_criterion;
 pub mod mark_task;
@@ -80,6 +81,17 @@ pub enum PrimitiveError {
     MissingFrontmatter {
         /// Path of the offending file.
         path: PathBuf,
+    },
+    /// `next-criterion` frontmatter is present but not a positive integer.
+    /// Refused rather than repaired: a corrupted counter may mean a retired
+    /// `AC{n}` label was already reissued, and silently rewriting it would
+    /// hide that (spec 013, `criterion-identifiers`).
+    #[error("next-criterion in {path} is not a positive integer: {value:?}")]
+    InvalidNextCriterion {
+        /// Path of the spec carrying the invalid counter.
+        path: PathBuf,
+        /// The offending value, verbatim.
+        value: String,
     },
     /// Feature directory does not exist under the configured spec-root.
     #[error("feature directory not found: {root}/{feature}")]

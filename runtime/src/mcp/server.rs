@@ -44,15 +44,16 @@ use crate::schema::primitives::{
     DashboardArgs, DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult, DiffCrossSpecArgs,
     DiffCrossSpecResult, DiscoverRuleFilesArgs, DiscoverRuleFilesResult, EnforceManifestArgs,
     EnforceManifestResult, ExtractArchiveArgs, ExtractArchiveResult, FetchArchiveArgs,
-    FetchArchiveResult, GateConfirmArgs, LintMarkdownArgs, LintMarkdownResult, MarkCriterionArgs,
-    MarkTaskArgs, MergeManagedBlockArgs, MergeManagedBlockResult, MergePermissionsArgs,
-    MergePermissionsResult, MigrateSessionFileArgs, MigrateSessionFileResult, ProcessWaiversArgs,
-    ProcessWaiversResult, PruneTasksArgs, PruneTasksResult, ReadSpecArgs, ReadSpecResult,
-    ReadTasksArgs, ReadTasksResult, RemoveInboxItemArgs, RemoveInboxItemResult, ResolveAnchorArgs,
-    ResolveAnchorResult, ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs,
-    ResolveReferencesResult, RunGeneratorArgs, RunGeneratorResult, SetStatusArgs, SetStatusResult,
-    TraverseDepsArgs, TraverseDepsResult, ValidateFrontmatterArgs, ValidateFrontmatterResult,
-    WriteReviewArgs, WriteReviewResult, WriteSessionArgs, WriteSessionResult,
+    FetchArchiveResult, GateConfirmArgs, LabelCriteriaArgs, LabelCriteriaResult, LintMarkdownArgs,
+    LintMarkdownResult, MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs,
+    MergeManagedBlockResult, MergePermissionsArgs, MergePermissionsResult, MigrateSessionFileArgs,
+    MigrateSessionFileResult, ProcessWaiversArgs, ProcessWaiversResult, PruneTasksArgs,
+    PruneTasksResult, ReadSpecArgs, ReadSpecResult, ReadTasksArgs, ReadTasksResult,
+    RemoveInboxItemArgs, RemoveInboxItemResult, ResolveAnchorArgs, ResolveAnchorResult,
+    ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs, ResolveReferencesResult,
+    RunGeneratorArgs, RunGeneratorResult, SetStatusArgs, SetStatusResult, TraverseDepsArgs,
+    TraverseDepsResult, ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteReviewArgs,
+    WriteReviewResult, WriteSessionArgs, WriteSessionResult,
 };
 
 /// Canonical MCP tool names exposed by the server, in manifest order —
@@ -528,6 +529,19 @@ impl GovRuntimeServer {
         params: Parameters<MigrateSessionFileArgs>,
     ) -> Result<Json<MigrateSessionFileResult>, String> {
         primitives::migrate_session_file::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "label-criteria",
+        description = "Assign stable AC{n} labels to a spec's acceptance criteria and maintain the next-criterion counter (idempotent; already-labelled criteria are left byte-identical)."
+    )]
+    async fn label_criteria(
+        &self,
+        params: Parameters<LabelCriteriaArgs>,
+    ) -> Result<Json<LabelCriteriaResult>, String> {
+        primitives::label_criteria::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }
