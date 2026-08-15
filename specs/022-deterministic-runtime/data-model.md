@@ -147,7 +147,7 @@ Result:
     { "heading": "Architecture", "level": 2, "body": "..." }
   ],
   "acceptance-criteria": [
-    { "checked": false, "text": "A single binary builds..." }
+    { "checked": false, "text": "AC3: A single binary builds...", "label": "AC3" }
   ],
   "open-questions": [],
   "scenario-open-questions": [
@@ -160,6 +160,8 @@ Result:
 `open-questions` comes from the **spec body only** and is unchanged in meaning and value by spec 046 — every existing consumer keeps its behavior, and feature-targeted `/{project}:clarify` still reads exactly this list.
 
 `scenario-open-questions` is a **sibling** signal, never merged into it: the unresolved questions carried by `scenarios/*.md`, each tagged with its source scenario slug, in the shared scenario order. The two lists stay separate because spec-level and scenario-level questions are independent concerns for *resolution* — merging them would route a feature-level target to feature-targeted clarify, which does not read scenarios and would arrive with nothing to act on. Completion is where they join: a spec does not reach `done` while this list is non-empty ([046 — Scenario open-question visibility](../046-scenario-open-question-visibility/spec.md)).
+
+`label` carries the criterion's stable `AC{n}` identifier, or `null` for a criterion the labelling pass has not reached ([013 — Text-First Artifacts](../013-text-first-artifacts/scenarios/criterion-identifiers.md)). `text` keeps the `AC{n}:` prefix as authored — stripping it here would make the reported text differ from the file, and a host citing a criterion wants the line it can paste. The label is parsed by `label-criteria`'s `parse_label`, deliberately the same function `mark-criterion` resolves a `label` argument through, so every surface answering "what label does this criterion carry?" answers identically; a second matching rule is the drift this repo has already been bitten by once. Callers holding a reference across edits should prefer `label` to the positional index, which an insertion above the target silently redirects.
 
 Both lists come from the same parser, which is comment- and fence-aware: questions inside an HTML comment or a fenced block are not entries, so a spec scaffolded from the shipped template reports zero rather than its commented-out examples. Scenario enumeration and ordering use the shared scenario-file listing, so the set and order match `check-artifacts` and `dashboard`. An absent `scenarios/` directory, an unreadable scenario, or one with no questions section each contribute nothing — an unknown is never escalated into a `done`-blocking finding.
 
@@ -210,12 +212,12 @@ Result:
 
 ### `mark-criterion` — flip checkbox state on an acceptance criterion
 
-Args:
+Args — **exactly one** of `criterion-index` or `label`:
 
 ```json
 {
   "feature": "022-deterministic-runtime",
-  "criterion-index": 3,
+  "label": "AC7",
   "checked": true
 }
 ```
@@ -225,6 +227,44 @@ Result:
 ```json
 { "previous": false, "current": true, "path": "specs/.../spec.md" }
 ```
+
+`criterion-index` is 0-based over the criteria in body order and remains supported: it is the positional fallback for a criterion the labelling pass has not reached. `label` is preferred wherever one exists, because an index is only valid against the list as it stood when the index was computed — inserting a criterion above the target silently redirects it, while a label survives insertion, reordering, and removal (spec 013).
+
+Supplying both, or neither, is refused rather than resolved by precedence: a caller that passes both is holding two references it believes name one criterion, and picking a winner would silently discard the disagreement the refusal surfaces. A `label` no criterion carries is an error naming the label, never a no-op — an unresolvable label means the caller's reference is stale, which is exactly the condition labels exist to make visible.
+
+### `label-criteria` — assign stable `AC{n}` labels to acceptance criteria
+
+The labelling pass [013](../013-text-first-artifacts/scenarios/criterion-identifiers.md) specifies. Args:
+
+```json
+{ "feature": "022-deterministic-runtime" }
+```
+
+Result:
+
+```json
+{
+  "assigned": [
+    { "label": "AC34", "criterion-index": 12 },
+    { "label": "AC35", "criterion-index": 13 }
+  ],
+  "next-criterion": 36,
+  "changed": true,
+  "path": "specs/022-deterministic-runtime/spec.md"
+}
+```
+
+`assigned` lists only the criteria this run labelled, each with the 0-based index it occupies in body order at the time of the run; an already-labelled criterion is left byte-identical and never appears. `next-criterion` is the counter as written back to the frontmatter — always greater than every label in the body. `changed` reports whether the file was written, so a no-op run says so rather than reporting a clean write it did not perform.
+
+Assignment takes **`max(highest label in body, next-criterion)`**, incremented per assignment in body order — never `max(body) + 1`. That distinction is the entire retirement mechanism: deleting the highest-numbered criterion is the only case where the body maximum falls, and without the stored counter the next assignment would hand a retired label to a different requirement. The counter is monotonically non-decreasing, so it cannot.
+
+Three refusals, each preferring a legible failure to a partial or silent one:
+
+- A spec with **no frontmatter fence** is refused — there is nowhere to record the counter, and a labelling that cannot be recorded is worse than none.
+- A **`next-criterion` that is not a positive integer** is refused rather than repaired in place: a corrupted counter may mean a label was already reissued, and a silent repair would hide that. The `criterion-labels` check family reports the same state as a finding — assignment refuses, enforcement reports.
+- A spec with **no Acceptance Criteria section, or an empty one**, is a no-op that creates no counter. An absent `next-criterion` means "no labels assigned yet", which is a truthful state rather than a defect to pre-empt.
+
+The write is atomic (tempfile + rename) like every other primitive write. The pass is idempotent: a second run finds nothing unlabelled and a counter that already exceeds the body, so it writes nothing.
 
 ### `set-status` — update spec frontmatter status field
 
@@ -487,6 +527,8 @@ Result:
 
 The number is `max(existing three-digit prefix) + 1`, zero-padded; the slug is the lowercased title with non-alphanumeric runs collapsed to single hyphens and trimmed. The spec template is resolved in `writeSpecBody`'s candidate order — `{specs-root}/templates/spec.md`, then `framework/templates/spec/spec.md` — and copied atomically with the source file's mode mirrored. An already-existing target directory is the `created: false` domain outcome (`template` absent, nothing written); a missing template is an operational error raised before the directory is created.
 
+**`path` here is the spec *directory*, and on the exec path it is pinned once written.** A successful `create-feature` (and, on `/{project}:target`, a `resolved` `resolve-feature`) retargets the session, so the walker lets its `feature` and `path` override even session-seeded values — then **pins both keys for the rest of the walk**. The pin is what keeps the later `write-session` binding a directory: nearly every spec-reading primitive that can run in between (`read-spec`, `label-criteria`, `mark-criterion`) reports its own `path`, the spec **file**, and results merge at the top level by bare key. On a repo whose session file already carries a target the seeded-key guard covered this; on a fresh repo those keys are unseeded, so without the pin the file path won and the session target was recorded as `specs/{feature}/spec.md`. The retargeting primitives stay exempt from their own pin, so a walk that resolves twice still records the second.
+
 ### `create-plan-artifacts` — copy the plan/tasks/data-model templates into a feature directory
 
 Args:
@@ -652,13 +694,15 @@ Result:
 }
 ```
 
-Seven families, mirroring `/gov:analyze`'s markdown-only reference exactly (severity tiers included — the primitive mechanizes the documented policy): `artifact-completeness` (blocking — `plan.md`/`tasks.md` required at `planned`/`in-progress`/`done`; `data-model.md` never required), `task-consistency` (blocking, when `tasks.md` exists — strictly-increasing numbering, `Done when` presence), `scenario-consistency` (advisory — every `scenarios/*.md` has a referencing task, skipped for `done` specs and satisfied by §tasks-phase pruning evidence: zero task sections or non-contiguous numbering), `review-state-drift` (blocking — a `done` spec with `review.last-run` unset or `review.blocking: true`; a `done` spec with no `review:` block is grandfathered), `scenario-open-questions` (blocking at `done`, advisory otherwise), `link-adjacent-drift` (advisory — prose asserting an open state that its own sibling link's target contradicts), and `criterion-path-existence` (advisory — a filesystem path named in a `done` spec's acceptance criterion that no longer resolves). `--all` iteration stays with the caller. The command-frontmatter-completeness family stays in the markdown-only reference (it reads the host's command directory, which the runtime does not own).
+Eight families, mirroring `/gov:analyze`'s markdown-only reference exactly (severity tiers included — the primitive mechanizes the documented policy): `artifact-completeness` (blocking — `plan.md`/`tasks.md` required at `planned`/`in-progress`/`done`; `data-model.md` never required), `task-consistency` (blocking, when `tasks.md` exists — strictly-increasing numbering, `Done when` presence), `scenario-consistency` (advisory — every `scenarios/*.md` has a referencing task, skipped for `done` specs and satisfied by §tasks-phase pruning evidence: zero task sections or non-contiguous numbering), `review-state-drift` (blocking — a `done` spec with `review.last-run` unset or `review.blocking: true`; a `done` spec with no `review:` block is grandfathered), `scenario-open-questions` (blocking at `done`, advisory otherwise), `link-adjacent-drift` (advisory — prose asserting an open state that its own sibling link's target contradicts), `criterion-path-existence` (advisory — a filesystem path named in a `done` spec's acceptance criterion that no longer resolves), and `criterion-labels` (advisory — a duplicate `AC{n}` within one spec, a `next-criterion` that no longer exceeds the body, and an unlabelled criterion in a spec that carries a counter). `--all` iteration stays with the caller. The command-frontmatter-completeness family stays in the markdown-only reference (it reads the host's command directory, which the runtime does not own).
 
 `scenario-consistency`'s **referencing-task rule is canonical for every surface that asks "does a task reference this scenario?"** A task references a scenario when the scenario's **slug** appears in the task's heading, in any subtask's text, or in its `Done when` clause. The match is on the slug, not on the `scenarios/{slug}.md` path: the path form is what `append-task`'s default body emits, and the wider slug match is what tolerates a hand-written task naming the scenario without it. A second surface applying a narrower rule disagrees asymmetrically — `/{project}:amend`'s reconcile pass would offer a task for a scenario this family already considers mapped, producing the duplicate its dedup exists to prevent — so a surface restating the rule (as the markdown-only path must, per §runtime-host-integration) states *this* rule. `mapped_scenario_produces_no_finding` and `bare_slug_reference_satisfies_the_mapping` cover both authoring forms, so a narrowing on the runtime side fails a test rather than shipping.
 
 `scenario-open-questions` reports when any `scenarios/*.md` carries an unresolved question, naming the count and the scenarios. At `done` that state contradicts the completion rule outright, so the finding is blocking and `/{project}:analyze --fix` reverts the spec `done → in-progress` with a non-silent notice, exactly as it does for review-state drift; before `done` the questions are real remaining work but not yet a defect, so the finding is advisory and `--fix` leaves the status alone. Unlike `review-state-drift` there is **no grandfather rule** — an absent `review:` block genuinely marks a spec as predating that feature, but an unresolved scenario question is a present-tense defect whenever it arrived, and exempting it would preserve the state the check exists to surface. The question list comes from `read-spec`'s collector, so this finding, the `check-review-gate` block, and the count surfaced to the user can never disagree ([046 — Scenario open-question visibility](../046-scenario-open-question-visibility/spec.md)).
 
-`skipped` records each target a family could not examine, as `{family, reason, path}` over the closed reason set `target-missing` / `target-unparseable` / `no-readable-state` / `root-absent` / `ships-to-adopter` / `artifact-unreadable` / `not-a-live-claim`. It exists because the two families added by [045 — Decision-state drift detection](../045-decision-state-drift-detection/spec.md) read *targets* — a link's destination, a criterion's path — and 045 forbids escalating an unreadable one into a finding. Without the list, a family that examined every target and found nothing would return exactly what a family that could examine nothing returns, which is the shape `QUAL-CLAIM-001` forbids. `clean` is unchanged and still means `findings.is_empty()`, so the assurance lives in the pair: `clean: true` with an empty `skipped` is verified-clean, `clean: true` with a non-empty `skipped` is partially examined. The five families predating 045 always return it empty — their subjects are fully examinable by construction — and hosts render its entries in the Informational tier, where the cross-service reference unknowns already sit. `target-unparseable` has a second producer beyond an unreadable file: a sibling whose path traverses a symlink at or below the feature directory is reported unexaminable rather than followed, which is how `link-adjacent-drift` closes the half of its trust boundary lexical resolution cannot see without giving up repeat-run determinism ([sibling-symlink-trust-boundary](scenarios/sibling-symlink-trust-boundary.md)).
+`criterion-labels` is the **enforcement half** of the labelling pass above ([013](../013-text-first-artifacts/scenarios/criterion-identifiers.md)): assignment is `label-criteria`'s, enforcement has to be separate because a criterion typed by hand in an editor never touches a primitive. Its three invariants are checkable from the artifact alone with no git-history read — a duplicate label is ambiguous rather than resolvable by picking the first match; a counter at or below the body maximum means the next assignment would reissue a label a live criterion already carries; and an unlabelled criterion is a defect **only once the spec carries `next-criterion` at all**. That last gate is the field's presence, deliberately not a per-spec grandfather date: 013 defines an absent counter as "no labels assigned yet", and the corpus backfill is what makes the check universal rather than an exemption list. The family runs at every status — a label is an identifier, not a contract about the delivered system, so a `draft` is as wrong to duplicate one in as a `done` spec — and it contributes nothing to `skipped`, since its whole subject is the spec's own frontmatter and criteria list.
+
+`skipped` records each target a family could not examine, as `{family, reason, path}` over the closed reason set `target-missing` / `target-unparseable` / `no-readable-state` / `root-absent` / `ships-to-adopter` / `artifact-unreadable` / `not-a-live-claim`. It exists because the two families added by [045 — Decision-state drift detection](../045-decision-state-drift-detection/spec.md) read *targets* — a link's destination, a criterion's path — and 045 forbids escalating an unreadable one into a finding. Without the list, a family that examined every target and found nothing would return exactly what a family that could examine nothing returns, which is the shape `QUAL-CLAIM-001` forbids. `clean` is unchanged and still means `findings.is_empty()`, so the assurance lives in the pair: `clean: true` with an empty `skipped` is verified-clean, `clean: true` with a non-empty `skipped` is partially examined. The five families predating 045, and `criterion-labels` after them, always return it empty — their subjects are fully examinable by construction — and hosts render its entries in the Informational tier, where the cross-service reference unknowns already sit. `target-unparseable` has a second producer beyond an unreadable file: a sibling whose path traverses a symlink at or below the feature directory is reported unexaminable rather than followed, which is how `link-adjacent-drift` closes the half of its trust boundary lexical resolution cannot see without giving up repeat-run determinism ([sibling-symlink-trust-boundary](scenarios/sibling-symlink-trust-boundary.md)).
 
 ## Extension-point schemas (initial release)
 

@@ -156,24 +156,63 @@ fn frontmatter_bounds(lines: &[&str]) -> Option<Frontmatter> {
     Some(Frontmatter { closing, newline })
 }
 
-/// Read the stored counter. A present-but-unparseable value is an error
-/// rather than a value to overwrite: the pass repairing it silently could
-/// hide that a retired label was already reissued.
-fn read_next_criterion(lines: &[&str], fm: &Frontmatter, spec_path: &Path) -> Result<Option<u32>> {
-    for line in lines.iter().take(fm.closing).skip(1) {
+/// The `next-criterion:` field as it stands in a spec's frontmatter.
+///
+/// Shared with `check-artifacts`'s `criterion-labels` family so the pass
+/// that *maintains* the counter and the audit that *validates* it read it
+/// through one parser, for the same reason [`parse_label`] is shared: two
+/// implementations of one grammar disagree eventually, and here they would
+/// disagree about whether a label can be reissued.
+pub(crate) enum StoredCounter {
+    /// No `next-criterion:` line. The spec has never been through the pass,
+    /// which 013 defines as "no labels assigned yet" rather than a defect.
+    Absent,
+    /// A positive integer.
+    Valid(u32),
+    /// Present but not a positive integer, carrying the raw text so a
+    /// caller can report what it found rather than what it expected.
+    Malformed(String),
+}
+
+/// Read the counter from a spec's full text.
+///
+/// A file with no frontmatter fence carries no counter, which reads as
+/// [`StoredCounter::Absent`] — the labelling pass refuses such a spec on
+/// its own account, before it ever asks for the counter.
+pub(crate) fn stored_counter(content: &str) -> StoredCounter {
+    let lines: Vec<&str> = content.split_inclusive('\n').collect();
+    frontmatter_bounds(&lines).map_or(StoredCounter::Absent, |fm| scan_counter(&lines, fm.closing))
+}
+
+/// Scan the frontmatter block for `next-criterion:`.
+fn scan_counter(lines: &[&str], closing: usize) -> StoredCounter {
+    for line in lines.iter().take(closing).skip(1) {
         let Some(rest) = line.trim_start().strip_prefix(NEXT_FIELD) else {
             continue;
         };
         let value = rest.trim();
         return match value.parse::<u32>() {
-            Ok(parsed) if parsed >= 1 => Ok(Some(parsed)),
-            _ => Err(PrimitiveError::InvalidNextCriterion {
-                path: spec_path.to_path_buf(),
-                value: value.to_string(),
-            }),
+            Ok(parsed) if parsed >= 1 => StoredCounter::Valid(parsed),
+            _ => StoredCounter::Malformed(value.to_string()),
         };
     }
-    Ok(None)
+    StoredCounter::Absent
+}
+
+/// Read the stored counter for the pass itself. A present-but-unparseable
+/// value is an error rather than a value to overwrite: the pass repairing
+/// it silently could hide that a retired label was already reissued. The
+/// audit reports the same state as a finding instead — assignment refuses,
+/// enforcement reports.
+fn read_next_criterion(lines: &[&str], fm: &Frontmatter, spec_path: &Path) -> Result<Option<u32>> {
+    match scan_counter(lines, fm.closing) {
+        StoredCounter::Absent => Ok(None),
+        StoredCounter::Valid(parsed) => Ok(Some(parsed)),
+        StoredCounter::Malformed(value) => Err(PrimitiveError::InvalidNextCriterion {
+            path: spec_path.to_path_buf(),
+            value,
+        }),
+    }
 }
 
 /// Parse the `AC{n}:` label immediately after the checkbox, if present.
@@ -195,11 +234,21 @@ pub(crate) fn parse_label(line: &str, marker_idx: usize) -> Option<u32> {
 
 /// Insert `AC{label}: ` between the checkbox and the criterion's text,
 /// leaving the text itself untouched.
+///
+/// A checkbox with no text yet (`- [ ]`, a shape the shared checkbox parser
+/// accepts) takes `AC{label}:` with **no** trailing space: the separating
+/// space would sit at end of line, which `lint-markdown` flags as MD009 —
+/// and in `/{project}:specify` that lint runs on the very next step, so the
+/// pass would hand the host a violation it had just created.
 fn insert_label(line: &str, marker_idx: usize, label: u32) -> String {
     let split_at = marker_idx + 2;
     let (head, tail) = line.split_at(split_at);
     let trimmed = tail.trim_start_matches([' ', '\t']);
-    format!("{head} AC{label}: {trimmed}")
+    if trimmed.trim_end_matches(['\r', '\n']).is_empty() {
+        format!("{head} AC{label}:{trimmed}")
+    } else {
+        format!("{head} AC{label}: {trimmed}")
+    }
 }
 
 /// Rebuild the file with the labelled criterion lines spliced in and the
@@ -373,6 +422,23 @@ mod tests {
             spec_text(tmp.path()).contains("- [ ] AC1: Supersedes AC5: the rule in 017"),
             "the label anchors after the checkbox, not at the first AC-shaped token"
         );
+    }
+
+    #[test]
+    fn an_empty_criterion_gains_no_trailing_space() {
+        // `- [ ]` with no text is a shape the shared checkbox parser accepts.
+        // Labelling it as `- [ ] AC1: ` would leave a trailing space, which
+        // MD009 flags — and `/gov:specify` lints the file one step later.
+        let tmp = tempdir().unwrap();
+        write_spec(
+            tmp.path(),
+            "---\nstatus: draft\ndependencies: []\n---\n\n# feat\n\n## Acceptance Criteria\n\n- [ ]\n",
+        );
+        run(&args(), tmp.path()).unwrap();
+
+        let text = spec_text(tmp.path());
+        assert!(text.contains("- [ ] AC1:\n"), "{text:?}");
+        assert!(!text.contains("AC1: \n"), "trailing space: {text:?}");
     }
 
     #[test]

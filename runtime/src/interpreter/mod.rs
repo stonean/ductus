@@ -308,6 +308,29 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
             }
             self.context.insert(key, value);
         }
+        // Once a retargeting primitive has established the session target,
+        // PIN `feature` and `path` for the rest of the walk.
+        //
+        // Those two keys are what the later `write-session` step binds, and
+        // `path` there means the spec *directory*. Nearly every spec-reading
+        // primitive that can run in between — `read-spec`, `label-criteria`,
+        // `mark-criterion` — reports its own `path`, the spec *file*. When
+        // the session file already carries a target those keys are seeded and
+        // the guard above protects them; on a repo with **no** session file
+        // they are unseeded, so the general merge policy let the file path
+        // win and the walk wrote a session target pointing at `spec.md`.
+        // That is not hypothetical: `/gov:specify` gained a `label-criteria`
+        // step between `create-feature` and `write-session` (spec 013), and
+        // `/gov:target` has read-spec sitting in the same gap.
+        //
+        // Pinning is the same narrow-exception idiom as the override above,
+        // one step later: the retargeting primitives themselves stay exempt
+        // (`overridable_target`), so a second retarget within one walk still
+        // takes effect.
+        if retargets_session {
+            self.seeded_keys.insert("feature".into());
+            self.seeded_keys.insert("path".into());
+        }
     }
 
     fn handle_extension(
@@ -1426,6 +1449,83 @@ mod tests {
         assert_eq!(walker.context["feature"], "007-webhook-delivery");
         assert_eq!(walker.context["path"], "specs/007-webhook-delivery");
         assert_eq!(walker.context["created"], Value::Bool(true));
+    }
+
+    /// A walker with an EMPTY seed — the fresh-repo case, where
+    /// `.govern/session.toml` does not exist yet (or carries no target), so
+    /// neither `feature` nor `path` is a seeded key.
+    fn unseeded_walker<'a, R: BufRead, W: Write>(
+        procedure: &'a Procedure,
+        reader: &'a mut R,
+        writer: &'a mut W,
+    ) -> Walker<'a, R, W> {
+        Walker::new(procedure, fixture_repo(), Map::new(), reader, writer)
+    }
+
+    #[test]
+    fn a_spec_file_path_never_overwrites_the_retargeted_session_path() {
+        // `/gov:specify` runs create-feature → label-criteria → write-session.
+        // create-feature's `path` is the spec DIRECTORY the session target
+        // holds; label-criteria's is the spec FILE it labelled. With no
+        // session file to seed the key, the general merge policy let the file
+        // win and write-session recorded `specs/007-.../spec.md` as the
+        // target. `/gov:target` has read-spec sitting in the same gap.
+        let procedure = Procedure {
+            command: "specify".into(),
+            steps: vec![],
+        };
+        let mut reader = Cursor::new(String::new());
+        let mut writer: Vec<u8> = Vec::new();
+        let mut walker = unseeded_walker(&procedure, &mut reader, &mut writer);
+        walker.merge_primitive_result(
+            "create-feature",
+            serde_json::json!({
+                "created": true,
+                "feature": "007-webhook-delivery",
+                "path": "specs/007-webhook-delivery",
+            }),
+        );
+        walker.merge_primitive_result(
+            "label-criteria",
+            serde_json::json!({
+                "assigned": [],
+                "next-criterion": 1,
+                "path": "specs/007-webhook-delivery/spec.md",
+                "changed": false,
+            }),
+        );
+
+        assert_eq!(walker.context["path"], "specs/007-webhook-delivery");
+        assert_eq!(walker.context["feature"], "007-webhook-delivery");
+        // Everything else the primitive reported still lands — pinning is
+        // scoped to the two target keys, not to the whole result.
+        assert_eq!(walker.context["next-criterion"], 1);
+        assert_eq!(walker.context["changed"], Value::Bool(false));
+    }
+
+    #[test]
+    fn a_second_retarget_still_overrides_the_pinned_target() {
+        // Pinning must not lock out the retargeting primitives themselves,
+        // or a walk that resolves a feature twice would write the first one.
+        let procedure = Procedure {
+            command: "target".into(),
+            steps: vec![],
+        };
+        let mut reader = Cursor::new(String::new());
+        let mut writer: Vec<u8> = Vec::new();
+        let mut walker = unseeded_walker(&procedure, &mut reader, &mut writer);
+        for slug in ["006-specify", "007-webhook-delivery"] {
+            walker.merge_primitive_result(
+                "resolve-feature",
+                serde_json::json!({
+                    "outcome": "resolved",
+                    "feature": slug,
+                    "path": format!("specs/{slug}"),
+                }),
+            );
+        }
+        assert_eq!(walker.context["path"], "specs/007-webhook-delivery");
+        assert_eq!(walker.context["feature"], "007-webhook-delivery");
     }
 
     #[test]

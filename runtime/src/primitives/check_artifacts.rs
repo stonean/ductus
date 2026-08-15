@@ -1,9 +1,10 @@
 //! `check-artifacts` — the residual deterministic check families from
 //! `/gov:analyze`'s markdown-only reference, mechanized for one feature.
 //!
-//! Owns seven families (spec 022, scenarios analyze-artifact-checks,
-//! scenario-open-question-signal, link-adjacent-drift-family, and
-//! criterion-path-existence-family). Each family MIRRORS
+//! Owns eight families (spec 022, scenarios analyze-artifact-checks,
+//! scenario-open-question-signal, link-adjacent-drift-family,
+//! criterion-path-existence-family, and criterion-label-assignment). Each
+//! family MIRRORS
 //! `framework/commands/analyze.md`'s markdown-only reference — severity
 //! tiers and skip rules come from the reference, the primitive introduces
 //! no policy of its own:
@@ -57,20 +58,28 @@
 //!   **inside** inline code spans, the inverse of the family above — which
 //!   is why the two are separate families rather than one check with a flag
 //!   (spec 045).
+//! - **criterion-labels** (advisory) — the enforcement half of the `AC{n}`
+//!   labelling pass: a duplicate label within one spec, a `next-criterion`
+//!   that no longer exceeds the body, and an unlabelled criterion in a spec
+//!   that has been labelled. Assignment is `label-criteria`'s, enforcement
+//!   is this family's, because a criterion typed by hand in an editor never
+//!   touches a primitive (spec 013).
 //!
 //! Parsing reuses the shared machinery — `split_frontmatter` for the spec
 //! frontmatter, [`crate::primitives::read_tasks`] for the task list,
 //! [`crate::primitives::read_spec`] for spec state and scenario questions,
-//! and [`crate::primitives::split_blocks`] for the prose unit — so this
+//! [`crate::primitives::split_blocks`] for the prose unit, and
+//! `label_criteria::stored_counter` for the criterion counter — so this
 //! primitive sees exactly the artifact structure every other primitive
 //! sees (no hand-rolled parsers).
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::{Component, Path, PathBuf};
 
+use crate::primitives::label_criteria::StoredCounter;
 use crate::primitives::{
-    MarkdownBlock, PrimitiveError, Result, inline_code_spans, list_scenario_files, read_spec,
-    read_tasks, read_text, rel_path, scenario_name_cmp, split_blocks,
+    MarkdownBlock, PrimitiveError, Result, inline_code_spans, label_criteria, list_scenario_files,
+    read_spec, read_tasks, read_text, rel_path, scenario_name_cmp, split_blocks,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -155,6 +164,7 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
         &spec_path,
         repo,
     );
+    check_criterion_labels(&mut findings, &spec, &spec_path, repo);
 
     let clean = findings.is_empty();
     Ok(CheckArtifactsResult {
@@ -1169,6 +1179,138 @@ fn is_path_like(content: &str) -> bool {
         && content.is_ascii()
         && !content.chars().any(char::is_whitespace)
         && !content.chars().any(|c| REJECTED.contains(&c))
+}
+
+// --- (h) acceptance-criterion labels ----------------------------------------
+
+/// (h) Criterion labels (advisory) — the enforcement half of the `AC{n}`
+/// labelling pass (spec 013). Assignment belongs to `label-criteria`;
+/// enforcement has to live here because a criterion typed by hand in an
+/// editor never touches a primitive. Three invariants, each checkable from
+/// the artifact alone with no git history read:
+///
+/// - **A duplicate `AC{n}` within one spec.** Ambiguous, so it is a defect
+///   the audit reports rather than a state a tool resolves by picking the
+///   first match.
+/// - **A counter that no longer exceeds the body.** `next-criterion` is
+///   what makes a retired label unreissuable, so one that has fallen to or
+///   below the highest label present means the next assignment hands a
+///   *live* label to a second requirement. A value that is not a positive
+///   integer is reported the same way and never repaired: a corrupted
+///   counter may mean a label was already reissued, and repairing it in
+///   place would hide that.
+/// - **An unlabelled criterion in a spec that has been labelled.** The gate
+///   is the counter's presence, not a grandfather date — 013 defines an
+///   absent `next-criterion` as "no labels assigned yet" rather than a
+///   defect, and rejects per-spec exemption state outright. The corpus
+///   backfill is what makes the check universal: once every spec carries a
+///   counter, an unlabelled criterion means a hand edit the pre-commit hook
+///   never saw.
+///
+/// Runs at every status. A label is an identifier rather than a contract
+/// about the delivered system, so — unlike [`check_criterion_path_existence`]
+/// — it is as wrong to duplicate one in a `draft` as in a `done` spec.
+///
+/// Contributes nothing to [`SkippedTarget`]: its entire subject is the
+/// spec's own frontmatter and criteria list, both already parsed and in
+/// hand, so there is no target it can fail to examine.
+fn check_criterion_labels(
+    findings: &mut Vec<ArtifactFinding>,
+    spec: &ReadSpecResult,
+    spec_path: &Path,
+    repo: &Path,
+) {
+    let citing = rel_path(spec_path, repo);
+    let labels: Vec<Option<u32>> = spec
+        .acceptance_criteria
+        .iter()
+        .map(|criterion| criterion.label.as_deref().and_then(label_number))
+        .collect();
+
+    // Reported at the second occurrence, so the order is body order and a
+    // label repeated three times still yields one finding.
+    let mut seen: HashSet<u32> = HashSet::new();
+    let mut reported: HashSet<u32> = HashSet::new();
+    for label in labels.iter().flatten() {
+        if !seen.insert(*label) && reported.insert(*label) {
+            findings.push(ArtifactFinding {
+                family: "criterion-labels".into(),
+                severity: "advisory".into(),
+                message: format!(
+                    "duplicate acceptance-criterion label AC{label} — a label addresses \
+                     exactly one criterion, so an ambiguous one cannot be resolved"
+                ),
+                path: citing.clone(),
+            });
+        }
+    }
+
+    // The counter is read through the labelling pass's own parser, so the
+    // pass and the audit can never disagree about what the field says.
+    let counter = match read_text(spec_path) {
+        Ok(content) => label_criteria::stored_counter(&content),
+        // Unreachable in practice — `read-spec` already read this file to
+        // produce `spec` — and a re-read that fails says nothing about the
+        // labels, so it yields no finding rather than a speculative one.
+        Err(_) => return,
+    };
+    let body_max = labels.iter().flatten().copied().max();
+    match &counter {
+        StoredCounter::Malformed(value) => findings.push(ArtifactFinding {
+            family: "criterion-labels".into(),
+            severity: "advisory".into(),
+            message: format!(
+                "next-criterion is `{value}`, which is not a positive integer — the \
+                 labelling pass refuses a spec with a corrupted counter rather than \
+                 repairing it, since the corruption may mean a label was already reissued"
+            ),
+            path: citing.clone(),
+        }),
+        StoredCounter::Valid(next) => {
+            if let Some(max_label) = body_max
+                && *next <= max_label
+            {
+                findings.push(ArtifactFinding {
+                    family: "criterion-labels".into(),
+                    severity: "advisory".into(),
+                    message: format!(
+                        "next-criterion {next} is at or below AC{max_label}, the highest \
+                         label in the body — the next assignment would reissue a label \
+                         a live criterion already carries"
+                    ),
+                    path: citing.clone(),
+                });
+            }
+        }
+        // Never labelled: 013's edge case, and not a defect.
+        StoredCounter::Absent => {}
+    }
+
+    if matches!(counter, StoredCounter::Absent) {
+        return;
+    }
+    for (index, criterion) in spec.acceptance_criteria.iter().enumerate() {
+        if criterion.label.is_none() {
+            findings.push(ArtifactFinding {
+                family: "criterion-labels".into(),
+                severity: "advisory".into(),
+                message: format!(
+                    "acceptance criterion {index} carries no AC label in a spec that has \
+                     been labelled — run the labelling pass: \"{}\"",
+                    criterion.text
+                ),
+                path: citing.clone(),
+            });
+        }
+    }
+}
+
+/// The numeric part of an `AC{n}` label as `read-spec` reports it. `read-spec`
+/// builds the string from the shared parser's integer, so the round-trip is
+/// total; the fallible signature keeps this from being an assumption the
+/// audit asserts.
+fn label_number(label: &str) -> Option<u32> {
+    label.strip_prefix("AC")?.parse().ok()
 }
 
 #[cfg(test)]
@@ -2457,6 +2599,214 @@ mod tests {
                 .any(|(f, _)| *f == "scenario-open-questions"),
             "got {:?}",
             families(&result)
+        );
+    }
+
+    // --- criterion labels ----------------------------------------------------
+
+    /// Seed a feature whose spec carries `criteria` under `## Acceptance
+    /// Criteria` and, when `counter` is set, that raw `next-criterion:`
+    /// value. The counter is a string rather than an integer so a corrupted
+    /// one — a state this family reports — can be seeded at all.
+    fn seed_with_labels(repo: &Path, status: &str, counter: Option<&str>, criteria: &str) {
+        let counter_line = counter.map_or_else(String::new, |c| format!("next-criterion: {c}\n"));
+        write(
+            repo,
+            &format!("specs/{FEATURE}/spec.md"),
+            &format!(
+                "---\nstatus: {status}\ndependencies: []\n{counter_line}---\n\n\
+                 # Demo\n\n## Acceptance Criteria\n\n{criteria}"
+            ),
+        );
+        write(repo, &format!("specs/{FEATURE}/plan.md"), "# Demo Plan\n");
+        write(repo, &format!("specs/{FEATURE}/tasks.md"), GOOD_TASKS);
+    }
+
+    fn label_findings(result: &CheckArtifactsResult) -> Vec<&ArtifactFinding> {
+        result
+            .findings
+            .iter()
+            .filter(|f| f.family == "criterion-labels")
+            .collect()
+    }
+
+    #[test]
+    fn a_labelled_spec_with_a_current_counter_is_clean() {
+        let tmp = tempdir().unwrap();
+        seed_with_labels(
+            tmp.path(),
+            "in-progress",
+            Some("3"),
+            "- [x] AC1: First.\n- [ ] AC2: Second.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(label_findings(&result).is_empty(), "{:?}", result.findings);
+        assert!(result.skipped.is_empty(), "{:?}", result.skipped);
+    }
+
+    #[test]
+    fn a_duplicate_label_is_reported_once_per_label() {
+        // Three occurrences of AC2, one finding: the defect is the label,
+        // not each line carrying it.
+        let tmp = tempdir().unwrap();
+        seed_with_labels(
+            tmp.path(),
+            "in-progress",
+            Some("9"),
+            "- [x] AC1: First.\n- [ ] AC2: Second.\n- [ ] AC2: Third.\n- [ ] AC2: Fourth.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        let found = label_findings(&result);
+        assert_eq!(found.len(), 1, "{:?}", result.findings);
+        assert_eq!(found[0].severity, "advisory");
+        assert_eq!(found[0].path, "specs/042-demo/spec.md");
+        assert!(found[0].message.contains("duplicate"), "{:?}", found[0]);
+        assert!(found[0].message.contains("AC2"), "{:?}", found[0]);
+    }
+
+    #[test]
+    fn a_duplicate_is_reported_at_every_status() {
+        // A label is an identifier, not a contract about the delivered
+        // system, so — unlike criterion-path-existence — a draft is as wrong
+        // to duplicate one in as a done spec.
+        let tmp = tempdir().unwrap();
+        seed_with_labels(
+            tmp.path(),
+            "draft",
+            Some("4"),
+            "- [ ] AC3: First.\n- [ ] AC3: Second.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(label_findings(&result).len(), 1, "{:?}", result.findings);
+    }
+
+    #[test]
+    fn a_counter_at_or_below_the_body_maximum_is_reported() {
+        // The retirement mechanism failing: the next assignment would hand
+        // AC3 to a second requirement.
+        let tmp = tempdir().unwrap();
+        seed_with_labels(
+            tmp.path(),
+            "in-progress",
+            Some("3"),
+            "- [x] AC1: First.\n- [x] AC2: Second.\n- [ ] AC3: Third.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        let found = label_findings(&result);
+        assert_eq!(found.len(), 1, "{:?}", result.findings);
+        assert!(
+            found[0].message.contains("next-criterion 3"),
+            "{:?}",
+            found[0]
+        );
+        assert!(found[0].message.contains("AC3"), "{:?}", found[0]);
+    }
+
+    #[test]
+    fn a_counter_above_the_body_maximum_is_clean_across_a_gap() {
+        // Gaps are legal and mean retired labels — AC2 missing is not a
+        // defect, and the counter still exceeds every label present.
+        let tmp = tempdir().unwrap();
+        seed_with_labels(
+            tmp.path(),
+            "in-progress",
+            Some("42"),
+            "- [x] AC1: First.\n- [ ] AC7: Seventh.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(label_findings(&result).is_empty(), "{:?}", result.findings);
+    }
+
+    #[test]
+    fn a_malformed_counter_is_reported() {
+        let tmp = tempdir().unwrap();
+        seed_with_labels(
+            tmp.path(),
+            "in-progress",
+            Some("zero"),
+            "- [x] AC1: First.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        let found = label_findings(&result);
+        assert_eq!(found.len(), 1, "{:?}", result.findings);
+        assert!(found[0].message.contains("`zero`"), "{:?}", found[0]);
+    }
+
+    #[test]
+    fn a_counter_below_one_is_reported() {
+        let tmp = tempdir().unwrap();
+        seed_with_labels(tmp.path(), "in-progress", Some("0"), "- [x] AC1: First.\n");
+        let result = run(&args(), tmp.path()).unwrap();
+        let found = label_findings(&result);
+        assert_eq!(found.len(), 1, "{:?}", result.findings);
+        assert!(
+            found[0].message.contains("not a positive integer"),
+            "{:?}",
+            found[0]
+        );
+    }
+
+    #[test]
+    fn an_unlabelled_criterion_is_reported_in_a_labelled_spec() {
+        let tmp = tempdir().unwrap();
+        seed_with_labels(
+            tmp.path(),
+            "in-progress",
+            Some("3"),
+            "- [x] AC1: First.\n- [ ] Typed by hand.\n- [ ] AC2: Third.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        let found = label_findings(&result);
+        assert_eq!(found.len(), 1, "{:?}", result.findings);
+        assert!(
+            found[0].message.contains("acceptance criterion 1"),
+            "{:?}",
+            found[0]
+        );
+        assert!(
+            found[0].message.contains("Typed by hand."),
+            "{:?}",
+            found[0]
+        );
+    }
+
+    #[test]
+    fn a_spec_that_has_never_been_labelled_is_clean() {
+        // 013's edge case: an absent next-criterion means "no labels
+        // assigned yet", not a defect. The corpus backfill is what makes the
+        // unlabelled check universal — not a per-spec grandfather date.
+        let tmp = tempdir().unwrap();
+        seed_with_labels(
+            tmp.path(),
+            "in-progress",
+            None,
+            "- [x] First.\n- [ ] Second.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(label_findings(&result).is_empty(), "{:?}", result.findings);
+    }
+
+    #[test]
+    fn the_family_never_records_a_skipped_target() {
+        // Its whole subject is the spec's own frontmatter and criteria list,
+        // both already parsed — there is no target it can fail to examine,
+        // so a finding-producing run still skips nothing.
+        let tmp = tempdir().unwrap();
+        seed_with_labels(
+            tmp.path(),
+            "in-progress",
+            Some("1"),
+            "- [x] AC1: First.\n- [ ] AC1: Second.\n- [ ] Unlabelled.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(label_findings(&result).len(), 3, "{:?}", result.findings);
+        assert!(
+            !result
+                .skipped
+                .iter()
+                .any(|s| s.family == "criterion-labels"),
+            "{:?}",
+            result.skipped
         );
     }
 }

@@ -2265,14 +2265,14 @@ pub struct CheckArtifactsArgs {
 pub struct ArtifactFinding {
     /// Check family: `artifact-completeness`, `task-consistency`,
     /// `scenario-consistency`, `review-state-drift`,
-    /// `scenario-open-questions`, `link-adjacent-drift`, or
-    /// `criterion-path-existence`.
+    /// `scenario-open-questions`, `link-adjacent-drift`,
+    /// `criterion-path-existence`, or `criterion-labels`.
     pub family: String,
     /// Severity tier per the reference's assignments: `blocking`
     /// (artifact completeness, task consistency, review state drift, and
     /// scenario open questions at `done`) or `advisory` (scenario
     /// consistency, scenario open questions below `done`, link-adjacent
-    /// drift, criterion path existence).
+    /// drift, criterion path existence, criterion labels).
     pub severity: String,
     /// Human-readable description of the finding.
     pub message: String,
@@ -2311,9 +2311,10 @@ pub struct CheckArtifactsResult {
     pub feature: String,
     /// Spec frontmatter `status` the tier classification ran against.
     pub status: String,
-    /// Findings across the seven families, in family order (completeness →
+    /// Findings across the eight families, in family order (completeness →
     /// task consistency → scenario consistency → review drift → scenario
-    /// open questions → link-adjacent drift → criterion path existence).
+    /// open questions → link-adjacent drift → criterion path existence →
+    /// criterion labels).
     pub findings: Vec<ArtifactFinding>,
     /// `true` when no family produced a finding.
     ///
@@ -2324,8 +2325,9 @@ pub struct CheckArtifactsResult {
     /// non-empty `skipped` is partially examined.
     pub clean: bool,
     /// Targets no family could examine. Empty for the five families
-    /// predating spec 045, whose subjects are fully examinable by
-    /// construction.
+    /// predating spec 045 and for `criterion-labels`, whose subjects are
+    /// fully examinable by construction — only the two families that read
+    /// an artifact's *targets* can fail to look.
     #[serde(default)]
     pub skipped: Vec<SkippedTarget>,
     /// Repo-relative path to the spec file.
