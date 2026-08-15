@@ -185,11 +185,15 @@ Done when: every `specs/*/spec.md` has a non-empty, coherent `tags` value and th
 
 ### 24. Implement scenario: criterion-identifiers
 
-Artifact half. The runtime half is [022's task 86](../022-deterministic-runtime/tasks.md) (`criterion-label-assignment`) and **must ship first** — the backfill below is performed by the `label-criteria` primitive, not by hand. Sub-items are ordered; the unchecked ones are what remains.
+Artifact half. The runtime half is [022's task 86](../022-deterministic-runtime/tasks.md) (`criterion-label-assignment`), which supplies the `label-criteria` primitive the backfill runs — the sweep is performed by the primitive, never by hand-editing 660 criteria.
+
+**What the backfill needs is a built binary, not a released one.** Run it through the CLI against a local `cargo build --release`; per `AGENTS.md`, an MCP tool call would execute the *installed* `gvrn` on `PATH`, which will not carry `label-criteria` until it is reinstalled and the MCP server restarts (a new session). Only the migration entry below depends on a release, because it runs in adopter repos against whatever runtime they have.
+
+Tagging is deferred until [048](../048-project-local-runtime-binary/spec.md) ships (operator decision, 2026-08-14), so this spec stays `in-progress` until then even once every sub-item below is done. Sub-items are ordered; the unchecked ones are what remains.
 
 - [x] `next-criterion` defined in the constitution's frontmatter-schema table (its canonical home) and in this spec's §Frontmatter Schema; §spec-requirements states that criteria carry a permanent `AC{n}:` label and that the label, not the position, is how a criterion is cited.
 - [ ] Backfill: run the labelling pass across the 47 specs whose criteria are unlabelled (660 of 697 criteria at decision time). `017-derive-dont-ask` (24/24) and `018-adopter-owned-pre-commit` (13/13) are already labelled by hand and must come out byte-identical — renumbering them would break `018`'s working "017 AC24" cross-reference. A uniform mechanical sweep under §spec-lifecycle, so the `done` specs it touches stay `done`.
-- [ ] Migration registry entry (`framework/migrations.toml` + a file under `framework/migrations/`) so adopter projects converge on their next `/govern` run. Without it this repo is labelled and every adopter is not — the ecosystem-level version of the two-tier corpus the going-forward-only option was rejected for.
+- [ ] Migration registry entry (`framework/migrations.toml` + a file under `framework/migrations/`) so adopter projects converge on their next `/govern` run. Without it this repo is labelled and every adopter is not — the ecosystem-level version of the two-tier corpus the going-forward-only option was rejected for. Its `introduced_in` names the runtime version that first carries `label-criteria`, so this entry is authored as part of the deferred release rather than ahead of it: an adopter reaching the migration with an older runtime has no primitive to run.
 - [ ] Hook wiring, all three sites per `AGENTS.md`: this repo's `.githooks/pre-commit`, the adopter hook `framework/bootstrap/hooks/govern-pre-commit`, and a Shared Files manifest row in `framework/bootstrap/govern.md`. This is the backstop for criteria typed by hand in an editor.
 - [ ] Command sources invoke the pass at its two remaining points: `framework/commands/specify.md` after `writeSpecBody`, and `framework/commands/clarify.md` after the criteria pass. Re-run `scripts/gen-claude-commands.sh` after editing either.
 
