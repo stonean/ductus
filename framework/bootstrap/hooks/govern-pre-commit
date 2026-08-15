@@ -15,6 +15,16 @@
 #                                         inline links to other services' specs
 #                                         (distinct from dependencies)
 #
+# It then runs the acceptance-criterion labelling pass over each staged spec —
+# `gvrn label-criteria`, which assigns the stable `AC{n}:` label a criterion is
+# cited by and maintains the `next-criterion` counter (spec 013). This is the
+# backstop for a criterion typed by hand in an editor rather than through a
+# govern command. Unlike the generators above it is a runtime primitive rather
+# than a bash script, so it runs only when the optional gvrn binary is present
+# and its failure never blocks a commit: the runtime is not a prerequisite for
+# any pipeline gate, and a binary predating `label-criteria` exits non-zero on
+# the unknown subcommand.
+#
 # This file is overwritten by /govern unless listed in .govern.toml `pinned.files`.
 # The `# managed-by: govern` sentinel above is how /govern detects that the file
 # is one it owns.
@@ -33,8 +43,14 @@ cd "$ROOT"
 # (spec 017 / tracked-specs-not-worktree).
 staged_specs="$(git diff --cached --name-only -- specs \
   | { grep -E '^specs/[0-9][0-9][0-9]-[^/]+/(spec|spec-and-plan)\.md$' || true; })"
+
 if [ -n "$staged_specs" ]; then
   printf '%s\n' "$staged_specs" | while IFS= read -r f; do
-    [ -f "$f" ] && git add "$f"
+    [ -f "$f" ] || continue
+    if command -v gvrn > /dev/null; then
+      gvrn label-criteria --feature "$(basename "$(dirname "$f")")" \
+        > /dev/null 2>&1 || true
+    fi
+    git add "$f"
   done
 fi
