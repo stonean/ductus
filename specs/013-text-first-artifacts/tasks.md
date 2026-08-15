@@ -185,6 +185,12 @@ Done when: every `specs/*/spec.md` has a non-empty, coherent `tags` value and th
 
 ### 24. Implement scenario: criterion-identifiers
 
-- [ ] Implement the behavior described in `scenarios/criterion-identifiers.md`
+Artifact half. The runtime half is [022's task 86](../022-deterministic-runtime/tasks.md) (`criterion-label-assignment`) and **must ship first** — the backfill below is performed by the `label-criteria` primitive, not by hand. Sub-items are ordered; the unchecked ones are what remains.
 
-- **Done when**: the scenario's described behavior is correctly implemented and tested; an acceptance criterion carries a stable, permanent identifier readable in the artifact and resolvable by tooling, unlabeled criteria still parse and tick via the positional fallback, and the runtime-side changes (`mark-criterion` label addressing, the audit's duplicate/missing-label checks) land as scenarios under 022 back-linking here.
+- [x] `next-criterion` defined in the constitution's frontmatter-schema table (its canonical home) and in this spec's §Frontmatter Schema; §spec-requirements states that criteria carry a permanent `AC{n}:` label and that the label, not the position, is how a criterion is cited.
+- [ ] Backfill: run the labelling pass across the 47 specs whose criteria are unlabelled (660 of 697 criteria at decision time). `017-derive-dont-ask` (24/24) and `018-adopter-owned-pre-commit` (13/13) are already labelled by hand and must come out byte-identical — renumbering them would break `018`'s working "017 AC24" cross-reference. A uniform mechanical sweep under §spec-lifecycle, so the `done` specs it touches stay `done`.
+- [ ] Migration registry entry (`framework/migrations.toml` + a file under `framework/migrations/`) so adopter projects converge on their next `/govern` run. Without it this repo is labelled and every adopter is not — the ecosystem-level version of the two-tier corpus the going-forward-only option was rejected for.
+- [ ] Hook wiring, all three sites per `AGENTS.md`: this repo's `.githooks/pre-commit`, the adopter hook `framework/bootstrap/hooks/govern-pre-commit`, and a Shared Files manifest row in `framework/bootstrap/govern.md`. This is the backstop for criteria typed by hand in an editor.
+- [ ] Command sources invoke the pass at its two remaining points: `framework/commands/specify.md` after `writeSpecBody`, and `framework/commands/clarify.md` after the criteria pass. Re-run `scripts/gen-claude-commands.sh` after editing either.
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested; an acceptance criterion carries a stable, permanent identifier readable in the artifact and resolvable by tooling, unlabelled criteria still parse and tick via the positional fallback, every spec in the corpus is labelled, adopters receive the same migration, and the runtime-side changes have landed under 022.
