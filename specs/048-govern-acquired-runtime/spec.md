@@ -1,5 +1,5 @@
 ---
-status: clarified
+status: planned
 dependencies: [021-runtime-boundary, 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire, 042-consolidate-govern-per-project-files-under-govern-directory]
 review:
   last-run: null
