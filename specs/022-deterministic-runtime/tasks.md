@@ -132,3 +132,9 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] Implement the behavior described in `scenarios/append-primitive-marker-normalization.md`
 
 - **Done when**: a shared `strip_bullet_marker` helper in `primitives/mod.rs` delegates to the existing `bullet_text` grammar rather than hand-rolling a second matcher; `append-task` applies it to each `body` item, `append-question` to `question` before both the dedup comparison and the insert, and `append-inbox` to both `text` and `dedup-prefix`; each affected argument's schema description records that the primitive renders the marker and strips a caller-supplied one; regression tests cover a marker-prefixed body item rendering exactly one checkbox, a marker-bearing `dedup-prefix` matching an existing bullet, a marker-prefixed question deduping against its unmarked twin, and `--fix`-style leading-dash content surviving untouched; `cargo test` green
+
+## 86. Implement scenario: criterion-label-assignment
+
+- [ ] Implement the behavior described in `scenarios/criterion-label-assignment.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested; the labelling pass assigns `AC{n}:` labels idempotently and maintains `next-criterion`, `mark-criterion` resolves a label as well as an index, `read-spec` reports labels, the `check-artifacts` family reports duplicate labels and a stale counter, and `specs/022-deterministic-runtime/data-model.md` records the primitive's result shape and the new family.

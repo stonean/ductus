@@ -94,7 +94,7 @@ The top-level directory name (`specs` above) is the documented default; a projec
 #### Spec requirements
 
 - Every spec includes a **Status** indicator: `draft`, `clarified`, `planned`, `in-progress`, or `done`
-- Every spec includes **Acceptance Criteria** — concrete, testable conditions that define "done"
+- Every spec includes **Acceptance Criteria** — concrete, testable conditions that define "done". Each carries a stable `AC{n}:` label after its checkbox (`- [ ] AC7: …`), assigned by the runtime's labelling pass and permanent for the life of the criterion: never renumbered when criteria are inserted, reordered, or removed, and never reissued after one is deleted. The label — not the criterion's position — is how a criterion is cited in prose, across specs, and by tooling (spec 013)
 - Every spec includes **Open Questions** — uncertainties and unresolved decisions. An open question is an **undecided blocker**: a decision deferred pending a condition ("not now; revisit when X lands") is resolved *with* a condition and belongs in Resolved Questions with its trigger recorded, not left open
 - Every spec lists **Dependencies** — other specs this feature depends on
 - Open questions must be resolved before moving to the plan phase
@@ -421,6 +421,7 @@ The frontmatter schema applies to **spec files** (`spec.md`) and **scenario file
 | `status` | yes | string | `draft`, `clarified`, `planned`, `in-progress`, `done` | Spec lifecycle state |
 | `dependencies` | yes | list of strings | spec slugs (e.g., `002-events`); empty list permitted | **Generated** by `.govern/scripts/gen-spec-deps.sh` from inline markdown links to sibling specs in the body. Not hand-authored. Author opt-out: links under a `## See also` heading are treated as navigational and do not produce edges (`## References` remains a dep-producing section). |
 | `references` | no | list of `{service, spec}` entries | registered service alias + target `NNN-slug`; empty or absent permitted | **Generated** by `.govern/scripts/gen-cross-service-refs.sh` from inline body links to a registered service's canonical repo URL. Not hand-authored, and **strictly distinct from `dependencies`** — informative cross-service navigation that never enters the blocking dependency graph (spec 030). |
+| `next-criterion` | no | integer | ≥ 1; absent means no criterion has been labelled yet | **Maintained by the runtime's labelling pass.** The `AC{n}` label the next acceptance criterion receives. Monotonically non-decreasing — deleting a criterion never lowers it — so a retired label is never reissued to a different requirement. Not hand-authored; the audit requires it to exceed every `AC{n}` label present in the body (spec 013). |
 
 #### Scenario files
 

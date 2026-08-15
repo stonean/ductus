@@ -47,6 +47,10 @@ The schema applies to **spec files** (`spec.md`, `spec-and-plan.md`) and **scena
 
 - `spec-ref` — string identifying the parent spec and section the scenario elaborates (replaces the bold-prefix `**spec-ref:**` line)
 
+**Runtime-maintained field (spec files):**
+
+- `next-criterion` — integer; the `AC{n}` label the next acceptance criterion will receive. Monotonically non-decreasing: deleting a criterion never lowers it, which is what keeps a retired label from being reissued to a different requirement without consulting git history. Maintained by the labelling pass, never hand-edited; absent on a spec whose criteria have never been labelled, which means "no labels assigned yet" rather than a defect. See [`scenarios/criterion-identifiers.md`](scenarios/criterion-identifiers.md) for the assignment rule, the backfill, and the audit invariant (`next-criterion` exceeds every label present in the body).
+
 **Standard optional fields (specs and scenarios):**
 
 - `tags` — list of free-form strings used by graph-view consumers (Quartz, Obsidian, etc.) for cross-cutting groupings. Treated as first-class for spec files through three reinforcement points: (1) bundled spec templates include `tags: []` so authors see the field at every new spec, (2) `/gov:specify` prompts for at least one tag at creation and surfaces existing sibling specs' tags as suggestions, (3) `/gov:clarify` flags missing or empty tags as an advisory finding at the `draft → clarified` transition (not a hard gate). The constitution publishes a starter vocabulary as guidance, not enforcement; new tags can be introduced as needed. Scenarios may also carry tags for graph-view consistency.
