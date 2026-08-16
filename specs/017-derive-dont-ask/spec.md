@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: []
 review:
   last-run: 2026-08-16T13:52:53Z
@@ -30,6 +30,11 @@ This spec is a discipline-cleanup pass. It does not introduce new framework capa
 
 ## State at hand-off (2026-08-16)
 
+**Closed and returned to `done`.** Both criteria this spec was reopened for
+shipped in `ductus-v0.29.0` (assets on five platforms, `ductus 0.29.0` on
+crates.io, acquisition invariant green on all five targets). There is nothing
+outstanding here.
+
 Reopened `done → in-progress` on 2026-08-16 to carry two new criteria, **AC25**
 and **AC26**. Both are instances of this spec's own principle found in the
 framework's own machinery, routed here because this spec is where that principle
@@ -48,10 +53,24 @@ lives:
 **Neither is implemented here.** Per §cross-spec-impact and the runtime-work
 routing rule, this spec keeps the requirement and the criteria while
 `022-deterministic-runtime` carries the implementation as
-scenarios: **task 90** (`review-observations-write-through`) closes AC25 and
-**task 91** (`specify-routes-before-scaffolding`) closes AC26. Landing those two
-tasks is what returns this spec to `done` — there is no work to do in this
-directory beyond ticking the criteria once they ship.
+scenarios: **task 90** (`review-observations-write-through`) closed AC25 and
+**task 91** (`specify-routes-before-scaffolding`) closed AC26. Both landed
+2026-08-16 and shipped in `ductus-v0.29.0`; this spec's only work was ticking
+the criteria once they did.
+
+What shipped, for a reader arriving at this spec rather than at 022:
+
+- **AC25** — `write-review` takes an `observations` array. Each entry renders in
+  a new `## Observations` report section *and* is appended to the inbox in the
+  same call, dedup-guarded, with the inbox write ordered **first** so a failed
+  capture leaves no report rather than a report that lies about it. There is no
+  path that records an observation without capturing it.
+- **AC26** — a new `derive-routing-candidates` primitive plus a routing gate on
+  `/{project}:specify` that runs before `create-feature` writes anything.
+  Candidates are derived from the rule-file directory, the spec corpus, and a
+  runtime-work signal whose home is read off the corpus rather than named in
+  code. The decision reuses `/{project}:groom`'s tree at the extension point
+  rather than growing a second one.
 
 ## Violation Inventory
 

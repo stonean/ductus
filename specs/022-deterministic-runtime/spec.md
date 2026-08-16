@@ -221,19 +221,26 @@ lands here as a scenario, back-linked to the requiring spec). It accumulates
 scenarios continuously and is not expected to reach `done` on any particular
 cycle.
 
-**Three tasks are outstanding**, all authored 2026-08-16 and none started:
+**One task is outstanding**, authored 2026-08-16 and not started:
 
 | Task | Scenario | Requiring spec |
 | --- | --- | --- |
 | 88 | `review-staleness-on-done-specs` — `check-artifacts` reports a stale review on a `done` spec | this spec |
-| 90 | `review-observations-write-through` — recording a review observation is what captures it | `017-derive-dont-ask` AC25 |
-| 91 | `specify-routes-before-scaffolding` — routing binds wherever work enters | `017-derive-dont-ask` AC26 |
 
-Tasks 90 and 91 are the ones to prefer: they close 017's two open criteria as
-well as their own, so landing both takes two specs forward rather than one. Task
-88's scenario asks for its corpus-wide flag count to be measured *before* the
-advisory-vs-blocking choice is finalised — the arm is specified advisory
-precisely so it cannot mass-reopen every spec the `0.28.0` sweep touched.
+Task 88's scenario asks for its corpus-wide flag count to be measured *before*
+the advisory-vs-blocking choice is finalised — the arm is specified advisory
+precisely so it cannot mass-reopen every spec the `0.28.0` sweep touched. Note
+that its first bullet is now partly done for it: task 91 made
+`compute_review_scope::read_plan_affected` `pub(crate)`, which is the shared
+path task 88 must resolve staleness through rather than writing a second one.
+
+**Tasks 90 and 91 landed 2026-08-16** and shipped in `ductus-v0.29.0`,
+closing `017-derive-dont-ask`'s AC25 and AC26 and returning that spec to `done`:
+
+| Task | Scenario | Shipped |
+| --- | --- | --- |
+| 90 | `review-observations-write-through` — recording a review observation is what captures it | `write-review`'s `observations` array, the `## Observations` section, and the inbox write-through ordered ahead of the report |
+| 91 | `specify-routes-before-scaffolding` — routing binds wherever work enters | the `derive-routing-candidates` primitive and `/{project}:specify`'s pre-scaffold routing gate |
 
 **This spec's review is stale** (`reviewed-against 9a9c38b3`, ~50 durable
 contracts changed). That is expected given the scenario count and blocks only
