@@ -29,7 +29,7 @@ pub struct ReadSpecArgs {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ReviewBlock {
-    /// ISO-8601 UTC timestamp of the last `/gov:review`, if any.
+    /// ISO-8601 UTC timestamp of the last `/ductus:review`, if any.
     #[serde(default)]
     pub last_run: Option<String>,
     /// Constitution sha the review was run against.
@@ -56,7 +56,7 @@ pub struct ReviewBlock {
 #[serde(rename_all = "kebab-case")]
 pub struct DiscoverRuleFilesArgs {
     /// Surfaces detected by the host's stack detection, consulted ONLY when
-    /// `.govern/config.toml` `[rules] surfaces` is unset. Members are `backend`
+    /// `.ductus/config.toml` `[rules] surfaces` is unset. Members are `backend`
     /// and/or `frontend`. When the config key is set it wins; when both are
     /// absent, every recognized surface is loaded.
     #[serde(default)]
@@ -69,7 +69,7 @@ pub struct DiscoverRuleFilesArgs {
 #[serde(rename_all = "kebab-case")]
 pub struct DiscoverRuleFilesResult {
     /// Repo-relative rule-file directory that was listed (`framework/rules`
-    /// in govern's own repo, `{specs-root}/rules` in adopters). Empty when
+    /// in ductus's own repo, `{specs-root}/rules` in adopters). Empty when
     /// neither exists.
     pub rules_dir: String,
     /// Selected rule-file basenames, sorted, after surface selection and the
@@ -734,8 +734,8 @@ pub struct TraverseDepsResult {
 // -- dashboard ---------------------------------------------------------------
 
 /// Args for `dashboard`. The primitive takes no caller-supplied inputs —
-/// the repo root, the project config (`.govern/config.toml`, committed),
-/// and the session file (`.govern/session.toml`, gitignored per-user
+/// the repo root, the project config (`.ductus/config.toml`, committed),
+/// and the session file (`.ductus/session.toml`, gitignored per-user
 /// session state), each resolved with the pre-042 legacy root fallback,
 /// are the only state it reads. The empty args struct preserves
 /// clap-derive consistency with every other primitive.
@@ -789,7 +789,7 @@ pub struct DashboardSpec {
 }
 
 /// Config review-state summary returned alongside the per-spec
-/// inventory, read from the resolved config file (`.govern/config.toml`;
+/// inventory, read from the resolved config file (`.ductus/config.toml`;
 /// legacy root `.govern.toml` pre-migration). The `present` flag
 /// distinguishes "config absent" from "config present but section absent
 /// / empty" so callers can drive the callout-suppression rule correctly.
@@ -821,7 +821,7 @@ pub struct DashboardScenarioDetail {
 }
 
 /// Session-target summary returned when the session file
-/// (`.govern/session.toml`; legacy root `.govern.session.toml`
+/// (`.ductus/session.toml`; legacy root `.govern.session.toml`
 /// pre-migration) exists and names a target. The `feature` field always names the targeted
 /// feature; `scenario` is populated when a scenario is targeted;
 /// `scenario-detail` is populated alongside `scenario` to spare callers an
@@ -840,14 +840,14 @@ pub struct DashboardSessionTarget {
     pub scenario_detail: Option<DashboardScenarioDetail>,
 }
 
-/// Result for `dashboard`. One call returns everything `/gov:status` needs
+/// Result for `dashboard`. One call returns everything `/ductus:status` needs
 /// to render the full pipeline view: the per-spec inventory, the
 /// repo-wide `tags-union`, the config review-state summary, and
 /// the optional session target.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct DashboardResult {
-    /// Session target when the session file (`.govern/session.toml`;
+    /// Session target when the session file (`.ductus/session.toml`;
     /// legacy root fallback) exists and names a target; `None` otherwise.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub session_target: Option<DashboardSessionTarget>,
@@ -1135,7 +1135,7 @@ pub struct MergeManagedBlockArgs {
     #[arg(long)]
     pub block: String,
     /// Marker name used to delimit the framework-managed region.
-    /// Defaults to `govern-managed`. Multiple frameworks can coexist in
+    /// Defaults to `ductus-managed`. Multiple frameworks can coexist in
     /// the same file by using different marker names.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
@@ -1432,7 +1432,7 @@ pub struct AppendTaskArgs {
     /// caller has provided the full body, so no slug is needed. Pairs
     /// with the slug previously passed to `create-scenario` when both
     /// primitives are invoked together by the scenario branch of
-    /// `/gov:amend`.
+    /// `/ductus:amend`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
     pub slug: Option<String>,
@@ -1614,7 +1614,7 @@ pub struct PruneTasksResult {
 
 /// Args for `migrate-session-file`. Translates a pre-0.10.0 legacy
 /// session JSON at `legacy-path` into the consolidated
-/// `<repo>/.govern/session.toml` and deletes the legacy file. The
+/// `<repo>/.ductus/session.toml` and deletes the legacy file. The
 /// destination is hardcoded (it's the runtime's `SESSION_FILE`
 /// constant) so the migration cannot drift from the runtime's read
 /// path.
@@ -1638,11 +1638,11 @@ pub struct MigrateSessionFileResult {
     /// (echoes the input `legacy-path`).
     pub source: String,
     /// Repo-relative path of the consolidated session file. Always
-    /// `.govern/session.toml` (the runtime's `SESSION_FILE` constant).
+    /// `.ductus/session.toml` (the runtime's `SESSION_FILE` constant).
     pub dest: String,
     /// `"migrated"` — legacy file translated into a fresh
-    /// `.govern/session.toml` and deleted.
-    /// `"kept-existing"` — `.govern/session.toml` already existed; the
+    /// `.ductus/session.toml` and deleted.
+    /// `"kept-existing"` — `.ductus/session.toml` already existed; the
     /// new file was left untouched and the legacy file was deleted.
     /// `"no-legacy"` — no legacy file present at `legacy-path`; no-op.
     pub action: String,
@@ -1654,8 +1654,8 @@ pub struct MigrateSessionFileResult {
 // -- write-session -----------------------------------------------------------
 
 /// Args for `write-session`. Sets the session state at the active
-/// session file — `.govern/session.toml`, or the legacy root
-/// `.govern.session.toml` pre-migration (the `/govern` migration is the
+/// session file — `.ductus/session.toml`, or the legacy root
+/// `.govern.session.toml` pre-migration (the `/ductus` migration is the
 /// sole cutover); gitignored either way. The `scenario` and `scenario-path` fields
 /// are paired — both must be supplied together or both omitted; omitting
 /// both clears any previously set scenario.
@@ -1704,7 +1704,7 @@ pub struct WriteSessionArgs {
     pub scenario_path: Option<String>,
     /// Optional per-contributor agent config-dir name (`.claude`, `.augment`,
     /// `.opencode`, `.agents`). Written to the gitignored session file by
-    /// `/govern` so a teammate's agent choice never lands in committed
+    /// `/ductus` so a teammate's agent choice never lands in committed
     /// config. Read back by `crate::host::Host`. On a target write it is
     /// preserved from the existing file unless supplied here.
     #[serde(
@@ -1731,7 +1731,7 @@ pub struct WriteSessionArgs {
 #[serde(rename_all = "kebab-case")]
 pub struct WriteSessionResult {
     /// Repo-relative path of the written session file — the active file
-    /// the write resolved (`.govern/session.toml`, or the legacy root
+    /// the write resolved (`.ductus/session.toml`, or the legacy root
     /// `.govern.session.toml` pre-migration); kept on the result for
     /// symmetry with other write primitives' return shapes.
     pub path: String,
@@ -1743,7 +1743,7 @@ pub struct WriteSessionResult {
 // -- resolve-references ------------------------------------------------------
 
 /// Args for `resolve-references`. Resolves the consumer feature's derived
-/// `references:` index (see spec 030) against the `.govern/config.toml`
+/// `references:` index (see spec 030) against the `.ductus/config.toml`
 /// `[services]` registry, reading each linked spec's live `status` from its local
 /// checkout. Takes only the consumer feature; the repo root is supplied by
 /// the runtime.
@@ -1812,7 +1812,7 @@ pub struct ResolveReferencesResult {
 
 /// Args for `resolve-feature`. Scans the configured spec root and resolves
 /// a user-supplied identifier to a feature directory — the deterministic
-/// core of `/gov:target`'s specs-dir scan.
+/// core of `/ductus:target`'s specs-dir scan.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct ResolveFeatureArgs {
@@ -1897,7 +1897,7 @@ pub struct ResolveFeatureResult {
 /// Args for `create-feature`. Computes the next feature number, derives
 /// the kebab-case slug from `title`, creates `{specs-root}/{NNN-slug}/`,
 /// and copies the spec template into it — the deterministic scaffold step
-/// of `/gov:specify`.
+/// of `/ductus:specify`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct CreateFeatureArgs {
@@ -1931,7 +1931,7 @@ pub struct CreateFeatureResult {
 /// Args for `create-plan-artifacts`. Copies the plan/tasks (and, on
 /// request, data-model) templates into an existing feature directory —
 /// the deterministic template-copy and existing-artifact-detection step
-/// of `/gov:plan` (the plan-side mirror of `create-feature`).
+/// of `/ductus:plan` (the plan-side mirror of `create-feature`).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct CreatePlanArtifactsArgs {
@@ -2001,7 +2001,7 @@ pub struct CreatePlanArtifactsResult {
 
 // -- check-review-gate -------------------------------------------------------
 
-/// Args for `check-review-gate`. Evaluates `/gov:implement`'s pre-done
+/// Args for `check-review-gate`. Evaluates `/ductus:implement`'s pre-done
 /// review gate for one feature: the feature directory's markdown lint,
 /// then the spec frontmatter `review:` block, in the completion gate's
 /// documented order (first failing check wins).
@@ -2057,7 +2057,7 @@ pub struct CheckReviewGateResult {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub blocked_by: Option<ReviewGateBlock>,
     /// The canonical blocked message for the failing check (the
-    /// `blocked: …` texts documented in `/gov:implement`'s completion
+    /// `blocked: …` texts documented in `/ductus:implement`'s completion
     /// gate, with the adopter's `[host] project` command namespace
     /// substituted); absent on pass.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2074,7 +2074,7 @@ pub struct CheckReviewGateResult {
 // -- append-question ---------------------------------------------------------
 
 /// Args for `append-question`. Appends one question bullet to the target
-/// artifact's `## Open Questions` section — `/gov:amend`'s question-route
+/// artifact's `## Open Questions` section — `/ductus:amend`'s question-route
 /// write, including the same-write status back-edge on spec targets.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
@@ -2126,7 +2126,7 @@ pub struct AppendQuestionResult {
 
 // -- diff-cross-spec ---------------------------------------------------------
 
-/// Args for `diff-cross-spec`. Computes `/gov:implement`'s cross-spec
+/// Args for `diff-cross-spec`. Computes `/ductus:implement`'s cross-spec
 /// impact surface: the diff from the feature's first spec-dir commit to
 /// the working tree, scoped to the spec root and filtered to paths
 /// outside the feature's own directory, plus the lines added to
@@ -2209,7 +2209,7 @@ pub struct AppendInboxResult {
     /// happened.
     pub deduped: bool,
     /// Total real (comment/fence-aware) inbox bullets after this call — the
-    /// count `/gov:log` reports without hand-counting. On a `deduped` no-op
+    /// count `/ductus:log` reports without hand-counting. On a `deduped` no-op
     /// this is the pre-existing total.
     pub item_count: u32,
 }
@@ -2218,7 +2218,7 @@ pub struct AppendInboxResult {
 
 /// Args for `remove-inbox-item`. Removes the first bullet from
 /// `{specs-root}/inbox.md` whose text matches `item`. The complement of
-/// `append-inbox`; the deterministic surface behind `/gov:groom`'s per-item
+/// `append-inbox`; the deterministic surface behind `/ductus:groom`'s per-item
 /// inbox removal (step 8), which previously edited the file by hand.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
@@ -2247,7 +2247,7 @@ pub struct RemoveInboxItemResult {
 // -- check-artifacts -----------------------------------------------------------
 
 /// Args for `check-artifacts`. Runs the residual deterministic check
-/// families from `/gov:analyze`'s markdown-only reference against one
+/// families from `/ductus:analyze`'s markdown-only reference against one
 /// feature (`--all` stays with the caller looping).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
@@ -2774,12 +2774,12 @@ mod tests {
     fn extract_archive_round_trip() {
         use super::{ExtractArchiveArgs, ExtractArchiveResult};
         let args = ExtractArchiveArgs {
-            archive: "/tmp/gvrn.tar.gz".into(),
+            archive: "/tmp/ductus.tar.gz".into(),
             dest: "/tmp/out".into(),
             format: Some("tar-gz".into()),
         };
         let value: serde_json::Value = serde_json::to_value(&args).unwrap();
-        assert_eq!(value["archive"], "/tmp/gvrn.tar.gz");
+        assert_eq!(value["archive"], "/tmp/ductus.tar.gz");
         assert_eq!(value["dest"], "/tmp/out");
         assert_eq!(value["format"], "tar-gz");
         assert_eq!(round_trip(&args), args);
@@ -2802,12 +2802,12 @@ mod tests {
         let args = MergeManagedBlockArgs {
             path: ".gitignore".into(),
             block: ".claude/\nspecs/.cache/".into(),
-            marker: Some("govern-managed".into()),
+            marker: Some("ductus-managed".into()),
             marker_style: Some("line-prefix".into()),
         };
         let value: serde_json::Value = serde_json::to_value(&args).unwrap();
         assert_eq!(value["marker-style"], "line-prefix");
-        assert_eq!(value["marker"], "govern-managed");
+        assert_eq!(value["marker"], "ductus-managed");
         assert_eq!(round_trip(&args), args);
 
         // marker_style omitted serializes without the field.
@@ -2824,7 +2824,7 @@ mod tests {
         let result = MergeManagedBlockResult {
             path: ".gitignore".into(),
             action: "inserted".into(),
-            marker: "govern-managed".into(),
+            marker: "ductus-managed".into(),
             marker_style: "line-prefix".into(),
             dedup_removed: Some(2),
             dedup_removed_lines: Some(vec![".claude/".into(), "*.sqlite".into()]),
@@ -2838,7 +2838,7 @@ mod tests {
         let html_result = MergeManagedBlockResult {
             path: "CLAUDE.md".into(),
             action: "updated".into(),
-            marker: "govern-managed".into(),
+            marker: "ductus-managed".into(),
             marker_style: "html-comment".into(),
             dedup_removed: None,
             dedup_removed_lines: None,
@@ -2940,8 +2940,8 @@ mod tests {
                     keep_literals: None,
                 },
                 ManifestEntry {
-                    source: "govern.md".into(),
-                    dest: ".claude/commands/anvil/govern.md".into(),
+                    source: "ductus.md".into(),
+                    dest: ".claude/commands/anvil/ductus.md".into(),
                     strategy: "update".into(),
                     keep_literals: Some(vec!["project".into(), "cli-config-dir".into()]),
                 },
@@ -2988,16 +2988,16 @@ mod tests {
     fn fetch_archive_round_trip() {
         use super::{FetchArchiveArgs, FetchArchiveResult};
         let args = FetchArchiveArgs {
-            url: "https://example.test/gvrn-0.2.0.tar.gz".into(),
-            sha256_url: Some("https://example.test/gvrn-0.2.0.tar.gz.sha256".into()),
-            archive: "/tmp/gvrn.tar.gz".into(),
+            url: "https://example.test/ductus-0.2.0.tar.gz".into(),
+            sha256_url: Some("https://example.test/ductus-0.2.0.tar.gz.sha256".into()),
+            archive: "/tmp/ductus.tar.gz".into(),
         };
         let value: serde_json::Value = serde_json::to_value(&args).unwrap();
         assert_eq!(
             value["sha256-url"],
-            "https://example.test/gvrn-0.2.0.tar.gz.sha256"
+            "https://example.test/ductus-0.2.0.tar.gz.sha256"
         );
-        assert_eq!(value["archive"], "/tmp/gvrn.tar.gz");
+        assert_eq!(value["archive"], "/tmp/ductus.tar.gz");
         assert_eq!(round_trip(&args), args);
 
         // Absent sha256_url omits the field entirely.
@@ -3011,7 +3011,7 @@ mod tests {
         assert_eq!(round_trip(&args_no_sidecar), args_no_sidecar);
 
         let result = FetchArchiveResult {
-            path: "/tmp/gvrn.tar.gz".into(),
+            path: "/tmp/ductus.tar.gz".into(),
             sha256: "abc123".into(),
             verified: true,
             bytes: 12345,
@@ -3037,13 +3037,13 @@ mod tests {
 
         let result = MigrateSessionFileResult {
             source: ".claude/gov-session.json".into(),
-            dest: ".govern/session.toml".into(),
+            dest: ".ductus/session.toml".into(),
             action: "migrated".into(),
             legacy_deleted: true,
         };
         let r_value: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert_eq!(r_value["source"], ".claude/gov-session.json");
-        assert_eq!(r_value["dest"], ".govern/session.toml");
+        assert_eq!(r_value["dest"], ".ductus/session.toml");
         assert_eq!(r_value["action"], "migrated");
         assert_eq!(r_value["legacy-deleted"], true);
         assert_eq!(round_trip(&result), result);
@@ -3121,7 +3121,7 @@ mod tests {
         assert!(!legacy.clear, "absent `clear` defaults to false");
 
         let result = WriteSessionResult {
-            path: ".govern/session.toml".into(),
+            path: ".ductus/session.toml".into(),
             created: true,
         };
         assert_eq!(round_trip(&result), result);
@@ -3313,7 +3313,7 @@ mod tests {
             message: Some(
                 "blocked: spec has 3 MUST violation(s) — see specs/042-widget/review.md".into(),
             ),
-            guidance: Some("Resolve the violations and re-run /gov:review".into()),
+            guidance: Some("Resolve the violations and re-run /ductus:review".into()),
             violations: vec![],
         };
         let bv: serde_json::Value = serde_json::to_value(&blocked).unwrap();

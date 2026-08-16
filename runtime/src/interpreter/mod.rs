@@ -248,7 +248,7 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
         // Targeted merge exception (mirrors the `process-waivers`→`fired`
         // special case in `dispatch_primitive`): a successful `create-feature`
         // result carries the freshly created feature's slug and directory. On
-        // `/gov:specify` against a repo whose session already targets a
+        // `/ductus:specify` against a repo whose session already targets a
         // feature, `feature` and `path` are session-seeded keys the general
         // policy protects — but retargeting the session to the just-created
         // feature is the entire point of the command, so the later
@@ -257,13 +257,13 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
         // exactly `feature` and `path`; no other primitive and no other key
         // escapes the seeded-key guard.
         // A second retarget exception, symmetric with create-feature: on
-        // `/gov:target` against a repo whose session already targets a
+        // `/ductus:target` against a repo whose session already targets a
         // feature, switching the target is the entire point of the command.
         // Step 3's `resolve-feature` returns the resolved `feature`/`path`,
         // which the seeded-key guard would otherwise block from reaching the
         // later `write-session` step — leaving it to rewrite the stale seed.
         // Scoped to the `target` command and a `resolved` outcome so no other
-        // command's `resolve-feature` call (e.g. `/gov:analyze`'s identifier
+        // command's `resolve-feature` call (e.g. `/ductus:analyze`'s identifier
         // resolution) escapes the guard.
         let retargets_session = (name == "create-feature"
             && map.get("created") == Some(&Value::Bool(true)))
@@ -319,9 +319,9 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
         // the guard above protects them; on a repo with **no** session file
         // they are unseeded, so the general merge policy let the file path
         // win and the walk wrote a session target pointing at `spec.md`.
-        // That is not hypothetical: `/gov:specify` gained a `label-criteria`
+        // That is not hypothetical: `/ductus:specify` gained a `label-criteria`
         // step between `create-feature` and `write-session` (spec 013), and
-        // `/gov:target` has read-spec sitting in the same gap.
+        // `/ductus:target` has read-spec sitting in the same gap.
         //
         // Pinning is the same narrow-exception idiom as the override above,
         // one step later: the retargeting primitives themselves stay exempt
@@ -662,7 +662,7 @@ fn dispatch_primitive(
     {
         bindings.insert("fired".into(), findings);
     }
-    // Exec-path binding for `mark-criterion`: `/gov:implement`'s completion
+    // Exec-path binding for `mark-criterion`: `/ductus:implement`'s completion
     // gate seeds `criterion-index`/`checked: true`, but the checkbox flip
     // must honor the `verifyCriteria` verdict the host returned first — only
     // a criterion the LLM affirmatively confirmed `met: true` may be checked
@@ -1452,7 +1452,7 @@ mod tests {
     }
 
     /// A walker with an EMPTY seed — the fresh-repo case, where
-    /// `.govern/session.toml` does not exist yet (or carries no target), so
+    /// `.ductus/session.toml` does not exist yet (or carries no target), so
     /// neither `feature` nor `path` is a seeded key.
     fn unseeded_walker<'a, R: BufRead, W: Write>(
         procedure: &'a Procedure,
@@ -1464,12 +1464,12 @@ mod tests {
 
     #[test]
     fn a_spec_file_path_never_overwrites_the_retargeted_session_path() {
-        // `/gov:specify` runs create-feature → label-criteria → write-session.
+        // `/ductus:specify` runs create-feature → label-criteria → write-session.
         // create-feature's `path` is the spec DIRECTORY the session target
         // holds; label-criteria's is the spec FILE it labelled. With no
         // session file to seed the key, the general merge policy let the file
         // win and write-session recorded `specs/007-.../spec.md` as the
-        // target. `/gov:target` has read-spec sitting in the same gap.
+        // target. `/ductus:target` has read-spec sitting in the same gap.
         let procedure = Procedure {
             command: "specify".into(),
             steps: vec![],
@@ -1579,7 +1579,7 @@ mod tests {
 
     #[test]
     fn target_resolve_feature_overrides_seeded_target() {
-        // `/gov:target <feature>` against a repo whose session already names
+        // `/ductus:target <feature>` against a repo whose session already names
         // a different feature: resolve-feature's resolved `feature`/`path`
         // must override the seed so write-session persists the NEW target,
         // not the stale one.

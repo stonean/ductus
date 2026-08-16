@@ -12,7 +12,7 @@ review:
 
 # 004 — Implement Fixture
 
-A minimal fixture for the `/gov:implement` parity test. Has one
+A minimal fixture for the `/ductus:implement` parity test. Has one
 pending task and a write boundary that admits edits inside
 `runtime/**`.
 

@@ -86,7 +86,7 @@ fn yaml_quoted(value: &str) -> String {
 
 /// Capitalize the slug's first character for the H1 heading. Hyphens are
 /// preserved so the H1 mirrors the slug ("ask-consolidation" → "Ask-consolidation");
-/// existing govern scenarios follow this pattern. Callers are free to edit
+/// existing ductus scenarios follow this pattern. Callers are free to edit
 /// the H1 afterward for a more descriptive title.
 fn title_from_slug(slug: &str) -> String {
     let mut chars = slug.chars();

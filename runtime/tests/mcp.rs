@@ -22,7 +22,7 @@ use rmcp::ServiceExt;
 use rmcp::model::CallToolRequestParams;
 use serde_json::{Value, json};
 
-use gvrn::mcp::server::{GovRuntimeServer, TOOL_NAMES};
+use ductus::mcp::server::{GovRuntimeServer, TOOL_NAMES};
 
 fn fixture_repo() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/primitives/sample-repo")

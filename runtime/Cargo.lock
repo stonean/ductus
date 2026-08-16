@@ -373,6 +373,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "ductus"
+version = "0.27.2"
+dependencies = [
+ "clap",
+ "flate2",
+ "git2",
+ "pulldown-cmark",
+ "regex",
+ "reqwest",
+ "rmcp",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_norway",
+ "sha2",
+ "tar",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "toml",
+ "walkdir",
+ "zip",
+]
+
+[[package]]
 name = "dunce"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -582,31 +607,6 @@ dependencies = [
  "libc",
  "libgit2-sys",
  "log",
-]
-
-[[package]]
-name = "gvrn"
-version = "0.27.2"
-dependencies = [
- "clap",
- "flate2",
- "git2",
- "pulldown-cmark",
- "regex",
- "reqwest",
- "rmcp",
- "schemars",
- "serde",
- "serde_json",
- "serde_norway",
- "sha2",
- "tar",
- "tempfile",
- "thiserror",
- "tokio",
- "toml",
- "walkdir",
- "zip",
 ]
 
 [[package]]

@@ -13,8 +13,8 @@ use std::path::{Path, PathBuf};
 use git2::{IndexAddOption, Repository, Signature};
 use serde_json::{Map, Value};
 
-use gvrn::interpreter::{WalkOutcome, Walker};
-use gvrn::schema::procedure::{Procedure, SourceRange, Step, StepNumber};
+use ductus::interpreter::{WalkOutcome, Walker};
+use ductus::schema::procedure::{Procedure, SourceRange, Step, StepNumber};
 
 fn loc() -> SourceRange {
     SourceRange {
@@ -790,7 +790,7 @@ fn prune_command_gate_blocks_on_the_exec_path() {
             .join("framework/commands/prune.md"),
     )
     .unwrap();
-    let procedure = gvrn::parser::parse(&source, "prune").expect("prune.md parses");
+    let procedure = ductus::parser::parse(&source, "prune").expect("prune.md parses");
 
     // Step numbers follow the document (1..6) and step 4 is the gate.
     let numbers: Vec<Vec<u32>> = procedure

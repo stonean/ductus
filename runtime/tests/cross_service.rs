@@ -24,8 +24,8 @@
 use std::fs;
 use std::path::PathBuf;
 
-use gvrn::primitives::resolve_references;
-use gvrn::schema::primitives::ResolveReferencesArgs;
+use ductus::primitives::resolve_references;
+use ductus::schema::primitives::ResolveReferencesArgs;
 
 fn manifest_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))

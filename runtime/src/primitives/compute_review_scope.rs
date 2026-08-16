@@ -1,4 +1,4 @@
-//! `compute-review-scope` — deterministic scope resolution for `/gov:review`.
+//! `compute-review-scope` — deterministic scope resolution for `/ductus:review`.
 //!
 //! Resolves three things the review command needs, from git history:
 //!

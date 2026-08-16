@@ -1,8 +1,8 @@
-//! `[paths]` block schema from `.govern.toml` — the configurable spec-root
+//! `[paths]` block schema from the project config — the configurable spec-root
 //! directory name (spec 040).
 //!
-//! The top-level directory that holds every govern artifact defaults to
-//! `specs`, but an adopter may rename it via `.govern.toml`:
+//! The top-level directory that holds every ductus artifact defaults to
+//! `specs`, but an adopter may rename it via the project config:
 //!
 //! ```toml
 //! [paths]
@@ -14,8 +14,8 @@
 //! the single source of truth the runtime uses to resolve that name: every
 //! primitive that today hardcodes `repo.join("specs")` calls [`specs_dir`]
 //! instead, and the default keeps an adopter who never sets the key on exactly
-//! today's behavior (`specs`). Per [§runtime-boundary], `.govern.toml` is the
-//! git-tracked source of truth — the runtime reads the resolved name, it does
+//! today's behavior (`specs`). Per [§runtime-boundary], the project config is
+//! the git-tracked source of truth — the runtime reads the resolved name, it does
 //! not own it.
 //!
 //! Resolution is best-effort, mirroring [`crate::host::Host::load`]: a missing
@@ -23,7 +23,7 @@
 //! unparseable document all fall back to the default `specs` (the malformed
 //! cases log a one-line warning to stderr) so that path resolution never fails
 //! because of an unrelated or operator config error. Hard rejection of a
-//! malformed value at configuration time is the `/govern` markdown path's job;
+//! malformed value at configuration time is the `/ductus` markdown path's job;
 //! [`validate_specs_root`] is the shared predicate both layers agree on.
 //!
 //! [§runtime-boundary]: `framework/constitution.md` §runtime-boundary
@@ -32,34 +32,50 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-/// Default spec-root directory name when `.govern.toml` does not configure
+/// Default spec-root directory name when the project config does not configure
 /// one. Matches the framework's historical hardcoded value, so an adopter who
 /// never sets `[paths] specs-root` sees byte-for-byte identical behavior.
 pub const DEFAULT_SPECS_ROOT: &str = "specs";
 
-/// Consolidated project config file under the `.govern/` directory (spec 042).
-pub(crate) const CONFIG_FILE: &str = ".govern/config.toml";
+/// Project config file under the `.ductus/` directory (spec 049).
+pub(crate) const CONFIG_FILE: &str = ".ductus/config.toml";
 
-/// Legacy repo-root config filename (pre-042). Read as a fallback when the
-/// consolidated [`CONFIG_FILE`] is absent so an adopter who upgrades gvrn
-/// before re-running `/govern` is never broken.
+/// Config file under the pre-rename `.govern/` directory (spec 042). Read as a
+/// fallback when [`CONFIG_FILE`] is absent.
+pub(crate) const LEGACY_DIR_CONFIG_FILE: &str = ".govern/config.toml";
+
+/// Legacy repo-root config filename (pre-042). Read as a fallback when neither
+/// directory-scoped file is present, so an adopter who upgrades the binary
+/// before re-running the bootstrap is never broken.
 pub(crate) const LEGACY_CONFIG_FILE: &str = ".govern.toml";
 
-/// Consolidated per-contributor session file under `.govern/` (spec 042).
-/// Gitignored. This is the single source of truth for the session path; the
-/// `write-session` and `migrate-session-file` primitives and `host.rs` all
-/// resolve through the helpers below rather than joining a literal.
-pub(crate) const SESSION_FILE: &str = ".govern/session.toml";
+/// Config locations in resolution order, newest first. Every resolver below
+/// walks this one list, so the read path, the write path, and the provenance
+/// tag can never disagree about the precedence rule (spec 049).
+pub(crate) const CONFIG_CHAIN: &[&str] = &[CONFIG_FILE, LEGACY_DIR_CONFIG_FILE, LEGACY_CONFIG_FILE];
 
-/// Legacy repo-root session filename (pre-042). Read as a fallback when the
-/// consolidated [`SESSION_FILE`] is absent.
+/// Per-contributor session file under `.ductus/` (spec 049). Gitignored. This
+/// is the single source of truth for the session path; the `write-session` and
+/// `migrate-session-file` primitives and `host.rs` all resolve through the
+/// helpers below rather than joining a literal.
+pub(crate) const SESSION_FILE: &str = ".ductus/session.toml";
+
+/// Session file under the pre-rename `.govern/` directory (spec 042).
+pub(crate) const LEGACY_DIR_SESSION_FILE: &str = ".govern/session.toml";
+
+/// Legacy repo-root session filename (pre-042). Read as a fallback when neither
+/// directory-scoped file is present.
 pub(crate) const LEGACY_SESSION_FILE: &str = ".govern.session.toml";
 
-/// Resolve the project config file to *read* for `repo`: the consolidated
-/// `.govern/config.toml` when it exists, else the legacy root `.govern.toml`
-/// (spec 042). New-wins when both exist, so a split layout never reads stale
-/// content. When neither exists the legacy path is returned — a missing file
-/// the caller already treats as "config absent" → defaults.
+/// Session locations in resolution order, newest first. See [`CONFIG_CHAIN`].
+pub(crate) const SESSION_CHAIN: &[&str] =
+    &[SESSION_FILE, LEGACY_DIR_SESSION_FILE, LEGACY_SESSION_FILE];
+
+/// Resolve the project config file to *read* for `repo`: the newest location
+/// in [`CONFIG_CHAIN`] that exists. New-wins across all three tiers, so a
+/// split layout never reads stale content. When none exists the oldest path is
+/// returned — a missing file the caller already treats as "config absent" →
+/// defaults.
 #[must_use]
 pub fn config_path(repo: &Path) -> PathBuf {
     // Derived from `config_display_name` so the new-wins choice lives once
@@ -69,20 +85,29 @@ pub fn config_path(repo: &Path) -> PathBuf {
 
 /// Repo-relative display name of the resolved config file — the same
 /// new-wins choice [`config_path`] makes, as the literal provenance tags
-/// render (`.govern/config.toml` post-migration, the legacy root
-/// `.govern.toml` before it). Display-only; readers resolve through
-/// [`config_path`].
+/// render (`.ductus/config.toml` post-rename, `.govern/config.toml` between
+/// 042 and 049, the legacy root `.govern.toml` before that). Display-only;
+/// readers resolve through [`config_path`].
 ///
 /// A caller that needs **both** the path and the name must call
 /// [`resolve_config`] once instead of calling this and [`config_path`]
 /// separately — see that function for why.
 #[must_use]
 pub(crate) fn config_display_name(repo: &Path) -> &'static str {
-    if repo.join(CONFIG_FILE).exists() {
-        CONFIG_FILE
-    } else {
-        LEGACY_CONFIG_FILE
-    }
+    newest_existing(repo, CONFIG_CHAIN)
+}
+
+/// The newest entry in `chain` that exists under `repo`, falling back to the
+/// oldest when none does. Shared by the config and session read resolvers so
+/// the precedence rule is stated once (spec 049).
+fn newest_existing(repo: &Path, chain: &[&'static str]) -> &'static str {
+    debug_assert!(!chain.is_empty(), "resolution chain must not be empty");
+    chain
+        .iter()
+        .find(|rel| repo.join(rel).exists())
+        .or_else(|| chain.last())
+        .copied()
+        .unwrap_or_default()
 }
 
 /// The resolved project config file from a **single** existence probe: the
@@ -90,7 +115,7 @@ pub(crate) fn config_display_name(repo: &Path) -> &'static str {
 ///
 /// Callers that both read the config and name it must resolve once and reuse
 /// the answer. Calling [`config_path`] for the read and [`config_display_name`]
-/// for the tag probes the filesystem twice, and a `/govern` migration landing
+/// for the tag probes the filesystem twice, and a `/ductus` migration landing
 /// between the two probes would let them disagree — the primitive would read
 /// one file and attribute its contents to the other. One probe cannot
 /// straddle the migration (spec 042 review, `BE-RACE-001`).
@@ -100,26 +125,21 @@ pub(crate) fn resolve_config(repo: &Path) -> (PathBuf, &'static str) {
     (repo.join(display_name), display_name)
 }
 
-/// Resolve the session file to *read*: `.govern/session.toml` when it exists,
-/// else the legacy root `.govern.session.toml` (spec 042). New-wins on a split.
+/// Resolve the session file to *read*: the newest location in
+/// [`SESSION_CHAIN`] that exists. New-wins on a split.
 #[must_use]
 pub fn session_path(repo: &Path) -> PathBuf {
-    let new = repo.join(SESSION_FILE);
-    if new.exists() {
-        new
-    } else {
-        repo.join(LEGACY_SESSION_FILE)
-    }
+    repo.join(newest_existing(repo, SESSION_CHAIN))
 }
 
-/// Resolve the session file to *write*: the active file (`.govern/session.toml`
-/// when it exists, else the legacy root file when *that* exists, else the new
-/// path for a fresh project). The `/govern` migration is the sole cutover, so a
-/// write never creates a `.govern/` file while a legacy one still lingers (spec
-/// 042 §Transition and fallback).
+/// Resolve the session file to *write*: the active file — the newest tier that
+/// exists, else the newest tier for a fresh project. The bootstrap migration is
+/// the sole cutover, so a write never creates a `.ductus/` file while an older
+/// one still lingers (spec 042 §Transition and fallback, extended to the third
+/// tier by spec 049).
 #[must_use]
 pub(crate) fn session_path_for_write(repo: &Path) -> PathBuf {
-    active_path(repo, SESSION_FILE, LEGACY_SESSION_FILE)
+    active_path(repo, SESSION_CHAIN)
 }
 
 /// Resolve the config file to *write*: the active file, same rule as
@@ -128,28 +148,28 @@ pub(crate) fn session_path_for_write(repo: &Path) -> PathBuf {
 /// `[project]` writes, `/gov:review`'s `[review]` flag, and
 /// the `merge-managed-block` host-block call, whose target path the caller
 /// supplies) — so this resolver is the canonical statement of the rule those
-/// callers mirror: a pre-migration write lands on the legacy file rather than
-/// creating a partial `.govern/config.toml` that new-wins-on-read would let
-/// strand the legacy file's other sections (spec 042 §Transition and
+/// callers mirror: a pre-migration write lands on the older file rather than
+/// creating a partial `.ductus/config.toml` that new-wins-on-read would let
+/// strand the older file's other sections (spec 042 §Transition and
 /// fallback).
 #[must_use]
 pub fn config_path_for_write(repo: &Path) -> PathBuf {
-    active_path(repo, CONFIG_FILE, LEGACY_CONFIG_FILE)
+    active_path(repo, CONFIG_CHAIN)
 }
 
-/// Shared active-file resolution for writes: prefer the new path when it
-/// exists, fall back to the legacy path when *it* exists, and default to the
-/// new path for a fresh project (neither present).
-fn active_path(repo: &Path, new: &str, legacy: &str) -> PathBuf {
-    let new_path = repo.join(new);
-    if new_path.exists() {
-        return new_path;
-    }
-    let legacy_path = repo.join(legacy);
-    if legacy_path.exists() {
-        return legacy_path;
-    }
-    new_path
+/// Shared active-file resolution for writes: the newest tier in `chain` that
+/// exists, defaulting to the newest tier for a fresh project (none present).
+/// Identical to [`newest_existing`] except for the empty-chain fallback — a
+/// write with nothing on disk targets the *newest* location, while a read with
+/// nothing on disk names the *oldest* (the caller treats it as absent).
+fn active_path(repo: &Path, chain: &[&'static str]) -> PathBuf {
+    debug_assert!(!chain.is_empty(), "resolution chain must not be empty");
+    let existing = chain.iter().find(|rel| repo.join(rel).exists()).copied();
+    repo.join(
+        existing
+            .or_else(|| chain.first().copied())
+            .unwrap_or_default(),
+    )
 }
 
 /// Validate a configured spec-root directory name for well-formedness.
@@ -164,7 +184,7 @@ fn active_path(repo: &Path, new: &str, legacy: &str) -> PathBuf {
 /// spec). Restricting the charset keeps both sides safe with one rule and also
 /// rejects a lone `.` (which would resolve the spec-root to the repo root).
 /// See spec 040's review. The predicate is shared so the runtime's
-/// best-effort resolver ([`Paths::load`]) and the `/govern` configuration
+/// best-effort resolver ([`Paths::load`]) and the `/ductus` configuration
 /// prompt apply the same rule.
 ///
 /// # Errors
@@ -204,9 +224,9 @@ pub struct Paths {
 }
 
 impl Paths {
-    /// Resolve `[paths]` for `base` by reading `<base>/.govern.toml`.
+    /// Resolve `[paths]` for `base` by reading `base`'s project config.
     ///
-    /// `base` is the directory whose `.govern.toml` governs the layout — the
+    /// `base` is the directory whose project config governs the layout — the
     /// repo root in the common case, or a cross-service checkout root for
     /// `resolve-references` (each service may configure its own spec-root).
     ///
@@ -222,7 +242,7 @@ impl Paths {
         Self { specs_root }
     }
 
-    /// Read and validate `[paths] specs-root` from `<base>/.govern.toml`.
+    /// Read and validate `[paths] specs-root` from `base`'s project config.
     /// Returns `None` (→ caller uses the default) when the file is missing,
     /// the key is absent or empty, the value is malformed, or the document
     /// does not parse. Malformed value/document log to stderr.
@@ -233,7 +253,7 @@ impl Paths {
             Ok(parsed) => parsed,
             Err(err) => {
                 eprintln!(
-                    "gvrn: failed to parse {} for [paths] block: {err}; using default spec-root {DEFAULT_SPECS_ROOT:?}",
+                    "ductus: failed to parse {} for [paths] block: {err}; using default spec-root {DEFAULT_SPECS_ROOT:?}",
                     toml_path.display()
                 );
                 return None;
@@ -249,7 +269,7 @@ impl Paths {
             Ok(()) => Some(name.to_owned()),
             Err(reason) => {
                 eprintln!(
-                    "gvrn: invalid [paths] specs-root {name:?} in {}: {reason}; using default {DEFAULT_SPECS_ROOT:?}",
+                    "ductus: invalid [paths] specs-root {name:?} in {}: {reason}; using default {DEFAULT_SPECS_ROOT:?}",
                     toml_path.display()
                 );
                 None
@@ -291,13 +311,15 @@ mod tests {
 
     fn tmp_repo() -> TempDir {
         tempfile::Builder::new()
-            .prefix("govern-paths-fixture")
+            .prefix("ductus-paths-fixture")
             .tempdir()
             .unwrap()
     }
 
     fn write_toml(dir: &Path, body: &str) {
-        std::fs::write(dir.join(".govern.toml"), body).unwrap();
+        let path = dir.join(CONFIG_FILE);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, body).unwrap();
     }
 
     // --- validate_specs_root -------------------------------------------------
@@ -453,7 +475,7 @@ mod tests {
         assert_eq!(Paths::load(repo.path()).specs_root, "specs");
     }
 
-    // --- config_path / session_path resolvers (spec 042) ---------------------
+    // --- config_path / session_path resolvers (specs 042, 049) --------------
 
     fn touch(dir: &Path, rel: &str) {
         let p = dir.join(rel);
@@ -463,121 +485,142 @@ mod tests {
         std::fs::write(p, "x").unwrap();
     }
 
+    /// Every subset of a three-tier chain, as (present tiers, expected winner).
+    /// Read resolvers name the *oldest* tier when nothing exists (the caller
+    /// treats a missing file as "absent"); write resolvers name the *newest*
+    /// (a fresh project cuts over immediately). Everything else agrees.
+    fn subsets(chain: &[&'static str]) -> Vec<(Vec<&'static str>, &'static str)> {
+        let mut cases = Vec::new();
+        for mask in 1u8..(1 << chain.len()) {
+            let present: Vec<&'static str> = chain
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| mask & (1 << i) != 0)
+                .map(|(_, rel)| *rel)
+                .collect();
+            // Newest present tier wins: chain is ordered newest-first, so it is
+            // the first entry of `present`.
+            let expected = present[0];
+            cases.push((present, expected));
+        }
+        cases
+    }
+
     #[test]
-    fn config_path_prefers_new_then_legacy() {
-        // neither present → returns the legacy path (a missing file the caller
-        // reads as "config absent")
+    fn config_read_resolves_newest_existing_tier() {
+        // nothing present → oldest tier, which the caller reads as "absent"
         let repo = tmp_repo();
         assert_eq!(
             config_path(repo.path()),
             repo.path().join(LEGACY_CONFIG_FILE)
         );
 
-        // legacy only → legacy
+        for (present, expected) in subsets(CONFIG_CHAIN) {
+            let repo = tmp_repo();
+            for rel in &present {
+                touch(repo.path(), rel);
+            }
+            assert_eq!(
+                config_path(repo.path()),
+                repo.path().join(expected),
+                "present: {present:?}"
+            );
+            // The provenance tag must never disagree with the path read.
+            assert_eq!(config_display_name(repo.path()), expected);
+            let (path, name) = resolve_config(repo.path());
+            assert_eq!((path, name), (repo.path().join(expected), expected));
+        }
+    }
+
+    #[test]
+    fn session_read_resolves_newest_existing_tier() {
         let repo = tmp_repo();
-        touch(repo.path(), LEGACY_CONFIG_FILE);
+        assert_eq!(
+            session_path(repo.path()),
+            repo.path().join(LEGACY_SESSION_FILE)
+        );
+
+        for (present, expected) in subsets(SESSION_CHAIN) {
+            let repo = tmp_repo();
+            for rel in &present {
+                touch(repo.path(), rel);
+            }
+            assert_eq!(
+                session_path(repo.path()),
+                repo.path().join(expected),
+                "present: {present:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn config_write_targets_active_tier_defaulting_newest() {
+        // fresh project (nothing present) → newest, so the migration is the
+        // sole cutover and a write never strands a populated older file
+        let repo = tmp_repo();
+        assert_eq!(
+            config_path_for_write(repo.path()),
+            repo.path().join(CONFIG_FILE)
+        );
+
+        for (present, expected) in subsets(CONFIG_CHAIN) {
+            let repo = tmp_repo();
+            for rel in &present {
+                touch(repo.path(), rel);
+            }
+            assert_eq!(
+                config_path_for_write(repo.path()),
+                repo.path().join(expected),
+                "present: {present:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn session_write_targets_active_tier_defaulting_newest() {
+        let repo = tmp_repo();
+        assert_eq!(
+            session_path_for_write(repo.path()),
+            repo.path().join(SESSION_FILE)
+        );
+
+        for (present, expected) in subsets(SESSION_CHAIN) {
+            let repo = tmp_repo();
+            for rel in &present {
+                touch(repo.path(), rel);
+            }
+            assert_eq!(
+                session_path_for_write(repo.path()),
+                repo.path().join(expected),
+                "present: {present:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn pre_rename_adopter_still_resolves_through_the_middle_tier() {
+        // The 049 guarantee: an adopter who upgrades the binary before
+        // re-running the bootstrap sits on the 042 layout and must keep
+        // working — nothing here may resolve to the un-migrated `.ductus/`.
+        let repo = tmp_repo();
+        touch(repo.path(), LEGACY_DIR_CONFIG_FILE);
+        touch(repo.path(), LEGACY_DIR_SESSION_FILE);
+
         assert_eq!(
             config_path(repo.path()),
-            repo.path().join(LEGACY_CONFIG_FILE)
+            repo.path().join(LEGACY_DIR_CONFIG_FILE)
         );
-
-        // new only → new
-        let repo = tmp_repo();
-        touch(repo.path(), CONFIG_FILE);
-        assert_eq!(config_path(repo.path()), repo.path().join(CONFIG_FILE));
-
-        // both present → new wins
-        let repo = tmp_repo();
-        touch(repo.path(), LEGACY_CONFIG_FILE);
-        touch(repo.path(), CONFIG_FILE);
-        assert_eq!(config_path(repo.path()), repo.path().join(CONFIG_FILE));
-    }
-
-    #[test]
-    fn session_path_prefers_new_then_legacy() {
-        let repo = tmp_repo();
+        assert_eq!(
+            config_path_for_write(repo.path()),
+            repo.path().join(LEGACY_DIR_CONFIG_FILE)
+        );
         assert_eq!(
             session_path(repo.path()),
-            repo.path().join(LEGACY_SESSION_FILE)
+            repo.path().join(LEGACY_DIR_SESSION_FILE)
         );
-
-        let repo = tmp_repo();
-        touch(repo.path(), LEGACY_SESSION_FILE);
-        assert_eq!(
-            session_path(repo.path()),
-            repo.path().join(LEGACY_SESSION_FILE)
-        );
-
-        let repo = tmp_repo();
-        touch(repo.path(), SESSION_FILE);
-        assert_eq!(session_path(repo.path()), repo.path().join(SESSION_FILE));
-
-        let repo = tmp_repo();
-        touch(repo.path(), LEGACY_SESSION_FILE);
-        touch(repo.path(), SESSION_FILE);
-        assert_eq!(session_path(repo.path()), repo.path().join(SESSION_FILE));
-    }
-
-    #[test]
-    fn session_write_path_targets_active_file_defaulting_new() {
-        // fresh project (neither present) → new, so the migration is the sole
-        // cutover and a write never strands a populated legacy file
-        let repo = tmp_repo();
         assert_eq!(
             session_path_for_write(repo.path()),
-            repo.path().join(SESSION_FILE)
-        );
-
-        // legacy present, new absent → write stays on legacy
-        let repo = tmp_repo();
-        touch(repo.path(), LEGACY_SESSION_FILE);
-        assert_eq!(
-            session_path_for_write(repo.path()),
-            repo.path().join(LEGACY_SESSION_FILE)
-        );
-
-        // new present → write targets new (cutover already happened)
-        let repo = tmp_repo();
-        touch(repo.path(), SESSION_FILE);
-        assert_eq!(
-            session_path_for_write(repo.path()),
-            repo.path().join(SESSION_FILE)
-        );
-    }
-
-    #[test]
-    fn config_write_path_targets_active_file_defaulting_new() {
-        // fresh project (neither present) → new
-        let repo = tmp_repo();
-        assert_eq!(
-            config_path_for_write(repo.path()),
-            repo.path().join(CONFIG_FILE)
-        );
-
-        // legacy present, new absent → write stays on legacy (never creates a
-        // partial `.govern/config.toml` that would strand the legacy sections)
-        let repo = tmp_repo();
-        touch(repo.path(), LEGACY_CONFIG_FILE);
-        assert_eq!(
-            config_path_for_write(repo.path()),
-            repo.path().join(LEGACY_CONFIG_FILE)
-        );
-
-        // new present → write targets new (cutover already happened)
-        let repo = tmp_repo();
-        touch(repo.path(), CONFIG_FILE);
-        assert_eq!(
-            config_path_for_write(repo.path()),
-            repo.path().join(CONFIG_FILE)
-        );
-
-        // both present → new wins, matching the read resolver
-        let repo = tmp_repo();
-        touch(repo.path(), LEGACY_CONFIG_FILE);
-        touch(repo.path(), CONFIG_FILE);
-        assert_eq!(
-            config_path_for_write(repo.path()),
-            repo.path().join(CONFIG_FILE)
+            repo.path().join(LEGACY_DIR_SESSION_FILE)
         );
     }
 }

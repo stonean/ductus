@@ -14,14 +14,14 @@
 use std::fs;
 use std::path::Path;
 
-use gvrn::primitives;
-use gvrn::schema::primitives::{
+use ductus::primitives;
+use ductus::schema::primitives::{
     AppendInboxArgs, CheckArtifactsArgs, CreateFeatureArgs, DashboardArgs, MarkCriterionArgs,
     MarkTaskArgs, ReadSpecArgs, ReadTasksArgs, ResolveFeatureArgs, ResolveFeatureOutcome,
     SetStatusArgs, TraverseDepsArgs,
 };
 
-const GOVERNANCE_TOML: &str = "[paths]\nspecs-root = \"governance\"\n";
+const DUCTUSANCE_TOML: &str = "[paths]\nspecs-root = \"governance\"\n";
 
 fn write(path: &Path, body: &str) {
     if let Some(parent) = path.parent() {
@@ -41,7 +41,7 @@ const TASKS_BODY: &str = "# Demo\n\n## 1. Bootstrap\n\n- [ ] Subtask one.\n- [ ]
 /// Seed a repo whose spec root is `governance`, with one feature plus a stray
 /// default-named `specs/` tree that must never be consulted.
 fn seed(repo: &Path) {
-    write(&repo.join(".govern.toml"), GOVERNANCE_TOML);
+    write(&repo.join(".govern.toml"), DUCTUSANCE_TOML);
     write(
         &repo.join("governance/001-demo/spec.md"),
         &spec_body("in-progress"),
@@ -100,8 +100,8 @@ fn set_status_writes_under_configured_root() {
     assert_eq!(result.current, "done");
     assert_eq!(result.path, "governance/001-demo/spec.md");
     // Written under governance/, while the decoy specs/ copy is untouched.
-    let governed = fs::read_to_string(tmp.path().join("governance/001-demo/spec.md")).unwrap();
-    assert!(governed.contains("status: done"));
+    let ductused = fs::read_to_string(tmp.path().join("governance/001-demo/spec.md")).unwrap();
+    assert!(ductused.contains("status: done"));
     let decoy = fs::read_to_string(tmp.path().join("specs/001-demo/spec.md")).unwrap();
     assert!(
         decoy.contains("status: draft"),
@@ -149,7 +149,7 @@ fn mark_criterion_resolves_configured_root() {
 fn traverse_deps_resolves_configured_root() {
     let tmp = tempfile::tempdir().unwrap();
     let repo = tmp.path();
-    write(&repo.join(".govern.toml"), GOVERNANCE_TOML);
+    write(&repo.join(".govern.toml"), DUCTUSANCE_TOML);
     write(
         &repo.join("governance/002-consumer/spec.md"),
         "---\nstatus: in-progress\ndependencies: [001-demo]\n---\n\n# Consumer\n",
@@ -212,7 +212,7 @@ fn error_messages_name_the_configured_root() {
     // hardcoded `specs/` — otherwise a renamed-root adopter sees a misleading
     // path (spec 040).
     let tmp = tempfile::tempdir().unwrap();
-    write(&tmp.path().join(".govern.toml"), GOVERNANCE_TOML);
+    write(&tmp.path().join(".govern.toml"), DUCTUSANCE_TOML);
     let err = primitives::read_spec::run(
         &ReadSpecArgs {
             feature: "404-missing".into(),

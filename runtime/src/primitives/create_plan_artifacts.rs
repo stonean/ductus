@@ -2,7 +2,7 @@
 //! into an existing feature directory.
 //!
 //! The deterministic template-copy and existing-artifact-detection step of
-//! `/gov:plan` (spec 022, scenario coverage-expansion-primitives): the
+//! `/ductus:plan` (spec 022, scenario coverage-expansion-primitives): the
 //! plan-side mirror of `create-feature`, which covers only `spec.md`. Each
 //! copy is atomic and mode-preserving ([`write_atomic_bytes`] +
 //! [`mirror_source_mode`], same as `create-feature`); templates resolve
@@ -10,7 +10,7 @@
 //! the copied sections afterwards via `writeSpecBody`.
 //!
 //! Pre-existing artifacts are never touched by default — they are reported
-//! back as `kept`, feeding `/gov:plan`'s existing-artifact prompt ("keep
+//! back as `kept`, feeding `/ductus:plan`'s existing-artifact prompt ("keep
 //! or replace?", default keep). Only an explicit `overwrite: true` — the
 //! confirmed "replace" branch — copies fresh templates over them.
 //! `data-model.md` joins the copy set only on request

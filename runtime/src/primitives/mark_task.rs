@@ -396,7 +396,7 @@ mod tests {
 
     #[test]
     fn checkbox_form_done_when_is_excluded_from_subtask_indexing() {
-        // The magpie / `/gov:plan`-authored shape: a checkbox-form done-when
+        // The magpie / `/ductus:plan`-authored shape: a checkbox-form done-when
         // (`- [x] Done when: …`) as the task's last `- [x]` line. It carries
         // a checkbox but must not be addressable as a subtask, and the real
         // subtasks before it must keep their indexes — matching what
@@ -449,7 +449,7 @@ mod tests {
         }
     }
 
-    /// A task authored the way `/gov:plan` tends to: two real subtasks and
+    /// A task authored the way `/ductus:plan` tends to: two real subtasks and
     /// an **unchecked** checkbox-form done-when clause.
     fn write_unchecked_clause_fixture(tmp: &std::path::Path) -> std::path::PathBuf {
         let feature_dir = tmp.join("specs/feat");
@@ -592,7 +592,7 @@ mod tests {
 
     #[test]
     fn completing_an_already_complete_task_produces_no_diff() {
-        // Idempotence: re-running /gov:implement over a finished task must
+        // Idempotence: re-running /ductus:implement over a finished task must
         // not rewrite the file, so a repeat run shows no diff.
         let tmp = tempdir().unwrap();
         let tasks_path = write_unchecked_clause_fixture(tmp.path());
@@ -653,7 +653,7 @@ mod tests {
     fn write_phased_fixture(tmp: &std::path::Path) {
         let feature_dir = tmp.join("specs/feat");
         fs::create_dir_all(&feature_dir).unwrap();
-        let body = "# feat\n\n## Phase A — first phase\n\n### 1. First phased task\n\n- [ ] Phased subtask one.\n- [x] Phased subtask two.\n\n## Phase C — Follow-on scenarios\n\n### 19. Dedup `/configure` permission entries via new gvrn primitive\n\n- [ ] Implement the behavior described in `scenarios/configure-dedup-permissions.md`\n\n- **Done when**: the scenario lands.\n";
+        let body = "# feat\n\n## Phase A — first phase\n\n### 1. First phased task\n\n- [ ] Phased subtask one.\n- [x] Phased subtask two.\n\n## Phase C — Follow-on scenarios\n\n### 19. Dedup `/configure` permission entries via new ductus primitive\n\n- [ ] Implement the behavior described in `scenarios/configure-dedup-permissions.md`\n\n- **Done when**: the scenario lands.\n";
         fs::write(feature_dir.join("tasks.md"), body).unwrap();
     }
 
@@ -679,9 +679,9 @@ mod tests {
 
     #[test]
     fn resolves_phased_task_with_backticks_in_heading() {
-        // Regression test for the bug surfaced during /gov:implement on
+        // Regression test for the bug surfaced during /ductus:implement on
         // spec 023 task #19. The heading `### 19. Dedup `/configure`
-        // permission entries via new gvrn primitive` contains inline-code
+        // permission entries via new ductus primitive` contains inline-code
         // spans (backticks); `read-tasks` recognized it correctly but
         // `mark-task` returned `task '19' not found` because it only
         // matched level-2 task headings.

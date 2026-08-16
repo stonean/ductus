@@ -8,7 +8,7 @@ requests carry no `existing-content` (re-run state absent).
 
 ## Technical Decisions
 
-Prior decision recorded on the previous `/gov:plan` run: use the
+Prior decision recorded on the previous `/ductus:plan` run: use the
 standard library and avoid third-party dependencies for this fixture.
 
 ## Affected Files

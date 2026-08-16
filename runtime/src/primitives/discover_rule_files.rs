@@ -1,8 +1,8 @@
-//! `discover-rule-files` — deterministic rule-file selection for `/gov:review`.
+//! `discover-rule-files` — deterministic rule-file selection for `/ductus:review`.
 //!
-//! Owns `/gov:review`'s rule-file selection end-to-end: list the rule-file
+//! Owns `/ductus:review`'s rule-file selection end-to-end: list the rule-file
 //! directory
-//! (`framework/rules/` in govern's own repo, `{specs-root}/rules/` in
+//! (`framework/rules/` in ductus's own repo, `{specs-root}/rules/` in
 //! adopters), classify each file by basename suffix, apply the
 //! `[rules] surfaces` selection, then the `[[review.disabled-rule-files]]`
 //! filter — returning the selected set plus the ordered stdout notice lines
@@ -73,7 +73,7 @@ fn classify(basename: &str) -> Surface {
 pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFilesResult> {
     // Resolved once: the same probe backs both the read below and the
     // provenance tag in the disabled-rule-file notice.
-    let (config, config_name) = load_govern_toml(repo)?;
+    let (config, config_name) = load_ductus_toml(repo)?;
     let (rules_dir_path, rules_dir_rel) = resolve_rules_dir(repo);
 
     let mut notices: Vec<String> = Vec::new();
@@ -130,9 +130,9 @@ fn has(surfaces: &[String], member: &str) -> bool {
 }
 
 /// Locate the rule-file directory. Adopters keep rules under
-/// `{specs-root}/rules/`; govern's own repo keeps them under
+/// `{specs-root}/rules/`; ductus's own repo keeps them under
 /// `framework/rules/`. Prefer the adopter path when it exists (that is the
-/// discriminator — a govern checkout has `framework/rules/` but no
+/// discriminator — a ductus checkout has `framework/rules/` but no
 /// `specs/rules/`). Returns `(None, "")` when neither exists.
 fn resolve_rules_dir(repo: &Path) -> (Option<PathBuf>, String) {
     let layout = paths::Paths::load(repo);
@@ -256,7 +256,7 @@ fn toml_type_name(value: &toml::Value) -> &'static str {
 /// later duplicates warn. Malformed entries warn and are skipped without
 /// dropping anything. `config_name` is the repo-relative resolved config
 /// file the disable came from, rendered in the drop notice's provenance
-/// tag (spec 042: `.govern/config.toml`, or the legacy root `.govern.toml`
+/// tag (spec 042: `.ductus/config.toml`, or the legacy root `.govern.toml`
 /// pre-migration).
 fn apply_disabled_filter(
     review: Option<&ReviewSection>,
@@ -348,10 +348,10 @@ fn collapse_whitespace(reason: &str) -> String {
 /// the repo-relative name that resolution picked. Returning the name here —
 /// rather than re-probing at render time — is what keeps the parsed content
 /// and its provenance tag from disagreeing across a concurrent migration.
-fn load_govern_toml(repo: &Path) -> Result<(GovernToml, &'static str)> {
+fn load_ductus_toml(repo: &Path) -> Result<(DuctusToml, &'static str)> {
     let (path, name) = paths::resolve_config(repo);
     if !path.is_file() {
-        return Ok((GovernToml::default(), name));
+        return Ok((DuctusToml::default(), name));
     }
     let content = read_text(&path)?;
     let parsed =
@@ -362,7 +362,7 @@ fn load_govern_toml(repo: &Path) -> Result<(GovernToml, &'static str)> {
 /// Minimal `.govern.toml` shape: the `[rules]` and `[review]` sections this
 /// primitive consults. Unknown keys are accepted.
 #[derive(Deserialize, Default)]
-struct GovernToml {
+struct DuctusToml {
     #[serde(default)]
     rules: Option<RulesSection>,
     #[serde(default)]
@@ -396,14 +396,14 @@ mod tests {
 
     /// Build a repo with `framework/rules/{files}` and an optional
     /// `.govern.toml`. Returns the tempdir.
-    fn setup(files: &[&str], govern_toml: Option<&str>) -> TempDir {
+    fn setup(files: &[&str], ductus_toml: Option<&str>) -> TempDir {
         let tmp = TempDir::new().unwrap();
         let rules = tmp.path().join("framework/rules");
         std::fs::create_dir_all(&rules).unwrap();
         for f in files {
             std::fs::write(rules.join(f), "# rule\n").unwrap();
         }
-        if let Some(body) = govern_toml {
+        if let Some(body) = ductus_toml {
             std::fs::write(tmp.path().join(".govern.toml"), body).unwrap();
         }
         tmp
@@ -564,16 +564,16 @@ mod tests {
 
     #[test]
     fn disabled_notice_names_new_layout_config() {
-        // Same drop, config under `.govern/config.toml` — the provenance
+        // Same drop, config under `.ductus/config.toml` — the provenance
         // tag names the resolved file, not a hardcoded legacy literal.
         let toml = "[[review.disabled-rule-files]]\nfile = \"accessibility-frontend.md\"\nreason = \"Internal admin UI; not yet adopting WCAG AA.\"\n";
         let tmp = setup(THREE, None);
-        let cfg_dir = tmp.path().join(".govern");
+        let cfg_dir = tmp.path().join(".ductus");
         std::fs::create_dir_all(&cfg_dir).unwrap();
         std::fs::write(cfg_dir.join("config.toml"), toml).unwrap();
         let result = run(&args(&[]), tmp.path()).unwrap();
         assert!(result.notices.contains(
-            &"disabled-rule-file: accessibility-frontend.md — Internal admin UI; not yet adopting WCAG AA. (.govern/config.toml)".to_string()
+            &"disabled-rule-file: accessibility-frontend.md — Internal admin UI; not yet adopting WCAG AA. (.ductus/config.toml)".to_string()
         ));
     }
 
@@ -679,7 +679,7 @@ mod tests {
     }
 
     #[test]
-    fn malformed_govern_toml_is_operational_error() {
+    fn malformed_ductus_toml_is_operational_error() {
         let tmp = setup(THREE, Some("[[review.broken\n"));
         let err = run(&args(&[]), tmp.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::Toml { .. }));

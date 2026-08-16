@@ -1,4 +1,4 @@
-//! `check-review-gate` — evaluate `/gov:implement`'s pre-done review gate.
+//! `check-review-gate` — evaluate `/ductus:implement`'s pre-done review gate.
 //!
 //! The deterministic surface behind the completion gate's step 13 (spec
 //! 022, scenario coverage-expansion-primitives), which the host previously
@@ -175,7 +175,7 @@ pub(crate) fn run_with_lint(
 /// measurement rather than reasoned about. The first cut used the plan's
 /// **Affected Files**; run across this repo it blocked **34 of 48** specs,
 /// because old specs list shared surfaces (`AGENTS.md`, `README.md`,
-/// `framework/bootstrap/govern.md`) that every later spec also touches — so
+/// `framework/bootstrap/ductus.md`) that every later spec also touches — so
 /// completing spec 004 was blocked by spec 042 having edited `AGENTS.md`.
 /// A gate that blocks seven specs in eight is one people route around.
 /// `tasks.md` and `plan.md` are excluded for the same reason: the first is
@@ -341,7 +341,7 @@ mod tests {
         fs::write(repo.join("specs/007-gate/spec.md"), spec).unwrap();
         // Pin the slash-command namespace so canonical messages are
         // deterministic (the default is the tempdir's random basename).
-        fs::write(repo.join(".govern.toml"), "[host]\nproject = \"gov\"\n").unwrap();
+        fs::write(repo.join(".govern.toml"), "[host]\nproject = \"ductus\"\n").unwrap();
     }
 
     fn args() -> CheckReviewGateArgs {
@@ -439,7 +439,7 @@ mod tests {
         assert!(message.contains("review is stale"), "{message}");
         assert!(message.contains("scenarios/retry.md"), "{message}");
         assert!(
-            result.guidance.unwrap().contains("/gov:review"),
+            result.guidance.unwrap().contains("/ductus:review"),
             "guidance must name the command that clears it"
         );
     }
@@ -586,7 +586,7 @@ mod tests {
         assert_eq!(result.blocked_by, Some(ReviewGateBlock::NotReviewed));
         assert_eq!(
             result.message.as_deref(),
-            Some("blocked: spec has not been reviewed — run /gov:review before completing")
+            Some("blocked: spec has not been reviewed — run /ductus:review before completing")
         );
         assert!(result.guidance.is_none());
     }
@@ -612,7 +612,7 @@ mod tests {
             Some("blocked: spec has 3 MUST violation(s) — see specs/007-gate/review.md")
         );
         let guidance = result.guidance.unwrap();
-        assert!(guidance.contains("re-run /gov:review"), "{guidance}");
+        assert!(guidance.contains("re-run /ductus:review"), "{guidance}");
         assert!(guidance.contains("--waive <rule-id>"), "{guidance}");
     }
 
@@ -643,7 +643,7 @@ mod tests {
         .unwrap();
         fs::write(
             tmp.path().join(".govern.toml"),
-            "[host]\nproject = \"gov\"\n\n[paths]\nspecs-root = \"governance\"\n",
+            "[host]\nproject = \"ductus\"\n\n[paths]\nspecs-root = \"governance\"\n",
         )
         .unwrap();
         let mut seen_glob = String::new();
@@ -706,7 +706,7 @@ mod tests {
         assert!(message.contains('1'), "and the count, got: {message}");
         // The guidance points at the command that can actually resolve
         // them — scenario-targeted clarify, not feature-targeted.
-        assert!(result.guidance.unwrap().contains("/gov:clarify"));
+        assert!(result.guidance.unwrap().contains("/ductus:clarify"));
     }
 
     #[test]

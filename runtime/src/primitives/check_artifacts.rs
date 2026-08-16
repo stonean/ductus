@@ -1,5 +1,5 @@
 //! `check-artifacts` — the residual deterministic check families from
-//! `/gov:analyze`'s markdown-only reference, mechanized for one feature.
+//! `/ductus:analyze`'s markdown-only reference, mechanized for one feature.
 //!
 //! Owns eight families (spec 022, scenarios analyze-artifact-checks,
 //! scenario-open-question-signal, link-adjacent-drift-family,
@@ -34,7 +34,7 @@
 //!   (blocking)": a `done` spec with
 //!   `review.last-run` unset, or `review.blocking: true`, drifted. The
 //!   grandfather rule applies: a `done` spec with no `review:` block at
-//!   all predates `/gov:review` and is exempt.
+//!   all predates `/ductus:review` and is exempt.
 //! - **scenario-open-questions** (blocking at `done`, advisory otherwise)
 //!   — a scenario is an organizational split of the spec, so its
 //!   unresolved questions are the spec's questions for completeness. At
@@ -362,7 +362,7 @@ fn pruning_evidence(tasks: &[Task]) -> bool {
 /// (d) Review-state drift — reference §"Review state drift (blocking)":
 /// for a `done` spec, `review.last-run` must be set and `review.blocking`
 /// must be `false`. Grandfather rule: a `done` spec with **no** `review:`
-/// block at all predates `/gov:review` and is exempt. Specs not at `done`
+/// block at all predates `/ductus:review` and is exempt. Specs not at `done`
 /// are silently exempt (the block populates lazily on first review).
 fn check_review_drift(
     findings: &mut Vec<ArtifactFinding>,
@@ -949,7 +949,7 @@ fn check_criterion_path_existence(
             // When the candidate's own top-level segment is absent, this repo
             // has nothing to say about the path — a framework repo's criteria
             // legitimately name paths that live in an *adopter's* checkout
-            // (`.govern/…`, `.agents/…`, `.githooks/…`), and calling those
+            // (`.ductus/…`, `.agents/…`, `.githooks/…`), and calling those
             // drifted would be asserting a defect from an absence of evidence.
             // Recorded rather than exempted, so the report says what went
             // unexamined instead of quietly reading as clean. In an adopter
@@ -970,7 +970,7 @@ fn check_criterion_path_existence(
             // The path resolves in the repo this criterion is *about*, which
             // is not this one: it is a destination this repo declares it
             // ships into an adopter's checkout. `root-absent` above cannot
-            // catch these — their top-level segments (`specs`, `.govern`,
+            // catch these — their top-level segments (`specs`, `.ductus`,
             // `.githooks`) all exist here — so without this arm a framework
             // repo reports a defect for every file it correctly delivers
             // elsewhere. Recorded, never dropped: the report still says the
@@ -1024,7 +1024,7 @@ fn check_criterion_path_existence(
 /// - **adopter scope** — `writes it to specs/rules/security-backend.md in the
 ///   project` describes a scaffolded checkout, not this one;
 /// - **hedge / example** — `(e.g., docs/rules/internal-api.md)` and
-///   `scripts/lint-govern-toml.sh (if it exists)` claim nothing at all.
+///   `scripts/lint-ductus-toml.sh (if it exists)` claim nothing at all.
 ///
 /// The whole criterion is exempted, not just the matched path: these phrases
 /// describe a *transition*, and a criterion about a transition names its
@@ -1063,7 +1063,7 @@ const NON_ASSERTION_MARKERS: [&str; 14] = [
 
 /// Repo-relative destinations this repo declares it scaffolds into an
 /// adopter's checkout, derived from the **Shared Files** manifest tables in
-/// `framework/bootstrap/govern.md` — the canonical registry of what lands
+/// `framework/bootstrap/ductus.md` — the canonical registry of what lands
 /// where, per the constitution's canonical-sources map.
 ///
 /// Empty when that file is absent, which is the discriminator: an adopter
@@ -1078,7 +1078,7 @@ const NON_ASSERTION_MARKERS: [&str; 14] = [
 /// list; here the safe default is built into the return value.
 fn adopter_destinations(repo: &Path) -> BTreeSet<String> {
     let mut out = BTreeSet::new();
-    let Ok(text) = std::fs::read_to_string(repo.join("framework/bootstrap/govern.md")) else {
+    let Ok(text) = std::fs::read_to_string(repo.join("framework/bootstrap/ductus.md")) else {
         return out;
     };
     for line in text.lines() {
@@ -1537,7 +1537,7 @@ mod tests {
         // path form that `append-task`'s default body emits; this covers
         // the hand-written form the rule deliberately tolerates. Both
         // exist because a second surface applying the narrower path rule
-        // disagrees with this family asymmetrically: /gov:amend's
+        // disagrees with this family asymmetrically: /ductus:amend's
         // reconcile pass would offer a task for a scenario already
         // mapped here (specs/022-deterministic-runtime/data-model.md,
         // registered canonical in constitution §drift-prevention).
@@ -2217,11 +2217,11 @@ mod tests {
     fn seed_manifest(repo: &Path) {
         write(
             repo,
-            "framework/bootstrap/govern.md",
-            "# govern\n\n## Shared Files\n\n\
+            "framework/bootstrap/ductus.md",
+            "# ductus\n\n## Shared Files\n\n\
              | Source Path | Destination Path |\n\
              | --- | --- |\n\
-             | `framework/constitution.md` | `.govern/constitution.md` |\n\
+             | `framework/constitution.md` | `.ductus/constitution.md` |\n\
              | `framework/templates/spec/spec.md` | `specs/templates/spec.md` |\n\
              | `framework/rules/security-backend.md` | `specs/rules/security-backend.md` |\n",
         );
@@ -2230,13 +2230,13 @@ mod tests {
     #[test]
     fn a_path_this_repo_ships_to_adopters_is_skipped_not_flagged() {
         // Scenario criterion-adopter-scope-destinations. `root-absent` cannot
-        // catch these — `specs` and `.govern` both exist here — so without the
+        // catch these — `specs` and `.ductus` both exist here — so without the
         // manifest check a framework repo reports a defect for every file it
         // correctly delivers elsewhere.
         for (criterion, subject) in [
             (
-                "- [x] A freshly adopted project has the constitution at `.govern/constitution.md`.\n",
-                ".govern/constitution.md",
+                "- [x] A freshly adopted project has the constitution at `.ductus/constitution.md`.\n",
+                ".ductus/constitution.md",
             ),
             (
                 "- [x] The \"Secure\" principle references `specs/rules/security-backend.md`.\n",
@@ -2252,7 +2252,7 @@ mod tests {
             let tmp = tempdir().unwrap();
             seed_with_criteria(tmp.path(), "done", criterion);
             seed_manifest(tmp.path());
-            fs::create_dir_all(tmp.path().join(".govern")).unwrap();
+            fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
             let result = run(&args(), tmp.path()).unwrap();
             assert!(
                 path_findings(&result).is_empty(),
@@ -2272,16 +2272,16 @@ mod tests {
 
     #[test]
     fn without_a_manifest_nothing_is_suppressed() {
-        // The adopter case: no `framework/bootstrap/govern.md`, so derivation
+        // The adopter case: no `framework/bootstrap/ductus.md`, so derivation
         // yields an empty set and the check reports as before. Fails toward
         // reporting, never toward silence.
         let tmp = tempdir().unwrap();
         seed_with_criteria(
             tmp.path(),
             "done",
-            "- [x] A freshly adopted project has the constitution at `.govern/constitution.md`.\n",
+            "- [x] A freshly adopted project has the constitution at `.ductus/constitution.md`.\n",
         );
-        fs::create_dir_all(tmp.path().join(".govern")).unwrap();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
         let result = run(&args(), tmp.path()).unwrap();
         assert_eq!(path_findings(&result).len(), 1, "{:?}", result.findings);
         assert!(
@@ -2302,7 +2302,7 @@ mod tests {
         seed_with_criteria(
             tmp.path(),
             "done",
-            "- [x] The hygiene tool lives at `scripts/lint-govern-toml.sh`.\n",
+            "- [x] The hygiene tool lives at `scripts/lint-ductus-toml.sh`.\n",
         );
         seed_manifest(tmp.path());
         fs::create_dir_all(tmp.path().join("scripts")).unwrap();
@@ -2324,7 +2324,7 @@ mod tests {
     #[test]
     fn the_originating_case_is_reproduced() {
         // AC18. Both named paths are gone, exactly as they are gone from
-        // `govern` after spec 043 sunset the workflows feature — while their
+        // `ductus` after spec 043 sunset the workflows feature — while their
         // parent trees survive, which is what makes their absence provable
         // rather than merely unknown. The fixture creates `framework/` and
         // `scripts/` for that reason: without them the root-absent rule would
@@ -2436,7 +2436,7 @@ mod tests {
         seed_with_criteria(
             tmp.path(),
             "done",
-            "- [x] A freshly adopted project has the constitution at `.govern/constitution.md`\n",
+            "- [x] A freshly adopted project has the constitution at `.ductus/constitution.md`\n",
         );
         let result = run(&args(), tmp.path()).unwrap();
         assert!(path_findings(&result).is_empty(), "{:?}", result.findings);
@@ -2447,7 +2447,7 @@ mod tests {
             .collect();
         assert_eq!(skips.len(), 1, "{:?}", result.skipped);
         assert_eq!(skips[0].reason, "root-absent");
-        assert_eq!(skips[0].path, ".govern/constitution.md");
+        assert_eq!(skips[0].path, ".ductus/constitution.md");
     }
 
     #[test]
@@ -2458,9 +2458,9 @@ mod tests {
         seed_with_criteria(
             tmp.path(),
             "done",
-            "- [x] The constitution ships to `.govern/constitution.md`\n",
+            "- [x] The constitution ships to `.ductus/constitution.md`\n",
         );
-        fs::create_dir_all(tmp.path().join(".govern")).unwrap();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
         let result = run(&args(), tmp.path()).unwrap();
         assert_eq!(path_findings(&result).len(), 1, "{:?}", result.findings);
     }
@@ -2474,9 +2474,9 @@ mod tests {
             "- [x] `framework/commands/capture.md` is deleted; its generated copy is regenerated as deleted.\n",
             "- [x] `framework/workflows/` does not exist, and no live artifact references it.\n",
             "- [x] `framework/rules/configuration.md` is renamed to `framework/rules/configuration-cross.md`.\n",
-            "- [x] The govern command writes it to `specs/rules/security-backend.md` in the project.\n",
+            "- [x] The ductus command writes it to `specs/rules/security-backend.md` in the project.\n",
             "- [x] Project-local rule files outside the rule dir (e.g., `docs/rules/internal-api.md`) still load.\n",
-            "- [x] The key is validated by `scripts/lint-govern-toml.sh` (if it exists).\n",
+            "- [x] The key is validated by `scripts/lint-ductus-toml.sh` (if it exists).\n",
             // Scenario criterion-non-assertion-phrasings — the three forms the
             // narrower list missed, each earned against a real criterion in
             // this repo. Past-tense agent (045 AC18):

@@ -12,7 +12,7 @@ review:
 
 # 005 — Plan Fixture
 
-A minimal fixture for the `/gov:plan` parity test. The spec is at
+A minimal fixture for the `/ductus:plan` parity test. The spec is at
 clarified; the procedure exercises read-spec, lint-markdown, three
 writeSpecBody extension calls, a gate-confirm, and set-status to
 advance the status to planned.

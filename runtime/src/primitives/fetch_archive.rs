@@ -1,8 +1,8 @@
 //! `fetch-archive` — download an archive and, optionally, verify its
 //! sha256 against a sidecar file.
 //!
-//! The procedural use case is the `/govern` bootstrap installer
-//! (scenario `govern-bootstrap` on spec 022). The framework operates
+//! The procedural use case is the `/ductus` bootstrap installer
+//! (scenario `ductus-bootstrap` on spec 022). The framework operates
 //! live-on-main, so the bootstrap fetches GitHub's auto-generated
 //! source tarball (`/archive/refs/heads/main.tar.gz`), which has no
 //! companion sha256 sidecar. Other procedural callers (release-asset
@@ -589,7 +589,7 @@ mod tests {
     fn insecure_host_allowlist_is_empty_by_default() {
         // With the env var unset (the ambient state for the test process),
         // nothing is exempted — the secure default holds. The allow path is
-        // exercised end-to-end by the govern-basic parity subprocess, which
+        // exercised end-to-end by the ductus-basic parity subprocess, which
         // sets GVRN_FETCH_ALLOW_INSECURE_HOSTS on its own process env (no
         // in-process env mutation here, which would race sibling tests).
         assert!(!host_is_insecure_allowed("127.0.0.1"));

@@ -1,19 +1,19 @@
-//! Deterministic runtime for the `govern` pipeline.
+//! Deterministic runtime for the `ductus` pipeline.
 //!
 //! Implements the architecture described in
 //! [`specs/022-deterministic-runtime/spec.md`]. The runtime exposes two
-//! surfaces — an MCP server (`gvrn mcp`) and a subprocess interpreter
-//! (`gvrn exec`) — sharing a common library of primitives.
+//! surfaces — an MCP server (`ductus mcp`) and a subprocess interpreter
+//! (`ductus exec`) — sharing a common library of primitives.
 //!
 //! # Stability
 //!
-//! **This library is an implementation detail of the `gvrn` binary.**
-//! The supported public surface is the CLI (`gvrn --help`) and the
+//! **This library is an implementation detail of the `ductus` binary.**
+//! The supported public surface is the CLI (`ductus --help`) and the
 //! JSON-over-stdio / MCP protocol it speaks. Linking against this crate
 //! directly is **not supported** in v0.x: every module (`interpreter`,
 //! `io`, `mcp`, `parser`, `primitives`, `schema`) may change shape
-//! without a semver bump. Consume `gvrn` by installing the binary
-//! (`cargo install gvrn`) and invoking it via stdio, or by running the
+//! without a semver bump. Consume `ductus` by installing the binary
+//! (`cargo install ductus`) and invoking it via stdio, or by running the
 //! MCP server and connecting an MCP-capable host. A curated library
 //! surface may land in a future major release; until then, treat the
 //! items below as private to the runtime.

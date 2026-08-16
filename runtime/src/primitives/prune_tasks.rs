@@ -65,9 +65,9 @@ struct Block {
     phase: Option<String>,
     checkbox_total: u32,
     checkbox_checked: u32,
-    /// Index into `blocks` of the governing phase container (Task blocks in
+    /// Index into `blocks` of the ductusing phase container (Task blocks in
     /// phased files); `None` in flat files.
-    governing_phase: Option<usize>,
+    ductusing_phase: Option<usize>,
 }
 
 impl Block {
@@ -80,7 +80,7 @@ impl Block {
             phase: None,
             checkbox_total: 0,
             checkbox_checked: 0,
-            governing_phase: None,
+            ductusing_phase: None,
         }
     }
 
@@ -247,7 +247,7 @@ fn segment(content: &str) -> Vec<Block> {
                 cur.number = number;
                 cur.heading = title;
                 cur.phase.clone_from(&current_phase_name);
-                cur.governing_phase = current_phase_idx;
+                cur.ductusing_phase = current_phase_idx;
             } else if is_phase {
                 cur.kind = Kind::Phase;
                 current_phase_name = Some(heading);
@@ -286,7 +286,7 @@ fn reduce_keep_pending(content: &str, blocks: &[Block]) -> (String, Vec<PruneSec
     for block in blocks {
         if block.kind == Kind::Task
             && block.classification() != Classification::Spent
-            && let Some(p) = block.governing_phase
+            && let Some(p) = block.ductusing_phase
         {
             phase_has_survivor.insert(p);
         }

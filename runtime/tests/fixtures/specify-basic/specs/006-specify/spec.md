@@ -5,7 +5,7 @@ dependencies: []
 
 # 006 — Specify Fixture
 
-A fixture for the `/gov:specify` parity test. The host pre-creates this
+A fixture for the `/ductus:specify` parity test. The host pre-creates this
 directory and the empty spec.md (mirroring the template-copy step) so
 the runtime walker can lint the file and confirm with the user. The
 writeSpecBody response fills the body content in the host's working

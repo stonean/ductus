@@ -345,7 +345,7 @@ mod tests {
         for f in [
             "commands/status.md",
             "commands/legacy.md",
-            "bootstrap/govern.md",
+            "bootstrap/ductus.md",
             "skills/old-skill.md",
         ] {
             touch(&dir.join(f));
@@ -353,7 +353,7 @@ mod tests {
 
         let args = args_for(
             &dir,
-            &["commands/status.md", "bootstrap/govern.md"],
+            &["commands/status.md", "bootstrap/ductus.md"],
             &[],
             true,
             None,
@@ -368,7 +368,7 @@ mod tests {
         assert!(!dir.join("commands/legacy.md").exists());
         assert!(!dir.join("skills/old-skill.md").exists());
         assert!(dir.join("commands/status.md").exists());
-        assert!(dir.join("bootstrap/govern.md").exists());
+        assert!(dir.join("bootstrap/ductus.md").exists());
     }
 
     #[test]

@@ -11,7 +11,7 @@
 //! macro.
 
 /// Every primitive name exposed by the runtime, in manifest order. Names
-/// are bare `<verb>-<noun>` strings; server-level namespacing (`gvrn`) is
+/// are bare `<verb>-<noun>` strings; server-level namespacing (`ductus`) is
 /// supplied by the host's MCP registration.
 pub(crate) const PRIMITIVE_REGISTRY: &[&str] = &[
     "read-spec",

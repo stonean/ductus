@@ -1,19 +1,19 @@
 //! `append-inbox` — append one bullet to `{specs-root}/inbox.md`.
 //!
-//! The single deterministic surface behind `/gov:log`, `/gov:implement`'s
+//! The single deterministic surface behind `/ductus:log`, `/ductus:implement`'s
 //! auto-capture rule, and the bootstrap security audit's dedup-by-prefix
 //! append (spec 022, scenario scaffolding-primitives) — each of which
 //! previously hand-rolled the same atomic append.
 //!
 //! Creation: when `inbox.md` is missing, the file is created from the
 //! project inbox template at `framework/templates/project/inbox.md` when
-//! that file exists (the govern source repo, where project templates
+//! that file exists (the ductus source repo, where project templates
 //! live), else from a bare `# Inbox` heading. Adopter repos don't carry
 //! `framework/templates/project/` — their `inbox.md` was scaffolded at
 //! adoption — so the heading fallback is the common adopter-side create.
 //!
 //! Form: entries are written as checkboxes — `- [ ] {text}` — matching the
-//! inbox template's documented forms (manual `/gov:log` entries, auto-captured
+//! inbox template's documented forms (manual `/ductus:log` entries, auto-captured
 //! findings, and audit findings are all `- [ ]`) and the constitution's
 //! §bug-handling ("tracked as a checkbox … resolved by being done, then
 //! removed"). Dedup and removal strip the checkbox marker, so both forms

@@ -50,7 +50,7 @@ use std::path::Path;
 use crate::primitives::{PrimitiveError, Result, read_text, validate_no_traversal, write_atomic};
 use crate::schema::primitives::{MergeManagedBlockArgs, MergeManagedBlockResult};
 
-const DEFAULT_MARKER: &str = "govern-managed";
+const DEFAULT_MARKER: &str = "ductus-managed";
 const STYLE_HTML_COMMENT: &str = "html-comment";
 const STYLE_LINE_PREFIX: &str = "line-prefix";
 
@@ -630,12 +630,12 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result.action, "created");
-        assert_eq!(result.marker, "govern-managed");
+        assert_eq!(result.marker, "ductus-managed");
         assert_eq!(result.marker_style, "html-comment");
         let body = fs::read_to_string(&path).unwrap();
-        assert!(body.contains("<!-- BEGIN govern-managed -->"));
+        assert!(body.contains("<!-- BEGIN ductus-managed -->"));
         assert!(body.contains("framework section\nline two"));
-        assert!(body.contains("<!-- END govern-managed -->"));
+        assert!(body.contains("<!-- END ductus-managed -->"));
     }
 
     #[test]
@@ -644,7 +644,7 @@ mod tests {
         let path = tmp.path().join("CLAUDE.md");
         fs::write(
             &path,
-            "<!-- BEGIN govern-managed -->\nblock body\n<!-- END govern-managed -->\n",
+            "<!-- BEGIN ductus-managed -->\nblock body\n<!-- END ductus-managed -->\n",
         )
         .unwrap();
         let mtime_before = fs::metadata(&path).unwrap().modified().unwrap();
@@ -660,7 +660,7 @@ mod tests {
     fn html_malformed_markers_error() {
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join("CLAUDE.md");
-        fs::write(&path, "<!-- BEGIN govern-managed -->\nopen\n").unwrap();
+        fs::write(&path, "<!-- BEGIN ductus-managed -->\nopen\n").unwrap();
         let err = run(&args(&path, "x", None), tmp.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::MalformedMarkers { .. }));
     }
@@ -676,7 +676,7 @@ mod tests {
         assert_eq!(result.action, "created");
         assert_eq!(result.marker_style, "line-prefix");
         let body = fs::read_to_string(&path).unwrap();
-        assert_eq!(body, "# govern-managed\n.claude/\nspecs/.cache/\n");
+        assert_eq!(body, "# ductus-managed\n.claude/\nspecs/.cache/\n");
     }
 
     #[test]
@@ -690,7 +690,7 @@ mod tests {
         let body = fs::read_to_string(&path).unwrap();
         assert_eq!(
             body,
-            "node_modules/\n*.log\n\n# govern-managed\n.claude/\nspecs/.cache/\n"
+            "node_modules/\n*.log\n\n# ductus-managed\n.claude/\nspecs/.cache/\n"
         );
     }
 
@@ -700,7 +700,7 @@ mod tests {
         let path = tmp.path().join(".gitignore");
         fs::write(
             &path,
-            "node_modules/\n\n# govern-managed\n.claude/\nspecs/.cache/\n",
+            "node_modules/\n\n# ductus-managed\n.claude/\nspecs/.cache/\n",
         )
         .unwrap();
         let mtime_before = fs::metadata(&path).unwrap().modified().unwrap();
@@ -717,7 +717,7 @@ mod tests {
         let path = tmp.path().join(".gitignore");
         fs::write(
             &path,
-            "node_modules/\n\n# govern-managed\n.old/\n\n# user-tail-section\n*.tmp\n",
+            "node_modules/\n\n# ductus-managed\n.old/\n\n# user-tail-section\n*.tmp\n",
         )
         .unwrap();
         let block = ".claude/\nspecs/.cache/";
@@ -727,7 +727,7 @@ mod tests {
         // Block updated; user-tail-section after the blank-line terminator is preserved verbatim.
         assert_eq!(
             body,
-            "node_modules/\n\n# govern-managed\n.claude/\nspecs/.cache/\n\n# user-tail-section\n*.tmp\n"
+            "node_modules/\n\n# ductus-managed\n.claude/\nspecs/.cache/\n\n# user-tail-section\n*.tmp\n"
         );
     }
 
@@ -735,12 +735,12 @@ mod tests {
     fn line_prefix_block_at_eof_has_exactly_one_trailing_newline() {
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join(".gitignore");
-        fs::write(&path, "user-pre\n\n# govern-managed\n.old/").unwrap();
+        fs::write(&path, "user-pre\n\n# ductus-managed\n.old/").unwrap();
         let block = ".claude/";
         let result = run(&args(&path, block, Some("line-prefix")), tmp.path()).unwrap();
         assert_eq!(result.action, "updated");
         let body = fs::read_to_string(&path).unwrap();
-        assert_eq!(body, "user-pre\n\n# govern-managed\n.claude/\n");
+        assert_eq!(body, "user-pre\n\n# ductus-managed\n.claude/\n");
         assert!(
             body.ends_with('\n') && !body.ends_with("\n\n"),
             "must end with exactly one trailing newline: {body:?}"
@@ -758,7 +758,7 @@ mod tests {
         let result = run(&args(&path, block, Some("line-prefix")), tmp.path()).unwrap();
         assert_eq!(result.action, "inserted");
         let body = fs::read_to_string(&path).unwrap();
-        assert_eq!(body, "node_modules/\n\n# govern-managed\n.claude/\n");
+        assert_eq!(body, "node_modules/\n\n# ductus-managed\n.claude/\n");
     }
 
     #[test]
@@ -783,17 +783,17 @@ mod tests {
 
     #[test]
     fn line_prefix_does_not_confuse_inline_hash_with_marker_line() {
-        // A line like `foo # govern-managed` (the marker as a tail
+        // A line like `foo # ductus-managed` (the marker as a tail
         // comment) is NOT the marker — only a line that exactly equals
         // `# {marker}` counts. The primitive must append a fresh block.
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join(".gitignore");
-        fs::write(&path, "user-ignore # govern-managed\n").unwrap();
+        fs::write(&path, "user-ignore # ductus-managed\n").unwrap();
         let result = run(&args(&path, ".claude/", Some("line-prefix")), tmp.path()).unwrap();
         assert_eq!(result.action, "inserted");
         let body = fs::read_to_string(&path).unwrap();
-        assert!(body.starts_with("user-ignore # govern-managed\n"));
-        assert!(body.contains("# govern-managed\n.claude/\n"));
+        assert!(body.starts_with("user-ignore # ductus-managed\n"));
+        assert!(body.contains("# ductus-managed\n.claude/\n"));
     }
 
     #[test]
@@ -850,7 +850,7 @@ mod tests {
         .unwrap();
         assert_eq!(result.action, "created");
         let body = fs::read_to_string(tmp.path().join("sub/.gitignore")).unwrap();
-        assert_eq!(body, "# govern-managed\n.cache/\n");
+        assert_eq!(body, "# ductus-managed\n.cache/\n");
     }
 
     #[test]
@@ -869,13 +869,13 @@ mod tests {
     #[test]
     fn line_prefix_block_with_crlf_line_endings_in_existing_file() {
         // CRLF in the existing file — the marker detector strips the
-        // trailing \r before equality, so the marker line `# govern-managed\r\n`
+        // trailing \r before equality, so the marker line `# ductus-managed\r\n`
         // is recognized correctly.
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join(".gitignore");
         fs::write(
             &path,
-            "node\r\n\r\n# govern-managed\r\n.old/\r\n\r\nuser-tail\r\n",
+            "node\r\n\r\n# ductus-managed\r\n.old/\r\n\r\nuser-tail\r\n",
         )
         .unwrap();
         let block = ".claude/";
@@ -885,9 +885,9 @@ mod tests {
         // the managed region; the surrounding content is preserved
         // byte-for-byte, including its original CRLF endings).
         let body = fs::read_to_string(&path).unwrap();
-        assert!(body.contains("# govern-managed\n.claude/\n"));
+        assert!(body.contains("# ductus-managed\n.claude/\n"));
         // Surrounding lines kept verbatim.
-        assert!(body.starts_with("node\r\n\r\n# govern-managed"));
+        assert!(body.starts_with("node\r\n\r\n# ductus-managed"));
         assert!(body.contains("user-tail\r\n"));
     }
 
@@ -899,7 +899,7 @@ mod tests {
         let path = tmp.path().join(".gitignore");
         fs::write(
             &path,
-            "node_modules/\n.claude/\nother/\n\n# govern-managed\n.claude/\nspecs/.cache/\n",
+            "node_modules/\n.claude/\nother/\n\n# ductus-managed\n.claude/\nspecs/.cache/\n",
         )
         .unwrap();
         let block = ".claude/\nspecs/.cache/";
@@ -916,7 +916,7 @@ mod tests {
         let body = fs::read_to_string(&path).unwrap();
         assert_eq!(
             body,
-            "node_modules/\nother/\n\n# govern-managed\n.claude/\nspecs/.cache/\n"
+            "node_modules/\nother/\n\n# ductus-managed\n.claude/\nspecs/.cache/\n"
         );
     }
 
@@ -926,7 +926,7 @@ mod tests {
         let path = tmp.path().join(".gitignore");
         fs::write(
             &path,
-            "node_modules/\n\n# govern-managed\n.claude/\n\nother/\n.claude/\n",
+            "node_modules/\n\n# ductus-managed\n.claude/\n\nother/\n.claude/\n",
         )
         .unwrap();
         let block = ".claude/";
@@ -937,7 +937,7 @@ mod tests {
         let body = fs::read_to_string(&path).unwrap();
         assert_eq!(
             body,
-            "node_modules/\n\n# govern-managed\n.claude/\n\nother/\n"
+            "node_modules/\n\n# ductus-managed\n.claude/\n\nother/\n"
         );
     }
 
@@ -947,7 +947,7 @@ mod tests {
         let path = tmp.path().join(".gitignore");
         fs::write(
             &path,
-            ".claude/\nfoo/\n.claude/\n\n# govern-managed\n.claude/\n\n.claude/\nbar/\n",
+            ".claude/\nfoo/\n.claude/\n\n# ductus-managed\n.claude/\n\n.claude/\nbar/\n",
         )
         .unwrap();
         let block = ".claude/";
@@ -966,7 +966,7 @@ mod tests {
         );
 
         let body = fs::read_to_string(&path).unwrap();
-        assert_eq!(body, "foo/\n\n# govern-managed\n.claude/\n\nbar/\n");
+        assert_eq!(body, "foo/\n\n# ductus-managed\n.claude/\n\nbar/\n");
     }
 
     #[test]
@@ -978,7 +978,7 @@ mod tests {
         // `#`, so dedup leaves it alone.
         fs::write(
             &path,
-            "# .claude/ (a note)\nnode_modules/\n\n# govern-managed\n.claude/\n",
+            "# .claude/ (a note)\nnode_modules/\n\n# ductus-managed\n.claude/\n",
         )
         .unwrap();
         let block = ".claude/";
@@ -994,7 +994,7 @@ mod tests {
     fn line_prefix_preserves_adopter_blank_lines() {
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join(".gitignore");
-        fs::write(&path, "foo/\n\n\nbar/\n\n# govern-managed\n.claude/\n").unwrap();
+        fs::write(&path, "foo/\n\n\nbar/\n\n# ductus-managed\n.claude/\n").unwrap();
         let block = ".claude/";
         let result = run(&args(&path, block, Some("line-prefix")), tmp.path()).unwrap();
         assert_eq!(result.action, "unchanged");
@@ -1005,7 +1005,7 @@ mod tests {
     fn line_prefix_unchanged_when_no_duplicates_and_block_matches() {
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join(".gitignore");
-        let original = "node_modules/\nother/\n\n# govern-managed\n.claude/\nspecs/.cache/\n";
+        let original = "node_modules/\nother/\n\n# ductus-managed\n.claude/\nspecs/.cache/\n";
         fs::write(&path, original).unwrap();
         let mtime_before = fs::metadata(&path).unwrap().modified().unwrap();
         let block = ".claude/\nspecs/.cache/";
@@ -1026,7 +1026,7 @@ mod tests {
         // Both are preserved if both are present outside the marker.
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join(".gitignore");
-        fs::write(&path, ".claude/*\nother/\n\n# govern-managed\n.claude/\n").unwrap();
+        fs::write(&path, ".claude/*\nother/\n\n# ductus-managed\n.claude/\n").unwrap();
         let block = ".claude/";
         let result = run(&args(&path, block, Some("line-prefix")), tmp.path()).unwrap();
         assert_eq!(result.action, "unchanged");
@@ -1051,7 +1051,7 @@ mod tests {
         let body = fs::read_to_string(&path).unwrap();
         assert_eq!(
             body,
-            "node_modules/\n\n# govern-managed\n.claude/\nspecs/.cache/\n"
+            "node_modules/\n\n# ductus-managed\n.claude/\nspecs/.cache/\n"
         );
     }
 
@@ -1071,7 +1071,7 @@ mod tests {
     #[test]
     fn line_prefix_preserves_multi_subsection_block_with_interior_blank_lines() {
         // Regression: the canonical block may contain blank-line-separated
-        // subsections (the .gitignore template shipped by /govern is shaped
+        // subsections (the .gitignore template shipped by /ductus is shaped
         // this way). The dedup pass must not treat lines past the first
         // interior blank line as adopter territory — they're still inside
         // the managed region and must be preserved.
@@ -1151,7 +1151,7 @@ Thumbs.db";
 # OS
 .DS_Store
 Thumbs.db";
-        let on_disk = format!("node_modules/\n\n# govern-managed\n{canonical}\n");
+        let on_disk = format!("node_modules/\n\n# ductus-managed\n{canonical}\n");
         fs::write(&path, &on_disk).unwrap();
         let mtime_before = fs::metadata(&path).unwrap().modified().unwrap();
 
@@ -1211,7 +1211,7 @@ Thumbs.db";
 # OS
 .DS_Store
 Thumbs.db";
-        let on_disk = format!("node_modules/\n\n# govern-managed\n{old_canonical}\n\nuser-tail/\n");
+        let on_disk = format!("node_modules/\n\n# ductus-managed\n{old_canonical}\n\nuser-tail/\n");
         fs::write(&path, &on_disk).unwrap();
 
         let result = run(&args(&path, new_canonical, Some("line-prefix")), tmp.path()).unwrap();
@@ -1219,7 +1219,7 @@ Thumbs.db";
 
         let body = fs::read_to_string(&path).unwrap();
         let expected =
-            format!("node_modules/\n\n# govern-managed\n{new_canonical}\n\nuser-tail/\n");
+            format!("node_modules/\n\n# ductus-managed\n{new_canonical}\n\nuser-tail/\n");
         assert_eq!(
             body, expected,
             "multi-subsection update must replace cleanly with no orphan tail"
@@ -1291,14 +1291,14 @@ Thumbs.db";
 # OS
 .DS_Store
 Thumbs.db";
-        let on_disk = format!("# govern-managed\n{old_canonical}\n\n# Rust\n/target\n");
+        let on_disk = format!("# ductus-managed\n{old_canonical}\n\n# Rust\n/target\n");
         fs::write(&path, &on_disk).unwrap();
 
         let result = run(&args(&path, new_canonical, Some("line-prefix")), tmp.path()).unwrap();
         assert_eq!(result.action, "updated");
 
         let body = fs::read_to_string(&path).unwrap();
-        let expected = format!("# govern-managed\n{new_canonical}\n\n# Rust\n/target\n");
+        let expected = format!("# ductus-managed\n{new_canonical}\n\n# Rust\n/target\n");
         assert_eq!(
             body, expected,
             "inserted subsection must replace cleanly with no orphan tail"
@@ -1349,14 +1349,14 @@ Thumbs.db";
 # OS
 .DS_Store
 Thumbs.db";
-        let on_disk = format!("# govern-managed\n{old_canonical}\n\n# Rust\n/target\n");
+        let on_disk = format!("# ductus-managed\n{old_canonical}\n\n# Rust\n/target\n");
         fs::write(&path, &on_disk).unwrap();
 
         let result = run(&args(&path, new_canonical, Some("line-prefix")), tmp.path()).unwrap();
         assert_eq!(result.action, "updated");
 
         let body = fs::read_to_string(&path).unwrap();
-        let expected = format!("# govern-managed\n{new_canonical}\n\n# Rust\n/target\n");
+        let expected = format!("# ductus-managed\n{new_canonical}\n\n# Rust\n/target\n");
         assert_eq!(
             body, expected,
             "appended canonical group must insert; adopter tail must survive"
@@ -1395,7 +1395,7 @@ Thumbs.db
 # Node
 node_modules/";
         let on_disk =
-            format!("# govern-managed\n{old_canonical}\n\n# Rust\n/target\n\n# Go\n/bin\n");
+            format!("# ductus-managed\n{old_canonical}\n\n# Rust\n/target\n\n# Go\n/bin\n");
         fs::write(&path, &on_disk).unwrap();
 
         let result = run(&args(&path, new_canonical, Some("line-prefix")), tmp.path()).unwrap();
@@ -1403,7 +1403,7 @@ node_modules/";
 
         let body = fs::read_to_string(&path).unwrap();
         let expected =
-            format!("# govern-managed\n{new_canonical}\n\n# Rust\n/target\n\n# Go\n/bin\n");
+            format!("# ductus-managed\n{new_canonical}\n\n# Rust\n/target\n\n# Go\n/bin\n");
         assert_eq!(
             body, expected,
             "all appended groups must insert; every adopter tail section must survive"
@@ -1441,14 +1441,14 @@ node_modules/";
 # OS
 .DS_Store
 Thumbs.db";
-        let on_disk = format!("# govern-managed\n{old_canonical}\n\n# OS\n*.swp\n");
+        let on_disk = format!("# ductus-managed\n{old_canonical}\n\n# OS\n*.swp\n");
         fs::write(&path, &on_disk).unwrap();
 
         let result = run(&args(&path, new_canonical, Some("line-prefix")), tmp.path()).unwrap();
         assert_eq!(result.action, "updated");
 
         let body = fs::read_to_string(&path).unwrap();
-        let expected = format!("# govern-managed\n{new_canonical}\n\n# OS\n*.swp\n");
+        let expected = format!("# ductus-managed\n{new_canonical}\n\n# OS\n*.swp\n");
         assert_eq!(
             body, expected,
             "canonical group inserts inside the block; adopter's colliding-heading copy survives"
@@ -1474,13 +1474,13 @@ Thumbs.db";
 # Environment and secrets
 .env
 
-# govern session state — per-user, ephemeral; managed by /project:target.
+# ductus session state — per-user, ephemeral; managed by /project:target.
 # (nothing tracked here yet)
 
 # OS
 .DS_Store
 Thumbs.db";
-        let on_disk = format!("# govern-managed\n{canonical}\n\n# Rust\n/target\n");
+        let on_disk = format!("# ductus-managed\n{canonical}\n\n# Rust\n/target\n");
         fs::write(&path, &on_disk).unwrap();
         let mtime_before = fs::metadata(&path).unwrap().modified().unwrap();
 
@@ -1502,7 +1502,7 @@ Thumbs.db";
         // (canonical block is itself the trusted region).
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join(".gitignore");
-        fs::write(&path, "foo/\n\n# govern-managed\n.claude/\nspecs/.cache/\n").unwrap();
+        fs::write(&path, "foo/\n\n# ductus-managed\n.claude/\nspecs/.cache/\n").unwrap();
         let block = ".claude/\nspecs/.cache/";
         let result = run(&args(&path, block, Some("line-prefix")), tmp.path()).unwrap();
         assert_eq!(result.action, "unchanged");
@@ -1515,8 +1515,8 @@ Thumbs.db";
     fn config_write_with_legacy_present_stays_on_legacy_file() {
         // The bootstrap's host-block write composed with the active-file
         // resolver: with a populated legacy `.govern.toml` and no
-        // `.govern/config.toml`, the write lands on the legacy file and no
-        // partial `.govern/` file is created — the `/govern` migration is the
+        // `.ductus/config.toml`, the write lands on the legacy file and no
+        // partial `.ductus/` file is created — the `/ductus` migration is the
         // sole cutover (spec 042 §Transition and fallback).
         let tmp = tempfile::tempdir().unwrap();
         fs::write(
@@ -1536,8 +1536,8 @@ Thumbs.db";
         let result = run(
             &MergeManagedBlockArgs {
                 path: rel,
-                block: "[host]\nproject = \"gov\"".into(),
-                marker: Some("govern (host)".into()),
+                block: "[host]\nproject = \"ductus\"".into(),
+                marker: Some("ductus (host)".into()),
                 marker_style: Some("line-prefix".into()),
             },
             tmp.path(),
@@ -1547,10 +1547,10 @@ Thumbs.db";
 
         let body = fs::read_to_string(tmp.path().join(".govern.toml")).unwrap();
         assert!(body.contains("[pinned]"), "legacy sections preserved");
-        assert!(body.contains("project = \"gov\""));
+        assert!(body.contains("project = \"ductus\""));
         assert!(
-            !tmp.path().join(".govern").exists(),
-            "no partial .govern/ file created while the legacy config lingers"
+            !tmp.path().join(".ductus").exists(),
+            "no partial .ductus/ file created while the legacy config lingers"
         );
     }
 }

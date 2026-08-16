@@ -3,7 +3,7 @@
 //! Walks a typed manifest of `{ source, dest, strategy, keep-literals }`
 //! entries, applies the entry's strategy against the destination tree,
 //! and returns per-entry actions plus aggregate counts. Designed for
-//! the `/govern` bootstrap, where the same primitive call replaces a
+//! the `/ductus` bootstrap, where the same primitive call replaces a
 //! host-generated bash walker and three distinct write strategies.
 //!
 //! Strategies:
@@ -28,7 +28,7 @@
 //!   absolute "do not touch" signal.
 //! - **`keep-literals`**: per-entry list of substitution keys to
 //!   exclude. Used to keep `{project}` and `{cli-config-dir}` literal
-//!   in a self-installed `govern.md` so the next adopter's bootstrap
+//!   in a self-installed `ductus.md` so the next adopter's bootstrap
 //!   substitutes them per their project, not this one's.
 //! - **Source missing**: when the staging tree doesn't contain an
 //!   entry's source, the action is `source-missing` (not an
@@ -238,7 +238,7 @@ fn apply_skip_if_conflict(source: &Path, dest: &Path, dest_exists: bool) -> Resu
 /// new tempfile (mode `0600` on Unix), which strips the source's
 /// executable bit. That is fatal for the generator scripts shipped via
 /// the Shared Files manifest (`scripts/gen-*.sh`, `update` strategy): the
-/// `govern-pre-commit` hook must be able to exec them, and on a fresh
+/// `ductus-pre-commit` hook must be able to exec them, and on a fresh
 /// adopter the `created` action would otherwise emit a non-executable
 /// generator. Copying the source's `Permissions` (the readonly flag on
 /// Windows, the full mode on Unix) restores `cp -p`-style fidelity.
@@ -663,16 +663,16 @@ mod tests {
 
     #[test]
     fn keep_literals_preserves_named_placeholders_for_that_entry_only() {
-        // Mirrors the bootstrap's `govern.md` self-install: the framework
+        // Mirrors the bootstrap's `ductus.md` self-install: the framework
         // installs the file with `{project}` and `{cli-config-dir}` kept
-        // literal so the NEXT adopter's `/govern` substitutes them per
+        // literal so the NEXT adopter's `/ductus` substitutes them per
         // that adopter — not per this one.
         let tmp = tempfile::tempdir().unwrap();
         let src = write_source(
             tmp.path(),
             &[
                 (
-                    "govern.md",
+                    "ductus.md",
                     "Project {project} writes to {cli-config-dir}/{project}-session.json (version {version}).\n",
                 ),
                 ("README.md", "{project} {version}\n"),
@@ -685,8 +685,8 @@ mod tests {
             &dst,
             vec![
                 ManifestEntry {
-                    source: "govern.md".into(),
-                    dest: "govern.md".into(),
+                    source: "ductus.md".into(),
+                    dest: "ductus.md".into(),
                     strategy: "update".into(),
                     keep_literals: Some(vec!["project".into(), "cli-config-dir".into()]),
                 },
@@ -702,9 +702,9 @@ mod tests {
         let result = run(&args, tmp.path()).unwrap();
 
         assert_eq!(result.created, 2);
-        // govern.md keeps {project} and {cli-config-dir} literal but
+        // ductus.md keeps {project} and {cli-config-dir} literal but
         // still substitutes {version}.
-        let installed = fs::read_to_string(dst.join("govern.md")).unwrap();
+        let installed = fs::read_to_string(dst.join("ductus.md")).unwrap();
         assert!(
             installed.contains("{project}") && installed.contains("{cli-config-dir}"),
             "keep-literals must preserve named placeholders: got {installed:?}"
@@ -914,7 +914,7 @@ mod tests {
         // Regression: `write_atomic_bytes` lands every write as mode 0600,
         // stripping +x. The Shared Files manifest ships `scripts/gen-*.sh`
         // with `update` strategy; the dest must stay executable so the
-        // govern-pre-commit hook can run it.
+        // ductus-pre-commit hook can run it.
         use std::os::unix::fs::PermissionsExt;
 
         let tmp = tempfile::tempdir().unwrap();

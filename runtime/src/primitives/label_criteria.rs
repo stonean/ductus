@@ -12,7 +12,7 @@
 //! label to a different requirement. The counter never decreases, so it
 //! cannot.
 //!
-//! [013]: <https://github.com/stonean/govern/blob/main/specs/013-text-first-artifacts/scenarios/criterion-identifiers.md>
+//! [013]: <https://github.com/stonean/ductus/blob/main/specs/013-text-first-artifacts/scenarios/criterion-identifiers.md>
 
 use std::path::Path;
 
@@ -428,7 +428,7 @@ mod tests {
     fn an_empty_criterion_gains_no_trailing_space() {
         // `- [ ]` with no text is a shape the shared checkbox parser accepts.
         // Labelling it as `- [ ] AC1: ` would leave a trailing space, which
-        // MD009 flags — and `/gov:specify` lints the file one step later.
+        // MD009 flags — and `/ductus:specify` lints the file one step later.
         let tmp = tempdir().unwrap();
         write_spec(
             tmp.path(),

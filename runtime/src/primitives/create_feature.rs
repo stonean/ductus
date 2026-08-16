@@ -1,7 +1,7 @@
 //! `create-feature` — scaffold the next `{specs-root}/{NNN-slug}/`
 //! feature directory with a spec-template copy.
 //!
-//! The deterministic scaffold step of `/gov:specify` (spec 022, scenario
+//! The deterministic scaffold step of `/ductus:specify` (spec 022, scenario
 //! scaffolding-primitives): compute the next feature number, derive the
 //! kebab-case slug from the title, create the directory, and copy the
 //! spec template into it — atomic and mode-preserving. The LLM fills the

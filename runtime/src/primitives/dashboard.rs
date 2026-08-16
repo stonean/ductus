@@ -72,7 +72,7 @@ pub fn run(_args: &DashboardArgs, repo: &Path) -> Result<DashboardResult> {
 // ---------------------------------------------------------------------------
 // Rendered pipeline view (spec 022, scenario coverage-expansion-primitives)
 //
-// `/gov:status` previously spent five of its six steps on LLM-side
+// `/ductus:status` previously spent five of its six steps on LLM-side
 // rendering of this payload. The runtime pre-renders the same four pieces
 // — preamble, dashboard table, counts/callouts, references readout — as
 // one markdown fragment the host may restyle. Returned data, never stdout
@@ -184,7 +184,7 @@ fn render_table(
 /// Counts per status plus the conditional callouts (blocked, recovery,
 /// tags, disabled rule files), one line each. `config_name` is the
 /// repo-relative resolved config file, rendered in the disabled-rule-files
-/// provenance tag (spec 042: `.govern/config.toml`, or the legacy root
+/// provenance tag (spec 042: `.ductus/config.toml`, or the legacy root
 /// `.govern.toml` pre-migration).
 fn render_callouts(
     specs: &[DashboardSpec],
@@ -535,7 +535,7 @@ fn compute_tags_union(specs: &[DashboardSpec]) -> Vec<String> {
 /// `[[review.disabled-rule-files]]` entries' `file` basenames. Unknown
 /// keys are accepted; the primitive only reports what it knows.
 #[derive(Deserialize, Default)]
-struct GovernConfig {
+struct DuctusConfig {
     #[serde(default)]
     review: Option<ReviewConfig>,
 }
@@ -567,7 +567,7 @@ fn load_config(repo: &Path) -> Result<(DashboardConfig, &'static str)> {
         ));
     }
     let content = read_text(&toml_path)?;
-    let parsed: GovernConfig = toml::from_str(&content).map_err(|source| PrimitiveError::Toml {
+    let parsed: DuctusConfig = toml::from_str(&content).map_err(|source| PrimitiveError::Toml {
         path: toml_path.clone(),
         source,
     })?;
@@ -592,11 +592,11 @@ fn load_config(repo: &Path) -> Result<(DashboardConfig, &'static str)> {
 /// callers don't need a second tool call. TOML keys are kebab-case
 /// (`scenario-path`, `set-at`); the legacy JSON keys (`scenarioPath`,
 /// `setAt`) are not accepted — adopters with the legacy `.claude/*-session.json`
-/// file complete the migration via the `/govern` bootstrap pass.
+/// file complete the migration via the `/ductus` bootstrap pass.
 #[derive(Deserialize)]
 struct SessionFile {
     // Optional: a session file may exist carrying only the per-contributor
-    // `cli-config-dir` (written by `/govern` before any target is selected).
+    // `cli-config-dir` (written by `/ductus` before any target is selected).
     // No `feature` means no target to surface.
     #[serde(default)]
     feature: Option<String>,
@@ -622,7 +622,7 @@ fn load_session_target(repo: &Path) -> Result<Option<DashboardSessionTarget>> {
         source,
     })?;
     // A session file with no `feature` (e.g. only `cli-config-dir` recorded by
-    // `/govern` before a target is selected) carries no target to surface.
+    // `/ductus` before a target is selected) carries no target to surface.
     let Some(feature) = session.feature else {
         return Ok(None);
     };
@@ -641,7 +641,7 @@ fn load_session_target(repo: &Path) -> Result<Option<DashboardSessionTarget>> {
 /// `Ok(None)` when the file doesn't exist OR exists with missing/
 /// malformed frontmatter — a parse failure degrades to a detail-less
 /// target exactly like the stale-path case, so one bad scenario cannot
-/// brick the whole `/gov:status` render (scenario
+/// brick the whole `/ductus:status` render (scenario
 /// primitive-robustness-hardening). The corrective surface for both is
 /// the same: re-target or fix the scenario file.
 fn load_scenario_detail(repo: &Path, rel_path: &str) -> Result<Option<DashboardScenarioDetail>> {
@@ -702,7 +702,7 @@ mod tests {
     }
 
     /// Write a legacy root session TOML at `<repo>/.govern.session.toml` —
-    /// the fallback path the resolver reads when `.govern/session.toml`
+    /// the fallback path the resolver reads when `.ductus/session.toml`
     /// is absent, so these tests double as legacy-fallback coverage.
     fn write_session_toml(repo: &Path, body: &str) {
         std::fs::write(repo.join(".govern.session.toml"), body).unwrap();
@@ -851,7 +851,7 @@ mod tests {
     }
 
     #[test]
-    fn govern_toml_absent_returns_present_false() {
+    fn ductus_toml_absent_returns_present_false() {
         let tmp = TempDir::new().unwrap();
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
         assert!(!result.config.present);
@@ -859,7 +859,7 @@ mod tests {
     }
 
     #[test]
-    fn govern_toml_present_but_empty_returns_present_true() {
+    fn ductus_toml_present_but_empty_returns_present_true() {
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join(".govern.toml"), "# empty\n").unwrap();
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
@@ -868,7 +868,7 @@ mod tests {
     }
 
     #[test]
-    fn govern_toml_disabled_rule_files_extracted() {
+    fn ductus_toml_disabled_rule_files_extracted() {
         let tmp = TempDir::new().unwrap();
         let toml = r#"
 [[review.disabled-rule-files]]
@@ -889,7 +889,7 @@ reason = "Deferred until v2 perf budget lands."
     }
 
     #[test]
-    fn govern_toml_parse_failure_is_operational_error() {
+    fn ductus_toml_parse_failure_is_operational_error() {
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join(".govern.toml"), "[[review.broken\n").unwrap();
         let err = run(&DashboardArgs::default(), tmp.path()).unwrap_err();
@@ -923,7 +923,7 @@ reason = "Deferred until v2 perf budget lands."
         // `.govern.session.toml` at the repo root. The path doesn't depend
         // on project name (`gov` vs `anvil`) or AI CLI (`.claude/` vs
         // `.augment/`). The legacy `.claude/{project}-session.json` files
-        // are not consulted — adopters migrate via /govern.
+        // are not consulted — adopters migrate via /ductus.
         let tmp = TempDir::new().unwrap();
         write_session_toml(
             tmp.path(),
@@ -938,11 +938,11 @@ reason = "Deferred until v2 perf budget lands."
 
     #[test]
     fn legacy_json_session_file_is_ignored() {
-        // An adopter who hasn't yet run /govern post-consolidation may
+        // An adopter who hasn't yet run /ductus post-consolidation may
         // still have `.claude/gov-session.json` on disk. The dashboard
         // does not read it — only `.govern.session.toml`. Adopters in
-        // this state see "no target" until they re-/gov:target or
-        // /govern migrates them.
+        // this state see "no target" until they re-/ductus:target or
+        // /ductus migrates them.
         let tmp = TempDir::new().unwrap();
         std::fs::create_dir_all(tmp.path().join(".claude")).unwrap();
         std::fs::write(
@@ -1043,7 +1043,7 @@ reason = "Deferred until v2 perf budget lands."
         // whose frontmatter fails YAML parse must degrade exactly like
         // the missing-file case — target surfaced, no detail — instead
         // of erroring the whole dashboard (one bad scenario bricking
-        // /gov:status).
+        // /ductus:status).
         let tmp = TempDir::new().unwrap();
         write_spec(
             tmp.path(),
@@ -1106,7 +1106,7 @@ reason = "Deferred until v2 perf budget lands."
     fn pin_project(repo: &Path, extra: &str) {
         std::fs::write(
             repo.join(".govern.toml"),
-            format!("[host]\nproject = \"gov\"\n{extra}"),
+            format!("[host]\nproject = \"ductus\"\n{extra}"),
         )
         .unwrap();
     }
@@ -1124,7 +1124,7 @@ reason = "Deferred until v2 perf budget lands."
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
         let rendered = &result.rendered_markdown;
         assert!(
-            rendered.starts_with("No session target. Run /gov:target to select one."),
+            rendered.starts_with("No session target. Run /ductus:target to select one."),
             "{rendered}"
         );
         assert!(
@@ -1134,7 +1134,7 @@ reason = "Deferred until v2 perf budget lands."
             "{rendered}"
         );
         assert!(
-            rendered.contains("| 001-alpha | draft | — | — | — | 0 | — | /gov:clarify |"),
+            rendered.contains("| 001-alpha | draft | — | — | — | 0 | — | /ductus:clarify |"),
             "{rendered}"
         );
         assert!(rendered.contains("Counts: draft 1"), "{rendered}");
@@ -1194,7 +1194,7 @@ reason = "Deferred until v2 perf budget lands."
         );
         assert!(
             rendered.contains(
-                "1 spec(s) in recovery state: 002-beta. Run /gov:clarify on each to walk the questions; the spec reverts to draft and advances forward again."
+                "1 spec(s) in recovery state: 002-beta. Run /ductus:clarify on each to walk the questions; the spec reverts to draft and advances forward again."
             ),
             "{rendered}"
         );
@@ -1207,14 +1207,14 @@ reason = "Deferred until v2 perf budget lands."
 
     #[test]
     fn rendered_config_callout_names_new_layout_config() {
-        // Same callout, config under `.govern/config.toml` — the
+        // Same callout, config under `.ductus/config.toml` — the
         // provenance tag names the resolved file, not a legacy literal.
         let tmp = TempDir::new().unwrap();
-        let cfg_dir = tmp.path().join(".govern");
+        let cfg_dir = tmp.path().join(".ductus");
         std::fs::create_dir_all(&cfg_dir).unwrap();
         std::fs::write(
             cfg_dir.join("config.toml"),
-            "[host]\nproject = \"gov\"\n\n[[review.disabled-rule-files]]\nfile = \"security-backend.md\"\nreason = \"n/a\"\n",
+            "[host]\nproject = \"ductus\"\n\n[[review.disabled-rule-files]]\nfile = \"security-backend.md\"\nreason = \"n/a\"\n",
         )
         .unwrap();
         write_spec(
@@ -1227,7 +1227,7 @@ reason = "Deferred until v2 perf budget lands."
         assert!(
             result
                 .rendered_markdown
-                .contains("disabled rule files: 1 (.govern/config.toml) — security-backend.md"),
+                .contains("disabled rule files: 1 (.ductus/config.toml) — security-backend.md"),
             "{}",
             result.rendered_markdown
         );
@@ -1258,7 +1258,7 @@ reason = "Deferred until v2 perf budget lands."
         let rendered = &result.rendered_markdown;
         assert!(
             rendered.starts_with(
-                "Target: 022-foo / done / next: /gov:clarify (scenario-targeted)\nScenario: edge (Core) — open-questions: 1"
+                "Target: 022-foo / done / next: /ductus:clarify (scenario-targeted)\nScenario: edge (Core) — open-questions: 1"
             ),
             "scenario with open questions owns the next action: {rendered}"
         );
@@ -1269,7 +1269,7 @@ reason = "Deferred until v2 perf budget lands."
         let tmp = TempDir::new().unwrap();
         std::fs::write(
             tmp.path().join(".govern.toml"),
-            "[host]\nproject = \"gov\"\n\n[services.api]\nrepo = \"https://github.com/acme/api\"\npath = \"checkouts/api\"\ndescription = \"Main API service\"\n",
+            "[host]\nproject = \"ductus\"\n\n[services.api]\nrepo = \"https://github.com/acme/api\"\npath = \"checkouts/api\"\ndescription = \"Main API service\"\n",
         )
         .unwrap();
         // Linked checkout with one resolvable spec.
@@ -1296,13 +1296,13 @@ reason = "Deferred until v2 perf budget lands."
         );
         assert!(
             rendered.contains(
-                "- 007-nav — status not attempted (unregistered; run /gov:link to register the service)"
+                "- 007-nav — status not attempted (unregistered; run /ductus:link to register the service)"
             ),
             "{rendered}"
         );
         assert!(
             rendered.contains(
-                "- api/999-gone → broken reference (target spec missing; also reported by /gov:analyze) — Main API service"
+                "- api/999-gone → broken reference (target spec missing; also reported by /ductus:analyze) — Main API service"
             ),
             "{rendered}"
         );
@@ -1406,7 +1406,7 @@ reason = "Deferred until v2 perf budget lands."
         // tempdir's random basename.
         std::fs::write(
             tmp.path().join(".govern.toml"),
-            "[host]\nproject = \"gov\"\n",
+            "[host]\nproject = \"ductus\"\n",
         )
         .unwrap();
         let rendered = run(&DashboardArgs {}, tmp.path())
@@ -1416,7 +1416,7 @@ reason = "Deferred until v2 perf budget lands."
             rendered.contains("| 001-quiet | planned | — | — | — | 0 |"),
             "{rendered}"
         );
-        assert!(rendered.contains("/gov:implement"), "{rendered}");
+        assert!(rendered.contains("/ductus:implement"), "{rendered}");
         assert!(
             !rendered.contains("unresolved scenario question(s)"),
             "no callout when nothing is outstanding: {rendered}"

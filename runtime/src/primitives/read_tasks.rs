@@ -13,7 +13,7 @@
 //!   `### N.` heading anywhere in the file signals phased structure,
 //!   even when mixed with `## N.` flat headings.
 //!
-//! [runtime-primitive-structural-bugs]: <https://github.com/stonean/govern/blob/main/specs/022-deterministic-runtime/scenarios/runtime-primitive-structural-bugs.md>
+//! [runtime-primitive-structural-bugs]: <https://github.com/stonean/ductus/blob/main/specs/022-deterministic-runtime/scenarios/runtime-primitive-structural-bugs.md>
 
 use std::path::Path;
 

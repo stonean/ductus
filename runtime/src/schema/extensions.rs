@@ -320,7 +320,7 @@ pub struct RouteInboxItemRequest {
 pub enum InboxRoute {
     /// Cross-cutting concern: promote to (or amend) a rule file.
     Rule,
-    /// No covering spec exists: direct the user to `/gov:specify`.
+    /// No covering spec exists: direct the user to `/ductus:specify`.
     Spec,
     /// Durable behavioral requirement under an existing spec: create a
     /// scenario (plus task append and possible done → in-progress reopen).
@@ -363,7 +363,7 @@ pub struct VerifyCriterion {
 }
 
 /// Request payload for `verifyCriteria` (implement-completion-gate
-/// scenario): `/gov:implement`'s completion gate sends one request
+/// scenario): `/ductus:implement`'s completion gate sends one request
 /// carrying every acceptance criterion; the LLM judges each criterion
 /// against the implementation — the verification stays semantic.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

@@ -1,7 +1,7 @@
 //! `resolve-feature` — resolve a user-supplied identifier to a feature
 //! directory under the configured spec root.
 //!
-//! The deterministic core of `/gov:target`'s specs-dir scan (spec 022,
+//! The deterministic core of `/ductus:target`'s specs-dir scan (spec 022,
 //! scenario scaffolding-primitives): every session's first command starts
 //! by turning an identifier — exact directory name, feature number, or
 //! partial slug — into a feature directory. Structured like

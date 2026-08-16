@@ -13,7 +13,7 @@ review:
 
 # 007 — Review Fixture
 
-A minimal fixture for the `/gov:review` exec parity test. Drives the
+A minimal fixture for the `/ductus:review` exec parity test. Drives the
 `compute-review-scope → discover-rule-files → performReview ×5 →
 process-waivers → write-review` pipeline against a single-commit repo.
 

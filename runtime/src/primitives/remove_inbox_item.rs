@@ -1,7 +1,7 @@
 //! `remove-inbox-item` — remove one bullet from `{specs-root}/inbox.md`.
 //!
 //! The complement of `append-inbox` and the deterministic surface behind
-//! `/gov:groom`'s per-item inbox removal (step 8), which previously edited
+//! `/ductus:groom`'s per-item inbox removal (step 8), which previously edited
 //! the file by hand. The first bullet whose text (via the shared
 //! [`bullet_text`] grammar) equals the given `item`, trimmed, is removed;
 //! a no-match — or a missing inbox file — is a clean domain outcome

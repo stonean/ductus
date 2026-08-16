@@ -1,6 +1,6 @@
 //! `migrate-session-file` — translate a pre-0.10.0 legacy session file
 //! (`.claude/{project}-session.json`, host- and project-name-specific) into
-//! the consolidated repo-root `.govern/session.toml`, then delete the
+//! the consolidated repo-root `.ductus/session.toml`, then delete the
 //! legacy file.
 //!
 //! The translation:
@@ -13,7 +13,7 @@
 //!
 //! Backs `framework/migrations/session-file-consolidate.md` on the
 //! runtime path. The markdown-only fallback in the migration body
-//! describes the same translation by hand for adopters without `gvrn`
+//! describes the same translation by hand for adopters without `ductus`
 //! on `PATH`.
 
 #![allow(clippy::expect_used)]
@@ -52,7 +52,7 @@ pub fn run(args: &MigrateSessionFileArgs, repo: &Path) -> Result<MigrateSessionF
         });
     }
 
-    // If `.govern/session.toml` is already present, the adopter has
+    // If `.ductus/session.toml` is already present, the adopter has
     // already targeted post-consolidation — preserve the new file, but
     // still delete the legacy one (it's superseded and would otherwise
     // confuse future readers).
@@ -184,19 +184,19 @@ mod tests {
     #[test]
     fn no_legacy_file_is_idempotent_noop() {
         let tmp = tempdir().unwrap();
-        fs::create_dir_all(tmp.path().join(".govern")).unwrap();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
         let result = run(&args(".claude/gov-session.json"), tmp.path()).unwrap();
         assert_eq!(result.action, "no-legacy");
-        assert_eq!(result.dest, ".govern/session.toml");
+        assert_eq!(result.dest, ".ductus/session.toml");
         assert!(!result.legacy_deleted);
         // No files materialize.
-        assert!(!tmp.path().join(".govern/session.toml").exists());
+        assert!(!tmp.path().join(".ductus/session.toml").exists());
     }
 
     #[test]
     fn translates_session_file_with_kebab_renames() {
         let tmp = tempdir().unwrap();
-        fs::create_dir_all(tmp.path().join(".govern")).unwrap();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
         write_legacy(
             tmp.path(),
             ".claude/gov-session.json",
@@ -218,7 +218,7 @@ mod tests {
         assert!(!tmp.path().join(".claude/gov-session.json").exists());
 
         // New file present, kebab-case keys.
-        let body = fs::read_to_string(tmp.path().join(".govern/session.toml")).unwrap();
+        let body = fs::read_to_string(tmp.path().join(".ductus/session.toml")).unwrap();
         assert!(
             body.contains("feature = \"022-deterministic-runtime\""),
             "{body}"
@@ -246,10 +246,10 @@ mod tests {
     #[test]
     fn preserves_existing_target_toml_and_deletes_legacy() {
         let tmp = tempdir().unwrap();
-        fs::create_dir_all(tmp.path().join(".govern")).unwrap();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
         // Adopter already targeted post-consolidation:
         fs::write(
-            tmp.path().join(".govern/session.toml"),
+            tmp.path().join(".ductus/session.toml"),
             "feature = \"new\"\npath = \"specs/new\"\nset-at = \"2026-05-24T00:00:00Z\"\n",
         )
         .unwrap();
@@ -266,7 +266,7 @@ mod tests {
 
         // Legacy gone, new file untouched.
         assert!(!tmp.path().join(".claude/gov-session.json").exists());
-        let body = fs::read_to_string(tmp.path().join(".govern/session.toml")).unwrap();
+        let body = fs::read_to_string(tmp.path().join(".ductus/session.toml")).unwrap();
         assert!(body.contains("feature = \"new\""));
         assert!(!body.contains("old"));
     }
@@ -278,7 +278,7 @@ mod tests {
         // extra keys beyond the session-target schema. The migration
         // preserves them under the same name.
         let tmp = tempdir().unwrap();
-        fs::create_dir_all(tmp.path().join(".govern")).unwrap();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
         write_legacy(
             tmp.path(),
             ".claude/gov-session.json",
@@ -294,7 +294,7 @@ mod tests {
         );
         run(&args(".claude/gov-session.json"), tmp.path()).unwrap();
 
-        let body = fs::read_to_string(tmp.path().join(".govern/session.toml")).unwrap();
+        let body = fs::read_to_string(tmp.path().join(".ductus/session.toml")).unwrap();
         // Renames applied to known keys, non-standard keys preserved.
         assert!(body.contains("set-at = \"2026-05-23T12:34:56Z\""), "{body}");
         assert!(
@@ -310,7 +310,7 @@ mod tests {
     #[test]
     fn rejects_legacy_path_with_parent_component() {
         let tmp = tempdir().unwrap();
-        fs::create_dir_all(tmp.path().join(".govern")).unwrap();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
         let err = run(&args("../escape.json"), tmp.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::InvalidPath { .. }));
     }
@@ -318,7 +318,7 @@ mod tests {
     #[test]
     fn rejects_absolute_legacy_path() {
         let tmp = tempdir().unwrap();
-        fs::create_dir_all(tmp.path().join(".govern")).unwrap();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
         let err = run(&args("/etc/passwd"), tmp.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::InvalidPath { .. }));
     }
@@ -326,19 +326,19 @@ mod tests {
     #[test]
     fn rejects_malformed_json() {
         let tmp = tempdir().unwrap();
-        fs::create_dir_all(tmp.path().join(".govern")).unwrap();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
         write_legacy(tmp.path(), ".claude/gov-session.json", "{not valid json");
         let err = run(&args(".claude/gov-session.json"), tmp.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::Json { .. }));
         // Legacy file unchanged on parse failure (atomic-write contract).
         assert!(tmp.path().join(".claude/gov-session.json").exists());
-        assert!(!tmp.path().join(".govern/session.toml").exists());
+        assert!(!tmp.path().join(".ductus/session.toml").exists());
     }
 
     #[test]
     fn rejects_non_object_top_level() {
         let tmp = tempdir().unwrap();
-        fs::create_dir_all(tmp.path().join(".govern")).unwrap();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
         write_legacy(tmp.path(), ".claude/gov-session.json", "[1, 2, 3]");
         let err = run(&args(".claude/gov-session.json"), tmp.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::JsonSchema { .. }));
@@ -350,6 +350,6 @@ mod tests {
         // writes — they MUST agree on the path. If `SESSION_FILE` is
         // ever renamed, this assertion fails at compile/test time and
         // forces the migration body to be updated in lockstep.
-        assert_eq!(SESSION_FILE, ".govern/session.toml");
+        assert_eq!(SESSION_FILE, ".ductus/session.toml");
     }
 }

@@ -1,4 +1,4 @@
-//! `process-waivers` — deterministic per-run waiver processing for `/gov:review`.
+//! `process-waivers` — deterministic per-run waiver processing for `/ductus:review`.
 //!
 //! Reads `review.waivers` from a spec's frontmatter and classifies each entry
 //! against the currently-firing `(rule, file)` findings:

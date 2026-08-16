@@ -16,9 +16,9 @@ review:
 
 # 001 — Basic Status Fixture
 
-A minimal fixture used by the `/gov:status` parity test. Status
+A minimal fixture used by the `/ductus:status` parity test. Status
 `clarified` with no dependencies — the dashboard reports it as unblocked
-and renders its next action as `/gov:plan`.
+and renders its next action as `/ductus:plan`.
 
 ## Motivation
 

@@ -1,4 +1,4 @@
-//! Integration coverage for the `/gov:review` command procedure.
+//! Integration coverage for the `/ductus:review` command procedure.
 //!
 //! Parses the shipped `framework/commands/review.md` and asserts it walks the
 //! review-runtime-acceleration procedure end-to-end: `compute-review-scope` →
@@ -15,8 +15,8 @@
 
 use std::path::PathBuf;
 
-use gvrn::parser::parse;
-use gvrn::schema::procedure::Step;
+use ductus::parser::parse;
+use ductus::schema::procedure::Step;
 
 fn workspace_root() -> PathBuf {
     // CARGO_MANIFEST_DIR is the runtime crate; the workspace root is its parent.
@@ -28,7 +28,7 @@ fn workspace_root() -> PathBuf {
 
 /// Reduce a step to `(number, kind:name)` for order-preserving comparison.
 fn label(step: &Step) -> (String, String) {
-    let num = |n: &gvrn::schema::procedure::StepNumber| {
+    let num = |n: &ductus::schema::procedure::StepNumber| {
         n.0.iter().map(u32::to_string).collect::<Vec<_>>().join(".")
     };
     match step {

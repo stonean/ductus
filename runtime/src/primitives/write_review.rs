@@ -1,5 +1,5 @@
 //! `write-review` — render `specs/NNN/review.md` and update the spec's
-//! `review:` frontmatter block for `/gov:review`.
+//! `review:` frontmatter block for `/ductus:review`.
 //!
 //! Consumes the pass findings as a single `findings` array (the
 //! content-ingestion convention), plus the waiver results from

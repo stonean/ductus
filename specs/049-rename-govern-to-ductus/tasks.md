@@ -12,14 +12,14 @@ release, not here.
 
 ### 1. Add the third resolution tier for the per-project directory
 
-- [ ] In `runtime/src/schema/paths.rs`, add `.ductus/config.toml` and `.ductus/session.toml` as
+- [x] In `runtime/src/schema/paths.rs`, add `.ductus/config.toml` and `.ductus/session.toml` as
       the primary constants; demote the `.govern/` pair to a middle tier and keep the
       `.govern.toml` / `.govern.session.toml` root pair as the oldest
-- [ ] Generalize `active_path` from a `(new, legacy)` pair to an ordered slice, first-existing
+- [x] Generalize `active_path` from a `(new, legacy)` pair to an ordered slice, first-existing
       wins, defaulting to the primary when none exists
-- [ ] Update `config_path`, `config_display_name`, `resolve_config`, `session_path`, and
+- [x] Update `config_path`, `config_display_name`, `resolve_config`, `session_path`, and
       `session_path_for_write` to resolve through the chain
-- [ ] Extend the existing resolver tests to cover all three tiers and every precedence pair,
+- [x] Extend the existing resolver tests to cover all three tiers and every precedence pair,
       including both-legacy-present
 
 - **Done when**: `cargo test` passes and the resolver returns the newest existing tier for
@@ -27,23 +27,23 @@ release, not here.
 
 ### 2. Rename the crate, binary, library, and MCP server key
 
-- [ ] `runtime/Cargo.toml`: `name`, `[[bin]] name`, `[lib] name`, `description`, `repository`
-- [ ] `runtime/src/host.rs`: `FALLBACK_PROJECT` → `ductus`
-- [ ] Sweep `runtime/src/**` for the server key, doc comments, error strings, and the
+- [x] `runtime/Cargo.toml`: `name`, `[[bin]] name`, `[lib] name`, `description`, `repository`
+- [x] `runtime/src/host.rs`: `FALLBACK_PROJECT` → `ductus`
+- [x] Sweep `runtime/src/**` for the server key, doc comments, error strings, and the
       `PRIMITIVE_NAMES` / `TOOL_NAMES` surrounding prose — leaving bare `<verb>-<noun>`
       primitive names untouched, since they never carried the project name
-- [ ] Rebuild and confirm the binary is `runtime/target/release/ductus`
+- [x] Rebuild and confirm the binary is `runtime/target/release/ductus`
 
 - **Done when**: `cargo build --release` produces `ductus`, `cargo test` passes, and no file
   under `runtime/src/` names the old binary or server key except a legacy path constant.
 
 ### 3. Re-bless the goldens and update the fixtures
 
-- [ ] Rename the new-layout fixture files under `runtime/tests/fixtures/**` to the new
+- [x] Rename the new-layout fixture files under `runtime/tests/fixtures/**` to the new
       per-project directory; leave every legacy-layout fixture
       (`.govern.session.toml`, `.govern.toml`) exactly as it is
-- [ ] Re-bless all 9 goldens with `BLESS=1 cargo test --test parity` — do not hand-edit them
-- [ ] Confirm `scripts/audit/fixture-session-shape.sh` still passes, since it asserts on the
+- [x] Re-bless all 9 goldens with `BLESS=1 cargo test --test parity` — do not hand-edit them
+- [x] Confirm `scripts/audit/fixture-session-shape.sh` still passes, since it asserts on the
       legacy fixture filenames
 
 - **Done when**: `cargo test` is green, the golden diff contains only name and path changes,

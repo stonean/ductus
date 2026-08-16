@@ -17,7 +17,7 @@ review:
 
 # 003 — Analyze Fixture
 
-A minimal fixture for the `/gov:analyze` parity test. Exercises every
+A minimal fixture for the `/ductus:analyze` parity test. Exercises every
 mechanical primitive plus the assessSpecQuality extension point.
 
 <!-- §spec-phase -->
@@ -41,7 +41,7 @@ harvested into the derived `references:` index above:
   reference).
 - [api Ghost spec](https://github.com/acme/api/blob/main/specs/099-ghost/spec.md)
   — `broken`: the `api` service is registered and its checkout is
-  reachable, but the target spec is absent upstream, so `/gov:analyze`
+  reachable, but the target spec is absent upstream, so `/ductus:analyze`
   raises an Advisory broken-reference finding.
 
 The `unregistered` / `not-checked-out` / `status-unreadable` outcomes are

@@ -436,7 +436,7 @@ mod tests {
     }
 
     #[test]
-    fn absent_govern_toml_makes_named_service_unregistered() {
+    fn absent_ductus_toml_makes_named_service_unregistered() {
         let tmp = tempfile::tempdir().unwrap();
         let repo = tmp.path();
         // No `.govern.toml` → empty registry → a named alias resolves to

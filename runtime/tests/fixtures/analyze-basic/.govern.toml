@@ -2,7 +2,7 @@
 # references resolve. The `003-user` reference resolves to `ok` (checkout
 # under `checkouts/api`); the `099-ghost` reference is `broken` —
 # registered and reachable, but the target spec is absent upstream, so
-# /gov:analyze raises an Advisory broken-reference finding. The analyze
+# /ductus:analyze raises an Advisory broken-reference finding. The analyze
 # walker never reads `[services]`; reference resolution is the
 # resolve-references primitive's / host's job, exercised separately.
 [services.api]

@@ -1,6 +1,6 @@
 //! `append-question` — append one question bullet to `## Open Questions`.
 //!
-//! The deterministic surface behind `/gov:amend`'s question-route write
+//! The deterministic surface behind `/ductus:amend`'s question-route write
 //! (spec 022, scenario coverage-expansion-primitives), which previously
 //! had no primitive — asymmetric with the scenario route's
 //! `create-scenario` + `append-task`. Appends `- {question}` to the
@@ -53,7 +53,7 @@ const RESOLVED_HEADING: &str = "## Resolved Questions";
 /// deliberately **excluded**: per the constitution §spec-lifecycle and
 /// spec 014, a new question is not a sanctioned back-edge out of `done` —
 /// a `done` spec reopens only via the scenario route (`done → in-progress`,
-/// owned by `/gov:amend`). Appending a question to a `done` spec leaves the
+/// owned by `/ductus:amend`). Appending a question to a `done` spec leaves the
 /// status at `done` (the command layer never routes a question there).
 const BACK_EDGE_STATUSES: [&str; 3] = ["clarified", "planned", "in-progress"];
 

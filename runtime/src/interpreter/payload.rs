@@ -104,7 +104,7 @@ impl PayloadError {
 ///   with hosts that already parse them (walker-internal accumulator keys
 ///   filtered — see [`is_walker_internal_key`]).
 /// - `writeSpecBody` — builds [`WriteSpecBodyRequest`]: the template the
-///   running command fills (`/gov:plan` → the plan template, `/gov:specify`
+///   running command fills (`/ductus:plan` → the plan template, `/ductus:specify`
 ///   → the spec template), the section named by the step prose, the
 ///   `feature-description` context key, and `existing-content` when the
 ///   named section already has body content in the file the running
@@ -373,12 +373,12 @@ fn build_write_code_request(
 /// - `template-path` / `template-content` — the template the running
 ///   command fills, resolved by [`load_template`].
 /// - `section` — the section heading named by the step prose; empty when
-///   the step fills a whole body rather than one section (`/gov:specify`).
+///   the step fills a whole body rather than one section (`/ductus:specify`).
 /// - `feature-description` — the `feature-description` context key the
 ///   host seeds from the slash command's `$ARGUMENTS`; empty when unset.
 /// - `existing-content` — the section's current body in the file the
-///   running command owns (plan.md for `/gov:plan`, spec.md for
-///   `/gov:specify`); omitted when absent or empty.
+///   running command owns (plan.md for `/ductus:plan`, spec.md for
+///   `/ductus:specify`); omitted when absent or empty.
 ///
 /// Filtered legacy context fields follow the typed prefix for hosts that
 /// already parse them.
@@ -412,12 +412,12 @@ fn build_write_spec_body_request(
     typed_with_legacy_context(&typed, context)
 }
 
-/// Resolve the template file the running command fills. `/gov:plan` fills
-/// plan sections from the plan template; `/gov:specify` fills the spec
+/// Resolve the template file the running command fills. `/ductus:plan` fills
+/// plan sections from the plan template; `/ductus:specify` fills the spec
 /// body from the spec template. Candidates, in order: the installed
-/// adopter layout `{specs-root}/templates/<file>` (what `/gov:init`
+/// adopter layout `{specs-root}/templates/<file>` (what `/ductus:init`
 /// scaffolds and the command prose names), then the framework source
-/// layout `framework/templates/spec/<file>` (the govern repo itself).
+/// layout `framework/templates/spec/<file>` (the ductus repo itself).
 /// Returns `(repo-relative path, content)` for the first candidate on
 /// disk, or empty strings when the command fills no template or none
 /// exists.
@@ -589,7 +589,7 @@ fn read_spec_status(spec_path: &Path) -> String {
     crate::primitives::frontmatter_status(&content, spec_path).unwrap_or_default()
 }
 
-/// Build the `verifyCriteria` request for `/gov:implement`'s completion
+/// Build the `verifyCriteria` request for `/ductus:implement`'s completion
 /// gate. Typed shape only, mirroring `askClarifyQuestion` — no legacy
 /// context dump:
 ///
@@ -633,10 +633,10 @@ fn build_verify_criteria_request(context: &Map<String, Value>, repo: &Path) -> V
 }
 
 /// Build the `assessSpecQuality` request for one per-rule Verification
-/// read (`/gov:analyze` steps 8–9). Mirrors `build_write_code_request`'s
+/// read (`/ductus:analyze` steps 8–9). Mirrors `build_write_code_request`'s
 /// structure: typed fields sourced from the walker context and disk.
 ///
-/// - `spec-path` — the context's `path` (seeded by `/gov:target`, echoed
+/// - `spec-path` — the context's `path` (seeded by `/ductus:target`, echoed
 ///   by `read-spec`).
 /// - `spec-content` — the spec read off disk, repo-confined
 ///   (BE-INPUT-004); empty when missing or out of repo.
@@ -1084,13 +1084,13 @@ pub fn extract_anchor_body(content: &str, anchor: &str) -> Option<String> {
 
 /// Read a section body from a spec or plan file. The running command
 /// selects the file explicitly (extension-request-hygiene — a
-/// `/gov:specify` re-run on a feature that has since gained a plan must
+/// `/ductus:specify` re-run on a feature that has since gained a plan must
 /// not read plan.md's section):
 ///
-/// - `plan` (`/gov:plan`) → `specs/{feature}/plan.md`
-/// - `specify` (`/gov:specify`) → `specs/{feature}/spec.md`
+/// - `plan` (`/ductus:plan`) → `specs/{feature}/plan.md`
+/// - `specify` (`/ductus:specify`) → `specs/{feature}/spec.md`
 ///
-/// Any other command yields `None`: only `/gov:plan` and `/gov:specify`
+/// Any other command yields `None`: only `/ductus:plan` and `/ductus:specify`
 /// carry the `writeSpecBody` marker. Returns `None` too when the file does
 /// not exist or the section is absent or empty. Whitespace-only bodies count
 /// as empty.
@@ -1168,7 +1168,7 @@ fn extract_section_body(content: &str, section: &str) -> Option<String> {
 /// `Fill the Technical Decisions section of the plan.` Returns `None` when
 /// no such phrase is present. The name charset is restricted to plain
 /// heading words (`[A-Za-z0-9 _/-]`) so a whole-body fill step whose prose
-/// happens to mention "… section" much later — `/gov:specify`'s "Fill the
+/// happens to mention "… section" much later — `/ductus:specify`'s "Fill the
 /// new spec body following §spec-requirements: a Motivation section …" —
 /// does not smuggle intervening punctuation into the typed `section` field.
 fn extract_section_name(prose: &str) -> Option<String> {
@@ -1615,7 +1615,7 @@ mod tests {
 
     #[test]
     fn build_write_spec_body_request_selects_file_by_running_command() {
-        // A /gov:specify re-run on a feature that has since gained a plan
+        // A /ductus:specify re-run on a feature that has since gained a plan
         // must read spec.md's section, not plan.md's (and vice versa).
         let tmp = tempdir().unwrap();
         let feature_dir = tmp.path().join("specs/123-foo");
@@ -1664,7 +1664,7 @@ mod tests {
     #[test]
     fn load_template_falls_back_to_framework_source_layout() {
         // No installed {specs-root}/templates/ → the framework source
-        // layout (the govern repo itself) is the second candidate.
+        // layout (the ductus repo itself) is the second candidate.
         let tmp = tempdir().unwrap();
         fs::create_dir_all(tmp.path().join("framework/templates/spec")).unwrap();
         fs::write(
@@ -1684,7 +1684,7 @@ mod tests {
 
     #[test]
     fn extract_section_name_ignores_whole_body_fill_prose() {
-        // /gov:specify's step 2 fills the whole spec body; its prose
+        // /ductus:specify's step 2 fills the whole spec body; its prose
         // mentions "a Motivation section" behind punctuation the heading
         // charset excludes, so no section is extracted.
         let prose = "Fill the new spec body following §spec-requirements: a \

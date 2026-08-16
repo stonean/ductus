@@ -140,7 +140,7 @@ struct Walker {
     current_step: Option<StepBuilder>,
     /// Whether the candidate `## …` heading emitted the exact text
     /// `Instructions`. A heading that emits no text (empty, or a code-span
-    /// only, e.g. `` ## `gvrn` ``) must NOT open the Instructions section,
+    /// only, e.g. `` ## `ductus` ``) must NOT open the Instructions section,
     /// or the parser would treat the following section as the procedure and
     /// drop the real steps.
     instructions_heading_matched: bool,
@@ -309,7 +309,7 @@ impl Walker {
             (State::InInstructionsHeading, Event::End(TagEnd::Heading(_))) => {
                 // Only a heading that actually said `Instructions` opens the
                 // section. A heading that emitted no matching text (empty, or
-                // a code-span like `` ## `gvrn` ``) returns to the scan state
+                // a code-span like `` ## `ductus` ``) returns to the scan state
                 // so the real `## Instructions` is still found.
                 self.state = if self.instructions_heading_matched {
                     State::InInstructions
@@ -736,11 +736,11 @@ mod tests {
 
     #[test]
     fn code_span_only_heading_does_not_open_instructions() {
-        // A `` ## `gvrn` `` heading emits no text, so it must not be mistaken
+        // A `` ## `ductus` `` heading emits no text, so it must not be mistaken
         // for the Instructions section; the real `## Instructions` below is
         // the procedure. Before the fix the notes-section `read-spec` was
         // parsed and the real `mark-task` was dropped.
-        let source = "# Cmd\n\n## `gvrn`\n\n1. Invoke `read-spec` in notes.\n\n## Instructions\n\n1. Invoke `mark-task` on the target.\n";
+        let source = "# Cmd\n\n## `ductus`\n\n1. Invoke `read-spec` in notes.\n\n## Instructions\n\n1. Invoke `mark-task` on the target.\n";
         let procedure = parse_str(source).unwrap();
         assert_eq!(procedure.steps.len(), 1);
         match &procedure.steps[0] {

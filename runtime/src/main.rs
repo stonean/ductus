@@ -1,4 +1,4 @@
-//! `govern` deterministic runtime CLI entrypoint.
+//! `ductus` deterministic runtime CLI entrypoint.
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -7,9 +7,9 @@ use clap::{Parser, Subcommand};
 
 use std::io;
 
-use gvrn::mcp::server::GovRuntimeServer;
-use gvrn::primitives;
-use gvrn::schema::primitives::{
+use ductus::mcp::server::GovRuntimeServer;
+use ductus::primitives;
+use ductus::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, CheckArtifactsArgs,
     CheckReviewGateArgs, CheckRuleIdsArgs, CheckStuckArgs, ComputeReviewScopeArgs,
     CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs,
@@ -24,9 +24,9 @@ use gvrn::schema::primitives::{
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "gvrn",
+    name = "ductus",
     version,
-    about = "Deterministic runtime for the govern pipeline."
+    about = "Deterministic runtime for the ductus pipeline."
 )]
 struct Cli {
     #[command(subcommand)]
@@ -84,11 +84,11 @@ enum Command {
     DeriveBoundary(DeriveBoundaryArgs),
     /// Diff the feature's first spec-dir commit against the working tree, filtered to sibling-spec paths + inbox additions.
     DiffCrossSpec(DiffCrossSpecArgs),
-    /// Select rule files for /gov:review (suffix, [rules] surfaces, disabled-rule-files).
+    /// Select rule files for /ductus:review (suffix, [rules] surfaces, disabled-rule-files).
     DiscoverRuleFiles(DiscoverRuleFilesArgs),
     /// Classify a spec's review.waivers against currently-firing findings.
     ProcessWaivers(ProcessWaiversArgs),
-    /// Resolve /gov:review's diff-base, file scope, and captured issues.
+    /// Resolve /ductus:review's diff-base, file scope, and captured issues.
     ComputeReviewScope(ComputeReviewScopeArgs),
     /// Render specs/NNN/review.md and update the spec `review:` frontmatter block.
     WriteReview(WriteReviewArgs),
@@ -114,7 +114,7 @@ enum Command {
     MergeManagedBlock(MergeManagedBlockArgs),
     /// Idempotently merge a canonical permission allow/deny set into a JSON file with dedup.
     MergePermissions(MergePermissionsArgs),
-    /// Translate a pre-0.10.0 legacy session JSON into `.govern/session.toml` and delete the legacy file.
+    /// Translate a pre-0.10.0 legacy session JSON into `.ductus/session.toml` and delete the legacy file.
     MigrateSessionFile(MigrateSessionFileArgs),
     /// Write a new scenarios/{slug}.md file under a feature with frontmatter and body.
     CreateScenario(CreateScenarioArgs),
@@ -124,7 +124,7 @@ enum Command {
     CreateFeature(CreateFeatureArgs),
     /// Copy the plan/tasks (and optional data-model) templates into a feature directory.
     CreatePlanArtifacts(CreatePlanArtifactsArgs),
-    /// Evaluate /gov:implement's pre-done review gate (markdown lint + spec review: block).
+    /// Evaluate /ductus:implement's pre-done review gate (markdown lint + spec review: block).
     CheckReviewGate(CheckReviewGateArgs),
     /// Append a question bullet to a spec or scenario's ## Open Questions (atomic, with back-edge).
     AppendQuestion(AppendQuestionArgs),
@@ -134,7 +134,7 @@ enum Command {
     AppendInbox(AppendInboxArgs),
     /// Remove the first bullet matching `item` from {specs-root}/inbox.md (atomic).
     RemoveInboxItem(RemoveInboxItemArgs),
-    /// Run /gov:analyze's residual deterministic artifact-check families for a feature.
+    /// Run /ductus:analyze's residual deterministic artifact-check families for a feature.
     CheckArtifacts(CheckArtifactsArgs),
     /// Reduce a feature's tasks.md — drop spent task sections or reset to template state.
     PruneTasks(PruneTasksArgs),
@@ -142,12 +142,12 @@ enum Command {
     GateConfirm(GateConfirmArgs),
     /// Single-call pipeline-state surface for `/{project}:status`.
     Dashboard(DashboardArgs),
-    /// Atomically rewrite the active session file (`.govern/session.toml`; legacy root pre-migration) with the session-target record.
+    /// Atomically rewrite the active session file (`.ductus/session.toml`, falling back to `.govern/session.toml` then the legacy root pre-migration) with the session-target record.
     WriteSession(WriteSessionArgs),
 }
 
 fn emit_protocol_schema() -> ExitCode {
-    let schema = schemars::schema_for!(gvrn::schema::protocol::ProtocolMessage);
+    let schema = schemars::schema_for!(ductus::schema::protocol::ProtocolMessage);
     match serde_json::to_string_pretty(&schema) {
         Ok(text) => {
             println!("{text}");
@@ -186,7 +186,7 @@ fn cwd() -> PathBuf {
 }
 
 fn run_parse(path: &std::path::Path, check_only: bool) -> ExitCode {
-    use gvrn::parser;
+    use ductus::parser;
 
     let source = match std::fs::read_to_string(path) {
         Ok(s) => s,
@@ -234,15 +234,15 @@ fn run_parse(path: &std::path::Path, check_only: bool) -> ExitCode {
 }
 
 /// Terminal `error` envelope for a command-file parse failure under
-/// `gvrn exec`. Protocol contract (spec 022 + the versioning-enforcement
+/// `ductus exec`. Protocol contract (spec 022 + the versioning-enforcement
 /// resolution): every non-zero exit in the 1–127 clean band is preceded
 /// by a terminal `error` message on stdout carrying the runtime version,
 /// so a host can suspect a framework/runtime version mismatch instead of
 /// facing a message-less failure.
-fn emit_exec_parse_error(path: &std::path::Path, err: &gvrn::parser::ParseError) -> ExitCode {
-    use gvrn::io::write_envelope;
-    use gvrn::parser::ParseError;
-    use gvrn::schema::protocol::{ErrorLocation, ProtocolMessage};
+fn emit_exec_parse_error(path: &std::path::Path, err: &ductus::parser::ParseError) -> ExitCode {
+    use ductus::io::write_envelope;
+    use ductus::parser::ParseError;
+    use ductus::schema::protocol::{ErrorLocation, ProtocolMessage};
 
     let location = match err {
         ParseError::Invalid {
@@ -258,7 +258,7 @@ fn emit_exec_parse_error(path: &std::path::Path, err: &gvrn::parser::ParseError)
     let message = format!(
         "failed to parse command file {}: {err} — a framework/runtime \
          version mismatch is a possible cause (this runtime is v{}; \
-         re-run /govern to realign the installed framework files)",
+         re-run /ductus to realign the installed framework files)",
         path.display(),
         env!("CARGO_PKG_VERSION"),
     );
@@ -284,8 +284,8 @@ fn emit_exec_parse_error(path: &std::path::Path, err: &gvrn::parser::ParseError)
 /// no terminal message). Used by the pre-walk and walker-I/O exit paths;
 /// parse errors use [`emit_exec_parse_error`], which also carries a location.
 fn emit_exec_error(code: &str, message: &str) {
-    use gvrn::io::write_envelope;
-    use gvrn::schema::protocol::ProtocolMessage;
+    use ductus::io::write_envelope;
+    use ductus::schema::protocol::ProtocolMessage;
 
     let envelope = ProtocolMessage::Error {
         code: code.into(),
@@ -301,9 +301,9 @@ fn emit_exec_error(code: &str, message: &str) {
 }
 
 fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode {
-    use gvrn::host::Host;
-    use gvrn::interpreter::{WalkOutcome, Walker};
-    use gvrn::parser;
+    use ductus::host::Host;
+    use ductus::interpreter::{WalkOutcome, Walker};
+    use ductus::parser;
     use serde_json::{Map, Value};
 
     let host = Host::load(repo);
@@ -319,10 +319,10 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
             .into_iter()
             .map(|rel| repo.join(rel)),
     );
-    // Bootstrap procedures (`/govern` and its successors) live outside
+    // Bootstrap procedures (`/ductus` and its successors) live outside
     // the project-installable command namespace because they're invoked
     // before any framework files exist in the adopter's project. See
-    // spec 022 scenario `govern-bootstrap`.
+    // spec 022 scenario `ductus-bootstrap`.
     candidates.push(
         repo.join("framework/bootstrap")
             .join(format!("{command}.md")),
@@ -355,7 +355,7 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
 
     // Seed the walker context: session file (when present) overlaid with
     // CLI `key=value` arg overrides. The session resolves through
-    // `paths::session_path` — `.govern/session.toml` (spec 042) with a
+    // `paths::session_path` — `.ductus/session.toml` (spec 042) with a
     // fallback to the legacy repo-root `.govern.session.toml`; the path is
     // uniform across every adopter regardless of AI CLI or project name. TOML
     // values are bridged into `serde_json::Value` via serde so nested
@@ -363,7 +363,7 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
     // `substitutions`, etc.) survive intact — the walker's context map
     // and every primitive's args struct are JSON-shaped.
     let mut context = Map::new();
-    let session_path = gvrn::schema::paths::session_path(repo);
+    let session_path = ductus::schema::paths::session_path(repo);
     if let Ok(text) = std::fs::read_to_string(&session_path)
         && let Ok(Value::Object(map)) = toml::from_str::<Value>(&text)
     {

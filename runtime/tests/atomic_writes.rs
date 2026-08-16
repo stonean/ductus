@@ -21,8 +21,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use gvrn::primitives;
-use gvrn::schema::primitives::{MarkCriterionArgs, MarkTaskArgs, SetStatusArgs};
+use ductus::primitives;
+use ductus::schema::primitives::{MarkCriterionArgs, MarkTaskArgs, SetStatusArgs};
 
 fn write_feature(tmp: &std::path::Path) {
     let feature_dir = tmp.join("specs/atom");

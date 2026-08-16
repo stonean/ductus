@@ -1,4 +1,4 @@
-//! `diff-cross-spec` — the cross-spec impact surface for `/gov:implement`.
+//! `diff-cross-spec` — the cross-spec impact surface for `/ductus:implement`.
 //!
 //! The deterministic filter implement steps 7 and 12 previously re-derived
 //! by hand per task (step 12's prose self-declared "no primitive owns this
@@ -16,7 +16,7 @@
 //! documented `git diff <first-commit>..HEAD -- {specs-root}/` form
 //! (step 12). Read-only.
 //!
-//! `/gov:review`'s captured-issues section stays on
+//! `/ductus:review`'s captured-issues section stays on
 //! `compute-review-scope`, whose window starts at the in-progress
 //! transition — the review wants the current work window, not the
 //! feature's whole history.
@@ -328,7 +328,7 @@ mod tests {
     fn missing_spec_history_is_the_empty_result() {
         // Scenario derive-boundary-uncommitted-spec-dir: erroring here would
         // relocate the halt `derive-boundary` no longer raises, since the
-        // same /gov:implement walk reaches this primitive at steps 7 and 12.
+        // same /ductus:implement walk reaches this primitive at steps 7 and 12.
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
         write(&tmp.path().join("README.md"), "# repo\n");

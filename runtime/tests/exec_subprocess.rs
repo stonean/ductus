@@ -17,10 +17,10 @@ use common::copy_dir_recursive;
 
 fn runtime_binary() -> PathBuf {
     // CARGO_MANIFEST_DIR is the runtime crate. The release binary lives
-    // under target/release/gvrn relative to it (gvrn.exe on Windows).
+    // under target/release/ductus relative to it (ductus.exe on Windows).
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("target/release")
-        .join(format!("gvrn{}", std::env::consts::EXE_SUFFIX))
+        .join(format!("ductus{}", std::env::consts::EXE_SUFFIX))
 }
 
 fn write_procedure_repo(tmp: &Path, command_name: &str, body: &str) {
@@ -33,7 +33,7 @@ fn ensure_binary_built() {
     // Always build (once per test binary): an incremental release build is
     // a fast no-op when the binary is current, and it guarantees the tested
     // binary matches the working tree — a mere `exists()` check let a stale
-    // `target/release/gvrn` from a prior version/source state pass.
+    // `target/release/ductus` from a prior version/source state pass.
     static BUILD: std::sync::Once = std::sync::Once::new();
     BUILD.call_once(|| {
         let status = Command::new("cargo")
@@ -63,7 +63,7 @@ fn exec_drives_a_deterministic_procedure_to_complete() {
     write_procedure_repo(
         tmp.path(),
         "smoke",
-        "# /gov:smoke\n\n## Instructions\n\n1. Invoke `read-spec` against the target.\n2. Invoke `read-tasks` against the target.\n",
+        "# /ductus:smoke\n\n## Instructions\n\n1. Invoke `read-spec` against the target.\n2. Invoke `read-tasks` against the target.\n",
     );
     let feature_dir = tmp.path().join("specs/001-basic");
     fs::create_dir_all(&feature_dir).unwrap();
@@ -122,7 +122,7 @@ fn exec_reads_extension_response_from_stdin() {
     write_procedure_repo(
         tmp.path(),
         "ext",
-        "# /gov:ext\n\n## Instructions\n\n1. <!-- llm:writeCode --> Ask the LLM to write code.\n",
+        "# /ductus:ext\n\n## Instructions\n\n1. <!-- llm:writeCode --> Ask the LLM to write code.\n",
     );
 
     let mut child = Command::new(runtime_binary())
@@ -171,7 +171,7 @@ fn exec_reads_extension_response_from_stdin() {
 fn exec_chains_bootstrap_primitives_extract_apply_merge() {
     ensure_binary_built();
     // Walks the back half of the bootstrap procedure end-to-end:
-    // a synthetic gvrn-exec target invokes extract-archive on a
+    // a synthetic ductus-exec target invokes extract-archive on a
     // committed-shape (test-built) tarball, then apply-manifest over
     // the staged tree, then merge-managed-block against CLAUDE.md
     // (the chain substitute-templates → merge-claude-md ran before
@@ -208,7 +208,7 @@ fn exec_chains_bootstrap_primitives_extract_apply_merge() {
     .unwrap();
 
     // Seed the session with every arg the three primitives need, at the
-    // consolidated `.govern/session.toml` layout (spec 042) so this test
+    // consolidated `.ductus/session.toml` layout (spec 042) so this test
     // exercises new-layout resolution end-to-end through the exec walker's
     // `session_path` seed (legacy root `.govern.session.toml` fallback stays
     // covered by the parity fixtures and `specs_root_override`). The walker
@@ -236,9 +236,9 @@ fn exec_chains_bootstrap_primitives_extract_apply_merge() {
         source_root = tmp.path().join("staging").to_string_lossy().to_string(),
         target_root = tmp.path().join("project").to_string_lossy().to_string(),
     );
-    let govern_dir = tmp.path().join(".govern");
-    fs::create_dir_all(&govern_dir).unwrap();
-    let session_path = govern_dir.join("session.toml");
+    let ductus_dir = tmp.path().join(".ductus");
+    fs::create_dir_all(&ductus_dir).unwrap();
+    let session_path = ductus_dir.join("session.toml");
     let mut sf = fs::File::create(&session_path).unwrap();
     sf.write_all(session_toml.as_bytes()).unwrap();
 
@@ -263,7 +263,7 @@ fn exec_chains_bootstrap_primitives_extract_apply_merge() {
     // - extract-archive wrote README.md into the staging dir
     // - apply-manifest wrote a substituted copy into the project dir
     // - merge-managed-block created CLAUDE.md with the managed block
-    //   (html-comment style, `govern-managed` marker — the defaults)
+    //   (html-comment style, `ductus-managed` marker — the defaults)
     assert!(tmp.path().join("staging/README.md").exists());
     let written = fs::read_to_string(tmp.path().join("project/README.md")).unwrap();
     assert!(
@@ -272,7 +272,7 @@ fn exec_chains_bootstrap_primitives_extract_apply_merge() {
     );
     let claude = fs::read_to_string(tmp.path().join("CLAUDE.md")).unwrap();
     assert!(
-        claude.contains("<!-- BEGIN govern-managed -->")
+        claude.contains("<!-- BEGIN ductus-managed -->")
             && claude.contains("framework managed block")
             && claude.contains("project = anvil"),
         "CLAUDE.md missing managed block:\n{claude}"
@@ -283,15 +283,15 @@ fn exec_chains_bootstrap_primitives_extract_apply_merge() {
 fn exec_resolves_bootstrap_procedure_under_framework_bootstrap() {
     ensure_binary_built();
     // Bootstrap procedures live at framework/bootstrap/<name>.md so the
-    // /govern installer can be invoked before any framework/commands/
+    // /ductus installer can be invoked before any framework/commands/
     // files exist in the adopter's project. The runtime falls back to
     // this third candidate path when the first two don't resolve.
     let tmp = tempfile::tempdir().unwrap();
     let bootstrap_dir = tmp.path().join("framework/bootstrap");
     fs::create_dir_all(&bootstrap_dir).unwrap();
     fs::write(
-        bootstrap_dir.join("govern.md"),
-        "# /govern\n\n## Instructions\n\n1. Invoke `read-spec` against the targeted feature.\n",
+        bootstrap_dir.join("ductus.md"),
+        "# /ductus\n\n## Instructions\n\n1. Invoke `read-spec` against the targeted feature.\n",
     )
     .unwrap();
 
@@ -305,7 +305,7 @@ fn exec_resolves_bootstrap_procedure_under_framework_bootstrap() {
 
     let mut child = Command::new(runtime_binary())
         .arg("exec")
-        .arg("govern")
+        .arg("ductus")
         .arg("feature=001-basic")
         .current_dir(tmp.path())
         .stdin(Stdio::piped())
@@ -343,7 +343,7 @@ fn exec_resolves_command_via_parameterized_host_block() {
     // "anvil"`. With the parameterized lookup wired up, the runtime
     // reads the [host] block and resolves the second candidate path
     // accordingly; without it, the second candidate would be the
-    // hardcoded `.claude/commands/gov/smoke.md` (which doesn't exist
+    // hardcoded `.claude/commands/ductus/smoke.md` (which doesn't exist
     // in this fixture) and the run would fail with "command file not
     // found".
     let tmp = tempfile::tempdir().unwrap();
@@ -458,7 +458,7 @@ fn exec_emits_terminal_error_envelope_on_unparseable_command_file() {
     write_procedure_repo(
         tmp.path(),
         "broken",
-        "# /gov:broken\n\n## Instructions\n\n1. Invoke `read-spek` on the target.\n2. Invoke `read-tasks` to load tasks.\n",
+        "# /ductus:broken\n\n## Instructions\n\n1. Invoke `read-spek` on the target.\n2. Invoke `read-tasks` to load tasks.\n",
     );
 
     let output = Command::new(runtime_binary())

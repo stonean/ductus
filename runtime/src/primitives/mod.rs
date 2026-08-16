@@ -635,7 +635,7 @@ pub(crate) mod checkbox {
 
 /// The task "Done when" clause label, matched case-insensitively by
 /// [`parse_done_when`]. `append-task` writes the canonical bold form
-/// (`- **Done when**: …`); the template documents it and `/gov:plan`'s
+/// (`- **Done when**: …`); the template documents it and `/ductus:plan`'s
 /// task-breakdown reference names it.
 const DONE_WHEN_LABEL: &str = "Done when";
 
@@ -645,7 +645,7 @@ const DONE_WHEN_LABEL: &str = "Done when";
 /// - `- **Done when**: <body>` — the form [`crate::primitives::append_task`]
 ///   emits and the `tasks.md` template documents (runtime-canonical);
 /// - `- [x] Done when: <body>` / `- [ ] Done when: <body>` — the checkbox
-///   form `/gov:plan`'s LLM-authored task breakdown tends to produce (the
+///   form `/ductus:plan`'s LLM-authored task breakdown tends to produce (the
 ///   plan step fills the template directly, not via `append-task`);
 /// - `Done when: <body>` — the bulletless form early specs used.
 ///
@@ -1188,7 +1188,7 @@ pub(crate) fn iter_task_numbers_at_levels<'a>(
 /// anywhere in the file signals phased structure, even if `## N.` headings
 /// are also present.
 ///
-/// [runtime-primitive-structural-bugs]: <https://github.com/stonean/govern/blob/main/specs/022-deterministic-runtime/scenarios/runtime-primitive-structural-bugs.md>
+/// [runtime-primitive-structural-bugs]: <https://github.com/stonean/ductus/blob/main/specs/022-deterministic-runtime/scenarios/runtime-primitive-structural-bugs.md>
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum TasksStructure {
     /// No `### N.` headings present; task entries are flat (`## N.`).
@@ -1499,9 +1499,9 @@ pub(crate) fn read_scenario_section(path: &Path) -> Option<String> {
 
 /// The two candidate locations for a spec-pipeline template file, in
 /// resolution order: the installed adopter layout
-/// `{specs-root}/templates/{file}` (what `/gov:init` scaffolds and the
+/// `{specs-root}/templates/{file}` (what `/ductus:init` scaffolds and the
 /// command prose names) first, then the framework source layout
-/// `framework/templates/spec/{file}` (the govern repo itself). Shared by
+/// `framework/templates/spec/{file}` (the ductus repo itself). Shared by
 /// `create-feature`'s template copy and the `writeSpecBody` request builder
 /// (`interpreter::payload::load_template`); each caller keeps its own
 /// missing-template policy.

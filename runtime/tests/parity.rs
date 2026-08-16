@@ -96,18 +96,18 @@ fn specify_basic_stream_matches_golden() {
 }
 
 #[test]
-fn govern_basic_stream_matches_golden() {
-    run_parity_case("install", "govern-basic");
+fn ductus_basic_stream_matches_golden() {
+    run_parity_case("install", "ductus-basic");
 }
 
 #[test]
-fn govern_basic_post_run_filesystem_state_matches_expectations() {
-    // Companion to govern_basic_stream_matches_golden: that test asserts the
+fn ductus_basic_post_run_filesystem_state_matches_expectations() {
+    // Companion to ductus_basic_stream_matches_golden: that test asserts the
     // JSONL stream is byte-correct, this one walks the post-run on-disk
     // state to verify every primitive's effects landed as designed.
     //
     // Per-entry expectations against
-    // runtime/tests/fixtures/govern-basic/.govern.session.toml:
+    // runtime/tests/fixtures/ductus-basic/.govern.session.toml:
     //
     // - update strategy + substitution → specify.md, feature.md with
     //   `{project}` → "anvil"
@@ -115,15 +115,15 @@ fn govern_basic_post_run_filesystem_state_matches_expectations() {
     //   LITERAL (substitution suppressed by strategy)
     // - pinned dest → framework/constitution.md preserved verbatim from
     //   the fixture's pre-seeded copy (apply-manifest's `skipped-pinned`)
-    // - keep-literals entry → .claude/commands/govern.md with `{project}`
+    // - keep-literals entry → .claude/commands/ductus.md with `{project}`
     //   and `{cli-config-dir}` kept LITERAL even though substitutions
     //   are applied to other entries
     // - merge-managed-block (line-prefix style) → .gitignore created
-    //   with the `# govern` block
+    //   with the `# ductus` block
     // - enforce-manifest → legacy-cmd.md REMOVED from the target dir
     ensure_binary_built();
     let bin = runtime_binary();
-    let staged = stage_fixture("install", "govern-basic");
+    let staged = stage_fixture("install", "ductus-basic");
 
     let mut child = Command::new(&bin)
         .arg("exec")
@@ -138,7 +138,7 @@ fn govern_basic_post_run_filesystem_state_matches_expectations() {
         .spawn()
         .expect("spawn runtime");
     // The bootstrap procedure no longer has a confirmation gate — invoking
-    // `/govern` is itself the consent. Close stdin without writing.
+    // `/ductus` is itself the consent. Close stdin without writing.
     drop(child.stdin.take());
     let output = child.wait_with_output().expect("wait");
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -192,17 +192,17 @@ fn govern_basic_post_run_filesystem_state_matches_expectations() {
 
     // keep-literals entry: placeholders preserved even though
     // substitutions are applied to other entries in the same run.
-    let govern_md = read(".claude/commands/govern.md");
+    let ductus_md = read(".claude/commands/ductus.md");
     assert!(
-        govern_md.contains("{project}") && govern_md.contains("{cli-config-dir}"),
-        "govern.md must keep {{project}} and {{cli-config-dir}} LITERAL: {govern_md:?}"
+        ductus_md.contains("{project}") && ductus_md.contains("{cli-config-dir}"),
+        "ductus.md must keep {{project}} and {{cli-config-dir}} LITERAL: {ductus_md:?}"
     );
 
     // merge-managed-block (line-prefix) created .gitignore.
     let gitignore = read(".gitignore");
     assert!(
-        gitignore.starts_with("# govern\n"),
-        ".gitignore must start with the # govern marker line: {gitignore:?}"
+        gitignore.starts_with("# ductus\n"),
+        ".gitignore must start with the # ductus marker line: {gitignore:?}"
     );
     assert!(
         gitignore.contains(".cache/") && gitignore.contains("staging/"),
@@ -236,7 +236,7 @@ fn traverse_deps_cycle_check_surfaces_two_cycle_via_cli() {
     // Parity coverage for spec 022's `traverse-deps-cycle-check` scenario:
     // both the markdown-only walker (the agent reading frontmatter via
     // host tools and feeding traverse-deps via MCP) and the runtime
-    // walker (`gvrn traverse-deps` subprocess used by `/gov:analyze` step
+    // walker (`ductus traverse-deps` subprocess used by `/ductus:analyze` step
     // 3) surface the same finding shape. This test exercises the CLI
     // subprocess surface against a hand-built 2-cycle fixture and
     // asserts the JSON envelope carries the expected `cycles` payload.
@@ -355,14 +355,14 @@ fn repo_root() -> PathBuf {
 fn runtime_binary() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("target/release")
-        .join(format!("gvrn{}", std::env::consts::EXE_SUFFIX))
+        .join(format!("ductus{}", std::env::consts::EXE_SUFFIX))
 }
 
 fn ensure_binary_built() {
     // Always build (once per test binary): an incremental release build is
     // a fast no-op when the binary is current, and it guarantees the tested
     // binary matches the working tree — a mere `exists()` check let a stale
-    // `target/release/gvrn` from a prior version/source state pass.
+    // `target/release/ductus` from a prior version/source state pass.
     static BUILD: std::sync::Once = std::sync::Once::new();
     BUILD.call_once(|| {
         let status = Command::new("cargo")
@@ -683,7 +683,7 @@ fn run_parity_case(command: &str, fixture: &str) {
         .arg("exec")
         .arg(command)
         .current_dir(staged.path())
-        // The govern-basic bootstrap fetches from the loopback mock-HTTP
+        // The ductus-basic bootstrap fetches from the loopback mock-HTTP
         // server, which fetch-archive's SSRF screen denies by default;
         // allow the mock host explicitly for this subprocess (empty
         // elsewhere, so the secure default holds).

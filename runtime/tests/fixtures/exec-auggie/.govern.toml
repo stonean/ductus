@@ -6,7 +6,7 @@
 # neither of which resolve under this fixture's `.augment/commands/anvil/`
 # layout.
 
-# govern (host)
+# ductus (host)
 [host]
 cli-config-dir = ".augment"
 project = "anvil"

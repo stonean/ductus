@@ -1,11 +1,11 @@
 [package]
-name = "gvrn"
+name = "ductus"
 version = "0.27.2"
 edition = "2024"
 rust-version = "1.88"
-description = "Deterministic runtime for the govern pipeline (spec 022)."
+description = "Deterministic runtime for the ductus pipeline (spec 022)."
 license = "MIT"
-repository = "https://github.com/stonean/govern"
+repository = "https://github.com/stonean/ductus"
 readme = "README.md"
 exclude = [
   "tests/**",
@@ -15,11 +15,11 @@ exclude = [
 ]
 
 [[bin]]
-name = "gvrn"
+name = "ductus"
 path = "src/main.rs"
 
 [lib]
-name = "gvrn"
+name = "ductus"
 path = "src/lib.rs"
 
 [dependencies]

@@ -13,7 +13,7 @@ review:
 # 001 — Basic Sample Feature
 
 A fixture spec used by the runtime primitive tests. The shape mirrors a
-real govern spec: numbered acceptance criteria, an Open Questions
+real ductus spec: numbered acceptance criteria, an Open Questions
 section, and at least one rule citation (`BE-AUTHN-001`).
 
 ## Motivation

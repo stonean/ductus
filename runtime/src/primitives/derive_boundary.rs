@@ -50,8 +50,8 @@ pub fn run(args: &DeriveBoundaryArgs, repo: &Path) -> Result<DeriveBoundaryResul
 
     // `zip` collapses two independent no-history shapes into one arm: a
     // spec dir with no commit touching it, and an unborn HEAD (a repo with
-    // no commits at all — the fresh-repo case where `/gov:specify` and
-    // `/gov:plan` both run before the first commit). `head` is resolved
+    // no commits at all — the fresh-repo case where `/ductus:specify` and
+    // `/ductus:plan` both run before the first commit). `head` is resolved
     // once so the no-history arm can still report it when it exists.
     let head = head_oid(&repository)?;
     let Some((first_commit, head_oid)) =
@@ -349,7 +349,7 @@ mod tests {
     fn uncommitted_spec_dir_is_a_domain_outcome_not_an_error() {
         // Scenario derive-boundary-uncommitted-spec-dir: the boundary is
         // unknowable, not broken. The walk must reach a legible next-step
-        // instead of dying at /gov:implement step 2.
+        // instead of dying at /ductus:implement step 2.
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
         write(&tmp.path().join("README.md"), "# repo\n");
@@ -381,7 +381,7 @@ mod tests {
         assert!(guidance.contains("specs/030-orphan"));
         assert!(
             guidance.contains("commit the spec directory"),
-            "names the fix /gov:plan's gate wants: {guidance}"
+            "names the fix /ductus:plan's gate wants: {guidance}"
         );
         assert!(
             guidance.contains("seed a write-boundary"),
@@ -391,7 +391,7 @@ mod tests {
 
     #[test]
     fn unborn_head_is_the_same_domain_outcome() {
-        // The fresh-repo case: /gov:init, /gov:specify and /gov:plan all run
+        // The fresh-repo case: /ductus:init, /ductus:specify and /ductus:plan all run
         // before the first commit exists, so HEAD is unborn. libgit2 reports
         // that as an error; for this primitive it is ordinary no-history.
         let tmp = tempfile::tempdir().unwrap();
@@ -417,7 +417,7 @@ mod tests {
 
     #[test]
     fn committed_spec_dir_carries_no_guidance() {
-        // The guidance field is the signal /gov:plan's gate refuses on, so
+        // The guidance field is the signal /ductus:plan's gate refuses on, so
         // it must be absent on every ordinary derivation.
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();

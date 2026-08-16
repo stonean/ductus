@@ -4,6 +4,6 @@
 # stays in committed `.govern.toml`; the per-contributor `cli-config-dir`
 # lives in the gitignored `.govern.session.toml` (see the sibling file).
 
-# govern (host)
+# ductus (host)
 [host]
 project = "anvil"

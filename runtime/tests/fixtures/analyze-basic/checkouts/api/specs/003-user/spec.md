@@ -12,5 +12,5 @@ and classifies the reference as `ok` — the clean reference.
 
 The companion `099-ghost` reference points at a spec that does not exist
 under this checkout, so it classifies as `broken` — the Advisory finding
-`/gov:analyze` raises. This file lives under `checkouts/`, not `specs/`,
+`/ductus:analyze` raises. This file lives under `checkouts/`, not `specs/`,
 so the analyze walk over the feature directory never picks it up.

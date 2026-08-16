@@ -2,8 +2,8 @@
 //!
 //! Tool names are bare `<verb>-<noun>` strings (e.g. `read-spec`).
 //! Server-level namespacing is supplied by the MCP server registration —
-//! the adopter registers this server as `gvrn` in `.mcp.json`, which
-//! makes the Claude Code-side wire identifier `mcp__gvrn__<verb>-<noun>`.
+//! the adopter registers this server as `ductus` in `.mcp.json`, which
+//! makes the Claude Code-side wire identifier `mcp__ductus__<verb>-<noun>`.
 //! Tools are async wrappers around the synchronous
 //! `primitives::<name>::run` functions; the server holds an `Arc<PathBuf>`
 //! to the repo root that every primitive operates on. Blocking-heavy
@@ -330,7 +330,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "diff-cross-spec",
-        description = "Compute /gov:implement's cross-spec impact surface: diff the feature's first spec-dir commit against the working tree, scoped to the spec root and filtered to paths outside the feature's own directory, plus the lines added to {specs-root}/inbox.md in the window (the captured issues). Read-only; empty lists are the no-impact outcome."
+        description = "Compute /ductus:implement's cross-spec impact surface: diff the feature's first spec-dir commit against the working tree, scoped to the spec root and filtered to paths outside the feature's own directory, plus the lines added to {specs-root}/inbox.md in the window (the captured issues). Read-only; empty lists are the no-impact outcome."
     )]
     async fn diff_cross_spec(
         &self,
@@ -522,7 +522,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "migrate-session-file",
-        description = "Translate a pre-0.10.0 legacy session JSON (`.claude/{project}-session.json`) into the consolidated `.govern/session.toml`, applying camelCase→kebab-case key renames (`scenarioPath`→`scenario-path`, `setAt`→`set-at`), and delete the legacy file. Idempotent: no-op when no legacy file is present; preserves any existing `.govern/session.toml`."
+        description = "Translate a pre-0.10.0 legacy session JSON (`.claude/{project}-session.json`) into the consolidated `.ductus/session.toml`, applying camelCase→kebab-case key renames (`scenarioPath`→`scenario-path`, `setAt`→`set-at`), and delete the legacy file. Idempotent: no-op when no legacy file is present; preserves any existing `.ductus/session.toml`."
     )]
     async fn migrate_session_file(
         &self,
@@ -561,7 +561,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "discover-rule-files",
-        description = "Select rule files for /gov:review by suffix, [rules] surfaces, and disabled-rule-files."
+        description = "Select rule files for /ductus:review by suffix, [rules] surfaces, and disabled-rule-files."
     )]
     async fn discover_rule_files(
         &self,
@@ -587,7 +587,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "compute-review-scope",
-        description = "Resolve /gov:review's diff-base, file scope, and inbox-window captured issues."
+        description = "Resolve /ductus:review's diff-base, file scope, and inbox-window captured issues."
     )]
     async fn compute_review_scope(
         &self,
@@ -639,7 +639,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "dashboard",
-        description = "Single-call pipeline-state surface for /{project}:status. Returns the per-spec inventory (status, deps, tags, open-question count, artifact existence, scenarios count, blocked-by), the repo-wide tags-union, the config review-state summary (.govern/config.toml), and the optional session target read from the session file (.govern/session.toml; legacy root fallback pre-migration)."
+        description = "Single-call pipeline-state surface for /{project}:status. Returns the per-spec inventory (status, deps, tags, open-question count, artifact existence, scenarios count, blocked-by), the repo-wide tags-union, the config review-state summary (.ductus/config.toml), and the optional session target read from the session file (.ductus/session.toml, falling back to .govern/session.toml then the legacy root pre-migration)."
     )]
     async fn dashboard(
         &self,
@@ -652,7 +652,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "write-session",
-        description = "Atomically merge-write the active session file (`.govern/session.toml`; legacy root `.govern.session.toml` pre-migration; gitignored). A target write (supply `feature`+`path`, optional `scenario`) sets the target and preserves the per-contributor `cli-config-dir`; a host-config write (supply only `cli-config-dir`) sets the agent config-dir and preserves the existing target. Pairs with `dashboard`'s read of the same file; allowing this MCP tool once suppresses the per-invocation Write permission prompt the host-write path triggers."
+        description = "Atomically merge-write the active session file (`.ductus/session.toml`, falling back to `.govern/session.toml` then the legacy root `.govern.session.toml` pre-migration; gitignored). A target write (supply `feature`+`path`, optional `scenario`) sets the target and preserves the per-contributor `cli-config-dir`; a host-config write (supply only `cli-config-dir`) sets the agent config-dir and preserves the existing target. Pairs with `dashboard`'s read of the same file; allowing this MCP tool once suppresses the per-invocation Write permission prompt the host-write path triggers."
     )]
     async fn write_session(
         &self,
@@ -665,7 +665,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "resolve-references",
-        description = "Resolve a consumer feature's `references:` index against the config's [services] registry (`.govern/config.toml`; legacy root fallback): for each cross-service reference, read the linked spec's live lifecycle status from its local checkout and classify the outcome (ok / unregistered / not-checked-out / broken / status-unreadable)."
+        description = "Resolve a consumer feature's `references:` index against the config's [services] registry (`.ductus/config.toml`, with the `.govern/` and legacy-root fallbacks): for each cross-service reference, read the linked spec's live lifecycle status from its local checkout and classify the outcome (ok / unregistered / not-checked-out / broken / status-unreadable)."
     )]
     async fn resolve_references(
         &self,
@@ -704,7 +704,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "create-plan-artifacts",
-        description = "Copy the plan/tasks (and, with include-data-model, data-model) templates into an existing feature directory (atomic, mode-preserving) — /gov:plan's template-copy and existing-artifact-detection step. Pre-existing artifacts are never touched by default: each is reported kept (file, path, action, template — primitive results carry no wall-clock data, so the keep-or-replace prompt stats the file itself for any timestamp); only overwrite: true (the confirmed replace branch) copies fresh templates over them."
+        description = "Copy the plan/tasks (and, with include-data-model, data-model) templates into an existing feature directory (atomic, mode-preserving) — /ductus:plan's template-copy and existing-artifact-detection step. Pre-existing artifacts are never touched by default: each is reported kept (file, path, action, template — primitive results carry no wall-clock data, so the keep-or-replace prompt stats the file itself for any timestamp); only overwrite: true (the confirmed replace branch) copies fresh templates over them."
     )]
     async fn create_plan_artifacts(
         &self,
@@ -717,7 +717,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "append-question",
-        description = "Append one `- {question}` bullet to the target artifact's ## Open Questions section — /gov:amend's question-route write. Targets the feature's spec.md, or scenarios/{slug}.md when `scenario` is passed. Dedup is normalized-whitespace + case-insensitive (a match is a clean appended: false outcome reporting the existing entry); a missing section is created per template order; on a spec target whose status is clarified/planned/in-progress the status reverts to draft in the same atomic write (the back-edge). A `done` spec is excluded (§spec-lifecycle): the question is appended but status stays done, since done reopens via the scenario route, not a question."
+        description = "Append one `- {question}` bullet to the target artifact's ## Open Questions section — /ductus:amend's question-route write. Targets the feature's spec.md, or scenarios/{slug}.md when `scenario` is passed. Dedup is normalized-whitespace + case-insensitive (a match is a clean appended: false outcome reporting the existing entry); a missing section is created per template order; on a spec target whose status is clarified/planned/in-progress the status reverts to draft in the same atomic write (the back-edge). A `done` spec is excluded (§spec-lifecycle): the question is appended but status stays done, since done reopens via the scenario route, not a question."
     )]
     async fn append_question(
         &self,
@@ -730,7 +730,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "check-review-gate",
-        description = "Evaluate /gov:implement's pre-done review gate for one feature: the feature directory's markdown lint (via the lint-markdown machinery), then the spec frontmatter review: block. Returns the verdict plus, when blocked, the first failing check (markdown-lint | not-reviewed | must-violations) and the canonical blocked message; a blocked gate is a domain outcome the host halts on, never an error."
+        description = "Evaluate /ductus:implement's pre-done review gate for one feature: the feature directory's markdown lint (via the lint-markdown machinery), then the spec frontmatter review: block. Returns the verdict plus, when blocked, the first failing check (markdown-lint | not-reviewed | must-violations) and the canonical blocked message; a blocked gate is a domain outcome the host halts on, never an error."
     )]
     async fn check_review_gate(
         &self,
@@ -771,7 +771,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "check-artifacts",
-        description = "Run /gov:analyze's residual deterministic check families against one feature: artifact completeness per status tier (plan.md/tasks.md at planned+), task consistency (strictly-increasing numbering, Done-when presence), scenario→task mapping (honoring §tasks-phase pruning evidence), review-state drift on done specs, scenario open questions (blocking at done, advisory otherwise), link-adjacent decision drift (prose asserting an open state its own sibling link's target contradicts), acceptance-criterion path existence on done specs, and acceptance-criterion labels (duplicate AC{n}, a next-criterion that no longer exceeds the body, an unlabelled criterion in a labelled spec). Each finding carries family, severity, message, and path; severity tiers mirror the command's markdown-only reference. Targets a family could not examine are reported separately in `skipped`, so a zero-finding result never reads as assurance the primitive cannot give."
+        description = "Run /ductus:analyze's residual deterministic check families against one feature: artifact completeness per status tier (plan.md/tasks.md at planned+), task consistency (strictly-increasing numbering, Done-when presence), scenario→task mapping (honoring §tasks-phase pruning evidence), review-state drift on done specs, scenario open questions (blocking at done, advisory otherwise), link-adjacent decision drift (prose asserting an open state its own sibling link's target contradicts), acceptance-criterion path existence on done specs, and acceptance-criterion labels (duplicate AC{n}, a next-criterion that no longer exceeds the body, an unlabelled criterion in a labelled spec). Each finding carries family, severity, message, and path; severity tiers mirror the command's markdown-only reference. Targets a family could not examine are reported separately in `skipped`, so a zero-finding result never reads as assurance the primitive cannot give."
     )]
     async fn check_artifacts(
         &self,
@@ -787,7 +787,7 @@ impl GovRuntimeServer {
 impl ServerHandler for GovRuntimeServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo::new(ServerCapabilities::builder().enable_tools().build()).with_instructions(
-            "Deterministic runtime for the govern pipeline. Exposes per-primitive tools; \
+            "Deterministic runtime for the ductus pipeline. Exposes per-primitive tools; \
                  see specs/022-deterministic-runtime/ for the protocol contract.",
         )
     }

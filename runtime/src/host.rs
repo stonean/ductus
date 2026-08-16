@@ -1,5 +1,5 @@
 //! Host config loader — resolves the `{cli-config-dir}` and `{project}`
-//! template variables used to locate slash-command files at `gvrn exec`
+//! template variables used to locate slash-command files at `ductus exec`
 //! time. See spec 022 scenario `commands-dir-parameterization`.
 //!
 //! The runtime resolves command files at two callsites
@@ -35,18 +35,18 @@ const DEFAULT_CLI_CONFIG_DIR: &str = ".claude";
 /// extractable file-name component (UTF-8-invalid name, root path,
 /// trailing `..`). The normal fallback is the repo's directory
 /// basename; this constant only fires on the degenerate path shape.
-const FALLBACK_PROJECT: &str = "gov";
+const FALLBACK_PROJECT: &str = "ductus";
 
 /// Resolved host config — the values both command-resolution callsites
 /// need at lookup time. `cli_config_dir` is the host's per-user
 /// config-dir name (e.g., `.claude` for Claude Code, `.augment` for
 /// Auggie); `project` is the slash-command namespace under that dir
-/// (e.g., `gov` in this repo, `anvil` for the Anvil adopter).
+/// (e.g., `ductus` in this repo, `anvil` for the Anvil adopter).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Host {
     /// Host's per-user config-dir name (e.g., `.claude`, `.augment`).
     pub cli_config_dir: String,
-    /// Slash-command namespace under the config dir (e.g., `gov`).
+    /// Slash-command namespace under the config dir (e.g., `ductus`).
     pub project: String,
 }
 
@@ -99,7 +99,7 @@ impl Host {
             Ok(parsed) => parsed.host,
             Err(err) => {
                 eprintln!(
-                    "gvrn: failed to parse {} for [host] block: {err}; using defaults",
+                    "ductus: failed to parse {} for [host] block: {err}; using defaults",
                     toml_path.display()
                 );
                 None
@@ -191,7 +191,7 @@ mod tests {
 
     #[test]
     fn missing_file_returns_defaults() {
-        let repo = tmp_repo("govern-fixture");
+        let repo = tmp_repo("ductus-fixture");
         let host = Host::load(repo.path());
         assert_eq!(host.cli_config_dir, ".claude");
         assert_eq!(
@@ -202,7 +202,7 @@ mod tests {
 
     #[test]
     fn empty_file_returns_defaults() {
-        let repo = tmp_repo("govern-fixture");
+        let repo = tmp_repo("ductus-fixture");
         std::fs::write(repo.path().join(".govern.toml"), "# empty\n").unwrap();
         let host = Host::load(repo.path());
         assert_eq!(host.cli_config_dir, ".claude");
@@ -210,7 +210,7 @@ mod tests {
 
     #[test]
     fn host_block_absent_returns_defaults() {
-        let repo = tmp_repo("govern-fixture");
+        let repo = tmp_repo("ductus-fixture");
         std::fs::write(
             repo.path().join(".govern.toml"),
             "[pins]\n\"foo\" = \"v1\"\n",
@@ -222,7 +222,7 @@ mod tests {
 
     #[test]
     fn host_block_full_overrides_defaults() {
-        let repo = tmp_repo("govern-fixture");
+        let repo = tmp_repo("ductus-fixture");
         std::fs::write(
             repo.path().join(".govern.toml"),
             "[host]\ncli-config-dir = \".augment\"\nproject = \"anvil\"\n",
@@ -247,7 +247,7 @@ mod tests {
     }
 
     #[test]
-    fn session_cli_config_dir_overrides_legacy_govern_toml() {
+    fn session_cli_config_dir_overrides_legacy_ductus_toml() {
         // Per-contributor session file wins for `cli-config-dir`; `project`
         // still comes from the committed `.govern.toml`. This is the team
         // case: the committed config may say `.claude` (or nothing), but a
@@ -315,7 +315,7 @@ mod tests {
 
     #[test]
     fn malformed_toml_falls_back_to_defaults() {
-        let repo = tmp_repo("govern-fixture");
+        let repo = tmp_repo("ductus-fixture");
         std::fs::write(repo.path().join(".govern.toml"), "[host\nbroken").unwrap();
         let host = Host::load(repo.path());
         assert_eq!(host.cli_config_dir, ".claude");
