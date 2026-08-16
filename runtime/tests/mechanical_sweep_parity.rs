@@ -190,8 +190,11 @@ fn rust_and_family_19_agree_on_every_done_spec() {
     let specs = reviewed_done_specs(&root);
     assert!(
         !specs.is_empty(),
-        "no reviewed done specs found — the comparison would pass vacuously, \
-         which is exactly the shape this repo treats as a defect"
+        "no done spec's reviewed-against sha resolved, so there is nothing to \
+         compare — and a green result here would mean the check could not run. \
+         On CI this is almost always a shallow checkout: this job needs \
+         `fetch-depth: 0`, the same requirement Family 19's job carries. \
+         Locally it means the recorded shas are absent from your history."
     );
 
     let mut compared = 0usize;

@@ -40,7 +40,17 @@ jobs:
       run:
         working-directory: runtime
     steps:
+      # fetch-depth: 0 — `tests/mechanical_sweep_parity.rs` resolves every
+      # done spec's `review.reviewed-against` sha and diffs it against HEAD,
+      # comparing the Rust staleness rule with /ductus:audit Family 19's. The
+      # default single-commit checkout has none of those commits, so the test
+      # finds nothing to compare and fails its own vacuity guard rather than
+      # passing on an empty set. Same requirement Family 19's job carries in
+      # runtime-release.yml, and the same one AGENTS.md records after
+      # gvrn-v0.27.1 blocked its own publish on it.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       # Pinned — keep in sync with runtime/rust-toolchain.toml.
       # `components` must match the toolchain file: any cargo command run
