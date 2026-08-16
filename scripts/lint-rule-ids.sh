@@ -17,7 +17,7 @@
 #                  specs/017-derive-dont-ask/data-model.md (CFG surface),
 #                  specs/036-quality-cross-rules/data-model.md (QUAL surface),
 #                  framework/constitution.md §rules
-# Consumed by: .github/workflows/markdown-only-pipeline.yml
+# Consumed by: .github/workflows/framework-checks.yml
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

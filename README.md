@@ -119,7 +119,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/stonean/d
 curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/stonean/ductus/main/install.sh | sh -s -- auggie
 ```
 
-Using the optional `ductus` runtime? Auggie needs a one-time manual registration (`auggie mcp add ductus …`) — see [Registering the runtime](#registering-the-runtime).
+Auggie needs a one-time manual MCP registration (`auggie mcp add ductus …`) — see [Registering the runtime](#registering-the-runtime).
 
 ### Antigravity
 
@@ -137,7 +137,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/stonean/d
 
 OpenCode installs the bootstrap as a verbatim command at `.opencode/command/ductus.md` (invoked `/ductus`) and reads `AGENTS.md` natively — no `CLAUDE.md`. `/ductus` wires the `ductus` runtime automatically by writing the project's root `opencode.json`; because OpenCode loads config once at startup, restart it after the first wiring (see [Registering the runtime](#registering-the-runtime)).
 
-The same bootstrap supports every agent, so re-run `/ductus --add-agent` from any adopted agent later to add others. Once the `ductus` binary is on your `PATH`, `/ductus` wires it on its next run — automatically for Claude and OpenCode (both keep MCP config in a committed repo file), or by surfacing a one-time registration step for Auggie and Antigravity (see [Registering the runtime](#registering-the-runtime)).
+The same bootstrap supports every agent, so re-run `/ductus --add-agent` from any adopted agent later to add others. `/ductus` acquires the runtime and wires it in the same run — automatically for Claude and OpenCode (both keep MCP config in a committed repo file), or by surfacing a one-time registration step for Auggie and Antigravity (see [Registering the runtime](#the-runtime)).
 
 ## Brownfield adoption
 
@@ -159,49 +159,50 @@ Adoption spreads by feature area, not in a big bang. The goal is for `inbox.md` 
 
 A scenario is a spec at a lower level of abstraction — same format, same discipline. Scenarios live in `specs/NNN-feature/scenarios/slug.md`, each gets a linked task in the parent spec, and any can be targeted directly with `/target feature/scenario-slug`.
 
-## The optional runtime
+## The runtime
 
-The `ductus` runtime (`ductus`) is an **optional** deterministic execution layer. It parses the prose of each command and runs the mechanical work (reading specs, walking tasks, checking dependencies, atomic checkbox updates, gate handshakes) in native Rust instead of slow LLM tokens — invoking the model only where semantic judgment actually matters (`assessSpecQuality`, `writeCode`, `writeSpecBody`).
+The `ductus` runtime is the deterministic execution layer the pipeline runs on. It parses the prose of each command and runs the mechanical work (reading specs, walking tasks, checking dependencies, atomic checkbox updates, gate handshakes) in native Rust instead of slow LLM tokens — invoking the model only where semantic judgment actually matters (`assessSpecQuality`, `writeCode`, `writeSpecBody`).
 
-The markdown-only path stays first-class per [constitution §runtime-boundary](framework/constitution.md#runtime-boundary): when the runtime is absent, the agent walks the same prose. Install it if you run the pipeline frequently — the wall-clock saving on `/analyze` and `/implement` is significant; skip it if you only use the pipeline occasionally.
+**You do not install it.** `/ductus` acquires it during adoption: it reads the runtime version this framework revision pins, downloads the matching release asset for your platform, verifies its checksum, and installs it into a ductus-owned store. Your `PATH` is not consulted, and nothing binary enters your repository.
 
-### Install the runtime
+| | |
+| --- | --- |
+| The store | `~/.ductus/bin/ductus` — one binary per machine, written only by `/ductus` |
+| The pointer | `.ductus/bin/ductus` — per project, gitignored, resolves to the store |
 
-Download the pre-built binary for your platform from the [latest release](https://github.com/stonean/ductus/releases) and verify the checksum:
+The pointer is what lets a committed MCP config work for the whole team: `.mcp.json` is shared, so a machine-specific absolute path in it would break every other contributor and every CI checkout. A repo-relative pointer resolves for all of them.
 
-```bash
-# Example for aarch64-apple-darwin; substitute your target triple.
-VERSION="0.12.1"
-TARGET="aarch64-apple-darwin"
-ARCHIVE="ductus-${TARGET}.tar.gz"
-BASE="https://github.com/stonean/ductus/releases/download/gvrn-v${VERSION}"
+`/ductus` compares the pin against the installed binary on every run and re-acquires on mismatch, so upgrading is a routine `/ductus`. A machine running two ductus projects pinned to different versions holds one binary — whichever ran most recently — until `/ductus` runs in the other.
 
-# Work in a scratch tempdir so the extracted binary lands away from your tree.
-tmp="$(mktemp -d)" && cd "${tmp}"
+### Supplying your own binary
 
-curl -LO "${BASE}/${ARCHIVE}"
-curl -LO "${BASE}/${ARCHIVE}.sha256"
-shasum -a 256 -c "${ARCHIVE}.sha256"
-tar xzf "${ARCHIVE}"
-sudo install -m 0755 ductus /usr/local/bin/ductus
-ductus --version
+Set `[runtime] path` in `.ductus/config.toml` and `/ductus` downloads nothing, resolving the pointer to the binary you name:
 
-# Clean up.
-cd - >/dev/null && rm -rf "${tmp}"
+```toml
+[runtime]
+path = "runtime/target/release/ductus"
 ```
 
-Binaries are published for `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu`, and `aarch64-unknown-linux-gnu` (a Windows binary appears when cross-compilation succeeds). If a runtime process crashes mid-procedure, just re-run the command — state lives in your markdown, and writes are filesystem-atomic, so the runtime resumes from the next incomplete step.
+This is the supported route for building from source, for an air-gapped or firewalled checkout, and for a platform with no published asset. A version mismatch against the pin warns rather than halts — you have stated deliberately which binary you want. A path that does not exist, or will not execute, halts naming it; `/ductus` never falls back to downloading, which would discard your choice without saying so.
+
+### When acquisition fails
+
+A network failure, an unpublished asset for your platform, or a checksum mismatch halts the run naming the store path and the release URL — so you can place the binary there by hand and re-run, or set `[runtime] path`. There is no silent degradation: the runtime is required, and a requirement that quietly is not one leaves both execution paths alive.
+
+Binaries are published for `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, and `x86_64-pc-windows-msvc`. Every target ships a `.tar.gz` plus a `.sha256` sidecar, and a release publishes only when all five are present. If a runtime process crashes mid-procedure, just re-run the command — state lives in your markdown, and writes are filesystem-atomic, so the runtime resumes from the next incomplete step.
 
 ### Registering the runtime
 
-You install the binary; the next time you run `/ductus` after `ductus` is on your `PATH`, the bootstrap detects it and adds the matching tool permissions. How the server itself is registered depends on where your agent reads MCP config:
+`/ductus` wires the MCP server in the same run that acquires the binary. Where it points depends on where your agent reads MCP config:
 
-- **Claude** — `/ductus` writes `.mcp.json` for you; just start a fresh session. Fully automatic.
-- **OpenCode** — `/ductus` writes the `ductus` `mcp` block into your committed root `opencode.json` for you; because OpenCode loads config once at startup, quit and restart it so the server loads. No manual `mcp add`.
-- **Auggie** — Auggie reads MCP servers from your user-level `~/.augment/settings.json`, which `/ductus` does not write. It surfaces a one-line command to run once — `auggie mcp add ductus --command ductus --args "mcp"` — then start a fresh session.
-- **Antigravity** — Antigravity reads MCP servers only from your home-level `~/.gemini/config/mcp_config.json` (project-local config is ignored), which `/ductus` does not write. It surfaces an instruction: add the `ductus` block to that file, then reload with the in-prompt `/mcp` overlay.
+- **Claude** — `/ductus` writes `.mcp.json` naming the repo-relative pointer; just start a fresh session. Fully automatic.
+- **OpenCode** — `/ductus` writes the `ductus` `mcp` block into your committed root `opencode.json`, also naming the pointer; because OpenCode loads config once at startup, quit and restart it. No manual `mcp add`.
+- **Auggie** — Auggie reads MCP servers from your user-level `~/.augment/settings.json`, which `/ductus` does not write. It surfaces a one-line command to run once per machine — `auggie mcp add ductus --command ~/.ductus/bin/ductus --args "mcp"` — then start a fresh session.
+- **Antigravity** — Antigravity reads MCP servers only from your home-level `~/.gemini/config/mcp_config.json` (project-local config is ignored), which `/ductus` does not write. It surfaces an instruction: add a `ductus` block naming that same store path, then reload with the in-prompt `/mcp` overlay.
 
-From that session on, the pipeline takes the deterministic path. File writes are additive — an existing MCP config keeps its other servers, and a `ductus` entry that's already present is left untouched. If `/ductus` can't find the binary, it stays on the markdown path and reminds you that installing `ductus` cuts token use.
+The two home-level agents name the **absolute store path** rather than the pointer, for the mirror-image reason: their config is per-machine and serves every project, so no project-relative path could be correct in it.
+
+From that session on, the pipeline takes the deterministic path. File writes are additive — an existing MCP config keeps its other servers, and a `ductus` entry that's already present is left untouched.
 
 ## Configuration
 
@@ -325,7 +326,7 @@ This repo is the source for everything `ductus` ships, plus its own dogfooded sp
   - [bootstrap/](framework/bootstrap/) — the `ductus.md` installer and per-agent permission files
 - **[install.sh](install.sh)** — the `curl … | sh` installer that places the `/ductus` bootstrap command for your agent
 - **[docs/introduction.md](docs/introduction.md)** — the long-form pitch for spec-driven development
-- **[runtime/](runtime/)** — the optional `ductus` deterministic runtime (Rust)
+- **[runtime/](runtime/)** — the `ductus` deterministic runtime (Rust)
 - **[specs/](specs/)** — `ductus`'s own feature specs; it develops itself with its own pipeline. See [specs/README.md](specs/README.md) for cross-cutting decisions and deferred work.
 - **[scripts/](scripts/)** — maintenance and generator scripts
 

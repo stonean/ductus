@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [003-bootstrap-automation, 021-runtime-boundary, 022-deterministic-runtime, 028-antigravity-agent]
 review:
   last-run: 2026-08-03T15:03:53Z
@@ -128,3 +128,16 @@ The README Runtime section, which currently frames the runtime as an entirely se
 - **claude-style `.mcp.json` location.** *Resolved:* repo-root `.mcp.json` is correct — it is Claude Code's documented project-level MCP config and already the value in ductus.md §Derived values (line 71); this spec activates it rather than inventing a path. Coexistence with an existing config is the additive/idempotent in-place update: preserve all existing servers and top-level keys, add only a missing `ductus` entry, add the `mcpServers` key if absent, leave an existing `ductus` entry unchanged, and never clobber a malformed-JSON file (skip + warn + degrade to markdown). Reversal is per layout — `git restore` for the tracked `.mcp.json` (claude-style), manual entry-deletion for the gitignored `.agents/mcp_config.json` (antigravity). The JSON-merge implementation (host-side vs. a future primitive — none exists today) is left to `/ductus:plan`.
 - **Version compatibility.** *Resolved:* presence of the binary is sufficient to wire — the gate performs no version check. `runtime-tools.txt` carries only tool names (no version floor), and spec 022 §Versioning enforcement already rejected startup version comparison and refuse-on-mismatch in favor of lockstep tagged releases plus the runtime's parse-error path. A too-old wired `ductus` is surfaced by that runtime parse error and degrades to the markdown fallback, so the bootstrap gate is the wrong layer to enforce a version floor.
 - **Detection mechanism across hosts.** *Resolved:* two independent probes. State A is reached by the agent introspecting its own tool inventory for a `ductus`-namespaced MCP tool (`mcp__ductus__*` on Claude, `mcp:ductus:*` on Auggie/antigravity), counting deferred/lazy names as present — no shell, no permission. The State B vs. State C split needs a `command -v ductus`-equivalent shell probe (the only way to detect an installed-but-unregistered binary; anything queryable via a tool would already be State A), reached only when introspection finds no tool. The probe command is seeded into the existing Permission Setup pre-grant so it does not prompt. If the probe cannot run or is denied, the run is classified as State C — a harmless false negative (no auto-wire; manual wiring stays documented), so detection never hard-fails on a locked-down host.
+
+## Post-completion note — three detection states collapse to two
+
+> Amended by [048 — Ductus-Acquired Runtime](../048-govern-acquired-runtime/spec.md).
+
+Spec 048 makes acquisition `/{project}`'s job, which removes the condition State C described.
+
+- **State C — binary absent** is gone. It existed to report a missing binary and suggest the adopter install one; a missing binary is now work to perform, so the former State C path acquires the runtime and then wires and permissions it exactly as State B does, joining the same pending-restart set and the same combined pre-flight abort. An adopter with no runtime reaches the deterministic path in one run plus one restart, with no manual install in between.
+- **The binary probe** changed from a `PATH` lookup (`command -v ductus` / `which ductus`) to a filesystem check on the ductus-owned store. `PATH` is not consulted at all — an adopter's own `ductus` on `PATH` is ignored, not warned about, not removed.
+- **A probe that cannot run** used to classify as State C, a harmless false negative that skipped auto-wiring. It now classifies as State B and acquisition proceeds; acquisition is idempotent, so the false negative costs a version comparison rather than a redundant download.
+- **The State C post-scaffolding tip** ("installing `ductus` cuts token use") lost its audience on the happy path and is reserved for the degraded case — acquisition attempted and failed.
+
+**State A is unchanged**, including its binding execution contract: detecting the runtime and then walking the prose path anyway remains the failure this spec exists to prevent.

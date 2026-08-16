@@ -10,3 +10,11 @@ project = "ductus"
 
 [review]
 tech-stack-verified = true
+
+[runtime]
+# This repository builds the runtime it ships, so it supplies its own binary
+# rather than acquiring a published release: a maintainer's MCP calls must
+# exercise the build in the working tree, not the last tagged version. The
+# pointer resolves here, so `cargo build --release` plus a session restart is
+# the whole loop — no `cargo install` step.
+path = "runtime/target/release/ductus"

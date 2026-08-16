@@ -1,0 +1,126 @@
+name: runtime-acquisition
+
+# The **acquisition invariant** from constitution §runtime-boundary: prove that
+# the published release assets can actually be acquired, on every supported
+# platform, exactly as `/ductus` acquires them.
+#
+# This replaces the opt-in invariant, which asserted a full pipeline cycle with
+# the binary absent from PATH. That job tested the guarantee principle 3 used to
+# make; the guarantee it now makes is that the binary is *obtainable*, and the
+# job that proves it is the one that fetches it (spec 048).
+#
+# Why it runs on a published release rather than on every PR: the subject is the
+# published asset set, which does not exist until the release publishes. Running
+# it on PRs would assert against the *previous* release — passing while the
+# release under review is broken, which is precisely backwards. The release
+# workflow's own gate already asserts every asset is present before publishing;
+# this job asserts an adopter can fetch, verify, install, and execute them.
+#
+# The steps mirror §Runtime acquisition in framework/bootstrap/ductus.md. When
+# that procedure changes, this job changes with it — it is the executable copy
+# of the same sequence.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to acquire (defaults to the repo-root version pin)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  acquire:
+    name: Acquire ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      # Every target's failure must be visible in one run — a partial matrix
+      # tells you one platform is broken, not which others also are.
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            runner: macos-latest
+          - target: x86_64-apple-darwin
+            runner: macos-13
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            runner: ubuntu-24.04-arm
+          - target: x86_64-pc-windows-msvc
+            runner: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve the version pin
+        id: pin
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The same pin /ductus reads out of the fetched archive.
+          version="${{ inputs.version }}"
+          if [ -z "$version" ]; then
+            version="$(tr -d '[:space:]' < version)"
+          fi
+          if [ -z "$version" ]; then
+            echo "::error::no version pin at the repo root"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Acquire, verify, install, execute
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ steps.pin.outputs.version }}"
+          target="${{ matrix.target }}"
+          base="https://github.com/stonean/ductus/releases/download/ductus-v${version}"
+          archive="ductus-${target}.tar.gz"
+
+          store="$(mktemp -d)/store"
+          staging="$(mktemp -d)"
+          cd "$staging"
+
+          # 1. Fetch the archive and its sidecar. A missing sidecar is a
+          #    failure here, not a skip: unlike the source tarball, release
+          #    assets always carry theirs.
+          curl -fsSL "${base}/${archive}" -o "$archive"
+          curl -fsSL "${base}/${archive}.sha256" -o "${archive}.sha256"
+
+          # 2. Verify the digest BEFORE anything is installed.
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum -c "${archive}.sha256"
+          else
+            shasum -a 256 -c "${archive}.sha256"
+          fi
+
+          # 3. Install into the store with the executable bit set.
+          mkdir -p "$store"
+          tar -xzf "$archive"
+          binary="ductus"
+          [ "$target" = "x86_64-pc-windows-msvc" ] && binary="ductus.exe"
+          mv "$binary" "$store/$binary"
+          chmod +x "$store/$binary"
+
+          # 4. Execute it and confirm it reports the pinned version. A binary
+          #    that installs but will not run is an acquisition failure — this
+          #    is why the probe executes rather than reading a marker.
+          reported="$("$store/$binary" --version)"
+          echo "reported: $reported"
+          case "$reported" in
+            *"$version"*) ;;
+            *)
+              echo "::error::installed binary reports '$reported', expected version $version"
+              exit 1
+              ;;
+          esac
+
+      - name: Fail when the asset is unavailable
+        if: failure()
+        shell: bash
+        run: |
+          echo "::error::acquisition failed for ${{ matrix.target }} at ${{ steps.pin.outputs.version }} — an adopter on this platform cannot bootstrap. Check that the release published every asset and its sidecar."

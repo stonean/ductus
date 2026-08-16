@@ -5,10 +5,7 @@
 #
 # Workflow-local: this script builds the runtime binary in --release mode
 # at runtime/target/release/ductus and invokes it via that relative
-# path. It does NOT add the binary to PATH, so the opt-in invariant
-# check (step (a) in markdown-only-pipeline.yml) remains intact — the
-# parseability check is a workflow-private compile, not a runtime
-# install.
+# path — a workflow-private compile, not a runtime install.
 #
 # The allowlist covers ONLY the legacy-prose case: an allowlisted file
 # may return LegacyProse (no parseable Instructions section), but an

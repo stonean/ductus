@@ -399,7 +399,7 @@ When a `/groom` pass encounters an item that does not map to any existing spec, 
 
 ## Text-First Artifacts
 
-`ductus` treats every artifact — constitution, specs, plans, tasks, scenarios, rules — as plain markdown the agent can edit with `Edit`. This is load-bearing: the agent's write path stays simple, PRs review glanceably, and merge conflicts stay rare and human-resolvable. The markdown framework is usable standalone with no tooling beyond the AI agent; an optional runtime (see [§runtime-boundary](#runtime-boundary)) provides deterministic execution of mechanical checks and fixes for adopters who opt in.
+`ductus` treats every artifact — constitution, specs, plans, tasks, scenarios, rules — as plain markdown the agent can edit with `Edit`. This is load-bearing: the agent's write path stays simple, PRs review glanceably, and merge conflicts stay rare and human-resolvable. The **artifacts** are usable standalone with no tooling beyond the AI agent — every one is plain markdown a contributor reads, edits, and reviews by hand, with no build step and no export. That is what text-first governs. The *pipeline* that reads them requires the runtime ([§runtime-boundary](#runtime-boundary)), which parses and writes the same markdown a contributor edits in an editor.
 
 ### Principles
 
@@ -449,13 +449,13 @@ For non-frontmatter checks (spec integrity, artifact completeness, plan/task con
 
 ### Runtime Boundary
 
-`ductus` MAY ship an optional runtime binary alongside the markdown framework. The runtime exists to execute the deterministic portions of pipeline commands without an LLM. This subsection defines what the runtime can and cannot do; deviations require their own constitutional amendment.
+`ductus` ships a runtime binary alongside the markdown framework, acquired by `/{project}` during adoption. The runtime exists to execute the deterministic portions of pipeline commands without an LLM. This subsection defines what the runtime can and cannot do; deviations require their own constitutional amendment.
 
 #### Five principles
 
 1. **Markdown is source of truth** — the runtime MUST NOT own state the markdown cannot reconstruct. Runtime-owned data (caches, indexes, parsed graphs) is derived and gitignored, per the existing rule on structured derived views.
 2. **Determinism only** — the runtime MUST NOT call an LLM. Work requiring semantic judgment (content quality, `/clarify` resolution, `/specify` sketching, per-rule Verification reads, `/groom` routing) stays in slash commands.
-3. **Opt-in for adopters** — the runtime MUST NOT be a prerequisite for any pipeline gate. A markdown-only adopter — agent + the host's file tools (`Read`, `Edit`, `Write`), no binary on `PATH` — must complete every cycle (greenfield, brownfield, reopen) and reach `done` on every spec. The markdown-only path operates through those host tools; shell pipelines that parse frontmatter or markdown structure (`awk`, `sed`, `grep` pipelines, `for` loops over files) are **not** a sanctioned substitute for either the runtime primitives or the host's file tools.
+3. **Required, and acquired by the pipeline** — `/{project}` acquires the pinned runtime as part of adoption, so a bootstrapped project has the binary and pipeline commands MAY assume determinism rather than specifying two executable paths to one result. The runtime is *ductus-owned*: acquired and version-managed by the pipeline into a store it writes, never whatever `PATH` happens to resolve. A project that supplies its own binary declares it (`[runtime] path`) and is equally supported; acquisition failure halts the run rather than degrading, because a requirement that quietly is not one leaves both paths alive. Shell pipelines that parse frontmatter or markdown structure (`awk`, `sed`, `grep` pipelines, `for` loops over files) remain **not** a sanctioned substitute for the runtime primitives or the host's file tools.
 4. **Schema follows the constitution** — the runtime MUST read frontmatter and artifact structure according to the schemas declared in this document. Schema changes ship through the constitution; the runtime MUST update to match. The constitution MUST NOT import runtime types.
 5. **MCP is the seam** — the runtime MUST expose its capabilities as MCP tools so slash commands can call them when they want determinism. This keeps the runtime accessible to any agent host and prevents `ductus`-specific coupling.
 
@@ -471,13 +471,15 @@ A capability is runtime-eligible only when **all three** hold:
 
 1. **Deterministic** — no semantic judgment required; the same inputs always produce the same outputs.
 2. **Currently mechanical** — already either (a) executed by an LLM following procedural instructions in a slash command body, or (b) implemented as a bash script the framework invokes (pre-commit hooks, generators, CI).
-3. **Degradation, not failure, when removed** — without the runtime, the work still completes correctly via the markdown-only path; only speed, cost, or reliability degrades.
+3. **Specifiable as prose** — the capability can be stated completely enough that the Markdown-only reference documents it, and a primitive mirrors that reference rather than introducing policy of its own. This is what keeps the specification and the implementation one thing: the reference is where the policy lives, the primitive is how it runs.
 
 A capability that fails any criterion stays out of the runtime. Anything that requires reading prose for intent is permanently LLM-owned regardless of how mechanical its surface looks.
 
-#### Opt-in invariant
+#### Acquisition invariant
 
-The repository's CI MUST include a job that exercises a representative pipeline cycle end-to-end with the runtime binary absent from `PATH`. A change that causes this job to fail — i.e., a slash command that silently requires the runtime — is a constitution violation, not a feature.
+The repository's CI MUST include a job that exercises acquisition end-to-end on every supported platform: fetch the published asset for the target, verify its sidecar digest, install it into a temporary store, and execute the installed binary. A change that causes this job to fail — i.e. a release whose assets an adopter cannot actually acquire — is a constitution violation, not a feature.
+
+This replaces the **opt-in invariant**, which asserted a full pipeline cycle with the binary absent from `PATH`. That job tested the guarantee principle 3 used to make; the guarantee it now makes is that the binary is *obtainable*, and the job that proves it is the one that fetches it. Amended by [048](../specs/048-govern-acquired-runtime/spec.md).
 
 #### Versioning
 

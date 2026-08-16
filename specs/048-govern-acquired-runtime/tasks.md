@@ -88,35 +88,35 @@ Phase 1 is independently safe and lands first so later work is written against a
 
 ### 9. Amend the constitution and sweep the references
 
-- [ ] Replace §runtime-boundary principle 3 and the Opt-in invariant with the requirement and the acquisition-asserting CI job
-- [ ] Narrow §text-first-artifacts' "usable standalone with no tooling beyond the AI agent" to the artifacts rather than the pipeline
-- [ ] Remove the 26 per-step markdown-only fallback instructions from `framework/commands/*.md` and `framework/bootstrap/ductus.md`, leaving the Markdown-only reference sections that specify check policy and procedure
-- [ ] Update `README.md`: drop the `PATH` install as the supported route, correct the Windows cross-compilation claim
-- [ ] Re-run `scripts/gen-claude-commands.sh`
+- [x] Replace §runtime-boundary principle 3 and the Opt-in invariant with the requirement and the acquisition-asserting CI job
+- [x] Narrow §text-first-artifacts' "usable standalone with no tooling beyond the AI agent" to the artifacts rather than the pipeline
+- [x] Remove the 26 per-step markdown-only fallback instructions from `framework/commands/*.md` and `framework/bootstrap/ductus.md`, leaving the Markdown-only reference sections that specify check policy and procedure
+- [x] Update `README.md`: drop the `PATH` install as the supported route, correct the Windows cross-compilation claim
+- [x] Re-run `scripts/gen-claude-commands.sh`
 
 - **Done when**: no live artifact under `framework/` or `README.md` describes the runtime as optional or documents a `PATH` install, the policy-bearing reference sections survive intact, and `npx markdownlint-cli2` passes.
 
 ### 10. Record the change in 021 and 029
 
-- [ ] Add a post-completion note to `specs/021-runtime-boundary/spec.md` recording that this spec retires the opt-in invariant its AC1 and AC2 delivered, with a back-link
-- [ ] Add the same to `specs/029-bootstrap-runtime-autowire/spec.md` for the collapsed detection states
-- [ ] Reopen both `done → in-progress` per §cross-spec-impact, in the same commit as task 9
+- [x] Add a post-completion note to `specs/021-runtime-boundary/spec.md` recording that this spec retires the opt-in invariant its AC1 and AC2 delivered, with a back-link
+- [x] Add the same to `specs/029-bootstrap-runtime-autowire/spec.md` for the collapsed detection states
+- [x] Reopen both `done → in-progress` per §cross-spec-impact, in the same commit as task 9
 
 - **Done when**: both specs describe the current state rather than the retired one, both are `in-progress`, and neither still asserts a guarantee the constitution no longer makes.
 
 ### 11. Replace the opt-in CI job with an acquisition job
 
-- [ ] Delete `.github/workflows/markdown-only-pipeline.yml` — it asserts the retired invariant
-- [ ] Add a job exercising acquisition end to end on each runner platform: fetch the published asset, verify the sidecar, install to a temporary home, execute the binary, and fail when any step fails
-- [ ] Give every job that runs `cargo` under `runtime/` the `components: clippy, rustfmt` input per `AGENTS.md`'s toolchain-pin gotcha
+- [x] Delete `.github/workflows/markdown-only-pipeline.yml` — it asserts the retired invariant
+- [x] Add a job exercising acquisition end to end on each runner platform: fetch the published asset, verify the sidecar, install to a temporary home, execute the binary, and fail when any step fails
+- [x] Give every job that runs `cargo` under `runtime/` the `components: clippy, rustfmt` input per `AGENTS.md`'s toolchain-pin gotcha
 
 - **Done when**: the acquisition job passes on macOS, Linux, and Windows runners, and fails when the asset or its sidecar is unavailable.
 
 ### 12. Point this repository at its own build
 
-- [ ] Set `.ductus/config.toml`'s `[runtime]` key to `runtime/target/release/ductus`
-- [ ] Update `.mcp.json` to the pointer, replacing the bare `ductus` command
-- [ ] Replace `AGENTS.md`'s stale-binary gotcha with the `[runtime]` workflow — a `runtime/` change is live after `cargo build --release` and a session restart, with no `cargo install` step
-- [ ] Confirm a maintainer's MCP calls exercise the freshly built binary
+- [x] Set `.ductus/config.toml`'s `[runtime]` key to `runtime/target/release/ductus`
+- [x] Update `.mcp.json` to the pointer, replacing the bare `ductus` command
+- [x] Replace `AGENTS.md`'s stale-binary gotcha with the `[runtime]` workflow — a `runtime/` change is live after `cargo build --release` and a session restart, with no `cargo install` step
+- [x] Confirm a maintainer's MCP calls exercise the freshly built binary
 
 - **Done when**: an MCP tool call in this repo runs the binary the maintainer just compiled, and `AGENTS.md` describes that workflow rather than the `cargo install` one it replaces.

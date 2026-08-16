@@ -11,7 +11,7 @@
 # allowlist (see framework/constitution.md §rules).
 #
 # Source of truth: framework/constitution.md §rules
-# Consumed by: .github/workflows/markdown-only-pipeline.yml
+# Consumed by: .github/workflows/framework-checks.yml
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

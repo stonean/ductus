@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [020-code-review]
 review:
   last-run: 2026-05-10T00:00:00Z
@@ -92,3 +92,15 @@ A row is added to the canonical sources table in §drift-prevention naming §run
 - **Opt-in CI invariant — when it runs** — every PR that modifies `framework/`, `specs/`, or `.claude/commands/`, starting now (not deferred until the binary exists). The invariant is a tripwire that must already be running before the first runtime-touching PR so that PR is the one that fails. It is vacuously satisfied today (no command references a runtime tool yet) at the cost of trivial workflow-runner minutes. The path filter ensures docs-only or release-only PRs skip the workflow.
 - **Capability listing in §runtime-boundary** — capability-agnostic, with a single forward pointer. §runtime-boundary defines the boundary; actual capabilities live in their introducing specs (beginning with spec 022). Mirrors how §rules works: the constitution defines the rules tier and schema; actual rules live in `specs/rules/{rule-set}.md` and are not enumerated in the constitution. A one-line pointer at the end of the subsection — *"Specific capabilities are introduced through their own feature specs, beginning with spec 022 (deterministic runtime)."* — anchors the reader without pinning content. Reader-side concreteness already lives in this spec's Motivation section (awk YAML parsing, three-place gate, cross-pass dedupe); the constitution does not need to repeat it.
 - **Runtime-eligibility note requirement on slash commands** — no requirement. A hand-authored "deterministic vs. semantic" note on each slash command source is exactly the anti-pattern the Design Principles section in `AGENTS.md` forbids: it depends on author diligence and fails silently when an author forgets. The substantive invariant — that any runtime-tool reference in a slash command has a graceful fallback — is already enforced by the CI tool-coverage lint (check 4 from the opt-in invariant resolution above), which is derived from the command source rather than from an author-supplied marker. If richer signals are wanted later, they are extracted by static analysis, not by hand.
+
+## Post-completion note — the opt-in invariant is retired
+
+> Amended by [048 — Ductus-Acquired Runtime](../048-govern-acquired-runtime/spec.md).
+
+Spec 048 amends the boundary this spec established. Two of the guarantees AC1 and AC2 delivered no longer hold, and the spec records what replaced them rather than being rewritten as though they never existed.
+
+- **Principle 3 was "Opt-in for adopters"** — the runtime MUST NOT be a prerequisite for any pipeline gate, and a markdown-only adopter must reach `done` on every spec. It is now "Required, and acquired by the pipeline": `/{project}` acquires the pinned runtime during adoption, so a bootstrapped project has the binary and commands may assume determinism. The change is what lets one specification have one implementation instead of two executable paths kept in agreement by hand.
+- **The Opt-in invariant** — a CI job asserting a full pipeline cycle with the binary absent from `PATH` — is now the **Acquisition invariant**, a job asserting that the published asset can actually be fetched, verified, installed, and executed on every supported platform. The old job tested the guarantee principle 3 used to make; the new one tests the guarantee that replaced it.
+- **The third eligibility criterion** was "Degradation, not failure, when removed". With no markdown-only execution path to degrade to, it is now "Specifiable as prose" — the capability must be statable completely enough that the Markdown-only reference documents it and a primitive mirrors that reference. The criterion still does the work the original did: it keeps a capability out of the runtime unless its policy can be written down.
+
+What this spec established that **did not** change: markdown remains the source of truth, the runtime still MUST NOT call an LLM, schema still follows the constitution, MCP is still the seam, and the artifacts are still plain markdown a contributor edits by hand. §text-first-artifacts narrowed to say so explicitly — text-first governs the artifacts, not the tooling that reads them.

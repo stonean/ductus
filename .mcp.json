@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "ductus": {
-      "command": "ductus",
+      "command": ".ductus/bin/ductus",
       "args": ["mcp"]
     }
   }

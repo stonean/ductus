@@ -1,15 +1,13 @@
-# Canonical names of runtime tools exposed by the optional `ductus` runtime.
+# Canonical names of runtime tools exposed by the `ductus` runtime.
 #
 # Source of truth: framework/constitution.md §runtime-boundary
 #
 # Each non-blank, non-comment line is one tool name (matching MCP tool names
 # or runtime binary names). The list is consumed by:
 #
-#   - .github/workflows/markdown-only-pipeline.yml (asserts no entry is on PATH)
-#   - scripts/lint-tool-coverage.sh              (verifies references in
-#                                                  framework/commands/*.md
-#                                                  are wrapped in a graceful
-#                                                  fallback)
+#   - scripts/lint-tool-coverage.sh (verifies every name referenced in
+#                                     framework/commands/*.md resolves to a
+#                                     tool the runtime actually exposes)
 #
 # Tool names are case-sensitive exact-match strings. Names are bare
 # `<verb>-<noun>` strings — server-level namespacing (`ductus`) is
