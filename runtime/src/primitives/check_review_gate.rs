@@ -297,8 +297,14 @@ fn scenario_question_block(
     repo: &Path,
     feature: &str,
 ) -> Option<CheckReviewGateResult> {
-    let questions = read_spec::collect_scenario_open_questions(feature_dir);
+    let scan = read_spec::collect_scenario_open_questions(feature_dir);
+    let questions = scan.questions;
     if questions.is_empty() {
+        // An unreadable scenario does not block — nothing can be proven about
+        // a file that will not parse, and this gate must not fail closed on
+        // its own inability to read. It is reported by `read-spec` and by
+        // `check-artifacts`' skipped list instead, so the pass is still
+        // distinguishable from a fully-examined one.
         return None;
     }
     let scenarios = read_spec::scenario_names(&questions);

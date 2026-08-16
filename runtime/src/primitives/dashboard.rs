@@ -468,7 +468,11 @@ fn load_one_spec(specs_dir: &Path, root: &str, slug: &str) -> Result<DashboardSp
     // Scenario questions come from `read-spec`'s collector so the glance
     // view, the completion gate, and the analyze finding can never report
     // different counts for the same feature (spec 046).
-    let scenario_questions = read_spec::collect_scenario_open_questions(&feature_dir);
+    // The dashboard is a glance, not a full pretty-printer: an unreadable
+    // scenario is reported by `read-spec` and by `check-artifacts`' skipped
+    // list, which is where a caller goes for that distinction. Named here so
+    // the discard is a decision rather than an oversight.
+    let scenario_questions = read_spec::collect_scenario_open_questions(&feature_dir).questions;
     let scenarios_with_questions: Vec<String> = read_spec::scenario_names(&scenario_questions)
         .into_iter()
         .map(ToString::to_string)

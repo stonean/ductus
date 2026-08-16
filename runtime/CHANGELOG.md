@@ -4,6 +4,10 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 
 ## [Unreleased]
 
+### Added
+
+- **`read-spec` reports scenario files it could not read.** A new `scenario-files-unreadable` field sits alongside `scenario-open-questions`, and `check-artifacts` records each unread scenario as a `skipped` target (family `scenario-open-questions`, reason `artifact-unreadable`). Previously an unreadable scenario contributed no questions and was dropped silently, so an empty question list meant either *every scenario was examined and none carries a question* or *a scenario could not be examined* — and every surface asserted the first. Nothing gains a block: an unknown is still not escalated into a defect, and `check-review-gate` still fails open. The field is omitted when empty, so existing payloads and the parity goldens are byte-unchanged (specs 046, 022 `unreadable-scenario-is-reported`).
+
 ### Changed
 
 - **BREAKING (opt-in escape hatch): `GVRN_FETCH_ALLOW_INSECURE_HOSTS` is now `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS`.** The 0.28.0 rename missed this variable — its Rust constant carried no project token, so the sweep's identifier grep passed over the string literal. The old name is **not** honoured as a fallback: keeping it would leave a live reference to the retired project name, which is exactly what spec 049's AC1 forbids. If you set the old variable for an internal mirror or local testing, rename it. The failure mode if you do not is safe and loud rather than silent — the host is screened again, so the fetch is refused with an error naming the scheme or the internal address, never quietly allowed. The variable only ever loosens the SSRF guard, so losing it fails closed.

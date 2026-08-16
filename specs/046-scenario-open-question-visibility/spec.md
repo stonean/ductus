@@ -8,7 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 32
+next-criterion: 33
 ---
 
 # 046 — Scenario open-question visibility
@@ -117,6 +117,7 @@ What stays with this spec: the constitution amendments to §spec-lifecycle's `do
 - [x] AC1: Scenario open questions are reported as a field distinct from the spec body's open-question count, with each entry tagged by its source scenario file
 - [x] AC2: The spec body's open-question count is unchanged in meaning and value by this feature
 - [x] AC3: Feature-targeted `/{project}:clarify` resolves no scenario question — it walks none, writes to no scenario file, and leaves resolution to the scenario-targeted branch
+- [x] AC32: A scenario file that cannot be read is reported rather than silently dropped — it contributes no questions and blocks nothing, but the reading surface names it and `/{project}:analyze` records it as an unexamined target, so an empty scenario-question result distinguishes "every scenario examined, none carries a question" from "a scenario could not be examined"
 - [x] AC31: Feature-targeted `/{project}:clarify` reports outstanding scenario open questions in every gate branch where the field is non-empty — including the `already {status}` and `done` branches, which still modify no file — naming every carrying scenario and the scenario-targeted command that resolves them, and is suppressed entirely rather than rendered as "0 outstanding" when the field is empty
 - [x] AC4: A spec with one or more unresolved scenario open questions cannot be advanced to `done`
 - [x] AC5: The `done` block is reported with the blocking scenario named, not as a generic gate failure

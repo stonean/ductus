@@ -152,9 +152,16 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
         tasks.as_ref().map(|t| t.tasks.as_slice()),
     );
     check_review_drift(&mut findings, frontmatter, &status, &spec_path, repo);
-    check_scenario_open_questions(&mut findings, &feature_dir, &status, &spec_path, repo);
 
     let mut skipped: Vec<SkippedTarget> = Vec::new();
+    check_scenario_open_questions(
+        &mut findings,
+        &mut skipped,
+        &feature_dir,
+        &status,
+        &spec_path,
+        repo,
+    );
     check_link_adjacent_drift(&mut findings, &mut skipped, &feature_dir, &spec, repo);
     check_criterion_path_existence(
         &mut findings,
@@ -419,12 +426,29 @@ fn check_review_drift(
 /// disagree.
 fn check_scenario_open_questions(
     findings: &mut Vec<ArtifactFinding>,
+    skipped: &mut Vec<SkippedTarget>,
     feature_dir: &Path,
     status: &str,
     spec_path: &Path,
     repo: &Path,
 ) {
-    let questions = read_spec::collect_scenario_open_questions(feature_dir);
+    let scan = read_spec::collect_scenario_open_questions(feature_dir);
+    // A scenario that could not be read is reported as a skipped target, not
+    // as a finding and not as silence. It is not a defect — nothing can be
+    // proven about a file that will not parse — but a zero-finding result
+    // over a subject the family never read would be indistinguishable from a
+    // fully-examined clean one (QUAL-CLAIM-001).
+    for slug in &scan.unreadable {
+        skipped.push(SkippedTarget {
+            family: "scenario-open-questions".into(),
+            reason: "artifact-unreadable".into(),
+            path: rel_path(
+                &feature_dir.join("scenarios").join(format!("{slug}.md")),
+                repo,
+            ),
+        });
+    }
+    let questions = scan.questions;
     if questions.is_empty() {
         return;
     }
@@ -2072,14 +2096,29 @@ mod tests {
         .unwrap();
         let result = run(&args(), tmp.path()).unwrap();
         assert!(drift(&result).is_empty(), "{:?}", result.findings);
+        // Scoped by family: one unreadable file is legitimately skipped by
+        // every family whose subject it is, which is what `family` on
+        // SkippedTarget distinguishes. `scenario-open-questions` also records
+        // it (asserted below) — two records of one file, not a duplicate.
         let skips: Vec<_> = result
             .skipped
             .iter()
-            .filter(|s| s.reason == "artifact-unreadable")
+            .filter(|s| s.reason == "artifact-unreadable" && s.family == "link-adjacent-drift")
             .collect();
         assert_eq!(skips.len(), 1, "{:?}", result.skipped);
-        assert_eq!(skips[0].family, "link-adjacent-drift");
         assert_eq!(skips[0].path, "specs/042-demo/scenarios/broken.md");
+
+        // The same file is the scenario-question collector's subject too, and
+        // it yields no questions — so without this record the family would
+        // report clean over a scenario it never read (QUAL-CLAIM-001).
+        let scenario_skips: Vec<_> = result
+            .skipped
+            .iter()
+            .filter(|s| s.family == "scenario-open-questions")
+            .collect();
+        assert_eq!(scenario_skips.len(), 1, "{:?}", result.skipped);
+        assert_eq!(scenario_skips[0].reason, "artifact-unreadable");
+        assert_eq!(scenario_skips[0].path, "specs/042-demo/scenarios/broken.md");
     }
 
     #[test]

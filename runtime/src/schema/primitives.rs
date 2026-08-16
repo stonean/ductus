@@ -389,10 +389,29 @@ pub struct ReadSpecResult {
     pub open_questions: Vec<OpenQuestion>,
     /// Unresolved questions carried by this feature's scenarios, in shared
     /// scenario order, each tagged with its source scenario. A sibling
-    /// signal to `open-questions`, never merged into it: merging would
-    /// route a feature-level target to feature-targeted clarify, which does
-    /// not read scenarios (spec 046).
+    /// signal to `open-questions`, never merged into it: the two answer
+    /// different questions. The body's count is what `clarified` asserts and
+    /// what the `draft → clarified` edge turns on; these are remaining work
+    /// that gates `done`, so merging them would make a spec's status
+    /// contradict its own body (spec 046).
+    ///
+    /// The earlier rationale here — that merging "would route a feature-level
+    /// target to feature-targeted clarify, which does not read scenarios" —
+    /// no longer holds: feature-targeted clarify *reports* this field as of
+    /// 022's `scenario-open-question-signal`. The conclusion is unchanged;
+    /// only the reason is.
     pub scenario_open_questions: Vec<ScenarioOpenQuestion>,
+    /// Slugs of scenario files that could not be read while collecting
+    /// `scenario-open-questions`. Empty in the ordinary case.
+    ///
+    /// Present so a caller can tell *"every scenario was examined and none
+    /// carries a question"* from *"a scenario could not be examined"* — an
+    /// empty `scenario-open-questions` alone means both. An unreadable
+    /// scenario is never escalated into a `done`-blocking finding (nothing
+    /// can be proven about a file that will not parse), but it is reported
+    /// rather than dropped, per `QUAL-CLAIM-001` (spec 046).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub scenario_files_unreadable: Vec<String>,
     /// Repo-relative path to the spec file.
     pub path: String,
 }
@@ -2396,6 +2415,7 @@ mod tests {
                 scenario: "framework-list-dedup".into(),
                 text: "Format argument or separate primitive?".into(),
             }],
+            scenario_files_unreadable: vec![],
             path: "specs/022-deterministic-runtime/spec.md".into(),
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();

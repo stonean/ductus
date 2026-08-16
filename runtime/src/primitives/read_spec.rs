@@ -42,7 +42,9 @@ pub fn run(args: &ReadSpecArgs, repo: &Path) -> Result<ReadSpecResult> {
     let sections = parse_sections(body, args.include_body);
     let acceptance_criteria = parse_checkboxes(body, "Acceptance Criteria");
     let open_questions = parse_open_questions(body, "Open Questions");
-    let scenario_open_questions = collect_scenario_open_questions(&feature_dir);
+    let scan = collect_scenario_open_questions(&feature_dir);
+    let scenario_open_questions = scan.questions;
+    let scenario_files_unreadable = scan.unreadable;
 
     Ok(ReadSpecResult {
         frontmatter,
@@ -50,6 +52,7 @@ pub fn run(args: &ReadSpecArgs, repo: &Path) -> Result<ReadSpecResult> {
         acceptance_criteria,
         open_questions,
         scenario_open_questions,
+        scenario_files_unreadable,
         path: rel_path(&spec_path, repo),
     })
 }
@@ -63,21 +66,34 @@ pub fn run(args: &ReadSpecArgs, repo: &Path) -> Result<ReadSpecResult> {
 /// uses — so one parser decides what counts as a question everywhere
 /// (spec 046).
 ///
-/// An absent `scenarios/` directory yields an empty list. So does a
-/// scenario whose file cannot be read or has no questions section: nothing
-/// can be proven about a file that will not parse, and an unknown is never
-/// escalated into a `done`-blocking finding.
+/// An absent `scenarios/` directory yields an empty scan. A scenario whose
+/// file cannot be read is **not** escalated into a `done`-blocking finding —
+/// nothing can be proven about a file that will not parse — but it is
+/// reported in [`ScenarioQuestionScan::unreadable`] rather than silently
+/// dropped. Those are different obligations: the first is about blocking,
+/// the second about distinguishability. Returning a bare empty list for both
+/// "examined every scenario, found no questions" and "could not examine a
+/// scenario" is `QUAL-CLAIM-001` — every consumer would report clean over a
+/// subject it never read, and the reassuring reading is the dangerous one.
 ///
 /// `pub(crate)`: shared with `check-review-gate`, whose completion check
 /// MUST block on exactly the list this reader reports. A second, private
 /// scenario-question reader could disagree with the count surfaced to the
 /// user, so there is deliberately only one (spec 046).
-pub(crate) fn collect_scenario_open_questions(feature_dir: &Path) -> Vec<ScenarioOpenQuestion> {
+pub(crate) fn collect_scenario_open_questions(feature_dir: &Path) -> ScenarioQuestionScan {
     let scenarios_dir = feature_dir.join("scenarios");
     let mut out = Vec::new();
+    let mut unreadable = Vec::new();
     for name in list_scenario_files(&scenarios_dir) {
         let scenario_path = scenarios_dir.join(&name);
         let Ok(content) = read_text(&scenario_path) else {
+            unreadable.push(
+                Path::new(&name)
+                    .file_stem()
+                    .and_then(|stem| stem.to_str())
+                    .unwrap_or(name.as_str())
+                    .to_string(),
+            );
             continue;
         };
         // A scenario normally carries `section:` frontmatter, but a
@@ -100,7 +116,26 @@ pub(crate) fn collect_scenario_open_questions(feature_dir: &Path) -> Vec<Scenari
                 }),
         );
     }
-    out
+    ScenarioQuestionScan {
+        questions: out,
+        unreadable,
+    }
+}
+
+/// The result of scanning a feature's `scenarios/` directory for open
+/// questions: what was found, and what could not be examined.
+///
+/// The second field is the point. A scenario that cannot be read yields no
+/// questions, which is indistinguishable from one that was read and carried
+/// none unless the scan says so — and the states where a file will not parse
+/// are disproportionately the states where something is wrong.
+pub(crate) struct ScenarioQuestionScan {
+    /// Unresolved questions, in shared scenario order, each tagged with its
+    /// source scenario slug.
+    pub(crate) questions: Vec<ScenarioOpenQuestion>,
+    /// Slugs of scenario files that could not be read. Never blocking — an
+    /// unknown is not a defect — but always reported.
+    pub(crate) unreadable: Vec<String>,
 }
 
 /// The distinct scenario slugs carrying questions, in the order they
@@ -633,6 +668,50 @@ dependencies: []
 
 *None — all resolved.*
 ";
+
+    #[test]
+    fn an_unreadable_scenario_is_reported_rather_than_read_as_clean() {
+        // The QUAL-CLAIM-001 case: a scenario that cannot be read yields no
+        // questions, which without this field is indistinguishable from a
+        // scenario that was read and carried none. Invalid UTF-8 is the
+        // reachable form of unreadable.
+        let tmp = seed_feature(SPEC_NO_QUESTIONS, &[]);
+        let dir = tmp.path().join("specs/046-probe/scenarios");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("broken.md"), [0xff, 0xfe, 0xfd]).unwrap();
+        std::fs::write(
+            dir.join("fine.md"),
+            "---\nsection: Behavior\n---\n\n# Fine\n\n## Open Questions\n\n*None — all resolved.*\n",
+        )
+        .unwrap();
+
+        let result = probe(&tmp);
+        assert!(
+            result.scenario_open_questions.is_empty(),
+            "an unreadable scenario contributes no questions — it is not escalated into a defect"
+        );
+        assert_eq!(
+            result.scenario_files_unreadable,
+            vec!["broken".to_string()],
+            "…but it is reported, so a caller can tell this from a fully-examined clean result"
+        );
+    }
+
+    #[test]
+    fn a_fully_examined_feature_reports_nothing_unreadable() {
+        // The other half of the distinction: the field is empty only when
+        // every scenario really was read, so it is evidence rather than noise.
+        let tmp = seed_feature(
+            SPEC_NO_QUESTIONS,
+            &[(
+                "fine.md",
+                "---\nsection: Behavior\n---\n\n# Fine\n\n## Open Questions\n\n*None — all resolved.*\n",
+            )],
+        );
+        let result = probe(&tmp);
+        assert!(result.scenario_open_questions.is_empty());
+        assert!(result.scenario_files_unreadable.is_empty());
+    }
 
     #[test]
     fn scenario_questions_are_reported_separately_from_the_body_count() {
