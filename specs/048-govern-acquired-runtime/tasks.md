@@ -32,6 +32,16 @@ Phase 1 is independently safe and lands first so later work is written against a
 
 ## Phase 2 — Acquisition
 
+> **Paused after Phase 1 (2026-08-15), pending the project rename to `ductus`.**
+> Phases 2 and 3 write the store path, the pointer path, and the adopter
+> migration that rewrites every adopter's MCP config to them. Landing those on
+> the current names and renaming afterwards would migrate adopters twice in
+> close succession — first to `.govern/bin/`, then to whatever the rename
+> chooses — and would change the release tag scheme one release after this
+> work is tagged. Resuming after the rename means acquisition writes the final
+> paths from the start and adopters converge in one pass. Phase 1 is unaffected
+> by the rename's outcome and is already landed.
+
 ### 4. Specify the acquisition procedure in the bootstrap
 
 - [ ] Write the acquisition sequence into `framework/bootstrap/govern.md`: read the pin from `{staging-dir}/govern-main/version`, derive the target triple, fetch archive + sidecar, verify the digest, extract, install into `~/.govern/bin/`, set the executable bit
