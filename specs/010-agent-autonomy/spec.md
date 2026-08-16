@@ -23,24 +23,24 @@ Each capability is evaluated independently. The outcome for each is one of: **ad
 
 ## State at hand-off (2026-08-16)
 
-Reopened `done → in-progress` on 2026-08-16 by the scenario back-edge, carrying
-one new scenario and **task 17**: [`implement-offers-the-next-step`](scenarios/implement-offers-the-next-step.md).
-All existing acceptance criteria remain met; the reopen is the documented
-consequence of adding a scenario, not a defect in what shipped.
+**Substantively finished; blocked only on a stale review.** Task 17 shipped in
+`ductus-v0.29.2`. No unchecked tasks, no scenario open questions, every
+acceptance criterion met.
 
-The scenario asks that a default-mode (`--auto`-less) `/{project}:implement`
-run, on completing a task, name the next unchecked task and prompt to continue —
-so the operator can reply "yes", or type instructions to redirect, without
-re-deriving where the work stands. It changes nothing under `--auto` and does
-not touch the `in-progress → done` gate.
+The scenario's open question — one next task or several — was resolved by the
+operator: **name one, and say how many remain after it.** A menu re-renders a
+slice of `tasks.md` after every completion; the count recovers most of its value,
+and looking further ahead is a free-text redirect like any other. The reasoning
+is in the scenario's Resolved Questions.
 
-**It carries one unresolved open question**, which `check-artifacts` reports as
-advisory and which blocks `done` until answered: should the offer name one next
-task or several? Answering it needs a product judgment about prompt length
-versus redirect range, so it is left for the operator rather than guessed —
-resolve it with `/{project}:target 010-agent-autonomy/implement-offers-the-next-step`
-then `/{project}:clarify`, which is the scenario-targeted branch that resolves
-scenario questions in place.
+`check-review-gate` blocks the `done` transition because
+[`implement-offers-the-next-step`](scenarios/implement-offers-the-next-step.md)
+was edited after the recorded `reviewed-against` — a real contract change, not a
+rename, so the mechanical-sweep exemption correctly does not apply.
+
+**One `/{project}:review` run against 010 closes this spec.** Its computed scope
+is small (unlike 022's, which resolves ~551 files), which makes it the cheapest
+spec on the board to finish. Nothing else is outstanding here.
 
 ## Capabilities Under Evaluation
 

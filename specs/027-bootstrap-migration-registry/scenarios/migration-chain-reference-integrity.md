@@ -32,6 +32,17 @@ visible to any check this repository runs against itself:
   the adopter-owned `.githooks/pre-commit` that invokes them was re-pointed by
   neither — leaving a hook calling a script whose targets no longer existed.
 
+A third, found the same day and the same way, is the branding half rather than
+the path half: `README.md` still reads *"the `govern` framework"* and links
+`github.com/stonean/govern`. That link **redirects**, so nothing dangles and no
+reachability check would flag it — but `AGENTS.md` records that the redirect
+holds only while the retired name stays unused, so an adopter's README is
+carrying a reference with an expiry nobody is tracking. It is in scope here
+because the form is **shipped**: `framework/templates/project/project-readme.md`
+seeds it, so a migration can target the known form the way
+`constitution-relocate` already targets README's constitution links, warning
+rather than rewriting when the text was hand-altered.
+
 Both share one shape. The referrer is an **adopter-owned** file — strategy
 `create`, so the manifest never overwrites it, and unpinned, so the
 pinned-invoker warnings never fire. A migration is the only mechanism that can
@@ -67,6 +78,17 @@ safe.
 **The check runs on every batch, not only on chains.** A single migration can
 orphan a reference just as a chain can; scoping this to multi-entry batches
 would make it a check that runs least often in the case it was written for.
+
+**Stale grants are the same class and are *not* covered by `/{project}:configure`.**
+A migration that renames a tool surface leaves the old permission entries
+behind — `papur` still carries `Bash(command -v gvrn)`, `Bash(gvrn --version)`,
+`govern-*` temp Read globs and two `cp …govern.md.upstream` grants after the
+batch. `ductus-rename` scopes itself to the `mcp__gvrn__` entries, which is
+correct for what it claims. But nothing else prunes them: `configure.md` is
+explicit that it adds canonical entries and removes only **exact-match
+duplicates**, and never rewrites non-duplicate entries another command added —
+so these survive every future run. They are dead rather than dangerous, and the
+report-not-repair rule above applies: name them, let the operator decide.
 
 ## Edge Cases
 

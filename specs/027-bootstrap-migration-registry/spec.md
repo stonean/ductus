@@ -15,6 +15,25 @@ next-criterion: 30
 
 Replace the monotonically-growing prose-encoded Pre-run Migrations section in [framework/bootstrap/ductus.md](../../framework/bootstrap/ductus.md) with a machine-readable registry of convention removals. Adopters record the last migration they applied; bootstrap runs only newer entries. After a per-entry sunset, migrations drop from the active registry but stay documented in an adopter-facing changelog. A new [`/audit`](../026-framework-self-audit/spec.md) family fails when a removed convention has no registry entry, so future removals can't ship without an adopter path.
 
+## State at hand-off (2026-08-16)
+
+Reopened `done → in-progress` to carry one scenario:
+`migration-chain-reference-integrity`, **task 12, unstarted**.
+
+Each registry entry is authored against the layout at its own `introduced_in`
+and is correct there; nothing validates the **composition** an adopter far
+enough behind actually executes. Three instances surfaced in one day during
+048's `papur` bootstrap — a dangling constitution `@import`, a pre-commit hook
+calling generators moved twice, and stale `gvrn` grants nothing prunes. The
+first two are fixed in `ductus-rename`; the scenario captures the class and
+proposes a **derived** post-batch check rather than a per-entry referrers list.
+
+**Its one open question is deliberate and is the operator's**: should the check
+live in the bootstrap procedure (sees the batch, can name the responsible
+migration) or as an `/{project}:audit` family (catches a newly authored hazard
+before it reaches an adopter)? That is why `check-artifacts` reports an advisory
+here. Do not guess it.
+
 ## Motivation
 
 Every convention removal `ductus` has shipped — `governance` → `ductus` rename, `# Governance` gitignore marker, `spec-and-plan.md` sunset, rule-file relocation, `skills/` → `workflows/` rename, post-005 workflow filename rename, `configuration.md` → `configuration-cross.md` — added a bespoke prose section to `framework/bootstrap/ductus.md`. Each section scans the adopter's filesystem on **every** `/ductus` re-run, forever. A fresh adopter who installed at the latest ductus release still pays the cost of looking for legacy artifacts that have not existed in the framework for months.

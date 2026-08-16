@@ -141,7 +141,34 @@ archive caught before install with nothing written to the store, a missing asset
 failing the fetch, a re-run leaving a current store byte-unchanged, and an
 unrunnable store reading as *no usable runtime* rather than *version unknown*.
 
-**AC10 is the only criterion left, and it needs a real bootstrap.** It asserts
+**AC10 is being validated by the operator (2026-08-16).** An agent ran the full
+bootstrap against `../papur` and every clause held — acquisition, MCP wiring and
+permissions all landed in one pre-flight pass, the config named the
+repo-relative pointer, and the runtime answered for that project. The operator
+then reset `papur` to re-run it themselves. **Do not tick AC10 and do not re-run
+the bootstrap there** unless they ask: the criterion is theirs to close, and a
+second agent-run would collide with theirs.
+
+That run found four defects, all fixed and released in `ductus-v0.29.2` except
+where noted, and all invisible to every check this repo runs against itself:
+
+1. `merge-managed-block` stranded the old block's tail when a subsection's
+   patterns were renamed (022 `merge-managed-block-renamed-subsection`) — fixed.
+2. No migration renamed the pre-commit hook or re-pointed its adopter-owned
+   invoker, so the chain silently broke the hook — fixed in `ductus-rename`.
+3. `ductus-rename` orphaned the `.govern/constitution.md` reference
+   `constitution-relocate` had written into `CLAUDE.md` / `AGENTS.md` /
+   `README.md` — fixed; the general class is 027
+   `migration-chain-reference-integrity`, **unstarted**.
+4. The bootstrap costs one restart more than AC10 states — 048
+   `state-b-continues-in-session`, **unstarted**, task 13. State B aborts after
+   acquiring even though the binary is on disk and the CLI is already
+   permission-seeded, so migrations and scaffolding are deferred to another
+   session for no gain.
+
+**Original AC10 note follows.**
+
+**AC10 needs a real bootstrap.** It asserts
 that an adopter with no runtime reaches the deterministic path in one
 `/{project}` run plus one restart. No CI job or scratch script can stand in for
 it: the subject is the bootstrap procedure end to end in a real project —
