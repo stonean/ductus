@@ -121,6 +121,20 @@ Newline-delimited JSON. Each line is one complete JSON object terminated by `\n`
 
 The runtime ignores any other inbound JSON shape — it logs to stderr and continues waiting for a valid response.
 
+## Per-project file resolution
+
+The two files the runtime reads out of the per-project directory resolve through one ordered chain each, declared once in `runtime/src/schema/paths.rs` (`CONFIG_CHAIN`, `SESSION_CHAIN`) and walked by every resolver. Newest first:
+
+| Tier | Config | Session | Introduced by |
+| --- | --- | --- | --- |
+| 1 | `.ductus/config.toml` | `.ductus/session.toml` | [049](../049-rename-govern-to-ductus/spec.md) |
+| 2 | `.govern/config.toml` | `.govern/session.toml` | [042](../042-consolidate-govern-per-project-files-under-govern-directory/spec.md) |
+| 3 | `.govern.toml` | `.govern.session.toml` | pre-042 |
+
+**Reads** return the newest tier that exists, falling back to the **oldest** when none does (a missing file the caller treats as "config absent" → defaults). **Writes** return the newest tier that exists, falling back to the **newest** when none does (a fresh project cuts over immediately; a pre-migration write stays on the file already holding the other sections). That empty-chain difference is the only place the two disagree.
+
+Older tiers are never removed by a primitive — the bootstrap migration is the sole cutover. See the [`project-directory-resolution-chain`](scenarios/project-directory-resolution-chain.md) scenario.
+
 ## Primitive request/response schemas
 
 Each primitive has a typed args struct (the CLI subcommand's `clap` derive shape) and a typed result struct. Below is the canonical JSON shape for each; the CLI surface translates command-line flags into the args; the MCP surface uses the same JSON via `rmcp` tool calls.

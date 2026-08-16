@@ -146,3 +146,14 @@ Runtime half of [013's `criterion-identifiers`](../013-text-first-artifacts/scen
 - [ ] Version bump + `runtime/CHANGELOG.md` + `ductus-v*` tag. **Deferred by operator decision (2026-08-14): no tag until [048 — Ductus-Acquired Runtime](../048-govern-acquired-runtime/spec.md) is done**, so this work rides that release rather than cutting its own. Run `scripts/audit/run-all.sh` locally before tagging — the tag pipeline treats it as a hard release gate. **The operator's completion bar for this tag (2026-08-15) is wider than the audit:** every identified piece of work ships first, including all MUST and SHOULD findings from `/ductus:review` and every issue `/ductus:analyze` reports across the affected specs. A finding deferred past the tag is not deferred, it is shipped. Until the tag ships, the primitive exists only in `main` and in local builds; no adopter has it.
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested; the labelling pass assigns `AC{n}:` labels idempotently and maintains `next-criterion`, `mark-criterion` resolves a label as well as an index, `read-spec` reports labels, the `check-artifacts` family reports duplicate labels and a stale counter, `specs/022-deterministic-runtime/data-model.md` records the primitive's result shape and the new family, and the release is tagged.
+
+## 87. Implement scenario: [project-directory-resolution-chain](scenarios/project-directory-resolution-chain.md)
+
+Runtime half of [049's rename](../049-rename-govern-to-ductus/spec.md): the per-project directory moves, so config and session resolution grows a third tier rather than swapping one out. 049 keeps the sweep, the migration, and its own acceptance criteria.
+
+- [x] Replace the `(new, legacy)` pair in `runtime/src/schema/paths.rs` with one ordered chain per file (`CONFIG_CHAIN`, `SESSION_CHAIN`), walked by every read and write resolver so precedence is stated once
+- [x] Reads return the newest existing tier and fall back to the oldest; writes return the newest existing tier and fall back to the newest — the only case in which the two differ
+- [x] Tests enumerate every subset of both chains, plus the 049 guarantee that a project on the middle tier alone never resolves to an un-migrated `.ductus/`
+- [x] `data-model.md` records the chain as the canonical per-project file resolution
+
+- **Done when**: `cargo test` is green, an adopter on any of the three layouts resolves to their own newest tier, a fresh project writes to `.ductus/`, and no primitive moves a file between tiers — the bootstrap migration stays the sole cutover.

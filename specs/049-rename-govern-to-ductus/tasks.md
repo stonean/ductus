@@ -148,11 +148,11 @@ release, not here.
 
 ### 11. Record the runtime behavior change on 022
 
-- [ ] Open the `done → in-progress` back-edge on `specs/022-deterministic-runtime/`
-- [ ] Add a scenario for the three-tier resolution chain, back-linking to this spec per
+- [x] Open the `done → in-progress` back-edge on `specs/022-deterministic-runtime/`
+- [x] Add a scenario for the three-tier resolution chain, back-linking to this spec per
       §cross-spec-impact
-- [ ] Update `specs/022-deterministic-runtime/data-model.md` with the resolution order
-- [ ] Add the matching task to 022's `tasks.md` so the scenario→task mapping family stays clean
+- [x] Update `specs/022-deterministic-runtime/data-model.md` with the resolution order
+- [x] Add the matching task to 022's `tasks.md` so the scenario→task mapping family stays clean
 
 - **Done when**: 022 carries the scenario, its data-model states the resolution order, and the
   scenario→task mapping check passes.
