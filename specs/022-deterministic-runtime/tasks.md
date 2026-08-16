@@ -157,3 +157,16 @@ Runtime half of [049's rename](../049-rename-govern-to-ductus/spec.md): the per-
 - [x] `data-model.md` records the chain as the canonical per-project file resolution
 
 - **Done when**: `cargo test` is green, an adopter on any of the three layouts resolves to their own newest tier, a fresh project writes to `.ductus/`, and no primitive moves a file between tiers — the bootstrap migration stays the sole cutover.
+
+## 88. Implement scenario: [review-staleness-on-done-specs](scenarios/review-staleness-on-done-specs.md) — check-artifacts reports a stale review on a done spec
+
+- [ ] `check_artifacts.rs`: extend the `review-state-drift` family with a staleness arm on `done` specs — a resolvable `reviewed-against` with durable contracts changed since it, reported **advisory** (the existing unset/blocking arms stay blocking)
+- [ ] Resolve staleness through the same `compute_review_scope::read_plan_affected` path `check-review-gate`'s `ReviewStale` uses — one implementation, never a second matching rule
+- [ ] Report the fail-open cases (`no git repo`, unresolvable `reviewed-against`, plan with no Affected Files table) under `skipped` with a distinguishing reason rather than as a clean result, per QUAL-CLAIM-001
+- [ ] Preserve the grandfather rule: a `done` spec with no `review:` block at all is exempt, as it is for the existing arms
+- [ ] `specs/022-deterministic-runtime/data-model.md`: update the `review-state-drift` entry in the eight-family registry — it currently defines the family as unset-or-blocking only, which is the wording this gap hides behind
+- [ ] `framework/commands/analyze.md`: mirror the new arm in the **Review state drift** reference section so the markdown-only path states the same policy (§runtime-host-integration's two-paths guarantee), then re-run `scripts/gen-claude-commands.sh`
+- [ ] Confirm the blast radius before landing: run the family across the corpus and report how many `done` specs it flags, so the advisory-vs-blocking choice is made against the real number rather than an assumption
+- [ ] Unit tests: a stale done spec flagged advisory; an unchanged done spec clean and counted as examined; a mechanical-sweep-only change not flagged (the `review-freshness.sh` exemption inherited through the shared path); an unresolvable `reviewed-against` reported skipped rather than clean; a no-`review:`-block spec grandfathered
+
+- **Done when**: `check-artifacts`' `review-state-drift` family reports a `done` spec whose recorded `reviewed-against` predates changes to its plan's durable contracts, as an **advisory** finding naming the count and the first paths; the staleness verdict comes from the same `compute_review_scope::read_plan_affected` path `check-review-gate` uses rather than a second implementation; fail-open cases land in `skipped` with a reason instead of reading as clean; the grandfather rule for a spec with no `review:` block is unchanged; 022's data-model family registry and `framework/commands/analyze.md`'s matching reference section both record the new arm and the generated command copies are re-rendered; the corpus-wide flag count is reported before the advisory-vs-blocking choice is finalised; `cargo test` green and `npx markdownlint-cli2` clean on every modified file.
