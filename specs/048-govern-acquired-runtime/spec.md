@@ -122,13 +122,13 @@ Existing adopters have an MCP entry naming the bare `ductus` command and, usuall
 
 ## Acceptance Criteria
 
-- [ ] AC1: A `/ductus` run on a machine with no runtime installed downloads the host-platform release asset, verifies its `.sha256` sidecar, and writes an executable `~/.ductus/bin/ductus` (`~/.ductus/bin/ductus.exe` on Windows)
+- [x] AC1: A `/ductus` run on a machine with no runtime installed downloads the host-platform release asset, verifies its `.sha256` sidecar, and writes an executable `~/.ductus/bin/ductus` (`~/.ductus/bin/ductus.exe` on Windows)
 - [x] AC2: `.ductus/bin/` is present in the framework-managed `.gitignore` block, and a freshly bootstrapped project reports no untracked binary under `git status`
-- [ ] AC3: A checksum mismatch leaves the store and the pointer unwritten, and halts the run with an error naming the expected and computed digests — no partial binary, no unverified binary
-- [ ] AC4: A download failure (network error, missing asset for the host platform) halts the run with an error naming the store path and the release URL, so the binary can be placed by hand and the run retried
+- [x] AC3: A checksum mismatch leaves the store and the pointer unwritten, and halts the run with an error naming the expected and computed digests — no partial binary, no unverified binary
+- [x] AC4: A download failure (network error, missing asset for the host platform) halts the run with an error naming the store path and the release URL, so the binary can be placed by hand and the run retried
 - [x] AC5: After acquisition on a `write-file` agent, the MCP config registers the repo-relative pointer `.ductus/bin/ductus` — `.mcp.json` for Claude, the root `opencode.json` `mcp` block for OpenCode — additively, preserving every other server and top-level key; neither committed file contains a machine-specific absolute path
-- [ ] AC6: A second `/ductus` run with the pinned version already installed performs no download and leaves the store byte-unchanged
-- [ ] AC7: A `/ductus` run whose pinned version differs from the installed binary's version replaces the store and reports the upgrade
+- [x] AC6: A second `/ductus` run with the pinned version already installed performs no download and leaves the store byte-unchanged
+- [x] AC7: A `/ductus` run whose pinned version differs from the installed binary's version replaces the store and reports the upgrade
 - [x] AC13: `.ductus/bin/ductus` resolves to the store on every supported platform without requiring elevated privileges, and a project whose pointer is missing or dangling has it repaired by the next `/ductus` run
 - [x] AC14: On a `surface-instruction` agent, the surfaced registration instruction names the absolute store path — not the repo-relative pointer, which their home-level config cannot resolve
 - [x] AC15: A repo-root `version` file carries one SemVer line, and it matches `runtime/Cargo.toml`, the newest `runtime/CHANGELOG.md` heading, and the newest `ductus-v*` tag; a self-audit family asserts that agreement

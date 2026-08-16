@@ -94,7 +94,7 @@ The relationship runs the other way too: 048's remaining migration entry and thi
 - [x] AC5: An adopter who has not yet re-run the bootstrap is not silently broken: either their existing installation keeps working, or they are told what to run, with the message naming the command
 - [x] AC6: Published release tags, their attached assets, and CHANGELOG entries describing past releases are left exactly as written
 - [ ] AC12: The retired crate is left installable rather than yanked, and its final published release describes the new name
-- [ ] AC13: The first release under the new name continues the existing version series rather than restarting it, and the version-agreement audit family passes across the `version` pin, `runtime/Cargo.toml`, and the newest `runtime/CHANGELOG.md` heading
+- [x] AC13: The first release under the new name continues the existing version series rather than restarting it, and the version-agreement audit family passes across the `version` pin, `runtime/Cargo.toml`, and the newest `runtime/CHANGELOG.md` heading
 - [x] AC7: The self-audit families that assert installer, registry, namespace, and host-namespace parity pass under the new name with no family disabled or exempted
 - [x] AC8: The runtime's own test suite, the parity goldens, and the generated command copies are consistent with the new name, with goldens re-blessed rather than hand-edited
 - [x] AC9: `README.md` and the bootstrap describe acquiring, registering, and invoking the project under the new name only
