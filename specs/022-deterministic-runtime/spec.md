@@ -227,12 +227,30 @@ cycle.
 | --- | --- | --- |
 | 88 | `review-staleness-on-done-specs` — `check-artifacts` reports a stale review on a `done` spec | this spec |
 
-Task 88's scenario asks for its corpus-wide flag count to be measured *before*
-the advisory-vs-blocking choice is finalised — the arm is specified advisory
-precisely so it cannot mass-reopen every spec the `0.28.0` sweep touched. Note
-that its first bullet is now partly done for it: task 91 made
-`compute_review_scope::read_plan_affected` `pub(crate)`, which is the shared
-path task 88 must resolve staleness through rather than writing a second one.
+**Task 88's measurement was taken 2026-08-16 and changed the task.** The
+scenario asks for the corpus-wide flag count *before* the advisory-vs-blocking
+choice is finalised; it came back **19 of 46 `done` specs, all 19 false
+positives** from 049's rename sweep. The cause was that the Rust staleness path
+lacked the mechanical-sweep exemption `/{project}:audit` Family 19 has always
+had, so the two enforcement moments disagreed on 19 specs with nothing
+comparing them. That half is now fixed and shipped: `primitives::mechanical_sweep`
+carries the exemption, `stale_review_block` applies it, an abbreviated
+`reviewed-against` no longer fails the check open, and
+`tests/mechanical_sweep_parity.rs` fails on any future divergence.
+
+What remains of 88 is the `check-artifacts` arm itself, and its case should be
+**re-argued rather than inherited**: with the exemption in place both existing
+mechanisms report 0 on this corpus, so the arm would add a third caller of a
+rule that currently finds nothing. The state it describes — a `done` spec whose
+review has genuinely aged — is still uncovered between releases; the scenario's
+Resolved Questions record the full finding, including that its founding
+observation (017 blocking on three contracts) was itself a rename false
+positive.
+
+An earlier revision of this note said task 91 had made
+`compute_review_scope::read_plan_affected` the shared path for 88. That was
+wrong — it repeated an error in the scenario and the task, both since
+corrected. `check-review-gate` has never used that function.
 
 **Tasks 90 and 91 landed 2026-08-16** and shipped in `ductus-v0.29.0`,
 closing `017-derive-dont-ask`'s AC25 and AC26 and returning that spec to `done`:

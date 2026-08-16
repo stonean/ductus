@@ -18,7 +18,7 @@ The `0.28.0` cycle swept the whole corpus, so 017 is unlikely to be alone. This 
 
 **`check-artifacts`' `review-state-drift` family gains a staleness arm.** On a `done` spec it already reports an unset `review.last-run` and a `review.blocking: true`; it additionally reports a recorded `reviewed-against` against which durable contracts have since changed, naming the count and the first few paths exactly as `check-review-gate`'s block message does.
 
-**The staleness computation is shared, not reimplemented.** `check-review-gate` already resolves this through `compute_review_scope::read_plan_affected`. The family calls the same code path — a second implementation is the drift this repo has already been bitten by, and two answers to "is this review stale?" would be worse than none.
+**The staleness computation is shared, not reimplemented.** The family calls the same code path `check-review-gate` uses — a second implementation is the drift this repo has already been bitten by, and two answers to "is this review stale?" would be worse than none. That path is `stale_review_block` plus `is_durable_contract` (a `scenarios/*.md` file or `data-model.md`), **not** `compute_review_scope::read_plan_affected`; see the first Resolved Question for why this paragraph originally named the wrong one and what following it would have cost.
 
 **The finding is advisory, not blocking.** The existing `review-state-drift` arms are blocking because they describe a spec that never had a usable review; a stale review *was* usable and has aged, which is a different claim. Advisory also keeps the change from mass-reopening the corpus: `/{project}:analyze --fix` reverts `done → in-progress` on blocking findings, and a blocking staleness arm would sweep every spec the `0.28.0` cycle touched into `in-progress` in one run. The operator decides which stale verdicts are worth re-earning.
 
@@ -30,7 +30,7 @@ The `0.28.0` cycle swept the whole corpus, so 017 is unlikely to be alone. This 
 
 - A `done` spec whose contracts have not moved since `reviewed-against`: no finding, and it is counted as examined rather than skipped.
 - A spec at any status other than `done`: out of scope — `check-review-gate` already covers the transition, and a pre-`done` spec's review is expected to be provisional.
-- A mechanical sweep (a rename, a criterion-label backfill) that touches a durable contract without changing its meaning: already handled by `review-freshness.sh`'s mechanical-sweep exemption, which the shared code path inherits; a uniform substitution must not report every `done` spec stale.
+- A mechanical sweep (a rename, a criterion-label backfill) that touches a durable contract without changing its meaning: a uniform substitution must not report every `done` spec stale. `review-freshness.sh` has always carried this exemption; the shared Rust path did **not** inherit it, which is the defect the measurement found and the second Resolved Question records. It does now, via `primitives::mechanical_sweep`.
 - `reviewed-against` names a commit absent from a shallow clone: the CI checkout that runs this needs `fetch-depth: 0`, the same requirement Family 19 already carries and was already bitten by.
 - The `--fix` interaction: advisory findings do not revert status, so `--fix` leaves a stale-but-done spec alone and says so.
 
@@ -40,4 +40,59 @@ The `0.28.0` cycle swept the whole corpus, so 017 is unlikely to be alone. This 
 
 ## Resolved Questions
 
-*None yet.*
+- **Which code path does `check-review-gate` actually share?**
+  `stale_review_block` and `is_durable_contract`, not
+  `compute_review_scope::read_plan_affected`. Resolved 2026-08-16: this scenario's Behavior section and 022 task 88 both
+  named `read_plan_affected`, and `check_review_gate.rs` references it nowhere.
+  Following the letter would have been actively harmful — that function's own
+  doc comment records that the Affected-Files scoping *was* tried and rejected
+  because it blocked **34 of 48** specs (old specs list shared surfaces like
+  `AGENTS.md` that every later spec touches), and adopting it here would have
+  created exactly the second matching rule the same paragraph forbids. Both
+  texts corrected.
+
+- **How many `done` specs would the arm flag, and is advisory enough?**
+  Measured 2026-08-16, before the design was finalised, as this scenario
+  requires: **19 of 46**, and **all 19 were false positives**. Every one was a
+  consequence of 049's `govern → ductus` rename — `005-workflows`, for
+  instance, differed only in `/govern` → `/ductus` inside its `data-model.md`.
+  Advisory would not have saved it: a family that reports noise on 41% of the
+  corpus is one people stop reading, which is the failure the gate's own
+  history already records at 34-of-48.
+
+  The cause was the third error: this scenario asserted that the shared path
+  inherits `review-freshness.sh`'s mechanical-sweep exemption. It did not.
+  Family 19 had the exemption and reported **0**; the Rust gate had none and
+  would have reported 19. Two implementations of one rule, disagreeing on 19
+  specs, with nothing comparing them — the drift this scenario's own Behavior
+  section says would be "worse than none", already present.
+
+  The founding observation was itself an instance: `017-derive-dont-ask`'s
+  three "stale" contracts all changed in exactly one commit, `9da4a7a
+  feat(049): sweep the framework, scripts, and specs onto ductus`. The gate
+  fired on a rename.
+
+- **What was done about it?** The exemption was ported to Rust as
+  `primitives::mechanical_sweep` and wired into `stale_review_block`, so the
+  transition gate stops firing on sweeps. A third divergence surfaced while
+  testing it: `git2::Oid::from_str` zero-pads an abbreviated sha into an id
+  that matches nothing, so the gate failed **open** on
+  `012-multi-agent-govern`'s `d904430` while Family 19's `git cat-file -e`
+  resolved it — fixed with `revparse_single`.
+
+  Family 19 keeps its own Python implementation: the CI job that runs the
+  self-audit has no Rust toolchain and no runtime build, because it *gates*
+  the build, so calling the runtime would make the gate depend on compiling
+  the artifact it gates. The `mechanical_sweep_parity` integration test runs
+  both over the real corpus and fails on the first disagreement, so the two
+  cannot drift again in silence. It compares the 19 specs that were previously
+  divergent and asserts it compared something, so a vacuous pass is itself a
+  failure.
+
+- **Does the `check-artifacts` staleness arm still need building?** Undecided,
+  and deliberately left so. With the exemption in place both mechanisms now
+  report 0 on this corpus, so the arm would add a third caller of a rule that
+  currently finds nothing. The state this scenario describes — a `done` spec
+  whose review has genuinely aged — remains uncovered between releases, but the
+  case for the arm should be re-argued against a corpus where the rule actually
+  fires, rather than inherited from a premise that has been shown false.

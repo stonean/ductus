@@ -188,6 +188,17 @@ pub(crate) fn run_with_lint(
 /// `write-review` touches both, so counting them would make every review
 /// stale the instant it was recorded.
 ///
+/// A candidate that changed only by a repo-wide rename is **not** stale, per
+/// [`crate::primitives::mechanical_sweep`]. This was missing until 2026-08-16
+/// and the omission was expensive: measured across this repo, the un-exempted
+/// rule called **19 of 46 `done` specs** stale, every one of them a
+/// consequence of 049's `govern → ductus` sweep and none a real contract
+/// change. `/{project}:audit` Family 19 had applied the exemption all along,
+/// so the two enforcement moments disagreed on 19 specs while the whole point
+/// of scoping them identically was that they would not. The incident that
+/// exposed it — `017-derive-dont-ask` blocking on three contracts — was itself
+/// a false positive: all three changed in the rename commit.
+///
 /// Fails **open** on anything it cannot determine — no git repo, an
 /// unparseable `reviewed-against`. A gate that blocks on its own inability
 /// to check would be a gate people route around; the honest checks above
@@ -203,8 +214,16 @@ fn stale_review_block(
         return None;
     }
     let repository = git2::Repository::discover(repo).ok()?;
+    // `revparse_single`, not `Oid::from_str`: the latter zero-pads a short hex
+    // string into a 40-char id that matches nothing, so an abbreviated
+    // `reviewed-against` — `012-multi-agent-govern` records `d904430` — made
+    // the whole check fail open with no signal, while Family 19's
+    // `git cat-file -e` resolved it and checked. A check that silently cannot
+    // run is the failure mode this repo pays for most.
     let base_tree = repository
-        .find_commit(git2::Oid::from_str(base).ok()?)
+        .revparse_single(base)
+        .ok()?
+        .peel_to_commit()
         .ok()?
         .tree()
         .ok()?;
@@ -214,7 +233,7 @@ fn stale_review_block(
         .ok()?;
 
     let prefix = format!("{rel_dir}/");
-    let mut stale: BTreeSet<String> = BTreeSet::new();
+    let mut candidates: BTreeSet<String> = BTreeSet::new();
     diff.foreach(
         &mut |delta, _| {
             if let Some(path) = delta.new_file().path().or_else(|| delta.old_file().path()) {
@@ -222,7 +241,7 @@ fn stale_review_block(
                 if let Some(rest) = path.strip_prefix(&prefix)
                     && is_durable_contract(rest)
                 {
-                    stale.insert(path);
+                    candidates.insert(path);
                 }
             }
             true
@@ -232,6 +251,25 @@ fn stale_review_block(
         None,
     )
     .ok()?;
+
+    // A contract that changed only in spelling states what it stated before,
+    // so a repo-wide rename must not stale the review — the same §spec-lifecycle
+    // case (a) rule that keeps the sweep from reopening the spec. Building the
+    // index is the expensive step, so it is skipped entirely when nothing is a
+    // candidate, which is the common case.
+    let stale: BTreeSet<String> = if candidates.is_empty() {
+        candidates
+    } else {
+        let index = crate::primitives::mechanical_sweep::SweepIndex::build(
+            &repository,
+            &base_tree,
+            &head_tree,
+        );
+        candidates
+            .into_iter()
+            .filter(|path| index.changed_beyond_spelling(path))
+            .collect()
+    };
 
     if stale.is_empty() {
         return None;
@@ -447,6 +485,100 @@ mod tests {
         assert!(
             result.guidance.unwrap().contains("/ductus:review"),
             "guidance must name the command that clears it"
+        );
+    }
+
+    #[test]
+    fn a_repo_wide_rename_sweep_does_not_stale_the_review() {
+        // The 019 defect, as a test. A uniform token substitution across live
+        // artifacts is a mechanical edit: it does not reopen a done spec, so it
+        // must not stale its review either. Measured before the fix, the
+        // un-exempted rule called 19 of this repo's 46 done specs stale, all of
+        // them this shape. Two files, because uniformity is a repo-wide
+        // property — a rewrite in one file only is a contract change.
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        fs::create_dir_all(tmp.path().join("specs/007-gate/scenarios")).unwrap();
+        for (path, body) in [
+            (
+                "specs/007-gate/scenarios/retry.md",
+                "# Retry\n\nRun `/govern` to sync.\n",
+            ),
+            (
+                "specs/007-gate/data-model.md",
+                "# Model\n\nWritten by `/govern`.\n",
+            ),
+            ("docs/elsewhere.md", "Run `/govern` to sync.\n"),
+        ] {
+            let full = tmp.path().join(path);
+            fs::create_dir_all(full.parent().unwrap()).unwrap();
+            fs::write(full, body).unwrap();
+        }
+        let base = git_commit_all(tmp.path(), "base");
+
+        seed_reviewed_at(tmp.path(), &base);
+        for (path, body) in [
+            (
+                "specs/007-gate/scenarios/retry.md",
+                "# Retry\n\nRun `/ductus` to sync.\n",
+            ),
+            (
+                "specs/007-gate/data-model.md",
+                "# Model\n\nWritten by `/ductus`.\n",
+            ),
+            ("docs/elsewhere.md", "Run `/ductus` to sync.\n"),
+        ] {
+            fs::write(tmp.path().join(path), body).unwrap();
+        }
+        git_commit_all(tmp.path(), "sweep: govern -> ductus");
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(
+            result.passed,
+            "a rename sweep must not stale the review: {result:?}"
+        );
+    }
+
+    #[test]
+    fn a_real_contract_change_inside_a_rename_sweep_still_stales() {
+        // The exemption must not become a blanket amnesty: a meaning change
+        // riding along with a sweep is still a contract change, because its
+        // rewrite is not one the sweep made anywhere else.
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        fs::create_dir_all(tmp.path().join("specs/007-gate/scenarios")).unwrap();
+        for (path, body) in [
+            (
+                "specs/007-gate/scenarios/retry.md",
+                "# Retry\n\nRun `/govern`. Timeout is 30s.\n",
+            ),
+            ("docs/elsewhere.md", "Run `/govern` to sync.\n"),
+        ] {
+            let full = tmp.path().join(path);
+            fs::create_dir_all(full.parent().unwrap()).unwrap();
+            fs::write(full, body).unwrap();
+        }
+        let base = git_commit_all(tmp.path(), "base");
+
+        seed_reviewed_at(tmp.path(), &base);
+        fs::write(
+            tmp.path().join("specs/007-gate/scenarios/retry.md"),
+            "# Retry\n\nRun `/ductus`. Timeout is 60s.\n",
+        )
+        .unwrap();
+        fs::write(
+            tmp.path().join("docs/elsewhere.md"),
+            "Run `/ductus` to sync.\n",
+        )
+        .unwrap();
+        git_commit_all(tmp.path(), "sweep plus a timeout change");
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(!result.passed, "{result:?}");
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::ReviewStale));
+        assert!(
+            result.message.unwrap().contains("scenarios/retry.md"),
+            "the finding must name the contract that actually changed"
         );
     }
 
