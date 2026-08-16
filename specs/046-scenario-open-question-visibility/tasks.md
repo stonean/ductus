@@ -89,7 +89,7 @@ Tasks 2–8 are authored as scenarios under [022 — Deterministic Runtime](../0
 ## 9. Verify the feature end to end
 
 - [x] Walk every acceptance criterion in the spec against shipped behavior
-- [x] Confirm feature-targeted clarify is unchanged
+- [x] Confirm feature-targeted clarify resolves no scenario question and writes to no scenario file (its *reporting* behavior was revised 2026-08-16 by 022's `scenario-open-question-signal`; the resolution boundary is what this item verifies)
 - [x] Confirm the spec-body open-question count is unchanged
 - [x] Run the full runtime test suite and the feature directory's markdown lint
 - [x] Confirm the 022 scenarios each back-link here and that 022's data-model is current

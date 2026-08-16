@@ -24,9 +24,9 @@ The placeholder guard (`read_spec.rs:168`) widens in the same change: it current
 
 ### Scenario questions are a sibling field, never merged
 
-`read-spec`'s result gains a field parallel to `open-questions`, each entry carrying its source scenario. `open-questions` itself is untouched — the spec-body count keeps its current meaning, its current value, and its current routing effect. This is what makes feature-targeted `/{project}:clarify` unchanged: it reads the field it always read.
+`read-spec`'s result gains a field parallel to `open-questions`, each entry carrying its source scenario. `open-questions` itself is untouched — the spec-body count keeps its current meaning, its current value, and its current routing effect. That is what keeps feature-targeted `/{project}:clarify`'s **branching** unchanged: it still branches on the field it always read. It now also *reports* the sibling field (corrected 2026-08-16 — see the spec's design-decision section and [022's `scenario-open-question-signal`](../022-deterministic-runtime/scenarios/scenario-open-question-signal.md)), which changes no branch and adds no write.
 
-Rejected: unioning into `open-questions`. It would route a feature-level target to feature-targeted clarify, which does not read scenarios (`framework/commands/clarify.md:43`), producing a command with nothing to act on.
+Rejected: unioning into `open-questions`. Merging would make a spec's status contradict its own body — the body's count is what `clarified` asserts and what the `draft → clarified` edge turns on, while scenario questions are remaining work that gates `done`. The two answer different questions, so the field stays separate and additive.
 
 ### The gate extends `check-review-gate` rather than adding a primitive
 

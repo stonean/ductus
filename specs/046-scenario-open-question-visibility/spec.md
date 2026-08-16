@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [009-scenario-targeting, 022-deterministic-runtime]
 review:
   last-run: 2026-07-31T02:10:51Z
@@ -8,7 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 31
+next-criterion: 32
 ---
 
 # 046 — Scenario open-question visibility
@@ -46,12 +46,13 @@ The gap is **discovery and completion-gating at feature level**, not resolution.
 
 ## Design decision: independent resolution, shared completion
 
-Resolution stays independent. `/{project}:clarify`'s documented boundary — spec-level and scenario-level questions are independent concerns, and feature-targeted clarify does not surface
-scenario questions — is **retained**. Feature-targeted `/{project}:clarify` is unchanged.
+Resolution stays independent. `/{project}:clarify` still resolves spec-level and scenario-level questions separately: a feature-targeted run walks the spec body's questions only, writes to no scenario file, and leaves scenario questions to the scenario-targeted branch. That half of the boundary is **retained**.
+
+Discovery is not independent — corrected 2026-08-16. This spec originally also held that feature-targeted clarify *does not surface* scenario questions and is "unchanged". That was wrong, and [022's `scenario-open-question-signal`](../022-deterministic-runtime/scenarios/scenario-open-question-signal.md) revises it: clarify is a discovery surface — it is where a contributor goes to ask what is unresolved — and it already held the answer and discarded it. Its gate step invokes `read-spec`, whose result carries `scenario-open-questions` alongside the count it branches on. The consequence was a spec with zero body questions and a non-empty scenario list stopping at *"Run `/{project}:implement` to continue implementation"* — an affirmative next step over exactly the questions the `done` gate blocks on, from a framework that ships `QUAL-CLAIM-001`. Feature-targeted clarify now **reports** those questions, naming every carrying scenario and the scenario-targeted command that resolves them. It still resolves nothing and gates nothing.
 
 Completion is shared. Because a scenario is an organizational split of the spec rather than a separate artifact class, its unresolved questions block the parent spec's `done`.
 
-This rules out unioning scenario questions into the spec body's open-question count. That would make a feature-level target route to feature-targeted `/{project}:clarify`, which by its own boundary does not read scenarios — the command would arrive with nothing to act on. The signal is therefore **separate and additive**, not merged.
+This rules out unioning scenario questions into the spec body's open-question count — for a reason that survives the correction above. Merging would make a spec's status contradict its own body: the body's count is what `clarified` asserts and what the `draft → clarified` edge turns on, while scenario questions are remaining work that gates `done`. The two answer different questions, so the signal is **separate and additive**, not merged. (The original rationale — that feature-targeted clarify "would arrive with nothing to act on" — was true of a *merged* count and false of a *separate* field; only the reason changed, not the conclusion.)
 
 ## Behavior
 
@@ -115,7 +116,8 @@ What stays with this spec: the constitution amendments to §spec-lifecycle's `do
 
 - [x] AC1: Scenario open questions are reported as a field distinct from the spec body's open-question count, with each entry tagged by its source scenario file
 - [x] AC2: The spec body's open-question count is unchanged in meaning and value by this feature
-- [x] AC3: Feature-targeted `/{project}:clarify` behavior is unchanged — it neither surfaces nor resolves scenario questions
+- [x] AC3: Feature-targeted `/{project}:clarify` resolves no scenario question — it walks none, writes to no scenario file, and leaves resolution to the scenario-targeted branch
+- [x] AC31: Feature-targeted `/{project}:clarify` reports outstanding scenario open questions in every gate branch where the field is non-empty — including the `already {status}` and `done` branches, which still modify no file — naming every carrying scenario and the scenario-targeted command that resolves them, and is suppressed entirely rather than rendered as "0 outstanding" when the field is empty
 - [x] AC4: A spec with one or more unresolved scenario open questions cannot be advanced to `done`
 - [x] AC5: The `done` block is reported with the blocking scenario named, not as a generic gate failure
 - [x] AC6: A spec whose scenarios have no unresolved questions advances to `done` exactly as it does today

@@ -39,8 +39,8 @@ The "already `{status}`" branch and the `done` branch never modify any file.
 
 Feature-targeted:
 
-- Read only the target feature's spec file (frontmatter and body) and dependency spec frontmatter. For the Recovery path, also list (without reading) `plan.md`, `tasks.md`, `data-model.md`, and `specs/{feature}/scenarios/`. Do NOT read plan files, tasks, source code, test files, scenarios, or unrelated specs' bodies *speculatively* or to browse. **Grounding carve-out (§grounding):** when an open question is a factual question about existing reality — how current code behaves, what a schema or interface holds, what a dev database contains — you MAY read the specific source that settles it (and MUST cite it in the resolution), rather than resolve the question from conjecture. Read narrowly, only what answers the question.
-- Scenario-level open questions are not surfaced — spec-level and scenario-level questions are independent concerns.
+- Read only the target feature's spec file (frontmatter and body) and dependency spec frontmatter. For the Recovery path, also list (without reading) `plan.md`, `tasks.md`, `data-model.md`, and `specs/{feature}/scenarios/`. Do NOT read plan files, tasks, source code, test files, scenarios, or unrelated specs' bodies *speculatively* or to browse. **Grounding carve-out (§grounding):** when an open question is a factual question about existing reality — how current code behaves, what a schema or interface holds, what a dev database contains — you MAY read the specific source that settles it (and MUST cite it in the resolution), rather than resolve the question from conjecture. Read narrowly, only what answers the question. **Scenario carve-out (markdown-only path only):** to derive the scenario open-question report below you MAY read the `## Open Questions` section of each file under `specs/{feature}/scenarios/` — those sections only, never a scenario's Behavior, Context, or Edge Cases. On the runtime path no such read happens: `read-spec` already returns the field.
+- Scenario-level open questions are **surfaced but never resolved** here. A feature-targeted run reports which scenarios carry questions and names the scenario-targeted command that resolves them; it writes to no scenario file and walks no scenario question. Spec-level and scenario-level questions stay independent for **resolution** — that independence was never about discovery, and a command that holds the signal must not answer an unresolved spec with an affirmative next step.
 - Do NOT begin planning or implementation work. This command resolves questions and verifies acceptance criteria only.
 - Reference: §grounding, §spec-requirements, §spec-lifecycle, §pipeline-boundaries, §text-first-artifacts (constitution loaded by `/{project}:target` — do not re-read).
 
@@ -61,13 +61,13 @@ Steps 1–12 are the feature-targeted walk; a scenario-targeted session runs ste
 <!-- audit:ignore-promotion -->
 1. Resolve the target from `.ductus/session.toml`; `$ARGUMENTS` overrides the session target. If no session target is set and no arguments are provided, stop and tell the user to run `/{project}:target` first. When the session includes a `scenario` and `scenario-path`, this is a **scenario-targeted** run: read the scenario file, run the question loop (step 6) against it, then wrap up at step 13 — steps 2–5 and 7–12 are feature-spec work and do not apply.
 
-2. Invoke `read-spec` against the target feature (with `include-body`) and branch on the pair `(status, open-question count)` per the Gate table above — the result's frontmatter carries the status and its open-questions list carries the count (the Gate's entry-counting rule; placeholder lines are not entries):
-   - Missing feature or `spec.md`: stop and report: "Spec does not exist. Run `/{project}:specify` first."
-   - `draft` with open questions: continue the full walk (steps 4–12).
-   - `draft` with zero open questions: short-circuit — skip the question loop (step 6 runs no extension round trip) and continue at step 7 toward the status-advance gate.
-   - `clarified` / `planned` / `in-progress` with zero open questions: stop with the "already `{status}`" message from the Gate table. No file is modified.
-   - `clarified` / `planned` / `in-progress` with one or more open questions: take the **recovery branch** — display the inconsistency and prompt the user per the Recovery path reference below, then hand off to step 3 for the guarded revert.
-   - `done` (any question count): stop with the `done` message from the Gate table. Exit without mutation.
+2. Invoke `read-spec` against the target feature (with `include-body`) and branch on the pair `(status, open-question count)` per the Gate table above — the result's frontmatter carries the status and its open-questions list carries the count (the Gate's entry-counting rule; placeholder lines are not entries). The same result carries `scenario-open-questions`, a **separate** field listing the questions carried by `specs/{feature}/scenarios/*.md`; it never merges into the count this step branches on, and it changes no branch. Append the **Scenario open-question report** (see the Markdown-only reference below) to whichever branch is taken whenever that field is non-empty — including the two branches that terminate without modifying a file. When the field is empty the report is suppressed entirely, never rendered as "0 outstanding":
+   - Missing feature or `spec.md`: stop and report: "Spec does not exist. Run `/{project}:specify` first." (No report — nothing was read.)
+   - `draft` with open questions: continue the full walk (steps 4–12); the report is rendered at step 12, before the next-step line.
+   - `draft` with zero open questions: short-circuit — skip the question loop (step 6 runs no extension round trip) and continue at step 7 toward the status-advance gate; the report is rendered at step 12, before the next-step line.
+   - `clarified` / `planned` / `in-progress` with zero open questions: stop with the "already `{status}`" message from the Gate table, **followed by the report**. No file is modified.
+   - `clarified` / `planned` / `in-progress` with one or more open questions: take the **recovery branch** — display the inconsistency and prompt the user per the Recovery path reference below, then hand off to step 3 for the guarded revert. Recovery is the more upstream defect and governs the walk; the report still renders at step 12 when the walk reaches it, and the questions remain to be resolved after recovery returns the spec to `clarified`.
+   - `done` (any question count): stop with the `done` message from the Gate table, **followed by the report**. Exit without mutation.
 
 3. **Recovery-branch revert** (only when step 2 took the recovery branch): on the user's confirmation, invoke `set-status` (from the current status, to `draft`) and continue the full walk (steps 4–12); on decline, exit without modifying any file.
 
@@ -89,7 +89,9 @@ Steps 1–12 are the feature-targeted walk; a scenario-targeted session runs ste
 
 11. Invoke `gate-confirm` with a prompt that presents a summary of the changes and the resolved questions and asks the user to approve the transition from `draft` to `clarified`. On confirmation, continue to step 12; on denial, the walker exits cleanly without modifying the spec.
 
-12. Invoke `set-status` to flip the spec frontmatter's status from `draft` to `clarified`; the primitive guards against a stale "from" value so concurrent edits surface as an operational error rather than a silent overwrite. Then display the next step: "Run `/{project}:plan` to create the technical plan."
+12. Invoke `set-status` to flip the spec frontmatter's status from `draft` to `clarified`; the primitive guards against a stale "from" value so concurrent edits surface as an operational error rather than a silent overwrite. Then, when step 2's `scenario-open-questions` field was non-empty, render the **Scenario open-question report** — before the next-step line, so the outstanding work is read ahead of the affirmative next action rather than after it. Finally display the next step: "Run `/{project}:plan` to create the technical plan."
+
+    The transition is **not** gated on the report: a spec advances `draft → clarified` carrying scenario questions, exactly as it did before. `done` remains the only mechanized block — the pre-done review gate's scenario-open-questions check — and §readiness-check already counts both sets at `planned → implement`. The report exists so the advance is not the *only* thing the run says.
 
 13. **Scenario-targeted wrap-up** (scenario-targeted runs only): after the question loop, enumerate edge cases specific to the scenario's behavior (empty inputs, missing data, boundary values, concurrent access) and add them to the scenario's `## Edge Cases` section; confirm the scenario's Behavior section is unambiguous and complete; if questions remain that need user input, list them. The scenario has no status field — resolution is complete when all open questions are removed from the Open Questions section. Invoke `lint-markdown` against the modified scenario file. Read the parent spec's frontmatter `status` field (a host read — this step already dispatches `lint-markdown`, so it does not also invoke read-spec), display "Scenario clarification complete.", and suggest `/{project}:implement` if the parent spec is `planned` or `in-progress` (both states are accepted by `/{project}:implement`'s gate); for other parent-spec states (`draft`, `clarified`, `done`), display the completion message without a next-step suggestion — the parent spec's own pipeline state determines what comes next.
 
@@ -150,6 +152,26 @@ Before mutating anything, surface the inconsistency to the user:
 4. **Decline** — exit without modifying any file. The spec retains its inconsistent state and open questions remain in `## Open Questions`. The next `/{project}:clarify` invocation offers the same prompt — the system surfaces the inconsistency on every clarify attempt rather than silently advancing.
 
 `## Resolved Questions` is never re-walked even on the recovery path; only items in `## Open Questions` are processed.
+
+### Scenario open-question report
+
+Rendered by a **feature-targeted** run in whichever gate branch it takes, whenever the feature's scenarios carry unresolved questions. It reports; it never resolves, never writes, and never gates.
+
+**Deriving the list.** On the runtime path it is `read-spec`'s `scenario-open-questions` field — already loaded at step 2, so no extra call and no extra read. On the markdown-only path, read the `## Open Questions` section of each file under `specs/{feature}/scenarios/` and count its entries by the same rule the Gate uses (placeholder lines such as `*None — all resolved.*` are not entries). Read those sections only, per the Scope Boundaries carve-out. Enumerate the directory with the shared scenario ordering — case-insensitive with a raw-byte tiebreak — so the two paths list the same scenarios in the same order. A scenario file that cannot be read or parsed contributes nothing and is not escalated into a defect: nothing can be proven about a file that will not parse.
+
+**Wording.** Name every carrying scenario and its count — no cap, since a truncated list reads as "these are the ones that need attention" while hiding others — then the command that resolves them:
+
+```text
+{N} unresolved question(s) in {M} scenario(s): {scenario} ({count}), {scenario} ({count}).
+These do not block this transition; they block `done`.
+Run /{project}:target {feature}/<scenario> then /{project}:clarify on each to resolve them.
+```
+
+**Suppression.** When no scenario carries a question the report is omitted **entirely** — not rendered as "0 outstanding". A feature with clean scenarios reads exactly as it did before this report existed.
+
+**Placement.** After the branch's own message. On the two terminating branches (`already {status}`, `done`) it follows the stop message and neither branch gains a write — both keep their guarantee of modifying no file. On the advancing branch it precedes the "Run `/{project}:plan`" line, so the outstanding work is read before the affirmative next step rather than after it. That ordering is the point of the report: the pre-`done` gate blocks on exactly these questions, and a command holding the signal must not answer an unresolved spec with an affirmative next step alone.
+
+**Not a gate.** `draft → clarified` still advances carrying scenario questions. The mechanized block stays at `done` (`check-review-gate`), and §readiness-check already counts the spec body's questions *and* those carried by any scenario at `planned → implement`. Adding a second gate here would change what `clarified` means.
 
 ### Scenario-targeted clarify
 
