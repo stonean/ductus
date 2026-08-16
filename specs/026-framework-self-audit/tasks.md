@@ -215,3 +215,14 @@ Pulled in from the original Future Considerations during the autonomous implemen
 - [x] Implement the behavior described in `scenarios/family-19-review-freshness.md`
 
 - **Done when**: `scripts/audit/review-freshness.sh` flags every `done` spec whose `scenarios/*.md` or `data-model.md` changed since its `review.reviewed-against`, grandfathering specs with no `review:` block, deferring a null `reviewed-against` to `check-review-gate`, and reporting an unresolvable sha as its own finding; the durable-contract scope is documented against the two wider rules measured and rejected (Affected Files at 42/48, whole directory at 31/48) and verified to catch both `gvrn-v0.26.1` and `gvrn-v0.26.2`; shellcheck clean; deliberately **not** wired into `run-all.sh` while 10 pre-existing stale reviews stand, with that decision and the one-line wiring recorded in the scenario and `scripts/audit/README.md`
+
+### 25. Implement scenario: [family-19-mechanical-sweep-exemption](scenarios/family-19-mechanical-sweep-exemption.md)
+
+Opened by [049's rename sweep](../049-rename-govern-to-ductus/spec.md), which made 22 of 48 done specs read stale on a diff whose every changed line was the rename.
+
+- [x] `review-freshness.sh` no longer counts a durable contract whose diff is a uniform token substitution the same sweep applied elsewhere — one-for-one lines, one-for-one tokens, and every rewrite repo-wide or a direct consequence of a repo-wide one
+- [x] The exemption is derived from the diff, never declared: no commit trailer, opt-out flag, or maintained sweep-commit list, per `AGENTS.md`'s design principle
+- [x] Collapsing rewrites are admitted (`govern` and `gvrn` both → `ductus`); a collapse that is not a rename still fails the repo-wide test
+- [x] One `git diff --unified=0` per distinct base sha rather than two blob reads per changed file — the family is a hard release gate and the blob shape cost 61s
+
+- **Done when**: `scripts/audit/review-freshness.sh` exits 0 across the rename sweep, still flags a single changed table cell, a `MUST`→`SHOULD` reword, a mixed rename-plus-reword line, and any added or deleted contract; runs in under 5s on this repo's history; and shellcheck is clean.
