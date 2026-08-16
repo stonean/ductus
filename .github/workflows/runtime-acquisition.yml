@@ -42,6 +42,20 @@ jobs:
       # tells you one platform is broken, not which others also are.
       fail-fast: false
       matrix:
+        # Runners must match the target **natively**, because this job
+        # executes the binary it installs — that is the half of acquisition
+        # a digest check cannot prove. This is the one place the matrix
+        # deliberately differs from runtime-release.yml, which cross-compiles
+        # aarch64-linux and x86_64-darwin from the wrong host and never runs
+        # what it builds.
+        #
+        # If a leg fails before any step runs, the runner label is the first
+        # thing to check: `ubuntu-24.04-arm` (arm64 Linux) and `macos-13`
+        # (the last Intel macOS image) are both availability-sensitive —
+        # arm64 Linux runners are a newer offering, and Intel macOS images
+        # are on a deprecation path. A label GitHub does not recognize fails
+        # at scheduling with no step output, which reads as a broken workflow
+        # rather than a missing runner.
         include:
           - target: aarch64-apple-darwin
             runner: macos-latest

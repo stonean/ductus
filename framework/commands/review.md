@@ -93,7 +93,7 @@ records `must-violations: > 0`. See [Blocking semantics](#blocking-semantics).
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no ductus MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write).
+> **For agent runtimes**: the Invoke steps below call the MCP tools of the ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. Before the server is registered — the window between acquisition and the restart that loads it — walk the same prose using the host file-reading tools (Read, Edit, Write).
 
 Run once per targeted feature (every in-progress or done spec under `--all`, otherwise the current `/{project}:target`), in order. Resolve a `[feature]` argument through `resolve-feature` (exact name / number / unique partial slug), and enumerate the `--all` set from `dashboard`'s per-spec status inventory (`specs[].status ∈ {in-progress, done}`) rather than a directory scan. The detailed walk — rule-selection notices, waiver semantics, the report skeleton, and the pass definitions — lives under the Markdown-only reference section below.
 

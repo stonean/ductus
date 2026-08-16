@@ -51,7 +51,7 @@ Default is unset — without the flag, the user confirms each task as today.
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no ductus MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write).
+> **For agent runtimes**: the Invoke steps below call the MCP tools of the ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. Before the server is registered — the window between acquisition and the restart that loads it — walk the same prose using the host file-reading tools (Read, Edit, Write).
 
 1. Invoke `read-tasks` against the targeted feature to load the ordered task list and the per-task "done when" conditions. The host threads the per-primitive addressing arguments (task-number, subtask-index, checked, write-boundary, threshold, criterion-index) as **typed** context to the calls that consume them — these are per-call inputs supplied by the driving host, not session-file state, and (on `ductus exec`) not string CLI overrides, since the primitives type them as integers/booleans.
 

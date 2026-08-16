@@ -22,7 +22,7 @@ Use the session target from `.ductus/session.toml` if set, but groom operates ac
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no ductus MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write) per the Markdown-only reference below.
+> **For agent runtimes**: the Invoke steps below call the MCP tools of the ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. Before the server is registered — the window between acquisition and the restart that loads it — walk the same prose using the host file-reading tools (Read, Edit, Write) per the Markdown-only reference below.
 
 Process items **one at a time** — do not batch or pre-process multiple items. Complete steps 2–8 for one item (decision, confirmation, writes, removal), then repeat from step 2 for the next; step 9 runs once after all items. The decision-tree detail, prompt wording, and write shapes live under the Markdown-only reference below.
 

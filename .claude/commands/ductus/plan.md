@@ -40,7 +40,7 @@ Read the spec's `status` field from the YAML frontmatter at the top of the file.
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no ductus MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write).
+> **For agent runtimes**: the Invoke steps below call the MCP tools of the ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. Before the server is registered — the window between acquisition and the restart that loads it — walk the same prose using the host file-reading tools (Read, Edit, Write).
 
 **Exec-path scope** (`ductus exec plan`): steps 4–6 cross the boundary at the `writeSpecBody` extension point, but the task breakdown (step 7) and the substantive readiness checks (the **Validation gate** reference below) are spec-wide semantic host work with no extension marker, so the subprocess walker no-ops them by design — the runtime owns no primitive for the task breakdown or the criteria/consistency judgments. A host driving `ductus exec` (and the markdown-only path) performs them itself before accepting the step-8 gate. `markdownlint` (steps 2, 10) is advisory on every path — it never blocks the clarified → planned transition. This scope reduction mirrors clarify's and is not a silent gap.
 

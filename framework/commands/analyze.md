@@ -37,7 +37,7 @@ If `--all` is not present, use the feature identifier if provided, otherwise fal
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no ductus MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write).
+> **For agent runtimes**: the Invoke steps below call the MCP tools of the ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. Before the server is registered — the window between acquisition and the restart that loads it — walk the same prose using the host file-reading tools (Read, Edit, Write).
 
 1. Invoke `read-spec` (with `include-body`) against the targeted feature to load frontmatter, sections, and the open-question count from the body. The result drives subsequent steps' tier classification (status governs which artifact-completeness checks apply); its parsed `sections` also feed step 12's `## Applicable Rules` scan, so no separate re-read of the body is needed.
 

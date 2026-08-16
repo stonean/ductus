@@ -20,7 +20,7 @@ A feature's `tasks.md` accumulates completed work across the whole life of the f
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no ductus MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write) per the markdown-only reference below.
+> **For agent runtimes**: the Invoke steps below call the MCP tools of the ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. Before the server is registered — the window between acquisition and the restart that loads it — walk the same prose using the host file-reading tools (Read, Edit, Write) per the markdown-only reference below.
 
 <!-- audit:ignore-promotion -->
 1. Resolve the session target from `.ductus/session.toml`. If no target is set, stop and tell the user to run `/ductus:target` first. Parse the invocation flags: `--reset` selects a full reset (default is a keep-pending prune); `--force` overrides the reset status gate on a non-`done` spec. `--force` without `--reset` is ignored (it only gates reset).

@@ -21,7 +21,7 @@ Read-only overview of every feature's progress through the pipeline. Shows which
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no ductus MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write).
+> **For agent runtimes**: the Invoke steps below call the MCP tools of the ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. Before the server is registered — the window between acquisition and the restart that loads it — walk the same prose using the host file-reading tools (Read, Edit, Write).
 >
 > **For this command specifically**: the single deterministic tool for the pipeline view is `dashboard`. One MCP call returns the session target, the per-spec inventory, the repo-wide tags-union, the `.ductus/config.toml` review-state summary, and the pre-rendered pipeline view. Do not substitute shell utilities (no `ls`, no `for` loops over spec directories, no `cat .ductus/config.toml`) for that call. Cross-service reference resolution for specs that carry a `references:` index is folded into the same call on the runtime path (the runtime resolves each index internally for the readout); on the markdown-only path, use the host file tools documented in the Resolving cross-service references section. Neither substitutes a shell pipeline.
 

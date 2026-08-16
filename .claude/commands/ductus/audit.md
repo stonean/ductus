@@ -26,7 +26,7 @@ See [spec 026](../../specs/026-framework-self-audit/spec.md) for the design and 
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no ductus MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write).
+> **For agent runtimes**: the Invoke steps below call the MCP tools of the ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. Before the server is registered — the window between acquisition and the restart that loads it — walk the same prose using the host file-reading tools (Read, Edit, Write).
 
 1. Invoke `run-generator` against `scripts/audit/run-all.sh` — the orchestrator that runs the check-zero precondition pass followed by the family check scripts. The script emits findings to stdout under per-family headers and exits 0 (no findings) or 1 (any family produced findings).
 
