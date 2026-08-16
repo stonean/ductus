@@ -1,6 +1,6 @@
 ---
 title: "010-agent-autonomy — spec"
-status: done
+status: in-progress
 dependencies: [000-slash-commands]
 tags: [agent, process]
 review:

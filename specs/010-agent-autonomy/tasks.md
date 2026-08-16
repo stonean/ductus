@@ -199,3 +199,9 @@ Run all checks and walk through 010's acceptance criteria.
 - [x] Cross-spec deliverable AC reflects 005 reopened to `in-progress` (005 is left at `in-progress` for a separate `/ductus:implement` to advance back to `done`)
 
 **Done when:** all checks pass, the rename is complete and consistent, and every 010 acceptance criterion is verified.
+
+## 17. Implement scenario: [implement-offers-the-next-step](scenarios/implement-offers-the-next-step.md) — name the next task and let the operator confirm or redirect
+
+- [ ] Implement the behavior described in `scenarios/implement-offers-the-next-step.md`
+
+- **Done when**: A default-mode `/{project}:implement` run completing a task names the next unchecked task (number and heading) and prompts to continue, after the per-task completion summary; yes continues the walk in the same run, no exits cleanly as today, and free-text redirects; the prompt is suppressed when no unchecked task remains, so it never renders as "no next step"; `--auto` behavior is unchanged and the `in-progress → done` gate keeps its own separate confirmation; the offer never advances spec status and never writes; `framework/commands/implement.md` documents it for the markdown-only path with the exec-path round trip named, and the generated command copies are re-rendered; the scenario's open question about offering more than one next step is resolved before the task closes; `npx markdownlint-cli2` and `scripts/lint-procedure-parseability.sh` clean.
