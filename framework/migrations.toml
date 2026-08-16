@@ -118,6 +118,20 @@ target_paths = [
 procedure_file = "framework/migrations/ductus-rename.md"
 
 [[migrations]]
+id = "criterion-label-backfill"
+introduced_in = "0.28.0"
+# No sunset_after: an adopter adopting for the first time years from now still
+# arrives with an unlabelled corpus, so the entry stays active indefinitely
+# (spec 013). It sorts first among the 0.28.0 entries by the lexicographic
+# tie-break, which is harmless — it touches spec bodies, the other two touch
+# config, MCP registration, and installed files.
+summary = "Assign stable AC{n} labels to every unlabelled acceptance criterion and record the next-criterion counter, so citing a criterion never requires counting a list"
+target_paths = [
+  "specs/*/spec.md",
+]
+procedure_file = "framework/migrations/criterion-label-backfill.md"
+
+[[migrations]]
 id = "runtime-store-path"
 introduced_in = "0.28.0"
 # No sunset_after: an adopter who has not re-bootstrapped since the runtime
