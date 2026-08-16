@@ -49,10 +49,10 @@ The registry lists every supported agent. Per-agent paths and behaviors are deri
 
 | `key` | `name` | `config_dir` | `layout` | `settings_template` | `rules_file_note` |
 | --- | --- | --- | --- | --- | --- |
-| `claude` | Claude Code | `.claude` | `claude-style` | `{ "permissions": { "allow": ["Bash(curl *)", "Bash(ls *)", "Bash(tar *)", "Bash(mktemp *)", "Bash(git status *)", "Bash(git config *)", "Bash(git rev-parse *)", "Bash(git diff *)", "Bash(git ls-files *)", "Bash(chmod *)", "Bash(awk *)", "Bash(command -v *)", "Read(/private/var/folders/**/T/ductus-*/**)", "Read(//private/var/folders/**/T/ductus-*/**)", "Read(/var/folders/**/T/ductus-*/**)", "Read(//var/folders/**/T/ductus-*/**)", "Read(/tmp/ductus-*/**)", "Read(//tmp/ductus-*/**)"], "deny": [] } }` | Claude Code reads `CLAUDE.md` natively. |
-| `auggie` | Auggie | `.augment` | `claude-style` | `{ "toolPermissions": [ { "toolName": "launch-process", "shellInputRegex": "^curl ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^ls ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^tar ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^mktemp ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^git status ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^git config ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^git rev-parse ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^git diff ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^git ls-files ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^chmod ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^awk ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^command -v ", "permission": { "type": "allow" } } ] }` | Auggie reads `CLAUDE.md` natively — no second rules file is needed. |
-| `antigravity` | Antigravity | `.agents` | `antigravity` | `{ "permissions": { "allow": [ "command(curl)", "command(ls)", "command(tar)", "command(mktemp)", "command(git status)", "command(git config)", "command(git rev-parse)", "command(git diff)", "command(git ls-files)", "command(chmod)", "command(awk)", "command(which)" ], "deny": [], "ask": [] } }` | Antigravity reads `AGENTS.md` natively — no second rules file is needed. |
-| `opencode` | OpenCode | `.opencode` | `opencode` | `{ "$schema": "https://opencode.ai/config.json", "permission": { "bash": { "curl *": "allow", "ls *": "allow", "tar *": "allow", "mktemp *": "allow", "git status *": "allow", "git config *": "allow", "git rev-parse *": "allow", "git diff *": "allow", "git ls-files *": "allow", "chmod *": "allow", "awk *": "allow", "command -v *": "allow" } } }` | OpenCode reads `AGENTS.md` natively — no second rules file is needed. |
+| `claude` | Claude Code | `.claude` | `claude-style` | `{ "permissions": { "allow": ["Bash(curl *)", "Bash(ls *)", "Bash(tar *)", "Bash(mktemp *)", "Bash(git status *)", "Bash(git config *)", "Bash(git rev-parse *)", "Bash(git diff *)", "Bash(git ls-files *)", "Bash(chmod *)", "Bash(awk *)", "Bash(command -v *)", "Bash(mkdir *)", "Bash(shasum *)", "Bash(sha256sum *)", "Bash(certutil *)", "Bash(ln *)", "Bash(cp *)", "Bash(~/.ductus/bin/ductus *)", "Bash(.ductus/bin/ductus *)", "Read(/private/var/folders/**/T/ductus-*/**)", "Read(//private/var/folders/**/T/ductus-*/**)", "Read(/var/folders/**/T/ductus-*/**)", "Read(//var/folders/**/T/ductus-*/**)", "Read(/tmp/ductus-*/**)", "Read(//tmp/ductus-*/**)"], "deny": [] } }` | Claude Code reads `CLAUDE.md` natively. |
+| `auggie` | Auggie | `.augment` | `claude-style` | `{ "toolPermissions": [ { "toolName": "launch-process", "shellInputRegex": "^curl ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^ls ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^tar ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^mktemp ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^git status ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^git config ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^git rev-parse ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^git diff ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^git ls-files ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^chmod ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^awk ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^command -v ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^mkdir ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^shasum ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^sha256sum ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^certutil ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^ln ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^cp ", "permission": { "type": "allow" } }, { "toolName": "launch-process", "shellInputRegex": "^[^ ]*\\.ductus/bin/ductus ", "permission": { "type": "allow" } } ] }` | Auggie reads `CLAUDE.md` natively — no second rules file is needed. |
+| `antigravity` | Antigravity | `.agents` | `antigravity` | `{ "permissions": { "allow": [ "command(curl)", "command(ls)", "command(tar)", "command(mktemp)", "command(git status)", "command(git config)", "command(git rev-parse)", "command(git diff)", "command(git ls-files)", "command(chmod)", "command(awk)", "command(which)", "command(mkdir)", "command(shasum)", "command(sha256sum)", "command(certutil)", "command(ln)", "command(cp)" ], "deny": [], "ask": [] } }` | Antigravity reads `AGENTS.md` natively — no second rules file is needed. |
+| `opencode` | OpenCode | `.opencode` | `opencode` | `{ "$schema": "https://opencode.ai/config.json", "permission": { "bash": { "curl *": "allow", "ls *": "allow", "tar *": "allow", "mktemp *": "allow", "git status *": "allow", "git config *": "allow", "git rev-parse *": "allow", "git diff *": "allow", "git ls-files *": "allow", "chmod *": "allow", "awk *": "allow", "command -v *": "allow", "mkdir *": "allow", "shasum *": "allow", "sha256sum *": "allow", "certutil *": "allow", "ln *": "allow", "cp *": "allow", "*/.ductus/bin/ductus *": "allow" } } }` | OpenCode reads `AGENTS.md` natively — no second rules file is needed. |
 
 ### Derived values
 
@@ -86,7 +86,7 @@ MCP discovery is **not** layout-derived — it is a per-agent property. A host c
 | `key` | MCP target | scope | mechanism | surfaced instruction (when `surface-instruction`) |
 | --- | --- | --- | --- | --- |
 | `claude` | `.mcp.json` (repo root) | `project-committed` | `write-file` | — |
-| `auggie` | `~/.augment/settings.json` | `user-global` | `surface-instruction` | `auggie mcp add ductus --command ductus --args "mcp"` |
+| `auggie` | `~/.augment/settings.json` | `user-global` | `surface-instruction` | `auggie mcp add ductus --command ~/.ductus/bin/ductus --args "mcp"` |
 | `antigravity` | `~/.gemini/config/mcp_config.json` | `home-level` | `surface-instruction` | edit `~/.gemini/config/mcp_config.json`, then `/mcp` reload |
 | `opencode` | `opencode.json` (repo root) `mcp` block | `project-committed` | `write-file` | — |
 
@@ -149,18 +149,20 @@ For each selected agent, before fetching any files:
 2. Merge the agent's `settings_template` entries into the existing file additively: add any entries that are missing, do not deduplicate or reorder anything else, and do not overwrite entries the user or `/{project}:configure` previously added. For `claude-style` the entries live under `permissions.allow`/`permissions.deny` (Claude) or `toolPermissions` (Auggie); for `antigravity` they live under `permissions.allow`/`permissions.deny`/`permissions.ask`; for `opencode` they live under the `permission` action map (preserving `$schema` and every other top-level key).
 3. Write the file if anything was added.
 
-This prevents repeated permission prompts during the fetch and scaffolding phases. The full permission set is applied later by `/{project}:configure` (which writes the same per-layout settings file). The seed also includes the ductus **binary probe** (`command -v ductus` for `claude-style`, Auggie, and `opencode`, `which ductus` for `antigravity`) so the **Pre-flight Phase**'s State B/State C probe does not prompt on routine runs.
+This prevents repeated permission prompts during the fetch and scaffolding phases. The full permission set is applied later by `/{project}:configure` (which writes the same per-layout settings file). The seed also covers every step of **Runtime acquisition** — `mkdir`, the platform checksum tool, `ln`/`cp` for the pointer, and execution of the store and pointer paths for the version probe — so a bootstrap that acquires the runtime prompts for nothing. The checksum entry is the one that matters most: leaving it unseeded adds no safety, it puts a dialog at the one gate that must never be waved through, and a prompt that appears on every bootstrap trains the reflex to approve it. The digest comparison is what protects the adopter, and it halts before anything is written.
 
 ### ductus runtime auto-wiring
 
-`/ductus` wires the optional ductus runtime automatically when its binary is detected on the session's `PATH` but not yet registered as an MCP server — the **Pre-flight Phase → State B** path. (This replaces the previous model where the runtime was a separate, hand-wired install.) Wiring depends on the agent's MCP registration `mechanism` (§MCP registration): a `write-file` agent gets its MCP file written; a `surface-instruction` agent gets a one-line registration command surfaced for the user to run (ductus never writes the user's home config) — see **ductus runtime detection → MCP wiring** for the per-mechanism rules. In the same pass, either way, `/ductus` adds the **ductus tool permissions** to the settings file so the next session calls the runtime without a per-tool prompt:
+`/ductus` **acquires** the ductus runtime and registers it as an MCP server — the **Pre-flight Phase → State B** path. The runtime is required ([§runtime-boundary](../constitution.md#runtime-boundary)), so a missing binary is work to perform rather than a condition to report: `/ductus` downloads the pinned release for the host platform into a ductus-owned store, materializes a per-project pointer to it, and wires the MCP config to that pointer. `PATH` is not consulted at any point.
+
+Wiring depends on the agent's MCP registration `mechanism` (§MCP registration): a `write-file` agent gets its MCP file written; a `surface-instruction` agent gets a one-line registration command surfaced for the user to run (ductus never writes the user's home config) — see **ductus runtime detection → MCP wiring** for the per-mechanism rules. In the same pass, either way, `/ductus` adds the **ductus tool permissions** to the settings file so the next session calls the runtime without a per-tool prompt:
 
 - **Claude** (`permissions.allow`): `mcp__ductus__*`
 - **Antigravity** (`permissions.allow`): `mcp(ductus/*)`
 - **Auggie** (`toolPermissions`): `{ "toolName": "mcp:ductus:*", "permission": { "type": "allow" } }` if Auggie's matcher honors the wildcard, otherwise the enumerated `mcp:ductus:<tool>` set `/{project}:configure` already installs.
 - **OpenCode** (`permission`): `"ductus*": "allow"` (a single glob in the root `opencode.json` `permission` map).
 
-The wildcard is the minimal bootstrap grant; the enumerated per-tool set stays owned by the generated block in `/{project}:configure`'s permission file and coexists harmlessly (exact-match dedup leaves both). Both the wiring write and this permission write are additive and idempotent and follow the same merge rules as the seed above — no existing entry is removed, reordered, or overwritten. There is **no new confirmation prompt**: the wiring is disclosed by the **Pre-flight abort** message, which names every file written — consistent with the §Procedural-fidelity rule the silent seed writes already follow. The runtime remains an optional install (the binary is still installed out of band; see the README's Runtime section) — `/ductus` automates only the MCP registration once the binary is present.
+The wildcard is the minimal bootstrap grant; the enumerated per-tool set stays owned by the generated block in `/{project}:configure`'s permission file and coexists harmlessly (exact-match dedup leaves both). Both the wiring write and this permission write are additive and idempotent and follow the same merge rules as the seed above — no existing entry is removed, reordered, or overwritten. There is **no new confirmation prompt**: the acquisition and the wiring are disclosed by the **Pre-flight abort** message, which names the store path and every file written — consistent with the §Procedural-fidelity rule the silent seed writes already follow.
 
 ## Pre-flight Phase
 
@@ -170,14 +172,22 @@ The phase runs both checks, accumulates every restart-requiring write into a **p
 
 ### ductus runtime detection
 
-Detect whether the optional ductus runtime is available and, when its binary is installed but not yet wired into this project, register it so the next session can run the deterministic path. Detection resolves to one of three states — A (runtime live this session), B (binary present, not wired), C (absent); the **Detection mechanism** and per-state behavior follow in the subsections below.
+Resolve whether the ductus runtime is live in this session and, when it is not, acquire and wire it so the next session runs the deterministic path. Detection resolves to one of **two** states — A (runtime live this session) and B (not live: acquire, wire, restart). There is no third "binary absent" state: the runtime is required, and a missing binary is work to perform.
 
 #### Detection mechanism
 
-Two independent probes resolve the state:
+- **Tool-inventory introspection (State A).** Inspect your own available-tool inventory for any `ductus`-namespaced MCP tool — `mcp__ductus__*` on Claude Code, `mcp:ductus:*` on Auggie and Antigravity — counting deferred or lazily-loaded tool names as present (a host that lists tool names before exposing their schemas still has the runtime registered). Any match ⇒ **State A**. This needs no shell and no permission; you always know your own tools.
+- **Store probe (State B).** Only when introspection finds no `ductus` tool. This is a **filesystem check for the ductus-owned store**, not a `PATH` lookup: test whether `{store-path}` exists and executes. `PATH` is not consulted — an adopter's `ductus` on `PATH` is ignored entirely, not consulted, not warned about, not removed. The probe is pre-authorized by the **Permission Setup** seed. A probe that cannot run classifies the run as State B, which acquires; acquisition is idempotent, so a false negative costs a version comparison, not a redundant download.
 
-- **Tool-inventory introspection (State A).** Inspect your own available-tool inventory for any `ductus`-namespaced MCP tool — `mcp__ductus__*` on Claude Code, `mcp:ductus:*` on Auggie and antigravity — counting deferred or lazily-loaded tool names as present (a host that lists tool names before exposing their schemas still has the runtime registered). Any match ⇒ **State A**. This needs no shell and no permission; you always know your own tools.
-- **Binary probe (State B vs. State C).** Only when introspection finds no `ductus` tool, run a binary probe — `command -v ductus` on `claude-style`, Auggie, and `opencode`, `which ductus` on `antigravity` (whose token-prefix permission grammar matches `which` cleanly). The probe is pre-authorized by the **Permission Setup** seed, so it does not prompt on routine runs. There is no non-shell way to detect an installed-but-unregistered binary — anything a tool could answer would already be **State A**. If the probe cannot run (no shell granted) or is denied, classify the run as **State C** — a harmless false negative; detection never hard-fails.
+#### Derived paths
+
+| Name | Value |
+| --- | --- |
+| `{store-dir}` | `~/.ductus/bin/` |
+| `{store-path}` | `~/.ductus/bin/ductus` (`ductus.exe` on Windows) |
+| `{pointer-path}` | `.ductus/bin/ductus` (repo-relative; `ductus.exe` on Windows) |
+| `{pin}` | the single SemVer line in `{staging-dir}/ductus-main/version` |
+| `{triple}` | the host target triple, from the table in **Runtime acquisition** |
 
 #### State A — runtime live this session
 
@@ -190,55 +200,141 @@ State A is a **binding execution contract, not a preference.** Detecting the run
 - **Steps with no backticked primitive run as shown in every state** — the per-language `.gitignore` `curl` against `github.com/github/gitignore`, `git config core.hooksPath`, `chmod`, the git repo / tracked-file checks, and the §Collect Project Inputs prompts have no tool equivalent.
 - **If a primitive call errors** — e.g., a too-old wired `ductus` surfaces a parse error per [spec 022 §Versioning enforcement](../022-deterministic-runtime/spec.md) — fall back to **that step's** shell specification for that one step and continue; do not abandon the deterministic path for the whole run.
 
-#### State B — binary present, not wired
+#### State B — runtime not live: acquire, wire, restart
 
-The binary probe succeeded but no `ductus` tool is available to this session. In order:
+No `ductus` tool is available to this session. In order:
 
-1. Register the `ductus` server per the agent's MCP registration `mechanism` (§MCP registration; details in **MCP wiring**): for `write-file`, write the MCP file additively; for `surface-instruction`, write **no** MCP file — the registration command is surfaced in the abort (step 3) for the user to run once per machine.
-2. Add the permission entries needed to call the `ductus` tools (see **Permission Setup**), so the next session calls them without a prompt. This write is the same for every agent regardless of `mechanism` — it targets the project-level settings file, not the MCP-server location.
-3. Add the wiring (and the permission write) to the **pending-restart set** and contribute this notice to the combined **Pre-flight abort**, naming every file written:
+1. **Resolve the binary** per **Runtime acquisition** below — either the project's own `[runtime]` path, or an acquisition into the store.
+2. **Materialize the pointer** per **Pointer materialization** below.
+3. Register the `ductus` server per the agent's MCP registration `mechanism` (§MCP registration; details in **MCP wiring**): for `write-file`, write the MCP file additively; for `surface-instruction`, write **no** MCP file — the registration command is surfaced in the abort for the user to run once per machine.
+4. Add the permission entries needed to call the `ductus` tools (see **Permission Setup**), so the next session calls them without a prompt. This write is the same for every agent regardless of `mechanism` — it targets the project-level settings file, not the MCP-server location.
+5. Add the acquisition, the wiring, and the permission write to the **pending-restart set** and contribute this notice to the combined **Pre-flight abort**, naming the store path and every file written:
 
-> **ductus runtime detected.** The `ductus` binary is installed but was not registered for this project, so `/ductus` could not use the faster deterministic runtime this run.
+> **ductus runtime acquired.** The runtime was not registered for this project, so `/ductus` could not use the deterministic path this run. Installed `{version}` to `{store-path}`.
 
 The abort takes the form matching the selected agent's `mechanism`:
 
-- **`write-file` agent** (e.g. Claude): "It has now been wired in so the next session runs through the runtime, which uses far fewer tokens. Files written: {comma-separated paths — the wiring file, and the settings file when permission entries were added}."
-- **`surface-instruction` agent** (e.g. Auggie): "{Agent} registers MCP servers in your user-level config, which `/ductus` does not write. To enable the faster runtime, run this once, then start a fresh session: `{the agent's surfaced instruction from §MCP registration}`. Files written: {the settings file, when permission entries were added}."
+- **`write-file` agent** (e.g. Claude): "It has now been wired in so the next session runs through the runtime, which uses far fewer tokens. Files written: {comma-separated paths — the store, the pointer, the wiring file, and the settings file when permission entries were added}."
+- **`surface-instruction` agent** (e.g. Auggie): "{Agent} registers MCP servers in your user-level config, which `/ductus` does not write. To enable the runtime, run this once, then start a fresh session: `{the agent's surfaced instruction from §MCP registration}`. Files written: {the store, the pointer, and the settings file when permission entries were added}."
 
-State B issues **no separate consent prompt** — any file writes are additive and idempotent, matching the silent **Permission Setup** writes; the abort's file list (and, for a `surface-instruction` agent, the one-line command) is the disclosure. There is no opt-out flag for auto-wiring.
+State B issues **no separate consent prompt** — the writes are additive and idempotent, matching the silent **Permission Setup** writes; the abort's file list (and, for a `surface-instruction` agent, the one-line command) is the disclosure. There is no opt-out flag.
 
-#### State C — binary absent
+When acquisition **fails**, the run halts per **Runtime acquisition → Failure**; it does not proceed to steps 2–5 and does not silently continue on the markdown path.
 
-The binary probe failed, could not run, or was denied. Proceed on the markdown path exactly as today; ductus contributes nothing to the **pending-restart set**. After scaffolding, the **Post-Scaffolding Output** emits one tip line noting that installing ductus reduces token use.
+#### Runtime acquisition
+
+Performed in State B, before any wiring. Two branches.
+
+##### Branch 1 — the project supplies its own binary
+
+When `.ductus/config.toml` has a `[runtime]` `path` key, the project has taken responsibility for supplying the runtime. This is the supported route for building from source, for an air-gapped or firewalled checkout, and for a platform with no published asset.
+
+1. Resolve `path` (relative to the repo root, or absolute).
+2. **No download is attempted and nothing is written to the store.**
+3. Execute it to read its version. Compare against `{pin}`: a mismatch emits one warning line and continues — a project naming a path has stated deliberately which binary it wants, and a development build is expected to run ahead of the last release.
+
+   > `warning: [runtime] path {path} reports {found}, the framework pins {pin} — using the configured binary.`
+4. A path that does not exist, or will not execute, **halts** the run naming the configured path. Never fall through to downloading: that would discard the project's stated choice without saying so.
+
+   > Halt: `[runtime] path {path} does not exist` / `… will not execute`. Fix the path or remove the `[runtime]` key to let `/ductus` acquire the pinned release.
+5. The pointer resolves to this path rather than to the store.
+
+##### Branch 2 — acquire the pinned release
+
+1. **Read the pin.** Read `{staging-dir}/ductus-main/version` — one SemVer line, no `v` prefix. It travels in the same archive as the `framework/` tree it describes, so the pin cannot disagree with the framework revision it arrived with. If the file is **absent or unparseable**, halt naming it — a framework revision predating this file has no pin to read, and guessing a version or falling through to "latest" silently installs a runtime the framework was never tested against.
+
+   > Halt: `no runtime version pin at {staging-dir}/ductus-main/version — this framework revision cannot state which runtime it requires.`
+
+2. **Probe the store for idempotency.** Execute `{store-path}` and read its reported version.
+   - Reports `{pin}` ⇒ **already current**. Perform no download and leave the binary byte-unchanged. Continue to the pointer.
+   - Reports a different version ⇒ re-acquire, overwriting the store.
+   - **Will not execute, or reports nothing** ⇒ treat as *no usable runtime*, not as *version unknown*, and acquire. A truncated download, a wrong-architecture asset, or a missing system library all land here — which is why the probe executes the binary rather than reading a recorded marker.
+
+3. **Derive the target triple** from the host platform and architecture:
+
+   | Platform | Architecture | `{triple}` |
+   | --- | --- | --- |
+   | macOS | arm64 | `aarch64-apple-darwin` |
+   | macOS | x86_64 | `x86_64-apple-darwin` |
+   | Linux | x86_64 | `x86_64-unknown-linux-gnu` |
+   | Linux | arm64 | `aarch64-unknown-linux-gnu` |
+   | Windows | x86_64 | `x86_64-pc-windows-msvc` |
+
+   A host matching no row halts naming the platform and the `[runtime]` key — supplying a binary is the escape hatch for an unpublished platform.
+
+4. **Fetch the archive and its sidecar** from the release, into the staging directory:
+
+   ```text
+   curl -fsSL https://github.com/stonean/ductus/releases/download/ductus-v{pin}/ductus-{triple}.tar.gz \
+     -o {staging-dir}/ductus-{triple}.tar.gz
+   curl -fsSL https://github.com/stonean/ductus/releases/download/ductus-v{pin}/ductus-{triple}.tar.gz.sha256 \
+     -o {staging-dir}/ductus-{triple}.tar.gz.sha256
+   ```
+
+5. **Verify the digest before installing anything.** Compute the archive's SHA-256 with the platform tool — `shasum -a 256` on macOS, `sha256sum` on Linux, `certutil -hashfile … SHA256` on Windows — and compare against the sidecar. This is stricter than the framework archive fetch, which tolerates a missing sidecar because GitHub's auto-generated source tarballs ship without one; the runtime's release assets always carry theirs, so a **missing sidecar is a failure here**, not a skip.
+
+6. **Install into the store**, only after the digest matches:
+
+   ```text
+   mkdir -p {store-dir}
+   tar -xzf {staging-dir}/ductus-{triple}.tar.gz -C {staging-dir}
+   ```
+
+   Write the extracted binary to `{store-path}` via **tempfile + rename** — the same atomic write every other ductus write uses — so a concurrent `/ductus` run in another project sees the old binary or the new one, never a partial file. Then `chmod +x {store-path}`.
+
+7. **Re-probe** the store path and confirm it reports `{pin}`. A binary that installs but does not run is an acquisition failure, not a success.
+
+##### Failure
+
+A network failure, an unpublished asset for the host platform, a missing sidecar, or a checksum mismatch **aborts the run**. Nothing is written into the store or the pointer, and the run does **not** degrade to the markdown path — a requirement that quietly is not one would leave both execution paths alive, which is the cost the requirement exists to end.
+
+The error names the exact store path and the release URL, so an adopter behind a firewall can place the binary by hand and re-run:
+
+> Halt: `could not acquire the ductus runtime {pin} for {triple}: {reason}.`
+> `Place the binary at {store-path} and re-run, or set [runtime] path in .ductus/config.toml to a binary you supply.`
+> `Release: https://github.com/stonean/ductus/releases/tag/ductus-v{pin}`
+
+**The home directory is unwritable, absent, or on a read-only mount** — some CI containers and locked-down images. Halt with the same shape, naming the store path and the `[runtime]` key, since supplying a binary from a writable location is exactly the escape hatch for this case.
+
+#### Pointer materialization
+
+The pointer exists for one reason: a committed MCP config must not name a machine-specific absolute path. `.mcp.json` and `opencode.json` are shared with the whole team, so `/Users/alice/.ductus/bin/ductus` in either breaks every other contributor and every CI checkout.
+
+1. `mkdir -p .ductus/bin`
+2. Attempt a **symlink** from `{pointer-path}` to the resolved binary (`ln -sf`).
+3. If symlink creation fails, **fall back to a copy** (`cp`). Windows requires developer mode or elevation to create a symlink, and no supported platform may require elevated privileges — the copy is what keeps that true.
+4. **Repair without ceremony.** A missing or dangling pointer is recreated, not reported. It is gitignored, so it never arrives with a clone: a dangling pointer is the expected state of any checkout nobody has bootstrapped on this machine yet, not an error.
+
+The pointer is covered by the framework-managed `.gitignore` block's `/.ductus/bin/` entry, so `git status` reports nothing untracked after a bootstrap.
 
 #### MCP wiring
 
 How State B registers `ductus` depends on the agent's MCP registration `mechanism` (§MCP registration). For the `mcpServers`-shaped agents (Claude/Auggie/Antigravity) the server entry is a `mcpServers` map keyed by name; only the **location** (and whether ductus writes it) differs:
 
 ```json
-{ "mcpServers": { "ductus": { "command": "ductus", "args": ["mcp"] } } }
+{ "mcpServers": { "ductus": { "command": ".ductus/bin/ductus", "args": ["mcp"] } } }
 ```
 
 OpenCode uses a different shape — an `mcp` key with a typed local-server entry — written into the committed root `opencode.json` (the OpenCode sub-case below):
 
 ```json
-{ "mcp": { "ductus": { "type": "local", "command": ["ductus", "mcp"], "enabled": true } } }
+{ "mcp": { "ductus": { "type": "local", "command": [".ductus/bin/ductus", "mcp"], "enabled": true } } }
 ```
 
-**`write-file` agents** (scope `project-committed` — Claude and OpenCode). ductus writes the agent's `target` MCP file from §MCP registration, using that agent's server-entry shape — **Claude:** `.mcp.json` at the repo root, the `mcpServers` map, `{ "command": "ductus", "args": ["mcp"] }`; **OpenCode:** the committed root `opencode.json` (or the adopter's existing `opencode.jsonc`), the `mcp` map, `{ "type": "local", "command": ["ductus", "mcp"], "enabled": true }`. The write **updates the file in place — it never replaces or truncates it.** Apply the matching case (read `{servers-key}` as `mcpServers` for Claude, `mcp` for OpenCode):
+**`write-file` agents** (scope `project-committed` — Claude and OpenCode). ductus writes the agent's `target` MCP file from §MCP registration, using that agent's server-entry shape — **Claude:** `.mcp.json` at the repo root, the `mcpServers` map, `{ "command": ".ductus/bin/ductus", "args": ["mcp"] }`; **OpenCode:** the committed root `opencode.json` (or the adopter's existing `opencode.jsonc`), the `mcp` map, `{ "type": "local", "command": [".ductus/bin/ductus", "mcp"], "enabled": true }`. The write **updates the file in place — it never replaces or truncates it.** Apply the matching case (read `{servers-key}` as `mcpServers` for Claude, `mcp` for OpenCode):
 
 - **Missing file** — create it containing only the `ductus` entry (for OpenCode, include `"$schema": "https://opencode.ai/config.json"`).
 - **Has `{servers-key}`, no `ductus`** — add the `ductus` entry; preserve every other server and every other top-level key (including OpenCode's `$schema` and `permission`).
 - **Already has a `ductus` entry** — no-op; leave the file byte-unchanged (idempotent re-run).
 - **No `{servers-key}` key** — add the key with just the `ductus` entry; preserve all other top-level keys.
-- **Not valid JSON** — do **not** touch the file. Skip wiring, warn the user to repair it, and degrade to the markdown path for this run (treat as **State C**). A hand-maintained config is never clobbered.
+- **Not valid JSON** — do **not** touch the file. Skip wiring and warn the user to repair it. The runtime is still acquired and the pointer still materialized — only the registration is skipped — so the next run wires it once the file parses. A hand-maintained config is never clobbered.
 
 There is no `ductus` runtime primitive for this merge: State B is the runtime-absent case by definition, so the write is always host-side.
 
-**`surface-instruction` agents** (scope `user-global` / `home-level` — Auggie and Antigravity). The agent reads MCP servers from a file in the user's **home** directory, shared across all their projects, which ductus must **not** write. ductus writes no MCP file; instead the **Pre-flight abort** surfaces the agent's registration instruction for the user to run once per machine, then restart:
+**`surface-instruction` agents** (scope `user-global` / `home-level` — Auggie and Antigravity). The split follows the config's **scope**, not the agent: a `project-committed` target names the repo-relative pointer, a `user-global` / `home-level` target names the absolute store path. That is what removes the asymmetry these agents used to carry — their config holds a single `ductus` entry serving every project on the machine, so no project-specific path could ever be correct in it, and a store owned by no project can. The agent reads MCP servers from a file in the user's **home** directory, shared across all their projects, which ductus must **not** write. ductus writes no MCP file; instead the **Pre-flight abort** surfaces the agent's registration instruction for the user to run once per machine, then restart:
 
-- **Auggie** — `auggie mcp add ductus --command ductus --args "mcp"` (the documented, schema-stable subcommand; it writes `~/.augment/settings.json`).
-- **Antigravity** — add the `ductus` block above to `~/.gemini/config/mcp_config.json`, then reload via the in-prompt `/mcp` overlay (there is no scriptable `agy mcp add`; project-local `.agents/mcp_config.json` is ignored).
+- **Auggie** — `auggie mcp add ductus --command {store-path} --args "mcp"` (the documented, schema-stable subcommand; it writes `~/.augment/settings.json`). The **absolute store path**, not the pointer: this config is per-machine and shared across every project, so no project-relative path could be correct in it.
+- **Antigravity** — add a `ductus` block to `~/.gemini/config/mcp_config.json` naming the **absolute store path** (`{"mcpServers": {"ductus": {"command": "{store-path}", "args": ["mcp"]}}}`), then reload via the in-prompt `/mcp` overlay (there is no scriptable `agy mcp add`; project-local `.agents/mcp_config.json` is ignored). Absolute for the same reason as Auggie: the file is per-machine and serves every project.
 
 The permission write (State B step 2) still happens for these agents — it targets the project-level settings file the agent reads, independent of the home-level MCP-server location.
 
@@ -308,7 +404,7 @@ When all selected agents are `current` or `no installed copy`, the self-update c
 
 After both checks have run, inspect the **pending-restart set**:
 
-- **Empty** — no restart is needed. Proceed to **Pre-run Migrations**. (ductus detection resolved to State A or State C, and the self-update check saw `current` / `no installed copy` / `pinned-divergent` for every selected agent.)
+- **Empty** — no restart is needed. Proceed to **Pre-run Migrations**. (ductus detection resolved to State A, and the self-update check saw `current` / `no installed copy` / `pinned-divergent` for every selected agent.)
 - **Non-empty** — emit one combined abort and stop before any further work. The message includes every contributed notice and names every file written during this phase:
   - the ductus-wiring notice (State B), when ductus was wired this run — see **ductus runtime detection → State B**;
   - the stale-update notice, when any selected agent was `stale` — see **Self-update check → Stale → defer to pre-flight abort**;
@@ -909,9 +1005,9 @@ After writing the agent's installed `ductus` file — whether via the **Pre-flig
 - **A required source file is absent from the extracted archive** — warn `Source not found in archive: {source-path}; skipping.` and continue with the remaining manifest entries. Preserves the per-entry "do not abort on a single fetch error" guarantee at the entry level even though the archive itself is fetched once.
 - **First-run prompt with no detected dirs and only one supported agent** — the prompt still appears (the agent must be explicitly chosen), but the single agent is pre-selected. Confirming is one keystroke.
 - **Running `ductus.md` cannot infer its own install path** — fall back to no pre-selection in the first-run prompt. The user picks explicitly.
-- **ductus binary present but unwired (State B)** — the **Pre-flight Phase** registers the runtime per the agent's `mechanism` (writes the MCP config for a `write-file` agent, or surfaces the registration command for a `surface-instruction` agent) plus the ductus tool permissions, then stops as part of the single combined pre-flight abort. No archive is fetched; the user starts a new session and re-runs. See **ductus runtime detection → State B**.
-- **ductus wiring file is malformed JSON** — the wiring write does not touch the file. `/ductus` skips wiring, warns the user to repair it, and continues on the markdown path for this run (treated as State C). A hand-maintained MCP config is never clobbered.
-- **ductus binary probe cannot run or is denied** — the run is classified as State C (binary absent): the markdown path proceeds and the post-scaffolding tip fires. Detection never hard-fails on a host without shell.
+- **ductus runtime not live (State B)** — the **Pre-flight Phase** acquires the pinned release into the store, materializes the pointer, and registers the runtime per the agent's `mechanism` (writes the MCP config for a `write-file` agent, or surfaces the registration command for a `surface-instruction` agent), then joins the pending-restart set.
+- **ductus wiring file is malformed JSON** — the wiring write does not touch the file. `/ductus` skips wiring and warns the user to repair it; the runtime is still acquired and the pointer still materialized, so the next run wires it once the file parses. A hand-maintained config is never clobbered.
+- **ductus store probe cannot run or is denied** — the run is classified as State B and acquisition proceeds. Acquisition is idempotent, so a false negative costs a version comparison rather than a redundant download. Detection never hard-fails on a host without shell.
 - **Stale `ductus.md` on an adopter who has never wired ductus** — both pre-flight checks contribute writes (a fresh `ductus.md` and the ductus wiring), but the **Pre-flight abort** emits one combined message and the user restarts once, not twice.
 
 ## Post-Scaffolding Output
@@ -924,12 +1020,12 @@ After scaffolding, display:
 - Any fetch failures encountered
 - Pinned `ductus.md` advisory (if applicable — see below)
 - Security audit summary (if applicable — see below)
-- ductus runtime tip (State C only — see below)
+- ductus runtime tip (failed acquisition only — see below)
 - Next steps (varies by mode):
 
 ### ductus runtime tip
 
-When the **Pre-flight Phase** resolved to **State C** (no `ductus` binary detected), append one line after the file summary:
+When acquisition was attempted and **failed** (the run halts, so this line accompanies the halt rather than a completed scaffold), append one line after the file summary:
 
 > Tip: this run used the markdown path. Installing the `ductus` runtime makes `/ductus` and the pipeline commands much cheaper in tokens — see [Runtime](https://github.com/stonean/ductus#runtime). Once it's on your `PATH`, `/ductus` wires it in automatically.
 

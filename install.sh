@@ -55,6 +55,14 @@ case "$agent" in
       "Bash(chmod *)",
       "Bash(awk *)",
       "Bash(command -v *)",
+      "Bash(mkdir *)",
+      "Bash(shasum *)",
+      "Bash(sha256sum *)",
+      "Bash(certutil *)",
+      "Bash(ln *)",
+      "Bash(cp *)",
+      "Bash(~/.ductus/bin/ductus *)",
+      "Bash(.ductus/bin/ductus *)",
       "Read(/private/var/folders/**/T/ductus-*/**)",
       "Read(//private/var/folders/**/T/ductus-*/**)",
       "Read(/var/folders/**/T/ductus-*/**)",
@@ -80,18 +88,139 @@ JSON
       cat > .augment/settings.local.json <<'JSON'
 {
   "toolPermissions": [
-    { "toolName": "launch-process", "shellInputRegex": "^curl ", "permission": { "type": "allow" } },
-    { "toolName": "launch-process", "shellInputRegex": "^ls ", "permission": { "type": "allow" } },
-    { "toolName": "launch-process", "shellInputRegex": "^tar ", "permission": { "type": "allow" } },
-    { "toolName": "launch-process", "shellInputRegex": "^mktemp ", "permission": { "type": "allow" } },
-    { "toolName": "launch-process", "shellInputRegex": "^git status ", "permission": { "type": "allow" } },
-    { "toolName": "launch-process", "shellInputRegex": "^git config ", "permission": { "type": "allow" } },
-    { "toolName": "launch-process", "shellInputRegex": "^git rev-parse ", "permission": { "type": "allow" } },
-    { "toolName": "launch-process", "shellInputRegex": "^git diff ", "permission": { "type": "allow" } },
-    { "toolName": "launch-process", "shellInputRegex": "^git ls-files ", "permission": { "type": "allow" } },
-    { "toolName": "launch-process", "shellInputRegex": "^chmod ", "permission": { "type": "allow" } },
-    { "toolName": "launch-process", "shellInputRegex": "^awk ", "permission": { "type": "allow" } },
-    { "toolName": "launch-process", "shellInputRegex": "^command -v ", "permission": { "type": "allow" } }
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^curl ",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^ls ",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^tar ",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^mktemp ",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^git status ",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^git config ",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^git rev-parse ",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^git diff ",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^git ls-files ",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^chmod ",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^awk ",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^command -v ",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^mkdir ",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^shasum ",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^sha256sum ",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^certutil ",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^ln ",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^cp ",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^[^ ]*\\.ductus/bin/ductus ",
+      "permission": {
+        "type": "allow"
+      }
+    }
   ]
 }
 JSON
@@ -130,7 +259,13 @@ JSON
       "command(git ls-files)",
       "command(chmod)",
       "command(awk)",
-      "command(which)"
+      "command(which)",
+      "command(mkdir)",
+      "command(shasum)",
+      "command(sha256sum)",
+      "command(certutil)",
+      "command(ln)",
+      "command(cp)"
     ],
     "deny": [],
     "ask": []
@@ -166,7 +301,14 @@ JSON
       "git ls-files *": "allow",
       "chmod *": "allow",
       "awk *": "allow",
-      "command -v *": "allow"
+      "command -v *": "allow",
+      "mkdir *": "allow",
+      "shasum *": "allow",
+      "sha256sum *": "allow",
+      "certutil *": "allow",
+      "ln *": "allow",
+      "cp *": "allow",
+      "*/.ductus/bin/ductus *": "allow"
     }
   }
 }

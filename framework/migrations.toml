@@ -118,6 +118,21 @@ target_paths = [
 procedure_file = "framework/migrations/ductus-rename.md"
 
 [[migrations]]
+id = "runtime-store-path"
+introduced_in = "0.28.0"
+# No sunset_after: an adopter who has not re-bootstrapped since the runtime
+# moved into the ductus-owned store still registers the bare command, and the
+# entry is what repoints them (spec 048). Ordered after ductus-rename by the
+# lexicographic tie-break on equal introduced_in, which is the order they must
+# run in: that one renames the key and command, this one rewrites the path.
+summary = "Repoint the ductus MCP registration from the bare command to the ductus-owned path — the repo-relative pointer for a project-committed config, the absolute store path for a home-level one"
+target_paths = [
+  ".mcp.json",
+  "opencode.json",
+]
+procedure_file = "framework/migrations/runtime-store-path.md"
+
+[[migrations]]
 id = "workflows-sunset"
 introduced_in = "0.23.0"
 sunset_after = "0.25.0"
