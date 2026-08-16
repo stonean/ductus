@@ -2,27 +2,27 @@
 title: "007-govern-workflow — plan"
 ---
 
-# 007 — Govern Command Plan
+# 007 — Ductus Command Plan
 
-> **Note:** this plan was written against the original layout and the two-file distribution model. The govern installer now lives at a single `framework/bootstrap/govern.md` (the two-file model was superseded by [012-multi-agent-govern](../012-multi-agent-govern/spec.md)); command sources moved to `framework/commands/`; project-scaffolding templates to `framework/templates/project/`. Several command names were later renamed (`about → help`, `setup → configure`, `scenario → elaborate`, `triage → groom`, `next` retired). See `spec.md` for the full history.
+> **Note:** this plan was written against the original layout and the two-file distribution model. The ductus installer now lives at a single `framework/bootstrap/ductus.md` (the two-file model was superseded by [012-multi-agent-govern](../012-multi-agent-govern/spec.md)); command sources moved to `framework/commands/`; project-scaffolding templates to `framework/templates/project/`. Several command names were later renamed (`about → help`, `setup → configure`, `scenario → elaborate`, `triage → groom`, `next` retired). See `spec.md` for the full history.
 
 ## Overview
 
-Create one govern command file per supported CLI (`govern/govern.md` for Claude Code, `govern/govern-auggie.md` for Auggie) in the `govern/` directory. Each file is a self-contained prompt that instructs the AI agent to fetch templates from GitHub, scaffold governance files, resolve placeholders, and display next steps. The command templates in `commands/` gain a `{cli-config-dir}` placeholder so a single template set serves all CLIs.
+Create one ductus command file per supported CLI (`ductus/ductus.md` for Claude Code, `ductus/ductus-auggie.md` for Auggie) in the `ductus/` directory. Each file is a self-contained prompt that instructs the AI agent to fetch templates from GitHub, scaffold governance files, resolve placeholders, and display next steps. The command templates in `commands/` gain a `{cli-config-dir}` placeholder so a single template set serves all CLIs.
 
 ## Technical Decisions
 
-### One govern file per CLI, not a single file with CLI detection
+### One ductus file per CLI, not a single file with CLI detection
 
-Each CLI variant is a separate markdown file in the `govern/` directory. The CLI-specific values (config directory, session file path, setup behavior) are hardcoded in each variant. This avoids runtime CLI detection logic in a prompt — the user's choice of which file to curl determines the target.
+Each CLI variant is a separate markdown file in the `ductus/` directory. The CLI-specific values (config directory, session file path, setup behavior) are hardcoded in each variant. This avoids runtime CLI detection logic in a prompt — the user's choice of which file to curl determines the target.
 
-Adding a new CLI means creating a new govern variant. The governance core (constitution, templates, command templates) does not change.
+Adding a new CLI means creating a new ductus variant. The governance core (constitution, templates, command templates) does not change.
 
 ### Command templates use `{cli-config-dir}` placeholder
 
 The existing command templates in `commands/` reference `.claude/` paths for session state and settings. To support multiple CLIs, these references change to `{cli-config-dir}` — a placeholder resolved during adoption alongside `{project}`.
 
-For governance's own commands in `.claude/commands/gov/`, the placeholder is already resolved to `.claude`. Adopting projects get it resolved to whichever CLI they chose.
+For governance's own commands in `.claude/commands/ductus/`, the placeholder is already resolved to `.claude`. Adopting projects get it resolved to whichever CLI they chose.
 
 Affected references in command templates:
 
@@ -32,17 +32,17 @@ Affected references in command templates:
 
 ### Setup command skipped for Auggie
 
-The Auggie govern variant omits the `/{project}:setup` step from post-scaffolding output. Auggie uses global permissions (`~/.augment/settings.json`) rather than per-project settings. This is documented as a future consideration in `specs/spec.md`.
+The Auggie ductus variant omits the `/{project}:setup` step from post-scaffolding output. Auggie uses global permissions (`~/.augment/settings.json`) rather than per-project settings. This is documented as a future consideration in `specs/spec.md`.
 
-The setup command template itself is still copied — it just won't work correctly for Auggie until per-project permissions are supported. The govern variant's next-steps output skips mentioning it.
+The setup command template itself is still copied — it just won't work correctly for Auggie until per-project permissions are supported. The ductus variant's next-steps output skips mentioning it.
 
-### Govern files live in `govern/`, not in templates/
+### Ductus files live in `ductus/`, not in templates/
 
-The govern files are the distribution entry point — users curl them directly. Placing them in the `govern/` directory keeps them organized while maintaining a clean URL: `https://raw.githubusercontent.com/stonean/govern/main/govern/govern.md`. They are not templates to be copied into projects; they are one-time bootstrap commands. The directory also accommodates future CLI variants without cluttering the repo root.
+The ductus files are the distribution entry point — users curl them directly. Placing them in the `ductus/` directory keeps them organized while maintaining a clean URL: `https://raw.githubusercontent.com/stonean/ductus/main/ductus/ductus.md`. They are not templates to be copied into projects; they are one-time bootstrap commands. The directory also accommodates future CLI variants without cluttering the repo root.
 
-### File manifest is a markdown table in the govern file
+### File manifest is a markdown table in the ductus file
 
-Each govern variant contains a hardcoded manifest table mapping source paths to destination paths with conflict strategies. This is readable, self-documenting, and easy to update. The agent reads the table and executes the fetches.
+Each ductus variant contains a hardcoded manifest table mapping source paths to destination paths with conflict strategies. This is readable, self-documenting, and easy to update. The agent reads the table and executes the fetches.
 
 ### Gitignore language patterns fetched from GitHub
 
@@ -52,8 +52,8 @@ Same approach as the init command: fetch from `https://raw.githubusercontent.com
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `govern/govern.md` | Create | Claude Code govern command |
-| `govern/govern-auggie.md` | Create | Auggie govern command |
+| `ductus/ductus.md` | Create | Claude Code ductus command |
+| `ductus/ductus-auggie.md` | Create | Auggie ductus command |
 | `commands/about.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
 | `commands/specify.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
 | `commands/clarify.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
@@ -67,20 +67,20 @@ Same approach as the init command: fetch from `https://raw.githubusercontent.com
 | `commands/scenario.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
 | `commands/triage.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
 | `commands/commit-push.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` (if it references CLI paths) |
-| `.claude/commands/gov/*.md` | Modify | Re-derive from updated templates with `{cli-config-dir}` → `.claude` |
-| `.claude/commands/gov/init.md` | Modify | Update to resolve `{cli-config-dir}` during scaffolding |
+| `.claude/commands/ductus/*.md` | Modify | Re-derive from updated templates with `{cli-config-dir}` → `.claude` |
+| `.claude/commands/ductus/init.md` | Modify | Update to resolve `{cli-config-dir}` during scaffolding |
 | `specs/007-govern-workflow/spec.md` | Modify | Update status to `done` |
-| `framework/bootstrap/govern.md` | Modify | Add self-update pre-check; reorder so File Fetching runs before Frontmatter Migration (added during scenario `govern-self-update-precheck` — the unified govern installer per 012 replaced the original per-CLI `govern/govern.md` and `govern/govern-auggie.md` listed above). |
+| `framework/bootstrap/ductus.md` | Modify | Add self-update pre-check; reorder so File Fetching runs before Frontmatter Migration (added during scenario `ductus-self-update-precheck` — the unified ductus installer per 012 replaced the original per-CLI `ductus/ductus.md` and `ductus/ductus-auggie.md` listed above). |
 
 ## Trade-offs
 
-### Considered: single govern file with CLI prompt
+### Considered: single ductus file with CLI prompt
 
-A single `govern.md` that asks "Which CLI are you using?" at runtime. Rejected because the user already chose their CLI by installing the file into a specific directory. A prompt adds friction and the file can't know which directory it was placed in.
+A single `ductus.md` that asks "Which CLI are you using?" at runtime. Rejected because the user already chose their CLI by installing the file into a specific directory. A prompt adds friction and the file can't know which directory it was placed in.
 
-### Considered: keeping `.claude/` hardcoded in command templates, substituting only in govern
+### Considered: keeping `.claude/` hardcoded in command templates, substituting only in ductus
 
-The govern command could do `.claude/` → `.augment/` replacement at copy time without changing the source templates. Rejected because it's fragile — any new `.claude/` reference in a template would silently break Auggie adoption. The `{cli-config-dir}` placeholder makes the abstraction explicit and grep-able.
+The ductus command could do `.claude/` → `.augment/` replacement at copy time without changing the source templates. Rejected because it's fragile — any new `.claude/` reference in a template would silently break Auggie adoption. The `{cli-config-dir}` placeholder makes the abstraction explicit and grep-able.
 
 ### Considered: separate command template directories per CLI
 

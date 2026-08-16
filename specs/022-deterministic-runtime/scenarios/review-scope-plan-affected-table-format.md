@@ -11,7 +11,7 @@ The [review-runtime-acceleration](review-runtime-acceleration.md) scenario's
 Files unioned with the files modified since `diff-base`, larger set wins." Its
 `read_plan_affected` helper (`runtime/src/primitives/compute_review_scope.rs`)
 parses the `## Affected Files` section as a **bullet list** (dash + backticked
-path). But the canonical plan format — the `/gov:plan` writeSpecBody template
+path). But the canonical plan format — the `/ductus:plan` writeSpecBody template
 and every real `specs/*/plan.md` — is a **Markdown table**
 (`| File | Action | Purpose |`), which the pre-existing
 `payload.rs::parse_affected_files` (the writeCode plan reader) already parses

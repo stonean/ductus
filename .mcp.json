@@ -1,7 +1,7 @@
 {
   "mcpServers": {
-    "gvrn": {
-      "command": "gvrn",
+    "ductus": {
+      "command": "ductus",
       "args": ["mcp"]
     }
   }

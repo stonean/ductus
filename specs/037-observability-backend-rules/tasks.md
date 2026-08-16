@@ -9,9 +9,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Cross-reference rather than restate: `BE-TRACE-001` extends/cites `security-backend.md` `BE-LOG-006`; `BE-METRIC-003` cites `performance-backend.md` for the cardinality-exhaustion angle; tunable values cite `configuration-cross.md` `CFG-*`.
 - Done when: the file exists with six well-formed rules (2 MUST / 4 SHOULD), categories disjoint from the other backend files, each MUST a detection/diagnosis-blocking absence.
 
-## 2. Register the file in the `/govern` manifest
+## 2. Register the file in the `/ductus` manifest
 
-- [x] Add `framework/rules/observability-backend.md → specs/rules/observability-backend.md` to the `### govern-owned shared files` table in `framework/bootstrap/govern.md`, slotted between `configuration-cross.md` and `performance-backend.md` (strategy: update).
+- [x] Add `framework/rules/observability-backend.md → specs/rules/observability-backend.md` to the `### ductus-owned shared files` table in `framework/bootstrap/ductus.md`, slotted between `configuration-cross.md` and `performance-backend.md` (strategy: update).
 - Done when: the manifest row is present; the `-backend.md` suffix makes 024's loader select it under the `backend` surface and 033's filter include it. (The §Shared Files note is already count-free — no count edit.)
 
 ## 3. Validate
@@ -23,5 +23,5 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 4. Review and complete
 
-- [x] Run `/gov:review` over the change set; resolve any MUST findings.
-- Done when: `/gov:review` reports no blocking violations and the spec can advance to `done`.
+- [x] Run `/ductus:review` over the change set; resolve any MUST findings.
+- Done when: `/ductus:review` reports no blocking violations and the spec can advance to `done`.

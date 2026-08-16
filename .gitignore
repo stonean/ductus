@@ -2,9 +2,9 @@
 .claude/*
 !.claude/commands/
 
-# govern session state — per-user, ephemeral; managed by /gov:target.
+# ductus session state — per-user, ephemeral; managed by /ductus:target.
 # Anchored to the repo root (leading `/`) so the fixtures' session files
 # at `runtime/tests/fixtures/*/` (legacy root `.govern.session.toml` and
-# new-layout `.govern/session.toml`) stay tracked — they're walker-context
-# seeds, not per-user state.
-/.govern/session.toml
+# the directory layouts) stay tracked — they're walker-context seeds, not
+# per-user state.
+/.ductus/session.toml

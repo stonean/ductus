@@ -24,7 +24,7 @@
 # missed one would have left a canonical source lying about shipped
 # behaviour — the exact drift §drift-prevention exists to catch, in the
 # check built to catch it. Surfaced as a QUAL-GROUND-001 SHOULD by
-# `/gov:review` on 022, 2026-08-03.
+# `/ductus:review` on 022, 2026-08-03.
 #
 # Method:
 #   18a Derive the marker set from the canonical table in 045's data-model.

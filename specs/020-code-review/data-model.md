@@ -2,13 +2,13 @@
 status: draft
 ---
 
-# 020 — `/gov:review` Data Model
+# 020 — `/ductus:review` Data Model
 
-Data structures introduced by [020 — `/gov:review`](spec.md). Authoritative shapes; the spec body and embedded `framework/commands/review.md` artifact reference these.
+Data structures introduced by [020 — `/ductus:review`](spec.md). Authoritative shapes; the spec body and embedded `framework/commands/review.md` artifact reference these.
 
 ## Spec frontmatter `review:` block
 
-Added to every spec's YAML frontmatter. Lazy-populated — the block is shipped in templates with safe defaults; existing adopter specs gain it on first `/gov:review` run.
+Added to every spec's YAML frontmatter. Lazy-populated — the block is shipped in templates with safe defaults; existing adopter specs gain it on first `/ductus:review` run.
 
 ```yaml
 review:
@@ -23,12 +23,12 @@ review:
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `last-run` | ISO 8601 timestamp or null | yes | Set by `/gov:review`. Null in templates and on un-reviewed specs. |
+| `last-run` | ISO 8601 timestamp or null | yes | Set by `/ductus:review`. Null in templates and on un-reviewed specs. |
 | `reviewed-against` | string (Git SHA) or null | yes | HEAD SHA at review time. Null in templates. |
 | `must-violations` | integer ≥ 0 | yes | Count after waivers applied. |
 | `should-violations` | integer ≥ 0 | yes | Advisory severity count. |
 | `low-confidence` | integer ≥ 0 | yes | Quality-pass findings below 80 confidence. Excluded from `must-violations`. |
-| `blocking` | boolean | yes | MUST equal `must-violations > 0`. Read by `/gov:implement`, `/gov:analyze`, CI template. |
+| `blocking` | boolean | yes | MUST equal `must-violations > 0`. Read by `/ductus:implement`, `/ductus:analyze`, CI template. |
 | `waivers` | list of waiver records | no | Omitted entirely when empty. Schema below is open per §text-first-artifacts. |
 
 ### Validation severity
@@ -54,13 +54,13 @@ One entry per waived MUST violation. Lives under `review.waivers` in spec frontm
 | `rule` | string (rule ID) | yes | E.g. `SEC-BE-014`. Must reference a known rule at write time. |
 | `file` | string (relative path) | yes | The path the waiver is anchored to. Waiver expires when the file moves or is deleted. |
 | `reason` | string | yes | Free-text justification. Empty string is invalid. |
-| `waived-at` | ISO 8601 timestamp | yes | Set by `/gov:review --waive`. |
+| `waived-at` | ISO 8601 timestamp | yes | Set by `/ductus:review --waive`. |
 | `waived-by` | string (email) | yes | Sourced from `git config user.email`. |
-| (additional fields) | any | no | Open-schema; ignored by `/gov:review` and `/gov:analyze`. |
+| (additional fields) | any | no | Open-schema; ignored by `/ductus:review` and `/ductus:analyze`. |
 
 ### Expiry rule
 
-A waiver expires (is dropped from frontmatter on the next `/gov:review` run) when **either** of the following holds:
+A waiver expires (is dropped from frontmatter on the next `/ductus:review` run) when **either** of the following holds:
 
 - The `file` path no longer exists in the repository (renamed or deleted).
 - The named `rule` no longer fires at `file` (rule removed, or the violating code was fixed).
@@ -69,7 +69,7 @@ When the underlying finding still exists elsewhere in scope after expiry, it re-
 
 ## `review.md` artifact
 
-Written to `specs/NNN-feature/review.md` — one review artifact per spec, regardless of whether the run targeted a feature or a scenario. A scenario-targeted run records which scenario it covered via the `scenario:` frontmatter field. Regenerated wholesale on each run; the most recent `/gov:review` invocation supersedes any prior report.
+Written to `specs/NNN-feature/review.md` — one review artifact per spec, regardless of whether the run targeted a feature or a scenario. A scenario-targeted run records which scenario it covered via the `scenario:` frontmatter field. Regenerated wholesale on each run; the most recent `/ductus:review` invocation supersedes any prior report.
 
 ### Frontmatter
 
@@ -130,7 +130,7 @@ For a given `(code-in-scope, loaded-rules, spec-acceptance-criteria, scenarios, 
 
 ## `.govern.toml [review]` section
 
-New TOML section in the project's `.govern.toml`. Added by `/gov:review` (with operator confirmation) on the first successful tech-stack alignment check. `.govern.toml` is shared adopter-side state per AGENTS.md (Workflow); this spec documents the section it adds rather than touching spec 019.
+New TOML section in the project's `.govern.toml`. Added by `/ductus:review` (with operator confirmation) on the first successful tech-stack alignment check. `.govern.toml` is shared adopter-side state per AGENTS.md (Workflow); this spec documents the section it adds rather than touching spec 019.
 
 ```toml
 [review]
@@ -139,7 +139,7 @@ tech-stack-verified = true
 
 | Key | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `tech-stack-verified` | boolean | `false` (when key absent) | When `true`, `/gov:review` skips the tech-stack alignment pre-flight on every run until the operator removes the line. There is no auto-reset. |
+| `tech-stack-verified` | boolean | `false` (when key absent) | When `true`, `/ductus:review` skips the tech-stack alignment pre-flight on every run until the operator removes the line. There is no auto-reset. |
 
 The section is open-schema; future review-related persisted decisions can land under `[review]` without schema migration.
 

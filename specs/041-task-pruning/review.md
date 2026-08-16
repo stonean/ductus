@@ -15,7 +15,7 @@ skipped-passes: []
 ## Summary
 
 Clean review. The implementation — the `prune-tasks` runtime primitive plus the
-`/gov:prune` command, the shared `SkipScanner` parser fix, and the framework
+`/ductus:prune` command, the shared `SkipScanner` parser fix, and the framework
 consistency edits — carries **no MUST violations** and is not blocking. Rule
 files applied: the backend + cross set (`security-backend`, `api-backend`,
 `concurrency-backend`, `observability-backend`, `performance-backend`,
@@ -28,7 +28,7 @@ low-confidence notes are waived with rationale (2026-08-02). The code is covered
 integration suites (parity, MCP), with `clippy -D warnings` and `fmt` clean, and
 `scripts/audit/run-all.sh` reporting zero findings.
 
-Security posture: the backend security rules govern authentication, credentials,
+Security posture: the backend security rules ductus authentication, credentials,
 sessions, tokens, and JWTs — none of which this feature introduces. `prune-tasks`
 performs a local, confirmed rewrite of a single `tasks.md` within the resolved
 feature directory; it opens no network, handles no secrets, and persists no
@@ -59,7 +59,7 @@ they are recorded in full under §Waived findings.
 ### WAIVED: quality — keep-pending rewrites a file whose only reducible content is an empty phase container
 
 - **File**: `runtime/src/primitives/prune_tasks.rs` (`reduce_keep_pending`, `dropped_any`)
-- **Finding** (original confidence ~55): in phased mode, a `## Phase …` container with zero (or only spent) task sections is dropped, which sets `dropped_any` and therefore writes even when `removed_count == 0`. A user running `/gov:prune` on a file whose only "prunable" element is an empty phase heading gets a write rather than a "nothing to prune" report.
+- **Finding** (original confidence ~55): in phased mode, a `## Phase …` container with zero (or only spent) task sections is dropped, which sets `dropped_any` and therefore writes even when `removed_count == 0`. A user running `/ductus:prune` on a file whose only "prunable" element is an empty phase heading gets a write rather than a "nothing to prune" report.
 - **Waiver rationale**: this is the documented data-model behavior, not a deviation from it — "drop a phase container with no surviving task section" is the contract, and an empty phase container _is_ reducible content, so the write is honest and `removed_count == 0` correctly reports that no task section was removed. Suppressing the write would make the primitive leave a file it had decided to change. The triggering state (a hand-edited empty phase heading) is unusual and self-correcting on the next prune. No code change.
 
 ### WAIVED: security (defense-in-depth) — `feature` arg is not run through `validate_no_traversal`
@@ -68,7 +68,7 @@ they are recorded in full under §Waived findings.
 - **Finding** (original confidence ~40): `run` builds `repo.join(&root).join(&args.feature)` and gates on `is_dir()` without calling `validate_no_traversal(&args.feature)`.
 - **Waiver rationale**: this is the established convention, not an omission in 041. Every sibling feature-name primitive (`read-tasks`, `mark-task`, `set-status`, `check-stuck`, `derive-boundary`) does the same: `feature` is a host-resolved directory slug, and the traversal guard is reserved for caller-supplied _path_ arguments (`feature-path`, `slug`) in `append-task` / `create-scenario`. Fixing `prune-tasks` alone would make the codebase inconsistent while closing nothing, and the containment that matters is already enforced — the `is_dir()` gate under the resolved specs root. Applying the guard across all six was considered and declined by the user on 2026-08-02; if it is ever revisited it is a codebase-wide change owned by 022, not a 041 defect.
 
-## Captured issues (pending /gov:groom)
+## Captured issues (pending /ductus:groom)
 
 _None — no additions to `specs/inbox.md` in the review window._
 

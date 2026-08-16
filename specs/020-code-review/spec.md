@@ -12,27 +12,27 @@ review:
 next-criterion: 14
 ---
 
-# 020 — `/gov:review` code review command with blocking gate
+# 020 — `/ductus:review` code review command with blocking gate
 
-Adds `/gov:review`, a verb-named slash command that audits implementation code against the framework's rules across five dimensions (reuse, quality, security, efficiency, simplicity), writes a `review.md` artifact alongside the spec, and gates the `in-progress → done` transition via three reinforcing mechanisms.
+Adds `/ductus:review`, a verb-named slash command that audits implementation code against the framework's rules across five dimensions (reuse, quality, security, efficiency, simplicity), writes a `review.md` artifact alongside the spec, and gates the `in-progress → done` transition via three reinforcing mechanisms.
 
 ## Summary
 
-Add `/gov:review`, a comprehensive code review slash command covering reuse,
+Add `/ductus:review`, a comprehensive code review slash command covering reuse,
 quality, security, efficiency, and simplicity. Reviews are written as
 `review.md` artifacts alongside the spec they audit. MUST violations block
 the spec from advancing to `done` via three reinforcing mechanisms
-(`/gov:implement` halt, `/gov:analyze` drift detection, optional CI gate),
+(`/ductus:implement` halt, `/ductus:analyze` drift detection, optional CI gate),
 consistent with the constitution's quality standards and the **Design
 Principles** rule that framework features must not depend on human diligence.
 
-`/gov:review` audits **code against rules**. It is complementary to
-`/gov:analyze`, which audits **artifacts against each other**.
+`/ductus:review` audits **code against rules**. It is complementary to
+`/ductus:analyze`, which audits **artifacts against each other**.
 
 ## Motivation
 
 The constitution references quality standards but no command enforces them on
-implementation code. `/gov:analyze` ensures spec/plan/tasks artifacts are
+implementation code. `/ductus:analyze` ensures spec/plan/tasks artifacts are
 internally consistent; nothing checks whether the code that landed actually
 satisfies the spec, the security rules added in spec 008, or basic quality
 expectations. Adopters currently have to remember to run external review
@@ -40,27 +40,27 @@ tools — a discipline dependency the framework should remove.
 
 ## Acceptance Criteria
 
-- [x] AC1: `/gov:review` exists as a verb-named slash command in the same shape as `/gov:analyze`, distributed through the standard `framework/commands/` → `.claude/commands/gov/` regeneration pipeline.
-- [x] AC2: Running `/gov:review` against an `in-progress` target produces `specs/NNN-feature/review.md` with findings categorized into MUST, SHOULD, and low-confidence sections.
+- [x] AC1: `/ductus:review` exists as a verb-named slash command in the same shape as `/ductus:analyze`, distributed through the standard `framework/commands/` → `.claude/commands/ductus/` regeneration pipeline.
+- [x] AC2: Running `/ductus:review` against an `in-progress` target produces `specs/NNN-feature/review.md` with findings categorized into MUST, SHOULD, and low-confidence sections.
 - [x] AC3: The command loads `framework/rules/security-backend.md` and `framework/rules/security-frontend.md` as authoritative security criteria. The five-dimension review model (security, reuse, quality, efficiency, simplicity) is applied to every targeted feature.
 - [x] AC4: Spec frontmatter gains a `review:` block populated by the command: `last-run`, `must-violations`, `should-violations`, `blocking`, optional `waivers`.
 - [x] AC5: **Blocking gate**: a spec with `review.blocking: true` cannot reach `done`.
-  - `/gov:implement` halts before marking `done` and emits the blocking message.
-  - `/gov:analyze` reports a violation when a spec at `status: done` has `review.blocking: true` or is missing `review.last-run`.
+  - `/ductus:implement` halts before marking `done` and emits the blocking message.
+  - `/ductus:analyze` reports a violation when a spec at `status: done` has `review.blocking: true` or is missing `review.last-run`.
   - The shipped CI template includes a check that fails PRs in the same conditions.
-- [x] AC6: Re-running `/gov:review` against unchanged code produces identical `review.md` content modulo timestamp and SHA fields (idempotency invariant).
+- [x] AC6: Re-running `/ductus:review` against unchanged code produces identical `review.md` content modulo timestamp and SHA fields (idempotency invariant).
 - [x] AC7: `--fix` applies only conservative auto-fixes per the scope rules in the command file. Behavior-changing fixes are never auto-applied.
 - [x] AC8: Waivers require explicit `--waive <rule-id> --reason "..."`, are recorded in spec frontmatter, and expire automatically when the file location or rule ID they were attached to changes.
 - [x] AC9: Exit code is `0` when not blocking, `1` when blocking — for CI use.
-- [x] AC10: The README slash commands table lists `/gov:review` under **Pipeline (advance state)** with a one-line purpose.
-- [x] AC11: **Tech-stack alignment gate**: before running review passes, `/gov:review` confirms the project's `AGENTS.md` `Tech Stack` section exists and appears consistent with the implementation in scope. Misalignment or a missing/empty section is a blocking error, not a warning. Adopters can persist a successful check by setting `.govern.toml [review] tech-stack-verified = true`, after which subsequent runs skip the check until the operator manually clears the key.
+- [x] AC10: The README slash commands table lists `/ductus:review` under **Pipeline (advance state)** with a one-line purpose.
+- [x] AC11: **Tech-stack alignment gate**: before running review passes, `/ductus:review` confirms the project's `AGENTS.md` `Tech Stack` section exists and appears consistent with the implementation in scope. Misalignment or a missing/empty section is a blocking error, not a warning. Adopters can persist a successful check by setting `.govern.toml [review] tech-stack-verified = true`, after which subsequent runs skip the check until the operator manually clears the key.
 - [x] AC12: **Empty scope**: a target with an empty resolved scope (no implementation files) produces a `review.md` recording 0 findings across all five passes, `blocking: false`, and exits `0`.
 - [x] AC13: **Cross-pass dedupe**: when the same finding (matching rule ID, file, and overlapping line range) is produced by more than one pass, only the highest-severity instance is retained in `must-violations` and `should-violations`; lower-severity duplicates are dropped from the counts and report.
 
 ## Non-goals
 
-- Replacing `/gov:analyze`. The two commands target different artifacts.
-- Making `/gov:review` a pipeline-advance command in its own right. It is a
+- Replacing `/ductus:analyze`. The two commands target different artifacts.
+- Making `/ductus:review` a pipeline-advance command in its own right. It is a
   gate, not a state transition.
 - Shipping language- or framework-specific rule packs beyond the existing
   security rules. Adopters extend `framework/rules/` themselves.
@@ -76,9 +76,9 @@ tools — a discipline dependency the framework should remove.
 | `framework/templates/spec/spec-and-plan.md` | edit — same `review:` block addition | update |
 | `framework/templates/ci/adopter-generators.yml` | edit — add review-blocking check | update |
 | `framework/constitution.md` | edit — reference the review gate in the pipeline section | update |
-| `README.md` | edit — add `/gov:review` row to Pipeline commands table; document waivers | update |
-| `scripts/regenerate-commands.sh` (or equivalent) | run after edits to regenerate `.claude/commands/gov/review.md` | n/a |
-| `.claude/commands/gov/review.md` | regenerated output | derived |
+| `README.md` | edit — add `/ductus:review` row to Pipeline commands table; document waivers | update |
+| `scripts/regenerate-commands.sh` (or equivalent) | run after edits to regenerate `.claude/commands/ductus/review.md` | n/a |
+| `.claude/commands/ductus/review.md` | regenerated output | derived |
 
 ## Tasks
 
@@ -97,15 +97,15 @@ tools — a discipline dependency the framework should remove.
 5. Edit `framework/templates/ci/adopter-generators.yml` to add a step that
    exits non-zero if any `specs/*/spec.md` has `status: done` with
    `review.blocking: true` or missing `review.last-run`.
-6. Edit `framework/constitution.md` pipeline section: add `/gov:review`
-   between `/gov:implement` and the `done` transition, with a sentence
+6. Edit `framework/constitution.md` pipeline section: add `/ductus:review`
+   between `/ductus:implement` and the `done` transition, with a sentence
    explaining the blocking gate.
-7. Edit `README.md`: add the `/gov:review` row to the Pipeline (advance
+7. Edit `README.md`: add the `/ductus:review` row to the Pipeline (advance
    state) table; add a short Waivers subsection under Slash Commands; update
    any pipeline diagrams.
-8. Run the regeneration script to produce `.claude/commands/gov/review.md`.
-9. Run `/gov:analyze --all` against the govern repo itself to confirm
-   nothing in govern's own specs broke.
+8. Run the regeneration script to produce `.claude/commands/ductus/review.md`.
+9. Run `/ductus:analyze --all` against the ductus repo itself to confirm
+   nothing in ductus's own specs broke.
 10. Add a scenario at `specs/020-code-review/scenarios/waiver-expiry.md`
     capturing the waiver auto-expiry behavior — this is the subtlest
     requirement and warrants a focused scenario.
@@ -117,8 +117,8 @@ tools — a discipline dependency the framework should remove.
 ## Resolved questions
 
 - **MUST waivers and second sign-off** — single-author waivers remain the
-  framework standard; `/gov:review` does not require a second `co-waived-by`
-  field. Govern has no runtime that could verify a second value belongs to a
+  framework standard; `/ductus:review` does not require a second `co-waived-by`
+  field. Ductus has no runtime that could verify a second value belongs to a
   different person, so encoding the requirement in frontmatter would be
   performative — exactly the "depend on human diligence" anti-pattern
   §pipeline-boundaries exists to avoid. The real second review happens at
@@ -126,12 +126,12 @@ tools — a discipline dependency the framework should remove.
   and human code review applies org policy. Adopters whose policy does
   require two-author waivers can layer fields like `co-waived-by` onto the
   `review.waivers` entries — the §text-first-artifacts open-schema rule
-  guarantees `/gov:review` and `/gov:analyze` will not error on unknown
+  guarantees `/ductus:review` and `/ductus:analyze` will not error on unknown
   fields — and gate them in their own CI.
-- **Stack detection source** — `/gov:review` continues to read `AGENTS.md`
+- **Stack detection source** — `/ductus:review` continues to read `AGENTS.md`
   `Tech Stack` to choose between `security-backend.md` and
   `security-frontend.md`. Spec 004 (`done`) writes to that exact section
-  during `/gov:init`, so `AGENTS.md` `Tech Stack` *is* the canonical sink
+  during `/ductus:init`, so `AGENTS.md` `Tech Stack` *is* the canonical sink
   for tech-stack metadata — there is no separate surface to point at. No
   change to the draft.
 - **Quality-pass confidence threshold** — fixed at 80; not exposed via
@@ -147,12 +147,12 @@ tools — a discipline dependency the framework should remove.
 - **`--all` scope** — `--all` reviews every feature whose status is
   `in-progress` or `done`. Excluding `done` would make the blocking gate
   retroactively blind to new MUST rules added after a feature shipped: the
-  existing `/gov:analyze` drift check only fires when `review.blocking` is
+  existing `/ductus:analyze` drift check only fires when `review.blocking` is
   already `true` or `review.last-run` is missing, so rules introduced after
   the last review never re-flip the flag on shipped code. The §drift-prevention
   "done specs are frozen archaeology" rule applies to the spec body, not to
   the code the spec describes — that code keeps living and should stay
-  compliant with current rules. Single-target `/gov:review` already accepts
+  compliant with current rules. Single-target `/ductus:review` already accepts
   `done` (the gate halts only when status is *not* in `{in-progress, done}`);
   `--all` simply enumerates the same set the gate already permits.
 
@@ -162,7 +162,7 @@ The `review:` block added to spec frontmatter:
 
 ```yaml
 review:
-  last-run: 2026-05-10T14:32:00Z      # ISO 8601, set by /gov:review
+  last-run: 2026-05-10T14:32:00Z      # ISO 8601, set by /ductus:review
   reviewed-against: <sha>             # HEAD sha at review time
   must-violations: 0                  # count after waivers applied
   should-violations: 3
@@ -177,28 +177,28 @@ review:
 ```
 
 When any waiver's `file` no longer exists or `rule` is no longer triggered
-at that location, the waiver is dropped on the next `/gov:review` run and
+at that location, the waiver is dropped on the next `/ductus:review` run and
 the underlying finding re-blocks if it's still present elsewhere.
 
 ## Blocking message
 
-Emitted by `/gov:implement` when it would otherwise mark a spec `done`:
+Emitted by `/ductus:implement` when it would otherwise mark a spec `done`:
 
 ```text
 blocked: spec NNN has N MUST violation(s) — see specs/NNN-feature/review.md
 
-resolve the violations and re-run /gov:review,
-or run /gov:review --waive <rule-id> --reason "..." for each waivable finding.
+resolve the violations and re-run /ductus:review,
+or run /ductus:review --waive <rule-id> --reason "..." for each waivable finding.
 ```
 
-Emitted by `/gov:analyze` when it detects drift:
+Emitted by `/ductus:analyze` when it detects drift:
 
 ```text
 review-drift: spec NNN at status=done with review.blocking=true
-  → revert to in-progress and re-run /gov:review (use --fix to revert)
+  → revert to in-progress and re-run /ductus:review (use --fix to revert)
 ```
 
-Emitted by `/gov:review` when tech-stack alignment fails (missing/empty
+Emitted by `/ductus:review` when tech-stack alignment fails (missing/empty
 `AGENTS.md` `Tech Stack` section, or documented stack inconsistent with
 implementation):
 
@@ -208,7 +208,7 @@ blocked: tech-stack alignment failed — AGENTS.md Tech Stack {missing | inconsi
   expected: <stack inferred from scope, e.g., "TypeScript + React frontend">
   documented: <AGENTS.md Tech Stack contents, or "(empty)">
 
-reconcile AGENTS.md Tech Stack with the implementation, then re-run /gov:review.
+reconcile AGENTS.md Tech Stack with the implementation, then re-run /ductus:review.
 to skip this check on future runs after manual reconciliation, add
 [review] tech-stack-verified = true to .govern.toml.
 ```
@@ -225,20 +225,20 @@ description: Run a code review covering reuse, quality, security, efficiency, an
 argument-hint: "[--all] [--fix] [feature]"
 ---
 
-# /gov:review
+# /ductus:review
 
 Run a comprehensive code review against the targeted feature's implementation,
 covering reuse, quality, security, efficiency, and simplicity. Produces a
 `review.md` artifact alongside the spec. **Blocks the spec from reaching `done`
 when MUST violations are present.**
 
-`/gov:review` audits **code against rules**. It is complementary to `/gov:analyze`,
+`/ductus:review` audits **code against rules**. It is complementary to `/ductus:analyze`,
 which audits **artifacts against each other**. Both should pass before a spec
 advances to `done`.
 
 ## Inputs
 
-- **Target** — the current `/gov:target` feature, or every feature with
+- **Target** — the current `/ductus:target` feature, or every feature with
   status `in-progress` or `done` when invoked with `--all`.
 - **Rules** — `framework/rules/security-backend.md` and
   `framework/rules/security-frontend.md` are loaded by reference. RFC 2119
@@ -269,14 +269,14 @@ advances to `done`.
 
 ## Pipeline position
 
-`/gov:review` runs after `/gov:implement` has produced code and before the spec
+`/ductus:review` runs after `/ductus:implement` has produced code and before the spec
 can advance to `done`. The recommended sequence is:
 
 ```
-/gov:implement   →   /gov:review   →   /gov:analyze   →   spec status: done
+/ductus:implement   →   /ductus:review   →   /ductus:analyze   →   spec status: done
 ```
 
-`/gov:implement` MUST NOT mark a spec `done` while the target's `review.md`
+`/ductus:implement` MUST NOT mark a spec `done` while the target's `review.md`
 records `must-violations: > 0`. See [Blocking semantics](#blocking-semantics).
 
 ## Behavior
@@ -285,8 +285,8 @@ For each targeted feature, in order:
 
 ### 1. Resolve target and scope
 
-1. Resolve the working feature from `--all` or the current `/gov:target`.
-   If neither yields a target, halt with `no target — run /gov:target first`.
+1. Resolve the working feature from `--all` or the current `/ductus:target`.
+   If neither yields a target, halt with `no target — run /ductus:target first`.
 2. Read the spec frontmatter. If `status` is not in `{in-progress, done}`,
    halt with `review only runs against in-progress or done specs`.
 3. Build the file scope per [Inputs](#inputs). If the resolved scope is
@@ -307,7 +307,7 @@ For each targeted feature, in order:
      (Y/n)"_. On `Y`, write `[review] tech-stack-verified = true` to
      `.govern.toml`. On `n` or skip, the check runs again on the next
      invocation. To re-run the check after a stack change, the operator
-     removes the line manually — `/gov:review` does not auto-reset.
+     removes the line manually — `/ductus:review` does not auto-reset.
 5. Select rule files per the (now-verified) tech stack: load
    `security-backend.md` for backend stacks, `security-frontend.md` for
    frontend, and both for full-stack projects.
@@ -422,7 +422,7 @@ Each finding follows this shape:
 - **Suggested fix**: <code block or prose>
 ```
 
-The report is regenerated on every `/gov:review` run — never appended.
+The report is regenerated on every `/ductus:review` run — never appended.
 Findings the user has explicitly waived (see [Waivers](#waivers)) carry across
 runs as long as their anchor (rule + file) is still valid.
 
@@ -460,18 +460,18 @@ read.
 A spec MUST NOT advance from `in-progress` to `done` while its frontmatter
 records `review.blocking: true`. This is enforced as follows:
 
-1. **`/gov:implement`** — before marking `status: done`, reads
+1. **`/ductus:implement`** — before marking `status: done`, reads
    `review.blocking`. If `true` (or `review.last-run` is missing), halts with:
 
    ```
    blocked: spec has N MUST violation(s) — see specs/NNN-feature/review.md
-   resolve the violations and re-run /gov:review, or waive with /gov:review --waive
+   resolve the violations and re-run /ductus:review, or waive with /ductus:review --waive
    ```
 
-2. **`/gov:analyze`** — adds a check to its existing audit: if the spec's
+2. **`/ductus:analyze`** — adds a check to its existing audit: if the spec's
    status is `done` but `review.blocking` is `true` or `review.last-run` is
    missing, this is a validation failure. Composable with `--fix`:
-   `/gov:analyze --fix` reverts `done` → `in-progress` and emits a notice
+   `/ductus:analyze --fix` reverts `done` → `in-progress` and emits a notice
    (it never silently downgrades; the notice is the point).
 
 3. **CI hook** — the shipped GHA template at
@@ -485,7 +485,7 @@ mechanisms rather than relying on any single one — consistent with the
 
 ## Blocking message
 
-Emitted by `/gov:review` when tech-stack alignment fails (missing/empty
+Emitted by `/ductus:review` when tech-stack alignment fails (missing/empty
 `AGENTS.md` `Tech Stack` section, or documented stack inconsistent with
 implementation):
 
@@ -495,7 +495,7 @@ blocked: tech-stack alignment failed — AGENTS.md Tech Stack {missing | inconsi
   expected: <stack inferred from scope, e.g., "TypeScript + React frontend">
   documented: <AGENTS.md Tech Stack contents, or "(empty)">
 
-reconcile AGENTS.md Tech Stack with the implementation, then re-run /gov:review.
+reconcile AGENTS.md Tech Stack with the implementation, then re-run /ductus:review.
 to skip this check on future runs after manual reconciliation, add
 [review] tech-stack-verified = true to .govern.toml.
 ```
@@ -505,7 +505,7 @@ to skip this check on future runs after manual reconciliation, add
 A MUST violation can be waived only with explicit, recorded justification:
 
 ```
-/gov:review --waive <rule-id> --reason "<text>"
+/ductus:review --waive <rule-id> --reason "<text>"
 ```
 
 This appends to the target spec's frontmatter:
@@ -522,7 +522,7 @@ review:
 
 Waived findings drop out of `must-violations` count and into a separate
 `waived-violations` count. They appear in `review.md` under the **Waived
-findings** section. They survive across `/gov:review` runs as long as the
+findings** section. They survive across `/ductus:review` runs as long as the
 rule ID and file location still match; if either changes, the waiver expires
 and the finding re-blocks. Line numbers are not part of the waiver anchor —
 the contract is `(rule, file)`, so code moving within the file does not
@@ -530,7 +530,7 @@ expire the waiver.
 
 ### Per-run waiver processing
 
-At the start of every `/gov:review` run, before counting findings into
+At the start of every `/ductus:review` run, before counting findings into
 `must-violations`, walk `review.waivers` and process each entry:
 
 1. **Apply** when the file exists at the anchored path AND the rule still
@@ -572,8 +572,8 @@ At the start of every `/gov:review` run, before counting findings into
 
 The `review.waivers` list follows the §text-first-artifacts open-schema
 rule. Adopters MAY add fields (e.g., `co-waived-by`, `approved-by-team`,
-`ticket`) to enforce org-specific waiver policy in their own CI; `/gov:review`
-and `/gov:analyze` will not error on unknown fields.
+`ticket`) to enforce org-specific waiver policy in their own CI; `/ductus:review`
+and `/ductus:analyze` will not error on unknown fields.
 
 ## Auto-fix scope
 
@@ -594,7 +594,7 @@ When in doubt, leave the finding unfixed and let the user apply the
 Stdout summary (always), followed by the path to `review.md`:
 
 ```
-/gov:review — 042-example-feature
+/ductus:review — 042-example-feature
 
   security    ✓ 0 MUST   2 SHOULD
   reuse       ✓ 0 MUST   1 SHOULD
@@ -609,7 +609,7 @@ Stdout summary (always), followed by the path to `review.md`:
 When MUST violations are present:
 
 ```
-/gov:review — 042-example-feature
+/ductus:review — 042-example-feature
 
   security    ✗ 2 MUST   1 SHOULD
   reuse       ✓ 0 MUST   0 SHOULD
@@ -620,8 +620,8 @@ When MUST violations are present:
   blocking: yes — 3 MUST violations
   report:   specs/042-example-feature/review.md
 
-  spec cannot advance to done. Resolve violations and re-run /gov:review,
-  or run /gov:review --waive <rule-id> --reason "..." for each waivable finding.
+  spec cannot advance to done. Resolve violations and re-run /ductus:review,
+  or run /ductus:review --waive <rule-id> --reason "..." for each waivable finding.
 ```
 
 Exit code: `0` when not blocking, `1` when blocking. Allows CI to gate on the
@@ -629,7 +629,7 @@ exit code without parsing the report.
 
 ## Idempotency
 
-Re-running `/gov:review` against an unchanged target reproduces an identical
+Re-running `/ductus:review` against an unchanged target reproduces an identical
 `review.md` (modulo `reviewed-at` and `reviewed-against`). This is a
 derive-don't-ask invariant: review output is a function of code + rules,
 never of session state.
@@ -637,12 +637,12 @@ never of session state.
 ## Notes for adopters
 
 - Projects that customize `framework/rules/security-{backend,frontend}.md`
-  pin them in `.govern.toml` `[pinned] files` to prevent `/govern` from
-  overwriting their additions. `/gov:review` reads whatever is on disk —
+  pin them in `.govern.toml` `[pinned] files` to prevent `/ductus` from
+  overwriting their additions. `/ductus:review` reads whatever is on disk —
   pinned or not.
 - Projects on a stack not covered by the shipped rule files should add
   their own at `framework/rules/<domain>.md` and reference them from
-  `AGENTS.md`. `/gov:review` automatically loads anything in
+  `AGENTS.md`. `/ductus:review` automatically loads anything in
   `framework/rules/` that's referenced from `AGENTS.md`.
 - The five-dimension model is fixed. Domain-specific concerns (accessibility,
   i18n, licensing) belong in additional rule files, not new passes.
@@ -662,7 +662,7 @@ spec's `review:` block:
 1. If `review.last-run` is missing, halt with:
 
    ```text
-   blocked: spec has not been reviewed — run /gov:review before completing
+   blocked: spec has not been reviewed — run /ductus:review before completing
    ```
 
 2. If `review.blocking: true`, halt with:
@@ -670,8 +670,8 @@ spec's `review:` block:
    ```text
    blocked: spec has {must-violations} MUST violation(s) — see specs/NNN-feature/review.md
 
-   resolve the violations and re-run /gov:review,
-   or run /gov:review --waive <rule-id> --reason "..." for each waivable finding.
+   resolve the violations and re-run /ductus:review,
+   or run /ductus:review --waive <rule-id> --reason "..." for each waivable finding.
    ```
 
 3. Otherwise, proceed with the `done` transition.
@@ -690,12 +690,12 @@ In the audit section that walks each spec, add a check:
 For each spec at `status: done`:
 
 - If `review.last-run` is missing → record a violation:
-  `done spec missing review — run /gov:review`
+  `done spec missing review — run /ductus:review`
 - If `review.blocking: true` → record a violation:
   `done spec has unresolved MUST violations — see review.md`
 
 When `--fix` is set, revert affected specs to `in-progress` and emit a
-notice for each (one line per spec — never silent). Re-running `/gov:review`
+notice for each (one line per spec — never silent). Re-running `/ductus:review`
 on each is left to the user; auto-running it during `--fix` is out of scope.
 ```
 
@@ -715,7 +715,7 @@ review:
   waivers: []
 ```
 
-`null` indicates the review has not yet been run. `/gov:review` populates
+`null` indicates the review has not yet been run. `/ductus:review` populates
 the fields on its first run.
 
 ### CI template addition

@@ -1,6 +1,6 @@
 # Concurrency Rules — Backend
 
-Enforceable concurrency-correctness rules for server-side shared state, locking, transactions, and distributed coordination. These rules apply to projects adopting `govern` whose surface includes a backend.
+Enforceable concurrency-correctness rules for server-side shared state, locking, transactions, and distributed coordination. These rules apply to projects adopting `ductus` whose surface includes a backend.
 
 Rules use RFC 2119 language: **MUST** / **MUST NOT** are enforced by the validate command (errors); **SHOULD** / **SHOULD NOT** are flagged as warnings.
 
@@ -8,7 +8,7 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 Concurrency rules default to **SHOULD** where the right approach is contextual. A rule is **MUST** only when its absence is a correctness or corruption hazard regardless of scale — a defect two concurrent actors are enough to trigger. These rules verify **design-time commitments** — what a spec or plan must state — rather than code patterns; `/{project}:analyze` enforces them against feature artifacts.
 
-Projects without a backend can pin this file in `.govern.toml` or set `[rules] surfaces` to exclude the backend surface, and it will be skipped during `govern` updates and reviews.
+Projects without a backend can pin this file in `.ductus/config.toml` or set `[rules] surfaces` to exclude the backend surface, and it will be skipped during `ductus` updates and reviews.
 
 ## BE-RACE — Shared-state races
 

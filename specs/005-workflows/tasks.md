@@ -41,7 +41,7 @@ Create one `.md` workflow file directly under `framework/workflows/` for each re
 
 ## 3. Add the workflow recommendation step to init
 
-Modify `.claude/commands/gov/init.md` to insert the workflow recommendation step after the slash command templates are scaffolded (so `.claude/commands/{slug}/` exists). This is a hand-maintained, governance-specific command (no source counterpart).
+Modify `.claude/commands/ductus/init.md` to insert the workflow recommendation step after the slash command templates are scaffolded (so `.claude/commands/{slug}/` exists). This is a hand-maintained, governance-specific command (no source counterpart).
 
 - [x] Insert a new "Recommend and scaffold workflows" step as scaffolding step 8, after step 7 ("Copy slash command templates"), so the project commands directory exists before workflow files are written into it
 - [x] Renumber steps 8–12 to 9–13 to make room
@@ -50,13 +50,13 @@ Modify `.claude/commands/gov/init.md` to insert the workflow recommendation step
 - [x] Step warns and skips individual workflow files whose file is missing
 - [x] Step is silently skipped if no entries match the user's selections
 - [x] All cross-references to step numbers elsewhere in `init.md` reflect the new numbering
-- [x] `.claude/commands/gov/init.md` passes `npx markdownlint-cli2`
+- [x] `.claude/commands/ductus/init.md` passes `npx markdownlint-cli2`
 
 **Done when:** init's step list includes the recommendation step, all step numbers and cross-references are consistent, and the file passes markdownlint.
 
-## 4. Add registry sync and workflow recommendation to govern
+## 4. Add registry sync and workflow recommendation to ductus
 
-Modify `framework/bootstrap/govern.md` to ship the registry to adopted projects and offer new workflows on subsequent runs.
+Modify `framework/bootstrap/ductus.md` to ship the registry to adopted projects and offer new workflows on subsequent runs.
 
 - [x] Add a new row to **Governance-owned shared files (strategy: update)** mapping `framework/workflows/registry.json` → `workflows/registry.json`
 - [x] Add a new "Workflow Recommendation" step in the per-agent scaffolding flow, after **Slash command cleanup** and before **Session state**
@@ -65,9 +65,9 @@ Modify `framework/bootstrap/govern.md` to ship the registry to adopted projects 
 - [x] Step warns and continues if registry is missing or malformed
 - [x] Step warns and skips individual workflow files whose upstream fetch fails
 - [x] Edge case noted: scaffolded workflow files in `{config_dir}/commands/{project}/workflows/` are not affected by the existing slash command cleanup (the cleanup only walks top-level `.md` files in the project commands directory)
-- [x] `framework/bootstrap/govern.md` passes `npx markdownlint-cli2`
+- [x] `framework/bootstrap/ductus.md` passes `npx markdownlint-cli2`
 
-**Done when:** govern syncs the registry as an `update`-strategy file, offers new workflows after sync, never overwrites already-scaffolded workflow files, and the file passes markdownlint.
+**Done when:** ductus syncs the registry as an `update`-strategy file, offers new workflows after sync, never overwrites already-scaffolded workflow files, and the file passes markdownlint.
 
 ## 5. Validate end-to-end and run readiness checks
 
@@ -76,7 +76,7 @@ Run all markdownlint and structural checks, and verify the spec's acceptance cri
 - [x] Every `template` path in `framework/workflows/registry.json` points to an existing file under `framework/workflows/`
 - [x] Every category value in the registry is in the fixed set
 - [x] Every `trigger.field` value in the registry is in the recognized set
-- [x] `npx markdownlint-cli2` passes on all created/modified `.md` files (workflow files, init, govern, plan, tasks, data-model)
+- [x] `npx markdownlint-cli2` passes on all created/modified `.md` files (workflow files, init, ductus, plan, tasks, data-model)
 - [x] `python -m json.tool framework/workflows/registry.json` (or equivalent JSON validator) succeeds
 - [x] Each acceptance criterion in `spec.md` is checked individually against the produced artifacts and marked `- [x]` only if satisfied
 
@@ -84,18 +84,18 @@ Run all markdownlint and structural checks, and verify the spec's acceptance cri
 
 ## 6. Cross-spec rename: "skills" → "workflows"
 
-Driven by [010-agent-autonomy](../010-agent-autonomy/spec.md). 010's "skills" capability adopts Anthropic/Claude Code terminology for context-loaded instruction packs, which conflicts with 005's prior use of "skills" for tech-stack-conditional development workflows (lint, test, format, migrate). To free the term, rename 005's internal concept to "workflows" throughout governance code and prose, and flatten the framework directory (the inner `templates/` becomes redundant once the parent already says "workflows"). Implementation is performed by 010's `/gov:implement` pass; this task tracks completion from 005's side.
+Driven by [010-agent-autonomy](../010-agent-autonomy/spec.md). 010's "skills" capability adopts Anthropic/Claude Code terminology for context-loaded instruction packs, which conflicts with 005's prior use of "skills" for tech-stack-conditional development workflows (lint, test, format, migrate). To free the term, rename 005's internal concept to "workflows" throughout governance code and prose, and flatten the framework directory (the inner `templates/` becomes redundant once the parent already says "workflows"). Implementation is performed by 010's `/ductus:implement` pass; this task tracks completion from 005's side.
 
 - [x] `framework/skills/` renamed to `framework/workflows/` and flattened (registry + nine workflow files at the same level, no inner `templates/`)
 - [x] `specs/005-skills-and-plugins/` renamed to `specs/005-workflows/`
-- [x] `framework/bootstrap/govern.md` manifest, recommendation step, and prose updated to use "workflows" / `workflows/` paths
-- [x] `.claude/commands/gov/init.md` recommendation step paths and prose updated (hand-maintained, generator skips)
+- [x] `framework/bootstrap/ductus.md` manifest, recommendation step, and prose updated to use "workflows" / `workflows/` paths
+- [x] `.claude/commands/ductus/init.md` recommendation step paths and prose updated (hand-maintained, generator skips)
 - [x] `framework/bootstrap/configure/claude.md` "Bash commands used by skills" comment label updated to "workflows"
 - [x] 005's own artifacts (`spec.md`, `plan.md`, `tasks.md`, `data-model.md`) updated for terminology and renamed paths
 - [x] `specs/013-text-first-artifacts/plan.md` one-row migration entry updated to the new spec dir path
 - [x] `README.md` references to 005's "skills" feature updated to "workflows"
-- [x] `.claude/commands/gov/configure.md` regenerated from updated source via `./scripts/gen-claude-commands.sh`
+- [x] `.claude/commands/ductus/configure.md` regenerated from updated source via `./scripts/gen-claude-commands.sh`
 - [x] `npx markdownlint-cli2` passes on all modified `.md` files
-- [x] After 010's implementation completes, advance 005 from `in-progress` back to `done` via a separate `/gov:implement` pass
+- [x] After 010's implementation completes, advance 005 from `in-progress` back to `done` via a separate `/ductus:implement` pass
 
 **Done when:** the rename is complete and consistent across governance code and 005's artifacts, the new acceptance criterion in `spec.md` is verifiable, and 005 is ready for re-advancement to `done`.

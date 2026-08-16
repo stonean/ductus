@@ -1,4 +1,4 @@
-# Canonical names of runtime tools exposed by the optional `govern` runtime.
+# Canonical names of runtime tools exposed by the optional `ductus` runtime.
 #
 # Source of truth: framework/constitution.md §runtime-boundary
 #
@@ -12,11 +12,11 @@
 #                                                  fallback)
 #
 # Tool names are case-sensitive exact-match strings. Names are bare
-# `<verb>-<noun>` strings — server-level namespacing (`gvrn`) is
+# `<verb>-<noun>` strings — server-level namespacing (`ductus`) is
 # supplied by each host's MCP server registration, producing the
-# host-specific wire identifier (Claude Code: `mcp__gvrn__<verb>-<noun>`;
-# Auggie / Antigravity: `mcp:gvrn:<verb>-<noun>`). The bare names are
-# also the `gvrn <name>` subcommand identifiers.
+# host-specific wire identifier (Claude Code: `mcp__ductus__<verb>-<noun>`;
+# Auggie / Antigravity: `mcp:ductus:<verb>-<noun>`). The bare names are
+# also the `ductus <name>` subcommand identifiers.
 
 read-spec
 read-tasks

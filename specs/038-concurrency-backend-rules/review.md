@@ -16,8 +16,8 @@ skipped-passes: []
 
 Rule-introducing, markdown-tier change set: the new rule file
 `framework/rules/concurrency-backend.md` (`RACE`/`LOCK`/`TXN`/`COORD`, eight
-rules) and its `/govern` Shared Files manifest row in
-`framework/bootstrap/govern.md` — no application code, no new surface (the `BE`
+rules) and its `/ductus` Shared Files manifest row in
+`framework/bootstrap/ductus.md` — no application code, no new surface (the `BE`
 surface already exists, so no `lint-rule-ids.sh` or `data-model.md` change). No
 loaded security rule's Verification trigger fires against a rule-definition file
 or a manifest row, and the reuse/efficiency/simplicity passes find nothing
@@ -37,7 +37,7 @@ other backend files and `scripts/lint-rule-ids.sh` passes; and all seven
 acceptance criteria are satisfied. **0 MUST violations — not blocking; the spec
 may advance to `done`.**
 
-Rule-file selection for this run: `[rules] surfaces` unset in govern's own
+Rule-file selection for this run: `[rules] surfaces` unset in ductus's own
 `.govern.toml`, so step 5 fell back to detected-stack derivation;
 `[review] tech-stack-verified = true` skipped the alignment check.
 
@@ -57,7 +57,7 @@ _None._
 
 _None._
 
-## Captured issues (pending /gov:groom)
+## Captured issues (pending /ductus:groom)
 
 _None — no inbox additions since diff-base._
 

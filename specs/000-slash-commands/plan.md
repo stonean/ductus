@@ -16,7 +16,7 @@ Create ten generic slash command `.md` files in a `commands/` directory at the g
 
 Commands live at `commands/{command}.md` in the governance root. This is the template source — adopting projects copy these to `.claude/commands/{project}/` and replace `{project}` placeholders.
 
-Rationale: Keeping them at the governance root (not under `.claude/commands/`) avoids them being treated as active slash commands in the governance repo itself. Governance's own commands (like `/gov:init`) live separately in `.claude/commands/gov/`.
+Rationale: Keeping them at the governance root (not under `.claude/commands/`) avoids them being treated as active slash commands in the governance repo itself. Governance's own commands (like `/ductus:init`) live separately in `.claude/commands/ductus/`.
 
 ### Parameterization approach
 

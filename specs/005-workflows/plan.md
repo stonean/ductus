@@ -6,7 +6,7 @@ title: "005-workflows — plan"
 
 ## Overview
 
-Add a tech-stack-driven workflow scaffolding bundle to the governance framework. The bundle is a registry (`framework/workflows/registry.json`) plus a flat directory of standalone `.md` workflow files alongside it. Init recommends and scaffolds workflows after the tech stack questionnaire. `govern.md` syncs the registry to adopted projects and offers any newly registered workflows on subsequent runs. The feature is entirely prompt-and-data — no application code, only markdown commands, JSON, and workflow files.
+Add a tech-stack-driven workflow scaffolding bundle to the governance framework. The bundle is a registry (`framework/workflows/registry.json`) plus a flat directory of standalone `.md` workflow files alongside it. Init recommends and scaffolds workflows after the tech stack questionnaire. `ductus.md` syncs the registry to adopted projects and offers any newly registered workflows on subsequent runs. The feature is entirely prompt-and-data — no application code, only markdown commands, JSON, and workflow files.
 
 ## Technical Decisions
 
@@ -50,7 +50,7 @@ Per resolved question #6. Workflow files follow the `{workflow}-{language}-{tool
 
 A per-project `workflows/` subdirectory under the existing project commands directory. This:
 
-- Survives the slash command cleanup loop in `govern.md` unchanged — that loop only walks top-level `.md` files in `{config_dir}/commands/{project}/`, so files inside `workflows/` are untouched.
+- Survives the slash command cleanup loop in `ductus.md` unchanged — that loop only walks top-level `.md` files in `{config_dir}/commands/{project}/`, so files inside `workflows/` are untouched.
 - Discovers naturally as namespaced slash commands (`/{project}:workflows:{file-stem}`) under Claude Code's standard subdirectory-as-namespace rule. Discovery for non-Claude agents may vary; v1 ships the file in the same conventional path and leaves agent-specific discovery rules to the agent.
 - Keeps scaffolded workflows clearly separated from pipeline commands so `/{project}:configure`, `/{project}:plan`, etc. remain visually distinct.
 
@@ -65,29 +65,29 @@ Per resolved question #3. Each registry entry has exactly one `trigger.field` an
 The match source differs by entry point:
 
 - **Init** matches against the in-memory selections from step 4 of the questionnaire.
-- **Govern** matches against the existing project's AGENTS.md Tech Stack table (the same source 004 populates). Govern reads the table and maps each row's layer/technology back to the registry's trigger fields.
+- **Ductus** matches against the existing project's AGENTS.md Tech Stack table (the same source 004 populates). Ductus reads the table and maps each row's layer/technology back to the registry's trigger fields.
 
-### Init scaffolds for Claude only; govern loops per selected agent
+### Init scaffolds for Claude only; ductus loops per selected agent
 
 Init is governance-specific to Claude Code (per `CLAUDE.md` — `init.md` has no source counterpart and is hand-maintained). It scaffolds directly into `.claude/commands/{slug}/workflows/`.
 
-Govern operates over the agent registry and may scaffold for one or more agents. Workflow scaffolding is performed inside the existing per-agent loop, with `{config_dir}` resolved per agent.
+Ductus operates over the agent registry and may scaffold for one or more agents. Workflow scaffolding is performed inside the existing per-agent loop, with `{config_dir}` resolved per agent.
 
-### Govern reads the local registry copy after sync
+### Ductus reads the local registry copy after sync
 
-The workflow recommendation step in `govern.md` runs **after** the manifest has copied `framework/workflows/registry.json` into the project at `workflows/registry.json`. Recommendation reads the just-synced local copy rather than re-fetching from upstream. This avoids a redundant fetch and matches the pattern already used by other shared files (e.g., `specs/templates/`).
+The workflow recommendation step in `ductus.md` runs **after** the manifest has copied `framework/workflows/registry.json` into the project at `workflows/registry.json`. Recommendation reads the just-synced local copy rather than re-fetching from upstream. This avoids a redundant fetch and matches the pattern already used by other shared files (e.g., `specs/templates/`).
 
-Workflow files are fetched on demand from upstream at scaffold time using the same URL pattern as the rest of govern's fetches. They are not synced into the project tree by default — the project only carries the registry as a manifest of what is available.
+Workflow files are fetched on demand from upstream at scaffold time using the same URL pattern as the rest of ductus's fetches. They are not synced into the project tree by default — the project only carries the registry as a manifest of what is available.
 
 ### Init's recommendation step is inserted after step 4 (tech stack), renumbering 5–12 to 6–13
 
-The current `.claude/commands/gov/init.md` has 12 ordered steps. The workflow recommendation step needs the full set of tech stack selections and must run before AGENTS.md is finalized so any future "workflows installed" annotation can be added if desired. The natural slot is immediately after step 4. Existing steps 5–12 shift down by one.
+The current `.claude/commands/ductus/init.md` has 12 ordered steps. The workflow recommendation step needs the full set of tech stack selections and must run before AGENTS.md is finalized so any future "workflows installed" annotation can be added if desired. The natural slot is immediately after step 4. Existing steps 5–12 shift down by one.
 
 The "Display next steps" final step already enumerates configure/AGENTS/system/specify follow-ups. No additional next-step item is required for workflows — they are scaffolded inside the new step itself.
 
-### Govern's recommendation step is inserted after manifest processing and before post-scaffolding output
+### Ductus's recommendation step is inserted after manifest processing and before post-scaffolding output
 
-Govern's flow is: pre-flight → agent selection → permission setup → project configuration → frontmatter migration → file fetching (manifest) → per-agent scaffolding → post-scaffolding output. The workflow recommendation step belongs at the end of per-agent scaffolding, after slash command cleanup and after the registry has been written to the project. It iterates over selected agents and offers any newly matched, not-yet-scaffolded workflows.
+Ductus's flow is: pre-flight → agent selection → permission setup → project configuration → frontmatter migration → file fetching (manifest) → per-agent scaffolding → post-scaffolding output. The workflow recommendation step belongs at the end of per-agent scaffolding, after slash command cleanup and after the registry has been written to the project. It iterates over selected agents and offers any newly matched, not-yet-scaffolded workflows.
 
 ### Initial registry coverage
 
@@ -109,7 +109,7 @@ Frontend coverage is intentionally out of scope for v1 — most frontend languag
 
 ### No JSON Schema for the registry in v1
 
-Per resolved question equivalent in the original plan. Validation is done at read time by init/govern: well-formed JSON, required fields present, category in the fixed set, template path exists. Failures emit warnings and skip entries; init/govern do not abort.
+Per resolved question equivalent in the original plan. Validation is done at read time by init/ductus: well-formed JSON, required fields present, category in the fixed set, template path exists. Failures emit warnings and skip entries; init/ductus do not abort.
 
 ## Affected Files
 
@@ -125,8 +125,8 @@ Per resolved question equivalent in the original plan. Validation is done at rea
 | `framework/workflows/lint-go-golangci-lint.md` | Create | Go golangci-lint workflow |
 | `framework/workflows/test-go-gotest.md` | Create | Go test workflow |
 | `framework/workflows/format-go-gofmt.md` | Create | Go gofmt workflow |
-| `.claude/commands/gov/init.md` | Modify | Insert workflow recommendation step after tech stack questionnaire; renumber 5–12 → 6–13 |
-| `framework/bootstrap/govern.md` | Modify | Add registry to manifest with `update` strategy; add workflow recommendation step in per-agent scaffolding |
+| `.claude/commands/ductus/init.md` | Modify | Insert workflow recommendation step after tech stack questionnaire; renumber 5–12 → 6–13 |
+| `framework/bootstrap/ductus.md` | Modify | Add registry to manifest with `update` strategy; add workflow recommendation step in per-agent scaffolding |
 | `specs/005-workflows/data-model.md` | Create | Schema for registry entries |
 
 ## Trade-offs
@@ -145,7 +145,7 @@ Scaffolding to `{config_dir}/commands/{project}/workflows/` works cleanly for Cl
 
 ### Workflow files not synced to project
 
-Only the registry is shipped to adopted projects; workflow files are fetched on demand from upstream during scaffolding. Reduces project surface area but adds a network dependency at scaffold time. Govern already depends on the network for the rest of its file fetching, so this introduces no new failure mode.
+Only the registry is shipped to adopted projects; workflow files are fetched on demand from upstream during scaffolding. Reduces project surface area but adds a network dependency at scaffold time. Ductus already depends on the network for the rest of its file fetching, so this introduces no new failure mode.
 
 ### Single-field triggers
 

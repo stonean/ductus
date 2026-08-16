@@ -10,7 +10,7 @@ section: "Follow-on scenarios"
 
 So prose that merely *mentions* a comment-open delimiter inside a backtick span — with no matching close delimiter later on the same line — is read as a real comment opener: `SkipScanner` enters comment mode and skips every following line to the next close delimiter or EOF, and each comment-aware parser silently drops all structure after that line.
 
-Hit concretely during 022 tasks 66–68: task 67's `done-when` in `tasks.md` embedded a backticked comment-open delimiter, opening a comment region that hid task 68 from `read-tasks` and `mark-task` (`task '68' not found`) until the prose was reworded. It was worked around at the prose level in two artifacts (`tasks.md` and the `append-inbox-comment-aware-write` scenario) but not fixed at the parser. Because govern's own tasks, specs, and scenarios routinely write *about* comments and fences, the hazard recurs.
+Hit concretely during 022 tasks 66–68: task 67's `done-when` in `tasks.md` embedded a backticked comment-open delimiter, opening a comment region that hid task 68 from `read-tasks` and `mark-task` (`task '68' not found`) until the prose was reworded. It was worked around at the prose level in two artifacts (`tasks.md` and the `append-inbox-comment-aware-write` scenario) but not fixed at the parser. Because ductus's own tasks, specs, and scenarios routinely write *about* comments and fences, the hazard recurs.
 
 ## Behavior
 

@@ -20,7 +20,7 @@ Quality gate before `done`: audit the feature's implementation against the proje
 
 ## Scope Boundaries
 
-- Reads the target spec, its `plan.md` (for Affected Files), the in-scope source files, the selected rule files, `AGENTS.md`, and `.govern/config.toml`; diffs `specs/inbox.md` over the review window. Do NOT review files outside the resolved scope, and do NOT introduce review criteria from outside the project's rule files and `AGENTS.md`.
+- Reads the target spec, its `plan.md` (for Affected Files), the in-scope source files, the selected rule files, `AGENTS.md`, and `.ductus/config.toml`; diffs `specs/inbox.md` over the review window. Do NOT review files outside the resolved scope, and do NOT introduce review criteria from outside the project's rule files and `AGENTS.md`.
 - Writes exactly two artifacts: `specs/NNN/review.md` and the target spec's frontmatter `review:` block (via `write-review`); with `--waive`, appends a waiver entry; with `--fix`, applies auto-fixable findings to the working tree. No other files are modified — status transitions belong to `/{project}:implement`.
 - Reference: §runtime-host-integration, §brownfield-inbox, §text-first-artifacts (constitution loaded by `/{project}:target` — do not re-read).
 
@@ -29,7 +29,7 @@ Quality gate before `done`: audit the feature's implementation against the proje
 - **Target** — the current `/{project}:target` feature, or every feature with
   status `in-progress` or `done` when invoked with `--all`.
 - **Rules** — every file under the project's rule-file directory
-  (`framework/rules/` in govern's own repo, `specs/rules/` in adopter
+  (`framework/rules/` in ductus's own repo, `specs/rules/` in adopter
   projects) selected by the suffix-based discovery in step 2
   (`discover-rule-files`); their content is the authoritative review
   criteria. RFC 2119 language is authoritative:
@@ -39,7 +39,7 @@ Quality gate before `done`: audit the feature's implementation against the proje
   plus any files modified since the spec advanced to `in-progress` (whichever
   set is larger). `specs/inbox.md` is also read (diffed against `diff-base`) to
   surface issues captured during the work window — see step 1 (`compute-review-scope`).
-- **Config** — three `.govern/config.toml` keys influence this command:
+- **Config** — three `.ductus/config.toml` keys influence this command:
   - `[review] tech-stack-verified` (boolean, default `false`): when
     `true`, the tech-stack alignment check (see step 1) is
     skipped on every run until the operator clears the key. Set
@@ -64,7 +64,7 @@ Quality gate before `done`: audit the feature's implementation against the proje
     (`[]`) is valid and means cross-only (not the same as unset); an
     unrecognized member (including `"cross"`) or a non-list value fails fast
     in step 2. Collected and persisted
-    by `/govern` (`govern.md`, **Collect Project Inputs**).
+    by `/ductus` (`ductus.md`, **Collect Project Inputs**).
 
 ## Flags
 
@@ -93,11 +93,11 @@ records `must-violations: > 0`. See [Blocking semantics](#blocking-semantics).
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional gvrn runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no gvrn MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write).
+> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no ductus MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write).
 
 Run once per targeted feature (every in-progress or done spec under `--all`, otherwise the current `/{project}:target`), in order. Resolve a `[feature]` argument through `resolve-feature` (exact name / number / unique partial slug), and enumerate the `--all` set from `dashboard`'s per-spec status inventory (`specs[].status ∈ {in-progress, done}`) rather than a directory scan. The detailed walk — rule-selection notices, waiver semantics, the report skeleton, and the pass definitions — lives under the Markdown-only reference section below.
 
-1. Invoke `compute-review-scope` to resolve the diff base (the commit the spec advanced to in-progress at, or a `--since` override), the review file scope (whichever is **larger** of the plan's Affected Files and the files modified since the diff base — not a union; ties resolve to the modified-since set), and the inbox additions captured in that window. When the scope is empty, jump straight to the write-review step (step 9) — it emits the nothing-to-review-yet, non-blocking report. Otherwise confirm tech-stack alignment first (host judgment, not a primitive): read the active config file; when its `[review] tech-stack-verified` flag is true, skip the check; else compare the AGENTS.md Tech Stack section against the code in scope, halting with the tech-stack-misalignment message on a mismatch, and — on success — confirm before persisting the flag (the same confirm-before-write gate the other pipeline steps use; see the tech-stack alignment step in the markdown-only reference) and write `[review] tech-stack-verified = true` to the **active config file** (`.govern/config.toml` when it exists, else the legacy root `.govern.toml` when that exists, else `.govern/config.toml`; spec 042 — a write outside the `/govern` migration never creates a partial `.govern/config.toml` alongside a lingering legacy file). Only the flag read is deterministic — the alignment judgment stays with the host.
+1. Invoke `compute-review-scope` to resolve the diff base (the commit the spec advanced to in-progress at, or a `--since` override), the review file scope (whichever is **larger** of the plan's Affected Files and the files modified since the diff base — not a union; ties resolve to the modified-since set), and the inbox additions captured in that window. When the scope is empty, jump straight to the write-review step (step 9) — it emits the nothing-to-review-yet, non-blocking report. Otherwise confirm tech-stack alignment first (host judgment, not a primitive): read the active config file; when its `[review] tech-stack-verified` flag is true, skip the check; else compare the AGENTS.md Tech Stack section against the code in scope, halting with the tech-stack-misalignment message on a mismatch, and — on success — confirm before persisting the flag (the same confirm-before-write gate the other pipeline steps use; see the tech-stack alignment step in the markdown-only reference) and write `[review] tech-stack-verified = true` to the **active config file** (the newest existing of `.ductus/config.toml`, `.govern/config.toml`, or the legacy root `.govern.toml`, else `.ductus/config.toml`; specs 042 and 049 — a write outside the `/ductus` migrations never creates a partial `.ductus/config.toml` alongside a lingering older file). Only the flag read is deterministic — the alignment judgment stays with the host.
 2. Invoke `discover-rule-files` to select this run's rule files — suffix classification, the `[rules] surfaces` selection, and the disabled-rule-files filter — and emit the ordered notice lines it returns verbatim.
 3. <!-- llm:performReview --> Run the **security** pass over the in-scope files against the loaded security rules, returning one finding per violation (rule id, severity, file, line range, confidence, explanation).
 4. <!-- llm:performReview --> Run the **reuse** pass: flag logic that duplicates existing utilities or belongs in shared code.
@@ -139,7 +139,7 @@ The numbered Instructions above are the deterministic path — the runtime's pri
      file (same resolution as Instructions step 1). On `n` or skip, the check runs again on the next
      invocation. To re-run the check after a stack change, the operator
      removes the line manually — `/{project}:review` does not auto-reset.
-5. Discover rule files by suffix. List `framework/rules/*.md` in govern's
+5. Discover rule files by suffix. List `framework/rules/*.md` in ductus's
    own repository, or `specs/rules/*.md` in adopter projects. For each
    file, classify by basename suffix:
    - `*-backend.md` → backend surface
@@ -152,7 +152,7 @@ The numbered Instructions above are the deterministic path — the runtime's pri
      rule file <name> has unrecognized suffix — loading for all stacks; rename to -backend.md, -frontend.md, or -cross.md
      ```
 
-   Determine the **surface selection** for this run. Read `.govern/config.toml`
+   Determine the **surface selection** for this run. Read `.ductus/config.toml`
    `[rules] surfaces` (see [Inputs](#inputs)):
 
    - **Set to a valid list** (every member in `{backend, frontend}`) —
@@ -183,7 +183,7 @@ The numbered Instructions above are the deterministic path — the runtime's pri
    In every non-error case, keep every unrecognized-suffix file
    unconditionally.
 
-   Then apply the **disabled-rule-files filter**. Read `.govern/config.toml`
+   Then apply the **disabled-rule-files filter**. Read `.ductus/config.toml`
    `[[review.disabled-rule-files]]` (see [Inputs](#inputs)). For each
    entry, in list order:
 
@@ -196,7 +196,7 @@ The numbered Instructions above are the deterministic path — the runtime's pri
      ```
 
      `<config-file>` is the repo-relative resolved config file the
-     disable came from — `.govern/config.toml`, or the legacy root
+     disable came from — `.ductus/config.toml`, or the legacy root
      `.govern.toml` on a pre-migration layout. Collapse internal
      whitespace in `reason` (including newlines from TOML multi-line
      strings) to single spaces before emitting — the notice is
@@ -244,7 +244,7 @@ The numbered Instructions above are the deterministic path — the runtime's pri
 
    All four warning forms emit to stdout and **do not affect the exit
    code**. `/{project}:review`'s exit status is driven exclusively by MUST
-   violations (see [Output](#output)). `.govern/config.toml` hygiene is a
+   violations (see [Output](#output)). `.ductus/config.toml` hygiene is a
    separate concern.
 
    Finally, emit a single stdout line naming what was selected:
@@ -502,7 +502,7 @@ blocked: tech-stack alignment failed — AGENTS.md Tech Stack {missing | inconsi
 
 reconcile AGENTS.md Tech Stack with the implementation, then re-run /{project}:review.
 to skip this check on future runs after manual reconciliation, add
-[review] tech-stack-verified = true to .govern/config.toml.
+[review] tech-stack-verified = true to .ductus/config.toml.
 ```
 
 ## Waivers
@@ -654,11 +654,11 @@ never of session state.
 ## Notes for adopters
 
 - Projects that customize shipped rule files (e.g.,
-  `specs/rules/security-backend.md`) pin them in `.govern/config.toml`
-  `[pinned] files` to prevent `/govern` from overwriting their additions.
+  `specs/rules/security-backend.md`) pin them in `.ductus/config.toml`
+  `[pinned] files` to prevent `/ductus` from overwriting their additions.
   `/{project}:review` reads whatever is on disk — pinned or not.
 - Files inside the rule-file directory (`specs/rules/` in adopter
-  projects; `framework/rules/` in govern's own repo) are auto-discovered
+  projects; `framework/rules/` in ductus's own repo) are auto-discovered
   by directory walk (see step 2, `discover-rule-files`). No `AGENTS.md` reference is
   required. Adding a new file at `specs/rules/<domain>-{backend,frontend,cross}.md`
   with a recognized suffix is the only step needed; the suffix selects
@@ -674,7 +674,7 @@ never of session state.
   suffixes — `-backend.md`, `-frontend.md`, `-cross.md` — to silence
   the warning.
 - A rule file can be explicitly excluded from a given project's review
-  via `.govern/config.toml` `[[review.disabled-rule-files]]` (see
+  via `.ductus/config.toml` `[[review.disabled-rule-files]]` (see
   [Inputs](#inputs) for the schema and step 2 (`discover-rule-files`) for the
   filter behavior). The override is project-wide and requires a
   mandatory `reason` — the reason is the audit trail. Use this when

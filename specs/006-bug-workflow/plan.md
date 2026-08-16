@@ -6,7 +6,7 @@ title: "006-bug-workflow — plan"
 
 ## Overview
 
-Add scenario support, a bug decision tree, and brownfield triage to the governance framework. This involves creating two new templates, two new slash commands (`/gov:scenario` and `/gov:groom`), updating four existing commands and their templates, and updating the constitution and README. All artifacts are markdown files — no application code, no persistence.
+Add scenario support, a bug decision tree, and brownfield triage to the governance framework. This involves creating two new templates, two new slash commands (`/ductus:scenario` and `/ductus:groom`), updating four existing commands and their templates, and updating the constitution and README. All artifacts are markdown files — no application code, no persistence.
 
 ## Technical Decisions
 
@@ -18,17 +18,17 @@ Scenario files are placed in `specs/{NNN-feature}/scenarios/{slug}.md`. This co-
 
 The spec explicitly states Given/When/Then is not required. The template uses spec-ref, Context, Behavior, and Edge Cases sections. This matches the governance preference for plain language over formal syntax.
 
-### `/gov:scenario` creates both the scenario file and a task entry
+### `/ductus:scenario` creates both the scenario file and a task entry
 
-When a scenario is created, `/gov:scenario` also appends a task to the parent spec's `tasks.md`. If `tasks.md` does not exist, it creates one. This ensures every scenario has a corresponding implementation task that carries completion status.
+When a scenario is created, `/ductus:scenario` also appends a task to the parent spec's `tasks.md`. If `tasks.md` does not exist, it creates one. This ensures every scenario has a corresponding implementation task that carries completion status.
 
-### `/gov:groom` operates on a flat `specs/inbox.md` file
+### `/ductus:groom` operates on a flat `specs/inbox.md` file
 
 Triage is a temporary inbox — a flat markdown list, not a directory structure. Each item is walked through the decision tree and migrated to the appropriate spec or scenario. Items are removed from `triage.md` as they are resolved. When `triage.md` is empty, the command reports triage is clean. The file is kept to preserve git history.
 
-### Command templates updated in both `commands/` and `.claude/commands/gov/`
+### Command templates updated in both `commands/` and `.claude/commands/ductus/`
 
-Template changes go into `commands/` (the source of truth for adopting projects). The governance-specific copies in `.claude/commands/gov/` are then re-derived by copying the template and replacing `{project}` with `gov`. This maintains the dogfooding principle from spec 003.
+Template changes go into `commands/` (the source of truth for adopting projects). The governance-specific copies in `.claude/commands/ductus/` are then re-derived by copying the template and replacing `{project}` with `gov`. This maintains the dogfooding principle from spec 003.
 
 ### Constitution updates are additive
 
@@ -52,12 +52,12 @@ The README feature table is updated with the correct status for 006-bug-workflow
 | `commands/status.md` | Modify | Add scenario counts per spec to dashboard |
 | `commands/next.md` | Modify | Add `/scenario` as a suggested next action |
 | `commands/analyze.md` | Modify | Add scenario-linked task completeness check |
-| `.claude/commands/gov/scenario.md` | Create | Governance-specific copy with `gov` replacing `{project}` |
-| `.claude/commands/gov/triage.md` | Create | Governance-specific copy with `gov` replacing `{project}` |
-| `.claude/commands/gov/about.md` | Modify | Re-derive from updated template |
-| `.claude/commands/gov/status.md` | Modify | Re-derive from updated template |
-| `.claude/commands/gov/next.md` | Modify | Re-derive from updated template |
-| `.claude/commands/gov/analyze.md` | Modify | Re-derive from updated template |
+| `.claude/commands/ductus/scenario.md` | Create | Governance-specific copy with `gov` replacing `{project}` |
+| `.claude/commands/ductus/triage.md` | Create | Governance-specific copy with `gov` replacing `{project}` |
+| `.claude/commands/ductus/about.md` | Modify | Re-derive from updated template |
+| `.claude/commands/ductus/status.md` | Modify | Re-derive from updated template |
+| `.claude/commands/ductus/next.md` | Modify | Re-derive from updated template |
+| `.claude/commands/ductus/analyze.md` | Modify | Re-derive from updated template |
 | `README.md` | Modify | Document bug workflow and scenario conventions |
 
 ## Trade-offs
@@ -74,7 +74,7 @@ Rejected for the default case. The spec explicitly states bug files are rarely n
 
 Rejected. A flat markdown file is simpler for a temporary inbox. Individual files add filesystem overhead for items that should be migrated quickly.
 
-### Considered: updating only `commands/` templates and not `.claude/commands/gov/`
+### Considered: updating only `commands/` templates and not `.claude/commands/ductus/`
 
 Rejected. The governance repo must dogfood its own commands. Per spec 003, the gov copies are re-derived from templates after any template change.
 

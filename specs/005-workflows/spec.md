@@ -17,13 +17,13 @@ next-criterion: 17
 
 Based on project tech stack, recommend and scaffold relevant development workflow files during bootstrap.
 
-> **Sunset ([043-workflows-sunset](../043-workflows-sunset/spec.md)):** the workflows feature was removed from the framework — `framework/workflows/` (templates + `registry.json`), the `/govern` Workflow recommendation flow, and the `[workflows] declined_categories` config surface no longer exist, and the `workflows-sunset` adopter migration cleans up what earlier runs scaffolded. Lint/format/test invocation belongs to adopter-owned pre-commit hooks, editor configs, and CI, not to scaffolded slash commands. This spec stays `done` as the historical record of the feature as shipped; everything below (including the post-completion notes that follow) describes behavior that no longer exists.
+> **Sunset ([043-workflows-sunset](../043-workflows-sunset/spec.md)):** the workflows feature was removed from the framework — `framework/workflows/` (templates + `registry.json`), the `/ductus` Workflow recommendation flow, and the `[workflows] declined_categories` config surface no longer exist, and the `workflows-sunset` adopter migration cleans up what earlier runs scaffolded. Lint/format/test invocation belongs to adopter-owned pre-commit hooks, editor configs, and CI, not to scaffolded slash commands. This spec stays `done` as the historical record of the feature as shipped; everything below (including the post-completion notes that follow) describes behavior that no longer exists.
 >
-> **Note (post-completion, [019-config-decisions](../019-config-decisions/spec.md)):** the per-category recommendation prompt now offers three options instead of two — `Yes, scaffold all in this category`, `Skip this run`, and `Skip and don't ask again`. The third option records the category in `.govern.toml`'s `[workflows] declined_categories` so subsequent `/govern` runs suppress the prompt for that category entirely. The current prompt and persistence behavior is canonical in `framework/bootstrap/govern.md`'s Workflow recommendation flow; the body below describes the original two-option prompt as it shipped.
+> **Note (post-completion, [019-config-decisions](../019-config-decisions/spec.md)):** the per-category recommendation prompt now offers three options instead of two — `Yes, scaffold all in this category`, `Skip this run`, and `Skip and don't ask again`. The third option records the category in `.govern.toml`'s `[workflows] declined_categories` so subsequent `/ductus` runs suppress the prompt for that category entirely. The current prompt and persistence behavior is canonical in `framework/bootstrap/ductus.md`'s Workflow recommendation flow; the body below describes the original two-option prompt as it shipped.
 >
-> **Note:** the workflow filename convention was revised post-completion. The original convention `{category}-{language}-{tool}.md` produced redundant slash command names like `/{project}:workflows:test-go-gotest` (the tool name `gotest` already encodes both `go` and `test`). The convention is now `{tool}.md` — slash commands invoke as `/{project}:workflows:gotest`, `/{project}:workflows:pytest`, etc. The category and language are still tracked in `framework/workflows/registry.json`'s `category` and `trigger` fields and continue to drive the per-category accept/skip prompt during `/govern`. The body below has been updated to reflect the current convention; `plan.md` and `tasks.md` retain the original filenames as a historical record of the original implementation.
+> **Note:** the workflow filename convention was revised post-completion. The original convention `{category}-{language}-{tool}.md` produced redundant slash command names like `/{project}:workflows:test-go-gotest` (the tool name `gotest` already encodes both `go` and `test`). The convention is now `{tool}.md` — slash commands invoke as `/{project}:workflows:gotest`, `/{project}:workflows:pytest`, etc. The category and language are still tracked in `framework/workflows/registry.json`'s `category` and `trigger` fields and continue to drive the per-category accept/skip prompt during `/ductus`. The body below has been updated to reflect the current convention; `plan.md` and `tasks.md` retain the original filenames as a historical record of the original implementation.
 >
-> Adopters who scaffolded the legacy filenames before this rename get them removed automatically on their next `/govern` re-run — see the **Legacy workflow cleanup** step in `framework/bootstrap/govern.md`'s Workflow recommendation flow. The cleanup is hardcoded to the original 9 filenames and respects `.governance.toml` `pinned.files`, so custom workflow files are never affected.
+> Adopters who scaffolded the legacy filenames before this rename get them removed automatically on their next `/ductus` re-run — see the **Legacy workflow cleanup** step in `framework/bootstrap/ductus.md`'s Workflow recommendation flow. The cleanup is hardcoded to the original 9 filenames and respects `.governance.toml` `pinned.files`, so custom workflow files are never affected.
 >
 > **Note (post-completion, Ruby + Rails extension):** the registry was extended beyond the v1 starter set. Ruby joined the backend languages with RuboCop (Linting), RSpec (Testing), and rufo (Formatting), all on the `backend_language: Ruby` trigger. Rails was added as the registry's first `backend_framework` trigger and first `Migrations`-category entry — `Rails migrations` (`rails db:migrate`) on `backend_framework: Rails`. Each addition is one registry entry plus one workflow file, exercising the extensibility criterion with no mechanism change. `plan.md`'s "Starter set vs. comprehensive coverage" trade-off is updated to match.
 
@@ -47,7 +47,7 @@ Each trigger matches a single tech stack field. A workflow is recommended when t
 
 ### Recommendation flow
 
-During `/gov:init`, after the tech stack questionnaire (step 4 from 004), the system:
+During `/ductus:init`, after the tech stack questionnaire (step 4 from 004), the system:
 
 1. **Matches** — scans the registry for entries whose trigger field and value match any of the user's tech stack selections. If no entries match, skip the workflow step entirely — do not prompt the user.
 2. **Presents** — displays matched workflows grouped by category with name and description. The user can accept or skip each category group.
@@ -68,9 +68,9 @@ Workflow files cover common development workflows that are tech-stack-specific b
 
 These are starting points — projects customize them after scaffolding.
 
-### Govern integration
+### Ductus integration
 
-When `/{project}:govern` syncs governance files, it also updates the workflow registry file in the project (using the same `update` strategy as other governance files). After updating, govern scans for new workflow recommendations that were not previously scaffolded and offers them to the user, following the same present-and-accept flow as init.
+When `/{project}:ductus` syncs governance files, it also updates the workflow registry file in the project (using the same `update` strategy as other governance files). After updating, ductus scans for new workflow recommendations that were not previously scaffolded and offers them to the user, following the same present-and-accept flow as init.
 
 Workflows already scaffolded in `.claude/commands/{slug}/workflows/` are not overwritten — they may have been customized. Only new, unscaffolded workflows are offered.
 
@@ -83,7 +83,7 @@ If the user's tech stack selections match no registry entries (e.g., all categor
 - **Registry file missing or malformed** — init warns ("Workflow registry not found or invalid, skipping workflow recommendations") and continues without the workflow step. Init must not fail due to registry issues.
 - **Workflow file missing** — if a registry entry references a file that does not exist under `framework/workflows/`, warn ("Workflow file {name} not found, skipping") and skip that individual workflow. Continue with remaining workflows.
 - **Duplicate triggers** — multiple registry entries can match the same tech stack selection. All matched entries are presented. This is expected (e.g., TypeScript triggers both a lint workflow and a format workflow).
-- **Govern with customized workflows** — govern detects existing workflow files by checking if a file with the expected name already exists in `.claude/commands/{slug}/workflows/`. If it exists, the workflow is treated as already scaffolded and is not offered again, regardless of content changes.
+- **Ductus with customized workflows** — ductus detects existing workflow files by checking if a file with the expected name already exists in `.claude/commands/{slug}/workflows/`. If it exists, the workflow is treated as already scaffolded and is not offered again, regardless of content changes.
 
 ## Acceptance Criteria
 
@@ -100,8 +100,8 @@ If the user's tech stack selections match no registry entries (e.g., all categor
 - [x] AC11: The registry is extensible — adding a new workflow requires only a registry entry and a workflow file
 - [x] AC12: Init warns and continues (does not fail) if the registry file is missing or malformed
 - [x] AC13: Init warns and skips individual workflows whose file is missing
-- [x] AC14: `/{project}:govern` updates the registry and offers new, unscaffolded workflows to the user
-- [x] AC15: Govern does not overwrite workflow files that already exist in the project
+- [x] AC14: `/{project}:ductus` updates the registry and offers new, unscaffolded workflows to the user
+- [x] AC15: Ductus does not overwrite workflow files that already exist in the project
 - [x] AC16: Rename internal terminology from "skills" to "workflows" to free the term "skills" for Anthropic-style context-loaded instruction packs (signpost: driven by [010-agent-autonomy](../010-agent-autonomy/spec.md); the rename also flattened the framework directory — workflow files sat directly under `framework/workflows/` rather than in an inner `templates/` subdirectory. Spec 043 later sunset the workflows feature, so that directory no longer exists)
 
 ## Resolved Questions
@@ -110,7 +110,7 @@ If the user's tech stack selections match no registry entries (e.g., all categor
 2. **Plugin ecosystem maturity** — v1 focuses exclusively on workflow files that governance fully controls. Plugin/marketplace support is deferred to a future spec when the ecosystem stabilizes.
 3. **Trigger complexity** — single-value matching only. Each trigger matches one tech stack field to one value. Compound logic (AND/OR) is deferred — single triggers cover the common cases and keep the registry simple.
 4. **Workflow categories** — fixed set: Testing, Linting, Formatting, Migrations, Code Review, Deployment. Adding a new category requires a governance update. This ensures consistent grouping in the UI.
-5. **Update mechanism** — `/{project}:govern` updates the registry file and offers new workflow recommendations. This integrates naturally with the existing govern flow. A standalone `/{project}:workflows` command is not needed for v1 since govern covers the use case.
+5. **Update mechanism** — `/{project}:ductus` updates the registry file and offers new workflow recommendations. This integrates naturally with the existing ductus flow. A standalone `/{project}:workflows` command is not needed for v1 since ductus covers the use case.
 6. **File granularity** — one file per tool (e.g., `eslint.md`). Explicit, easy to maintain. Minimal duplication since each workflow file is small.
 
 ## References

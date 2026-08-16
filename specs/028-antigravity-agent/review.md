@@ -15,7 +15,7 @@ skipped-passes: []
 ## Summary
 
 028 implements Antigravity support entirely in framework **markdown**
-(`govern.md`, `configure/antigravity.md`, README, the 012 signpost) plus one
+(`ductus.md`, `configure/antigravity.md`, README, the 012 signpost) plus one
 **Bash** generator change (`gen-configure-mcp.sh`) and a focused test — no
 application code. Per `AGENTS.md`'s Tech Stack (markdown + bash, no application
 runtime, no backend/frontend surface), the suffix-based rule selection keeps
@@ -46,7 +46,7 @@ None.
 
 None.
 
-## Captured issues (pending /gov:groom)
+## Captured issues (pending /ductus:groom)
 
 None — `specs/inbox.md` is unchanged since `diff-base`.
 
@@ -56,7 +56,7 @@ None — all five passes (security, reuse, quality, efficiency, simplicity) ran.
 
 ## Notes (non-blocking, informational)
 
-- **Rule applicability.** The govern rule files target adopter *application*
+- **Rule applicability.** The ductus rule files target adopter *application*
   code (auth, XSS, SQL, API contracts, a11y, perf). 028 changes framework
   markdown and a Bash generator, so only `configuration-cross.md` is
   stack-eligible, and its constants/env-var rules do not fire on a generator's
@@ -64,12 +64,12 @@ None — all five passes (security, reuse, quality, efficiency, simplicity) ran.
   for a framework-docs feature, not a coverage gap.
 - **Deliberate duplication (recorded, not a finding).** Antigravity mirrors
   `specs/rules/*.md` into `.agents/rules/` for native loading; both copies
-  regenerate from `framework/rules/` on every `/govern` run. This is a clarified
+  regenerate from `framework/rules/` on every `/ductus` run. This is a clarified
   design decision (spec Resolved Questions + plan §Technical Decision), generator
   -maintained rather than hand-synced, so it is logged here for transparency
   rather than flagged by the reuse/simplicity passes.
 - **Quality spot-checks (passed).** The README bootstrap `awk` correctly strips
-  govern.md's single frontmatter block (prints only after the 2nd `---`); the
+  ductus.md's single frontmatter block (prints only after the 2nd `---`); the
   Self-Update and Post-Write Integrity branches keep the Antigravity `SKILL.md`
   install consistent (no infinite "stale" loop); the 012 signpost link sits in a
   blockquote so `gen-spec-deps` skips it (no `012↔028` cycle).

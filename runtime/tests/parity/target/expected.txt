@@ -1,7 +1,7 @@
-TODO: capture the LLM-driven `/gov:target 002-target` output against
+TODO: capture the LLM-driven `/ductus:target 002-target` output against
 `runtime/tests/fixtures/target-basic/` and replace this file's body with
 the captured `.govern.session.toml` (no trailing whitespace,
-terminating newline). Parity bound for `/gov:target` is
+terminating newline). Parity bound for `/ductus:target` is
 `strict-files: [".govern.session.toml"]` — the captured session
 JSON must match the runtime+host-written file byte-for-byte.
 
@@ -9,12 +9,12 @@ Capture recipe (maintainer-only, requires an LLM-driven host):
 
   1. cp -r runtime/tests/fixtures/target-basic <a-clean-tempdir>
   2. cp framework/commands/target.md <a-clean-tempdir>/framework/commands/
-  3. From <a-clean-tempdir>, run `/gov:target 002-target` in the
+  3. From <a-clean-tempdir>, run `/ductus:target 002-target` in the
      LLM-driven host (no scenario argument).
   4. After the run, capture the contents of
      `<a-clean-tempdir>/.govern.session.toml` verbatim into this
      file (omit the `setAt` line, which is non-deterministic — the
      harness substitutes a stable timestamp before comparison).
 
-Until this file is filled in, the parity test for `/gov:target` is
+Until this file is filled in, the parity test for `/ductus:target` is
 recorded as SKIPPED and does not block CI.

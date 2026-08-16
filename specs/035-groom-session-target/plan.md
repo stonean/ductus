@@ -4,7 +4,7 @@ Implements [035 — Groom sets the session target from the routed item](spec.md)
 
 ## Overview
 
-Edit `framework/commands/groom.md` so that the two decision-tree branches that route an item to an existing spec also write the session target, and the per-item confirmation names that target. Markdown-tier change — `groom.md` is a markdown-only command (no runtime-primitive preamble today), so the session write is described in prose, preserving any `cli-config-dir`, exactly as `specify.md` / `amend.md` describe their markdown-only session writes. The generated `.claude/commands/gov/groom.md` regenerates from the source.
+Edit `framework/commands/groom.md` so that the two decision-tree branches that route an item to an existing spec also write the session target, and the per-item confirmation names that target. Markdown-tier change — `groom.md` is a markdown-only command (no runtime-primitive preamble today), so the session write is described in prose, preserving any `cli-config-dir`, exactly as `specify.md` / `amend.md` describe their markdown-only session writes. The generated `.claude/commands/ductus/groom.md` regenerates from the source.
 
 ## Technical Decisions
 
@@ -13,9 +13,9 @@ Edit `framework/commands/groom.md` so that the two decision-tree branches that r
 Two branches route to an existing spec; both set the target:
 
 - **Step 3 (spec edit)** — target is the matched **feature** (`feature` + `path` only, no scenario fields).
-- **Step 4 durable-requirement branch (scenario creation)** — target is the matched feature **plus the new scenario** (`feature` + `path` + `scenario` + `scenario-path`), consistent with how `amend.md`'s scenario route sets the session target. A follow-on `/gov:implement` then works the scenario's task directly.
+- **Step 4 durable-requirement branch (scenario creation)** — target is the matched feature **plus the new scenario** (`feature` + `path` + `scenario` + `scenario-path`), consistent with how `amend.md`'s scenario route sets the session target. A follow-on `/ductus:implement` then works the scenario's task directly.
 
-Branches that do **not** write a target: Step 1 (rule item — amend a rule file, no spec home), Step 2 (no spec → hand off to `/gov:specify`, which targets the spec it creates), and the Step 4 chore branch (left in the inbox).
+Branches that do **not** write a target: Step 1 (rule item — amend a rule file, no spec home), Step 2 (no spec → hand off to `/ductus:specify`, which targets the spec it creates), and the Step 4 chore branch (left in the inbox).
 
 ### How the target is written
 
@@ -34,11 +34,11 @@ Each spec-routed item sets the target as it is processed, so the target follows 
 | File | Action | Purpose |
 | --- | --- | --- |
 | `framework/commands/groom.md` | Modify | Context note; Step 3 + Step 4 set the target; confirmation names it; Completion reports it |
-| `.claude/commands/gov/groom.md` | Regenerate | Generated copy (via the pre-commit `gen-claude-commands.sh`) |
+| `.claude/commands/ductus/groom.md` | Regenerate | Generated copy (via the pre-commit `gen-claude-commands.sh`) |
 
 ## Trade-offs
 
 - **Markdown-only session write vs. `write-session` primitive** — chose markdown-only to match groom's current style (it uses no runtime primitives) and keep the change small. The deterministic-primitive version is a larger, separate refactor of groom onto `write-session`/`create-scenario`/`append-task`; out of scope here.
-- **Scenario-target vs. spec-target for Step 4** — chose scenario-target (feature + scenario), matching `amend.md`'s scenario route, so a follow-on `/gov:implement` lands on the scenario's task. Step 3 stays spec-only.
+- **Scenario-target vs. spec-target for Step 4** — chose scenario-target (feature + scenario), matching `amend.md`'s scenario route, so a follow-on `/ductus:implement` lands on the scenario's task. Step 3 stays spec-only.
 - **Target follows the current item vs. set-once** — chose follow-the-current-item: a single session target can only hold one value, and the most-recently-groomed spec is the most likely next action.
 - **No separate prompt** — folding the target into the existing routing confirmation keeps groom's prompt count unchanged (procedural-fidelity), while still showing the operator the target.

@@ -1,16 +1,16 @@
 # 019 — Config-Persisted Decisions Data Model
 
-Schema declaration for the `.govern/config.toml` file. This file is the canonical reference for the framework; the README documents the same schema for adopters.
+Schema declaration for the `.ductus/config.toml` file. This file is the canonical reference for the framework; the README documents the same schema for adopters.
 
-> **Note (post-completion):** paths in the live schema below reflect [042-consolidate-govern-per-project-files-under-govern-directory](../042-consolidate-govern-per-project-files-under-govern-directory/spec.md) (`.govern.toml` → `.govern/config.toml`) and [044-relocate-constitution-under-govern-directory](../044-relocate-constitution-under-govern-directory/spec.md) (the pinned example's constitution path). The `[workflows]` section below is historical — removed by [043-workflows-sunset](../043-workflows-sunset/spec.md); see the post-completion note in [spec.md](spec.md). Its prose (including the `.govern.toml` literals inside it) is left as the decision-time record.
+> **Note (post-completion):** paths in the live schema below reflect [042-consolidate-govern-per-project-files-under-govern-directory](../042-consolidate-govern-per-project-files-under-govern-directory/spec.md) (`.govern.toml` → `.ductus/config.toml`) and [044-relocate-constitution-under-govern-directory](../044-relocate-constitution-under-govern-directory/spec.md) (the pinned example's constitution path). The `[workflows]` section below is historical — removed by [043-workflows-sunset](../043-workflows-sunset/spec.md); see the post-completion note in [spec.md](spec.md). Its prose (including the `.govern.toml` literals inside it) is left as the decision-time record.
 
 ## File location and lifecycle
 
-- Path: `.govern/config.toml` (inside the committed `.govern/` directory at the project root).
-- Optional. If absent, `/govern` uses default behavior for every key.
-- Created lazily by `/govern` when a user picks `Skip and don't ask again` and no file yet exists.
+- Path: `.ductus/config.toml` (inside the committed `.ductus/` directory at the project root).
+- Optional. If absent, `/ductus` uses default behavior for every key.
+- Created lazily by `/ductus` when a user picks `Skip and don't ask again` and no file yet exists.
 - Adopters may commit it (durable across clones) or `.gitignore` it (per-clone). Both are coherent.
-- Format: TOML. Parse errors are a hard abort in `/govern`.
+- Format: TOML. Parse errors are a hard abort in `/ductus`.
 
 ## Sections
 
@@ -22,13 +22,13 @@ Unchanged by this spec. Documented here for completeness because it's a sibling 
 
 | Key | Type | Required | Description |
 | --- | --- | --- | --- |
-| `files` | array of strings | no | Destination paths (post-placeholder-resolution) for files `/govern` should treat as `skip` instead of `update`. |
+| `files` | array of strings | no | Destination paths (post-placeholder-resolution) for files `/ductus` should treat as `skip` instead of `update`. |
 
 ```toml
 [pinned]
 files = [
   ".claude/commands/myapp/implement.md",
-  ".govern/constitution.md",
+  ".ductus/constitution.md",
 ]
 ```
 
@@ -38,7 +38,7 @@ Records categories the user has chosen to permanently decline at the per-categor
 
 | Key | Type | Required | Description |
 | --- | --- | --- | --- |
-| `declined_categories` | array of strings | no | Workflow categories `/govern` will not re-prompt for. Matched case-insensitively against the registry-derived category list at decline-check time. |
+| `declined_categories` | array of strings | no | Workflow categories `/ductus` will not re-prompt for. Matched case-insensitively against the registry-derived category list at decline-check time. |
 
 ```toml
 [workflows]
@@ -56,7 +56,7 @@ The category list is the canonical set defined in [005-workflows](../005-workflo
 - `Code Review`
 - `Deployment`
 
-Matching is case-insensitive — `"linting"`, `"Linting"`, and `"LINTING"` are equivalent. Storage is recommended in title case for human readability, but `/govern` does not normalize the user's chosen casing.
+Matching is case-insensitive — `"linting"`, `"Linting"`, and `"LINTING"` are equivalent. Storage is recommended in title case for human readability, but `/ductus` does not normalize the user's chosen casing.
 
 #### Unrecognized entries
 
@@ -82,19 +82,19 @@ The flat-section layout is additive. Future specs that introduce new persisted-d
 
 Each new domain chooses its own keys to fit its decision shape (boolean toggles, arrays, structured records). There is no requirement for future domains to use a `declined_*` naming convention.
 
-Adopters are not expected to author future sections by hand. Each future section, like `[workflows]` here, is created by `/govern` when its corresponding prompt option is exercised.
+Adopters are not expected to author future sections by hand. Each future section, like `[workflows]` here, is created by `/ductus` when its corresponding prompt option is exercised.
 
 ## Schema validation
 
-`/govern` does not run a schema validator over `.govern/config.toml`. Validation is per-key, ad-hoc, at the point each section is consumed:
+`/ductus` does not run a schema validator over `.ductus/config.toml`. Validation is per-key, ad-hoc, at the point each section is consumed:
 
 - `[pinned] files` — entries that don't match a known manifest path are silently no-op (today's behavior, unchanged).
 - `[workflows] declined_categories` — entries that don't match a registry-derived category name are surfaced in the post-scaffolding summary (per this spec).
 
-There is no commit hook or `/gov:analyze` rule for `.govern/config.toml`. The post-scaffolding summary is the only enforcement layer, by design.
+There is no commit hook or `/ductus:analyze` rule for `.ductus/config.toml`. The post-scaffolding summary is the only enforcement layer, by design.
 
 ## Backwards compatibility
 
-Projects with an existing `.govern.toml` containing only `[pinned]` continue to work without modification. The `[workflows]` section is purely additive — neither `/govern` nor any other framework component requires it to exist.
+Projects with an existing `.govern.toml` containing only `[pinned]` continue to work without modification. The `[workflows]` section is purely additive — neither `/ductus` nor any other framework component requires it to exist.
 
-Removing the `[workflows]` section from an existing `.govern.toml` (manually) reverts that project to today's prompt behavior on the next `/govern` run.
+Removing the `[workflows]` section from an existing `.govern.toml` (manually) reverts that project to today's prompt behavior on the next `/ductus` run.

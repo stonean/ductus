@@ -72,20 +72,20 @@ The existing rules' *content* (rationale, threat model, OWASP citations) represe
 
 **Done when:** every frontend rule conforms to the data-model schema, no stale category abbreviations remain, every Verification is written as an agent-actionable instruction, the pinned-versions rule has been added, accuracy issues found during the audit are fixed, and the file passes markdownlint.
 
-## 3. Update govern manifest
+## 3. Update ductus manifest
 
-Add the two rule files to `framework/bootstrap/govern.md`'s **Governance-owned shared files (strategy: update)** table.
+Add the two rule files to `framework/bootstrap/ductus.md`'s **Governance-owned shared files (strategy: update)** table.
 
 - [x] Insert row mapping `framework/rules/security-backend.md` → `specs/rules/security-backend.md`
 - [x] Insert row mapping `framework/rules/security-frontend.md` → `specs/rules/security-frontend.md`
 - [x] Rows appear adjacent to the other governance-owned shared files
-- [x] `framework/bootstrap/govern.md` passes `npx markdownlint-cli2`
+- [x] `framework/bootstrap/ductus.md` passes `npx markdownlint-cli2`
 
-**Done when:** govern syncs both rule files on its next run, and the file passes markdownlint.
+**Done when:** ductus syncs both rule files on its next run, and the file passes markdownlint.
 
-## 4. Add the brownfield security audit to govern
+## 4. Add the brownfield security audit to ductus
 
-Add a new top-level **Security audit (brownfield)** section to `framework/bootstrap/govern.md`, slotted after **Shared Files** and before **Per-Agent Scaffolding**. The section reads each rule file that was newly created by the manifest pass, evaluates each rule's Verification trigger against existing `specs/NNN-*` artifacts, and appends findings to `specs/inbox.md`.
+Add a new top-level **Security audit (brownfield)** section to `framework/bootstrap/ductus.md`, slotted after **Shared Files** and before **Per-Agent Scaffolding**. The section reads each rule file that was newly created by the manifest pass, evaluates each rule's Verification trigger against existing `specs/NNN-*` artifacts, and appends findings to `specs/inbox.md`.
 
 - [x] Insert **Security audit (brownfield)** section between **Shared Files** and **Per-Agent Scaffolding**
 - [x] Section's trigger: at least one of `specs/rules/security-backend.md` or `specs/rules/security-frontend.md` was newly **created** by the manifest pass AND the project contains at least one `specs/NNN-*` directory
@@ -95,9 +95,9 @@ Add a new top-level **Security audit (brownfield)** section to `framework/bootst
 - [x] Section appends each finding to `specs/inbox.md` as `- [ ] {Rule ID}: {affected artifact path} does not address — {one-line summary}`
 - [x] Section deduplicates against existing inbox content: skip any finding whose `- [ ] {Rule ID}: {affected artifact path}` prefix already appears in the inbox
 - [x] Add an audit-summary line to **Post-Scaffolding Output**: `{N} security audit items added to specs/inbox.md. Run /{project}:groom to triage.` Omit when N is zero
-- [x] `framework/bootstrap/govern.md` passes `npx markdownlint-cli2`
+- [x] `framework/bootstrap/ductus.md` passes `npx markdownlint-cli2`
 
-**Done when:** govern runs the audit only when the trigger conditions hold, writes deduplicated findings to inbox in the documented format, reports the count, and the file passes markdownlint.
+**Done when:** ductus runs the audit only when the trigger conditions hold, writes deduplicated findings to inbox in the documented format, reports the count, and the file passes markdownlint.
 
 ## 5. Extend validate with the security rule check section
 
@@ -133,7 +133,7 @@ Append the rule-files reference to the "Secure" guiding principle in `framework/
 
 Run all structural and lint checks; verify each acceptance criterion is satisfied by the produced artifacts.
 
-- [x] `npx markdownlint-cli2` passes on all created/modified files: `framework/rules/security-backend.md`, `framework/rules/security-frontend.md`, `framework/bootstrap/govern.md`, `framework/commands/analyze.md`, `framework/constitution.md`, and the feature directory (`spec.md`, `plan.md`, `tasks.md`, `data-model.md`)
+- [x] `npx markdownlint-cli2` passes on all created/modified files: `framework/rules/security-backend.md`, `framework/rules/security-frontend.md`, `framework/bootstrap/ductus.md`, `framework/commands/analyze.md`, `framework/constitution.md`, and the feature directory (`spec.md`, `plan.md`, `tasks.md`, `data-model.md`)
 - [x] Every rule ID in both files matches the `{surface}-{category}-{NNN}` format
 - [x] No duplicate rule IDs within either file (check via `grep '^### ' framework/rules/security-*.md | sort | uniq -d`)
 - [x] Every rule has Statement, Rationale, and Verification fields present

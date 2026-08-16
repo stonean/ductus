@@ -5,8 +5,8 @@
 # placeholders per spec 012's multi-agent contract. Three patterns:
 #
 #   .claude/    should be {cli-config-dir}/
-#   /gov:       should be /{project}:
-#   `gov:`      should be `{project}:` (backticked command-prefix mentions)
+#   /ductus:       should be /{project}:
+#   `ductus:`   should be `{project}:` (backticked command-prefix mentions)
 #
 # Allowlist (two forms):
 #   1. Line scope: a line preceded by `<!-- audit:ignore-placeholders -->`
@@ -16,19 +16,19 @@
 #      that are not scaffolded into adopters (e.g., framework/commands/audit.md).
 #      The line marker doesn't compose with markdown tables — inserting a
 #      comment between table rows breaks the table — so file scope is the
-#      right tool when /gov: references span a table or are pervasive.
+#      right tool when /ductus: references span a table or are pervasive.
 #
 # False-positive shape: prose that mentions `.claude/` for documentary
 # purposes (e.g., "Auggie reads `CLAUDE.md` natively — no `.claude/` dir
 # is created"). When this surfaces, the right fix is the ignore-comment;
 # do NOT widen the regex to match audience-specific prose.
 #
-# Expected: this check fires on /gov: throughout the framework's command
-# sources today — the framework files are pre-substituted for the gov
+# Expected: this check fires on /ductus: throughout the framework's command
+# sources today — the framework files are pre-substituted for the ductus
 # project rather than properly templated with /{project}: placeholders.
 # This is a known framework-level drift /audit is designed to surface.
 # The maintainer's next move after /audit ships is either to (a) fix the
-# templating across all command files, or (b) declare /gov: as the
+# templating across all command files, or (b) declare /ductus: as the
 # canonical literal and adjust the audit. Both are valid decisions made
 # AFTER /audit exists to surface the gap. v1 of /audit emits the findings;
 # resolution is a follow-on framework refactor.
@@ -70,14 +70,14 @@ for file in framework/commands/*.md; do
     if [[ "$line" == *".claude/"* ]]; then
       emit "$file:$line_no" "hardcoded \`.claude/\` should be \`{cli-config-dir}/\`" "replace with the placeholder, or add <!-- audit:ignore-placeholders --> if literal is intentional"
     fi
-    if [[ "$line" == *"/gov:"* ]]; then
-      emit "$file:$line_no" "hardcoded \`/gov:\` should be \`/{project}:\`" "replace with the placeholder, or add <!-- audit:ignore-placeholders --> if literal is intentional"
+    if [[ "$line" == *"/ductus:"* ]]; then
+      emit "$file:$line_no" "hardcoded \`/ductus:\` should be \`/{project}:\`" "replace with the placeholder, or add <!-- audit:ignore-placeholders --> if literal is intentional"
     fi
-    # Match backticked `gov:` mentions (e.g., \`gov:specify\`). The earlier
-    # check catches `/gov:` with a leading slash; this one catches the
+    # Match backticked `ductus:` mentions (e.g., \`ductus:specify\`). The earlier
+    # check catches `/ductus:` with a leading slash; this one catches the
     # bare prefix that appears in code spans.
-    if [[ "$line" == *'`gov:'* ]]; then
-      emit "$file:$line_no" "hardcoded \`gov:\` should be \`{project}:\`" "replace with the placeholder, or add <!-- audit:ignore-placeholders --> if literal is intentional"
+    if [[ "$line" == *'`ductus:'* ]]; then
+      emit "$file:$line_no" "hardcoded \`ductus:\` should be \`{project}:\`" "replace with the placeholder, or add <!-- audit:ignore-placeholders --> if literal is intentional"
     fi
   done < "$file"
 done

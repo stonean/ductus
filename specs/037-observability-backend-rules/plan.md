@@ -4,9 +4,9 @@ Implements [037 — Backend observability rules](spec.md).
 
 ## Overview
 
-A rule-introducing, markdown-tier feature — the 034-performance-backend path exactly. It adds one rule file, `framework/rules/observability-backend.md`, on the **existing** `BE` surface (so no `scripts/lint-rule-ids.sh` change and no `data-model.md` — unlike 036, which introduced a new `QUAL` surface), and wires it into the `/govern` Shared Files manifest. The §Shared Files note is already count-free (036), so no count to update.
+A rule-introducing, markdown-tier feature — the 034-performance-backend path exactly. It adds one rule file, `framework/rules/observability-backend.md`, on the **existing** `BE` surface (so no `scripts/lint-rule-ids.sh` change and no `data-model.md` — unlike 036, which introduced a new `QUAL` surface), and wires it into the `/ductus` Shared Files manifest. The §Shared Files note is already count-free (036), so no count to update.
 
-Three categories ship — `METRIC`, `TRACE`, `HEALTH` — with six rules, two of them MUST. Verification is **design-time commitment** framing (what a spec/plan must state), enforced by `/gov:analyze` against feature artifacts, matching how the 034 performance rules work.
+Three categories ship — `METRIC`, `TRACE`, `HEALTH` — with six rules, two of them MUST. Verification is **design-time commitment** framing (what a spec/plan must state), enforced by `/ductus:analyze` against feature artifacts, matching how the 034 performance rules work.
 
 ## Technical Decisions
 
@@ -33,9 +33,9 @@ Six rules across three `## BE-{CATEGORY}` sections. Verification is phrased as a
 
 Operator-tunable values these rules imply (scrape interval, probe timeout) are governed by `configuration-cross.md` `CFG-*` — the observability rule requires the value to *exist*; `CFG-*` governs how it is named/validated. Cited, not restated.
 
-### Manifest wiring — `framework/bootstrap/govern.md`
+### Manifest wiring — `framework/bootstrap/ductus.md`
 
-Add `| \`framework/rules/observability-backend.md\` | \`specs/rules/observability-backend.md\` |` to the `### govern-owned shared files` table, slotted between `configuration-cross.md` and `performance-backend.md` (alphabetical). The `-backend.md` suffix means 024's loader selects it under the `backend` surface and 033's surface filter includes it when `backend` is configured — no change needed in either. The §Shared Files note is count-free, so no count edit.
+Add `| \`framework/rules/observability-backend.md\` | \`specs/rules/observability-backend.md\` |` to the `### ductus-owned shared files` table, slotted between `configuration-cross.md` and `performance-backend.md` (alphabetical). The `-backend.md` suffix means 024's loader selects it under the `backend` surface and 033's surface filter includes it when `backend` is configured — no change needed in either. The §Shared Files note is count-free, so no count edit.
 
 ### What this feature does NOT touch
 
@@ -47,14 +47,14 @@ Add `| \`framework/rules/observability-backend.md\` | \`specs/rules/observabilit
 | File | Action | Purpose |
 | --- | --- | --- |
 | `framework/rules/observability-backend.md` | Create | The observability rule set (`METRIC`/`TRACE`/`HEALTH`, six rules, two MUST) |
-| `framework/bootstrap/govern.md` | Modify | Add the manifest row (between `configuration-cross` and `performance-backend`) |
+| `framework/bootstrap/ductus.md` | Modify | Add the manifest row (between `configuration-cross` and `performance-backend`) |
 
 ## Trade-offs
 
-- **Three categories vs. five.** Chose `METRIC`/`TRACE`/`HEALTH`; deferred `SLO`/`ALERT` (clarify resolution) — they are operational policy, not per-feature design commitments `/gov:analyze` can check against a spec/plan. The `BE-{CATEGORY}` grammar admits them later.
+- **Three categories vs. five.** Chose `METRIC`/`TRACE`/`HEALTH`; deferred `SLO`/`ALERT` (clarify resolution) — they are operational policy, not per-feature design commitments `/ductus:analyze` can check against a spec/plan. The `BE-{CATEGORY}` grammar admits them later.
 - **Analyze-time vs. review-time verification.** Chose analyze-time design-time commitments (like 034), not code-pattern review (like 036's `QUAL-STUB-001`). Observability is something a spec/plan *commits to* up front; the absence of a metric or probe is a planning gap, caught best against artifacts.
 - **Two MUSTs only.** Readiness-distinct-from-liveness and trace-context propagation are the two absences that blind operators regardless of scale; everything else is contextual coverage (SHOULD). Keeping the MUST set tight avoids forcing instrumentation that may not fit every feature.
-- **Known limitation.** `/gov:analyze` checks that a spec/plan *commits* to these; it cannot verify the commitment is actually implemented in code — that residual gap is what `/gov:review` and tests cover, the same limitation every design-time rule carries.
+- **Known limitation.** `/ductus:analyze` checks that a spec/plan *commits* to these; it cannot verify the commitment is actually implemented in code — that residual gap is what `/ductus:review` and tests cover, the same limitation every design-time rule carries.
 
 ## Cross-spec impact
 

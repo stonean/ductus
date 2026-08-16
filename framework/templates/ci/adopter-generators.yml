@@ -1,31 +1,31 @@
-# govern generators and policy gates — adopter CI template.
+# ductus generators and policy gates — adopter CI template.
 #
-# Copy this file into your project at .github/workflows/govern-generators.yml
-# to enforce that govern's invariants stay intact on every PR. Two classes of
+# Copy this file into your project at .github/workflows/ductus-generators.yml
+# to enforce that ductus's invariants stay intact on every PR. Two classes of
 # check run:
 #
 #   1. Generator sync — generated frontmatter (currently spec `dependencies:`,
-#      via .govern/scripts/gen-spec-deps.sh) must match its sources. Safety net for
+#      via .ductus/scripts/gen-spec-deps.sh) must match its sources. Safety net for
 #      contributors who never installed the local pre-commit hook
-#      (.githooks/pre-commit, set up by /govern).
+#      (.githooks/pre-commit, set up by /ductus).
 #
 #   2. Review-blocking gate — every spec at `status: done` must have a
 #      non-null `review.last-run` and `review.blocking: false`. The local
-#      `/gov:implement` halt and `/gov:analyze` drift check catch this
+#      `/ductus:implement` halt and `/ductus:analyze` drift check catch this
 #      pre-merge; this step catches bypasses (direct frontmatter edits).
 #
-# When new adopter-relevant checks are added by future govern releases, this
-# template gains a step for each. Re-running /govern updates the template;
-# you re-copy it manually (CI files are not auto-installed by /govern — that
-# would require platform detection beyond govern's scope).
+# When new adopter-relevant checks are added by future ductus releases, this
+# template gains a step for each. Re-running /ductus updates the template;
+# you re-copy it manually (CI files are not auto-installed by /ductus — that
+# would require platform detection beyond ductus's scope).
 
-name: govern-generators
+name: ductus-generators
 
 on:
   pull_request:
     paths:
       - 'specs/**'
-      - '.govern/scripts/gen-*.sh'
+      - '.ductus/scripts/gen-*.sh'
       - '.githooks/**'
   push:
     branches:
@@ -36,18 +36,18 @@ permissions:
 
 jobs:
   check:
-    name: govern generators are in sync
+    name: ductus generators are in sync
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Run gen-spec-deps
-        run: ./.govern/scripts/gen-spec-deps.sh
+        run: ./.ductus/scripts/gen-spec-deps.sh
 
       - name: Fail if any generator produced a diff
         run: |
           if ! git diff --exit-code; then
-            echo "::error::Spec dependencies are out of sync with body links. Run /govern to install the pre-commit hook, or run .govern/scripts/gen-spec-deps.sh locally and re-commit."
+            echo "::error::Spec dependencies are out of sync with body links. Run /ductus to install the pre-commit hook, or run .ductus/scripts/gen-spec-deps.sh locally and re-commit."
             exit 1
           fi
 
@@ -57,9 +57,9 @@ jobs:
         # `review.last-run` to be a non-null timestamp and `review.blocking`
         # to be false. Pre-feature `done` specs without a `review:` block
         # are grandfathered (no finding) — adopters opt in to retroactive
-        # review by running /gov:review against the spec, which adds the
+        # review by running /ductus:review against the spec, which adds the
         # block. Catches the bypass case where someone edits frontmatter
-        # directly to set `done` without running /gov:review.
+        # directly to set `done` without running /ductus:review.
         run: |
           set -e
           fail=0
@@ -77,7 +77,7 @@ jobs:
             last_run=$(printf '%s\n' "$review_block" | sed -n 's/^[[:space:]]*last-run: *//p' | head -n1 | tr -d '"')
             blocking=$(printf '%s\n' "$review_block" | sed -n 's/^[[:space:]]*blocking: *//p' | head -n1)
             if [ -z "$last_run" ] || [ "$last_run" = "null" ]; then
-              echo "::error file=$f::Review-blocking gate: done spec missing or null review.last-run — run /gov:review"
+              echo "::error file=$f::Review-blocking gate: done spec missing or null review.last-run — run /ductus:review"
               fail=1
             elif [ "$blocking" = "true" ]; then
               echo "::error file=$f::Review-blocking gate: review.blocking=true — see $(dirname "$f")/review.md"

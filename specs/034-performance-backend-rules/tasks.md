@@ -9,10 +9,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Cross-reference rather than restate: `BE-PAGE` (pagination), `BE-AUTHZ-002`/`BE-AUTHZ-005` (cache-key tenant isolation), `BE-STATUS-001` (202 for async), `CFG-CONST-003` (named tunable constants).
 - Done when: the file exists with 13 well-formed rules, 8 MUST / 5 SHOULD, each MUST a DoS/exhaustion case.
 
-## 2. Register the file in the `/govern` manifest
+## 2. Register the file in the `/ductus` manifest
 
-- [x] Add `framework/rules/performance-backend.md → specs/rules/performance-backend.md` to the `### govern-owned shared files` table in `framework/bootstrap/govern.md` (alphabetical position, strategy: update).
-- Done when: the manifest row is present; `/govern` would install the file, and 033's `-backend` surface filter selects it.
+- [x] Add `framework/rules/performance-backend.md → specs/rules/performance-backend.md` to the `### ductus-owned shared files` table in `framework/bootstrap/ductus.md` (alphabetical position, strategy: update).
+- Done when: the manifest row is present; `/ductus` would install the file, and 033's `-backend` surface filter selects it.
 
 ## 3. Validate
 
@@ -24,5 +24,5 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 4. Review and complete
 
-- [x] Run `/gov:review` over the change set; resolve any MUST findings. (0 MUST / 0 SHOULD / 0 low-confidence — clean; see `review.md`.)
-- Done when: `/gov:review` reports no blocking violations and the spec can advance to `done`.
+- [x] Run `/ductus:review` over the change set; resolve any MUST findings. (0 MUST / 0 SHOULD / 0 low-confidence — clean; see `review.md`.)
+- Done when: `/ductus:review` reports no blocking violations and the spec can advance to `done`.

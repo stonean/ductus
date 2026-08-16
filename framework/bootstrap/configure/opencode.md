@@ -4,15 +4,15 @@ description: Configure opencode.json with permissions for slash commands.
 
 # Configure
 
-Configure the repo-root `opencode.json` `permission` block with the OpenCode permissions needed for the `govern` commands to run without per-call approval.
+Configure the repo-root `opencode.json` `permission` block with the OpenCode permissions needed for the `ductus` commands to run without per-call approval.
 
 ## Scope Boundaries
 
 - Read and write only the repo-root `opencode.json` (or the adopter's existing `opencode.jsonc` if that is where their config lives). Do NOT modify any other file.
 - This is the **same file** OpenCode reads its `mcp` server wiring from; touch only the `permission` region, and preserve `$schema`, `mcp`, and every other top-level key byte-for-byte.
-- Add missing entries to the `permission` object; do NOT reorder or rewrite non-canonical entries the user (or `/govern`) previously added beyond the canonical set below.
+- Add missing entries to the `permission` object; do NOT reorder or rewrite non-canonical entries the user (or `/ductus`) previously added beyond the canonical set below.
 - Do NOT scan source code, specs, or git history. This command only manages permissions.
-- Reference: no constitution sections apply — this command operates on agent-specific permission state, not `govern` artifacts.
+- Reference: no constitution sections apply — this command operates on agent-specific permission state, not `ductus` artifacts.
 
 ## Instructions
 
@@ -20,13 +20,13 @@ Configure the repo-root `opencode.json` `permission` block with the OpenCode per
 
 1. Read the repo-root `opencode.json` (fall back to `opencode.jsonc` if that exists instead; if neither exists, create `opencode.json` with `{ "$schema": "https://opencode.ai/config.json", "permission": {} }`). OpenCode validates config strictly and rejects unknown top-level keys, so preserve `$schema` and only add known keys.
 
-2. Merge the canonical entries below into the `permission` object additively. Preserve `$schema`, `mcp`, and any other top-level key; preserve `permission` entries the adopter added that are not in the canonical set. **Ordering matters** — OpenCode evaluates the **last** matching rule, so within the `bash` object the broad `"*": "ask"` comes first, specific `allow` patterns next, and `deny` patterns last; the top-level `"gvrn*"` allow is placed so no later broad rule shadows it.
+2. Merge the canonical entries below into the `permission` object additively. Preserve `$schema`, `mcp`, and any other top-level key; preserve `permission` entries the adopter added that are not in the canonical set. **Ordering matters** — OpenCode evaluates the **last** matching rule, so within the `bash` object the broad `"*": "ask"` comes first, specific `allow` patterns next, and `deny` patterns last; the top-level `"ductus*"` allow is placed so no later broad rule shadows it.
 
 3. Canonical `permission` entries:
 
    **Top-level tool actions:**
-   - `"edit": "allow"` — `govern` edits specs, `tasks.md`, `.govern/session.toml`, and config
-   - `"webfetch": "allow"`, `"websearch": "allow"` — `/govern` fetches the framework archive; research commands
+   - `"edit": "allow"` — `ductus` edits specs, `tasks.md`, `.ductus/session.toml`, and config
+   - `"webfetch": "allow"`, `"websearch": "allow"` — `/ductus` fetches the framework archive; research commands
 
    **`bash` pattern map (broad `ask` first, allows next, denies last):**
 
@@ -55,8 +55,8 @@ Configure the repo-root `opencode.json` `permission` block with the OpenCode per
      "markdownlint *": "allow",
      "markdownlint-cli2 *": "allow",
      "npx markdownlint-cli2 *": "allow",
-     ".govern/scripts/gen-*": "allow",
-     "./.govern/scripts/gen-*": "allow",
+     ".ductus/scripts/gen-*": "allow",
+     "./.ductus/scripts/gen-*": "allow",
      "scripts/install-hooks.sh *": "allow",
      "./scripts/install-hooks.sh *": "allow",
      "./.githooks/pre-commit": "allow",
@@ -74,10 +74,10 @@ Configure the repo-root `opencode.json` `permission` block with the OpenCode per
    }
    ```
 
-   **Runtime MCP tools (one glob — there is no dedicated `mcp` permission key; OpenCode matches MCP tools by tool-name pattern, and `"gvrn*"` covers every gvrn tool):**
+   **Runtime MCP tools (one glob — there is no dedicated `mcp` permission key; OpenCode matches MCP tools by tool-name pattern, and `"ductus*"` covers every ductus tool):**
 
    <!-- generated:mcp-allow:start -->
-   - `"gvrn*": "allow"`
+   - `"ductus*": "allow"`
    <!-- generated:mcp-allow:end -->
 
 4. Write the file atomically (tempfile + rename), preserving `$schema`, `mcp`, and all unspecified keys.

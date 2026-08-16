@@ -7,7 +7,7 @@ title: "005-workflows — data-model"
 ## Registry file
 
 **Location in framework:** `framework/workflows/registry.json`
-**Location in adopted project (after `/govern` sync):** `workflows/registry.json`
+**Location in adopted project (after `/ductus` sync):** `workflows/registry.json`
 
 The registry is a single JSON document containing a top-level array of registry entries:
 
@@ -33,7 +33,7 @@ The file uses a top-level array (not an object with a `version` or `entries` wra
 
 ### Validation rules
 
-Init and govern validate each entry at read time. An entry that fails validation is logged as a warning and skipped; the surrounding flow continues. Validation failures:
+Init and ductus validate each entry at read time. An entry that fails validation is logged as a warning and skipped; the surrounding flow continues. Validation failures:
 
 - Missing required field
 - `category` not in the fixed set
@@ -41,7 +41,7 @@ Init and govern validate each entry at read time. An entry that fails validation
 - `template` path does not end in `.md`
 - `template` file is not found in `framework/workflows/` (warned at scaffold time, not at registry-load time, so a registry can ship ahead of workflow files being added)
 
-If the registry file itself is missing or unparseable JSON, init/govern emit a single warning (`Workflow registry not found or invalid, skipping workflow recommendations`) and continue without the workflow step. The pipeline does not abort.
+If the registry file itself is missing or unparseable JSON, init/ductus emit a single warning (`Workflow registry not found or invalid, skipping workflow recommendations`) and continue without the workflow step. The pipeline does not abort.
 
 ## Trigger / tech stack mapping
 
@@ -60,7 +60,7 @@ Tech stack keys correspond to the questions asked by init step 4 (sourced from s
 | `css_ui` | 4c | CSS/UI |
 | `frontend_test_runner` | 4c | Frontend test runner |
 
-When matching against an AGENTS.md table (govern's path), the **Language** layer maps to either `backend_language` or `frontend_language` based on the existing layer label rules from 004 (use `Language` for backend-only or frontend-only projects, and the disambiguated `Backend language` / `Frontend language` for fullstack).
+When matching against an AGENTS.md table (ductus's path), the **Language** layer maps to either `backend_language` or `frontend_language` based on the existing layer label rules from 004 (use `Language` for backend-only or frontend-only projects, and the disambiguated `Backend language` / `Frontend language` for fullstack).
 
 ## Categories
 
@@ -88,10 +88,10 @@ Each workflow file is a `.md` file at `framework/workflows/{filename}` matching 
 
 **Scaffolded destination:** `{config_dir}/commands/{project}/workflows/{filename}`. The scaffold copy preserves the file stem; e.g., `eslint.md` is scaffolded as `eslint.md` under the project's `workflows/` subdirectory.
 
-Workflow files are not synced into adopted projects on `/govern` runs. They are fetched on demand from upstream at scaffold time using the same URL pattern as other governance file fetches.
+Workflow files are not synced into adopted projects on `/ductus` runs. They are fetched on demand from upstream at scaffold time using the same URL pattern as other governance file fetches.
 
 ## Project-level state
 
-**`{config_dir}/commands/{project}/workflows/`** — the directory that holds scaffolded workflow files in an adopted project. Existence of a file inside this directory means the corresponding workflow has already been scaffolded and is treated as "owned" by the project (not overwritten on subsequent govern runs). Removing a file from this directory makes the workflow eligible to be re-offered on the next govern run.
+**`{config_dir}/commands/{project}/workflows/`** — the directory that holds scaffolded workflow files in an adopted project. Existence of a file inside this directory means the corresponding workflow has already been scaffolded and is treated as "owned" by the project (not overwritten on subsequent ductus runs). Removing a file from this directory makes the workflow eligible to be re-offered on the next ductus run.
 
-**`workflows/registry.json`** — the project's local copy of the framework registry, written by govern's manifest sync (`update` strategy). Provides a manifest of available workflows for inspection and is the source govern reads at recommendation time within a single run.
+**`workflows/registry.json`** — the project's local copy of the framework registry, written by ductus's manifest sync (`update` strategy). Provides a manifest of available workflows for inspection and is the source ductus reads at recommendation time within a single run.

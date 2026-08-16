@@ -11,15 +11,15 @@ Resolve open questions and advance a spec from `draft` to `clarified`, or resolv
 
 Pipeline gate: `draft` → `clarified`. A spec cannot be planned until all open questions are resolved, edge cases documented, and acceptance criteria verified. When a scenario is targeted, resolves scenario-level open questions instead.
 
-This command is the resolver, not the back-edge entry point. The `clarified` / `planned` / `in-progress` → `draft` back-edge is owned by `/gov:amend` (see §spec-lifecycle in the constitution and spec 014). The hot path here walks open questions on a `draft` spec and advances to `clarified`. A recovery branch handles hand-edited specs that arrive at `/gov:clarify` with a non-`draft` status and unresolved questions in the body — a state that should not occur via normal usage but can arise from manual frontmatter edits or migrations from other tools.
+This command is the resolver, not the back-edge entry point. The `clarified` / `planned` / `in-progress` → `draft` back-edge is owned by `/ductus:amend` (see §spec-lifecycle in the constitution and spec 014). The hot path here walks open questions on a `draft` spec and advances to `clarified`. A recovery branch handles hand-edited specs that arrive at `/ductus:clarify` with a non-`draft` status and unresolved questions in the body — a state that should not occur via normal usage but can arise from manual frontmatter edits or migrations from other tools.
 
 ## Context
 
-Use the session target from `.govern/session.toml`. If `$ARGUMENTS` is provided, use it to override the session target. If no session target is set and no arguments provided, stop and tell the user to run `/gov:target` first.
+Use the session target from `.ductus/session.toml`. If `$ARGUMENTS` is provided, use it to override the session target. If no session target is set and no arguments provided, stop and tell the user to run `/ductus:target` first.
 
 ## Target File Detection
 
-Read `.govern/session.toml`. If the session includes a `scenario` and `scenario-path`, operate on the scenario file (the scenario-targeted branch of the Instructions below; detailed walk under **Scenario-targeted clarify** in the Markdown-only reference). Otherwise, operate on the feature spec.
+Read `.ductus/session.toml`. If the session includes a `scenario` and `scenario-path`, operate on the scenario file (the scenario-targeted branch of the Instructions below; detailed walk under **Scenario-targeted clarify** in the Markdown-only reference). Otherwise, operate on the feature spec.
 
 ## Gate
 
@@ -29,9 +29,9 @@ On a feature-targeted run, read the spec's frontmatter `status` field and count 
 | --- | --- | --- |
 | `draft` | yes | Walk questions, then verify acceptance criteria, then advance to `clarified` (existing hot path) |
 | `draft` | no | Verify acceptance criteria, then advance to `clarified` (existing hot path) |
-| `clarified` / `planned` / `in-progress` | no | Stop with: "Spec is already `{status}`. Run `/gov:plan` to create the technical plan." for `clarified`, or "Run `/gov:implement` to continue implementation." for `planned` / `in-progress`. |
+| `clarified` / `planned` / `in-progress` | no | Stop with: "Spec is already `{status}`. Run `/ductus:plan` to create the technical plan." for `clarified`, or "Run `/ductus:implement` to continue implementation." for `planned` / `in-progress`. |
 | `clarified` / `planned` / `in-progress` | yes | Run the **Recovery path** (see the Markdown-only reference below). |
-| `done` | (any) | Stop with: "Spec is `done`. Run `/gov:amend` to capture this as a scenario instead." Exit without mutation. |
+| `done` | (any) | Stop with: "Spec is `done`. Run `/ductus:amend` to capture this as a scenario instead." Exit without mutation. |
 
 The "already `{status}`" branch and the `done` branch never modify any file.
 
@@ -42,27 +42,27 @@ Feature-targeted:
 - Read only the target feature's spec file (frontmatter and body) and dependency spec frontmatter. For the Recovery path, also list (without reading) `plan.md`, `tasks.md`, `data-model.md`, and `specs/{feature}/scenarios/`. Do NOT read plan files, tasks, source code, test files, scenarios, or unrelated specs' bodies *speculatively* or to browse. **Grounding carve-out (§grounding):** when an open question is a factual question about existing reality — how current code behaves, what a schema or interface holds, what a dev database contains — you MAY read the specific source that settles it (and MUST cite it in the resolution), rather than resolve the question from conjecture. Read narrowly, only what answers the question.
 - Scenario-level open questions are not surfaced — spec-level and scenario-level questions are independent concerns.
 - Do NOT begin planning or implementation work. This command resolves questions and verifies acceptance criteria only.
-- Reference: §grounding, §spec-requirements, §spec-lifecycle, §pipeline-boundaries, §text-first-artifacts (constitution loaded by `/gov:target` — do not re-read).
+- Reference: §grounding, §spec-requirements, §spec-lifecycle, §pipeline-boundaries, §text-first-artifacts (constitution loaded by `/ductus:target` — do not re-read).
 
 Scenario-targeted:
 
 - Read the targeted scenario file (frontmatter and body). May read the parent spec's frontmatter `status` field to decide which next-step suggestion to display. Do NOT read the parent spec's open questions or body, plan files, tasks, source code, test files, or unrelated specs *speculatively* or to browse. The **Grounding carve-out (§grounding)** above applies here too: a scenario question about existing reality may be settled by reading the specific source that answers it, cited in the resolution.
 - Do NOT begin planning or implementation work. This command resolves scenario-level questions only.
-- Reference: §grounding, §scenarios, §text-first-artifacts (constitution loaded by `/gov:target` — do not re-read).
+- Reference: §grounding, §scenarios, §text-first-artifacts (constitution loaded by `/ductus:target` — do not re-read).
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional gvrn runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no gvrn MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write) per the Markdown-only reference below.
+> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no ductus MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write) per the Markdown-only reference below.
 
 Steps 1–12 are the feature-targeted walk; a scenario-targeted session runs steps 1, 6, and 13. The detailed walk — the question-resolution sub-procedure, the recovery prompt wording, and the scenario-targeted variant — lives under the Markdown-only reference below.
 
-**Exec-path scope** (`gvrn exec clarify`): steps 7–8 are semantic host work with no extension marker, so the subprocess walker no-ops them by design — they cannot fold into the `askClarifyQuestion` round trip, which is one question per trip, because they are spec-wide passes that must run even when the question loop has nothing to walk (the zero-questions short-circuit in step 2). A host walking this command file directly (the MCP path) and the markdown-only path both perform steps 7–8 in full; a host driving exec performs them itself before accepting the step-11 gate. This scope reduction is deliberate and recorded in the spec 022 data-model's exec-path note — not a silent gap.
+**Exec-path scope** (`ductus exec clarify`): steps 7–8 are semantic host work with no extension marker, so the subprocess walker no-ops them by design — they cannot fold into the `askClarifyQuestion` round trip, which is one question per trip, because they are spec-wide passes that must run even when the question loop has nothing to walk (the zero-questions short-circuit in step 2). A host walking this command file directly (the MCP path) and the markdown-only path both perform steps 7–8 in full; a host driving exec performs them itself before accepting the step-11 gate. This scope reduction is deliberate and recorded in the spec 022 data-model's exec-path note — not a silent gap.
 
 <!-- audit:ignore-promotion -->
-1. Resolve the target from `.govern/session.toml`; `$ARGUMENTS` overrides the session target. If no session target is set and no arguments are provided, stop and tell the user to run `/gov:target` first. When the session includes a `scenario` and `scenario-path`, this is a **scenario-targeted** run: read the scenario file, run the question loop (step 6) against it, then wrap up at step 13 — steps 2–5 and 7–12 are feature-spec work and do not apply.
+1. Resolve the target from `.ductus/session.toml`; `$ARGUMENTS` overrides the session target. If no session target is set and no arguments are provided, stop and tell the user to run `/ductus:target` first. When the session includes a `scenario` and `scenario-path`, this is a **scenario-targeted** run: read the scenario file, run the question loop (step 6) against it, then wrap up at step 13 — steps 2–5 and 7–12 are feature-spec work and do not apply.
 
 2. Invoke `read-spec` against the target feature (with `include-body`) and branch on the pair `(status, open-question count)` per the Gate table above — the result's frontmatter carries the status and its open-questions list carries the count (the Gate's entry-counting rule; placeholder lines are not entries):
-   - Missing feature or `spec.md`: stop and report: "Spec does not exist. Run `/gov:specify` first."
+   - Missing feature or `spec.md`: stop and report: "Spec does not exist. Run `/ductus:specify` first."
    - `draft` with open questions: continue the full walk (steps 4–12).
    - `draft` with zero open questions: short-circuit — skip the question loop (step 6 runs no extension round trip) and continue at step 7 toward the status-advance gate.
    - `clarified` / `planned` / `in-progress` with zero open questions: stop with the "already `{status}`" message from the Gate table. No file is modified.
@@ -83,25 +83,25 @@ Steps 1–12 are the feature-targeted walk; a scenario-targeted session runs ste
 <!-- audit:ignore-promotion -->
 8. **Verify acceptance criteria and cross-spec impact** — check each criterion is concrete, testable, and unambiguous; rewrite vague ones; flag missing criteria. Then list every sibling spec referenced by inline markdown link in the body (the union the dependency scan already computed) and ask: "Do any of these referenced specs need an update because of decisions made here?" If yes, the §cross-spec-impact rule applies — the change goes in the affected spec as a new acceptance criterion or scenario, with a back-link to this spec. This check is informational; it does not block the transition.
 
-9. Invoke `label-criteria` against the feature so any criterion added or rewritten during clarification carries its stable `AC{n}:` label before the spec advances. It runs **after** the criteria pass above, not before: a criterion rewritten in step 8 keeps the label it already had (a rewrite that changes the requirement's meaning is a new criterion with a new label, but that is an authoring judgment nothing mechanical can make), and a criterion *added* in step 8 gets one. Already-labelled criteria are left byte-identical, so the pass is safe to run on every clarification. Skipped for scenario-targeted runs — scenarios carry behavior and edge cases, not acceptance criteria. With no gvrn runtime registered, perform the same derivation by hand per the markdown-only path.
+9. Invoke `label-criteria` against the feature so any criterion added or rewritten during clarification carries its stable `AC{n}:` label before the spec advances. It runs **after** the criteria pass above, not before: a criterion rewritten in step 8 keeps the label it already had (a rewrite that changes the requirement's meaning is a new criterion with a new label, but that is an authoring judgment nothing mechanical can make), and a criterion *added* in step 8 gets one. Already-labelled criteria are left byte-identical, so the pass is safe to run on every clarification. Skipped for scenario-targeted runs — scenarios carry behavior and edge cases, not acceptance criteria. With no ductus runtime registered, perform the same derivation by hand per the markdown-only path.
 
 10. Run the **validation gate** before proposing the status transition — every check must pass: all open questions are resolved (none remain in the Open Questions section — if questions remain that need user input, list them and keep `status` at `draft`); acceptance criteria are concrete and testable with no empty placeholders; dependencies are at `clarified` or later (step 5); and invoke `lint-markdown` against the modified spec file, requiring a clean result. If any check fails, report the specific failures and do not propose the transition — the user fixes the issues and re-runs the command.
 
 11. Invoke `gate-confirm` with a prompt that presents a summary of the changes and the resolved questions and asks the user to approve the transition from `draft` to `clarified`. On confirmation, continue to step 12; on denial, the walker exits cleanly without modifying the spec.
 
-12. Invoke `set-status` to flip the spec frontmatter's status from `draft` to `clarified`; the primitive guards against a stale "from" value so concurrent edits surface as an operational error rather than a silent overwrite. Then display the next step: "Run `/gov:plan` to create the technical plan."
+12. Invoke `set-status` to flip the spec frontmatter's status from `draft` to `clarified`; the primitive guards against a stale "from" value so concurrent edits surface as an operational error rather than a silent overwrite. Then display the next step: "Run `/ductus:plan` to create the technical plan."
 
-13. **Scenario-targeted wrap-up** (scenario-targeted runs only): after the question loop, enumerate edge cases specific to the scenario's behavior (empty inputs, missing data, boundary values, concurrent access) and add them to the scenario's `## Edge Cases` section; confirm the scenario's Behavior section is unambiguous and complete; if questions remain that need user input, list them. The scenario has no status field — resolution is complete when all open questions are removed from the Open Questions section. Invoke `lint-markdown` against the modified scenario file. Read the parent spec's frontmatter `status` field (a host read — this step already dispatches `lint-markdown`, so it does not also invoke read-spec), display "Scenario clarification complete.", and suggest `/gov:implement` if the parent spec is `planned` or `in-progress` (both states are accepted by `/gov:implement`'s gate); for other parent-spec states (`draft`, `clarified`, `done`), display the completion message without a next-step suggestion — the parent spec's own pipeline state determines what comes next.
+13. **Scenario-targeted wrap-up** (scenario-targeted runs only): after the question loop, enumerate edge cases specific to the scenario's behavior (empty inputs, missing data, boundary values, concurrent access) and add them to the scenario's `## Edge Cases` section; confirm the scenario's Behavior section is unambiguous and complete; if questions remain that need user input, list them. The scenario has no status field — resolution is complete when all open questions are removed from the Open Questions section. Invoke `lint-markdown` against the modified scenario file. Read the parent spec's frontmatter `status` field (a host read — this step already dispatches `lint-markdown`, so it does not also invoke read-spec), display "Scenario clarification complete.", and suggest `/ductus:implement` if the parent spec is `planned` or `in-progress` (both states are accepted by `/ductus:implement`'s gate); for other parent-spec states (`draft`, `clarified`, `done`), display the completion message without a next-step suggestion — the parent spec's own pipeline state determines what comes next.
 
 ## Markdown-only reference
 
-With no gvrn runtime registered, the host walks the same contract with its own file tools (Read, Edit, Write) — no shell-pipeline substitution (§runtime-host-integration). The Gate table above governs both paths.
+With no ductus runtime registered, the host walks the same contract with its own file tools (Read, Edit, Write) — no shell-pipeline substitution (§runtime-host-integration). The Gate table above governs both paths.
 
 ### Feature-targeted clarify (hot path: `draft` spec)
 
-Read `spec.md`. If it does not exist, stop and report: "Spec does not exist. Run `/gov:specify` first." Then perform the clarify gate defined in `.govern/constitution.md` (§spec-requirements, §spec-lifecycle):
+Read `spec.md`. If it does not exist, stop and report: "Spec does not exist. Run `/ductus:specify` first." Then perform the clarify gate defined in `.ductus/constitution.md` (§spec-requirements, §spec-lifecycle):
 
-0. **Recompute dependencies (safety net).** Run `.govern/scripts/gen-spec-deps.sh --dry-run` (it walks every spec — there is no per-spec mode). If it reports a diff, the `dependencies:` frontmatter is stale from uncommitted body edits; surface that and recommend committing (the pre-commit hook syncs it) or running the generator manually. Do not run it for real from this command — evaluate dependency readiness against the current frontmatter and note the caveat.
+0. **Recompute dependencies (safety net).** Run `.ductus/scripts/gen-spec-deps.sh --dry-run` (it walks every spec — there is no per-spec mode). If it reports a diff, the `dependencies:` frontmatter is stale from uncommitted body edits; surface that and recommend committing (the pre-commit hook syncs it) or running the generator manually. Do not run it for real from this command — evaluate dependency readiness against the current frontmatter and note the caveat.
 
 1. **Resolve open questions one at a time** — process each open question individually in sequence:
    1. Display the question with its full context.
@@ -131,11 +131,11 @@ After the review:
 - If any check fails, report the specific failures and do not propose the transition. The user fixes the issues and re-runs the command.
 - If all checks pass, present a summary of changes and ask the user to approve the transition to `clarified`. Do not update the status until the user confirms.
 - On confirmation, update the frontmatter `status` field from `draft` to `clarified`.
-- Display the next step: "Run `/gov:plan` to create the technical plan."
+- Display the next step: "Run `/ductus:plan` to create the technical plan."
 
 ### Recovery path: non-`draft` spec with open questions
 
-Triggered only when the gate sees `(status ∈ {clarified, planned, in-progress}) && open-question count ≥ 1`. This state should not occur via normal usage — `/gov:amend` reverts a spec to `draft` whenever it records a new open question on a non-`draft` spec — but it can arise from a manual frontmatter edit or a spec migrated from another tool.
+Triggered only when the gate sees `(status ∈ {clarified, planned, in-progress}) && open-question count ≥ 1`. This state should not occur via normal usage — `/ductus:amend` reverts a spec to `draft` whenever it records a new open question on a non-`draft` spec — but it can arise from a manual frontmatter edit or a spec migrated from another tool.
 
 Before mutating anything, surface the inconsistency to the user:
 
@@ -147,7 +147,7 @@ Before mutating anything, surface the inconsistency to the user:
 2. **Prompt the user:**
    > Spec is `{status}` but has {N} unresolved open questions in the body — this state usually arises from a manual frontmatter edit. Revert status to `draft` and walk the questions?
 3. **Confirm** — update the frontmatter `status` field to `draft` (the `set-status` primitive on the runtime path; a direct frontmatter edit otherwise), then run the **Hot path: `draft` spec** procedure above (including the dependency-readiness check; the post-revert walk runs the same checks as a normal `draft` clarify). On successful resolution, the spec advances back to `clarified`. Downstream artifacts (`plan.md`, `tasks.md`, `data-model.md`, scenario files) are not deleted or rewritten by this command.
-4. **Decline** — exit without modifying any file. The spec retains its inconsistent state and open questions remain in `## Open Questions`. The next `/gov:clarify` invocation offers the same prompt — the system surfaces the inconsistency on every clarify attempt rather than silently advancing.
+4. **Decline** — exit without modifying any file. The spec retains its inconsistent state and open questions remain in `## Open Questions`. The next `/ductus:clarify` invocation offers the same prompt — the system surfaces the inconsistency on every clarify attempt rather than silently advancing.
 
 `## Resolved Questions` is never re-walked even on the recovery path; only items in `## Open Questions` are processed.
 
@@ -170,4 +170,4 @@ After the review:
 - If questions remain that need user input, list them.
 - The scenario does not have its own status field — resolution is complete when all open questions are removed from the Open Questions section.
 - Run `npx markdownlint-cli2` on the modified file.
-- Read the parent spec's frontmatter `status` field. Display: "Scenario clarification complete." and suggest `/gov:implement` if the parent spec is `planned` or `in-progress` (both states are accepted by `/gov:implement`'s gate). For other parent-spec states (`draft`, `clarified`, `done`), display the completion message without a next-step suggestion — the parent spec's own pipeline state determines what comes next.
+- Read the parent spec's frontmatter `status` field. Display: "Scenario clarification complete." and suggest `/ductus:implement` if the parent spec is `planned` or `in-progress` (both states are accepted by `/ductus:implement`'s gate). For other parent-spec states (`draft`, `clarified`, `done`), display the completion message without a next-step suggestion — the parent spec's own pipeline state determines what comes next.

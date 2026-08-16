@@ -4,7 +4,7 @@ Implements [043 — Workflows sunset](spec.md).
 
 ## Overview
 
-Delete the workflows feature in one coordinated pass: remove `framework/workflows/` and every procedural surface that drives it (the `/govern` Workflow recommendation flow, the Shared Files registry row, the `[workflows]` config schema, `init.md` §8), register a `workflows-sunset` migration that cleans adopter projects (subsuming the two dormant 005-era migrations, which are archived per 027's sunset flow), sweep the remaining references by meaning across live artifacts, annotate the affected done specs, and ship as gvrn 0.23.0 with the `gvrn-v0.23.0` tag as the completion gate.
+Delete the workflows feature in one coordinated pass: remove `framework/workflows/` and every procedural surface that drives it (the `/ductus` Workflow recommendation flow, the Shared Files registry row, the `[workflows]` config schema, `init.md` §8), register a `workflows-sunset` migration that cleans adopter projects (subsuming the two dormant 005-era migrations, which are archived per 027's sunset flow), sweep the remaining references by meaning across live artifacts, annotate the affected done specs, and ship as gvrn 0.23.0 with the `gvrn-v0.23.0` tag as the completion gate.
 
 ## Technical Decisions
 
@@ -21,9 +21,9 @@ Delete the workflows feature in one coordinated pass: remove `framework/workflow
 
 ### Archive per 027's sunset flow
 
-`skills-to-workflows` and `workflow-filename-rename` leave `framework/migrations.toml`; their procedure-file text is appended to root `CHANGELOG.md` under `## Archived migrations` with headings naming id, `introduced_in`, and `sunset_after` (027 acceptance criterion, `specs/027-bootstrap-migration-registry/spec.md:99`), replacing the *"None yet"* placeholder; the two `framework/migrations/*.md` files are deleted. The registry's stale-reference behavior (`framework/bootstrap/govern.md` §Pre-run Migrations) already defines what happens when an adopter's `last_applied` names an archived id — no new mechanism needed.
+`skills-to-workflows` and `workflow-filename-rename` leave `framework/migrations.toml`; their procedure-file text is appended to root `CHANGELOG.md` under `## Archived migrations` with headings naming id, `introduced_in`, and `sunset_after` (027 acceptance criterion, `specs/027-bootstrap-migration-registry/spec.md:99`), replacing the *"None yet"* placeholder; the two `framework/migrations/*.md` files are deleted. The registry's stale-reference behavior (`framework/bootstrap/ductus.md` §Pre-run Migrations) already defines what happens when an adopter's `last_applied` names an archived id — no new mechanism needed.
 
-### `framework/bootstrap/govern.md` surgery
+### `framework/bootstrap/ductus.md` surgery
 
 Grounded inventory of every feature reference (line numbers pre-edit):
 
@@ -41,12 +41,12 @@ Generic uses of the word (`:30` "tar -xzf workflow", `:1072` "fits your workflow
 
 ### `init.md` is hand-maintained — §8 removed by hand
 
-`.claude/commands/gov/init.md` is the one generator exception (AGENTS.md gotcha): its **### 8. Recommend and scaffold workflows** (`:144-168`) is removed by hand, later step numbers renumbered. The framework-implies-language inference at `:40` **stays** — only its justification changes: "since language-triggered workflows … match on it" becomes the table's remaining consumers (documentation value; `/gov:review`'s tech-stack alignment check reads the section as prose, `framework/commands/review.md:100`).
+`.claude/commands/ductus/init.md` is the one generator exception (AGENTS.md gotcha): its **### 8. Recommend and scaffold workflows** (`:144-168`) is removed by hand, later step numbers renumbered. The framework-implies-language inference at `:40` **stays** — only its justification changes: "since language-triggered workflows … match on it" becomes the table's remaining consumers (documentation value; `/ductus:review`'s tech-stack alignment check reads the section as prose, `framework/commands/review.md:100`).
 
 ### Constitution edits
 
 - Canonical-source map: drop the `Workflow registry | framework/workflows/registry.json` row (`framework/constitution.md:506`).
-- §runtime-boundary eligibility criterion 2(b) (`framework/constitution.md:471`): "implemented as a bash script invoked by `govern` workflows" — the phrase reads as the feature post-removal; reword to "implemented as a bash script the framework invokes (pre-commit hooks, generators, CI)". Meaning unchanged; the criterion never depended on the workflows feature.
+- §runtime-boundary eligibility criterion 2(b) (`framework/constitution.md:471`): "implemented as a bash script invoked by `ductus` workflows" — the phrase reads as the feature post-removal; reword to "implemented as a bash script the framework invokes (pre-commit hooks, generators, CI)". Meaning unchanged; the criterion never depended on the workflows feature.
 
 There is no root `constitution.md` to sync (verified absent; the AGENTS.md project-structure note claiming one is pre-existing drift, out of scope).
 
@@ -55,13 +55,13 @@ There is no root `constitution.md` to sync (verified absent; the AGENTS.md proje
 - `framework/commands/groom.md` `:49`, `:82`: "the project's lint/format/test workflows cover the common cases" → "the project's lint/format/test tooling covers the common cases" (same meaning, no feature reference; placeholders untouched).
 - `framework/commands/link.md` `:71`: drop `[workflows]` from the illustrative preserve list (the list is explicitly non-exhaustive, so removal is safe).
 - `framework/templates/project/agents.md` `:74-79`: the Skills comment's disambiguation against "this repo's `framework/workflows/`" is dropped; the Skills description stands alone.
-- Regenerate `.claude/commands/gov/*.md` via `scripts/gen-claude-commands.sh` (the pre-commit hook path) after source edits.
+- Regenerate `.claude/commands/ductus/*.md` via `scripts/gen-claude-commands.sh` (the pre-commit hook path) after source edits.
 
 ### Runtime: comment-only code changes, version bump, no golden re-bless for the version
 
 - `runtime/src/schema/paths.rs:109`: drop `[workflows]` from the host-driven config-writes enumeration in the doc comment.
-- `runtime/src/primitives/enforce_manifest.rs:8`: the module doc's "legacy workflow filenames" example becomes a generic "historical conventions" pointer. Test identifiers (`legacy-workflow.md` at `:273-296`, the `workflows` temp dir at `:394`) are arbitrary test data with no feature coupling — left as-is, as is the `govern-basic` fixture's `framework/skills/old-skill.md` (an adopter legacy-state fixture).
-- `runtime/Cargo.toml` `0.22.0` → `0.23.0` + a `runtime/CHANGELOG.md` 0.23.0 section. Parity goldens store the version as `{{runtime-version}}` — no re-bless for the bump (AGENTS.md rule; refresh `runtime/target/release/gvrn` instead). If a parity golden embeds changed `groom.md` step text, that specific golden is re-blessed intentionally as a content change — never to absorb a version delta.
+- `runtime/src/primitives/enforce_manifest.rs:8`: the module doc's "legacy workflow filenames" example becomes a generic "historical conventions" pointer. Test identifiers (`legacy-workflow.md` at `:273-296`, the `workflows` temp dir at `:394`) are arbitrary test data with no feature coupling — left as-is, as is the `ductus-basic` fixture's `framework/skills/old-skill.md` (an adopter legacy-state fixture).
+- `runtime/Cargo.toml` `0.22.0` → `0.23.0` + a `runtime/CHANGELOG.md` 0.23.0 section. Parity goldens store the version as `{{runtime-version}}` — no re-bless for the bump (AGENTS.md rule; refresh `runtime/target/release/ductus` instead). If a parity golden embeds changed `groom.md` step text, that specific golden is re-blessed intentionally as a content change — never to absorb a version delta.
 
 ### Sibling done-spec annotations (mechanical-class, no back-edge)
 
@@ -76,7 +76,7 @@ The acceptance sweep greps live artifacts (`framework/`, `scripts/`, `runtime/`,
 | File | Action | Purpose |
 | --- | --- | --- |
 | `framework/workflows/` (14 files) | Delete | The feature's templates + `registry.json` |
-| `framework/bootstrap/govern.md` | Modify | Remove recommendation flow, manifest row, config schema, preamble/write-policy/layout mentions |
+| `framework/bootstrap/ductus.md` | Modify | Remove recommendation flow, manifest row, config schema, preamble/write-policy/layout mentions |
 | `framework/migrations.toml` | Modify | Add `workflows-sunset`; remove two subsumed entries; relocate audit comment |
 | `framework/migrations/workflows-sunset.md` | Create | Migration procedure |
 | `framework/migrations/skills-to-workflows.md` | Delete | Archived to `CHANGELOG.md` |
@@ -88,8 +88,8 @@ The acceptance sweep greps live artifacts (`framework/`, `scripts/`, `runtime/`,
 | `framework/templates/project/agents.md` | Modify | Drop workflows disambiguation from Skills comment |
 | `README.md` | Modify | Drop `[workflows]` docs, example TOML section, repo-layout row; prose-claim pass |
 | `AGENTS.md` | Modify | Drop project-structure bullet, gotcha, procedural-fidelity mention |
-| `.claude/commands/gov/init.md` | Modify | Remove §8 by hand; reword `:40` justification |
-| `.claude/commands/gov/groom.md`, `link.md` | Regenerate | Via `scripts/gen-claude-commands.sh` |
+| `.claude/commands/ductus/init.md` | Modify | Remove §8 by hand; reword `:40` justification |
+| `.claude/commands/ductus/groom.md`, `link.md` | Regenerate | Via `scripts/gen-claude-commands.sh` |
 | `runtime/src/schema/paths.rs` | Modify | Doc-comment enumeration |
 | `runtime/src/primitives/enforce_manifest.rs` | Modify | Module doc-comment example |
 | `runtime/Cargo.toml`, `runtime/CHANGELOG.md` | Modify | 0.23.0 bump + entry |
@@ -101,7 +101,7 @@ The acceptance sweep greps live artifacts (`framework/`, `scripts/`, `runtime/`,
 ## Trade-offs
 
 - **Deprecate-in-place (stop offering, keep files) — rejected.** Dead templates and an unreferenced registry are exactly the drift §drift-prevention exists to prevent; the manifest's `update` strategy would also keep rewriting an orphaned `workflows/registry.json` into adopter repos forever.
-- **Relocate templates to an examples/ directory — rejected.** Still a maintenance surface making the same claim (that govern owns lint/test/format invocation) the removal rationale rejects; adopters wanting these recipes have their tools' own documentation.
+- **Relocate templates to an examples/ directory — rejected.** Still a maintenance surface making the same claim (that ductus owns lint/test/format invocation) the removal rationale rejects; adopters wanting these recipes have their tools' own documentation.
 - **Big-bang directory delete in the migration — rejected in clarify Q1.** Exact-set deletion costs a fixed filename list but preserves adopter-authored files; the subsumed `workflow-filename-rename` set this precedent.
 - **Known limitation:** an adopter who pinned or customized scaffolded workflow files keeps orphaned slash commands under the `{project}:workflows:` namespace — their files, their choice; nothing references them after the sweep.
 - **Known limitation:** after `sunset_after = "0.25.0"` passes, stragglers apply `workflows-sunset` manually from the `CHANGELOG.md` recipe — the accepted 027 contract for every migration.

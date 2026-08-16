@@ -27,7 +27,7 @@ review:
      in the body — do not edit it by hand.
 
      Cross-service references: to reference a spec in another service (its own
-     repo with its own govern install), write a normal inline markdown link to
+     repo with its own ductus install), write a normal inline markdown link to
      that spec's absolute canonical URL in the body — shaped like (backticks
      here only to keep this example from being harvested as a real reference):
      `[api 014-auth-tokens](https://github.com/acme/api/blob/main/specs/014-auth-tokens/spec.md)`.

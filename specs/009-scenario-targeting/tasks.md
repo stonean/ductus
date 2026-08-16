@@ -20,7 +20,7 @@ Done when: `templates/scenario.md` includes Open Questions and Resolved Question
 - [x] Add scenario fields (`scenario`, `scenarioPath`) to session file write
 - [x] Add scenario detail to target display (scenario name, spec-ref, context summary)
 - [x] Update `commands/target.md`
-- [x] Re-derive `.claude/commands/gov/target.md`
+- [x] Re-derive `.claude/commands/ductus/target.md`
 
 Done when: target command handles no-args display, feature-only targeting (clears scenario), and feature/scenario targeting with validation and error messages.
 
@@ -28,7 +28,7 @@ Done when: target command handles no-args display, feature-only targeting (clear
 
 - [x] After creating the scenario file, write session file with `scenario` and `scenarioPath` fields (no confirmation prompt)
 - [x] Update `commands/scenario.md`
-- [x] Re-derive `.claude/commands/gov/scenario.md`
+- [x] Re-derive `.claude/commands/ductus/scenario.md`
 
 Done when: creating a scenario automatically sets it as the session target.
 
@@ -38,7 +38,7 @@ Done when: creating a scenario automatically sets it as the session target.
 - [x] Enumerate scenario-specific edge cases and verify behavior section
 - [x] When no scenario targeted, existing behavior unchanged — do not surface scenario-level questions
 - [x] Update `commands/clarify.md`
-- [x] Re-derive `.claude/commands/gov/clarify.md`
+- [x] Re-derive `.claude/commands/ductus/clarify.md`
 
 Done when: clarify operates on the scenario file when a scenario is targeted, and on the spec when not.
 
@@ -46,7 +46,7 @@ Done when: clarify operates on the scenario file when a scenario is targeted, an
 
 - [x] Add scenario-level display when a scenario is targeted: open questions, spec-ref, context summary
 - [x] Update `commands/status.md`
-- [x] Re-derive `.claude/commands/gov/status.md`
+- [x] Re-derive `.claude/commands/ductus/status.md`
 
 Done when: status shows scenario detail when a scenario is targeted.
 
@@ -54,7 +54,7 @@ Done when: status shows scenario detail when a scenario is targeted.
 
 - [x] Add scenario context loading: when a scenario is targeted, include the scenario file as primary context for implementation
 - [x] Update `commands/implement.md`
-- [x] Re-derive `.claude/commands/gov/implement.md`
+- [x] Re-derive `.claude/commands/ductus/implement.md`
 
 Done when: implement scopes context to the targeted scenario when one is set.
 
@@ -62,7 +62,7 @@ Done when: implement scopes context to the targeted scenario when one is set.
 
 - [x] Verify `commands/question.md` already handles scenario targeting via Target File Detection section
 - [x] If any gaps exist, update the command
-- [x] Verify `.claude/commands/gov/question.md` matches
+- [x] Verify `.claude/commands/ductus/question.md` matches
 
 Done when: question command correctly appends to scenario Open Questions when a scenario is targeted and spec Open Questions when not.
 

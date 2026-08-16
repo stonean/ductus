@@ -4,14 +4,14 @@ description: Configure .agents/settings.json with permissions for slash commands
 
 # Configure
 
-Configure `{cli-config-dir}/settings.json` with the Antigravity tool permissions needed for the `govern` skills to run without per-call approval.
+Configure `{cli-config-dir}/settings.json` with the Antigravity tool permissions needed for the `ductus` skills to run without per-call approval.
 
 ## Scope Boundaries
 
 - Read and write only `{cli-config-dir}/settings.json`. Do NOT modify any other file.
 - Add missing entries and remove exact-match duplicates from `permissions.allow`, `permissions.deny`, and `permissions.ask`; do NOT reorder or rewrite non-duplicate entries the user (or another command) added beyond the canonical set listed below.
 - Do NOT scan source code, specs, or git history. This command only manages permissions.
-- Reference: no constitution sections apply — this command operates on agent-specific permission state, not `govern` artifacts.
+- Reference: no constitution sections apply — this command operates on agent-specific permission state, not `ductus` artifacts.
 
 ## Instructions
 
@@ -20,11 +20,11 @@ Configure `{cli-config-dir}/settings.json` with the Antigravity tool permissions
 1. Read `{cli-config-dir}/settings.json` (create it if missing, with `{ "permissions": { "allow": [], "deny": [], "ask": [] } }`).
 2. Ensure `permissions.allow`, `permissions.deny`, and `permissions.ask` contain all of the canonical entries below. Add any that are missing; remove exact-match duplicates so each `action(target)` string appears at most once per array. Do not reorder or rewrite non-duplicate entries beyond the canonical set. Preserve any other top-level keys and unspecified keys under `permissions` byte-for-byte.
 
-   Antigravity auto-allows reads and writes of files **inside the workspace** by default, so `read_file`/`write_file` entries are intentionally omitted — `govern`'s edits to specs, `.govern/session.toml`, and config all fall under the workspace auto-allow. Only out-of-workspace and non-file actions need explicit grants.
+   Antigravity auto-allows reads and writes of files **inside the workspace** by default, so `read_file`/`write_file` entries are intentionally omitted — `ductus`'s edits to specs, `.ductus/session.toml`, and config all fall under the workspace auto-allow. Only out-of-workspace and non-file actions need explicit grants.
 
 3. Canonical `permissions.allow` entries:
 
-   **Web access (`govern` fetches the framework archive and gitignore patterns from GitHub):**
+   **Web access (`ductus` fetches the framework archive and gitignore patterns from GitHub):**
    - `read_url(github.com)`
    - `read_url(githubusercontent.com)`
 
@@ -52,17 +52,17 @@ Configure `{cli-config-dir}/settings.json` with the Antigravity tool permissions
    - `command(markdownlint-cli2)`
    - `command(npx markdownlint-cli2)`
 
-   **Shell — hooks and generators (`govern`'s pre-commit pipeline):**
-   - `command(.govern/scripts/gen-.*)`
-   - `command(./.govern/scripts/gen-.*)`
+   **Shell — hooks and generators (`ductus`'s pre-commit pipeline):**
+   - `command(.ductus/scripts/gen-.*)`
+   - `command(./.ductus/scripts/gen-.*)`
    - `command(./.githooks/pre-commit)`
    - `command(scripts/install-hooks.sh)`
    - `command(./scripts/install-hooks.sh)`
 
-   **Runtime MCP tools (`mcp(gvrn/...)` — generated from `framework/runtime-tools.txt`):**
+   **Runtime MCP tools (`mcp(ductus/...)` — generated from `framework/runtime-tools.txt`):**
 
    <!-- generated:mcp-allow:start -->
-   - `mcp(gvrn/*)`
+   - `mcp(ductus/*)`
    <!-- generated:mcp-allow:end -->
 
 4. Canonical `permissions.deny` entries:

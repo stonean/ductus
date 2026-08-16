@@ -11,7 +11,7 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
 - Read and write only `{cli-config-dir}/settings.local.json`. Do NOT modify any other file.
 - Add missing entries and remove exact-match duplicates from `permissions.allow` and `permissions.deny`; do NOT reorder or rewrite non-duplicate entries the user (or another command) added beyond the canonical set listed below. The `merge-permissions` primitive performs the canonical-presence + dedup passes automatically; only `additionalDirectories` is handled outside the primitive (it has no duplication problem — entries are presence-checked, not deduped).
 - Do NOT scan source code, specs, or git history. This command only manages permissions.
-- Reference: no constitution sections apply — this command operates on agent-specific permission state, not `govern` artifacts.
+- Reference: no constitution sections apply — this command operates on agent-specific permission state, not `ductus` artifacts.
 
 ## Instructions
 
@@ -23,11 +23,11 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    - `Edit`
    - `Write`
 
-   **Govern state files (no per-write confirmation):**
-   - `Edit(.govern/session.toml)`
-   - `Write(.govern/session.toml)`
-   - `Edit(.govern/config.toml)`
-   - `Write(.govern/config.toml)`
+   **Ductus state files (no per-write confirmation):**
+   - `Edit(.ductus/session.toml)`
+   - `Write(.ductus/session.toml)`
+   - `Edit(.ductus/config.toml)`
+   - `Write(.ductus/config.toml)`
 
    **Web access:**
    - `WebFetch`
@@ -69,60 +69,60 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    - `Bash(markdownlint-cli2 *)`
    - `Bash(npx markdownlint-cli2 *)`
 
-   **Hooks and generators (govern's pre-commit pipeline):**
+   **Hooks and generators (ductus's pre-commit pipeline):**
    - `Bash(git config core.hooksPath *)`
    - `Bash(git config --get core.hooksPath)`
    - `Bash(git config --unset core.hooksPath)`
    - `Bash(./.githooks/pre-commit)`
-   - `Bash(.govern/scripts/gen-*.sh)`
-   - `Bash(./.govern/scripts/gen-*.sh)`
+   - `Bash(.ductus/scripts/gen-*.sh)`
+   - `Bash(./.ductus/scripts/gen-*.sh)`
    - `Bash(scripts/install-hooks.sh)`
    - `Bash(./scripts/install-hooks.sh)`
 
-   **Runtime MCP tools (`mcp__gvrn__*` — generated from `framework/runtime-tools.txt`):**
+   **Runtime MCP tools (`mcp__ductus__*` — generated from `framework/runtime-tools.txt`):**
 
    <!-- generated:mcp-allow:start -->
-   - `mcp__gvrn__read-spec`
-   - `mcp__gvrn__read-tasks`
-   - `mcp__gvrn__mark-task`
-   - `mcp__gvrn__mark-criterion`
-   - `mcp__gvrn__set-status`
-   - `mcp__gvrn__derive-boundary`
-   - `mcp__gvrn__discover-rule-files`
-   - `mcp__gvrn__process-waivers`
-   - `mcp__gvrn__compute-review-scope`
-   - `mcp__gvrn__write-review`
-   - `mcp__gvrn__check-stuck`
-   - `mcp__gvrn__validate-frontmatter`
-   - `mcp__gvrn__resolve-anchor`
-   - `mcp__gvrn__resolve-references`
-   - `mcp__gvrn__traverse-deps`
-   - `mcp__gvrn__check-rule-ids`
-   - `mcp__gvrn__run-generator`
-   - `mcp__gvrn__lint-markdown`
-   - `mcp__gvrn__gate-confirm`
-   - `mcp__gvrn__fetch-archive`
-   - `mcp__gvrn__extract-archive`
-   - `mcp__gvrn__apply-manifest`
-   - `mcp__gvrn__enforce-manifest`
-   - `mcp__gvrn__merge-managed-block`
-   - `mcp__gvrn__merge-permissions`
-   - `mcp__gvrn__migrate-session-file`
-   - `mcp__gvrn__create-scenario`
-   - `mcp__gvrn__append-task`
-   - `mcp__gvrn__label-criteria`
-   - `mcp__gvrn__prune-tasks`
-   - `mcp__gvrn__dashboard`
-   - `mcp__gvrn__write-session`
-   - `mcp__gvrn__resolve-feature`
-   - `mcp__gvrn__create-feature`
-   - `mcp__gvrn__create-plan-artifacts`
-   - `mcp__gvrn__check-review-gate`
-   - `mcp__gvrn__append-question`
-   - `mcp__gvrn__diff-cross-spec`
-   - `mcp__gvrn__append-inbox`
-   - `mcp__gvrn__remove-inbox-item`
-   - `mcp__gvrn__check-artifacts`
+   - `mcp__ductus__read-spec`
+   - `mcp__ductus__read-tasks`
+   - `mcp__ductus__mark-task`
+   - `mcp__ductus__mark-criterion`
+   - `mcp__ductus__set-status`
+   - `mcp__ductus__derive-boundary`
+   - `mcp__ductus__discover-rule-files`
+   - `mcp__ductus__process-waivers`
+   - `mcp__ductus__compute-review-scope`
+   - `mcp__ductus__write-review`
+   - `mcp__ductus__check-stuck`
+   - `mcp__ductus__validate-frontmatter`
+   - `mcp__ductus__resolve-anchor`
+   - `mcp__ductus__resolve-references`
+   - `mcp__ductus__traverse-deps`
+   - `mcp__ductus__check-rule-ids`
+   - `mcp__ductus__run-generator`
+   - `mcp__ductus__lint-markdown`
+   - `mcp__ductus__gate-confirm`
+   - `mcp__ductus__fetch-archive`
+   - `mcp__ductus__extract-archive`
+   - `mcp__ductus__apply-manifest`
+   - `mcp__ductus__enforce-manifest`
+   - `mcp__ductus__merge-managed-block`
+   - `mcp__ductus__merge-permissions`
+   - `mcp__ductus__migrate-session-file`
+   - `mcp__ductus__create-scenario`
+   - `mcp__ductus__append-task`
+   - `mcp__ductus__label-criteria`
+   - `mcp__ductus__prune-tasks`
+   - `mcp__ductus__dashboard`
+   - `mcp__ductus__write-session`
+   - `mcp__ductus__resolve-feature`
+   - `mcp__ductus__create-feature`
+   - `mcp__ductus__create-plan-artifacts`
+   - `mcp__ductus__check-review-gate`
+   - `mcp__ductus__append-question`
+   - `mcp__ductus__diff-cross-spec`
+   - `mcp__ductus__append-inbox`
+   - `mcp__ductus__remove-inbox-item`
+   - `mcp__ductus__check-artifacts`
    <!-- generated:mcp-allow:end -->
 
 3. Canonical `permissions.deny` entries:

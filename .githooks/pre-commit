@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# govern repo pre-commit hook.
+# ductus repo pre-commit hook.
 #
 # Runs all generators unconditionally so the committed tree always has
 # up-to-date generated artifacts, and stages their outputs. Per-spec staging is
@@ -11,16 +11,16 @@
 #                                framework/bootstrap/configure/{claude,auggie}.md
 #                                (runs before gen-claude-commands.sh so the
 #                                 regenerated configure.md picks up changes)
-#   2. gen-claude-commands.sh  — .claude/commands/gov/*.md from framework/commands/
-#   3. .govern/scripts/gen-spec-deps.sh — frontmatter dependencies from body inline links
-#   4. .govern/scripts/gen-cross-service-refs.sh — frontmatter references from body cross-service
+#   2. gen-claude-commands.sh  — .claude/commands/ductus/*.md from framework/commands/
+#   3. .ductus/scripts/gen-spec-deps.sh — frontmatter dependencies from body inline links
+#   4. .ductus/scripts/gen-cross-service-refs.sh — frontmatter references from body cross-service
 #                                URL links (distinct from dependencies)
 #   5. gen-help-tables.sh      — five command tables in framework/commands/help.md
 #
 # It then runs the acceptance-criterion labelling pass over each staged spec —
-# `gvrn label-criteria`, the backstop for a criterion typed by hand in an editor
+# `ductus label-criteria`, the backstop for a criterion typed by hand in an editor
 # (spec 013 / criterion-identifiers). Unlike the generators above this is a
-# runtime primitive rather than a bash script, so it runs only when a gvrn
+# runtime primitive rather than a bash script, so it runs only when a ductus
 # binary is available and a failure never blocks the commit: the runtime is
 # optional (§runtime-boundary), and a binary predating `label-criteria` exits
 # non-zero on the unknown subcommand.
@@ -28,7 +28,7 @@
 # When staged files include anything under runtime/, this hook additionally
 # runs `cargo fmt --check`, `cargo clippy --all-targets --all-features
 # -- -D warnings`, and `cargo test` against the runtime crate. Skip the
-# cargo checks for a single commit with GOVERN_SKIP_RUNTIME_CHECKS=1.
+# cargo checks for a single commit with DUCTUS_SKIP_RUNTIME_CHECKS=1.
 #
 # Installation: scripts/install-hooks.sh sets `git config core.hooksPath .githooks`.
 
@@ -39,13 +39,13 @@ cd "$ROOT"
 
 scripts/gen-configure-mcp.sh
 scripts/gen-claude-commands.sh > /dev/null
-.govern/scripts/gen-spec-deps.sh
-.govern/scripts/gen-cross-service-refs.sh
+.ductus/scripts/gen-spec-deps.sh
+.ductus/scripts/gen-cross-service-refs.sh
 scripts/gen-help-tables.sh
 
 # Stage any generator-produced changes to their known output paths.
 git add framework/bootstrap/configure/claude.md framework/bootstrap/configure/auggie.md
-git add .claude/commands/gov/ 2>/dev/null || true
+git add .claude/commands/ductus/ 2>/dev/null || true
 git add framework/commands/help.md
 # Re-stage only spec files already part of this commit, so the generator's
 # derived `dependencies:` rewrite is captured without sweeping in untracked
@@ -55,22 +55,22 @@ staged_specs="$(git diff --cached --name-only -- specs \
   | { grep -E '^specs/[0-9][0-9][0-9]-[^/]+/(spec|spec-and-plan)\.md$' || true; })"
 
 # Acceptance-criterion labelling (spec 013). Prefer this repo's own release
-# build over an installed gvrn: the framework repo is where the primitive is
+# build over an installed ductus: the framework repo is where the primitive is
 # developed, so a `cargo install` lag would otherwise leave its specs labelled
 # by a binary older than the one under test. Absent both, the step is skipped —
 # never fatal.
-gvrn_bin=""
-if [ -x runtime/target/release/gvrn ]; then
-  gvrn_bin="runtime/target/release/gvrn"
-elif command -v gvrn > /dev/null; then
-  gvrn_bin="gvrn"
+ductus_bin=""
+if [ -x runtime/target/release/ductus ]; then
+  ductus_bin="runtime/target/release/ductus"
+elif command -v ductus > /dev/null; then
+  ductus_bin="ductus"
 fi
 
 if [ -n "$staged_specs" ]; then
   printf '%s\n' "$staged_specs" | while IFS= read -r f; do
     [ -f "$f" ] || continue
-    if [ -n "$gvrn_bin" ]; then
-      "$gvrn_bin" label-criteria --feature "$(basename "$(dirname "$f")")" \
+    if [ -n "$ductus_bin" ]; then
+      "$ductus_bin" label-criteria --feature "$(basename "$(dirname "$f")")" \
         > /dev/null 2>&1 || true
     fi
     git add "$f"
@@ -78,7 +78,7 @@ if [ -n "$staged_specs" ]; then
 fi
 
 # Runtime crate verification — only when staged changes touch runtime/.
-if [[ "${GOVERN_SKIP_RUNTIME_CHECKS:-0}" != "1" ]] \
+if [[ "${DUCTUS_SKIP_RUNTIME_CHECKS:-0}" != "1" ]] \
    && git diff --cached --name-only | grep -q '^runtime/'; then
   if ! command -v cargo > /dev/null; then
     echo "pre-commit: runtime/ changes staged but cargo not on PATH; skipping verification" >&2
@@ -99,11 +99,11 @@ fi
 # cause was not conclusively identified, so guard the outcome instead:
 # if the index matches HEAD when the hook ends, the commit would be
 # empty — abort loudly rather than let silent data loss ship. Escape
-# hatch for an intentional empty commit: GOVERN_ALLOW_EMPTY=1.
-if [[ "${GOVERN_ALLOW_EMPTY:-0}" != "1" ]] && git diff --cached --quiet; then
+# hatch for an intentional empty commit: DUCTUS_ALLOW_EMPTY=1.
+if [[ "${DUCTUS_ALLOW_EMPTY:-0}" != "1" ]] && git diff --cached --quiet; then
   echo "pre-commit: index matches HEAD — this commit would be empty." >&2
   echo "  Staged changes were lost during the hook run (or nothing was staged)." >&2
   echo "  Re-stage the files and retry. For an intentional empty commit," >&2
-  echo "  re-run with GOVERN_ALLOW_EMPTY=1." >&2
+  echo "  re-run with DUCTUS_ALLOW_EMPTY=1." >&2
   exit 1
 fi

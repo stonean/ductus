@@ -14,10 +14,10 @@ with three fields:
 | --- | --- | --- |
 | `target` | string (path) | Where the agent reads MCP server definitions. May be a repo-relative path or a `~`-rooted home path. |
 | `scope` | enum `project-committed` \| `user-global` \| `home-level` | Whether `target` lives in (and travels with) the repo, or in the user's home and is shared across all their projects. |
-| `mechanism` | enum `write-file` \| `surface-instruction` | How govern's State-B auto-wire registers the server: write the file directly, or surface a copy-pasteable instruction the user runs. |
+| `mechanism` | enum `write-file` \| `surface-instruction` | How ductus's State-B auto-wire registers the server: write the file directly, or surface a copy-pasteable instruction the user runs. |
 
 `scope` and `mechanism` are correlated but distinct: `project-committed` ⇒ `write-file`
-(govern owns a repo file); `user-global` / `home-level` ⇒ `surface-instruction` (govern
+(ductus owns a repo file); `user-global` / `home-level` ⇒ `surface-instruction` (ductus
 must not mutate the user's home, per the spec's posture decision).
 
 ## Per-agent values
@@ -25,8 +25,8 @@ must not mutate the user's home, per the spec's posture decision).
 | key | `target` | `scope` | `mechanism` | Surfaced instruction (when `surface-instruction`) |
 | --- | --- | --- | --- | --- |
 | `claude` | `.mcp.json` (repo root) | `project-committed` | `write-file` | — |
-| `auggie` | `~/.augment/settings.json` | `user-global` | `surface-instruction` | `auggie mcp add gvrn --command gvrn --args "mcp"` |
-| `antigravity` | `~/.gemini/config/mcp_config.json` | `home-level` | `surface-instruction` | edit `~/.gemini/config/mcp_config.json` (add the `gvrn` block), then `/mcp` reload |
+| `auggie` | `~/.augment/settings.json` | `user-global` | `surface-instruction` | `auggie mcp add ductus --command ductus --args "mcp"` |
+| `antigravity` | `~/.gemini/config/mcp_config.json` | `home-level` | `surface-instruction` | edit `~/.gemini/config/mcp_config.json` (add the `ductus` block), then `/mcp` reload |
 
 ### Antigravity: resolved by live-`agy` verification
 
@@ -35,10 +35,10 @@ The descriptor above was settled by testing the live `agy` CLI (see
 project-local `.agents/mcp_config.json` is **not loaded** (0 server spawns, 0 MCP log
 references across two runs), while a home-level control at
 `~/.gemini/config/mcp_config.json` **loads** (sentinel spawned, 19 MCP log references).
-Issue #60 confirmed. Antigravity is therefore `home-level` / `surface-instruction`. govern
+Issue #60 confirmed. Antigravity is therefore `home-level` / `surface-instruction`. ductus
 stops writing `.agents/mcp_config.json` going forward; any already-written copy is **inert
 cruft left in place** — agy ignores it, so no destructive cleanup migration is warranted
-(symmetric with how govern leaves Auggie's stale `.mcp.json`).
+(symmetric with how ductus leaves Auggie's stale `.mcp.json`).
 
 ## Server entry shape (unchanged across all agents)
 
@@ -46,13 +46,13 @@ Every target — repo file or home file — uses the same `mcpServers` map keyed
 name. Only the file location differs.
 
 ```json
-{ "mcpServers": { "gvrn": { "command": "gvrn", "args": ["mcp"] } } }
+{ "mcpServers": { "ductus": { "command": "ductus", "args": ["mcp"] } } }
 ```
 
 ## Relationship to the existing registry
 
 - The `MCP-wiring file` row is **removed** from the §Derived values *layout* table
-  (`framework/bootstrap/govern.md`) — it was the source of the conflation.
+  (`framework/bootstrap/ductus.md`) — it was the source of the conflation.
 - The descriptor above is added as a **per-agent** table (keyed by registry `key`, like
   `config_dir`), not a layout-derived value.
 - Adding a new `claude-style` agent is therefore no longer a pure one-row append: it also
@@ -60,9 +60,9 @@ name. Only the file location differs.
 
 ## Notes
 
-- The permission grant (`mcp__gvrn__*` / `mcp:gvrn:*` / `mcp(gvrn/*)`) is **independent**
+- The permission grant (`mcp__ductus__*` / `mcp:ductus:*` / `mcp(ductus/*)`) is **independent**
   of this descriptor and unchanged — it lives in the project-level settings file every
   agent reads, regardless of where the server itself is registered.
-- The `gvrn mcp` server is project-agnostic (operates on the working directory), so a
+- The `ductus mcp` server is project-agnostic (operates on the working directory), so a
   single `user-global` / `home-level` registration serves every project — the user runs
   the surfaced instruction once per machine.

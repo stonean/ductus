@@ -1,4 +1,4 @@
-TODO: capture the LLM-driven `/gov:implement` output against
+TODO: capture the LLM-driven `/ductus:implement` output against
 `runtime/tests/fixtures/implement-basic/` and replace this file's body
 with the captured post-run state.
 
@@ -7,7 +7,7 @@ Capture recipe (maintainer-only, requires an LLM-driven host):
   1. cp -r runtime/tests/fixtures/implement-basic <a-clean-tempdir>
   2. cp framework/commands/implement.md <a-clean-tempdir>/framework/commands/
   3. cd <a-clean-tempdir> && git init && git add . && git commit -m chore
-  4. Run `/gov:implement` in the LLM-driven host. Invoking the command
+  4. Run `/ductus:implement` in the LLM-driven host. Invoking the command
      is itself the approval to start work — no planned → in-progress
      gate fires.
   5. After the run, record:
@@ -15,7 +15,7 @@ Capture recipe (maintainer-only, requires an LLM-driven host):
         with the task-1 subtask checkbox flipped to checked.
      b. The set of paths the LLM modified outside specs/004-implement/.
 
-Parity bound for `/gov:implement`:
+Parity bound for `/ductus:implement`:
   - strict-fields: `task-checkbox-state` — the tasks.md checkbox
     transitions must match the runtime-driven path exactly.
   - strict-files: `specs/{feature}/tasks.md` — the post-run tasks file
@@ -24,5 +24,5 @@ Parity bound for `/gov:implement`:
     edit content is semantic; the runtime validates only the path
     against the write boundary.
 
-Until this file is filled in, the parity test for `/gov:implement` is
+Until this file is filled in, the parity test for `/ductus:implement` is
 recorded as SKIPPED and does not block CI.

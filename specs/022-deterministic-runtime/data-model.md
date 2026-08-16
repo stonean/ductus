@@ -362,7 +362,7 @@ Result:
 }
 ```
 
-Scans `path` for `§<anchor>` references and resolves each against `<!-- §anchor -->` markers. The markers come from `path` itself when `markers-path` is omitted (the constitution self-consistency check); supply `markers-path` to resolve one file's references against a *different* file's markers — `/gov:analyze` passes the constitution as `markers-path` so a spec's `§` references resolve against the constitution's sections (a spec carries no markers of its own, so resolving against itself would flag every reference as unresolved noise).
+Scans `path` for `§<anchor>` references and resolves each against `<!-- §anchor -->` markers. The markers come from `path` itself when `markers-path` is omitted (the constitution self-consistency check); supply `markers-path` to resolve one file's references against a *different* file's markers — `/ductus:analyze` passes the constitution as `markers-path` so a spec's `§` references resolve against the constitution's sections (a spec carries no markers of its own, so resolving against itself would flag every reference as unresolved noise).
 
 ### `traverse-deps` — verify spec dependencies and status compatibility
 
@@ -459,7 +459,7 @@ Under the MCP surface, this is the only primitive whose semantics depend on host
 The dashboard payload's full shape is canonical in [scenarios/dashboard-primitive.md](scenarios/dashboard-primitive.md); the coverage-expansion-primitives scenario adds one field:
 
 ```json
-{ "rendered-markdown": "Target: 042-widget / planned / next: /gov:implement\n\n| Feature | Status | … |\n…" }
+{ "rendered-markdown": "Target: 042-widget / planned / next: /ductus:implement\n\n| Feature | Status | … |\n…" }
 ```
 
 The scenario-open-question-signal scenario adds two per-spec fields (spec 046):
@@ -470,7 +470,7 @@ The scenario-open-question-signal scenario adds two per-spec fields (spec 046):
 
 `scenario-open-question-count` is the total unresolved questions across the spec's scenarios, and `scenarios-with-questions` names the scenarios carrying them in shared scenario order. Both are distinct from `open-question-count`, which stays spec-body-only; the two signals are never summed. They drive three rendering changes: the existing Scenarios column gains a `{count} ({n} open)` suffix when non-zero (unchanged otherwise, so the glance table grows no ninth column), the Next Action cell overrides to `clarify (scenario)`, and a callout below the table names every affected spec with its carrying scenarios — no cap, since a truncated list reads as "these are the ones needing attention" while hiding others. When a spec is in recovery state *and* carries scenario questions, `clarify (recovery)` wins the cell — it is the more upstream defect — but **both** callouts render, because the scenario questions still need resolving after the recovery walk.
 
-The full pipeline view pre-rendered as one markdown fragment, in `/gov:status`'s documented order: preamble, dashboard table, counts and callouts, and the cross-service references readout (blocks separated by blank lines; the readout omitted when no spec declares references). The runtime resolves each spec's `references:` index internally for the readout — the same classification `resolve-references` exposes, with the matched service's `description` appended from the `[services]` registry — so one `dashboard` call covers the whole view on the runtime path. `/{project}:…` next actions and callout texts substitute the adopter's `[host] project` namespace. Returned data the host may restyle, never stdout printing (§runtime-boundary: no user-facing rendering owned by the runtime); the structured fields stay authoritative for hosts that render their own view. The canonical piece-by-piece formats live in `/gov:status`'s Rendering reference, which is also the markdown-only path.
+The full pipeline view pre-rendered as one markdown fragment, in `/ductus:status`'s documented order: preamble, dashboard table, counts and callouts, and the cross-service references readout (blocks separated by blank lines; the readout omitted when no spec declares references). The runtime resolves each spec's `references:` index internally for the readout — the same classification `resolve-references` exposes, with the matched service's `description` appended from the `[services]` registry — so one `dashboard` call covers the whole view on the runtime path. `/{project}:…` next actions and callout texts substitute the adopter's `[host] project` namespace. Returned data the host may restyle, never stdout printing (§runtime-boundary: no user-facing rendering owned by the runtime); the structured fields stay authoritative for hosts that render their own view. The canonical piece-by-piece formats live in `/ductus:status`'s Rendering reference, which is also the markdown-only path.
 
 ### `resolve-feature` — resolve an identifier to a feature directory
 
@@ -550,7 +550,7 @@ Result:
 }
 ```
 
-The plan-side mirror of `create-feature` and the deterministic surface behind `/gov:plan`'s template-copy and existing-artifact detection (step 3). Copies each missing artifact's template into the existing feature directory using the same candidate order and atomic, mode-mirroring write as `create-feature`; every needed template is resolved before the first write, so a missing template is one operational error with nothing half-copied. `data-model.md` joins the copy set only when `include-data-model` is passed (whether the feature has domain entities is the host's judgment), but a pre-existing `data-model.md` is always reported so the existing-artifact prompt sees the full set; when it is neither requested nor on disk it is omitted from `artifacts`.
+The plan-side mirror of `create-feature` and the deterministic surface behind `/ductus:plan`'s template-copy and existing-artifact detection (step 3). Copies each missing artifact's template into the existing feature directory using the same candidate order and atomic, mode-mirroring write as `create-feature`; every needed template is resolved before the first write, so a missing template is one operational error with nothing half-copied. `data-model.md` joins the copy set only when `include-data-model` is passed (whether the feature has domain entities is the host's judgment), but a pre-existing `data-model.md` is always reported so the existing-artifact prompt sees the full set; when it is neither requested nor on disk it is omitted from `artifacts`.
 
 Per-artifact `action` is the domain outcome: `created` (was missing, template copied), `kept` (pre-existing, untouched — never an error), or `replaced` (pre-existing, template copied over; only with `overwrite: true`, the confirmed "replace" branch of the prompt). `template` names the copied template and is absent on `kept`. No last-modified stamp accompanies `kept` entries — primitive results carry no wall-clock data (the same rule that keeps `write-session`'s `set-at` in the file, out of the result), so the exec envelope stream stays deterministic; the prompt's timestamp listing stays a markdown-only-path detail. A missing feature directory is an operational error (`create-feature` owns directory creation).
 
@@ -569,12 +569,12 @@ Result:
   "passed": false,
   "blocked-by": "must-violations",
   "message": "blocked: spec has 3 MUST violation(s) — see specs/042-widget/review.md",
-  "guidance": "Resolve the violations and re-run /gov:review, or run /gov:review --waive <rule-id> --reason \"...\" for each waivable finding.",
+  "guidance": "Resolve the violations and re-run /ductus:review, or run /ductus:review --waive <rule-id> --reason \"...\" for each waivable finding.",
   "violations": []
 }
 ```
 
-The deterministic surface behind `/gov:implement`'s completion-gate step 13, which the host previously walked by hand on every completion attempt. Evaluates the gate's three checks in documented order, first failure wins:
+The deterministic surface behind `/ductus:implement`'s completion-gate step 13, which the host previously walked by hand on every completion attempt. Evaluates the gate's three checks in documented order, first failure wins:
 
 1. **`markdown-lint`** — the feature directory's markdown lint (recursive `{root}/{feature}/**/*.md` glob through the `lint-markdown` machinery — the raw `npx markdownlint-cli2` invocation the step used to name). Violations are echoed in `violations`, or a non-zero exit the parser could not attribute.
 2. **`scenario-open-questions`** — one or more of the feature's scenarios carry unresolved open questions. The message names the count and the scenarios; `guidance` points at scenario-targeted `/{project}:clarify`, the only command that can resolve them. Ordered ahead of the `review:` checks because an unresolved design question is the more upstream defect — reviewing a design that is about to change wastes the review. The list comes from `read-spec`'s collector, so the gate blocks on exactly the questions the reader reports; a second independent reader could disagree with the count the user was shown ([046 — Scenario open-question visibility](../046-scenario-open-question-visibility/spec.md)).
@@ -601,7 +601,7 @@ Result:
 }
 ```
 
-The deterministic surface behind `/gov:amend`'s question-route write, previously the only record-path with no primitive (asymmetric with the scenario route's `create-scenario` + `append-task`). Appends `- {question}` to the target artifact's `## Open Questions` section — the feature's `spec.md` by default, `scenarios/{slug}.md` when `scenario` is passed (slug validated against the framework slug grammar; `question` is single-line, embedded newlines rejected).
+The deterministic surface behind `/ductus:amend`'s question-route write, previously the only record-path with no primitive (asymmetric with the scenario route's `create-scenario` + `append-task`). Appends `- {question}` to the target artifact's `## Open Questions` section — the feature's `spec.md` by default, `scenarios/{slug}.md` when `scenario` is passed (slug validated against the framework slug grammar; `question` is single-line, embedded newlines rejected).
 
 Dedup uses amend's normalized-whitespace comparison (collapse whitespace runs, trim, case-insensitive) against exactly the entries `read-spec`'s question parser reports (continuation lines folded, placeholders skipped), so the runtime and markdown-only paths agree on question identity; a match is the `appended: false` domain outcome with the existing entry echoed verbatim in `duplicate-of`, nothing written. A missing section is created per template order — immediately before `## Resolved Questions` when present (the scenario scaffold), else at end of file (the spec template) — and a `*None …*` scaffold placeholder is replaced by the first real entry. On a spec target whose status is `clarified`, `planned`, or `in-progress`, the frontmatter status reverts to `draft` in the same atomic write (`status-reverted` + `previous-status` report it) — never a window where the body holds an unresolved question while the status claims otherwise. `done` is **excluded** from the back-edge (§spec-lifecycle, spec 014): a `done` spec reopens only via the scenario route (`done → in-progress`), so a question appended to a `done` spec is recorded but leaves the status at `done` — the command layer never routes a question there. Scenario targets have no status field and never back-edge; a status value outside the lifecycle set is left alone (`validate-frontmatter` owns flagging it).
 
@@ -624,9 +624,9 @@ Result:
 }
 ```
 
-The deterministic filter `/gov:implement` steps 7 and 12 previously re-derived by hand per task (step 12's prose self-declared "no primitive owns this filter yet"). Diffs the feature's first spec-dir commit — the same base `derive-boundary` computes, through the shared revwalk helper — against the **working tree** (index and untracked files included), scoped to the spec root: `cross-spec-paths` lists changed paths outside the feature's own directory (sorted; `{specs-root}/inbox.md` excluded), and `inbox-additions` lists the bullet lines added to the inbox in the window (shared bullet grammar, so structural additions — heading, blanks on a brand-new file — never report as captured items). The working-tree diff is why the per-task summary (step 7, which fires before the task's commit) sees the run's uncommitted captures and sibling edits; on a clean tree the result equals the documented `git diff <first-commit>..HEAD -- {specs-root}/` form (step 12). Read-only; both lists empty is the no-impact domain outcome.
+The deterministic filter `/ductus:implement` steps 7 and 12 previously re-derived by hand per task (step 12's prose self-declared "no primitive owns this filter yet"). Diffs the feature's first spec-dir commit — the same base `derive-boundary` computes, through the shared revwalk helper — against the **working tree** (index and untracked files included), scoped to the spec root: `cross-spec-paths` lists changed paths outside the feature's own directory (sorted; `{specs-root}/inbox.md` excluded), and `inbox-additions` lists the bullet lines added to the inbox in the window (shared bullet grammar, so structural additions — heading, blanks on a brand-new file — never report as captured items). The working-tree diff is why the per-task summary (step 7, which fires before the task's commit) sees the run's uncommitted captures and sibling edits; on a clean tree the result equals the documented `git diff <first-commit>..HEAD -- {specs-root}/` form (step 12). Read-only; both lists empty is the no-impact domain outcome.
 
-Resolved fork (scenario open question): a separate primitive rather than a mode on `derive-boundary` — the two results share only the diff base (boundary globs versus sibling-paths + inbox lines), so they share the `first_commit_for_prefix` walk as a `pub(crate)` helper instead of a result-shape union. `/gov:review`'s captured-issues section stays on `compute-review-scope`, whose window starts at the in-progress transition — review wants the current work window, not the feature's whole history.
+Resolved fork (scenario open question): a separate primitive rather than a mode on `derive-boundary` — the two results share only the diff base (boundary globs versus sibling-paths + inbox lines), so they share the `first_commit_for_prefix` walk as a `pub(crate)` helper instead of a result-shape union. `/ductus:review`'s captured-issues section stays on `compute-review-scope`, whose window starts at the in-progress transition — review wants the current work window, not the feature's whole history.
 
 ### `append-inbox` — append one bullet to the inbox
 
@@ -658,7 +658,7 @@ Result:
 { "path": "specs/inbox.md", "removed": true, "remaining-count": 3 }
 ```
 
-The complement of `append-inbox` and the deterministic surface behind `/gov:groom`'s per-item removal (step 8). Removes the first bullet from `{specs-root}/inbox.md` whose text — after the `-` bullet marker and an optional `[ ]`/`[x]` checkbox are stripped via the shared bullet grammar — equals the trimmed `item`, writing atomically. Bullet scanning is comment/fence-aware (shared with `append-inbox`), so a `-` line inside an HTML comment is neither counted nor removable. A double blank left at the removal seam is collapsed and the file ends in a single newline. A no-match, or a missing inbox file, is a clean domain outcome (`removed: false`), never an operational error; `remaining-count` reports the bullets left after the operation. Embedded newlines in `item` are rejected (single-line rule).
+The complement of `append-inbox` and the deterministic surface behind `/ductus:groom`'s per-item removal (step 8). Removes the first bullet from `{specs-root}/inbox.md` whose text — after the `-` bullet marker and an optional `[ ]`/`[x]` checkbox are stripped via the shared bullet grammar — equals the trimmed `item`, writing atomically. Bullet scanning is comment/fence-aware (shared with `append-inbox`), so a `-` line inside an HTML comment is neither counted nor removable. A double blank left at the removal seam is collapsed and the file ends in a single newline. A no-match, or a missing inbox file, is a clean domain outcome (`removed: false`), never an operational error; `remaining-count` reports the bullets left after the operation. Embedded newlines in `item` are rejected (single-line rule).
 
 ### `check-artifacts` — deterministic artifact-check families for one feature
 
@@ -694,7 +694,7 @@ Result:
 }
 ```
 
-Eight families, mirroring `/gov:analyze`'s markdown-only reference exactly (severity tiers included — the primitive mechanizes the documented policy): `artifact-completeness` (blocking — `plan.md`/`tasks.md` required at `planned`/`in-progress`/`done`; `data-model.md` never required), `task-consistency` (blocking, when `tasks.md` exists — strictly-increasing numbering, `Done when` presence), `scenario-consistency` (advisory — every `scenarios/*.md` has a referencing task, skipped for `done` specs and satisfied by §tasks-phase pruning evidence: zero task sections or non-contiguous numbering), `review-state-drift` (blocking — a `done` spec with `review.last-run` unset or `review.blocking: true`; a `done` spec with no `review:` block is grandfathered), `scenario-open-questions` (blocking at `done`, advisory otherwise), `link-adjacent-drift` (advisory — prose asserting an open state that its own sibling link's target contradicts), `criterion-path-existence` (advisory — a filesystem path named in a `done` spec's acceptance criterion that no longer resolves), and `criterion-labels` (advisory — a duplicate `AC{n}` within one spec, a `next-criterion` that no longer exceeds the body, and an unlabelled criterion in a spec that carries a counter). `--all` iteration stays with the caller. The command-frontmatter-completeness family stays in the markdown-only reference (it reads the host's command directory, which the runtime does not own).
+Eight families, mirroring `/ductus:analyze`'s markdown-only reference exactly (severity tiers included — the primitive mechanizes the documented policy): `artifact-completeness` (blocking — `plan.md`/`tasks.md` required at `planned`/`in-progress`/`done`; `data-model.md` never required), `task-consistency` (blocking, when `tasks.md` exists — strictly-increasing numbering, `Done when` presence), `scenario-consistency` (advisory — every `scenarios/*.md` has a referencing task, skipped for `done` specs and satisfied by §tasks-phase pruning evidence: zero task sections or non-contiguous numbering), `review-state-drift` (blocking — a `done` spec with `review.last-run` unset or `review.blocking: true`; a `done` spec with no `review:` block is grandfathered), `scenario-open-questions` (blocking at `done`, advisory otherwise), `link-adjacent-drift` (advisory — prose asserting an open state that its own sibling link's target contradicts), `criterion-path-existence` (advisory — a filesystem path named in a `done` spec's acceptance criterion that no longer resolves), and `criterion-labels` (advisory — a duplicate `AC{n}` within one spec, a `next-criterion` that no longer exceeds the body, and an unlabelled criterion in a spec that carries a counter). `--all` iteration stays with the caller. The command-frontmatter-completeness family stays in the markdown-only reference (it reads the host's command directory, which the runtime does not own).
 
 `scenario-consistency`'s **referencing-task rule is canonical for every surface that asks "does a task reference this scenario?"** A task references a scenario when the scenario's **slug** appears in the task's heading, in any subtask's text, or in its `Done when` clause. The match is on the slug, not on the `scenarios/{slug}.md` path: the path form is what `append-task`'s default body emits, and the wider slug match is what tolerates a hand-written task naming the scenario without it. A second surface applying a narrower rule disagrees asymmetrically — `/{project}:amend`'s reconcile pass would offer a task for a scenario this family already considers mapped, producing the duplicate its dedup exists to prevent — so a surface restating the rule (as the markdown-only path must, per §runtime-host-integration) states *this* rule. `mapped_scenario_produces_no_finding` and `bare_slug_reference_satisfies_the_mapping` cover both authoring forms, so a narrowing on the runtime side fails a test rather than shipping.
 
@@ -706,11 +706,11 @@ Eight families, mirroring `/gov:analyze`'s markdown-only reference exactly (seve
 
 ## Extension-point schemas (initial release)
 
-The three initial-release single-shot extension points, plus the follow-on points: `askClarifyQuestion` and `routeInboxItem`, whose typed shapes ship ahead of their scenarios per the extension-request-hygiene scenario, and `verifyCriteria`, which ships with the implement-completion-gate scenario as `/gov:implement`'s criterion-verification seam. Each has request and response payload schemas; the runtime validates incoming responses against these and emits `error: schema-mismatch` on failure. An extension identifier outside this closed set is an `error: unknown-extension` at request-build time — never a raw walker-context dump. In every request that carries legacy-compat context fields after its typed prefix (`writeCode`, `writeSpecBody`, `performReview`), walker-internal accumulator keys (prior `llm:*` response echoes and the accumulated `findings` array) are filtered out; primitive results threaded through the context (`scope`, `diff-base`, `selected`, `rules-dir`, `notices`, …) pass through.
+The three initial-release single-shot extension points, plus the follow-on points: `askClarifyQuestion` and `routeInboxItem`, whose typed shapes ship ahead of their scenarios per the extension-request-hygiene scenario, and `verifyCriteria`, which ships with the implement-completion-gate scenario as `/ductus:implement`'s criterion-verification seam. Each has request and response payload schemas; the runtime validates incoming responses against these and emits `error: schema-mismatch` on failure. An extension identifier outside this closed set is an `error: unknown-extension` at request-build time — never a raw walker-context dump. In every request that carries legacy-compat context fields after its typed prefix (`writeCode`, `writeSpecBody`, `performReview`), walker-internal accumulator keys (prior `llm:*` response echoes and the accumulated `findings` array) are filtered out; primitive results threaded through the context (`scope`, `diff-base`, `selected`, `rules-dir`, `notices`, …) pass through.
 
 ### `assessSpecQuality`
 
-Used by `/gov:analyze`'s per-rule Verification reads.
+Used by `/ductus:analyze`'s per-rule Verification reads.
 
 Request payload:
 
@@ -744,7 +744,7 @@ When `passed: true`, `finding` is `null`.
 
 ### `writeCode`
 
-Used by `/gov:implement`'s per-task work step.
+Used by `/ductus:implement`'s per-task work step.
 
 Request payload:
 
@@ -791,7 +791,7 @@ Every edit path must fall within the `write-boundary`; the runtime rejects out-o
 
 ### `writeSpecBody`
 
-Used by `/gov:specify` and `/gov:plan` at template-fill moments.
+Used by `/ductus:specify` and `/ductus:plan` at template-fill moments.
 
 Request payload:
 
@@ -814,14 +814,14 @@ Response payload:
 }
 ```
 
-When invoked from `/gov:plan` to fill in plan sections, `template-path` points at the plan template and `section` enumerates the plan section to fill.
+When invoked from `/ductus:plan` to fill in plan sections, `template-path` points at the plan template and `section` enumerates the plan section to fill.
 
 Field sourcing (extension-request-hygiene):
 
-- `template-path` / `template-content` — resolved from the running command (`/gov:plan` → the plan template, `/gov:specify` → the spec template), trying `{specs-root}/templates/<file>` (the installed adopter layout) then `framework/templates/spec/<file>` (the framework source layout). Both are empty strings when no template exists on disk.
-- `section` — the section heading named by the step prose ("Fill the `<name>` section …"); empty when the step fills a whole body rather than one section (`/gov:specify`).
+- `template-path` / `template-content` — resolved from the running command (`/ductus:plan` → the plan template, `/ductus:specify` → the spec template), trying `{specs-root}/templates/<file>` (the installed adopter layout) then `framework/templates/spec/<file>` (the framework source layout). Both are empty strings when no template exists on disk.
+- `section` — the section heading named by the step prose ("Fill the `<name>` section …"); empty when the step fills a whole body rather than one section (`/ductus:specify`).
 - `feature-description` — the `feature-description` walker-context key, seeded by the host from the slash command's `$ARGUMENTS` (session file or `key=value` exec argument); empty when the host seeds none.
-- `existing-content` — the named section's current body from the file the running command owns (`/gov:plan` reads `plan.md`, `/gov:specify` reads `spec.md` — selected by command, never by fallback order); omitted when the file or section is absent or empty.
+- `existing-content` — the named section's current body from the file the running command owns (`/ductus:plan` reads `plan.md`, `/ductus:specify` reads `spec.md` — selected by command, never by fallback order); omitted when the file or section is absent or empty.
 
 ### `askClarifyQuestion` (follow-on)
 
@@ -842,7 +842,7 @@ Request payload:
 
 `question.section` is optional and omitted when the walker cannot attribute the question to a section. The question comes from an explicit `question` walker-context value when present, else the first entry of `read-spec`'s merged `open-questions` result.
 
-**Exec-path scope note** (scenario [coverage-residue-cleanup](scenarios/coverage-residue-cleanup.md)): clarify steps 7–8 — edge-case enumeration and acceptance-criterion verification — carry no extension marker, so `gvrn exec clarify` no-ops them by design. They do not fold into this point's one-question-per-round-trip ABI: they are spec-wide passes that must run even on the zero-questions short-circuit, when this loop performs no round trips at all. The markdown-only path and a host walking the command file directly perform them in full; a host driving exec performs them itself before accepting the status-advance gate. The reduction is documented in the command (`clarify.md`, Instructions preamble), keeping the two-paths guarantee honest rather than silently narrower; a dedicated spec-review extension point remains future work if exec-driven clarify becomes hot.
+**Exec-path scope note** (scenario [coverage-residue-cleanup](scenarios/coverage-residue-cleanup.md)): clarify steps 7–8 — edge-case enumeration and acceptance-criterion verification — carry no extension marker, so `ductus exec clarify` no-ops them by design. They do not fold into this point's one-question-per-round-trip ABI: they are spec-wide passes that must run even on the zero-questions short-circuit, when this loop performs no round trips at all. The markdown-only path and a host walking the command file directly perform them in full; a host driving exec performs them itself before accepting the status-advance gate. The reduction is documented in the command (`clarify.md`, Instructions preamble), keeping the two-paths guarantee honest rather than silently narrower; a dedicated spec-review extension point remains future work if exec-driven clarify becomes hot.
 
 Response payload:
 
@@ -885,7 +885,7 @@ Response payload:
 
 ### `verifyCriteria` (follow-on)
 
-Introduced by the [implement-completion-gate](scenarios/implement-completion-gate.md) scenario: `/gov:implement`'s completion gate sends one request carrying every acceptance criterion, and the LLM judges each criterion against the implementation — the verification stays semantic while the surrounding tallies and checkbox flips stay mechanical. Each `met: true` verdict drives one `mark-criterion` call; a `met: false` verdict leaves its checkbox unchecked and is reported, never batch-marked.
+Introduced by the [implement-completion-gate](scenarios/implement-completion-gate.md) scenario: `/ductus:implement`'s completion gate sends one request carrying every acceptance criterion, and the LLM judges each criterion against the implementation — the verification stays semantic while the surrounding tallies and checkbox flips stay mechanical. Each `met: true` verdict drives one `mark-criterion` call; a `met: false` verdict leaves its checkbox unchecked and is reported, never batch-marked.
 
 Request payload:
 

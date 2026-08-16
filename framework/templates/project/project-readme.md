@@ -17,7 +17,7 @@
 
 ## Documentation
 
-- [constitution.md](.govern/constitution.md) — Guiding principles, development pipeline, spec lifecycle, quality standards
+- [constitution.md](.ductus/constitution.md) — Guiding principles, development pipeline, spec lifecycle, quality standards
 - [AGENTS.md](AGENTS.md) — Tech stack, project structure, code style, conventions, and boundaries
 - [specs/system.md](specs/system.md) — System architecture, request lifecycle, shared infrastructure
 - [specs/errors.md](specs/errors.md) — Error handling conventions
@@ -32,7 +32,7 @@
 
 ## Development Pipeline
 
-{project} follows a spec-driven workflow. See [constitution.md](.govern/constitution.md#development-pipeline) for the full pipeline definition, spec lifecycle states, and readiness checks.
+{project} follows a spec-driven workflow. See [constitution.md](.ductus/constitution.md#development-pipeline) for the full pipeline definition, spec lifecycle states, and readiness checks.
 
 ### Pipeline
 
@@ -64,7 +64,7 @@ Three cycles are supported:
 | `/{project}:log` | Record a raw item to the inbox for later grooming |
 | `/{project}:groom` | Walk the inbox and route each item to its proper spec or scenario |
 | `/{project}:configure` | Configure permissions for common operations |
-| `/govern` | Adopt or update `govern` in this project (top-level command, no project namespace) |
+| `/ductus` | Adopt or update `ductus` in this project (top-level command, no project namespace) |
 
 ### Working on Existing Specs
 

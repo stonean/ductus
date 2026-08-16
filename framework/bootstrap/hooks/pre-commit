@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Project pre-commit hook. Edit this file freely — /govern does not overwrite it
+# Project pre-commit hook. Edit this file freely — /ductus does not overwrite it
 # after the initial install. Add your project's pre-commit checks (lint, tests,
-# format, etc.) above or below the govern hook invocation below.
+# format, etc.) above or below the ductus hook invocation below.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-# Keeps govern's generated artifacts (spec deps, etc.) in sync. /govern updates
+# Keeps ductus's generated artifacts (spec deps, etc.) in sync. /ductus updates
 # this script on every run; do not edit it.
-./.githooks/govern-pre-commit
+./.githooks/ductus-pre-commit

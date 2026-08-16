@@ -1,6 +1,6 @@
-# 048 — Govern-Acquired Runtime Data Model
+# 048 — Ductus-Acquired Runtime Data Model
 
-Three artifacts this feature introduces, plus the layout they describe. The `[runtime]` config section is owned here, following the convention that the introducing spec owns its `.govern/config.toml` section ([030](../030-cross-service-references/spec.md) owns `[services]` the same way).
+Three artifacts this feature introduces, plus the layout they describe. The `[runtime]` config section is owned here, following the convention that the introducing spec owns its `.ductus/config.toml` section ([030](../030-cross-service-references/spec.md) owns `[services]` the same way).
 
 ## The `version` file
 
@@ -15,7 +15,7 @@ A repo-root file named `version`, containing exactly one line: a SemVer string w
 | Path | `version` (repo root) |
 | Format | one SemVer line, `MAJOR.MINOR.PATCH` |
 | Written by | the release commit, by hand, alongside `runtime/Cargo.toml` and `runtime/CHANGELOG.md` |
-| Read by | `/govern`, from the extracted archive at `{staging-dir}/govern-main/version` |
+| Read by | `/ductus`, from the extracted archive at `{staging-dir}/ductus-main/version` |
 | Meaning | the runtime version this framework revision requires |
 
 **The agreement invariant.** These four must carry the same value, and a self-audit family asserts it:
@@ -25,7 +25,7 @@ A repo-root file named `version`, containing exactly one line: a SemVer string w
 | `version` | repo root |
 | `runtime/Cargo.toml` | `version = "…"` under `[package]` |
 | `runtime/CHANGELOG.md` | the newest `## [X.Y.Z]` heading |
-| the release tag | newest `gvrn-v*` by SemVer |
+| the release tag | newest `ductus-v*` by SemVer |
 
 A pre-tag window exists by construction: the release commit advances the first three, and the tag follows moments later. The audit family runs against the working tree, so it compares the first three strictly and treats a newest-tag lag as expected rather than as a finding.
 
@@ -33,14 +33,14 @@ A pre-tag window exists by construction: the release commit advances the first t
 
 ```toml
 [runtime]
-path = "runtime/target/release/gvrn"
+path = "runtime/target/release/ductus"
 ```
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `path` | string | no | A binary the project supplies itself, relative to the repo root or absolute. When set, `/govern` performs no download and resolves the pointer to this path. |
+| `path` | string | no | A binary the project supplies itself, relative to the repo root or absolute. When set, `/ductus` performs no download and resolves the pointer to this path. |
 
-Absent (the normal case) means `/govern` acquires the pinned version into the store. Present means the project has taken responsibility for supplying the runtime — the supported route for building from source, for an air-gapped or firewalled checkout, and for a platform with no published asset.
+Absent (the normal case) means `/ductus` acquires the pinned version into the store. Present means the project has taken responsibility for supplying the runtime — the supported route for building from source, for an air-gapped or firewalled checkout, and for a platform with no published asset.
 
 Behavior when set:
 
@@ -53,22 +53,22 @@ Behavior when set:
 
 | Path | Scope | Committed | Description |
 | --- | --- | --- | --- |
-| `~/.govern/bin/gvrn` | machine | no (outside any repo) | The store. One binary per machine, executable bit set, written only by `/govern`. `gvrn.exe` on Windows. |
-| `.govern/bin/gvrn` | project | no (gitignored) | The pointer. Symlink where creation succeeds, copy otherwise. Named by every `project-committed` MCP config. |
+| `~/.ductus/bin/ductus` | machine | no (outside any repo) | The store. One binary per machine, executable bit set, written only by `/ductus`. `ductus.exe` on Windows. |
+| `.ductus/bin/ductus` | project | no (gitignored) | The pointer. Symlink where creation succeeds, copy otherwise. Named by every `project-committed` MCP config. |
 
-The `.gitignore` block gains `.govern/bin/`, joining the anchored `/.govern/session.toml` line that already establishes per-path ignores under a committed `.govern/` directory ([042](../042-consolidate-govern-per-project-files-under-govern-directory/spec.md)).
+The `.gitignore` block gains `.ductus/bin/`, joining the anchored `/.ductus/session.toml` line that already establishes per-path ignores under a committed `.ductus/` directory ([042](../042-consolidate-govern-per-project-files-under-govern-directory/spec.md)).
 
 ## Release assets
 
-Published under `https://github.com/stonean/govern/releases/download/gvrn-v{version}/`, one archive plus one sidecar per target. All five are required for a release to publish.
+Published under `https://github.com/stonean/ductus/releases/download/ductus-v{version}/`, one archive plus one sidecar per target. All five are required for a release to publish.
 
 | Target triple | Asset | Sidecar |
 | --- | --- | --- |
-| `aarch64-apple-darwin` | `gvrn-aarch64-apple-darwin.tar.gz` | `.sha256` |
-| `x86_64-apple-darwin` | `gvrn-x86_64-apple-darwin.tar.gz` | `.sha256` |
-| `x86_64-unknown-linux-gnu` | `gvrn-x86_64-unknown-linux-gnu.tar.gz` | `.sha256` |
-| `aarch64-unknown-linux-gnu` | `gvrn-aarch64-unknown-linux-gnu.tar.gz` | `.sha256` |
-| `x86_64-pc-windows-msvc` | `gvrn-x86_64-pc-windows-msvc.tar.gz` | `.sha256` |
+| `aarch64-apple-darwin` | `ductus-aarch64-apple-darwin.tar.gz` | `.sha256` |
+| `x86_64-apple-darwin` | `ductus-x86_64-apple-darwin.tar.gz` | `.sha256` |
+| `x86_64-unknown-linux-gnu` | `ductus-x86_64-unknown-linux-gnu.tar.gz` | `.sha256` |
+| `aarch64-unknown-linux-gnu` | `ductus-aarch64-unknown-linux-gnu.tar.gz` | `.sha256` |
+| `x86_64-pc-windows-msvc` | `ductus-x86_64-pc-windows-msvc.tar.gz` | `.sha256` |
 
 Windows publishes `.tar.gz` rather than `.zip` so extraction is `tar` on every platform — Windows 10+ ships `bsdtar`, and `tar` is already granted in all four permission grammars, so `unzip` never enters the permission surface.
 
@@ -78,8 +78,8 @@ Replaces [029](../029-bootstrap-runtime-autowire/spec.md)'s three-state model. `
 
 | State | Condition | Behavior |
 | --- | --- | --- |
-| **A** | a `gvrn`-namespaced MCP tool is in the session's inventory | Runtime live. Deterministic path; no pre-flight acquisition work; contributes nothing to the pending-restart set. |
-| **B** | no `gvrn`-namespaced tool | Resolve the binary (acquire, or use `[runtime]`), materialize the pointer, wire the MCP config, add tool permissions, join the pending-restart set, and surface in the single combined pre-flight abort. |
+| **A** | a `ductus`-namespaced MCP tool is in the session's inventory | Runtime live. Deterministic path; no pre-flight acquisition work; contributes nothing to the pending-restart set. |
+| **B** | no `ductus`-namespaced tool | Resolve the binary (acquire, or use `[runtime]`), materialize the pointer, wire the MCP config, add tool permissions, join the pending-restart set, and surface in the single combined pre-flight abort. |
 
 ## Acquisition command set
 

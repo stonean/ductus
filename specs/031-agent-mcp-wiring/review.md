@@ -15,7 +15,7 @@ skipped-passes: []
 ## Summary
 
 031 is an entirely text-first change: per-agent MCP registration prose in
-`framework/bootstrap/govern.md`, a README correction, a Claude-specific phrasing sweep
+`framework/bootstrap/ductus.md`, a README correction, a Claude-specific phrasing sweep
 across eight command sources + `runtime-tools.txt`, two non-reopening signposts in
 028/029, and the 031 spec artifacts. **No application code, no backend/frontend surface,
 no constants or env vars** are introduced — so the security, efficiency, and
@@ -46,13 +46,13 @@ None.
 
 ### WAIVED: SIMPLICITY — `scope` field is descriptive metadata, not behaviorally load-bearing
 
-- **File**: `framework/bootstrap/govern.md` (§MCP registration table) and `specs/031-agent-mcp-wiring/data-model.md`
+- **File**: `framework/bootstrap/ductus.md` (§MCP registration table) and `specs/031-agent-mcp-wiring/data-model.md`
 - **Rule**: AGENTS.md §Design Principles / simplicity pass — avoid fields that are not load-bearing.
 - **Finding**: The per-agent descriptor carries `scope` (`project-committed` / `user-global` / `home-level`) alongside `mechanism` (`write-file` / `surface-instruction`). Only `mechanism` drives State-B branching, and the exact location is already given by `target`. `scope` is therefore derivable/descriptive — `user-global` (Auggie) and `home-level` (Antigravity) both map to `surface-instruction` and differ only in *which* home location `target` already names.
 - **Auto-fixable**: no
 - **Waiver rationale**: keep as-is, which was this finding's own recommendation. `scope` documents a real conceptual distinction readers care about — committed-in-repo vs. user-config-dir vs. home-global — and the three-line table costs nothing; a schema change to remove it would trade reader clarity for a metric. Filed under SHOULD originally, which left an accepted trade-off reading as outstanding work; recorded as a waiver 2026-08-02 so the decision is the record.
 
-## Captured issues (pending /gov:groom)
+## Captured issues (pending /ductus:groom)
 
 None — no issues were appended to `specs/inbox.md` during the work window.
 

@@ -3,12 +3,12 @@
 #
 # Catches regressions to hardcoded host-/project-specific paths in the
 # runtime source. Spec 022 scenario `commands-dir-parameterization`
-# replaced the literal `.claude/commands/gov/` (which baked in Claude
+# replaced the literal `.claude/commands/ductus/` (which baked in Claude
 # Code's config-dir name AND this repo's slash-command namespace) with
 # a `{cli-config-dir}/commands/{project}/` lookup driven by the
 # `Host::load` config loader.
 #
-# Any new occurrence of `.claude/commands/gov/` in `runtime/src/` means
+# Any new occurrence of `.claude/commands/ductus/` in `runtime/src/` means
 # someone added a fresh hardcode — quietly breaking every Auggie /
 # Anvil / future-host adopter that doesn't match the defaults. This
 # audit is the safety net.
@@ -23,11 +23,11 @@ set -uo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
 audit_family runtime-hardcoded-paths
 
-# 13a — Scan runtime/src for any literal `.claude/commands/gov/`.
+# 13a — Scan runtime/src for any literal `.claude/commands/ductus/`.
 # This is the exact string the parameterization scenario eliminated.
 # `git grep` keeps the search index-aware and ignores generated/build
 # artifacts under runtime/target/.
-matches="$(git grep -n -F '.claude/commands/gov/' -- 'runtime/src/' 2>/dev/null || true)"
+matches="$(git grep -n -F '.claude/commands/ductus/' -- 'runtime/src/' 2>/dev/null || true)"
 if [ -n "$matches" ]; then
   while IFS= read -r line; do
     emit "$line" \

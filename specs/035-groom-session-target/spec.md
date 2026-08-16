@@ -13,11 +13,11 @@ next-criterion: 8
 
 # 035 — Groom sets the session target from the routed item
 
-`/gov:groom` sets `.govern.session.toml` to the spec it routes an inbox item to, so a follow-on `/gov:amend` or `/gov:implement` operates on the right target without a manual `/gov:target`.
+`/ductus:groom` sets `.govern.session.toml` to the spec it routes an inbox item to, so a follow-on `/ductus:amend` or `/ductus:implement` operates on the right target without a manual `/ductus:target`.
 
 ## Motivation
 
-`/gov:groom` walks the inbox and, for each item, finds the matching feature by searching `specs/` (the [006-bug-workflow](../006-bug-workflow/spec.md) decision tree, §bug-handling) and routes it — a spec edit (Step 3) or a scenario under the matching spec (Step 4). But groom never writes the session target: its Context says a target "is not required" because it operates across all specs. The consequence is friction at exactly the moment the spec is known — groom has *just identified* the right feature, yet the operator must remember it and run `/gov:target NNN` by hand before the follow-on `/gov:amend` or `/gov:implement`.
+`/ductus:groom` walks the inbox and, for each item, finds the matching feature by searching `specs/` (the [006-bug-workflow](../006-bug-workflow/spec.md) decision tree, §bug-handling) and routes it — a spec edit (Step 3) or a scenario under the matching spec (Step 4). But groom never writes the session target: its Context says a target "is not required" because it operates across all specs. The consequence is friction at exactly the moment the spec is known — groom has *just identified* the right feature, yet the operator must remember it and run `/ductus:target NNN` by hand before the follow-on `/ductus:amend` or `/ductus:implement`.
 
 This is the same "don't make the operator remember session state" gap that self-contained inbox items only half-close: the item names its target, but nothing carries that target into the session. This spec carries it the rest of the way — groom sets the target as part of the routing it already performs.
 
@@ -25,13 +25,13 @@ This is the same "don't make the operator remember session state" gap that self-
 
 - When groom routes an item to an **existing spec** — a spec edit (Step 3) or a scenario created under the matching spec (Step 4, durable-requirement branch) — it sets `.govern.session.toml` to that feature as part of the routing action. The target is the feature the decision tree matched in Step 2 (reinforced by, but not dependent on, any `specs/NNN-*/` link in the item text).
 - The per-item routing confirmation groom already requires before acting now **names the target it will set** — e.g., *"Create a scenario under `033-rule-surface-setting` and set it as the session target? (Y/n)"*. That single confirmation is the consent for both the routing and the target write; no separate target prompt is added (consistent with the procedural-fidelity / don't-add-prompts stance). The operator sees and confirms the target without having to recall it.
-- **New-spec items** (Step 2, no spec exists → `/gov:specify`) are unchanged: `/gov:specify` already targets the spec it creates.
+- **New-spec items** (Step 2, no spec exists → `/ductus:specify`) are unchanged: `/ductus:specify` already targets the spec it creates.
 - **Rule items** (Step 1, amend a rule file) and **chores** (Step 4 chore, left in the inbox) set no target — neither has a single spec home.
 - Across a multi-item run, the session target **follows the current item**: each spec-routed item sets it, so when the run ends the target points at the most recently groomed spec (the one the operator is most likely to act on next).
 - The session write **preserves any existing `cli-config-dir`** (the per-contributor agent identity), using the same `write-session` target-write semantics from [023-govern-refinement](../023-govern-refinement/spec.md); it must not be dropped.
 - The completion summary names the resulting session target (or states it is unchanged when no item set one).
 
-The change is confined to `framework/commands/groom.md` (and its generated `.claude/commands/gov/groom.md` copy).
+The change is confined to `framework/commands/groom.md` (and its generated `.claude/commands/ductus/groom.md` copy).
 
 ## Acceptance Criteria
 
@@ -41,7 +41,7 @@ The change is confined to `framework/commands/groom.md` (and its generated `.cla
 - [x] AC4: Across a multi-item run, the session target follows the current item (the last spec-routed item is the final target).
 - [x] AC5: The session-target write preserves any existing `cli-config-dir` value.
 - [x] AC6: The completion summary names the resulting session target (or states it is unchanged when no item set one).
-- [x] AC7: `framework/commands/groom.md` documents the behavior, and its generated `.claude/commands/gov/groom.md` copy regenerates cleanly.
+- [x] AC7: `framework/commands/groom.md` documents the behavior, and its generated `.claude/commands/ductus/groom.md` copy regenerates cleanly.
 
 ## Resolved Questions
 

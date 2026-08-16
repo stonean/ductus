@@ -13,6 +13,13 @@ next-criterion: 14
 
 # 049 — Rename govern to ductus
 
+<!-- audit:ignore-introducing-drift:file -->
+<!-- This spec is the *introducing* spec for the rename catalogued in
+     scripts/audit/introducing-drift.sh: the retired names are the subject of
+     its prose, not residual drift. It is also excluded from the rename sweep
+     for the same reason — a spec that records a transition has to be able to
+     name both sides of it. -->
+
 The project takes the name **ductus**. This spec covers what that means across every surface the old name reached — the framework, the runtime binary and its crate, the per-project directory, the MCP server key and tool prefixes, the release tag scheme, and the command namespace — and how existing adopters converge without breaking.
 
 ## Motivation

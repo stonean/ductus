@@ -1,4 +1,4 @@
-# 048 — Govern-Acquired Runtime Tasks
+# 048 — Ductus-Acquired Runtime Tasks
 
 Tasks derived from the [plan](plan.md). Complete in order.
 
@@ -25,8 +25,8 @@ Phase 1 is independently safe and lands first so later work is written against a
 
 ### 3. Publish the Windows asset as `.tar.gz`
 
-- [x] Change the Windows leg of `runtime-release.yml` to produce `gvrn-x86_64-pc-windows-msvc.tar.gz` plus its `.sha256` sidecar
-- [x] Confirm the archive contains `gvrn.exe` and that `tar` extracts it on a `windows-latest` runner
+- [x] Change the Windows leg of `runtime-release.yml` to produce `ductus-x86_64-pc-windows-msvc.tar.gz` plus its `.sha256` sidecar
+- [x] Confirm the archive contains `ductus.exe` and that `tar` extracts it on a `windows-latest` runner
 
 - **Done when**: the Windows release asset is a `.tar.gz` extracting cleanly with `tar` on `windows-latest`, so `unzip` is needed on no platform.
 
@@ -36,7 +36,7 @@ Phase 1 is independently safe and lands first so later work is written against a
 > Phases 2 and 3 write the store path, the pointer path, and the adopter
 > migration that rewrites every adopter's MCP config to them. Landing those on
 > the current names and renaming afterwards would migrate adopters twice in
-> close succession — first to `.govern/bin/`, then to whatever the rename
+> close succession — first to `.ductus/bin/`, then to whatever the rename
 > chooses — and would change the release tag scheme one release after this
 > work is tagged. Resuming after the rename means acquisition writes the final
 > paths from the start and adopters converge in one pass. Phase 1 is unaffected
@@ -44,24 +44,24 @@ Phase 1 is independently safe and lands first so later work is written against a
 
 ### 4. Specify the acquisition procedure in the bootstrap
 
-- [ ] Write the acquisition sequence into `framework/bootstrap/govern.md`: read the pin from `{staging-dir}/govern-main/version`, derive the target triple, fetch archive + sidecar, verify the digest, extract, install into `~/.govern/bin/`, set the executable bit
+- [ ] Write the acquisition sequence into `framework/bootstrap/ductus.md`: read the pin from `{staging-dir}/ductus-main/version`, derive the target triple, fetch archive + sidecar, verify the digest, extract, install into `~/.ductus/bin/`, set the executable bit
 - [ ] Specify the failure behavior: a checksum mismatch or download failure halts the run with an error naming the store path and the release URL, leaving the store and pointer unwritten
 - [ ] Specify the `[runtime]` supplied-binary branch: no download, pointer resolves to the configured path, version mismatch warns, a missing or non-executing path halts naming it
 - [ ] Specify the idempotency probe: execute the store path, compare the reported version against the pin, re-acquire on mismatch, and treat a binary that will not execute as absent
 
-- **Done when**: `govern.md` specifies acquisition end to end including every failure branch, and a reader can follow it without consulting this spec.
+- **Done when**: `ductus.md` specifies acquisition end to end including every failure branch, and a reader can follow it without consulting this spec.
 
 ### 5. Materialize the pointer
 
-- [ ] Specify pointer creation in `govern.md`: attempt a symlink, fall back to a copy when creation fails, so no supported platform requires elevated privileges
+- [ ] Specify pointer creation in `ductus.md`: attempt a symlink, fall back to a copy when creation fails, so no supported platform requires elevated privileges
 - [ ] Specify repair — a missing or dangling pointer is recreated without ceremony, being the expected state of any checkout not yet bootstrapped on this machine
-- [ ] Add `.govern/bin/` to the framework-managed `.gitignore` block
+- [ ] Add `.ductus/bin/` to the framework-managed `.gitignore` block
 
-- **Done when**: the pointer resolves to the store on Unix and on Windows without developer mode, a fresh clone's missing pointer is recreated by `/govern`, and `git status` reports nothing untracked after a bootstrap.
+- **Done when**: the pointer resolves to the store on Unix and on Windows without developer mode, a fresh clone's missing pointer is recreated by `/ductus`, and `git status` reports nothing untracked after a bootstrap.
 
 ### 6. Seed the acquisition permissions in all four grammars
 
-- [ ] Add `mkdir`, the platform checksum tool, the pointer command, and execution of the store path to each agent's seed in `framework/bootstrap/govern.md`'s registry table — Claude `Bash(…)`, Auggie `launch-process` regexes, Antigravity `command(…)`, OpenCode `permission.bash` globs
+- [ ] Add `mkdir`, the platform checksum tool, the pointer command, and execution of the store path to each agent's seed in `framework/bootstrap/ductus.md`'s registry table — Claude `Bash(…)`, Auggie `launch-process` regexes, Antigravity `command(…)`, OpenCode `permission.bash` globs
 - [ ] Walk the §Derived values **Layout-derived** table row by row per `AGENTS.md`'s agent-registry rule, and record the per-agent impact in the commit message
 - [ ] Confirm no acquisition step prompts on a bootstrap — including checksum verification
 
@@ -69,20 +69,20 @@ Phase 1 is independently safe and lands first so later work is written against a
 
 ### 7. Rewrite MCP registration and the detection states
 
-- [ ] Update the MCP shapes in `govern.md`: `project-committed` targets name the repo-relative pointer, `user-global` / `home-level` targets name the absolute store path
+- [ ] Update the MCP shapes in `ductus.md`: `project-committed` targets name the repo-relative pointer, `user-global` / `home-level` targets name the absolute store path
 - [ ] Collapse the three detection states to two per the data model, deleting former State C and its §Post-Scaffolding tip
 - [ ] Update the pre-flight binary probe from a `PATH` lookup to a store check, and its §Permission Setup seed entry with it
 - [ ] Verify the additive-merge rules are unchanged — other servers, other top-level keys, and a malformed config are all handled as before
 
-- **Done when**: each agent registers the correct path for its config scope, no committed config contains a machine-specific absolute path, and an adopter with no runtime reaches the deterministic path in one `/govern` run plus one restart.
+- **Done when**: each agent registers the correct path for its config scope, no committed config contains a machine-specific absolute path, and an adopter with no runtime reaches the deterministic path in one `/ductus` run plus one restart.
 
 ### 8. Register the adopter migration
 
-- [ ] Add a `framework/migrations.toml` entry rewriting an MCP config that names the bare `gvrn` command to the govern-owned path, with `introduced_in` set to the release carrying this work
+- [ ] Add a `framework/migrations.toml` entry rewriting an MCP config that names the bare `ductus` command to the ductus-owned path, with `introduced_in` set to the release carrying this work
 - [ ] Write its procedure body under `framework/migrations/`, idempotent and silent when the target config is absent or already migrated
 - [ ] Leave any `PATH`-installed binary alone — removing it is the adopter's call
 
-- **Done when**: an adopter config naming bare `gvrn` is rewritten on the next `/govern` run, re-running the migration is a no-op, and a config already migrated is untouched.
+- **Done when**: an adopter config naming bare `ductus` is rewritten on the next `/ductus` run, re-running the migration is a no-op, and a config already migrated is untouched.
 
 ## Phase 3 — The requirement
 
@@ -90,7 +90,7 @@ Phase 1 is independently safe and lands first so later work is written against a
 
 - [ ] Replace §runtime-boundary principle 3 and the Opt-in invariant with the requirement and the acquisition-asserting CI job
 - [ ] Narrow §text-first-artifacts' "usable standalone with no tooling beyond the AI agent" to the artifacts rather than the pipeline
-- [ ] Remove the 26 per-step markdown-only fallback instructions from `framework/commands/*.md` and `framework/bootstrap/govern.md`, leaving the Markdown-only reference sections that specify check policy and procedure
+- [ ] Remove the 26 per-step markdown-only fallback instructions from `framework/commands/*.md` and `framework/bootstrap/ductus.md`, leaving the Markdown-only reference sections that specify check policy and procedure
 - [ ] Update `README.md`: drop the `PATH` install as the supported route, correct the Windows cross-compilation claim
 - [ ] Re-run `scripts/gen-claude-commands.sh`
 
@@ -114,8 +114,8 @@ Phase 1 is independently safe and lands first so later work is written against a
 
 ### 12. Point this repository at its own build
 
-- [ ] Set `.govern/config.toml`'s `[runtime]` key to `runtime/target/release/gvrn`
-- [ ] Update `.mcp.json` to the pointer, replacing the bare `gvrn` command
+- [ ] Set `.ductus/config.toml`'s `[runtime]` key to `runtime/target/release/ductus`
+- [ ] Update `.mcp.json` to the pointer, replacing the bare `ductus` command
 - [ ] Replace `AGENTS.md`'s stale-binary gotcha with the `[runtime]` workflow — a `runtime/` change is live after `cargo build --release` and a session restart, with no `cargo install` step
 - [ ] Confirm a maintainer's MCP calls exercise the freshly built binary
 

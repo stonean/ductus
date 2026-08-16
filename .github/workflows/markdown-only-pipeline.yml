@@ -58,8 +58,8 @@ jobs:
 
       - name: (b) Bash generator scripts run clean
         run: |
-          bash .govern/scripts/gen-spec-deps.sh --dry-run
-          bash .govern/scripts/gen-cross-service-refs.sh --dry-run
+          bash .ductus/scripts/gen-spec-deps.sh --dry-run
+          bash .ductus/scripts/gen-cross-service-refs.sh --dry-run
           bash scripts/gen-help-tables.sh --dry-run
 
       - name: (c) markdownlint passes
@@ -78,7 +78,7 @@ jobs:
         run: bash scripts/lint-rule-ids.sh
 
       # Step (f) builds a workflow-private copy of the runtime binary at
-      # runtime/target/release/gvrn and invokes it via a *relative
+      # runtime/target/release/ductus and invokes it via a *relative
       # path* — never adding it to PATH. The opt-in invariant from step
       # (a) (no runtime binary on PATH) is unchanged: a workflow-local
       # compile for the parseability check does not constitute a

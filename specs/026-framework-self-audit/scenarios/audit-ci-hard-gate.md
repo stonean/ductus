@@ -14,13 +14,13 @@ Origin: spec 026 Phase D CI integration, 2026-05-18. Captured via the inbox.
 
 All three preconditions are already met as of commit `1aca768` ("fix(audit): resolve Family 4, 8, 9 findings — /audit now exits 0"):
 
-1. **Family 4 clear.** `bash scripts/audit/placeholder-roundtrip.sh` exits 0. Resolution in 1aca768 included `/gov:` → `/{project}:` templating across `framework/commands/{review,analyze,implement}.md`, a `.claude/` → `{cli-config-dir}/` rewrite in `target.md`, and a file-scope `audit:ignore-placeholders:file` marker on the maintainer-only `framework/commands/audit.md`.
+1. **Family 4 clear.** `bash scripts/audit/placeholder-roundtrip.sh` exits 0. Resolution in 1aca768 included `/ductus:` → `/{project}:` templating across `framework/commands/{review,analyze,implement}.md`, a `.claude/` → `{cli-config-dir}/` rewrite in `target.md`, and a file-scope `audit:ignore-placeholders:file` marker on the maintainer-only `framework/commands/audit.md`.
 2. **Family 8 clear.** `bash scripts/audit/introducing-drift.sh` exits 0. Resolution in 1aca768 included mechanical substitutions in done specs 020/021/022, contextual rewrites in 011/014/017/026 (with historical signposts preserved), and a file-scope exemption on spec 023 (the introducing spec for the cataloged renames, where old names are first-class content).
 3. **Family 9 clear.** `bash scripts/audit/primitive-promotion-candidates.sh` exits 0. Resolution in 1aca768 added 20 `audit:ignore-promotion` annotations across analyze, implement, plan, specify, status, and target for host-responsibility steps the runtime does not own.
 
 Gate flip: remove `continue-on-error: true` from the audit step in [`.github/workflows/markdown-only-pipeline.yml`](../../../.github/workflows/markdown-only-pipeline.yml) and from the `audit` job in [`.github/workflows/runtime-release.yml`](../../../.github/workflows/runtime-release.yml). `/audit` becomes a hard PR gate and a hard release gate. The two CI files are the only edits; no script changes.
 
-Verification: `bash scripts/audit/run-all.sh` exits 0 on `main` at HEAD (already confirmed); the next PR-check run passes with the audit step blocking-eligible; a deliberately-introduced finding (e.g., test commit adding a `/gov:` literal to a command source without the ignore marker) would be rejected.
+Verification: `bash scripts/audit/run-all.sh` exits 0 on `main` at HEAD (already confirmed); the next PR-check run passes with the audit step blocking-eligible; a deliberately-introduced finding (e.g., test commit adding a `/ductus:` literal to a command source without the ignore marker) would be rejected.
 
 ## Edge Cases
 

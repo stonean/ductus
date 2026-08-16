@@ -20,7 +20,7 @@ Pipeline gate: planned → in-progress → done. Walks through `tasks.md` step b
 
 ## Context
 
-Use the session target from `.govern/session.toml`. If `$ARGUMENTS` is provided, use it to override the session target — resolve that override through `resolve-feature` (exact directory name, feature number, or unique partial slug; `ambiguous` and `not-found` are domain outcomes to surface). If no session target is set and no arguments provided, stop and tell the user to run `/{project}:target` first.
+Use the session target from `.ductus/session.toml`. If `$ARGUMENTS` is provided, use it to override the session target — resolve that override through `resolve-feature` (exact directory name, feature number, or unique partial slug; `ambiguous` and `not-found` are domain outcomes to surface). If no session target is set and no arguments provided, stop and tell the user to run `/{project}:target` first.
 
 ### Flags
 
@@ -46,14 +46,14 @@ Default is unset — without the flag, the user confirms each task as today.
 - The runtime write boundary is derived in step 2 from git history; the plan's **Affected Files** section is a planning aid, not authoritative.
 - Do NOT read or modify files belonging to other features' spec directories.
 - Do NOT read source code speculatively — only read files relevant to the current task.
-- Reference: §implement-phase, §pipeline-boundaries, §text-first-artifacts, §brownfield-inbox (Automatic issue capture), plus the rule-file directory's `configuration-cross.md` (`specs/rules/configuration-cross.md` in adopter projects; `framework/rules/configuration-cross.md` in govern's own repo) for constants and env-vars (constitution loaded by `/{project}:target` — do not re-read).
-- Appending an incidentally-discovered issue to `specs/inbox.md` (per §brownfield-inbox Automatic issue capture) is a govern-artifact write, in the same category as the `mark-task` write to `tasks.md` — it is **not** subject to the runtime write boundary and does not trigger an out-of-boundary halt. The deterministic path for the append is the `append-inbox` primitive; if unavailable, append the bullet with the host's file tools per the markdown-only path (Walk through tasks, step 5).
+- Reference: §implement-phase, §pipeline-boundaries, §text-first-artifacts, §brownfield-inbox (Automatic issue capture), plus the rule-file directory's `configuration-cross.md` (`specs/rules/configuration-cross.md` in adopter projects; `framework/rules/configuration-cross.md` in ductus's own repo) for constants and env-vars (constitution loaded by `/{project}:target` — do not re-read).
+- Appending an incidentally-discovered issue to `specs/inbox.md` (per §brownfield-inbox Automatic issue capture) is a ductus-artifact write, in the same category as the `mark-task` write to `tasks.md` — it is **not** subject to the runtime write boundary and does not trigger an out-of-boundary halt. The deterministic path for the append is the `append-inbox` primitive; if unavailable, append the bullet with the host's file tools per the markdown-only path (Walk through tasks, step 5).
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional gvrn runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no gvrn MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write).
+> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no ductus MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write).
 
-1. Invoke `read-tasks` against the targeted feature to load the ordered task list and the per-task "done when" conditions. The host threads the per-primitive addressing arguments (task-number, subtask-index, checked, write-boundary, threshold, criterion-index) as **typed** context to the calls that consume them — these are per-call inputs supplied by the driving host, not session-file state, and (on `gvrn exec`) not string CLI overrides, since the primitives type them as integers/booleans.
+1. Invoke `read-tasks` against the targeted feature to load the ordered task list and the per-task "done when" conditions. The host threads the per-primitive addressing arguments (task-number, subtask-index, checked, write-boundary, threshold, criterion-index) as **typed** context to the calls that consume them — these are per-call inputs supplied by the driving host, not session-file state, and (on `ductus exec`) not string CLI overrides, since the primitives type them as integers/booleans.
 
 2. Invoke `derive-boundary` against the feature to compute the runtime write boundary from `git diff` against the spec dir's first commit. The result lists the feature's directory zones — the spec-dir glob plus a `{dir}/**` glob per changed path's parent directory (root-level files stay exact paths) — so writeCode may create new files inside zones the feature already touched. The boundary feeding the writeCode validator below is the **union** of this derivation and any session-seeded write-boundary: a seed is a deliberate grant the derivation never revokes, and on a fresh feature (no non-spec history yet) the seed is what admits the first code edit; with neither, enforcement stays fail-closed and the first out-of-spec edit halts. An **uncommitted spec directory** — no commit touches `{specs-root}/{feature}` — is a domain outcome, not an error: the result carries the spec-dir glob alone plus a `guidance` string, since the boundary is unknowable rather than broken. Surface that guidance (commit the spec directory, or seed a `write-boundary` in the session) and continue; enforcement stays fail-closed, so the first out-of-spec edit halts with `out-of-boundary-edit` and a legible next-step rather than the walk dying here. `/{project}:plan`'s validation gate is what normally prevents this state — reaching it means the spec was advanced another way.
 
@@ -90,12 +90,12 @@ The full setup, walk-through, completion gate, and stuck-detection details are d
 
 ### Setup details
 
-- Read `.govern/session.toml` for the session target, including optional `scenario` and `scenario-path` fields.
+- Read `.ductus/session.toml` for the session target, including optional `scenario` and `scenario-path` fields.
 - Read `specs/{feature}/tasks.md` for the ordered task list (primitive: `read-tasks`).
 - Read `specs/{feature}/plan.md` for technical decisions and affected files.
 - Read the spec file for acceptance criteria and contracts.
 - If a scenario is targeted, read the scenario file for scenario-specific context, behavior, and edge cases. The scenario scopes which part of the feature is the primary focus for this implementation session.
-- **Recompute dependencies (safety net).** Run `.govern/scripts/gen-spec-deps.sh --dry-run` (via the `run-generator` primitive; the generator walks every spec — there is no per-spec mode). If it reports a diff, the `dependencies:` frontmatter is stale from uncommitted body edits; surface that and recommend committing (the pre-commit hook syncs it) or running the generator manually. Do not run it for real from this command.
+- **Recompute dependencies (safety net).** Run `.ductus/scripts/gen-spec-deps.sh --dry-run` (via the `run-generator` primitive; the generator walks every spec — there is no per-spec mode). If it reports a diff, the `dependencies:` frontmatter is stale from uncommitted body edits; surface that and recommend committing (the pre-commit hook syncs it) or running the generator manually. Do not run it for real from this command.
 
 ### Stuck-detection details
 

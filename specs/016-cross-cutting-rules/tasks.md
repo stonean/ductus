@@ -49,17 +49,17 @@ Tasks derived from the [plan](plan.md). Complete in order.
 ## 7. Regenerate Claude command mirrors [simple]
 
 - [x] Run `./scripts/gen-claude-commands.sh` from the repo root.
-- [x] Verify `.claude/commands/gov/analyze.md` and `.claude/commands/gov/groom.md` reflect the source edits (renamed sections, new decision-tree step, parameterized loading prose).
+- [x] Verify `.claude/commands/ductus/analyze.md` and `.claude/commands/ductus/groom.md` reflect the source edits (renamed sections, new decision-tree step, parameterized loading prose).
 - [x] **Done when:** the generator runs without errors and the two generated files are in sync with their `framework/commands/` sources.
 
 ## 8. Lint and validate end-to-end [simple]
 
 - [x] Run `npx markdownlint-cli2` against all modified files (constitution, analyze.md, groom.md, spec template, 008 spec, 016 plan/tasks).
-- [x] Run `/gov:analyze --all` against the govern repo. Confirm no new findings introduced by the spec/template/validate changes themselves (specifically: no new "unknown rule reference" findings on existing specs; no template-rule-alignment findings against the new "Applicable Rules" section).
-- [x] **Done when:** markdownlint reports zero errors across all modified files and `/gov:analyze --all` passes (or its findings are pre-existing and unrelated to 016).
+- [x] Run `/ductus:analyze --all` against the ductus repo. Confirm no new findings introduced by the spec/template/validate changes themselves (specifically: no new "unknown rule reference" findings on existing specs; no template-rule-alignment findings against the new "Applicable Rules" section).
+- [x] **Done when:** markdownlint reports zero errors across all modified files and `/ductus:analyze --all` passes (or its findings are pre-existing and unrelated to 016).
 
 ## 9. Implement scenario: applicable-rules-consistency-check
 
 - [x] - [ ] Implement the behavior described in [`scenarios/applicable-rules-consistency-check.md`](scenarios/applicable-rules-consistency-check.md).
 
-- **Done when**: `/gov:analyze` emits a finding for every rule cited under a spec's `## Applicable Rules` section whose Verification trigger does NOT fire against the spec's content. Severity (blocking vs advisory) is resolved during the scenario's `/gov:clarify` walk and implemented per that decision.
+- **Done when**: `/ductus:analyze` emits a finding for every rule cited under a spec's `## Applicable Rules` section whose Verification trigger does NOT fire against the spec's content. Severity (blocking vs advisory) is resolved during the scenario's `/ductus:clarify` walk and implemented per that decision.

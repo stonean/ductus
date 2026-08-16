@@ -6,16 +6,16 @@ section: "Follow-on scenarios"
 
 ## Context
 
-Spec 042 made config resolution new-wins: read `.govern/config.toml` when it
+Spec 042 made config resolution new-wins: read `.ductus/config.toml` when it
 exists, else the legacy root `.govern.toml`. Two primitives need both halves of
 that answer — the path to read, and the repo-relative name to render as the
 provenance tag on a notice. `discover-rule-files` and `dashboard` each obtained
 them from two separate calls: `paths::config_path(repo)` at load time, and
 `paths::config_display_name(repo)` again at render time.
 
-That is two existence probes at two different moments. A `/govern` migration
+That is two existence probes at two different moments. A `/ductus` migration
 landing between them would let the primitive read one file and attribute its
-contents to the other — the notice would name `.govern/config.toml` while the
+contents to the other — the notice would name `.ductus/config.toml` while the
 disabled-rule-file list came from the legacy root file, or the reverse.
 
 Carried forward across two review runs of
@@ -23,7 +23,7 @@ Carried forward across two review runs of
 as `BE-RACE-001`, each time recorded as low-confidence rather than closed. The
 mitigations are real — the pipeline is serial per constitution
 [§concurrent-features](../../../framework/constitution.md#concurrent-features),
-the migration runs only inside `/govern`, and writes are atomic tempfile+rename
+the migration runs only inside `/ductus`, and writes are atomic tempfile+rename
 — but they are all arguments about *who else is running*, not about the
 primitive being correct on its own terms.
 
@@ -35,7 +35,7 @@ existence probe yielding both the path to read and the name to render.
 Both primitives resolve once and carry the name forward with the parsed
 content:
 
-- `discover_rule_files::load_govern_toml` returns `(GovernToml, &'static str)`;
+- `discover_rule_files::load_ductus_toml` returns `(DuctusToml, &'static str)`;
   the name flows into `apply_disabled_filter` instead of a second probe.
 - `dashboard::load_config` returns `(DashboardConfig, &'static str)`; the name
   is threaded through `render_markdown` into `render_callouts`.

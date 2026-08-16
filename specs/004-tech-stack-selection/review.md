@@ -15,7 +15,7 @@ skipped-passes: []
 ## Summary
 
 Reviewed the code added under the `framework-implies-language` scenario: the
-backend/frontend questionnaire change in `.claude/commands/gov/init.md` (ask the
+backend/frontend questionnaire change in `.claude/commands/ductus/init.md` (ask the
 framework first; infer the language and skip its question — and its example
 options — when the framework unambiguously determines it). **No MUST violations
 — the spec remains validly `done`, with no SHOULD findings.** The change is a
@@ -23,7 +23,7 @@ prose command instruction; the loaded security/api/config rule files target
 application-backend code and do not apply.
 
 One boundary point worth recording rather than flagging: `init.md` was edited at
-`.claude/commands/gov/init.md` directly, which the AGENTS.md §Boundaries rule
+`.claude/commands/ductus/init.md` directly, which the AGENTS.md §Boundaries rule
 normally forbids for generated command files. `init.md` is the documented
 exception — it is governance-specific and hand-maintained (`gen-claude-commands.sh`
 explicitly never touches it, and there is no `framework/commands/init.md`
@@ -45,7 +45,7 @@ None.
 
 None.
 
-## Captured issues (pending /gov:groom)
+## Captured issues (pending /ductus:groom)
 
 None.
 

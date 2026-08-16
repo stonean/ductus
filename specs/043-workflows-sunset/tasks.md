@@ -19,26 +19,26 @@ Tasks derived from the [plan](plan.md). Complete in order.
 ## 3. Delete `framework/workflows/` and excise the bootstrap flow
 
 - [x] `git rm` the 14 files under `framework/workflows/`
-- [x] Remove from `framework/bootstrap/govern.md`: §Workflow recommendation (incl. Tech Stack parsing + Auggie note), the manifest row, the `[workflows]` config schema block and `declined_categories` paragraph, and the mentions at the procedural-fidelity preamble, managed-block preserve list, enforce-manifest note, write-policy paragraph, manifest-scope sentence, and both per-layout skip instructions
+- [x] Remove from `framework/bootstrap/ductus.md`: §Workflow recommendation (incl. Tech Stack parsing + Auggie note), the manifest row, the `[workflows]` config schema block and `declined_categories` paragraph, and the mentions at the procedural-fidelity preamble, managed-block preserve list, enforce-manifest note, write-policy paragraph, manifest-scope sentence, and both per-layout skip instructions
 
-- **Done when**: `grep -i workflow framework/bootstrap/govern.md` returns only generic uses (tar-xzf sentence, PKM tip) and `framework/workflows/` does not exist.
+- **Done when**: `grep -i workflow framework/bootstrap/ductus.md` returns only generic uses (tar-xzf sentence, PKM tip) and `framework/workflows/` does not exist.
 
 ## 4. Sweep constitution, command sources, templates
 
 - [x] `framework/constitution.md`: drop the Workflow registry map row; reword §runtime-boundary criterion 2(b)
 - [x] `framework/commands/groom.md` (2 sites) and `framework/commands/link.md` (preserve list): reword per plan
 - [x] `framework/templates/project/agents.md`: drop the workflows disambiguation from the Skills comment
-- [x] Regenerate `.claude/commands/gov/` copies via `scripts/gen-claude-commands.sh`
+- [x] Regenerate `.claude/commands/ductus/` copies via `scripts/gen-claude-commands.sh`
 
 - **Done when**: no framework artifact outside `CHANGELOG.md` references the feature, and regenerated copies match their sources.
 
 ## 5. Hand-sweep `init.md`, README, AGENTS.md
 
-- [x] `.claude/commands/gov/init.md`: remove §8, renumber later steps, reword the `:40` inference justification
+- [x] `.claude/commands/ductus/init.md`: remove §8, renumber later steps, reword the `:40` inference justification
 - [x] `README.md`: drop the `[workflows]` config docs, example TOML section, repo-layout row; run the prose-claim pass (scaffold/recommend/decline phrasings)
 - [x] `AGENTS.md`: drop the `framework/workflows/` project-structure bullet, the ships-as-is gotcha, and the "per-category workflow prompts" phrase in the procedural-fidelity mirror
 
-- **Done when**: the meaning-based sweep over README, AGENTS.md, and `.claude/commands/` finds no claim that govern offers, scaffolds, or records declines for workflows.
+- **Done when**: the meaning-based sweep over README, AGENTS.md, and `.claude/commands/` finds no claim that ductus offers, scaffolds, or records declines for workflows.
 
 ## 6. Runtime comment sweep, version bump, changelog
 

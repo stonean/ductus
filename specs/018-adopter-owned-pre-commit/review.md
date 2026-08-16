@@ -13,7 +13,7 @@ skipped-passes: []
 
 ## Summary
 
-Splits the adopter pre-commit hook into an outer adopter-owned stub and an inner govern-owned `govern-pre-commit` script. Deletes the standalone `install.sh` and inlines installation into `framework/bootstrap/govern.md`'s Hook Installation section. The split is byte-preserving for the inner file (rename only), so CI sees no diff. Pure markdown + shell-script split — security rules do not apply at the framework level. All five passes ran; no findings. `blocking: no`.
+Splits the adopter pre-commit hook into an outer adopter-owned stub and an inner ductus-owned `ductus-pre-commit` script. Deletes the standalone `install.sh` and inlines installation into `framework/bootstrap/ductus.md`'s Hook Installation section. The split is byte-preserving for the inner file (rename only), so CI sees no diff. Pure markdown + shell-script split — security rules do not apply at the framework level. All five passes ran; no findings. `blocking: no`.
 
 ## MUST violations (blocking)
 
@@ -39,15 +39,15 @@ _None._
 
 ### Security
 
-The outer adopter-owned stub is unmanaged by govern — adopters can extend it freely. The inner `govern-pre-commit` preserves its `# managed-by: govern` sentinel on line 2, allowing the installer ladder to detect and refresh govern-owned content without clobbering adopter edits. No new attack surface.
+The outer adopter-owned stub is unmanaged by ductus — adopters can extend it freely. The inner `ductus-pre-commit` preserves its `# managed-by: ductus` sentinel on line 2, allowing the installer ladder to detect and refresh ductus-owned content without clobbering adopter edits. No new attack surface.
 
 ### Reuse
 
-The outer-stub / inner-script pattern is the canonical mechanism for govern-shipped files that adopters extend (analogous to constitution/AGENTS.md handling for similar boundary).
+The outer-stub / inner-script pattern is the canonical mechanism for ductus-shipped files that adopters extend (analogous to constitution/AGENTS.md handling for similar boundary).
 
 ### Quality
 
-Migration subsection in `govern.md` correctly handles the case where adopters already have a `pre-commit` from 017 (rename in place to `govern-pre-commit`, install new stub). Idempotent across re-runs.
+Migration subsection in `ductus.md` correctly handles the case where adopters already have a `pre-commit` from 017 (rename in place to `ductus-pre-commit`, install new stub). Idempotent across re-runs.
 
 ### Efficiency
 
@@ -55,4 +55,4 @@ N/A.
 
 ### Simplicity
 
-Inlining `install.sh` into `govern.md` collapses two files into one description; the operator follows the markdown rather than running an additional script.
+Inlining `install.sh` into `ductus.md` collapses two files into one description; the operator follows the markdown rather than running an additional script.

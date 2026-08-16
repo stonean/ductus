@@ -11,18 +11,18 @@ Tasks derived from the [plan](plan.md). Complete in order.
 Rename files and update all references from `triage` to `inbox` across the framework. This is a mechanical rename done first so subsequent tasks work with the final naming.
 
 - [x] Rename `commands/triage.md` → `commands/inbox.md`
-- [x] Rename `.claude/commands/gov/triage.md` → `.claude/commands/gov/inbox.md`
+- [x] Rename `.claude/commands/ductus/triage.md` → `.claude/commands/ductus/inbox.md`
 - [x] Rename `templates/triage.md` → `templates/inbox.md`
 - [x] Update content in `commands/inbox.md` (heading, references, prose)
-- [x] Update content in `.claude/commands/gov/inbox.md` (heading, references, prose)
+- [x] Update content in `.claude/commands/ductus/inbox.md` (heading, references, prose)
 - [x] Update content in `templates/inbox.md` (heading, content)
-- [x] Update `govern/govern.md` file manifest, command manifest, and post-scaffolding output
-- [x] Update `govern/govern-auggie.md` file manifest, command manifest, and post-scaffolding output
+- [x] Update `ductus/ductus.md` file manifest, command manifest, and post-scaffolding output
+- [x] Update `ductus/ductus-auggie.md` file manifest, command manifest, and post-scaffolding output
 - [x] Update `constitution.md` section heading, marker, and content
 - [x] Update `sdd-context.md` references
 - [x] Update `README.md` references
 - [x] Update `commands/about.md` references
-- [x] Update `.claude/commands/gov/about.md` references
+- [x] Update `.claude/commands/ductus/about.md` references
 - [x] Update `AGENTS.md` references
 - [x] Add signpost to `specs/006-bug-workflow/spec.md` noting the rename
 - [x] Run `npx markdownlint-cli2` on all modified files
@@ -34,25 +34,25 @@ Rename files and update all references from `triage` to `inbox` across the frame
 Create the `/capture` command in both platform-agnostic and Claude Code forms.
 
 - [x] Create `commands/capture.md` with freeform input flow, skeleton spec creation, session target update, and post-capture options
-- [x] Create `.claude/commands/gov/capture.md` as Claude Code instance with `/gov:` prefix and `.claude` paths
+- [x] Create `.claude/commands/ductus/capture.md` as Claude Code instance with `/ductus:` prefix and `.claude` paths
 - [x] Verify command file parity between the two files
 - [x] Run `npx markdownlint-cli2` on both files
 
 **Done when:** both capture command files exist, pass lint, and follow the same structure as other commands.
 
-## 3. Update govern file manifests and add migration
+## 3. Update ductus file manifests and add migration
 
-Add the capture command to the govern file manifests and add a triage → inbox migration step.
+Add the capture command to the ductus file manifests and add a triage → inbox migration step.
 
-- [x] Add `commands/capture.md` to `govern/govern.md` slash command manifest with `update` strategy
-- [x] Add `commands/capture.md` to `govern/govern-auggie.md` slash command manifest with `update` strategy
-- [x] Add triage → inbox migration to `govern/govern.md`: rename `specs/inbox.md` to `specs/inbox.md` if needed, merge if both exist, delete old triage command
-- [x] Add triage → inbox migration to `govern/govern-auggie.md`: same migration with Auggie paths
+- [x] Add `commands/capture.md` to `ductus/ductus.md` slash command manifest with `update` strategy
+- [x] Add `commands/capture.md` to `ductus/ductus-auggie.md` slash command manifest with `update` strategy
+- [x] Add triage → inbox migration to `ductus/ductus.md`: rename `specs/inbox.md` to `specs/inbox.md` if needed, merge if both exist, delete old triage command
+- [x] Add triage → inbox migration to `ductus/ductus-auggie.md`: same migration with Auggie paths
 - [x] Migration is reported in post-scaffolding summary
-- [x] Add signpost to `specs/007-govern-workflow/spec.md` noting the govern command changes by this spec
-- [x] Run `npx markdownlint-cli2` on both govern files and 007 spec
+- [x] Add signpost to `specs/007-govern-workflow/spec.md` noting the ductus command changes by this spec
+- [x] Run `npx markdownlint-cli2` on both ductus files and 007 spec
 
-**Done when:** both govern files include the capture command in their manifests and perform the triage → inbox migration for previously adopted projects.
+**Done when:** both ductus files include the capture command in their manifests and perform the triage → inbox migration for previously adopted projects.
 
 ## 4. Document brownfield process in constitution
 

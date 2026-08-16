@@ -6,7 +6,7 @@ section: "Follow-on scenarios"
 
 ## Context
 
-`/gov:review`'s procedure invokes `process-waivers` at step 3 to classify waivers "against the currently-firing findings" — but the five `performReview` passes that produce findings are steps 4–8, so at step 3 no findings exist. The primitive's `fired` argument defaults to empty, and its classification rule (`apply` requires the file to exist AND the rule to still fire) then classifies every waiver as `expire`; step 9's `write-review` "prunes expired waivers." On the exec path this mass-expires every valid waiver on every run; the parity test pins the same broken sequence. The primitive itself is correct — the procedure ordering and the exec-path binding of `fired` are the defects. Surfaced in the 2026-07-11 runtime review.
+`/ductus:review`'s procedure invokes `process-waivers` at step 3 to classify waivers "against the currently-firing findings" — but the five `performReview` passes that produce findings are steps 4–8, so at step 3 no findings exist. The primitive's `fired` argument defaults to empty, and its classification rule (`apply` requires the file to exist AND the rule to still fire) then classifies every waiver as `expire`; step 9's `write-review` "prunes expired waivers." On the exec path this mass-expires every valid waiver on every run; the parity test pins the same broken sequence. The primitive itself is correct — the procedure ordering and the exec-path binding of `fired` are the defects. Surfaced in the 2026-07-11 runtime review.
 
 ## Behavior
 

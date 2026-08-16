@@ -2,16 +2,16 @@
 # scripts/audit/installer-registry-parity.sh — Family 14 of /audit.
 #
 # Verifies the one-line installer (install.sh) and the agent registry in
-# framework/bootstrap/govern.md agree on which agents exist and where each
-# one's `govern` bootstrap is placed.
+# framework/bootstrap/ductus.md agree on which agents exist and where each
+# one's `ductus` bootstrap is placed.
 #
 # install.sh hard-codes one `case` arm per agent (`<key>) ... dest="..."`).
-# The registry's §Derived values table derives each agent's `govern` install
+# The registry's §Derived values table derives each agent's `ductus` install
 # path from its row by layout:
 #
-#   claude-style → {config_dir}/commands/govern.md
-#   antigravity  → {config_dir}/skills/govern/SKILL.md
-#   opencode     → {config_dir}/command/govern.md
+#   claude-style → {config_dir}/commands/ductus.md
+#   antigravity  → {config_dir}/skills/ductus/SKILL.md
+#   opencode     → {config_dir}/command/ductus.md
 #
 # The check enforces per-key parity in three directions:
 #
@@ -26,7 +26,7 @@
 #      permission copy silently drifting from the registry it duplicates.)
 #
 # Directions 1-2 are pure text extraction — no jq, no associative arrays
-# (macOS bash 3.2). Direction 3 uses python3 (already a govern bootstrap
+# (macOS bash 3.2). Direction 3 uses python3 (already a ductus bootstrap
 # dependency, and used by sibling audit scripts) because the three permission
 # formats make an order-insensitive JSON compare the only reliable check.
 # This is the audit check spec 003's curl-sh-installer scenario calls for,
@@ -38,11 +38,11 @@ set -uo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
 audit_family installer-registry-parity
 
-GOVERN="framework/bootstrap/govern.md"
+DUCTUS="framework/bootstrap/ductus.md"
 INSTALLER="install.sh"
 
-if [ ! -f "$GOVERN" ]; then
-  emit "$GOVERN" "agent registry source missing" "restore $GOVERN"
+if [ ! -f "$DUCTUS" ]; then
+  emit "$DUCTUS" "agent registry source missing" "restore $DUCTUS"
   exit 1
 fi
 if [ ! -f "$INSTALLER" ]; then
@@ -50,13 +50,13 @@ if [ ! -f "$INSTALLER" ]; then
   exit 1
 fi
 
-# Derive an agent's `govern` install path from its config_dir + layout,
-# mirroring the §Derived values "govern install path" row.
+# Derive an agent's `ductus` install path from its config_dir + layout,
+# mirroring the §Derived values "ductus install path" row.
 derive_path() {
   case "$2" in
-    claude-style) printf '%s/commands/govern.md\n' "$1" ;;
-    antigravity)  printf '%s/skills/govern/SKILL.md\n' "$1" ;;
-    opencode)     printf '%s/command/govern.md\n' "$1" ;;
+    claude-style) printf '%s/commands/ductus.md\n' "$1" ;;
+    antigravity)  printf '%s/skills/ductus/SKILL.md\n' "$1" ;;
+    opencode)     printf '%s/command/ductus.md\n' "$1" ;;
     *)            printf '\n' ;;  # unknown layout — signalled by empty result
   esac
 }
@@ -80,7 +80,7 @@ registry_map="$(
       if (key == "" || key == "key" || key ~ /^-+$/) next
       print key "\t" cd "\t" lay
     }
-  ' "$GOVERN"
+  ' "$DUCTUS"
 )"
 
 # Extract install.sh's case-arm key -> dest mapping. Track the current
@@ -116,7 +116,7 @@ while IFS="$(printf '\t')" read -r key cd lay; do
   [ -n "$key" ] || continue
   want="$(derive_path "$cd" "$lay")"
   if [ -z "$want" ]; then
-    emit "$GOVERN (agent $key)" "unrecognized layout '$lay' — cannot derive install path" \
+    emit "$DUCTUS (agent $key)" "unrecognized layout '$lay' — cannot derive install path" \
       "add a '$lay' branch to derive_path() in scripts/audit/installer-registry-parity.sh and a matching install.sh case arm"
     continue
   fi
@@ -137,29 +137,29 @@ while IFS="$(printf '\t')" read -r key dest; do
   [ -n "$key" ] || continue
   if [ -z "$(lookup "$registry_map" "$key")" ]; then
     emit "$INSTALLER (agent $key)" "installs to '$dest' but '$key' is not in the agent registry" \
-      "add '$key' to the §Agent Registry table in $GOVERN, or remove its arm from install.sh"
+      "add '$key' to the §Agent Registry table in $DUCTUS, or remove its arm from install.sh"
   fi
 done <<EOF
 $installer_map
 EOF
 
 # Direction 3: settings-template parity. install.sh pre-seeds each agent's
-# permission file (so the first /govern run does not prompt for its bootstrap
+# permission file (so the first /ductus run does not prompt for its bootstrap
 # shell commands) by hard-coding a copy of that agent's registry settings_template.
 # That duplicate must not silently drift. The three permission formats (claude
 # Bash()/Read(), auggie toolPermissions/regex, antigravity command()) make a text
 # diff unreliable, so this pass uses python3 for an order-insensitive JSON compare
 # of each install.sh seed against its §Agent Registry settings_template.
 seed_drift="$(
-python3 - "$GOVERN" "$INSTALLER" <<'PY'
+python3 - "$DUCTUS" "$INSTALLER" <<'PY'
 import json, re, sys
-govern, installer = sys.argv[1], sys.argv[2]
+ductus, installer = sys.argv[1], sys.argv[2]
 
 # Registry: agent key -> settings_template JSON (column 5 of the §Agent Registry
 # table). The cell is backtick-wrapped JSON containing no literal '|'.
 rows = {}
 in_reg = False
-for line in open(govern):
+for line in open(ductus):
     if line.startswith("## Agent Registry"):
         in_reg = True
         continue
@@ -206,12 +206,12 @@ for key, (path, body) in seeds.items():
     if key not in rows:
         finding(f"{installer} ({path})",
                 f"seeds settings for '{key}' but '{key}' is not in the agent registry",
-                f"add '{key}' to the §Agent Registry table in {govern}, or remove its seed from {installer}")
+                f"add '{key}' to the §Agent Registry table in {ductus}, or remove its seed from {installer}")
         continue
     try:
         reg = norm(json.loads(rows[key]))
     except json.JSONDecodeError as e:
-        finding(f"{govern} (agent {key})", f"settings_template is not valid JSON: {e}",
+        finding(f"{ductus} (agent {key})", f"settings_template is not valid JSON: {e}",
                 "repair the registry settings_template cell")
         continue
     try:
@@ -223,7 +223,7 @@ for key, (path, body) in seeds.items():
     if reg != seed:
         finding(f"{installer} ({path})",
                 f"settings seed for '{key}' drifts from the registry settings_template",
-                f"re-sync the '{path}' heredoc in {installer} with the '{key}' row in {govern} §Agent Registry")
+                f"re-sync the '{path}' heredoc in {installer} with the '{key}' row in {ductus} §Agent Registry")
 PY
 )"
 if [ -n "$seed_drift" ]; then

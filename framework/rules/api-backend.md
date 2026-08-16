@@ -8,7 +8,7 @@ Rules use RFC 2119 language: **MUST** / **MUST NOT** are enforced by the validat
 
 Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assigned, an ID is never renumbered, even if the rule is moved within the file or deprecated. Categories: `SCHEMA` (schema publication and source-of-truth), `APIVER` (versioning and deprecation), `ERRENV` (error response envelope), `STATUS` (HTTP status code discipline), `PAGE` (pagination), `IDEMP` (idempotency), `COMPAT` (backwards compatibility). See `specs/008-security-rules/data-model.md` for the full schema.
 
-Projects without a programmatic API can pin this file in `.govern.toml` to skip it during `govern` updates.
+Projects without a programmatic API can pin this file in `.ductus/config.toml` to skip it during `ductus` updates.
 
 ## BE-SCHEMA — Schema Publication
 
@@ -70,7 +70,7 @@ Projects without a programmatic API can pin this file in `.govern.toml` to skip 
 
 > Error responses from HTTP APIs MUST use a single documented envelope shape across all endpoints. The default SHOULD be RFC 9457 `application/problem+json` (with at least `type`, `title`, `status`, `detail` fields). A project-specific envelope is acceptable when documented in `specs/system.md` and used uniformly.
 
-**Rationale:** Without a uniform shape, every consumer writes per-endpoint error parsing — and gets it wrong for endpoints added later. A single shape lets clients write one error handler that works everywhere, and lets the API evolve error categories without breaking consumers. The security properties of the same envelope — no internal detail in production, a correlation ID surfaced to the client — are governed by `security-backend.md` §BE-ERR (`BE-ERR-001`, `BE-ERR-002`); this rule and `BE-ERRENV-002` govern its contract shape and code stability.
+**Rationale:** Without a uniform shape, every consumer writes per-endpoint error parsing — and gets it wrong for endpoints added later. A single shape lets clients write one error handler that works everywhere, and lets the API evolve error categories without breaking consumers. The security properties of the same envelope — no internal detail in production, a correlation ID surfaced to the client — are governed by `security-backend.md` §BE-ERR (`BE-ERR-001`, `BE-ERR-002`); this rule and `BE-ERRENV-002` ductus its contract shape and code stability.
 
 **Verification:** Any spec or plan that introduces an HTTP API endpoint MUST commit to the project's error envelope shape and reference its definition in `specs/system.md`. Validate flags endpoint specs that describe ad-hoc error formats (per-endpoint shapes, mixed error types, naked strings) without naming the project envelope.
 

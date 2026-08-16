@@ -9,9 +9,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Cross-reference rather than restate: `BE-COORD-002` cites `api-backend.md` `BE-IDEMP`; lock/pool interaction cites `performance-backend.md` `BE-POOL-*`; tunable values cite `configuration-cross.md` `CFG-*`.
 - Done when: the file exists with eight well-formed rules (4 MUST / 4 SHOULD), categories disjoint from the other backend files, each MUST a scale-independent corruption hazard.
 
-## 2. Register the file in the `/govern` manifest
+## 2. Register the file in the `/ductus` manifest
 
-- [x] Add `framework/rules/concurrency-backend.md → specs/rules/concurrency-backend.md` to the `### govern-owned shared files` table in `framework/bootstrap/govern.md`, slotted between `api-backend.md` and `configuration-cross.md` (alphabetical; strategy: update).
+- [x] Add `framework/rules/concurrency-backend.md → specs/rules/concurrency-backend.md` to the `### ductus-owned shared files` table in `framework/bootstrap/ductus.md`, slotted between `api-backend.md` and `configuration-cross.md` (alphabetical; strategy: update).
 - Done when: the manifest row is present; the `-backend.md` suffix makes 024's loader select it under the `backend` surface and 033's filter include it. (The §Shared Files note is count-free — no count edit.)
 
 ## 3. Validate
@@ -23,5 +23,5 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 4. Review and complete
 
-- [x] Run `/gov:review` over the change set; resolve any MUST findings.
-- Done when: `/gov:review` reports no blocking violations and the spec can advance to `done`.
+- [x] Run `/ductus:review` over the change set; resolve any MUST findings.
+- Done when: `/ductus:review` reports no blocking violations and the spec can advance to `done`.

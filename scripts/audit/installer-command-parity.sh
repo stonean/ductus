@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # scripts/audit/installer-command-parity.sh — Family 16 of /audit.
 #
-# The /govern bootstrap (framework/bootstrap/govern.md) scaffolds an
+# The /ductus bootstrap (framework/bootstrap/ductus.md) scaffolds an
 # adopter's slash commands from a HARDCODED manifest table in its
 # §Per-Agent Scaffolding → Slash commands section — one
 # `framework/commands/<name>.md` row per installable command. That table
@@ -11,11 +11,11 @@
 # configure/*.md, runtime-tools.txt) while the installer manifest is easy
 # to miss. The result is a command that exists in the framework and is
 # dogfooded here (gen-claude-commands.sh globs all of framework/commands/)
-# yet never reaches adopters via /govern — and, because §Slash command
+# yet never reaches adopters via /ductus — and, because §Slash command
 # cleanup deletes any unlisted file, would be removed if hand-placed.
 #
 # This family pins the manifest to the source of truth: the set of
-# `framework/commands/*.md` rows in govern.md must equal the set of
+# `framework/commands/*.md` rows in ductus.md must equal the set of
 # framework/commands/*.md files, minus the maintainer-only commands that
 # are intentionally not shipped to adopters (see `excl` below).
 #
@@ -29,20 +29,20 @@ set -uo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
 audit_family installer-command-parity
 
-GOVERN="framework/bootstrap/govern.md"
+DUCTUS="framework/bootstrap/ductus.md"
 SRC_DIR="framework/commands"
-SECTION="$GOVERN §Per-Agent Scaffolding → Slash commands"
+SECTION="$DUCTUS §Per-Agent Scaffolding → Slash commands"
 
-if [ ! -f "$GOVERN" ]; then
-  emit "$GOVERN" "bootstrap file not found" "restore framework/bootstrap/govern.md"
+if [ ! -f "$DUCTUS" ]; then
+  emit "$DUCTUS" "bootstrap file not found" "restore framework/bootstrap/ductus.md"
   exit "$drift"
 fi
 
 # Manifest command names: the `| `framework/commands/<name>.md` | ... |`
-# table rows in govern.md. Anchored on a leading `| ` + backticked source
+# table rows in ductus.md. Anchored on a leading `| ` + backticked source
 # path so prose references to framework/commands/*.md elsewhere in the file
 # (e.g. the review.disabled-rule-files pointer) are never mistaken for rows.
-manifest="$(grep -oE '^\| `framework/commands/[a-z-]+\.md`' "$GOVERN" \
+manifest="$(grep -oE '^\| `framework/commands/[a-z-]+\.md`' "$DUCTUS" \
   | sed -E 's/.*framework\/commands\/([a-z-]+)\.md.*/\1/' | sort -u)"
 
 # Actual source files under framework/commands/.
@@ -50,7 +50,7 @@ actual="$(for f in "$SRC_DIR"/*.md; do basename "$f" .md; done | sort -u)"
 
 # Maintainer-only commands intentionally excluded from the adopter manifest.
 # audit is maintainer-only (see framework/commands/audit.md's own header).
-# Add a line here when a new command is deliberately withheld from /govern.
+# Add a line here when a new command is deliberately withheld from /ductus.
 excl="$(sort -u <<'EOF'
 audit
 EOF
@@ -63,7 +63,7 @@ expected="$(comm -23 <(printf '%s' "$actual") <(printf '%s' "$excl"))"
 while IFS= read -r name; do
   [ -z "$name" ] && continue
   emit "$SECTION" \
-    "framework/commands/$name.md has no installer manifest row — /govern never scaffolds it for adopters" \
+    "framework/commands/$name.md has no installer manifest row — /ductus never scaffolds it for adopters" \
     "add | \`framework/commands/$name.md\` | \`{config_dir}/commands/{project}/$name.md\` | to the Slash commands table, then bump the two 'N framework/commands/*.md rows' counts"
 done <<< "$(comm -23 <(printf '%s' "$expected") <(printf '%s' "$manifest"))"
 

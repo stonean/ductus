@@ -13,7 +13,7 @@ skipped-passes: []
 
 ## Summary
 
-Unified `/govern` installer plus the post-task-10 audit of `settings_template` Bash patterns: both Agent Registry rows now cover `Bash(git status *)`, `Bash(git config *)`, `Bash(chmod *)`, and `Bash(awk *)` (Claude format) and the mirrored `launch-process` regexes (Auggie format). The change is pure data in markdown table cells — no application code added. Tech-stack alignment skipped via `.govern.toml` `[review] tech-stack-verified = true`. Loaded rule files: `configuration-cross.md` (the only file whose suffix selects for govern's text-first stack — no backend/frontend code). All five passes ran; no findings. `blocking: no`.
+Unified `/ductus` installer plus the post-task-10 audit of `settings_template` Bash patterns: both Agent Registry rows now cover `Bash(git status *)`, `Bash(git config *)`, `Bash(chmod *)`, and `Bash(awk *)` (Claude format) and the mirrored `launch-process` regexes (Auggie format). The change is pure data in markdown table cells — no application code added. Tech-stack alignment skipped via `.govern.toml` `[review] tech-stack-verified = true`. Loaded rule files: `configuration-cross.md` (the only file whose suffix selects for ductus's text-first stack — no backend/frontend code). All five passes ran; no findings. `blocking: no`.
 
 ## MUST violations (blocking)
 

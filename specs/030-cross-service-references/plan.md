@@ -8,7 +8,7 @@ Cross-service references are informative links from a spec to a spec in another 
 
 1. **Registry** — a `.govern.toml [services]` table mapping a service alias to its canonical repo and local checkout path.
 2. **Harvest** — a generator that extracts cross-service URL links from a spec body into a derived `references:` frontmatter index, kept strictly distinct from `dependencies:`.
-3. **Runtime** — a new `gvrn` primitive that resolves each reference through the registry, reads the linked spec's `status` from the local checkout, and classifies the outcome. The markdown-only path performs the same work with host file tools; the primitive is the fast path, never a prerequisite.
+3. **Runtime** — a new `ductus` primitive that resolves each reference through the registry, reads the linked spec's `status` from the local checkout, and classifies the outcome. The markdown-only path performs the same work with host file tools; the primitive is the fast path, never a prerequisite.
 4. **Commands** — `/{project}:status` surfaces the resolved status; `/{project}:analyze` reports a provably-broken reference as a finding.
 5. **Constitution** — a §spec-lifecycle carve-out so reference edits don't reopen a `done` spec, plus a `references:` row in the §text-first-artifacts frontmatter schema.
 
@@ -20,7 +20,7 @@ Comprehensive tests are a first-class deliverable (per the planning decision): R
 
 A `[services.<alias>]` table with two string fields: `repo` (canonical URL, the identity matched against body-link hrefs) and `path` (local checkout, relative to repo root or absolute). The table is optional — absent means no cross-service resolution, and a single-service adopter writes nothing.
 
-`.govern.toml` is the shared adopter-side database (per `AGENTS.md`); `[services]` is a new table documented in this spec's `data-model.md`. Adding it does **not** generate a §cross-spec-impact signpost on spec 019. The schema is declared canonically in `data-model.md` and the runtime reads per that schema (§runtime-boundary principle 4). Entries are added with the `/{project}:link` command (D6), not derived — `path` is machine-local knowledge `govern` cannot infer. An optional `description` annotates an entry with the service's purpose; it is **informational only** (surfaced for orientation, never branched on), which keeps it clear of the no-human-diligence principle that rejects optional *load-bearing* inputs.
+`.govern.toml` is the shared adopter-side database (per `AGENTS.md`); `[services]` is a new table documented in this spec's `data-model.md`. Adding it does **not** generate a §cross-spec-impact signpost on spec 019. The schema is declared canonically in `data-model.md` and the runtime reads per that schema (§runtime-boundary principle 4). Entries are added with the `/{project}:link` command (D6), not derived — `path` is machine-local knowledge `ductus` cannot infer. An optional `description` annotates an entry with the service's purpose; it is **informational only** (surfaced for orientation, never branched on), which keeps it clear of the no-human-diligence principle that rejects optional *load-bearing* inputs.
 
 ### D2 — Reference syntax and harvesting
 
@@ -62,11 +62,11 @@ Template-rule alignment holds without a template change: a freshly scaffolded sp
 
 ### D6 — Registration command `/{project}:link`
 
-A new slash command registers a service in `[services]` — chosen over hand-edit-only for two reasons: it surfaces the capability in `/{project}:help` and the README (an adopter discovers it; a `.govern.toml` table they would not), and it guarantees well-formed TOML rather than leaving structure to the author. Registration is *not* derived — `path` is machine-local knowledge `govern` cannot infer.
+A new slash command registers a service in `[services]` — chosen over hand-edit-only for two reasons: it surfaces the capability in `/{project}:help` and the README (an adopter discovers it; a `.govern.toml` table they would not), and it guarantees well-formed TOML rather than leaving structure to the author. Registration is *not* derived — `path` is machine-local knowledge `ductus` cannot infer.
 
 - **Flow:** prompts for each field one at a time — alias, then repo URL, then local path, then an optional `description` (enter to skip) — validating as it goes, the same one-at-a-time interaction `/{project}:clarify` uses. Inline args (`/{project}:link <alias> <repo> <path> [--description <text>]`) are accepted as an optional shortcut.
 - **Validation (per field, as entered):** alias is a valid, unique TOML key (no clobber of an existing entry); `repo` is URL-shaped; `path` is recorded as written but *warns* — does not block — when it does not currently resolve, since `not-checked-out` is a valid state.
-- **Write:** additive — adds the `[services.<alias>]` block and leaves every other `.govern.toml` table intact (the additive discipline already used for `.mcp.json` and permission merges). The markdown-only path edits `.govern.toml` with host file tools; a small deterministic write primitive may serve as the fast path, but `gvrn` is never required.
+- **Write:** additive — adds the `[services.<alias>]` block and leaves every other `.govern.toml` table intact (the additive discipline already used for `.mcp.json` and permission merges). The markdown-only path edits `.govern.toml` with host file tools; a small deterministic write primitive may serve as the fast path, but `ductus` is never required.
 - **`--list`:** shows registered services and, when reachable, their resolution health. Removal stays a hand-edit.
 - **Docs:** the command's row lives in the README **Orient** section and `/{project}:help`; the `unregistered` outcome (D4) points the user at `/{project}:link`.
 

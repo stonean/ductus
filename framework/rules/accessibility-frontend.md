@@ -1,12 +1,12 @@
 # Accessibility Rules — Frontend
 
-Enforceable accessibility rules for browser-rendered UI. These rules apply to any project with a web frontend adopting `govern`. They derive from WCAG 2.2 AA, the de facto baseline for public-facing web applications in regulated jurisdictions (EU EAA, US Section 508, UK Equality Act, Ontario AODA).
+Enforceable accessibility rules for browser-rendered UI. These rules apply to any project with a web frontend adopting `ductus`. They derive from WCAG 2.2 AA, the de facto baseline for public-facing web applications in regulated jurisdictions (EU EAA, US Section 508, UK Equality Act, Ontario AODA).
 
 Rules use RFC 2119 language: **MUST** / **MUST NOT** are enforced by the validate command (errors); **SHOULD** / **SHOULD NOT** are flagged as warnings.
 
 Rule IDs follow the format `FE-{CATEGORY}-{NNN}` and are permanent — once assigned, an ID is never renumbered, even if the rule is moved within the file or deprecated. Categories: `SEMHTML` (semantic HTML), `KBD` (keyboard navigation and focus), `ARIA` (ARIA usage), `CONTRAST` (color and contrast), `A11YFORM` (accessible forms), `A11YMEDIA` (text alternatives and media). See `specs/008-security-rules/data-model.md` for the full schema.
 
-Projects without a frontend can pin this file in `.govern.toml` to skip it during `govern` updates.
+Projects without a frontend can pin this file in `.ductus/config.toml` to skip it during `ductus` updates.
 
 ## FE-SEMHTML — Semantic HTML
 

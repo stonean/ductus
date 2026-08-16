@@ -70,7 +70,7 @@ jobs:
       # Packaging portability (spec 048, task 3). The release workflow packages
       # every platform as `.tar.gz` and verifies the digest with whichever of
       # `shasum` / `sha256sum` the image provides — but it runs only on a
-      # pushed `gvrn-v*` tag, so until now the Windows leg of that sequence
+      # pushed `ductus-v*` tag, so until now the Windows leg of that sequence
       # could not be exercised before the release it was meant to protect.
       # That is the wrong moment to discover Git Bash lacks a tool.
       #
@@ -85,8 +85,8 @@ jobs:
           ext=""
           [ "${{ matrix.os }}" = "windows-latest" ] && ext=".exe"
           cd target/release
-          archive="gvrn-packaging-probe.tar.gz"
-          tar -czf "$archive" "gvrn${ext}"
+          archive="ductus-packaging-probe.tar.gz"
+          tar -czf "$archive" "ductus${ext}"
           if command -v shasum > /dev/null; then
             shasum -a 256 "$archive" > "${archive}.sha256"
             shasum -a 256 -c "${archive}.sha256"
@@ -96,8 +96,8 @@ jobs:
           fi
           probe="$(mktemp -d)"
           tar -xzf "$archive" -C "$probe"
-          test -f "$probe/gvrn${ext}"
-          "$probe/gvrn${ext}" --version
+          test -f "$probe/ductus${ext}"
+          "$probe/ductus${ext}" --version
           rm "$archive" "${archive}.sha256"
 
   # Dependency vulnerability scan (BE-DEPS-001). Fails on any RUSTSEC

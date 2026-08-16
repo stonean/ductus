@@ -6,17 +6,17 @@ title: "003-bootstrap-automation — plan"
 
 ## Overview
 
-Create eleven slash commands in `.claude/commands/gov/`: ten standard pipeline commands copied from `commands/` templates with `{project}` replaced by `gov`, plus one governance-specific `init.md` that scaffolds new projects. The standard commands give governance the same pipeline enforcement as adopting projects. The init command automates the manual bootstrap process from the README.
+Create eleven slash commands in `.claude/commands/ductus/`: ten standard pipeline commands copied from `commands/` templates with `{project}` replaced by `gov`, plus one governance-specific `init.md` that scaffolds new projects. The standard commands give governance the same pipeline enforcement as adopting projects. The init command automates the manual bootstrap process from the README.
 
 ## Technical Decisions
 
 ### Standard commands are literal copies with placeholder replacement
 
-Each of the ten command templates in `commands/` is copied to `.claude/commands/gov/` with every occurrence of `{project}` replaced by `gov`. No other modifications. This ensures governance dogfoods the exact same commands adopting projects use. If a command template is updated later, the governance copy should be re-derived from the template.
+Each of the ten command templates in `commands/` is copied to `.claude/commands/ductus/` with every occurrence of `{project}` replaced by `gov`. No other modifications. This ensures governance dogfoods the exact same commands adopting projects use. If a command template is updated later, the governance copy should be re-derived from the template.
 
 ### Init command is governance-specific
 
-The init command does not exist in `commands/` — it is unique to the governance repo. It lives alongside the standard commands at `.claude/commands/gov/init.md` and is invoked as `/gov:init`. It orchestrates file copying, placeholder replacement, and gitignore fetching as a single slash command prompt.
+The init command does not exist in `commands/` — it is unique to the governance repo. It lives alongside the standard commands at `.claude/commands/ductus/init.md` and is invoked as `/ductus:init`. It orchestrates file copying, placeholder replacement, and gitignore fetching as a single slash command prompt.
 
 ### Placeholder replacement in init uses find-and-replace
 
@@ -34,17 +34,17 @@ Standard commands reference `.govern.session.toml` for session state. (Original 
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `.claude/commands/gov/about.md` | Create | Pipeline overview (from template) |
-| `.claude/commands/gov/target.md` | Create | Set session target (from template) |
-| `.claude/commands/gov/status.md` | Create | Spec dashboard (from template) |
-| `.claude/commands/gov/setup.md` | Create | Configure permissions (from template) |
-| `.claude/commands/gov/specify.md` | Create | Create new spec (from template) |
-| `.claude/commands/gov/clarify.md` | Create | Resolve questions (from template) |
-| `.claude/commands/gov/plan.md` | Create | Create plan and tasks (from template) |
-| `.claude/commands/gov/implement.md` | Create | Execute tasks (from template) |
-| `.claude/commands/gov/analyze.md` | Create | Audit artifacts (from template) |
-| `.claude/commands/gov/next.md` | Create | Auto-advance phase (from template) |
-| `.claude/commands/gov/init.md` | Create | Scaffold new projects (governance-specific) |
+| `.claude/commands/ductus/about.md` | Create | Pipeline overview (from template) |
+| `.claude/commands/ductus/target.md` | Create | Set session target (from template) |
+| `.claude/commands/ductus/status.md` | Create | Spec dashboard (from template) |
+| `.claude/commands/ductus/setup.md` | Create | Configure permissions (from template) |
+| `.claude/commands/ductus/specify.md` | Create | Create new spec (from template) |
+| `.claude/commands/ductus/clarify.md` | Create | Resolve questions (from template) |
+| `.claude/commands/ductus/plan.md` | Create | Create plan and tasks (from template) |
+| `.claude/commands/ductus/implement.md` | Create | Execute tasks (from template) |
+| `.claude/commands/ductus/analyze.md` | Create | Audit artifacts (from template) |
+| `.claude/commands/ductus/next.md` | Create | Auto-advance phase (from template) |
+| `.claude/commands/ductus/init.md` | Create | Scaffold new projects (governance-specific) |
 
 ## Trade-offs
 
@@ -52,7 +52,7 @@ Standard commands reference `.govern.session.toml` for session state. (Original 
 
 Rejected. Copying with replacement is simple and explicit. The governance repo has a fixed project name (`gov`) that never changes. Dynamic generation adds complexity for no benefit.
 
-### Considered: a single `/gov:work` command instead of ten standard commands
+### Considered: a single `/ductus:work` command instead of ten standard commands
 
 Rejected. Governance should use the same commands as adopting projects. A custom command would diverge from the dogfooding principle and miss bugs or friction in the templates.
 

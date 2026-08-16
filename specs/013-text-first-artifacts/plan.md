@@ -6,7 +6,7 @@ title: "013-text-first-artifacts — plan"
 
 ## Overview
 
-Land the principle in the constitution, update the templates and the slash command sources to read/write YAML frontmatter, and make migration the responsibility of the existing `/govern` bootstrap. Migration logic lives in `framework/bootstrap/govern.md` (no new command, no new download surface, no new failure mode). Governance dogfoods by self-migrating its own specs as a manual implementation task — there is no `/govern` to run on this repo.
+Land the principle in the constitution, update the templates and the slash command sources to read/write YAML frontmatter, and make migration the responsibility of the existing `/ductus` bootstrap. Migration logic lives in `framework/bootstrap/ductus.md` (no new command, no new download surface, no new failure mode). Governance dogfoods by self-migrating its own specs as a manual implementation task — there is no `/ductus` to run on this repo.
 
 The work is mostly textual: editing markdown source files. There is no library to add, no parser to write, no migration script in code form. The slash commands are markdown executed by an agent, so "update the parser" means rewriting the prose instructions in each command file from "read the `**Status:**` line" to "read `status` from the YAML frontmatter."
 
@@ -53,9 +53,9 @@ Per resolved Q1. The constitution table has columns `Field | Required | Type | A
 
 Schema details captured in `data-model.md` for cross-reference.
 
-### Migration logic in `framework/bootstrap/govern.md`
+### Migration logic in `framework/bootstrap/ductus.md`
 
-Embedded as a new step in the existing govern.md flow, between the agent-selection phase and the file-manifest fetch phase. Migration step does:
+Embedded as a new step in the existing ductus.md flow, between the agent-selection phase and the file-manifest fetch phase. Migration step does:
 
 1. Run `git status --porcelain -- specs/` (project-relative; the project has no `framework/templates/spec/` of its own — that was governance's path, not the adopter's). If output is non-empty, refuse with a clear message and exit.
 2. Walk `specs/**/spec.md`, `specs/**/spec-and-plan.md`, and `specs/**/scenarios/*.md`.
@@ -67,13 +67,13 @@ Idempotency falls out of the `---`-check on re-run. The clean-tree precheck make
 
 ### Self-migration of governance's own specs
 
-Governance has no `/govern`. The work is a manual implementation task: convert each `specs/NNN-*/spec.md` and each scenario file under `specs/*/scenarios/` to frontmatter format. The conversion is mechanical, the agent does it once per file, lint passes confirm correctness.
+Governance has no `/ductus`. The work is a manual implementation task: convert each `specs/NNN-*/spec.md` and each scenario file under `specs/*/scenarios/` to frontmatter format. The conversion is mechanical, the agent does it once per file, lint passes confirm correctness.
 
-### Tag prompt UX in `/gov:specify`
+### Tag prompt UX in `/ductus:specify`
 
-`/gov:specify` reads `specs/*/spec.md` (and `spec-and-plan.md`) frontmatter to collect the union of existing `tags`. At creation time, prompt: *"Tags for this spec? Existing tags in this repo: \[cli, bootstrap, process, ...\]. Enter one or more (or skip)."* Author input either selects from suggestions, adds new tags, or skips (writes `tags: []`). This implements Q2's reinforcement model without enforcing non-empty tags.
+`/ductus:specify` reads `specs/*/spec.md` (and `spec-and-plan.md`) frontmatter to collect the union of existing `tags`. At creation time, prompt: *"Tags for this spec? Existing tags in this repo: \[cli, bootstrap, process, ...\]. Enter one or more (or skip)."* Author input either selects from suggestions, adds new tags, or skips (writes `tags: []`). This implements Q2's reinforcement model without enforcing non-empty tags.
 
-### Missing-tags advisory in `/gov:clarify`
+### Missing-tags advisory in `/ductus:clarify`
 
 At the `draft → clarified` transition, after all open questions are resolved and before the validation gate, check whether `tags` is empty. If so, surface as one of the validation findings with severity advisory: *"Tags are empty. Adding tags helps cross-cutting graph views. Add some, or proceed without."* The advisory does not block the transition.
 
@@ -91,8 +91,8 @@ Strict ordering matters because later steps depend on earlier work being correct
 1. Constitution (declares the rule and schema)
 2. Templates (newly created specs use the format from day one)
 3. Slash command sources (read/write the format the templates produce)
-4. Regenerate `.claude/commands/gov/*` from the updated framework sources
-5. Govern.md migration logic (relies on schema being canonical in the constitution)
+4. Regenerate `.claude/commands/ductus/*` from the updated framework sources
+5. Ductus.md migration logic (relies on schema being canonical in the constitution)
 6. Self-migration of governance's existing specs (uses the new template format and the new commands as their canonical reference)
 7. README "Viewing artifacts" section (documents the rendering convention adopted)
 8. Code-location-index scenario note (refers to a constitution section that now exists)
@@ -120,8 +120,8 @@ Phases 2 and 3 can run in parallel within the same session; everything else is s
 | `framework/commands/amend.md` | Audit/Modify | Update only if it reads spec/scenario metadata to identify the target |
 | `framework/commands/log.md` | Audit | Likely no change (inbox.md is out of frontmatter scope) |
 | `framework/commands/help.md` | No change | Fixed text, no metadata parsing |
-| `framework/bootstrap/govern.md` | Modify | Add migration step (git precheck, walk, convert); add `npx quartz specs/` to post-run tip output |
-| `.claude/commands/gov/*.md` | Regenerate | Run `scripts/gen-claude-commands.sh` after framework command sources are updated |
+| `framework/bootstrap/ductus.md` | Modify | Add migration step (git precheck, walk, convert); add `npx quartz specs/` to post-run tip output |
+| `.claude/commands/ductus/*.md` | Regenerate | Run `scripts/gen-claude-commands.sh` after framework command sources are updated |
 | `specs/000-slash-commands/spec.md` | Migrate | Self-migration to frontmatter |
 | `specs/001-system-spec-templates/spec.md` | Migrate | Self-migration |
 | `specs/002-project-scaffolding/spec.md` | Migrate | Self-migration |
@@ -153,20 +153,20 @@ Phases 2 and 3 can run in parallel within the same session; everything else is s
 
 ### Known limitations
 
-- **Tag fragmentation risk.** Free-form tags can drift (`cli` vs. `commands` vs. `slash-commands`). The starter vocabulary in the constitution and the sibling-spec autocomplete in `/gov:specify` mitigate but don't enforce. Accepted because rigid taxonomy adds ceremony without proportional value.
-- **Single-commit migration diff.** Adopters with many specs see one large diff when `/govern` runs the migration. Accepted because git review tools handle this fine, atomicity is a feature, and the alternative (multi-commit migration) requires the bootstrap to make multiple commits in the user's repo, which is out of scope for governance.
+- **Tag fragmentation risk.** Free-form tags can drift (`cli` vs. `commands` vs. `slash-commands`). The starter vocabulary in the constitution and the sibling-spec autocomplete in `/ductus:specify` mitigate but don't enforce. Accepted because rigid taxonomy adds ceremony without proportional value.
+- **Single-commit migration diff.** Adopters with many specs see one large diff when `/ductus` runs the migration. Accepted because git review tools handle this fine, atomicity is a feature, and the alternative (multi-commit migration) requires the bootstrap to make multiple commits in the user's repo, which is out of scope for governance.
 - **Scenario non-spec-ref metadata is preserved as-is.** Migration converts `**spec-ref:**` to frontmatter but leaves any other bold-prefix patterns in scenario bodies untouched (there are no other recognized scenario fields today). If projects have invented scenario metadata conventions, those stay in body prose unchanged.
-- **No automated test for govern.md migration.** The migration step is markdown instructions executed by the agent, not code. Verification is manual: run on a test fixture (a copy of a brownfield project's `specs/`) and confirm the diff. Tracked as a task.
+- **No automated test for ductus.md migration.** The migration step is markdown instructions executed by the agent, not code. Verification is manual: run on a test fixture (a copy of a brownfield project's `specs/`) and confirm the diff. Tracked as a task.
 
 ## Open Questions Resolved
 
-All eight resolved during `/gov:clarify`. Resolutions of record live in `spec.md`'s **Resolved Questions** section. Summary:
+All eight resolved during `/ductus:clarify`. Resolutions of record live in `spec.md`'s **Resolved Questions** section. Summary:
 
 - **Schema location and format** — markdown table in constitution; defer JSON Schema.
 - **Required vs. optional fields** — required: `status`, `dependencies`. Tags optional with three reinforcement points.
 - **Field naming for dependencies** — flat list of slugs; defer object form.
 - **Validation strictness** — hard fail on required-field violations; advisory on rest.
 - **Migration scope for non-spec artifacts** — schema covers specs and scenarios only.
-- **Quartz recommendation scope** — this repo's README only; one-line tip in govern.md post-run output.
+- **Quartz recommendation scope** — this repo's README only; one-line tip in ductus.md post-run output.
 - **Code-location-index scenario interaction** — scenario stays parked under 000; resolutions derive from 013.
 - **Migration safety net** — rely on git; clean-tree precheck scoped to `specs/`.

@@ -6,12 +6,12 @@ section: "Flow"
 
 ## Context
 
-Spec 004's **Flow** asks **Backend language** and **Backend framework** as independent questions (and likewise for the frontend section). For a framework that fully determines its language — Rails is always Ruby — asking the language as a separate question is redundant and reads as a bug: the user has already told `/gov:init` the project is Rails, so being prompted "what language?" is noise.
+Spec 004's **Flow** asks **Backend language** and **Backend framework** as independent questions (and likewise for the frontend section). For a framework that fully determines its language — Rails is always Ruby — asking the language as a separate question is redundant and reads as a bug: the user has already told `/ductus:init` the project is Rails, so being prompted "what language?" is noise.
 
 ## Behavior
 
-- In each section (backend, then frontend), `/gov:init` asks the **framework** question before the **language** question.
-- When the selected framework unambiguously determines its language — e.g. Rails → Ruby, Sinatra → Ruby, Django / FastAPI / Flask → Python, Gin / Echo → Go, Laravel → PHP, Phoenix → Elixir, ASP.NET → C# — `/gov:init` records that language automatically and presents **no** language question and **no** language example options.
+- In each section (backend, then frontend), `/ductus:init` asks the **framework** question before the **language** question.
+- When the selected framework unambiguously determines its language — e.g. Rails → Ruby, Sinatra → Ruby, Django / FastAPI / Flask → Python, Gin / Echo → Go, Laravel → PHP, Phoenix → Elixir, ASP.NET → C# — `/ductus:init` records that language automatically and presents **no** language question and **no** language example options.
 - The inferred language is still written as a row in the AGENTS.md **Tech Stack** table. Workflow recommendation (spec 005) matches registry entries on `backend_language`, so omitting the row would silently drop the Ruby-triggered workflows (RuboCop, RSpec); the inference suppresses the *question*, not the *data*.
 - The language question — with its example options — is shown only when the framework was skipped, answered "Other" with an unrecognized value, or is language-ambiguous: a Node framework that could be TypeScript or JavaScript, a JVM framework that could be Java or Kotlin, and the like.
 

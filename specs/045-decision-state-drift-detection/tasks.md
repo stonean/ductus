@@ -12,7 +12,7 @@ Tasks 3–10 are authored as scenarios under [022 — Deterministic Runtime](../
 - [x] Add a Canonical sources row pointing the open-state tell list at `specs/045-decision-state-drift-detection/data-model.md`
 - [x] Confirm no `§drift-prevention` anchor consumers break — the marker and section name are unchanged, only content is added
 
-- **Done when**: `framework/constitution.md` §drift-prevention carries the decision trigger and the completion rule, the Canonical sources table names the tell list's owner, and `/gov:analyze`'s anchor resolution still resolves every `§drift-prevention` reference.
+- **Done when**: `framework/constitution.md` §drift-prevention carries the decision trigger and the completion rule, the Canonical sources table names the tell list's owner, and `/ductus:analyze`'s anchor resolution still resolves every `§drift-prevention` reference.
 
 ## 2. Open the 022 back-edge and author the four runtime scenarios
 
@@ -117,7 +117,7 @@ Tasks 3–10 are authored as scenarios under [022 — Deterministic Runtime](../
 
 - [x] Run `check-artifacts` across all 47 specs and collect every finding from the two new families
 - [x] Triage each finding as a true positive or a false positive, and record the tally as the promotion criterion's first precision data point
-- [x] Fix any true positive found in `govern`'s own artifacts, or log it to the inbox when it belongs to a `done` spec and needs the back-edge
+- [x] Fix any true positive found in `ductus`'s own artifacts, or log it to the inbox when it belongs to a `done` spec and needs the back-edge
 - [x] Confirm no false positive traces to a defect in the grammar or the exempt-context handling; if one does, fix the check rather than the artifact
 
 - **Done when**: the full-repo run is triaged, the tally is recorded in the spec or the inbox, and every false positive is either eliminated or documented as an accepted limitation.

@@ -35,7 +35,7 @@ QUAL-{category}-{NNN}
 | Unverified external contracts | `GROUND` |
 | Unsubstantiated clean results | `CLAIM` |
 
-The category set is declared in the `quality-cross.md` file header per the per-file category-declaration policy (`016-cross-cutting-rules`). It grows as concerns promote — adjacent categories (e.g. swallowed errors, dead code) are added when a concrete need appears, via `/gov:amend` or a follow-on spec.
+The category set is declared in the `quality-cross.md` file header per the per-file category-declaration policy (`016-cross-cutting-rules`). It grows as concerns promote — adjacent categories (e.g. swallowed errors, dead code) are added when a concrete need appears, via `/ductus:amend` or a follow-on spec.
 
 ## Rule set
 
@@ -43,15 +43,15 @@ The category set is declared in the `quality-cross.md` file header per the per-f
 
 ### QUAL-STUB namespace (Silent stubs category)
 
-- `QUAL-STUB-001` (MUST) — partial or unimplemented code paths fail loudly (panic / explicit error / failing test fixture) rather than silently passing through; stubs that return zero values, no-op middleware that returns `next` unchanged, handlers that return early without an error, and methods that return `nil, nil` are forbidden when the surrounding contract implies the path performs work. Verified at review time by `/gov:review`'s quality pass; cites `api-backend.md` `BE-SCHEMA-002` for the build-time schema case.
+- `QUAL-STUB-001` (MUST) — partial or unimplemented code paths fail loudly (panic / explicit error / failing test fixture) rather than silently passing through; stubs that return zero values, no-op middleware that returns `next` unchanged, handlers that return early without an error, and methods that return `nil, nil` are forbidden when the surrounding contract implies the path performs work. Verified at review time by `/ductus:review`'s quality pass; cites `api-backend.md` `BE-SCHEMA-002` for the build-time schema case.
 
 ### QUAL-GROUND namespace (Verify external contracts category)
 
-- `QUAL-GROUND-001` (SHOULD) — code whose correctness depends on an external contract it does not own (database schema, external API shape, config key, file/wire format) binds to that contract so a wrong assumption fails loudly (typed/generated binding, schema/migration reference, startup/first-use validation, or a test against the real shape) rather than silently encoding an unverified assumption. Verified at review time by `/gov:review`'s quality pass; the code-side counterpart to `/gov:analyze`'s artifact-grounding check, both enforcing constitution §grounding.
+- `QUAL-GROUND-001` (SHOULD) — code whose correctness depends on an external contract it does not own (database schema, external API shape, config key, file/wire format) binds to that contract so a wrong assumption fails loudly (typed/generated binding, schema/migration reference, startup/first-use validation, or a test against the real shape) rather than silently encoding an unverified assumption. Verified at review time by `/ductus:review`'s quality pass; the code-side counterpart to `/ductus:analyze`'s artifact-grounding check, both enforcing constitution §grounding.
 
 ### QUAL-CLAIM namespace (Unsubstantiated clean results category)
 
-- `QUAL-CLAIM-001` (SHOULD) — a clean / empty / in-sync result distinguishes "examined the subject and found nothing" from "could not examine the subject", through a distinct return variant, a status or guidance field, or a message naming what was skipped — rather than emitting the same bare zero or empty collection for both. Distinct from `QUAL-STUB-001` (unimplemented paths returning success) and `QUAL-GROUND-001` (unverified assumptions inside logic): this rule governs a fully-implemented path whose *output* overstates what it verified. Advisory, with a documented promotion criterion to MUST. Verified at review time by `/gov:review`'s quality pass; enforces constitution §grounding on the reporting surface.
+- `QUAL-CLAIM-001` (SHOULD) — a clean / empty / in-sync result distinguishes "examined the subject and found nothing" from "could not examine the subject", through a distinct return variant, a status or guidance field, or a message naming what was skipped — rather than emitting the same bare zero or empty collection for both. Distinct from `QUAL-STUB-001` (unimplemented paths returning success) and `QUAL-GROUND-001` (unverified assumptions inside logic): this rule governs a fully-implemented path whose *output* overstates what it verified. Advisory, with a documented promotion criterion to MUST. Verified at review time by `/ductus:review`'s quality pass; enforces constitution §grounding on the reporting surface.
 
 ## Severity and ID-stability invariants
 

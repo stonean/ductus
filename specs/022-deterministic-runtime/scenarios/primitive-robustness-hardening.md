@@ -13,7 +13,7 @@ The 2026-07-11 runtime review surfaced eight SHOULD-tier robustness gaps across 
 - `write-review` writes `review.md` before parsing spec frontmatter, so a malformed spec halts between the two writes.
 - `substitute-templates` lands outputs at the 0600 tempfile mode, discarding source modes.
 - `create-scenario` does not YAML-escape `"`/`\` in the `section` argument; `append-task` interpolates `title`/`done-when`/`body` without newline sanitization (structure injection).
-- `dashboard` hard-fails the whole render when the targeted scenario file has missing/malformed frontmatter (one bad scenario bricks `/gov:status`), and its open-question count doc contradicts behavior.
+- `dashboard` hard-fails the whole render when the targeted scenario file has missing/malformed frontmatter (one bad scenario bricks `/ductus:status`), and its open-question count doc contradicts behavior.
 - `check-rule-ids` marks an ID deprecated when `**DEPRECATED` appears within 256 bytes after any occurrence anywhere in the file — a live rule near a deprecated neighbor false-flags.
 - `set-status` writes any string, including values outside the constitution's lifecycle set.
 

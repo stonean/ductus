@@ -13,9 +13,9 @@ next-criterion: 13
 
 # 030 — Cross-Service References
 
-When a project spans multiple services — each its own repo with its own `govern` install — specs in one service routinely relate to specs in another: a frontend page uses a backend data model; a backend model is used by particular frontend pages. `govern` has no way to express that relationship across repos. The dependency graph, [§cross-spec-impact](../../framework/constitution.md#cross-spec-impact), and `/{project}:analyze`'s reference checks are all sibling-only (`scripts/gen-spec-deps.sh` resolves `](../NNN-slug/…)` and nothing else).
+When a project spans multiple services — each its own repo with its own `ductus` install — specs in one service routinely relate to specs in another: a frontend page uses a backend data model; a backend model is used by particular frontend pages. `ductus` has no way to express that relationship across repos. The dependency graph, [§cross-spec-impact](../../framework/constitution.md#cross-spec-impact), and `/{project}:analyze`'s reference checks are all sibling-only (`scripts/gen-spec-deps.sh` resolves `](../NNN-slug/…)` and nothing else).
 
-This feature adds **informative cross-service references**: a spec can link a spec in another service, in either direction, and — when that service is checked out locally and registered — `govern` shows the linked spec's lifecycle status next to the reference. The references are informative, never dependencies: they do not gate completion, do not enter the blocking dependency graph, and play no part in readiness or build ordering. The most `govern` does is surface the linked spec's status; nothing more.
+This feature adds **informative cross-service references**: a spec can link a spec in another service, in either direction, and — when that service is checked out locally and registered — `ductus` shows the linked spec's lifecycle status next to the reference. The references are informative, never dependencies: they do not gate completion, do not enter the blocking dependency graph, and play no part in readiness or build ordering. The most `ductus` does is surface the linked spec's status; nothing more.
 
 ## Informative, not a dependency
 
@@ -28,7 +28,7 @@ This feature adds **informative cross-service references**: a spec can link a sp
 
 ### Declaring a reference
 
-A spec declares a cross-service reference with a **standard markdown link to the linked spec's canonical repo URL** — for example `[api User model](https://github.com/acme/api/blob/main/specs/003-user/spec.md)`. This stays within [§text-first-artifacts](../../framework/constitution.md#text-first-artifacts)' "standard markdown links, not wiki-links": the link is real and resolves for a human in GitHub or any viewer. The URL is **identity and navigation only — it is never fetched**; `govern` reads the linked spec from its local checkout, never over the network.
+A spec declares a cross-service reference with a **standard markdown link to the linked spec's canonical repo URL** — for example `[api User model](https://github.com/acme/api/blob/main/specs/003-user/spec.md)`. This stays within [§text-first-artifacts](../../framework/constitution.md#text-first-artifacts)' "standard markdown links, not wiki-links": the link is real and resolves for a human in GitHub or any viewer. The URL is **identity and navigation only — it is never fetched**; `ductus` reads the linked spec from its local checkout, never over the network.
 
 References are harvested into a derived **cross-service references index** (body links authoritative; the index is generated, never hand-authored), kept distinct from `dependencies:` so they never enter the blocking dependency graph.
 
@@ -42,7 +42,7 @@ repo = "https://github.com/acme/api"
 path = "../api"
 ```
 
-When the referenced service is registered, its checkout is reachable, and the linked spec resolves, `govern` reads that spec's lifecycle `status` from its frontmatter — live, never cached — and surfaces it alongside the reference (e.g., in `/{project}:status` or when a spec's references are listed; the exact surface is a plan-phase detail). That is the entire payload: `draft`, `clarified`, `planned`, `in-progress`, or `done`. There is no baseline, no change detection, and no diff.
+When the referenced service is registered, its checkout is reachable, and the linked spec resolves, `ductus` reads that spec's lifecycle `status` from its frontmatter — live, never cached — and surfaces it alongside the reference (e.g., in `/{project}:status` or when a spec's references are listed; the exact surface is a plan-phase detail). That is the entire payload: `draft`, `clarified`, `planned`, `in-progress`, or `done`. There is no baseline, no change detection, and no diff.
 
 Otherwise the outcome depends on **what can be proven**, not a single catch-all "unknown" — the registry is **required for status resolution, optional for referencing**:
 
@@ -62,29 +62,29 @@ Introducing a reference into an existing spec is a body edit. Because references
 ## Non-Goals
 
 - **No change detection.** Only the linked spec's current lifecycle status is surfaced — no baseline, no "changed since you referenced it," no diffs, no breakage assessment.
-- **No remote fetch or remote checkout.** The URL is never fetched; status is read from the local checkout. `govern` adds no machinery to fetch or clone a repo (the tarball-fetch primitives were considered for an earlier, heavier framing and are excluded; see [See also](#see-also)).
+- **No remote fetch or remote checkout.** The URL is never fetched; status is read from the local checkout. `ductus` adds no machinery to fetch or clone a repo (the tarball-fetch primitives were considered for an earlier, heavier framing and are excluded; see [See also](#see-also)).
 - **No CI-specific cross-project functionality.** Status resolution runs only where the linked service is already locally present — a developer workstation, or a CI job that has itself checked out the sibling repo. Headless resolution without a local checkout shows status as unknown; building anything that reaches into other repos in CI is out of scope.
-- **No producer-maintained or auto-discovered consumer list.** References are author-chosen, in either direction; `govern` does not enumerate or scan repos to discover who references whom.
+- **No producer-maintained or auto-discovered consumer list.** References are author-chosen, in either direction; `ductus` does not enumerate or scan repos to discover who references whom.
 
 ## Acceptance Criteria
 
 - [x] AC1: A spec declares a cross-service reference as a standard markdown link to the linked spec's canonical repo URL; the URL is never fetched.
 - [x] AC2: References are informative: they never enter `dependencies:`, never affect readiness, ordering, or completion, and never block a gate.
 - [x] AC3: References are bidirectional — a spec may reference a spec in another service in either direction — and are author's-discretion, with no completeness requirement and no auto-discovered consumer list.
-- [x] AC4: When the linked spec's service is registered in `.govern.toml [services]` and its checkout is reachable, `govern` surfaces the linked spec's lifecycle status (read live from frontmatter) next to the reference; no baseline, change detection, or diff is produced.
+- [x] AC4: When the linked spec's service is registered in `.govern.toml [services]` and its checkout is reachable, `ductus` surfaces the linked spec's lifecycle status (read live from frontmatter) next to the reference; no baseline, change detection, or diff is produced.
 - [x] AC5: An unregistered reference (repo not in `[services]`) is a plain navigational link with status not attempted — not an error.
 - [x] AC6: A registered reference whose checkout is missing or unusable shows status `unknown — not checked out`: informational, never blocking, never reported as broken.
 - [x] AC7: A registered, reachable reference that does not resolve to a spec (malformed URL, or the spec renamed/moved/deleted/mistyped upstream) is reported as a broken-reference `/{project}:analyze` finding — distinct from an unknown status.
 - [x] AC8: A registered, reachable reference whose linked file exists but whose `status` is unreadable (no or malformed frontmatter, missing or out-of-set `status`, or a scenario target) shows status `unknown — status unreadable`: surfaced, never silent.
 - [x] AC9: References are harvested into a derived index, distinct from `dependencies:`, and never hand-authored in frontmatter.
-- [x] AC10: The deterministic work — harvest references, resolve via `[services]`, read the linked status, classify the outcome — runs through `gvrn` MCP primitives when the runtime is installed, and completes identically via the markdown-only path (host file tools) when it is not; `gvrn` is never a prerequisite, and the no-runtime CI job exercises the fallback end-to-end.
+- [x] AC10: The deterministic work — harvest references, resolve via `[services]`, read the linked status, classify the outcome — runs through `ductus` MCP primitives when the runtime is installed, and completes identically via the markdown-only path (host file tools) when it is not; `ductus` is never a prerequisite, and the no-runtime CI job exercises the fallback end-to-end.
 - [x] AC11: Adding or removing an informative cross-service reference does not reopen a `done` spec — it is a non-reopening (mechanical-class) edit under §spec-lifecycle.
 - [x] AC12: A single-service adopter that declares no cross-service references sees no behavior change and creates no new configuration.
 
 ## Resolved Questions
 
 - **Nature of a reference — informative, not a dependency.** References are navigational (the `## See also` class across repos), bidirectional, and author's-discretion. They never gate completion or enter the blocking dependency graph. The producer-side "who references me" view needs no auto-discovery or workspace enumeration — it is just the same informative reference used in the other direction, so the earlier producer-aggregate question dissolves.
-- **Payload — the linked spec's lifecycle status only.** `govern` surfaces the referenced spec's current `status` and nothing more: no baseline, no change detection, no diff. (This supersedes the earlier change-record and baseline-SHA framing.)
+- **Payload — the linked spec's lifecycle status only.** `ductus` surfaces the referenced spec's current `status` and nothing more: no baseline, no change detection, no diff. (This supersedes the earlier change-record and baseline-SHA framing.)
 - **Source of state — local checkout, required reachable.** Status is read live from the producer's local checkout resolved through the registry; the canonical URL is never fetched. Requiring local reachability keeps resolution deterministic and CI simple.
 - **Reference syntax and the registry — canonical-URL links plus a registry required only for status.** A reference is a standard markdown link to the linked spec's canonical repo URL; `.govern.toml [services]` maps a service to its `repo` and local `path`. A URL link alone is a navigational pointer; the same link plus a matching `[services]` entry resolves the linked status from the local `path`. The registry is required for status resolution, optional for referencing.
 - **Adding or removing an informative reference does not reopen a `done` spec.** Cross-service references are navigational, so their add/remove joins the mechanical/non-reopening edit class in [§spec-lifecycle](../../framework/constitution.md#spec-lifecycle) — a `done` spec stays `done`. This requires an explicit carve-out in §spec-lifecycle (a constitution edit, landed as part of implementing this feature), worded so the exemption is determinable from the diff alone — a changed or added link whose target is a registered cross-service reference — consistent with the existing mechanical-vs-meaningful test.

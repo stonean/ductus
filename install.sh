@@ -1,8 +1,8 @@
 #!/bin/sh
-# govern installer — places the /govern bootstrap command for your AI coding agent.
+# ductus installer — places the /ductus bootstrap command for your AI coding agent.
 #
 # Usage:
-#   curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/stonean/govern/main/install.sh | sh
+#   curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/stonean/ductus/main/install.sh | sh
 #
 # Pick an agent explicitly (default: claude):
 #   ... | sh -s -- claude
@@ -11,17 +11,17 @@
 #   ... | sh -s -- opencode
 #
 # The script is idempotent — re-run it any time to refresh the bootstrap file.
-# govern is live-on-main: the bootstrap (and everything /govern fetches) tracks
+# ductus is live-on-main: the bootstrap (and everything /ductus fetches) tracks
 # main, so there is no release-pinning knob.
 set -eu
 
-RAW="https://raw.githubusercontent.com/stonean/govern/main/framework/bootstrap/govern.md"
+RAW="https://raw.githubusercontent.com/stonean/ductus/main/framework/bootstrap/ductus.md"
 
 # Resolve the target agent: the optional positional argument, defaulting to claude.
 agent="${1:-claude}"
 
 if ! command -v curl >/dev/null 2>&1; then
-  echo "govern: curl is required but was not found on PATH" >&2
+  echo "ductus: curl is required but was not found on PATH" >&2
   exit 1
 fi
 
@@ -31,13 +31,13 @@ curl --proto '=https' --tlsv1.2 -fsSL "$RAW" > "$tmp"
 
 case "$agent" in
   claude)
-    dest=".claude/commands/govern.md"
+    dest=".claude/commands/ductus.md"
     mkdir -p .claude/commands
     cp "$tmp" "$dest"
-    # Pre-seed permissions so the first /govern run does not prompt for its
+    # Pre-seed permissions so the first /ductus run does not prompt for its
     # bootstrap shell commands (see the antigravity arm for the rationale).
-    # Written only when absent — /govern owns additive merges. Keep in sync with
-    # the claude settings_template in framework/bootstrap/govern.md (§Agent Registry).
+    # Written only when absent — /ductus owns additive merges. Keep in sync with
+    # the claude settings_template in framework/bootstrap/ductus.md (§Agent Registry).
     if [ ! -f .claude/settings.local.json ]; then
       cat > .claude/settings.local.json <<'JSON'
 {
@@ -55,12 +55,12 @@ case "$agent" in
       "Bash(chmod *)",
       "Bash(awk *)",
       "Bash(command -v *)",
-      "Read(/private/var/folders/**/T/govern-*/**)",
-      "Read(//private/var/folders/**/T/govern-*/**)",
-      "Read(/var/folders/**/T/govern-*/**)",
-      "Read(//var/folders/**/T/govern-*/**)",
-      "Read(/tmp/govern-*/**)",
-      "Read(//tmp/govern-*/**)"
+      "Read(/private/var/folders/**/T/ductus-*/**)",
+      "Read(//private/var/folders/**/T/ductus-*/**)",
+      "Read(/var/folders/**/T/ductus-*/**)",
+      "Read(//var/folders/**/T/ductus-*/**)",
+      "Read(/tmp/ductus-*/**)",
+      "Read(//tmp/ductus-*/**)"
     ],
     "deny": []
   }
@@ -69,13 +69,13 @@ JSON
     fi
     ;;
   auggie)
-    dest=".augment/commands/govern.md"
+    dest=".augment/commands/ductus.md"
     mkdir -p .augment/commands
     cp "$tmp" "$dest"
-    # Pre-seed permissions so the first /govern run does not prompt for its
+    # Pre-seed permissions so the first /ductus run does not prompt for its
     # bootstrap shell commands (see the antigravity arm for the rationale).
-    # Written only when absent — /govern owns additive merges. Keep in sync with
-    # the auggie settings_template in framework/bootstrap/govern.md (§Agent Registry).
+    # Written only when absent — /ductus owns additive merges. Keep in sync with
+    # the auggie settings_template in framework/bootstrap/ductus.md (§Agent Registry).
     if [ ! -f .augment/settings.local.json ]; then
       cat > .augment/settings.local.json <<'JSON'
 {
@@ -99,21 +99,21 @@ JSON
     ;;
   antigravity | agy)
     agent="antigravity"  # 'agy' is the Antigravity CLI command name
-    dest=".agents/skills/govern/SKILL.md"
-    mkdir -p .agents/skills/govern
-    # Antigravity discovers dir-form skills: wrap govern.md's body in skill
-    # frontmatter, dropping govern.md's own frontmatter (everything up to and
+    dest=".agents/skills/ductus/SKILL.md"
+    mkdir -p .agents/skills/ductus
+    # Antigravity discovers dir-form skills: wrap ductus.md's body in skill
+    # frontmatter, dropping ductus.md's own frontmatter (everything up to and
     # including the second `---`).
     {
-      printf -- '---\nname: govern\n---\n'
+      printf -- '---\nname: ductus\n---\n'
       awk 'p{print} /^---[[:space:]]*$/{c++; if(c==2)p=1}' "$tmp"
     } > "$dest"
-    # Pre-seed the permission file so the first /govern run does not prompt for
+    # Pre-seed the permission file so the first /ductus run does not prompt for
     # its bootstrap shell commands. Antigravity loads permissions at session
-    # start, so govern.md's in-run Permission Setup seed lands too late for the
-    # first run. Written only when absent — /govern owns additive merges into an
+    # start, so ductus.md's in-run Permission Setup seed lands too late for the
+    # first run. Written only when absent — /ductus owns additive merges into an
     # existing settings.json. Keep this allow-list in sync with the antigravity
-    # settings_template in framework/bootstrap/govern.md (§Agent Registry).
+    # settings_template in framework/bootstrap/ductus.md (§Agent Registry).
     if [ ! -f .agents/settings.json ]; then
       cat > .agents/settings.json <<'JSON'
 {
@@ -140,15 +140,15 @@ JSON
     fi
     ;;
   opencode)
-    dest=".opencode/command/govern.md"
+    dest=".opencode/command/ductus.md"
     mkdir -p .opencode/command
     cp "$tmp" "$dest"
-    # Pre-seed permissions so the first /govern run does not prompt for its
+    # Pre-seed permissions so the first /ductus run does not prompt for its
     # bootstrap shell commands. OpenCode keeps both MCP wiring and permissions in
     # one committed opencode.json; this seeds only the permission block, and only
-    # when neither opencode.json nor opencode.jsonc exists — /govern owns additive
+    # when neither opencode.json nor opencode.jsonc exists — /ductus owns additive
     # merges. Keep in sync with the opencode settings_template in
-    # framework/bootstrap/govern.md (§Agent Registry).
+    # framework/bootstrap/ductus.md (§Agent Registry).
     if [ ! -f opencode.json ] && [ ! -f opencode.jsonc ]; then
       cat > opencode.json <<'JSON'
 {
@@ -174,10 +174,10 @@ JSON
     fi
     ;;
   *)
-    echo "govern: unknown agent '$agent' (expected: claude, auggie, antigravity, agy, or opencode)" >&2
+    echo "ductus: unknown agent '$agent' (expected: claude, auggie, antigravity, agy, or opencode)" >&2
     exit 1
     ;;
 esac
 
-echo "govern: installed the $agent bootstrap -> $dest"
-echo "govern: now run '/govern <project-name>' in your agent to scaffold the project."
+echo "ductus: installed the $agent bootstrap -> $dest"
+echo "ductus: now run '/ductus <project-name>' in your agent to scaffold the project."

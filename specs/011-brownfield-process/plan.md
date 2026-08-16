@@ -14,7 +14,7 @@ Three workstreams: (1) create the `/capture` command and its Claude Code instanc
 
 The `/capture` command follows the same markdown command format as `/specify` and `/scenario`. It reads the session file, creates a numbered spec directory, drafts a skeleton spec from freeform input, and writes the session target — the same mechanics as `/specify` but without the lightweight track qualifying questions and without pressure for comprehensive criteria.
 
-Two files are created: `commands/capture.md` (platform-agnostic template using `{project}` and `{cli-config-dir}` placeholders) and `.claude/commands/gov/capture.md` (Claude Code instance using `gov` and `.claude`). This follows the command file parity rule in CLAUDE.md.
+Two files are created: `commands/capture.md` (platform-agnostic template using `{project}` and `{cli-config-dir}` placeholders) and `.claude/commands/ductus/capture.md` (Claude Code instance using `gov` and `.claude`). This follows the command file parity rule in CLAUDE.md.
 
 ### Inbox rename strategy
 
@@ -22,15 +22,15 @@ The rename is a direct find-and-replace across all files that reference `triage`
 
 The rename touches 16 files. To keep the diff reviewable, the rename is done as a single task before other content changes.
 
-### Govern file manifest updates
+### Ductus file manifest updates
 
-Both `govern/govern.md` and `govern/govern-auggie.md` reference `triage` in three places each: the file manifest (template source → destination), the slash command manifest, and the post-scaffolding output. All six references update to `inbox`. The new `/capture` command is added to both manifests.
+Both `ductus/ductus.md` and `ductus/ductus-auggie.md` reference `triage` in three places each: the file manifest (template source → destination), the slash command manifest, and the post-scaffolding output. All six references update to `inbox`. The new `/capture` command is added to both manifests.
 
-### Govern migration for triage → inbox
+### Ductus migration for triage → inbox
 
-The govern command only creates and updates files — it does not delete files removed from the manifest. Projects that adopted governance before the rename will have orphaned `specs/inbox.md` and `{cli-config-dir}/commands/{project}/triage.md` files after re-running `/govern`.
+The ductus command only creates and updates files — it does not delete files removed from the manifest. Projects that adopted governance before the rename will have orphaned `specs/inbox.md` and `{cli-config-dir}/commands/{project}/triage.md` files after re-running `/ductus`.
 
-A migration step is added to both govern files. Before the file manifest is processed, the command checks:
+A migration step is added to both ductus files. Before the file manifest is processed, the command checks:
 
 - If `specs/inbox.md` exists and `specs/inbox.md` does not → rename `specs/inbox.md` to `specs/inbox.md`
 - If `specs/inbox.md` exists and `specs/inbox.md` also exists → merge items from `triage.md` into `inbox.md`, then delete `triage.md`
@@ -50,27 +50,27 @@ Three new sections added to `constitution.md`:
 
 A brief note is added to 006-bug-workflow's spec.md indicating that `triage` was renamed to `inbox` by 011. The note does not change 006's status — it is informational only, not a behavioral change.
 
-A brief note is added to 007-govern-workflow's spec.md indicating that the govern command gains a triage → inbox migration step and `/capture` in the command manifest by 011. This is also informational — 007's status does not change.
+A brief note is added to 007-govern-workflow's spec.md indicating that the ductus command gains a triage → inbox migration step and `/capture` in the command manifest by 011. This is also informational — 007's status does not change.
 
 ## Affected Files
 
 | File | Action | Purpose |
 | --- | --- | --- |
 | `commands/capture.md` | Create | Platform-agnostic capture command template |
-| `.claude/commands/gov/capture.md` | Create | Claude Code capture command instance |
+| `.claude/commands/ductus/capture.md` | Create | Claude Code capture command instance |
 | `commands/triage.md` | Rename → `commands/inbox.md` | Rename triage command to inbox |
-| `.claude/commands/gov/triage.md` | Rename → `.claude/commands/gov/inbox.md` | Rename Claude Code triage instance |
+| `.claude/commands/ductus/triage.md` | Rename → `.claude/commands/ductus/inbox.md` | Rename Claude Code triage instance |
 | `templates/triage.md` | Rename → `templates/inbox.md` | Rename triage template |
 | `commands/inbox.md` | Modify | Update heading, references, and content from triage to inbox |
-| `.claude/commands/gov/inbox.md` | Modify | Update heading, references, and content from triage to inbox |
+| `.claude/commands/ductus/inbox.md` | Modify | Update heading, references, and content from triage to inbox |
 | `templates/inbox.md` | Modify | Update heading and content from triage to inbox |
-| `govern/govern.md` | Modify | Update file manifest, command manifest, post-scaffolding output; add capture command |
-| `govern/govern-auggie.md` | Modify | Same updates as govern.md for Auggie paths |
+| `ductus/ductus.md` | Modify | Update file manifest, command manifest, post-scaffolding output; add capture command |
+| `ductus/ductus-auggie.md` | Modify | Same updates as ductus.md for Auggie paths |
 | `constitution.md` | Modify | Rename triage section to inbox; add brownfield process, scenario promotion, cross-spec impact |
 | `sdd-context.md` | Modify | Rename triage to inbox; add capture command, scenario promotion, cross-spec impact |
 | `README.md` | Modify | Rename triage to inbox; update brownfield section; add capture to slash commands table |
 | `commands/about.md` | Modify | Update triage references to inbox |
-| `.claude/commands/gov/about.md` | Modify | Update triage references to inbox |
+| `.claude/commands/ductus/about.md` | Modify | Update triage references to inbox |
 | `AGENTS.md` | Modify | Update triage references to inbox |
 | `specs/006-bug-workflow/spec.md` | Modify | Add signpost noting triage → inbox rename by 011 |
 

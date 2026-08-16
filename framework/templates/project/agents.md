@@ -6,7 +6,7 @@
 
 ## Constitution
 
-See [constitution.md](.govern/constitution.md) — guiding principles, development pipeline, spec lifecycle, and quality standards that govern this project.
+See [constitution.md](.ductus/constitution.md) — guiding principles, development pipeline, spec lifecycle, and quality standards that ductus this project.
 
 ## Tech Stack
 
@@ -50,7 +50,7 @@ See [constitution.md](.govern/constitution.md) — guiding principles, developme
 
 ## Project Structure
 
-- `.govern/constitution.md` -- Principles, pipeline, quality standards
+- `.ductus/constitution.md` -- Principles, pipeline, quality standards
 - `AGENTS.md` -- Agent rules: tech stack, conventions, workflow, gotchas, boundaries
 - `CLAUDE.md` -- `@AGENTS.md` + Claude Code-specific configuration
 - `specs/`
@@ -84,7 +84,7 @@ See [constitution.md](.govern/constitution.md) — guiding principles, developme
      | `db-migration` skill | Editing migration files |
 
      Per-platform mapping (Claude Code skills, Cursor rules, etc.) is the
-     adopter's call — `govern` defines the index pattern, not the location.
+     adopter's call — `ductus` defines the index pattern, not the location.
 -->
 
 ## Code Style

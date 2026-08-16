@@ -10,7 +10,7 @@ Spec 022 task #34 added the writeCode payload bundler, including a read-side sec
 
 A separate but related bypass: `secret_pattern`'s checks are case-sensitive exact-equality on the basename. On case-insensitive filesystems (macOS APFS by default), a plan entry of `.ENV` slips past `secret_pattern` but resolves to `.env` on disk, exfiltrating the file the guard exists to protect.
 
-Origin: `/gov:review` of spec 022 at HEAD `2873aad`, recorded as the SHOULD finding against `BE-INPUT-004` in `specs/022-deterministic-runtime/review.md`. Threat model is prompt-injection-class — a compromised `/gov:plan` LLM, or a malicious plan author bypassing PR review, plants the entry once; the next `/gov:implement` exfiltrates. Defense-in-depth tightening, not a bug in shipped behavior.
+Origin: `/ductus:review` of spec 022 at HEAD `2873aad`, recorded as the SHOULD finding against `BE-INPUT-004` in `specs/022-deterministic-runtime/review.md`. Threat model is prompt-injection-class — a compromised `/ductus:plan` LLM, or a malicious plan author bypassing PR review, plants the entry once; the next `/ductus:implement` exfiltrates. Defense-in-depth tightening, not a bug in shipped behavior.
 
 ## Behavior
 

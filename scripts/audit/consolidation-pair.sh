@@ -3,7 +3,7 @@
 #
 # Verifies that every "consolidated artifact" (a single canonical path
 # that multiple loosely-coupled files reference) agrees across all
-# referencing sources. The motivating case is .govern/session.toml,
+# referencing sources. The motivating case is .ductus/session.toml,
 # which appears in:
 #
 #   1. The runtime's SESSION_FILE constant (schema/paths.rs — the
@@ -66,7 +66,7 @@ else
 fi
 
 # 11c — Framework gitignore template must list the SESSION_FILE so
-# adopters who run /govern get the new file gitignored.
+# adopters who run /ductus get the new file gitignored.
 GITIGNORE_TEMPLATE="framework/templates/project/gitignore"
 if [ -f "$GITIGNORE_TEMPLATE" ]; then
   if ! grep -qF "$SESSION_FILE" "$GITIGNORE_TEMPLATE"; then
@@ -79,7 +79,7 @@ else
 fi
 
 # 11d — Claude configure-permission file must allow Edit/Write on the
-# SESSION_FILE so /gov:* commands don't trigger per-write prompts. The
+# SESSION_FILE so /ductus:* commands don't trigger per-write prompts. The
 # legacy reference (.claude/gov-session.json) would also leak through
 # here if not swept, since this file is what spec 023 wired up.
 CONFIGURE_CLAUDE="framework/bootstrap/configure/claude.md"

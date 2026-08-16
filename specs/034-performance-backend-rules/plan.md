@@ -4,7 +4,7 @@ Implements [034 — Backend performance rules](spec.md).
 
 ## Overview
 
-Author `framework/rules/performance-backend.md` (13 rules across 5 categories) following the canonical rule schema, and register it in the `/govern` Shared Files manifest so it installs under the backend surface. Pure markdown-tier change — no runtime. Verification clauses are design-time commitments (what a spec/plan MUST state), consistent with `/gov:analyze` auditing artifacts. Default severity SHOULD; MUST only for the DoS/exhaustion-regardless-of-scale cases.
+Author `framework/rules/performance-backend.md` (13 rules across 5 categories) following the canonical rule schema, and register it in the `/ductus` Shared Files manifest so it installs under the backend surface. Pure markdown-tier change — no runtime. Verification clauses are design-time commitments (what a spec/plan MUST state), consistent with `/ductus:analyze` auditing artifacts. Default severity SHOULD; MUST only for the DoS/exhaustion-regardless-of-scale cases.
 
 ## Technical Decisions
 
@@ -36,18 +36,18 @@ Author `framework/rules/performance-backend.md` (13 rules across 5 categories) f
 
 ### Verification style
 
-Every Verification clause targets a **design-time commitment** in a spec or plan (e.g., "any plan that introduces a list-rendering endpoint MUST state its query strategy and the indexes it relies on; validate flags list-endpoint plans that omit the query/index commitment"), never a source-code grep — matching how `/gov:analyze` audits artifacts.
+Every Verification clause targets a **design-time commitment** in a spec or plan (e.g., "any plan that introduces a list-rendering endpoint MUST state its query strategy and the indexes it relies on; validate flags list-endpoint plans that omit the query/index commitment"), never a source-code grep — matching how `/ductus:analyze` audits artifacts.
 
 ### Installation
 
-Add one row to the `### govern-owned shared files` table in `framework/bootstrap/govern.md`: `framework/rules/performance-backend.md → specs/rules/performance-backend.md` (strategy: update). Spec 033's surface filter selects it under `backend` automatically via the `-backend.md` suffix — no 033 change needed. No `data-model.md`: the schema/format lives in 008; the category abbreviations live in the file header per the constitution's per-file policy.
+Add one row to the `### ductus-owned shared files` table in `framework/bootstrap/ductus.md`: `framework/rules/performance-backend.md → specs/rules/performance-backend.md` (strategy: update). Spec 033's surface filter selects it under `backend` automatically via the `-backend.md` suffix — no 033 change needed. No `data-model.md`: the schema/format lives in 008; the category abbreviations live in the file header per the constitution's per-file policy.
 
 ## Affected Files
 
 | File | Action | Purpose |
 | --- | --- | --- |
 | `framework/rules/performance-backend.md` | Create | The 13-rule performance rule set |
-| `framework/bootstrap/govern.md` | Modify | Add the rule file to the Shared Files manifest |
+| `framework/bootstrap/ductus.md` | Modify | Add the rule file to the Shared Files manifest |
 
 ## Trade-offs
 

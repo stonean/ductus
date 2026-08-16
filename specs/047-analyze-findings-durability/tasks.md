@@ -21,7 +21,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 3. Verify and regenerate
 
-- [x] Regenerate `.claude/commands/gov/analyze.md` and confirm the mirror matches its source
+- [x] Regenerate `.claude/commands/ductus/analyze.md` and confirm the mirror matches its source
 - [x] Run `npx markdownlint-cli2` across the repo
 - [x] Run `scripts/lint-procedure-parseability.sh` so the new step parses as a single-primitive dispatch
 - [x] Run `scripts/audit/run-all.sh` — check-zero catches a stale mirror, and Family 9 checks primitive promotion

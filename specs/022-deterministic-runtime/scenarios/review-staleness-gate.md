@@ -17,7 +17,7 @@ that satisfies every automated check while describing a diff that is gone.
 That shipped. `gvrn-v0.26.2` was tagged at `334907f` while this spec's review
 read `reviewed-against: 1f7ee722` — three commits back, covering none of the
 adopter-scope suppression it released. `check-review-gate` passed. So did
-`/gov:analyze`'s `review-state-drift` family, which tests the same two fields.
+`/ductus:analyze`'s `review-state-drift` family, which tests the same two fields.
 The gap was invisible to tooling and surfaced only because the user asked
 whether the reviews had been run.
 
@@ -38,7 +38,7 @@ could afford a narrow rule (it judges every spec at release) while the gate
 could afford a wide one (it judges one spec at completion). That reasoning was
 never tested. Run across this repo, the Affected-Files rule blocked **34 of 48**
 specs — old specs list shared surfaces (`AGENTS.md`, `README.md`,
-`framework/bootstrap/govern.md`) that every later spec also touches, so
+`framework/bootstrap/ductus.md`) that every later spec also touches, so
 completing spec 004 was blocked by spec 042 having edited `AGENTS.md`. A gate
 that blocks seven specs in eight is one people route around, which is the
 failure this scenario's own prose warned about. The durable-contract rule

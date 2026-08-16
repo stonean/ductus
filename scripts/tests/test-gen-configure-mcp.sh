@@ -4,9 +4,9 @@
 #
 # Coverage:
 #   A. `--dry-run` reports all four configure sources in sync (no drift)
-#   B. antigravity.md's generated block is the single `mcp(gvrn/*)` wildcard
+#   B. antigravity.md's generated block is the single `mcp(ductus/*)` wildcard
 #   C. claude.md / auggie.md still carry their per-tool blocks (regression)
-#   D. opencode.md's generated block is the single `"gvrn*": "allow"` glob
+#   D. opencode.md's generated block is the single `"ductus*": "allow"` glob
 #
 # Usage: scripts/tests/test-gen-configure-mcp.sh
 
@@ -38,31 +38,31 @@ else
   fail "A: --dry-run reports drift — run scripts/gen-configure-mcp.sh and commit"
 fi
 
-# B. antigravity block is exactly one mcp(gvrn/*) entry
+# B. antigravity block is exactly one mcp(ductus/*) entry
 ag_block="$(mcp_block "$ANTIGRAVITY")"
-if printf '%s\n' "$ag_block" | grep -qF -- '- `mcp(gvrn/*)`' \
+if printf '%s\n' "$ag_block" | grep -qF -- '- `mcp(ductus/*)`' \
    && [ "$(printf '%s\n' "$ag_block" | grep -c '`')" -eq 1 ]; then
-  pass "B: antigravity.md block is the single mcp(gvrn/*) wildcard"
+  pass "B: antigravity.md block is the single mcp(ductus/*) wildcard"
 else
   fail "B: antigravity.md block unexpected: $(printf '%s' "$ag_block" | tr '\n' '|')"
 fi
 
 # C. claude / auggie regression — per-tool blocks still present
-if mcp_block "$CLAUDE" | grep -qF -- '- `mcp__gvrn__read-spec`'; then
+if mcp_block "$CLAUDE" | grep -qF -- '- `mcp__ductus__read-spec`'; then
   pass "C: claude.md per-tool block intact"
 else
   fail "C: claude.md per-tool block missing or changed"
 fi
-if mcp_block "$AUGGIE" | grep -qF -- 'mcp:gvrn:read-spec'; then
+if mcp_block "$AUGGIE" | grep -qF -- 'mcp:ductus:read-spec'; then
   pass "C: auggie.md per-tool block intact"
 else
   fail "C: auggie.md per-tool block missing or changed"
 fi
 
-# D. opencode block is exactly one `"gvrn*": "allow"` entry
+# D. opencode block is exactly one `"ductus*": "allow"` entry
 oc_block="$(mcp_block "$OPENCODE")"
-if printf '%s\n' "$oc_block" | grep -qF -- '- `"gvrn*": "allow"`'; then
-  pass 'D: opencode.md block is the single "gvrn*": "allow" glob'
+if printf '%s\n' "$oc_block" | grep -qF -- '- `"ductus*": "allow"`'; then
+  pass 'D: opencode.md block is the single "ductus*": "allow" glob'
 else
   fail "D: opencode.md block unexpected: $(printf '%s' "$oc_block" | tr '\n' '|')"
 fi

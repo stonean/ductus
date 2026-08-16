@@ -13,7 +13,7 @@ skipped-passes: []
 
 ## Summary
 
-`triage` → `inbox` rename across template, command source, and `.claude/commands/gov/` mirror; new `capture` command for brownfield spec sketches; constitution, README, and `AGENTS.md` updates threading the renaming through. Pure markdown — security rules do not apply. All five passes ran; no findings. `blocking: no`.
+`triage` → `inbox` rename across template, command source, and `.claude/commands/ductus/` mirror; new `capture` command for brownfield spec sketches; constitution, README, and `AGENTS.md` updates threading the renaming through. Pure markdown — security rules do not apply. All five passes ran; no findings. `blocking: no`.
 
 ## MUST violations (blocking)
 

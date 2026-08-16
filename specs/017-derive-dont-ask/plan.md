@@ -12,7 +12,7 @@ The work is intentionally additive in mechanism (add generators and hooks) and s
 
 ### Single canonical constitution at `framework/constitution.md`
 
-Per spec Q2: collapse the twin constitutions. Root `constitution.md` is deleted. Root `CLAUDE.md` updates `@import constitution.md` → `@import framework/constitution.md`. Root `README.md` link to `constitution.md` updates likewise. `/govern`'s install-time remap (`framework/constitution.md` → `constitution.md` at the adopter root) is unchanged — adopter projects continue to receive `constitution.md` at their root. The AGENTS.md "mirror constitutions" instruction is removed.
+Per spec Q2: collapse the twin constitutions. Root `constitution.md` is deleted. Root `CLAUDE.md` updates `@import constitution.md` → `@import framework/constitution.md`. Root `README.md` link to `constitution.md` updates likewise. `/ductus`'s install-time remap (`framework/constitution.md` → `constitution.md` at the adopter root) is unchanged — adopter projects continue to receive `constitution.md` at their root. The AGENTS.md "mirror constitutions" instruction is removed.
 
 Alternative considered: generator with section markers — rejected because the historical divergence between the two files was zero at decision time, so the discipline trap was guarding nothing. Pre-emptive scaffolding for hypothetical divergence violates the "don't design for hypothetical future requirements" guidance in the system prompt.
 
@@ -33,7 +33,7 @@ Removal mechanism: remove the inline link, or move it inside a code fence (the s
 
 ### Pre-commit hook architecture
 
-govern repo's `.githooks/pre-commit` orchestrates all four generators:
+ductus repo's `.githooks/pre-commit` orchestrates all four generators:
 
 1. `scripts/gen-claude-commands.sh` (existing)
 2. `scripts/gen-readme-table.sh` (new, this spec)
@@ -44,21 +44,21 @@ Hook installation via `scripts/install-hooks.sh` (sets `git config core.hooksPat
 
 Generators run unconditionally on every commit (no file-change gating). Trades a fraction of a second per commit for a one-line implementation that can't get the gate logic wrong.
 
-### Adopter hook surface and `/govern` integration
+### Adopter hook surface and `/ductus` integration
 
 Per spec Q7 expansion: `framework/bootstrap/hooks/pre-commit` and `framework/bootstrap/hooks/install.sh` ship with the framework. The shipped hook calls only adopter-relevant generators — initially just `gen-spec-deps.sh`. Slot is extensible.
 
-`/govern` adds a new "Hook installation" section between **Per-Agent Scaffolding** and **Post-Scaffolding Output**. On every run it detects state and acts:
+`/ductus` adds a new "Hook installation" section between **Per-Agent Scaffolding** and **Post-Scaffolding Output**. On every run it detects state and acts:
 
 | Detected state | Action |
 | --- | --- |
 | `core.hooksPath` unset and `.githooks/pre-commit` absent | Install both, set `core.hooksPath .githooks`, report installed |
-| `.githooks/pre-commit` exists from a prior `/govern` run (detected by a sentinel comment in the file) | Overwrite (`update` strategy, pinnable via `.govern.toml`) |
+| `.githooks/pre-commit` exists from a prior `/ductus` run (detected by a sentinel comment in the file) | Overwrite (`update` strategy, pinnable via `.govern.toml`) |
 | `core.hooksPath` points elsewhere, OR `.githooks/pre-commit` exists without the sentinel comment, OR husky/lefthook/`.pre-commit-config.yaml` detected | Skip install; report a warning with a manual integration snippet; continue |
 
-The sentinel comment is a single line near the top of the shipped hook (e.g., `# managed-by: govern`) that the detection logic looks for to distinguish a govern-installed hook from a hand-rolled one. The same sentinel survives `/govern` updates because it's part of the shipped file.
+The sentinel comment is a single line near the top of the shipped hook (e.g., `# managed-by: ductus`) that the detection logic looks for to distinguish a ductus-installed hook from a hand-rolled one. The same sentinel survives `/ductus` updates because it's part of the shipped file.
 
-`scripts/gen-spec-deps.sh` ships to adopters with `update` strategy — every `/govern` run refreshes it from upstream so adopters pick up generator fixes automatically. Adopters who have customized the script can list it in `.govern.toml` `pinned.files` to opt out of overwrites. The shipped pre-commit hook references it via the project-relative path (`scripts/gen-spec-deps.sh`).
+`scripts/gen-spec-deps.sh` ships to adopters with `update` strategy — every `/ductus` run refreshes it from upstream so adopters pick up generator fixes automatically. Adopters who have customized the script can list it in `.govern.toml` `pinned.files` to opt out of overwrites. The shipped pre-commit hook references it via the project-relative path (`scripts/gen-spec-deps.sh`).
 
 ### Generated artifacts use marker comments
 
@@ -107,7 +107,7 @@ Per spec Q5/Q6: a single file at `framework/rules/configuration-cross.md` with `
 
 Rule format details (Statement, Rationale, Verification, Source, ID stability) declared in `data-model.md` alongside this plan, mirroring the precedent set by `specs/008-security-rules/data-model.md`.
 
-Adopter shipping: added to `framework/bootstrap/govern.md`'s Shared Files manifest under "govern-owned shared files (strategy: update)" — alongside the security rule files.
+Adopter shipping: added to `framework/bootstrap/ductus.md`'s Shared Files manifest under "ductus-owned shared files (strategy: update)" — alongside the security rule files.
 
 ### Migration of existing dogfood specs
 
@@ -119,7 +119,7 @@ The one exception that needs active migration: **inline links for dependencies**
 
 A GitHub Actions workflow (`.github/workflows/generators.yml`) runs all four generators in dry-run mode on PR. Non-empty diff fails the build. Catches contributors who never ran `scripts/install-hooks.sh`.
 
-A second workflow file (`.github/workflows/adopter-generators.yml`) ships as a template referenced from the adopter README — not auto-installed. Adopters who want CI enforcement copy it into their own `.github/workflows/`. Auto-shipping CI files via `/govern` would require platform detection (GitHub Actions vs. GitLab CI vs. Buildkite) that's out of scope for this spec.
+A second workflow file (`.github/workflows/adopter-generators.yml`) ships as a template referenced from the adopter README — not auto-installed. Adopters who want CI enforcement copy it into their own `.github/workflows/`. Auto-shipping CI files via `/ductus` would require platform detection (GitHub Actions vs. GitLab CI vs. Buildkite) that's out of scope for this spec.
 
 ## Affected Files
 
@@ -181,9 +181,9 @@ A second workflow file (`.github/workflows/adopter-generators.yml`) ships as a t
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `.githooks/pre-commit` | Create | govern repo's hook — orchestrates all four generators, stages outputs |
-| `framework/bootstrap/hooks/pre-commit` | Create | Adopter-shipped hook — calls only adopter-relevant generators (initially `gen-spec-deps.sh`); contains `# managed-by: govern` sentinel |
-| `framework/bootstrap/hooks/install.sh` | Create | Adopter-side install script invoked by `/govern` |
+| `.githooks/pre-commit` | Create | ductus repo's hook — orchestrates all four generators, stages outputs |
+| `framework/bootstrap/hooks/pre-commit` | Create | Adopter-shipped hook — calls only adopter-relevant generators (initially `gen-spec-deps.sh`); contains `# managed-by: ductus` sentinel |
+| `framework/bootstrap/hooks/install.sh` | Create | Adopter-side install script invoked by `/ductus` |
 
 ### New rule file
 
@@ -195,7 +195,7 @@ A second workflow file (`.github/workflows/adopter-generators.yml`) ships as a t
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `framework/bootstrap/govern.md` | Modify | Add Hook Installation section; add `framework/rules/configuration-cross.md` to Shared Files (update strategy); add `framework/bootstrap/hooks/pre-commit` to Shared Files (create strategy) and `scripts/gen-spec-deps.sh` to Shared Files (update strategy, pinnable via `.govern.toml`); add `framework/bootstrap/hooks/install.sh` to per-agent scaffolding logic |
+| `framework/bootstrap/ductus.md` | Modify | Add Hook Installation section; add `framework/rules/configuration-cross.md` to Shared Files (update strategy); add `framework/bootstrap/hooks/pre-commit` to Shared Files (create strategy) and `scripts/gen-spec-deps.sh` to Shared Files (update strategy, pinnable via `.govern.toml`); add `framework/bootstrap/hooks/install.sh` to per-agent scaffolding logic |
 | `framework/bootstrap/configure/claude.md` | Modify | Add Bash permissions for hook install/run paths (`Bash(git config *)`, `Bash(.githooks/*)`, `Bash(scripts/gen-*)`) |
 | `framework/bootstrap/configure/auggie.md` | Modify | Same permission additions in Auggie's format |
 
@@ -203,7 +203,7 @@ A second workflow file (`.github/workflows/adopter-generators.yml`) ships as a t
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `.github/workflows/generators.yml` | Create | govern repo CI: dry-run all four generators; fail on diff |
+| `.github/workflows/generators.yml` | Create | ductus repo CI: dry-run all four generators; fail on diff |
 | `framework/templates/ci/adopter-generators.yml` | Create | Shipped template adopters can copy into their own `.github/workflows/` |
 
 ### Existing dogfood spec migration
@@ -229,7 +229,7 @@ See `data-model.md` for the configuration rule file structure, ID format, catego
 
 ## Trade-offs
 
-- **Symmetric hooks across govern and adopters.** Considered: command-entry recompute only, no adopter hook. Rejected because drift between commits is a real failure mode (a teammate pulls an out-of-date branch and reads stale deps without running a govern command). The user explicitly pushed for symmetry — if hooks are right for govern, they're right for adopters.
+- **Symmetric hooks across ductus and adopters.** Considered: command-entry recompute only, no adopter hook. Rejected because drift between commits is a real failure mode (a teammate pulls an out-of-date branch and reads stale deps without running a ductus command). The user explicitly pushed for symmetry — if hooks are right for ductus, they're right for adopters.
 - **Adopter hook installs only when no existing hook system is detected.** Considered: always install (clobbering existing hooks). Rejected because adopter projects already use husky/lefthook/pre-commit-py and clobbering their setup is a pipeline-violating action. Skip-and-warn-with-snippet keeps the adopter in control.
 - **No `gen-root-constitution.sh` generator.** Q2 collapsed the twin constitutions; the divergence the generator would have managed is gone.
 - **Existing dogfood specs not migrated for deleted fields.** Done specs are frozen archaeology per `framework/constitution.md` §done-specs-are-frozen-archaeology. Stale `title:`, `tags:`, `spec-ref:`, `track:` fields remain; the open-schema rule ignores them. The cost is one-time visual noise in old specs; the benefit is no rewrite of merged history.

@@ -1,6 +1,6 @@
 # Observability Rules — Backend
 
-Enforceable observability rules for server-side metrics, distributed tracing, and health signaling. These rules apply to projects adopting `govern` whose surface includes a backend.
+Enforceable observability rules for server-side metrics, distributed tracing, and health signaling. These rules apply to projects adopting `ductus` whose surface includes a backend.
 
 Rules use RFC 2119 language: **MUST** / **MUST NOT** are enforced by the validate command (errors); **SHOULD** / **SHOULD NOT** are flagged as warnings.
 
@@ -8,7 +8,7 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 Observability rules default to **SHOULD** — the right metrics, spans, and probes are context-dependent. A rule is **MUST** only when its absence blinds operators in a way that prevents detection or diagnosis of an outage regardless of scale. These rules verify **design-time commitments** — what a spec or plan must state — rather than code patterns; `/{project}:analyze` enforces them against feature artifacts. Logging and audit-trail rules live in `security-backend.md` §BE-LOG, not here.
 
-Projects without a backend can pin this file in `.govern.toml` or set `[rules] surfaces` to exclude the backend surface, and it will be skipped during `govern` updates and reviews.
+Projects without a backend can pin this file in `.ductus/config.toml` or set `[rules] surfaces` to exclude the backend surface, and it will be skipped during `ductus` updates and reviews.
 
 ## BE-METRIC — Metrics
 

@@ -22,21 +22,21 @@ Done when: all three template files exist with correct structure, and `spec.md` 
 
 Done when: `constitution.md` includes bug handling, scenario lifecycle, and updated file structure showing `scenarios/`.
 
-## 3. Create `/gov:scenario` command
+## 3. Create `/ductus:scenario` command
 
 - [x] Create `commands/scenario.md` template: requires active session target, confirms target, walks decision tree, creates scenario file in `scenarios/`, appends task to `tasks.md`
 - [x] Handle edge cases: no session target, no `tasks.md`, duplicate scenario name, parent spec is `done`
-- [x] Create `.claude/commands/gov/scenario.md` by copying template and replacing `{project}` with `gov`
+- [x] Create `.claude/commands/ductus/scenario.md` by copying template and replacing `{project}` with `gov`
 
-Done when: both command files exist, `/gov:scenario` creates scenario files under the correct feature's `scenarios/` directory and appends linked tasks to `tasks.md`.
+Done when: both command files exist, `/ductus:scenario` creates scenario files under the correct feature's `scenarios/` directory and appends linked tasks to `tasks.md`.
 
-## 4. Create `/gov:groom` command
+## 4. Create `/ductus:groom` command
 
 - [x] Create `commands/triage.md` template: reads `specs/inbox.md`, walks each item through the decision tree, migrates items to specs or scenarios, removes resolved items
 - [x] Handle edge cases: `triage.md` does not exist, `triage.md` is empty
-- [x] Create `.claude/commands/gov/triage.md` by copying template and replacing `{project}` with `gov`
+- [x] Create `.claude/commands/ductus/triage.md` by copying template and replacing `{project}` with `gov`
 
-Done when: both command files exist, `/gov:groom` processes triage items and migrates them.
+Done when: both command files exist, `/ductus:groom` processes triage items and migrates them.
 
 ## 5. Update existing command templates
 
@@ -49,10 +49,10 @@ Done when: all four command templates include the new functionality.
 
 ## 6. Re-derive governance command copies
 
-- [x] Re-derive `.claude/commands/gov/about.md` from updated `commands/about.md` (replace `{project}` with `gov`)
-- [x] Re-derive `.claude/commands/gov/status.md` from updated `commands/status.md`
-- [x] Re-derive `.claude/commands/gov/next.md` from updated `commands/next.md`
-- [x] Re-derive `.claude/commands/gov/analyze.md` from updated `commands/analyze.md`
+- [x] Re-derive `.claude/commands/ductus/about.md` from updated `commands/about.md` (replace `{project}` with `gov`)
+- [x] Re-derive `.claude/commands/ductus/status.md` from updated `commands/status.md`
+- [x] Re-derive `.claude/commands/ductus/next.md` from updated `commands/next.md`
+- [x] Re-derive `.claude/commands/ductus/analyze.md` from updated `commands/analyze.md`
 
 Done when: all four governance copies match their templates with `{project}` replaced by `gov`.
 

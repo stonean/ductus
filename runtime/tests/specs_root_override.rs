@@ -100,8 +100,8 @@ fn set_status_writes_under_configured_root() {
     assert_eq!(result.current, "done");
     assert_eq!(result.path, "governance/001-demo/spec.md");
     // Written under governance/, while the decoy specs/ copy is untouched.
-    let ductused = fs::read_to_string(tmp.path().join("governance/001-demo/spec.md")).unwrap();
-    assert!(ductused.contains("status: done"));
+    let governed = fs::read_to_string(tmp.path().join("governance/001-demo/spec.md")).unwrap();
+    assert!(governed.contains("status: done"));
     let decoy = fs::read_to_string(tmp.path().join("specs/001-demo/spec.md")).unwrap();
     assert!(
         decoy.contains("status: draft"),

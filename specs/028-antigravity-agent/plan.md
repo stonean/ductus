@@ -10,7 +10,7 @@ Auggie share a `claude-style` profile (commands under
 `{config_dir}/commands/{project}/`, `CLAUDE.md`, `.mcp.json`,
 `settings.local.json`); Antigravity gets an `antigravity` profile (dir-form
 skills under `.agents/skills/`, `AGENTS.md`, `.agents/mcp_config.json`,
-`.agents/settings.json`). `framework/bootstrap/govern.md`'s derived values and
+`.agents/settings.json`). `framework/bootstrap/ductus.md`'s derived values and
 §Per-Agent Scaffolding branch on the profile; everything else (the unified
 procedure, manifests, session state) is unchanged. The work is almost entirely
 in the markdown bootstrap + one generator + one new configure source; no
@@ -22,7 +22,7 @@ mandatory runtime (Rust) change ships in this spec (see Technical Decision 6).
 
 The registry gains a per-agent **`layout`** discriminator with two values:
 `claude-style` (Claude, Auggie) and `antigravity`. The derived-value formulas in
-govern.md §Derived values and the branch points in §Per-Agent Scaffolding select
+ductus.md §Derived values and the branch points in §Per-Agent Scaffolding select
 behavior by `layout`. Claude and Auggie are unchanged (`layout: claude-style`;
 they already differ only by `config_dir`). Antigravity is one new row.
 
@@ -53,7 +53,7 @@ verbatim. Each `framework/commands/<name>.md` becomes
 - Frontmatter: set `name: {project}-<name>`, carry the source `description`.
 - Body: the command procedure, with `{project}` / `{cli-config-dir}` substituted
   (`{cli-config-dir}` resolves to `.agents`).
-- The `govern` installer → `.agents/skills/govern/SKILL.md` (placeholders kept
+- The `ductus` installer → `.agents/skills/ductus/SKILL.md` (placeholders kept
   literal, per the existing self-install rule).
 - Domain rule files → `.agents/rules/<name>.md`.
 - Slash-command cleanup prunes stale `.agents/skills/{project}-*/` skill dirs not
@@ -69,7 +69,7 @@ New `framework/bootstrap/configure/antigravity.md` writes `.agents/settings.json
 `permissions.allow/deny/ask` in Antigravity's action grammar. Canonical-set
 mapping:
 
-- gvrn runtime → a single `mcp(gvrn/*)` (replaces Claude's 27 `mcp__gvrn__*`
+- ductus runtime → a single `mcp(ductus/*)` (replaces Claude's 27 `mcp__ductus__*`
   lines).
 - shell allows → `command(git add)`, `command(curl)`,
   `command(npx markdownlint-cli2)`, …
@@ -77,14 +77,14 @@ mapping:
 - `read_file`/`write_file` largely omitted — workspace files are auto-allowed.
 
 `gen-configure-mcp.sh` gains a **third splice target** emitting the Antigravity
-MCP block (one `mcp(gvrn/*)` line) into `antigravity.md`, preserving the
+MCP block (one `mcp(ductus/*)` line) into `antigravity.md`, preserving the
 pre-commit invariant that runtime-tool permissions stay in sync across all
 agents.
 
 ### 4. MCP wiring — two files, additive
 
-gvrn for Antigravity = `.agents/mcp_config.json` (server definition) **plus** the
-`mcp(gvrn/*)` allow in `.agents/settings.json`. govern.md's MCP-registration step
+ductus for Antigravity = `.agents/mcp_config.json` (server definition) **plus** the
+`mcp(ductus/*)` allow in `.agents/settings.json`. ductus.md's MCP-registration step
 branches per layout: `.mcp.json` (claude-style) vs `.agents/mcp_config.json`
 (antigravity). Both writes are additive — preserve any servers/permissions the
 adopter already has.
@@ -92,21 +92,21 @@ adopter already has.
 ### 5. gitignore
 
 Add `.agents/` to the framework-managed `.gitignore` block (the
-`merge-managed-block` content in govern.md §Shared Files and
+`merge-managed-block` content in ductus.md §Shared Files and
 `framework/templates/project/gitignore`), parallel to the existing `.claude/`
 line — Antigravity's scaffolded tree is adopter-local, gitignored like the
 others.
 
 ### 6. Runtime `exec` command resolution — scoped out (markdown-only path ships)
 
-gvrn `exec` resolves a command file at `{cli-config-dir}/commands/{project}/
+ductus `exec` resolves a command file at `{cli-config-dir}/commands/{project}/
 <name>.md` via [022](../022-deterministic-runtime/spec.md)'s `Host`. For
 Antigravity the procedure lives at `.agents/skills/{project}-<name>/SKILL.md`, so
-`gvrn exec` would not find it without extending `Host` to the skill layout — a
+`ductus exec` would not find it without extending `Host` to the skill layout — a
 Rust change.
 
 This spec **scopes that out**: (a) Antigravity adoption works on the
-markdown-only path immediately — the agent reads `SKILL.md` directly; (b) gvrn's
+markdown-only path immediately — the agent reads `SKILL.md` directly; (b) ductus's
 MCP tools (`read-spec`, `mark-task`, `lint-markdown`, …) operate on `specs/`
 independent of agent layout, so the runtime's value-add is available regardless.
 Extending `Host` to resolve the skill path is recorded as a follow-up dependent
@@ -115,28 +115,28 @@ Antigravity adoption on a runtime change; ship file-scaffold + MCP tools now.
 
 ### 7. Merge ownership — host/markdown now, primitive later
 
-`.agents/mcp_config.json` (JSON-object merge: add `gvrn` if absent) and
+`.agents/mcp_config.json` (JSON-object merge: add `ductus` if absent) and
 `.agents/settings.json` (`permissions` allow/deny/ask merge) are performed
-host-side per govern.md prose. `merge-permissions` /`merge-managed-block`
+host-side per ductus.md prose. `merge-permissions` /`merge-managed-block`
 extension to these shapes is a 022 follow-up (parallel to the existing Auggie
-`toolPermissions` gap already noted in 022). govern.md documents the additive
+`toolPermissions` gap already noted in 022). ductus.md documents the additive
 merge so the markdown-only path is faithful.
 
 ### 8. The `antigravity` layout touches the whole bootstrap, not just scaffolding
 
 Discovered mid-implement (Task 2): the layout branch is not confined to
-§Per-Agent Scaffolding. Because the Antigravity `govern` installer is a
-*transformed* skill (`.agents/skills/govern/SKILL.md`, frontmatter `name:
-govern` plus the body) rather than a verbatim copy of `govern.md`, several other
+§Per-Agent Scaffolding. Because the Antigravity `ductus` installer is a
+*transformed* skill (`.agents/skills/ductus/SKILL.md`, frontmatter `name:
+ductus` plus the body) rather than a verbatim copy of `ductus.md`, several other
 bootstrap
-sections that assume the `claude-style` `commands/govern.md` install must also
+sections that assume the `claude-style` `commands/ductus.md` install must also
 branch on `layout`:
 
-- **govern.md Self-Update Check** — byte-compares the installed file against
+- **ductus.md Self-Update Check** — byte-compares the installed file against
   upstream; for `antigravity` it must strip the added frontmatter and compare the
   body, and the stale-write path must write the transformed skill, not raw
-  `govern.md` (otherwise every run reports stale and installs a broken skill).
-- **Post-Write Integrity Check** — asserts a `# govern` first line; for
+  `ductus.md` (otherwise every run reports stale and installs a broken skill).
+- **Post-Write Integrity Check** — asserts a `# ductus` first line; for
   `antigravity` it checks the `SKILL.md` frontmatter + body.
 - **Placeholder-substitution exception**, **intermediate-dir creation**,
   **`parity.strict-files` frontmatter**, the **CLAUDE.md shared-file step**
@@ -150,13 +150,13 @@ for Antigravity to bootstrap at all.
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `framework/bootstrap/govern.md` | Modify | `layout` profiles + Antigravity registry row; §Derived values + §Per-Agent Scaffolding branch (skill transform, rules, `mcp_config.json`); §Permission Setup branch (`.agents/settings.json`); MCP-registration branch; `.gitignore` block adds `.agents/`; §Agent Selection/detection unchanged (keys on `config_dir`) |
-| `framework/bootstrap/configure/antigravity.md` | Create | Antigravity permission set → `.agents/settings.json` (`allow/deny/ask`, action grammar, `mcp(gvrn/*)`) |
-| `scripts/gen-configure-mcp.sh` | Modify | Third splice target: emit `mcp(gvrn/*)` Antigravity block; keep the cross-agent in-sync invariant |
+| `framework/bootstrap/ductus.md` | Modify | `layout` profiles + Antigravity registry row; §Derived values + §Per-Agent Scaffolding branch (skill transform, rules, `mcp_config.json`); §Permission Setup branch (`.agents/settings.json`); MCP-registration branch; `.gitignore` block adds `.agents/`; §Agent Selection/detection unchanged (keys on `config_dir`) |
+| `framework/bootstrap/configure/antigravity.md` | Create | Antigravity permission set → `.agents/settings.json` (`allow/deny/ask`, action grammar, `mcp(ductus/*)`) |
+| `scripts/gen-configure-mcp.sh` | Modify | Third splice target: emit `mcp(ductus/*)` Antigravity block; keep the cross-agent in-sync invariant |
 | `framework/templates/project/gitignore` | Modify | Add `.agents/` to the managed block |
 | `README.md` | Modify | Antigravity curl-bootstrap snippet + add Antigravity to the supported-agents list |
 | `specs/012-multi-agent-govern/spec.md` | Modify | Signpost note pointing to 028 (cross-spec impact; mirrors `007 → 012`) |
-| `scripts/tests/test-gen-configure-mcp.sh` (or extend) | Create/Modify | Assert the Antigravity `mcp(gvrn/*)` block is emitted and stays in sync |
+| `scripts/tests/test-gen-configure-mcp.sh` (or extend) | Create/Modify | Assert the Antigravity `mcp(ductus/*)` block is emitted and stays in sync |
 | `specs/028-antigravity-agent/data-model.md` | Create | Registry schema + Antigravity artifact schemas (this plan) |
 
 ## Trade-offs
@@ -166,8 +166,8 @@ for Antigravity to bootstrap at all.
   new branch set rather than new column values; acceptable until a fourth layout
   appears.
 - **Runtime `exec` deferred** — Antigravity ships on the markdown-only path now;
-  adopters with gvrn installed do not get the deterministic command-walk speedup
-  for Antigravity until 022's `Host` is extended. gvrn MCP tools are unaffected.
+  adopters with ductus installed do not get the deterministic command-walk speedup
+  for Antigravity until 022's `Host` is extended. ductus MCP tools are unaffected.
   Limitation documented; tracked as a 022 follow-up.
 - **Host-side merge vs runtime primitive** — host/prose now; primitive extension
   deferred to 022 (same posture as Auggie's `toolPermissions`).

@@ -6,7 +6,7 @@ title: "004-tech-stack-selection — plan"
 
 ## Overview
 
-Modify the `/gov:init` command to replace the single "primary language(s)" question with a multi-step tech stack questionnaire. The flow starts with project type (backend, frontend, fullstack), then asks relevant technology questions per category. Selections populate the AGENTS.md Tech Stack table and drive `.gitignore` fetching.
+Modify the `/ductus:init` command to replace the single "primary language(s)" question with a multi-step tech stack questionnaire. The flow starts with project type (backend, frontend, fullstack), then asks relevant technology questions per category. Selections populate the AGENTS.md Tech Stack table and drive `.gitignore` fetching.
 
 The change is entirely within `init.md` (the command definition) and `AGENTS.md` (the template). No new files or infrastructure needed.
 
@@ -53,7 +53,7 @@ The current step 8 in init fetches `.gitignore` patterns based on the "primary l
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `.claude/commands/gov/init.md` | Modify | Replace language question with tech stack flow |
+| `.claude/commands/ductus/init.md` | Modify | Replace language question with tech stack flow |
 | `AGENTS.md` | Modify | Adjust Tech Stack comment to support replacement |
 
 ## Open Questions Resolved

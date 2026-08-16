@@ -1,4 +1,4 @@
-# 044 — Relocate the shipped constitution to `.govern/constitution.md` Tasks
+# 044 — Relocate the shipped constitution to `.ductus/constitution.md` Tasks
 
 Tasks derived from the [plan](plan.md). Complete in order.
 
@@ -11,32 +11,32 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 2. Update the bootstrap manifest and prose
 
-- [x] Change the Shared Files row `framework/constitution.md` → destination `.govern/constitution.md` (`framework/bootstrap/govern.md:614`)
-- [x] Update the `[pinned] files` schema example (`govern.md:432`) to `.govern/constitution.md`
+- [x] Change the Shared Files row `framework/constitution.md` → destination `.ductus/constitution.md` (`framework/bootstrap/ductus.md:614`)
+- [x] Update the `[pinned] files` schema example (`ductus.md:432`) to `.ductus/constitution.md`
 
-- **Done when**: `rg -n 'constitution' framework/bootstrap/govern.md` shows no adopter-root `constitution.md` destination — only the `framework/constitution.md` source and `.govern/constitution.md` destination forms.
+- **Done when**: `rg -n 'constitution' framework/bootstrap/ductus.md` shows no adopter-root `constitution.md` destination — only the `framework/constitution.md` source and `.ductus/constitution.md` destination forms.
 
 ## 3. Sweep the shipped command bodies
 
-- [x] Update the bare adopter-path references to `.govern/constitution.md`: `target.md:19`, `specify.md:25,68`, `groom.md:64`, `clarify.md:100`, `analyze.md:123,178,216,220,228`
-- [x] Update `analyze.md:48`'s dual-path rule: `framework/constitution.md` in govern's own repo; `.govern/constitution.md` at the adopter repo root
+- [x] Update the bare adopter-path references to `.ductus/constitution.md`: `target.md:19`, `specify.md:25,68`, `groom.md:64`, `clarify.md:100`, `analyze.md:123,178,216,220,228`
+- [x] Update `analyze.md:48`'s dual-path rule: `framework/constitution.md` in ductus's own repo; `.ductus/constitution.md` at the adopter repo root
 - [x] Run the full sweep grep over `framework/commands/` to catch references my scoping grep filtered (lines mentioning both path forms)
 
-- **Done when**: `rg -n '\bconstitution\.md' framework/commands/` returns only `framework/constitution.md` and `.govern/constitution.md` forms.
+- **Done when**: `rg -n '\bconstitution\.md' framework/commands/` returns only `framework/constitution.md` and `.ductus/constitution.md` forms.
 
 ## 4. Update the project seed templates
 
-- [x] `claude-md.md:3` → `@import .govern/constitution.md`
-- [x] `agents.md:9,53` → link/list `.govern/constitution.md`
-- [x] `project-readme.md:20,35` → Documentation bullet and pipeline link target `.govern/constitution.md` (no new governance blurb, per the resolved question)
+- [x] `claude-md.md:3` → `@import .ductus/constitution.md`
+- [x] `agents.md:9,53` → link/list `.ductus/constitution.md`
+- [x] `project-readme.md:20,35` → Documentation bullet and pipeline link target `.ductus/constitution.md` (no new governance blurb, per the resolved question)
 
-- **Done when**: `rg -n 'constitution' framework/templates/project/` shows only `.govern/constitution.md` references.
+- **Done when**: `rg -n 'constitution' framework/templates/project/` shows only `.ductus/constitution.md` references.
 
-## 5. Update govern's own docs
+## 5. Update ductus's own docs
 
 - [x] Fix `AGENTS.md:9`'s dead root link to `framework/constitution.md`
-- [x] Reword `AGENTS.md:15`'s sync-target parenthetical to name `.govern/constitution.md` as the adopter destination
-- [x] Update `README.md:210,217,284` pinned/strategy examples to `.govern/constitution.md`
+- [x] Reword `AGENTS.md:15`'s sync-target parenthetical to name `.ductus/constitution.md` as the adopter destination
+- [x] Update `README.md:210,217,284` pinned/strategy examples to `.ductus/constitution.md`
 
 - **Done when**: no bare root `constitution.md` reference remains in `AGENTS.md` / `README.md`, and every constitution link in them resolves to an existing file.
 

@@ -15,9 +15,9 @@ next-criterion: 10
 
 # 004 — Tech Stack Selection
 
-Interactive tech stack selection during `/gov:init` that collects richer project metadata beyond primary language(s). From those selections, populate the AGENTS.md Tech Stack table so the project's technology context is captured at creation time.
+Interactive tech stack selection during `/ductus:init` that collects richer project metadata beyond primary language(s). From those selections, populate the AGENTS.md Tech Stack table so the project's technology context is captured at creation time.
 
-> **Note (post-completion, [043-workflows-sunset](../043-workflows-sunset/spec.md)):** the workflow-registry trigger matching this spec fed was removed with the workflows feature. The Tech Stack table survives with its documentation role and `/gov:review`'s tech-stack alignment check as consumers; body references to workflow triggers below are historical.
+> **Note (post-completion, [043-workflows-sunset](../043-workflows-sunset/spec.md)):** the workflow-registry trigger matching this spec fed was removed with the workflows feature. The Tech Stack table survives with its documentation role and `/ductus:review`'s tech-stack alignment check as consumers; body references to workflow triggers below are historical.
 
 ## Problem
 
@@ -25,7 +25,7 @@ Init currently asks only for primary language(s). Real projects have databases, 
 
 ## Behavior
 
-During `/gov:init`, after collecting the project slug, path, and description, replace the single "primary language(s)" question with a guided tech stack questionnaire. Selections populate the AGENTS.md Tech Stack table.
+During `/ductus:init`, after collecting the project slug, path, and description, replace the single "primary language(s)" question with a guided tech stack questionnaire. Selections populate the AGENTS.md Tech Stack table.
 
 ### Flow
 

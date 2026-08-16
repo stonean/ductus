@@ -15,9 +15,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] In `scripts/lint-rule-ids.sh`, extend the allowlist regex `^(BE|FE|CFG)-…` to include `QUAL`, update the error-message string to `{BE|FE|CFG|QUAL}`, and add `specs/036-quality-cross-rules/data-model.md` to the "Source of truth" comment block.
 - Done when: `scripts/lint-rule-ids.sh` accepts `QUAL-STUB-001` and still rejects malformed IDs; the data-model and the rule file agree.
 
-## 3. Register the file in the `/govern` manifest
+## 3. Register the file in the `/ductus` manifest
 
-- [x] Add `framework/rules/quality-cross.md → specs/rules/quality-cross.md` to the `### govern-owned shared files` table in `framework/bootstrap/govern.md`, slotted between `performance-frontend.md` and `security-backend.md` (strategy: update).
+- [x] Add `framework/rules/quality-cross.md → specs/rules/quality-cross.md` to the `### ductus-owned shared files` table in `framework/bootstrap/ductus.md`, slotted between `performance-frontend.md` and `security-backend.md` (strategy: update).
 - [x] Make the §Shared Files "Rule-file surface filter" note count-free (dropped the hard-coded number, which had silently drifted — it read "six" while seven rule files were already listed — and which nothing machine-checks; removing it eliminates the drift class rather than just correcting the value).
 - Done when: the manifest row is present, the note no longer hard-codes a rule-file count, and the `-cross.md` suffix makes 024's loader select it for every stack and 033's filter keep it unconditionally.
 
@@ -31,14 +31,14 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 5. Review and complete
 
-- [x] Run `/gov:review` over the change set; resolve any MUST findings.
-- Done when: `/gov:review` reports no blocking violations and the spec can advance to `done`.
+- [x] Run `/ductus:review` over the change set; resolve any MUST findings.
+- Done when: `/ductus:review` reports no blocking violations and the spec can advance to `done`.
 
 ## 6. Add QUAL-GROUND-001 (verify external contracts)
 
 - [x] Declare the `GROUND` category in the `quality-cross.md` file header and register it in `data-model.md` (category table + `QUAL-GROUND` namespace).
-- [x] Add `QUAL-GROUND-001` (SHOULD) to `quality-cross.md` following the canonical schema — the code-side counterpart to `/gov:analyze`'s grounding check, enforcing constitution §grounding.
-- Done when: `scripts/lint-rule-ids.sh` accepts `QUAL-GROUND-001`, markdownlint and `scripts/audit/*` pass, and the rule is registered in both the file header and the data-model. Re-run `/gov:review` before advancing 036 back to `done`.
+- [x] Add `QUAL-GROUND-001` (SHOULD) to `quality-cross.md` following the canonical schema — the code-side counterpart to `/ductus:analyze`'s grounding check, enforcing constitution §grounding.
+- Done when: `scripts/lint-rule-ids.sh` accepts `QUAL-GROUND-001`, markdownlint and `scripts/audit/*` pass, and the rule is registered in both the file header and the data-model. Re-run `/ductus:review` before advancing 036 back to `done`.
 
 ## 7. Add QUAL-CLAIM-001 (unsubstantiated clean results)
 
@@ -46,4 +46,4 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Add `QUAL-CLAIM-001` (SHOULD) to `quality-cross.md` following the canonical schema, with the promotion criterion to MUST documented alongside the Verification paragraph.
 - [x] Cite the four originating instances in the rule's Source paragraph so the rule is traceable to observed defects rather than speculation.
 
-- **Done when**: `scripts/lint-rule-ids.sh` accepts `QUAL-CLAIM-001`; the category appears in both the `quality-cross.md` header and `data-model.md` (table + namespace section); markdownlint and `bash scripts/audit/run-all.sh` pass; `/gov:review` is re-run before 036 advances back to `done`.
+- **Done when**: `scripts/lint-rule-ids.sh` accepts `QUAL-CLAIM-001`; the category appears in both the `quality-cross.md` header and `data-model.md` (table + namespace section); markdownlint and `bash scripts/audit/run-all.sh` pass; `/ductus:review` is re-run before 036 advances back to `done`.

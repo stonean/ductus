@@ -5,7 +5,7 @@
 # that have neither a backtick-quoted runtime-primitive name nor an
 # `<!-- llm:* -->` extension-point marker. Each such "prose-only" step is
 # a candidate for primitive promotion (deterministic logic that could
-# become a `gvrn` primitive) or for an LLM-marker annotation (when the
+# become a `ductus` primitive) or for an LLM-marker annotation (when the
 # step requires semantic judgment but the marker is missing).
 #
 # Allowlist: a numbered step preceded by `<!-- audit:ignore-promotion -->`

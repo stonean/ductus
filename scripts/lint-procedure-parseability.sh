@@ -4,7 +4,7 @@
 # as the allowlist of files not yet rewritten to the new conventions.
 #
 # Workflow-local: this script builds the runtime binary in --release mode
-# at runtime/target/release/gvrn and invokes it via that relative
+# at runtime/target/release/ductus and invokes it via that relative
 # path. It does NOT add the binary to PATH, so the opt-in invariant
 # check (step (a) in markdown-only-pipeline.yml) remains intact — the
 # parseability check is a workflow-private compile, not a runtime
@@ -13,7 +13,7 @@
 # The allowlist covers ONLY the legacy-prose case: an allowlisted file
 # may return LegacyProse (no parseable Instructions section), but an
 # Invalid parse (malformed structure, e.g. a typo'd primitive name)
-# fails the lint for every file — allowlisted or not. `gvrn parse
+# fails the lint for every file — allowlisted or not. `ductus parse
 # --check` distinguishes the two: exit 0 = parses as a Procedure,
 # exit 2 = legacy prose, exit 1 = Invalid (or unreadable input).
 #
@@ -28,7 +28,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 runtime_dir="$repo_root/runtime"
-runtime_bin="$runtime_dir/target/release/gvrn"
+runtime_bin="$runtime_dir/target/release/ductus"
 allowlist="$runtime_dir/legacy-prose-commands.txt"
 
 if [[ ! -d "$runtime_dir" ]]; then
@@ -76,8 +76,8 @@ is_allowed() {
 
 shopt -s nullglob
 # Slash commands plus the bootstrap procedures: `framework/bootstrap/*.md`
-# (currently `govern.md`) is exec-reachable — `gvrn exec govern` resolves it
-# via the govern-bootstrap scenario — so a parse regression there breaks the
+# (currently `ductus.md`) is exec-reachable — `ductus exec ductus` resolves it
+# via the ductus-bootstrap scenario — so a parse regression there breaks the
 # runtime bootstrap path exactly as one in framework/commands/ would. Both
 # trees are held to the same parseability contract.
 command_files=("$repo_root"/framework/commands/*.md "$repo_root"/framework/bootstrap/*.md)

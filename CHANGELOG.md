@@ -10,7 +10,7 @@ The runtime crate's own release notes live at [`runtime/CHANGELOG.md`](runtime/C
 
 ## Archived migrations
 
-Entries here left `framework/migrations.toml` after their sunset window closed. An adopter far enough behind to still need one applies the recipe by hand. Both entries below are additionally **subsumed** by the active `workflows-sunset` migration (spec 043): a current `/govern` run cleans their targets automatically, so the recipes matter only for manual application outside `/govern`.
+Entries here left `framework/migrations.toml` after their sunset window closed. An adopter far enough behind to still need one applies the recipe by hand. Both entries below are additionally **subsumed** by the active `workflows-sunset` migration (spec 043): a current `/ductus` run cleans their targets automatically, so the recipes matter only for manual application outside `/ductus`.
 
 ### skills-to-workflows (introduced 0.2.0, sunset after 0.10.0)
 

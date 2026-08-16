@@ -148,7 +148,7 @@ For this spec specifically: 006-bug-workflow gets a signpost noting that `triage
 - [x] AC12: Scenario promotion pattern is documented in `constitution.md`
 - [x] AC13: `triage` is renamed to `inbox` across all governance artifacts (templates, commands, constitution, sdd-context, README)
 - [x] AC14: 006-bug-workflow spec includes a signpost noting the `triage` → `inbox` rename by this spec
-- [x] AC15: 007-govern-workflow spec includes a signpost noting the govern command gains a triage → inbox migration and brownfield-initialization handling by this spec
+- [x] AC15: 007-govern-workflow spec includes a signpost noting the ductus command gains a triage → inbox migration and brownfield-initialization handling by this spec
 - [x] AC16: Cross-spec impact pattern is documented in `constitution.md`
 - [x] AC17: The brownfield process is documented in `constitution.md` under brownfield adoption
 - [x] AC18: `sdd-context.md` is updated to reflect the brownfield process

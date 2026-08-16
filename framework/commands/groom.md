@@ -12,17 +12,17 @@ Backlog grooming for `specs/inbox.md`. Walks each raw item through the bug decis
 
 ## Context
 
-Use the session target from `.govern/session.toml` if set, but groom operates across all specs so a target is not *required* to start. When groom routes an item to an existing spec — a spec edit or a scenario under the matching spec — it **sets** the session target to that spec as part of the routing, so a follow-on `/{project}:amend` or `/{project}:implement` needs no manual `/{project}:target`. Adding a scenario to a `done` spec also **reopens** it `done → in-progress` so that follow-on `/{project}:implement` has an actionable target. See **Setting the session target** and **Reopening a `done` spec** in the Markdown-only reference below.
+Use the session target from `.ductus/session.toml` if set, but groom operates across all specs so a target is not *required* to start. When groom routes an item to an existing spec — a spec edit or a scenario under the matching spec — it **sets** the session target to that spec as part of the routing, so a follow-on `/{project}:amend` or `/{project}:implement` needs no manual `/{project}:target`. Adding a scenario to a `done` spec also **reopens** it `done → in-progress` so that follow-on `/{project}:implement` has an actionable target. See **Setting the session target** and **Reopening a `done` spec** in the Markdown-only reference below.
 
 ## Scope Boundaries
 
-- This command grooms inbox items — it creates scenario files, appends tasks, edits a matched spec's body when the operator confirms the spec-edit route (Step 3), sets the session target (`.govern/session.toml`) when routing to an existing spec, and reopens a matched spec's frontmatter status `done → in-progress` when it adds a scenario to a `done` spec, but does NOT implement fixes. Do NOT read or modify source code or test files.
+- This command grooms inbox items — it creates scenario files, appends tasks, edits a matched spec's body when the operator confirms the spec-edit route (Step 3), sets the session target (`.ductus/session.toml`) when routing to an existing spec, and reopens a matched spec's frontmatter status `done → in-progress` when it adds a scenario to a `done` spec, but does NOT implement fixes. Do NOT read or modify source code or test files.
 - For each item, read only the spec file of the matching feature (for decision tree evaluation) and its `tasks.md` (for appending). Do NOT read plans, data models, or source code.
 - Reference: §bug-handling, §rules, §scenarios, §brownfield-inbox (constitution loaded by `/{project}:target` — do not re-read).
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional gvrn runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no gvrn MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write) per the Markdown-only reference below.
+> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no ductus MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write) per the Markdown-only reference below.
 
 Process items **one at a time** — do not batch or pre-process multiple items. Complete steps 2–8 for one item (decision, confirmation, writes, removal), then repeat from step 2 for the next; step 9 runs once after all items. The decision-tree detail, prompt wording, and write shapes live under the Markdown-only reference below.
 
@@ -46,14 +46,14 @@ Process items **one at a time** — do not batch or pre-process multiple items. 
 
 7. **Set the session target** — when the item routed to an existing spec, invoke `write-session`: for a confirmed spec edit, pass the matched feature and its repo-relative `specs/{feature}` directory; for a scenario route, additionally pass the new scenario slug and `specs/{feature}/scenarios/{slug}.md`. Rule items, missing-spec items (routed to `/{project}:specify`), chores, and discards set no target. The atomic-write shape and the `cli-config-dir` preservation rule are detailed in **Setting the session target** below. Across a multi-item run each spec-routed item performs this write, so the session target follows the current item and ends pointing at the most recently groomed spec.
 
-8. After migrating an item to a spec, scenario, or rule (or otherwise resolving it — a `discard` is resolved by removal alone), invoke `remove-inbox-item` with the item's bullet text to remove it from `specs/inbox.md` (atomic write; a no-match is a clean outcome, and the result reports the remaining item count). A chore recognized in step 2 is the exception — leave it in place and tell the user it is general maintenance to be done directly (the project's lint/format/test tooling covers the common cases); it clears from the inbox when it is done, not by grooming. On the markdown-only path (no gvrn runtime registered), remove the line with a host `Edit`. Then return to step 2 for the next item.
+8. After migrating an item to a spec, scenario, or rule (or otherwise resolving it — a `discard` is resolved by removal alone), invoke `remove-inbox-item` with the item's bullet text to remove it from `specs/inbox.md` (atomic write; a no-match is a clean outcome, and the result reports the remaining item count). A chore recognized in step 2 is the exception — leave it in place and tell the user it is general maintenance to be done directly (the project's lint/format/test tooling covers the common cases); it clears from the inbox when it is done, not by grooming. On the markdown-only path (no ductus runtime registered), remove the line with a host `Edit`. Then return to step 2 for the next item.
 
 <!-- audit:ignore-promotion -->
 9. After all items are groomed, report the completion summary: how many items were migrated, how many specs were created, how many scenarios were added, how many items were recognized as chores (left in the inbox to be done directly), and how many items remain. Name any spec reopened `done → in-progress` during the run, so the status change is surfaced rather than silent. Report the resulting session target — the spec (and scenario, if any) set by the most recently groomed spec-routed item, or "session target unchanged" when no groomed item set one. If `specs/inbox.md` is now empty (no items left), report: "Inbox is clean."
 
 ## Markdown-only reference
 
-With no gvrn runtime registered, the host performs the same walk and the same writes with its own file tools (Read, Edit, Write) — no shell-pipeline substitution — one contract, two paths (§runtime-host-integration). The routing decision per item stays the same decision tree; the sections below carry the full detail both paths follow.
+With no ductus runtime registered, the host performs the same walk and the same writes with its own file tools (Read, Edit, Write) — no shell-pipeline substitution — one contract, two paths (§runtime-host-integration). The routing decision per item stays the same decision tree; the sections below carry the full detail both paths follow.
 
 ### Groom decision tree
 
@@ -61,8 +61,8 @@ For each item, walk the steps in order; the first matching step names the route.
 
 **Step 1: Is this a cross-cutting concern with no covering rule?** (route: `rule`)
 
-- Apply the four-indicator promotion checklist (§rules in `.govern/constitution.md`): cross-cutting, citable, governance-recognized category, generalizable wording. If the item qualifies, recommend promoting it to a rule.
-- If a loaded rule file already covers the domain (e.g., `specs/rules/security-backend.md` for an authentication concern, `specs/rules/configuration-cross.md` for an env-var concern), recommend the user amend the relevant rule file directly — note that local edits to rule files are overwritten by `/govern` unless the file is pinned in `.govern/config.toml`, so amendments belong upstream in the framework rather than in adopting projects.
+- Apply the four-indicator promotion checklist (§rules in `.ductus/constitution.md`): cross-cutting, citable, governance-recognized category, generalizable wording. If the item qualifies, recommend promoting it to a rule.
+- If a loaded rule file already covers the domain (e.g., `specs/rules/security-backend.md` for an authentication concern, `specs/rules/configuration-cross.md` for an env-var concern), recommend the user amend the relevant rule file directly — note that local edits to rule files are overwritten by `/ductus` unless the file is pinned in `.ductus/config.toml`, so amendments belong upstream in the framework rather than in adopting projects.
 - If no rule file covers the domain, creating a new rule file is its own feature spec (out of `/{project}:groom`'s scope). Leave the item in the inbox unmodified — every subsequent groom pass walks every unmigrated item, including this one, so it stays surfaced. Ask the user whether to skip and continue.
 - If the item is feature-specific rather than cross-cutting, fall through to Step 2.
 
@@ -91,7 +91,7 @@ When an item routes to an existing spec, set the session target to that spec as 
 - **Scenario creation (Step 4)** — target the matched feature **plus the new scenario**: write `feature`, `path`, `scenario` (the new scenario slug), and `scenario-path` (`specs/{feature}/scenarios/{slug}.md`) — the same target shape `/{project}:amend`'s scenario route writes.
 - **Rule items (Step 1), new-spec items (Step 2 → `/{project}:specify`), chores, and discards** set **no** target — a rule file and a chore have no single spec home, and `/{project}:specify` already targets the spec it creates.
 
-Write the file the way every session-target write does: first read any existing `.govern/session.toml` to capture its `cli-config-dir` (the per-contributor agent identity written by `/govern`) and carry it forward, then rewrite the file atomically (tempfile + rename) with the target keys plus `set-at` (ISO 8601 UTC). Dropping `cli-config-dir` would strip the agent identity, so it is always preserved. On the runtime path the `write-session` primitive performs exactly this write.
+Write the file the way every session-target write does: first read any existing `.ductus/session.toml` to capture its `cli-config-dir` (the per-contributor agent identity written by `/ductus`) and carry it forward, then rewrite the file atomically (tempfile + rename) with the target keys plus `set-at` (ISO 8601 UTC). Dropping `cli-config-dir` would strip the agent identity, so it is always preserved. On the runtime path the `write-session` primitive performs exactly this write.
 
 Across a multi-item run, each spec-routed item performs this write, so the session target follows the current item and ends pointing at the most recently groomed spec.
 

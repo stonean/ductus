@@ -19,7 +19,7 @@ Introduce `framework/rules/concurrency-backend.md`, an enforceable rule set cove
 
 The constitution names **concurrency** a governance-recognized cross-cutting category (§rules) — and names it twice. The backend surface has **zero** coverage of it today. Concurrency defects — shared-state races, lost updates under the wrong isolation level, deadlocks from inconsistent lock ordering, double-applied non-idempotent retries, distributed locks without fencing tokens — are among the costliest to diagnose because they are non-deterministic and often invisible until production load. There is nowhere to promote these recurring hazards to the rules tier, so each is re-litigated per feature or caught only after a corruption incident.
 
-This spec closes that gap: a backend concurrency rule set citable by ID (`BE-{CATEGORY}-{NNN}`) that `/gov:analyze` checks against specs and plans (design-time concurrency commitments).
+This spec closes that gap: a backend concurrency rule set citable by ID (`BE-{CATEGORY}-{NNN}`) that `/ductus:analyze` checks against specs and plans (design-time concurrency commitments).
 
 ## Rule set scope
 
@@ -49,10 +49,10 @@ Concurrency rules default to **SHOULD** where the right approach is contextual. 
 - [x] AC1: `framework/rules/concurrency-backend.md` exists, ends in the `-backend.md` suffix, and follows the canonical rule schema (`### {ID}` headings; Statement / Rationale / Verification; RFC 2119 language) per [008-security-rules](../008-security-rules/spec.md)'s data-model.
 - [x] AC2: Every rule ID uses the `BE-{CATEGORY}-{NNN}` format with a concurrency category disjoint from the `security-backend.md`, `api-backend.md`, and `performance-backend.md` category sets; `scripts/lint-rule-ids.sh` passes.
 - [x] AC3: The file header declares the concurrency category abbreviations per the per-file category-declaration policy ([016-cross-cutting-rules](../016-cross-cutting-rules/spec.md)).
-- [x] AC4: The rule set covers, at minimum, shared-state races, locking/deadlock avoidance, and transaction isolation — each with a Verification clause expressed as a **design-time commitment** the spec/plan must make (not a code-pattern grep), consistent with how `/gov:analyze` audits artifacts.
+- [x] AC4: The rule set covers, at minimum, shared-state races, locking/deadlock avoidance, and transaction isolation — each with a Verification clause expressed as a **design-time commitment** the spec/plan must make (not a code-pattern grep), consistent with how `/ductus:analyze` audits artifacts.
 - [x] AC5: Each MUST rule is one whose absence is a correctness/corruption hazard regardless of scale; contextual trade-offs are SHOULD. The split is evident from the Statements.
 - [x] AC6: Rules whose surface overlaps an existing rule cite it rather than restating it (`BE-IDEMP` for retry safety, `BE-POOL-*` for pool interaction, `CFG-*` for tunable config).
-- [x] AC7: The file is added to the `/govern` **Shared Files** manifest in `framework/bootstrap/govern.md` and is selected under the `backend` surface by `/gov:review`, composing with [033-rule-surface-setting](../033-rule-surface-setting/spec.md) and [024-rule-loader](../024-rule-loader/spec.md).
+- [x] AC7: The file is added to the `/ductus` **Shared Files** manifest in `framework/bootstrap/ductus.md` and is selected under the `backend` surface by `/ductus:review`, composing with [033-rule-surface-setting](../033-rule-surface-setting/spec.md) and [024-rule-loader](../024-rule-loader/spec.md).
 
 ## Open Questions
 

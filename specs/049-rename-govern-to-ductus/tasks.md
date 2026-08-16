@@ -53,13 +53,13 @@ release, not here.
 
 ### 4. Rename the bootstrap and repoint every adopter-facing URL
 
-- [ ] `git mv framework/bootstrap/govern.md framework/bootstrap/ductus.md`
-- [ ] Update the three adopter-facing URLs — the archive fetch, the self-update fetch (which
+- [x] `git mv framework/bootstrap/govern.md framework/bootstrap/ductus.md`
+- [x] Update the three adopter-facing URLs — the archive fetch, the self-update fetch (which
       must name the *new* bootstrap path), and the post-scaffolding documentation links
-- [ ] Sweep the bootstrap body: MCP registration shapes, the per-agent permission seeds in all
+- [x] Sweep the bootstrap body: MCP registration shapes, the per-agent permission seeds in all
       four grammars, the pre-flight probe, the Agent Registry's derived-values table, and the
       Shared Files manifest rows
-- [ ] Walk the §Derived values **Layout-derived** table row by row per `AGENTS.md`'s
+- [x] Walk the §Derived values **Layout-derived** table row by row per `AGENTS.md`'s
       agent-registry rule and record the per-agent impact in the commit message
 
 - **Done when**: the bootstrap names only the new project, the self-update fetch points at the
@@ -68,16 +68,16 @@ release, not here.
 
 ### 5. Register the adopter migration
 
-- [ ] Add a `framework/migrations.toml` entry with `introduced_in` set to the release carrying
+- [x] Add a `framework/migrations.toml` entry with `introduced_in` set to the release carrying
       this work, and `target_paths` covering the per-project directory, the installed command
       files, and the MCP config
-- [ ] Write `framework/migrations/ductus-rename.md`: rewrite the MCP server key and command,
+- [x] Write `framework/migrations/ductus-rename.md`: rewrite the MCP server key and command,
       rewrite the permission entries in all four grammars, move the per-project directory under
       042's convergence rule (`git mv` when tracked, converge when the destination exists),
       rewrite `[pinned] files` entries, warn on a pinned invoker still naming the old path, and
       reinstall the command files under the new namespace
-- [ ] Make it idempotent and silent when the project is already converged
-- [ ] Leave `framework/migrations/govern-dir-consolidate.md` unchanged
+- [x] Make it idempotent and silent when the project is already converged
+- [x] Leave `framework/migrations/govern-dir-consolidate.md` unchanged
 
 - **Done when**: the entry validates against the registry's duplicate-id and
   reference-integrity guard, a pre-rename project converges in one run, and a re-run is a
@@ -85,47 +85,47 @@ release, not here.
 
 ### 6. Sweep the framework sources
 
-- [ ] `framework/constitution.md`, `framework/commands/*.md`, `framework/templates/**`,
+- [x] `framework/constitution.md`, `framework/commands/*.md`, `framework/templates/**`,
       `framework/rules/**`, `framework/runtime-tools.txt` surroundings
-- [ ] Keep placeholders as placeholders — `{project}` and `{cli-config-dir}`, never the
+- [x] Keep placeholders as placeholders — `{project}` and `{cli-config-dir}`, never the
       substituted literals, per `AGENTS.md`'s generator boundary
-- [ ] Leave every version- and tag-adjacent occurrence untouched
+- [x] Leave every version- and tag-adjacent occurrence untouched
 
 - **Done when**: `scripts/audit/placeholder-roundtrip.sh` passes and no framework source names
   the old project outside a legacy path or a published-version reference.
 
 ### 7. Sweep the scripts and add the retired-name guard entries
 
-- [ ] `scripts/gen-claude-commands.sh` (`PROJECT`), `scripts/gen-configure-mcp.sh` (the four
+- [x] `scripts/gen-claude-commands.sh` (`PROJECT`), `scripts/gen-configure-mcp.sh` (the four
       permission-string emitters), `scripts/gen-help-tables.sh`
-- [ ] `scripts/audit/*.sh` hardcoded names, including `host-namespace-parity.sh`'s contract
+- [x] `scripts/audit/*.sh` hardcoded names, including `host-namespace-parity.sh`'s contract
       assertion against `paths.rs`, `manifest-parity.sh`'s permission-prefix greps,
       `runtime-hardcoded-paths.sh`'s command-dir grep, and `check-zero.sh`'s generator path
-- [ ] Add the rename's tokens to `introducing-drift.sh`'s `RENAMED_TOKENS` catalog
-- [ ] `scripts/lint-procedure-parseability.sh`'s runtime binary path
+- [x] Add the rename's tokens to `introducing-drift.sh`'s `RENAMED_TOKENS` catalog
+- [x] `scripts/lint-procedure-parseability.sh`'s runtime binary path
 
 - **Done when**: every audit and lint script runs against the new names and
   `scripts/audit/run-all.sh` reaches the specs sweep with no name-related finding.
 
 ### 8. Update the workflows and the release tag scheme
 
-- [ ] `.github/workflows/runtime-release.yml`: trigger pattern `gvrn-v*` → `ductus-v*`, asset
+- [x] `.github/workflows/runtime-release.yml`: trigger pattern `gvrn-v*` → `ductus-v*`, asset
       base names, and the crates.io publish step
-- [ ] `.github/workflows/runtime.yml`, `generators.yml`, `markdown-only-pipeline.yml`
-- [ ] Give every job that runs `cargo` under `runtime/` the `components: clippy, rustfmt` input
+- [x] `.github/workflows/runtime.yml`, `generators.yml`, `markdown-only-pipeline.yml`
+- [x] Give every job that runs `cargo` under `runtime/` the `components: clippy, rustfmt` input
       per `AGENTS.md`'s toolchain-pin gotcha, and keep `fetch-depth: 0` on history-reading jobs
-- [ ] Leave the existing `gvrn-v*` tags and their assets alone
+- [x] Leave the existing `gvrn-v*` tags and their assets alone
 
 - **Done when**: the release workflow triggers on the new tag scheme, publishes the new asset
   names, and no workflow references the old binary.
 
 ### 9. Rewrite the project-level documents
 
-- [ ] `README.md`: acquiring, registering, and invoking under the new name only
-- [ ] `AGENTS.md`: the runtime-release entry's tag scheme and three-artifact bump, the
+- [x] `README.md`: acquiring, registering, and invoking under the new name only
+- [x] `AGENTS.md`: the runtime-release entry's tag scheme and three-artifact bump, the
       stale-binary gotcha's binary path, the generator gotcha's command directory
-- [ ] `CLAUDE.md` import paths
-- [ ] Add the contributor-local checklist for a maintainer renaming their own checkout — local
+- [x] `CLAUDE.md` import paths
+- [x] Add the contributor-local checklist for a maintainer renaming their own checkout — local
       directory, git remote, and per-project agent state keyed by path (AC10)
 
 - **Done when**: `README.md` and the bootstrap describe only the new name, and the
@@ -135,12 +135,12 @@ release, not here.
 
 ### 10. Sweep the spec corpus
 
-- [ ] Apply the substitution table across `specs/NNN-*/**`, excluding every occurrence that
+- [x] Apply the substitution table across `specs/NNN-*/**`, excluding every occurrence that
       names a published version, tag, or asset
-- [ ] Rename spec directories whose slug carries the old project name only if their slug is
+- [x] Rename spec directories whose slug carries the old project name only if their slug is
       part of the live artifact set — otherwise leave the slug and sweep the body
-- [ ] Add the file-scope `<!-- audit:ignore-introducing-drift:file -->` marker to this spec
-- [ ] Confirm every change in the diff is the same substitution, so the `done` specs it touches
+- [x] Add the file-scope `<!-- audit:ignore-introducing-drift:file -->` marker to this spec
+- [x] Confirm every change in the diff is the same substitution, so the `done` specs it touches
       stay `done` per §spec-lifecycle case (a)
 
 - **Done when**: `/ductus:analyze` reports no spec drifted by the sweep, no `done` spec changed
@@ -161,12 +161,12 @@ release, not here.
 
 ### 12. Move this repo onto the new layout
 
-- [ ] `git mv .govern .ductus`, and correct the stale basename comment in its `config.toml`
+- [x] `git mv .govern .ductus`, and correct the stale basename comment in its `config.toml`
       while leaving `[host] project` explicitly pinned
-- [ ] Update `.mcp.json`'s server key and command
-- [ ] Regenerate the command copies with `scripts/gen-claude-commands.sh` and remove the old
+- [x] Update `.mcp.json`'s server key and command
+- [x] Regenerate the command copies with `scripts/gen-claude-commands.sh` and remove the old
       `.claude/commands/gov/` directory — regenerate, never hand-move
-- [ ] Update `.gitignore`'s framework-managed block for the new session path
+- [x] Update `.gitignore`'s framework-managed block for the new session path
 
 - **Done when**: `git status` is clean after a regeneration, the commands live under the new
   namespace, and an MCP tool call in this repo resolves through the new server key.

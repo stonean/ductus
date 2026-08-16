@@ -28,7 +28,7 @@ one would have left a canonical source asserting behavior the runtime does not
 have — the drift [§drift-prevention](../../framework/constitution.md#drift-prevention)
 exists to catch, inside the check built to catch it.
 
-Surfaced as a `QUAL-GROUND-001` SHOULD by `/gov:review` on 022 (2026-08-03).
+Surfaced as a `QUAL-GROUND-001` SHOULD by `/ductus:review` on 022 (2026-08-03).
 Same shape as the finding that produced
 [family-17-contract-binding](family-17-contract-binding.md), and closed the
 same way: derive from the canonical source, fail closed when derivation yields

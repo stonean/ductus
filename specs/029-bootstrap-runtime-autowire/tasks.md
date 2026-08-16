@@ -2,31 +2,31 @@
 
 Tasks derived from the [plan](plan.md). Complete in order.
 
-## 1. Add the Pre-flight Phase to `govern.md`
+## 1. Add the Pre-flight Phase to `ductus.md`
 
-- [x] Generalize the §govern.md Self-Update Check section into a **Pre-flight Phase** positioned after the §Permission Setup seed and before §Pre-run Migrations / the archive fetch.
-- [x] Describe the phase running both checks (gvrn detection + self-update), accumulating restart-requiring writes, and emitting a single combined abort if anything was written.
+- [x] Generalize the §ductus.md Self-Update Check section into a **Pre-flight Phase** positioned after the §Permission Setup seed and before §Pre-run Migrations / the archive fetch.
+- [x] Describe the phase running both checks (ductus detection + self-update), accumulating restart-requiring writes, and emitting a single combined abort if anything was written.
 - [x] Preserve the existing self-update byte-compare / stale-write behavior inside the phase.
-- Done when: govern.md describes one pre-flight phase whose worst case is a single restart, and the prior standalone self-update section no longer exists as a sibling.
+- Done when: ductus.md describes one pre-flight phase whose worst case is a single restart, and the prior standalone self-update section no longer exists as a sibling.
 
 ## 2. Add the three-state detection mechanism
 
-- [x] Document **State A** = tool-inventory introspection (`mcp__gvrn__*` / `mcp:gvrn:*`, lazy names count as present); no shell, no permission.
+- [x] Document **State A** = tool-inventory introspection (`mcp__ductus__*` / `mcp:ductus:*`, lazy names count as present); no shell, no permission.
 - [x] Document **State B** = binary probe succeeds, no tools → wire + grant perms + contribute to the pre-flight abort (names every file written).
 - [x] Document **State C** = probe fails *or* cannot run *or* is denied → markdown path + one tip line pointing at README Runtime.
-- Done when: all three states and the "deny/unavailable ⇒ State C" degradation are specified in govern.md.
+- Done when: all three states and the "deny/unavailable ⇒ State C" degradation are specified in ductus.md.
 
 ## 3. Add the MCP Wiring subsection
 
-- [x] Specify the per-layout target (`.mcp.json` / `{config_dir}/mcp_config.json`) and the `gvrn` entry shape.
-- [x] Specify the additive/idempotent in-place merge rules: missing file, missing `gvrn`, existing `gvrn` (no-op), missing `mcpServers` key, malformed JSON (skip + warn + degrade).
+- [x] Specify the per-layout target (`.mcp.json` / `{config_dir}/mcp_config.json`) and the `ductus` entry shape.
+- [x] Specify the additive/idempotent in-place merge rules: missing file, missing `ductus`, existing `ductus` (no-op), missing `mcpServers` key, malformed JSON (skip + warn + degrade).
 - [x] State explicitly that the write updates and never replaces/truncates the file.
-- Done when: govern.md's MCP Wiring subsection covers all five merge cases.
+- Done when: ductus.md's MCP Wiring subsection covers all five merge cases.
 
 ## 4. Update §Permission Setup and reverse the "not scaffolded" decision
 
 - [x] Add the binary-probe permission to the always-applied seed description.
-- [x] Describe the State-B gvrn tool-permission grant (per-layout wildcard, additive).
+- [x] Describe the State-B ductus tool-permission grant (per-layout wildcard, additive).
 - [x] Rewrite the paragraph that says the runtime is "wired separately and not scaffolded" into the auto-wire-on-detect behavior.
 - [x] Confirm the §Procedural-fidelity allowed-prompts list is unchanged (no new prompt).
 - Done when: the "not scaffolded" language is gone and no new confirmation prompt was added.
@@ -47,11 +47,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 7. Reframe the README Runtime section
 
-- [x] Change the framing from "manual MCP wiring" to "`/govern` auto-wires gvrn when the binary is detected."
+- [x] Change the framing from "manual MCP wiring" to "`/ductus` auto-wires ductus when the binary is detected."
 - [x] Keep the binary download/install instructions (the binary is still installed out of band).
 - Done when: README states auto-wiring and no longer instructs the user to hand-edit the MCP config.
 
-## 8. Add new edge cases and the State-C tip to govern.md output
+## 8. Add new edge cases and the State-C tip to ductus.md output
 
 - [x] §Edge Cases: malformed wiring file (no clobber), denied/unavailable probe ⇒ State C, compounding restart collapsed to one.
 - [x] §Post-Scaffolding Output: the State-C tip line; ensure the State-B abort message lists every file written.
@@ -65,16 +65,16 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 10. Verification pass
 
-- [x] `npx markdownlint-cli2` clean on the changed markdown (govern.md, configure files, README, this spec dir).
-- [x] Manually walk each state's prose to confirm coherence: State A (silent deterministic), State B (wire + single abort + file list), State C (markdown + tip), and the merged stale-`govern.md` + unwired case (one restart).
-- [x] Confirm `gvrn`-absent CI (`markdown-only-pipeline.yml`) reasoning still holds — the new probe is a detection step, not a runtime dependency.
+- [x] `npx markdownlint-cli2` clean on the changed markdown (ductus.md, configure files, README, this spec dir).
+- [x] Manually walk each state's prose to confirm coherence: State A (silent deterministic), State B (wire + single abort + file list), State C (markdown + tip), and the merged stale-`ductus.md` + unwired case (one restart).
+- [x] Confirm `ductus`-absent CI (`markdown-only-pipeline.yml`) reasoning still holds — the new probe is a detection step, not a runtime dependency.
 - Done when: lint is clean and all state walk-throughs are coherent.
 
 ## 11. Implement scenario: runtime-probe-parity-audit
 
 - [x] Implement the behavior described in [`scenarios/runtime-probe-parity-audit.md`](scenarios/runtime-probe-parity-audit.md).
 
-- **Done when**: `scripts/audit/runtime-probe-parity.sh` asserts, per agent, that the gvrn binary probe is in parity between the §Agent Registry `settings_template` seed and that agent's `framework/bootstrap/configure/{key}.md` (present in both or neither — present in one only is a finding), as a fixed-string check in each agent's native grammar; the family is wired into `scripts/audit/run-all.sh` (family-count comment bumped) and enumerated in `framework/commands/audit.md`; `scripts/audit/run-all.sh` passes clean. (Scope narrowed from the original "every seed entry" framing during implementation — the seed and configure sets legitimately diverge; only the probe is a real cross-artifact invariant. See the scenario's Resolved Questions.)
+- **Done when**: `scripts/audit/runtime-probe-parity.sh` asserts, per agent, that the ductus binary probe is in parity between the §Agent Registry `settings_template` seed and that agent's `framework/bootstrap/configure/{key}.md` (present in both or neither — present in one only is a finding), as a fixed-string check in each agent's native grammar; the family is wired into `scripts/audit/run-all.sh` (family-count comment bumped) and enumerated in `framework/commands/audit.md`; `scripts/audit/run-all.sh` passes clean. (Scope narrowed from the original "every seed entry" framing during implementation — the seed and configure sets legitimately diverge; only the probe is a real cross-artifact invariant. See the scenario's Resolved Questions.)
 
 > Tasks 12–14 are backfilled records of scenarios that were added and implemented together via the direct reopen-implement path (a `set-status` reopen plus a single `feat` commit), tracked at the time by their acceptance criteria rather than a `tasks.md` entry. They are recorded here for scenario→task traceability; the work landed in the commits noted on each and predates Task 11.
 
@@ -82,7 +82,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 - [x] Implement the behavior described in [`scenarios/project-inputs-asked-once.md`](scenarios/project-inputs-asked-once.md).
 
-- **Done when**: project inputs (`name`, `description`, `languages`) persist in `.govern.toml`'s `[project]` table and resolve at §Collect Project Inputs after the Pre-flight Phase — existing values read back, only missing ones prompted — so they are asked at most once across a State-B / stale-`govern.md` restart and never re-asked on update runs. (Landed in commit `6f75041`.)
+- **Done when**: project inputs (`name`, `description`, `languages`) persist in `.govern.toml`'s `[project]` table and resolve at §Collect Project Inputs after the Pre-flight Phase — existing values read back, only missing ones prompted — so they are asked at most once across a State-B / stale-`ductus.md` restart and never re-asked on update runs. (Landed in commit `6f75041`.)
 
 ## 13. Implement scenario: archive-fetch-direct-codeload
 
@@ -94,4 +94,4 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 - [x] Implement the behavior described in [`scenarios/state-a-deterministic-path-forcing.md`](scenarios/state-a-deterministic-path-forcing.md).
 
-- **Done when**: State A (gvrn live) is a binding execution contract — every primitive-backed step calls its `gvrn` MCP tool, the shell commands under those steps are the State-B/C fallback spec (not executed), non-primitive steps (gitignore `curl`, `git config`, input prompts) run in every state, and a primitive call that errors falls back to that one step's shell spec. (Landed in commit `2d14949`, refined in `42965fe`.)
+- **Done when**: State A (ductus live) is a binding execution contract — every primitive-backed step calls its `ductus` MCP tool, the shell commands under those steps are the State-B/C fallback spec (not executed), non-primitive steps (gitignore `curl`, `git config`, input prompts) run in every state, and a primitive call that errors falls back to that one step's shell spec. (Landed in commit `2d14949`, refined in `42965fe`.)

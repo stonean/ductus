@@ -8,9 +8,9 @@ Tasks derived from the [plan](plan.md). Complete in order. Phased structure — 
 
 - [x] Create `framework/commands/audit.md` with frontmatter (`description`, no `argument-hint`, no `parity:` yet) and an empty Instructions section. The full procedure body lands in task 4 after the family scripts exist.
 - [x] Add frontmatter description: `Audit framework artifacts for cross-doc, cross-manifest, cross-registry drift. Maintainer-only.`
-- [x] Run `scripts/gen-claude-commands.sh` to regenerate `.claude/commands/gov/audit.md`. Verify the mirror exists and matches the source.
+- [x] Run `scripts/gen-claude-commands.sh` to regenerate `.claude/commands/ductus/audit.md`. Verify the mirror exists and matches the source.
 
-- **Done when**: `framework/commands/audit.md` exists with frontmatter + H1 + empty Instructions section; `.claude/commands/gov/audit.md` regenerates without error.
+- **Done when**: `framework/commands/audit.md` exists with frontmatter + H1 + empty Instructions section; `.claude/commands/ductus/audit.md` regenerates without error.
 
 ### 2. Create `scripts/audit/` directory and `check-zero.sh` orchestrator
 
@@ -33,7 +33,7 @@ Tasks derived from the [plan](plan.md). Complete in order. Phased structure — 
 
 ### 4. Implement Family 2 — `scripts/audit/manifest-parity.sh`
 
-- [x] Sub-check 2a: parse the file manifest from `framework/bootstrap/govern.md`'s scaffold section and from `framework/commands/init.md`'s scaffold section. Extract path lists via section-anchored regex. Diff; finding per asymmetry.
+- [x] Sub-check 2a: parse the file manifest from `framework/bootstrap/ductus.md`'s scaffold section and from `framework/commands/init.md`'s scaffold section. Extract path lists via section-anchored regex. Diff; finding per asymmetry.
 - [x] Sub-check 2b: extract Claude `permissions.allow` array from `framework/bootstrap/configure/claude.md`'s canonical permission set. Extract Auggie `toolPermissions` array from `framework/bootstrap/configure/auggie.md`. Normalize each entry to `(tool, command-pattern)` per Q6's rule (Claude `Bash(X *)` → `("Bash", "X *")`; Auggie `{toolName: "launch-process", shellInputRegex: "^X "}` → `("Bash", "X *")` after stripping `^` and trailing space, normalizing case). Sort both, diff; finding per asymmetric entry.
 - [x] Smoke-test as in task 3.
 
@@ -50,7 +50,7 @@ Tasks derived from the [plan](plan.md). Complete in order. Phased structure — 
 
 ### 6. Implement Family 4 — `scripts/audit/placeholder-roundtrip.sh`
 
-- [x] `grep -rn` over `framework/commands/*.md` for hardcoded tokens: `.claude/`, `gov:`, `/gov:`.
+- [x] `grep -rn` over `framework/commands/*.md` for hardcoded tokens: `.claude/`, `gov:`, `/ductus:`.
 - [x] Allowlist mechanism: skip lines preceded by `<!-- audit:ignore-placeholders -->` on the previous line. `framework/commands/audit.md` itself (NOT scaffolded into adopters) is the primary case where literals are correct.
 - [x] Surface remaining hits as findings with file:line and suggested fix (the placeholder form: `{cli-config-dir}/`, `{project}:`, `/{project}:`).
 
@@ -103,7 +103,7 @@ Pulled in from the original Future Considerations during the autonomous implemen
 - [x] For each old-name token: grep all `done` specs' bodies for the token in code-span form (backticked).
 - [x] For each match: examine the surrounding sentence (split at sentence boundaries). Look for current-tense verbs (`is`, `provides`, `exposes`, `creates`, `runs`, `defines`).
 - [x] If a current-tense verb is found near the old-name token: emit a finding with the affected sentence, the spec file:line, and a suggested past-tense rewrite (`is` → `was`, `provides` → `provided`, `exposes` → `exposed`, `creates` → `created`, `runs` → `ran`, `defines` → `defined`).
-- [x] Suggested-fix output names the `/gov:amend` cycle as the resolution path (the maintainer adds a clarify-question on the affected spec, then accepts the past-tense rewrite).
+- [x] Suggested-fix output names the `/ductus:amend` cycle as the resolution path (the maintainer adds a clarify-question on the affected spec, then accepts the past-tense rewrite).
 
 - **Done when**: script runs and produces findings against the documented ~9 specs from spec body's Family 8 background (011, 014, 017, 020, 021, 022, 023, 024, 000). False positives expected; manually verify the findings list is plausible.
 
@@ -114,9 +114,9 @@ Pulled in from the original Future Considerations during the autonomous implemen
 - [x] Replace the empty Instructions section with a numbered procedure: step 1 invokes `run-generator` against `scripts/audit/check-zero.sh`; if it reports drift, halt and exit. Steps 2–9 invoke `run-generator` against each of the eight family scripts; stream output to /audit's stdout under family headers.
 - [x] Each step uses the parseable conventions per spec 022 — numbered, backtick-quoted `run-generator` name, no extension-point markers (every step is deterministic; no LLM extension required).
 - [x] Add an "Output" section to the command body documenting the stdout format and exit-code contract.
-- [x] Add a "Boundary with `/gov:analyze`" section referencing the spec's table.
+- [x] Add a "Boundary with `/ductus:analyze`" section referencing the spec's table.
 
-- **Done when**: `framework/commands/audit.md`'s Instructions section parses cleanly under `scripts/lint-procedure-parseability.sh`; the regenerated `.claude/commands/gov/audit.md` mirror is in sync.
+- **Done when**: `framework/commands/audit.md`'s Instructions section parses cleanly under `scripts/lint-procedure-parseability.sh`; the regenerated `.claude/commands/ductus/audit.md` mirror is in sync.
 
 > **Implementation note:** the per-step args mismatch in the runtime's `run-generator` primitive (no per-step arg binding) was sidestepped by introducing `scripts/audit/run-all.sh` as the actual orchestrator — the procedure invokes that single script via `run-generator`. Per-family scripts retain their independent existence; `run-all.sh` is the aggregator. Future runtime enhancement: add per-step arg binding to procedural commands.
 
@@ -129,10 +129,10 @@ Pulled in from the original Future Considerations during the autonomous implemen
 
 ### 13. Wire `/audit` self-invocation
 
-- [x] Run `scripts/audit/run-all.sh` against the current repo. It exits 1 with structured findings from Family 4 (placeholder-roundtrip — `/gov:` literals in framework/commands/*.md, a pre-existing framework templating gap) and Family 8 (introducing-drift — old-name references in done spec bodies, the ~9 specs spec 026 listed). Both are expected findings the audit is designed to surface; resolution is follow-on framework work.
-- [x] `gvrn exec audit` cannot bind the `script` argument for `run-generator` in the current runtime (no per-step arg binding in procedural commands). The implementation routes CI integration through `scripts/audit/run-all.sh` directly. The audit.md command file is parseable for lint purposes; the runtime exec path is a v2 enhancement.
+- [x] Run `scripts/audit/run-all.sh` against the current repo. It exits 1 with structured findings from Family 4 (placeholder-roundtrip — `/ductus:` literals in framework/commands/*.md, a pre-existing framework templating gap) and Family 8 (introducing-drift — old-name references in done spec bodies, the ~9 specs spec 026 listed). Both are expected findings the audit is designed to surface; resolution is follow-on framework work.
+- [x] `ductus exec audit` cannot bind the `script` argument for `run-generator` in the current runtime (no per-step arg binding in procedural commands). The implementation routes CI integration through `scripts/audit/run-all.sh` directly. The audit.md command file is parseable for lint purposes; the runtime exec path is a v2 enhancement.
 
-- **Done when**: `gvrn exec audit` runs end-to-end and either exits 0, or exits 1 with findings whose resolution path is clear.
+- **Done when**: `ductus exec audit` runs end-to-end and either exits 0, or exits 1 with findings whose resolution path is clear.
 
 ## Phase D — CI integration
 
@@ -153,13 +153,13 @@ Pulled in from the original Future Considerations during the autonomous implemen
 
 ## Phase E — Validation
 
-### 16. Run `/gov:analyze` against this spec
+### 16. Run `/ductus:analyze` against this spec
 
-- [x] Invoke `/gov:analyze` targeted at `026-framework-self-audit`. Resolve any hard-fail or blocking findings against `spec.md`, `plan.md`, `tasks.md`.
+- [x] Invoke `/ductus:analyze` targeted at `026-framework-self-audit`. Resolve any hard-fail or blocking findings against `spec.md`, `plan.md`, `tasks.md`.
 - [x] Confirm anchor resolution: any §runtime-boundary / §rules / §spec-lifecycle references resolve to constitution markers.
 - [x] Confirm dependency status: 017, 022, 023, 024, 025 are all `done`.
 
-- **Done when**: `/gov:analyze` reports no hard-fail and no blocking findings.
+- **Done when**: `/ductus:analyze` reports no hard-fail and no blocking findings.
 
 ### 17. Final lint sweep
 
@@ -167,13 +167,13 @@ Pulled in from the original Future Considerations during the autonomous implemen
 - [x] `scripts/lint-procedure-parseability.sh` — exit 0 (audit.md is parseable).
 - [x] `scripts/lint-tool-coverage.sh` — exit 0.
 - [x] `scripts/lint-frontmatter.sh` — exit 0.
-- [x] `scripts/audit/run-all.sh` — runs end-to-end against the post-implementation repo state. Exits 1 in v1 with documented findings from Family 4 (`/gov:` literals across framework/commands/*.md) and Family 8 (old-name references in done specs); both are expected v1 findings the audit is *designed* to surface — resolution is follow-on framework work (re-template /gov: → /{project}: across all command sources; past-tense rewrites in ~9 done spec bodies). The audit IS the meta-check that closes the loop; v1 ships with the loop visible but not yet quiet.
+- [x] `scripts/audit/run-all.sh` — runs end-to-end against the post-implementation repo state. Exits 1 in v1 with documented findings from Family 4 (`/ductus:` literals across framework/commands/*.md) and Family 8 (old-name references in done specs); both are expected v1 findings the audit is *designed* to surface — resolution is follow-on framework work (re-template /ductus: → /{project}: across all command sources; past-tense rewrites in ~9 done spec bodies). The audit IS the meta-check that closes the loop; v1 ships with the loop visible but not yet quiet.
 
 - **Done when**: every lint exits 0; `/audit` runs end-to-end and surfaces findings whose resolution path is documented.
 
 ### 18. Promote spec to `done`
 
-- [x] After the user confirms `/gov:review` is clean against the five phases' commits, set `specs/026-framework-self-audit/spec.md` status from `in-progress` to `done`.
+- [x] After the user confirms `/ductus:review` is clean against the five phases' commits, set `specs/026-framework-self-audit/spec.md` status from `in-progress` to `done`.
 
 - **Done when**: spec status is `done`; the runtime CI workflow passes on the final commit.
 
@@ -196,13 +196,13 @@ Pulled in from the original Future Considerations during the autonomous implemen
 
 - [x] Implement the behavior described in `scenarios/host-namespace-parity.md`
 
-- **Done when**: `/gov:audit` gains a host-namespace-parity family that resolves the effective namespace the way `Host::load` does (`[host] project`, else repo dir basename) and compares it against the installed `{cli-config-dir}/commands/<ns>/` directories, emitting a finding that names both values and the one-block fix; a repo with no installed commands dir and a repo whose basename fallback already matches both pass without a finding; `.govern/config.toml` in this repo gains `[host]` / `project = "gov"` so the family is green and every rendered next-action names `/gov:*`; `bash scripts/audit/run-all.sh` exits 0.
+- **Done when**: `/ductus:audit` gains a host-namespace-parity family that resolves the effective namespace the way `Host::load` does (`[host] project`, else repo dir basename) and compares it against the installed `{cli-config-dir}/commands/<ns>/` directories, emitting a finding that names both values and the one-block fix; a repo with no installed commands dir and a repo whose basename fallback already matches both pass without a finding; `.ductus/config.toml` in this repo gains `[host]` / `project = "gov"` so the family is green and every rendered next-action names `/ductus:*`; `bash scripts/audit/run-all.sh` exits 0.
 
 ### 22. Implement scenario: [family-17-contract-binding](scenarios/family-17-contract-binding.md)
 
 - [x] Implement the behavior described in `scenarios/family-17-contract-binding.md`
 
-- **Done when**: Family 17 derives its agent config-dir set from the Agent Registry table's `config_dir` column in `framework/bootstrap/govern.md` rather than hardcoding it, emits a finding and exits non-zero when that derivation yields nothing instead of falling back to a built-in list, and asserts the `commands`/`command` pair and `[host] project` key against `runtime/src/host.rs` and the new-wins config order against `runtime/src/schema/paths.rs`, each failing loudly with a suggested fix that names the runtime-exposed-namespace option; the derived set matches the four registered agents; `scripts/audit/run-all.sh` exits clean.
+- **Done when**: Family 17 derives its agent config-dir set from the Agent Registry table's `config_dir` column in `framework/bootstrap/ductus.md` rather than hardcoding it, emits a finding and exits non-zero when that derivation yields nothing instead of falling back to a built-in list, and asserts the `commands`/`command` pair and `[host] project` key against `runtime/src/host.rs` and the new-wins config order against `runtime/src/schema/paths.rs`, each failing loudly with a suggested fix that names the runtime-exposed-namespace option; the derived set matches the four registered agents; `scripts/audit/run-all.sh` exits clean.
 
 ### 23. Implement scenario: [family-18-marker-list-parity](scenarios/family-18-marker-list-parity.md)
 

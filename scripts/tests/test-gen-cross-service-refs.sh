@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test surface for .govern/scripts/gen-cross-service-refs.sh.
+# Test surface for .ductus/scripts/gen-cross-service-refs.sh.
 #
 # Builds tiny fixture spec trees (plus a fixture .govern.toml [services]
 # registry) under temp dirs, runs the generator against them via the
@@ -37,7 +37,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-GEN="$REPO_ROOT/.govern/scripts/gen-cross-service-refs.sh"
+GEN="$REPO_ROOT/.ductus/scripts/gen-cross-service-refs.sh"
 
 failures=0
 pass() { printf '  PASS  %s\n' "$1"; }
@@ -53,7 +53,7 @@ write_spec() {
 }
 
 # Write a fixture .govern.toml from stdin (the [services] registry).
-write_govern_toml() {
+write_ductus_toml() {
   local tmp="$1"
   cat > "$tmp/.govern.toml"
 }
@@ -86,7 +86,7 @@ fm_lacks() {
 
 test_A_registered_link_harvested() {
   local tmp; tmp="$(make_fixture)"
-  write_govern_toml "$tmp" <<'EOF'
+  write_ductus_toml "$tmp" <<'EOF'
 [services.api]
 repo = "https://github.com/acme/api"
 path = "../api"
@@ -113,7 +113,7 @@ EOF
 
 test_B_unregistered_link_null_service() {
   local tmp; tmp="$(make_fixture)"
-  write_govern_toml "$tmp" <<'EOF'
+  write_ductus_toml "$tmp" <<'EOF'
 [services.api]
 repo = "https://github.com/acme/api"
 path = "../api"
@@ -139,7 +139,7 @@ EOF
 
 test_C_see_also_excluded() {
   local tmp; tmp="$(make_fixture)"
-  write_govern_toml "$tmp" <<'EOF'
+  write_ductus_toml "$tmp" <<'EOF'
 [services.api]
 repo = "https://github.com/acme/api"
 path = "../api"
@@ -165,7 +165,7 @@ EOF
 
 test_D_branch_ref_same_identity() {
   local tmp; tmp="$(make_fixture)"
-  write_govern_toml "$tmp" <<'EOF'
+  write_ductus_toml "$tmp" <<'EOF'
 [services.api]
 repo = "https://github.com/acme/api"
 path = "../api"
@@ -196,7 +196,7 @@ EOF
 
 test_E_dependencies_untouched() {
   local tmp; tmp="$(make_fixture)"
-  write_govern_toml "$tmp" <<'EOF'
+  write_ductus_toml "$tmp" <<'EOF'
 [services.api]
 repo = "https://github.com/acme/api"
 path = "../api"
@@ -228,7 +228,7 @@ EOF
 
 test_F_inline_code_excluded() {
   local tmp; tmp="$(make_fixture)"
-  write_govern_toml "$tmp" <<'EOF'
+  write_ductus_toml "$tmp" <<'EOF'
 [services.api]
 repo = "https://github.com/acme/api"
 path = "../api"
@@ -252,7 +252,7 @@ EOF
 
 test_G_code_fence_excluded() {
   local tmp; tmp="$(make_fixture)"
-  write_govern_toml "$tmp" <<'EOF'
+  write_ductus_toml "$tmp" <<'EOF'
 [services.api]
 repo = "https://github.com/acme/api"
 path = "../api"
@@ -278,7 +278,7 @@ EOF
 
 test_H_blockquote_excluded() {
   local tmp; tmp="$(make_fixture)"
-  write_govern_toml "$tmp" <<'EOF'
+  write_ductus_toml "$tmp" <<'EOF'
 [services.api]
 repo = "https://github.com/acme/api"
 path = "../api"
@@ -302,7 +302,7 @@ EOF
 
 test_I_idempotent() {
   local tmp; tmp="$(make_fixture)"
-  write_govern_toml "$tmp" <<'EOF'
+  write_ductus_toml "$tmp" <<'EOF'
 [services.api]
 repo = "https://github.com/acme/api"
 path = "../api"
@@ -334,7 +334,7 @@ EOF
 
 test_J_stale_block_removed() {
   local tmp; tmp="$(make_fixture)"
-  write_govern_toml "$tmp" <<'EOF'
+  write_ductus_toml "$tmp" <<'EOF'
 [services.api]
 repo = "https://github.com/acme/api"
 path = "../api"
@@ -368,7 +368,7 @@ test_K_staged_scopes_rewrite() {
   git -C "$tmp" init -q
   git -C "$tmp" config user.email t@t
   git -C "$tmp" config user.name t
-  write_govern_toml "$tmp" <<'EOF'
+  write_ductus_toml "$tmp" <<'EOF'
 [services.api]
 repo = "https://github.com/acme/api"
 path = "../api"
@@ -413,7 +413,7 @@ test_L_configured_specs_root() {
   local tmp; tmp="$(make_fixture)"
   # Consumer renames its spec root to `governance`; the registered service URL
   # keeps its own `specs/` layout (a different repo's convention, unchanged).
-  write_govern_toml "$tmp" <<'EOF'
+  write_ductus_toml "$tmp" <<'EOF'
 [paths]
 specs-root = "governance"
 
@@ -447,7 +447,7 @@ test_M_referenced_renamed_root_checked_out() {
   # spec root to `governance`; its canonical URLs therefore carry
   # `/governance/NNN-slug/`. Tier-1 (checkout reachable): the matcher reads the
   # checkout's .govern.toml and harvests the renamed-root link.
-  write_govern_toml "$tmp" <<'EOF'
+  write_ductus_toml "$tmp" <<'EOF'
 [services.api]
 repo = "https://github.com/acme/api"
 path = "checkouts/api"
@@ -481,7 +481,7 @@ test_N_checked_out_wrong_root_skipped() {
   # api is checked out and rooted at `governance`; a body link that uses the
   # wrong `/specs/` segment does not point at api's real spec root, so tier-1
   # (exact match against the checkout's resolved root) does not harvest it.
-  write_govern_toml "$tmp" <<'EOF'
+  write_ductus_toml "$tmp" <<'EOF'
 [services.api]
 repo = "https://github.com/acme/api"
 path = "checkouts/api"
@@ -515,7 +515,7 @@ test_O_not_checked_out_renamed_root_harvested() {
   # spec-root is unknowable at harvest time. Tier-2: the permissive fallback
   # still harvests the renamed-root link so the reference never silently drops
   # (it resolves later to `unknown — not checked out`).
-  write_govern_toml "$tmp" <<'EOF'
+  write_ductus_toml "$tmp" <<'EOF'
 [services.api]
 repo = "https://github.com/acme/api"
 path = "checkouts/api"

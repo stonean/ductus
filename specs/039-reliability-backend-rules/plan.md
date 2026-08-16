@@ -4,9 +4,9 @@ Implements [039 — Backend reliability rules](spec.md).
 
 ## Overview
 
-A rule-introducing, markdown-tier feature — the 034/037/038 path exactly. It adds one rule file, `framework/rules/reliability-backend.md`, on the **existing** `BE` surface (so no `scripts/lint-rule-ids.sh` change and no `data-model.md`), and wires it into the `/govern` Shared Files manifest. The §Shared Files note is already count-free (036), so no count to update. Landing this set resolves 034's forward-reference to a future `reliability-backend.md` (AC #8).
+A rule-introducing, markdown-tier feature — the 034/037/038 path exactly. It adds one rule file, `framework/rules/reliability-backend.md`, on the **existing** `BE` surface (so no `scripts/lint-rule-ids.sh` change and no `data-model.md`), and wires it into the `/ductus` Shared Files manifest. The §Shared Files note is already count-free (036), so no count to update. Landing this set resolves 034's forward-reference to a future `reliability-backend.md` (AC #8).
 
-Five categories ship — `TIMEOUT`, `RETRY`, `BREAKER`, `DRAIN`, `BULK` — with eight rules, three of them MUST. Verification is **design-time commitment** framing enforced by `/gov:analyze` against feature artifacts, matching 034/037/038.
+Five categories ship — `TIMEOUT`, `RETRY`, `BREAKER`, `DRAIN`, `BULK` — with eight rules, three of them MUST. Verification is **design-time commitment** framing enforced by `/ductus:analyze` against feature artifacts, matching 034/037/038.
 
 ## Technical Decisions
 
@@ -34,9 +34,9 @@ Eight rules across five `## BE-{CATEGORY}` sections. Verification is phrased as 
 
 Cross-references, not restatements: `BE-RETRY-001` cites `api-backend.md` `BE-IDEMP`; `BE-DRAIN-002` cites `observability-backend.md` `BE-HEALTH-001`; `BE-BULK-001` cites `performance-backend.md` `BE-ASYNC`/`BE-POOL-*`; `BE-TIMEOUT`/`BE-BREAKER` cite `performance-backend.md` `BE-POOL-002` for the pool-acquisition-timeout interaction; tunables (timeout durations, retry counts, breaker thresholds) cite `configuration-cross.md` `CFG-*`.
 
-### Manifest wiring — `framework/bootstrap/govern.md`
+### Manifest wiring — `framework/bootstrap/ductus.md`
 
-Add a `reliability-backend.md` → `specs/rules/reliability-backend.md` row to the `### govern-owned shared files` table, slotted between `quality-cross.md` and `security-backend.md` (alphabetical). The `-backend.md` suffix means 024's loader selects it under the `backend` surface and 033's filter includes it. The §Shared Files note is count-free, so no count edit.
+Add a `reliability-backend.md` → `specs/rules/reliability-backend.md` row to the `### ductus-owned shared files` table, slotted between `quality-cross.md` and `security-backend.md` (alphabetical). The `-backend.md` suffix means 024's loader selects it under the `backend` surface and 033's filter includes it. The §Shared Files note is count-free, so no count edit.
 
 ### What this feature does NOT touch
 
@@ -49,14 +49,14 @@ Add a `reliability-backend.md` → `specs/rules/reliability-backend.md` row to t
 | File | Action | Purpose |
 | --- | --- | --- |
 | `framework/rules/reliability-backend.md` | Create | The reliability rule set (`TIMEOUT`/`RETRY`/`BREAKER`/`DRAIN`/`BULK`, eight rules, three MUST) |
-| `framework/bootstrap/govern.md` | Modify | Add the manifest row (between `quality-cross` and `security-backend`) |
+| `framework/bootstrap/ductus.md` | Modify | Add the manifest row (between `quality-cross` and `security-backend`) |
 
 ## Trade-offs
 
 - **Five categories; `DEADLINE` folded into `TIMEOUT`.** Per-call timeout and end-to-end deadline propagation are the same concern (bounding the wait) at two scopes — one category, two rules — rather than a sixth category (clarify resolution).
 - **`BULK` kept.** Backpressure/load-shedding is the graceful-degradation primitive named by the constitution's reliability principle and fits the design-time-commitment model; it cites the performance set where it overlaps rather than re-deriving (clarify resolution).
 - **Three MUSTs.** Unbounded waits (`TIMEOUT-001`), retry storms (`RETRY-001`), and no-drain deploys (`DRAIN-001`) are the absences that cause availability loss or cascading failure regardless of scale; breaker adoption, deadline propagation, retry budgeting, and bulkheading are contextual (SHOULD).
-- **Known limitation.** Analyze-time verification checks that a spec/plan *commits* to these resilience measures; it cannot prove the timeout is actually wired or the drain actually waits — that residual is for `/gov:review` and tests, the standard design-time-rule limitation.
+- **Known limitation.** Analyze-time verification checks that a spec/plan *commits* to these resilience measures; it cannot prove the timeout is actually wired or the drain actually waits — that residual is for `/ductus:review` and tests, the standard design-time-rule limitation.
 
 ## Cross-spec impact
 

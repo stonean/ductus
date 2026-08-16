@@ -13,7 +13,7 @@ skipped-passes: []
 
 ## Summary
 
-Workflow registry (`framework/workflows/registry.json`) and nine workflow markdown files (lint/test/format for TypeScript, Python, Go) plus init/govern.md edits to wire them in. The registry is data, not executable; workflows are markdown command surfaces consumed by adopting projects' AI agents. Security rules do not apply. All five passes ran; no findings. `blocking: no`.
+Workflow registry (`framework/workflows/registry.json`) and nine workflow markdown files (lint/test/format for TypeScript, Python, Go) plus init/ductus.md edits to wire them in. The registry is data, not executable; workflows are markdown command surfaces consumed by adopting projects' AI agents. Security rules do not apply. All five passes ran; no findings. `blocking: no`.
 
 Note: the directory location and naming were subsequently changed by spec 010 (renamed from `skills/` to `workflows/` and flattened). Review evaluates current state at HEAD.
 
@@ -45,11 +45,11 @@ _None._
 
 ### Reuse
 
-Registry shape is canonicalized in `data-model.md` and consumed by `framework/bootstrap/govern.md`. No parallel registries elsewhere.
+Registry shape is canonicalized in `data-model.md` and consumed by `framework/bootstrap/ductus.md`. No parallel registries elsewhere.
 
 ### Quality
 
-Mapping is keyed by stack selection (a closed enum). The registry is data-only with no consumer outside `govern.md`'s documented loader logic.
+Mapping is keyed by stack selection (a closed enum). The registry is data-only with no consumer outside `ductus.md`'s documented loader logic.
 
 ### Efficiency
 

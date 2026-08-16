@@ -8,9 +8,9 @@ tags: [commands, ux]
 
 ## Context
 
-Claude Code's built-in slash commands (e.g., `/help`, `/clear`, `/model`) show a short summary next to each name in the autocomplete window, so the user can scan options without selecting one to see what it does. Governance's commands currently render with name only — the autocomplete shows `/gov:specify`, `/gov:plan`, etc., but not what each one does. Users have to remember the command set or run `/gov:about` to learn it.
+Claude Code's built-in slash commands (e.g., `/help`, `/clear`, `/model`) show a short summary next to each name in the autocomplete window, so the user can scan options without selecting one to see what it does. Governance's commands currently render with name only — the autocomplete shows `/ductus:specify`, `/ductus:plan`, etc., but not what each one does. Users have to remember the command set or run `/ductus:about` to learn it.
 
-The framework command sources under `framework/commands/*.md` start with a top-level `# Name` heading and a one-line description on the next line. The generated `.claude/commands/gov/*.md` files inherit that shape. Neither uses YAML frontmatter.
+The framework command sources under `framework/commands/*.md` start with a top-level `# Name` heading and a one-line description on the next line. The generated `.claude/commands/ductus/*.md` files inherit that shape. Neither uses YAML frontmatter.
 
 ## Behavior
 
@@ -20,7 +20,7 @@ The investigation has two parts:
 
 1. **Confirm the platform mechanism.** Verify that Claude Code reads a `description:` field from YAML frontmatter at the top of a slash command markdown file and renders it in autocomplete. (This is the de facto convention for custom commands; confirm against current Claude Code behavior before committing to it.) If `description:` is not the field, identify the correct one.
 
-2. **Apply it framework-wide.** Add a `description:` field to every command source under `framework/commands/*.md` (and `framework/bootstrap/configure/claude.md`). The description should be a single short sentence — concrete enough to disambiguate from sibling commands, short enough to fit alongside the command name. Re-run `scripts/gen-claude-commands.sh` so the generated `.claude/commands/gov/*.md` files inherit the field. Manually update the hand-maintained `.claude/commands/gov/init.md` to match.
+2. **Apply it framework-wide.** Add a `description:` field to every command source under `framework/commands/*.md` (and `framework/bootstrap/configure/claude.md`). The description should be a single short sentence — concrete enough to disambiguate from sibling commands, short enough to fit alongside the command name. Re-run `scripts/gen-claude-commands.sh` so the generated `.claude/commands/ductus/*.md` files inherit the field. Manually update the hand-maintained `.claude/commands/ductus/init.md` to match.
 
 The autocomplete summaries should match the existing one-line descriptions already present below each command's `# Name` heading (e.g., `Specify` → "Create a new feature spec."), so there is one source of truth per command.
 

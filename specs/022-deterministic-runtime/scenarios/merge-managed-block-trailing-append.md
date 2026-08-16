@@ -6,7 +6,7 @@ section: "Follow-on scenarios"
 
 ## Context
 
-`merge-managed-block`'s group-alignment walk (`walk_body_extent`) mis-attributes adopter content when the new canonical block appends subsection(s) at the end. With an on-disk managed block containing groups `{Env, IDE}` followed by an adopter-authored tail section (e.g. `# Rust` / `/target`), and a new canonical block `{Env, IDE, OS}`, the walk consumes the adopter's `# Rust` section as a "full rewrite" of the unmatched trailing canonical group — the adopter's content is deleted from the merged result. Probe-verified in the 2026-07-11 runtime review. A framework release that adds a new subsection at the bottom of the shipped `.gitignore` template would destroy the first adopter-authored section following the managed block on every adopter's next `/govern` run. Existing tests cover mid-block insertion but not trailing append.
+`merge-managed-block`'s group-alignment walk (`walk_body_extent`) mis-attributes adopter content when the new canonical block appends subsection(s) at the end. With an on-disk managed block containing groups `{Env, IDE}` followed by an adopter-authored tail section (e.g. `# Rust` / `/target`), and a new canonical block `{Env, IDE, OS}`, the walk consumes the adopter's `# Rust` section as a "full rewrite" of the unmatched trailing canonical group — the adopter's content is deleted from the merged result. Probe-verified in the 2026-07-11 runtime review. A framework release that adds a new subsection at the bottom of the shipped `.gitignore` template would destroy the first adopter-authored section following the managed block on every adopter's next `/ductus` run. Existing tests cover mid-block insertion but not trailing append.
 
 ## Behavior
 

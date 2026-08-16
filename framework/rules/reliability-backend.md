@@ -1,6 +1,6 @@
 # Reliability Rules — Backend
 
-Enforceable reliability rules for server-side resilience under partial failure — timeouts and deadlines, retries, circuit breakers, graceful shutdown, and backpressure. These rules apply to projects adopting `govern` whose surface includes a backend. They land the deadlines, downstream-call timeouts, retries, and circuit breakers that `performance-backend.md` deliberately deferred.
+Enforceable reliability rules for server-side resilience under partial failure — timeouts and deadlines, retries, circuit breakers, graceful shutdown, and backpressure. These rules apply to projects adopting `ductus` whose surface includes a backend. They land the deadlines, downstream-call timeouts, retries, and circuit breakers that `performance-backend.md` deliberately deferred.
 
 Rules use RFC 2119 language: **MUST** / **MUST NOT** are enforced by the validate command (errors); **SHOULD** / **SHOULD NOT** are flagged as warnings.
 
@@ -8,7 +8,7 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 Reliability rules default to **SHOULD** where the approach is contextual. A rule is **MUST** only when its absence is an availability or cascading-failure risk regardless of scale — an unbounded downstream wait, a retry storm, a deploy that drops in-flight work. These rules verify **design-time commitments** — what a spec or plan must state — rather than code patterns; `/{project}:analyze` enforces them against feature artifacts.
 
-Projects without a backend can pin this file in `.govern.toml` or set `[rules] surfaces` to exclude the backend surface, and it will be skipped during `govern` updates and reviews.
+Projects without a backend can pin this file in `.ductus/config.toml` or set `[rules] surfaces` to exclude the backend surface, and it will be skipped during `ductus` updates and reviews.
 
 ## BE-TIMEOUT — Timeouts and deadlines
 

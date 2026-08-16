@@ -6,7 +6,7 @@ title: "013-text-first-artifacts — data-model"
 
 The data structure introduced by this feature is the **YAML frontmatter schema** for spec and scenario files. The schema is the canonical metadata format consumers parse; this document declares the structure once so the constitution, templates, and slash commands stay aligned.
 
-The same schema is published in `framework/constitution.md` as a markdown table — the constitution is the authoritative source for adopters; this document is the planning-phase reference and the basis for the validation logic in `/gov:analyze`.
+The same schema is published in `framework/constitution.md` as a markdown table — the constitution is the authoritative source for adopters; this document is the planning-phase reference and the basis for the validation logic in `/ductus:analyze`.
 
 ## Frontmatter Block
 
@@ -41,11 +41,11 @@ Delimiters are `---` on the first line and a closing `---` on a subsequent line.
 
 ### Open-schema rule
 
-Additional fields beyond those listed above are permitted and ignored by uninterested consumers. This applies uniformly to both spec and scenario files. Examples that adopters or future governance work might add: `owner`, `target_release`, `created_at`, `description`, `aliases`. Consumers MUST NOT error on the presence of unknown fields. `/gov:analyze` reports unknown fields as informational findings (not errors).
+Additional fields beyond those listed above are permitted and ignored by uninterested consumers. This applies uniformly to both spec and scenario files. Examples that adopters or future governance work might add: `owner`, `target_release`, `created_at`, `description`, `aliases`. Consumers MUST NOT error on the presence of unknown fields. `/ductus:analyze` reports unknown fields as informational findings (not errors).
 
 ## Validation Severity
 
-`/gov:analyze` checks frontmatter against this schema with the following severity:
+`/ductus:analyze` checks frontmatter against this schema with the following severity:
 
 | Check | Severity |
 | --- | --- |
@@ -64,7 +64,7 @@ Hard fails block the validation pass. Advisory and informational findings are re
 
 ## Starter Tag Vocabulary
 
-Published in the constitution as guidance, not enforcement. Adopters and future governance specs MAY introduce new tags as needed; the agent's prompt in `/gov:specify` surfaces existing tags from sibling specs as autocomplete to drive convergence by reuse rather than ceremony.
+Published in the constitution as guidance, not enforcement. Adopters and future governance specs MAY introduce new tags as needed; the agent's prompt in `/ductus:specify` surfaces existing tags from sibling specs as autocomplete to drive convergence by reuse rather than ceremony.
 
 | Tag | Suggested use |
 | --- | --- |

@@ -13,13 +13,13 @@ review:
 next-criterion: 15
 ---
 
-# 007 — Govern Workflow
+# 007 — Ductus Workflow
 
-> **Note:** This spec was renamed from `007-adopt-workflow` to `007-govern-workflow` by [011-brownfield-process](../011-brownfield-process/spec.md). The govern command also gains a triage → inbox migration step and `/capture` in the command manifest via 011.
+> **Note:** This spec was renamed from `007-adopt-workflow` to `007-govern-workflow` by [011-brownfield-process](../011-brownfield-process/spec.md). The ductus command also gains a triage → inbox migration step and `/capture` in the command manifest via 011.
 >
-> **Superseded in part by [012-multi-agent-govern](../012-multi-agent-govern/spec.md).** The two-file distribution model described below (`govern/govern.md` for Claude Code, `govern/govern-auggie.md` for Auggie) is replaced by a single unified `govern/govern.md` with an agent registry. The `{cli-config-dir}` placeholder approach and the file-fetching workflow remain correct — only the file count and the runtime agent-selection mechanism change. 007's status stays `done` because its work shipped; 012 carries forward the new design.
+> **Superseded in part by [012-multi-agent-govern](../012-multi-agent-govern/spec.md).** The two-file distribution model described below (`ductus/ductus.md` for Claude Code, `ductus/ductus-auggie.md` for Auggie) is replaced by a single unified `ductus/ductus.md` with an agent registry. The `{cli-config-dir}` placeholder approach and the file-fetching workflow remain correct — only the file count and the runtime agent-selection mechanism change. 007's status stays `done` because its work shipped; 012 carries forward the new design.
 >
-> **Note:** path references below (`govern/govern.md`, `templates/system.md`, `templates/spec.md`, etc.) reflect the original layout. The repository was later reorganized so the govern installer lives at `framework/bootstrap/govern.md`, spec templates at `framework/templates/spec/`, and project-scaffolding templates at `framework/templates/project/`. Adopting projects' destination paths did not change.
+> **Note:** path references below (`ductus/ductus.md`, `templates/system.md`, `templates/spec.md`, etc.) reflect the original layout. The repository was later reorganized so the ductus installer lives at `framework/bootstrap/ductus.md`, spec templates at `framework/templates/spec/`, and project-scaffolding templates at `framework/templates/project/`. Adopting projects' destination paths did not change.
 
 A self-contained slash command file that bootstraps governance in existing (brownfield) projects. Users fetch a single `.md` file into their CLI's command directory and run it — no clone of the governance repo required. The command instructs the AI agent to fetch templates from GitHub, write them into the correct locations, perform placeholder substitution, handle conflicts with existing files, and display brownfield-specific next steps.
 
@@ -33,19 +33,19 @@ The deliverable is one markdown file per supported CLI, hosted in the governance
 
 | CLI | Command file | Install location | Invoke |
 | ----- | ------------- | --------------- | -------- |
-| Claude Code (default) | `govern/govern.md` | `.claude/commands/govern.md` | `/govern {project-name}` |
-| Auggie | `govern/govern-auggie.md` | `.augment/commands/govern.md` | `/govern {project-name}` |
+| Claude Code (default) | `ductus/ductus.md` | `.claude/commands/ductus.md` | `/ductus {project-name}` |
+| Auggie | `ductus/ductus-auggie.md` | `.augment/commands/ductus.md` | `/ductus {project-name}` |
 
 Install with one command:
 
 ```text
 # Claude Code
-curl -fsSL https://raw.githubusercontent.com/stonean/govern/main/govern/govern.md \
-  > .claude/commands/govern.md
+curl -fsSL https://raw.githubusercontent.com/stonean/ductus/main/ductus/ductus.md \
+  > .claude/commands/ductus.md
 
 # Auggie
-curl -fsSL https://raw.githubusercontent.com/stonean/govern/main/govern/govern-auggie.md \
-  > .augment/commands/govern.md
+curl -fsSL https://raw.githubusercontent.com/stonean/ductus/main/ductus/ductus-auggie.md \
+  > .augment/commands/ductus.md
 ```
 
 No runtime, no dependencies, no build step — the "program" is a prompt. Each variant contains the same governance logic but targets its CLI's native paths and configuration formats.
@@ -58,7 +58,7 @@ The command collects from `$ARGUMENTS` or prompts interactively:
 2. **Project description** — one-line description for AGENTS.md.
 3. **Primary language(s)** — comma-separated list for .gitignore language patterns.
 
-The target CLI is implicit — determined by which `govern.md` variant the user installed. The command file itself knows its target and uses the correct paths throughout.
+The target CLI is implicit — determined by which `ductus.md` variant the user installed. The command file itself knows its target and uses the correct paths throughout.
 
 ## Pre-flight Checks
 
@@ -78,7 +78,7 @@ The command contains a manifest of files to fetch from the governance repo. Each
 Source URL pattern:
 
 ```text
-https://raw.githubusercontent.com/stonean/govern/main/{source-path}
+https://raw.githubusercontent.com/stonean/ductus/main/{source-path}
 ```
 
 If a fetch fails, report the failure and continue with remaining files. The command must not abort on a single fetch error.
@@ -112,7 +112,7 @@ These files use native paths and formats for the target CLI:
 | Slash commands | `.claude/commands/{project}/*.md` | `.augment/commands/{project}/*.md` |
 | Rules file | `CLAUDE.md` (from `templates/claude-md.md`) | `CLAUDE.md` (Auggie reads it natively) |
 
-Slash command templates use a `{cli-config-dir}` placeholder for CLI-specific paths. The govern command resolves this placeholder to the target CLI's native directory (`.claude` or `.augment`) during copy. Session state is not in this table — post-0.10.0 it lives at the repo-root `.govern.session.toml` and is host-agnostic.
+Slash command templates use a `{cli-config-dir}` placeholder for CLI-specific paths. The ductus command resolves this placeholder to the target CLI's native directory (`.claude` or `.augment`) during copy. Session state is not in this table — post-0.10.0 it lives at the repo-root `.govern.session.toml` and is host-agnostic.
 
 ### Files with conflict handling
 
@@ -165,8 +165,8 @@ The command file remains in the CLI's command directory after execution. It is i
 
 ## Acceptance Criteria
 
-- [x] AC1: One `govern.md` variant exists per supported CLI in the `govern/` directory
-- [x] AC2: Running `curl` followed by `/govern {name}` in an existing git repo produces a complete governance scaffold
+- [x] AC1: One `ductus.md` variant exists per supported CLI in the `ductus/` directory
+- [x] AC2: Running `curl` followed by `/ductus {name}` in an existing git repo produces a complete governance scaffold
 - [x] AC3: Each CLI variant scaffolds into its native directory paths (`.claude/` for Claude Code, `.augment/` for Auggie)
 - [x] AC4: Existing files (.gitignore, AGENTS.md, CLAUDE.md) are not overwritten
 - [x] AC5: `.gitignore` merge is idempotent — running twice does not duplicate governance patterns
@@ -178,7 +178,7 @@ The command file remains in the CLI's command directory after execution. It is i
 - [x] AC11: Post-scaffolding output displays brownfield-specific next steps
 - [x] AC12: Invalid project names are rejected with a clear error message
 - [x] AC13: Intermediate directories are created as needed
-- [x] AC14: Adding a new CLI requires only a new govern variant file — no changes to governance core
+- [x] AC14: Adding a new CLI requires only a new ductus variant file — no changes to governance core
 
 ## Open Questions
 
@@ -188,9 +188,9 @@ None — all resolved.
 
 - ~~Should the command also fetch `sdd-context.md`?~~ No — governance-internal only.
 - ~~Should there be a `--dry-run` mode?~~ No — the command is idempotent with create/skip/merge strategies, making dry-run unnecessary.
-- ~~How should the file manifest be maintained?~~ Hardcoded in each govern variant. Updated when governance templates change.
-- ~~CLI-specific command variants or path variable?~~ Path variable (`{cli-config-dir}`) resolved at govern time. One set of command templates, N govern variants do the substitution.
-- ~~How should `/gov:setup` work for Auggie?~~ Skipped for now — Auggie permissions are global. Deferred to future considerations in `specs/spec.md`.
+- ~~How should the file manifest be maintained?~~ Hardcoded in each ductus variant. Updated when governance templates change.
+- ~~CLI-specific command variants or path variable?~~ Path variable (`{cli-config-dir}`) resolved at ductus time. One set of command templates, N ductus variants do the substitution.
+- ~~How should `/ductus:setup` work for Auggie?~~ Skipped for now — Auggie permissions are global. Deferred to future considerations in `specs/spec.md`.
 
 ## References
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Regenerate .claude/commands/gov/*.md from framework/commands/*.md and
+# Regenerate .claude/commands/ductus/*.md from framework/commands/*.md and
 # framework/bootstrap/configure/claude.md.
 #
-# Substitutes {project} -> gov and {cli-config-dir} -> .claude.
+# Substitutes {project} -> ductus and {cli-config-dir} -> .claude.
 # The configure command is sourced from framework/bootstrap/configure/claude.md.
-# init.md is governance-specific and hand-maintained — never touched.
-# Files in .claude/commands/gov/ that do not correspond to a current source
+# init.md is ductus-specific and hand-maintained — never touched.
+# Files in .claude/commands/ductus/ that do not correspond to a current source
 # (and are not init.md) are removed so renames flow through cleanly.
 #
 # Flags:
@@ -34,9 +34,9 @@ done
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SRC="$ROOT/framework/commands"
 CONFIGURE_SRC="$ROOT/framework/bootstrap/configure/claude.md"
-DEST="$ROOT/.claude/commands/gov"
+DEST="$ROOT/.claude/commands/ductus"
 
-PROJECT="gov"
+PROJECT="ductus"
 CONFIG_DIR=".claude"
 
 substitute() {

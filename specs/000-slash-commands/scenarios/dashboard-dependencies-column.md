@@ -12,7 +12,7 @@ The data is already available: the `dashboard` primitive (per [022's dashboard-p
 
 The user-visible gap: when multiple specs are non-done, the user has no glance-level view of dependency order — they cannot tell which spec to start on without opening each spec file individually. The spec's promise of dependencies in the dashboard isn't being kept.
 
-A second, related rendering defect surfaces in the same table: the session-target marker. Step 3 says "Mark the row matching the session target with a leading `>>`," which produces a first cell like `| >> 022-deterministic-runtime |`. Several markdown renderers (observed 2026-05-23 in the agent's own paste-back of `/gov:status` output) strip the leading pipe on that row, dropping it out of the table grid; the rendered output visibly breaks alignment exactly on the row the marker is meant to highlight.
+A second, related rendering defect surfaces in the same table: the session-target marker. Step 3 says "Mark the row matching the session target with a leading `>>`," which produces a first cell like `| >> 022-deterministic-runtime |`. Several markdown renderers (observed 2026-05-23 in the agent's own paste-back of `/ductus:status` output) strip the leading pipe on that row, dropping it out of the table grid; the rendered output visibly breaks alignment exactly on the row the marker is meant to highlight.
 
 ## Behavior
 

@@ -14,7 +14,7 @@ The review offered three resolutions. Registering the literals in Family 6's tra
 
 ## Behavior
 
-**The agent config dirs are derived, not listed.** Family 17 reads them from the `config_dir` column of the **Agent Registry** table in `framework/bootstrap/govern.md` — the canonical source per the constitution's canonical-sources map. Adding a fifth agent to the registry extends the family automatically; nothing has to be remembered.
+**The agent config dirs are derived, not listed.** Family 17 reads them from the `config_dir` column of the **Agent Registry** table in `framework/bootstrap/ductus.md` — the canonical source per the constitution's canonical-sources map. Adding a fifth agent to the registry extends the family automatically; nothing has to be remembered.
 
 **A failed derivation is a finding, not a fallback.** When the table yields no config dirs — renamed, restructured, or removed — the family emits a finding naming that and exits non-zero, rather than falling back to a built-in list and passing. This is the distinction the family exists to enforce, applied to itself: *could not check* is reported, never rendered as *checked and clean*.
 

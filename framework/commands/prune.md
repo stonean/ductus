@@ -20,10 +20,10 @@ A feature's `tasks.md` accumulates completed work across the whole life of the f
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional gvrn runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no gvrn MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write) per the markdown-only reference below.
+> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no ductus MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write) per the markdown-only reference below.
 
 <!-- audit:ignore-promotion -->
-1. Resolve the session target from `.govern/session.toml`. If no target is set, stop and tell the user to run `/{project}:target` first. Parse the invocation flags: `--reset` selects a full reset (default is a keep-pending prune); `--force` overrides the reset status gate on a non-`done` spec. `--force` without `--reset` is ignored (it only gates reset).
+1. Resolve the session target from `.ductus/session.toml`. If no target is set, stop and tell the user to run `/{project}:target` first. Parse the invocation flags: `--reset` selects a full reset (default is a keep-pending prune); `--force` overrides the reset status gate on a non-`done` spec. `--force` without `--reset` is ignored (it only gates reset).
 
 2. Invoke `prune-tasks` against the target feature in preview mode (`apply: false`), passing the `reset` and `force` flags. The result is a compact summary — mode, the `--reset` gate outcome, the per-section classification (`spent` / `pending` / `no-checkbox`), the removed/kept counts, and the size before/after — and never carries the file body. When the target has no `tasks.md`, stop and direct the user to run `/{project}:plan` (there is no task list to prune yet — the MCP surface returns this as a `tasks.md not found: …` error); when the feature directory does not exist, direct the user to `/{project}:target` (a `feature directory not found: …` error). These are operational errors carrying a Display message — the `tasks-file-missing` / `feature-not-found` names label the error variants, they are not literal tokens in the payload.
 
@@ -39,7 +39,7 @@ A feature's `tasks.md` accumulates completed work across the whole life of the f
 
 ## Markdown-only reference
 
-With no gvrn runtime registered, the host reaches the same result with its own file tools — no shell-pipeline substitution — producing byte-for-byte the output the `prune-tasks` primitive would write (the two-paths guarantee, §runtime-host-integration).
+With no ductus runtime registered, the host reaches the same result with its own file tools — no shell-pipeline substitution — producing byte-for-byte the output the `prune-tasks` primitive would write (the two-paths guarantee, §runtime-host-integration).
 
 Segment `tasks.md` with the same grammar every tasks command uses (see [data-model](../../specs/041-task-pruning/data-model.md)): detect flat (`## N.`) versus phased (`### N.` under `## …` containers), then split the file into its preamble, phase containers, and task sections. Classify each task section by its checkboxes — **spent** (≥ 1 checkbox, all checked), **pending** (any unchecked), or **no-checkbox** (zero checkboxes) — counting only real task-list checkboxes (a `- **Done when**:` line is not one).
 

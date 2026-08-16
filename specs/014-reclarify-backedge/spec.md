@@ -158,7 +158,7 @@ Both back-edges then read as command-owned, status-mutating actions triggered by
 
 - [x] AC23: `framework/constitution.md` §spec-lifecycle back-edge bullet for `/amend` is rewritten per the **Constitution Updates** section above (named `/amend` as the entry point, `draft` as the destination)
 - [x] AC24: `specs/000-slash-commands/spec.md` gains a signpost noting that `/amend` becomes the back-edge owner in 014 (mutating status to `draft` on non-`draft` specs), `/clarify` gains the open-questions-on-non-`draft`-spec recovery path in 014, and `/plan` gains overwrite-protection on existing artifacts in 014
-- [x] AC25: `.claude/commands/gov/amend.md`, `.claude/commands/gov/clarify.md`, and `.claude/commands/gov/plan.md` are regenerated via `scripts/gen-claude-commands.sh`
+- [x] AC25: `.claude/commands/ductus/amend.md`, `.claude/commands/ductus/clarify.md`, and `.claude/commands/ductus/plan.md` are regenerated via `scripts/gen-claude-commands.sh`
 - [x] AC26: All modified `.md` files pass `npx markdownlint-cli2`
 
 ## Edge Cases

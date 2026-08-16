@@ -43,7 +43,7 @@ No security surface.
 
 ### Reuse
 
-Scenario-target syntax (`/gov:target NNN-slug#scenario-slug`) is the canonical addressing form reused by 014's reclarify back-edge and 020's review scoping.
+Scenario-target syntax (`/ductus:target NNN-slug#scenario-slug`) is the canonical addressing form reused by 014's reclarify back-edge and 020's review scoping.
 
 ### Quality
 

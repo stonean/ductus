@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 # scripts/audit/runtime-probe-parity.sh — Family 15 of /audit.
 #
-# Verifies the gvrn binary probe stays in parity between an agent's bootstrap
+# Verifies the ductus binary probe stays in parity between an agent's bootstrap
 # permission *seed* (the settings_template blob in the §Agent Registry table of
-# framework/bootstrap/govern.md) and its steady-state permission set
+# framework/bootstrap/ductus.md) and its steady-state permission set
 # (framework/bootstrap/configure/{key}.md).
 #
-# Spec 029 wired a `command -v gvrn`-equivalent detection probe into BOTH places
-# per agent so a routine /govern run does not re-prompt for the State-B/State-C
+# Spec 029 wired a `command -v ductus`-equivalent detection probe into BOTH places
+# per agent so a routine /ductus run does not re-prompt for the State-B/State-C
 # probe. Nothing else guards the pairing: a maintainer who adds or removes the
 # probe in one place but not the other ships a silent gap that only surfaces when
 # a run re-prompts. This family catches that asymmetry.
 #
 # Scope is the probe ONLY — not the whole seed. The seed and the configure set
 # legitimately diverge: the seed grants bootstrap-only commands (tar, mktemp,
-# git rev-parse, git ls-files, the Read(...govern-*...) temp globs) the
+# git rev-parse, git ls-files, the Read(...ductus-*...) temp globs) the
 # steady-state configure files omit, and the configure files grant pipeline
 # commands the seed omits. Neither is a subset of the other, so a whole-seed
 # parity check would false-positive on the correct repo. The probe is the one
@@ -41,16 +41,16 @@ set -uo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
 audit_family runtime-probe-parity
 
-GOVERN="framework/bootstrap/govern.md"
+DUCTUS="framework/bootstrap/ductus.md"
 
-if [ ! -f "$GOVERN" ]; then
-  emit "$GOVERN" "agent registry source missing" "restore $GOVERN"
+if [ ! -f "$DUCTUS" ]; then
+  emit "$DUCTUS" "agent registry source missing" "restore $DUCTUS"
   exit 1
 fi
 
 # check_agent <key> <configure-file> <probe-literal>
 #
-# Seed presence is a whole-file fixed-string match against govern.md: each probe
+# Seed presence is a whole-file fixed-string match against ductus.md: each probe
 # literal is a permission-grammar string (Bash(...), a ^-anchored regex, or
 # command(...)) that occurs only in its agent's §Agent Registry settings_template
 # cell and nowhere else in the file, so no section scoping is needed and seed-side
@@ -64,7 +64,7 @@ check_agent() {
   fi
 
   seed_has=0
-  if grep -qF -- "$probe" "$GOVERN"; then
+  if grep -qF -- "$probe" "$DUCTUS"; then
     seed_has=1
   fi
 
@@ -78,9 +78,9 @@ check_agent() {
       "registry settings_template seeds the probe '$probe' but the configure file does not grant it" \
       "add '$probe' to the canonical permission set in $configure"
   elif [ "$seed_has" -eq 0 ] && [ "$cfg_has" -eq 1 ]; then
-    emit "$GOVERN (agent $key)" \
+    emit "$DUCTUS (agent $key)" \
       "configure file grants the probe '$probe' but the registry settings_template seed does not" \
-      "add '$probe' to the '$key' settings_template in the §Agent Registry table of $GOVERN"
+      "add '$probe' to the '$key' settings_template in the §Agent Registry table of $DUCTUS"
   fi
 }
 

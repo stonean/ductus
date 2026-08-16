@@ -4,7 +4,7 @@
 # The product has one version, recorded in more than one place. This family
 # asserts the places agree.
 #
-# Spec 048 makes `/govern` acquire the runtime and pin it to the version the
+# Spec 048 makes `/ductus` acquire the runtime and pin it to the version the
 # fetched framework revision declares, read from the repo-root `version`
 # file. That pin is only as good as its agreement with what actually ships:
 # if `version` says 0.28.0 while the runtime crate builds 0.27.2, every
@@ -14,7 +14,7 @@
 # Three artifacts must carry the same SemVer, and all three are advanced by
 # the same release commit:
 #
-#   20a  version                    — the pin /govern reads from the archive
+#   20a  version                    — the pin /ductus reads from the archive
 #   20b  runtime/Cargo.toml         — what the crate builds and publishes as
 #   20c  runtime/CHANGELOG.md       — the newest `## [X.Y.Z]` heading
 #
@@ -37,11 +37,11 @@ VERSION_FILE="version"
 CARGO_TOML="runtime/Cargo.toml"
 CHANGELOG="runtime/CHANGELOG.md"
 
-# 20a — the pin itself. Absent is a finding rather than a skip: /govern reads
+# 20a — the pin itself. Absent is a finding rather than a skip: /ductus reads
 # this file to decide what to download, so a missing pin is not "nothing to
 # check", it is an unbootstrappable framework revision.
 if [ ! -f "$VERSION_FILE" ]; then
-  emit "$VERSION_FILE" "missing — /govern reads this file to resolve which runtime to acquire" \
+  emit "$VERSION_FILE" "missing — /ductus reads this file to resolve which runtime to acquire" \
     "create $VERSION_FILE containing one SemVer line matching runtime/Cargo.toml"
   exit "$drift"
 fi

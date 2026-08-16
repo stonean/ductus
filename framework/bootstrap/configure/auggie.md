@@ -59,53 +59,53 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
    - `{ "toolName": "launch-process", "shellInputRegex": "^git config core\\.hooksPath", "permission": { "type": "allow" } }`
    - `{ "toolName": "launch-process", "shellInputRegex": "^git config --(get|unset) core\\.hooksPath", "permission": { "type": "allow" } }`
    - `{ "toolName": "launch-process", "shellInputRegex": "^\\./.githooks/pre-commit", "permission": { "type": "allow" } }`
-   - `{ "toolName": "launch-process", "shellInputRegex": "^\\./?\\.govern/scripts/gen-.*\\.sh", "permission": { "type": "allow" } }`
+   - `{ "toolName": "launch-process", "shellInputRegex": "^\\./?\\.ductus/scripts/gen-.*\\.sh", "permission": { "type": "allow" } }`
    - `{ "toolName": "launch-process", "shellInputRegex": "^\\./?scripts/install-hooks\\.sh", "permission": { "type": "allow" } }`
 
-   **Runtime MCP tools (`mcp:gvrn:*` — generated from `framework/runtime-tools.txt`):**
+   **Runtime MCP tools (`mcp:ductus:*` — generated from `framework/runtime-tools.txt`):**
 
    <!-- generated:mcp-allow:start -->
-   - `{ "toolName": "mcp:gvrn:read-spec", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:read-tasks", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:mark-task", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:mark-criterion", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:set-status", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:derive-boundary", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:discover-rule-files", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:process-waivers", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:compute-review-scope", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:write-review", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:check-stuck", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:validate-frontmatter", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:resolve-anchor", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:resolve-references", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:traverse-deps", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:check-rule-ids", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:run-generator", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:lint-markdown", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:gate-confirm", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:fetch-archive", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:extract-archive", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:apply-manifest", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:enforce-manifest", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:merge-managed-block", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:merge-permissions", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:migrate-session-file", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:create-scenario", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:append-task", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:label-criteria", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:prune-tasks", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:dashboard", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:write-session", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:resolve-feature", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:create-feature", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:create-plan-artifacts", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:check-review-gate", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:append-question", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:diff-cross-spec", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:append-inbox", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:remove-inbox-item", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:gvrn:check-artifacts", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:read-spec", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:read-tasks", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:mark-task", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:mark-criterion", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:set-status", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:derive-boundary", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:discover-rule-files", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:process-waivers", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:compute-review-scope", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:write-review", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:check-stuck", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:validate-frontmatter", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:resolve-anchor", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:resolve-references", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:traverse-deps", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:check-rule-ids", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:run-generator", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:lint-markdown", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:gate-confirm", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:fetch-archive", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:extract-archive", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:apply-manifest", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:enforce-manifest", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:merge-managed-block", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:merge-permissions", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:migrate-session-file", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:create-scenario", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:append-task", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:label-criteria", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:prune-tasks", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:dashboard", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:write-session", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:resolve-feature", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:create-feature", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:create-plan-artifacts", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:check-review-gate", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:append-question", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:diff-cross-spec", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:append-inbox", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:remove-inbox-item", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:check-artifacts", "permission": { "type": "allow" } }`
    <!-- generated:mcp-allow:end -->
 
    **Shell commands — denied (destructive):**

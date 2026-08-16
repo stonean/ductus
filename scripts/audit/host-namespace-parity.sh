@@ -15,13 +15,13 @@
 # whose `project` disagrees with the installed directory — renders
 # next-actions naming a namespace that does not exist, and the operator
 # gets instructions they cannot run. That is exactly the drift
-# §drift-prevention exists to catch, and it went unnoticed in govern's own
-# repo for a long time: the basename is `govern`, the installed namespace
-# is `gov`, so `/gov:dashboard` output read "Run /govern:target …".
+# §drift-prevention exists to catch, and it went unnoticed in ductus's own
+# repo for a long time: the basename is `ductus`, the installed namespace
+# is `gov`, so `/ductus:dashboard` output read "Run /ductus:target …".
 #
 # Method:
 #   17a Resolve the effective namespace the way `Host::load` does:
-#       `[host] project` from `.govern/config.toml` (new-wins) or the
+#       `[host] project` from `.ductus/config.toml` (new-wins) or the
 #       legacy root `.govern.toml`; else the repo directory basename.
 #   17b Collect the installed namespace directories under every agent
 #       config dir present in the repo, trying both the plural
@@ -38,7 +38,7 @@
 #     family checks agreement, not the presence of the block.
 #
 # No overlap with Family 4 (placeholder roundtrip): that one forbids a
-# hardcoded `gov:` inside `framework/commands/` *sources*; this one
+# hardcoded `ductus:` inside `framework/commands/` *sources*; this one
 # compares *resolved* values in an installed repo. The two never read the
 # same file.
 #
@@ -64,8 +64,8 @@ fi
 
 # New-wins config resolution, mirroring schema::paths::config_display_name.
 CONFIG_FILE=""
-if [ -f ".govern/config.toml" ]; then
-  CONFIG_FILE=".govern/config.toml"
+if [ -f ".ductus/config.toml" ]; then
+  CONFIG_FILE=".ductus/config.toml"
 elif [ -f ".govern.toml" ]; then
   CONFIG_FILE=".govern.toml"
 fi
@@ -107,10 +107,10 @@ fi
 # than a silent fallback.
 
 HOST_RS="$ROOT/runtime/src/host.rs"
-REGISTRY_MD="$ROOT/framework/bootstrap/govern.md"
+REGISTRY_MD="$ROOT/framework/bootstrap/ductus.md"
 
 # The agent config dirs are DERIVED from the Agent Registry table in
-# framework/bootstrap/govern.md — the canonical source per the constitution's
+# framework/bootstrap/ductus.md — the canonical source per the constitution's
 # canonical-sources map — rather than listed here. `config_dir` is the table's
 # third column, so with a leading `|` it is awk's field 4.
 CLI_DIRS=()
@@ -124,7 +124,7 @@ done < <(awk -F'|' '
 ' "$REGISTRY_MD" 2>/dev/null | sort -u)
 
 if [ "${#CLI_DIRS[@]}" -eq 0 ]; then
-  emit "framework/bootstrap/govern.md" \
+  emit "framework/bootstrap/ductus.md" \
     "could not derive the agent config-dir set from the Agent Registry table — this family would otherwise check a hardcoded set and pass while ignoring real agents" \
     "restore the Agent Registry table's \`config_dir\` column, or update this family's derivation to match its new shape"
   exit 1
@@ -147,7 +147,7 @@ assert_contract "$HOST_RS" '["commands", "command"]' \
   "the commands/command subdirectory pair (Host::command_file_candidates)" || contracts_ok=0
 assert_contract "$HOST_RS" 'project' \
   "the [host] project key (HostBlock)" || contracts_ok=0
-assert_contract "$ROOT/runtime/src/schema/paths.rs" '.govern/config.toml' \
+assert_contract "$ROOT/runtime/src/schema/paths.rs" '.ductus/config.toml' \
   "the new-wins config resolution order (schema::paths)" || contracts_ok=0
 [ "$contracts_ok" -eq 1 ] || exit 1
 
@@ -196,7 +196,7 @@ for cli_dir in "${CLI_DIRS[@]}"; do
     if [ -n "$CONFIG_FILE" ]; then
       fix="set [host] project = $value in $CONFIG_FILE"
     else
-      fix="create .govern/config.toml with a [host] block: project = $value"
+      fix="create .ductus/config.toml with a [host] block: project = $value"
     fi
     emit "$cli_dir" \
       "rendered namespace \"$project\" ($source_desc) matches no installed command namespace ($installed_list) — every rendered next-action names /$project:… which does not exist" \

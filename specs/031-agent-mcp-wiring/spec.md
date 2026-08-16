@@ -13,11 +13,11 @@ next-criterion: 9
 
 # 031 — Agent MCP Wiring
 
-govern wires the optional `gvrn` runtime as an MCP server so pipeline commands take
+ductus wires the optional `ductus` runtime as an MCP server so pipeline commands take
 the deterministic path. The wiring is correct for Claude but **wrong for Auggie** (a
 reproduced defect) and **unverified for Antigravity** (sources conflict): both agents
-register MCP servers at the user/home level, not the committed repo file govern writes.
-For Auggie this means the `gvrn` server never loads and every command silently degrades
+register MCP servers at the user/home level, not the committed repo file ductus writes.
+For Auggie this means the `ductus` server never loads and every command silently degrades
 to the slower markdown-only path. This spec corrects the per-agent MCP wiring and the
 registry abstraction that produced the defect, and gates the Antigravity target on
 live-CLI verification.
@@ -48,7 +48,7 @@ target (which Auggie does not read) and Antigravity gets a project-local
   `mcpServers` shape is a map keyed by server name with `command`/`args`/`env` —
   identical to Claude's `.mcp.json`. No project-local MCP file is read. Registration is
   via the `auggie mcp add <name> --command <cmd> --args "..."` / `auggie mcp add-json`
-  subcommands, or per-launch `auggie --mcp-config '<inline json>'`. govern writes
+  subcommands, or per-launch `auggie --mcp-config '<inline json>'`. ductus writes
   repo-root `.mcp.json`, which Auggie never reads. This defect is confirmed.
 - **Antigravity** (`agy` CLI). Home-level config definitely loads —
   `~/.gemini/config/mcp_config.json` (shared) or `~/.gemini/antigravity-cli/mcp_config.json`
@@ -63,7 +63,7 @@ target (which Auggie does not read) and Antigravity gets a project-local
 
 ### Current per-agent state
 
-| Agent | Where MCP actually loads | Scope | What govern writes today | Works? |
+| Agent | Where MCP actually loads | Scope | What ductus writes today | Works? |
 | --- | --- | --- | --- | --- |
 | Claude | repo-root `.mcp.json` | project-committed | `.mcp.json` | yes |
 | Auggie | `~/.augment/settings.json` | user-global | `.mcp.json` | no |
@@ -76,7 +76,7 @@ target (which Auggie does not read) and Antigravity gets a project-local
   MCP servers. The registry/derived-values gain a per-agent MCP descriptor carrying the
   correct target path **and scope** (project-committed vs. user-global/home-level), rather
   than inheriting one from `layout`.
-- **govern stops writing files the agent ignores.** No repo-root `.mcp.json` for Auggie
+- **ductus stops writing files the agent ignores.** No repo-root `.mcp.json` for Auggie
   adoptions. For Antigravity, the `.agents/mcp_config.json` write is **retained pending
   live-CLI verification**; if project-local loading is confirmed broken, the target moves
   to home-level `~/.gemini/config/mcp_config.json` (surfaced per the posture decision).
@@ -84,20 +84,20 @@ target (which Auggie does not read) and Antigravity gets a project-local
   the State-B auto-wire from
   [029-bootstrap-runtime-autowire](../029-bootstrap-runtime-autowire/spec.md) is updated
   so that, for an agent whose MCP config is user-global/home-level, it does the correct
-  thing (exact write-vs-surface posture is resolved below — govern surfaces the registration instruction).
-- **An adopter who follows govern's output reaches a working `gvrn` registration** in
-  Auggie and in Antigravity — i.e. after adoption the `gvrn` MCP tools are loadable in
+  thing (exact write-vs-surface posture is resolved below — ductus surfaces the registration instruction).
+- **An adopter who follows ductus's output reaches a working `ductus` registration** in
+  Auggie and in Antigravity — i.e. after adoption the `ductus` MCP tools are loadable in
   those agents, by whatever mechanism the resolved posture prescribes.
 
 ### The home-level write problem
 
-govern's State-B auto-wire model is "write a committed repo file and stop." For Auggie
+ductus's State-B auto-wire model is "write a committed repo file and stop." For Auggie
 and Antigravity the working config lives in the **user's home directory**, which cannot
 be committed and is shared across all of that user's projects. This collides with the
 existing model and is the crux the design fork (Open Questions) must resolve. The
-`gvrn mcp` server itself is project-agnostic (it operates on the working directory), so a
+`ductus mcp` server itself is project-agnostic (it operates on the working directory), so a
 single home-level registration serving every project is acceptable; the open question is
-whether govern writes that home file, drives the agent's own CLI to write it, or surfaces
+whether ductus writes that home file, drives the agent's own CLI to write it, or surfaces
 the instruction for the user to run.
 
 ## Acceptance Criteria
@@ -112,27 +112,27 @@ the instruction for the user to run.
 - [x] AC3: A per-agent MCP descriptor records, for each of Claude / Auggie / Antigravity, the
       correct MCP config target path and its scope (project-committed vs. user-global vs.
       home-level), independent of the `layout` field.
-- [x] AC4: §MCP wiring in `framework/bootstrap/govern.md` documents the correct registration
+- [x] AC4: §MCP wiring in `framework/bootstrap/ductus.md` documents the correct registration
       target and mechanism for each agent, replacing the single per-layout file write.
 - [x] AC5: An Auggie adoption produces no repo-root `.mcp.json`.
 - [x] AC6: The [029-bootstrap-runtime-autowire](../029-bootstrap-runtime-autowire/spec.md)
       State-B path produces, for Auggie (and for Antigravity if verification moves its
-      target off the committed file), an outcome that results in a loadable `gvrn`
+      target off the committed file), an outcome that results in a loadable `ductus`
       registration via the surfaced-instruction posture rather than a write to an ignored
       path.
-- [x] AC7: govern's completion / State-B message surfaces the correct registration step: for
-      Auggie, `auggie mcp add gvrn --command gvrn --args "mcp"`; for Antigravity, the
-      config-file edit + `/mcp` reload — shown when `gvrn` is present but not yet
+- [x] AC7: ductus's completion / State-B message surfaces the correct registration step: for
+      Auggie, `auggie mcp add ductus --command ductus --args "mcp"`; for Antigravity, the
+      config-file edit + `/mcp` reload — shown when `ductus` is present but not yet
       registered.
 - [x] AC8: If files already written into existing adopter projects (`.mcp.json` for Auggie,
       and `.agents/mcp_config.json` for Antigravity should verification retarget it) need
-      cleanup, the change is registered in `framework/migrations.toml` so `/govern`
+      cleanup, the change is registered in `framework/migrations.toml` so `/ductus`
       reconciles them on the next run.
 
 ## Out of Scope
 
 The same `.agents/`-is-project-local-and-read assumption that produced the MCP defect also
-underpins govern's Antigravity **skills** (`.agents/skills/.../SKILL.md` — the slash
+underpins ductus's Antigravity **skills** (`.agents/skills/.../SKILL.md` — the slash
 commands themselves) and **permissions** (`.agents/settings.json`). Blog sources point
 Antigravity skills at home-level `~/.gemini/skills`, which would mean the Antigravity
 command surface may not be discovered at all — a higher-stakes failure than the MCP gap,
@@ -147,22 +147,22 @@ Question below). Listing it here records the linkage without expanding this spec
 
 ## Resolved Questions
 
-- **Write-vs-surface posture for user-global / home-level MCP config.** govern **surfaces
+- **Write-vs-surface posture for user-global / home-level MCP config.** ductus **surfaces
   a one-line, copy-pasteable registration instruction** in the State-B / completion
   message and lets the user run it — it does **not** silently write or merge into
   `~/.augment/` or `~/.gemini/`, nor shell out to the agent's CLI on the user's behalf.
-  Rationale: only this option keeps govern from mutating global state outside the repo
+  Rationale: only this option keeps ductus from mutating global state outside the repo
   (a posture change from every other write it makes), it avoids depending on each agent
   having a registration subcommand, and it satisfies the §Design-Principles
   "no dependence on human diligence" filter because the action is reduced to a single
-  copy-paste. The home-level config is project-agnostic (`gvrn mcp` operates on the
+  copy-paste. The home-level config is project-agnostic (`ductus mcp` operates on the
   working directory), so the user runs it **once per machine**, not once per project. The
   Claude path keeps writing the committed repo `.mcp.json` as today — that automation is
   available precisely because Claude's config is a committable repo file; the asymmetry is
   inherent, not a regression.
-- **Auggie registration mechanism.** The instruction govern surfaces for Auggie is the
+- **Auggie registration mechanism.** The instruction ductus surfaces for Auggie is the
   documented `auggie mcp add` subcommand in **flag form** —
-  `auggie mcp add gvrn --command gvrn --args "mcp"` — as the primary path. It is the
+  `auggie mcp add ductus --command ductus --args "mcp"` — as the primary path. It is the
   forward-compatible, schema-stable mechanism (Auggie owns writing its own
   `~/.augment/settings.json`), and the flag form is the most paste-safe (no embedded JSON
   for a shell to mangle, unlike `auggie mcp add-json`). `add-json` may be mentioned as an
@@ -170,7 +170,7 @@ Question below). Listing it here records the linkage without expanding this spec
   without the binary on PATH.
 - **Antigravity registration mechanism.** Antigravity has **no scriptable `agy mcp add`
   subcommand** — MCP management is the interactive in-prompt `/mcp` overlay (status,
-  reload, logs). So the instruction govern surfaces for Antigravity is a **config-file
+  reload, logs). So the instruction ductus surfaces for Antigravity is a **config-file
   edit plus a `/mcp` reload**, not a single pasted command like Auggie's. Separately, the
   Antigravity MCP **target/scope is left verification-gated**: sources conflict on whether
   project-local `.agents/mcp_config.json` actually loads servers (documented as
@@ -182,8 +182,8 @@ Question below). Listing it here records the linkage without expanding this spec
   "definitely broken, worse than Auggie" is **downgraded to unverified** accordingly.
 - **Cleanup of files already written into adopter repos.** Asymmetric by file. Auggie's
   repo-root `.mcp.json` is **never migrate-deleted**: it is Claude's legitimate config
-  file, govern supports multiple agents per repo, and deleting it would break Claude's
-  gvrn wiring; a stale Auggie-only copy is harmless (Auggie ignores it), so govern merely
+  file, ductus supports multiple agents per repo, and deleting it would break Claude's
+  ductus wiring; a stale Auggie-only copy is harmless (Auggie ignores it), so ductus merely
   stops writing it. Antigravity's `.agents/mcp_config.json` lives under Antigravity's own
   config dir (not shared), so a `framework/migrations.toml` entry may remove it — **but
   only if** the Q3 live-CLI verification confirms project-local does not load; if it does

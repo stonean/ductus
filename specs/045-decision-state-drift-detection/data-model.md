@@ -126,7 +126,7 @@ The phrases are matched as phrases, not words, and that is load-bearing: bare `a
 
 The whole criterion is exempted rather than the matched path, because a criterion about a transition names its endpoints together.
 
-An unresolved candidate emits a finding **only when its own top-level segment exists in this repo**. When that segment is absent, nothing can be proven — a framework repo's criteria legitimately name paths that live in an *adopter's* checkout (`.govern/…`, `.agents/…`) — so the candidate is recorded as `root-absent` instead. The rule self-corrects where it matters: in an adopter repo those roots do exist, so real drift beneath them is provable again.
+An unresolved candidate emits a finding **only when its own top-level segment exists in this repo**. When that segment is absent, nothing can be proven — a framework repo's criteria legitimately name paths that live in an *adopter's* checkout (`.ductus/…`, `.agents/…`) — so the candidate is recorded as `root-absent` instead. The rule self-corrects where it matters: in an adopter repo those roots do exist, so real drift beneath them is provable again.
 
 Worked example — 026's AC5 (AC18), after `531e3ea` deleted both subjects:
 
@@ -151,12 +151,12 @@ Triaging the 28 **by reading each criterion**, not by classifying its path:
 | Class | Count | Verdict |
 | --- | --- | --- |
 | Real stale paths | 5 | True |
-| Paths `govern` creates *in an adopter project* | 19 | False here, would resolve there |
+| Paths `ductus` creates *in an adopter project* | 19 | False here, would resolve there |
 | Residual | 4 | False — since cleared by the three added markers above |
 
-The five true positives are `specs/triage.md` in 006 (×2, renamed to `specs/inbox.md` alongside `/{project}:triage` → `/{project}:groom`), `scripts/gen-spec-deps.sh` in 018 (×2, moved to `.govern/scripts/` by 042), and 005's criterion still asserting a workflow registry `exists` after 043 sunset the feature.
+The five true positives are `specs/triage.md` in 006 (×2, renamed to `specs/inbox.md` alongside `/{project}:triage` → `/{project}:groom`), `scripts/gen-spec-deps.sh` in 018 (×2, moved to `.ductus/scripts/` by 042), and 005's criterion still asserting a workflow registry `exists` after 043 sunset the feature.
 
-**The 19 are a dogfooding artifact, not a check defect.** `.govern/constitution.md`, `specs/rules/security-backend.md`, `specs/system.md`, `.githooks/govern-pre-commit`, `specs/templates/` — every one is a path `govern` *creates in an adopter's checkout*. They are absent here for the single reason that `govern` is the source rather than an adopter, and each criterion naming one is correct and satisfied in the repo it describes. `root-absent` cannot catch them because their top-level segments (`specs`, `.govern`, `.githooks`) do exist here. The class is structural to a framework repo documenting adopter layout while also being its own adopter, and it does not generalize to the projects this check ships to.
+**The 19 are a dogfooding artifact, not a check defect.** `.ductus/constitution.md`, `specs/rules/security-backend.md`, `specs/system.md`, `.githooks/ductus-pre-commit`, `specs/templates/` — every one is a path `ductus` *creates in an adopter's checkout*. They are absent here for the single reason that `ductus` is the source rather than an adopter, and each criterion naming one is correct and satisfied in the repo it describes. `root-absent` cannot catch them because their top-level segments (`specs`, `.ductus`, `.githooks`) do exist here. The class is structural to a framework repo documenting adopter layout while also being its own adopter, and it does not generalize to the projects this check ships to.
 
 **Promotion verdict: do not promote — and re-measure in an adopter repo before deciding.** The volume half of the criterion is met several times over. The precision half reads 5/28 (18%) here and roughly 5/9 (56%) once the framework-repo artifact is set aside, and neither number is the one that matters: this repo is the least representative sample the check will ever run against.
 

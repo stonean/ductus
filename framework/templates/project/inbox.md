@@ -33,7 +33,7 @@ Items are migrated to their proper home by `/groom` (see the constitution,
         Categories: security, leak (memory/resource), convention, bug, perf, other.
         Security issues and leaks are the highest-priority captures.
 
-     3. Audit finding written by /govern — stricter form (see
+     3. Audit finding written by /ductus — stricter form (see
         specs/008-security-rules/spec.md): `- [ ] {Rule ID}: {artifact} does not address — {summary}`.
 
      When an item is migrated, remove it from this list. -->

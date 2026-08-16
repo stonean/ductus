@@ -11,7 +11,7 @@ An operator sets `[rules] surfaces` in `.govern.toml` to a degenerate value — 
 ## Behavior
 
 - **`surfaces = []` (explicitly empty) is valid and means "cross-only".** No surface-suffixed rule files (`-backend.md`, `-frontend.md`) are selected; only `-cross.md` files apply. This is distinct from the key being *unset*, which falls back to 024 stack derivation — the empty list is the operator explicitly declaring "this project needs no surface rules, only cross-cutting ones."
-- **An unrecognized member fails fast.** When `surfaces` contains a value outside the accepted set (`"backend"`, `"frontend"`), the command that reads the setting (`/govern`, `/gov:review`) errors immediately, naming the offending value and listing the accepted members, consistent with `CFG-ENV-003`'s fail-fast-on-invalid-configuration posture. The setting is never silently ignored, and the unknown member is never warn-and-continued.
+- **An unrecognized member fails fast.** When `surfaces` contains a value outside the accepted set (`"backend"`, `"frontend"`), the command that reads the setting (`/ductus`, `/ductus:review`) errors immediately, naming the offending value and listing the accepted members, consistent with `CFG-ENV-003`'s fail-fast-on-invalid-configuration posture. The setting is never silently ignored, and the unknown member is never warn-and-continued.
 
 ## Edge Cases
 

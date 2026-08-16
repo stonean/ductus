@@ -1,22 +1,22 @@
 ---
-description: Scaffold a new project with govern files, templates, and commands.
+description: Scaffold a new project with ductus files, templates, and commands.
 argument-hint: "[project slug]"
 ---
 
 # Init
 
-Scaffold a new project with `govern` files, templates, and slash commands.
+Scaffold a new project with `ductus` files, templates, and slash commands.
 
 ## Purpose
 
-Automates the manual bootstrap process from the `govern` README. Creates a complete project directory with all `govern` files, spec templates, and slash commands ready to use. This command is `govern`-specific — it does not exist in the `framework/commands/` template set.
+Automates the manual bootstrap process from the `ductus` README. Creates a complete project directory with all `ductus` files, spec templates, and slash commands ready to use. This command is `ductus`-specific — it does not exist in the `framework/commands/` template set.
 
 ## Inputs
 
 Collect from `$ARGUMENTS` or prompt the user interactively. When using AskUserQuestion, every question **must** include an `options` array with 2–4 example choices (the user can always select "Other" for custom input):
 
 1. **Project slug** — used for directory name, command prefix, and `{project}` placeholder substitution. Must be lowercase, alphanumeric, hyphens allowed. Example options: `myapp`, `my-service`.
-2. **Project path** — where to create the project directory. Defaults to a sibling of the `govern` repo (i.e., `../../{slug}` relative to this repo, or the parent directory of wherever `govern` lives). Example options: the computed default path, `~/src/{slug}`.
+2. **Project path** — where to create the project directory. Defaults to a sibling of the `ductus` repo (i.e., `../../{slug}` relative to this repo, or the parent directory of wherever `ductus` lives). Example options: the computed default path, `~/src/{slug}`.
 3. **Project description** — one-line description for README and AGENTS.md. Example options: `A new microservice`, `CLI tool for X`.
 4. **Tech stack** — a guided questionnaire that replaces the old "primary language(s)" question. Ask each question interactively using AskUserQuestion with 2–4 example choices plus "Other" and "Skip". The flow is:
 
@@ -37,11 +37,11 @@ Collect from `$ARGUMENTS` or prompt the user interactively. When using AskUserQu
    - **CSS/UI** — Example options: `Tailwind`, `SCSS`, `styled-components`.
    - **Frontend test runner** — Example options: `Vitest`, `Jest`, `Playwright`.
 
-   **Framework-implies-language inference.** Ask the framework question before the language question in each section. When the selected framework unambiguously determines its language — e.g. Rails → Ruby, Sinatra → Ruby, Django / FastAPI / Flask → Python, Gin / Echo → Go, Laravel → PHP, Phoenix → Elixir, ASP.NET → C# — record that language automatically and present **no** language question and **no** language example options. Still write the language row into the AGENTS.md Tech Stack table — it documents the stack for contributors and `/gov:review`'s tech-stack alignment check reads it. Show the language question — and its example options — only when the framework was skipped, answered "Other" with an unrecognized value, or is language-ambiguous (a Node framework that could be TypeScript or JavaScript, a JVM framework that could be Java or Kotlin, etc.).
+   **Framework-implies-language inference.** Ask the framework question before the language question in each section. When the selected framework unambiguously determines its language — e.g. Rails → Ruby, Sinatra → Ruby, Django / FastAPI / Flask → Python, Gin / Echo → Go, Laravel → PHP, Phoenix → Elixir, ASP.NET → C# — record that language automatically and present **no** language question and **no** language example options. Still write the language row into the AGENTS.md Tech Stack table — it documents the stack for contributors and `/ductus:review`'s tech-stack alignment check reads it. Show the language question — and its example options — only when the framework was skipped, answered "Other" with an unrecognized value, or is language-ambiguous (a Node framework that could be TypeScript or JavaScript, a JVM framework that could be Java or Kotlin, etc.).
 
    For `fullstack` projects, ask backend questions first, then frontend questions. Every question can be skipped — the user is not required to answer any category.
 
-5. **Spec-root directory** — the top-level directory that will hold every `govern` artifact (feature dirs, `inbox.md`, `rules/`, shared docs). Defaults to `specs`; accept the default unless a different name is needed to avoid colliding with an existing directory (e.g. RSpec's `spec/`). Example options: `specs` (the default), `governance`, `design`. Validate the entered value: empty, or any character outside `[A-Za-z0-9_-]` (a path separator, `.`/`..`, or other punctuation), is rejected with "Spec-root must be a single directory name using only letters, digits, '-', and '_'." When a non-`specs` name is chosen, init records it in the new project's `.govern.toml` so every command and the runtime resolve it (spec 040). Referred to below as `{spec-root}`.
+5. **Spec-root directory** — the top-level directory that will hold every `ductus` artifact (feature dirs, `inbox.md`, `rules/`, shared docs). Defaults to `specs`; accept the default unless a different name is needed to avoid colliding with an existing directory (e.g. RSpec's `spec/`). Example options: `specs` (the default), `governance`, `design`. Validate the entered value: empty, or any character outside `[A-Za-z0-9_-]` (a path separator, `.`/`..`, or other punctuation), is rejected with "Spec-root must be a single directory name using only letters, digits, '-', and '_'." When a non-`specs` name is chosen, init records it in the new project's `.govern.toml` so every command and the runtime resolve it (spec 040). Referred to below as `{spec-root}`.
 
 Validate the project slug: must be lowercase, alphanumeric, and hyphens only. If invalid, reject with: "Project slug must be lowercase, alphanumeric, and hyphens only."
 
@@ -50,11 +50,11 @@ Validate the project slug: must be lowercase, alphanumeric, and hyphens only. If
 Before scaffolding, verify:
 
 - The target directory (`{path}/{slug}`) does **not** already exist.
-- If it exists, **stop immediately** and report: "Directory already exists at {path}/{slug}. Init is for new projects only. To add `govern` to an existing project, follow the manual bootstrap steps in the `govern` README."
+- If it exists, **stop immediately** and report: "Directory already exists at {path}/{slug}. Init is for new projects only. To add `ductus` to an existing project, follow the manual bootstrap steps in the `ductus` README."
 
 ## Scaffolding Steps
 
-Perform all steps in order. Use the `govern` repo as the source for all template files.
+Perform all steps in order. Use the `ductus` repo as the source for all template files.
 
 ### 1. Create project directory and initialize git
 
@@ -64,16 +64,16 @@ cd {path}/{slug}
 git init
 ```
 
-### 2. Copy `govern` files
+### 2. Copy `ductus` files
 
-Copy these files from the `govern` repo into the new project root:
+Copy these files from the `ductus` repo into the new project root:
 
 - `framework/constitution.md` → `constitution.md`
 - `.markdownlint-cli2.jsonc` → `.markdownlint-cli2.jsonc`
 
 ### 3. Copy and customize AGENTS.md
 
-Copy `framework/templates/project/agents.md` from the `govern` repo into the new project root as `AGENTS.md`. Replace every `{project-name}` placeholder with the user-provided project slug. Replace `{One-line project description.}` with the user-provided description.
+Copy `framework/templates/project/agents.md` from the `ductus` repo into the new project root as `AGENTS.md`. Replace every `{project-name}` placeholder with the user-provided project slug. Replace `{One-line project description.}` with the user-provided description.
 
 Then, if the user selected any technologies in the tech stack questionnaire (step 4), replace the Tech Stack comment placeholder with an actual table. Build the table from the user's selections using this layer-to-role mapping:
 
@@ -96,7 +96,7 @@ Only include rows for categories the user answered (not skipped). If all categor
 
 ### 4. Create CLAUDE.md
 
-Copy `framework/templates/project/claude-md.md` from the `govern` repo into the new project as `CLAUDE.md`.
+Copy `framework/templates/project/claude-md.md` from the `ductus` repo into the new project as `CLAUDE.md`.
 
 ### 5. Create the spec-root directory with system spec templates
 
@@ -107,7 +107,7 @@ Copy `framework/templates/project/claude-md.md` from the `govern` repo into the 
 specs-root = "{spec-root}"
 ```
 
-Create `{spec-root}/` and copy these files from `framework/templates/project/` in the `govern` repo:
+Create `{spec-root}/` and copy these files from `framework/templates/project/` in the `ductus` repo:
 
 - `framework/templates/project/system.md` → `{spec-root}/system.md`
 - `framework/templates/project/errors.md` → `{spec-root}/errors.md`
@@ -125,7 +125,7 @@ Also create `{spec-root}/rules/` and copy the shipped rule files from `framework
 
 ### 6. Copy spec templates
 
-Create `{spec-root}/templates/` and copy all spec-pipeline templates from `framework/templates/spec/` in the `govern` repo (the destination is flat — no `spec/` subdirectory):
+Create `{spec-root}/templates/` and copy all spec-pipeline templates from `framework/templates/spec/` in the `ductus` repo (the destination is flat — no `spec/` subdirectory):
 
 - `spec.md`
 - `spec-and-plan.md`
@@ -137,13 +137,13 @@ Create `{spec-root}/templates/` and copy all spec-pipeline templates from `frame
 
 ### 7. Copy slash command templates
 
-Create `.claude/commands/{slug}/` and copy every `.md` file from the `govern` repo's `framework/commands/` directory into it. In each copied file, replace every `{project}` with the user-provided project name and every `{cli-config-dir}` with `.claude`.
+Create `.claude/commands/{slug}/` and copy every `.md` file from the `ductus` repo's `framework/commands/` directory into it. In each copied file, replace every `{project}` with the user-provided project name and every `{cli-config-dir}` with `.claude`.
 
 Additionally, copy `framework/bootstrap/configure/claude.md` into `.claude/commands/{slug}/configure.md` (renaming it), substituting placeholders the same way.
 
 ### 8. Create .gitignore
 
-Copy `framework/templates/project/gitignore` from the `govern` repo into the new project as `.gitignore`.
+Copy `framework/templates/project/gitignore` from the `ductus` repo into the new project as `.gitignore`.
 
 Then, for each language selected in the tech stack questionnaire (backend language and/or frontend language from step 4), fetch the language-specific patterns:
 
@@ -162,7 +162,7 @@ If a fetch fails (404 or network error), report the failure and continue with th
 
 ### 9. Create README.md
 
-Copy `framework/templates/project/project-readme.md` from the `govern` repo into the new project as `README.md`. Replace every `{project}` with the user-provided project name. Replace `{Brief description of what this project does.}` with the user-provided description.
+Copy `framework/templates/project/project-readme.md` from the `ductus` repo into the new project as `README.md`. Replace every `{project}` with the user-provided project name. Replace `{Brief description of what this project does.}` with the user-provided description.
 
 ### 10. Create session file
 
@@ -196,4 +196,4 @@ Next steps:
 - Write system.md content — that requires architectural decisions
 - Create the first feature spec — the user does that via `/{slug}:specify`
 - Make any git commits — the user decides when to commit
-- Run `/{slug}:configure` — that runs in the new project's Claude session, not `govern`'s
+- Run `/{slug}:configure` — that runs in the new project's Claude session, not `ductus`'s

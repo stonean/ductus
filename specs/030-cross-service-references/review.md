@@ -33,7 +33,7 @@ _None remaining._ The quality pass surfaced one low-confidence observation (conf
 
 _None._
 
-## Captured issues (pending /gov:groom)
+## Captured issues (pending /ductus:groom)
 
 _None — no lines were added to `specs/inbox.md` in the review window._
 

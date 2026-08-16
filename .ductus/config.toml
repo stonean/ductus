@@ -1,0 +1,12 @@
+[host]
+# The slash-command namespace, shared across the team and committed. The repo
+# directory basename now agrees with it, so `Host::load`'s fallback would
+# resolve the same value — but the key stays explicit: an implicit namespace is
+# one directory rename away from silently moving every rendered next-action to
+# a namespace that does not exist. The commands are installed at
+# `.claude/commands/ductus/`, and Family 17 of `/ductus:audit`
+# (host-namespace-parity) enforces the agreement.
+project = "ductus"
+
+[review]
+tech-stack-verified = true

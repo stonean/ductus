@@ -29,7 +29,7 @@ test before the command (Phase B) wires to it.
 - [x] `runtime/src/mcp/server.rs`: add `"prune-tasks"` to `TOOL_NAMES` and a `#[tool(name = "prune-tasks", …)]` method.
 - [x] `runtime/src/interpreter/mod.rs`: add `"prune-tasks" => call!(PruneTasksArgs, prune_tasks)`.
 - [x] `runtime/src/parser/mod.rs`: add `"prune-tasks"` to `PRIMITIVE_NAMES`.
-- **Done when**: the CLI subcommand, the MCP tool, and a `gvrn exec` procedure step all resolve the primitive.
+- **Done when**: the CLI subcommand, the MCP tool, and a `ductus exec` procedure step all resolve the primitive.
 
 ### 4. Canonical manifest, generated config, release metadata
 
@@ -52,13 +52,13 @@ test before the command (Phase B) wires to it.
 
 ### 7. Parseability
 
-- [x] Run `gvrn parse --check framework/commands/prune.md`. If it parses cleanly, leave it; otherwise add `framework/commands/prune.md` to `runtime/legacy-prose-commands.txt`.
+- [x] Run `ductus parse --check framework/commands/prune.md`. If it parses cleanly, leave it; otherwise add `framework/commands/prune.md` to `runtime/legacy-prose-commands.txt`.
 - **Done when**: `scripts/lint-procedure-parseability.sh` passes for `prune.md`.
 
 ### 8. Register and regenerate
 
 - [x] Add the `'/{project}:prune' "$CMD_DIR/prune.md"` row to the appropriate group in `scripts/gen-help-tables.sh` (add a new `generated:commands-<group>` marker pair in `help.md` and a splice-loop entry only if prune warrants its own group).
-- [x] Run the generators (or the pre-commit hook) to regenerate `framework/commands/help.md` and materialize `.claude/commands/gov/prune.md`; commit both.
+- [x] Run the generators (or the pre-commit hook) to regenerate `framework/commands/help.md` and materialize `.claude/commands/ductus/prune.md`; commit both.
 - **Done when**: `gen-help-tables.sh --dry-run` and `gen-claude-commands.sh --check` report in-sync.
 
 ### 9. Docs
@@ -80,7 +80,7 @@ Surfaced by the pre-`done` durability review: `tasks.md` must be treated as disp
 - [x] In `runtime/src/primitives/mod.rs`, teach the shared line-walkers to skip content inside `<!-- … -->` HTML comments (single- and multi-line) exactly as they skip fenced blocks: `iter_task_numbers_at_levels`, `iter_phase_ranges`, and `section_lines` (so `detect_tasks_structure` follows).
 - [x] Apply the same comment-skipping in `read_tasks.rs`, `mark_task.rs`, `check_stuck.rs`, and `prune_tasks.rs::segment` so every tasks parser agrees.
 - [x] Add a regression test proving a reset (template-state) `tasks.md` parses to zero tasks and `append-task` returns number 1.
-- **Done when**: `gvrn read-tasks` on a `--reset` file returns 0 tasks; `cargo test` / clippy / fmt clean.
+- **Done when**: `ductus read-tasks` on a `--reset` file returns 0 tasks; `cargo test` / clippy / fmt clean.
 
 ### 12. Codify `tasks.md` as an ephemeral tracking artifact in the constitution
 

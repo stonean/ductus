@@ -3,7 +3,7 @@
 Structures introduced by [032 — OpenCode Agent Support](spec.md). The agent
 registry schema and the `layout`-profile model are owned by
 [028](../028-antigravity-agent/spec.md); this document adds the `opencode`
-profile and the two govern-owned regions of OpenCode's config file. All shapes
+profile and the two ductus-owned regions of OpenCode's config file. All shapes
 are verified against `opencode 1.17.8` (see spec Resolved Questions).
 
 ## `opencode` registry row
@@ -19,13 +19,13 @@ are verified against `opencode 1.17.8` (see spec Resolved Questions).
 
 ## `opencode` layout-derived values
 
-Selected by `layout: opencode` in `framework/bootstrap/govern.md` §Derived values.
+Selected by `layout: opencode` in `framework/bootstrap/ductus.md` §Derived values.
 
 | Derived value | `opencode` formula |
 | --- | --- |
 | Command path | `.opencode/command/{project}/<name>.md` (verbatim markdown; `description` frontmatter; body = prompt; `$ARGUMENTS` token) |
 | Invocation | `/{project}/<name>` (path namespace via the `{project}/` subdirectory) |
-| `govern` install path | `.opencode/command/govern.md` (verbatim; placeholders kept literal) |
+| `ductus` install path | `.opencode/command/ductus.md` (verbatim; placeholders kept literal) |
 | Settings file | root `opencode.json` (**same file as the MCP-wiring file**) |
 | Permission shape | OpenCode `permission` action map (`allow` / `ask` / `deny`; per-tool string or `{ pattern: action }`, last match wins) |
 | Native rule-loading dir | — (rules read from shared `specs/rules/`, as `claude-style`) |
@@ -44,27 +44,27 @@ independent of `layout`).
 | mechanism | `write-file` |
 | surfaced instruction | — (none; the committed file is read directly) |
 
-## govern-owned regions of `opencode.json`
+## ductus-owned regions of `opencode.json`
 
 OpenCode reads a root `opencode.json` (`./opencode.json`, `./opencode.jsonc`, or
 `.opencode/opencode.json`), deep-merged over `~/.config/opencode/opencode.json`,
 project overriding global, validated against `https://opencode.ai/config.json`
-(unknown top-level keys hard-fail with `ConfigInvalidError`). govern writes the
+(unknown top-level keys hard-fail with `ConfigInvalidError`). ductus writes the
 project-root file and owns exactly two keys; every other key (`$schema`, `model`,
 `provider`, `agent`, `command`, adopter `mcp`/`permission` entries) is preserved.
 
-### Region 1 — `mcp.gvrn` (local stdio server)
+### Region 1 — `mcp.ductus` (local stdio server)
 
 ```json
 {
   "mcp": {
-    "gvrn": { "type": "local", "command": ["gvrn", "mcp"], "enabled": true }
+    "ductus": { "type": "local", "command": ["ductus", "mcp"], "enabled": true }
   }
 }
 ```
 
 `type` is required; `command` is an array. Written by the State-B `write-file`
-auto-wire (host-side). Idempotent: an existing `mcp.gvrn` entry is a no-op.
+auto-wire (host-side). Idempotent: an existing `mcp.ductus` entry is a no-op.
 
 ### Region 2 — `permission`
 
@@ -95,17 +95,17 @@ Full set (written by `framework/bootstrap/configure/opencode.md`):
     "webfetch": "allow",
     "websearch": "allow",
     "bash": { "<allow patterns>": "allow", "rm -rf *": "deny", "*": "ask" },
-    "gvrn*": "allow"
+    "ductus*": "allow"
   }
 }
 ```
 
 Notes (verified):
 
-- `"gvrn*": "allow"` pre-allows every gvrn MCP tool with one glob — there is **no**
+- `"ductus*": "allow"` pre-allows every ductus MCP tool with one glob — there is **no**
   dedicated `mcp` permission key; MCP tools are matched by tool-name patterns
-  (`gvrn*` / `gvrn_*` both accepted with no `ConfigInvalidError`).
-- OpenCode evaluates the **last** matching rule, so `gvrn*` (and other narrow
+  (`ductus*` / `ductus_*` both accepted with no `ConfigInvalidError`).
+- OpenCode evaluates the **last** matching rule, so `ductus*` (and other narrow
   allows) must be ordered after any broad `"*"` rule.
 - Exact `bash` allow/deny patterns are finalized at implement against the
   published schema; the shape above is the contract.
@@ -116,9 +116,9 @@ Every write into `opencode.json` (the State-B `mcp` write and the configure
 `permission` write) is a **generic additive JSON-object merge** (spec Resolved
 Q5, option A — *not* a `merge-permissions` extension):
 
-- Preserve `$schema` and every key govern does not own, byte-for-byte where
+- Preserve `$schema` and every key ductus does not own, byte-for-byte where
   possible.
-- Merge into `mcp` and `permission` object keys only; add govern's entries,
+- Merge into `mcp` and `permission` object keys only; add ductus's entries,
   preserve the adopter's.
 - If a root `opencode.jsonc` already exists, merge into that file rather than
   creating a second `opencode.json`; default to `opencode.json` when neither

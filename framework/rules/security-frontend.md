@@ -1,12 +1,12 @@
 # Security Rules — Frontend
 
-Enforceable security rules for browser-side code, UI rendering, and client-server interaction. These rules apply to all projects with a web frontend adopting `govern`.
+Enforceable security rules for browser-side code, UI rendering, and client-server interaction. These rules apply to all projects with a web frontend adopting `ductus`.
 
 Rules use RFC 2119 language: **MUST** / **MUST NOT** are enforced by the validate command (errors); **SHOULD** / **SHOULD NOT** are flagged as warnings.
 
 Rule IDs follow the format `FE-{CATEGORY}-{NNN}` and are permanent — once assigned, an ID is never renumbered, even if the rule is moved within the file or deprecated. Categories: `XSS` (cross-site scripting), `CSRF` (cross-site request forgery), `STORAGE` (secure client-side storage), `AUTHN` (authentication UX), `CSP` (content security policy), `DEPS` (dependency management), `PII` (sensitive data handling). See `specs/008-security-rules/data-model.md` for the full schema.
 
-Projects without a frontend can pin this file in `.govern.toml` to skip it during `govern` updates.
+Projects without a frontend can pin this file in `.ductus/config.toml` to skip it during `ductus` updates.
 
 ## FE-XSS — Cross-Site Scripting Prevention
 
@@ -304,7 +304,7 @@ Projects without a frontend can pin this file in `.govern.toml` to skip it durin
 
 > A frontend dependency MUST NOT originate network requests to third-party origins as a side effect of being used. Telemetry, usage analytics, license checks, and update polling performed by a dependency MUST be disabled at build time through the opt-out the dependency provides, and the opt-out MUST apply to every build configuration the team runs, not only to production builds. An intentional third-party integration is exempt only when it is a declared part of the application's design, permitted explicitly by the CSP `connect-src` directive, and vendor reviewed. Verification that no unintended egress occurs MUST be performed against a production build, since a dependency's network behavior may differ by build configuration.
 
-**Rationale:** The other `FE-DEPS` rules govern what code is loaded and from where; none governs what a dependency does on the network once it runs. A package can be pinned, scanned, and bundled locally — satisfying every existing rule — while still contacting its vendor on every application start. Such calls leak the fact of usage, and often version, locale, and coarse environment fingerprints, to a party the team never chose to inform. Two properties make this class of defect persistently hard to catch: it is invisible in the UI, and it frequently differs between development and production builds, so a dependency that is silent in a shipped bundle may report from every workstation. Development machines sit on corporate networks and VPNs and are not a safe default destination for that traffic. For air-gapped or otherwise egress-controlled deployments, an unannounced outbound call is an outright deployment defect rather than a privacy preference.
+**Rationale:** The other `FE-DEPS` rules ductus what code is loaded and from where; none governs what a dependency does on the network once it runs. A package can be pinned, scanned, and bundled locally — satisfying every existing rule — while still contacting its vendor on every application start. Such calls leak the fact of usage, and often version, locale, and coarse environment fingerprints, to a party the team never chose to inform. Two properties make this class of defect persistently hard to catch: it is invisible in the UI, and it frequently differs between development and production builds, so a dependency that is silent in a shipped bundle may report from every workstation. Development machines sit on corporate networks and VPNs and are not a safe default destination for that traffic. For air-gapped or otherwise egress-controlled deployments, an unannounced outbound call is an outright deployment defect rather than a privacy preference.
 
 **Verification:** Any spec or plan that introduces or upgrades a frontend dependency shipping to the browser MUST state whether that dependency performs network egress of its own and, where it does, name the documented opt-out and the build configurations the opt-out covers. Validate flags specs adopting UI component libraries, analytics-capable SDKs, error/crash reporters, font or icon providers, and map or media embeds without addressing dependency egress. Validate also flags a verification commitment that names only a development-server check, since dev-only behavior is not representative.
 

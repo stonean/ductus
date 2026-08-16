@@ -33,7 +33,7 @@
 # guessed. Two wider rules were measured against this repo first:
 #   * the plan's **Affected Files** — flagged 42 of 48, because old specs
 #     list shared surfaces (`AGENTS.md`, `README.md`,
-#     `framework/bootstrap/govern.md`) that every later spec also touches, so
+#     `framework/bootstrap/ductus.md`) that every later spec also touches, so
 #     spec 004 read "stale" because spec 042 edited `AGENTS.md`;
 #   * the spec's whole directory — flagged 31 of 48, because `tasks.md`
 #     churns on every ticked checkbox and is ephemeral by construction
@@ -74,8 +74,8 @@ for tool in git python3; do
 done
 
 SPECS_ROOT="specs"
-if [ -f "$ROOT/.govern/config.toml" ] || [ -f "$ROOT/.govern.toml" ]; then
-  cfg="$ROOT/.govern/config.toml"; [ -f "$cfg" ] || cfg="$ROOT/.govern.toml"
+if [ -f "$ROOT/.ductus/config.toml" ] || [ -f "$ROOT/.govern.toml" ]; then
+  cfg="$ROOT/.ductus/config.toml"; [ -f "$cfg" ] || cfg="$ROOT/.govern.toml"
   derived="$(python3 - "$cfg" <<'PY' 2>/dev/null || true
 import sys, tomllib
 try:

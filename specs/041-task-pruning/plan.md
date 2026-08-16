@@ -102,7 +102,7 @@ error writes nothing.
 ### Runtime wiring (fully-wired primitive)
 
 `prune-tasks` is wired through all seven registration sites so it is callable
-from the CLI, MCP, and the `gvrn exec` walker:
+from the CLI, MCP, and the `ductus exec` walker:
 
 1. `schema/primitives.rs` — `PruneTasksArgs` / `PruneTasksResult` / section
    record / classification+mode enums (kebab-case serde, `clap::Args` on the
@@ -132,13 +132,13 @@ table. Each `## Instructions` step carries a backticked primitive name
 (`prune-tasks`, `gate-confirm`), an `<!-- llm:* -->` marker, or an
 `<!-- audit:ignore-promotion -->` annotation (Family-9 promotion audit), and the
 file references §runtime-host-integration once so the tool-coverage lint passes.
-The command is authored to parse under `gvrn parse --check`; if the
+The command is authored to parse under `ductus parse --check`; if the
 preview→confirm→apply prose resists the parser, `framework/commands/prune.md`
 is added to `runtime/legacy-prose-commands.txt` as the documented escape hatch.
 Registration is generator-driven: add the row to `scripts/gen-help-tables.sh`,
 then run the generators (or the pre-commit hook) to regenerate
-`framework/commands/help.md` and materialize `.claude/commands/gov/prune.md`.
-Adopter materialization (`/govern` bootstrap, `gov:init`) enumerates
+`framework/commands/help.md` and materialize `.claude/commands/ductus/prune.md`.
+Adopter materialization (`/ductus` bootstrap, `gov:init`) enumerates
 `framework/commands/*.md` dynamically — no per-command edit there. Slash
 commands are not individually permission-gated, so no `settings` entry is
 needed beyond the `prune-tasks` MCP allow-block that already flows from
@@ -169,7 +169,7 @@ violation.
 | `runtime/legacy-prose-commands.txt` | Edit (conditional) | Escape hatch if `prune.md` doesn't parse as a Procedure |
 | `scripts/gen-help-tables.sh` | Edit | Add the prune row to a command-group table |
 | `framework/commands/help.md` | Regenerate | Help table (via `gen-help-tables.sh`) |
-| `.claude/commands/gov/prune.md` | Regenerate | Materialized command (via `gen-claude-commands.sh`) |
+| `.claude/commands/ductus/prune.md` | Regenerate | Materialized command (via `gen-claude-commands.sh`) |
 | `README.md` | Edit | Add `/prune` to the hand-maintained Commands section |
 
 ## Trade-offs

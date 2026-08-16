@@ -6,12 +6,12 @@ section: "Follow-on scenarios"
 
 ## Context
 
-The `merge-managed-block` primitive (line-prefix style) does not reliably detect the end of an existing canonical block when that block contains interior blank lines between subsections. The `.gitignore` template shipped by `/govern` ([framework/templates/project/gitignore](../../../framework/templates/project/gitignore)) is exactly this shape: five subsections (`# Environment and secrets`, `# Claude Code local settings`, `# govern derived views`, `# IDE`, `# OS`), each separated by a blank line. Every `/govern` invocation against an adopter project re-walks the same canonical block; each run leaves a fresh trail of orphan subsection headers below the real block. Over time the file accumulates a tail like:
+The `merge-managed-block` primitive (line-prefix style) does not reliably detect the end of an existing canonical block when that block contains interior blank lines between subsections. The `.gitignore` template shipped by `/ductus` ([framework/templates/project/gitignore](../../../framework/templates/project/gitignore)) is exactly this shape: five subsections (`# Environment and secrets`, `# Claude Code local settings`, `# ductus derived views`, `# IDE`, `# OS`), each separated by a blank line. Every `/ductus` invocation against an adopter project re-walks the same canonical block; each run leaves a fresh trail of orphan subsection headers below the real block. Over time the file accumulates a tail like:
 
 ```text
 # Claude Code local settings (keep commands tracked for project-wide access)
 
-# govern derived views — non-markdown caches and indexes generated from specs.
+# ductus derived views — non-markdown caches and indexes generated from specs.
 # Markdown artifacts (specs, plans, scenarios) stay in git as the source of truth;
 # binary or machine-only views regenerated from them do not. See constitution
 # §text-first-artifacts.
@@ -21,7 +21,7 @@ The `merge-managed-block` primitive (line-prefix style) does not reliably detect
 # OS
 ```
 
-— canonical-block subsection headers, comment-shaped, with their list bodies dedup'd away. The accumulation reproduces on every adopter that ran `/govern` against a template with multi-subsection blocks.
+— canonical-block subsection headers, comment-shaped, with their list bodies dedup'd away. The accumulation reproduces on every adopter that ran `/ductus` against a template with multi-subsection blocks.
 
 Root cause is local to [`runtime/src/primitives/merge_managed_block.rs`](../../../runtime/src/primitives/merge_managed_block.rs):
 

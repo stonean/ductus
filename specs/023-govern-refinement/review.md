@@ -35,7 +35,7 @@ Clean and non-blocking: 0 MUST, 0 SHOULD, 0 low-confidence. The two SHOULD findi
 ## Captured issues
 
 - Architectural exploration: re-frame the runtime's LLM extension points as named Anthropic-style Skills the host loads at the seam — speculative, **on hold per user 2026-07-11**. Still open in `specs/inbox.md`.
-- No command adds an acceptance criterion to a non-`draft` spec — `/gov:clarify` gates on `draft`, `/gov:amend` writes only a question or a scenario+task, `/gov:plan` gates on `clarified`. Captured 2026-08-14 while adding criterion 33 to this spec during its completion gate. Still open in `specs/inbox.md`; run `/gov:groom` to route it.
+- No command adds an acceptance criterion to a non-`draft` spec — `/ductus:clarify` gates on `draft`, `/ductus:amend` writes only a question or a scenario+task, `/ductus:plan` gates on `clarified`. Captured 2026-08-14 while adding criterion 33 to this spec during its completion gate. Still open in `specs/inbox.md`; run `/ductus:groom` to route it.
 
 ## Skipped passes
 

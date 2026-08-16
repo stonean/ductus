@@ -1,4 +1,4 @@
-# 024 — Stack-aware rule-file loader for `/gov:review` Tasks
+# 024 — Stack-aware rule-file loader for `/ductus:review` Tasks
 
 Tasks derived from the [plan](plan.md). Complete in order.
 
@@ -26,12 +26,12 @@ Tasks derived from the [plan](plan.md). Complete in order.
 ## 4. Update `framework/constitution.md` §rules
 
 - [x] Add a new subsection `#### Filename suffix` before `#### Lifecycle` (around line 285)
-- [x] Body: state the closed suffix set (`-backend.md`, `-frontend.md`, `-cross.md`), name the surface each selects, reference `scripts/lint-rule-filenames.sh` as govern-side enforcement and the runtime warning as the adopter-side safety net
+- [x] Body: state the closed suffix set (`-backend.md`, `-frontend.md`, `-cross.md`), name the surface each selects, reference `scripts/lint-rule-filenames.sh` as ductus-side enforcement and the runtime warning as the adopter-side safety net
 - [x] Update line 173 reference: `framework/rules/configuration.md` → `framework/rules/configuration-cross.md`
 - [x] Update line 179 reference: same change
 - [x] Done when the new subsection renders cleanly and no live references to `configuration.md` (without `-cross`) remain in the constitution
 
-## 5. Rewrite `/gov:review` rule-file selection
+## 5. Rewrite `/ductus:review` rule-file selection
 
 - [x] In `framework/commands/review.md`, rewrite §Behavior step 5 (lines 88–90) to describe the suffix-based discovery procedure: iterate `framework/rules/*.md`, classify each by basename suffix, filter by detected stack (keeping cross-cutting and unrecognized-suffix files), emit the `loading rule files:` notice plus any per-file unrecognized-suffix warnings
 - [x] Rewrite §Behavior step 2 (§Load rules, lines 92–103) to describe the discovery output rather than the hardcoded `security-backend.md` / `security-frontend.md` list. The "Any other `framework/rules/*.md` referenced from `AGENTS.md`" line is removed (replaced by the new discovery)
@@ -39,12 +39,12 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Rewrite §Notes for adopters (lines 415–426): replace the bullet about "automatically loads anything in `framework/rules/` referenced from `AGENTS.md`" with: (a) files inside `framework/rules/` are auto-discovered by directory walk — no `AGENTS.md` reference required; (b) the `AGENTS.md` fallback survives only for adopter-local rule files placed outside `framework/rules/`
 - [x] Done when the hardcoded names `security-backend.md` and `security-frontend.md` no longer appear in `framework/commands/review.md` as selection criteria
 
-## 6. Rewrite `/gov:analyze` rule-file discovery
+## 6. Rewrite `/ductus:analyze` rule-file discovery
 
 - [x] In `framework/commands/analyze.md`, rewrite §Rules (around line 133) to apply the shared suffix-based discovery: iterate the rule-file directory, classify by basename suffix, load every discovered file (no stack filtering)
 - [x] Remove the closed list at lines 137–141 (`specs/rules/security-backend.md`, `specs/rules/security-frontend.md`, `specs/configuration.md`)
-- [x] Add a sentence clarifying: "`/gov:analyze` loads every discovered rule file regardless of detected stack — citation verification spans surfaces."
-- [x] Emit the same `loading rule files:` notice and unrecognized-suffix warnings as `/gov:review`
+- [x] Add a sentence clarifying: "`/ductus:analyze` loads every discovered rule file regardless of detected stack — citation verification spans surfaces."
+- [x] Emit the same `loading rule files:` notice and unrecognized-suffix warnings as `/ductus:review`
 - [x] Done when no hardcoded filename list remains under §Rules
 
 ## 7. Sweep `configuration.md` references in framework command files
@@ -55,8 +55,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 8. Update bootstrap map and add migration
 
-- [x] `framework/bootstrap/govern.md` line 393: source `framework/rules/configuration-cross.md`, destination `specs/rules/configuration-cross.md`
-- [x] Add a one-pass migration check in the same file, modeled on the existing `spec-and-plan.md` cleanup from spec 023: on each `/govern` invocation, detect any `specs/configuration.md` in the adopting project and offer to rename it to `specs/rules/configuration-cross.md`; emit a one-line notice
+- [x] `framework/bootstrap/ductus.md` line 393: source `framework/rules/configuration-cross.md`, destination `specs/rules/configuration-cross.md`
+- [x] Add a one-pass migration check in the same file, modeled on the existing `spec-and-plan.md` cleanup from spec 023: on each `/ductus` invocation, detect any `specs/configuration.md` in the adopting project and offer to rename it to `specs/rules/configuration-cross.md`; emit a one-line notice
 - [x] Done when the bootstrap doc shows the new map row and the migration step
 
 ## 9. Record the rename in `specs/README.md`
@@ -64,10 +64,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Under §Past Renames, add an entry naming the rename (`configuration.md` → `configuration-cross.md`, spec 024, 2026-05-17), the reason (closed-suffix rule-file naming policy), and the rule-ID stability note (`CFG-CONST-*`, `CFG-ENV-*` are content-anchored and unchanged).
 - [x] Done when the entry appears in the file
 
-## 10. Regenerate `.claude/commands/gov/*.md`
+## 10. Regenerate `.claude/commands/ductus/*.md`
 
 - [x] Run `scripts/gen-claude-commands.sh`
-- [x] Confirm `.claude/commands/gov/review.md`, `.claude/commands/gov/analyze.md`, `.claude/commands/gov/implement.md`, `.claude/commands/gov/groom.md` reflect the updated framework sources
+- [x] Confirm `.claude/commands/ductus/review.md`, `.claude/commands/ductus/analyze.md`, `.claude/commands/ductus/implement.md`, `.claude/commands/ductus/groom.md` reflect the updated framework sources
 - [x] Done when `git diff --exit-code` against the generated directory shows no unexpected drift
 
 ## 11. Run repo-local validation
@@ -79,8 +79,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] `bash scripts/gen-spec-deps.sh --dry-run` — clean
 - [x] Done when every check exits `0`
 
-## 12. Run `/gov:analyze` and `/gov:review` against this spec
+## 12. Run `/ductus:analyze` and `/ductus:review` against this spec
 
-- [x] `/gov:analyze` against `024-rule-loader` — no blocking findings; the new discovery loads every `framework/rules/*.md` file under the closed-suffix policy
-- [x] `/gov:review` against `024-rule-loader` — `review.md` records 0 MUST violations; the `loading rule files:` notice lists every file in `framework/rules/` (govern is a full-stack repo for review purposes)
+- [x] `/ductus:analyze` against `024-rule-loader` — no blocking findings; the new discovery loads every `framework/rules/*.md` file under the closed-suffix policy
+- [x] `/ductus:review` against `024-rule-loader` — `review.md` records 0 MUST violations; the `loading rule files:` notice lists every file in `framework/rules/` (ductus is a full-stack repo for review purposes)
 - [x] Done when both commands complete with `blocking: false` and no MUST violations

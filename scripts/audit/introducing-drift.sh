@@ -18,7 +18,7 @@
 #   - Each match emits a finding with file:line and a suggested past-
 #     tense rewrite. False positives expected (heuristic doesn't
 #     distinguish current-tense from past-tense surrounding prose);
-#     maintainer dismisses per-spec via a small /gov:amend cycle that
+#     maintainer dismisses per-spec via a small /ductus:amend cycle that
 #     adds a past-tense rewrite or accepts the prose as-is.
 #
 # Exemptions (two forms):
@@ -49,12 +49,20 @@ RENAMED_TOKENS=(
   "/capture|/specify|consolidated into /specify (spec 023)"
   "/elaborate|/amend|consolidated into /amend (spec 023)"
   "/validate|/analyze|renamed to /analyze (spec 023)"
-  "/gov:validate|/gov:analyze|renamed to /analyze (spec 023)"
-  "/gov:capture|/gov:specify|consolidated into /specify (spec 023)"
-  "/gov:elaborate|/gov:amend|consolidated into /amend (spec 023)"
+  "/ductus:validate|/ductus:analyze|renamed to /analyze (spec 023)"
+  "/ductus:capture|/ductus:specify|consolidated into /specify (spec 023)"
+  "/ductus:elaborate|/ductus:amend|consolidated into /amend (spec 023)"
   "/ask|/amend|renamed to /amend (slash-command clarity)"
-  "/gov:ask|/gov:amend|renamed to /amend (slash-command clarity)"
-  "gov-rt:|gvrn:|MCP server name changed (spec 022 task 28)"
+  "/ductus:ask|/ductus:amend|renamed to /amend (slash-command clarity)"
+  "gov-rt:|ductus:|MCP server name changed (spec 022 task 28)"
+  # Spec 049 — the project rename. The grep matches a whole code span, so a
+  # body naming a published tag (`gvrn-v0.23.0`) or a legacy path constant
+  # (`.govern.toml`) is a different span and does not fire: only a bare
+  # retired name in current-tense prose does.
+  "gvrn|ductus|binary, crate, and MCP server key renamed (spec 049)"
+  "govern|ductus|project renamed (spec 049)"
+  "/govern|/ductus|bootstrap command renamed (spec 049)"
+  ".govern/|.ductus/|per-project directory renamed (spec 049)"
 )
 
 # Iterate done spec bodies. A "done" spec has `status: done` in its
@@ -87,7 +95,7 @@ for spec_file in specs/[0-9][0-9][0-9]-*/spec.md; do
       if [[ "$line_content" =~ ^[[:space:]]*\> ]]; then
         continue
       fi
-      emit "$spec_file:$line_no" "references old name \`$old\` ($hint)" "rewrite to past tense or replace with \`$new\`; see scenarios/living-specs.md pattern (small /gov:amend cycle)"
+      emit "$spec_file:$line_no" "references old name \`$old\` ($hint)" "rewrite to past tense or replace with \`$new\`; see scenarios/living-specs.md pattern (small /ductus:amend cycle)"
     done < <(grep -nF "\`$old\`" "$spec_file" 2>/dev/null || true)
   done
 done

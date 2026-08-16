@@ -115,7 +115,7 @@ orient_table="$(build_two_col_table \
 )"
 
 bootstrap_table="$(build_two_col_table \
-  '/govern'              "$BOOTSTRAP_DIR/govern.md" \
+  '/ductus'              "$BOOTSTRAP_DIR/ductus.md" \
   '/{project}:configure' "$BOOTSTRAP_DIR/configure/claude.md" \
 )"
 

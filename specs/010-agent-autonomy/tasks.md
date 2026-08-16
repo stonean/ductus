@@ -16,7 +16,7 @@ Document the optional inline `[simple]` task header marker in `framework/templat
 
 **Done when:** a future reader of `tasks.md` template understands when and how to use `[simple]`, with an example to copy from.
 
-## 2. Update `/gov:plan` to propose `[simple]` markers
+## 2. Update `/ductus:plan` to propose `[simple]` markers
 
 Modify `framework/commands/plan.md` to add a step that scans generated tasks and proposes `[simple]` markers on trivial ones.
 
@@ -27,7 +27,7 @@ Modify `framework/commands/plan.md` to add a step that scans generated tasks and
 
 **Done when:** the plan command has explicit instructions for proposing `[simple]` markers and surfacing them for user review.
 
-## 3. Update `/gov:implement` with stuck detection
+## 3. Update `/ductus:implement` with stuck detection
 
 Modify `framework/commands/implement.md` to add a setup-time stuck-detection check.
 
@@ -39,7 +39,7 @@ Modify `framework/commands/implement.md` to add a setup-time stuck-detection che
 
 **Done when:** the implement command has explicit instructions for the stuck-detection check, including the algorithm, threshold, and behavior under `--auto`.
 
-## 4. Update `/gov:implement` with `--auto` flag
+## 4. Update `/ductus:implement` with `--auto` flag
 
 Modify `framework/commands/implement.md` to accept and document the `--auto` flag.
 
@@ -111,22 +111,22 @@ Perform both directory moves. The framework directory is also flattened: the inn
 
 **Done when:** both directories are renamed, the framework workflows directory is flattened, and no internal paths still point to the old names.
 
-## 10. Update `framework/bootstrap/govern.md` for the rename
+## 10. Update `framework/bootstrap/ductus.md` for the rename
 
-Update the manifest, recommendation step, and all prose in `framework/bootstrap/govern.md` from "skills" / "skill" to "workflows" / "workflow" wherever the term refers to 005's concept.
+Update the manifest, recommendation step, and all prose in `framework/bootstrap/ductus.md` from "skills" / "skill" to "workflows" / "workflow" wherever the term refers to 005's concept.
 
 - [x] Update the manifest row: `framework/skills/registry.json` → `framework/workflows/registry.json` and `skills/registry.json` → `workflows/registry.json` (project-side)
 - [x] Update the recommendation-step path references to read from `workflows/registry.json` and fetch from `framework/workflows/{entry.template}` (note: flattened — no inner `templates/`)
 - [x] Update scaffold destination from `{config_dir}/commands/{project}/skills/{entry.template}` to `{config_dir}/commands/{project}/workflows/{entry.template}`
 - [x] Update the section heading from "Skill recommendation" to "Workflow recommendation" and update prose throughout (warning messages, summary lines, discovery note for Auggie)
-- [x] Update the slash-command-cleanup edge-case note to reference the new directory name (no explicit edge-case note found in govern.md; cleanup walks top-level files only, so subdirectory immunity is implicit and documented in the recommendation step itself)
+- [x] Update the slash-command-cleanup edge-case note to reference the new directory name (no explicit edge-case note found in ductus.md; cleanup walks top-level files only, so subdirectory immunity is implicit and documented in the recommendation step itself)
 - [x] Update the schema reference from `specs/005-skills-and-plugins/data-model.md` to `specs/005-workflows/data-model.md`
-- [x] Add a one-line migration note: adopters who already ran `/gov:govern` should manually delete the old `skills/` directory after re-running govern
+- [x] Add a one-line migration note: adopters who already ran `/ductus:ductus` should manually delete the old `skills/` directory after re-running ductus
 - [x] File passes `npx markdownlint-cli2`
 
-**Done when:** govern.md has no references to "skills" as 005's concept; all paths use `workflows`; markdownlint passes.
+**Done when:** ductus.md has no references to "skills" as 005's concept; all paths use `workflows`; markdownlint passes.
 
-## 11. Update `.claude/commands/gov/init.md` for the rename
+## 11. Update `.claude/commands/ductus/init.md` for the rename
 
 Hand-edit `init.md` (the generator skips it). Update the recommendation step's paths and prose.
 
@@ -170,15 +170,15 @@ Update any references to 005's "skills" feature in the top-level `README.md`.
 
 **Done when:** README.md no longer uses "skills" for 005's concept.
 
-## 15. Regenerate `.claude/commands/gov/*.md` from sources
+## 15. Regenerate `.claude/commands/ductus/*.md` from sources
 
 Run the generator after all source-side edits to `framework/commands/` and `framework/bootstrap/configure/claude.md` are complete.
 
 - [x] Run `./scripts/gen-claude-commands.sh`
-- [x] Verify `.claude/commands/gov/plan.md` reflects the `[simple]` marker step
-- [x] Verify `.claude/commands/gov/implement.md` reflects stuck detection and `--auto` flag
-- [x] Verify `.claude/commands/gov/configure.md` reflects the renamed comment label
-- [x] Verify `.claude/commands/gov/init.md` is untouched (hand-maintained)
+- [x] Verify `.claude/commands/ductus/plan.md` reflects the `[simple]` marker step
+- [x] Verify `.claude/commands/ductus/implement.md` reflects stuck detection and `--auto` flag
+- [x] Verify `.claude/commands/ductus/configure.md` reflects the renamed comment label
+- [x] Verify `.claude/commands/ductus/init.md` is untouched (hand-maintained)
 - [x] All regenerated files pass `npx markdownlint-cli2`
 
 **Done when:** the regenerated files match the sources, init.md is preserved, and markdownlint passes.
@@ -196,6 +196,6 @@ Run all checks and walk through 010's acceptance criteria.
 - [x] No remaining references to `specs/005-skills-and-plugins/` exist anywhere except in commit messages or prose specifically discussing the rename
 - [x] `grep -rn "skill" --include="*.md" .` produces no hits referring to 005's concept (only Anthropic-style skills references in `AGENTS.md` template, constitution Cost levers paragraph, and 010's spec/plan/tasks)
 - [x] Each acceptance criterion in 010's `spec.md` is checked individually against the produced artifacts and marked `- [x]` only if satisfied
-- [x] Cross-spec deliverable AC reflects 005 reopened to `in-progress` (005 is left at `in-progress` for a separate `/gov:implement` to advance back to `done`)
+- [x] Cross-spec deliverable AC reflects 005 reopened to `in-progress` (005 is left at `in-progress` for a separate `/ductus:implement` to advance back to `done`)
 
 **Done when:** all checks pass, the rename is complete and consistent, and every 010 acceptance criterion is verified.

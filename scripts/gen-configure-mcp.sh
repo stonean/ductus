@@ -13,14 +13,14 @@
 #   <!-- generated:mcp-allow:end -->
 #
 # Per-host mapping (deterministic; no host-presence detection). The
-# `gvrn` server-name prefix comes from the adopter's `.mcp.json`
+# `ductus` server-name prefix comes from the adopter's `.mcp.json`
 # registration; tool names in this list are bare `<verb>-<noun>`.
-#   <verb>-<noun>  →  Claude:  mcp__gvrn__<verb>-<noun>
-#                  →  Auggie:  toolName "mcp:gvrn:<verb>-<noun>",
+#   <verb>-<noun>  →  Claude:  mcp__ductus__<verb>-<noun>
+#                  →  Auggie:  toolName "mcp:ductus:<verb>-<noun>",
 #                              permission { type: "allow" }
-#                  →  Antigravity: a single `mcp(gvrn/*)` wildcard (covers
+#                  →  Antigravity: a single `mcp(ductus/*)` wildcard (covers
 #                                  every tool; not per-tool enumerated)
-#                  →  OpenCode: a single `"gvrn*": "allow"` glob (covers
+#                  →  OpenCode: a single `"ductus*": "allow"` glob (covers
 #                                  every tool; not per-tool enumerated)
 #
 # Exits non-zero if either marker is missing in either source file.
@@ -61,19 +61,19 @@ fi
 
 # Build the Claude block content (3-space indent matches sibling sub-sections
 # in claude.md's allow-list). Each tool name from runtime-tools.txt is a
-# bare `<verb>-<noun>`; the `gvrn` server-name prefix is added per host.
+# bare `<verb>-<noun>`; the `ductus` server-name prefix is added per host.
 claude_block_file="$(mktemp)"; cleanup_files+=("$claude_block_file")
 auggie_block_file="$(mktemp)"; cleanup_files+=("$auggie_block_file")
-# Antigravity uses one `mcp(gvrn/*)` wildcard covering every gvrn tool, rather
+# Antigravity uses one `mcp(ductus/*)` wildcard covering every ductus tool, rather
 # than the per-tool enumeration Claude/Auggie need — so its block is a constant
 # single line, built outside the per-tool loop below.
 antigravity_block_file="$(mktemp)"; cleanup_files+=("$antigravity_block_file")
-printf '   - `mcp(gvrn/*)`\n' > "$antigravity_block_file"
-# OpenCode likewise uses one `"gvrn*": "allow"` glob (no dedicated mcp permission
+printf '   - `mcp(ductus/*)`\n' > "$antigravity_block_file"
+# OpenCode likewise uses one `"ductus*": "allow"` glob (no dedicated mcp permission
 # key; MCP tools are matched by tool-name pattern), so its block is also a
 # constant single line built outside the per-tool loop.
 opencode_block_file="$(mktemp)"; cleanup_files+=("$opencode_block_file")
-printf '   - `"gvrn*": "allow"`\n' > "$opencode_block_file"
+printf '   - `"ductus*": "allow"`\n' > "$opencode_block_file"
 
 tool_count=0
 while IFS= read -r tool; do
@@ -83,8 +83,8 @@ while IFS= read -r tool; do
   # Trim trailing whitespace.
   tool="${tool%"${tool##*[![:space:]]}"}"
   [ -z "$tool" ] && continue
-  printf '   - `mcp__gvrn__%s`\n' "$tool" >> "$claude_block_file"
-  printf '   - `{ "toolName": "mcp:gvrn:%s", "permission": { "type": "allow" } }`\n' "$tool" >> "$auggie_block_file"
+  printf '   - `mcp__ductus__%s`\n' "$tool" >> "$claude_block_file"
+  printf '   - `{ "toolName": "mcp:ductus:%s", "permission": { "type": "allow" } }`\n' "$tool" >> "$auggie_block_file"
   tool_count=$((tool_count + 1))
 done < "$TOOLS"
 

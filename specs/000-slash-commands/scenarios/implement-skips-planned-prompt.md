@@ -13,7 +13,7 @@ any code changes, then flips status (step 5). The `--auto` carve-out (Flags
 section) also lists `planned → in-progress` among the pipeline gates that "still
 fire and pause" even under `--auto`, citing §pipeline-boundaries.
 
-That prompt is redundant. Invoking `/gov:implement` is itself the user's
+That prompt is redundant. Invoking `/ductus:implement` is itself the user's
 deliberate decision to start work and enter `in-progress`; a yes/no prompt fired
 immediately after invocation — before any work — asks the user to re-confirm what
 they just requested. §pipeline-boundaries' "present the work done and wait for
@@ -23,7 +23,7 @@ present, so the command invocation is the explicit approval the rule calls for.
 
 ## Behavior
 
-- `/gov:implement` no longer prompts to confirm `planned → in-progress`.
+- `/ductus:implement` no longer prompts to confirm `planned → in-progress`.
   Invoking the command against a `planned` spec flips status to `in-progress`
   (after the read-tasks / derive-boundary / check-stuck setup) and proceeds
   directly to the first task. No yes/no gate, with or without `--auto`.
@@ -39,7 +39,7 @@ present, so the command invocation is the explicit approval the rule calls for.
 - **Spec already `in-progress` (resuming).** No transition prompt either way
   today; unchanged — the command continues with the next task.
 - **Spec at `clarified` or earlier.** The gate still rejects and directs the user
-  to `/gov:plan` first. Only the *confirmation* is removed, not the status check.
+  to `/ductus:plan` first. Only the *confirmation* is removed, not the status check.
 - **Denial escape hatch removed.** Step 4 previously let the user deny and exit
   without mutating the spec. With no prompt there is no denial branch — a user
   who doesn't want to start simply doesn't invoke the command.

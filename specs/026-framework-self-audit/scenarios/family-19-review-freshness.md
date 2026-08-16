@@ -38,7 +38,7 @@ caught by measuring against this repo before wiring anything:
 
 | Rule | Fires on | Why it fails |
 | --- | --- | --- |
-| Plan's **Affected Files** | 42 of 48 | Old specs list shared surfaces (`AGENTS.md`, `README.md`, `framework/bootstrap/govern.md`) that every later spec also touches, so spec 004 reads stale because spec 042 edited `AGENTS.md` |
+| Plan's **Affected Files** | 42 of 48 | Old specs list shared surfaces (`AGENTS.md`, `README.md`, `framework/bootstrap/ductus.md`) that every later spec also touches, so spec 004 reads stale because spec 042 edited `AGENTS.md` |
 | The whole spec directory | 31 of 48 | `tasks.md` churns on every ticked checkbox and is ephemeral by construction ([§tasks-phase](../../framework/constitution.md#tasks-phase)); `plan.md` churns as Affected Files are revised |
 | **Durable contracts** | 10 of 48 | Ships |
 
@@ -57,7 +57,7 @@ it, because a check's value is its precision, not its coverage.
 ## Edge Cases
 
 - **Deliberately not wired into `run-all.sh`.** It reported 10 pre-existing
-  stale reviews when it landed, so wiring it would block the next `gvrn-v*` tag
+  stale reviews when it landed, so wiring it would block the next `ductus-v*` tag
   until every one is re-reviewed. That is real debt and the findings are real,
   but imposing a release freeze is the maintainer's call, not a side effect of
   landing the check. Wiring is one `run_check` line once the debt is cleared.

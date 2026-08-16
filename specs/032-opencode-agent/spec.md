@@ -14,9 +14,9 @@ next-criterion: 12
 # 032 — OpenCode Agent Support
 
 Add **OpenCode** (the open-source terminal coding agent, `opencode`) as the
-fourth agent `govern` scaffolds into, alongside Claude Code, Auggie, and
+fourth agent `ductus` scaffolds into, alongside Claude Code, Auggie, and
 Antigravity. The work expresses OpenCode's layout, MCP discovery, native rules
-file, and permission format as registry-derived values so `/govern` produces a
+file, and permission format as registry-derived values so `/ductus` produces a
 working OpenCode adoption — on **verified** conventions, not assumed ones.
 
 > **Source provenance.** Unlike the conflicting/unverified state
@@ -26,10 +26,10 @@ working OpenCode adoption — on **verified** conventions, not assumed ones.
 > paths), `opencode debug config` (resolved config from a project dir), `opencode
 > debug skill` (the built-in `customize-opencode` skill, which is OpenCode's own
 > authoritative config reference), and a project-config probe — a throwaway
-> `/tmp` project with an `opencode.json` declaring the `gvrn` MCP server, a
+> `/tmp` project with an `opencode.json` declaring the `ductus` MCP server, a
 > `.opencode/command/hello.md`, and an `AGENTS.md`. The probe loaded all three:
 > the resolved config merged the project `mcp` / `permission` / `command` blocks,
-> and `opencode mcp list` reported **`✓ gvrn connected`** — a live wiring proof.
+> and `opencode mcp list` reported **`✓ ductus connected`** — a live wiring proof.
 > Following the [028-antigravity-agent](../028-antigravity-agent/spec.md)
 > discipline — observed behavior governs — the model below is what the CLI did,
 > not what docs claim. The narrow items still open are **design choices**, not
@@ -50,14 +50,14 @@ State-B auto-wire writes — the path this spec extends with OpenCode's
 `write-file` case.
 
 OpenCode is the next agent. Adopters driving their work through OpenCode get none
-of the `govern` pipeline today — the slash commands are never scaffolded where
-OpenCode scans, and the `gvrn` runtime is never wired where OpenCode discovers MCP
+of the `ductus` pipeline today — the slash commands are never scaffolded where
+OpenCode scans, and the `ductus` runtime is never wired where OpenCode discovers MCP
 servers. This spec slots OpenCode into the same registry-driven machinery the
 other three agents use.
 
 ## Verified OpenCode Layout
 
-`govern` adopts OpenCode by file-scaffolding into the project-local **`.opencode/`**
+`ductus` adopts OpenCode by file-scaffolding into the project-local **`.opencode/`**
 directory and a committed **`opencode.json`** at the project root. All facts below
 are verified (see provenance):
 
@@ -65,22 +65,22 @@ are verified (see provenance):
 | --- | --- |
 | Config dir | `.opencode/` (project); global is `~/.config/opencode/` (the install dir `~/.opencode/` is **not** the config dir) |
 | Config file | `./opencode.json`, `./opencode.jsonc`, or `.opencode/opencode.json`; global `~/.config/opencode/opencode.json`. Deep-merged, **project overrides global**. `$schema: https://opencode.ai/config.json`. Unknown top-level keys are rejected with `ConfigInvalidError` |
-| Invocable unit | markdown **command** at `.opencode/command/{project}/<name>.md`: `description` frontmatter, body becomes the command prompt/`template`, `$ARGUMENTS` is the argument token. Commands namespace by subdirectory — verified: `command/gov/specify.md` registers as key `gov/specify` |
+| Invocable unit | markdown **command** at `.opencode/command/{project}/<name>.md`: `description` frontmatter, body becomes the command prompt/`template`, `$ARGUMENTS` is the argument token. Commands namespace by subdirectory — verified: `command/ductus/specify.md` registers as key `gov/specify` |
 | Invocation | `/{project}/<name>` (e.g. `/gov/specify`) — path-style namespace via the `{project}/` subdirectory, the OpenCode analog of Claude's colon `/{project}:<name>` |
 | Native rules file | `AGENTS.md` (already shipped), read via OpenCode's `instructions` resolution — no `CLAUDE.md`, no new context file |
-| MCP wiring | `mcp` block in the **project-committed** `opencode.json`: `{ "type": "local", "command": ["gvrn", "mcp"], "enabled": true }`. Project config is read and merged (probe: `✓ gvrn connected`). A scriptable `opencode mcp add` subcommand also exists |
+| MCP wiring | `mcp` block in the **project-committed** `opencode.json`: `{ "type": "local", "command": ["ductus", "mcp"], "enabled": true }`. Project config is read and merged (probe: `✓ ductus connected`). A scriptable `opencode mcp add` subcommand also exists |
 | Permissions | `permission` block in the **same** `opencode.json`: actions `allow` / `ask` / `deny`; per-tool string or `{ pattern: action }` (last match wins); keys include `read, edit, bash, task, webfetch, …` |
 
 Two structural facts drive the design:
 
 - **MCP discovery is project-committed.** OpenCode reads MCP servers from the
-  committed `opencode.json`, so `govern` can **write the file** (the Claude
+  committed `opencode.json`, so `ductus` can **write the file** (the Claude
   `write-file` posture) — it does **not** need the surface-instruction posture
   Auggie and Antigravity require ([031](../031-agent-mcp-wiring/spec.md)). OpenCode
-  is only the second agent (after Claude) whose `gvrn` wiring is fully automatable.
+  is only the second agent (after Claude) whose `ductus` wiring is fully automatable.
 - **One committed file carries both MCP and permissions.** `mcp` and `permission`
   are sibling keys in `opencode.json`. The settings file and the MCP-wiring file
-  collapse to a single target with **two `govern`-owned regions**, so the additive
+  collapse to a single target with **two `ductus`-owned regions**, so the additive
   merge must preserve `$schema` and adopter keys while owning only `mcp` and
   `permission`.
 
@@ -112,13 +112,13 @@ The Claude / Auggie / Antigravity rows are unchanged; a future `CLAUDE.md`-readi
 
 ## Per-Agent Adoption for OpenCode
 
-For OpenCode, `/govern` scaffolds:
+For OpenCode, `/ductus` scaffolds:
 
 - **Commands.** Transform each `framework/commands/*.md` into
   `.opencode/command/{project}/<name>.md` — keep the body (procedure + approval-gate
   prompts), carry the `description` frontmatter, preserve the `$ARGUMENTS` token.
   Placeholder substitution (`{project}`, `{cli-config-dir}`) still applies.
-- **MCP.** Write the `gvrn` local-stdio server into `opencode.json`'s `mcp` block
+- **MCP.** Write the `ductus` local-stdio server into `opencode.json`'s `mcp` block
   additively (`write-file`), preserving other keys.
 - **Permissions (`configure`).** A new `framework/bootstrap/configure/opencode.md`
   writes the `permission` block in OpenCode's native format.
@@ -127,15 +127,15 @@ For OpenCode, `/govern` scaffolds:
 ## Bootstrap
 
 The existing curl-scaffold bootstrap model carries over — only the destination
-changes: the README documents installing the `govern` installer into OpenCode's
-command location, after which the user runs `/govern`, which scaffolds the rest.
+changes: the README documents installing the `ductus` installer into OpenCode's
+command location, after which the user runs `/ductus`, which scaffolds the rest.
 Because OpenCode loads config **once at startup** (no hot reload), the completion
 message must tell the user to restart OpenCode for newly-wired MCP servers and
 commands to take effect.
 
 ## Update Story
 
-`/govern` re-runs re-scaffold the `.opencode/` files and re-merge `opencode.json`
+`/ductus` re-runs re-scaffold the `.opencode/` files and re-merge `opencode.json`
 (live-on-main), like the other file-scaffold agents — no install/registration
 step. Pinning via `.govern.toml` and the manifest strategies apply unchanged.
 
@@ -143,13 +143,13 @@ step. Pinning via `.govern.toml` and the manifest strategies apply unchanged.
 
 - **Any agent beyond OpenCode** (Cursor, Copilot, …) — each is its own spec.
 - **Removing an adopted agent** — unchanged from 012 (manual).
-- **OpenCode skills and agents as `govern` surfaces.** OpenCode also supports
+- **OpenCode skills and agents as `ductus` surfaces.** OpenCode also supports
   model-invoked **skills** (`.opencode/skill(s)/<name>/SKILL.md`) and **agents**
-  (`.opencode/agent/<name>.md`); `govern`'s pipeline maps to user-invoked
-  **commands**. Reusing skills/agents for any `govern` surface is deferred.
+  (`.opencode/agent/<name>.md`); `ductus`'s pipeline maps to user-invoked
+  **commands**. Reusing skills/agents for any `ductus` surface is deferred.
 - **OpenCode's external-skill auto-load** of `~/.claude/skills/` and
   `~/.agents/skills/` (it scans those) — interaction with a co-installed Claude or
-  Antigravity `govern` adoption is noted, not addressed here.
+  Antigravity `ductus` adoption is noted, not addressed here.
 - **Extending `merge-permissions`
   ([022-deterministic-runtime](../022-deterministic-runtime/spec.md)) to
   OpenCode's format** — a plan-phase call.
@@ -168,29 +168,29 @@ step. Pinning via `.govern.toml` and the manifest strategies apply unchanged.
       invocable as `/{project}/<name>` (subdirectory namespacing)
 - [x] AC3: The per-agent MCP descriptor records OpenCode's target as the
       project-committed `opencode.json` `mcp` block, `scope: project-committed`,
-      `mechanism: write-file`; `/govern` writes the `gvrn` local-stdio server
-      (`{ "type": "local", "command": ["gvrn", "mcp"], "enabled": true }`)
+      `mechanism: write-file`; `/ductus` writes the `ductus` local-stdio server
+      (`{ "type": "local", "command": ["ductus", "mcp"], "enabled": true }`)
       additively, preserving other config keys
-- [x] AC4: An OpenCode adoption reaches a loadable `gvrn` registration with **no
+- [x] AC4: An OpenCode adoption reaches a loadable `ductus` registration with **no
       surfaced manual instruction** (OpenCode reads the committed file) —
-      verifiable by `opencode mcp list` reporting `gvrn` connected, as observed
+      verifiable by `opencode mcp list` reporting `ductus` connected, as observed
       during this spec's verification
 - [x] AC5: A `framework/bootstrap/configure/opencode.md` writes OpenCode's `permission`
       block (allow/ask/deny) in OpenCode's native format — the framework's bootstrap
-      shell allows plus `"gvrn*": "allow"` to pre-allow gvrn's MCP tools without
+      shell allows plus `"ductus*": "allow"` to pre-allow ductus's MCP tools without
       prompts; OpenCode never receives another agent's permission format
 - [x] AC6: OpenCode's `mcp` and `permission` blocks coexist in one committed root
-      `opencode.json` (or the adopter's existing `opencode.jsonc`); `govern`'s
+      `opencode.json` (or the adopter's existing `opencode.jsonc`); `ductus`'s
       additive merge preserves `$schema` and adopter keys and touches only the two
       regions it owns (no `ConfigInvalidError`)
-- [x] AC7: `/govern` gitignores `.opencode/` (the regenerated `command/{project}/`
-      tree) but leaves the root `opencode.json` committed, so the `gvrn` wiring is
+- [x] AC7: `/ductus` gitignores `.opencode/` (the regenerated `command/{project}/`
+      tree) but leaves the root `opencode.json` committed, so the `ductus` wiring is
       team-shared — the same split as Claude's gitignored `.claude/` and committed
       root `.mcp.json`
 - [x] AC8: Adopting OpenCode ships no `CLAUDE.md` and no new context file — the
       already-shipped `AGENTS.md` is read natively
 - [x] AC9: Auto-detection recognizes an existing OpenCode adoption (its `config_dir` /
-      `opencode.json`) and re-scaffolds on routine `/govern` re-runs, consistent
+      `opencode.json`) and re-scaffolds on routine `/ductus` re-runs, consistent
       with the 012/028 detect path
 - [x] AC10: The README documents the OpenCode bootstrap and notes that OpenCode loads
       config once — a restart is required after MCP/command changes
@@ -217,17 +217,17 @@ step. Pinning via `.govern.toml` and the manifest strategies apply unchanged.
   `command.hello = { description, template: "Hello $ARGUMENTS" }` — markdown
   commands under `.opencode/command/<name>.md`, body becomes the prompt,
   `$ARGUMENTS` is the argument token. OpenCode **namespaces by subdirectory**: a
-  `command/gov/specify.md` registers as command key `gov/specify`, so `govern`
+  `command/ductus/specify.md` registers as command key `gov/specify`, so `ductus`
   scaffolds to `.opencode/command/{project}/<name>.md` invoked `/{project}/<name>`
   (e.g. `/gov/specify`) — the OpenCode analog of Claude's colon `/{project}:<name>`,
   not Antigravity's flat-prefix workaround. The `opencode` layout's slash-command
-  cleanup glob is the `{project}/` subdirectory under `command/`. `govern`'s gated
+  cleanup glob is the `{project}/` subdirectory under `command/`. `ductus`'s gated
   pipeline ports directly (approval gates stay in-body).
 - **Native rules file.** Verified: OpenCode reads `AGENTS.md` via its
-  `instructions` resolution. `govern` ships no `CLAUDE.md` and no new context file.
+  `instructions` resolution. `ductus` ships no `CLAUDE.md` and no new context file.
 - **MCP discovery — target, scope, mechanism.** Verified: OpenCode reads the
-  project-committed `opencode.json` `mcp` block and **connected to `gvrn`** in the
-  probe (`opencode mcp list` → `✓ gvrn connected`). Local-server shape is
+  project-committed `opencode.json` `mcp` block and **connected to `ductus`** in the
+  probe (`opencode mcp list` → `✓ ductus connected`). Local-server shape is
   `{ "type": "local", "command": [...], "enabled": true }` (`type` required,
   `command` an array). Descriptor: `target` = project `opencode.json` `mcp`;
   `scope` = `project-committed`; `mechanism` = `write-file`. A scriptable
@@ -242,10 +242,10 @@ step. Pinning via `.govern.toml` and the manifest strategies apply unchanged.
   `opencode.json` spanning MCP + permissions is the decisive difference;
   markdown-command files and AGENTS.md reading echo Antigravity but the config
   model matches neither.
-- **Config-file target & gitignore.** Resolved: `govern` writes the project-root
+- **Config-file target & gitignore.** Resolved: `ductus` writes the project-root
   `opencode.json` (the conventional, committed, adopter-authored location), merging
   additively into the `mcp` and `permission` keys and preserving `$schema` and all
-  other keys; if the adopter already keeps config in root `opencode.jsonc`, `govern`
+  other keys; if the adopter already keeps config in root `opencode.jsonc`, `ductus`
   merges into that file rather than creating a second one (plan-phase detection).
   `.opencode/` — the regenerated `command/{project}/` tree — is gitignored, while
   root `opencode.json` stays committed, mirroring Claude's split (gitignored
@@ -253,8 +253,8 @@ step. Pinning via `.govern.toml` and the manifest strategies apply unchanged.
   project-committed MCP posture work; `.opencode/opencode.json` was rejected because
   it would fall under the gitignored `.opencode/` rule and split config from where
   adopters keep it.
-- **MCP posture.** Resolved: `write-file` is the sole mechanism — `govern` writes
-  the gvrn `mcp` block into the committed root `opencode.json` and surfaces **no**
+- **MCP posture.** Resolved: `write-file` is the sole mechanism — `ductus` writes
+  the ductus `mcp` block into the committed root `opencode.json` and surfaces **no**
   registration instruction (descriptor stays `mechanism: write-file`,
   `scope: project-committed`). The only post-adoption user action is restarting
   opencode (config loads once at startup). `opencode mcp add` is **not** part of the
@@ -263,19 +263,19 @@ step. Pinning via `.govern.toml` and the manifest strategies apply unchanged.
   one-liner like Auggie's — surfacing it would reintroduce a manual step the file
   write makes unnecessary. It may earn at most a README footnote as a manual
   alternative.
-- **Permitting the `gvrn` MCP tools without prompts.** Resolved: `govern`'s
-  `configure/opencode.md` pre-allows gvrn's tools with a single glob key
-  `"gvrn*": "allow"` in the `permission` block. Verified: opencode accepts
-  MCP-server-scoped permission keys (`gvrn*` / `gvrn_*` survived `debug config` with
+- **Permitting the `ductus` MCP tools without prompts.** Resolved: `ductus`'s
+  `configure/opencode.md` pre-allows ductus's tools with a single glob key
+  `"ductus*": "allow"` in the `permission` block. Verified: opencode accepts
+  MCP-server-scoped permission keys (`ductus*` / `ductus_*` survived `debug config` with
   no `ConfigInvalidError`); there is **no** dedicated `mcp` permission key, so MCP
-  tools are matched by tool-name patterns. The `gvrn*` prefix glob covers the whole
-  gvrn tool namespace regardless of the exact `<server>_<tool>` separator and as
-  gvrn adds primitives. opencode evaluates the **last** matching rule, so the allow
+  tools are matched by tool-name patterns. The `ductus*` prefix glob covers the whole
+  ductus tool namespace regardless of the exact `<server>_<tool>` separator and as
+  ductus adds primitives. opencode evaluates the **last** matching rule, so the allow
   must be ordered after any broad `*` rule (an implement-time placement detail). The
   exact separator is reconfirmed at implement time; the prefix glob is
   forward-robust.
 - **`merge-permissions` (022) extension vs. generic JSON merge.** Resolved (option
-  A): `govern` implements the `opencode.json` write as a **generic additive
+  A): `ductus` implements the `opencode.json` write as a **generic additive
   JSON-object merge** over the two owned regions (`mcp`, `permission`), preserving
   `$schema` and all adopter keys — **not** an extension of `merge-permissions` to a
   fourth grammar. OpenCode's `permission` is plain `{ tool-name → action }` JSON

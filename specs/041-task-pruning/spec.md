@@ -21,7 +21,7 @@ A feature's `tasks.md` accumulates work items across the whole life of the featu
 
 That accumulation has no durable value. A task's purpose is spent the moment it is complete — the durable record of *what was built* lives in the spec, its scenarios, the code, and git history, not in a checked-off checkbox. The constitution codifies this directly — §tasks-phase classifies `tasks.md` as an ephemeral work-tracking artifact: transient work whose value is spent once complete does not belong in a persistent artifact (the same durability test §bug-handling applies to chores). A bloated `tasks.md` makes the "what's left" view noisy and harder to work from during `/{project}:implement`, and it obscures the small set of genuinely pending items under a wall of finished ones.
 
-`govern` has no command to reclaim that space. `/{project}:prune` fills the gap: a deliberate, confirmed reduction of `tasks.md` back toward a lean working set — or all the way back to the template's initial state — recovering the file's usefulness without losing anything that matters, because history and the spec already hold the record.
+`ductus` has no command to reclaim that space. `/{project}:prune` fills the gap: a deliberate, confirmed reduction of `tasks.md` back toward a lean working set — or all the way back to the template's initial state — recovering the file's usefulness without losing anything that matters, because history and the spec already hold the record.
 
 ## Behavior
 

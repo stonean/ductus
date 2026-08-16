@@ -1,6 +1,6 @@
 # Configuration Rules
 
-Enforceable rules for operator-tunable values, named constants, and environment variables. These rules apply to all projects adopting `govern`, regardless of whether the code is backend or frontend — configuration is the same problem on both surfaces.
+Enforceable rules for operator-tunable values, named constants, and environment variables. These rules apply to all projects adopting `ductus`, regardless of whether the code is backend or frontend — configuration is the same problem on both surfaces.
 
 Rules use RFC 2119 language: **MUST** / **MUST NOT** are enforced by the validate command (errors); **SHOULD** / **SHOULD NOT** are flagged as warnings.
 

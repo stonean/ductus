@@ -63,7 +63,7 @@ The pass runs at five points, all the same code:
 - the pre-commit hook — the backstop for criteria typed by hand in an editor, in the same slot as `gen-spec-deps.sh`.
 - the one-shot backfill migration — the same primitive, run once across the corpus.
 
-So a label is initialized at the first govern write that touches the criteria list, and at latest at commit time. The agent authors the criterion's text and never its number; citing a criterion never requires counting, including in the session that created it.
+So a label is initialized at the first ductus write that touches the criteria list, and at latest at commit time. The agent authors the criterion's text and never its number; citing a criterion never requires counting, including in the session that created it.
 
 The hook invocation edits body text, which no existing generator does — `gen-spec-deps.sh` and `gen-cross-service-refs.sh` maintain frontmatter only. That widening is accepted deliberately: inserting an `AC7:` prefix after a checkbox is mechanical rather than semantic, and the alternative — an audit that reports unlabelled criteria for a human to fix — puts a person back to counting, which is the work this scenario exists to remove.
 
@@ -74,7 +74,7 @@ The question framed this as author-written versus generator-maintained, and both
 
 Deriving it in the primitive avoids both: assignment is deterministic, in-band, and immediate.
 
-This follows the project's direction of putting deterministic work in the runtime rather than in the agent — the same direction [048 — Govern-Acquired Runtime](../../048-govern-acquired-runtime/spec.md) takes by making `gvrn` an artifact the pipeline acquires and version-pins instead of an optional binary on `PATH`. A label is pure arithmetic over a file the runtime already parses; there is no judgment in it to leave with the LLM.
+This follows the project's direction of putting deterministic work in the runtime rather than in the agent — the same direction [048 — Ductus-Acquired Runtime](../../048-govern-acquired-runtime/spec.md) takes by making `ductus` an artifact the pipeline acquires and version-pins instead of an optional binary on `PATH`. A label is pure arithmetic over a file the runtime already parses; there is no judgment in it to leave with the LLM.
 
 Validation is separate from assignment and remains necessary, because a criterion typed by hand in an editor never touches a primitive. The artifact audit gains a check in the shape `check-rule-ids` already has for rule citations: a duplicate label within a spec is a defect, and a label at or below the current maximum is a reuse defect. Assignment is the runtime's, enforcement is the audit's, authoring is the agent's.
 
@@ -95,7 +95,7 @@ Two properties the sweep must preserve:
 - **Existing labels are never renumbered.** `017`'s `AC1`–`AC24` and `018`'s thirteen stay as authored. Renumbering them would break `specs/018-adopter-owned-pre-commit/spec.md:108`'s working cross-spec reference to "017 AC24" — the one thing the hand-rolled convention has already bought.
 - **Body-order numbering makes existing count-derived references correct by construction**, wherever the list has not changed since the reference was written. Anyone who wrote "criterion 12" derived it by counting body order, which is exactly what the backfill assigns. Where a criterion was inserted or removed since, that reference was already wrong and the backfill neither fixes nor worsens it.
 
-Delivery is the migration registry ([027 — Bootstrap migration registry](../../027-bootstrap-migration-registry/spec.md), `framework/migrations.toml`), which already exists to push one-shot artifact migrations to adopter projects on their next `/govern` run. Without it this repo would be labelled while every adopting project stayed unlabelled — a two-tier corpus at the ecosystem level instead of the spec level, which is the same defect the going-forward-only option was rejected for.
+Delivery is the migration registry ([027 — Bootstrap migration registry](../../027-bootstrap-migration-registry/spec.md), `framework/migrations.toml`), which already exists to push one-shot artifact migrations to adopter projects on their next `/ductus` run. Without it this repo would be labelled while every adopting project stayed unlabelled — a two-tier corpus at the ecosystem level instead of the spec level, which is the same defect the going-forward-only option was rejected for.
 
 **Is identifier retirement enforced, or left to authoring discipline?**
 

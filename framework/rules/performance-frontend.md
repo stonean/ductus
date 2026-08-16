@@ -1,12 +1,12 @@
 # Performance Rules — Frontend
 
-Enforceable performance rules for browser-rendered UI. These rules apply to any project with a web frontend adopting `govern`. They derive from Google Core Web Vitals, browser-vendor performance guidance, and HTTP delivery best practices.
+Enforceable performance rules for browser-rendered UI. These rules apply to any project with a web frontend adopting `ductus`. They derive from Google Core Web Vitals, browser-vendor performance guidance, and HTTP delivery best practices.
 
 Rules use RFC 2119 language: **MUST** / **MUST NOT** are enforced by the validate command (errors); **SHOULD** / **SHOULD NOT** are flagged as warnings.
 
 Rule IDs follow the format `FE-{CATEGORY}-{NNN}` and are permanent — once assigned, an ID is never renumbered, even if the rule is moved within the file or deprecated. Categories: `VITALS` (Core Web Vitals budgets), `BUNDLE` (JavaScript/CSS bundle size), `IMAGE` (image delivery), `LOAD` (resource loading and lazy-loading), `FONT` (web font discipline). See `specs/008-security-rules/data-model.md` for the full schema.
 
-Projects without a frontend can pin this file in `.govern.toml` to skip it during `govern` updates.
+Projects without a frontend can pin this file in `.ductus/config.toml` to skip it during `ductus` updates.
 
 ## FE-VITALS — Core Web Vitals Budgets
 

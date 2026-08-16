@@ -65,7 +65,7 @@ The framework is operationalized through slash commands installed during adoptio
 | Refine (add to a spec) | `/amend` |
 | Brownfield (absorb existing reality) | `/log`, `/groom` |
 | Orient | `/target`, `/status`, `/help` |
-| Bootstrap | `/govern`, `/configure` |
+| Bootstrap | `/ductus`, `/configure` |
 
 For full descriptions of each command and the rules each enforces, see `framework/constitution.md` and the command sources in `framework/commands/` and `framework/bootstrap/`.
 

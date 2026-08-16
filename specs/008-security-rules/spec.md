@@ -17,7 +17,7 @@ next-criterion: 29
 
 > **Signpost:** 008 defines the *security instance* of the general rules tier later formalized in [016 — Cross-Cutting Rules](../016-cross-cutting-rules/spec.md). The rule-file format, ID conventions, and validate enforcement defined here remain the canonical reference for any future rule file (observability, performance, accessibility, etc.). See §rules in `framework/constitution.md` for the general framing of rules as a cross-cutting artifact tier alongside specs and scenarios.
 
-Comprehensive, enforceable security rules for backend and frontend development. Distributed to adopting projects via the govern command as two files — `security-backend.md` and `security-frontend.md`. These are rules, not guidelines: the validate command checks implementation against them.
+Comprehensive, enforceable security rules for backend and frontend development. Distributed to adopting projects via the ductus command as two files — `security-backend.md` and `security-frontend.md`. These are rules, not guidelines: the validate command checks implementation against them.
 
 ## Motivation
 
@@ -82,9 +82,9 @@ Rules whose enforcement happens *outside* the code repository (runtime configura
 
 Validate does not probe running infrastructure or parse deployment configs — it confirms the project has documented its approach. Code-pattern Verification (e.g., "every handler accepting user input MUST call a validator before persisting") remains the norm for rules whose enforcement lives in the repository.
 
-## Govern Integration
+## Ductus Integration
 
-Both files are added to the govern file manifest with `update` strategy — governance-owned, always overwritten with the latest version on re-run.
+Both files are added to the ductus file manifest with `update` strategy — governance-owned, always overwritten with the latest version on re-run.
 
 | Source Path | Destination Path |
 | --- | --- |
@@ -93,7 +93,7 @@ Both files are added to the govern file manifest with `update` strategy — gove
 
 Source files live in the governance framework under `framework/rules/`, alongside the constitution and other ship-everything artifacts. Destination is the project's `specs/` directory, alongside `system.md`, `errors.md`, and `events.md` — the other cross-cutting global specs. Projects that do not have a frontend can pin `specs/rules/security-frontend.md` in `.governance.toml` to skip it. Backend rules apply to all projects.
 
-**Local edits will be overwritten.** Because both files use the `update` strategy, any local edits to `specs/rules/security-backend.md` or `specs/rules/security-frontend.md` are discarded on the next `/govern` run. To diverge from the governance-owned ruleset, pin the file in `.governance.toml` — pinned files are never updated. Editing rule files directly without pinning is a path to losing work.
+**Local edits will be overwritten.** Because both files use the `update` strategy, any local edits to `specs/rules/security-backend.md` or `specs/rules/security-frontend.md` are discarded on the next `/ductus` run. To diverge from the governance-owned ruleset, pin the file in `.governance.toml` — pinned files are never updated. Editing rule files directly without pinning is a path to losing work.
 
 ## Validate Integration
 
@@ -113,11 +113,11 @@ Rules with a **runtime or infrastructure dimension** (e.g., "TLS must be enabled
 
 ## Brownfield Adoption
 
-When `/govern` installs the security rule files in a project that already has feature specs, the adopter inherits a backlog: existing specs were written before these rules existed and almost certainly do not address all of them. To avoid dumping that backlog directly on validate (where it would block the next pipeline gate), 008 hooks into the existing brownfield workflow defined by 011 — bugs and findings flow through `specs/inbox.md` and are routed via `/{project}:groom`.
+When `/ductus` installs the security rule files in a project that already has feature specs, the adopter inherits a backlog: existing specs were written before these rules existed and almost certainly do not address all of them. To avoid dumping that backlog directly on validate (where it would block the next pipeline gate), 008 hooks into the existing brownfield workflow defined by 011 — bugs and findings flow through `specs/inbox.md` and are routed via `/{project}:groom`.
 
 ### Trigger
 
-Govern runs a one-time security audit when **both** conditions hold after the file manifest has been processed:
+Ductus runs a one-time security audit when **both** conditions hold after the file manifest has been processed:
 
 - Either `specs/rules/security-backend.md` or `specs/rules/security-frontend.md` was newly **created** by the manifest pass (i.e., not already present, not just updated).
 - The project contains at least one feature spec directory under `specs/` matching the `NNN-*` pattern.
@@ -128,7 +128,7 @@ When neither condition holds — greenfield adoption with no existing specs, or 
 
 For each newly created rule file:
 
-1. Load the rule file, applying the same integrity checks validate uses (well-formed headings, required fields, valid IDs, no duplicates). If the file fails to load, govern reports the load failure and skips the audit for that file — same posture as validate.
+1. Load the rule file, applying the same integrity checks validate uses (well-formed headings, required fields, valid IDs, no duplicates). If the file fails to load, ductus reports the load failure and skips the audit for that file — same posture as validate.
 2. For each MUST/MUST NOT and SHOULD/SHOULD NOT rule whose Verification trigger fires against any artifact under `specs/NNN-*/` (`spec.md`, `spec-and-plan.md`, `plan.md`, scenario files), produce a finding.
 3. Append each finding to `specs/inbox.md` as a new item.
 
@@ -151,13 +151,13 @@ Prefixing every line with the rule ID makes related findings group naturally dur
 
 ### Idempotency
 
-Audit findings are deduplicated against existing inbox content. Before appending, govern scans `specs/inbox.md` for any line beginning with `- [ ] {Rule ID}: {affected artifact path}` (the line up to the first em-dash). If a matching line exists, the new finding is skipped. This makes the audit safe to re-run if a user deletes and re-installs a rule file or otherwise re-triggers the "newly created" path.
+Audit findings are deduplicated against existing inbox content. Before appending, ductus scans `specs/inbox.md` for any line beginning with `- [ ] {Rule ID}: {affected artifact path}` (the line up to the first em-dash). If a matching line exists, the new finding is skipped. This makes the audit safe to re-run if a user deletes and re-installs a rule file or otherwise re-triggers the "newly created" path.
 
 Inbox items already grommed by the user (lines that have been removed or rewritten by `/{project}:groom`) are not re-emitted — once the adopter has triaged a finding, governance does not resurrect it.
 
 ### Reporting
 
-After the audit completes, govern's post-scaffolding output gains a new line in the summary:
+After the audit completes, ductus's post-scaffolding output gains a new line in the summary:
 
 ```text
 {N} security audit items added to specs/inbox.md. Run /{project}:groom to triage.
@@ -167,7 +167,7 @@ When `N == 0` (no new findings), the line is omitted.
 
 ### Why not block validate instead?
 
-A simpler alternative would be: validate runs on existing specs after govern adoption and emits errors as usual. Rejected — for brownfield projects, that produces an immediate validate failure that blocks every pipeline gate until the adopter fixes dozens of legacy specs. The inbox model gives the adopter a real-world path: triage at their own pace, treating each finding as a backlog item rather than a release blocker.
+A simpler alternative would be: validate runs on existing specs after ductus adoption and emits errors as usual. Rejected — for brownfield projects, that produces an immediate validate failure that blocks every pipeline gate until the adopter fixes dozens of legacy specs. The inbox model gives the adopter a real-world path: triage at their own pace, treating each finding as a backlog item rather than a release blocker.
 
 The inbox approach also reuses 011's existing groom workflow rather than inventing baseline files or suppression mechanisms — there is one place backlog items live (`specs/inbox.md`) and one tool to process them (`/{project}:groom`), regardless of whether the source is a bug report, a brownfield spec gap, or a security audit finding.
 
@@ -182,7 +182,7 @@ This connects the principle to its operational detail without duplicating conten
 ## Versioning and Evolution
 
 - Rules are added, modified, or deprecated in the governance repo
-- Adopting projects receive updates on the next `/govern` re-run
+- Adopting projects receive updates on the next `/ductus` re-run
 - Deprecated rules are marked with a `DEPRECATED` label and removal target version rather than deleted immediately, giving projects time to adjust
 - New rules are announced in governance commit messages so adopters can review changes
 
@@ -193,9 +193,9 @@ How validate behaves when the inputs are unusual:
 - **Neither rule file present.** If a project has no `specs/rules/security-backend.md` and no `specs/rules/security-frontend.md` (e.g., both pinned out, or files manually deleted), validate emits a warning: `No security rule files found, skipping security checks.` Validate continues; the security check is non-blocking in this case.
 - **Only one file present.** If a project has only one of the two files (e.g., backend-only project that pinned the frontend file out, or vice versa), validate runs over the present file and emits no finding for the missing one. This is the common case for non-fullstack projects.
 - **Malformed rule file.** A rule file is malformed if any rule is missing a required field (ID, statement, rationale, verification), if any rule's ID does not match the `{surface}-{category}-{NNN}` format, or if the file fails to parse. Validate **blocks** with an error: `Malformed security rule file {path} at {location}: {reason}`. The accompanying file is treated as unloadable; no rules from that file are applied. Rationale: validate's findings must rest on accurate rule data — partial or guessed-at parsing produces unreliable findings.
-- **Stale rule reference.** A spec or plan references a rule ID that does not exist in the current rule files (the rule was removed upstream after `/govern` updated the file). Validate **blocks** with an error: `Spec at {path} references unknown rule {ID}.` The adopter must update or remove the reference before validate will pass. Rationale: stale references silently rot if tolerated.
+- **Stale rule reference.** A spec or plan references a rule ID that does not exist in the current rule files (the rule was removed upstream after `/ductus` updated the file). Validate **blocks** with an error: `Spec at {path} references unknown rule {ID}.` The adopter must update or remove the reference before validate will pass. Rationale: stale references silently rot if tolerated.
 - **Reference to DEPRECATED rule.** A spec or plan references a rule ID that exists but is marked `DEPRECATED`. Validate emits a warning (not an error): `Spec at {path} references deprecated rule {ID}; targeted for removal in {version}.` The reference still satisfies the rule for the duration of the deprecation window. Rationale: deprecation needs a real grace window between the label landing and references becoming invalid; a hard block at deprecation collapses the window to zero.
-- **Local edits overwritten by `/govern`.** The govern command overwrites `specs/security-{backend,frontend}.md` on every run because they use the `update` strategy. This is normal govern behavior, not a security-rules-specific concern, but is called out in **Govern Integration** above so adopters know to use `.governance.toml` pinning rather than local edits when they need to diverge.
+- **Local edits overwritten by `/ductus`.** The ductus command overwrites `specs/security-{backend,frontend}.md` on every run because they use the `update` strategy. This is normal ductus behavior, not a security-rules-specific concern, but is called out in **Ductus Integration** above so adopters know to use `.governance.toml` pinning rather than local edits when they need to diverge.
 - **Duplicate rule IDs in a file.** If two rules in the same file share an ID (a botched edit broke the never-renumber discipline), validate **blocks** with an error: `Duplicate rule ID {ID} in {file}; refusing to load.` The whole file is skipped to prevent ambiguous references — validate cannot tell which of the two rules a spec's reference points to. Rationale: same as malformed file — accurate rule data is non-negotiable.
 
 ## Acceptance Criteria
@@ -208,12 +208,12 @@ How validate behaves when the inputs are unusual:
 - [x] AC4: Rule IDs follow the format `{surface}-{category}-{NNN}` with `{surface}` ∈ `{BE, FE}` and `{NNN}` zero-padded starting at `001`
 - [x] AC5: Rules use RFC 2119 language to distinguish enforced (MUST/MUST NOT) from advisory (SHOULD/SHOULD NOT)
 
-### Govern Integration
+### Ductus Integration
 
-- [x] AC6: Both files appear in the govern file manifest with `update` strategy
-- [x] AC7: The govern command fetches `framework/rules/security-backend.md` and writes it to `specs/rules/security-backend.md` in the project
-- [x] AC8: The govern command fetches `framework/rules/security-frontend.md` and writes it to `specs/rules/security-frontend.md` in the project
-- [x] AC9: Re-running govern updates both files to the latest governance version
+- [x] AC6: Both files appear in the ductus file manifest with `update` strategy
+- [x] AC7: The ductus command fetches `framework/rules/security-backend.md` and writes it to `specs/rules/security-backend.md` in the project
+- [x] AC8: The ductus command fetches `framework/rules/security-frontend.md` and writes it to `specs/rules/security-frontend.md` in the project
+- [x] AC9: Re-running ductus updates both files to the latest governance version
 - [x] AC10: Projects can pin either file in `.governance.toml` to skip updates
 
 ### Validate Integration
@@ -235,12 +235,12 @@ How validate behaves when the inputs are unusual:
 
 ### Brownfield Adoption
 
-- [x] AC22: On a govern run where a security rule file is newly created AND `specs/NNN-*` directories exist, govern audits the existing specs against the rule and writes one inbox item per finding to `specs/inbox.md`
+- [x] AC22: On a ductus run where a security rule file is newly created AND `specs/NNN-*` directories exist, ductus audits the existing specs against the rule and writes one inbox item per finding to `specs/inbox.md`
 - [x] AC23: On a greenfield run (no existing `specs/NNN-*` directories), the audit is silently skipped
 - [x] AC24: On a routine re-run (rule files already present), the audit is silently skipped
 - [x] AC25: Inbox items follow the format `- [ ] {Rule ID}: {affected artifact path} does not address — {one-line summary}`
 - [x] AC26: Audit findings are deduplicated against existing inbox content (no duplicate items emitted on re-trigger)
-- [x] AC27: Govern's post-scaffolding output reports the count of new audit items added (omitted when zero)
+- [x] AC27: Ductus's post-scaffolding output reports the count of new audit items added (omitted when zero)
 
 ### Constitution Reference
 

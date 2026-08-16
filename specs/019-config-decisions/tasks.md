@@ -4,7 +4,7 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is a docume
 
 ## 1. Document the extended `.govern.toml` schema in the bootstrap runbook
 
-- [x] Edit `framework/bootstrap/govern.md` **Project Configuration** section (currently lines ~172–186):
+- [x] Edit `framework/bootstrap/ductus.md` **Project Configuration** section (currently lines ~172–186):
   - Reword the section intro so `.govern.toml` is described as multi-purpose (configuration + persisted decisions), not pin-only.
   - Keep the existing `[pinned]` example and behavior text exactly as today.
   - Add a sibling `[workflows]` example showing `declined_categories = ["Linting", "Formatting"]`.
@@ -14,7 +14,7 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is a docume
 
 ## 2. Add the decline-load step to the workflow recommendation flow
 
-- [x] Edit `framework/bootstrap/govern.md` **Workflow recommendation** flow (currently lines ~481–535).
+- [x] Edit `framework/bootstrap/ductus.md` **Workflow recommendation** flow (currently lines ~481–535).
 - [x] Add a new sub-step **between step 3 (read tech stack) and step 4 (match registry entries)** titled "Load recorded declines" that instructs the agent to:
   - Read `.govern.toml` if present.
   - Parse `[workflows] declined_categories` into a normalized lowercase set.
@@ -53,7 +53,7 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is a docume
 
 ## 6. Create `data-model.md`
 
-- [x] Already drafted as part of `/gov:plan`; verify it lints, references 005, and covers `[pinned]` (existing), `[workflows]` (new), category list, case-insensitive matching, unrecognized entries, empty cases, future-section guidance, and backwards compatibility.
+- [x] Already drafted as part of `/ductus:plan`; verify it lints, references 005, and covers `[pinned]` (existing), `[workflows]` (new), category list, case-insensitive matching, unrecognized entries, empty cases, future-section guidance, and backwards compatibility.
 - [x] **Done when**: `npx markdownlint-cli2 specs/019-config-decisions/data-model.md` passes; the schema declaration matches the runbook prose word-for-word on category names and key names.
 
 ## 7. Update README's `.govern.toml` section
@@ -82,6 +82,6 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is a docume
 
 ## 10. Lint and finalize
 
-- [x] Run `npx markdownlint-cli2` against the entire feature directory and any modified files (`framework/bootstrap/govern.md`, `README.md`, `specs/005-workflows/spec.md`).
+- [x] Run `npx markdownlint-cli2` against the entire feature directory and any modified files (`framework/bootstrap/ductus.md`, `README.md`, `specs/005-workflows/spec.md`).
 - [x] Verify `scripts/gen-spec-deps.sh --dry-run` reports no changes (the dependency on 005 was already added during clarify).
 - [x] **Done when**: all lints pass; the dependencies frontmatter is in sync; spec status is ready to advance to `done`.

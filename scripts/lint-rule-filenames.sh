@@ -6,8 +6,8 @@
 #   - `-frontend.md`  (loaded for frontend stacks)
 #   - `-cross.md`     (loaded for all stacks; cross-cutting)
 #
-# The closed-suffix policy is the surface signal `/gov:review` and
-# `/gov:analyze` use to derive rule-file selection without a hardcoded
+# The closed-suffix policy is the surface signal `/ductus:review` and
+# `/ductus:analyze` use to derive rule-file selection without a hardcoded
 # allowlist (see framework/constitution.md §rules).
 #
 # Source of truth: framework/constitution.md §rules

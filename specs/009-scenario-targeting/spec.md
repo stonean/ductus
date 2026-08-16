@@ -53,7 +53,7 @@ The `target` command accepts an extended syntax to target scenarios:
 - `target {feature}` — targets the feature, clears any scenario (current behavior)
 - `target {feature}/{scenario-slug}` — targets the feature and a specific scenario within it
 
-When targeting a scenario, the command validates that the scenario file exists under the feature's `scenarios/` directory. If the `scenarios/` directory does not exist, it reports "No scenarios exist for this feature. Run `/{project}:amend` to create one." (Per the rename signpost above, this spec drafted the message with `/gov:scenario`; the shipped command is `/{project}:amend`.) If the directory exists but the slug does not match a file, it lists available scenarios and asks the user to choose.
+When targeting a scenario, the command validates that the scenario file exists under the feature's `scenarios/` directory. If the `scenarios/` directory does not exist, it reports "No scenarios exist for this feature. Run `/{project}:amend` to create one." (Per the rename signpost above, this spec drafted the message with `/ductus:scenario`; the shipped command is `/{project}:amend`.) If the directory exists but the slug does not match a file, it lists available scenarios and asks the user to choose.
 
 When targeting a feature that does not exist, it reports "Feature `{feature}` does not exist."
 
@@ -136,8 +136,8 @@ When `clarify` is run with only a feature targeted (no scenario):
 - [x] AC14: `target` command with no arguments informs user how to change focus
 - [x] AC15: `target` command reports no scenarios exist when the feature has no `scenarios/` directory
 - [x] AC16: `target` command reports feature not found when the feature does not exist
-- [x] AC17: Command file parity maintained between `commands/` and `.claude/commands/gov/`
-- [x] AC18: Govern file parity maintained across `govern/` variants
+- [x] AC17: Command file parity maintained between `commands/` and `.claude/commands/ductus/`
+- [x] AC18: Ductus file parity maintained across `ductus/` variants
 
 ## Open Questions
 

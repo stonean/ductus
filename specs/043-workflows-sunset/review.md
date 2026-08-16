@@ -36,7 +36,7 @@ Pure-removal sweep reviewed across all five dimensions against the 11 loaded rul
 
 *None outstanding.* The single capture below was resolved in-window.
 
-- Pre-commit hook produced a silently empty commit (b9ce6e5: staged runtime/ files vanished mid-hook; tree identical to parent). Captured 2026-07-22 during this review, classified a chore, and RESOLVED in-window: .githooks/pre-commit now aborts loudly when the index matches HEAD at hook-end (guard verified on both paths, commit f211919; GOVERN_ALLOW_EMPTY=1 escape hatch). Inbox entry cleared (6ed1774) — nothing left to groom.
+- Pre-commit hook produced a silently empty commit (b9ce6e5: staged runtime/ files vanished mid-hook; tree identical to parent). Captured 2026-07-22 during this review, classified a chore, and RESOLVED in-window: .githooks/pre-commit now aborts loudly when the index matches HEAD at hook-end (guard verified on both paths, commit f211919; DUCTUS_ALLOW_EMPTY=1 escape hatch). Inbox entry cleared (6ed1774) — nothing left to groom.
 
 ## Skipped passes
 

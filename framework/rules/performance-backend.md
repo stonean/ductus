@@ -1,6 +1,6 @@
 # Performance Rules — Backend
 
-Enforceable performance rules for server-side request handling, data access, caching, and resource management. These rules apply to projects adopting `govern` whose surface includes a backend.
+Enforceable performance rules for server-side request handling, data access, caching, and resource management. These rules apply to projects adopting `ductus` whose surface includes a backend.
 
 Rules use RFC 2119 language: **MUST** / **MUST NOT** are enforced by the validate command (errors); **SHOULD** / **SHOULD NOT** are flagged as warnings.
 
@@ -8,7 +8,7 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 Performance rules default to **SHOULD** — thresholds are context-dependent, so most are advisory. A rule is **MUST** only when its absence is a denial-of-service or resource-exhaustion risk regardless of scale. These rules verify **design-time commitments** — what a spec or plan must state — rather than code patterns; `/{project}:analyze` enforces them against feature artifacts. Server-side deadlines, timeouts, retries, and circuit breakers are reliability concerns covered elsewhere, not here.
 
-Projects without a backend can pin this file in `.govern.toml` or set `[rules] surfaces` to exclude the backend surface, and it will be skipped during `govern` updates and reviews.
+Projects without a backend can pin this file in `.ductus/config.toml` or set `[rules] surfaces` to exclude the backend surface, and it will be skipped during `ductus` updates and reviews.
 
 ## BE-QUERY — Query Efficiency
 

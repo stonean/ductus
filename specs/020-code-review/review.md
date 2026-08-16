@@ -13,9 +13,9 @@ skipped-passes: []
 
 ## Summary
 
-Re-review of `020-code-review` after the spec reverted `done → in-progress` in commit `2fd87e4` ("fix(review): one review.md per spec — drop scenarios/SLUG/review.md path"). The body edit was a doc-prose simplification: the documented `/gov:review` output-path contract collapsed from two branches (`specs/NNN-feature/review.md` *or* `specs/NNN-feature/scenarios/SLUG/review.md`) to one (`specs/NNN-feature/review.md` for both feature- and scenario-targeted runs; the `scenario:` frontmatter field records which scenario was reviewed). The change touched three files consistently — `framework/commands/review.md`, `specs/020-code-review/spec.md`, and `specs/020-code-review/data-model.md` — and removed one structural anomaly under `specs/023-govern-refinement/scenarios/living-specs/`.
+Re-review of `020-code-review` after the spec reverted `done → in-progress` in commit `2fd87e4` ("fix(review): one review.md per spec — drop scenarios/SLUG/review.md path"). The body edit was a doc-prose simplification: the documented `/ductus:review` output-path contract collapsed from two branches (`specs/NNN-feature/review.md` *or* `specs/NNN-feature/scenarios/SLUG/review.md`) to one (`specs/NNN-feature/review.md` for both feature- and scenario-targeted runs; the `scenario:` frontmatter field records which scenario was reviewed). The change touched three files consistently — `framework/commands/review.md`, `specs/020-code-review/spec.md`, and `specs/020-code-review/data-model.md` — and removed one structural anomaly under `specs/023-govern-refinement/scenarios/living-specs/`.
 
-No application code in scope (`govern` is a text-first markdown framework). All five passes ran; zero findings across every severity. `blocking: no`. Idempotency holds: this review reproduces the prior pass's structure modulo timestamps and `reviewed-against`.
+No application code in scope (`ductus` is a text-first markdown framework). All five passes ran; zero findings across every severity. `blocking: no`. Idempotency holds: this review reproduces the prior pass's structure modulo timestamps and `reviewed-against`.
 
 ## MUST violations (blocking)
 
@@ -41,7 +41,7 @@ No application code in scope (`govern` is a text-first markdown framework). All 
 
 ### Security
 
-No security-sensitive surface introduced. The doc-prose change adds no new HTTP, auth, DOM, secrets, or env-var handling; no `eval`, no curl, no user-controlled input. Loaded rule file `configuration-cross.md` targets operator-tunable values in code — none introduced. `security-backend.md`, `security-frontend.md`, `api-backend.md`, `accessibility-frontend.md`, `performance-frontend.md` filtered out by stack (no backend/frontend code in `govern`'s framework surface — see AGENTS.md Tech Stack).
+No security-sensitive surface introduced. The doc-prose change adds no new HTTP, auth, DOM, secrets, or env-var handling; no `eval`, no curl, no user-controlled input. Loaded rule file `configuration-cross.md` targets operator-tunable values in code — none introduced. `security-backend.md`, `security-frontend.md`, `api-backend.md`, `accessibility-frontend.md`, `performance-frontend.md` filtered out by stack (no backend/frontend code in `ductus`'s framework surface — see AGENTS.md Tech Stack).
 
 ### Reuse
 
@@ -49,11 +49,11 @@ The change *removes* a duplicated path branch (the "or scenarios/SLUG/review.md"
 
 ### Quality
 
-Doc-prose simplification preserves the established `review.md` artifact contract: deterministic regeneration, frontmatter shape, blocking semantics, waiver processing. The narrowed path contract is internally consistent — the `scenario:` frontmatter field already existed in the data-model to record scenario context, and re-running `/gov:review` already supersedes the prior report wholesale. No edge cases newly exposed.
+Doc-prose simplification preserves the established `review.md` artifact contract: deterministic regeneration, frontmatter shape, blocking semantics, waiver processing. The narrowed path contract is internally consistent — the `scenario:` frontmatter field already existed in the data-model to record scenario context, and re-running `/ductus:review` already supersedes the prior report wholesale. No edge cases newly exposed.
 
 ### Efficiency
 
-No performance surface — `/gov:review` runs once per invocation; the path change does not affect compute or I/O cost.
+No performance surface — `/ductus:review` runs once per invocation; the path change does not affect compute or I/O cost.
 
 ### Simplicity
 
@@ -62,4 +62,4 @@ The diff is itself a simplicity-pass win: one path is simpler than two paths plu
 ## Notes
 
 - Prior pass (`3d7c50b`, 2026-05-10) found zero violations across all five passes; this re-pass continues that posture. The doc-prose change did not introduce new surface to flag.
-- The `/gov:review` invariants enumerated in 020 (three-mechanism blocking gate, deterministic regeneration, waiver-anchor semantics) are unchanged by this edit; the only contract change is the artifact path.
+- The `/ductus:review` invariants enumerated in 020 (three-mechanism blocking gate, deterministic regeneration, waiver-anchor semantics) are unchanged by this edit; the only contract change is the artifact path.

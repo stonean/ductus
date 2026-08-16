@@ -6,7 +6,7 @@ are markdown/JSON artifacts (no database).
 
 ## Agent Registry (generalized)
 
-The registry in `framework/bootstrap/govern.md` §Agent Registry gains a `layout`
+The registry in `framework/bootstrap/ductus.md` §Agent Registry gains a `layout`
 column. Existing fields are unchanged; `layout` selects the derived-value set.
 
 | Field | Type | Notes |
@@ -24,7 +24,7 @@ column. Existing fields are unchanged; `layout` selects the derived-value set.
 | --- | --- | --- |
 | Command/skill path | `{config_dir}/commands/{project}/<name>.md` | `.agents/skills/{project}-<name>/SKILL.md` |
 | Invocation | `/{project}:<name>` | `/{project}-<name>` |
-| `govern` install path | `{config_dir}/commands/govern.md` | `.agents/skills/govern/SKILL.md` |
+| `ductus` install path | `{config_dir}/commands/ductus.md` | `.agents/skills/ductus/SKILL.md` |
 | MCP-wiring file | `.mcp.json` | `.agents/mcp_config.json` |
 | Settings file | `{config_dir}/settings.local.json` | `.agents/settings.json` |
 | Permission shape | `permissions.allow/deny` (Claude) / `toolPermissions[]` (Auggie) | `permissions.allow/deny/ask` (action grammar) |
@@ -52,18 +52,18 @@ description: <one-line, carried from the source command's frontmatter>
 - `name` — flat, project-prefixed; drives the `/{project}-<name>` invocation.
 - `description` — lifted from the source `framework/commands/<name>.md`
   frontmatter.
-- `govern` installer skill keeps `{project}` / `{cli-config-dir}` literal.
+- `ductus` installer skill keeps `{project}` / `{cli-config-dir}` literal.
 
 ## `.agents/mcp_config.json`
 
-gvrn server definition (local stdio). Additive: govern adds the `gvrn` key if
+ductus server definition (local stdio). Additive: ductus adds the `ductus` key if
 absent, preserving any adopter servers.
 
 ```json
 {
   "mcpServers": {
-    "gvrn": {
-      "command": "gvrn",
+    "ductus": {
+      "command": "ductus",
       "args": ["mcp"]
     }
   }
@@ -73,14 +73,14 @@ absent, preserving any adopter servers.
 ## `.agents/settings.json`
 
 Permissions in Antigravity's action grammar. Three arrays; entries are
-`action(target)` strings. Additive merge — govern installs the canonical set and
+`action(target)` strings. Additive merge — ductus installs the canonical set and
 dedups, preserving adopter entries (mirrors the Claude/Auggie configure posture).
 
 ```json
 {
   "permissions": {
     "allow": [
-      "mcp(gvrn/*)",
+      "mcp(ductus/*)",
       "command(git add)",
       "command(git commit)",
       "command(curl)",
@@ -96,17 +96,17 @@ dedups, preserving adopter entries (mirrors the Claude/Auggie configure posture)
 }
 ```
 
-- `mcp(gvrn/*)` — one entry covers every gvrn tool (vs Claude's per-tool list);
+- `mcp(ductus/*)` — one entry covers every ductus tool (vs Claude's per-tool list);
   emitted by `gen-configure-mcp.sh`.
 - `command(<prefix>)` — token-prefix match (anchored per-token regex).
 - `read_file`/`write_file` — generally omitted; workspace files auto-allowed.
-- Global form lives at `~/.gemini/antigravity-cli/settings.json`; govern targets
+- Global form lives at `~/.gemini/antigravity-cli/settings.json`; ductus targets
   the workspace `.agents/settings.json`.
 
 ## Notes
 
-- Detection (`/govern` §Agent Selection) is unchanged — it keys on `config_dir`
+- Detection (`/ductus` §Agent Selection) is unchanged — it keys on `config_dir`
   existing in the project (`.agents/` for Antigravity).
 - The global plugin schema (`plugin.json` + `skills/` + `rules/` +
   `mcp_config.json` under `~/.gemini/config/plugins/`) is **out of scope** — the
-  deferred marketplace path, not govern's adoption surface.
+  deferred marketplace path, not ductus's adoption surface.

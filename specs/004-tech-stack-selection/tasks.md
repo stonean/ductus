@@ -31,7 +31,7 @@ Done when: `init.md`'s scaffolding steps populate the AGENTS.md Tech Stack table
 
 - [x] Adjust Tech Stack comment block so it can be cleanly replaced by init when selections are made
 
-Done when: the AGENTS.md template's Tech Stack comment block is shaped so `/gov:init` can cleanly replace it when selections are made.
+Done when: the AGENTS.md template's Tech Stack comment block is shaped so `/ductus:init` can cleanly replace it when selections are made.
 
 ## 4. Update init.md display section
 
@@ -49,8 +49,8 @@ Done when: `npx markdownlint-cli2` passes on all modified files and skipping eve
 
 ## 6. Framework-implies-language inference
 
-- [x] `/gov:init` asks the framework before the language in each section and infers the language when the framework determines it (Rails → Ruby, Django → Python, Gin → Go, …)
+- [x] `/ductus:init` asks the framework before the language in each section and infers the language when the framework determines it (Rails → Ruby, Django → Python, Gin → Go, …)
 - [x] The inferred language is still written to the AGENTS.md Tech Stack table, so `backend_language`-triggered workflows (RuboCop, RSpec) still match
 - [x] The language question is still asked when the framework is skipped, answered "Other"/unrecognized, or is language-ambiguous (Node → TS/JS, JVM → Java/Kotlin)
 
-Done when: `/gov:init` does not ask the language question when the chosen framework unambiguously implies it, per `scenarios/framework-implies-language.md`.
+Done when: `/ductus:init` does not ask the language question when the chosen framework unambiguously implies it, per `scenarios/framework-implies-language.md`.

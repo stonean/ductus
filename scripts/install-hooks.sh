@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install govern repo's git hooks by setting core.hooksPath.
+# Install ductus repo's git hooks by setting core.hooksPath.
 #
 # Idempotent: safe to run repeatedly. The actual hook scripts live in
 # .githooks/ and are part of the repo.

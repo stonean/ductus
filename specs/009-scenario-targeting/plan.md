@@ -44,11 +44,11 @@ Specify, plan, and validate read the session file for the feature but disregard 
 
 ### Command file parity maintained via paired edits
 
-Every command change is applied to both `commands/` (templates with `{project}` and `{cli-config-dir}` placeholders) and `.claude/commands/gov/` (governance-specific copies with `gov` and `.claude`). The govern file manifest already includes these command files, so adopting projects get the updates on next `/govern` run.
+Every command change is applied to both `commands/` (templates with `{project}` and `{cli-config-dir}` placeholders) and `.claude/commands/ductus/` (governance-specific copies with `gov` and `.claude`). The ductus file manifest already includes these command files, so adopting projects get the updates on next `/ductus` run.
 
-### Govern file parity maintained across variants
+### Ductus file parity maintained across variants
 
-The scenario template's Open Questions section is already in the govern file manifest (`templates/scenario.md` → `specs/templates/scenario.md`). No new files need to be added to the manifest. The govern files themselves need no structural changes — only the command files they reference are updated.
+The scenario template's Open Questions section is already in the ductus file manifest (`templates/scenario.md` → `specs/templates/scenario.md`). No new files need to be added to the manifest. The ductus files themselves need no structural changes — only the command files they reference are updated.
 
 ## Affected Files
 
@@ -61,12 +61,12 @@ The scenario template's Open Questions section is already in the govern file man
 | `commands/clarify.md` | Modify | Add scenario-targeted behavior (resolve scenario open questions, skip spec questions) |
 | `commands/status.md` | Modify | Add scenario-level detail display when scenario is targeted |
 | `commands/implement.md` | Modify | Add scenario context loading when scenario is targeted |
-| `.claude/commands/gov/target.md` | Modify | Re-derive from updated `commands/target.md` |
-| `.claude/commands/gov/scenario.md` | Modify | Re-derive from updated `commands/scenario.md` |
-| `.claude/commands/gov/question.md` | Verify | Re-derive from updated `commands/question.md` if changed |
-| `.claude/commands/gov/clarify.md` | Modify | Re-derive from updated `commands/clarify.md` |
-| `.claude/commands/gov/status.md` | Modify | Re-derive from updated `commands/status.md` |
-| `.claude/commands/gov/implement.md` | Modify | Re-derive from updated `commands/implement.md` |
+| `.claude/commands/ductus/target.md` | Modify | Re-derive from updated `commands/target.md` |
+| `.claude/commands/ductus/scenario.md` | Modify | Re-derive from updated `commands/scenario.md` |
+| `.claude/commands/ductus/question.md` | Verify | Re-derive from updated `commands/question.md` if changed |
+| `.claude/commands/ductus/clarify.md` | Modify | Re-derive from updated `commands/clarify.md` |
+| `.claude/commands/ductus/status.md` | Modify | Re-derive from updated `commands/status.md` |
+| `.claude/commands/ductus/implement.md` | Modify | Re-derive from updated `commands/implement.md` |
 
 ## Trade-offs
 

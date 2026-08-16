@@ -16,16 +16,16 @@ rather than classifying by path prefix — the discipline
 [045's data-model](../045-decision-state-drift-detection/data-model.md) records
 as the correction to an earlier mis-triage — splits them three ways:
 
-- **19 adopter-scope.** Paths `govern` creates in an adopter's checkout
-  (`.govern/constitution.md`, `specs/rules/*`, `.githooks/govern-pre-commit`,
+- **19 adopter-scope.** Paths `ductus` creates in an adopter's checkout
+  (`.ductus/constitution.md`, `specs/rules/*`, `.githooks/ductus-pre-commit`,
   `specs/templates/`, `specs/system.md`). 045 already triaged these and ruled
   them "a dogfooding artifact, not a check defect", noting the class "does not
   generalize to the projects this check ships to". **Deliberately unaddressed
-  here** — suppressing them would mean shipping govern-repo-only machinery, and
+  here** — suppressing them would mean shipping ductus-repo-only machinery, and
   it would key off a manifest an adopter does not have, so it would never
   engage where the check actually runs.
 - **2 true positives.** 005's `framework/workflows/` (sunset by 043) and 025's
-  `scripts/lint-govern-toml.sh` (never built). These are what the family exists
+  `scripts/lint-ductus-toml.sh` (never built). These are what the family exists
   to surface; they are spec-level drift, not check defects.
 - **4 residual false positives.** Three phrasings the marker list missed. Those
   are this scenario.

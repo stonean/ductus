@@ -4,15 +4,15 @@ description: Audit framework artifacts for cross-doc, cross-manifest, cross-regi
 
 <!-- audit:ignore-placeholders:file -->
 <!-- This command is maintainer-only and not scaffolded into adopter projects,
-     so its /gov: references are literal, not templating drift. -->
+     so its /ductus: references are literal, not templating drift. -->
 
 # Audit
 
-Audit `govern`'s own framework artifacts for the kinds of drift `/gov:analyze` is not scoped to catch. Maintainer-only — adopters never invoke this command. Runs without a session target.
+Audit `ductus`'s own framework artifacts for the kinds of drift `/ductus:analyze` is not scoped to catch. Maintainer-only — adopters never invoke this command. Runs without a session target.
 
 ## Purpose
 
-`/gov:analyze` audits a single feature spec's artifacts against each other (frontmatter, plan, tasks, data-model, dependencies, rule citations). Its contract is bounded to one feature directory plus declared dependencies, so it cannot see drift across the framework: pipeline diagrams in the constitution vs. the introduction, `configure/claude.md` vs. `configure/auggie.md` canonical permission set, migration registry vs. procedure files, etc.
+`/ductus:analyze` audits a single feature spec's artifacts against each other (frontmatter, plan, tasks, data-model, dependencies, rule citations). Its contract is bounded to one feature directory plus declared dependencies, so it cannot see drift across the framework: pipeline diagrams in the constitution vs. the introduction, `configure/claude.md` vs. `configure/auggie.md` canonical permission set, migration registry vs. procedure files, etc.
 
 `/audit` fills that gap. It loads no rule files — its checks are about *framework consistency*, not spec quality. Each check family produces structured findings on stdout. Exit code is binary: `0` when no findings, `1` when any finding is present. CI uses the exit code as a release gate.
 
@@ -22,11 +22,11 @@ See [spec 026](../../specs/026-framework-self-audit/spec.md) for the design and 
 
 - Read-only against the framework's cross-cutting artifacts. Do NOT modify any file.
 - No session target required; the command operates on the framework as a whole.
-- Reference: §drift-prevention, §principles. The constitution is loaded by other pipeline commands; `/audit` re-reads it independently because it runs without `/gov:target`.
+- Reference: §drift-prevention, §principles. The constitution is loaded by other pipeline commands; `/audit` re-reads it independently because it runs without `/ductus:target`.
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional gvrn runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no gvrn MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write).
+> **For agent runtimes**: the Invoke steps below call the MCP tools of the optional ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. With no ductus MCP server registered, walk the same prose using the host file-reading tools (Read, Edit, Write).
 
 1. Invoke `run-generator` against `scripts/audit/run-all.sh` — the orchestrator that runs the check-zero precondition pass followed by the family check scripts. The script emits findings to stdout under per-family headers and exits 0 (no findings) or 1 (any family produced findings).
 
@@ -49,9 +49,9 @@ When the runtime is not on `PATH`, walk the same scripts directly. Each prints f
 11. Run `scripts/audit/consolidation-pair.sh` (Family 11).
 12. Run `scripts/audit/fixture-session-shape.sh` (Family 12).
 13. Run `scripts/audit/runtime-hardcoded-paths.sh` (Family 13).
-14. Run `scripts/audit/installer-registry-parity.sh` (Family 14 — `install.sh` agent list and dest paths match the `govern.md` **Agent Registry**, and each agent's pre-seeded settings file matches its registry `settings_template`).
-15. Run `scripts/audit/runtime-probe-parity.sh` (Family 15 — the gvrn binary probe is in parity between each agent's **Agent Registry** `settings_template` seed and its `configure/{key}.md` set: present in both or neither, never one only).
-16. Run `scripts/audit/installer-command-parity.sh` (Family 16 — the `/govern` **Per-Agent Scaffolding** slash-command manifest lists exactly the `framework/commands/*.md` files, minus the maintainer-only commands (`audit`) intentionally not shipped to adopters).
+14. Run `scripts/audit/installer-registry-parity.sh` (Family 14 — `install.sh` agent list and dest paths match the `ductus.md` **Agent Registry**, and each agent's pre-seeded settings file matches its registry `settings_template`).
+15. Run `scripts/audit/runtime-probe-parity.sh` (Family 15 — the ductus binary probe is in parity between each agent's **Agent Registry** `settings_template` seed and its `configure/{key}.md` set: present in both or neither, never one only).
+16. Run `scripts/audit/installer-command-parity.sh` (Family 16 — the `/ductus` **Per-Agent Scaffolding** slash-command manifest lists exactly the `framework/commands/*.md` files, minus the maintainer-only commands (`audit`) intentionally not shipped to adopters).
 
 17. Run `scripts/audit/host-namespace-parity.sh` (Family 17 — the namespace the runtime renders (`[host] project`, else the repo directory basename, as `Host::load` resolves it) matches a namespace actually installed under an agent config dir, so no rendered next-action names a namespace the operator cannot invoke).
 
@@ -61,20 +61,20 @@ When the runtime is not on `PATH`, walk the same scripts directly. Each prints f
 
 20. Run `scripts/audit/version-agreement.sh` (Family 20 — the repo-root `version` pin, `runtime/Cargo.toml`, and the newest `runtime/CHANGELOG.md` heading carry the same SemVer. The release tag is deliberately not compared: the release commit precedes the tag push, so asserting it here would fail every release mid-flight).
 
-## Boundary with `/gov:analyze`
+## Boundary with `/ductus:analyze`
 
 | Concern | Owner |
 | --- | --- |
-| Spec's frontmatter parses; required fields present | `/gov:analyze` |
-| Dependency graph well-formed for one feature | `/gov:analyze` |
-| Rule IDs cited in spec exist in loaded rule files | `/gov:analyze` |
-| Plan / tasks / data-model present per status tier | `/gov:analyze` |
+| Spec's frontmatter parses; required fields present | `/ductus:analyze` |
+| Dependency graph well-formed for one feature | `/ductus:analyze` |
+| Rule IDs cited in spec exist in loaded rule files | `/ductus:analyze` |
+| Plan / tasks / data-model present per status tier | `/ductus:analyze` |
 | Cross-doc claim consistency (pipeline diagrams, back-edge wording, etc.) | `/audit` |
 | Manifest / permission / registry parity | `/audit` |
 | Sibling-spec coupling (bundling candidates) | `/audit` |
 | Introducing-spec body drift (current-tense prose around renamed names) | `/audit` |
 
-Rule of thumb: `/gov:analyze` reads within one spec's directory plus its declared dependencies; `/audit` reads across the framework's cross-cutting artifacts. The two never duplicate a check.
+Rule of thumb: `/ductus:analyze` reads within one spec's directory plus its declared dependencies; `/audit` reads across the framework's cross-cutting artifacts. The two never duplicate a check.
 
 ## Output
 

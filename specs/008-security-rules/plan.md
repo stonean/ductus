@@ -6,7 +6,7 @@ title: "008-security-rules — plan"
 
 ## Overview
 
-Operationalize the constitution's "Secure" principle by shipping two rule files (`security-backend.md`, `security-frontend.md`), wiring them into govern's distribution manifest, extending validate to enforce them, and updating the constitution to point at them. The work is entirely prompt-and-data — markdown rule files, an extended validate prompt, and a constitution edit. No application code.
+Operationalize the constitution's "Secure" principle by shipping two rule files (`security-backend.md`, `security-frontend.md`), wiring them into ductus's distribution manifest, extending validate to enforce them, and updating the constitution to point at them. The work is entirely prompt-and-data — markdown rule files, an extended validate prompt, and a constitution edit. No application code.
 
 ## Technical Decisions
 
@@ -16,7 +16,7 @@ Per spec, sources are `framework/rules/security-backend.md` and `framework/rules
 
 ### Project destination is `specs/`
 
-Per spec, govern writes both files to `specs/security-{backend,frontend}.md` in adopted projects. Sits alongside `system.md`, `errors.md`, `events.md` — the other cross-cutting global specs. Keeps the project root clean and groups all "applies project-wide" docs together.
+Per spec, ductus writes both files to `specs/security-{backend,frontend}.md` in adopted projects. Sits alongside `system.md`, `errors.md`, `events.md` — the other cross-cutting global specs. Keeps the project root clean and groups all "applies project-wide" docs together.
 
 ### Rule entry format is heading-anchored markdown
 
@@ -100,11 +100,11 @@ The trade-off: validate's accuracy depends on the rule author's Verification phr
 
 Each edge case maps directly to a checkbox in validate's check list, so violations show up grouped under the standard hard-fail/blocking/advisory headers in validate's report.
 
-### Brownfield audit lives in govern, not validate
+### Brownfield audit lives in ductus, not validate
 
-When `/govern` lands rule files in a project with existing `specs/NNN-*/` directories, it runs a one-time audit and writes findings to `specs/inbox.md`. The adopter then walks the inbox via `/{project}:groom`. This reuses 011's brownfield infrastructure rather than introducing baseline files or suppression mechanisms.
+When `/ductus` lands rule files in a project with existing `specs/NNN-*/` directories, it runs a one-time audit and writes findings to `specs/inbox.md`. The adopter then walks the inbox via `/{project}:groom`. This reuses 011's brownfield infrastructure rather than introducing baseline files or suppression mechanisms.
 
-`framework/bootstrap/govern.md` gains a new top-level section, **Security audit (brownfield)**, slotted after **Shared Files** (where the manifest deposits the rule files) and before **Per-Agent Scaffolding**. The section's logic:
+`framework/bootstrap/ductus.md` gains a new top-level section, **Security audit (brownfield)**, slotted after **Shared Files** (where the manifest deposits the rule files) and before **Per-Agent Scaffolding**. The section's logic:
 
 1. Detect the trigger: at least one of `specs/rules/security-backend.md` or `specs/rules/security-frontend.md` was newly created (not updated) by the manifest pass, AND at least one `specs/NNN-*` directory exists.
 2. Load the newly created rule file(s) using the same integrity checks validate uses. If a file fails to load, report and skip the audit for that file.
@@ -112,9 +112,9 @@ When `/govern` lands rule files in a project with existing `specs/NNN-*/` direct
 4. Append findings to `specs/inbox.md`, deduplicating against existing lines that begin with the same `{Rule ID}: {artifact path}` prefix.
 5. Report the audit summary line (`{N} security audit items added to specs/inbox.md.`) in the post-scaffolding output, omitted when N is zero.
 
-Audit logic mirrors validate's per-rule check logic. Both call into the same Verification-evaluation pattern; the difference is the *output sink* (inbox vs. validate's findings report). For implementation, the validate prompt and the govern audit section can share a written description of the per-rule check (referenced rather than duplicated) — the rule-evaluation procedure lives in one place, both consumers reference it.
+Audit logic mirrors validate's per-rule check logic. Both call into the same Verification-evaluation pattern; the difference is the *output sink* (inbox vs. validate's findings report). For implementation, the validate prompt and the ductus audit section can share a written description of the per-rule check (referenced rather than duplicated) — the rule-evaluation procedure lives in one place, both consumers reference it.
 
-Trade-off: govern gains complexity from this audit step, but the alternative (adopters running validate post-adoption and manually piping output to log) is high-friction and fragile. Auto-audit on first install matches the brownfield ergonomic that 011 already established.
+Trade-off: ductus gains complexity from this audit step, but the alternative (adopters running validate post-adoption and manually piping output to log) is high-friction and fragile. Auto-audit on first install matches the brownfield ergonomic that 011 already established.
 
 ### Constitution gets a one-line append
 
@@ -138,7 +138,7 @@ Like 005's registry, the rule entry is structured data even though it lives in m
 | --- | --- | --- |
 | `framework/rules/security-backend.md` | Create | Starter set of backend security rules |
 | `framework/rules/security-frontend.md` | Create | Starter set of frontend security rules |
-| `framework/bootstrap/govern.md` | Modify | Add 2 rows to **Governance-owned shared files (strategy: update)** mapping `framework/rules/security-{backend,frontend}.md` → `specs/security-{backend,frontend}.md`. Add a new **Security audit (brownfield)** section after **Shared Files** and before **Per-Agent Scaffolding**, plus an audit-summary line in **Post-Scaffolding Output**. |
+| `framework/bootstrap/ductus.md` | Modify | Add 2 rows to **Governance-owned shared files (strategy: update)** mapping `framework/rules/security-{backend,frontend}.md` → `specs/security-{backend,frontend}.md`. Add a new **Security audit (brownfield)** section after **Shared Files** and before **Per-Agent Scaffolding**, plus an audit-summary line in **Post-Scaffolding Output**. |
 | `framework/commands/analyze.md` | Modify | Add **Security rules** check section codifying the 7 edge cases and the contextual matching rule |
 | `framework/constitution.md` | Modify | Append the rule-files reference to the "Secure" principle |
 | `specs/008-security-rules/data-model.md` | Create | Schema for rule entries (fields, ID format, category enum, Verification phrasing convention) |

@@ -1,13 +1,15 @@
 name: runtime-release
 
 # Tag-triggered cross-compile + GitHub release upload for the
-# deterministic runtime binary. Tag scheme: gvrn-v<MAJOR>.<MINOR>.<PATCH>.
+# deterministic runtime binary. Tag scheme: ductus-v<MAJOR>.<MINOR>.<PATCH>.
+# Releases before 0.28.0 were tagged gvrn-v*; those tags and their assets are
+# left exactly as published (spec 049).
 # The release notes are sourced from runtime/CHANGELOG.md.
 
 on:
   push:
     tags:
-      - 'gvrn-v*'
+      - 'ductus-v*'
 
 permissions:
   contents: write
@@ -96,7 +98,7 @@ jobs:
         if: matrix.os != 'ubuntu-latest' || !matrix.cross
         shell: bash
         run: |
-          ./target/${{ matrix.target }}/release/gvrn${{ matrix.ext }} --version
+          ./target/${{ matrix.target }}/release/ductus${{ matrix.ext }} --version
 
       # One archive format on every platform. Windows published `.zip` until
       # spec 048; `.tar.gz` everywhere means acquisition extracts with `tar`
@@ -106,15 +108,15 @@ jobs:
       #
       # `shell: bash` on Windows is Git Bash, which supplies tar and shasum —
       # so this is one step rather than a per-OS pair. The archived binary
-      # keeps its platform name (`gvrn.exe` on Windows), which acquisition
+      # keeps its platform name (`ductus.exe` on Windows), which acquisition
       # relies on when it installs into the store.
       - name: Package (tar.gz)
         shell: bash
         run: |
           set -euo pipefail
           cd target/${{ matrix.target }}/release
-          archive="gvrn-${{ matrix.target }}.tar.gz"
-          tar -czf "$archive" "gvrn${{ matrix.ext }}"
+          archive="ductus-${{ matrix.target }}.tar.gz"
+          tar -czf "$archive" "ductus${{ matrix.ext }}"
           # No single checksum command spans the three runner images: macOS
           # ships `shasum` and not `sha256sum`, Git Bash on windows-latest
           # ships coreutils `sha256sum`, Linux has both. Probe rather than
@@ -137,14 +139,14 @@ jobs:
       # adopter's bootstrap — verify the digest, extract with `tar`, execute
       # the binary — so a packaging change that breaks acquisition fails here,
       # on the release that introduced it, instead of in someone's first
-      # `/govern` run. It is the only place the Windows path can be exercised:
+      # `/ductus` run. It is the only place the Windows path can be exercised:
       # the release workflow is the only job that runs on windows-latest.
       - name: Verify the archive extracts and runs
         shell: bash
         run: |
           set -euo pipefail
           cd target/${{ matrix.target }}/release
-          archive="gvrn-${{ matrix.target }}.tar.gz"
+          archive="ductus-${{ matrix.target }}.tar.gz"
           if command -v shasum > /dev/null; then
             shasum -a 256 -c "${archive}.sha256"
           else
@@ -152,11 +154,11 @@ jobs:
           fi
           probe="$(mktemp -d)"
           tar -xzf "$archive" -C "$probe"
-          test -f "$probe/gvrn${{ matrix.ext }}"
+          test -f "$probe/ductus${{ matrix.ext }}"
           # A cross-compiled binary cannot execute on the builder, matching
           # the existing smoke test's condition.
           if [ "${{ matrix.cross }}" != "true" ]; then
-            "$probe/gvrn${{ matrix.ext }}" --version
+            "$probe/ductus${{ matrix.ext }}" --version
           fi
 
       # Assets are STAGED as workflow artifacts, never uploaded to the release
@@ -171,8 +173,8 @@ jobs:
         with:
           name: release-asset-${{ matrix.target }}
           path: |
-            runtime/target/${{ matrix.target }}/release/gvrn-${{ matrix.target }}.tar.gz
-            runtime/target/${{ matrix.target }}/release/gvrn-${{ matrix.target }}.tar.gz.sha256
+            runtime/target/${{ matrix.target }}/release/ductus-${{ matrix.target }}.tar.gz
+            runtime/target/${{ matrix.target }}/release/ductus-${{ matrix.target }}.tar.gz.sha256
           if-no-files-found: error
           retention-days: 1
 
@@ -213,7 +215,7 @@ jobs:
           set -euo pipefail
           missing=0
           for target in $REQUIRED_TARGETS; do
-            archive="staged/gvrn-${target}.tar.gz"
+            archive="staged/ductus-${target}.tar.gz"
             if [ ! -f "$archive" ]; then
               echo "::error::no release archive for ${target}"
               missing=1
@@ -267,15 +269,15 @@ jobs:
       # default naming has varied across cargo-cyclonedx versions.
       - name: Generate SBOM
         run: |
-          cargo cyclonedx --format json --override-filename gvrn.cdx
-          shasum -a 256 gvrn.cdx.json > gvrn.cdx.json.sha256
+          cargo cyclonedx --format json --override-filename ductus.cdx
+          shasum -a 256 ductus.cdx.json > ductus.cdx.json.sha256
 
       - name: Upload SBOM to release
         uses: softprops/action-gh-release@v3
         with:
           files: |
-            runtime/gvrn.cdx.json
-            runtime/gvrn.cdx.json.sha256
+            runtime/ductus.cdx.json
+            runtime/ductus.cdx.json.sha256
 
   publish:
     name: Publish to crates.io

@@ -29,13 +29,13 @@ Tasks derived from the [plan](plan.md). Complete in order. Phase 1 must finish b
 
 These tasks may proceed in parallel within a session. Each command file is touched once. Tasks 11–14 are audits — only modify if the command actually reads or writes spec/scenario metadata.
 
-### 3. Update `/gov:specify`
+### 3. Update `/ductus:specify`
 
 - [x] Update `framework/commands/specify.md` to write spec metadata as YAML frontmatter rather than bold-prefix lines.
 - [x] Add a tag prompt step: after the lightweight-track question and before file creation, instruct the command to read existing `tags` values from sibling specs in `specs/*/spec.md` and `specs/*/spec-and-plan.md` (frontmatter), display them as suggestions, and prompt the author for one or more tags. The author may pick from suggestions, enter new tags, or skip (writes `tags: []`).
 - [x] **Done when:** the command instructions describe frontmatter-writing and the tag prompt; file lints clean.
 
-### 4. Update `/gov:clarify`
+### 4. Update `/ductus:clarify`
 
 - [x] Update `framework/commands/clarify.md` to read the spec status from the YAML frontmatter `status` field rather than the `**Status:** {value}` line.
 - [x] Update the status-write step (advance to `clarified`) to update the frontmatter field.
@@ -43,29 +43,29 @@ These tasks may proceed in parallel within a session. Each command file is touch
 - [x] Apply the same frontmatter parsing for the scenario-targeted path (`spec-ref` from frontmatter).
 - [x] **Done when:** the command instructions read and write frontmatter, the advisory is described, and the file lints clean.
 
-### 5. Update `/gov:plan`
+### 5. Update `/ductus:plan`
 
 - [x] Update `framework/commands/plan.md` to read the spec status from frontmatter and write the status update on advance to `planned` to the frontmatter field.
 - [x] **Done when:** instructions reference frontmatter; file lints clean.
 
-### 6. Update `/gov:implement`
+### 6. Update `/ductus:implement`
 
 - [x] Update `framework/commands/implement.md` to read/write the spec status via frontmatter (gate on `planned` or `in-progress`; advance to `in-progress` and `done`).
 - [x] **Done when:** instructions reference frontmatter; file lints clean.
 
-### 7. Update `/gov:status`
+### 7. Update `/ductus:status`
 
 - [x] Update `framework/commands/status.md` to extract `status`, `dependencies`, and `tags` from each spec's frontmatter rather than from `**Status:** {value}` and `**Dependencies:** {value}` lines.
 - [x] Update any extraction prose that mentions "look for the bold-prefix lines" to "parse the YAML frontmatter block."
 - [x] Confirm the dashboard rendering still works for specs with empty `tags` — chose to display tags only as an aggregate "tags in use" line below the table (skipped entirely when no spec has tags); kept the table columns unchanged for now.
 - [x] **Done when:** the dashboard reads from frontmatter; file lints clean.
 
-### 8. Update `/gov:target`
+### 8. Update `/ductus:target`
 
 - [x] Update `framework/commands/target.md` to read the spec status from frontmatter when displaying the target detail view.
 - [x] **Done when:** instructions reference frontmatter; file lints clean.
 
-### 9. Update `/gov:analyze`
+### 9. Update `/ductus:analyze`
 
 - [x] Update `framework/commands/analyze.md` with the strict/advisory split per `data-model.md`'s severity table.
 - [x] Hard-fail conditions: missing/malformed frontmatter, missing/invalid `status`, missing/invalid `dependencies`, missing `spec-ref` on scenarios.
@@ -73,24 +73,24 @@ These tasks may proceed in parallel within a session. Each command file is touch
 - [x] The command's report format clearly separates hard fails, blocking, advisory, and informational findings.
 - [x] **Done when:** instructions describe the split; file lints clean.
 
-### 10. Update `/gov:specify`
+### 10. Update `/ductus:specify`
 
 - [x] Update `framework/commands/capture.md` to write frontmatter for new sketch specs (with `status: draft`, `dependencies: []`, `tags: []`).
 - [x] **Done when:** instructions reference frontmatter; file lints clean.
 
-### 11. Audit and update `/gov:groom`
+### 11. Audit and update `/ductus:groom`
 
 - [x] Read `framework/commands/groom.md` and check whether it parses spec metadata as part of routing inbox items.
 - [x] Audit conclusion: groom does not read or write spec metadata fields. No edit needed.
 - [x] **Done when:** audit complete; any required updates lint clean.
 
-### 12. Audit and update `/gov:amend`
+### 12. Audit and update `/ductus:amend`
 
 - [x] Read `framework/commands/elaborate.md` and check whether it writes scenario `spec-ref` or otherwise touches scenario metadata.
 - [x] Updated the "Update spec status" section to read/write the frontmatter `status` field. (Scenario creation uses the scenario template, which already emits frontmatter from Task 2.)
 - [x] **Done when:** scenario creation produces frontmatter-formatted scenarios; file lints clean.
 
-### 13. Audit and update `/gov:amend`
+### 13. Audit and update `/ductus:amend`
 
 - [x] Read `framework/commands/amend.md` and check whether it reads spec/scenario metadata to identify the target.
 - [x] Updated scope boundaries to declare that `status` is read from YAML frontmatter; references §text-first-artifacts.
@@ -98,15 +98,15 @@ These tasks may proceed in parallel within a session. Each command file is touch
 
 ### 14. Regenerate Claude command instances
 
-- [x] Run `./scripts/gen-claude-commands.sh` to regenerate `.claude/commands/gov/*.md` from the updated `framework/commands/` and `framework/bootstrap/configure/claude.md` sources.
+- [x] Run `./scripts/gen-claude-commands.sh` to regenerate `.claude/commands/ductus/*.md` from the updated `framework/commands/` and `framework/bootstrap/configure/claude.md` sources.
 - [x] Spot-checked the regenerated files: 15 files regenerated, all lint clean.
 - [x] **Done when:** generation completes without error; spot-check passes.
 
-## Phase 3: Migration logic in `/govern`
+## Phase 3: Migration logic in `/ductus`
 
-### 15. Add migration step to `framework/bootstrap/govern.md`
+### 15. Add migration step to `framework/bootstrap/ductus.md`
 
-- [x] Add a new section to `framework/bootstrap/govern.md`, positioned between Project Configuration (which reads `.governance.toml`) and File Fetching, titled "Frontmatter Migration."
+- [x] Add a new section to `framework/bootstrap/ductus.md`, positioned between Project Configuration (which reads `.governance.toml`) and File Fetching, titled "Frontmatter Migration."
 - [x] Step 1: run `git status --porcelain -- specs/` (project-relative). If the output is non-empty, refuse with a clear message ("Migration requires a clean working tree under `specs/`. Commit or stash your changes, then re-run.") and exit before any modifications.
 - [x] Step 2: walk `specs/**/spec.md`, `specs/**/spec-and-plan.md`, and `specs/**/scenarios/*.md`.
 - [x] Step 3: for each file, check whether the first non-blank line is `---`. If yes, skip with reason "already frontmatter." If no and bold-prefix metadata lines are present, convert: insert frontmatter block at top, remove redundant body lines.
@@ -116,7 +116,7 @@ These tasks may proceed in parallel within a session. Each command file is touch
 - [x] Added an Edge Cases subsection covering partially-migrated files, malformed metadata, and custom open-schema fields.
 - [x] **Done when:** the migration section is present, idempotent, scoped, and respects pinning; file lints clean.
 
-### 16. Add Quartz tip to govern.md post-run output
+### 16. Add Quartz tip to ductus.md post-run output
 
 - [x] Added a one-line tip to both the First-run and Update-mode output blocks: `Tip: \`npx quartz specs/\` renders your specs as a navigable graph view in the browser. Other PKM tools (Obsidian, Logseq, MkDocs) work unchanged.`
 - [x] Positioned at the end of each block (after the existing next-steps content) so it's discoverable but not load-bearing.
@@ -124,13 +124,13 @@ These tasks may proceed in parallel within a session. Each command file is touch
 
 ### 17. Verify migration on a test fixture
 
-- [x] Created `/tmp/govern-013-fixture/` with: `specs/000-foo/spec.md` (typical bold-prefix), `specs/000-foo/scenarios/edge-case.md` (bold-prefix `spec-ref`), `specs/001-bar/spec.md` (pinned via `.governance.toml`), `specs/002-already-migrated/spec.md` (already in frontmatter), plus a `.governance.toml` pinning `001-bar`.
+- [x] Created `/tmp/ductus-013-fixture/` with: `specs/000-foo/spec.md` (typical bold-prefix), `specs/000-foo/scenarios/edge-case.md` (bold-prefix `spec-ref`), `specs/001-bar/spec.md` (pinned via `.governance.toml`), `specs/002-already-migrated/spec.md` (already in frontmatter), plus a `.governance.toml` pinning `001-bar`.
 - [x] Confirmed clean-tree precheck behavior: clean → empty `git status --porcelain -- specs/` → migration proceeds; dirty → non-empty output → migration refuses.
 - [x] Walked the convert step on `000-foo/spec.md` and `000-foo/scenarios/edge-case.md`. Both produced correctly-structured frontmatter (em-dash in `spec-ref` properly quoted), bodies preserved, `# Heading` placed after the frontmatter block. Output lints clean.
 - [x] Verified pinning: `001-bar/spec.md` was untouched (matches `.governance.toml` `pinned.files`).
 - [x] Verified idempotency: `002-already-migrated/spec.md` starts with `---` on the first non-blank line and would be skipped per the prose.
-- [x] No rough edges discovered. The migration prose in `govern.md` is sufficient as written.
-- [x] **Done when:** the fixture migration runs cleanly end-to-end; documented findings (if any) are incorporated. (Fixture left in `/tmp/govern-013-fixture/` — `/tmp` clears on reboot.)
+- [x] No rough edges discovered. The migration prose in `ductus.md` is sufficient as written.
+- [x] **Done when:** the fixture migration runs cleanly end-to-end; documented findings (if any) are incorporated. (Fixture left in `/tmp/ductus-013-fixture/` — `/tmp` clears on reboot.)
 
 ## Phase 4: Self-migration of governance's own specs
 
@@ -187,15 +187,15 @@ Done when: every `specs/*/spec.md` has a non-empty, coherent `tags` value and th
 
 Artifact half. The runtime half is [022's task 86](../022-deterministic-runtime/tasks.md) (`criterion-label-assignment`), which supplies the `label-criteria` primitive the backfill runs — the sweep is performed by the primitive, never by hand-editing 660 criteria.
 
-**What the backfill needs is a built binary, not a released one.** Run it through the CLI against a local `cargo build --release`; per `AGENTS.md`, an MCP tool call would execute the *installed* `gvrn` on `PATH`, which will not carry `label-criteria` until it is reinstalled and the MCP server restarts (a new session). Only the migration entry below depends on a release, because it runs in adopter repos against whatever runtime they have.
+**What the backfill needs is a built binary, not a released one.** Run it through the CLI against a local `cargo build --release`; per `AGENTS.md`, an MCP tool call would execute the *installed* `ductus` on `PATH`, which will not carry `label-criteria` until it is reinstalled and the MCP server restarts (a new session). Only the migration entry below depends on a release, because it runs in adopter repos against whatever runtime they have.
 
 Tagging is deferred until [048](../048-govern-acquired-runtime/spec.md) ships (operator decision, 2026-08-14), so this spec stays `in-progress` until then even once every sub-item below is done. Sub-items are ordered; the unchecked ones are what remains.
 
 - [x] `next-criterion` defined in the constitution's frontmatter-schema table (its canonical home) and in this spec's §Frontmatter Schema; §spec-requirements states that criteria carry a permanent `AC{n}:` label and that the label, not the position, is how a criterion is cited.
 - [x] §spec-lifecycle admits a **third** mechanical-edit case (c): a diff that only assigns `AC{n}:` labels and maintains `next-criterion`, leaving each labelled criterion's text byte-identical, does not take the `done → in-progress` back-edge. This scenario asserts the sweep "qualifies as a uniform mechanical edit under §spec-lifecycle", but the rule enumerated exactly two cases and neither covered a label insert — so between the backfill landing and this amendment, the constitution said the 47 `done` specs it touched should have reopened. Mirrored in `AGENTS.md` alongside the case-(b) entry spec 030 added, same shape.
 - [x] Backfill: run the labelling pass across the 47 specs whose criteria are unlabelled (660 of 697 criteria at decision time). `017-derive-dont-ask` (24/24) and `018-adopter-owned-pre-commit` (13/13) are already labelled by hand and must come out byte-identical — renumbering them would break `018`'s working "017 AC24" cross-reference. A uniform mechanical sweep under §spec-lifecycle, so the `done` specs it touches stay `done`. **Result:** 49 specs swept, 700 criteria labelled, 0 unlabelled; a second run is a no-op on all 49. The two hand-labelled specs came out with their criteria bytes untouched — their only diff is the `next-criterion:` line the counter requires (25 and 14), which is the retirement backing those labels previously lacked. The corpus total is 700 rather than 697 because 027 nests three criteria as indented sub-bullets; `read-spec` and `mark-criterion` already address those as criteria, so labelling them is what keeps the two addressing modes in agreement.
-- [ ] Migration registry entry (`framework/migrations.toml` + a file under `framework/migrations/`) so adopter projects converge on their next `/govern` run. Without it this repo is labelled and every adopter is not — the ecosystem-level version of the two-tier corpus the going-forward-only option was rejected for. Its `introduced_in` names the runtime version that first carries `label-criteria`, so this entry is authored as part of the deferred release rather than ahead of it: an adopter reaching the migration with an older runtime has no primitive to run.
-- [x] Hook wiring, all three sites per `AGENTS.md`: this repo's `.githooks/pre-commit`, the adopter hook `framework/bootstrap/hooks/govern-pre-commit`, and a Shared Files manifest row in `framework/bootstrap/govern.md`. This is the backstop for criteria typed by hand in an editor. The third site needed no new **row** — the hook is already shipped by one — so what landed there is the manifest section's description of what the hook holds (`govern.md` §"`.githooks/govern-pre-commit` is govern-owned"), which would otherwise describe a two-generator hook that now has a third step. Guarded on the binary and `|| true` at both hook sites, unlike the generators: the pass is a *runtime primitive*, the runtime must never be a prerequisite for a commit (§runtime-boundary), and a gvrn predating `label-criteria` exits non-zero on the unknown subcommand. This repo's hook prefers `runtime/target/release/gvrn` over an installed one so a `cargo install` lag cannot label the framework's own specs with a binary older than the one under test. Both paths verified end-to-end in a scratch repo: with the runtime present a hand-typed criterion is labelled `AC5` (the spec's max was `AC4`) and staged into the commit; with `PATH` stripped of gvrn the same commit succeeds unlabelled.
+- [ ] Migration registry entry (`framework/migrations.toml` + a file under `framework/migrations/`) so adopter projects converge on their next `/ductus` run. Without it this repo is labelled and every adopter is not — the ecosystem-level version of the two-tier corpus the going-forward-only option was rejected for. Its `introduced_in` names the runtime version that first carries `label-criteria`, so this entry is authored as part of the deferred release rather than ahead of it: an adopter reaching the migration with an older runtime has no primitive to run.
+- [x] Hook wiring, all three sites per `AGENTS.md`: this repo's `.githooks/pre-commit`, the adopter hook `framework/bootstrap/hooks/ductus-pre-commit`, and a Shared Files manifest row in `framework/bootstrap/ductus.md`. This is the backstop for criteria typed by hand in an editor. The third site needed no new **row** — the hook is already shipped by one — so what landed there is the manifest section's description of what the hook holds (`ductus.md` §"`.githooks/ductus-pre-commit` is ductus-owned"), which would otherwise describe a two-generator hook that now has a third step. Guarded on the binary and `|| true` at both hook sites, unlike the generators: the pass is a *runtime primitive*, the runtime must never be a prerequisite for a commit (§runtime-boundary), and a ductus predating `label-criteria` exits non-zero on the unknown subcommand. This repo's hook prefers `runtime/target/release/ductus` over an installed one so a `cargo install` lag cannot label the framework's own specs with a binary older than the one under test. Both paths verified end-to-end in a scratch repo: with the runtime present a hand-typed criterion is labelled `AC5` (the spec's max was `AC4`) and staged into the commit; with `PATH` stripped of ductus the same commit succeeds unlabelled.
 - [x] Command sources invoke the pass at its two remaining points: `framework/commands/specify.md` after `writeSpecBody`, and `framework/commands/clarify.md` after the criteria pass. Re-run `scripts/gen-claude-commands.sh` after editing either. Both markdown-only references gained the matching by-hand derivation, so the two paths still share one contract. `specify-basic.jsonl` re-blessed: the walker now dispatches `label-criteria` at step 3, shifting the gate and session-write steps down by one.
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested; an acceptance criterion carries a stable, permanent identifier readable in the artifact and resolvable by tooling, unlabelled criteria still parse and tick via the positional fallback, every spec in the corpus is labelled, adopters receive the same migration, and the runtime-side changes have landed under 022.

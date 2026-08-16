@@ -35,7 +35,7 @@ These are evaluation criteria, not implementation instructions. Use them to iden
 
 ### Cost levers
 
-Per-task token tracking and budget ceilings require a runtime `govern` does not have — that work belongs to the AI platform. `govern` contributes by offering cost-aware patterns the user can opt into. The current levers: the stuck-detection step in `/{project}:implement` catches runaway loops before they compound spend; default-off autonomy keeps the human in the loop unless `--auto` is explicitly passed. For runtime cost controls, point the adopter at the platform's tooling — Claude Code's `/cost`, the Anthropic usage dashboard, Cursor's request limits, and equivalents.
+Per-task token tracking and budget ceilings require a runtime `ductus` does not have — that work belongs to the AI platform. `ductus` contributes by offering cost-aware patterns the user can opt into. The current levers: the stuck-detection step in `/{project}:implement` catches runaway loops before they compound spend; default-off autonomy keeps the human in the loop unless `--auto` is explicitly passed. For runtime cost controls, point the adopter at the platform's tooling — Claude Code's `/cost`, the Anthropic usage dashboard, Cursor's request limits, and equivalents.
 
 <!-- §grounding -->
 
@@ -87,7 +87,7 @@ specs/
       {slug}.md          # One file per scenario
 ```
 
-The top-level directory name (`specs` above) is the documented default; a project may rename it via `.govern/config.toml` `[paths] specs-root` (e.g. to avoid colliding with a sibling framework's `spec/`, like RSpec's). When the key is unset every command and the optional runtime default to `specs`, so an adopter who never sets it sees unchanged behavior. The literal `specs/` throughout this constitution and the command sources is that default; wherever a command or the runtime constructs a path under it, it resolves `[paths] specs-root` (spec 040).
+The top-level directory name (`specs` above) is the documented default; a project may rename it via `.ductus/config.toml` `[paths] specs-root` (e.g. to avoid colliding with a sibling framework's `spec/`, like RSpec's). When the key is unset every command and the optional runtime default to `specs`, so an adopter who never sets it sees unchanged behavior. The literal `specs/` throughout this constitution and the command sources is that default; wherever a command or the runtime constructs a path under it, it resolves `[paths] specs-root` (spec 040).
 
 <!-- §spec-requirements -->
 
@@ -120,7 +120,7 @@ Forward edges only — `/clarify` raises status to `clarified`, `/plan` to `plan
 
 - **Backward via new questions** — `clarified` / `planned` / `in-progress` → `draft` when `/amend` records a new open question; the next `/clarify` resolves the question and the spec advances forward again. `draft` is the only status that tolerates open questions, so it is the destination; `/amend` performs the status mutation in the same write that records the question.
 - **Backward via new scenario** — `done` → `in-progress` when `/amend` records a scenario. The scenario's task is implemented and the spec returns to `done`. A scenario that *carries open questions* takes this same edge, **not** the question edge above: that edge exists because `draft` is the only status tolerating open questions **in the spec body**, and a scenario's questions are a separate signal that leaves the body untouched. Reverting to `draft` would assert a body state that is not true and route to feature-targeted `/clarify`, which does not read scenarios. The questions still bind — a spec does not reach `done` while any remain (see the `done` row above) — but the routing pressure comes from that gate, not from the status.
-- **Backward via meaningful body edit** — `done` → `in-progress` when any artifact under `specs/{feature}/` is edited *meaningfully*. An edit is **mechanical** (no back-edge) in any of three diff-determinable cases: **(a)** every change in the diff is the same find-and-replace token substitution, applied uniformly across all live artifacts per the `AGENTS.md` rename rule's scope, mapping a deprecated label (slug, capability, command, identifier, parenthetical descriptor) to its current label; **(b)** every change in the diff adds, removes, or rewrites a **cross-service reference** — an inline body link whose target resolves to a registered `.govern/config.toml` `[services]` entry, together with the regenerated `references:` frontmatter that harvests it — because such references are informative cross-service navigation, never dependencies, acceptance criteria, or behavior (spec 030); or **(c)** every change in the diff assigns a **runtime-maintained identifier** — an `AC{n}:` label written between an acceptance criterion's checkbox and its text, together with the `next-criterion:` counter that backs it — leaving every labelled criterion's own text byte-identical, because an identifier names a requirement without stating one, exactly as a rule ID does (spec 013). Anything else — new scope, changed semantics, factual corrections, restructuring, edits scoped to a single spec — is a **meaningful edit** and triggers the back-edge via the same `/amend` flow used for scenarios. The distinction is determinable from the diff alone, so the rule does not depend on author judgment.
+- **Backward via meaningful body edit** — `done` → `in-progress` when any artifact under `specs/{feature}/` is edited *meaningfully*. An edit is **mechanical** (no back-edge) in any of three diff-determinable cases: **(a)** every change in the diff is the same find-and-replace token substitution, applied uniformly across all live artifacts per the `AGENTS.md` rename rule's scope, mapping a deprecated label (slug, capability, command, identifier, parenthetical descriptor) to its current label; **(b)** every change in the diff adds, removes, or rewrites a **cross-service reference** — an inline body link whose target resolves to a registered `.ductus/config.toml` `[services]` entry, together with the regenerated `references:` frontmatter that harvests it — because such references are informative cross-service navigation, never dependencies, acceptance criteria, or behavior (spec 030); or **(c)** every change in the diff assigns a **runtime-maintained identifier** — an `AC{n}:` label written between an acceptance criterion's checkbox and its text, together with the `next-criterion:` counter that backs it — leaving every labelled criterion's own text byte-identical, because an identifier names a requirement without stating one, exactly as a rule ID does (spec 013). Anything else — new scope, changed semantics, factual corrections, restructuring, edits scoped to a single spec — is a **meaningful edit** and triggers the back-edge via the same `/amend` flow used for scenarios. The distinction is determinable from the diff alone, so the rule does not depend on author judgment.
 
 This avoids spec proliferation; scenarios evolve the existing spec rather than spawning a new one. Spec bodies are living documents that represent current state — git history is the historical record of what was written when.
 
@@ -216,7 +216,7 @@ Not every captured item is a requirement gap. An inbox item may be a **chore** �
 
 When a bug is reported, follow this decision tree in order. The first matching condition determines the route:
 
-1. **No rule covers this cross-cutting concern** — the bug surfaces a class of behavior the framework should govern at the rules tier (perf budget, observability commitment, security control, accessibility minimum, etc.). Promote to a rule (new or amended), then fix the code.
+1. **No rule covers this cross-cutting concern** — the bug surfaces a class of behavior the framework should ductus at the rules tier (perf budget, observability commitment, security control, accessibility minimum, etc.). Promote to a rule (new or amended), then fix the code.
 2. **No spec exists for the behavior** — the bug is a feature-level gap. Write the spec first, then fix the code.
 3. **Spec exists but is ambiguous or incomplete** — the bug is a spec deficiency. Correct or enhance the spec, then fix the implementation.
 4. **Spec is clear but implementation is wrong** — add a scenario capturing the correct behavior, then fix the code.
@@ -320,17 +320,17 @@ Rule filenames signal the surface a rule applies to via a closed-suffix conventi
 
 The suffix is the surface signal `/{project}:review` and `/{project}:analyze` use to derive rule-file selection without a hardcoded allowlist. `/{project}:review` filters discovered files by the project's detected stack; `/{project}:analyze` loads every discovered file regardless of stack (citation verification spans surfaces).
 
-Enforcement is two-layered. In `govern`'s own repository, `scripts/lint-rule-filenames.sh` fails CI on any file that violates the closed-suffix policy. In adopter repositories — where the lint does not run — a rule file with an unrecognized suffix loads for every stack and emits a one-line stdout warning (`rule file <name> has unrecognized suffix — loading for all stacks; rename to -backend.md, -frontend.md, or -cross.md`). The default is "load + warn," never "silent skip."
+Enforcement is two-layered. In `ductus`'s own repository, `scripts/lint-rule-filenames.sh` fails CI on any file that violates the closed-suffix policy. In adopter repositories — where the lint does not run — a rule file with an unrecognized suffix loads for every stack and emits a one-line stdout warning (`rule file <name> has unrecognized suffix — loading for all stacks; rename to -backend.md, -frontend.md, or -cross.md`). The default is "load + warn," never "silent skip."
 
 #### Project-level opt-out
 
-A project may exclude a stack-selected rule file from `/{project}:review` by listing it in `.govern/config.toml` `[[review.disabled-rule-files]]` with a mandatory `reason` — the reason is the audit trail for the override, surfaced on stdout at the start of every run. The opt-out is project-wide and applies to whole files; per-`(rule, file)` exceptions remain the job of `/{project}:review --waive`. Schema and behavior are documented in [`framework/commands/review.md`](commands/review.md).
+A project may exclude a stack-selected rule file from `/{project}:review` by listing it in `.ductus/config.toml` `[[review.disabled-rule-files]]` with a mandatory `reason` — the reason is the audit trail for the override, surfaced on stdout at the start of every run. The opt-out is project-wide and applies to whole files; per-`(rule, file)` exceptions remain the job of `/{project}:review --waive`. Schema and behavior are documented in [`framework/commands/review.md`](commands/review.md).
 
 #### Lifecycle
 
 - Rule IDs are permanent. Once assigned, an ID is never renumbered, even if the rule moves within the file or is edited.
 - Rules are deprecated with a `**DEPRECATED in {version}:**` label and a removal target version, then removed only after the deprecation window has passed.
-- New rule files **that ship with `govern`** are introduced via their own feature spec (the same way 008 introduced `security-backend.md` and `security-frontend.md`). A rule file a project authors for itself has no introducing spec and needs none — placing it in the rule-file directory is the whole registration step, and its own header is where its ID prefix and category abbreviations are declared (as above). Every consumer of the rule set treats the two origins identically; nothing may condition loading, citation resolution, or validation on a rule file having an introducing spec. **Recorded exception (backfill):** `api-backend.md`, `accessibility-frontend.md`, and `performance-frontend.md` were introduced in commit `9ccbd0b` bundled into specs 024/025 rather than through their own introducing specs. They are in active use — discovered by the suffix directory-walk and cited by ID like every other rule file — and their ID grammar is reconciled with this section, so they are retained as-is; no retroactive introducing specs are required.
+- New rule files **that ship with `ductus`** are introduced via their own feature spec (the same way 008 introduced `security-backend.md` and `security-frontend.md`). A rule file a project authors for itself has no introducing spec and needs none — placing it in the rule-file directory is the whole registration step, and its own header is where its ID prefix and category abbreviations are declared (as above). Every consumer of the rule set treats the two origins identically; nothing may condition loading, citation resolution, or validation on a rule file having an introducing spec. **Recorded exception (backfill):** `api-backend.md`, `accessibility-frontend.md`, and `performance-frontend.md` were introduced in commit `9ccbd0b` bundled into specs 024/025 rather than through their own introducing specs. They are in active use — discovered by the suffix directory-walk and cited by ID like every other rule file — and their ID grammar is reconciled with this section, so they are retained as-is; no retroactive introducing specs are required.
 
 See `specs/008-security-rules/data-model.md` for the full ID-stability invariants and deprecation rules.
 
@@ -350,7 +350,7 @@ Bugs route to the tier that matches the *scope* of the missing or violated requi
 
 A `specs/inbox.md` file is the project's capture queue for issues not yet assigned to a feature spec. It serves two roles:
 
-- **Brownfield migration** — for projects adopting `govern` incrementally, known issues are parked here until a spec exists to absorb them.
+- **Brownfield migration** — for projects adopting `ductus` incrementally, known issues are parked here until a spec exists to absorb them.
 - **Incidental capture** — issues an agent discovers as a side effect of other work are recorded here automatically (see [Automatic issue capture](#automatic-issue-capture) below).
 
 Items are recorded with `/log` (manual) or captured automatically during work, and groomed into their proper home with `/groom`. An item's "proper home" is usually a feature spec, scenario, or rule; an item that is a **chore** (project maintenance belonging to no feature — lint or dependency cleanup, repo hygiene, see [§bug-handling](#bug-handling)) has no spec home and is resolved by being done directly, then removed — `/groom` recognizes it and leaves it in place rather than forcing it into a spec.
@@ -378,7 +378,7 @@ This keeps the agent's attention on the task while guaranteeing that discoveries
 
 ### Brownfield Process
 
-Brownfield projects adopt `govern` incrementally. The `/specify` command initializes a skeleton spec from freeform user input — sparse acceptance criteria are expected and valid for brownfield use; no pressure to be comprehensive. Start broad; decompose through scenarios over time.
+Brownfield projects adopt `ductus` incrementally. The `/specify` command initializes a skeleton spec from freeform user input — sparse acceptance criteria are expected and valid for brownfield use; no pressure to be comprehensive. Start broad; decompose through scenarios over time.
 
 #### Capture → incremental growth → promotion
 
@@ -399,11 +399,11 @@ When a `/groom` pass encounters an item that does not map to any existing spec, 
 
 ## Text-First Artifacts
 
-`govern` treats every artifact — constitution, specs, plans, tasks, scenarios, rules — as plain markdown the agent can edit with `Edit`. This is load-bearing: the agent's write path stays simple, PRs review glanceably, and merge conflicts stay rare and human-resolvable. The markdown framework is usable standalone with no tooling beyond the AI agent; an optional runtime (see [§runtime-boundary](#runtime-boundary)) provides deterministic execution of mechanical checks and fixes for adopters who opt in.
+`ductus` treats every artifact — constitution, specs, plans, tasks, scenarios, rules — as plain markdown the agent can edit with `Edit`. This is load-bearing: the agent's write path stays simple, PRs review glanceably, and merge conflicts stay rare and human-resolvable. The markdown framework is usable standalone with no tooling beyond the AI agent; an optional runtime (see [§runtime-boundary](#runtime-boundary)) provides deterministic execution of mechanical checks and fixes for adopters who opt in.
 
 ### Principles
 
-- All `govern` artifacts are markdown by default. The agent reads and writes them with the same `Edit` flow used for code.
+- All `ductus` artifacts are markdown by default. The agent reads and writes them with the same `Edit` flow used for code.
 - Structured metadata lives in YAML frontmatter at the top of each markdown file; the document body remains markdown prose.
 - Cross-artifact references use standard relative markdown links (`[label](../path.md)`), not wiki-links — this keeps PRs reviewable on GitHub and viewers like Quartz/Obsidian still resolve them.
 - Source-of-truth artifacts are markdown. Structured derived views are regenerated from canonical sources and never become the canonical record.
@@ -412,15 +412,15 @@ When a `/groom` pass encounters an item that does not map to any existing spec, 
 
 ### Frontmatter Schema
 
-The frontmatter schema applies to **spec files** (`spec.md`) and **scenario files** (`scenarios/{slug}.md`). Other `govern` artifacts (`system.md`, `errors.md`, `events.md`, `inbox.md`, plan files, tasks files, rule files, README files) MAY include frontmatter when a specific consumer benefits, but are not required to.
+The frontmatter schema applies to **spec files** (`spec.md`) and **scenario files** (`scenarios/{slug}.md`). Other `ductus` artifacts (`system.md`, `errors.md`, `events.md`, `inbox.md`, plan files, tasks files, rule files, README files) MAY include frontmatter when a specific consumer benefits, but are not required to.
 
 #### Spec files
 
 | Field | Required | Type | Allowed values | Description |
 | --- | --- | --- | --- | --- |
 | `status` | yes | string | `draft`, `clarified`, `planned`, `in-progress`, `done` | Spec lifecycle state |
-| `dependencies` | yes | list of strings | spec slugs (e.g., `002-events`); empty list permitted | **Generated** by `.govern/scripts/gen-spec-deps.sh` from inline markdown links to sibling specs in the body. Not hand-authored. Author opt-out: links under a `## See also` heading are treated as navigational and do not produce edges (`## References` remains a dep-producing section). |
-| `references` | no | list of `{service, spec}` entries | registered service alias + target `NNN-slug`; empty or absent permitted | **Generated** by `.govern/scripts/gen-cross-service-refs.sh` from inline body links to a registered service's canonical repo URL. Not hand-authored, and **strictly distinct from `dependencies`** — informative cross-service navigation that never enters the blocking dependency graph (spec 030). |
+| `dependencies` | yes | list of strings | spec slugs (e.g., `002-events`); empty list permitted | **Generated** by `.ductus/scripts/gen-spec-deps.sh` from inline markdown links to sibling specs in the body. Not hand-authored. Author opt-out: links under a `## See also` heading are treated as navigational and do not produce edges (`## References` remains a dep-producing section). |
+| `references` | no | list of `{service, spec}` entries | registered service alias + target `NNN-slug`; empty or absent permitted | **Generated** by `.ductus/scripts/gen-cross-service-refs.sh` from inline body links to a registered service's canonical repo URL. Not hand-authored, and **strictly distinct from `dependencies`** — informative cross-service navigation that never enters the blocking dependency graph (spec 030). |
 | `next-criterion` | no | integer | ≥ 1; absent means no criterion has been labelled yet | **Maintained by the runtime's labelling pass.** The `AC{n}` label the next acceptance criterion receives. Monotonically non-decreasing — deleting a criterion never lowers it — so a retired label is never reissued to a different requirement. Not hand-authored; the audit requires it to exceed every `AC{n}` label present in the body (spec 013). |
 
 #### Scenario files
@@ -431,11 +431,11 @@ The frontmatter schema applies to **spec files** (`spec.md`) and **scenario file
 
 #### Open-schema rule
 
-Additional fields beyond those listed above are permitted and ignored by uninterested consumers. Examples adopters or future `govern` work might add: `owner`, `target_release`, `created_at`, `description`, `aliases`. Consumers MUST NOT error on the presence of unknown fields. `/gov:analyze` reports unknown fields as informational findings (not errors). Stale fields in done specs (e.g., `title`, `tags`, `spec-ref`, `track`) remain valid under this rule and produce no findings.
+Additional fields beyond those listed above are permitted and ignored by uninterested consumers. Examples adopters or future `ductus` work might add: `owner`, `target_release`, `created_at`, `description`, `aliases`. Consumers MUST NOT error on the presence of unknown fields. `/ductus:analyze` reports unknown fields as informational findings (not errors). Stale fields in done specs (e.g., `title`, `tags`, `spec-ref`, `track`) remain valid under this rule and produce no findings.
 
 ### Validation Severity
 
-`/gov:analyze` checks frontmatter against this schema with the following severity:
+`/ductus:analyze` checks frontmatter against this schema with the following severity:
 
 - **Hard fail** — frontmatter block missing on a spec or scenario file; frontmatter YAML malformed; `status` missing or not in the allowed set; `dependencies` missing or not a list; both `section` and the legacy `spec-ref` missing on a scenario.
 - **Advisory** — cross-reference checks; body inline links to sibling specs that are not yet in the generator-managed `dependencies` (informational — the next commit's `gen-spec-deps.sh` run will resolve).
@@ -443,13 +443,13 @@ Additional fields beyond those listed above are permitted and ignored by uninter
 
 Hard fails block the validation pass. Advisory and informational findings are reported but do not block.
 
-For non-frontmatter checks (spec integrity, artifact completeness, plan/task consistency, dependencies, security rules), `/gov:analyze` adds a fourth tier — **Blocking** — between Hard fail and Advisory. Blocking findings are structural or content issues that must be fixed before the next pipeline gate fires (e.g., missing `plan.md` on a `planned` spec, an unknown rule ID referenced in a spec). Hard fail and Blocking both prevent pipeline advancement; the distinction is that Hard fail says "the spec file itself is malformed," while Blocking says "the artifact set is incomplete or inconsistent." See `framework/commands/analyze.md` for the full per-check severity assignment.
+For non-frontmatter checks (spec integrity, artifact completeness, plan/task consistency, dependencies, security rules), `/ductus:analyze` adds a fourth tier — **Blocking** — between Hard fail and Advisory. Blocking findings are structural or content issues that must be fixed before the next pipeline gate fires (e.g., missing `plan.md` on a `planned` spec, an unknown rule ID referenced in a spec). Hard fail and Blocking both prevent pipeline advancement; the distinction is that Hard fail says "the spec file itself is malformed," while Blocking says "the artifact set is incomplete or inconsistent." See `framework/commands/analyze.md` for the full per-check severity assignment.
 
 <!-- §runtime-boundary -->
 
 ### Runtime Boundary
 
-`govern` MAY ship an optional runtime binary alongside the markdown framework. The runtime exists to execute the deterministic portions of pipeline commands without an LLM. This subsection defines what the runtime can and cannot do; deviations require their own constitutional amendment.
+`ductus` MAY ship an optional runtime binary alongside the markdown framework. The runtime exists to execute the deterministic portions of pipeline commands without an LLM. This subsection defines what the runtime can and cannot do; deviations require their own constitutional amendment.
 
 #### Five principles
 
@@ -457,13 +457,13 @@ For non-frontmatter checks (spec integrity, artifact completeness, plan/task con
 2. **Determinism only** — the runtime MUST NOT call an LLM. Work requiring semantic judgment (content quality, `/clarify` resolution, `/specify` sketching, per-rule Verification reads, `/groom` routing) stays in slash commands.
 3. **Opt-in for adopters** — the runtime MUST NOT be a prerequisite for any pipeline gate. A markdown-only adopter — agent + the host's file tools (`Read`, `Edit`, `Write`), no binary on `PATH` — must complete every cycle (greenfield, brownfield, reopen) and reach `done` on every spec. The markdown-only path operates through those host tools; shell pipelines that parse frontmatter or markdown structure (`awk`, `sed`, `grep` pipelines, `for` loops over files) are **not** a sanctioned substitute for either the runtime primitives or the host's file tools.
 4. **Schema follows the constitution** — the runtime MUST read frontmatter and artifact structure according to the schemas declared in this document. Schema changes ship through the constitution; the runtime MUST update to match. The constitution MUST NOT import runtime types.
-5. **MCP is the seam** — the runtime MUST expose its capabilities as MCP tools so slash commands can call them when they want determinism. This keeps the runtime accessible to any agent host and prevents `govern`-specific coupling.
+5. **MCP is the seam** — the runtime MUST expose its capabilities as MCP tools so slash commands can call them when they want determinism. This keeps the runtime accessible to any agent host and prevents `ductus`-specific coupling.
 
 <!-- §runtime-host-integration -->
 
 #### Host integration (for agent runtimes)
 
-The backticked primitive names in a rewritten command's Instructions section map to the MCP tools the runtime exposes under bare `<verb>-<noun>` names. A host wraps them with a server-name prefix taken from its MCP registration — Claude Code: `mcp__gvrn__<verb>-<noun>`; Auggie / Antigravity: `mcp:gvrn:<verb>-<noun>`. When the `gvrn` server is registered for the session, the agent **calls the corresponding tool** for each step — the deterministic path. If a host loads MCP tool schemas lazily (e.g., Claude Code lists tool names in a deferred-tool reminder before exposing their schemas), the runtime is still registered: the agent fetches the schema through the host's mechanism (`ToolSearch` on Claude Code) and calls the tool rather than bailing to the fallback. When no `gvrn` server is configured, the agent walks the same prose with the host's file tools (`Read`, `Edit`, `Write`); the shell-pipeline substitutes named in principle 3 are **not** a sanctioned stand-in for either the runtime primitives or those file tools. The two paths share one contract; neither wraps the other. A rewritten command opens its Instructions with a one-line pointer to this subsection (§runtime-host-integration) rather than restating it — the contract lives here once.
+The backticked primitive names in a rewritten command's Instructions section map to the MCP tools the runtime exposes under bare `<verb>-<noun>` names. A host wraps them with a server-name prefix taken from its MCP registration — Claude Code: `mcp__ductus__<verb>-<noun>`; Auggie / Antigravity: `mcp:ductus:<verb>-<noun>`. When the `ductus` server is registered for the session, the agent **calls the corresponding tool** for each step — the deterministic path. If a host loads MCP tool schemas lazily (e.g., Claude Code lists tool names in a deferred-tool reminder before exposing their schemas), the runtime is still registered: the agent fetches the schema through the host's mechanism (`ToolSearch` on Claude Code) and calls the tool rather than bailing to the fallback. When no `ductus` server is configured, the agent walks the same prose with the host's file tools (`Read`, `Edit`, `Write`); the shell-pipeline substitutes named in principle 3 are **not** a sanctioned stand-in for either the runtime primitives or those file tools. The two paths share one contract; neither wraps the other. A rewritten command opens its Instructions with a one-line pointer to this subsection (§runtime-host-integration) rather than restating it — the contract lives here once.
 
 #### Eligibility criteria
 
@@ -481,7 +481,7 @@ The repository's CI MUST include a job that exercises a representative pipeline 
 
 #### Versioning
 
-The runtime ships in lockstep with the framework. A `govern` release includes the binary built against the schemas in that release; an adopter's `govern` version pins their compatible runtime version, eliminating schema/runtime drift as a failure mode.
+The runtime ships in lockstep with the framework. A `ductus` release includes the binary built against the schemas in that release; an adopter's `ductus` version pins their compatible runtime version, eliminating schema/runtime drift as a failure mode.
 
 #### What the runtime is not
 
@@ -493,7 +493,7 @@ Specific capabilities are introduced through their own feature specs, beginning 
 
 ## Drift Prevention
 
-These principles keep facts consistent as the framework evolves. They apply both to `govern` itself and to projects that adopt it. Drift is a class of bug; preventing it is part of the framework's design, not an afterthought.
+These principles keep facts consistent as the framework evolves. They apply both to `ductus` itself and to projects that adopt it. Drift is a class of bug; preventing it is part of the framework's design, not an afterthought.
 
 ### Canonical sources
 
@@ -513,7 +513,7 @@ For every kind of fact described in multiple places, one location is authoritati
 | Runtime contract / boundary | `framework/constitution.md` §runtime-boundary |
 | Security rule file format and ID conventions (`BE-`/`FE-`) | `specs/008-security-rules/data-model.md` |
 | Configuration rule file format and ID conventions (`CFG-`) | `specs/017-derive-dont-ask/data-model.md` |
-| Service registry schema (`.govern/config.toml` `[services]`) | `specs/030-cross-service-references/data-model.md` |
+| Service registry schema (`.ductus/config.toml` `[services]`) | `specs/030-cross-service-references/data-model.md` |
 | Where contributor knowledge is recorded (git vs. per-user agent memory) | `framework/constitution.md` §drift-prevention (Shared knowledge stays in git) |
 | Open-state tell list and decision-drift check grammars | `specs/045-decision-state-drift-detection/data-model.md` |
 | Scenario→task referencing rule (what counts as a task referencing a scenario) | `specs/022-deterministic-runtime/data-model.md` (`scenario-consistency`) |
@@ -553,7 +553,7 @@ Templates and validate evolve together. A diff that touches one without the othe
 
 ### Manifest discipline
 
-When multiple commands distribute or reference the same set of files (e.g., `/govern` and `/{project}:init` both scaffold a project; `/{project}:configure` and the bootstrap install both apply permission sets), the file list lives in one place:
+When multiple commands distribute or reference the same set of files (e.g., `/ductus` and `/{project}:init` both scaffold a project; `/{project}:configure` and the bootstrap install both apply permission sets), the file list lives in one place:
 
 - Either as a shared section the commands include by reference, or
 - As a registry both commands read.
@@ -584,7 +584,7 @@ The test before saving to per-user memory: *would this help a teammate?* If yes,
 
 ### Concurrent Features
 
-The session state file (`.govern/session.toml`) holds a single target by design. The pipeline is serial within a feature, and concurrent work on independent features uses two independent sessions in two terminals — not multi-target session state. Isolation is provided by the platform layer: `git worktree` keeps the working trees separate, and AI-agent platforms typically expose isolation primitives (Claude Code's `isolation: "worktree"` agent parameter, Cursor's worktree integration, etc.). Reach for those rather than asking `govern` to track multiple targets at once.
+The session state file (`.ductus/session.toml`) holds a single target by design. The pipeline is serial within a feature, and concurrent work on independent features uses two independent sessions in two terminals — not multi-target session state. Isolation is provided by the platform layer: `git worktree` keeps the working trees separate, and AI-agent platforms typically expose isolation primitives (Claude Code's `isolation: "worktree"` agent parameter, Cursor's worktree integration, etc.). Reach for those rather than asking `ductus` to track multiple targets at once.
 
 <!-- §cross-spec-impact -->
 

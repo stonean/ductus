@@ -98,7 +98,7 @@ Done when: the scenario's described behavior is correctly implemented and tested
 
 - [x] Verified Claude Code's frontmatter field for autocomplete summaries is `description:` (confirmed by single-file experiment on `init.md` — the description surfaced in the session skills list while siblings without it rendered as bare names).
 - [x] Added `description:` frontmatter to all 14 sources under `framework/commands/*.md` and to `framework/bootstrap/configure/claude.md`. Each description is a one-line concrete summary. `framework/bootstrap/configure/auggie.md` left alone — different CLI with its own conventions.
-- [x] Re-ran `scripts/gen-claude-commands.sh` to flow descriptions into `.claude/commands/gov/*.md`. Manually added the same field to the hand-maintained `.claude/commands/gov/init.md`.
+- [x] Re-ran `scripts/gen-claude-commands.sh` to flow descriptions into `.claude/commands/ductus/*.md`. Manually added the same field to the hand-maintained `.claude/commands/ductus/init.md`.
 - [x] Lint clean (`npx markdownlint-cli2 "**/*.md" "!CLAUDE.md"` — 121 files, 0 errors).
 
 Done when: the scenario's described behavior is correctly implemented; every gov command shows a summary in the Claude Code autocomplete window; the repo lints clean.

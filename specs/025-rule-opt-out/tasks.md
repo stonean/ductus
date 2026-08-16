@@ -23,7 +23,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Add one bullet noting the `[[review.disabled-rule-files]]` override exists, with a reason field for the audit trail. Cross-link to §Inputs (or §Behavior step 5) for the schema.
 - [x] Done when: the bullet list under §Notes for adopters covers the opt-out alongside the existing pinning / auto-discovery / unrecognized-suffix notes.
 
-## 4. Update `framework/bootstrap/govern.md` example TOML block
+## 4. Update `framework/bootstrap/ductus.md` example TOML block
 
 - [x] In the example TOML block (currently lines 246–262, showing `[pinned]` and `[workflows]`), add a commented-out `[[review.disabled-rule-files]]` example block. Show the `file` and `reason` fields with realistic placeholder content.
 - [x] Done when: an adopter running through bootstrap sees the three TOML sections side-by-side and the new block is unambiguously commented out (will not actually disable anything if uncommented without editing).
@@ -50,7 +50,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Run `npx markdownlint-cli2` against every file modified in tasks 1–6 plus `specs/025-rule-opt-out/spec.md` and this `tasks.md`.
 - [x] Done when: zero violations.
 
-## 9. Run `/gov:review`
+## 9. Run `/ductus:review`
 
-- [x] After the spec advances to `in-progress` and tasks 1–7 are complete, run `/gov:review` to populate `spec.md`'s `review` frontmatter block and produce `review.md`.
+- [x] After the spec advances to `in-progress` and tasks 1–7 are complete, run `/ductus:review` to populate `spec.md`'s `review` frontmatter block and produce `review.md`.
 - [x] Done when: `review.md` exists, `must-violations: 0` (or all surfaced findings are resolved/waived), and `review.blocking: false`.

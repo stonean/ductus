@@ -4,20 +4,20 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 1. Rename the existing hook to the inner-file path
 
-- [x] `git mv framework/bootstrap/hooks/pre-commit framework/bootstrap/hooks/govern-pre-commit`
+- [x] `git mv framework/bootstrap/hooks/pre-commit framework/bootstrap/hooks/ductus-pre-commit`
 - [x] Verify content is byte-identical to the pre-rename file (sentinel on line 2 preserved, generator invocation + staging unchanged)
 
 Done when: `git status` shows the rename, the new path's contents exactly match the old.
 Maps to: AC1.
 
-Note: `git mv` is in `.claude/settings.local.json` deny list, so the implementation wrote `govern-pre-commit` via `Write` and let Task 2 overwrite the original `pre-commit` with the outer-stub content. Git's rename-detection heuristic still flags this as a rename in `git status -M` and `git log --follow` because `govern-pre-commit` is byte-identical to the original `pre-commit`.
+Note: `git mv` is in `.claude/settings.local.json` deny list, so the implementation wrote `ductus-pre-commit` via `Write` and let Task 2 overwrite the original `pre-commit` with the outer-stub content. Git's rename-detection heuristic still flags this as a rename in `git status -M` and `git log --follow` because `ductus-pre-commit` is byte-identical to the original `pre-commit`.
 
 ## 2. Write the new outer stub at the original hook path
 
 - [x] Create `framework/bootstrap/hooks/pre-commit` with the contents specified in spec §Design > Outer file (initial content)
-- [x] No `# managed-by: govern` sentinel anywhere in the file
-- [x] Two comment blocks: top block (adopter ownership + where to add steps) and the inline comment above `./.githooks/govern-pre-commit` (govern-owned, do not edit)
-- [x] File is executable (chmod +x; the manifest's adopter-side install handles this for adopters, but the source file in the govern repo should also be executable)
+- [x] No `# managed-by: ductus` sentinel anywhere in the file
+- [x] Two comment blocks: top block (adopter ownership + where to add steps) and the inline comment above `./.githooks/ductus-pre-commit` (ductus-owned, do not edit)
+- [x] File is executable (chmod +x; the manifest's adopter-side install handles this for adopters, but the source file in the ductus repo should also be executable)
 
 Done when: `framework/bootstrap/hooks/pre-commit` exists, is executable, contains the two comment blocks and the invocation, has no sentinel.
 Maps to: AC2.
@@ -30,25 +30,25 @@ Maps to: AC2.
 Done when: file is deleted; no references remain except in 017 (covered by signpost).
 Maps to: AC12.
 
-Note: also updated `framework/templates/ci/adopter-generators.yml:46` (boundary expansion approved during implement) — its error message previously referenced `./.githooks/install.sh`; now points at `/govern` for hook install or `scripts/gen-spec-deps.sh` for the local fix-up.
+Note: also updated `framework/templates/ci/adopter-generators.yml:46` (boundary expansion approved during implement) — its error message previously referenced `./.githooks/install.sh`; now points at `/ductus` for hook install or `scripts/gen-spec-deps.sh` for the local fix-up.
 
-## 4. Update the §Shared Files manifest in `framework/bootstrap/govern.md`
+## 4. Update the §Shared Files manifest in `framework/bootstrap/ductus.md`
 
 - [x] Replace the single row `framework/bootstrap/hooks/pre-commit` → `.githooks/pre-commit` with two rows:
-  - `framework/bootstrap/hooks/govern-pre-commit` → `.githooks/govern-pre-commit` (`update` strategy, in the govern-owned shared files section)
+  - `framework/bootstrap/hooks/ductus-pre-commit` → `.githooks/ductus-pre-commit` (`update` strategy, in the ductus-owned shared files section)
   - `framework/bootstrap/hooks/pre-commit` → `.githooks/pre-commit` (`create` strategy, in the project-specific shared files section)
 - [x] Verify the manifest still validates (no broken table syntax, all rows have source + destination)
 
 Done when: §Shared Files lists both rows in their respective subsections, with the documented strategies.
 Maps to: AC3, AC4.
 
-## 5. Rewrite §Hook Installation detection ladder in `framework/bootstrap/govern.md`
+## 5. Rewrite §Hook Installation detection ladder in `framework/bootstrap/ductus.md`
 
 - [x] Replace the 7-item ladder with the 4-item form from spec §Design > Hook Installation logic
-- [x] Remove the old item 6 ("existing `.githooks/pre-commit` from a prior `/govern` run, detected by sentinel") entirely
+- [x] Remove the old item 6 ("existing `.githooks/pre-commit` from a prior `/ductus` run, detected by sentinel") entirely
 - [x] Collapse husky / pre-commit-py / lefthook items into a single "third-party hook system detected" branch
-- [x] Update the Manual integration snippet path from `./.githooks/pre-commit` to `./.githooks/govern-pre-commit`
-- [x] Replace the prior install action (calling `install.sh`) with two inline lines in the fresh-install branch: `git config core.hooksPath .githooks` and `chmod +x .githooks/pre-commit .githooks/govern-pre-commit`
+- [x] Update the Manual integration snippet path from `./.githooks/pre-commit` to `./.githooks/ductus-pre-commit`
+- [x] Replace the prior install action (calling `install.sh`) with two inline lines in the fresh-install branch: `git config core.hooksPath .githooks` and `chmod +x .githooks/pre-commit .githooks/ductus-pre-commit`
 - [x] Update the Post-Scaffolding Output § hook-installation status messages to match the new ladder branches
 - [x] Update Pinning subsection to clarify pinning is only meaningful for the inner file (outer is `create`-strategy and never overwritten regardless)
 
@@ -61,9 +61,9 @@ Maps to: AC5, AC6.
 - [x] Specify the line-2 sentinel check on `.githooks/pre-commit`
 - [x] Specify the conditional `git mv` (tracked) vs. plain `mv` (untracked); the check is `git ls-files --error-unmatch .githooks/pre-commit`
 - [x] Specify the post-rename behavior: continue with manifest passes (the renamed inner is byte-identical to upstream so `update` is a no-op; `create` writes the new outer)
-- [x] Specify the post-scaffolding summary line: `migrated pre-commit hook: .githooks/pre-commit → .githooks/govern-pre-commit; created adopter-owned .githooks/pre-commit stub`
+- [x] Specify the post-scaffolding summary line: `migrated pre-commit hook: .githooks/pre-commit → .githooks/ductus-pre-commit; created adopter-owned .githooks/pre-commit stub`
 - [x] Cover the two recovery branches from spec §Edge Cases:
-  - Pre-existing `.githooks/govern-pre-commit` blocking the rename: warn `migration skipped: .githooks/govern-pre-commit already exists; resolve manually` and continue
+  - Pre-existing `.githooks/ductus-pre-commit` blocking the rename: warn `migration skipped: .githooks/ductus-pre-commit already exists; resolve manually` and continue
   - `git mv` failure (permissions, etc.): warn `migration failed: could not rename .githooks/pre-commit; resolve manually`, continue with manifest passes (inner gets written from scratch; outer's `create` skips the still-present legacy file)
 
 Done when: the subsection is present, lists the trigger condition, the rename action, the post-scaffolding summary line, and both recovery branches.
@@ -96,13 +96,13 @@ Maps to: AC13.
 ## 9. End-to-end manual verification (sandbox adopter)
 
 - [x] Create a temp git repository: `mktemp -d`, `git init`, configure user
-- [x] Run `/govern` against the temp dir from a Claude Code session that has the local govern checkout as a source — fresh-install path
-- [x] Verify: both `.githooks/pre-commit` and `.githooks/govern-pre-commit` exist, both are executable, only the inner has the sentinel on line 2, `core.hooksPath` is set to `.githooks`
+- [x] Run `/ductus` against the temp dir from a Claude Code session that has the local ductus checkout as a source — fresh-install path
+- [x] Verify: both `.githooks/pre-commit` and `.githooks/ductus-pre-commit` exist, both are executable, only the inner has the sentinel on line 2, `core.hooksPath` is set to `.githooks`
 - [x] Add a comment line to the outer file (`# adopter test edit`); commit something trivial
-- [x] Re-run `/govern`; verify the comment line in the outer file survives
+- [x] Re-run `/ductus`; verify the comment line in the outer file survives
 - [x] In a second temp dir, simulate the spec-017 install: create `.githooks/pre-commit` with the legacy contents (sentinel on line 2), set `core.hooksPath .githooks`
-- [x] Run `/govern` against the second temp dir — migration path
-- [x] Verify: `.githooks/pre-commit` now contains the new outer stub (no sentinel), `.githooks/govern-pre-commit` contains the legacy contents (sentinel on line 2), the post-scaffolding summary includes the migration line
+- [x] Run `/ductus` against the second temp dir — migration path
+- [x] Verify: `.githooks/pre-commit` now contains the new outer stub (no sentinel), `.githooks/ductus-pre-commit` contains the legacy contents (sentinel on line 2), the post-scaffolding summary includes the migration line
 
 Done when: both verification runs produce the expected file layouts; the post-scaffolding summary lines match.
 Maps to: AC8, AC9, AC11.

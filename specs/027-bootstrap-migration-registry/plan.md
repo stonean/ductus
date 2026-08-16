@@ -4,7 +4,7 @@ Implements [027 — Bootstrap Migration Registry](spec.md).
 
 ## Overview
 
-The implementation consolidates two scattered sets of adopter-cleanup prose in `framework/bootstrap/govern.md` — the `## Pre-run Migrations` section (`.governance.toml`, gitignore marker, `spec-and-plan.md`, rule-file relocation) and the `## Workflow recommendation` legacy-cleanup sub-sections (`skills/` directory, workflow filename rename) — into one registry-driven loop. Six bespoke prose blocks become six TOML entries plus six small markdown procedure files plus one consolidated bootstrap step. Sunset is delivered via a `CHANGELOG.md` at the repo root and a Family 10 audit that enforces registry/state consistency.
+The implementation consolidates two scattered sets of adopter-cleanup prose in `framework/bootstrap/ductus.md` — the `## Pre-run Migrations` section (`.governance.toml`, gitignore marker, `spec-and-plan.md`, rule-file relocation) and the `## Workflow recommendation` legacy-cleanup sub-sections (`skills/` directory, workflow filename rename) — into one registry-driven loop. Six bespoke prose blocks become six TOML entries plus six small markdown procedure files plus one consolidated bootstrap step. Sunset is delivered via a `CHANGELOG.md` at the repo root and a Family 10 audit that enforces registry/state consistency.
 
 No new runtime primitive at v1 (Q11). Per-entry idempotency is preserved as an invariant: every procedure file's first action is a target-presence check that exits silently when nothing to do.
 
@@ -28,7 +28,7 @@ Field semantics:
 
 - `id` — slug, stable, lowercase-hyphenated. The `.govern.toml` `[migrations].last_applied` references this string.
 - `introduced_in` — SemVer string; back-filled per `git log` for the existing six entries.
-- `sunset_after` — SemVer string or omitted. Entry expires when current gvrn ≥ `sunset_after`. Omitted means "active indefinitely."
+- `sunset_after` — SemVer string or omitted. Entry expires when current ductus ≥ `sunset_after`. Omitted means "active indefinitely."
 - `summary` — one-line human-readable description used by the post-scaffolding summary line and the eventual CHANGELOG heading.
 - `target_paths` — array of paths or globs (relative to adopter project root). Read by Family 10 to verify the removed convention is actually absent from current `framework/`.
 - `procedure_file` — path (relative to repo root) to the markdown procedure file. Always present; there is no declarative-step DSL (Q4).
@@ -44,7 +44,7 @@ Ordering rule (Q3): by `introduced_in` SemVer ascending, lexicographic tie-break
 last_applied = "rule-files-relocate"
 ```
 
-Absent section is the green-field default for new adopters scaffolded after the registry ships. Their first `/govern` run applies every active entry (most of which are no-ops because their targets are absent), then writes the section with `last_applied = <newest entry's id>`.
+Absent section is the green-field default for new adopters scaffolded after the registry ships. Their first `/ductus` run applies every active entry (most of which are no-ops because their targets are absent), then writes the section with `last_applied = <newest entry's id>`.
 
 Stale-reference behavior (edge case from spec): if `last_applied` references an id that no longer exists in the active registry (sunsetted since the adopter's last run), bootstrap treats the field as "before the oldest active entry," runs every active entry, and emits a warning naming the retired id with a pointer to `CHANGELOG.md`.
 
@@ -55,7 +55,7 @@ Each file is a small markdown procedure with a fixed top-level shape. The bootst
 ```markdown
 # {id}
 
-**Introduced in:** {gvrn version}
+**Introduced in:** {ductus version}
 **Summary:** {one-line summary, matches TOML `summary` field}
 
 ## Procedure
@@ -70,7 +70,7 @@ Idempotency check is step 1 of every procedure file, mechanically. The bootstrap
 
 ### Bootstrap loop placement and shape
 
-The `## Pre-run Migrations` section in `framework/bootstrap/govern.md` (lines ~190–250) and the two scattered "Legacy X cleanup" sub-sections inside `## Workflow recommendation` (lines ~570–598) collapse into one new `## Pre-run Migrations` section with this shape:
+The `## Pre-run Migrations` section in `framework/bootstrap/ductus.md` (lines ~190–250) and the two scattered "Legacy X cleanup" sub-sections inside `## Workflow recommendation` (lines ~570–598) collapse into one new `## Pre-run Migrations` section with this shape:
 
 ```markdown
 ## Pre-run Migrations
@@ -80,19 +80,19 @@ Read `framework/migrations.toml` from the fetched archive. Read `.govern.toml`'s
 
 Filter the registry to entries where:
   - `introduced_in` is newer than `last_applied` (SemVer compare, lex tie-break on id), AND
-  - current gvrn version is less than `sunset_after` (or `sunset_after` is absent).
+  - current ductus version is less than `sunset_after` (or `sunset_after` is absent).
 
 If the filtered list is empty, emit nothing and proceed.
 
 Otherwise, prompt once with text of the form:
 
-      N framework migrations are pending since your last /govern run:
+      N framework migrations are pending since your last /ductus run:
         - {id} (introduced {introduced_in})
         ...
       Apply now? (Y/n)
 
 On decline: emit `warning: N migrations skipped; pipeline commands may fail on
-legacy artifacts until applied. Re-run /govern to apply.` and proceed without
+legacy artifacts until applied. Re-run /ductus to apply.` and proceed without
 filesystem changes.
 
 On confirm: for each entry in filter order:
@@ -101,7 +101,7 @@ On confirm: for each entry in filter order:
   3. Update `.govern.toml` `[migrations].last_applied = "{id}"` atomically
      (tempfile + rename, matching existing `.govern.toml` write semantics).
   4. If the procedure aborts (rare — only via explicit user "stop everything"
-     path inside the procedure), halt the loop. The next /govern run resumes
+     path inside the procedure), halt the loop. The next /ductus run resumes
      from the next-pending entry.
 ```
 
@@ -122,15 +122,15 @@ If, after implementation, a SemVer helper proves common across multiple procedur
 
 ### Sunset commit shape
 
-When a maintainer sunsets a migration (current gvrn ≥ entry's `sunset_after`), the work is one commit:
+When a maintainer sunsets a migration (current ductus ≥ entry's `sunset_after`), the work is one commit:
 
 1. Delete the `[[migrations]]` entry from `framework/migrations.toml`.
 2. Append the procedure file's content to `CHANGELOG.md` at the repo root under:
 
    ```markdown
-   ## {id} — sunset {gvrn version}
+   ## {id} — sunset {ductus version}
 
-   Introduced in gvrn {introduced_in}; sunset after gvrn {sunset_after}.
+   Introduced in ductus {introduced_in}; sunset after ductus {sunset_after}.
    Adopters who skipped past this window must apply manually.
 
    {full content of framework/migrations/{id}.md}
@@ -190,7 +190,7 @@ The runtime crate's own release notes live at `runtime/CHANGELOG.md`.
 
 ## Archived migrations
 
-*None yet — registry introduced in gvrn {registry_introduction_version}.*
+*None yet — registry introduced in ductus {registry_introduction_version}.*
 ```
 
 Future maintainers append archived migrations under `## Archived migrations` as they sunset, with most-recent at the top.
@@ -205,17 +205,17 @@ Future maintainers append archived migrations under `## Archived migrations` as 
 | `framework/migrations/workflow-filename-rename.md` | Create | Procedure for post-005 workflow filename cleanup |
 | `framework/migrations/rule-files-relocate.md` | Create | Procedure for rule-file relocation (subsumes `configuration.md` rename) |
 | `framework/migrations/governance-config-rename.md` | Create | Procedure for `.governance.toml` → `.govern.toml` |
-| `framework/migrations/gitignore-marker-rename.md` | Create | Procedure for `# Governance` → `# govern` gitignore marker |
-| `framework/bootstrap/govern.md` | Modify | Replace `## Pre-run Migrations` section; delete two legacy-cleanup sub-sections inside `## Workflow recommendation`; add `.govern.toml` `[migrations]` section to the §Project Configuration schema |
+| `framework/migrations/gitignore-marker-rename.md` | Create | Procedure for `# Governance` → `# ductus` gitignore marker |
+| `framework/bootstrap/ductus.md` | Modify | Replace `## Pre-run Migrations` section; delete two legacy-cleanup sub-sections inside `## Workflow recommendation`; add `.govern.toml` `[migrations]` section to the §Project Configuration schema |
 | `scripts/audit/migration-coverage.sh` | Create | Family 10 — three static checks |
 | `scripts/audit/run-all.sh` | Modify | Append Family 10 invocation |
 | `framework/commands/audit.md` | Modify | Append step for Family 10 in the Markdown-only reference |
 | `CHANGELOG.md` | Create | Adopter-facing archive (seed content; no entries yet) |
-| `.claude/commands/gov/init.md` | Generate | Regenerated by `scripts/gen-claude-commands.sh` (pre-commit hook) if it mirrors govern.md content |
+| `.claude/commands/ductus/init.md` | Generate | Regenerated by `scripts/gen-claude-commands.sh` (pre-commit hook) if it mirrors ductus.md content |
 | `specs/026-framework-self-audit/scenarios/family-10-migration-coverage.md` | Create | Cross-spec impact: 026 is `done`; Family 10 extension lands as a scenario with back-link to 027 |
 | `specs/027-bootstrap-migration-registry/spec.md` | Modify | Status `clarified → planned` at the end of this phase, then `→ in-progress` and `→ done` during implementation |
 
-The runtime write boundary that `/gov:implement` derives from git history will include the above plus incidental files (CHANGELOG entries on this spec's commits, README spec-status table regeneration via the pre-commit hook).
+The runtime write boundary that `/ductus:implement` derives from git history will include the above plus incidental files (CHANGELOG entries on this spec's commits, README spec-status table regeneration via the pre-commit hook).
 
 ## Trade-offs
 
@@ -233,7 +233,7 @@ Q9. A check that walks `git log -- framework/templates/ framework/commands/` to 
 
 ### Considered: unifying `enforce-manifest`'s legacy-cleanup work with the registry (accepted)
 
-The existing `enforce-manifest` invocation in govern.md line 36 already removes the legacy `skills/` directory and legacy workflow filenames as a side effect. Leaving those two migrations out of the registry (since `enforce-manifest` handles them) would be coherent but creates two places to look for "what does bootstrap clean up on every run?" Decision: register both anyway, and modify `enforce-manifest`'s contract so it no longer handles legacy-cleanup work (just slash-command manifest enforcement). This keeps the registry as the *one* source of truth for adopter-cleanup, at the cost of trimming `enforce-manifest`. The trim is a small refactor of the primitive's expected-list construction — no behavior change for the slash-command-manifest path.
+The existing `enforce-manifest` invocation in ductus.md line 36 already removes the legacy `skills/` directory and legacy workflow filenames as a side effect. Leaving those two migrations out of the registry (since `enforce-manifest` handles them) would be coherent but creates two places to look for "what does bootstrap clean up on every run?" Decision: register both anyway, and modify `enforce-manifest`'s contract so it no longer handles legacy-cleanup work (just slash-command manifest enforcement). This keeps the registry as the *one* source of truth for adopter-cleanup, at the cost of trimming `enforce-manifest`. The trim is a small refactor of the primitive's expected-list construction — no behavior change for the slash-command-manifest path.
 
 ## Known Limitations
 

@@ -13,7 +13,7 @@ skipped-passes: []
 
 ## Summary
 
-`[simple]` task marker, `--auto` flag on `/gov:implement`, stuck-detection step, plus the `skills/` → `workflows/` rename (and the cross-spec migration into 005). Pure markdown across command sources, templates, constitution, and adopter docs. The directory rename is byte-preserving for templates. Security rules do not apply. All five passes ran; no findings. `blocking: no`.
+`[simple]` task marker, `--auto` flag on `/ductus:implement`, stuck-detection step, plus the `skills/` → `workflows/` rename (and the cross-spec migration into 005). Pure markdown across command sources, templates, constitution, and adopter docs. The directory rename is byte-preserving for templates. Security rules do not apply. All five passes ran; no findings. `blocking: no`.
 
 Note: the `[simple]` task marker introduced here was later removed by spec 017 (derive-don't-ask) along with the related plan.md proposal step. The autonomy mechanism itself (the `--auto` flag and gates) remains.
 

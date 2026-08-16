@@ -68,5 +68,5 @@ move with it; the implementation greps for step references before renumbering.
 | --- | --- | --- |
 | `framework/commands/analyze.md` | Modify | Capture step before render; markdown-only reference section |
 | `framework/constitution.md` | Modify | §Automatic issue capture — analyze as a surfacing gate, scope widened |
-| `.claude/commands/gov/analyze.md` | Modify | Regenerated mirror |
+| `.claude/commands/ductus/analyze.md` | Modify | Regenerated mirror |
 | `specs/047-analyze-findings-durability/tasks.md` | Modify | Task tracking |

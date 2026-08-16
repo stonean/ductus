@@ -42,8 +42,8 @@ Issue #60 confirmed.
 - `scope`: `home-level`
 - `mechanism`: `surface-instruction` (no scriptable `agy mcp add`; edit the config file, then `/mcp` reload)
 
-govern's previously-written `.agents/mcp_config.json` is now inert cruft (agy ignores it):
-govern stops writing it going forward and leaves existing copies in place — no destructive
+ductus's previously-written `.agents/mcp_config.json` is now inert cruft (agy ignores it):
+ductus stops writing it going forward and leaves existing copies in place — no destructive
 cleanup migration (symmetric with how Auggie's stale `.mcp.json` is left alone).
 
 ## Edge Cases

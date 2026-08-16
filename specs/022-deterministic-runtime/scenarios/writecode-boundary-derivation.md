@@ -6,13 +6,13 @@ section: "Follow-on scenarios"
 
 ## Context
 
-On the `/gov:implement` exec path the writeCode validator enforces edits against the `write-boundary` context key, but nothing derives into that key. `derive-boundary` (step 2) emits its result under `boundary`; only the informational `first-commit` / `current-head` are threaded into the writeCode request. So `write-boundary` is populated only by a session seed — with no seed, every edit is rejected (fail-closed), and a freshly derived boundary is never used for enforcement.
+On the `/ductus:implement` exec path the writeCode validator enforces edits against the `write-boundary` context key, but nothing derives into that key. `derive-boundary` (step 2) emits its result under `boundary`; only the informational `first-commit` / `current-head` are threaded into the writeCode request. So `write-boundary` is populated only by a session seed — with no seed, every edit is rejected (fail-closed), and a freshly derived boundary is never used for enforcement.
 
 A naive fix (bind `derive-boundary`'s `boundary` → `write-boundary`) breaks the `implement-basic` parity fixture: it is a single-commit git repo, so `git diff <first-commit>..HEAD` is empty and `derive-boundary` yields an empty (or edit-excluding) boundary. The fixture hand-seeds `["specs/004-implement/**", "runtime/**"]` precisely to give the writeCode enforcement a realistic boundary the canned edits satisfy. An empty-guarded override still fails, because the single-commit derivation is non-empty-but-wrong for the canned edits, so the golden re-blesses to an out-of-boundary error and the parity success assert fails. The fix therefore needs both a precedence decision and a fixture that exercises a real derivation.
 
 ## Behavior
 
-The write boundary the runtime derives during `/gov:implement` populates the key the writeCode validator enforces on, so enforcement uses what the run actually computed rather than depending on a pre-seeded `write-boundary`. A seeded boundary remains the fallback when the derivation is empty (a spec dir with no changes since its first commit), so the fail-closed case is a deliberate seed rather than an accident.
+The write boundary the runtime derives during `/ductus:implement` populates the key the writeCode validator enforces on, so enforcement uses what the run actually computed rather than depending on a pre-seeded `write-boundary`. A seeded boundary remains the fallback when the derivation is empty (a spec dir with no changes since its first commit), so the fail-closed case is a deliberate seed rather than an accident.
 
 The `implement-basic` parity fixture gains a multi-commit history (an initial commit, then a commit touching the feature's spec dir and the edited paths) so `derive-boundary` produces a non-empty boundary that matches the canned writeCode edits; the golden is re-blessed against it.
 

@@ -16,7 +16,7 @@ skipped-passes: []
 
 Rule-introducing, markdown-tier change set: the new rule file
 `framework/rules/observability-backend.md` (`METRIC`/`TRACE`/`HEALTH`, six rules)
-and its `/govern` Shared Files manifest row in `framework/bootstrap/govern.md` —
+and its `/ductus` Shared Files manifest row in `framework/bootstrap/ductus.md` —
 no application code, no new surface (the `BE` surface already exists, so no
 `lint-rule-ids.sh` or `data-model.md` change). No loaded security rule's
 Verification trigger fires against a rule-definition file or a manifest table
@@ -33,7 +33,7 @@ stated in each; categories are disjoint from the other backend files and
 satisfied by the implementation. **0 MUST violations — not blocking; the spec
 may advance to `done`.**
 
-Rule-file selection for this run: `[rules] surfaces` unset in govern's own
+Rule-file selection for this run: `[rules] surfaces` unset in ductus's own
 `.govern.toml`, so step 5 fell back to detected-stack derivation;
 `[review] tech-stack-verified = true` skipped the alignment check.
 
@@ -53,7 +53,7 @@ _None._
 
 _None._
 
-## Captured issues (pending /gov:groom)
+## Captured issues (pending /ductus:groom)
 
 _None — no inbox additions since diff-base._
 

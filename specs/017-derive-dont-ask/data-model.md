@@ -161,10 +161,10 @@ Where `{name}` identifies the block type. The generator scripts find the markers
 The shipped adopter pre-commit hook contains a single sentinel line near the top:
 
 ```bash
-# managed-by: govern
+# managed-by: ductus
 ```
 
-`/govern`'s hook-installation logic uses the presence of this sentinel to distinguish a govern-installed hook from a hand-rolled one. When the sentinel is present, `/govern` treats the file as `update`-strategy and overwrites it on subsequent runs (subject to `.govern.toml` pinning). When the sentinel is absent, `/govern` skips installation and warns the user.
+`/ductus`'s hook-installation logic uses the presence of this sentinel to distinguish a ductus-installed hook from a hand-rolled one. When the sentinel is present, `/ductus` treats the file as `update`-strategy and overwrites it on subsequent runs (subject to `.govern.toml` pinning). When the sentinel is absent, `/ductus` skips installation and warns the user.
 
 ## File extension and shebang conventions
 

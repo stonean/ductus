@@ -8,7 +8,7 @@ Wave 1 (tasks 1–4) does not change Antigravity behavior and is implementable n
 
 ## 1. Split MCP discovery off the `layout` axis in the registry
 
-- [x] In `framework/bootstrap/govern.md`, remove the `MCP-wiring file` row from the
+- [x] In `framework/bootstrap/ductus.md`, remove the `MCP-wiring file` row from the
       §Derived values **layout** table (line ~71).
 - [x] Add a per-agent **MCP registration** table (keyed by registry `key`) with
       `target` / `scope` / `mechanism` columns for `claude` / `auggie` / `antigravity`,
@@ -20,7 +20,7 @@ Wave 1 (tasks 1–4) does not change Antigravity behavior and is implementable n
       exists; the "Adding a new agent" contract mentions the descriptor; `lint-markdown`
       clean.
 
-## 2. Branch State-B wiring by `mechanism` in `govern.md`
+## 2. Branch State-B wiring by `mechanism` in `ductus.md`
 
 - [x] Rewrite §State B step 1 (line ~178) to branch on the agent's `mechanism`:
       `write-file` writes `target` additively (existing five-case merge); `surface-instruction`
@@ -29,10 +29,10 @@ Wave 1 (tasks 1–4) does not change Antigravity behavior and is implementable n
       description; keep the additive five-case merge for the `write-file` branch.
 - [x] Add a `surface-instruction` variant to the Pre-flight abort message (line ~182–184)
       that carries the per-agent registration command and "run this, then start a fresh
-      session." Auggie command: `auggie mcp add gvrn --command gvrn --args "mcp"`.
+      session." Auggie command: `auggie mcp add ductus --command ductus --args "mcp"`.
 - [x] Confirm the State-B **permission write** (step 2) stays unchanged for all agents
       (project-level settings, independent of MCP server location).
-- [x] **Done when:** govern.md describes both mechanisms; Auggie is no longer wired via
+- [x] **Done when:** ductus.md describes both mechanisms; Auggie is no longer wired via
       `.mcp.json`; the abort covers both variants; Antigravity retains current behavior
       (provisional); `lint-markdown` clean.
 
@@ -52,7 +52,7 @@ Wave 1 (tasks 1–4) does not change Antigravity behavior and is implementable n
       031 supersedes the `.agents/mcp_config.json` layout-derived MCP-wiring decision.
 - [x] Add a back-linked note to `specs/029-bootstrap-runtime-autowire/spec.md`: 031 changes
       State-B for home-level agents (surface-instruction, not file write).
-- [x] Decide and apply the recording mechanism (signpost vs. `/gov:amend`): **Option B** —
+- [x] Decide and apply the recording mechanism (signpost vs. `/ductus:amend`): **Option B** —
       non-reopening navigational signposts, 028/029 stay `done` (per the existing 012
       `Signpost (post-028)` precedent). User-approved deviation from `constitution.md:543`;
       flagged for a possible constitution clarification follow-up.
@@ -61,7 +61,7 @@ Wave 1 (tasks 1–4) does not change Antigravity behavior and is implementable n
 
 ## 5. Verify Antigravity project-local MCP loading against the live `agy` CLI
 
-- [x] On a machine with `agy` installed, place a `gvrn` entry in a project's
+- [x] On a machine with `agy` installed, place a `ductus` entry in a project's
       `.agents/mcp_config.json` and confirm whether the server actually spawns (vs.
       read-but-ignored per `google-antigravity/antigravity-cli` issue #60).
       **Result: project-local NOT loaded (0 spawns, 0 log refs); home-level control
@@ -80,27 +80,27 @@ Wave 1 (tasks 1–4) does not change Antigravity behavior and is implementable n
 - [x] If `surface-instruction`: add the Antigravity abort instruction (edit
       `~/.gemini/config/mcp_config.json`, then `/mcp` reload) and stop writing
       `.agents/mcp_config.json`. If `write-file`: keep current behavior, descriptor now
-      explicit. **→ surface-instruction / home-level applied across govern.md,
+      explicit. **→ surface-instruction / home-level applied across ductus.md,
       data-model.md, README.md.**
-- [x] **Done when:** govern.md's Antigravity MCP descriptor and State-B branch match the
+- [x] **Done when:** ductus.md's Antigravity MCP descriptor and State-B branch match the
       task-5 outcome; `lint-markdown` clean.
 
 ## 7. Conditional cleanup migration (gated on task 5; only if project-local is ignored)
 
 - [x] If verification confirmed project-local ignored: add a `framework/migrations.toml`
       entry removing a stale `.agents/mcp_config.json` from adopter repos on the next
-      `/govern` run. Verify the matcher targets only that file and **never** `.mcp.json`.
+      `/ductus` run. Verify the matcher targets only that file and **never** `.mcp.json`.
       **Decision: Option B — no migration.** The stale file is inert (agy ignores it), so
       cleanup is purely cosmetic; a destructive, primitive-less (hand-edited JSON every
-      `/govern`), version-coupled migration is not worth it. Symmetric with leaving
-      Auggie's stale `.mcp.json` in place. govern stops writing it going forward (task 6).
+      `/ductus`), version-coupled migration is not worth it. Symmetric with leaving
+      Auggie's stale `.mcp.json` in place. ductus stops writing it going forward (task 6).
 - [x] **Done when:** the migration entry exists and is antigravity-file-scoped — or the
       task is closed **N/A** (chosen): inert file left in place, no destructive cleanup.
 
 ## 8. Generalize the command-preamble MCP-prefix phrasing (optional sweep)
 
 - [x] Replace "server-name prefix taken from `.mcp.json`" with "taken from the agent's MCP
-      registration" in `framework/bootstrap/govern.md` (line ~22) and
+      registration" in `framework/bootstrap/ductus.md` (line ~22) and
       `framework/commands/{target,status,analyze,implement,audit,specify,plan,ask}.md`.
 - [x] **Done when:** the phrase is host-generic everywhere; `lint-markdown` clean.
 

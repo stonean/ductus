@@ -55,10 +55,10 @@ Done when: the §spec-lifecycle bullet matches the **Constitution Updates** sect
 
 Done when: the note appears near the existing rename note and references spec 014 explicitly.
 
-## 6. Regenerate `.claude/commands/gov/` mirrors
+## 6. Regenerate `.claude/commands/ductus/` mirrors
 
 - [x] Run `./scripts/gen-claude-commands.sh`
-- [x] Verify `.claude/commands/gov/amend.md`, `clarify.md`, and `plan.md` reflect the source edits with `{project}` and `{cli-config-dir}` substituted correctly
+- [x] Verify `.claude/commands/ductus/amend.md`, `clarify.md`, and `plan.md` reflect the source edits with `{project}` and `{cli-config-dir}` substituted correctly
 - [x] Confirm `git diff` shows changes only in those three generated files (plus the source edits and other expected files)
 
 Done when: the generator runs to completion and the regenerated files contain the new behaviors.
@@ -74,8 +74,8 @@ Done when: `npx markdownlint-cli2` exits 0 across all modified files.
 
 - [x] Pick Option A, Option B, or both per the scenario's "Recommended pick"; record the decision in the scenario's Resolved Questions
 - [x] If Option B: update `framework/commands/amend.md` to add the on-disk delta detection precondition on `done` specs, with the prompt wording in the scenario's Behavior section; revert `status: done → in-progress` on confirm, leave files untouched on decline
-- [x] If Option A: update agent-facing guidance (AGENTS.md and/or constitution) so the agent invokes `set-status` directly for re-open-only intent and does not prompt `/gov:amend`
-- [x] Regenerate `.claude/commands/gov/amend.md` via `./scripts/gen-claude-commands.sh` if `amend.md` is touched
+- [x] If Option A: update agent-facing guidance (AGENTS.md and/or constitution) so the agent invokes `set-status` directly for re-open-only intent and does not prompt `/ductus:amend`
+- [x] Regenerate `.claude/commands/ductus/amend.md` via `./scripts/gen-claude-commands.sh` if `amend.md` is touched
 - [x] Run `npx markdownlint-cli2` on every modified file
 
 Done when: the targeted host (agent for A, command for B, or both) re-opens a `done` spec from an on-disk delta without requiring synthetic classifier input and without creating an unwanted scenario file.

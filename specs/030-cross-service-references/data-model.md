@@ -11,7 +11,7 @@ Declared in `.govern.toml` under `[services.<alias>]`. The table is optional; an
 | `<alias>` | yes | table key | Short, stable handle for the service (e.g., `api`). Author-chosen; need not match the repo name. |
 | `repo` | yes | string | Canonical repository URL. The **identity** matched against a reference link's href to decide registration. |
 | `path` | yes | string | Local checkout location, relative to the repo root or absolute. The location read for status resolution. |
-| `description` | no | string | Human/agent-facing note on the service's purpose (e.g., "owns all data models; the system of record"). **Informational only** — surfaced for orientation in `/{project}:status` and the registry; no `govern` behavior depends on it, so a blank description degrades to nothing. |
+| `description` | no | string | Human/agent-facing note on the service's purpose (e.g., "owns all data models; the system of record"). **Informational only** — surfaced for orientation in `/{project}:status` and the registry; no `ductus` behavior depends on it, so a blank description degrades to nothing. |
 
 Example:
 

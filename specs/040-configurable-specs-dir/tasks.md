@@ -22,26 +22,26 @@ Done when: every listed site uses the resolver, the existing suite stays green u
 ## 3. Generators and lints resolve the root
 
 - [x] Resolve `[paths] specs-root` (default `specs`) in `gen-spec-deps.sh` and `gen-cross-service-refs.sh` before walking the tree
-- [x] Confirm `lint-rule-ids.sh` (walks `framework/rules/`) and `lint-frontmatter.sh` (govern-CI-only, walks govern's own `specs/`) need no change — neither walks the adopter-configurable spec tree, and neither ships to or runs in an adopter pre-commit
+- [x] Confirm `lint-rule-ids.sh` (walks `framework/rules/`) and `lint-frontmatter.sh` (ductus-CI-only, walks ductus's own `specs/`) need no change — neither walks the adopter-configurable spec tree, and neither ships to or runs in an adopter pre-commit
 - [x] Add a renamed-root fixture under `scripts/tests/` and assert correct walking
 
 Done when: each script reads the configured root (default `specs`), and a renamed-root fixture is walked correctly without touching adopter wiring beyond these scripts.
 
-## 4. Bootstrap `/govern` prompt, validation, and notices
+## 4. Bootstrap `/ductus` prompt, validation, and notices
 
-- [x] Add the init-time spec-root prompt (default `specs`, persisted to `.govern.toml`), confined to `/govern`
+- [x] Add the init-time spec-root prompt (default `specs`, persisted to `.govern.toml`), confined to `/ductus`
 - [x] Add blocking well-formedness validation with a clear rejection message
 - [x] Add the on-disk collision advisory (warn naming the directory; proceed on confirmation)
 - [x] Add the half-finished-rename notice
 - [x] Scaffold the spec tree under the configured name; author with placeholders
 
-Done when: `framework/bootstrap/govern.md` documents all four behaviors and selective scaffolding via the markdown-only path, using placeholders.
+Done when: `framework/bootstrap/ductus.md` documents all four behaviors and selective scaffolding via the markdown-only path, using placeholders.
 
-## 5. Init `/gov:init` scaffolds under the configured name
+## 5. Init `/ductus:init` scaffolds under the configured name
 
-- [x] Update `.claude/commands/gov/init.md` to scaffold the spec-root dir (`inbox.md`, `rules/`, shared docs) under the configured name or `specs`
+- [x] Update `.claude/commands/ductus/init.md` to scaffold the spec-root dir (`inbox.md`, `rules/`, shared docs) under the configured name or `specs`
 
-Done when: `/gov:init` creates the spec tree under the configured root and falls back to `specs` when unset.
+Done when: `/ductus:init` creates the spec tree under the configured root and falls back to `specs` when unset.
 
 ## 6. Command sources resolve the root
 
@@ -54,7 +54,7 @@ Done when: no command body hardcodes a `specs/` read/write path, and the session
 ## 7. Documentation
 
 - [x] Add a one-line configurability note to constitution `§spec-phase` (`[paths] specs-root`, default `specs`)
-- [x] Root `constitution.md` does not exist in govern's own repo (only `framework/constitution.md` is canonical; root copies are an adopter artifact created by `/gov:init` and `/govern`) — no separate sync needed
+- [x] Root `constitution.md` does not exist in ductus's own repo (only `framework/constitution.md` is canonical; root copies are an adopter artifact created by `/ductus:init` and `/ductus`) — no separate sync needed
 - [x] Add an adopter-facing mention of `[paths] specs-root` to `README.md`
 
 Done when: both constitutions carry the note and `README.md` documents the key.
@@ -68,7 +68,7 @@ Done when: each of `002`/`003`/`022` is audited and either carries a back-linked
 
 ## 9. End-to-end and opt-in invariant
 
-- [x] Run a full pipeline cycle on a non-`specs` fixture (`/gov:specify` → `done`) with no path errors
+- [x] Run a full pipeline cycle on a non-`specs` fixture (`/ductus:specify` → `done`) with no path errors
 - [x] Confirm default-`specs` parity/golden suites are unchanged
 - [x] Confirm the markdown-only opt-in CI stays green
 

@@ -19,7 +19,7 @@ Bugs are unwritten scenarios. Rather than tracking defects in a separate system,
 
 Most projects adopting governance are not greenfield — they have existing code, existing bugs, and incomplete specifications. Scenarios are the primary mechanism for incrementally bringing brownfield projects under governance. Every bug fix, edge case discovery, or behavior clarification produces a scenario that makes the specs more precise over time.
 
-> **Note:** several commands introduced here were renamed by later specs. `/gov:scenario` is now `/gov:amend`, `/gov:groom` is now `/gov:groom` (operating on `specs/inbox.md` — see [011-brownfield-process](../011-brownfield-process/spec.md)), and `/gov:next` was retired. References to the original names appear below as historical context.
+> **Note:** several commands introduced here were renamed by later specs. `/ductus:scenario` is now `/ductus:amend`, `/ductus:groom` is now `/ductus:groom` (operating on `specs/inbox.md` — see [011-brownfield-process](../011-brownfield-process/spec.md)), and `/ductus:next` was retired. References to the original names appear below as historical context.
 >
 > **Note:** path references below (`templates/scenario.md`, `templates/triage.md`, `templates/spec.md`) reflect the original layout. The repository was later reorganized so spec templates live in `framework/templates/spec/` and project-scaffolding templates in `framework/templates/project/`. The `triage.md` template was renamed to `inbox.md` by [011-brownfield-process](../011-brownfield-process/spec.md) (current path: `framework/templates/project/inbox.md`). The acceptance criteria below were satisfied at merge time under the original paths and names.
 
@@ -61,7 +61,7 @@ Scenarios use plain language. Given/When/Then syntax is not required.
 
 ### Scenario lifecycle
 
-Scenarios do not have their own status field. A scenario is either written (merged) or not. When `/gov:scenario` creates a scenario file, it also appends a task to the parent spec's `tasks.md` referencing the scenario. The task carries the completion status — the scenario itself is a permanent requirement document.
+Scenarios do not have their own status field. A scenario is either written (merged) or not. When `/ductus:scenario` creates a scenario file, it also appends a task to the parent spec's `tasks.md` referencing the scenario. The task carries the completion status — the scenario itself is a permanent requirement document.
 
 - The parent spec's status remains `in-progress` while tasks are being worked
 - The task in `tasks.md` shows what is being worked on and links to the scenario
@@ -112,12 +112,12 @@ This feature produces the following changes to the governance framework:
 - **New template:** `templates/triage.md` — temporary inbox format for brownfield adoption
 - **Updated template:** `templates/spec.md` — reference to scenarios directory convention
 - **Updated document:** `constitution.md` — bug handling section with decision tree and scenario lifecycle
-- **New command:** `/gov:scenario` — standalone command that requires an active session target (set via `/gov:target`), confirms the target is correct, walks the decision tree, creates scenario files in the correct feature's `scenarios/` directory, and appends a linked task to the parent spec's `tasks.md`
-- **New command:** `/gov:groom` — reviews `specs/inbox.md`, walks each item through the decision tree, migrates items to the appropriate spec or scenario, and removes resolved items from triage
-- **Updated command:** `/gov:about` — documents `/gov:scenario`, `/gov:groom`, scenario conventions, and bug workflow
-- **Updated command:** `/gov:status` — displays scenario counts per spec in the pipeline dashboard
-- **Updated command:** `/gov:next` — suggests `/gov:scenario` as a next action when appropriate (e.g., bug reported, spec is `in-progress`)
-- **Updated command:** `/gov:analyze` — checks that scenario-linked tasks are complete during validation
+- **New command:** `/ductus:scenario` — standalone command that requires an active session target (set via `/ductus:target`), confirms the target is correct, walks the decision tree, creates scenario files in the correct feature's `scenarios/` directory, and appends a linked task to the parent spec's `tasks.md`
+- **New command:** `/ductus:groom` — reviews `specs/inbox.md`, walks each item through the decision tree, migrates items to the appropriate spec or scenario, and removes resolved items from triage
+- **Updated command:** `/ductus:about` — documents `/ductus:scenario`, `/ductus:groom`, scenario conventions, and bug workflow
+- **Updated command:** `/ductus:status` — displays scenario counts per spec in the pipeline dashboard
+- **Updated command:** `/ductus:next` — suggests `/ductus:scenario` as a next action when appropriate (e.g., bug reported, spec is `in-progress`)
+- **Updated command:** `/ductus:analyze` — checks that scenario-linked tasks are complete during validation
 - **Updated document:** `README.md` — documents bug workflow and scenario convention
 
 ## Acceptance Criteria
@@ -128,31 +128,31 @@ This feature produces the following changes to the governance framework:
 - [x] AC4: `constitution.md` includes a bug handling section with the decision tree
 - [x] AC5: `constitution.md` defines scenarios as part of the spec lifecycle
 - [x] AC6: `constitution.md` documents the scenario directory convention in the spec phase file structure
-- [x] AC7: `/gov:groom` command exists and walks each triage item through the decision tree
-- [x] AC8: `/gov:groom` migrates resolved items from `specs/inbox.md` to the appropriate spec or scenario
-- [x] AC9: `/gov:groom` removes migrated items from `specs/inbox.md`
-- [x] AC10: `/gov:about` documents `/gov:scenario`, `/gov:groom`, scenario conventions, and the bug workflow
-- [x] AC11: `/gov:scenario` command exists and creates scenario files under the correct feature's `scenarios/` directory
-- [x] AC12: `/gov:scenario` requires an active session target and confirms the target before proceeding
-- [x] AC13: `/gov:scenario` follows the decision tree — checks for existing spec before creating a scenario
-- [x] AC14: `/gov:scenario` appends a task to the parent spec's `tasks.md` referencing the new scenario
-- [x] AC15: `/gov:status` displays scenario counts per spec in the pipeline dashboard
-- [x] AC16: `/gov:next` suggests `/gov:scenario` as a next action when context warrants it
-- [x] AC17: `/gov:analyze` checks that scenario-linked tasks in `tasks.md` are complete
+- [x] AC7: `/ductus:groom` command exists and walks each triage item through the decision tree
+- [x] AC8: `/ductus:groom` migrates resolved items from `specs/inbox.md` to the appropriate spec or scenario
+- [x] AC9: `/ductus:groom` removes migrated items from `specs/inbox.md`
+- [x] AC10: `/ductus:about` documents `/ductus:scenario`, `/ductus:groom`, scenario conventions, and the bug workflow
+- [x] AC11: `/ductus:scenario` command exists and creates scenario files under the correct feature's `scenarios/` directory
+- [x] AC12: `/ductus:scenario` requires an active session target and confirms the target before proceeding
+- [x] AC13: `/ductus:scenario` follows the decision tree — checks for existing spec before creating a scenario
+- [x] AC14: `/ductus:scenario` appends a task to the parent spec's `tasks.md` referencing the new scenario
+- [x] AC15: `/ductus:status` displays scenario counts per spec in the pipeline dashboard
+- [x] AC16: `/ductus:next` suggests `/ductus:scenario` as a next action when context warrants it
+- [x] AC17: `/ductus:analyze` checks that scenario-linked tasks in `tasks.md` are complete
 - [x] AC18: `README.md` documents the bug workflow and scenario conventions
 - [x] AC19: All new and modified markdown files pass `npx markdownlint-cli2`
 
 ## Edge Cases
 
-- **No session target set** — `/gov:scenario` stops and tells the user to run `/gov:target` first
-- **Session target points to a spec that has no `tasks.md`** — `/gov:scenario` creates `tasks.md` before appending the task
-- **Scenario file already exists with the same name** — `/gov:scenario` stops and reports the conflict; user must choose a different name or update the existing scenario
-- **Parent spec is `done`** — `/gov:scenario` still allows creating a scenario (a bug can surface after completion); the spec status reverts to `in-progress`
+- **No session target set** — `/ductus:scenario` stops and tells the user to run `/ductus:target` first
+- **Session target points to a spec that has no `tasks.md`** — `/ductus:scenario` creates `tasks.md` before appending the task
+- **Scenario file already exists with the same name** — `/ductus:scenario` stops and reports the conflict; user must choose a different name or update the existing scenario
+- **Parent spec is `done`** — `/ductus:scenario` still allows creating a scenario (a bug can surface after completion); the spec status reverts to `in-progress`
 - **Triage item matches an existing spec** — migration path: move the item into a scenario under the matching spec and remove it from `triage.md`
 - **Bug spans multiple specs** — create a scenario under the most relevant spec; reference the other spec(s) in the scenario's spec-ref field
-- **No spec exists for the bug** — decision tree step 1: create the spec first via `/gov:specify`, then create the scenario
-- **`specs/inbox.md` does not exist** — `/gov:groom` stops and reports nothing to triage
-- **`specs/inbox.md` is empty** — `/gov:groom` reports triage is clean; the file is kept to preserve git history
+- **No spec exists for the bug** — decision tree step 1: create the spec first via `/ductus:specify`, then create the scenario
+- **`specs/inbox.md` does not exist** — `/ductus:groom` stops and reports nothing to triage
+- **`specs/inbox.md` is empty** — `/ductus:groom` reports triage is clean; the file is kept to preserve git history
 
 ## Open Questions
 

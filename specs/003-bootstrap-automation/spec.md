@@ -15,11 +15,11 @@ next-criterion: 18
 
 # 003 — Bootstrap Automation
 
-Governance slash commands that dogfood the same pipeline commands adopting projects use (`/gov:about`, `/gov:target`, `/gov:status`, `/gov:setup`, `/gov:specify`, `/gov:clarify`, `/gov:plan`, `/gov:implement`, `/gov:analyze`, `/gov:next`), plus a governance-specific `/gov:init` that scaffolds new projects from templates.
+Governance slash commands that dogfood the same pipeline commands adopting projects use (`/ductus:about`, `/ductus:target`, `/ductus:status`, `/ductus:setup`, `/ductus:specify`, `/ductus:clarify`, `/ductus:plan`, `/ductus:implement`, `/ductus:analyze`, `/ductus:next`), plus a governance-specific `/ductus:init` that scaffolds new projects from templates.
 
-> **Note:** the command set evolved after this spec shipped. `/gov:about` is now `/gov:help`, `/gov:setup` is now `/gov:configure` (renamed by [012-multi-agent-govern](../012-multi-agent-govern/spec.md)), and `/gov:next` was retired — pipeline next-step suggestions are surfaced by `/gov:status` and `/gov:target` instead. The brownfield commands (`/gov:specify`, `/gov:log`, `/gov:groom`) and the elaborate command (`/gov:amend`) were added by later specs and are scaffolded alongside the original set.
+> **Note:** the command set evolved after this spec shipped. `/ductus:about` is now `/ductus:help`, `/ductus:setup` is now `/ductus:configure` (renamed by [012-multi-agent-govern](../012-multi-agent-govern/spec.md)), and `/ductus:next` was retired — pipeline next-step suggestions are surfaced by `/ductus:status` and `/ductus:target` instead. The brownfield commands (`/ductus:specify`, `/ductus:log`, `/ductus:groom`) and the elaborate command (`/ductus:amend`) were added by later specs and are scaffolded alongside the original set.
 >
-> **Note:** path references below (`commands/`) reflect the original layout. The repository was later reorganized so command sources live in `framework/commands/`; the generator script `scripts/gen-claude-commands.sh` produces `.claude/commands/gov/` from those sources. Adopting projects' destination paths did not change.
+> **Note:** path references below (`commands/`) reflect the original layout. The repository was later reorganized so command sources live in `framework/commands/`; the generator script `scripts/gen-claude-commands.sh` produces `.claude/commands/ductus/` from those sources. Adopting projects' destination paths did not change.
 
 ## Problem
 
@@ -31,22 +31,22 @@ Additionally, the governance project itself has no slash commands. Agents workin
 
 ### Standard pipeline commands
 
-Copy all ten command templates from `commands/` into `.claude/commands/gov/`, replacing `{project}` with `gov`. This gives governance the same slash commands as any adopting project:
+Copy all ten command templates from `commands/` into `.claude/commands/ductus/`, replacing `{project}` with `gov`. This gives governance the same slash commands as any adopting project:
 
-- `/gov:about` — pipeline overview
-- `/gov:target` — set session target feature
-- `/gov:status` — dashboard of all specs
-- `/gov:setup` — configure permissions
-- `/gov:specify` — create new feature spec
-- `/gov:clarify` — resolve open questions (draft → clarified)
-- `/gov:plan` — create plan and tasks (clarified → planned)
-- `/gov:implement` — execute tasks (planned → done)
-- `/gov:analyze` — audit artifacts for consistency
-- `/gov:next` — auto-advance to next phase
+- `/ductus:about` — pipeline overview
+- `/ductus:target` — set session target feature
+- `/ductus:status` — dashboard of all specs
+- `/ductus:setup` — configure permissions
+- `/ductus:specify` — create new feature spec
+- `/ductus:clarify` — resolve open questions (draft → clarified)
+- `/ductus:plan` — create plan and tasks (clarified → planned)
+- `/ductus:implement` — execute tasks (planned → done)
+- `/ductus:analyze` — audit artifacts for consistency
+- `/ductus:next` — auto-advance to next phase
 
 These commands enforce the same pipeline gates, dependency checks (via AGENTS.md boundaries), and conventions that adopting projects follow.
 
-### /gov:init
+### /ductus:init
 
 ### Inputs
 
@@ -87,14 +87,14 @@ Before scaffolding, verify the target directory does not already exist. If it do
 
 ### Standard pipeline commands
 
-- [x] AC1: All ten command templates copied to `.claude/commands/gov/` with `{project}` replaced by `gov`
+- [x] AC1: All ten command templates copied to `.claude/commands/ductus/` with `{project}` replaced by `gov`
 - [x] AC2: Commands reference `.govern.session.toml` for session state (was `.claude/gov-session.json` pre-0.10.0; consolidated in spec 022 task 40)
 - [x] AC3: Pipeline gates enforce status transitions (draft → clarified → planned → done)
 - [x] AC4: Dependency checks enforced via AGENTS.md boundary rule
 
-### /gov:init
+### /ductus:init
 
-- [x] AC5: Command exists at `.claude/commands/gov/init.md`
+- [x] AC5: Command exists at `.claude/commands/ductus/init.md`
 - [x] AC6: Command accepts project name, path, description, and primary language(s) as arguments or prompts for them
 - [x] AC7: Verifies the target directory does not exist before proceeding
 - [x] AC8: Creates a complete project directory with all governance files
@@ -114,7 +114,7 @@ Before scaffolding, verify the target directory does not already exist. If it do
 - **Initial commit** — leave to the user. They may want to review generated files, fill in AGENTS.md, or make adjustments before committing.
 - **Minimal flag** — not now. Templates are empty prompts that cost nothing to include. If a project doesn't use events, they delete `events.md`. See [specs/spec.md](../spec.md#future-considerations) for deferred rationale.
 - **Existing directory** — verify it doesn't exist and stop if it does. Running in an existing directory risks overwriting files. The manual bootstrap steps in the README cover adding governance to existing projects.
-- **Command location** — `.claude/commands/gov/init.md`, invoked as `/gov:init`. Consistent with the slash command pattern from spec 000.
+- **Command location** — `.claude/commands/ductus/init.md`, invoked as `/ductus:init`. Consistent with the slash command pattern from spec 000.
 - **Language-specific gitignore** — init asks for primary language(s) and fetches patterns from github.com/github/gitignore to append to the minimal .gitignore template.
 
 ## References

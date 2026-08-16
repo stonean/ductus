@@ -56,7 +56,7 @@ as fully scanned.
 - **Symlink pointing *inside* the feature directory** — also refused. The test
   is on the link, not its destination; resolving the destination to decide
   would reintroduce exactly the path-dependence determinism forbids. A
-  same-directory link is not an authoring form govern uses.
+  same-directory link is not an authoring form ductus uses.
 - **Missing component** — cannot be a link; the walk stops and the existing
   `target-missing` outcome reports it.
 - **Target outside `base`** — `strip_prefix` fails and the walk returns
@@ -64,7 +64,7 @@ as fully scanned.
 - **Windows** — `symlink_metadata` is cross-platform; the regression test is
   `#[cfg(unix)]` only because creating the fixture link is.
 - **A legitimately symlinked artifact** — would now be skipped rather than
-  scanned. No govern artifact is authored this way, and the skip is visible in
+  scanned. No ductus artifact is authored this way, and the skip is visible in
   `skipped` rather than silent, so the case is diagnosable if it ever arises.
 
 ## Open Questions

@@ -6,7 +6,7 @@ section: "Follow-on scenarios"
 
 ## Context
 
-Spec [023 — `govern` Refinement](../../023-govern-refinement/spec.md) consolidates `/elaborate` into `/amend`. The merged `/amend` classifies its input as a question or a scenario; the scenario branch creates a `scenarios/{slug}.md` file under the targeted feature, appends a linked task to that feature's `tasks.md`, and on a `done` spec flips status via the existing `set-status` primitive.
+Spec [023 — `ductus` Refinement](../../023-govern-refinement/spec.md) consolidates `/elaborate` into `/amend`. The merged `/amend` classifies its input as a question or a scenario; the scenario branch creates a `scenarios/{slug}.md` file under the targeted feature, appends a linked task to that feature's `tasks.md`, and on a `done` spec flips status via the existing `set-status` primitive.
 
 Two of those operations have no primitive today:
 
@@ -34,12 +34,12 @@ Both primitives compose with existing primitives at the procedure level — `/am
 The CLI surfaces follow the same shape as existing write primitives:
 
 ```text
-gvrn create-scenario --feature specs/042-foo --slug retry-on-timeout \
+ductus create-scenario --feature specs/042-foo --slug retry-on-timeout \
   --section "Network failure handling" \
   --context "Connections to the upstream may time out..." \
   --behavior "On timeout, the client retries up to three times..."
 
-gvrn append-task --feature specs/042-foo \
+ductus append-task --feature specs/042-foo \
   --title "Implement scenario: retry-on-timeout" \
   --done-when "the scenario's described behavior is correctly implemented and tested."
 ```
@@ -64,5 +64,5 @@ Both register under the canonical `gov-rt:` namespace (`gov-rt:create-scenario`,
 
 - **Why two primitives and not one combined `create-scenario-with-task`?** Single responsibility. `create-scenario` writes a scenario file; `append-task` extends a tasks file. They compose at the procedure level for the `/amend` scenario branch, and each is independently useful (a future `/groom` integration, for example, may want `append-task` without creating a scenario). Combining them would couple two failure modes that callers want to handle separately.
 - **Why not extend `substitute-templates` to also handle single-file writes?** Rejected — `substitute-templates`'s contract is "overwrite the destination tree from a source tree with substitutions applied," a single-strategy bulk copy. Conflating it with single-file scenario creation muddies the abstraction. `create-scenario` is the more specific primitive that names what it's for; `substitute-templates` stays as-is.
-- **Should the new primitives bump `gvrn` to a major version?** No — they are additive (no existing primitive contract changes), so a minor bump is appropriate (same pattern as 0.2 → 0.3 when the apply-manifest scenario shipped). The next `gvrn` release that ships these primitives moves `gvrn` to 0.4.0.
+- **Should the new primitives bump `ductus` to a major version?** No — they are additive (no existing primitive contract changes), so a minor bump is appropriate (same pattern as 0.2 → 0.3 when the apply-manifest scenario shipped). The next `ductus` release that ships these primitives moves `ductus` to 0.4.0.
 - **Should the primitives know about `/amend`'s classifier heuristic?** No. The classifier lives in `framework/commands/amend.md` as prose the LLM applies (per spec 023's resolved question on classification mechanism). The primitives operate one layer below — they perform the writes whichever route the classifier selects.

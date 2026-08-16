@@ -110,7 +110,7 @@ Done when: running the script populates the README table from spec frontmatter; 
 - [x] Find marker comments in `framework/commands/help.md` for each of the five command groups (`commands-pipeline`, `commands-elaborate`, `commands-brownfield`, `commands-orient`, `commands-bootstrap`)
 - [x] For each group, list the commands belonging to that group (hardcoded grouping in the generator) and read each command file's frontmatter `description:`
 - [x] Pipeline group includes the extra "Pipeline Gate" column (gate values hardcoded — they are static pipeline facts)
-- [x] Bootstrap group sources `/govern` from `framework/bootstrap/govern.md` and `/configure` from `framework/bootstrap/configure/claude.md`
+- [x] Bootstrap group sources `/ductus` from `framework/bootstrap/ductus.md` and `/configure` from `framework/bootstrap/configure/claude.md`
 - [x] Emit a markdown table per group between its markers
 - [x] Exit 5 if any expected marker pair is absent; exit 4 if any referenced command file is missing
 - [x] Idempotent; supports `--dry-run`
@@ -130,24 +130,24 @@ Done when: both files have valid marker pairs; running the generators produces n
 
 - [x] Create `.githooks/` directory and `pre-commit` script
 - [x] Hook calls all four generators in order: `gen-claude-commands.sh`, `gen-readme-table.sh`, `gen-help-tables.sh`, `gen-spec-deps.sh`
-- [x] After generators run, stage outputs at known paths (`.claude/commands/gov/`, `README.md`, `framework/commands/help.md`, `specs/NNN-*/spec*.md`)
+- [x] After generators run, stage outputs at known paths (`.claude/commands/ductus/`, `README.md`, `framework/commands/help.md`, `specs/NNN-*/spec*.md`)
 - [x] Hook is executable
 - [x] Create `scripts/install-hooks.sh` that runs `git config core.hooksPath .githooks` (idempotent; warns if existing different value)
 - [x] Both scripts begin with `#!/usr/bin/env bash` and `set -euo pipefail`
 
-Done when: running `./scripts/install-hooks.sh` configures `core.hooksPath` correctly; making a no-op commit does not produce errors; modifying a command source produces an updated `.claude/commands/gov/*.md` automatically on commit. ✓
+Done when: running `./scripts/install-hooks.sh` configures `core.hooksPath` correctly; making a no-op commit does not produce errors; modifying a command source produces an updated `.claude/commands/ductus/*.md` automatically on commit. ✓
 
 ### 13. Implement `framework/bootstrap/hooks/pre-commit` and `framework/bootstrap/hooks/install.sh`
 
 - [x] Create the shipped adopter hook: calls `scripts/gen-spec-deps.sh` only
-- [x] Sentinel comment `# managed-by: govern` on the second line (after the shebang) — this is what `/govern` looks for to distinguish managed from hand-rolled hooks
-- [x] Create the shipped install script: idempotent `git config core.hooksPath .githooks`; refuses to overwrite an existing non-`.githooks` value (deferred to /govern's detection of existing hook systems)
+- [x] Sentinel comment `# managed-by: ductus` on the second line (after the shebang) — this is what `/ductus` looks for to distinguish managed from hand-rolled hooks
+- [x] Create the shipped install script: idempotent `git config core.hooksPath .githooks`; refuses to overwrite an existing non-`.githooks` value (deferred to /ductus's detection of existing hook systems)
 - [x] Both scripts use `#!/usr/bin/env bash` and `set -euo pipefail`
 - [x] Both are executable
 
 Done when: the shipped scripts exist and would correctly install in an adopter project. ✓
 
-### 14. Add CI workflow for govern repo
+### 14. Add CI workflow for ductus repo
 
 - [x] Create `.github/workflows/generators.yml`
 - [x] On `pull_request` (path-filtered to relevant files) and on `push` to main, run all four generators and `git diff --exit-code`
@@ -159,9 +159,9 @@ Done when: the workflow file exists and is valid GHA YAML. Will run on next PR.
 ### 15. Ship adopter CI template
 
 - [x] Create `framework/templates/ci/adopter-generators.yml`
-- [x] Document in the file header that adopters copy this into their own `.github/workflows/govern-generators.yml`
+- [x] Document in the file header that adopters copy this into their own `.github/workflows/ductus-generators.yml`
 - [x] Reference `scripts/gen-spec-deps.sh` (the shipped generator name)
-- [x] Add a one-paragraph note to govern's README ("Optional CI enforcement" section) pointing at the template
+- [x] Add a one-paragraph note to ductus's README ("Optional CI enforcement" section) pointing at the template
 
 Done when: the template exists and documents adopter usage. ✓
 
@@ -281,11 +281,11 @@ Done when: `framework/commands/help.md` carries all five generated-table marker 
 
 ## Phase 6 — Bootstrap installer
 
-### 27. Update `framework/bootstrap/govern.md` for adopter hook installation
+### 27. Update `framework/bootstrap/ductus.md` for adopter hook installation
 
 - [x] Add new top-level section "Hook Installation" before "Placeholder Substitution"
-- [x] Document seven detection states + actions (already-wired, custom hooksPath, husky, pre-commit-py, lefthook, govern-managed, none)
-- [x] Sentinel-based detection of govern-managed hooks via `# managed-by: govern` comment
+- [x] Document seven detection states + actions (already-wired, custom hooksPath, husky, pre-commit-py, lefthook, ductus-managed, none)
+- [x] Sentinel-based detection of ductus-managed hooks via `# managed-by: ductus` comment
 - [x] Add `framework/rules/configuration-cross.md` → `specs/rules/configuration-cross.md` to update-strategy manifest
 - [x] Add `framework/bootstrap/hooks/pre-commit` → `.githooks/pre-commit` to update-strategy manifest (subject to detection)
 - [x] Add `scripts/gen-spec-deps.sh` → `scripts/gen-spec-deps.sh` to update-strategy manifest (pinnable via `.govern.toml`)
@@ -294,7 +294,7 @@ Done when: `framework/commands/help.md` carries all five generated-table marker 
 - [x] Update Post-Scaffolding Output to include hook installation status line
 - [x] Lint passes
 
-Done when: `/govern` ships the new files and manages the adopter hook with the documented detection logic. ✓
+Done when: `/ductus` ships the new files and manages the adopter hook with the documented detection logic. ✓
 
 ### 28. Update permission files
 
@@ -302,7 +302,7 @@ Done when: `/govern` ships the new files and manages the adopter hook with the d
 - [x] `framework/bootstrap/configure/auggie.md` — same permissions in Auggie's regex format
 - [x] Lint passes
 
-Done when: adopters scaffolding via `/govern` get the necessary Bash permissions for hook operations without prompts. ✓
+Done when: adopters scaffolding via `/ductus` get the necessary Bash permissions for hook operations without prompts. ✓
 
 ## Phase 7 — Migration, regeneration, and self-cleanup
 
@@ -322,7 +322,7 @@ Note: gen-spec-deps additionally added body-derived deps where the body had inli
 
 - [x] Run all four generators by hand: gen-claude-commands, gen-readme-table, gen-help-tables, gen-spec-deps
 - [x] Verify each generator exits 0
-- [x] `git diff` — reviewed: 11 .claude/commands/gov/*.md (Phase 5 propagation), README.md (deps now show derived numbers), 15 specs/*/spec.md (migration + derivation)
+- [x] `git diff` — reviewed: 11 .claude/commands/ductus/*.md (Phase 5 propagation), README.md (deps now show derived numbers), 15 specs/*/spec.md (migration + derivation)
 - [x] Run `npx markdownlint-cli2` across modified files — clean
 - [x] Re-run `./scripts/install-hooks.sh` to reactivate the pre-commit hook (deactivated at task 12 to avoid early gen-spec-deps trigger)
 - [x] Commit the derived state
@@ -331,7 +331,7 @@ Done when: working tree is clean after running every generator a second time. �
 
 ### 31. Verify `/validate` runs cleanly on every existing spec
 
-- [x] Confirmed via manual scripted sanity check (proxy for `/gov:analyze --all`):
+- [x] Confirmed via manual scripted sanity check (proxy for `/ductus:analyze --all`):
   - Every scenario has either `section` (new) or `spec-ref` (legacy) — no hard-fails
   - Every spec has required `status` and `dependencies` fields
   - `gen-spec-deps.sh --dry-run` reports no drift across all 18 specs
@@ -357,13 +357,13 @@ Done when: this spec's artifacts have no `title:` or `tags:` frontmatter; valida
 
 - [x] Implement the behavior described in `scenarios/skip-prose-cross-references.md`
 
-- **Done when**: the scenario's described behavior is correctly implemented and tested. `gen-spec-deps.sh` recognizes the chosen opt-out form (resolved via `/gov:clarify` Q1) so navigational cross-references can stay rich without inducing dep edges; fixtures cover the opt-out region, an unmarked link still producing an edge, and the existing code-fence exclusion regression; constitution / AGENTS.md / 017's §Generators and Hooks gain the one-line carve-out describing the chosen form.
+- **Done when**: the scenario's described behavior is correctly implemented and tested. `gen-spec-deps.sh` recognizes the chosen opt-out form (resolved via `/ductus:clarify` Q1) so navigational cross-references can stay rich without inducing dep edges; fixtures cover the opt-out region, an unmarked link still producing an edge, and the existing code-fence exclusion regression; constitution / AGENTS.md / 017's §Generators and Hooks gain the one-line carve-out describing the chosen form.
 
 ### 34. Implement scenario: detect-dependency-cycles
 
 - [x] Implement the behavior described in `scenarios/detect-dependency-cycles.md`
 
-- **Done when**: the scenario's described behavior is correctly implemented and tested. `gen-spec-deps.sh` exits non-zero and names the SCC(s) on stderr when the generated graph contains a cycle; the pre-commit hooks (`.githooks/govern-pre-commit` and shipped `framework/bootstrap/hooks/govern-pre-commit`) propagate the failure and block the commit; fixtures cover 2-cycle, 3-cycle (single SCC), mixed acyclic+cyclic, self-cycle, and the acyclic happy path.
+- **Done when**: the scenario's described behavior is correctly implemented and tested. `gen-spec-deps.sh` exits non-zero and names the SCC(s) on stderr when the generated graph contains a cycle; the pre-commit hooks (`.githooks/ductus-pre-commit` and shipped `framework/bootstrap/hooks/ductus-pre-commit`) propagate the failure and block the commit; fixtures cover 2-cycle, 3-cycle (single SCC), mixed acyclic+cyclic, self-cycle, and the acyclic happy path.
 
 ## Phase A — Follow-on scenarios
 

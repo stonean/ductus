@@ -1,8 +1,8 @@
-# 023 — `govern` Refinement Tasks
+# 023 — `ductus` Refinement Tasks
 
-Tasks derived from the [plan](plan.md). Complete in order. Phase A (invariant + `gvrn` primitives) must ship as a tagged `gvrn` release before any phase B work begins. Within Phase A, the configure MCP allow-list generator lands first so the `runtime-tools.txt` → configure invariant holds at every commit.
+Tasks derived from the [plan](plan.md). Complete in order. Phase A (invariant + `ductus` primitives) must ship as a tagged `ductus` release before any phase B work begins. Within Phase A, the configure MCP allow-list generator lands first so the `runtime-tools.txt` → configure invariant holds at every commit.
 
-## Phase A — invariant + `gvrn` primitives via spec 022 follow-on
+## Phase A — invariant + `ductus` primitives via spec 022 follow-on
 
 ### 1. Add MCP allow-list generator (invariant foundation)
 
@@ -16,18 +16,18 @@ Done when: dry-run reports "in sync" after a clean run; both configure files con
 
 ### 1b. Session-file allow entries
 
-- [x] Edit `framework/bootstrap/configure/claude.md`: add explicit `Edit({cli-config-dir}/{project}-session.json)` and `Write({cli-config-dir}/{project}-session.json)` to the canonical `permissions.allow` array. Place them next to the existing bare `Edit` / `Write` entries (or in a "Govern state files" sub-section, matching the prose grouping pattern used elsewhere in the file).
+- [x] Edit `framework/bootstrap/configure/claude.md`: add explicit `Edit({cli-config-dir}/{project}-session.json)` and `Write({cli-config-dir}/{project}-session.json)` to the canonical `permissions.allow` array. Place them next to the existing bare `Edit` / `Write` entries (or in a "Ductus state files" sub-section, matching the prose grouping pattern used elsewhere in the file).
 - [x] Confirm `framework/bootstrap/configure/auggie.md`'s existing `save-file` and `str-replace-editor` allows cover session-file writes (read once, document if a path-restriction syntax is needed instead — Auggie's existing bare-allow pattern for these tools should suffice).
-- [x] Run `scripts/gen-claude-commands.sh` and confirm `.claude/commands/gov/configure.md` regenerates with the new entries.
+- [x] Run `scripts/gen-claude-commands.sh` and confirm `.claude/commands/ductus/configure.md` regenerates with the new entries.
 - [x] Run `npx markdownlint-cli2` against both configure sources — passes.
 
-Done when: claude.md's permissions.allow contains the two explicit session-file entries; auggie.md is verified to need no addition; downstream `.claude/commands/gov/configure.md` reflects the change.
+Done when: claude.md's permissions.allow contains the two explicit session-file entries; auggie.md is verified to need no addition; downstream `.claude/commands/ductus/configure.md` reflects the change.
 
 ### 2. Open the cross-spec scenario on spec 022
 
-- [x] Run `/gov:elaborate` against spec 022 (`/gov:target 022`) to create `specs/022-deterministic-runtime/scenarios/ask-consolidation.md`.
+- [x] Run `/ductus:elaborate` against spec 022 (`/ductus:target 022`) to create `specs/022-deterministic-runtime/scenarios/ask-consolidation.md`.
 - [x] Fill the scenario's Context, Behavior, and Edge Cases sections describing the two new primitives and their argument/result shapes.
-- [x] Confirm `/gov:elaborate` reopens spec 022's status `done → in-progress` and appends a linked task to 022's `tasks.md`.
+- [x] Confirm `/ductus:elaborate` reopens spec 022's status `done → in-progress` and appends a linked task to 022's `tasks.md`.
 
 Done when: scenario file exists, frontmatter `section` references spec 022's "Follow-on scenarios" section, 022's status is `in-progress`, and 022's `tasks.md` has the new task block.
 
@@ -60,17 +60,17 @@ Done when: `cargo test` passes; the MCP tool responds correctly under fixture in
 - [x] Update `runtime/CHANGELOG.md` with the two new primitives and reference to spec 022 scenario.
 - [x] Tag `gvrn-vX.Y.0` and confirm GitHub release artifacts publish.
 
-Done when: release artifacts are downloadable; `gvrn --version` reports the new version; `framework/bootstrap/configure/claude.md` and `framework/bootstrap/configure/auggie.md` both contain allow entries for `gov-rt:create-scenario` and `gov-rt:append-task`.
+Done when: release artifacts are downloadable; `ductus --version` reports the new version; `framework/bootstrap/configure/claude.md` and `framework/bootstrap/configure/auggie.md` both contain allow entries for `gov-rt:create-scenario` and `gov-rt:append-task`.
 
 ### 6. Close the spec 022 scenario
 
-- [x] Run `/gov:implement` against the ask-consolidation scenario in spec 022 (the scenario task already appended in task 1); mark the linked task complete in 022's `tasks.md`.
-- [x] Run `/gov:review` against spec 022 (if its review block has gone stale per the new primitives).
+- [x] Run `/ductus:implement` against the ask-consolidation scenario in spec 022 (the scenario task already appended in task 1); mark the linked task complete in 022's `tasks.md`.
+- [x] Run `/ductus:review` against spec 022 (if its review block has gone stale per the new primitives).
 - [x] Confirm spec 022 returns `in-progress → done` via the standard pipeline gate.
 
 Done when: spec 022's status is `done` again with no blocking review findings.
 
-## Phase B — `govern` consolidation
+## Phase B — `ductus` consolidation
 
 ### 7. Constitution edits — lightweight track removal
 
@@ -113,7 +113,7 @@ Done when: zero `spec-and-plan` hits under `framework/commands/`; parseability c
 - [x] Update the brownfield path in `specify.md` to explicitly note that sparse acceptance criteria are valid for brownfield use; reference §brownfield-process.
 - [x] Run the runtime parseability check against the rewritten `specify.md`.
 - [x] Delete `framework/commands/capture.md`.
-- [x] Run `scripts/gen-claude-commands.sh` and verify `.claude/commands/gov/capture.md` is pruned.
+- [x] Run `scripts/gen-claude-commands.sh` and verify `.claude/commands/ductus/capture.md` is pruned.
 
 Done when: `specify.md` carries no qualifying questions; `capture.md` source no longer exists; the Claude-commands generator reports the prune.
 
@@ -141,7 +141,7 @@ Done when: scenario branch is fully described; both back-edges are documented; p
 - [x] Update `framework/commands/clarify.md`: the recovery-path gate currently mentions `/elaborate` on the `done` row — rewrite to reference `/amend`.
 - [x] Update Status → next action tables in `framework/commands/target.md` and `framework/commands/status.md`: `done` row's next action becomes `/amend` (scenario branch) instead of `/elaborate`. (target.md updated; status.md never carried an `/elaborate` reference.)
 - [x] Run the parseability check against every edited command.
-- [x] Run `scripts/gen-claude-commands.sh` and verify `.claude/commands/gov/elaborate.md` is pruned.
+- [x] Run `scripts/gen-claude-commands.sh` and verify `.claude/commands/ductus/elaborate.md` is pruned.
 
 Done when: `elaborate.md` source no longer exists; no command source references `/elaborate`; generators run clean.
 
@@ -154,16 +154,16 @@ Pure rename, no behavior change. Must land atomically with the help-tables gener
 - [x] Edit `framework/commands/review.md`: replace the frontmatter `description:` value with exactly `Audit code against rules — security, reuse, quality, efficiency, simplicity. Writes review.md; blocks done on MUST violations.`
 - [x] Run `scripts/gen-help-tables.sh` and confirm both new descriptions propagate to `framework/commands/help.md`'s pipeline table.
 - [x] Sweep references in command sources: `framework/commands/help.md`, `framework/commands/review.md`, `framework/commands/analyze.md` (self-references in the body), and any other `framework/commands/*.md` with `/validate` mentions.
-- [x] Sweep references in `framework/constitution.md` (9 occurrences per the audit) — every `/{project}:validate` or `/gov:validate` becomes `/{project}:analyze` / `/gov:analyze`.
-- [x] Sweep references in `framework/bootstrap/govern.md` (manifest rows and any prose) — `validate.md` → `analyze.md`; `/{project}:validate` → `/{project}:analyze`.
+- [x] Sweep references in `framework/constitution.md` (9 occurrences per the audit) — every `/{project}:validate` or `/ductus:validate` becomes `/{project}:analyze` / `/ductus:analyze`.
+- [x] Sweep references in `framework/bootstrap/ductus.md` (manifest rows and any prose) — `validate.md` → `analyze.md`; `/{project}:validate` → `/{project}:analyze`.
 - [x] Sweep references in `framework/templates/spec/spec.md` (the template's example references) and `framework/templates/project/project-readme.md`.
 - [x] Edit `scripts/gen-help-tables.sh`: the pipeline-table builder references `validate.md` and `'/{project}:validate'` — both update to `analyze.md` and `'/{project}:analyze'`.
 - [x] Edit `scripts/lint-frontmatter.sh`: update any direct `validate.md` reference.
 - [x] Sweep references in `README.md` (5 occurrences) and `docs/introduction.md`.
 - [x] Edit `specs/README.md`: add a new "Past Renames" section recording `/validate → /analyze` (also `/capture → /specify` and `/elaborate → /amend`).
 - [x] Verify done specs under `specs/NNN-*/` are NOT modified — `git diff --stat specs/0[0-2][0-9]-*/` should be empty (excluding 023 itself).
-- [x] Run `scripts/gen-claude-commands.sh` and verify `.claude/commands/gov/validate.md` is pruned and `.claude/commands/gov/analyze.md` is created.
-- [x] Verify `grep -rn '/validate\b\|validate\.md\|/gov:validate\|/{project}:validate' framework/ scripts/ docs/ README.md AGENTS.md` returns zero hits except: (a) `framework/commands/analyze.md` line 20 (intentional rename documentation), and (b) `README.md` line 41 (generated table content describing spec 003's frozen-archaeology body).
+- [x] Run `scripts/gen-claude-commands.sh` and verify `.claude/commands/ductus/validate.md` is pruned and `.claude/commands/ductus/analyze.md` is created.
+- [x] Verify `grep -rn '/validate\b\|validate\.md\|/ductus:validate\|/{project}:validate' framework/ scripts/ docs/ README.md AGENTS.md` returns zero hits except: (a) `framework/commands/analyze.md` line 20 (intentional rename documentation), and (b) `README.md` line 41 (generated table content describing spec 003's frozen-archaeology body).
 
 Done when: source is at `framework/commands/analyze.md`; the grep returns no hits in current-state files; done-spec bodies are untouched; pre-commit hooks pass with the rename + help-generator script update in one commit.
 
@@ -175,28 +175,28 @@ Done when: source is at `framework/commands/analyze.md`; the grep returns no hit
 
 Done when: dry-run reports "in sync"; help.md shows the renamed category with `/amend` only and the brownfield table with two rows.
 
-### 14. `/govern` bootstrap — migration check and prose sweep
+### 14. `/ductus` bootstrap — migration check and prose sweep
 
-- [x] Edit `framework/bootstrap/govern.md`: add a step in the **Pre-run Migrations** section (`spec-and-plan.md → spec.md (lightweight-track sunset)`). The step walks `specs/*/spec-and-plan.md`, prompts the user per match, runs `mv` on confirm, logs a warning on decline.
+- [x] Edit `framework/bootstrap/ductus.md`: add a step in the **Pre-run Migrations** section (`spec-and-plan.md → spec.md (lightweight-track sunset)`). The step walks `specs/*/spec-and-plan.md`, prompts the user per match, runs `mv` on confirm, logs a warning on decline.
 - [x] Update the bootstrap's completion message to include "Migrated N `spec-and-plan.md` files" when N > 0; omit the line when N=0. (Folded into the same migration-check step.)
-- [x] Sweep `framework/bootstrap/govern.md` for existing `spec-and-plan` and deleted-verb references. Specifically: remove `specs/**/spec-and-plan.md` from the file-walk list; drop `spec-and-plan.md` from the spec-files pattern list; remove the manifest row mapping `framework/templates/spec/spec-and-plan.md` → `specs/templates/spec-and-plan.md`; remove `spec-and-plan.md` from the artifacts-in-scope enumeration; remove the manifest rows for `framework/commands/capture.md` and `framework/commands/elaborate.md`; rewrite the `/{project}:validate` reference in the security-rule check section to `/{project}:analyze`; rewrite the `framework/commands/validate.md` manifest row to `analyze.md`.
-- [x] Also sweep `framework/bootstrap/hooks/govern-pre-commit` (drop `spec-and-plan.md` from the `for f in ...` stage loop) and `framework/templates/ci/adopter-generators.yml` (drop `spec-and-plan.md` from the `find ... -name spec.md -o -name spec-and-plan.md` clause; `/gov:validate` → `/gov:analyze` in the comment).
-- [x] Run the parseability check on the modified `govern.md`.
-- [x] Verify `grep -n 'spec-and-plan\|/capture\b\|/elaborate\b' framework/bootstrap/govern.md` returns hits only inside the migration-check step (which references `spec-and-plan.md` by design — the file pattern it's looking for).
+- [x] Sweep `framework/bootstrap/ductus.md` for existing `spec-and-plan` and deleted-verb references. Specifically: remove `specs/**/spec-and-plan.md` from the file-walk list; drop `spec-and-plan.md` from the spec-files pattern list; remove the manifest row mapping `framework/templates/spec/spec-and-plan.md` → `specs/templates/spec-and-plan.md`; remove `spec-and-plan.md` from the artifacts-in-scope enumeration; remove the manifest rows for `framework/commands/capture.md` and `framework/commands/elaborate.md`; rewrite the `/{project}:validate` reference in the security-rule check section to `/{project}:analyze`; rewrite the `framework/commands/validate.md` manifest row to `analyze.md`.
+- [x] Also sweep `framework/bootstrap/hooks/ductus-pre-commit` (drop `spec-and-plan.md` from the `for f in ...` stage loop) and `framework/templates/ci/adopter-generators.yml` (drop `spec-and-plan.md` from the `find ... -name spec.md -o -name spec-and-plan.md` clause; `/ductus:validate` → `/ductus:analyze` in the comment).
+- [x] Run the parseability check on the modified `ductus.md`.
+- [x] Verify `grep -n 'spec-and-plan\|/capture\b\|/elaborate\b' framework/bootstrap/ductus.md` returns hits only inside the migration-check step (which references `spec-and-plan.md` by design — the file pattern it's looking for).
 
 Done when: bootstrap runs against a fixture project containing `spec-and-plan.md` and offers the rename; declining leaves the file in place with a warning; running again with the file already renamed completes silently; the grep returns only migration-check matches.
 
 ### 15. Prose sweep — root docs, adopter templates, specs/README
 
 - [x] Edit `README.md`: remove or rewrite every reference to `/capture`, `/elaborate`, and the lightweight track. Update the Slash Commands tables under "Pipeline", "Elaborate" (renamed to "Refine"), and "Brownfield" to match the post-consolidation surface (Pipeline 6, Refine 1, Brownfield 2). Update "Adopting in an Existing Project" prose to point at `/specify` for brownfield use with sparse-AC guidance. Drop the `spec-and-plan.md` row from the templates table and rewrite the scenario.md description that mentioned "elaborate workflow".
-- [x] Edit `AGENTS.md` (govern repo root): drop `spec-and-plan` from the framework templates list.
+- [x] Edit `AGENTS.md` (ductus repo root): drop `spec-and-plan` from the framework templates list.
 - [x] Edit `specs/README.md`: replace the "Lightweight track detection" bullet from §Design Decisions with a new "Past Renames" section recording `/validate → /analyze`, `/capture → /specify`, and `/elaborate → /amend`.
 - [x] Edit `docs/introduction.md`: sweep deleted-verb references and lightweight-track mentions; rewrite the back-edges paragraph so both back-edges name `/amend`; update the help-tables-mirroring table to match the new category set (Pipeline 6 / Refine 1 / Brownfield 2 / Orient 3 / Bootstrap 2).
 - [x] Edit `framework/templates/project/agents.md`: drop `spec-and-plan` from the templates list; remove the dedicated `spec-and-plan.md` description row including the `*(lightweight track)*` annotation; rewrite "elaborate command" mention to point at `/{project}:amend`.
 - [x] Edit `framework/templates/project/project-readme.md`: drop `spec-and-plan` from the templates list; rewrite cycle prose (Brownfield / Reopen) to use `/specify` and `/amend`; rewrite Slash Commands table to drop `/elaborate` and `/capture` rows and add `/analyze` description.
-- [x] Run `grep -rn '/capture\b\|/elaborate\b\|lightweight track\|spec-and-plan' README.md AGENTS.md specs/README.md docs/ framework/` and confirm zero hits (excluding the resolved questions and decision tables in spec 023's own body, which are frozen historical record, and excluding the migration-check step in `framework/bootstrap/govern.md` that legitimately references the `spec-and-plan.md` filename pattern, and excluding the Past Renames bullets in `specs/README.md` that intentionally document the renames).
+- [x] Run `grep -rn '/capture\b\|/elaborate\b\|lightweight track\|spec-and-plan' README.md AGENTS.md specs/README.md docs/ framework/` and confirm zero hits (excluding the resolved questions and decision tables in spec 023's own body, which are frozen historical record, and excluding the migration-check step in `framework/bootstrap/ductus.md` that legitimately references the `spec-and-plan.md` filename pattern, and excluding the Past Renames bullets in `specs/README.md` that intentionally document the renames).
 
-Done when: the four `grep` patterns return no hits outside the spec 023 directory and the migration-check step in `govern.md`.
+Done when: the four `grep` patterns return no hits outside the spec 023 directory and the migration-check step in `ductus.md`.
 
 ### 16. Validation pass and pre-merge checks
 
@@ -207,18 +207,18 @@ Done when: the four `grep` patterns return no hits outside the spec 023 director
 - [x] Run `scripts/gen-configure-mcp.sh --dry-run` → "in sync".
 - [x] Run `npx markdownlint-cli2 '**/*.md'` → passes.
 - [x] Run runtime parseability check across all rewritten commands → passes.
-- [x] Run `/gov:analyze` against spec 023 → no hard-fail or blocking findings.
+- [x] Run `/ductus:analyze` against spec 023 → no hard-fail or blocking findings.
 - [x] Push to a branch and confirm CI passes — both `markdown-only-pipeline.yml` and `runtime.yml`.
 
 Done when: every check in the list above passes locally; CI workflows report green on the PR branch.
 
 ### 17. Code review gate
 
-- [x] Run `/gov:review` against spec 023.
+- [x] Run `/ductus:review` against spec 023.
 - [x] Resolve any MUST violations or record waivers. (None to resolve — 0 MUST findings.)
 - [x] Confirm `review.blocking: false` in spec 023's frontmatter.
 
-Done when: `/gov:review` returns clean and the spec frontmatter's `review.blocking` is `false`.
+Done when: `/ductus:review` returns clean and the spec frontmatter's `review.blocking` is `false`.
 
 ## Phase C — Follow-on scenarios
 
@@ -226,13 +226,13 @@ Done when: `/gov:review` returns clean and the spec frontmatter's `review.blocki
 
 - [x] Implement the behavior described in [`scenarios/living-specs.md`](scenarios/living-specs.md).
 
-- **Done when**: `framework/constitution.md` §drift-prevention no longer carries the "frozen archaeology" exception; `AGENTS.md` line 42's rename rule no longer carves out `specs/NNN-*/`; `specs/README.md` §Past Renames is deleted; the done specs identified during clarify/planning have been swept clean of dead references; this spec passes `/gov:review` with no MUST violations.
+- **Done when**: `framework/constitution.md` §drift-prevention no longer carries the "frozen archaeology" exception; `AGENTS.md` line 42's rename rule no longer carves out `specs/NNN-*/`; `specs/README.md` §Past Renames is deleted; the done specs identified during clarify/planning have been swept clean of dead references; this spec passes `/ductus:review` with no MUST violations.
 
-### 19. Dedup `/configure` permission entries via new gvrn primitive
+### 19. Dedup `/configure` permission entries via new ductus primitive
 
 - [x] Implement the behavior described in `scenarios/configure-dedup-permissions.md`
 
-- **Done when**: `/configure` writes a `.claude/settings.local.json` whose `permissions.allow` and `permissions.deny` arrays contain no exact-match duplicates after the run, including duplicates that pre-existed in the file. The behavior is implemented via a new deterministic `gvrn` primitive (added on spec 022) that `/configure` invokes; the `configure.md` command source and the generated `.claude/commands/gov/configure.md` reflect the inverted instruction (dedup is mandatory; reorder/rewrite of non-duplicate entries is still forbidden). The scenario's described behavior is correctly implemented and tested.
+- **Done when**: `/configure` writes a `.claude/settings.local.json` whose `permissions.allow` and `permissions.deny` arrays contain no exact-match duplicates after the run, including duplicates that pre-existed in the file. The behavior is implemented via a new deterministic `ductus` primitive (added on spec 022) that `/configure` invokes; the `configure.md` command source and the generated `.claude/commands/ductus/configure.md` reflect the inverted instruction (dedup is mandatory; reorder/rewrite of non-duplicate entries is still forbidden). The scenario's described behavior is correctly implemented and tested.
 
 ### 20. Implement scenario: extend-existing-scenario-task
 

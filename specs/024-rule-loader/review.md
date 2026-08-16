@@ -52,19 +52,19 @@ All nine acceptance criteria are satisfied by the landed changes:
 | # | Criterion | Status |
 | --- | --- | --- |
 | 1 | Closed suffix policy documented in `constitution.md` §rules and enforced by `scripts/lint-rule-filenames.sh` in CI | ✓ — new `#### Filename suffix` subsection; lint passes |
-| 2 | `/gov:review` selection rewritten to suffix-based discovery; hardcoded names no longer drive selection | ✓ — §Behavior step 5 and §Load rules rewritten |
+| 2 | `/ductus:review` selection rewritten to suffix-based discovery; hardcoded names no longer drive selection | ✓ — §Behavior step 5 and §Load rules rewritten |
 | 3 | Three new files (`api-backend.md`, `accessibility-frontend.md`, `performance-frontend.md`) load automatically | ✓ — all have closed suffixes; discovery picks them up |
 | 4 | `configuration.md` → `configuration-cross.md` rename; rule IDs unchanged; §Past Renames updated | ✓ — `git mv` preserved rename; 11 rule IDs intact; entry added |
 | 5 | `AGENTS.md` fallback narrowed to adopter-local rule files outside `framework/rules/` | ✓ — §Notes for adopters rewritten |
 | 6 | Unrecognized-suffix rule files load + emit one-line stdout warning | ✓ — described in §Behavior step 5 of `review.md` and §Rules of `analyze.md` |
-| 7 | `/gov:review` emits `loading rule files: <list>` notice | ✓ — described in §Behavior step 5 |
+| 7 | `/ductus:review` emits `loading rule files: <list>` notice | ✓ — described in §Behavior step 5 |
 | 8 | §Notes for adopters rewritten to describe the new contract | ✓ |
-| 9 | `/gov:analyze` uses the shared discovery; no stack filtering | ✓ — §Rules rewritten to load every discovered file unconditionally |
+| 9 | `/ductus:analyze` uses the shared discovery; no stack filtering | ✓ — §Rules rewritten to load every discovered file unconditionally |
 
 ## Output
 
 ```text
-/gov:review — 024-rule-loader
+/ductus:review — 024-rule-loader
 
   security    ✓ 0 MUST   0 SHOULD
   reuse       ✓ 0 MUST   0 SHOULD
