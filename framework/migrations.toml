@@ -107,13 +107,14 @@ introduced_in = "0.28.0"
 # high-impact rename kept active indefinitely so any adopter still carrying the
 # retired name is converged on their next /ductus run. The runtime keeps the
 # .govern/ fallback tier to match (spec 049).
-summary = "Rename the project from govern to ductus: .govern/ → .ductus/, the gvrn MCP server key and command, the per-agent runtime permission entries, the installed bootstrap entry point, and the # govern / # govern (host) managed-block markers"
+summary = "Rename the project from govern to ductus: .govern/ → .ductus/, the gvrn MCP server key and command, the per-agent runtime permission entries, the installed bootstrap entry point, the pre-commit hook and its invoker, and the # govern / # govern (host) managed-block markers"
 # Adopter-relative paths only. The settings and MCP files are per-agent and
 # resolved from the registry at run time, so they are not enumerable here.
 target_paths = [
   ".govern/",
   ".mcp.json",
   ".gitignore",
+  ".githooks/govern-pre-commit",
 ]
 procedure_file = "framework/migrations/ductus-rename.md"
 

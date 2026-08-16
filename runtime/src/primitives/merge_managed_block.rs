@@ -13,8 +13,9 @@
 //!   by the block. The block's extent on disk is identified by aligning
 //!   the on-disk blank-line-delimited subsections against the supplied
 //!   block's subsections (see [`walk_body_extent`]); unmatched trailing
-//!   canonical subsections are insertions, and the first unaligned
-//!   on-disk group ends the block. This matches `.gitignore` /
+//!   canonical subsections are insertions, and an unaligned on-disk group
+//!   ends the block unless a later group still aligns — the retired-
+//!   subsection case (`scenarios/merge-managed-block-renamed-subsection.md`). This matches `.gitignore` /
 //!   `.gitattributes` conventions where a `#` line serves as both a
 //!   comment and an inline section header, and correctly handles blocks
 //!   containing interior blank lines between subsections (the shipped
@@ -405,16 +406,20 @@ fn read_group(text: &str, start: usize) -> (Group<'_>, usize, usize) {
 ///   replacement path). The first group after the marker is always part of
 ///   the old managed block; consume it.
 /// - **matches no remaining canonical group, after at least one group was
-///   consumed** → the block has ended: the remaining canonical groups are
+///   consumed** → either a retired framework subsection (its patterns were
+///   renamed, so it matches nothing) or the first adopter group past the
+///   block. A bounded lookahead tells them apart: when a later on-disk group
+///   still aligns, the block continues and this group is consumed; otherwise
+///   the block has ended: the remaining canonical groups are
 ///   trailing insertions (subsections appended by a framework release) and
 ///   this group is the first adopter group past the block. Stop without
 ///   consuming it. Consuming here — the old behavior — swallowed the
 ///   adopter's first tail section as a "full rewrite" of the appended
 ///   canonical group, deleting adopter content. See
 ///   `scenarios/merge-managed-block-trailing-append.md`. (A framework group
-///   removed or fully renamed mid-block also stops the walk now; its old
-///   content survives below the merged block instead of being replaced —
-///   preservation over consumption when identity is ambiguous.)
+///   removed or fully renamed mid-block is now consumed when the rest of the
+///   block still aligns below it; it stranded the old block's tail before —
+///   see `scenarios/merge-managed-block-renamed-subsection.md`.)
 ///
 /// The block also ends at the first on-disk group reached after the
 /// canonical's groups are exhausted — adopter territory, preserved. Returns
@@ -426,6 +431,7 @@ fn walk_body_extent(text: &str, body_start: usize, expected_block: &str) -> usiz
     let mut offset = body_start;
     let mut block_end = body_start;
     let mut consumed_any = false;
+    let mut skipped_unmatched = 0usize;
     while offset < text.len() {
         // Canonical groups exhausted: everything from here is adopter content.
         if ci >= canon.len() {
@@ -441,18 +447,82 @@ fn walk_body_extent(text: &str, body_start: usize, expected_block: &str) -> usiz
             ci += rel + 1;
             continue;
         } else if consumed_any {
-            // Unmatched after alignment began: trailing canonical groups are
-            // pure insertions; this group is adopter territory.
+            // Unmatched after alignment began. Two different things look like
+            // this, and the difference is only visible further down the file:
+            //
+            //   - a **retired** framework group whose patterns were renamed,
+            //     so it matches no canonical group by identity — the
+            //     `govern → ductus` sweep renamed `.govern.session.toml` to
+            //     `/.ductus/session.toml`, and that group carries no other
+            //     pattern to match on;
+            //   - the **first adopter group** past the end of the block.
+            //
+            // Stopping at both — the prior behavior — stranded the entire tail
+            // of the old block below the newly written one, where the dedup
+            // pass then removed its pattern lines and left its comment headers
+            // orphaned. Observed on a real adopter (spec 048's `papur`
+            // bootstrap): a `.gitignore` carrying a dead `.govern.session.toml`
+            // plus two headerless `# IDE` / `# OS` comments.
+            //
+            // A retired group is distinguishable by what follows it: a later
+            // on-disk group still aligns with a canonical one, because the rest
+            // of the managed block is still there. Adopter content has no such
+            // continuation. So look ahead — bounded, because an adopter tail is
+            // arbitrarily long while a run of retired subsections is not, and
+            // an unbounded scan would reach a pasted duplicate far below and
+            // swallow everything above it.
+            if skipped_unmatched < MAX_SKIPPED_RETIRED_GROUPS
+                && later_group_matches(text, next_start, &canon[ci..])
+            {
+                skipped_unmatched += 1;
+                offset = next_start;
+                continue;
+            }
+            // No continuation: trailing canonical groups are pure insertions
+            // and this group is adopter territory. Preserved verbatim
+            // (`scenarios/merge-managed-block-trailing-append.md`).
             break;
         } else {
             // Full rewrite of the block, starting at its first group.
             ci += 1;
         }
         consumed_any = true;
+        skipped_unmatched = 0;
         block_end = content_end;
         offset = next_start;
     }
     block_end
+}
+
+/// How many consecutive unmatched on-disk groups the walk will step over
+/// looking for the rest of the managed block. A framework release retires a
+/// subsection or two at a time; anything longer is far more likely to be
+/// adopter content that happens to precede a coincidental match, and
+/// consuming it would delete it.
+const MAX_SKIPPED_RETIRED_GROUPS: usize = 2;
+
+/// Whether any on-disk group at or after `from` still aligns with one of the
+/// `remaining` canonical groups — the signal that the managed block continues
+/// past an unmatched group rather than having ended at it.
+///
+/// Bounded by [`MAX_SKIPPED_RETIRED_GROUPS`] groups of lookahead, so the scan
+/// cannot run down an arbitrarily long adopter tail.
+fn later_group_matches(text: &str, from: usize, remaining: &[Group<'_>]) -> bool {
+    let mut offset = from;
+    for _ in 0..MAX_SKIPPED_RETIRED_GROUPS {
+        if offset >= text.len() {
+            return false;
+        }
+        let (group, _, next_start) = read_group(text, offset);
+        if remaining.iter().any(|c| groups_match(&group, c)) {
+            return true;
+        }
+        if next_start == offset {
+            return false;
+        }
+        offset = next_start;
+    }
+    false
 }
 
 fn merge_line_prefix(
@@ -1320,6 +1390,108 @@ Thumbs.db";
         let rerun = run(&args(&path, new_canonical, Some("line-prefix")), tmp.path()).unwrap();
         assert_eq!(rerun.action, "unchanged");
         assert_eq!(fs::read_to_string(&path).unwrap(), expected);
+    }
+
+    #[test]
+    fn line_prefix_renamed_subsection_does_not_strand_the_old_block_tail() {
+        // Regression from a real adopter bootstrap (spec 048's `papur`): the
+        // `govern → ductus` sweep renamed `.govern.session.toml` to
+        // `/.ductus/session.toml`, and that subsection carries no other
+        // pattern — so it matched no canonical group by identity and the walk
+        // stopped there, stranding the rest of the old block below the newly
+        // written one. The dedup pass then removed the stranded pattern lines
+        // and left their comment headers orphaned, so the adopter's .gitignore
+        // kept a dead `.govern.session.toml` plus headerless `# IDE` / `# OS`.
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join(".gitignore");
+        std::fs::write(
+            &path,
+            "# ductus-managed\n\
+             # Env\n\
+             .env\n\
+             \n\
+             # Session state\n\
+             .govern.session.toml\n\
+             \n\
+             # IDE\n\
+             .vscode/\n\
+             \n\
+             # OS\n\
+             .DS_Store\n\
+             \n\
+             # Rust\n\
+             /target/\n",
+        )
+        .unwrap();
+        // The session subsection's only pattern is renamed; IDE/OS are stable.
+        let canonical = "\
+# Env
+.env
+
+# Session state
+/.ductus/session.toml
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store";
+        run(&args(&path, canonical, Some("line-prefix")), tmp.path()).unwrap();
+        let out = std::fs::read_to_string(&path).unwrap();
+
+        assert!(
+            !out.contains(".govern.session.toml"),
+            "the retired subsection must be replaced, not stranded below:\n{out}"
+        );
+        assert!(out.contains("/.ductus/session.toml"), "{out}");
+        assert_eq!(
+            out.matches("# IDE").count(),
+            1,
+            "no orphaned comment header may survive:\n{out}"
+        );
+        assert_eq!(out.matches("# OS").count(), 1, "{out}");
+        assert!(
+            out.contains("# Rust\n/target/"),
+            "adopter tail must still be preserved verbatim:\n{out}"
+        );
+    }
+
+    #[test]
+    fn line_prefix_long_unmatched_run_is_treated_as_adopter_territory() {
+        // The bound on the retired-group lookahead. Three consecutive
+        // unmatched on-disk groups is not a retired framework run; consuming
+        // them to reach a coincidental match far below would delete adopter
+        // content, which is the failure the trailing-append scenario records.
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join(".gitignore");
+        std::fs::write(
+            &path,
+            "# ductus-managed\n\
+             # Env\n\
+             .env\n\
+             \n\
+             # Mine A\n\
+             mine-a\n\
+             \n\
+             # Mine B\n\
+             mine-b\n\
+             \n\
+             # Mine C\n\
+             mine-c\n\
+             \n\
+             # OS\n\
+             .DS_Store\n",
+        )
+        .unwrap();
+        let canonical = "# Env\n.env\n\n# OS\n.DS_Store";
+        run(&args(&path, canonical, Some("line-prefix")), tmp.path()).unwrap();
+        let out = std::fs::read_to_string(&path).unwrap();
+        for adopter in ["mine-a", "mine-b", "mine-c"] {
+            assert!(
+                out.contains(adopter),
+                "adopter content beyond the lookahead bound must survive: {adopter}\n{out}"
+            );
+        }
     }
 
     #[test]
