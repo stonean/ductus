@@ -26,7 +26,7 @@ The 2026-07-11 follow-up review of the 0.18.0 runtime (after the nine-MUST/twent
 
 ## Edge Cases
 
-- The markdown-only path is unchanged; `GVRN_FETCH_ALLOW_INSECURE_HOSTS` still exempts named hosts (initial URL and every redirect hop).
+- The markdown-only path is unchanged; `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS` still exempts named hosts (initial URL and every redirect hop). Named `GVRN_*` when this scenario was written; renamed in the residue sweep that closed [049's AC1](../../049-rename-govern-to-ductus/spec.md).
 - An empty derived boundary and the DNS-rebinding TOCTOU are explicitly out of scope here (see [writecode-boundary-derivation](writecode-boundary-derivation.md) and the inbox item, respectively).
 
 ## Open Questions

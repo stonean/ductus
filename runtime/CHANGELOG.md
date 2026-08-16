@@ -2,6 +2,12 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [Unreleased]
+
+### Changed
+
+- **BREAKING (opt-in escape hatch): `GVRN_FETCH_ALLOW_INSECURE_HOSTS` is now `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS`.** The 0.28.0 rename missed this variable — its Rust constant carried no project token, so the sweep's identifier grep passed over the string literal. The old name is **not** honoured as a fallback: keeping it would leave a live reference to the retired project name, which is exactly what spec 049's AC1 forbids. If you set the old variable for an internal mirror or local testing, rename it. The failure mode if you do not is safe and loud rather than silent — the host is screened again, so the fetch is refused with an error naming the scheme or the internal address, never quietly allowed. The variable only ever loosens the SSRF guard, so losing it fails closed.
+
 ## [0.28.0] — 2026-08-16
 
 The project is renamed to **ductus**, and the runtime it ships stops being optional.

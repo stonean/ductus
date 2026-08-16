@@ -185,7 +185,7 @@ fn redirect_verdict(url: &str, prior_hops: usize) -> RedirectVerdict {
 /// reqwest's own connect-time resolution.
 #[derive(Debug)]
 enum FetchScreen {
-    /// An operator-allowlisted insecure host (`GVRN_FETCH_ALLOW_INSECURE_HOSTS`):
+    /// An operator-allowlisted insecure host (`DUCTUS_FETCH_ALLOW_INSECURE_HOSTS`):
     /// resolve and connect normally, no pinning.
     Unpinned,
     /// A screened host: pin the connection to `addrs`. Every address already
@@ -216,7 +216,7 @@ fn validate_fetch_url(url: &str) -> Result<FetchScreen> {
         .map_err(|err| fetch_refused(url, &format!("is not a valid URL: {err}")))?;
     // Explicit opt-in escape hatch for internal mirrors and local testing.
     // The SSRF rule (BE-INPUT-007) denies internal ranges *by default*; a
-    // host named in `GVRN_FETCH_ALLOW_INSECURE_HOSTS` (comma-separated) is
+    // host named in `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS` (comma-separated) is
     // exempted from both the https-only and internal-address screens. Empty
     // by default, so the secure posture holds unless an operator opts in.
     // Only a URL that actually carries a host can be allowlisted; hostless
@@ -275,10 +275,21 @@ fn validate_fetch_url(url: &str) -> Result<FetchScreen> {
 
 /// Name of the environment variable holding the comma-separated
 /// insecure-host allowlist consulted by [`validate_fetch_url`].
-const FETCH_ALLOW_INSECURE_HOSTS_ENV: &str = "GVRN_FETCH_ALLOW_INSECURE_HOSTS";
+///
+/// Renamed from `GVRN_*` in the 049 sweep, which missed it: the constant's
+/// *name* carried no project token, so a grep for the old project name over
+/// identifiers passed straight over the string literal. The old name is not
+/// read as a fallback, deliberately. Honouring it would leave a live
+/// reference to the retired project name — the thing 049's AC1 forbids — and
+/// the failure mode of dropping it is safe and loud rather than silent: a
+/// host that was exempt under the old variable is now screened, so the fetch
+/// is *refused* with an error naming the scheme or the internal address,
+/// never quietly allowed. The variable only ever loosens the SSRF guard, so
+/// losing it fails closed.
+const FETCH_ALLOW_INSECURE_HOSTS_ENV: &str = "DUCTUS_FETCH_ALLOW_INSECURE_HOSTS";
 
 /// Whether `host` is exempted from the SSRF/scheme screens via the
-/// `GVRN_FETCH_ALLOW_INSECURE_HOSTS` allowlist. Matching is exact against
+/// `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS` allowlist. Matching is exact against
 /// each comma-separated, whitespace-trimmed entry. An unset or empty
 /// variable exempts nothing (the secure default).
 fn host_is_insecure_allowed(host: &str) -> bool {
@@ -590,7 +601,7 @@ mod tests {
         // With the env var unset (the ambient state for the test process),
         // nothing is exempted — the secure default holds. The allow path is
         // exercised end-to-end by the ductus-basic parity subprocess, which
-        // sets GVRN_FETCH_ALLOW_INSECURE_HOSTS on its own process env (no
+        // sets DUCTUS_FETCH_ALLOW_INSECURE_HOSTS on its own process env (no
         // in-process env mutation here, which would race sibling tests).
         assert!(!host_is_insecure_allowed("127.0.0.1"));
         assert!(!host_is_insecure_allowed("example.com"));

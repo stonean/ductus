@@ -84,7 +84,29 @@ What shipped, in the order it was done:
    with sidecars, an SBOM, and `ductus 0.28.0` on crates.io. Acquisition is
    verified on all five platforms.
 
-**The one item left on this spec is AC12**, and it is an operator publish rather
+**A residue was found after the tag and fixed (2026-08-16).** `/ductus:review`
+on `013-text-first-artifacts` caught one live reference the
+sweep missed: `runtime/src/primitives/fetch_archive.rs` named its
+insecure-host allowlist `GVRN_FETCH_ALLOW_INSECURE_HOSTS`. The sweep passed
+over it because the Rust *constant* carries no project token — only the string
+literal did — so an identifier-scoped grep saw nothing, and no audit family
+checks environment-variable names. AC1 was ticked while untrue.
+
+It is now `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS`, with no fallback to the old
+name: honouring it would leave exactly the live reference AC1 forbids, and
+dropping it fails **closed** rather than silently — the variable only loosens
+the SSRF guard, so a host that was exempt is screened again and the fetch is
+refused with an error naming the scheme or the internal address. Recorded as
+BREAKING in `runtime/CHANGELOG.md` under Unreleased.
+
+**This adds a release obligation.** The fix is a `runtime/` change, so per
+`AGENTS.md` it reaches no adopter until a `ductus-v*` tag ships it; the repo
+`version` pin is deliberately left at `0.28.0` until that release is cut,
+because `/ductus` reads it to resolve which assets to download and a pin
+naming an unreleased version would break acquisition for every adopter who
+bootstraps in the window. The bump belongs in the same commit as the tag.
+
+**The other item left on this spec is AC12**, an operator publish rather
 than repository work: the retired `gvrn` crate needs a final release whose
 description points at `ductus`. The half that protects existing installs is
 already true — `gvrn 0.27.2` is published, unyanked, and still installable, which
