@@ -2,8 +2,8 @@
 status: in-progress
 dependencies: [003-bootstrap-automation, 021-runtime-boundary, 022-deterministic-runtime, 028-antigravity-agent]
 review:
-  last-run: 2026-08-03T15:03:53Z
-  reviewed-against: 1eda6f6f626eb368473b1dcae957392ba0e210d0
+  last-run: 2026-08-16T12:53:08Z
+  reviewed-against: c24f40e6b870ff46ef399f6ab6a85f8e0724d60c
   must-violations: 0
   should-violations: 0
   low-confidence: 0

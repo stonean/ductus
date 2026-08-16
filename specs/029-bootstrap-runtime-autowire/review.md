@@ -1,8 +1,8 @@
 ---
 spec: 029-bootstrap-runtime-autowire
-reviewed-at: 2026-08-03T15:03:53Z
-reviewed-against: 1eda6f6f626eb368473b1dcae957392ba0e210d0
-diff-base: f85565f0fa2709d15df059208cb4c2b0ca1c07c7
+reviewed-at: 2026-08-16T12:53:08Z
+reviewed-against: c24f40e6b870ff46ef399f6ab6a85f8e0724d60c
+diff-base: 2cca7d6d729848a3cafc78b4f7498b5fbdce197b
 must-violations: 0
 should-violations: 0
 low-confidence: 0
@@ -14,7 +14,11 @@ skipped-passes: []
 
 ## Summary
 
-Re-review triggered by /ductus:audit Family 19, which flagged this spec's review as predating its own durable contracts. **0 MUST, 0 SHOULD — not blocking.** The diff since the recorded review is markdown only, confined to the `runtime-probe-parity-audit` scenario, added to record shipped behavior: no source file, no command procedure, and no schema changed, so the loaded backend + cross rule set has no surface to evaluate — security, api, concurrency, performance, observability, and reliability are all N/A by scope rather than by inspection. What a review can check here is whether the artifact still describes shipped behavior, and it does: `scripts/audit/runtime-probe-parity.sh` exists and runs as Family 15 of the wired suite. Verification at this HEAD: 864 lib tests plus 11 suites green, clippy -D warnings and fmt clean, markdownlint clean across 390 files, check-artifacts clean on this spec, and the 19-family self-audit green apart from the freshness backlog this review is clearing.
+No findings. Scope resolved to 48 files, of which exactly one is code — scripts/audit/sibling-coupling.sh. The other 47 are command sources, bootstrap prose, the constitution, migrations, workflow YAML, a lockfile, a golden fixture and spec artifacts; those are `/ductus:analyze`'s subject, not the five code passes'. This report states that count deliberately rather than asserting a clean bill over the whole spec: the code passes examined one file.
+
+That file is exemplary against the rule set. It uses POSIX-only match() with RSTART/RLENGTH rather than the 3-argument GNU form, and it opens with an explicit precondition probe — `awk 'BEGIN { if (match("x", /x/)) exit 0; exit 1 }'` — that emits a finding and returns 1 when awk cannot evaluate match(), with an inline comment citing QUAL-CLAIM-001 and the incident it came from. This is the direct remediation of the defect AGENTS.md's first Design Principle records, and it was exercised rather than assumed: the family runs clean here under BSD awk (20200816), the exact environment where the original GNU-extension abort produced a silent pass. QUAL-STUB-001, QUAL-GROUND-001 and QUAL-CLAIM-001 are clean on it.
+
+The broader observation that the repo runs no shellcheck over its shell surface is recorded against 013 and 026, whose scopes contain the bulk of those scripts; it is not re-filed here, where the single in-scope script is compliant on inspection.
 
 ## MUST violations (blocking)
 
