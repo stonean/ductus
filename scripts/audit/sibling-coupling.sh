@@ -65,14 +65,33 @@ extract_sibling_links() {
 extract_affected_files() {
   local plan="$1"
   [ -f "$plan" ] || return
+  # POSIX awk only: the 3-argument match($0, re, arr) is a GNU extension.
+  # BSD awk (every macOS developer machine) aborts on it, and because the
+  # abort happened inside a subshell this function returned empty and the
+  # family reported no findings — a silent pass everywhere it was run
+  # locally, while CI's gawk found real ones. Extract via RSTART/RLENGTH,
+  # which is portable.
+  # Fail loudly rather than returning empty: an awk that cannot run turned
+  # this family into a silent pass (QUAL-CLAIM-001) — no findings and exit
+  # 0, indistinguishable from clean, on every machine whose awk lacked a
+  # GNU extension this script used. It shipped a broken release gate that
+  # was green locally and red in CI.
+  if ! awk 'BEGIN { if (match("x", /x/)) exit 0; exit 1 }' </dev/null; then
+    emit "(precondition)" "awk cannot evaluate match() — Family 7 cannot examine any plan" \
+      "install a POSIX-conformant awk; this family reports nothing without one, which is not the same as clean"
+    return 1
+  fi
   awk '
     # Detect Affected Files heading.
     /^## Affected Files/ { in_section = 1; next }
     /^## / { in_section = 0; next }
     in_section && /^\|/ {
-      # Extract first column between | markers.
-      match($0, /\| *`([^`]+)` *\|/, m)
-      if (RLENGTH > 0) print m[1]
+      if (match($0, /\| *`[^`]+` *\|/)) {
+        cell = substr($0, RSTART, RLENGTH)
+        sub(/^\| *`/, "", cell)
+        sub(/` *\|$/, "", cell)
+        print cell
+      }
     }
   ' "$plan" | sort -u
 }

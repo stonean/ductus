@@ -153,6 +153,10 @@ Existing adopters have an MCP entry naming the bare `ductus` command and, usuall
 
 ## Resolved Questions
 
+**Why split from runtime-boundary:** [021](../021-runtime-boundary/spec.md) established the boundary — what a runtime may and may not do, and the principles that admit one at all. This spec exercises that boundary by *changing* one of its principles, and the two cannot be one spec because 021's content is what this one amends: folding them would leave a single spec that both forbids the runtime as a prerequisite and requires it. The overlap Family 7 sees is `framework/constitution.md` and the CI workflow, which is exactly the surface an amendment touches. 021 stays the record of what the boundary was and why; this spec is the record of what changed and what it cost.
+
+**Why split from bootstrap-runtime-autowire:** [029](../029-bootstrap-runtime-autowire/spec.md) made `/{project}` *wire* a runtime the adopter had already installed; this spec makes `/{project}` *acquire* it. The overlap is `framework/bootstrap/ductus.md` and `README.md` — the files any bootstrap change touches — but the concerns are sequential rather than shared: 029 solved registration and restart batching, and this one removes the precondition 029 assumed (that a binary exists). Folding them would mean rewriting 029's three detection states as two in the spec that introduced them, erasing the reason State C existed. It is recorded as a post-completion note on 029 instead.
+
 **Is `--version` the right idempotency probe?**
 
 Yes. `/ductus` executes the store binary and compares its reported version against the pin.

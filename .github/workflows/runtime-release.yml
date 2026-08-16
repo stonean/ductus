@@ -190,7 +190,13 @@ jobs:
   # this gate loudly, which is the direction that matters.
   release-assets:
     name: Publish release assets (complete set only)
-    needs: build
+    # `audit` is load-bearing here, not decoration. Until 0.28.0 this job
+    # needed only `build`, so a tag whose self-audit FAILED still published
+    # its binaries — the audit gated `publish` (crates.io) alone. That made
+    # AGENTS.md's "any finding aborts the publish" true of the crate and
+    # false of the assets an adopter actually downloads, and it is the half
+    # that matters: acquisition fetches assets, not the crate.
+    needs: [audit, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -248,6 +254,13 @@ jobs:
   # retention lifetime.
   sbom:
     name: SBOM (CycloneDX)
+    # Gated behind release-assets for the same reason. Uploading an SBOM
+    # creates the release object when it does not exist, so on the first
+    # ductus-v0.28.0 attempt — audit failed, no binaries published — the tag
+    # still had a GitHub release carrying nothing but an SBOM. A release with
+    # no runtime in it is worse than no release: it reads as published to
+    # anyone looking, and to the acquisition job.
+    needs: release-assets
     runs-on: ubuntu-latest
     defaults:
       run:
