@@ -28,6 +28,31 @@ The principle, restated: any framework input that requires an author to *remembe
 
 This spec is a discipline-cleanup pass. It does not introduce new framework capabilities — every change either removes an input or replaces a manual input with a generator/hook/derivation.
 
+## State at hand-off (2026-08-16)
+
+Reopened `done → in-progress` on 2026-08-16 to carry two new criteria, **AC25**
+and **AC26**. Both are instances of this spec's own principle found in the
+framework's own machinery, routed here because this spec is where that principle
+lives:
+
+- **AC25** — capturing a review finding that maps to no loaded rule depends on
+  the reviewer remembering a separate `append-inbox` call, and nothing detects
+  an uncaptured one. Surfaced when an observation was recorded only in a review
+  Summary (regenerated wholesale on the next run) and a commit message; it
+  survived only because the operator asked where it had been written down.
+- **AC26** — the routing rules deciding new-spec versus scenario-on-existing
+  bind only for work arriving through the inbox, where `/{project}:groom`'s
+  decision tree runs. `/{project}:specify` has no equivalent, and the rules live
+  in `AGENTS.md` §Workflow, which no command loads as normative criteria.
+
+**Neither is implemented here.** Per §cross-spec-impact and the runtime-work
+routing rule, this spec keeps the requirement and the criteria while
+`022-deterministic-runtime` carries the implementation as
+scenarios: **task 90** (`review-observations-write-through`) closes AC25 and
+**task 91** (`specify-routes-before-scaffolding`) closes AC26. Landing those two
+tasks is what returns this spec to `done` — there is no work to do in this
+directory beyond ticking the criteria once they ship.
+
 ## Violation Inventory
 
 The 17 violations identified during the audit, classified by disposition. Acceptance criteria below trace back to this inventory by item number.

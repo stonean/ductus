@@ -126,6 +126,13 @@ Existing adopters have an MCP entry naming the bare `ductus` command and, usuall
 acceptance criteria are met. The runtime is required, `/{project}` acquires it,
 and the constitution is amended to say so.
 
+**The current release is `ductus-v0.28.1`** (2026-08-16), which carries two
+post-tag fixes found by `/{project}:review`: the `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS`
+rename that closed 049's AC1, and `read-spec`'s `scenario-files-unreadable`. Its
+acquisition invariant passed on all five platforms against the real published
+assets, so this spec's shipped behavior is verified at that version, not only at
+`0.28.0`.
+
 **Acquisition is verified against the real published assets**, not inferred:
 the `acquire` job inside `runtime-release.yml` fetches, verifies the sidecar
 digest, installs, and executes on all five targets, and the failure branches the
@@ -142,15 +149,34 @@ acquisition, pointer, MCP wiring, the restart, and the migrations that run on
 the next pass.
 
 To close it, run `/{project}` in an adopting project that has not yet been
-bootstrapped against `0.28.0`, and confirm three things: the store and pointer
-exist afterward, the MCP config names the repo-relative pointer, and the second
-session's tool calls resolve through the runtime rather than the markdown path.
-A **pre-042 adopter is the strongest test**, because the same run also exercises
-the full four-migration chain (`govern-dir-consolidate` → `workflows-sunset` →
-`constitution-relocate` → `ductus-rename`, then `runtime-store-path` and
-`criterion-label-backfill`) in registry order. That chain has been verified on a
-*copy* of such a project; what remains is a real one, which is an operator
-decision because it modifies a project outside this repository.
+bootstrapped against the current release, and confirm three things: the store
+and pointer exist afterward, the MCP config names the repo-relative pointer, and
+the second session's tool calls resolve through the runtime rather than the
+markdown path. A **pre-042 adopter is the strongest test**, because the same run
+also exercises the full four-migration chain (`govern-dir-consolidate` →
+`workflows-sunset` → `constitution-relocate` → `ductus-rename`, then
+`runtime-store-path` and `criterion-label-backfill`) in registry order. That
+chain has been verified on a *copy* of such a project; what remains is a real
+one, which is an operator decision because it modifies a project outside this
+repository.
+
+**The identified subject is `../papur`** (`/Users/stonean/src/stonean/papur`),
+confirmed 2026-08-16 to be exactly the pre-042 shape this criterion wants: a
+legacy root `.govern.toml` and `.govern.session.toml`, a root `constitution.md`
+(pre-044), a `workflows/` directory (pre-043), and — the detail that makes it
+the strongest available test — an `.mcp.json` naming the **bare `gvrn` command**,
+which is precisely the case the `runtime-store-path` migration rewrites. It was
+clean on `main` at `c6bcf1b`, so the whole run is reviewable as a diff and
+revertable with git.
+
+**Two preconditions before an agent can run it.** First, `papur` sits outside
+this repository, so a session must have it added as a working directory — a
+read succeeds without that, a write does not, and discovering the boundary
+mid-migration is the wrong moment. Second, it is a real project of the
+maintainer's, so the run needs an explicit go-ahead rather than being inferred
+from a general instruction to proceed; show the diff and commit nothing there
+without it. Run it **after** the current release rather than before, so the
+bootstrap acquires the newest runtime instead of one with known fixes missing.
 
 ## Acceptance Criteria
 

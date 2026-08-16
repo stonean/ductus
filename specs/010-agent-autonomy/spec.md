@@ -21,6 +21,27 @@ Evaluate capabilities found in autonomous agent orchestration tools (e.g., GSD-2
 
 Each capability is evaluated independently. The outcome for each is one of: **adopt** (add to governance), **adapt** (modify the concept to fit governance's model), or **decline** (not a fit).
 
+## State at hand-off (2026-08-16)
+
+Reopened `done → in-progress` on 2026-08-16 by the scenario back-edge, carrying
+one new scenario and **task 17**: [`implement-offers-the-next-step`](scenarios/implement-offers-the-next-step.md).
+All existing acceptance criteria remain met; the reopen is the documented
+consequence of adding a scenario, not a defect in what shipped.
+
+The scenario asks that a default-mode (`--auto`-less) `/{project}:implement`
+run, on completing a task, name the next unchecked task and prompt to continue —
+so the operator can reply "yes", or type instructions to redirect, without
+re-deriving where the work stands. It changes nothing under `--auto` and does
+not touch the `in-progress → done` gate.
+
+**It carries one unresolved open question**, which `check-artifacts` reports as
+advisory and which blocks `done` until answered: should the offer name one next
+task or several? Answering it needs a product judgment about prompt length
+versus redirect range, so it is left for the operator rather than guessed —
+resolve it with `/{project}:target 010-agent-autonomy/implement-offers-the-next-step`
+then `/{project}:clarify`, which is the scenario-targeted branch that resolves
+scenario questions in place.
+
 ## Capabilities Under Evaluation
 
 ### Skills system

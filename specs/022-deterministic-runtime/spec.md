@@ -212,6 +212,35 @@ Stable relationships post-rewrite:
 - **`lint-frontmatter.sh`** — repositioned as the markdown-only fallback for the runtime's `validate-frontmatter` primitive. Same intent, two implementations, both ship; the prose Instructions invoke whichever is available.
 - **`lint-tool-coverage.sh`** — stays bash-only with no runtime counterpart. The lint runs exclusively in `markdown-only-pipeline.yml`, which asserts the runtime is absent; a runtime version is unreachable in that workflow.
 
+## State at hand-off (2026-08-16)
+
+All 19 acceptance criteria are met; this spec stays `in-progress` because it is
+the **durable home for runtime work** (`AGENTS.md`: a new `check-artifacts`
+family, a new field on a primitive's result, or a change under `runtime/src/`
+lands here as a scenario, back-linked to the requiring spec). It accumulates
+scenarios continuously and is not expected to reach `done` on any particular
+cycle.
+
+**Three tasks are outstanding**, all authored 2026-08-16 and none started:
+
+| Task | Scenario | Requiring spec |
+| --- | --- | --- |
+| 88 | `review-staleness-on-done-specs` — `check-artifacts` reports a stale review on a `done` spec | this spec |
+| 90 | `review-observations-write-through` — recording a review observation is what captures it | `017-derive-dont-ask` AC25 |
+| 91 | `specify-routes-before-scaffolding` — routing binds wherever work enters | `017-derive-dont-ask` AC26 |
+
+Tasks 90 and 91 are the ones to prefer: they close 017's two open criteria as
+well as their own, so landing both takes two specs forward rather than one. Task
+88's scenario asks for its corpus-wide flag count to be measured *before* the
+advisory-vs-blocking choice is finalised — the arm is specified advisory
+precisely so it cannot mass-reopen every spec the `0.28.0` sweep touched.
+
+**This spec's review is stale** (`reviewed-against 9a9c38b3`, ~50 durable
+contracts changed). That is expected given the scenario count and blocks only
+the `done` transition, which is not being sought. Re-running `/{project}:review`
+here is a large job: its computed scope resolves to most of the repository,
+because the diff base predates the `0.28.0` cycle.
+
 ## Acceptance Criteria
 
 - [x] AC1: A single binary builds from this repo and exposes two surfaces: `runtime mcp` (MCP server) and `runtime exec <command> [args...]` (subprocess interpreter).
