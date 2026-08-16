@@ -120,6 +120,38 @@ Existing adopters have an MCP entry naming the bare `ductus` command and, usuall
 - **A pinned version whose tag exists but whose asset for this platform does not.** Prevented upstream by the release gate, but an adopter pinned to an older partial release can still meet it. Treated as any unavailable asset: halt, name the store path and the release URL.
 - **The adopter has a `ductus` on `PATH`.** Ignored entirely — not consulted, not warned about, not removed. Removing it is the adopter's call; `/ductus` simply no longer looks there.
 
+## State at hand-off (2026-08-16)
+
+**Shipped in `ductus-v0.28.0`.** All twelve tasks are complete and 23 of 24
+acceptance criteria are met. The runtime is required, `/{project}` acquires it,
+and the constitution is amended to say so.
+
+**Acquisition is verified against the real published assets**, not inferred:
+the `acquire` job inside `runtime-release.yml` fetches, verifies the sidecar
+digest, installs, and executes on all five targets, and the failure branches the
+CI job cannot cover were exercised by hand against the same assets — a tampered
+archive caught before install with nothing written to the store, a missing asset
+failing the fetch, a re-run leaving a current store byte-unchanged, and an
+unrunnable store reading as *no usable runtime* rather than *version unknown*.
+
+**AC10 is the only criterion left, and it needs a real bootstrap.** It asserts
+that an adopter with no runtime reaches the deterministic path in one
+`/{project}` run plus one restart. No CI job or scratch script can stand in for
+it: the subject is the bootstrap procedure end to end in a real project —
+acquisition, pointer, MCP wiring, the restart, and the migrations that run on
+the next pass.
+
+To close it, run `/{project}` in an adopting project that has not yet been
+bootstrapped against `0.28.0`, and confirm three things: the store and pointer
+exist afterward, the MCP config names the repo-relative pointer, and the second
+session's tool calls resolve through the runtime rather than the markdown path.
+A **pre-042 adopter is the strongest test**, because the same run also exercises
+the full four-migration chain (`govern-dir-consolidate` → `workflows-sunset` →
+`constitution-relocate` → `ductus-rename`, then `runtime-store-path` and
+`criterion-label-backfill`) in registry order. That chain has been verified on a
+*copy* of such a project; what remains is a real one, which is an operator
+decision because it modifies a project outside this repository.
+
 ## Acceptance Criteria
 
 - [x] AC1: A `/ductus` run on a machine with no runtime installed downloads the host-platform release asset, verifies its `.sha256` sidecar, and writes an executable `~/.ductus/bin/ductus` (`~/.ductus/bin/ductus.exe` on Windows)

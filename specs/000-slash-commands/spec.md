@@ -94,6 +94,26 @@ If all answers indicate "small and clear," specify creates `spec-and-plan.md` fr
 
 Pipeline commands reference spec templates from the project's `specs/templates/` directory, not from governance. Each project copies the governance templates into their own `specs/templates/` during bootstrap.
 
+## Why this spec is still `in-progress` (2026-08-16)
+
+Every acceptance criterion is met and its review is current. The single thing
+holding it out of `done` is the pre-done gate's scenario check: three open
+questions remain across `criterion-route-after-draft` and
+`scenario-without-task-visibility`, and a spec is not complete while its
+scenarios carry questions ([§spec-lifecycle](../../framework/constitution.md#spec-lifecycle)).
+
+**Operator decision, 2026-08-16: these were deliberately not resolved for the
+`ductus-v0.28.0` release.** They predate that work, this spec is not one the
+release closes, and resolving them requires design decisions rather than
+mechanical cleanup. The release shipped without them by explicit choice, not by
+oversight.
+
+To close this spec, target each scenario and walk its questions:
+`/{project}:target 000/criterion-route-after-draft` then `/{project}:clarify`,
+and the same for `scenario-without-task-visibility`. A question that is deferred
+rather than undecided belongs in that scenario's `## Resolved Questions` with its
+trigger recorded — only `## Open Questions` entries count against the gate.
+
 ## Acceptance Criteria
 
 - [x] AC1: Ten command template files exist in `commands/` directory

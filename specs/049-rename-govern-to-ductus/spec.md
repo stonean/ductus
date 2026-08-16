@@ -67,16 +67,48 @@ The ordering constraint is that an adopter running the migration is, by definiti
 
 ## Sequencing and current state
 
-**State at hand-off (2026-08-15).** All eight open questions are resolved and recorded below; the spec sits at `draft` with zero open questions, so the next pipeline action is `/{project}:clarify`, which short-circuits the question loop and goes straight to its validation gate and the `draft → clarified` confirmation. No decision recorded here should be reopened.
+**State at hand-off (2026-08-16). The rename shipped in `ductus-v0.28.0`.** The
+sequence below is complete except for one operator publish; nothing here is
+awaiting a decision, and no decision recorded in this spec should be reopened.
 
-The work sequence, and why it is in this order:
+What shipped, in the order it was done:
 
-1. **049 (this spec)** — clarify gate, then plan, then implement. The rename lands before 048 resumes.
-2. **048 resumes** at its Phase 2. Its Phase 1 (the repo-root `version` pin, the release publish gate, one archive format on every platform) is name-independent and already shipped. Phases 2 and 3 write the store path, the pointer path, and an adopter migration to them, which is why they wait for the names.
-3. **013's migration registry entry**, whose `introduced_in` names the release that first carries the labelling primitive.
-4. **The release** — version bump, CHANGELOG, and the first `ductus-v{version}` tag, which closes out 013 and 022.
+1. **049 (this spec)** — clarified, planned, implemented, reviewed. The sweep
+   landed as a uniform substitution, so the `done` specs it touched stayed
+   `done`.
+2. **048** resumed at its Phase 2 and completed Phase 3, so the runtime is now
+   required and `/{project}` acquires it.
+3. **013's migration registry entry** (`criterion-label-backfill`) registered
+   against `0.28.0`, the release that first carries `label-criteria`.
+4. **The release** — `ductus-v0.28.0` tagged and published: five target assets
+   with sidecars, an SBOM, and `ductus 0.28.0` on crates.io. Acquisition is
+   verified on all five platforms.
 
-The completion bar for that tag is the operator's, recorded in [022's task 86](../022-deterministic-runtime/tasks.md): every identified piece of work ships first, **including all MUST and SHOULD findings from `/{project}:review` and every issue `/{project}:analyze` reports** across the affected specs. A finding deferred past the tag is not deferred, it is shipped.
+**The one item left on this spec is AC12**, and it is an operator publish rather
+than repository work: the retired `gvrn` crate needs a final release whose
+description points at `ductus`. The half that protects existing installs is
+already true — `gvrn 0.27.2` is published, unyanked, and still installable, which
+is what the resolved question requires. What is missing is the deprecation
+notice, which reaches those users at the moment they next look. Closing it means
+publishing a `gvrn` version from a crate manifest named `gvrn` with a
+description naming `ductus`; it cannot be done from this repository's manifest,
+which is now named `ductus`.
+
+**Operational constraints this rename leaves permanently in force**, both
+recorded in `AGENTS.md` because they outlive this spec: a repository named
+`govern` must never be created under this account again (it silently severs the
+redirect every un-migrated adopter still depends on), and the retired bootstrap
+path `framework/bootstrap/govern.md` must keep serving the current bootstrap
+byte-for-byte until no adopter can still be running a pre-rename copy —
+`/{project}:audit` Family 21 enforces the second.
+
+The completion bar for the tag was the operator's, recorded in
+[022's task 86](../022-deterministic-runtime/tasks.md): every identified piece of
+work ships first, **including all MUST and SHOULD findings from
+`/{project}:review` and every issue `/{project}:analyze` reports** across the
+affected specs. That bar was met at the tag — the audit exits 0, every affected
+spec's `check-artifacts` is clean, and both reviewed specs record their findings
+as fixed rather than deferred.
 
 ## Sequencing with 048
 
