@@ -221,11 +221,8 @@ lands here as a scenario, back-linked to the requiring spec). It accumulates
 scenarios continuously and is not expected to reach `done` on any particular
 cycle.
 
-**One task is outstanding**, authored 2026-08-16 and not started:
-
-| Task | Scenario | Requiring spec |
-| --- | --- | --- |
-| 88 | `review-staleness-on-done-specs` — `check-artifacts` reports a stale review on a `done` spec | this spec |
+**No tasks are outstanding.** Task 88 — the last one authored 2026-08-16 —
+closed on its investigation and its fix rather than on the arm it proposed:
 
 **Task 88's measurement was taken 2026-08-16 and changed the task.** The
 scenario asks for the corpus-wide flag count *before* the advisory-vs-blocking
@@ -238,14 +235,20 @@ carries the exemption, `stale_review_block` applies it, an abbreviated
 `reviewed-against` no longer fails the check open, and
 `tests/mechanical_sweep_parity.rs` fails on any future divergence.
 
-What remains of 88 is the `check-artifacts` arm itself, and its case should be
-**re-argued rather than inherited**: with the exemption in place both existing
-mechanisms report 0 on this corpus, so the arm would add a third caller of a
-rule that currently finds nothing. The state it describes — a `done` spec whose
-review has genuinely aged — is still uncovered between releases; the scenario's
-Resolved Questions record the full finding, including that its founding
-observation (017 blocking on three contracts) was itself a rename false
-positive.
+The `check-artifacts` arm itself was re-argued and **declined**. The scenario's
+premise — that nothing re-evaluates a `done` spec's verdict — does not hold:
+`framework-checks.yml` runs the full self-audit, Family 19 included, on every
+push to `main` (branch filter, no `paths:` filter), and a durable contract is by
+definition a file the same push touches, so there is no window in which
+contracts move unwatched. The two-week silence the scenario cites was Family 19
+being correctly quiet about a rename. What remains is a *visibility* gap rather
+than a detection one — `/{project}:analyze` cannot surface a verdict CI already
+computes — and if that is worth closing, the shape is one more reader of the
+existing answer, not a third implementation of the rule. The scenario's
+Resolved Questions carry the full reasoning and supersede its Behavior section.
+
+**022 now has no outstanding tasks.** It stays `in-progress` as the durable home
+for runtime work, per the paragraph above.
 
 An earlier revision of this note said task 91 had made
 `compute_review_scope::read_plan_affected` the shared path for 88. That was

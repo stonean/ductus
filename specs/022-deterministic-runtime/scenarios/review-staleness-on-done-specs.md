@@ -89,10 +89,35 @@ The `0.28.0` cycle swept the whole corpus, so 017 is unlikely to be alone. This 
   divergent and asserts it compared something, so a vacuous pass is itself a
   failure.
 
-- **Does the `check-artifacts` staleness arm still need building?** Undecided,
-  and deliberately left so. With the exemption in place both mechanisms now
-  report 0 on this corpus, so the arm would add a third caller of a rule that
-  currently finds nothing. The state this scenario describes — a `done` spec
-  whose review has genuinely aged — remains uncovered between releases, but the
-  case for the arm should be re-argued against a corpus where the rule actually
-  fires, rather than inherited from a premise that has been shown false.
+- **Does the `check-artifacts` staleness arm still need building?** No, not as
+  this scenario scopes it. Resolved 2026-08-16 after checking the claim in the
+  Context section rather than accepting it.
+
+  That claim is: *"Once a spec is `done`, nothing re-evaluates its verdict, so
+  contracts can move underneath it indefinitely."* It is false.
+  `.github/workflows/framework-checks.yml` runs the full self-audit — Family 19
+  included — on **every push to `main`**; its `push:` trigger carries a branch
+  filter and no `paths:` filter at all. Family 19 walks every `done` spec and
+  applies exactly this rule. A durable contract is by definition a file under
+  `{specs-root}/`, so the push that moves one is itself the push that
+  re-evaluates every recorded verdict. There is no window in which contracts
+  move unwatched.
+
+  The two-week silence the Context describes was Family 19 being **correctly
+  quiet**: 017's drift was entirely 049's rename, which the exemption exempts.
+  What read as an undetected state was an over-firing gate measured against a
+  correctly-silent family — the defect fixed in `0.29.1`, not a gap this arm
+  would have filled.
+
+  What remains is real but much smaller, and is a different feature:
+  `check-artifacts` backs `/{project}:analyze`, so a maintainer can learn a
+  `done` spec's review has aged only from CI, never from a local on-demand run.
+  That is a **visibility** gap, not a detection one. If it is worth closing, the
+  shape is *surface Family 19's existing verdict in `/{project}:analyze`* — one
+  more reader of the answer — rather than the advisory arm described above,
+  which would be a third implementation of a rule that already has one too many
+  (see the previous question on why the two that exist cannot be merged).
+
+  The Behavior section above is left as authored rather than rewritten: it
+  records what was believed, and these questions record what was measured. A
+  future reader should treat the Behavior as superseded by this entry.
