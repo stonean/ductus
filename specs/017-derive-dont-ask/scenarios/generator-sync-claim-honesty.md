@@ -36,6 +36,18 @@ Each clause appears only when its count is non-zero. This case is specific to `g
 
 **The other two are assessed, not assumed.** `gen-help-tables.sh` ("help.md in sync") and `gen-configure-mcp.sh` ("mcp-allow blocks in sync") share the message *shape* but regenerate from fixed sources rather than through `list_specs()`. Each is checked against the same question — can its zero count ever mean "did not examine?" — and its message is corrected only if the answer is yes. A uniform edit applied without that check would be its own unfounded claim.
 
+### Outcome of that assessment (2026-08-16)
+
+The assessment above was specified here but its result was never written down, so for two releases this scenario read as pending work and `quality-cross.md`'s `QUAL-CLAIM-001` Source note recorded both generators as *"have not been assessed against this rule"*. `/ductus:review` on [013](../../013-text-first-artifacts/review.md) performed it. The answers differ, which is why the uniform edit this scenario warns against would have been wrong in both directions.
+
+**`gen-configure-mcp.sh` — no; its message stands.** It processes a fixed set of four agent-source files unconditionally, compares each with `cmp`, and exits 4 when the tool manifest yields zero tools. Its subject is always fully examined, so a zero count cannot mean "did not examine". This is the rule's documented compliant case: *a documented total function whose subject is always fully examinable.* Left unchanged — correcting it would have been the unfounded claim in reverse.
+
+**`gen-help-tables.sh` — yes; corrected.** It built its five tables from a command list hardcoded in the script rather than from `framework/commands/`, so a command that existed but was unlisted was never examined while the run still reported `No changes (help.md in sync)` at exit 0. Reproduced by adding a scratch command file: the generator reported sync while `help.md` never mentioned it. Nothing else covered the gap — `help.md` appears in `scripts/audit/` only inside a prose comment in `installer-command-parity.sh`, whose subject is `ductus.md`'s installer manifest, and whose header concedes help.md merely *"tends to get updated"* — the author-diligence dependency the framework forbids.
+
+The correction is a verified claim rather than a reworded one: the command groups are arrays feeding both the rendered tables and a coverage assertion against the directory (minus the same maintainer-only exclusion `installer-command-parity.sh` uses), and an unlisted command now exits 6 naming the command and the remedy. The message names its subject — `No changes (14 command(s) in sync)`. Because `check-zero` runs this generator, `/ductus:audit` and the release gate inherit the check.
+
+**The reporting this scenario specifies is now tested.** Its three clauses had no assertion anywhere — `run_gen` captured stdout that no test read — so a regression to a bare "all specs in sync" would have gone unnoticed. Test R in `scripts/tests/test-gen-spec-deps.sh` covers the in-sync count, the skipped clause and its omission, and the drifted clause and its omission; reverting the message to its pre-scenario form fails three of its assertions.
+
 ## Edge Cases
 
 - Every spec tracked: the skipped clause is omitted and the message reads as it does today, with the count added.
