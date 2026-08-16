@@ -1,6 +1,6 @@
 name: runtime-acquisition
 
-# The **acquisition invariant** from constitution §runtime-boundary: prove that
+# Manual re-validation of an already-published release: prove that
 # the published release assets can actually be acquired, on every supported
 # platform, exactly as `/ductus` acquires them.
 #
@@ -20,9 +20,14 @@ name: runtime-acquisition
 # that procedure changes, this job changes with it — it is the executable copy
 # of the same sequence.
 
+# NOTE: this workflow is **manual only**. It used to declare
+# `on: release: [published]`, which never fired: GitHub does not trigger
+# workflows from events created with the default GITHUB_TOKEN, and
+# runtime-release.yml creates its release with exactly that. The invariant
+# is enforced by the `acquire` job inside runtime-release.yml, which runs
+# against the assets it just published and gates the crates.io publish.
+# This copy stays for re-validating an already-published release by hand.
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       version:
