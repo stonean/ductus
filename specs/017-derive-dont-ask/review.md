@@ -6,7 +6,7 @@ diff-base: 096dbc0cf65a2322c91bfa895a825ea60c5a23f8
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-captured-issues: 1
+captured-issues: 2
 skipped-passes: []
 ---
 
@@ -16,7 +16,7 @@ skipped-passes: []
 
 0 MUST violation(s), 0 SHOULD violation(s), 0 low-confidence finding(s). blocking: no.
 
-Re-run after this spec took the `done → in-progress` back-edge to record the outcome of the assessment its `generator-sync-claim-honesty` scenario specifies. The previous verdict dated from 2026-08-02 and had gone stale on four durable contracts; three of those four changed during the 0.28.0 cycle, while the spec sat at `done`. Worth noting for its own sake: the staleness gate fires on the `done` transition, so a spec already at `done` is not re-checked when its contracts move underneath it — this review is the first thing to look at 017's subject since the release.
+Re-run after this spec took the `done → in-progress` back-edge to record the outcome of the assessment its `generator-sync-claim-honesty` scenario specifies. The previous verdict dated from 2026-08-02 and had gone stale on four durable contracts; three of those four changed during the 0.28.0 cycle, while the spec sat at `done`. That is a framework gap rather than a fact about 017: the staleness gate fires only on the `in-progress → done` transition, so a spec already at `done` is never re-checked when its contracts move underneath it, and `check-artifacts`' review-state-drift family covers a missing or blocking review but not a stale one. This review is the first thing to look at 017's subject since the release. Logged to `specs/inbox.md` and listed under Captured issues below — it needs a design decision and it applies to every spec swept in that cycle, so it does not belong buried in one spec's report.
 
 Scope resolved to 545 files (the modified-since set, larger than the plan's 43 Affected Files), of which 90 are code — ~46.4k lines. That surface is the same one reviewed against 013 at this HEAD plus exactly one file, `runtime/src/primitives/prune_tasks.rs`, which was examined here and is clean: `validate_no_traversal` guards its feature argument, every missing precondition has its own error variant rather than a silent pass, and the `--reset` status gate returns a distinct `PruneGate::BlockedNeedsForce` variant instead of quietly declining — the QUAL-CLAIM-001 compliant shape — with 11 unit tests.
 
@@ -67,6 +67,7 @@ Rust posture verified rather than assumed: `unsafe_code = "forbid"`, clippy `all
 ## Captured issues
 
 - Architectural exploration: re-frame the runtime's LLM extension points as named Skills loaded at the seam. Speculative; **On hold per user 2026-07-11.**
+- Framework gap — a `done` spec's review can go stale with nothing reporting it: `check-review-gate`'s `review-stale` check fires only on the `in-progress → done` transition, and `check-artifacts`' review-state-drift family covers a missing or blocking review but not a stale one. Captured while reviewing 017, which was found stale on 4 durable contracts, 3 of them changed during the 0.28.0 cycle while it sat at `done`. Needs a design decision; run `/ductus:groom` to route it.
 
 ## Skipped passes
 
