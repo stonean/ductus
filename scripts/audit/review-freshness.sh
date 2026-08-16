@@ -191,6 +191,13 @@ def diff_substitutions(base):
         ["git", "-C", str(root), "diff", "--unified=0", f"{base}..HEAD", "--", "*.md"],
         capture_output=True,
         text=True,
+        # Explicit, not the locale default: on Windows that is cp1252, which
+        # raises UnicodeDecodeError on the first em-dash in a spec and takes
+        # the whole family down. `replace` rather than a raise so a stray
+        # undecodable byte reads as a changed token — a finding, which is the
+        # safe direction — instead of crashing a release gate.
+        encoding="utf-8",
+        errors="replace",
     )
     result = {}
     if proc.returncode != 0:
@@ -332,6 +339,13 @@ for spec_path in sorted(specs_dir.glob("*/spec.md")):
         ["git", "-C", str(root), "diff", "--name-only", f"{base}..HEAD"],
         capture_output=True,
         text=True,
+        # Explicit, not the locale default: on Windows that is cp1252, which
+        # raises UnicodeDecodeError on the first em-dash in a spec and takes
+        # the whole family down. `replace` rather than a raise so a stray
+        # undecodable byte reads as a changed token — a finding, which is the
+        # safe direction — instead of crashing a release gate.
+        encoding="utf-8",
+        errors="replace",
     )
     if changed.returncode != 0:
         continue
