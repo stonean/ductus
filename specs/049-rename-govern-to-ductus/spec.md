@@ -1,5 +1,5 @@
 ---
-status: planned
+status: in-progress
 dependencies: [022-deterministic-runtime, 027-bootstrap-migration-registry, 042-consolidate-govern-per-project-files-under-govern-directory, 048-govern-acquired-runtime]
 review:
   last-run: null
