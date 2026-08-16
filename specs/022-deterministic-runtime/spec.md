@@ -260,11 +260,21 @@ closing `017-derive-dont-ask`'s AC25 and AC26 and returning that spec to `done`:
 | 90 | `review-observations-write-through` — recording a review observation is what captures it | `write-review`'s `observations` array, the `## Observations` section, and the inbox write-through ordered ahead of the report |
 | 91 | `specify-routes-before-scaffolding` — routing binds wherever work enters | the `derive-routing-candidates` primitive and `/{project}:specify`'s pre-scaffold routing gate |
 
-**This spec's review is stale** (`reviewed-against 9a9c38b3`, ~50 durable
-contracts changed). That is expected given the scenario count and blocks only
-the `done` transition, which is not being sought. Re-running `/{project}:review`
-here is a large job: its computed scope resolves to most of the repository,
-because the diff base predates the `0.28.0` cycle.
+**This spec's review is stale** (`reviewed-against 9a9c38b3`), and the size of
+that staleness was overstated here until it was measured. 54 durable contracts
+have changed since that sha, but under the mechanical-sweep exemption shipped in
+`0.29.1` only **10** are real changes rather than 049's rename, and 4 of those
+10 were authored on 2026-08-16 — so roughly six contracts carry genuine
+pre-existing drift, not the fifty this note previously claimed. Staleness blocks
+only the `done` transition, which is not being sought.
+
+Re-running `/{project}:review` here is nonetheless **a large job, and for a
+different reason than staleness**: `compute-review-scope` resolves 551 files
+(`diff-base 8c57d4bd`, `plan-affected` 33), because scope is the larger of the
+plan's Affected Files and everything modified since a diff base that predates
+the `0.28.0` cycle. Shrinking the staleness number does not shrink the review —
+the two are independent, and conflating them is what made the earlier note read
+as if a smaller number would mean a smaller job.
 
 ## Acceptance Criteria
 
