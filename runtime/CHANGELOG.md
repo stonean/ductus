@@ -2,6 +2,20 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.29.1] — 2026-08-16
+
+Two fixes in the framework's own machinery, found by taking the measurement spec 022 task 88 asks for *before* its design is finalised. The measurement invalidated the task and exposed a live defect instead.
+
+### Fixed
+
+- **The review-staleness gate fired on rename sweeps — 19 of 46 `done` specs.** `check-review-gate` blocks the `in-progress → done` transition when a spec's durable contracts changed since its recorded `reviewed-against`. It had no mechanical-sweep exemption, so a uniform token substitution across live artifacts — the thing §spec-lifecycle case (a) explicitly calls a *mechanical* edit, and the reason a rename does not reopen a `done` spec — read as a contract change. Measured across this repo: 19 of 46 `done` specs would have been blocked, every one a consequence of 049's `govern → ductus` sweep and none a real change. `005-workflows`, for instance, differed only in `/govern` → `/ductus` inside its `data-model.md`. `/ductus:audit` Family 19 has applied the exemption since it was written and reported 0, so the two enforcement moments disagreed on 19 specs with nothing comparing them. The incident that prompted the investigation was itself an instance: `017-derive-dont-ask` blocked on three contracts that all changed in one commit, the rename. The new `primitives::mechanical_sweep` module carries the rule — one-for-one line runs, equal token counts per line, and rewrites that recur across more than one file, with file-local variants admitted when the repo-wide rewrites explain them — and `stale_review_block` filters through it. A meaning change riding along with a sweep still blocks, because its rewrite is not one the sweep made anywhere else.
+- **An abbreviated `reviewed-against` made the staleness check fail open.** `git2`'s `Oid::from_str` zero-pads a short hex string into a 40-character id that matches nothing, so the whole check bailed silently for any spec recording an abbreviated sha (`012-multi-agent-govern` records `d904430`) while Family 19's `git cat-file -e` resolved it and checked. Now resolved with `revparse_single`. A check that silently cannot run is the failure mode this project pays for most, and this one was sitting inside the check that exists to catch it.
+- **`/ductus:audit` Family 19 crashed on Windows.** `scripts/audit/review-freshness.sh` decoded `git diff` output with the platform locale, which is cp1252 on Windows and raises `UnicodeDecodeError` on the first em-dash in a spec. Latent since the family was written, because it only ever runs on Linux in CI. Now pinned to UTF-8 with `errors="replace"`, so an undecodable byte reports the spec stale — a finding, the safe direction — rather than crashing a release gate. Adopters running the audit locally on Windows are the ones this affects.
+
+### Added
+
+- **`primitives::mechanical_sweep::SweepIndex` is public.** It is reachable from integration tests, which is how `tests/mechanical_sweep_parity.rs` runs the Rust rule and Family 19's Python rule over the real corpus and fails on the first disagreement. The two implementations exist because the CI job running the self-audit has no Rust toolchain — it *gates* the build, so calling the runtime would make the gate depend on compiling the artifact it gates. The test is what keeps them from drifting again in silence; it asserts that it compared something, so a vacuous pass is itself a failure.
+
 ## [0.29.0] — 2026-08-16
 
 Two instances of spec 017's own principle — *never design a framework feature that depends on an author remembering* — found in the framework's own machinery and closed. Both land here per the runtime-work routing rule; the requiring spec keeps the criteria (017 AC25, AC26).
