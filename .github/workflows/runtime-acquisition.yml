@@ -54,18 +54,23 @@ jobs:
         # aarch64-linux and x86_64-darwin from the wrong host and never runs
         # what it builds.
         #
-        # If a leg fails before any step runs, the runner label is the first
-        # thing to check: `ubuntu-24.04-arm` (arm64 Linux) and `macos-13`
-        # (the last Intel macOS image) are both availability-sensitive —
-        # arm64 Linux runners are a newer offering, and Intel macOS images
-        # are on a deprecation path. A label GitHub does not recognize fails
-        # at scheduling with no step output, which reads as a broken workflow
-        # rather than a missing runner.
+        # If a leg sits queued with no runner assigned, the label is the
+        # first thing to check — that is a missing runner, not a hang, and
+        # it produces no step output to say so. Measured against the real
+        # 0.28.0 assets: `ubuntu-24.04-arm` and `windows-latest` both work;
+        # `macos-13` never picked up a runner and is gone (see below).
         include:
           - target: aarch64-apple-darwin
             runner: macos-latest
+          # Executed on Apple Silicon under Rosetta 2 rather than on native
+          # Intel: GitHub has retired its Intel macOS images, and the
+          # macos-13 label this used to name never picks up a runner — the
+          # job sits queued until it times out, which reads as a hang rather
+          # than a missing runner. Rosetta proves the binary loads and runs;
+          # it does not prove native Intel execution, and nothing available
+          # here can.
           - target: x86_64-apple-darwin
-            runner: macos-13
+            runner: macos-latest
           - target: x86_64-unknown-linux-gnu
             runner: ubuntu-latest
           - target: aarch64-unknown-linux-gnu
