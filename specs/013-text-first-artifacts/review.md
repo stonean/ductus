@@ -6,7 +6,7 @@ diff-base: d924627ca6c3f4478a40e3bcdaf8b4d608a835c9
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-captured-issues: 2
+captured-issues: 1
 skipped-passes: []
 ---
 
@@ -22,7 +22,7 @@ Scope resolved to 532 files (the modified-since set, larger than the plan's 35 A
 
 Rust posture is strong and was verified, not assumed: `unsafe_code = "forbid"`, clippy `all`+`pedantic` with `unwrap_used`/`expect_used` warned and CI promoting all warnings to errors, `cargo clippy --release --all-targets --locked -- -D warnings` clean, 972 tests green, and no `todo!`/`unimplemented!`/TODO/FIXME under `runtime/src` (QUAL-STUB-001 clean). Two candidate findings were investigated and dismissed on evidence: `fetch-archive` resolving its `archive` argument through `resolve_path` without `validate_no_traversal` is documented deliberate design (`primitives/mod.rs:711-723` names downloaded archives as operator/machine-local paths that must accept absolute input), and the SSRF guard is thorough — https-only, internal-range denial incl. the metadata endpoint, IPv4-mapped unwrapping, per-hop redirect re-validation, DNS-rebinding address pinning. `install.sh` is clean (TLS-pinned curl, allowlisted agent arm with an explicit reject, quoted expansions).
 
-One defect with no mapping to any loaded rule is logged to `specs/inbox.md` rather than invented as a rule violation, and remains **outstanding**: a live `GVRN_`-prefixed env var survives the 049 rename in `runtime/src/primitives/fetch_archive.rs:278`, which makes 049's AC1 read as met when it is not. Closing it is a decision (rename, dual-read, or recorded exception), not a mechanical fix.
+A fourth defect surfaced with no mapping to any loaded rule, so it was logged to `specs/inbox.md` rather than invented as a rule violation: a live `GVRN_`-prefixed env var had survived the 049 rename in `runtime/src/primitives/fetch_archive.rs`, which made 049's AC1 read as met when it was not. It is **also closed** — renamed in `37f823f` and removed from the inbox; see Captured issues below. The remaining captured issue is the on-hold Skills exploration, which is not a review finding.
 
 ## MUST violations (blocking)
 
@@ -67,7 +67,7 @@ One defect with no mapping to any loaded rule is logged to `specs/inbox.md` rath
 ## Captured issues
 
 - Architectural exploration: re-frame the runtime's LLM extension points as named Skills loaded at the seam. Speculative; **On hold per user 2026-07-11.**
-- Stale old-project-name env var survives the 049 rename: `GVRN_FETCH_ALLOW_INSECURE_HOSTS` in `runtime/src/primitives/fetch_archive.rs:278`. Outstanding — needs a decision (rename, dual-read, or record as a deliberate exception on 049).
+- [x] Stale old-project-name env var survived the 049 rename: `GVRN_FETCH_ALLOW_INSECURE_HOSTS` in `runtime/src/primitives/fetch_archive.rs`. **Closed in `37f823f`** — renamed to `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS` with no fallback, which makes 049's AC1 true rather than merely ticked. Removed from `specs/inbox.md`, so it is no longer outstanding and does not count above.
 
 ## Skipped passes
 
