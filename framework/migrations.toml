@@ -115,6 +115,9 @@ target_paths = [
   ".mcp.json",
   ".gitignore",
   ".githooks/govern-pre-commit",
+  "CLAUDE.md",
+  "AGENTS.md",
+  "README.md",
 ]
 procedure_file = "framework/migrations/ductus-rename.md"
 
