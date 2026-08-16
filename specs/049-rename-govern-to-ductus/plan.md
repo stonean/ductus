@@ -216,7 +216,7 @@ the adopter-facing URLs resolving, and its one failure mode (recreating the reti
 has no detection — which is why it is recorded as a permanent constraint in `AGENTS.md` rather
 than as a check.
 
-**Known limitation: `/gov:implement`'s derived write boundary is wrong for this spec.**
+**Known limitation: `/ductus:implement`'s derived write boundary is wrong for this spec.**
 `derive-boundary` returns `["AGENTS.md", "specs/049-rename-govern-to-ductus/**"]` from the spec
 directory's commit history, while the rename touches the whole repo. Implementation seeds an
 explicit `write-boundary` in the session rather than letting the derived one block every edit.

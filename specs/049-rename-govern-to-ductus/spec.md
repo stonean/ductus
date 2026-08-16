@@ -2,8 +2,8 @@
 status: in-progress
 dependencies: [022-deterministic-runtime, 027-bootstrap-migration-registry, 042-consolidate-govern-per-project-files-under-govern-directory, 048-govern-acquired-runtime]
 review:
-  last-run: null
-  reviewed-against: null
+  last-run: 2026-08-16T02:19:31Z
+  reviewed-against: 34b8f22ff997d54dd9e3344226b4d03032959914
   must-violations: 0
   should-violations: 0
   low-confidence: 0
@@ -87,7 +87,7 @@ The relationship runs the other way too: 048's remaining migration entry and thi
 ## Acceptance Criteria
 
 - [x] AC1: No live artifact under `framework/`, `scripts/`, `runtime/src/`, `.github/`, `README.md`, or `AGENTS.md` references the old project name, except where it is recording history
-- [x] AC2: The in-repo sweep is a uniform token substitution, so `done` specs it touches stay `done` per §spec-lifecycle case (a), and `/gov:analyze` reports no spec drifted by it
+- [x] AC2: The in-repo sweep is a uniform token substitution, so `done` specs it touches stay `done` per §spec-lifecycle case (a), and `/ductus:analyze` reports no spec drifted by it
 - [x] AC3: A registry migration converges an adopter's MCP registration, permission entries, per-project directory, and installed command files in one bootstrap run
 - [x] AC4: Re-running that migration against an already-converged project is a no-op
 - [x] AC11: An adopter converges on the new per-project directory from any prior layout — pre-[042](../042-consolidate-govern-per-project-files-under-govern-directory/spec.md) legacy, consolidated under the old directory, or already converged — with no tracked file lost, `[pinned] files` entries rewritten to the new paths, and the two directory migrations composing in registry order
