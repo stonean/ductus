@@ -41,7 +41,8 @@ use crate::schema::primitives::{
     CheckRuleIdsResult, CheckStuckArgs, CheckStuckResult, CheckboxToggleResult,
     ComputeReviewScopeArgs, ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult,
     CreatePlanArtifactsArgs, CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult,
-    DashboardArgs, DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult, DiffCrossSpecArgs,
+    DashboardArgs, DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult,
+    DeriveRoutingCandidatesArgs, DeriveRoutingCandidatesResult, DiffCrossSpecArgs,
     DiffCrossSpecResult, DiscoverRuleFilesArgs, DiscoverRuleFilesResult, EnforceManifestArgs,
     EnforceManifestResult, ExtractArchiveArgs, ExtractArchiveResult, FetchArchiveArgs,
     FetchArchiveResult, GateConfirmArgs, LabelCriteriaArgs, LabelCriteriaResult, LintMarkdownArgs,
@@ -778,6 +779,19 @@ impl GovRuntimeServer {
         params: Parameters<CheckArtifactsArgs>,
     ) -> Result<Json<CheckArtifactsResult>, String> {
         primitives::check_artifacts::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "derive-routing-candidates",
+        description = "Derive the existing homes proposed work could belong to, so /ductus:specify runs the routing decision before create-feature writes anything. Three sources: runtime-work (the description names a primitive or a `runtime/` path, routed to the spec whose plan claims `runtime/` — derived from the corpus, never a hardcoded slug), rule-surface (a rule file whose category stem the description shares), and spec-corpus (a spec whose slug it shares vocabulary with). Each candidate names the route it implies (`rule` or `scenario`), the target's status, and whether accepting it implies the done -> in-progress back-edge. Matching is lexical and advisory — the semantic call stays at the routeInboxItem extension point and the decision stays with the operator. Every source lands in `sources-examined` or in `skipped`, so empty candidates with empty skipped means 'examined and matched nothing' while a non-empty `skipped` means 'could not derive' — different answers. `routed-by` marks a tree that already ran and returns gate-required: false."
+    )]
+    async fn derive_routing_candidates(
+        &self,
+        params: Parameters<DeriveRoutingCandidatesArgs>,
+    ) -> Result<Json<DeriveRoutingCandidatesResult>, String> {
+        primitives::derive_routing_candidates::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

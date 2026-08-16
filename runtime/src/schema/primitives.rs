@@ -222,6 +222,25 @@ pub struct ReviewFinding {
     pub suggested_fix: String,
 }
 
+/// One review **observation** — something the reviewer judged real that maps
+/// to no loaded rule, so it cannot be a [`ReviewFinding`]. Observations never
+/// enter the MUST / SHOULD / low-confidence counts and never affect
+/// `blocking`; `write-review` renders them in their own report section and
+/// appends each one to the inbox in the same call, so recording an observation
+/// *is* capturing it (spec 022 scenario `review-observations-write-through`).
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ReviewObservation {
+    /// What was observed, as one line of prose. Leading it with a category
+    /// (`security` / `leak` / `convention` / `bug` / `perf` / `other`) matches
+    /// the inbox template's auto-capture form, but nothing parses it.
+    pub text: String,
+    /// Repo-relative path (optionally `file:line`) the observation anchors to;
+    /// empty when it is not anchored to one file.
+    #[serde(default)]
+    pub path: String,
+}
+
 /// Args for `write-review`. Findings cross the runtime boundary as a single
 /// `findings` array (the content-ingestion convention), never as several
 /// large per-section prose params.
@@ -282,6 +301,13 @@ pub struct WriteReviewArgs {
     #[serde(default)]
     #[arg(skip)]
     pub captured_issues: Vec<String>,
+    /// Reviewer observations that map to no loaded rule. Excluded from every
+    /// count and from `blocking`; each is appended to the inbox by this same
+    /// call, so the report and the inbox cannot diverge. Supplied via
+    /// MCP/interpreter JSON; not a CLI flag.
+    #[serde(default)]
+    #[arg(skip)]
+    pub observations: Vec<ReviewObservation>,
 }
 
 /// Result for `write-review`.
@@ -300,6 +326,12 @@ pub struct WriteReviewResult {
     pub low_confidence: u32,
     /// Findings excluded by an applied waiver.
     pub waived: u32,
+    /// Observations rendered in the report's `## Observations` section.
+    pub observations: u32,
+    /// Observations newly appended to the inbox by this call; the remainder of
+    /// `observations` were already there and deduped. Reported so a caller can
+    /// tell "nothing to capture" from "capture ran and found duplicates".
+    pub observations_captured: u32,
     /// `true` when `must-violations` exceeds zero.
     pub blocking: bool,
     /// Derived exit code: 1 when blocking, else 0.
@@ -2351,6 +2383,112 @@ pub struct CheckArtifactsResult {
     pub skipped: Vec<SkippedTarget>,
     /// Repo-relative path to the spec file.
     pub path: String,
+}
+
+// -- derive-routing-candidates -------------------------------------------------
+
+/// Args for `derive-routing-candidates`. Derives the homes new work could
+/// belong to, so `/ductus:specify` can run the routing decision *before*
+/// `create-feature` writes anything (spec 022 scenario
+/// `specify-routes-before-scaffolding`).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct DeriveRoutingCandidatesArgs {
+    /// The proposed work, in the requester's words — `/ductus:specify`'s
+    /// feature description. Matching is lexical over this text.
+    ///
+    /// The `title` alias reads the key `create-feature` already consumes, so
+    /// the exec walker binds both primitives from one context value instead of
+    /// the operator supplying the same string under two names.
+    #[serde(alias = "title")]
+    #[arg(long)]
+    pub description: String,
+    /// The command whose routing tree already ran, when one did (e.g.
+    /// `groom`). Present means the decision has been made already, so
+    /// `gate-required` comes back false and the caller does not ask twice.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[arg(long)]
+    pub routed_by: Option<String>,
+}
+
+/// One derived home the proposed work could belong to instead of a new spec.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RoutingCandidate {
+    /// Route from the `routeInboxItem` vocabulary this candidate implies:
+    /// `rule` (amend an existing rule surface) or `scenario` (add a scenario
+    /// to an existing spec). `spec` — create a new one — is the absence of
+    /// candidates, never a candidate itself.
+    pub route: String,
+    /// Which derivation produced it: `runtime-work`, `rule-surface`, or
+    /// `spec-corpus`. Ordered by that precedence in the result.
+    pub source: String,
+    /// The home: a rule-file basename, or a feature slug.
+    pub target: String,
+    /// Repo-relative path of the target.
+    pub path: String,
+    /// Target spec's frontmatter `status`; empty for a rule-file candidate
+    /// and for a spec whose frontmatter could not be read.
+    #[serde(default)]
+    pub status: String,
+    /// `true` when accepting this candidate implies the `done → in-progress`
+    /// back-edge, so the confirmation can name the reopen before it happens
+    /// exactly as `/ductus:groom`'s does.
+    pub reopens: bool,
+    /// Why it matched — the shared tokens, or the runtime artifact named.
+    /// Surfaced in the gate so the operator can judge the match rather than
+    /// take it on trust.
+    pub reason: String,
+}
+
+/// One derivation source that could not be examined. The reason a
+/// zero-candidate result is not automatically *no candidate found*.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RoutingSkip {
+    /// Source that could not run: `rule-surface`, `spec-corpus`, or
+    /// `runtime-work`.
+    pub source: String,
+    /// What stopped it, in the operator's terms.
+    pub reason: String,
+    /// Repo-relative path the source would have read; empty when the source
+    /// has no single path.
+    #[serde(default)]
+    pub path: String,
+}
+
+/// Result for `derive-routing-candidates`.
+///
+/// `candidates` empty with `skipped` empty is **no candidate found** — every
+/// source ran and matched nothing, so a new spec is the right answer.
+/// `candidates` empty with `skipped` non-empty is **could not derive
+/// candidates** — a different answer that must not be reported as the first
+/// (`QUAL-CLAIM-001`). `sources-examined` is what makes the distinction
+/// checkable rather than inferred.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct DeriveRoutingCandidatesResult {
+    /// The description the derivation ran against, echoed so the routing
+    /// extension point downstream reads one key whichever name the caller
+    /// supplied it under.
+    pub description: String,
+    /// Derived homes, ordered by source precedence (`runtime-work`,
+    /// `rule-surface`, `spec-corpus`), then by descending match strength,
+    /// then by target for a stable render.
+    pub candidates: Vec<RoutingCandidate>,
+    /// Sources that ran to completion. A source appears here or in
+    /// `skipped`, never both and never neither.
+    pub sources_examined: Vec<String>,
+    /// Sources that could not be examined.
+    #[serde(default)]
+    pub skipped: Vec<RoutingSkip>,
+    /// `false` when `routed-by` named a command whose tree already ran — the
+    /// caller skips the routing decision and its confirmation rather than
+    /// asking a question that has been answered.
+    pub gate_required: bool,
+    /// `true` when at least one source could not be examined, so the caller
+    /// reports *could not derive candidates* rather than *none found*.
+    pub derivation_incomplete: bool,
 }
 
 #[cfg(test)]

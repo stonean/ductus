@@ -29,7 +29,7 @@ Requiring spec: [017 — Derive, Don't Ask](../../017-derive-dont-ask/spec.md), 
 - No observations: the section renders `*None.*`, the inbox is untouched, and the frontmatter is byte-identical to today's.
 - The same observation on a re-run: the dedup prefix suppresses the append; the report still renders it, because the report describes this run.
 - An observation whose text later becomes a rule finding: nothing special — the rule finding counts, the observation is the reviewer's to drop on the next run.
-- Markdown-only path: the host writes both the section and the inbox bullet, in that order, with the same dedup rule — one contract, two paths.
+- Markdown-only path: the host writes both the inbox bullet and the report section, in that order, with the same dedup rule — one contract, two paths. The inbox leads for the reason the last edge case gives.
 - An observation containing a newline is rejected, as `append-inbox` already rejects one: structure injection into `inbox.md` is the reason that guard exists.
 - The inbox append failing (unwritable file) fails the call rather than rendering the report without it — a report claiming an observation was captured when it was not is the defect this scenario removes, reintroduced one level down.
 
@@ -39,4 +39,13 @@ Requiring spec: [017 — Derive, Don't Ask](../../017-derive-dont-ask/spec.md), 
 
 ## Resolved Questions
 
-*None yet.*
+- **Which artifact is written first, the report section or the inbox bullet?**
+  The inbox bullet. Resolved 2026-08-16 during implementation: as authored, the
+  markdown-only edge case said "the section and the inbox bullet, in that
+  order", which contradicts the last edge case in the same list — writing the
+  section first and then failing to write the inbox leaves exactly the report
+  that claims a capture that did not happen, the defect this scenario exists to
+  remove. Writing the inbox first fails in the safe direction (a captured
+  observation, no report) and a retry re-appends nothing because the dedup
+  prefix already matches. The edge case above was corrected to match, and both
+  paths now specify inbox-then-section.

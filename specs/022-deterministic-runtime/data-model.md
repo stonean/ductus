@@ -661,6 +661,75 @@ Result:
 
 Appends `- [ ] {text}` (the checkbox inbox form the inbox template and constitution §bug-handling document) atomically to `{specs-root}/inbox.md`, creating the file when missing (from `framework/templates/project/inbox.md` when that file exists on disk — the framework source repo — else a bare `# Inbox` heading). Bullet scanning (dedup and counting) is comment/fence-aware — a `-` line inside the template's `<!-- Rules: … -->` guidance is not an item. With `dedup-prefix` supplied, an existing bullet whose text starts with the prefix (checkbox bullets included) suppresses the write and the result reports `deduped: true`. `item-count` reports the total inbox bullets after the call (the pre-existing total on a `deduped` no-op). Embedded newlines in `text` are rejected as an operational error (structure injection), matching `append-task`'s single-line rule.
 
+### `derive-routing-candidates` — the homes proposed work could already have
+
+Args:
+
+```json
+{ "description": "report a stale review on a done spec from the check-artifacts family", "routed-by": null }
+```
+
+Result:
+
+```json
+{
+  "description": "report a stale review on a done spec from the check-artifacts family",
+  "candidates": [
+    {
+      "route": "scenario",
+      "source": "runtime-work",
+      "target": "022-deterministic-runtime",
+      "path": "specs/022-deterministic-runtime",
+      "status": "in-progress",
+      "reopens": false,
+      "reason": "names the primitive `check-artifacts`; this spec's plan claims `runtime/`"
+    }
+  ],
+  "sources-examined": ["runtime-work", "rule-surface", "spec-corpus"],
+  "skipped": [],
+  "gate-required": true,
+  "derivation-incomplete": false
+}
+```
+
+The deterministic half of `/{project}:specify`'s routing gate, which runs **before** `create-feature` writes anything — creating a spec is the action the two routing rules in `AGENTS.md` §Workflow exist to prevent, so a check after the scaffold is not a check. Three sources, in result precedence order:
+
+- **`runtime-work`** — the description names a primitive (matched against the parser's `PRIMITIVE_NAMES`, so the signal tracks the shipped runtime rather than a hand-kept keyword list) or a path under `runtime/`. The home is the feature whose `plan.md` lists a `runtime/` path under `## Affected Files`, read through the same `compute_review_scope::read_plan_affected` the review scope uses. **Derived from the corpus, never a slug named in code**: an adopter's runtime-owning spec is not this repo's `022`, and a project with none yields no candidate rather than a wrong one.
+- **`rule-surface`** — a rule file whose category stem the description shares, with the `-backend` / `-frontend` / `-cross` surface suffix set aside so `security-backend.md` matches on `security` and not on every backend file. Directory resolution and listing are `discover-rule-files`' (`{specs-root}/rules/`, else `framework/rules/`).
+- **`spec-corpus`** — a spec whose slug shares vocabulary with the description. A spec already offered by `runtime-work` is not offered twice; the more specific claim wins.
+
+Matching is lexical (lowercased alphanumeric tokens of four or more characters, minus a short stopword list) and the result is **advisory**. The semantic decision stays at the `routeInboxItem` extension point — groom's tree, reused rather than copied — and the choice stays with the operator: a new spec remains creatable over any candidate, and the gate's denial branch is how the operator takes one instead. `reopens` is true when accepting a candidate implies the `done → in-progress` back-edge, so the confirmation names the reopen before it happens exactly as `/{project}:groom`'s does. `route` is drawn from the `routeInboxItem` vocabulary; `spec` (create a new one) is the *absence* of candidates and never appears as one.
+
+**Every source lands in `sources-examined` or in `skipped`, never both and never neither.** That invariant is what makes the two zero-candidate answers distinguishable: empty `candidates` with empty `skipped` is *examined and matched nothing* — a new spec is right, and a fresh adopter with no rule directory and a single-spec corpus is exactly this case; empty `candidates` with a non-empty `skipped` is *could not derive candidates*, a different answer that must not be reported as the first (`QUAL-CLAIM-001`). The runtime-work signal firing with no derivable home is a skip, not silence: that is precisely when the operator most needs to know the check could not answer. Only an empty `description` is an operational error — every other failure is reported as a skipped source, because raising would collapse "could not check" into "no gate".
+
+`routed-by` names a command whose routing tree already ran (`/{project}:groom` recommending `/{project}:specify` is the case); it returns `gate-required: false` with no candidates and no skips, and the caller skips the decision and its confirmation rather than asking twice. `description` carries a `title` alias so the exec walker binds it and `create-feature` from one context value, and is echoed in the result so the routing extension reads one key whichever name the caller supplied.
+
+Defined by `scenarios/specify-routes-before-scaffolding.md`; requiring spec [017 — Derive, Don't Ask](../017-derive-dont-ask/spec.md) AC26.
+
+### `routeInboxItem` — `candidates` request field (addendum)
+
+The request gains an optional `candidates` array carrying `derive-routing-candidates`' output, `skip_serializing_if` empty so the `/{project}:groom` payload is byte-unchanged. This keeps **one** routing point: `/{project}:specify` sends the proposed feature description as `item-text` with its derived candidates, so work arriving through conversation is routed by the same tree as work arriving through the inbox. Two routing rules that could disagree is the drift the scenario was written against. `item-text` falls back to the `description` key on the specify path, so neither entry point needs a second context key for the same value. The router treats candidates as evidence to weigh, never as a decision already made.
+
+### `write-review` — `observations` argument and `## Observations` section (addendum)
+
+Args (the observations half only; the findings/waivers/scope arguments are unchanged):
+
+```json
+{ "observations": [{ "text": "perf: the config file is re-read on every primitive call", "path": "runtime/src/schema/paths.rs" }] }
+```
+
+Result (the observations half only):
+
+```json
+{ "observations": 1, "observations-captured": 1 }
+```
+
+An **observation** is something the reviewer judged real that maps to no loaded rule, so it cannot be a finding. `path` is optional. Observations never enter `must-violations` / `should-violations` / `low-confidence`, never affect `blocking`, and never change the exit code; they render in their own `## Observations` report section, which sits after `## Captured issues` and before `## Skipped passes` and emits `*None.*` when empty like every other section. The report frontmatter is unchanged — no `observations:` key — so a run with no observations produces a byte-identical report to one written before this addendum.
+
+**Recording is capture.** The same call appends one bullet per observation to `{specs-root}/inbox.md` in the form ``- [ ] {text} — `{path}` (captured during review of {feature})`` (the path clause dropped when absent), via the `append-inbox` primitive rather than a second append implementation, dedup-guarded on that whole rendered line so a re-run over an unchanged repo appends nothing. `observations` counts what the report rendered; `observations-captured` counts what was newly appended, so a caller can tell *nothing to capture* from *capture ran and everything was already there*. The inbox write happens **before** `review.md` is written and an I/O failure fails the whole call: a report whose section claims a capture that did not happen is the defect this write-through removes (QUAL-CLAIM-001), and the reverse order would reintroduce it one level down. Observation `text` and `path` carry `append-inbox`'s single-line rule, screened up front so a rejection touches no artifact.
+
+`performReview`'s response carries a matching optional `observations` array, accumulated across passes exactly as `findings` is and filtered out of later passes' request payloads by the same rule; without that leg the section would render `*None.*` on every run whether or not the reviewer had any. Defined by `scenarios/review-observations-write-through.md`; requiring spec [017 — Derive, Don't Ask](../017-derive-dont-ask/spec.md) AC25.
+
 ### `remove-inbox-item` — remove one bullet from the inbox
 
 Args:

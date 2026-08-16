@@ -214,6 +214,28 @@ fn walker_halts_on_primitive_failure_with_error_envelope() {
 /// `discover-rule-files`'s `selected`/`rules-dir` reach
 /// `build_perform_review_request` (as `scope-files`/`rule-files`) and
 /// `write-review` (which renders `diff-base` and the accumulated findings).
+/// The observations leg is asserted by [`assert_observations_threaded`].
+///
+/// The observations channel must be threaded the whole way — pass response →
+/// walker accumulator → `write-review` → both the report section and the
+/// inbox. Without this leg the report's `## Observations` section would render
+/// `*None.*` on every run whether or not the reviewer recorded any: a check
+/// that cannot run, indistinguishable from one that passed.
+fn assert_observations_threaded(repo_root: &std::path::Path, review: &str) {
+    assert!(
+        review.contains("## Observations\n\n- perf: a() is called in a loop — `src/a.rs`"),
+        "accumulated performReview observations reached the report:\n{review}"
+    );
+    let inbox = std::fs::read_to_string(repo_root.join("specs/inbox.md"))
+        .expect("write-review captured the observation to the inbox");
+    assert!(
+        inbox.contains(
+            "- [ ] perf: a() is called in a loop — `src/a.rs` (captured during review of 001-x)"
+        ),
+        "recording the observation is what captured it:\n{inbox}"
+    );
+}
+
 #[test]
 fn review_primitive_results_thread_into_perform_review_and_write_review() {
     let tmp = tempfile::tempdir().unwrap();
@@ -277,8 +299,9 @@ fn review_primitive_results_thread_into_perform_review_and_write_review() {
     context.insert("reviewed-against".into(), Value::String("headsha0".into()));
     context.insert("pass".into(), Value::String("security".into()));
 
-    // One security pass returns a single MUST finding against the scoped file.
-    let responses = "{\"type\":\"llm-response\",\"request-id\":\"req-1\",\"response\":{\"findings\":[{\"rule\":\"SEC-BE-001\",\"severity\":\"must\",\"file\":\"src/a.rs\",\"line-range\":\"1\",\"confidence\":\"high\"}]}}\n";
+    // One security pass returns a single MUST finding against the scoped file,
+    // plus one observation — something real that matched no loaded rule.
+    let responses = "{\"type\":\"llm-response\",\"request-id\":\"req-1\",\"response\":{\"findings\":[{\"rule\":\"SEC-BE-001\",\"severity\":\"must\",\"file\":\"src/a.rs\",\"line-range\":\"1\",\"confidence\":\"high\"}],\"observations\":[{\"text\":\"perf: a() is called in a loop\",\"path\":\"src/a.rs\"}]}}\n";
 
     let mut reader = Cursor::new(responses.to_string());
     let mut writer: Vec<u8> = Vec::new();
@@ -327,6 +350,9 @@ fn review_primitive_results_thread_into_perform_review_and_write_review() {
         review.contains("SEC-BE-001"),
         "accumulated performReview findings reached write-review:\n{review}"
     );
+
+    assert_observations_threaded(tmp.path(), &review);
+
     let spec_after = std::fs::read_to_string(&spec_path).unwrap();
     assert!(
         spec_after.contains("blocking: true"),

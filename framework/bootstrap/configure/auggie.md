@@ -106,6 +106,7 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
    - `{ "toolName": "mcp:ductus:append-inbox", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:remove-inbox-item", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:check-artifacts", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:derive-routing-candidates", "permission": { "type": "allow" } }`
    <!-- generated:mcp-allow:end -->
 
    **Shell commands — denied (destructive):**

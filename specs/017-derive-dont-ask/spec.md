@@ -176,8 +176,8 @@ Both repos run all generators in dry-run mode in CI; non-empty diff fails the bu
 - [x] AC22: `/ductus` installs the adopter hook on first run when no existing hook system is detected; updates on subsequent runs; warns and skips with a manual integration snippet when an existing hook system is detected (`.githooks/pre-commit` not from `/ductus`, husky, lefthook, pre-commit-py, or `core.hooksPath` pointing elsewhere); respects `.govern.toml` pinning
 - [x] AC23: `.ductus/scripts/gen-spec-deps.sh` ships to adopter projects with `update` strategy on every `/ductus` run (pinnable via `.govern.toml`); the shipped pre-commit hook references it via the project-relative path
 - [x] AC24: A CI workflow runs all generators in dry-run mode and fails the build on non-empty diff, in both this repo and (as a shipped example) adopter projects; protects against contributors or adopters whose hook was skipped or never installed
-- [ ] AC25: Capturing a review finding that maps to no loaded rule does not depend on the reviewer remembering a separate step: recording it in the report is what writes it to the inbox, so the two cannot diverge and an uncaptured observation is not a reachable state
-- [ ] AC26: The routing rules that decide whether work becomes a new spec, a scenario on an existing spec, or a rule-file amendment bind wherever work enters — not only when it arrives through the inbox, where `/{project}:groom`'s decision tree happens to run
+- [x] AC25: Capturing a review finding that maps to no loaded rule does not depend on the reviewer remembering a separate step: recording it in the report is what writes it to the inbox, so the two cannot diverge and an uncaptured observation is not a reachable state
+- [x] AC26: The routing rules that decide whether work becomes a new spec, a scenario on an existing spec, or a rule-file amendment bind wherever work enters — not only when it arrives through the inbox, where `/{project}:groom`'s decision tree happens to run
 
 ## Open Questions
 

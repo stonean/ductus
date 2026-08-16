@@ -21,7 +21,7 @@ Quality gate before `done`: audit the feature's implementation against the proje
 ## Scope Boundaries
 
 - Reads the target spec, its `plan.md` (for Affected Files), the in-scope source files, the selected rule files, `AGENTS.md`, and `.ductus/config.toml`; diffs `specs/inbox.md` over the review window. Do NOT review files outside the resolved scope, and do NOT introduce review criteria from outside the project's rule files and `AGENTS.md`.
-- Writes exactly two artifacts: `specs/NNN/review.md` and the target spec's frontmatter `review:` block (via `write-review`); with `--waive`, appends a waiver entry; with `--fix`, applies auto-fixable findings to the working tree. No other files are modified — status transitions belong to `/{project}:implement`.
+- Writes exactly three artifacts: `specs/NNN/review.md`, the target spec's frontmatter `review:` block, and — when the run recorded any observations — one `specs/inbox.md` bullet per observation (all three via `write-review`); with `--waive`, appends a waiver entry; with `--fix`, applies auto-fixable findings to the working tree. No other files are modified — status transitions belong to `/{project}:implement`.
 - Reference: §runtime-host-integration, §brownfield-inbox, §text-first-artifacts (constitution loaded by `/{project}:target` — do not re-read).
 
 ## Inputs
@@ -105,7 +105,7 @@ Run once per targeted feature (every in-progress or done spec under `--all`, oth
 6. <!-- llm:performReview --> Run the **efficiency** pass: flag N+1 queries, repeated work, and unbounded loops over user-controlled input.
 7. <!-- llm:performReview --> Run the **simplicity** pass: flag overengineering, premature abstraction, and dead branches; mark a finding auto-fixable when a simpler form is mechanically derivable. A dimension-restricting flag (`--security` / `--simplicity` / `--quality`) skips the unselected passes.
 8. Invoke `process-waivers` to classify the spec's `review.waivers` against the findings the passes just accumulated (apply / expire / retain / malformed / duplicate), emitting each notice it returns. **On a dimension-restricted run (`--security` / `--simplicity` / `--quality`), pass the skipped dimensions as `skipped-passes`** so a waiver whose rule did not fire is _retained_, not expired — the partial run cannot see the dimensions it didn't run, so it must not prune their waivers. The applied set is excluded from the blocking count; the expired set is dropped on the next write; the retained set is left in the frontmatter untouched. On an unrestricted run `skipped-passes` is empty and a waiver expires only when its file is gone or its rule genuinely no longer fires.
-9. Invoke `write-review` with the accumulated pass findings, the waiver results (`applied` / `expired`), and the scope to render `specs/NNN-feature/review.md` and update the spec `review:` frontmatter block. Supply the required scalars the primitives don't produce — `reviewed-at` (the current UTC timestamp) and `reviewed-against` (HEAD sha), both host-provided (as the session-write's `set-at` is); `diff-base` comes from step 1. It applies the cross-pass dedup (highest-severity-wins on rule + file + overlapping range), buckets findings into MUST / SHOULD / low-confidence / waived, prunes expired waivers (preserving any adopter-authored waiver fields on the survivors), records the skipped passes, and sets blocking when MUST violations remain. With `--fix`, apply the auto-fixable findings, re-run the affected passes, and invoke `write-review` a second time for the post-fix counts.
+9. Invoke `write-review` with the accumulated pass findings, the accumulated pass **observations**, the waiver results (`applied` / `expired`), and the scope to render `specs/NNN-feature/review.md`, update the spec `review:` frontmatter block, and capture each observation to `specs/inbox.md`. Supply the required scalars the primitives don't produce — `reviewed-at` (the current UTC timestamp) and `reviewed-against` (HEAD sha), both host-provided (as the session-write's `set-at` is); `diff-base` comes from step 1. It applies the cross-pass dedup (highest-severity-wins on rule + file + overlapping range), buckets findings into MUST / SHOULD / low-confidence / waived, prunes expired waivers (preserving any adopter-authored waiver fields on the survivors), records the skipped passes, renders the observations, and sets blocking when MUST violations remain. With `--fix`, apply the auto-fixable findings, re-run the affected passes, and invoke `write-review` a second time for the post-fix counts.
 
 ## Markdown-only reference
 
@@ -292,6 +292,12 @@ text, and a one-sentence explanation of how the code violates it. **Do not
 flag patterns that are not in the loaded rules** — the project's rule set is
 authoritative.
 
+That rule holds for every pass below, and it is not a reason to drop what you
+noticed: anything real that matches no loaded rule is an **observation**, and
+every pass may return them alongside its findings — see the Observations
+rules under [4. Write `review.md`](#4-write-reviewmd). Recording one is what
+captures it, so there is nothing separate to remember.
+
 #### Reuse pass
 
 Identify logic that duplicates existing utilities or that should be extracted
@@ -359,12 +365,16 @@ skipped-passes: []
 
 <one bullet per item appended to specs/inbox.md since diff-base; `*None.*` when empty>
 
+## Observations
+
+<one bullet per observation this run recorded; `*None.*` when empty>
+
 ## Skipped passes
 
 <`*None.*` when none>
 ```
 
-Every empty section renders the literal `*None.*` line — the `write-review` primitive emits it, and the markdown-only path writes the same so the two paths produce byte-identical reports. The **Captured issues** heading carries no suffix.
+Every empty section renders the literal `*None.*` line — the `write-review` primitive emits it, and the markdown-only path writes the same so the two paths produce byte-identical reports. The **Captured issues** and **Observations** headings carry no suffix.
 
 The **Captured issues** section surfaces issues the agent recorded to
 `specs/inbox.md` automatically during the work being reviewed (per
@@ -389,6 +399,45 @@ Leaving a groomed item written as open is the failure mode this rule exists to
 prevent: the snapshot ages into a list of issues that read as pending years
 after they were closed, and a reader cannot tell which are real without
 re-deriving every one against the inbox.
+
+The **Observations** section is the home for something the reviewer judged
+real that maps to **no loaded rule**. Inventing a rule for it is not the answer
+— the rule set is authoritative — and the free-text Summary is not either,
+because `write-review` regenerates the Summary wholesale on the next run and it
+is per-spec, so a cross-cutting note filed there is both erased and misfiled.
+An observation is **not** a finding: it never enters the
+`must-violations` / `should-violations` / `low-confidence` counts, never
+affects `review.blocking`, and never changes the exit code. Each entry carries
+its own one-line text and, optionally, the path it anchors to. Leading the text
+with a category (`security` / `leak` / `convention` / `bug` / `perf` / `other`)
+matches the inbox template's auto-capture form and helps `/{project}:groom`
+route it, but nothing parses it.
+
+**Recording an observation is capturing it.** For each entry, the same call
+that writes the section appends a bullet to `specs/inbox.md`:
+
+```text
+- [ ] {text} — `{path}` (captured during review of {NNN-feature})
+```
+
+with the path clause omitted when the observation has no path. The append is
+dedup-guarded on that whole rendered line, so re-running a review over an
+unchanged repo appends nothing while the report still renders the section —
+the report describes _this run_. On the markdown-only path, write the **inbox
+bullet first and the report section second**, and halt without writing
+`review.md` if the inbox cannot be written. That order is the point of the
+whole mechanism: a report whose Observations section claims a capture that did
+not happen is the defect this replaces, one level down. There is deliberately
+no path that records an observation in the report without also recording it in
+the inbox, and no separate `append-inbox` call to forget. An observation
+supplied to a run whose scope is empty still captures — the reviewer's
+judgment is the input, not the diff.
+
+Observations sit next to **Captured issues** because the two are complements:
+Captured issues mirrors what the inbox _already_ held over the review window,
+while Observations is what this run added to it. An observation whose subject
+later becomes a real rule finding needs nothing special — the finding counts,
+and the observation is the reviewer's to drop on the next run.
 
 The same reconciliation applies to the finding sections. A SHOULD or
 low-confidence entry whose disposition is "keep as-is" belongs under **Waived

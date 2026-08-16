@@ -15,13 +15,18 @@
 //!   (`last-run`, `reviewed-against`, `must-violations`, `should-violations`,
 //!   `low-confidence`, `blocking`), pruning any **expired** waiver entries from
 //!   `review.waivers` on the write (per `process-waivers`' contract);
+//! - **captures the reviewer's observations** — things the reviewer judged
+//!   real that map to no loaded rule — by appending each to the inbox in this
+//!   same call, so recording an observation *is* capturing it and the report
+//!   and the inbox cannot diverge;
 //! - the empty-scope case is a branch of this primitive, not a prose
 //!   special-case: it emits the 0-findings, `blocking: false` report.
 //!
 //! Both writes are atomic (tempfile + rename). `blocking` is true exactly when
 //! `must-violations` exceeds zero, and the exit code (0 / 1) is derivable from
 //! it. Defined by
-//! `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`.
+//! `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`
+//! and `.../review-observations-write-through.md`.
 
 use std::fmt::Write as _;
 use std::path::Path;
@@ -32,7 +37,9 @@ use crate::primitives::{
     PrimitiveError, Result, read_text, rel_path, split_frontmatter, write_atomic,
 };
 use crate::schema::paths;
-use crate::schema::primitives::{ReviewFinding, WriteReviewArgs, WriteReviewResult};
+use crate::schema::primitives::{
+    ReviewFinding, ReviewObservation, WriteReviewArgs, WriteReviewResult,
+};
 
 /// Execute the `write-review` primitive.
 ///
@@ -61,6 +68,21 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     }
     for (idx, pass) in args.skipped_passes.iter().enumerate() {
         single_line(&format!("skipped-passes[{idx}]"), pass)?;
+    }
+    // Observations become inbox bullets, so they carry `append-inbox`'s
+    // single-line rule for the same reason: an embedded newline would inject
+    // markdown structure into inbox.md. Rejected here rather than at the
+    // append, so the whole call fails before any artifact is touched.
+    for (idx, observation) in args.observations.iter().enumerate() {
+        if observation.text.trim().is_empty() {
+            return Err(PrimitiveError::InvalidArgument {
+                primitive: "write-review".into(),
+                argument: format!("observations[{idx}].text"),
+                reason: "text is empty".into(),
+            });
+        }
+        single_line(&format!("observations[{idx}].text"), &observation.text)?;
+        single_line(&format!("observations[{idx}].path"), &observation.path)?;
     }
     let root = paths::Paths::load(repo).specs_root;
     let feature_dir = repo.join(&root).join(&args.feature);
@@ -107,6 +129,16 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
         update_spec_review_block(&spec_content, &spec_path, args, must_n, should_n, low_n)?;
 
     // Both outputs computed; only now touch the filesystem.
+    //
+    // The inbox goes FIRST, ahead of review.md. The report's `## Observations`
+    // section asserts that each entry was captured, so a report written before
+    // a failed capture would claim something that did not happen — the exact
+    // defect this write-through removes, reintroduced one level down. Failing
+    // here leaves no report at all; the reverse order would leave a lying one.
+    // A retry after a later failure re-appends nothing, because the dedup
+    // prefix already matches.
+    let observations_captured = capture_observations(&args.observations, &args.feature, repo)?;
+
     write_atomic(&review_path, &report)?;
     if updated != spec_content {
         write_atomic(&spec_path, &updated)?;
@@ -119,9 +151,71 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
         should_violations: should_n,
         low_confidence: low_n,
         waived: waived_n,
+        observations: u32::try_from(args.observations.len()).unwrap_or(u32::MAX),
+        observations_captured,
         blocking,
         exit_code: i32::from(blocking),
     })
+}
+
+// -- observation capture -----------------------------------------------------
+
+/// Append every observation to `{specs-root}/inbox.md`, returning how many were
+/// newly written (the rest already matched an inbox bullet and deduped).
+///
+/// Delegates to the `append-inbox` primitive rather than re-implementing the
+/// append: the comment/fence-aware write position, the checkbox bullet form,
+/// the atomic write, and the single-line guard are all defined there once. An
+/// I/O failure propagates, which is what makes the capture non-optional.
+fn capture_observations(
+    observations: &[ReviewObservation],
+    feature: &str,
+    repo: &Path,
+) -> Result<u32> {
+    let mut captured = 0u32;
+    for observation in observations {
+        let text = inbox_bullet_text(observation, feature);
+        let result = super::append_inbox::run(
+            &crate::schema::primitives::AppendInboxArgs {
+                // The whole rendered line is the dedup prefix: it is stable
+                // across runs over an unchanged repo, and being the full text
+                // it cannot over-match an unrelated bullet the way a truncated
+                // prefix would.
+                dedup_prefix: Some(text.clone()),
+                text,
+            },
+            repo,
+        )?;
+        if !result.deduped {
+            captured = captured.saturating_add(1);
+        }
+    }
+    Ok(captured)
+}
+
+/// The observation as one line of prose: its text, with the anchoring path
+/// appended when it has one. Shared by the report section and the inbox bullet
+/// so the two records of the same observation read identically.
+fn observation_line(observation: &ReviewObservation) -> String {
+    let text = observation.text.trim();
+    let path = observation.path.trim();
+    if path.is_empty() {
+        text.to_string()
+    } else {
+        format!("{text} — `{path}`")
+    }
+}
+
+/// The inbox bullet text for an observation: the shared line plus the
+/// provenance suffix, matching the inbox template's auto-capture form
+/// (`{summary} — {file} (captured during {NNN-feature})`). The suffix names
+/// review rather than implementation so `/{project}:groom` can tell which
+/// walk produced the item.
+fn inbox_bullet_text(observation: &ReviewObservation, feature: &str) -> String {
+    format!(
+        "{} (captured during review of {feature})",
+        observation_line(observation)
+    )
 }
 
 // -- dedup -------------------------------------------------------------------
@@ -264,6 +358,10 @@ fn render_report(
             render_captured(&args.captured_issues)
         ),
         format!(
+            "## Observations\n\n{}",
+            render_observations(&args.observations)
+        ),
+        format!(
             "## Skipped passes\n\n{}",
             render_skipped(&args.skipped_passes)
         ),
@@ -369,6 +467,22 @@ fn render_captured(issues: &[String]) -> String {
                 format!("- {}", trimmed.trim_start())
             }
         })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Render the observations as a list, or `*None.*` when empty. Each bullet is
+/// the same [`observation_line`] the inbox bullet carries, so a reader can
+/// match the two records of one observation by eye. Rendered next to Captured
+/// issues, which mirrors what the inbox *already* held over the review window,
+/// while this section is what this run added to it.
+fn render_observations(observations: &[ReviewObservation]) -> String {
+    if observations.is_empty() {
+        return "*None.*".to_string();
+    }
+    observations
+        .iter()
+        .map(|observation| format!("- {}", observation_line(observation)))
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -687,7 +801,19 @@ mod tests {
             applied_waivers: Vec::new(),
             expired_waivers: Vec::new(),
             captured_issues: Vec::new(),
+            observations: Vec::new(),
         }
+    }
+
+    fn observation(text: &str, path: &str) -> ReviewObservation {
+        ReviewObservation {
+            text: text.into(),
+            path: path.into(),
+        }
+    }
+
+    fn inbox(tmp: &TempDir) -> Option<String> {
+        fs::read_to_string(tmp.path().join("specs/inbox.md")).ok()
     }
 
     /// Write `specs/{feature}/spec.md` with the given frontmatter body (the
@@ -1048,6 +1174,202 @@ mod tests {
         );
         // And no stray top-level `security` / `lead` keys leaked onto the waiver.
         assert!(!waivers[0].extra.contains_key("security"));
+    }
+
+    // -- observations (scenario review-observations-write-through) -----------
+
+    #[test]
+    fn observation_is_rendered_and_written_through_to_the_inbox() {
+        // The property the whole scenario exists for: one call, both records.
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.observations = vec![observation(
+            "perf: the config file is re-read on every primitive call",
+            "runtime/src/schema/paths.rs",
+        )];
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(result.observations, 1);
+        assert_eq!(result.observations_captured, 1);
+
+        let report = review_md(&tmp, "001-x");
+        assert!(
+            report.contains(
+                "## Observations\n\n- perf: the config file is re-read on every primitive call \
+                 — `runtime/src/schema/paths.rs`"
+            ),
+            "{report}"
+        );
+        let inbox = inbox(&tmp).expect("inbox written");
+        assert!(
+            inbox.contains(
+                "- [ ] perf: the config file is re-read on every primitive call \
+                 — `runtime/src/schema/paths.rs` (captured during review of 001-x)"
+            ),
+            "{inbox}"
+        );
+    }
+
+    #[test]
+    fn observations_do_not_enter_the_counts_or_blocking() {
+        // An observation maps to no loaded rule, so it is not a finding: the
+        // counts, `blocking`, and the exit code must be untouched by it.
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.observations = vec![observation("bug: retry loop has no ceiling", "src/a.rs")];
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(result.must_violations, 0);
+        assert_eq!(result.should_violations, 0);
+        assert_eq!(result.low_confidence, 0);
+        assert!(!result.blocking);
+        assert_eq!(result.exit_code, 0);
+        let report = review_md(&tmp, "001-x");
+        assert!(report.contains("must-violations: 0"));
+        assert!(report.contains("## MUST violations (blocking)\n\n*None.*"));
+    }
+
+    #[test]
+    fn no_observations_leaves_the_inbox_untouched_and_frontmatter_unchanged() {
+        // Empty renders `*None.*` like every other section; nothing is
+        // appended, no inbox is created, and the report frontmatter keeps its
+        // existing field set (no `observations:` key appears).
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let result = run(&base_args("001-x"), tmp.path()).unwrap();
+        assert_eq!(result.observations, 0);
+        assert_eq!(result.observations_captured, 0);
+        assert!(
+            inbox(&tmp).is_none(),
+            "an empty observations array must not create an inbox"
+        );
+        let report = review_md(&tmp, "001-x");
+        assert!(report.contains("## Observations\n\n*None.*"), "{report}");
+        let (fm, _) = split_frontmatter(&report, Path::new("review.md")).unwrap();
+        assert!(
+            !fm.contains("observations"),
+            "the report frontmatter must be unchanged by this feature:\n{fm}"
+        );
+    }
+
+    #[test]
+    fn rerunning_over_an_unchanged_repo_appends_nothing_but_still_renders() {
+        // Dedup on the stable prefix: the second run adds no inbox bullet,
+        // while the report still describes this run's observations.
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.observations = vec![observation("convention: naming drift in the parser", "")];
+
+        let first = run(&args, tmp.path()).unwrap();
+        assert_eq!(first.observations_captured, 1);
+        let after_first = inbox(&tmp).expect("inbox written");
+
+        let second = run(&args, tmp.path()).unwrap();
+        assert_eq!(second.observations, 1, "the report still describes it");
+        assert_eq!(
+            second.observations_captured, 0,
+            "an unchanged re-run must append nothing"
+        );
+        assert_eq!(inbox(&tmp).unwrap(), after_first, "inbox byte-unchanged");
+        assert!(review_md(&tmp, "001-x").contains("- convention: naming drift in the parser"));
+    }
+
+    #[test]
+    fn empty_scope_run_still_captures_observations() {
+        // The reviewer's judgment is the input, not the diff — an empty scope
+        // must not silently drop what the reviewer recorded.
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.empty_scope = true;
+        args.observations = vec![observation(
+            "other: dead fixture directory",
+            "tests/fixtures",
+        )];
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(result.observations_captured, 1);
+        assert!(
+            inbox(&tmp)
+                .unwrap()
+                .contains("other: dead fixture directory")
+        );
+        assert!(review_md(&tmp, "001-x").contains("Review scope is empty"));
+    }
+
+    #[test]
+    fn unwritable_inbox_fails_the_call_and_writes_no_report() {
+        // QUAL-CLAIM-001 applied to this primitive: a report whose
+        // `## Observations` section claims a capture that did not happen is
+        // the defect the write-through removes. Failing the call is the only
+        // outcome that keeps "recorded" and "captured" the same event. The
+        // inbox path is occupied by a directory, so the read/write fails
+        // identically on every platform and without depending on file modes.
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        fs::create_dir_all(tmp.path().join("specs/inbox.md")).unwrap();
+        let mut args = base_args("001-x");
+        args.observations = vec![observation("leak: handle never closed", "src/a.rs")];
+        let err = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::Io { .. }),
+            "expected Io error, got {err:?}"
+        );
+        assert!(
+            !tmp.path().join("specs/001-x/review.md").exists(),
+            "no report may claim a capture that failed"
+        );
+    }
+
+    #[test]
+    fn rejects_multiline_and_empty_observations_before_any_write() {
+        // Same guard `append-inbox` applies to its own text, hoisted so the
+        // call fails before either artifact is touched.
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let before = spec_md(&tmp, "001-x");
+        for bad in [
+            observation("first line\nstatus: done", ""),
+            observation("carriage\rreturn", ""),
+            observation("anchored", "src/a.rs\n- [ ] injected"),
+            observation("   ", ""),
+        ] {
+            let mut args = base_args("001-x");
+            args.observations = vec![bad.clone()];
+            let err = run(&args, tmp.path()).unwrap_err();
+            assert!(
+                matches!(&err, PrimitiveError::InvalidArgument { primitive, argument, .. }
+                    if primitive == "write-review" && argument.starts_with("observations[0]")),
+                "expected InvalidArgument for {bad:?}, got {err:?}"
+            );
+        }
+        assert_eq!(spec_md(&tmp, "001-x"), before, "spec.md must be untouched");
+        assert!(!tmp.path().join("specs/001-x/review.md").exists());
+        assert!(inbox(&tmp).is_none(), "inbox must not be created");
+    }
+
+    #[test]
+    fn observation_capture_honors_the_configured_specs_root() {
+        // The inbox the observation lands in is the one `append-inbox` resolves,
+        // not a hardcoded `specs/` — an adopter with a configured root must not
+        // get a second, invisible inbox.
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        fs::write(
+            tmp.path().join(".ductus/config.toml"),
+            "[paths]\nspecs-root = \"governance\"\n",
+        )
+        .unwrap();
+        let dir = tmp.path().join("governance/001-x");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join("spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\n---\n\n# 001-x\n",
+        )
+        .unwrap();
+        let mut args = base_args("001-x");
+        args.observations = vec![observation("other: routed observation", "")];
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(result.observations_captured, 1);
+        assert!(
+            fs::read_to_string(tmp.path().join("governance/inbox.md"))
+                .unwrap()
+                .contains("other: routed observation")
+        );
+        assert!(!tmp.path().join("specs").exists());
     }
 
     #[test]

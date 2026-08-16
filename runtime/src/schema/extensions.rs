@@ -241,6 +241,15 @@ pub struct PerformReviewRequest {
 pub struct PerformReviewResponse {
     /// Findings from this pass, in the shape `write-review` consumes.
     pub findings: Vec<crate::schema::primitives::ReviewFinding>,
+    /// Observations from this pass — real, but matched by no loaded rule, so
+    /// they cannot be findings. Accumulated across passes exactly as
+    /// `findings` is, and consumed by `write-review`'s `observations` input.
+    /// Defaults to empty so a host that returns only `findings` still
+    /// validates; without this channel the report's `## Observations` section
+    /// would render `*None.*` on every run whether or not the reviewer had
+    /// any, which is the silent-degradation shape the scenario removes.
+    #[serde(default)]
+    pub observations: Vec<crate::schema::primitives::ReviewObservation>,
 }
 
 // -- askClarifyQuestion --------------------------------------------------------
@@ -302,16 +311,30 @@ pub struct RouteInboxSpec {
 /// (the groom decision tree's leaves, in walk order), and the specs the
 /// router may match — enough for the routing decision without a
 /// walker-context dump.
+///
+/// This is the **one** routing point. `/ductus:specify` sends the proposed
+/// feature description as `item_text` with `derive-routing-candidates`' output
+/// in `candidates`, so work arriving through conversation is routed by the same
+/// tree as work arriving through the inbox — two routing rules that could
+/// disagree is the drift this repo has been bitten by before (spec 022 scenario
+/// `specify-routes-before-scaffolding`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct RouteInboxItemRequest {
-    /// Raw inbox item text under decision.
+    /// Raw inbox item text under decision — or, from `/ductus:specify`, the
+    /// proposed feature description.
     pub item_text: String,
     /// Closed route vocabulary, in decision-tree walk order:
     /// `rule`, `spec`, `scenario`, `chore`, `discard`.
     pub routes: Vec<String>,
     /// Feature specs the router may target, sorted by slug.
     pub available_specs: Vec<RouteInboxSpec>,
+    /// Pre-derived candidate homes from `derive-routing-candidates`, each
+    /// carrying the route it implies and why it matched. Empty on the groom
+    /// path, which walks the tree over the corpus directly; the router treats
+    /// them as evidence to weigh, never as a decision already made.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub candidates: Vec<crate::schema::primitives::RoutingCandidate>,
 }
 
 /// Route decision discriminator — the groom decision tree's leaves.
@@ -1102,11 +1125,35 @@ mod tests {
                 confidence: "high".into(),
                 ..ReviewFinding::default()
             }],
+            observations: vec![crate::schema::primitives::ReviewObservation {
+                text: "perf: config re-read per call".into(),
+                path: "runtime/src/schema/paths.rs".into(),
+            }],
         };
         let r_value: serde_json::Value = serde_json::to_value(&response).unwrap();
         assert_eq!(r_value["findings"][0]["rule"], "SEC-BE-014");
         assert_eq!(r_value["findings"][0]["line-range"], "1-1");
+        assert_eq!(
+            r_value["observations"][0]["path"],
+            "runtime/src/schema/paths.rs"
+        );
         assert_eq!(round_trip(&response), response);
+    }
+
+    #[test]
+    fn validate_response_accepts_perform_review_observations_and_defaults_them() {
+        use super::validate_response;
+        // A host that returns only `findings` still validates — the channel is
+        // additive — but an `observations` array is accepted and typed.
+        validate_response("performReview", &serde_json::json!({ "findings": [] })).unwrap();
+        validate_response(
+            "performReview",
+            &serde_json::json!({
+                "findings": [],
+                "observations": [{ "text": "bug: retry loop has no ceiling" }]
+            }),
+        )
+        .unwrap();
     }
 
     #[test]
@@ -1196,6 +1243,7 @@ mod tests {
                 feature: "021-webhook-delivery".into(),
                 status: "done".into(),
             }],
+            candidates: Vec::new(),
         };
         let value: serde_json::Value = serde_json::to_value(&request).unwrap();
         let keys: Vec<&str> = value
@@ -1204,12 +1252,33 @@ mod tests {
             .keys()
             .map(String::as_str)
             .collect();
-        assert_eq!(keys, vec!["item-text", "routes", "available-specs"]);
+        assert_eq!(
+            keys,
+            vec!["item-text", "routes", "available-specs"],
+            "the groom path's payload stays byte-unchanged: empty candidates are omitted"
+        );
         assert_eq!(
             value["available-specs"][0]["feature"],
             "021-webhook-delivery"
         );
         assert_eq!(round_trip(&request), request);
+
+        // The specify path adds the derived candidates to the same point.
+        let with_candidates = RouteInboxItemRequest {
+            candidates: vec![crate::schema::primitives::RoutingCandidate {
+                route: "scenario".into(),
+                source: "runtime-work".into(),
+                target: "022-deterministic-runtime".into(),
+                path: "specs/022-deterministic-runtime".into(),
+                status: "in-progress".into(),
+                reopens: false,
+                reason: "names the primitive `read-spec`".into(),
+            }],
+            ..request.clone()
+        };
+        let value: serde_json::Value = serde_json::to_value(&with_candidates).unwrap();
+        assert_eq!(value["candidates"][0]["route"], "scenario");
+        assert_eq!(round_trip(&with_candidates), with_candidates);
 
         let response = RouteInboxItemResponse {
             route: InboxRoute::Scenario,

@@ -166,14 +166,20 @@ pub fn build_extension_request(
     }
 }
 
+/// Context keys the walker accumulates across `performReview` passes and hands
+/// to `write-review` as a single union each. Both are pass *outputs*, so a
+/// later pass must never see an earlier one's — they are filtered out of every
+/// outbound request by [`is_walker_internal_key`], which reads this same list.
+pub(crate) const PERFORM_REVIEW_ACCUMULATORS: &[&str] = &["findings", "observations"];
+
 /// `true` for walker-internal accumulator keys that never belong in an
 /// outbound request: prior `llm:<identifier>` response echoes and the
-/// cross-pass `findings` array the walker accumulates for `write-review`.
-/// Primitive results threaded through the context (`scope`, `diff-base`,
-/// `selected`, `rules-dir`, `notices`, …) are NOT accumulator state and
-/// pass through the merge untouched.
+/// cross-pass [`PERFORM_REVIEW_ACCUMULATORS`] arrays the walker accumulates
+/// for `write-review`. Primitive results threaded through the context
+/// (`scope`, `diff-base`, `selected`, `rules-dir`, `notices`, …) are NOT
+/// accumulator state and pass through the merge untouched.
 fn is_walker_internal_key(key: &str) -> bool {
-    key == "findings" || key.starts_with("llm:")
+    PERFORM_REVIEW_ACCUMULATORS.contains(&key) || key.starts_with("llm:")
 }
 
 /// Append the legacy-compat context fields after a typed prefix, skipping
@@ -547,16 +553,31 @@ const INBOX_ROUTES: [&str; 5] = ["rule", "spec", "scenario", "chore", "discard"]
 /// - `available-specs` — `NNN-slug` directories under the spec root with
 ///   each spec's frontmatter `status` (status drives the
 ///   done → in-progress reopen consent on a scenario route).
+/// - `candidates` — `derive-routing-candidates`' result threaded through the
+///   walker context, present on the `/ductus:specify` path and absent on the
+///   groom path. Omitted from the payload when empty, so groom's request is
+///   byte-unchanged and the two entry points share one routing point rather
+///   than growing a second tree.
+///
+/// `item-text` falls back to `description` — the key `/ductus:specify` seeds —
+/// so the specify path needs no second context key for the same value.
 fn build_route_inbox_item_request(context: &Map<String, Value>, repo: &Path) -> Value {
     let item_text = context
         .get("item-text")
+        .or_else(|| context.get("description"))
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_string();
+    let candidates = context
+        .get("candidates")
+        .cloned()
+        .and_then(|value| serde_json::from_value(value).ok())
+        .unwrap_or_default();
     let typed = RouteInboxItemRequest {
         item_text,
         routes: INBOX_ROUTES.iter().map(ToString::to_string).collect(),
         available_specs: load_available_specs(repo),
+        candidates,
     };
     typed_only(&typed)
 }
@@ -2023,9 +2044,9 @@ mod tests {
 
     #[test]
     fn perform_review_merge_keeps_primitive_results_drops_accumulators() {
-        // Pass N must not see passes 1..N-1's findings or llm:* echoes,
-        // but keeps the task-46 result threading: scope/diff-base from
-        // compute-review-scope, selected/rules-dir/notices from
+        // Pass N must not see passes 1..N-1's findings, observations, or
+        // llm:* echoes, but keeps the task-46 result threading: scope/diff-base
+        // from compute-review-scope, selected/rules-dir/notices from
         // discover-rule-files.
         let tmp = tempdir().unwrap();
         let mut ctx = Map::new();
@@ -2040,6 +2061,10 @@ mod tests {
             serde_json::json!([{ "rule": "SEC-BE-001" }]),
         );
         ctx.insert(
+            "observations".into(),
+            serde_json::json!([{ "text": "perf: repeated scan" }]),
+        );
+        ctx.insert(
             "llm:performReview".into(),
             serde_json::json!({ "findings": [] }),
         );
@@ -2047,6 +2072,7 @@ mod tests {
         let value = build_perform_review_request(&ctx, tmp.path());
         let obj = value.as_object().unwrap();
         assert!(!obj.contains_key("findings"));
+        assert!(!obj.contains_key("observations"));
         assert!(!obj.contains_key("llm:performReview"));
         for kept in ["scope", "diff-base", "rules-dir", "selected", "notices"] {
             assert!(obj.contains_key(kept), "primitive result `{kept}` dropped");
@@ -2147,6 +2173,66 @@ mod tests {
                 { "feature": "002-beta", "status": "draft" }
             ])
         );
+    }
+
+    #[test]
+    fn route_inbox_item_carries_specify_description_and_derived_candidates() {
+        // The `/ductus:specify` entry point reaches the SAME routing point as
+        // groom: `description` stands in for `item-text`, and
+        // `derive-routing-candidates`' output rides along as evidence. A
+        // second routing tree is what this avoids.
+        let tmp = tempdir().unwrap();
+        let dir = tmp.path().join("specs/022-deterministic-runtime");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join("spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\n---\n\n# 022\n",
+        )
+        .unwrap();
+
+        let mut ctx = Map::new();
+        ctx.insert(
+            "description".into(),
+            Value::String("a new check-artifacts family".into()),
+        );
+        ctx.insert(
+            "candidates".into(),
+            serde_json::json!([{
+                "route": "scenario",
+                "source": "runtime-work",
+                "target": "022-deterministic-runtime",
+                "path": "specs/022-deterministic-runtime",
+                "status": "in-progress",
+                "reopens": false,
+                "reason": "names the primitive `check-artifacts`"
+            }]),
+        );
+
+        let value = build_route_inbox_item_request(&ctx, tmp.path());
+        assert_eq!(value["item-text"], "a new check-artifacts family");
+        assert_eq!(
+            value["candidates"][0]["target"],
+            "022-deterministic-runtime"
+        );
+        assert_eq!(value["candidates"][0]["reopens"], false);
+        // The vocabulary is the same closed set groom routes against.
+        assert_eq!(
+            value["routes"],
+            serde_json::json!(["rule", "spec", "scenario", "chore", "discard"])
+        );
+    }
+
+    #[test]
+    fn route_inbox_item_prefers_item_text_over_description() {
+        // Groom seeds `item-text`; a stale `description` in context must not
+        // displace the item actually under decision.
+        let tmp = tempdir().unwrap();
+        let mut ctx = Map::new();
+        ctx.insert("item-text".into(), Value::String("the inbox item".into()));
+        ctx.insert("description".into(), Value::String("something else".into()));
+        let value = build_route_inbox_item_request(&ctx, tmp.path());
+        assert_eq!(value["item-text"], "the inbox item");
+        assert!(value.as_object().unwrap().get("candidates").is_none());
     }
 
     #[test]

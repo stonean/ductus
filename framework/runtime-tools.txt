@@ -57,3 +57,4 @@ diff-cross-spec
 append-inbox
 remove-inbox-item
 check-artifacts
+derive-routing-candidates

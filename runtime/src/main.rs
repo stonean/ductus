@@ -13,9 +13,9 @@ use ductus::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, CheckArtifactsArgs,
     CheckReviewGateArgs, CheckRuleIdsArgs, CheckStuckArgs, ComputeReviewScopeArgs,
     CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs,
-    DeriveBoundaryArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs,
-    ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, LabelCriteriaArgs, LintMarkdownArgs,
-    MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
+    DeriveBoundaryArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs,
+    EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, LabelCriteriaArgs,
+    LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
     MigrateSessionFileArgs, ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs,
     RemoveInboxItemArgs, ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs,
     RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteReviewArgs,
@@ -134,6 +134,7 @@ enum Command {
     AppendInbox(AppendInboxArgs),
     /// Remove the first bullet matching `item` from {specs-root}/inbox.md (atomic).
     RemoveInboxItem(RemoveInboxItemArgs),
+    DeriveRoutingCandidates(DeriveRoutingCandidatesArgs),
     /// Run /ductus:analyze's residual deterministic artifact-check families for a feature.
     CheckArtifacts(CheckArtifactsArgs),
     /// Reduce a feature's tasks.md — drop spent task sections or reset to template state.
@@ -525,6 +526,9 @@ fn main() -> ExitCode {
         Command::AppendInbox(args) => emit_result(primitives::append_inbox::run(&args, &repo)),
         Command::RemoveInboxItem(args) => {
             emit_result(primitives::remove_inbox_item::run(&args, &repo))
+        }
+        Command::DeriveRoutingCandidates(args) => {
+            emit_result(primitives::derive_routing_candidates::run(&args, &repo))
         }
         Command::CheckArtifacts(args) => {
             emit_result(primitives::check_artifacts::run(&args, &repo))

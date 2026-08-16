@@ -61,9 +61,9 @@ use crate::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, CheckArtifactsArgs,
     CheckReviewGateArgs, CheckRuleIdsArgs, CheckStuckArgs, ComputeReviewScopeArgs,
     CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs,
-    DeriveBoundaryArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs,
-    ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, LabelCriteriaArgs, LintMarkdownArgs,
-    MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
+    DeriveBoundaryArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs,
+    EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, LabelCriteriaArgs,
+    LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
     MigrateSessionFileArgs, ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs,
     RemoveInboxItemArgs, ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs,
     RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteReviewArgs,
@@ -361,17 +361,22 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
             return Ok(Some(outcome));
         }
         // `performReview` runs once per pass; accumulate each pass's
-        // findings into the shared `findings` context key so a later
-        // `write-review` step consumes the union across all passes.
-        if identifier == "performReview"
-            && let Some(Value::Array(findings)) = response.get("findings")
-        {
-            let findings = findings.clone();
-            match self.context.get_mut("findings") {
-                Some(Value::Array(existing)) => existing.extend(findings),
-                _ => {
-                    self.context
-                        .insert("findings".into(), Value::Array(findings));
+        // findings and observations into the shared context keys so a later
+        // `write-review` step consumes the union across all passes. Both
+        // arrays accumulate identically — an observation is a pass output the
+        // reviewer judged real but that matched no loaded rule, and it reaches
+        // `write-review` (and through it the inbox) by this same route.
+        if identifier == "performReview" {
+            for key in payload::PERFORM_REVIEW_ACCUMULATORS {
+                let Some(Value::Array(items)) = response.get(*key) else {
+                    continue;
+                };
+                let items = items.clone();
+                match self.context.get_mut(*key) {
+                    Some(Value::Array(existing)) => existing.extend(items),
+                    _ => {
+                        self.context.insert((*key).to_string(), Value::Array(items));
+                    }
                 }
             }
         }
@@ -725,6 +730,9 @@ fn dispatch_primitive(
         "append-task" => call!(AppendTaskArgs, append_task),
         "append-inbox" => call!(AppendInboxArgs, append_inbox),
         "remove-inbox-item" => call!(RemoveInboxItemArgs, remove_inbox_item),
+        "derive-routing-candidates" => {
+            call!(DeriveRoutingCandidatesArgs, derive_routing_candidates)
+        }
         "check-artifacts" => call!(CheckArtifactsArgs, check_artifacts),
         "prune-tasks" => call!(PruneTasksArgs, prune_tasks),
         "dashboard" => call!(DashboardArgs, dashboard),

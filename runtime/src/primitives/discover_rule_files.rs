@@ -134,7 +134,7 @@ fn has(surfaces: &[String], member: &str) -> bool {
 /// `framework/rules/`. Prefer the adopter path when it exists (that is the
 /// discriminator — a ductus checkout has `framework/rules/` but no
 /// `specs/rules/`). Returns `(None, "")` when neither exists.
-fn resolve_rules_dir(repo: &Path) -> (Option<PathBuf>, String) {
+pub(crate) fn resolve_rules_dir(repo: &Path) -> (Option<PathBuf>, String) {
     let layout = paths::Paths::load(repo);
     let adopter = repo.join(&layout.specs_root).join("rules");
     if adopter.is_dir() {
@@ -148,7 +148,7 @@ fn resolve_rules_dir(repo: &Path) -> (Option<PathBuf>, String) {
 }
 
 /// List `*.md` basenames directly under `dir`, sorted for determinism.
-fn list_rule_files(dir: &Path) -> Result<Vec<String>> {
+pub(crate) fn list_rule_files(dir: &Path) -> Result<Vec<String>> {
     let mut names = Vec::new();
     let read_dir = std::fs::read_dir(dir).map_err(|source| PrimitiveError::Io {
         path: dir.into(),

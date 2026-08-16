@@ -185,12 +185,12 @@ Runtime half of [049's rename](../049-rename-govern-to-ductus/spec.md): the per-
 
 ## 90. Implement scenario: [review-observations-write-through](scenarios/review-observations-write-through.md) — recording an observation is capturing it
 
-- [ ] Implement the behavior described in `scenarios/review-observations-write-through.md`
+- [x] Implement the behavior described in `scenarios/review-observations-write-through.md`
 
 - **Done when**: `write-review` accepts an `observations` array whose entries are excluded from the MUST / SHOULD / low-confidence counts and from `blocking`; each entry is appended to `{specs-root}/inbox.md` in the same call, dedup-guarded on a stable prefix so a re-run over an unchanged repo appends nothing; the report gains an `## Observations` section rendering `*None.*` when empty; an unwritable inbox fails the call rather than rendering a report that claims capture that did not happen; embedded newlines are rejected as `append-inbox` already rejects them; `framework/commands/review.md` documents the array and the section so the markdown-only path writes both in the same order; 022's data-model records the widened argument and the new section; `cargo test` green and `npx markdownlint-cli2` clean.
 
 ## 91. Implement scenario: [specify-routes-before-scaffolding](scenarios/specify-routes-before-scaffolding.md) — routing binds wherever work enters
 
-- [ ] Implement the behavior described in `scenarios/specify-routes-before-scaffolding.md`
+- [x] Implement the behavior described in `scenarios/specify-routes-before-scaffolding.md`
 
 - **Done when**: `/{project}:specify` presents derived routing candidates and confirms the choice before `create-feature` writes anything; candidates come from the rule-file directory, the spec corpus, and the runtime-work signal (a named primitive, `check-artifacts` family, result field, or `runtime/src/` path routing to 022 as a scenario); the tree is groom's, reused rather than duplicated; "could not derive candidates" is reported distinctly from "no candidates found"; naming a `done` candidate also names the back-edge it implies; a groom-initiated specify skips the gate rather than asking twice; a corpus with no candidates proceeds unchanged so a fresh adopter sees no new friction; `framework/commands/specify.md` documents the gate for the markdown-only path and the generated copies are re-rendered; `cargo test`, `scripts/lint-procedure-parseability.sh` and `npx markdownlint-cli2` clean.
