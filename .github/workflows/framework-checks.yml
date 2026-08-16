@@ -69,6 +69,42 @@ jobs:
       - name: (i) Rule-ID grammar lint
         run: bash scripts/lint-rule-ids.sh
 
+      # (j) The shell surface is the framework's own machinery — the audit
+      # families that form the release gate, the generators, the lints, the
+      # installer and the hooks. The Rust half has been gated at
+      # `clippy -D warnings` since spec 022, but nothing linted the shell,
+      # even though a tuned .shellcheckrc was committed: a green
+      # framework-checks run could not distinguish "the scripts are clean"
+      # from "the scripts were never examined". That is the exact shape
+      # AGENTS.md's first Design Principle records, and it is how
+      # sibling-coupling.sh shipped a GNU-awk extension that silently
+      # disabled a release gate on every macOS machine.
+      #
+      # The enumeration is asserted non-empty before the run: an unmatched
+      # glob or a moved directory would otherwise lint nothing and pass,
+      # reintroducing the same false green this step exists to close.
+      - name: (j) Shell static analysis
+        run: |
+          set -euo pipefail
+          command -v shellcheck >/dev/null 2>&1 || {
+            echo "::error::shellcheck is not available — this step cannot examine its subject, which is not the same as clean" >&2
+            exit 1
+          }
+          # No `mapfile`/`readarray`: bash 3.2 (every macOS machine) lacks
+          # both, and a contributor must be able to run this step verbatim
+          # before pushing rather than discovering it only in CI.
+          files="$(
+            git ls-files -- '*.sh' '.githooks/*' 'framework/bootstrap/hooks/*' \
+              | grep -vE '^runtime/tests/fixtures/'
+          )"
+          count="$(printf '%s\n' "$files" | grep -c . || true)"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::no shell scripts matched — the enumeration is broken, not the tree" >&2
+            exit 1
+          fi
+          echo "linting $count shell script(s)"
+          printf '%s\n' "$files" | xargs shellcheck -S warning
+
       # Step (f) builds a workflow-private copy of the runtime binary at
       # runtime/target/release/ductus and invokes it via a *relative path*.
       # Pinned — keep in sync with runtime/rust-toolchain.toml.

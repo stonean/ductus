@@ -13,8 +13,10 @@
 # static pipeline facts hardcoded below). All other groups are
 # (Command, Description) two-column tables.
 #
-# Exits non-zero if any expected marker is missing or any referenced
-# command source file is absent.
+# Exits non-zero if any expected marker is missing, any referenced command
+# source file is absent, or any framework/commands/*.md has no row in the
+# tables below (so the "in sync" report cannot be made over an unexamined
+# command — see the coverage assertion).
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -88,36 +90,93 @@ build_pipeline_table() {
 CMD_DIR="$ROOT/framework/commands"
 BOOTSTRAP_DIR="$ROOT/framework/bootstrap"
 
-pipeline_table="$(build_pipeline_table \
-  '/{project}:specify'   '→ draft'                            "$CMD_DIR/specify.md" \
-  '/{project}:clarify'   'draft → clarified'                  "$CMD_DIR/clarify.md" \
-  '/{project}:plan'      'clarified → planned'                "$CMD_DIR/plan.md" \
-  '/{project}:implement' 'planned → in-progress → done'       "$CMD_DIR/implement.md" \
-  '/{project}:review'    'blocks `done` (MUST violations)'    "$CMD_DIR/review.md" \
-  '/{project}:analyze'   '—'                                  "$CMD_DIR/analyze.md" \
+# Command groups. Each entry is a (label, source) pair, or a
+# (label, gate, source) triple for the pipeline group. These arrays are the
+# single source for both the rendered tables and the coverage assertion
+# below, so a command can never be in one and not the other.
+pipeline_entries=(
+  '/{project}:specify'   '→ draft'                            "$CMD_DIR/specify.md"
+  '/{project}:clarify'   'draft → clarified'                  "$CMD_DIR/clarify.md"
+  '/{project}:plan'      'clarified → planned'                "$CMD_DIR/plan.md"
+  '/{project}:implement' 'planned → in-progress → done'       "$CMD_DIR/implement.md"
+  '/{project}:review'    'blocks `done` (MUST violations)'    "$CMD_DIR/review.md"
+  '/{project}:analyze'   '—'                                  "$CMD_DIR/analyze.md"
+)
+
+refine_entries=(
+  '/{project}:amend' "$CMD_DIR/amend.md"
+  '/{project}:prune' "$CMD_DIR/prune.md"
+)
+
+brownfield_entries=(
+  '/{project}:log'   "$CMD_DIR/log.md"
+  '/{project}:groom' "$CMD_DIR/groom.md"
+)
+
+orient_entries=(
+  '/{project}:target' "$CMD_DIR/target.md"
+  '/{project}:link'   "$CMD_DIR/link.md"
+  '/{project}:status' "$CMD_DIR/status.md"
+  '/{project}:help'   "$CMD_DIR/help.md"
+)
+
+bootstrap_entries=(
+  '/ductus'              "$BOOTSTRAP_DIR/ductus.md"
+  '/{project}:configure' "$BOOTSTRAP_DIR/configure/claude.md"
+)
+
+# Coverage assertion — the honesty half of the "in sync" claim at the end.
+#
+# The tables name their sources explicitly, so a command added under
+# framework/commands/ but never listed above would be absent from help.md
+# while this script still reported it in sync: a clean result asserted over
+# a subject that was never examined. That is QUAL-CLAIM-001, and it is the
+# question specs/017-derive-dont-ask/scenarios/generator-sync-claim-honesty.md
+# requires this script be checked against ("can its zero count ever mean
+# 'did not examine?'"). It can, so the claim is made verifiable rather than
+# merely reworded: an unlisted command now fails the run.
+#
+# The reverse direction — a listed command whose file is gone — is already
+# fatal via read_description's exit 4.
+covered_commands="$(
+  for entry in "${pipeline_entries[@]}" "${refine_entries[@]}" \
+               "${brownfield_entries[@]}" "${orient_entries[@]}" \
+               "${bootstrap_entries[@]}"; do
+    # Glob match, not regex: $CMD_DIR is an absolute path whose components
+    # may contain regex metacharacters. `[[ ]]` rather than `case`, whose
+    # pattern-closing `)` is a parse error inside `$( )` on bash 3.2.
+    if [[ "$entry" == "$CMD_DIR"/*.md ]]; then
+      basename "$entry" .md
+    fi
+  done | sort -u
 )"
 
-refine_table="$(build_two_col_table \
-  '/{project}:amend' "$CMD_DIR/amend.md" \
-  '/{project}:prune' "$CMD_DIR/prune.md" \
+actual_commands="$(for f in "$CMD_DIR"/*.md; do basename "$f" .md; done | sort -u)"
+
+# Maintainer-only commands intentionally absent from the adopter-facing help
+# tables. Mirrors installer-command-parity.sh's `excl` (audit.md's own header
+# declares it maintainer-only). Add a line here when a command is deliberately
+# withheld from help.md.
+excluded_commands="$(sort -u <<'EOF'
+audit
+EOF
 )"
 
-brownfield_table="$(build_two_col_table \
-  '/{project}:log'   "$CMD_DIR/log.md" \
-  '/{project}:groom' "$CMD_DIR/groom.md" \
-)"
+expected_commands="$(comm -23 <(printf '%s\n' "$actual_commands") <(printf '%s\n' "$excluded_commands"))"
+uncovered="$(comm -23 <(printf '%s\n' "$expected_commands") <(printf '%s\n' "$covered_commands"))"
+if [ -n "$uncovered" ]; then
+  echo "gen-help-tables: command(s) under framework/commands/ with no help.md row:" >&2
+  printf '  %s\n' $uncovered >&2
+  echo "add each to the matching *_entries array in $(basename "$0"), or to its excluded_commands list if it is maintainer-only" >&2
+  exit 6
+fi
+command_count="$(printf '%s\n' "$covered_commands" | grep -c . || true)"
 
-orient_table="$(build_two_col_table \
-  '/{project}:target' "$CMD_DIR/target.md" \
-  '/{project}:link'   "$CMD_DIR/link.md" \
-  '/{project}:status' "$CMD_DIR/status.md" \
-  '/{project}:help'   "$CMD_DIR/help.md" \
-)"
-
-bootstrap_table="$(build_two_col_table \
-  '/ductus'              "$BOOTSTRAP_DIR/ductus.md" \
-  '/{project}:configure' "$BOOTSTRAP_DIR/configure/claude.md" \
-)"
+pipeline_table="$(build_pipeline_table "${pipeline_entries[@]}")"
+refine_table="$(build_two_col_table "${refine_entries[@]}")"
+brownfield_table="$(build_two_col_table "${brownfield_entries[@]}")"
+orient_table="$(build_two_col_table "${orient_entries[@]}")"
+bootstrap_table="$(build_two_col_table "${bootstrap_entries[@]}")"
 
 # Splice each table between its markers. Fail if any marker is missing.
 splice() {
@@ -189,7 +248,7 @@ rm "$p_file" "$r_file" "$b_file" "$o_file" "$boot_file"
 
 if cmp -s "$HELP" "$tmp"; then
   rm "$tmp"
-  echo "No changes (help.md in sync)"
+  echo "No changes ($command_count command(s) in sync)"
   exit 0
 fi
 

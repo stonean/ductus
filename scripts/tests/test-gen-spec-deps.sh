@@ -88,6 +88,24 @@ assert_stderr_not_contains() {
   fi
 }
 
+assert_stdout_contains() {
+  local haystack="$1" needle="$2" label="$3"
+  if printf '%s\n' "$haystack" | grep -qF -- "$needle"; then
+    pass "$label"
+  else
+    fail "$label: stdout did not contain '$needle' (got: $(printf '%s' "$haystack" | tr '\n' '|'))"
+  fi
+}
+
+assert_stdout_not_contains() {
+  local haystack="$1" needle="$2" label="$3"
+  if ! printf '%s\n' "$haystack" | grep -qF -- "$needle"; then
+    pass "$label"
+  else
+    fail "$label: stdout unexpectedly contained '$needle' (got: $(printf '%s' "$haystack" | tr '\n' '|'))"
+  fi
+}
+
 make_fixture() {
   mktemp -d
 }
@@ -330,14 +348,16 @@ EOF
 
 # ---------- detect-dependency-cycles ----------
 
-# Run the generator capturing stdout, stderr, and exit code.
+# Run the generator capturing stdout, stderr, and exit code. Any extra
+# arguments are passed through to the generator (e.g. --staged).
 # Sets globals: GEN_STDOUT, GEN_STDERR, GEN_RC.
 run_gen() {
-  local tmp="$1" out err rc
+  local tmp="$1"; shift
+  local out err rc
   out="$(mktemp)"
   err="$(mktemp)"
   rc=0
-  "$GEN" --root="$tmp" >"$out" 2>"$err" || rc=$?
+  "$GEN" --root="$tmp" "$@" >"$out" 2>"$err" || rc=$?
   GEN_STDOUT="$(cat "$out")"
   GEN_STDERR="$(cat "$err")"
   GEN_RC=$rc
@@ -670,6 +690,69 @@ EOF
   rm -rf "$tmp"
 }
 
+# ---------- generator-sync-claim-honesty ----------
+
+# The zero-rewrite report must name what was examined and what was not, per
+# specs/017-derive-dont-ask/scenarios/generator-sync-claim-honesty.md. The
+# behavior those clauses describe is covered by N and O; the *reporting* —
+# which is the entire subject of that scenario — was not asserted anywhere
+# until this test, so a regression to a bare "all specs in sync" would have
+# gone unnoticed. Covers all three clauses and their omission.
+test_R_zero_rewrite_report_names_its_subject() {
+  local tmp; tmp="$(make_fixture)"
+  git -C "$tmp" init -q
+  git -C "$tmp" config user.email "test@example.com"
+  git -C "$tmp" config user.name "test"
+
+  write_basic_spec "$tmp" "001-alpha" "003-gamma"
+  write_basic_spec "$tmp" "003-gamma"
+  git -C "$tmp" add -A
+  git -C "$tmp" commit -q -m init
+  # First run derives 001's dependency; the second has nothing to rewrite.
+  run_gen "$tmp"
+  run_gen "$tmp"
+
+  assert_stdout_contains "$GEN_STDOUT" "2 tracked spec(s) in sync" \
+    "R: the in-sync count names how many specs were examined"
+  assert_stdout_not_contains "$GEN_STDOUT" "untracked" \
+    "R: the skipped clause is omitted when nothing was skipped"
+  assert_stdout_not_contains "$GEN_STDOUT" "drifted" \
+    "R: the drifted clause is omitted when nothing drifted"
+
+  # An untracked draft is never examined — the message must say so rather
+  # than folding it into the in-sync count (the 2026-08-01 adopter report).
+  write_basic_spec "$tmp" "002-beta" "003-gamma"
+  run_gen "$tmp"
+  assert_stdout_contains "$GEN_STDOUT" "1 untracked spec(s) skipped" \
+    "R: an untracked draft is reported as skipped, not as in sync"
+  assert_stdout_contains "$GEN_STDOUT" "git add to include" \
+    "R: the skipped clause names the remedy"
+  assert_stdout_contains "$GEN_STDOUT" "2 tracked spec(s) in sync" \
+    "R: the untracked draft is excluded from the in-sync count"
+  rm -rf "$tmp"
+
+  # Third state: under --staged with nothing staged, a tracked spec whose
+  # derived deps have drifted is examined, found drifted, and deliberately
+  # left unwritten — neither "in sync" nor "not examined".
+  local drift; drift="$(make_fixture)"
+  git -C "$drift" init -q
+  git -C "$drift" config user.email "test@example.com"
+  git -C "$drift" config user.name "test"
+  write_basic_spec "$drift" "002-beta" "003-gamma"
+  write_basic_spec "$drift" "003-gamma"
+  git -C "$drift" add -A
+  git -C "$drift" commit -q -m init
+
+  run_gen "$drift" --staged
+  assert_stdout_contains "$GEN_STDOUT" "1 drifted spec(s) left unwritten" \
+    "R: a drifted-but-unstaged spec is reported, not counted as in sync"
+  assert_stdout_contains "$GEN_STDOUT" "not staged" \
+    "R: the drifted clause names why it was left alone"
+  assert_stdout_contains "$GEN_STDOUT" "1 tracked spec(s) in sync" \
+    "R: the drifted spec is excluded from the in-sync count"
+  rm -rf "$drift"
+}
+
 # ---------- runner ----------
 
 run_all() {
@@ -691,6 +774,7 @@ run_all() {
   test_O_staged_scopes_rewrite
   test_P_staged_cycle_spans_full_graph
   test_Q_configured_specs_root
+  test_R_zero_rewrite_report_names_its_subject
 
   if [ "$failures" -gt 0 ]; then
     echo "$failures test(s) failed" >&2
