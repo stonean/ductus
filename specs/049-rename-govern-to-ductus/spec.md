@@ -86,19 +86,19 @@ The relationship runs the other way too: 048's remaining migration entry and thi
 
 ## Acceptance Criteria
 
-- [ ] AC1: No live artifact under `framework/`, `scripts/`, `runtime/src/`, `.github/`, `README.md`, or `AGENTS.md` references the old project name, except where it is recording history
-- [ ] AC2: The in-repo sweep is a uniform token substitution, so `done` specs it touches stay `done` per §spec-lifecycle case (a), and `/gov:analyze` reports no spec drifted by it
-- [ ] AC3: A registry migration converges an adopter's MCP registration, permission entries, per-project directory, and installed command files in one bootstrap run
-- [ ] AC4: Re-running that migration against an already-converged project is a no-op
-- [ ] AC11: An adopter converges on the new per-project directory from any prior layout — pre-[042](../042-consolidate-govern-per-project-files-under-govern-directory/spec.md) legacy, consolidated under the old directory, or already converged — with no tracked file lost, `[pinned] files` entries rewritten to the new paths, and the two directory migrations composing in registry order
-- [ ] AC5: An adopter who has not yet re-run the bootstrap is not silently broken: either their existing installation keeps working, or they are told what to run, with the message naming the command
-- [ ] AC6: Published release tags, their attached assets, and CHANGELOG entries describing past releases are left exactly as written
+- [x] AC1: No live artifact under `framework/`, `scripts/`, `runtime/src/`, `.github/`, `README.md`, or `AGENTS.md` references the old project name, except where it is recording history
+- [x] AC2: The in-repo sweep is a uniform token substitution, so `done` specs it touches stay `done` per §spec-lifecycle case (a), and `/gov:analyze` reports no spec drifted by it
+- [x] AC3: A registry migration converges an adopter's MCP registration, permission entries, per-project directory, and installed command files in one bootstrap run
+- [x] AC4: Re-running that migration against an already-converged project is a no-op
+- [x] AC11: An adopter converges on the new per-project directory from any prior layout — pre-[042](../042-consolidate-govern-per-project-files-under-govern-directory/spec.md) legacy, consolidated under the old directory, or already converged — with no tracked file lost, `[pinned] files` entries rewritten to the new paths, and the two directory migrations composing in registry order
+- [x] AC5: An adopter who has not yet re-run the bootstrap is not silently broken: either their existing installation keeps working, or they are told what to run, with the message naming the command
+- [x] AC6: Published release tags, their attached assets, and CHANGELOG entries describing past releases are left exactly as written
 - [ ] AC12: The retired crate is left installable rather than yanked, and its final published release describes the new name
 - [ ] AC13: The first release under the new name continues the existing version series rather than restarting it, and the version-agreement audit family passes across the `version` pin, `runtime/Cargo.toml`, and the newest `runtime/CHANGELOG.md` heading
-- [ ] AC7: The self-audit families that assert installer, registry, namespace, and host-namespace parity pass under the new name with no family disabled or exempted
-- [ ] AC8: The runtime's own test suite, the parity goldens, and the generated command copies are consistent with the new name, with goldens re-blessed rather than hand-edited
-- [ ] AC9: `README.md` and the bootstrap describe acquiring, registering, and invoking the project under the new name only
-- [ ] AC10: The contributor-local checklist is documented for a maintainer renaming their own checkout — the local directory, the git remote, and per-project agent state keyed by path — since none of it is reachable by the adopter migration
+- [x] AC7: The self-audit families that assert installer, registry, namespace, and host-namespace parity pass under the new name with no family disabled or exempted
+- [x] AC8: The runtime's own test suite, the parity goldens, and the generated command copies are consistent with the new name, with goldens re-blessed rather than hand-edited
+- [x] AC9: `README.md` and the bootstrap describe acquiring, registering, and invoking the project under the new name only
+- [x] AC10: The contributor-local checklist is documented for a maintainer renaming their own checkout — the local directory, the git remote, and per-project agent state keyed by path — since none of it is reachable by the adopter migration
 
 ## Open Questions
 

@@ -175,14 +175,14 @@ release, not here.
 
 ### 13. Prove the sweep against the audit families
 
-- [ ] `scripts/audit/run-all.sh` exits 0 with no family disabled or exempted — specifically the
+- [x] `scripts/audit/run-all.sh` exits 0 with no family disabled or exempted — specifically the
       installer-command, installer-registry, manifest, and host-namespace parity families (AC7)
-- [ ] `cargo test` green, including the re-blessed parity goldens (AC8)
-- [ ] `npx markdownlint-cli2` clean
-- [ ] Grep the live-artifact set for the old tokens and confirm every surviving occurrence is a
+- [x] `cargo test` green, including the re-blessed parity goldens (AC8)
+- [x] `npx markdownlint-cli2` clean
+- [x] Grep the live-artifact set for the old tokens and confirm every surviving occurrence is a
       legacy path constant, a published-version reference, or a historical migration body (AC1,
       AC6)
-- [ ] Exercise the migration against a scratch copy of a pre-rename project and a
+- [x] Exercise the migration against a scratch copy of a pre-rename project and a
       pre-042 project, confirming both converge and a re-run is a no-op (AC3, AC4, AC11)
 
 - **Done when**: the full self-audit and test suite pass under the new name, and the migration
