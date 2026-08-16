@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [022-deterministic-runtime, 027-bootstrap-migration-registry, 042-consolidate-govern-per-project-files-under-govern-directory, 048-govern-acquired-runtime]
 review:
   last-run: 2026-08-16T02:19:31Z
@@ -67,9 +67,10 @@ The ordering constraint is that an adopter running the migration is, by definiti
 
 ## Sequencing and current state
 
-**State at hand-off (2026-08-16). The rename shipped in `ductus-v0.28.0`.** The
-sequence below is complete except for one operator publish; nothing here is
-awaiting a decision, and no decision recorded in this spec should be reopened.
+**Complete (2026-08-16). The rename shipped in `ductus-v0.28.0`, with a
+follow-up residue fix in `ductus-v0.28.1`.** Every criterion is met and nothing
+here is awaiting a decision; no decision recorded in this spec should be
+reopened.
 
 What shipped, in the order it was done:
 
@@ -99,22 +100,27 @@ the SSRF guard, so a host that was exempt is screened again and the fetch is
 refused with an error naming the scheme or the internal address. Recorded as
 BREAKING in `runtime/CHANGELOG.md` under Unreleased.
 
-**This adds a release obligation.** The fix is a `runtime/` change, so per
-`AGENTS.md` it reaches no adopter until a `ductus-v*` tag ships it; the repo
-`version` pin is deliberately left at `0.28.0` until that release is cut,
-because `/ductus` reads it to resolve which assets to download and a pin
-naming an unreleased version would break acquisition for every adopter who
-bootstraps in the window. The bump belongs in the same commit as the tag.
+**That release shipped as `ductus-v0.28.1` (2026-08-16).** The fix was a
+`runtime/` change, which per `AGENTS.md` reaches no adopter until a `ductus-v*`
+tag carries it. The `version` pin was deliberately held at `0.28.0` until the
+tag was cut — `/ductus` reads it to resolve which assets to download, so a pin
+naming an unreleased version would have broken acquisition for every adopter
+bootstrapping in that window — and all three version sites moved in the tag's
+own commit. The release published five target assets with sidecars, an SBOM,
+and `ductus 0.28.1` on crates.io, and the acquisition invariant fetched,
+verified, installed and executed the real assets on all five platforms.
 
-**The other item left on this spec is AC12**, an operator publish rather
-than repository work: the retired `gvrn` crate needs a final release whose
-description points at `ductus`. The half that protects existing installs is
-already true — `gvrn 0.27.2` is published, unyanked, and still installable, which
-is what the resolved question requires. What is missing is the deprecation
-notice, which reaches those users at the moment they next look. Closing it means
-publishing a `gvrn` version from a crate manifest named `gvrn` with a
-description naming `ductus`; it cannot be done from this repository's manifest,
-which is now named `ductus`.
+**AC12 is closed (2026-08-16).** `gvrn 0.27.3` is published: built from the
+`gvrn-v0.27.2` tree so the crate still *works* — a non-functional stub would
+have broken the "left installable" half — with only its metadata changed. Its
+description now reads *"DEPRECATED — renamed to `ductus`. Install `ductus`
+instead…"*, its `repository` points at this repo, and its README opens with a
+deprecation banner naming `cargo install ductus`. Both halves of the criterion
+hold together: nothing is yanked (`0.26.2` through `0.27.3` all remain
+installable), and the newest release is the one crates.io shows, so the notice
+reaches a user at the moment they next look. It was published from a scratch
+manifest named `gvrn` staged from that tag, since this repository's manifest is
+now named `ductus` and cannot produce it.
 
 **Operational constraints this rename leaves permanently in force**, both
 recorded in `AGENTS.md` because they outlive this spec: a repository named
@@ -147,7 +153,7 @@ The relationship runs the other way too: 048's remaining migration entry and thi
 - [x] AC11: An adopter converges on the new per-project directory from any prior layout — pre-[042](../042-consolidate-govern-per-project-files-under-govern-directory/spec.md) legacy, consolidated under the old directory, or already converged — with no tracked file lost, `[pinned] files` entries rewritten to the new paths, and the two directory migrations composing in registry order
 - [x] AC5: An adopter who has not yet re-run the bootstrap is not silently broken: either their existing installation keeps working, or they are told what to run, with the message naming the command
 - [x] AC6: Published release tags, their attached assets, and CHANGELOG entries describing past releases are left exactly as written
-- [ ] AC12: The retired crate is left installable rather than yanked, and its final published release describes the new name
+- [x] AC12: The retired crate is left installable rather than yanked, and its final published release describes the new name
 - [x] AC13: The first release under the new name continues the existing version series rather than restarting it, and the version-agreement audit family passes across the `version` pin, `runtime/Cargo.toml`, and the newest `runtime/CHANGELOG.md` heading
 - [x] AC7: The self-audit families that assert installer, registry, namespace, and host-namespace parity pass under the new name with no family disabled or exempted
 - [x] AC8: The runtime's own test suite, the parity goldens, and the generated command copies are consistent with the new name, with goldens re-blessed rather than hand-edited
