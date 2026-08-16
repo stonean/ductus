@@ -212,10 +212,19 @@ def diff_substitutions(base):
         new_run.clear()
 
     for line in proc.stdout.split("\n"):
-        if line.startswith("+++ b/"):
+        if line.startswith("diff --git "):
+            # Reset between files: a deleted file's header is `+++ /dev/null`,
+            # which names no path. Without this its removed lines would keep
+            # accumulating against the *previous* file and mark that file's
+            # diff non-uniform — a pure rename reported stale because an
+            # unrelated file was deleted in the same window.
             flush()
-            path = line[6:]
-            result.setdefault(path, set())
+            path = None
+        elif line.startswith("+++ "):
+            flush()
+            path = line[6:] if line.startswith("+++ b/") else None
+            if path is not None:
+                result.setdefault(path, set())
         elif line.startswith("@@"):
             flush()
         elif line.startswith("-") and not line.startswith("---"):

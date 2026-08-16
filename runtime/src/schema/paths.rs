@@ -49,10 +49,15 @@ pub(crate) const LEGACY_DIR_CONFIG_FILE: &str = ".govern/config.toml";
 /// before re-running the bootstrap is never broken.
 pub(crate) const LEGACY_CONFIG_FILE: &str = ".govern.toml";
 
+/// Number of resolution tiers: the current directory, the 042-era one, and
+/// the pre-042 repo-root file. Fixed-size so an empty chain cannot be built.
+pub(crate) const TIERS: usize = 3;
+
 /// Config locations in resolution order, newest first. Every resolver below
 /// walks this one list, so the read path, the write path, and the provenance
 /// tag can never disagree about the precedence rule (spec 049).
-pub(crate) const CONFIG_CHAIN: &[&str] = &[CONFIG_FILE, LEGACY_DIR_CONFIG_FILE, LEGACY_CONFIG_FILE];
+pub(crate) const CONFIG_CHAIN: [&str; 3] =
+    [CONFIG_FILE, LEGACY_DIR_CONFIG_FILE, LEGACY_CONFIG_FILE];
 
 /// Per-contributor session file under `.ductus/` (spec 049). Gitignored. This
 /// is the single source of truth for the session path; the `write-session` and
@@ -68,8 +73,8 @@ pub(crate) const LEGACY_DIR_SESSION_FILE: &str = ".govern/session.toml";
 pub(crate) const LEGACY_SESSION_FILE: &str = ".govern.session.toml";
 
 /// Session locations in resolution order, newest first. See [`CONFIG_CHAIN`].
-pub(crate) const SESSION_CHAIN: &[&str] =
-    &[SESSION_FILE, LEGACY_DIR_SESSION_FILE, LEGACY_SESSION_FILE];
+pub(crate) const SESSION_CHAIN: [&str; 3] =
+    [SESSION_FILE, LEGACY_DIR_SESSION_FILE, LEGACY_SESSION_FILE];
 
 /// Resolve the project config file to *read* for `repo`: the newest location
 /// in [`CONFIG_CHAIN`] that exists. New-wins across all three tiers, so a
@@ -94,20 +99,22 @@ pub fn config_path(repo: &Path) -> PathBuf {
 /// separately — see that function for why.
 #[must_use]
 pub(crate) fn config_display_name(repo: &Path) -> &'static str {
-    newest_existing(repo, CONFIG_CHAIN)
+    newest_existing(repo, &CONFIG_CHAIN)
 }
 
 /// The newest entry in `chain` that exists under `repo`, falling back to the
 /// oldest when none does. Shared by the config and session read resolvers so
 /// the precedence rule is stated once (spec 049).
-fn newest_existing(repo: &Path, chain: &[&'static str]) -> &'static str {
-    debug_assert!(!chain.is_empty(), "resolution chain must not be empty");
+fn newest_existing(repo: &Path, chain: &[&'static str; TIERS]) -> &'static str {
+    // Fixed-size, so "no tiers" is unrepresentable rather than guarded: an
+    // `unwrap_or_default()` here would resolve an empty chain to `""`, and
+    // `repo.join("")` is the repo root — the worst possible answer to give
+    // silently for a state that cannot occur.
     chain
         .iter()
         .find(|rel| repo.join(rel).exists())
-        .or_else(|| chain.last())
         .copied()
-        .unwrap_or_default()
+        .unwrap_or(chain[TIERS - 1])
 }
 
 /// The resolved project config file from a **single** existence probe: the
@@ -129,7 +136,7 @@ pub(crate) fn resolve_config(repo: &Path) -> (PathBuf, &'static str) {
 /// [`SESSION_CHAIN`] that exists. New-wins on a split.
 #[must_use]
 pub fn session_path(repo: &Path) -> PathBuf {
-    repo.join(newest_existing(repo, SESSION_CHAIN))
+    repo.join(newest_existing(repo, &SESSION_CHAIN))
 }
 
 /// Resolve the session file to *write*: the active file — the newest tier that
@@ -139,7 +146,7 @@ pub fn session_path(repo: &Path) -> PathBuf {
 /// tier by spec 049).
 #[must_use]
 pub(crate) fn session_path_for_write(repo: &Path) -> PathBuf {
-    active_path(repo, SESSION_CHAIN)
+    active_path(repo, &SESSION_CHAIN)
 }
 
 /// Resolve the config file to *write*: the active file, same rule as
@@ -154,7 +161,7 @@ pub(crate) fn session_path_for_write(repo: &Path) -> PathBuf {
 /// fallback).
 #[must_use]
 pub fn config_path_for_write(repo: &Path) -> PathBuf {
-    active_path(repo, CONFIG_CHAIN)
+    active_path(repo, &CONFIG_CHAIN)
 }
 
 /// Shared active-file resolution for writes: the newest tier in `chain` that
@@ -162,14 +169,9 @@ pub fn config_path_for_write(repo: &Path) -> PathBuf {
 /// Identical to [`newest_existing`] except for the empty-chain fallback — a
 /// write with nothing on disk targets the *newest* location, while a read with
 /// nothing on disk names the *oldest* (the caller treats it as absent).
-fn active_path(repo: &Path, chain: &[&'static str]) -> PathBuf {
-    debug_assert!(!chain.is_empty(), "resolution chain must not be empty");
+fn active_path(repo: &Path, chain: &[&'static str; TIERS]) -> PathBuf {
     let existing = chain.iter().find(|rel| repo.join(rel).exists()).copied();
-    repo.join(
-        existing
-            .or_else(|| chain.first().copied())
-            .unwrap_or_default(),
-    )
+    repo.join(existing.unwrap_or(chain[0]))
 }
 
 /// Validate a configured spec-root directory name for well-formedness.
@@ -515,7 +517,7 @@ mod tests {
             repo.path().join(LEGACY_CONFIG_FILE)
         );
 
-        for (present, expected) in subsets(CONFIG_CHAIN) {
+        for (present, expected) in subsets(&CONFIG_CHAIN) {
             let repo = tmp_repo();
             for rel in &present {
                 touch(repo.path(), rel);
@@ -540,7 +542,7 @@ mod tests {
             repo.path().join(LEGACY_SESSION_FILE)
         );
 
-        for (present, expected) in subsets(SESSION_CHAIN) {
+        for (present, expected) in subsets(&SESSION_CHAIN) {
             let repo = tmp_repo();
             for rel in &present {
                 touch(repo.path(), rel);
@@ -563,7 +565,7 @@ mod tests {
             repo.path().join(CONFIG_FILE)
         );
 
-        for (present, expected) in subsets(CONFIG_CHAIN) {
+        for (present, expected) in subsets(&CONFIG_CHAIN) {
             let repo = tmp_repo();
             for rel in &present {
                 touch(repo.path(), rel);
@@ -584,7 +586,7 @@ mod tests {
             repo.path().join(SESSION_FILE)
         );
 
-        for (present, expected) in subsets(SESSION_CHAIN) {
+        for (present, expected) in subsets(&SESSION_CHAIN) {
             let repo = tmp_repo();
             for rel in &present {
                 touch(repo.path(), rel);
