@@ -193,10 +193,10 @@ Runtime half of [049's rename](../049-rename-govern-to-ductus/spec.md): the per-
 
 ## 92. Implement scenario: [merge-managed-block-renamed-subsection](scenarios/merge-managed-block-renamed-subsection.md) — a renamed subsection must not strand the old block's tail
 
-- [ ] `merge_managed_block.rs`: in `walk_body_extent`, an on-disk group matching no canonical group no longer ends the block when a later on-disk group still aligns with a remaining canonical one — the retired-subsection case, distinguished from adopter content by its continuation
-- [ ] Bound the lookahead (`MAX_SKIPPED_RETIRED_GROUPS`) so an adopter's pasted duplicate far below cannot extend the block and swallow everything above it
-- [ ] Preserve the trailing-append invariant unchanged: adopter content after the block is still never consumed by group alignment
-- [ ] Tests: a mid-block renamed subsection replaced rather than stranded, with no orphaned comment header and the adopter tail intact; a long unmatched run past the bound preserved as adopter territory; all existing line-prefix tests green
-- [ ] Update the module doc, which currently records the stranding as a deliberate trade-off
+- [x] `merge_managed_block.rs`: in `walk_body_extent`, an on-disk group matching no canonical group no longer ends the block when a later on-disk group still aligns with a remaining canonical one — the retired-subsection case, distinguished from adopter content by its continuation
+- [x] Bound the lookahead (`MAX_SKIPPED_RETIRED_GROUPS`) so an adopter's pasted duplicate far below cannot extend the block and swallow everything above it
+- [x] Preserve the trailing-append invariant unchanged: adopter content after the block is still never consumed by group alignment
+- [x] Tests: a mid-block renamed subsection replaced rather than stranded, with no orphaned comment header and the adopter tail intact; a long unmatched run past the bound preserved as adopter territory; all existing line-prefix tests green
+- [x] Update the module doc, which currently records the stranding as a deliberate trade-off
 
 - **Done when**: `merge-managed-block` replaces a `line-prefix` subsection whose patterns were all renamed instead of stopping the walk at it, so no tail of the old block survives below the merged one and the dedup pass leaves no orphaned comment headers; the lookahead is bounded and the bound's rationale is stated in code; `scenarios/merge-managed-block-trailing-append.md`'s invariant still holds and its tests are unchanged; the real case that surfaced it — spec 048's `papur` bootstrap, whose `.gitignore` kept a dead `.govern.session.toml` plus headerless `# IDE` / `# OS` — merges clean; `cargo test`, `cargo clippy -- -D warnings` and `npx markdownlint-cli2` all clean.
