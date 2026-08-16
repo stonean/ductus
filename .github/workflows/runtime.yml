@@ -13,6 +13,12 @@ on:
       # A packaging change in the release workflow re-runs the portability
       # check below, which mirrors that sequence (spec 048, task 3).
       - '.github/workflows/runtime-release.yml'
+      # tests/mechanical_sweep_parity.rs runs Family 19's own rule and
+      # compares it with the Rust one, so an edit to the family is an edit
+      # to this suite's subject. Without this path a change there breaks the
+      # comparison and nothing notices until an unrelated runtime commit
+      # happens to trigger the workflow.
+      - 'scripts/audit/review-freshness.sh'
   push:
     branches:
       - main
@@ -21,6 +27,7 @@ on:
       - 'framework/commands/*.md'
       - '.github/workflows/runtime.yml'
       - '.github/workflows/runtime-release.yml'
+      - 'scripts/audit/review-freshness.sh'
 
 permissions:
   contents: read
