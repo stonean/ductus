@@ -226,3 +226,12 @@ Opened by [049's rename sweep](../049-rename-govern-to-ductus/spec.md), which ma
 - [x] One `git diff --unified=0` per distinct base sha rather than two blob reads per changed file — the family is a hard release gate and the blob shape cost 61s
 
 - **Done when**: `scripts/audit/review-freshness.sh` exits 0 across the rename sweep, still flags a single changed table cell, a `MUST`→`SHOULD` reword, a mixed rename-plus-reword line, and any added or deleted contract; runs in under 5s on this repo's history; and shellcheck is clean.
+
+### 26. Implement scenario: [family-10-migration-coverage](scenarios/family-10-migration-coverage.md)
+
+Record backfilled 2026-08-16. The family shipped as `scripts/audit/migration-coverage.sh` and is registered in `run-all.sh` as Family 10, but its task was pruned from this file without leaving pruning evidence — so while this spec was `done` the scenario→task mapping family skipped it (that family is skipped on a `done` spec, whose tasks may already be pruned) and the gap stayed invisible. Reopening the spec for [049](../049-rename-govern-to-ductus/spec.md)'s Family 19 work surfaced it. The work is real and shipped; only the record was missing.
+
+- [x] `scripts/audit/migration-coverage.sh` asserts every `framework/migrations.toml` entry has a procedure body, every body has an entry, and no entry names a `target_paths` glob that matches nothing under `framework/`
+- [x] Registered in `scripts/audit/run-all.sh` as Family 10 and in `framework/commands/audit.md`'s family list
+
+- **Done when**: the family runs in `run-all.sh`, reports a missing procedure body and a stale `target_paths` entry, and this spec's scenario→task mapping is clean.
