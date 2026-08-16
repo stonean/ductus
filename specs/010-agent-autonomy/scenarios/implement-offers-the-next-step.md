@@ -12,7 +12,7 @@ That is friction in the mode that is supposed to be the *considered* one. Confir
 
 ## Behavior
 
-**On completing a task without `--auto`, the run names the next step and asks.** After the per-task completion summary and before exiting, when the ordered task list holds at least one unchecked task, the run names the next recommended task — its number and heading — and prompts the operator to continue with it.
+**On completing a task without `--auto`, the run names the next step and asks.** After the per-task completion summary and before exiting, when the ordered task list holds at least one unchecked task, the run names the next recommended task — its number and heading — plus how many unchecked tasks remain after it, and prompts the operator to continue with it. **One** task, not a menu; the count is what lets the operator judge the queue without re-reading `tasks.md` (see Resolved Questions).
 
 **The prompt is a fork, not a gate.** Answering yes continues the walk onto that task within the same run. Answering no exits cleanly, exactly as the run ends today. Answering with instructions instead redirects: the operator's text is the next input, so "do task 12 first" or "stop and re-plan" is a first-class reply rather than a rejection followed by a fresh invocation.
 
@@ -31,8 +31,24 @@ That is friction in the mode that is supposed to be the *considered* one. Confir
 
 ## Open Questions
 
-- Should the offer surface more than one next step — for example the next two or three unchecked tasks — so the operator can redirect further ahead without re-reading `tasks.md`? Naming one keeps the prompt short and matches "the next recommended step"; naming several turns it into a menu, which may be more useful when tasks are small and sequential but risks re-rendering the task list on every completion.
+*None — see Resolved Questions.*
 
 ## Resolved Questions
 
-*None yet.*
+- **Should the offer surface more than one next step?** No — **name one, and say
+  how many remain.** Resolved 2026-08-16 by the operator.
+
+  Naming several turns the prompt into a menu that re-renders a slice of
+  `tasks.md` after every completion, which is the cost the question named. The
+  count recovers most of what the menu was for: the operator learns whether the
+  queue is one task or twelve without reading it, and the free-text reply the
+  Behavior section already specifies is how they look further ahead when they
+  want to — "what's after that?" is a redirect like any other. So the prompt
+  stays one line and the information the menu carried is available on demand
+  rather than by default.
+
+  The count is of **unchecked tasks remaining after the one being offered**, so
+  the last task offers `(0 remaining)` rather than suppressing the count — a
+  bare "next: task 91" and "next: task 91 (0 remaining)" answer different
+  questions, and the second is the one an operator deciding whether to continue
+  is actually asking.
