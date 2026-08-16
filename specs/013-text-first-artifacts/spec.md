@@ -4,10 +4,10 @@ status: in-progress
 dependencies: [000-slash-commands, 007-govern-workflow, 012-multi-agent-govern]
 tags: [format, migration, pipeline]
 review:
-  last-run: 2026-08-16T12:53:08Z
-  reviewed-against: c24f40e6b870ff46ef399f6ab6a85f8e0724d60c
+  last-run: 2026-08-16T13:09:52Z
+  reviewed-against: 49a14d3c43cc0aa4a231c2c0fd40e14fb5ef6894
   must-violations: 0
-  should-violations: 3
+  should-violations: 0
   low-confidence: 0
   blocking: false
 next-criterion: 19
