@@ -1,6 +1,36 @@
 # Changelog
 
-All notable changes to the `govern` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `gvrn-v<MAJOR>.<MINOR>.<PATCH>` scheme distinct from framework tags (was `runtime-v*` before v0.2.0 — see the v0.2.0 rename entry below).
+All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
+
+## [0.28.0] — 2026-08-16
+
+The project is renamed to **ductus**, and the runtime it ships stops being optional.
+
+### Changed
+
+- **The binary, crate, library, and MCP server key are all `ductus`.** One name across the project, the release tag prefix (`ductus-v*`), the per-project directory (`.ductus/`), and the default command namespace (`/ductus:`). The retired `gvrn` crate is left published rather than yanked so an existing `cargo install` keeps resolving, and the 47 historical `gvrn-v*` tags and their assets are untouched — they are the record of what was named when (spec 049).
+
+- **The per-project directory resolves across three tiers.** `.ductus/` first, then the 042-era `.govern/`, then the pre-042 repo-root files. An adopter who upgrades the binary before re-running the bootstrap sits on the middle tier and keeps working, so the fallback grew a level rather than swapping one out. Reads name the oldest tier when nothing exists (the caller treats that as "config absent"); writes name the newest, so a fresh project cuts over immediately while a pre-migration write stays on the file that already holds the other sections (022 scenario `project-directory-resolution-chain`).
+
+- **The runtime is required, and `/ductus` acquires it.** `PATH` is no longer consulted anywhere. `/ductus` reads the version this framework revision pins, downloads the matching release asset, verifies its sidecar digest, and installs it into a ductus-owned store at `~/.ductus/bin/ductus`, reached from each project through a gitignored pointer at `.ductus/bin/ductus`. A project may supply its own binary with `[runtime] path` instead. Acquisition failure halts the run naming the store path and the release URL rather than degrading silently (spec 048).
+
+  This amends the constitution: §runtime-boundary principle 3 was "Opt-in for adopters", and the Opt-in invariant asserted a full pipeline cycle with the binary absent. Both are replaced — by the requirement, and by an Acquisition invariant asserting the published assets can actually be fetched, verified, installed, and executed on every supported platform.
+
+- **Detection collapses from three states to two.** State C existed to report a missing binary and suggest installing one; acquisition removes its subject.
+
+### Added
+
+- **`label-criteria` reaches adopters.** The `criterion-label-backfill` migration assigns stable `AC{n}` labels across an adopter's corpus, so citing a criterion never requires counting a list (spec 013).
+
+- **Three registry migrations**, applied in one bootstrap run: `criterion-label-backfill`, `ductus-rename` (the per-project directory, the MCP server key and command, the per-agent permission entries, the installed bootstrap entry point, and the two managed-block markers), and `runtime-store-path` (the MCP command path).
+
+- **Two self-audit families.** Family 21 asserts the retired bootstrap path still serves the current bootstrap byte-for-byte — every pre-rename adopter's self-update fetch is hardcoded to that path, and their bootstrap aborts before migrations when it 404s. Family 19 gains a mechanical-sweep exemption so a uniform rename no longer stales every review it touches (spec 026).
+
+### Fixed
+
+- **A deleted file's diff lines were attributed to the previously-seen file** in Family 19's parser, because `+++ /dev/null` does not match `+++ b/`. A pure rename would have read stale indefinitely.
+
+- **An empty resolution chain resolved to the repo root.** `unwrap_or_default()` over the path chain yielded `""`, and `repo.join("")` is the repo directory — guarded only by a `debug_assert` that compiles out of release. The chains are fixed-size now, so the state is unrepresentable.
 
 ## [0.27.2] — 2026-08-14
 
