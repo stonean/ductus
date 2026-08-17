@@ -2,8 +2,8 @@
 status: in-progress
 dependencies: [021-runtime-boundary, 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire, 042-consolidate-govern-per-project-files-under-govern-directory]
 review:
-  last-run: 2026-08-17T14:23:16Z
-  reviewed-against: a98e9fab3af9afb9e2db078b314fd64bd482bd07
+  last-run: 2026-08-17T22:13:28Z
+  reviewed-against: 0036c9ab96aedfe4143b5431a0c37c5c48a9d6a3
   must-violations: 0
   should-violations: 0
   low-confidence: 1
@@ -121,6 +121,39 @@ Existing adopters have an MCP entry naming the bare `ductus` command and, usuall
 - **The adopter has a `ductus` on `PATH`.** Ignored entirely — not consulted, not warned about, not removed. Removing it is the adopter's call; `/ductus` simply no longer looks there.
 
 ## State at hand-off (2026-08-17)
+
+**AC10 was exercised twice on 2026-08-17 and every clause held on the second
+run.** The subject was the strongest available shape: a pre-rename adopter with a
+legacy root config, a root `constitution.md`, a `workflows/` directory, and an
+`.mcp.json` naming the retired server key and bare command. Both runs cost **two
+restarts** — the inherent self-update hop plus the closing hand-over to the tool
+surface — matching this criterion as reworded.
+
+Run 1 surfaced six defects, all of which needed a real pre-rename adopter and
+none of which any check in this repository could reach. Four were fixed in
+`4bc6c06` (the abort naming a command the adopter did not have; the self-update
+writing the canonical filename rather than the installed one; `ductus-rename`
+step 9 contradicting itself when its destination MCP key already existed; a
+sweep-residue sentence), and one in `979a3f0`, released as `ductus-v0.29.9` (the
+orphan check being blind to pre-migration path roots).
+
+Run 2 validated each of them against the same adopter: one command file rather
+than two, the retired MCP key removed by contract rather than by host judgment,
+and — the decisive one — `check-orphaned-references` itself reporting
+`AGENTS.md:118 names scripts/gen-spec-deps.sh`, the exact orphan run 1 passed
+over and a human found by reading the file. AC13 was validated incidentally, the
+pointer having gone missing across the reset and being repaired by the run.
+
+**The sixth finding was mine, not the framework's.** I read a migration absent
+from run 1's summary as a silent skip; `workflows-sunset` carries
+`sunset_after = "0.25.0"` against a `0.29.9` release and was correctly excluded
+as retired, so `workflows/registry.json` surviving is the documented outcome. A
+`[migrations].applied` set was built on that misreading and reverted in
+`4ceb799`. Both runs had behaved correctly the whole time.
+
+**AC10 is still the operator's to tick**, and it remains unticked here.
+
+**Original 2026-08-17 note follows.**
 
 **Two blockers, and only one belongs to an agent.**
 
