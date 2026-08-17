@@ -29,6 +29,20 @@ tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
 curl --proto '=https' --tlsv1.2 -fsSL "$RAW" > "$tmp"
 
+# Confirm the payload is actually the bootstrap before installing it. `curl -f`
+# rejects an HTTP error status, but a 200 carrying a captive-portal page, a
+# proxy interstitial, or an empty body passes -f and would otherwise be written
+# out and reported as a successful install. The antigravity arm below splits
+# ductus.md on its frontmatter, so such a payload yields a skill with an empty
+# body — a no-op install that says it worked. Checked once here, for every arm,
+# so no arm reports an install it did not verify.
+delims="$(grep -c '^---[[:space:]]*$' "$tmp" || true)"
+if [ ! -s "$tmp" ] || [ "${delims:-0}" -lt 2 ]; then
+  echo "ductus: the downloaded file is not the ductus bootstrap — got $(wc -c < "$tmp" | tr -d ' ') bytes with ${delims:-0} frontmatter delimiter(s), expected at least 2" >&2
+  echo "ductus: check network access to $RAW — a proxy or captive portal may have answered with a placeholder page" >&2
+  exit 1
+fi
+
 case "$agent" in
   claude)
     dest=".claude/commands/ductus.md"
