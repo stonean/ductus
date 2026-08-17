@@ -69,8 +69,8 @@ The `version` file, the publish gate, and the Windows `.tar.gz` asset touch only
 | --- | --- | --- |
 | `version` | Create | The repo-root SemVer pin, read from the fetched archive |
 | `.github/workflows/runtime-release.yml` | Modify | Publish gate on the complete asset set; Windows asset as `.tar.gz` |
-| `.github/workflows/markdown-only-pipeline.yml` | Delete | Asserts the retired opt-in invariant |
-| `.github/workflows/acquisition.yml` | Create | Replacement: end-to-end acquisition on each runner platform |
+| `.github/workflows/framework-checks.yml` | Rename | Was `markdown-only-pipeline.yml`, whose job asserted the retired opt-in invariant |
+| `.github/workflows/runtime-acquisition.yml` | Create | Replacement: end-to-end acquisition on each runner platform |
 | `framework/constitution.md` | Modify | §runtime-boundary principle 3 + Opt-in invariant; §text-first-artifacts narrowing |
 | `framework/bootstrap/ductus.md` | Modify | Acquisition procedure, MCP shapes, detection states, permission seeds, gitignore block, Shared Files note |
 | `framework/commands/*.md` | Modify | Remove the 26 per-step markdown-only fallback instructions |
