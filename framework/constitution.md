@@ -51,6 +51,18 @@ Grounding is the working-discipline counterpart to the **Verified** principle: *
 2. **Live, reachable state** — a connected dev or read-only database, a running dev server, logs, a REPL, `--help` output, an actual test run. When such a source is on hand, query it rather than infer schema, data shape, or behavior.
 3. **Inference** — permitted only for what no reachable source can answer, and then stated as an assumption, never asserted as fact.
 
+<!-- §recommendations -->
+
+### Recommendations
+
+A recommendation is a claim, so grounding governs it. When the agent offers options and recommends one, it MUST work the recommendation out to its result **before** presenting it — not after the user accepts.
+
+Where the options differ by a quantity the user cares about — steps removed, restarts saved, files touched, time or cost — that quantity MUST be computed for **every** option and stated alongside the recommendation. Reasoning from an option's *shape* to its *effect* ("this is the biggest change available", "this reuses the most existing machinery") is inference presented as analysis, and it is a defect on this principle whether or not the ranking turns out to be right.
+
+When the deciding quantity cannot be computed yet, the agent MUST say so and describe what would settle it, rather than ranking the options anyway. "I don't know which is better until X is measured" is a usable answer; a confident ranking with an unchecked basis is not — it reads as analysis and carries none, so the user's approval rests on the framing rather than on the facts.
+
+This is the same standard the pipeline applies to its own machinery: `/{project}:review` findings quantify their scope, artifact checks report what they examined, and a gate that cannot run must never look like one that passed. Advice about the system is held to the standard the system is held to.
+
 ### Rules
 
 - **Prefer the source to the recollection.** Before asserting how code behaves, what a schema holds, what an artifact says, or what a command does, open it — a `Read`, a `grep`, or a query is cheaper than a wrong answer propagated downstream.
