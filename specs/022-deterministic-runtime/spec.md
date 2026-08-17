@@ -212,7 +212,37 @@ Stable relationships post-rewrite:
 - **`lint-frontmatter.sh`** — repositioned as the markdown-only fallback for the runtime's `validate-frontmatter` primitive. Same intent, two implementations, both ship; the prose Instructions invoke whichever is available.
 - **`lint-tool-coverage.sh`** — stays bash-only with no runtime counterpart. The lint runs exclusively in `markdown-only-pipeline.yml`, which asserts the runtime is absent; a runtime version is unreachable in that workflow.
 
-## State at hand-off (2026-08-16)
+## State at hand-off (2026-08-17)
+
+**One thing blocks this spec: its own stale review.** No unchecked tasks, no
+unchecked criteria, no scenario open questions. `check-review-gate` reports
+`review-stale` — 12 durable contracts changed since `reviewed-against`
+`9a9c38b3` — and `compute-review-scope` resolves **557 files**, which is why it
+has been deferred repeatedly rather than because anything is wrong with it.
+
+**Whether it should reach `done` at all is a live question.** The 2026-08-16
+note below argues it is the durable home for runtime work and *"is not expected
+to reach `done` on any particular cycle"* — every new primitive, result field
+and check family lands here as a scenario. The operator asked on 2026-08-17
+that it be closed before the adopter-bootstrap test. Those two positions are
+not reconciled; if closing it, expect it to reopen on the next runtime change,
+which is by design.
+
+**Reviewing it is the whole job.** The scope is large but the work is
+mechanical: run `/{project}:review`, fix or waive **every** MUST *and* SHOULD
+(`AGENTS.md` §Workflow — a SHOULD gates `done` here exactly as a MUST does),
+then close. Findings in `runtime/src/` mean a version bump and a
+`ductus-v*` tag; that release is part of the completion gate, not a follow-up.
+
+**Read `AGENTS.md` §Workflow before starting.** Four rules were added on
+2026-08-17 and each was earned by a failure in that session: SHOULDs gate
+`done`; a recommendation's benefit is computed before it is offered; a review's
+`reviewed-against` must be a commit that already contains its subject (commit,
+then review, then commit the review — and run the self-audit *after*
+committing, since Family 19 cannot see the working tree); and a superseded
+acceptance criterion is annotated in the spec body, never in `review.md`.
+
+**Original 2026-08-16 note follows.**
 
 All 19 acceptance criteria are met; this spec stays `in-progress` because it is
 the **durable home for runtime work** (`AGENTS.md`: a new `check-artifacts`

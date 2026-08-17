@@ -120,7 +120,43 @@ Existing adopters have an MCP entry naming the bare `ductus` command and, usuall
 - **A pinned version whose tag exists but whose asset for this platform does not.** Prevented upstream by the release gate, but an adopter pinned to an older partial release can still meet it. Treated as any unavailable asset: halt, name the store path and the release URL.
 - **The adopter has a `ductus` on `PATH`.** Ignored entirely — not consulted, not warned about, not removed. Removing it is the adopter's call; `/ductus` simply no longer looks there.
 
-## State at hand-off (2026-08-16)
+## State at hand-off (2026-08-17)
+
+**Two blockers, and only one belongs to an agent.**
+
+1. **Stale review** — `check-review-gate` reports `review-stale`, one durable
+   contract (`scenarios/state-b-continues-in-session.md`) changed since
+   `reviewed-against` `948598d2`. Re-run `/{project}:review` and close it out.
+   Scope is small.
+2. **AC10 is unchecked and is the operator's.** It requires a real adopter
+   bootstrap end to end; no CI job or scratch script substitutes, and this spec
+   deliberately does not name the project used — see the shape described below.
+   **Do not tick AC10, and do not run a bootstrap against any project outside
+   this repository, unless explicitly asked.** The operator runs it and routes
+   anything it finds to `specs/inbox.md`.
+
+So this spec reaches `done`-except-AC10 on an agent's work alone, and waits
+there.
+
+**AC10 was reworded on 2026-08-17 and the rewording matters.** Its second clause
+used to read *"…surface in one combined abort"*, describing the pre-flight abort
+that `ductus-v0.29.5` removed: State B no longer stops there. It now acquires,
+wires, and **continues through the CLI in the same session** — migrations,
+config, archive fetch, Shared Files, scaffolding — with a single closing restart
+that hands over to the MCP tool surface. For a pre-042 adopter that is **3
+restarts → 2**; the remaining two are the inherent `ductus.md` self-update hop
+and the tool-surface handover. Verifying AC10 against the old wording would
+verify behaviour that no longer exists.
+
+That change also required a runtime one, which is worth knowing before reading
+the scenario: `apply-manifest`'s `entries` / `pinned` / `substitutions` and
+`enforce-manifest`'s `expected` / `pinned` had no CLI surface (`#[arg(skip)]`),
+so a CLI-driven run would have reached Shared Files, received an **empty**
+manifest, copied nothing, and reported success. They now take
+`--{field}-json PATH`, and an unreadable or malformed file is an error rather
+than an empty default.
+
+**Original 2026-08-16 note follows.**
 
 **Shipped in `ductus-v0.28.0`.** All twelve tasks are complete and 23 of 24
 acceptance criteria are met. The runtime is required, `/{project}` acquires it,
