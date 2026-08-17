@@ -22,7 +22,7 @@ The route is even pre-authorized: the Agent Registry's Claude
 `Bash(~/.ductus/bin/ductus *)`, and the Permission Setup seed writes them before
 the probe. Nothing needs a new grant.
 
-Measured 2026-08-16 on the real adopter bootstrap (048 AC10, `papur`): **three**
+Measured 2026-08-16 on the real adopter bootstrap (048 AC10, the adopter project): **three**
 restarts.
 
 1. the installed pre-rename `govern.md` self-updates itself — inherent, since a

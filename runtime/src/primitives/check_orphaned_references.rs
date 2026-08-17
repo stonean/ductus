@@ -7,7 +7,7 @@
 //! pinned-invoker warning never fires. A migration is the only mechanism that
 //! can follow a move into one, and each migration knows only its own hop.
 //!
-//! Two real instances surfaced in the `papur` bootstrap (048 AC10), and both
+//! Two real instances surfaced in the adopter bootstrap (048 AC10), and both
 //! were silent in the way this project pays most for — nothing errored. A
 //! dangling `@import` yields a constitution that is simply not loaded, and a
 //! hook calling a missing script fails at commit time, far from the run that
@@ -372,7 +372,7 @@ mod tests {
     }
 
     #[test]
-    fn the_papur_defect_is_reported() {
+    fn the_real_adopter_defect_is_reported() {
         // The real instance: `constitution-relocate` wrote a `.govern/`
         // reference into CLAUDE.md and `ductus-rename` moved the file, leaving
         // an @import that resolves to nothing and loads no constitution.

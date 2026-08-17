@@ -460,7 +460,7 @@ fn walk_body_extent(text: &str, body_start: usize, expected_block: &str) -> usiz
             // Stopping at both — the prior behavior — stranded the entire tail
             // of the old block below the newly written one, where the dedup
             // pass then removed its pattern lines and left its comment headers
-            // orphaned. Observed on a real adopter (spec 048's `papur`
+            // orphaned. Observed on a real adopter (spec 048's the adopter project
             // bootstrap): a `.gitignore` carrying a dead `.govern.session.toml`
             // plus two headerless `# IDE` / `# OS` comments.
             //
@@ -1394,7 +1394,7 @@ Thumbs.db";
 
     #[test]
     fn line_prefix_renamed_subsection_does_not_strand_the_old_block_tail() {
-        // Regression from a real adopter bootstrap (spec 048's `papur`): the
+        // Regression from a real adopter bootstrap (spec 048's the adopter project): the
         // `govern → ductus` sweep renamed `.govern.session.toml` to
         // `/.ductus/session.toml`, and that subsection carries no other
         // pattern — so it matched no canonical group by identity and the walk

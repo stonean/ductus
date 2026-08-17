@@ -104,7 +104,7 @@ would make it a check that runs least often in the case it was written for.
 
 **Stale grants are the same class and are *not* covered by `/{project}:configure`.**
 A migration that renames a tool surface leaves the old permission entries
-behind — `papur` still carries `Bash(command -v gvrn)`, `Bash(gvrn --version)`,
+behind — the adopter still carries `Bash(command -v gvrn)`, `Bash(gvrn --version)`,
 `govern-*` temp Read globs and two `cp …govern.md.upstream` grants after the
 batch. `ductus-rename` scopes itself to the `mcp__gvrn__` entries, which is
 correct for what it claims. But nothing else prunes them: `configure.md` is

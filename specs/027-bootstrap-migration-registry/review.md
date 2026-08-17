@@ -22,7 +22,7 @@ The security pass gave the traversal the most attention and concluded it was nev
 
 The reuse pass found the opposite of a finding: `check-orphaned-references` reaches for `check_artifacts::adopter_destinations` and `ships_to_adopter` rather than restating the ships-elsewhere rule, and `load_json_arg` is one generic helper serving both manifest hydrators.
 
-Verification: 953 tests pass (`--locked --release`), clippy clean on `--all-targets`, `scripts/audit/run-all.sh` exit 0, markdownlint clean over 420 files. The primitive was also run against this repository — 0 findings, 4 referrers examined, 0 skipped — and against a fixture reproducing both `papur` defects, which it reports.
+Verification: 953 tests pass (`--locked --release`), clippy clean on `--all-targets`, `scripts/audit/run-all.sh` exit 0, markdownlint clean over 420 files. The primitive was also run against this repository — 0 findings, 4 referrers examined, 0 skipped — and against a fixture reproducing both adopter defects, which it reports.
 
 ## MUST violations (blocking)
 

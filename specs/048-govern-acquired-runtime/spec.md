@@ -141,13 +141,13 @@ archive caught before install with nothing written to the store, a missing asset
 failing the fetch, a re-run leaving a current store byte-unchanged, and an
 unrunnable store reading as *no usable runtime* rather than *version unknown*.
 
-**AC10 is being validated by the operator (2026-08-16).** An agent ran the full
-bootstrap against `../papur` and every clause held — acquisition, MCP wiring and
-permissions all landed in one pre-flight pass, the config named the
-repo-relative pointer, and the runtime answered for that project. The operator
-then reset `papur` to re-run it themselves. **Do not tick AC10 and do not re-run
-the bootstrap there** unless they ask: the criterion is theirs to close, and a
-second agent-run would collide with theirs.
+**AC10 is verified by a real adopter bootstrap, which the operator runs.** An
+agent ran the full bootstrap against an adopting project and every clause held —
+acquisition, MCP wiring and permissions all landed in one pre-flight pass, the
+config named the repo-relative pointer, and the runtime answered for that
+project. The criterion is the operator's to close: the subject is a project
+outside this repository, and this spec does not record which one. Issues found
+during that run are routed to `specs/inbox.md`.
 
 That run found four defects, all fixed and released in `ductus-v0.29.2` except
 where noted, and all invisible to every check this repo runs against itself:
@@ -187,23 +187,22 @@ chain has been verified on a *copy* of such a project; what remains is a real
 one, which is an operator decision because it modifies a project outside this
 repository.
 
-**The identified subject is `../papur`** (`/Users/stonean/src/stonean/papur`),
-confirmed 2026-08-16 to be exactly the pre-042 shape this criterion wants: a
-legacy root `.govern.toml` and `.govern.session.toml`, a root `constitution.md`
-(pre-044), a `workflows/` directory (pre-043), and — the detail that makes it
-the strongest available test — an `.mcp.json` naming the **bare `gvrn` command**,
-which is precisely the case the `runtime-store-path` migration rewrites. It was
-clean on `main` at `c6bcf1b`, so the whole run is reviewable as a diff and
+**The shape that makes the strongest subject** is a pre-042 adopter: a legacy
+root `.govern.toml` and `.govern.session.toml`, a root `constitution.md`
+(pre-044), a `workflows/` directory (pre-043), and an `.mcp.json` naming the
+**bare command** rather than a pointer, which is precisely the case the
+`runtime-store-path` migration rewrites. Such a project should be clean on its
+default branch before the run, so the whole thing is reviewable as a diff and
 revertable with git.
 
-**Two preconditions before an agent can run it.** First, `papur` sits outside
-this repository, so a session must have it added as a working directory — a
-read succeeds without that, a write does not, and discovering the boundary
-mid-migration is the wrong moment. Second, it is a real project of the
-maintainer's, so the run needs an explicit go-ahead rather than being inferred
-from a general instruction to proceed; show the diff and commit nothing there
-without it. Run it **after** the current release rather than before, so the
-bootstrap acquires the newest runtime instead of one with known fixes missing.
+**Two preconditions before an agent runs it.** First, the subject sits outside
+this repository, so a session must have it added as a working directory — a read
+succeeds without that, a write does not, and discovering the boundary
+mid-migration is the wrong moment. Second, it is a real project, so the run
+needs an explicit go-ahead rather than being inferred from a general instruction
+to proceed; show the diff and commit nothing there without it. Run it **after**
+the current release rather than before, so the bootstrap acquires the newest
+runtime instead of one with known fixes missing.
 
 ## Acceptance Criteria
 
@@ -219,7 +218,7 @@ bootstrap acquires the newest runtime instead of one with known fixes missing.
 - [x] AC15: A repo-root `version` file carries one SemVer line, and it matches `runtime/Cargo.toml`, the newest `runtime/CHANGELOG.md` heading, and the newest `ductus-v*` tag; a self-audit family asserts that agreement
 - [x] AC8: An adopter whose MCP config names the bare `ductus` command has it rewritten to the ductus-owned path by the registered migration, and re-running the migration is a no-op
 - [x] AC9: The pre-flight binary probe checks the ductus-owned store rather than `PATH`, and the §Permission Setup seed grants exactly what that probe needs
-- [ ] AC10: An adopter with no runtime reaches the deterministic path in one `/ductus` run plus one restart — acquisition, MCP wiring, and tool permissions all land in the same pre-flight pass and surface in one combined abort
+- [ ] AC10: An adopter with no runtime reaches the deterministic path in one `/ductus` run plus one restart — acquisition, MCP wiring, and tool permissions all land in the same pre-flight pass, the run then completes its remaining work through the CLI in that same session, and the single closing restart hands over to the MCP tool surface
 - [x] AC11: `.github/workflows/markdown-only-pipeline.yml` — the job asserting the retired opt-in invariant — is replaced by one that exercises acquisition end-to-end on each supported platform and fails when the runtime cannot be obtained
 - [x] AC16: The constitution is amended in the same change: §runtime-boundary principle 3 and the Opt-in invariant are replaced by the requirement, §text-first-artifacts' "usable standalone" is narrowed to the artifacts, and no live artifact still describes the runtime as optional
 - [x] AC18: A project setting `.ductus/config.toml`'s `[runtime]` path key gets no download, a pointer resolving to the named binary, and a warning — not a halt — when that binary's version differs from the pin

@@ -9,7 +9,7 @@ section: "Follow-on scenarios"
 [027](../../027-bootstrap-migration-registry/spec.md)'s
 `migration-chain-reference-integrity` requires that an adopter-owned file left
 pointing at a framework-owned path which no longer exists is **reported**. Two
-real instances surfaced during the `papur` bootstrap 048 AC10 called for: a
+real instances surfaced during the adopter bootstrap 048 AC10 called for: a
 `CLAUDE.md` `@import` left dangling by `ductus-rename` moving the file
 `constitution-relocate` had pointed it at, and a `.githooks/pre-commit` calling
 generators two migrations had relocated out from under it.
