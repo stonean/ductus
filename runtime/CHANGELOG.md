@@ -2,6 +2,16 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.29.9] — 2026-08-17
+
+### Fixed
+
+- **`check-orphaned-references` could not see the orphan it was written to catch.** A reference was examined only when it carried a *current* framework-managed root (`.ductus/`, `.githooks/`, the configured spec root) as a prefix — but the orphan a migration chain leaves behind is a reference to the path *before* the move, which by definition carries the *old* root. Found on the real adopter bootstrap for spec 048's AC10: the generators had moved root `scripts/` → `.govern/scripts/` → `.ductus/scripts/`, the adopter's `AGENTS.md` still named `scripts/gen-spec-deps.sh`, and the primitive returned clean across all four referrers while that orphan sat in one of them. The operator found it by reading the file. The blind spot was known and worked around rather than closed — this primitive's own test carried the comment *"`.govern/` is not a managed root, so the stale reference must be caught by naming a path under one that does not resolve"* and built its fixture accordingly. `managed_roots` now also matches the historical roots `.govern/`, `scripts/gen-` and `scripts/lib/`. The pre-042 entries are prefixes rather than the `scripts/` directory on purpose: the framework owned `scripts/gen-*.sh` and `scripts/lib/`, never the whole directory, so a `scripts/` root would turn every unresolved adopter script into a finding.
+
+### Added
+
+- **`matched-prefixes` on the `check-orphaned-references` result.** `examined` already bounds the claim by *subject* — which referrers were read — and this bounds it by *scope*: which reference forms were recognized. The two are not interchangeable, and the difference is what hid the defect above. A reference carrying no listed prefix is never reported under `skipped`, because nothing recognized it as a reference at all, so a clean result without this field asserts *no orphans* while meaning *no orphans among paths carrying one of these prefixes*. `QUAL-CLAIM-001` about the boundary of a claim rather than its subject. Additive and `serde(default)`, so an older host reading the result is unaffected.
+
 ## [0.29.8] — 2026-08-17
 
 No runtime change. `0.29.7` carried the `check-artifacts` change below but never published: its release gate failed the framework self-audit, so no assets and no crates.io publish exist at that version and the `version` pin had to move rather than be reused.
