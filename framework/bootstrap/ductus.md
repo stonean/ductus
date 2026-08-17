@@ -442,11 +442,15 @@ Adopter-side cleanup for conventions that have been removed or renamed since the
 ### Procedure
 
 1. Read `framework/migrations.toml` from the fetched archive. If the file is missing or malformed (TOML parse error), abort with `Failed to read framework/migrations.toml; cannot run pre-run migrations.` and do not continue.
-2. Resolve the **active config file** once for this run (write policy: §Project Configuration) and read its `[migrations].last_applied` (treat an absent `[migrations]` section as null). Every marker write-back in step 7 targets this same resolved file, so the read and the write-backs agree even though the config file is itself a migration target; the one step that changes the resolution mid-run is the `govern-dir-consolidate` procedure, whose config move makes `.ductus/config.toml` the active file for every later step (its procedure file says so).
+2. Resolve the **active config file** once for this run (write policy: §Project Configuration) and read its `[migrations]` block: **`applied`**, the list of entry ids already applied and the authoritative record of what this project has run, and `last_applied`, the most recently applied id — retained because readers such as `check-orphaned-references` report it as migration context. Treat an absent `[migrations]` section as *nothing applied*. Every marker write-back in step 7 targets this same resolved file, so the read and the write-backs agree even though the config file is itself a migration target; the one step that changes the resolution mid-run is the `govern-dir-consolidate` procedure, whose config move makes `.ductus/config.toml` the active file for every later step (its procedure file says so).
+
+   **Backfill `applied` when it is absent and `last_applied` is set.** A project bootstrapped before the list existed carries only the watermark, so derive the list once and write it before filtering: every registry entry whose `introduced_in` is less than or equal to `last_applied`'s (SemVer, lex tie-break on `id`) is recorded as applied. This inherits exactly what the watermark asserted and nothing more — it cannot recover an entry the watermark passed over, so a hole predating the backfill remains one and is the adopter's to clear by hand. Emit `backfilled {N} applied migration(s) from last_applied "{id}".`
 3. Filter the registry to entries where both:
 
-   - `introduced_in` is greater than `last_applied`'s `introduced_in` (SemVer comparison, lex tie-break on `id`); when `last_applied` is null, every entry qualifies.
+   - the entry's `id` is **not** in `applied`.
    - Either `sunset_after` is absent, or the current ductus release version is less than `sunset_after` (SemVer comparison).
+
+   **Membership rather than a watermark is what keeps a passed-over entry recoverable.** The rule this replaces selected entries whose `introduced_in` exceeded the last-applied entry's, so an entry missed for *any* reason — a host that never processed it, a procedure that silently converged nothing, a batch interrupted between entries — became permanently ineligible the moment a later entry landed, because its `introduced_in` could never again exceed the advanced watermark. Observed on the adopter bootstrap for [048](../../specs/048-govern-acquired-runtime/spec.md)'s AC10: `workflows-sunset` was never processed, its target survived untouched, `last_applied` advanced past it, and no future run could ever select it again. A list has no such failure mode — an id absent from `applied` stays pending until the entry actually runs — and it is the difference between a hole that heals on the next run and one that is silent and permanent.
 
 4. If the filtered list is empty, emit nothing and proceed to the next bootstrap section.
 5. Otherwise, prompt once with text of the form:
@@ -463,14 +467,14 @@ Adopter-side cleanup for conventions that have been removed or renamed since the
 
    1. Read `framework/migrations/{id}.md` from the fetched archive.
    2. Execute its `## Procedure` steps. The procedure file owns idempotency (step 1 of every procedure exits silently when the target artifact is absent), per-file user prompts (when applicable), and the post-scaffolding summary line.
-   3. After the procedure completes successfully, update the active config file's `[migrations].last_applied = "{id}"` atomically (tempfile + rename, matching the rest of the config file's write semantics) — the file resolved at step 2, or `.ductus/config.toml` once the `govern-dir-consolidate` procedure has moved it. The update happens **per entry**, not at end of batch — an aborted batch resumes from the next-pending entry on the following `/ductus` run.
-   4. If a procedure aborts (rare — only via explicit user "stop everything" path inside the procedure file), halt the loop. The retained `last_applied` value points at the last-completed entry; the next run resumes.
+   3. After the procedure completes successfully, **append `{id}` to `[migrations].applied`** and set `[migrations].last_applied = "{id}"`, atomically (tempfile + rename, matching the rest of the config file's write semantics) — the file resolved at step 2, or `.ductus/config.toml` once the `govern-dir-consolidate` procedure has moved it. Both writes happen **per entry**, not at end of batch, so an aborted batch resumes from the next pending entry on the following `/ductus` run. Record the id only on success: an entry that did not complete must stay absent from `applied`, because absence is what makes it eligible again.
+   4. If a procedure aborts (rare — only via explicit user "stop everything" path inside the procedure file), halt the loop. `applied` holds exactly the entries that completed, so the next run resumes at the first one missing from it — including any entry *earlier* in registry order than the last success, which the watermark rule could not express.
 
 8. After the loop, invoke `check-orphaned-references` (MCP: `check-orphaned-references`) once and report each finding. Each migration is authored against the layout as it stood at its own `introduced_in` and is correct there; nothing validates the **composition**, and an adopter far enough behind runs several in one batch, so the composition is what they actually execute. A later entry moving a path an earlier entry wrote into an **adopter-owned** file — `create` strategy, so the manifest never overwrites it, and unpinned, so the pinned-invoker warning never fires — leaves a reference pointing at nothing, and nothing errors: a dangling `@import` yields a constitution that is simply not loaded, and a hook calling a moved generator fails at commit time, far from the run that broke it. Report `Orphaned reference: {referrer}:{line} names {target}, which does not exist; most likely orphaned by migration {id}` — the `{id}` clause comes from the finding's `migration`, available here because the registry is in the fetched archive (the result's `attribution` reads `registry`). Findings in `skipped` are referrers that could not be read; surface them as unexamined rather than folding them into a clean count. **The batch does not halt**: the migrations that applied are correct and re-running is safe, and the adopter may have hand-edited the reference, so this reports and never repairs. Run it on **every** batch, not only multi-entry ones — a single migration can orphan a reference just as a chain can, and scoping this to chains would make it run least often in the case it was written for. When the batch applied nothing, there is nothing to verify and nothing is emitted — not a clean bill of health for files it never examined. The same primitive is `/{project}:analyze`'s durable adopter-facing surface, where it runs without the registry; see [027 — Bootstrap Migration Registry](../../specs/027-bootstrap-migration-registry/spec.md)'s `migration-chain-reference-integrity`.
 
 ### Stale-reference behavior
 
-If the active config file's `[migrations].last_applied` references an `id` that no longer exists in the active registry (the entry was sunsetted since the adopter's last run), treat the field as "before the oldest active entry" and run every active entry. Emit one warning: `last_applied was "{retired_id}" which has been retired; see CHANGELOG.md for its recipe.` Adopters far enough behind to hit a sunsetted entry apply it manually from `CHANGELOG.md`.
+An `id` in `[migrations].applied` (or in `last_applied`) that no longer exists in the active registry — the entry was sunsetted since the adopter's last run — is informational and needs no handling: it matches no active entry, so it neither selects nor suppresses one. Membership removes a special case the watermark required, where a retired `last_applied` had no position to compare against and so had to be treated as *before the oldest active entry*, re-running every active entry. An adopter who never applied a since-retired entry is undetectable under either model, because the entry is no longer in the registry to test against; they apply it manually from `CHANGELOG.md`.
 
 ### Duplicate-id and reference-integrity guard
 
@@ -480,7 +484,7 @@ If `framework/migrations.toml` contains two entries with the same `id`, or if an
 
 `.ductus/config.toml` is the project's configuration and persisted-decisions store. Readers fall back through the earlier locations while it is absent — `.govern/config.toml` (042-era) then the repo root `.govern.toml` (pre-042) — and the newest existing file wins when more than one is present (specs 042, 049). If the file exists, read it before processing the file manifest. The file is optional — if it does not exist, use default behavior for every key. If the file exists but is malformed (TOML parse error), abort the run with a clear error rather than silently proceeding.
 
-**Write policy — the `/ductus` migration is the sole cutover (spec 042).** Every config write in this procedure (the `[host]` managed block, the `[project]`/`[rules]`/`[paths]` input persistence, `[migrations].last_applied`) and every session write targets the **active file**: the newest tier that exists — `.ductus/`, else `.govern/`, else the repo root — and the `.ductus/` file for a fresh project where none exists. No write outside the directory migrations ever creates `.ductus/config.toml` while an older config lingers — that partial file would win on read and strand the legacy file's other sections. The migration moves the whole file as one unit; the runtime's `config_path_for_write` / `session_path_for_write` resolvers are the canonical statement of this rule, and `write-session` applies it on every session write.
+**Write policy — the `/ductus` migration is the sole cutover (spec 042).** Every config write in this procedure (the `[host]` managed block, the `[project]`/`[rules]`/`[paths]` input persistence, `[migrations].applied` and `[migrations].last_applied`) and every session write targets the **active file**: the newest tier that exists — `.ductus/`, else `.govern/`, else the repo root — and the `.ductus/` file for a fresh project where none exists. No write outside the directory migrations ever creates `.ductus/config.toml` while an older config lingers — that partial file would win on read and strand the legacy file's other sections. The migration moves the whole file as one unit; the runtime's `config_path_for_write` / `session_path_for_write` resolvers are the canonical statement of this rule, and `write-session` applies it on every session write.
 
 The file is a flat collection of top-level sections. There is no umbrella namespace; each section is keyed to the thing it governs. The sections that may appear in the config file:
 
@@ -531,10 +535,18 @@ files = [
 ]
 
 [migrations]
-# Slug of the newest pre-run migration applied. Bootstrap runs only entries
-# newer than this (see §Pre-run Migrations). Absent section means "no
-# migrations applied" — bootstrap runs every active entry. Maintained by
-# /ductus; do not edit by hand.
+# Every pre-run migration this project has applied, by slug. Bootstrap runs
+# the active entries absent from this list (see §Pre-run Migrations). Absent
+# section means "no migrations applied" — bootstrap runs every active entry.
+# This is a list rather than a high-water mark so an entry passed over for any
+# reason stays pending: a watermark makes such an entry permanently ineligible
+# the moment a later one lands, silently and with no way to recover it.
+# Maintained by /ductus; do not edit by hand.
+applied = ["gitignore-marker-rename", "governance-config-rename", "spec-and-plan-sunset", "rule-files-relocate"]
+
+# The most recently applied entry. Informational — readers such as
+# check-orphaned-references report it as migration context. `applied` is what
+# decides eligibility. Maintained by /ductus; do not edit by hand.
 last_applied = "rule-files-relocate"
 
 # Consumed by /ductus:review (not /ductus itself). Excludes rule files from
