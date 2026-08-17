@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# .govern/scripts/lib/specs-root.sh — shared spec-tree helpers for the generators.
+# .ductus/scripts/lib/specs-root.sh — shared spec-tree helpers for the generators.
 #
 # Sourced by gen-spec-deps.sh and gen-cross-service-refs.sh, which run in both
-# govern's own pre-commit and adopter pre-commit hooks. One definition rather
+# ductus's own pre-commit and adopter pre-commit hooks. One definition rather
 # than a copy per generator (spec 040 review — no drift). Shipped to adopters
-# via the Shared Files manifest in framework/bootstrap/govern.md alongside the
+# via the Shared Files manifest in framework/bootstrap/ductus.md alongside the
 # generators; sourced by script-relative path so it resolves regardless of cwd
 # or a --root override (which retargets $ROOT but not the script location).
 #
@@ -12,7 +12,7 @@
 # any of these, and $SPECS_ROOT (resolve_specs_root's result) before calling
 # list_specs / staged_specs; both generators set them up top.
 
-# Spec-root directory name from a given govern config file's [paths]
+# Spec-root directory name from a given ductus config file's [paths]
 # specs-root,
 # defaulting to "specs" (spec 040) when the file is absent, the key is missing,
 # or the value is outside the [A-Za-z0-9_-] charset (path separators, "..",
@@ -44,13 +44,20 @@ specs_root_of() {
   printf '%s' "$name"
 }
 
-# Active govern config file for a repo/checkout root: `.govern/config.toml`
-# when it exists, else the legacy root `.govern.toml` (spec 042 — new wins on
-# a split layout; when neither exists the legacy path is returned and
-# specs_root_of falls through to the default on the absent file).
+# Active ductus config file for a repo/checkout root: `.ductus/config.toml`
+# when it exists, else `.govern/config.toml`, else the legacy root
+# `.govern.toml` (specs 042/049 — newest tier wins on a split layout; when
+# none exists the legacy path is returned and specs_root_of falls through to
+# the default on the absent file). All three tiers are required: omitting the
+# `.ductus/` one resolves a *converged* adopter to a path that does not exist,
+# which specs_root_of answers with the default `specs` — so a non-default
+# [paths] specs-root enumerates the wrong tree, derives nothing, and reports
+# success. Mirrors the runtime's config-path ladder; keep them in step.
 config_path_of() {
   local base="$1"
-  if [ -f "$base/.govern/config.toml" ]; then
+  if [ -f "$base/.ductus/config.toml" ]; then
+    printf '%s' "$base/.ductus/config.toml"
+  elif [ -f "$base/.govern/config.toml" ]; then
     printf '%s' "$base/.govern/config.toml"
   else
     printf '%s' "$base/.govern.toml"

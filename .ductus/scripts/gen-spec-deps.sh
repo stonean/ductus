@@ -23,7 +23,7 @@
 # Body inline links are authoritative; the frontmatter is a derived index.
 
 set -euo pipefail
-# Two levels up: this script lives at <repo>/.govern/scripts/ (spec 042).
+# Two levels up: this script lives at <repo>/.ductus/scripts/ (specs 042, 049).
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
 dry_run=0

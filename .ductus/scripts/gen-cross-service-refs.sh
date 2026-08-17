@@ -4,7 +4,7 @@
 #
 # Walks tracked specs/NNN-*/spec.md (and spec-and-plan.md), finds inline
 # markdown links whose href is an absolute http(s) URL pointing at another
-# govern project's spec (a `/<spec-root>/NNN-slug/spec.md` path, where the
+# ductus project's spec (a `/<spec-root>/NNN-slug/spec.md` path, where the
 # <spec-root> segment is the referenced service's own spec-root name — see
 # "Root-aware matching" below), outside fenced code blocks, outside
 # blockquote-prefixed lines, and outside any `## See also`
@@ -15,7 +15,7 @@
 #   * spec    — the `NNN-slug` segment of the URL (the stable identity).
 #   * service — the URL's repo (everything before any `/blob/<ref>/` or
 #               `/tree/<ref>/` branch segment, which is ignored) matched
-#               against the govern config's [services]. A matched repo records the
+#               against the ductus config's [services]. A matched repo records the
 #               service alias; an unmatched repo records `service: null` (the
 #               `unregistered` outcome, surfaced later at resolution time).
 #
@@ -23,7 +23,7 @@
 # segment is NOT hardcoded to `specs`: a referenced service may rename its own
 # spec root (spec 040). Two tiers, decided per registered service:
 #   * Checkout reachable — the service is registered in [services] and its
-#     local `path` resolves; the matcher reads that checkout's own govern config
+#     local `path` resolves; the matcher reads that checkout's own ductus config
 #     [paths] specs-root (default `specs`) and accepts only that exact segment.
 #   * Checkout unreachable — a registered service that is not checked out, or
 #     an unregistered repo, has an unknowable root, so the matcher accepts any
@@ -43,7 +43,7 @@
 # derived index.
 
 set -euo pipefail
-# Two levels up: this script lives at <repo>/.govern/scripts/ (spec 042).
+# Two levels up: this script lives at <repo>/.ductus/scripts/ (specs 042, 049).
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
 dry_run=0
@@ -89,13 +89,13 @@ enumerate_specs() {
   if [ "$staged_only" -eq 1 ]; then staged_specs; else list_specs; fi
 }
 
-# Parse the govern config [services] into "normalized-repo<TAB>alias<TAB>root"
+# Parse the ductus config [services] into "normalized-repo<TAB>alias<TAB>root"
 # records — the registry the harvest matcher consults. A missing file or absent
 # [services] table yields an empty registry (every reference then resolves to
 # `unregistered`).
 #
 # `root` is each service's resolved spec-root name: when its local checkout is
-# reachable, read from that checkout's own govern config (default `specs`); when
+# reachable, read from that checkout's own ductus config (default `specs`); when
 # the service is not checked out, left empty — the tier where the matcher
 # accepts any spec-root segment (scenario referenced-service-spec-root, Q1). The
 # two-step parse — awk extracts alias/repo/path, then bash resolves the
