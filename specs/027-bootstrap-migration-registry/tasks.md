@@ -117,15 +117,3 @@ Look up `introduced_in` per migration via `git log` against the commits that shi
 - [x] Implement the behavior described in `scenarios/migration-chain-reference-integrity.md`
 
 - **Done when**: The registry's procedure-file convention states that a migration moving a path re-points every adopter-owned referrer of it, including references a previous migration wrote; `/{project}` verifies the batch when it finishes, reporting any adopter-owned file that references a framework-owned path which does not exist, naming the file, the missing path, and the migration whose move most likely orphaned it; the check is derived from the files and the filesystem rather than from a per-entry referrers list (which would be the author-discipline input `AGENTS.md`'s second Design Principle forbids); a dangling reference is reported rather than repaired and does not halt the run; a converged adopter with an empty batch emits nothing rather than a clean bill of health for files it never examined; a file the check could not read is reported as unexamined rather than passed per `QUAL-CLAIM-001`; the scenario's open question about bootstrap-step versus `/{project}:audit`-family placement is resolved before the task closes; `npx markdownlint-cli2` clean.
-
-## 13. migration eligibility is set membership, not a watermark
-
-- [ ] §Pre-run Migrations step 2 reads `applied` and backfills it from `last_applied` when absent, emitting the backfill line
-- [ ] step 3 filters on `id` absent from `applied` rather than comparing `introduced_in` against the watermark
-- [ ] step 7.3 appends the id to `applied` and sets `last_applied` in one atomic write, on success only
-- [ ] step 7.4 resumes at the first entry missing from `applied`, including one earlier than the last success
-- [ ] the retired-id paragraph drops the treat-as-before-the-oldest rule membership makes unnecessary
-- [ ] the config schema block in §Project Configuration documents `applied` and `last_applied`, including why a list rather than a high-water mark
-- [ ] mirrored to `framework/bootstrap/govern.md` byte-identically for Family 21
-
-- **Done when**: `[migrations].applied` decides eligibility, is appended per entry only on success, and is backfilled once from `last_applied` when absent; `last_applied` remains as informational context for readers that report it. The retired-id special case the watermark needed is gone, ordering is unchanged, and the config schema block documents both keys and why `applied` is a list.
