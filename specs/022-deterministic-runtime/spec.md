@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [021-runtime-boundary]
 review:
   last-run: 2026-08-17T14:02:09Z
@@ -214,6 +214,22 @@ Stable relationships post-rewrite:
 
 ## State at hand-off (2026-08-17)
 
+**Resolved 2026-08-17 — this spec is `done`.** The stale review described below
+was re-run at `5e6df7f` and recorded 0 MUST, 0 SHOULD, 1 low-confidence, closing
+this spec for the nineteenth time since 2026-05-12. Two things the note below
+did not anticipate. The review found and fixed a `QUAL-CLAIM-001` defect in
+`install.sh`, which printed a success line over a payload it never verified — a
+200 response carrying a captive-portal page yielded a 21-byte skill and an
+"installed" message. And five criteria — AC6, AC9, AC12, AC16, AC17 — turned out
+to be substantively superseded by `048-govern-acquired-runtime`; each is now
+annotated on the criterion itself per `AGENTS.md`. That drift was invisible
+beforehand because `check-artifacts`' criterion-path-existence family examines
+`done` specs only, so it reported this spec clean right up to the moment the
+status flipped — the same class of blind spot as a pre-commit audit that cannot
+see the working tree.
+
+**Original 2026-08-17 note follows.**
+
 **One thing blocks this spec: its own stale review.** No unchecked tasks, no
 unchecked criteria, no scenario open questions. `check-review-gate` reports
 `review-stale` — 12 durable contracts changed since `reviewed-against`
@@ -316,18 +332,18 @@ as if a smaller number would mean a smaller job.
 - [x] AC3: The subprocess interpreter's JSON-over-stdio message protocol is documented in the runtime's docs and stable enough for third-party agent hosts to integrate against.
 - [x] AC4: The six initial-release slash commands (`/ductus:status`, `/ductus:target`, `/ductus:analyze`, `/ductus:implement`, `/ductus:plan`, `/ductus:specify`) have their prose Instructions sections rewritten to follow the structural conventions and parse cleanly under the runtime parser. The remaining three (`/ductus:clarify`, `/ductus:review`, `/ductus:groom`) are not rewritten in this spec — they ship as scenarios.
 - [x] AC5: The three initial-release LLM extension points (`assessSpecQuality`, `writeCode`, `writeSpecBody`) each have a request schema, response schema, and a corresponding HTML-comment marker in the relevant Instructions step.
-- [x] AC6: A parseability check is added to `.github/workflows/markdown-only-pipeline.yml` and passes against every slash command file — the six rewritten ones under the new conventions, and the three not-yet-rewritten ones under the legacy prose-walk path (the parser tolerates files that do not yet declare a Procedure-shaped Instructions section).
+- [x] AC6: A parseability check is added to `.github/workflows/markdown-only-pipeline.yml` and passes against every slash command file — the six rewritten ones under the new conventions, and the three not-yet-rewritten ones under the legacy prose-walk path (the parser tolerates files that do not yet declare a Procedure-shaped Instructions section). Delivered as written; that workflow is renamed to `.github/workflows/framework-checks.yml` by `048-govern-acquired-runtime`, which carried the parseability check across unchanged.
 - [x] AC7: The binary executes each of the six initial-release commands end-to-end against a fixture repo and produces output consistent with the LLM-driven path against the same fixture, within the determinism bounds defined for each command.
 - [x] AC8: Median wall-clock time per invocation drops from minutes to seconds for each of the six initial-release commands when the runtime is present.
-- [x] AC9: The markdown-only path (no binary on `PATH`) continues to complete every pipeline cycle (greenfield, brownfield, reopen) as it did before this spec.
+- [x] AC9: The markdown-only path (no binary on `PATH`) continues to complete every pipeline cycle (greenfield, brownfield, reopen) as it did before this spec. Delivered as written; the guarantee is removed by `048-govern-acquired-runtime`, which made the runtime a requirement rather than an option, so the no-binary cycle this criterion asserts is since retired.
 - [x] AC10: `framework/runtime-tools.txt` is populated with every MCP tool name the binary exposes; `scripts/lint-tool-coverage.sh` passes against the rewritten slash command files.
 - [x] AC11: A new CI workflow at `.github/workflows/runtime.yml` builds the binary, runs its test suite, exercises every primitive against fixture inputs, and fails on any test failure.
-- [x] AC12: The existing `.github/workflows/markdown-only-pipeline.yml` workflow continues to pass with the runtime binary absent from `PATH`.
+- [x] AC12: The existing `.github/workflows/markdown-only-pipeline.yml` workflow continues to pass with the runtime binary absent from `PATH`. Delivered as written; that workflow no longer exists — `048-govern-acquired-runtime` replaced it with the end-to-end acquisition workflow, so the invariant this criterion asserts is removed.
 - [x] AC13: State-modifying primitives (`mark-task`, `mark-criterion`, `set-status`) use filesystem-atomic writes (write to temp + atomic rename) so a runtime crash mid-write leaves coherent markdown.
 - [x] AC14: The runtime self-reports its build-time version via `runtime --version`; parse failures emit a descriptive `error` JSON message that includes the runtime version and notes version-mismatch as a possible cause.
 - [x] AC15: The binary is distributed via GitHub release artifacts cross-compiled for `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu` (and `x86_64-pc-windows-msvc` if cross-compilation is friction-free in CI), with sha256 checksums; adopter-facing install instructions exist in a README Runtime section.
-- [x] AC16: The `/ductus` bootstrap command's completion output includes a one-line pointer to the README Runtime section, mentioning the runtime is optional.
-- [x] AC17: No slash command in `framework/commands/*.md` detects the missing runtime and prints an install nag on invocation; the markdown-only path remains a first-class path per §runtime-boundary principle 3.
+- [x] AC16: The `/ductus` bootstrap command's completion output includes a one-line pointer to the README Runtime section, mentioning the runtime is optional. Delivered as written; the pointer remains, but the optionality it announces is removed by `048-govern-acquired-runtime`, which made the runtime required.
+- [x] AC17: No slash command in `framework/commands/*.md` detects the missing runtime and prints an install nag on invocation; the markdown-only path remains a first-class path per §runtime-boundary principle 3. Delivered as written, and the no-nag half still holds; principle 3's first-class markdown-only guarantee is since retired by `048-govern-acquired-runtime`.
 - [x] AC18: `/ductus:analyze` against this spec passes with no hard-fail or blocking findings.
 - [x] AC19: `npx markdownlint-cli2` against all rewritten slash command files and new spec files passes.
 
