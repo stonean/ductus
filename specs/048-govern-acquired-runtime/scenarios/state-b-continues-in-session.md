@@ -26,7 +26,15 @@ Measured 2026-08-16 on the real adopter bootstrap (048 AC10, the adopter project
 restarts.
 
 1. the installed pre-rename `govern.md` self-updates itself — inherent, since a
-   copy predating the Pre-flight Phase cannot run the combined abort;
+   copy predating **acquisition** cannot acquire the runtime, whatever else it
+   contains. Measured again 2026-08-17: the subject's installed copy dated from
+   2026-06-30, which *did* carry the Pre-flight Phase (029) and its State A/B/C
+   detection, and still could not acquire — pre-048 State B meant *wire a binary
+   the adopter already installed*, and a missing binary was State C, which
+   proceeded on the markdown path by design. So the cutoff is acquisition
+   (048, `0.28.0`), not the Pre-flight Phase (029); an earlier revision of this
+   line named the latter and would have mis-predicted the restart count for any
+   adopter sitting between the two;
 2. pre-flight acquires and wires, then aborts;
 3. migrations (including the rename to `ductus.md`) and scaffolding run.
 
