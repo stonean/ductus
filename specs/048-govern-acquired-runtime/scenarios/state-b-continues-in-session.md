@@ -49,6 +49,17 @@ the MCP server this run just registered loads only on a fresh session — so the
 is deferred to after the scaffolding it used to precede, and its message says
 what it now means: the work is done, and the restart is for the tool surface.
 
+**Two primitives needed a CLI argument surface before this was possible.**
+`apply-manifest`'s `entries` / `pinned` / `substitutions` and
+`enforce-manifest`'s `expected` / `pinned` are arrays and maps of objects,
+which clap cannot express as flags; they were `#[arg(skip)]`, reachable only
+through the JSON context. Moving the abort without fixing that would have
+carried the run **past Shared Files having written nothing** — silently, since
+an empty manifest is a legal manifest and the primitive reports success over
+it. Each field gains a sibling `--{field}-json PATH` flag, `serde(skip)` so the
+MCP tool contract is unchanged. An unreadable or malformed file is an error,
+never an empty default: the silent-empty path is the entire hazard.
+
 **The self-update restart is untouched.** A stale `ductus.md` still aborts
 before anything else, because the run must not proceed on instructions it is
 about to replace. An adopter carrying a bootstrap that predates the Pre-flight
@@ -78,12 +89,33 @@ unaffected — it never entered State B.
 
 ## Open Questions
 
-- Does any step between the pre-flight phase and the end of scaffolding
-  genuinely require the **MCP** surface rather than the CLI? A walk of the
-  primitives those sections invoke should answer it before the abort is moved;
-  the expectation is none, but that is the assumption most worth checking
-  because moving the abort on a false one strands the run halfway.
+*None — see Resolved Questions.*
 
 ## Resolved Questions
 
-*None yet.*
+- **Does any step between the pre-flight phase and the end of scaffolding
+  genuinely require the MCP surface rather than the CLI?** **Yes — two did, and
+  the expectation recorded here was wrong.** Resolved 2026-08-17 by walking the
+  primitives, which is the check this question asked for.
+
+  Eight primitives run after the pre-flight phase: `label-criteria`,
+  `check-orphaned-references`, `merge-managed-block`, `fetch-archive`,
+  `extract-archive`, `write-session`, `apply-manifest`, and
+  `enforce-manifest`. All eight have CLI subcommands, so *availability* was
+  never the constraint. **Arguments** were: `apply-manifest`'s `entries` — the
+  manifest itself — plus `pinned` and `substitutions`, and
+  `enforce-manifest`'s `expected` and `pinned`, were all `#[arg(skip)]`,
+  documented "Set via JSON context — not exposed as CLI flags."
+
+  Called from the CLI as it stood, `apply-manifest` would have received an
+  empty manifest and copied nothing, **reporting success** — an empty manifest
+  is a legal one. The run would have continued through Per-Agent Scaffolding
+  on a project that never received a single shared file. That is precisely the
+  "strands the run halfway" outcome this question was written to prevent, and
+  the question is the only reason it was caught before the abort moved.
+
+  The fix is the `--{field}-json PATH` surface described in Behavior, which
+  reverses the original `arg(skip)` decision deliberately: that decision was
+  taken when the CLI surface of these two primitives was "a debug entry point,
+  not the production path", and State B makes the CLI *the* production path
+  for one whole run.

@@ -125,6 +125,6 @@ Phase 1 is independently safe and lands first so later work is written against a
 
 ### 13. Implement scenario: [state-b-continues-in-session](scenarios/state-b-continues-in-session.md) — acquire, then keep going through the CLI
 
-- [ ] Implement the behavior described in `scenarios/state-b-continues-in-session.md`
+- [x] Implement the behavior described in `scenarios/state-b-continues-in-session.md`
 
 - **Done when**: State B acquires, wires, seeds permissions and then **continues in the same session**, invoking each remaining primitive as `{pointer-path} <primitive>` rather than aborting; the single restart moves to after scaffolding and its message says the work is done and the restart is for the MCP tool surface; the self-update abort is unchanged and still fires before anything else; State A is unaffected; a step with no CLI equivalent falls back to that step's markdown-only specification only, not the whole run; the scenario's open question — whether any step between pre-flight and end-of-scaffolding genuinely needs MCP rather than the CLI — is answered by walking those sections' primitives before the abort is moved; a legacy adopter's bootstrap drops from three restarts to two and a current adopter's from two to one, which is what AC10 states; `framework/bootstrap/ductus.md` documents the continuation for both paths and the generated copies are re-rendered; `scripts/lint-procedure-parseability.sh` and `npx markdownlint-cli2` clean.

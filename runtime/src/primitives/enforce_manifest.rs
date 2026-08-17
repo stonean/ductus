@@ -250,6 +250,8 @@ mod tests {
         glob: Option<&str>,
     ) -> EnforceManifestArgs {
         EnforceManifestArgs {
+            expected_json: None,
+            pinned_json: None,
             directory: directory.to_string_lossy().into_owned(),
             expected: expected.iter().map(|s| (*s).to_string()).collect(),
             pinned: pinned.iter().map(|s| (*s).to_string()).collect(),
@@ -515,6 +517,8 @@ mod tests {
         }
         // Pass the directory as a repo-relative path, the bootstrap's shape.
         let args = EnforceManifestArgs {
+            expected_json: None,
+            pinned_json: None,
             directory: "cmds".into(),
             expected: vec!["status.md".into()],
             pinned: vec![],
@@ -546,6 +550,8 @@ mod tests {
     fn relative_directory_with_parent_component_is_rejected() {
         let tmp = tempfile::tempdir().unwrap();
         let args = EnforceManifestArgs {
+            expected_json: None,
+            pinned_json: None,
             directory: "../escape".into(),
             expected: vec![],
             pinned: vec![],

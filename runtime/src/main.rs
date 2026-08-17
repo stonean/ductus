@@ -164,6 +164,49 @@ fn emit_protocol_schema() -> ExitCode {
     }
 }
 
+/// Read a `--<flag> PATH` payload into the field the MCP and interpreter paths
+/// receive through the JSON context.
+///
+/// `apply-manifest`'s `entries` / `pinned` / `substitutions` and
+/// `enforce-manifest`'s `expected` / `pinned` are arrays and maps of objects,
+/// which clap cannot express as flags. A State-B `/{project}` run drives the
+/// whole bootstrap through the CLI (spec 048 `state-b-continues-in-session`),
+/// so without this the two primitives would receive **empty** collections —
+/// and an empty manifest is a *legal* manifest, so `apply-manifest` would copy
+/// nothing and report success. Every failure here is therefore an error, never
+/// a default: the silent-empty path is the whole thing this guards against.
+fn load_json_arg<T: serde::de::DeserializeOwned>(flag: &str, path: &str) -> Result<T, String> {
+    let text = std::fs::read_to_string(path)
+        .map_err(|err| format!("--{flag}: cannot read `{path}`: {err}"))?;
+    serde_json::from_str(&text)
+        .map_err(|err| format!("--{flag}: `{path}` is not valid JSON for this field: {err}"))
+}
+
+/// Fill `apply-manifest`'s context-supplied fields from their `--*-json` paths.
+fn hydrate_apply_manifest(args: &mut ApplyManifestArgs) -> Result<(), String> {
+    if let Some(path) = args.entries_json.clone() {
+        args.entries = load_json_arg("entries-json", &path)?;
+    }
+    if let Some(path) = args.pinned_json.clone() {
+        args.pinned = load_json_arg("pinned-json", &path)?;
+    }
+    if let Some(path) = args.substitutions_json.clone() {
+        args.substitutions = load_json_arg("substitutions-json", &path)?;
+    }
+    Ok(())
+}
+
+/// Fill `enforce-manifest`'s context-supplied fields from their `--*-json` paths.
+fn hydrate_enforce_manifest(args: &mut EnforceManifestArgs) -> Result<(), String> {
+    if let Some(path) = args.expected_json.clone() {
+        args.expected = load_json_arg("expected-json", &path)?;
+    }
+    if let Some(path) = args.pinned_json.clone() {
+        args.pinned = load_json_arg("pinned-json", &path)?;
+    }
+    Ok(())
+}
+
 fn emit_result<T: serde::Serialize, E: std::fmt::Display>(
     result: std::result::Result<T, E>,
 ) -> ExitCode {
@@ -498,10 +541,14 @@ fn main() -> ExitCode {
         Command::ExtractArchive(args) => {
             emit_result(primitives::extract_archive::run(&args, &repo))
         }
-        Command::ApplyManifest(args) => emit_result(primitives::apply_manifest::run(&args, &repo)),
-        Command::EnforceManifest(args) => {
-            emit_result(primitives::enforce_manifest::run(&args, &repo))
-        }
+        Command::ApplyManifest(mut args) => match hydrate_apply_manifest(&mut args) {
+            Ok(()) => emit_result(primitives::apply_manifest::run(&args, &repo)),
+            Err(err) => emit_result::<(), String>(Err(err)),
+        },
+        Command::EnforceManifest(mut args) => match hydrate_enforce_manifest(&mut args) {
+            Ok(()) => emit_result(primitives::enforce_manifest::run(&args, &repo)),
+            Err(err) => emit_result::<(), String>(Err(err)),
+        },
         Command::MergeManagedBlock(args) => {
             emit_result(primitives::merge_managed_block::run(&args, &repo))
         }

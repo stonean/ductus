@@ -208,7 +208,7 @@ No `ductus` tool is available to this session. In order:
 2. **Materialize the pointer** per **Pointer materialization** below.
 3. Register the `ductus` server per the agent's MCP registration `mechanism` (§MCP registration; details in **MCP wiring**): for `write-file`, write the MCP file additively; for `surface-instruction`, write **no** MCP file — the registration command is surfaced in the abort for the user to run once per machine.
 4. Add the permission entries needed to call the `ductus` tools (see **Permission Setup**), so the next session calls them without a prompt. This write is the same for every agent regardless of `mechanism` — it targets the project-level settings file, not the MCP-server location.
-5. Add the acquisition, the wiring, and the permission write to the **pending-restart set** and contribute this notice to the combined **Pre-flight abort**, naming the store path and every file written:
+5. Add the acquisition, the wiring, and the permission write to the **deferred-restart set** and contribute this notice to the **Closing restart** at the end of the run, naming the store path and every file written. State B does **not** stop here: the binary is now on disk and `Bash(.ductus/bin/ductus *)` was seeded in **Permission Setup** before the probe, so the run continues and invokes every remaining primitive as `{pointer-path} <primitive>` — the same deterministic code the MCP tools call, reached through the CLI surface spec 022 AC1 ships alongside them. The abort this used to raise bought nothing the CLI could not already give this run.
 
 > **ductus runtime acquired.** The runtime was not registered for this project, so `/ductus` could not use the deterministic path this run. Installed `{version}` to `{store-path}`.
 
@@ -404,13 +404,13 @@ When all selected agents are `current` or `no installed copy`, the self-update c
 
 After both checks have run, inspect the **pending-restart set**:
 
-- **Empty** — no restart is needed. Proceed to **Pre-run Migrations**. (ductus detection resolved to State A, and the self-update check saw `current` / `no installed copy` / `pinned-divergent` for every selected agent.)
-- **Non-empty** — emit one combined abort and stop before any further work. The message includes every contributed notice and names every file written during this phase:
-  - the ductus-wiring notice (State B), when ductus was wired this run — see **ductus runtime detection → State B**;
-  - the stale-update notice, when any selected agent was `stale` — see **Self-update check → Stale → defer to pre-flight abort**;
-  - a single shared closing line: **Start a new session and re-run `/ductus` to pick up the changes.**
+The set has two contributors and they are **not** equivalent, so they are inspected separately:
 
-Everything past the pre-flight phase — **Collect Project Inputs**, **Pre-run Migrations**, **Project Configuration**, the **Archive fetch and extract**, **Frontmatter Migration**, **Shared Files**, **Per-Agent Scaffolding**, **Security Audit**, and **Post-Scaffolding Output** — is skipped. The only writes performed are the additive **Permission Setup** entries, any per-stale-agent `ductus.md` overwrite, and any ductus wiring plus its permission entries. Because input collection now lives past this point, an aborted run never prompts the user for the project name, description, or languages — they are asked exactly once, in the session that proceeds to scaffold. The next `/ductus` run in a new session sees ductus live (or absent) and every selected agent `current` (or `no installed copy`), and proceeds normally without abort.
+- **A stale `ductus.md` (self-update)** — abort **now**, before any further work. The run must not proceed on instructions it has just replaced: the installed copy that is executing cannot be trusted to describe the procedure that now exists on disk. Emit the stale-update notice — see **Self-update check → Stale → defer to pre-flight abort** — with the closing line **Start a new session and re-run `/ductus` to pick up the changes.**
+- **State B wiring only** — do **not** abort. The binary is on disk, the CLI is permission-seeded, and every remaining step's primitives are reachable as `{pointer-path} <primitive>`, so stopping here would defer the entire run to another session for nothing. Continue to **Collect Project Inputs** and carry the wiring notice to the **Closing restart**.
+- **Empty** — no restart is needed at all. Proceed to **Collect Project Inputs**. (ductus detection resolved to State A, and the self-update check saw `current` / `no installed copy` / `pinned-divergent` for every selected agent.)
+
+On the **stale `ductus.md`** branch, everything past the pre-flight phase — **Collect Project Inputs**, **Pre-run Migrations**, **Project Configuration**, the **Archive fetch and extract**, **Frontmatter Migration**, **Shared Files**, **Per-Agent Scaffolding**, **Security Audit**, and **Post-Scaffolding Output** — is skipped. On the **State B** branch none of it is: the run proceeds through all of it via the CLI and stops only at the **Closing restart**. The only writes performed are the additive **Permission Setup** entries, any per-stale-agent `ductus.md` overwrite, and any ductus wiring plus its permission entries. Because input collection now lives past this point, an aborted run never prompts the user for the project name, description, or languages — they are asked exactly once, in the session that proceeds to scaffold. The next `/ductus` run in a new session sees ductus live (or absent) and every selected agent `current` (or `no installed copy`), and proceeds normally without abort.
 
 ## Collect Project Inputs
 
@@ -702,6 +702,8 @@ The user reviews the result via `git diff` and commits or aborts via `git restor
 ## Shared Files
 
 These files are scaffolded **once per `/ductus` invocation**, regardless of how many agents are selected. They are unaffected by the agent registry.
+
+**Invoking `apply-manifest` on the State B (CLI) path.** `entries`, `pinned`, and `substitutions` are arrays and maps of objects, so they are not clap flags — on the MCP and interpreter paths they arrive through the JSON context. From the CLI, write each to a temp file and pass its path: `{pointer-path} apply-manifest --source-root {staging} --target-root . --entries-json {file} --pinned-json {file} --substitutions-json {file}`. **Slash command cleanup**'s `enforce-manifest` takes `--expected-json` and `--pinned-json` the same way. An unreadable or malformed file is an **error**, never an empty default: an empty manifest is a legal manifest, so a silent fallback would copy nothing and report success — the adopter would end the run with none of the shared files and no indication why.
 
 **Rule-file surface filter.** The `framework/rules/*.md → specs/rules/*.md` entries below are filtered by `[rules] surfaces` (§Project Configuration) before the manifest is applied: an entry is kept when its suffix matches a configured surface (`*-backend.md` for `backend`, `*-frontend.md` for `frontend`), and every `*-cross.md` entry is kept unconditionally. When `surfaces` is the **empty list** (`[]`), no surface-suffixed entry matches, so only the `*-cross.md` entries are kept (cross-only). When `surfaces` is unset, all rule files are kept (pre-033 behavior). (A degenerate `surfaces` value — an unrecognized member or a non-list — has already halted the run at §Collect Project Inputs item 4 before this filter runs.) Entries the filter omits are simply not applied — never pruned — so a rule file already on disk for a now-unconfigured surface is left in place (rule files are not in `enforce-directories`); it just stops receiving updates.
 
@@ -1024,6 +1026,21 @@ After scaffolding, display:
 - Security audit summary (if applicable — see below)
 - ductus runtime tip (failed acquisition only — see below)
 - Next steps (varies by mode):
+
+### Closing restart
+
+When the **deferred-restart set** is non-empty — State B wired `ductus` this run — append this after the summary, as the last thing the run says:
+
+> **`ductus` was wired in this run and the work above is complete.** Every primitive ran through the CLI at `{pointer-path}`. Start a new session so the MCP server loads and the pipeline commands call the same primitives as tools.
+
+The restart is for the **tool surface**, not for unfinished work — that distinction is the whole point of moving this here, and the message says which so the operator does not re-run `/ductus` expecting it to do more. One restart, not two: migrations, the archive fetch, Shared Files, and every scaffolding step already happened. An adopter carrying a `ductus.md` that predates the Pre-flight Phase still pays the separate self-update hop, because a copy that cannot execute this phase cannot be talked into it.
+
+Two variants:
+
+- **The wiring was skipped** because the agent's MCP file is not valid JSON: acquisition still happened and the pointer exists, so the work above still completed by CLI. Say the registration was skipped and name the file, rather than promising a tool surface that will not appear.
+- **A `surface-instruction` agent** (Auggie, Antigravity) never gets an MCP file written by `/ductus` at all: keep surfacing the one-line registration command here, after the work rather than instead of it.
+
+Nothing is emitted when the set is empty — a State A run has no restart to announce, and a line saying so would be noise on every run.
 
 ### ductus runtime tip
 

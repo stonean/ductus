@@ -1047,9 +1047,14 @@ pub struct ManifestEntry {
 
 /// Args for `apply-manifest`.
 ///
-/// Only `source-root` and `target-root` are exposed as CLI flags; `entries`,
-/// `pinned`, and `substitutions` are set via the JSON context (the CLI surface
-/// of this primitive is a debug entry point, not the production path).
+/// `entries`, `pinned`, and `substitutions` are arrays and maps of objects,
+/// which clap cannot express as flags — they arrive through the JSON context on
+/// the MCP and interpreter paths. The CLI reaches them through the sibling
+/// `--*-json` flags below, each a path to a file holding that field's value.
+/// That surface exists because a State-B `/{project}` run drives the whole
+/// bootstrap through the CLI (spec 048 scenario `state-b-continues-in-session`);
+/// without it, `apply-manifest` would receive an empty manifest and copy
+/// nothing — silently, since an empty manifest is a legal one.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct ApplyManifestArgs {
@@ -1075,6 +1080,20 @@ pub struct ApplyManifestArgs {
     #[serde(default)]
     #[arg(skip)]
     pub substitutions: std::collections::BTreeMap<String, String>,
+    /// CLI-only: path to a JSON file holding the `entries` array.
+    /// `#[serde(skip)]` keeps it out of the MCP schema, so the tool contract
+    /// is unchanged and an MCP caller passing it is still rejected as unknown.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub entries_json: Option<String>,
+    /// CLI-only: path to a JSON file holding the `pinned` array.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub pinned_json: Option<String>,
+    /// CLI-only: path to a JSON file holding the `substitutions` map.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub substitutions_json: Option<String>,
 }
 
 /// One per-entry outcome from `apply-manifest`.
@@ -1136,6 +1155,15 @@ pub struct EnforceManifestArgs {
     #[serde(default)]
     #[arg(skip)]
     pub pinned: Vec<String>,
+    /// CLI-only: path to a JSON file holding the `expected` array. See
+    /// [`ApplyManifestArgs::entries_json`] for why this surface exists.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub expected_json: Option<String>,
+    /// CLI-only: path to a JSON file holding the `pinned` array.
+    #[serde(skip)]
+    #[arg(long, value_name = "PATH")]
+    pub pinned_json: Option<String>,
     /// When `true`, walk subdirectories recursively. Default `false` —
     /// the bootstrap's slash-command cleanup is top-level only.
     #[serde(default)]
@@ -3117,6 +3145,8 @@ mod tests {
     fn enforce_manifest_round_trip() {
         use super::{EnforceManifestArgs, EnforceManifestResult};
         let args = EnforceManifestArgs {
+            expected_json: None,
+            pinned_json: None,
             directory: ".claude/commands/anvil".into(),
             expected: vec!["status.md".into(), "target.md".into()],
             pinned: vec!["adopter-custom.md".into()],
@@ -3131,6 +3161,8 @@ mod tests {
 
         // glob_include omitted serializes without the field.
         let args_default_glob = EnforceManifestArgs {
+            expected_json: None,
+            pinned_json: None,
             directory: "x".into(),
             expected: vec![],
             pinned: vec![],
@@ -3158,6 +3190,9 @@ mod tests {
         let mut subs = BTreeMap::new();
         subs.insert("project".into(), "anvil".into());
         let args = ApplyManifestArgs {
+            entries_json: None,
+            pinned_json: None,
+            substitutions_json: None,
             source_root: "/tmp/staging".into(),
             target_root: "/tmp/project".into(),
             entries: vec![

@@ -389,6 +389,9 @@ mod tests {
         substitutions: BTreeMap<String, String>,
     ) -> ApplyManifestArgs {
         ApplyManifestArgs {
+            entries_json: None,
+            pinned_json: None,
+            substitutions_json: None,
             source_root: src_root.to_string_lossy().into_owned(),
             target_root: dst_root.to_string_lossy().into_owned(),
             entries,

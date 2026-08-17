@@ -2,6 +2,18 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.29.5] — 2026-08-17
+
+The runtime half of spec 048's `state-b-continues-in-session` — a CLI argument surface for the two primitives that had none, which is what a State-B `/ductus` run needs to finish its work in the session that acquires the runtime instead of deferring it to the next one.
+
+### Added
+
+- **`apply-manifest` gains `--entries-json` / `--pinned-json` / `--substitutions-json`, and `enforce-manifest` gains `--expected-json` / `--pinned-json`** — each a path to a JSON file holding that field's value. These fields are arrays and maps of objects, which clap cannot express as flags, so they were `#[arg(skip)]` and reachable only through the JSON context: fine while the CLI surface of these two primitives was "a debug entry point, not the production path", which is exactly how it was documented.
+
+  State B changes that. When `/ductus` acquires the runtime mid-run, the binary is on disk and the CLI is permission-seeded but no MCP server is live until the next session, so the CLI *is* the production path for that run. Walking the eight primitives invoked after the pre-flight phase found all eight had CLI subcommands — availability was never the constraint — but `apply-manifest`'s `entries` is the manifest itself. Called from the CLI as it stood, it would have received an **empty** manifest, copied nothing, and **reported success**, because an empty manifest is a legal one; the run would then have continued through Per-Agent Scaffolding on a project that received not one shared file. The scenario's open question asked for exactly this walk before the abort was moved, and it is the only reason the hazard was found first.
+
+  The new flags are `#[serde(skip)]`, so the MCP tool schema is unchanged and an MCP caller passing one is still rejected as an unknown field. An unreadable or malformed file is an **error**, never an empty default — the silent-empty path is the whole thing the surface guards against, and it is the case the new tests assert hardest.
+
 ## [0.29.4] — 2026-08-17
 
 The runtime half of spec 027's `migration-chain-reference-integrity` — the class of defect the real `papur` bootstrap surfaced twice, where a migration chain converges every file it owns and silently breaks the ones it does not.
