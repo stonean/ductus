@@ -6,7 +6,7 @@ section: "Follow-on scenarios"
 
 ## Context
 
-[046](../../046-scenario-open-question-visibility/spec.md) requires that a scenario's unresolved questions gate its parent spec's `done`, and its runtime half landed as [scenario-open-question-signal](scenario-open-question-signal.md). Both specs recorded one deliberate decision about failure: *an unreadable or malformed scenario file contributes nothing and never blocks the gate — nothing can be proven about a file that will not parse, and an unknown is not escalated into a defect.*
+[046](../../046-scenario-open-question-visibility/spec.md) requires that questions a scenario still carries gate its parent spec's `done`, and its runtime half landed as [scenario-open-question-signal](scenario-open-question-signal.md). Both specs recorded one deliberate decision about failure: *an unreadable or malformed scenario file contributes nothing and never blocks the gate — nothing can be proven about a file that will not parse, and an unknown is not escalated into a defect.*
 
 That decision is right, and it is only half the obligation. `collect_scenario_open_questions` skipped an unreadable file and returned a bare `Vec`, so **not blocking** was implemented as **not reporting**. A feature whose only scenario could not be read produced an empty question list — byte-identical to a feature whose scenarios were all read and carried nothing. Every downstream surface then asserted the reassuring reading: `check-review-gate` passed, `check-artifacts`' family reported clean, the dashboard rendered no callout, and feature-targeted `/{project}:clarify`'s report was suppressed entirely.
 

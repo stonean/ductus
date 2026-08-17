@@ -661,6 +661,37 @@ Result:
 
 Appends `- [ ] {text}` (the checkbox inbox form the inbox template and constitution §bug-handling document) atomically to `{specs-root}/inbox.md`, creating the file when missing (from `framework/templates/project/inbox.md` when that file exists on disk — the framework source repo — else a bare `# Inbox` heading). Bullet scanning (dedup and counting) is comment/fence-aware — a `-` line inside the template's `<!-- Rules: … -->` guidance is not an item. With `dedup-prefix` supplied, an existing bullet whose text starts with the prefix (checkbox bullets included) suppresses the write and the result reports `deduped: true`. `item-count` reports the total inbox bullets after the call (the pre-existing total on a `deduped` no-op). Embedded newlines in `text` are rejected as an operational error (structure injection), matching `append-task`'s single-line rule.
 
+### `check-orphaned-references` — adopter-owned files pointing at paths that are gone
+
+Args: none.
+
+Result:
+
+```json
+{
+  "findings": [
+    {
+      "referrer": "CLAUDE.md",
+      "target": ".ductus/constitution.md",
+      "line": 3,
+      "migration": ""
+    }
+  ],
+  "examined": ["CLAUDE.md", ".githooks/pre-commit"],
+  "skipped": [],
+  "attribution": "watermark",
+  "last-applied": "ductus-rename"
+}
+```
+
+The runtime half of [027](../027-bootstrap-migration-registry/spec.md)'s `migration-chain-reference-integrity`, invoked from **two** call sites so one rule has one implementation: `/{project}:analyze` §Project-level consistency (the durable adopter-facing surface) and `/{project}`'s Pre-run Migrations at batch end. Read-only, and it reports rather than repairs — the adopter may have hand-edited the reference, and a rewrite that guessed wrong is worse than a report that is precise.
+
+- **Referrers** are the `create`-strategy files the manifest never overwrites and no migration re-points: `CLAUDE.md`, `AGENTS.md`, `README.md`, `.githooks/pre-commit`. They are enumerated in code rather than derived from the **Shared Files** manifest because that manifest lives in `framework/bootstrap/ductus.md`, a this-repo artifact that is fetched into staging and never installed — so a manifest-derived list would be empty in the adopter checkout where the check does its work.
+- **Managed roots** are `.ductus/`, `.githooks/`, and the configured spec root (read from config, not assumed). A broken link into the adopter's own `docs/` is their business; scoping the check is what keeps it from being noise.
+- **`attribution` is the field that keeps the result honest.** `registry` means `framework/migrations.toml` was readable — the bootstrap call site — and a finding's `migration` names the entry whose `target_paths` covers the missing path, latest hop winning since that is the one that left the reference dangling. `watermark` means no registry was available — an adopter checkout — so `migration` is empty for an entirely different reason and `last-applied` is the only migration context there is. An empty `migration` under `registry` means *asked and no entry claims it*; under `watermark` it means *nothing to ask*. Rendering the two alike would assert an attribution nobody computed, which is `QUAL-CLAIM-001` inside a check written to enforce it.
+- **A pattern is not a reference.** A candidate containing `*` or `NNN` is documentation naming a shape (`specs/NNN-*/spec.md`), and a path the project declares it *ships* to adopters is not local breakage — both exemptions were earned by running the primitive against ductus's own repo, where they produced thirteen findings and zero real defects.
+- `examined` names the files the result describes and `skipped` names the ones it could not read, so empty `findings` reads as clean only when `skipped` is empty.
+
 ### `derive-routing-candidates` — the homes proposed work could already have
 
 Args:

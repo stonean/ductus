@@ -37,19 +37,19 @@ use crate::primitives::gate_confirm::GatePromptPayload;
 use crate::schema::primitives::{
     AppendInboxArgs, AppendInboxResult, AppendQuestionArgs, AppendQuestionResult, AppendTaskArgs,
     AppendTaskResult, ApplyManifestArgs, ApplyManifestResult, CheckArtifactsArgs,
-    CheckArtifactsResult, CheckReviewGateArgs, CheckReviewGateResult, CheckRuleIdsArgs,
-    CheckRuleIdsResult, CheckStuckArgs, CheckStuckResult, CheckboxToggleResult,
-    ComputeReviewScopeArgs, ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult,
-    CreatePlanArtifactsArgs, CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult,
-    DashboardArgs, DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult,
-    DeriveRoutingCandidatesArgs, DeriveRoutingCandidatesResult, DiffCrossSpecArgs,
-    DiffCrossSpecResult, DiscoverRuleFilesArgs, DiscoverRuleFilesResult, EnforceManifestArgs,
-    EnforceManifestResult, ExtractArchiveArgs, ExtractArchiveResult, FetchArchiveArgs,
-    FetchArchiveResult, GateConfirmArgs, LabelCriteriaArgs, LabelCriteriaResult, LintMarkdownArgs,
-    LintMarkdownResult, MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs,
-    MergeManagedBlockResult, MergePermissionsArgs, MergePermissionsResult, MigrateSessionFileArgs,
-    MigrateSessionFileResult, ProcessWaiversArgs, ProcessWaiversResult, PruneTasksArgs,
-    PruneTasksResult, ReadSpecArgs, ReadSpecResult, ReadTasksArgs, ReadTasksResult,
+    CheckArtifactsResult, CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult,
+    CheckReviewGateArgs, CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult,
+    CheckStuckArgs, CheckStuckResult, CheckboxToggleResult, ComputeReviewScopeArgs,
+    ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult, CreatePlanArtifactsArgs,
+    CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult, DashboardArgs,
+    DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult, DeriveRoutingCandidatesArgs,
+    DeriveRoutingCandidatesResult, DiffCrossSpecArgs, DiffCrossSpecResult, DiscoverRuleFilesArgs,
+    DiscoverRuleFilesResult, EnforceManifestArgs, EnforceManifestResult, ExtractArchiveArgs,
+    ExtractArchiveResult, FetchArchiveArgs, FetchArchiveResult, GateConfirmArgs, LabelCriteriaArgs,
+    LabelCriteriaResult, LintMarkdownArgs, LintMarkdownResult, MarkCriterionArgs, MarkTaskArgs,
+    MergeManagedBlockArgs, MergeManagedBlockResult, MergePermissionsArgs, MergePermissionsResult,
+    MigrateSessionFileArgs, MigrateSessionFileResult, ProcessWaiversArgs, ProcessWaiversResult,
+    PruneTasksArgs, PruneTasksResult, ReadSpecArgs, ReadSpecResult, ReadTasksArgs, ReadTasksResult,
     RemoveInboxItemArgs, RemoveInboxItemResult, ResolveAnchorArgs, ResolveAnchorResult,
     ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs, ResolveReferencesResult,
     RunGeneratorArgs, RunGeneratorResult, SetStatusArgs, SetStatusResult, TraverseDepsArgs,
@@ -792,6 +792,19 @@ impl GovRuntimeServer {
         params: Parameters<DeriveRoutingCandidatesArgs>,
     ) -> Result<Json<DeriveRoutingCandidatesResult>, String> {
         primitives::derive_routing_candidates::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "check-orphaned-references",
+        description = "Report adopter-owned files (CLAUDE.md, AGENTS.md, README.md, .githooks/pre-commit) whose references to ductus-managed paths no longer resolve — the failure a migration chain leaves behind when a later entry moves a path an earlier entry wrote into a create-strategy file the manifest never overwrites. Read-only, and reports rather than repairs: the adopter may have hand-edited the reference. Attribution has two modes and the result names which ran — `registry` when framework/migrations.toml is readable (the bootstrap call site, where it names the entry whose target_paths covers the missing path), `watermark` otherwise (an adopter checkout, where only .ductus/config.toml's [migrations].last_applied is available and `migration` is empty). An unreadable referrer lands in `skipped`, so empty `findings` means examined-and-clean only when `skipped` is empty; `examined` names the files the result actually describes."
+    )]
+    async fn check_orphaned_references(
+        &self,
+        params: Parameters<CheckOrphanedReferencesArgs>,
+    ) -> Result<Json<CheckOrphanedReferencesResult>, String> {
+        primitives::check_orphaned_references::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

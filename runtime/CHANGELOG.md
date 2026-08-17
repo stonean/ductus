@@ -2,6 +2,20 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.29.4] — 2026-08-17
+
+The runtime half of spec 027's `migration-chain-reference-integrity` — the class of defect the real `papur` bootstrap surfaced twice, where a migration chain converges every file it owns and silently breaks the ones it does not.
+
+### Added
+
+- **`check-orphaned-references`** — reports adopter-owned files whose references to ductus-managed paths no longer resolve. Each migration is authored against the layout as it stood at its own `introduced_in` and is correct there; nothing validated the **composition**, and an adopter far enough behind runs several in one batch, so the composition is what they actually execute. The referrers are the `create`-strategy files the manifest never overwrites and no migration re-points — `CLAUDE.md`, `AGENTS.md`, `README.md`, `.githooks/pre-commit` — and both real instances lived there: `constitution-relocate` wrote a constitution reference into the first three and `ductus-rename` then moved the file, leaving a dangling `@import` that yields a constitution simply not loaded; and `govern-dir-consolidate` plus `ductus-rename` moved the generators out from under an adopter-owned `pre-commit` that neither re-pointed, so the hook failed at commit time far from the run that broke it. Nothing errored in either case, which is why nothing caught them.
+
+  One primitive, **two call sites**, so one rule cannot become two that disagree: `/ductus:analyze` §Project-level consistency is the durable adopter-facing surface (it ships in the Shared Files manifest, is read-only and advisory, and runs on every invocation regardless of target), and `/ductus`'s Pre-run Migrations calls it at batch end, where it runs closest to the cause. `/ductus:audit` was considered and rejected: it is maintainer-only and absent from the manifest, so an audit family could only ever check this repository, never the adopter whose config both instances were found in.
+
+  **Attribution has two modes and the result names which one ran.** With `framework/migrations.toml` readable — the bootstrap site, where the registry is in the fetched archive — a finding names the entry whose `target_paths` covers the missing path, latest hop winning since that is the one that left the reference dangling, and `attribution` reads `registry`. Without it — an adopter checkout, where the registry is never installed — `attribution` reads `watermark` and `[migrations].last_applied` is the only migration context there is. An empty `migration` therefore means *asked, and no entry claims it* under one mode and *nothing to ask* under the other; rendering them alike would assert an attribution nobody computed, which is `QUAL-CLAIM-001` inside a check written to enforce it. Read-only throughout: it reports and never repairs, because the adopter may have hand-edited the reference and a wrong rewrite is worse than a precise report.
+
+  Two exemptions were earned by running the primitive against ductus's own repo before shipping it, where it produced thirteen findings and zero real defects: a candidate containing `*` or `NNN` is documentation naming a *shape* (`specs/NNN-*/spec.md`), not a file anyone expects to exist; and a path the project declares it *ships* to adopters is a manifest destination written on the way out, not local breakage — the same distinction `criterion-path-existence` draws, reusing its two helpers rather than a second copy of the rule.
+
 ## [0.29.3] — 2026-08-16
 
 One fix, found by `/ductus:review` running against spec 010 and reported as an advisory `QUAL-CLAIM-001` — the rule this repository wrote about its own machinery, firing on the machinery that enforces review staleness.

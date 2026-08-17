@@ -114,6 +114,6 @@ Look up `introduced_in` per migration via `git log` against the commits that shi
 
 ## 12. Implement scenario: [migration-chain-reference-integrity](scenarios/migration-chain-reference-integrity.md) — a later migration must not orphan what an earlier one wrote
 
-- [ ] Implement the behavior described in `scenarios/migration-chain-reference-integrity.md`
+- [x] Implement the behavior described in `scenarios/migration-chain-reference-integrity.md`
 
 - **Done when**: The registry's procedure-file convention states that a migration moving a path re-points every adopter-owned referrer of it, including references a previous migration wrote; `/{project}` verifies the batch when it finishes, reporting any adopter-owned file that references a framework-owned path which does not exist, naming the file, the missing path, and the migration whose move most likely orphaned it; the check is derived from the files and the filesystem rather than from a per-entry referrers list (which would be the author-discipline input `AGENTS.md`'s second Design Principle forbids); a dangling reference is reported rather than repaired and does not halt the run; a converged adopter with an empty batch emits nothing rather than a clean bill of health for files it never examined; a file the check could not read is reported as unexamined rather than passed per `QUAL-CLAIM-001`; the scenario's open question about bootstrap-step versus `/{project}:audit`-family placement is resolved before the task closes; `npx markdownlint-cli2` clean.

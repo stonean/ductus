@@ -11,15 +11,15 @@ use ductus::mcp::server::GovRuntimeServer;
 use ductus::primitives;
 use ductus::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, CheckArtifactsArgs,
-    CheckReviewGateArgs, CheckRuleIdsArgs, CheckStuckArgs, ComputeReviewScopeArgs,
-    CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs,
-    DeriveBoundaryArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs,
-    EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, LabelCriteriaArgs,
-    LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
-    MigrateSessionFileArgs, ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs,
-    RemoveInboxItemArgs, ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs,
-    RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteReviewArgs,
-    WriteSessionArgs,
+    CheckOrphanedReferencesArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStuckArgs,
+    ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs,
+    DashboardArgs, DeriveBoundaryArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs,
+    DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs,
+    GateConfirmArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
+    MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs, ProcessWaiversArgs,
+    PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RemoveInboxItemArgs, ResolveAnchorArgs,
+    ResolveFeatureArgs, ResolveReferencesArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
+    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -136,6 +136,8 @@ enum Command {
     RemoveInboxItem(RemoveInboxItemArgs),
     /// Derive the existing homes — specs, rule surfaces — proposed work could belong to.
     DeriveRoutingCandidates(DeriveRoutingCandidatesArgs),
+    /// Report adopter-owned files whose references to ductus-managed paths no longer resolve.
+    CheckOrphanedReferences(CheckOrphanedReferencesArgs),
     /// Run /ductus:analyze's residual deterministic artifact-check families for a feature.
     CheckArtifacts(CheckArtifactsArgs),
     /// Reduce a feature's tasks.md — drop spent task sections or reset to template state.
@@ -530,6 +532,9 @@ fn main() -> ExitCode {
         }
         Command::DeriveRoutingCandidates(args) => {
             emit_result(primitives::derive_routing_candidates::run(&args, &repo))
+        }
+        Command::CheckOrphanedReferences(args) => {
+            emit_result(primitives::check_orphaned_references::run(&args, &repo))
         }
         Command::CheckArtifacts(args) => {
             emit_result(primitives::check_artifacts::run(&args, &repo))

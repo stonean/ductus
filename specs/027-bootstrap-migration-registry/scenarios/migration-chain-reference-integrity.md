@@ -68,6 +68,29 @@ input `AGENTS.md`'s second Design Principle rules out: correctness would depend
 on remembering to fill it in, and the cases where it is forgotten are the cases
 where it mattered.
 
+**Its durable home is `/{project}:analyze`, under §Project-level consistency.**
+A check that runs only during `/{project}` runs only while an adopter is
+already mid-bootstrap; an orphaned reference discovered a week later has no
+surface to report it. That section already exists for exactly this subject —
+checks that *"span the project's installed command set and constitution rather
+than the target feature"* and *"catch drift in the framework files `ductus`
+ships"* — it is read-only and advisory, it ships to adopters in the Shared
+Files manifest, and it runs on every invocation regardless of which feature is
+targeted. One rule, one primitive, two call sites: `analyze` is where an
+adopter meets it, and the batch-end call is where it runs closest to the cause.
+
+**Attribution is available in one call site and not the other, and the result
+says which.** `framework/migrations.toml` — the registry carrying each entry's
+`target_paths` — is **not** in the Shared Files manifest; it lives in staging
+during a `/{project}` run and is absent from an adopter checkout. So the
+batch-end call can name the entry whose move most likely orphaned a reference,
+while the `analyze` call has only `.ductus/config.toml`'s
+`[migrations].last_applied` — a watermark naming the newest applied entry, not
+a map from paths to the migrations that moved them. The primitive therefore
+reports **which mode it ran in**: attributed against the registry, or
+watermark-only. Rendering the two identically would be `QUAL-CLAIM-001` in the
+check itself — a finding that reads as an attribution nobody computed.
+
 **A dangling reference is reported, not repaired.** The batch names the file,
 the missing path, and the migration whose move most likely orphaned it. It does
 not guess a replacement: the adopter may have hand-edited the reference, and a
@@ -109,14 +132,32 @@ report-not-repair rule above applies: name them, let the operator decide.
 
 ## Open Questions
 
-- Should the check live in the bootstrap procedure, where it sees the batch that
-  just ran and can name the responsible migration, or as an `/{project}:audit`
-  family, where it runs against this repository's own corpus on every push and
-  would catch a *newly authored* composition hazard before it ever reaches an
-  adopter? The two catch different things at different times and are not
-  alternatives so much as two placements of one rule; the question is whether
-  the second is worth its cost given the first.
+*None — see Resolved Questions.*
 
 ## Resolved Questions
 
-*None yet.*
+- **Where should the check live — the bootstrap procedure or an
+  `/{project}:audit` family?** **Neither, as posed: `/{project}:analyze` under
+  §Project-level consistency, with the bootstrap as a second call site.**
+  Resolved 2026-08-17 by the operator.
+
+  The question offered two options and both were wrong for the same reason.
+  `/{project}:audit` is **maintainer-only** — its own frontmatter says so, it is
+  absent from the Shared Files manifest, and its body states adopters never
+  invoke it — so an audit family could only ever check *this* repository, never
+  the adopter whose config the two motivating instances were found in. And the
+  bootstrap alone confines the check to the minutes an adopter spends running
+  `/{project}`, which is the one window in which they are least likely to be
+  looking.
+
+  `/{project}:analyze` is neither of those. It ships to adopters, it already
+  carries a §Project-level consistency section scoped to exactly this subject —
+  framework-owned paths referenced from files outside the target feature — and
+  that section is already read-only and advisory with an established
+  advisory→blocking promotion path this check inherits. No new command, no new
+  surface.
+
+  The bootstrap call site is kept rather than replaced, because the registry it
+  holds is what makes attribution possible at all (see the Behavior section):
+  the same primitive runs richer there and degrades explicitly, never silently,
+  when `analyze` calls it without a registry to attribute against.

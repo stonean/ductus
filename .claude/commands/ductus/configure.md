@@ -124,6 +124,7 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
    - `mcp__ductus__remove-inbox-item`
    - `mcp__ductus__check-artifacts`
    - `mcp__ductus__derive-routing-candidates`
+   - `mcp__ductus__check-orphaned-references`
    <!-- generated:mcp-allow:end -->
 
 3. Canonical `permissions.deny` entries:

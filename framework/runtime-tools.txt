@@ -58,3 +58,4 @@ append-inbox
 remove-inbox-item
 check-artifacts
 derive-routing-candidates
+check-orphaned-references

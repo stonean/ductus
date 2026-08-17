@@ -2491,6 +2491,76 @@ pub struct DeriveRoutingCandidatesResult {
     pub derivation_incomplete: bool,
 }
 
+// -- check-orphaned-references -------------------------------------------------
+
+/// Args for `check-orphaned-references`. Reports adopter-owned files whose
+/// references to ductus-managed paths no longer resolve — the runtime half of
+/// spec 027's `migration-chain-reference-integrity`, invoked from both
+/// `/ductus:analyze` §Project-level consistency and the bootstrap's
+/// migration-batch end (spec 022 scenario `orphaned-reference-check`).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckOrphanedReferencesArgs {}
+
+/// One adopter-owned reference that does not resolve.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct OrphanedReference {
+    /// Repo-relative path of the adopter-owned file carrying the reference.
+    pub referrer: String,
+    /// The ductus-managed path it names, which does not exist.
+    pub target: String,
+    /// 1-based line number within `referrer`.
+    pub line: u32,
+    /// Registry entry whose `target_paths` covers `target`, when the registry
+    /// was readable. Empty under `watermark` attribution — an empty string is
+    /// *not* a migration named "", and the `attribution` field is what tells
+    /// a caller which reading applies.
+    #[serde(default)]
+    pub migration: String,
+}
+
+/// A referrer the check could not read, recorded so an empty `findings` is
+/// never mistaken for a verified-clean tree.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct OrphanedReferenceSkip {
+    /// Repo-relative path that went unexamined.
+    pub path: String,
+    /// Why, in the operator's terms.
+    pub reason: String,
+}
+
+/// Result for `check-orphaned-references`.
+///
+/// `findings` empty with `skipped` empty is **examined and clean**. `findings`
+/// empty with `skipped` non-empty is **could not examine**, and the caller must
+/// not render it as assurance (`QUAL-CLAIM-001`).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckOrphanedReferencesResult {
+    /// Unresolved references, in referrer then line order.
+    #[serde(default)]
+    pub findings: Vec<OrphanedReference>,
+    /// Referrers examined, repo-relative — the subject the counts describe.
+    /// A caller that reports "clean" quantifies it from this rather than
+    /// asserting a property of files nobody enumerated.
+    #[serde(default)]
+    pub examined: Vec<String>,
+    /// Referrers that could not be read.
+    #[serde(default)]
+    pub skipped: Vec<OrphanedReferenceSkip>,
+    /// `registry` when `framework/migrations.toml` was readable and findings
+    /// carry a `migration`; `watermark` when it was not, and `last-applied`
+    /// is the only migration context available.
+    pub attribution: String,
+    /// `[migrations].last_applied` from the active config file — the adopter's
+    /// migration watermark. Empty when no `[migrations]` section exists, which
+    /// means *no migration has been applied*, not *a migration named ""*.
+    #[serde(default)]
+    pub last_applied: String,
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]

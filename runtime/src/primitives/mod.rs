@@ -16,6 +16,7 @@ pub mod append_question;
 pub mod append_task;
 pub mod apply_manifest;
 pub mod check_artifacts;
+pub mod check_orphaned_references;
 pub mod check_review_gate;
 pub mod check_rule_ids;
 pub mod check_stuck;

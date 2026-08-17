@@ -1100,7 +1100,7 @@ const NON_ASSERTION_MARKERS: [&str; 14] = [
 /// a broken parse means findings are emitted, never silently swallowed.
 /// Family 18 of `/{project}:audit` guards the inverse direction for the marker
 /// list; here the safe default is built into the return value.
-fn adopter_destinations(repo: &Path) -> BTreeSet<String> {
+pub(crate) fn adopter_destinations(repo: &Path) -> BTreeSet<String> {
     let mut out = BTreeSet::new();
     let Ok(text) = std::fs::read_to_string(repo.join("framework/bootstrap/ductus.md")) else {
         return out;
@@ -1129,7 +1129,7 @@ fn adopter_destinations(repo: &Path) -> BTreeSet<String> {
 /// `true` when `candidate` is one of the adopter destinations, or is a
 /// directory containing one. The directory case is what lets a criterion name
 /// `specs/templates/` and match the six per-file template rows beneath it.
-fn ships_to_adopter(destinations: &BTreeSet<String>, candidate: &str) -> bool {
+pub(crate) fn ships_to_adopter(destinations: &BTreeSet<String>, candidate: &str) -> bool {
     if destinations.contains(candidate) {
         return true;
     }
