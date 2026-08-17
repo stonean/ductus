@@ -2,6 +2,15 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.29.3] — 2026-08-16
+
+One fix, found by `/ductus:review` running against spec 010 and reported as an advisory `QUAL-CLAIM-001` — the rule this repository wrote about its own machinery, firing on the machinery that enforces review staleness.
+
+### Fixed
+
+- **A `SweepIndex` built from a diff walk that aborted partway could grant exemptions it had not earned.** `SweepIndex::build` discarded the result of `git2`'s `diff.foreach` with `let _ =`, but a walk that fails partway still leaves the event buffer holding whatever prefix was delivered. Folding that prefix is worse than folding nothing: a file whose *leading* hunk was a rename but whose *later* hunks were structural lands in the per-file index as a pure token substitution, so `changed_beyond_spelling` reports `false`, `check-review-gate` calls the review current, and a spec advances to `done` on a contract change nobody read. The two failure branches of one function also disagreed on direction — a failed `diff_tree_to_tree` already returned an empty index, which is conservative, while the discarded `foreach` error was not. Both branches now return one named `SweepIndex::unreadable()`, so "could not read the diff" has a single representation and every path reports as changed. The direction is deliberate and opposite to the enclosing gate's: `check-review-gate` fails **open** on what it cannot determine, but an exemption is a positive claim that a contract did not really change, and that claim has to be earned from a diff that was actually read (spec 022 scenario `review-staleness-on-done-specs`).
+- **`ductus derive-routing-candidates` had no help text.** It was the only variant of the CLI's `Command` enum without a doc comment, and `clap` derives each subcommand's description from exactly that — so it was the one subcommand of roughly fifty listed blank in `ductus --help`. Nothing catches this: no audit family reads clap help text, and the six-site wiring checklist for a new primitive (`AGENTS.md` §Gotchas) tracks the sites a *missing* entry breaks, while this one compiles and runs correctly and is only wrong to a human reading the help.
+
 ## [0.29.2] — 2026-08-16
 
 Two defects found by the thing spec 048's AC10 exists to do — running `/ductus` against a real pre-042 adopter, where no CI job could stand in for it. Both were invisible to every check this repository runs against itself.

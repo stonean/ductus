@@ -64,6 +64,27 @@ pub struct SweepIndex {
 }
 
 impl SweepIndex {
+    /// The index for a diff this code could not read: no entries, so every
+    /// path reports [`changed_beyond_spelling`] and no exemption is granted.
+    ///
+    /// Every failure branch in [`build`] returns *this*, so "could not examine
+    /// the diff" has one representation rather than one per branch. The
+    /// direction is deliberate and is the opposite of the enclosing gate's:
+    /// `check-review-gate` fails **open** on what it cannot determine, but an
+    /// exemption is a claim that a contract did not really change, and a claim
+    /// has to be earned from a diff that was actually read. Failing open here
+    /// would mean granting exemptions on the strength of a walk that never
+    /// finished (`QUAL-CLAIM-001`).
+    ///
+    /// [`build`]: SweepIndex::build
+    /// [`changed_beyond_spelling`]: SweepIndex::changed_beyond_spelling
+    fn unreadable() -> Self {
+        Self {
+            per_file: BTreeMap::new(),
+            repo_wide: BTreeSet::new(),
+        }
+    }
+
     /// Build the index from one `git diff --unified=0 base..HEAD -- '*.md'`.
     ///
     /// One diff per base rather than two blob reads per changed file: this
@@ -74,17 +95,14 @@ impl SweepIndex {
         let mut opts = DiffOptions::new();
         opts.context_lines(0).pathspec("*.md");
         let Ok(diff) = repo.diff_tree_to_tree(Some(base), Some(head), Some(&mut opts)) else {
-            return Self {
-                per_file: BTreeMap::new(),
-                repo_wide: BTreeSet::new(),
-            };
+            return Self::unreadable();
         };
 
         // git2 delivers file / hunk / line callbacks as separate closures, so
         // the shared state they all drive lives in one cell rather than being
         // threaded through three borrows.
         let events: RefCell<Vec<Event>> = RefCell::new(Vec::new());
-        let _ = diff.foreach(
+        let walked = diff.foreach(
             &mut |delta, _| {
                 // A deleted file's patch header names no new path
                 // (`+++ /dev/null`). Treating it as a path would let its
@@ -119,6 +137,17 @@ impl SweepIndex {
                 true
             }),
         );
+
+        // A walk that aborted partway still leaves `events` holding the prefix
+        // git2 delivered, and folding that prefix is worse than folding
+        // nothing: a file whose leading hunk was a rename but whose later
+        // hunks were structural would land in `per_file` as a pure
+        // substitution and read as **exempt**, so the gate would call the
+        // review current on a diff nobody finished reading. Discard the
+        // partial index rather than infer from it.
+        if walked.is_err() {
+            return Self::unreadable();
+        }
 
         let per_file = fold_events(&events.into_inner());
         let mut counts: BTreeMap<&Pair, usize> = BTreeMap::new();
@@ -455,6 +484,31 @@ mod tests {
             "a file in the diff with no token rewrites changed only in ways \
              the token view does not see"
         );
+    }
+
+    #[test]
+    fn an_unreadable_diff_grants_no_exemptions() {
+        // Both of `build`'s failure branches return this index, so the
+        // property is asserted once here rather than per branch. Forcing a
+        // real git2 failure is not reachable from a unit test — what is
+        // testable, and what actually matters, is that the shape those
+        // branches produce cannot hand out an exemption: an empty index has
+        // no entry for any path, so every path is a real change and the
+        // review stays stale. The alternative — folding a half-delivered
+        // diff — would let a file whose structural hunks were dropped read
+        // as a pure rename, which is `QUAL-CLAIM-001` in the machinery that
+        // enforces it.
+        let idx = SweepIndex::unreadable();
+        for path in [
+            "specs/005/data-model.md",
+            "specs/007-gate/scenarios/retry.md",
+            "",
+        ] {
+            assert!(
+                idx.changed_beyond_spelling(path),
+                "an unreadable diff must not exempt `{path}`"
+            );
+        }
     }
 
     #[test]

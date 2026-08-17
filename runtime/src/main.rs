@@ -134,6 +134,7 @@ enum Command {
     AppendInbox(AppendInboxArgs),
     /// Remove the first bullet matching `item` from {specs-root}/inbox.md (atomic).
     RemoveInboxItem(RemoveInboxItemArgs),
+    /// Derive the existing homes — specs, rule surfaces — proposed work could belong to.
     DeriveRoutingCandidates(DeriveRoutingCandidatesArgs),
     /// Run /ductus:analyze's residual deterministic artifact-check families for a feature.
     CheckArtifacts(CheckArtifactsArgs),

@@ -4,8 +4,8 @@ status: in-progress
 dependencies: [000-slash-commands]
 tags: [agent, process]
 review:
-  last-run: 2026-05-10T00:00:00Z
-  reviewed-against: 3d7c50beb1aa9e82783cb2a7f9ed5b0540068625
+  last-run: 2026-08-17T00:14:48Z
+  reviewed-against: d8c5c616648e9ae2ee06af0e8c9abd4e09613bc1
   must-violations: 0
   should-violations: 0
   low-confidence: 0
@@ -147,8 +147,8 @@ No new artifact, no per-task estimates, no budget files. The cross-reference par
 
 ### Concrete deliverables (from adapted capabilities)
 
-- [x] AC7: `tasks.md` template documents the optional `[simple]` inline marker convention (one tier; no marker = default)
-- [x] AC8: `/ductus:plan` command instructions include a step to propose `[simple]` markers on tasks the agent judges trivial
+- [x] AC7: `tasks.md` template documents the optional `[simple]` inline marker convention (one tier; no marker = default) — **superseded, delivered then removed**: the `[simple]` marker no longer exists anywhere under `framework/`, dropped by `017-derive-dont-ask`. Checked because 010 did deliver it; the removal is 017's, and 017 declares no dependency on 010, so this line is the only thing tying the two together.
+- [x] AC8: `/ductus:plan` command instructions include a step to propose `[simple]` markers on tasks the agent judges trivial — **superseded, delivered then removed**: the proposal step no longer exists, dropped by `017-derive-dont-ask` alongside the marker in AC7.
 - [x] AC9: `/ductus:implement` command instructions include a stuck-detection step that reads `git log` for affected paths and `tasks.md` checkbox state, surfaces cycles, and suggests decomposition
 - [x] AC10: `/ductus:implement` command accepts an `--auto` flag that skips per-task confirmations within a phase, with the documented gates (phase transitions, stuck detection, spec/plan edits, mid-implement discovery, risky actions) still firing
 - [x] AC11: Constitution `## Guiding Principles` → `Cost-conscious` (or a new dedicated subsection) gains a cross-reference paragraph naming governance's cost levers (lightweight track, `[simple]` marker, stuck detection, default-off autonomy) and pointing at platform tooling for runtime controls
@@ -157,7 +157,7 @@ No new artifact, no per-task estimates, no budget files. The cross-reference par
 
 ### Cross-spec deliverable
 
-- [x] AC14: If the skills capability is delivered, 005's concept is renamed from "skills" to "workflows" (cross-spec impact: reopens 005 to `in-progress` per §cross-spec-impact). Affected paths in governance: `framework/skills/` → `framework/workflows/` (flattened — registry and workflow files sit at the same level, no inner `templates/` directory), `skills/registry.json` → `workflows/registry.json`, `specs/005-skills-and-plugins/` → `specs/005-workflows/` (spec directory rename), and prose updates in 005's spec, plan, tasks, and any project templates that reference the term.
+- [x] AC14: If the skills capability is delivered, 005's concept is renamed from "skills" to "workflows" (cross-spec impact: reopens 005 to `in-progress` per §cross-spec-impact). Affected paths in governance: `framework/skills/` → `framework/workflows/` (flattened — registry and workflow files sit at the same level, no inner `templates/` directory), `skills/registry.json` → `workflows/registry.json`, `specs/005-skills-and-plugins/` → `specs/005-workflows/` (spec directory rename), and prose updates in 005's spec, plan, tasks, and any project templates that reference the term. — **partially superseded**: the `specs/005-workflows/` rename stands, but `framework/workflows/` no longer exists, sunset by `043-workflows-sunset` (which does declare 010, so that half is traceable from its frontmatter). Checked because 010 delivered the rename as specified; the later sunset is 043's.
 
 ## Open Questions
 
