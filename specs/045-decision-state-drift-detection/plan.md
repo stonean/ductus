@@ -158,7 +158,7 @@ See [data-model.md](data-model.md). It is the canonical home for the closed tell
 
 **`review.md` and `data-model.md` are out of the scanned set.** Excluding `review.md` is a genuine coverage hole: a review record can and does link to siblings. It is excluded because its prose is pinned to a past sha by design, so the check would be wrong there more often than right.
 
-**The tell list is fixed with no per-project extension.** Acknowledged during clarification as the same shape as Family 6's hardcoded SSOT list, which 026's own plan concedes is "a the derive-don't-ask principle (`017-derive-dont-ask`) violation in miniature". Accepted because the check is advisory: a false positive costs a glance, not a blocked gate. The revisit trigger is a project reporting domain prose that trips a tell repeatedly.
+**The tell list is fixed with no per-project extension.** Acknowledged during clarification as the same shape as Family 6's hardcoded SSOT list, which 026's own plan concedes is "a derive-don't-ask principle (`017-derive-dont-ask`) violation in miniature". Accepted because the check is advisory: a false positive costs a glance, not a blocked gate. The revisit trigger is a project reporting domain prose that trips a tell repeatedly.
 
 **The precision half of the promotion criterion needs a human.** "Every finding confirmed a true positive" is a maintainer judgment, not something the tool computes. That is deliberate — a mechanical word match produces 5+ findings on two consecutive runs just as reliably when it is noisy as when it is accurate, so volume alone cannot carry the promotion decision for this check the way it can for the LLM-judged ones.
 

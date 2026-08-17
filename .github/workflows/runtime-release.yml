@@ -388,7 +388,16 @@ jobs:
     # Also gated on release-assets: publishing the crate while the GitHub
     # release carries no downloadable binaries would leave the two halves of
     # one release disagreeing about whether it happened (spec 048, task 2).
-    needs: [audit, build, release-assets, acquire]
+    #
+    # And on sbom, because BE-DEPS-003 requires every production artifact to
+    # ship with a machine-readable bill of materials. On ductus-v0.29.9 the SBOM
+    # upload hit a transient GitHub 5xx, the job failed, and the crates.io
+    # publish went ahead regardless — sbom was a sibling of publish rather than
+    # a dependency, so the release sat with ten binaries and no SBOM until the
+    # failed job was re-run by hand. A job that reads like a gate for something
+    # that does not depend on it is the same defect this file already carried
+    # once, when release-assets needed only build.
+    needs: [audit, build, release-assets, acquire, sbom]
     runs-on: ubuntu-latest
     defaults:
       run:
