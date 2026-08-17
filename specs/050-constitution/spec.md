@@ -17,6 +17,31 @@ The constitution is the one artifact every adopter receives and every command
 reads, and until now no spec owned it. This spec is its home: what belongs in
 it, how it is structured, and what reaches adopters through it.
 
+## State at hand-off (2026-08-17)
+
+**Draft, and deliberately parked at the operator's judgment.** Created
+2026-08-17 by `/{project}:groom`, which routed two inbox items here: the survey
+of `AGENTS.md` entries that are true for any ductus project but ship to nobody,
+and a criterion-verification rule that belongs in the constitution for the same
+reason. Both are recorded below; the inbox items were removed as migrated.
+
+The six Open Questions are real rather than scaffolding, and none should be
+answered by an agent acting alone — every answer ships to every adopter, and the
+last of them asks what else belongs in this spec's scope, which is a scoping
+decision rather than a research task. `/{project}:clarify` is the vehicle.
+
+One question already has a caller waiting. `specs/inbox.md` carries a one-word
+sweep artifact in `045`'s **spec body** that is held here on purpose: repairing
+it would trigger the `done → in-progress` back-edge to fix a word that changes
+no claim, states no requirement, and alters no behaviour. §spec-lifecycle
+enumerates three mechanical-edit cases and a pure typo repair is none of them,
+so read strictly it reopens a done spec. Whether an edit that changes no claim
+counts as mechanical is a constitution question, and settling it here also
+settles that chore. The matching instance in `045`'s `plan.md` was already
+repaired, since a design record is not a durable contract.
+
+No implementation work has started and none should until the questions resolve.
+
 ## Ownership
 
 The constitution had no owning spec. Specs amended it constantly — `021` set

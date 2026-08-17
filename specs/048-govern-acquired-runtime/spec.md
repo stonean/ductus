@@ -151,7 +151,33 @@ as retired, so `workflows/registry.json` surviving is the documented outcome. A
 `[migrations].applied` set was built on that misreading and reverted in
 `4ceb799`. Both runs had behaved correctly the whole time.
 
-**AC10 is still the operator's to tick**, and it remains unticked here.
+**AC10 is still the operator's to tick**, and it remains unticked here. Every
+other criterion is met, no task or subtask is outstanding, the review gate
+passes, and `check-artifacts` is clean — so ticking it is the only thing between
+this spec and `done`.
+
+### What a further adoption run needs to know
+
+A third run was planned as this note was written. Three facts decide what it
+actually tests, and none of them is visible from `git status`:
+
+- **A reverted subject is not a fresh one.** See `AGENTS.md` §Gotchas — tracked
+  files come back, gitignored state does not. Check the MCP config's server key
+  and command, the absence of `.ductus/bin/`, and the store's version against
+  the pin before assuming which path a run will take.
+- **A converged subject exercises idempotency, not the migration chain.** It is
+  a real check — a second run must leave a current store byte-unchanged and
+  report no-op migrations — but it re-tests none of the pre-rename fixes, which
+  need an adopter still carrying the retired entry point.
+- **The fixes worth re-testing each need a specific starting shape**: the abort
+  wording and the in-place self-update need an installed bootstrap predating
+  acquisition; the MCP convergence needs the retired server key present
+  alongside the current one.
+
+Findings from any run route to `specs/inbox.md` with the reproducing shape
+described and the subject's name omitted (`AGENTS.md` §Workflow). The subject is
+a project outside this repository, so a session reads it freely and writes
+nothing to it without an explicit go-ahead.
 
 **Original 2026-08-17 note follows.**
 
