@@ -2,6 +2,14 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.29.8] — 2026-08-17
+
+No runtime change. `0.29.7` carried the `check-artifacts` change below but never published: its release gate failed the framework self-audit, so no assets and no crates.io publish exist at that version and the `version` pin had to move rather than be reused.
+
+### Fixed
+
+- **A release-gate failure caused by review bookkeeping, not by code.** Spec 000's review was recorded with `reviewed-against` pointing at the HEAD that existed *while* the review ran, and the scenarios it reviewed were then committed on top of it. `/ductus:audit` Family 19 compares `reviewed-against..HEAD` for every `done` spec, so the contracts read as changed since their own review the instant that commit landed. The local audit had passed because it ran **before** the commit, where the edits were invisible to a commit-to-commit diff — a green that meant nothing, which is the failure mode this repository pays for most. The review is re-recorded against the commit that actually contains its subject, and `AGENTS.md` gains the ordering rule: commit the work, review against the new HEAD, commit the review, and run the audit after committing rather than before tagging.
+
 ## [0.29.7] — 2026-08-17
 
 The runtime half of spec 000's `scenario-without-task-visibility`: a scenario hand-added to a `done` spec, never implemented and carrying no questions, used to be invisible to every check.
