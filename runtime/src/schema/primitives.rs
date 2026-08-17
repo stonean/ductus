@@ -2578,6 +2578,18 @@ pub struct CheckOrphanedReferencesResult {
     /// Referrers that could not be read.
     #[serde(default)]
     pub skipped: Vec<OrphanedReferenceSkip>,
+    /// The path prefixes a reference had to carry to be examined at all —
+    /// current *and* historical framework-managed roots.
+    ///
+    /// [`Self::examined`] bounds the claim by **subject** (which referrers were
+    /// read); this bounds it by **scope** (which reference forms were
+    /// recognized). Without it a clean result reads as "no orphans" when it
+    /// means "no orphans among paths carrying one of these prefixes", and a
+    /// reference outside the list cannot even be reported as skipped, because
+    /// nothing recognized it as a reference. A caller quantifying a clean
+    /// verdict states this alongside `examined` (spec 048 AC10 review).
+    #[serde(default)]
+    pub matched_prefixes: Vec<String>,
     /// `registry` when `framework/migrations.toml` was readable and findings
     /// carry a `migration`; `watermark` when it was not, and `last-applied`
     /// is the only migration context available.

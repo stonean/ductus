@@ -206,3 +206,14 @@ Runtime half of [049's rename](../049-rename-govern-to-ductus/spec.md): the per-
 - [x] Implement the behavior described in `scenarios/orphaned-reference-check.md`
 
 - **Done when**: `check-orphaned-references` ships: reports adopter-owned files whose framework-owned path references do not resolve (referrer, missing path, line), read-only and never repairing; attribution is `registry` when `framework/migrations.toml` is readable and `watermark` otherwise, echoing `[migrations].last_applied`, with the two rendered distinguishably; unreadable referrers land in `skipped` with a reason so an empty `findings` means examined-and-clean only when `skipped` is empty; wired at all seven Rust sites plus `framework/runtime-tools.txt`; `framework/commands/analyze.md` surfaces it under §Project-level consistency and `framework/bootstrap/ductus.md` calls it at migration-batch end; `specs/022-deterministic-runtime/data-model.md` records the result shape; generated command copies re-rendered; `cargo test`, `cargo clippy`, `npx markdownlint-cli2`, `scripts/lint-procedure-parseability.sh` and `scripts/audit/run-all.sh` all clean; released under a `ductus-v*` tag.
+
+## 94. check-orphaned-references matches historical roots and declares its scope
+
+- [ ] `managed_roots` gains `.govern/`, `scripts/gen-`, `scripts/lib/`, with the historical-root reasoning in the doc comment
+- [ ] `CheckOrphanedReferencesResult` gains `matched-prefixes`, populated from the roots the run used
+- [ ] the pre-existing test that worked around the blind spot is corrected to assert the retired-root reference is now reported
+- [ ] tests: the pre-042 generator orphan reports; an adopter-owned script does not; a clean result declares its prefixes
+- [ ] 022 `data-model.md`: result JSON, the managed-roots bullet, and the scope-honesty bullet
+- [ ] version bump, CHANGELOG entry, and a `ductus-v*` tag — the change reaches no adopter without it
+
+- **Done when**: `managed_roots` returns the historical roots `.govern/`, `scripts/gen-` and `scripts/lib/` alongside the current ones; the result carries `matched-prefixes`; a bare pre-042 generator reference is reported, an adopter-owned `scripts/build.sh` is not, and a clean result names the prefixes it matched — each covered by a test. 022's `data-model.md` records the field and the historical-root reasoning. Released, since the change is under `runtime/src/`.

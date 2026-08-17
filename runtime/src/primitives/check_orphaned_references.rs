@@ -121,6 +121,7 @@ pub fn run(
         findings,
         examined,
         skipped,
+        matched_prefixes: roots.clone(),
         attribution: if registry.is_some() {
             ATTRIBUTION_REGISTRY.to_string()
         } else {
@@ -138,9 +139,32 @@ pub fn run(
 /// business, and flagging it would make the check noise. The spec root is read
 /// from config rather than assumed, so a project that configured one is checked
 /// against its own layout.
+///
+/// **Historical roots are included, and that is the point.** The orphan a
+/// migration chain leaves behind is a reference to the path *before* the move,
+/// so it carries the *old* root — and a list of only current roots is blind to
+/// exactly the class this check exists to catch. Observed on the adopter
+/// bootstrap (048 AC10): after the generators moved root `scripts/` →
+/// `.govern/scripts/` → `.ductus/scripts/`, the adopter's `AGENTS.md` still
+/// named `scripts/gen-spec-deps.sh` and this check reported clean, because
+/// `scripts/` matched no root. The operator found it by reading the file.
+///
+/// The pre-042 generator prefixes are deliberately narrower than `scripts/`:
+/// the framework owned `scripts/gen-*.sh` and `scripts/lib/`, never the whole
+/// directory, so a root of `scripts/` would flag an adopter's own
+/// `scripts/build.sh` — noise this check must not produce.
 fn managed_roots(repo: &Path) -> Vec<String> {
     let layout = paths::Paths::load(repo);
-    let mut roots = vec![".ductus/".to_string(), ".githooks/".to_string()];
+    let mut roots = vec![
+        ".ductus/".to_string(),
+        ".githooks/".to_string(),
+        // Historical: the 042-era per-project directory, retired by `049`.
+        ".govern/".to_string(),
+        // Historical: the pre-042 generator locations, by prefix rather than
+        // by directory, so adopter-owned scripts stay out of scope.
+        "scripts/gen-".to_string(),
+        "scripts/lib/".to_string(),
+    ];
     roots.push(format!("{}/", layout.specs_root.trim_end_matches('/')));
     roots.sort();
     roots.dedup();
@@ -381,8 +405,10 @@ mod tests {
             &tmp.path().join("CLAUDE.md"),
             "# CLAUDE.md\n\n@import .govern/constitution.md\n",
         );
-        // `.govern/` is not a managed root, so the stale reference must be
-        // caught by naming a path under one that does not resolve.
+        // `.govern/` is a *historical* managed root and is matched, so the
+        // `@import` above is reported directly. It did not used to be, and this
+        // test worked around that by relying on a `.ductus/` path instead — the
+        // workaround was the blind spot, found on the 048 AC10 adopter run.
         write(
             &tmp.path().join("AGENTS.md"),
             "See `.ductus/constitution.md` and `.ductus/scripts/gen-spec-deps.sh`.\n",
@@ -391,12 +417,79 @@ mod tests {
         let targets: Vec<&str> = result.findings.iter().map(|f| f.target.as_str()).collect();
         assert_eq!(
             targets,
-            vec![".ductus/scripts/gen-spec-deps.sh"],
-            "the constitution resolves; the generator does not: {:?}",
+            vec![
+                ".govern/constitution.md",
+                ".ductus/scripts/gen-spec-deps.sh"
+            ],
+            "the retired-root @import and the missing generator both report; \
+             the current constitution resolves: {:?}",
             result.findings
         );
-        assert_eq!(result.findings[0].referrer, "AGENTS.md");
-        assert_eq!(result.findings[0].line, 1);
+        assert_eq!(result.findings[0].referrer, "CLAUDE.md");
+        assert_eq!(result.findings[1].referrer, "AGENTS.md");
+        assert_eq!(result.findings[1].line, 1);
+    }
+
+    #[test]
+    fn the_pre_042_generator_path_a_chain_orphans_is_reported() {
+        // The defect the AC10 adopter run surfaced: the generators moved root
+        // `scripts/` -> `.govern/scripts/` -> `.ductus/scripts/`, so the stale
+        // reference carries the *pre-migration* root. A current-roots-only list
+        // cannot see it, which is why the run reported clean over a real orphan.
+        let tmp = adopter();
+        write(
+            &tmp.path().join("AGENTS.md"),
+            "Run `scripts/gen-spec-deps.sh` before committing.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        let targets: Vec<&str> = result.findings.iter().map(|f| f.target.as_str()).collect();
+        assert_eq!(
+            targets,
+            vec!["scripts/gen-spec-deps.sh"],
+            "{:?}",
+            result.findings
+        );
+    }
+
+    #[test]
+    fn an_adopters_own_script_is_not_flagged_by_the_historical_prefixes() {
+        // The reason the pre-042 roots are `scripts/gen-` and `scripts/lib/`
+        // rather than `scripts/`: the framework owned those, never the whole
+        // directory. A bare `scripts/` root would turn every adopter script
+        // that fails to resolve into a finding — noise this must not produce.
+        let tmp = adopter();
+        write(
+            &tmp.path().join("README.md"),
+            "Build with `scripts/build.sh`, release with `scripts/release.sh`.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(result.findings.is_empty(), "{:?}", result.findings);
+    }
+
+    #[test]
+    fn a_clean_result_declares_the_prefixes_it_matched() {
+        // `examined` bounds the claim by subject; `matched_prefixes` bounds it
+        // by scope. A reference carrying no listed prefix is not reported as
+        // skipped, because nothing recognized it as a reference — so a clean
+        // verdict has to say which forms it looked for.
+        let tmp = adopter();
+        write(&tmp.path().join("AGENTS.md"), "Nothing managed here.\n");
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(result.findings.is_empty());
+        for expected in [
+            ".ductus/",
+            ".githooks/",
+            ".govern/",
+            "scripts/gen-",
+            "scripts/lib/",
+            "specs/",
+        ] {
+            assert!(
+                result.matched_prefixes.iter().any(|p| p == expected),
+                "{expected} missing from {:?}",
+                result.matched_prefixes
+            );
+        }
     }
 
     #[test]

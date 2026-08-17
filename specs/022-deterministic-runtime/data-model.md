@@ -679,6 +679,14 @@ Result:
   ],
   "examined": ["CLAUDE.md", ".githooks/pre-commit"],
   "skipped": [],
+  "matched-prefixes": [
+    ".ductus/",
+    ".githooks/",
+    ".govern/",
+    "scripts/gen-",
+    "scripts/lib/",
+    "specs/"
+  ],
   "attribution": "watermark",
   "last-applied": "ductus-rename"
 }
@@ -687,7 +695,9 @@ Result:
 The runtime half of [027](../027-bootstrap-migration-registry/spec.md)'s `migration-chain-reference-integrity`, invoked from **two** call sites so one rule has one implementation: `/{project}:analyze` §Project-level consistency (the durable adopter-facing surface) and `/{project}`'s Pre-run Migrations at batch end. Read-only, and it reports rather than repairs — the adopter may have hand-edited the reference, and a rewrite that guessed wrong is worse than a report that is precise.
 
 - **Referrers** are the `create`-strategy files the manifest never overwrites and no migration re-points: `CLAUDE.md`, `AGENTS.md`, `README.md`, `.githooks/pre-commit`. They are enumerated in code rather than derived from the **Shared Files** manifest because that manifest lives in `framework/bootstrap/ductus.md`, a this-repo artifact that is fetched into staging and never installed — so a manifest-derived list would be empty in the adopter checkout where the check does its work.
-- **Managed roots** are `.ductus/`, `.githooks/`, and the configured spec root (read from config, not assumed). A broken link into the adopter's own `docs/` is their business; scoping the check is what keeps it from being noise.
+- **Managed roots** are `.ductus/`, `.githooks/`, the configured spec root (read from config, not assumed), and the **historical** roots `.govern/`, `scripts/gen-`, and `scripts/lib/`. A broken link into the adopter's own `docs/` is their business; scoping the check is what keeps it from being noise.
+- **The historical roots are the point, not completeness for its own sake.** The orphan a migration chain leaves is a reference to the path *before* the move, so it carries the *old* root — a current-roots-only list is blind to exactly the class this check exists to catch. Measured on the 048 AC10 adopter run: after the generators moved root `scripts/` → `.govern/scripts/` → `.ductus/scripts/`, the adopter's `AGENTS.md` still named `scripts/gen-spec-deps.sh`, the check reported clean, and the operator found it by reading the file. The pre-042 entries are prefixes (`scripts/gen-`, `scripts/lib/`) rather than the `scripts/` directory because the framework owned those and never the whole directory; a `scripts/` root would flag an adopter's own `scripts/build.sh`.
+- **`matched-prefixes` bounds the claim by scope, as `examined` bounds it by subject.** A reference carrying none of the listed prefixes is not reported under `skipped`, because nothing recognized it as a reference at all — so without this field a clean result reads as *no orphans* when it means *no orphans among paths carrying one of these prefixes*. That gap is what let a real orphan sit under a clean verdict, and it is `QUAL-CLAIM-001` about the boundary of a claim rather than its subject.
 - **`attribution` is the field that keeps the result honest.** `registry` means `framework/migrations.toml` was readable — the bootstrap call site — and a finding's `migration` names the entry whose `target_paths` covers the missing path, latest hop winning since that is the one that left the reference dangling. `watermark` means no registry was available — an adopter checkout — so `migration` is empty for an entirely different reason and `last-applied` is the only migration context there is. An empty `migration` under `registry` means *asked and no entry claims it*; under `watermark` it means *nothing to ask*. Rendering the two alike would assert an attribution nobody computed, which is `QUAL-CLAIM-001` inside a check written to enforce it.
 - **A pattern is not a reference.** A candidate containing `*` or `NNN` is documentation naming a shape (`specs/NNN-*/spec.md`), and a path the project declares it *ships* to adopters is not local breakage — both exemptions were earned by running the primitive against ductus's own repo, where they produced thirteen findings and zero real defects.
 - `examined` names the files the result describes and `skipped` names the ones it could not read, so empty `findings` reads as clean only when `skipped` is empty.
