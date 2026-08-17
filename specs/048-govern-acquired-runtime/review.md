@@ -1,12 +1,12 @@
 ---
 spec: 048-govern-acquired-runtime
-reviewed-at: 2026-08-16T02:51:23Z
-reviewed-against: 948598d28fc2b634a699328201c0d83afecb856f
-diff-base: 9832d40
+reviewed-at: 2026-08-17T14:23:16Z
+reviewed-against: a98e9fab3af9afb9e2db078b314fd64bd482bd07
+diff-base: b9da1c12396b794c6c160fcc22ae2e6272e59b9c
 must-violations: 0
 should-violations: 0
-low-confidence: 0
-captured-issues: 0
+low-confidence: 1
+captured-issues: 2
 skipped-passes: []
 ---
 
@@ -14,11 +14,7 @@ skipped-passes: []
 
 ## Summary
 
-0 MUST violation(s), 0 SHOULD violation(s), 0 low-confidence finding(s). blocking: no.
-
-Two findings were raised and **both were fixed before this report was written**, so the counts state what is outstanding. They are recorded below with a **Status** line naming the commit that closed each.
-
-This spec's deliverable is mostly *specification* — the acquisition procedure in `framework/bootstrap/ductus.md`, two migration bodies, and a constitution amendment — plus two workflows and the four installer seeds. The passes concentrated there. The one genuinely executable artifact, `runtime-acquisition.yml`'s acquisition script, was extracted and checked standalone: `bash -n` and `shellcheck` both clean, and its assumption that the binary sits at the archive root was verified against how `runtime-release.yml` actually packages it (`tar -czf` from inside the release directory).
+Re-review after `948598d2` went stale on one durable contract, `scenarios/state-b-continues-in-session.md`. **0 MUST, 0 SHOULD, 1 low-confidence — not blocking.** The staleness was small but the review is not: `compute-review-scope` resolves 551 files against a diff base that predates the 049 rename, and that 551 is a **strict subset** of the 557 this session already reviewed for 022 — intersection 551, nothing unique to 048 — so the code surface arrives pre-reviewed and the genuinely new subject is the changed contract plus this spec's own criteria. Conflating the one-contract staleness with a small review is the error the hand-off note made and 022's note had already diagnosed; they are independent quantities. The changed contract checks out against the implementation rather than on its own authority. It claims two primitives gained a `--{field}-json PATH` surface, that the fields stay `serde(skip)` so the MCP tool contract is unchanged, and that an unreadable or malformed file is an error and never an empty default — all three verified, the last by exercising it: a malformed file exits 1 naming the flag, path and parse error; a missing file exits 1 naming the flag and path; and a deliberately-empty `[]` still exits 0 with zero counts, which is the right discrimination, since the hazard was never emptiness but an *unreadable* manifest silently becoming an empty one. `apply-manifest`'s result also quantifies what it processed (`entries`, `created`, `updated`, `unchanged`, `skipped-*`), so a caller can tell nought-of-nought from nought-of-twelve — `QUAL-CLAIM-001`'s compliant form rather than a bare success. Reading this spec's criteria against the tree, instead of trusting their checkboxes, is what this review is actually worth. **AC16 was ticked and false.** It asserts that no live artifact still describes the runtime as optional, and five bootstrap sites contradicted it: the §22 preamble called it "the optional ductus runtime"; §907 justified guarding the `label-criteria` hook step with "the runtime is optional (§runtime-boundary)", citing the section that no longer says so; §1091 and §1109 both offered "Optional: install the deterministic runtime" in completion output the adopter reads *after* `/ductus` has already acquired and wired it; and §1049's acquisition-failure tip told the reader the run "used the markdown path" and to put the binary "on your `PATH`". That last site falsified **AC12** as well, which forbids exactly the `PATH`-as-install-location documentation it contained. All five are fixed in `e86a3d3`, mirrored to `govern.md` with `cp` so Family 21's byte-identity holds by construction, and both criteria re-verified to zero hits afterwards. The §1049 site is the case for the prose-claim sweep being a distinct discipline from an identifier sweep: greps for "optional", "opt-in" and "without the runtime" all passed straight over it, because it carries none of those tokens. It surfaced only because its README link pointed at a `#runtime` anchor that does not exist — the heading is `## The runtime` — and four dead anchors were fixed with it. AC11 was a live landmine rather than a defect: it names `.github/workflows/markdown-only-pipeline.yml`, which no longer exists, and says so with "replaced", which is not one of `check-artifacts`' `NON_ASSERTION_MARKERS`. Because criterion-path-existence examines `done` specs only and this spec is gated `in-progress` on an operator-run criterion, nothing reports it today and it would have fired the moment AC10 was ticked — turning the operator's bootstrap-test close into a red audit on a criterion they never touched. Annotated in `a98e9fa` and confirmed by reproducing the family's rule against all 24 criteria: one would-fire before, zero after. The plan's Affected Files table also named two workflows that never shipped under those names (`markdown-only-pipeline.yml | Delete`, which was renamed rather than deleted, and `acquisition.yml | Create`, which shipped as `runtime-acquisition.yml`); both now name real files, so `plan-affected` stops feeding two dead entries into review scope. The remaining low-confidence entry is `CFG-ENV-001` in `fetch_archive.rs`, carried from 022's review because the file sits in both scopes and the finding fires in both; it is recorded unranked for the reasons given there. Whole-surface evidence at this HEAD: `clippy --release --all-targets -D warnings` exit 0; the full test suite exit 0; `shellcheck -S warning` clean across every changed script; markdownlint clean; `check-artifacts` clean; and `scripts/audit/run-all.sh` exit 0 run against committed state after each commit rather than before it. **AC10 remains unticked and is deliberately untouched** — it needs a real adopter bootstrap end to end, which is the operator's to run and close.
 
 ## MUST violations (blocking)
 
@@ -26,27 +22,17 @@ This spec's deliverable is mostly *specification* — the acquisition procedure 
 
 ## SHOULD violations (advisory)
 
-*None outstanding.* Both findings below were fixed in-window.
-
-### SHOULD: QUAL-GROUND-001 — the commands contradicted the constitution they follow
-
-- **File**: `framework/commands/*.md` (13 files), `framework/constitution.md:90`
-- **Rule**: A claim about existing behavior stated without grounding it in the source is an assumption, and must be labeled one rather than asserted.
-- **Finding**: The amendment made the runtime required, but every command source still opened with "the MCP tools of the **optional** ductus runtime" and instructed hosts to walk the prose when no server is registered. This spec's own plan named the risk — "a window in which the canonical source and the commands disagree" — and the window was left open. A reader following a command would have been told the opposite of what the constitution says.
-- **Auto-fixable**: no
-- **Status**: fixed in `948598d`. The no-server sentence stays rather than being deleted: there is a real window between acquisition and the restart that registers the server, so the fallback is the transitional state, reframed as such instead of presented as a first-class mode.
-
-### SHOULD: QUAL-CLAIM-001 — a scheduling failure would read as a broken workflow
-
-- **File**: `.github/workflows/runtime-acquisition.yml:38-56`
-- **Rule**: When a code path cannot examine part of its subject, its output should say so rather than emitting a result a caller reads as positive assurance.
-- **Finding**: The acquisition matrix must run each target **natively**, because the job executes the binary it installs — deliberately unlike `runtime-release.yml`, which cross-compiles `aarch64-unknown-linux-gnu` and `x86_64-apple-darwin` and never runs what it builds. Two of the required labels are availability-sensitive (`ubuntu-24.04-arm` is a newer offering; `macos-13` is the last Intel macOS image and on a deprecation path), and GitHub fails an unrecognized label at *scheduling* — no step output, no error text. Someone reading that failure sees a broken workflow, not a missing runner, and the divergence from the release matrix looks like a mistake rather than the point.
-- **Auto-fixable**: no
-- **Status**: fixed in `948598d` by recording why the matrix differs and which labels to suspect first. The availability itself cannot be verified from here — it is confirmed by the first run after a release publishes.
+*None.*
 
 ## Low-confidence findings
 
-*None.*
+### LOW-CONFIDENCE: CFG-ENV-001 — insecure-host allowlist is read from the environment per call rather than cached once
+
+- **File**: `runtime/src/primitives/fetch_archive.rs:295-299`
+- **Rule**: Every environment variable MUST be declared as either optional with a default fallback defined as a named constant, or required with no default (in which case CFG-ENV-003 governs its startup validation). Secrets MUST be declared required and MUST NOT carry an in-application default value (see BE-DATA-003). All environment variables MUST be read once at startup and the value cached; per-call reads from os.environ (or equivalent) are forbidden.
+- **Finding**: `host_is_insecure_allowed` calls `std::env::var(FETCH_ALLOW_INSECURE_HOSTS_ENV)` on each invocation, and `validate_fetch_url` calls it for the initial URL plus every redirect hop, so one fetch performs up to 1 + MAX_FETCH_REDIRECTS reads rather than one cached read. In scope for this spec because acquisition is what drives `fetch-archive`. Recorded low-confidence for the reasons given in 022's review: the count is bounded rather than a hot path, nothing in the crate calls `set_var`/`remove_var` so a value cached at first use would be identical, the default is documented at the constant, and a per-hop re-read is defensible because each redirect target is meant to receive a complete independent screen.
+- **Auto-fixable**: yes
+- **Suggested fix**: Wrap the parsed allowlist in a `std::sync::LazyLock<Option<Vec<String>>>` (or resolve it once in `run` and thread it into `validate_fetch_url`) so the variable is read once per process. Safe as written — nothing mutates the environment in-process, and the parity tests set the variable on a subprocess before it starts, so a startup read still observes it.
 
 ## Waived findings
 
@@ -54,7 +40,12 @@ This spec's deliverable is mostly *specification* — the acquisition procedure 
 
 ## Captured issues
 
-*None.*
+- Architectural exploration: re-frame the runtime's LLM extension points (`writeCode`, `writeSpecBody`, `assessSpecQuality`, future multi-turn points) as named Anthropic-style Skills the host loads at the seam, rather than ad-hoc JSON envelopes. Potential benefits: structural cache anchoring (Skills are a natural cache boundary); third-party hosts integrate against an emerging Skills protocol instead of ductus-specific JSON; `constitution-excerpts` becomes a bundled resource rather than an inline string array. Speculative — depends on Anthropic's Skills protocol stabilizing and is a larger redesign than 022's current scope. Revisit after the writeCode payload-bundling scenario on 022 ships and the cache-anchored shape proves out the pattern. Surfaced 2026-05-19 during runtime-improvement investigation. **On hold per user 2026-07-11.**
+- [ ] rule: `AGENTS.md` carries adopter-beneficial rules in a file adopters never receive. It is contributor-only — the Shared Files manifest ships `framework/constitution.md` → `.ductus/constitution.md`, the rule files, the hooks and the templates, but never this repo's `AGENTS.md` — so a rule learned here that is true for *any* ductus project reaches nobody. Surveyed 2026-08-17: 56 entries, of which ~12 are strongly universal (both §Design Principles entries; a markdown link in a spec body creating a `dependencies:` edge; `git checkout -- specs/{feature}/` silently reverting uncommitted pipeline state; never `git add -A` because it sweeps untracked `/specify` drafts; never hand-writing an `AC{n}` label; `create-scenario`'s auto-appended question scaffolding; routing a new rule to its surface's home spec instead of a new spec; re-opening a done spec via `set-status` for on-disk-edit-only cases; the prose-claim sweep that identifier sweeps miss; `fetch-depth: 0` for history-reading CI checks; treating `.ductus/config.toml` as a shared database rather than one spec's schema; and recording a superseded acceptance criterion in the spec body), ~10 borderline, and ~24 genuinely ductus-only (trunk-based commits, the retired repo name, the `runtime/` tag loop, the agent registry, cargo/rustup gotchas, primitive wiring sites). §recommendations was promoted to the constitution on 2026-08-17 as the first instance and is the model: canonical text in the constitution, a contributor-side mirror in `AGENTS.md` pointing at it. The rest needs a spec — this is a governed artifact that ships to every adopter, and promoting a dozen entries is not a one-pass edit. Prompted by the operator asking whether the recommendation rule belonged in the constitution.
+
+## Observations
+
+- convention: criterion drift is structurally invisible on any spec that sits `in-progress` indefinitely. `check-artifacts`' criterion-path-existence family is scoped to `done` specs by design (a mid-implementation criterion may legitimately name a path not yet created), but a spec gated on an operator-run criterion — 048 on AC10 — never reaches `done`, so its criteria are never examined and drift accumulates for exactly the specs that sit longest. Both defects this review found in 048's criteria (AC16 ticked-and-false, AC11 a latent would-fire) were invisible to every automated check while the spec stayed open, and surfaced only from reading the criteria against the tree by hand. Worth considering whether the family should also examine an `in-progress` spec whose criterion is already ticked — a ticked criterion is a completed claim regardless of the parent spec's status. — `runtime/src/primitives/check_artifacts.rs`
 
 ## Skipped passes
 
