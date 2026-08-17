@@ -150,6 +150,7 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
         &args.feature,
         &status,
         tasks.as_ref().map(|t| t.tasks.as_slice()),
+        repo,
     );
     check_review_drift(&mut findings, frontmatter, &status, &spec_path, repo);
 
@@ -251,9 +252,21 @@ fn check_task_consistency(findings: &mut Vec<ArtifactFinding>, tasks: &[Task], t
 /// (c) Scenario→task mapping — reference §"Scenario consistency
 /// (advisory)". Skip rules, in order:
 ///
-/// - Spec at `done` → the whole family is skipped (its tasks may have
-///   been pruned or the file reset; the durable record is the scenario
-///   file, the code, and git history).
+/// - Spec at `done` → an unmapped scenario is a finding **only when no task
+///   for it ever existed**, proven from `tasks.md` history rather than
+///   inferred from the file. `tasks.md` is not a durable index
+///   (§tasks-phase), so its *current* silence proves nothing: a spent task
+///   may have been pruned or the file reset. Its *history* does — a
+///   scenario that was implemented had a task at some point, and one that
+///   was hand-added and never implemented never did. The family used to
+///   skip `done` wholesale, which left a committed, question-free,
+///   never-tasked scenario invisible to every check while its spec stayed
+///   `done` (spec 000 scenario `scenario-without-task-visibility`).
+///   Measured over this repo's 46 `done` specs before the rule shipped:
+///   one unmapped scenario, which *was* tasked historically — so the
+///   probe fires zero times here, and the file-shape alternative would
+///   have produced exactly one false positive, the direction §tasks-phase
+///   forbids.
 /// - No `tasks.md` → not evaluable; the completeness family already owns
 ///   the missing-file signal at `planned`+, and a pre-plan spec's
 ///   scenarios have no tasks yet by design.
@@ -272,10 +285,8 @@ fn check_scenario_consistency(
     feature: &str,
     status: &str,
     tasks: Option<&[Task]>,
+    repo: &Path,
 ) {
-    if status == "done" {
-        return;
-    }
     let Some(tasks) = tasks else {
         return;
     };
@@ -286,19 +297,97 @@ fn check_scenario_consistency(
     if pruning_evidence(tasks) {
         return;
     }
-    for slug in slugs {
-        if !scenario_mapped(tasks, &slug) {
-            findings.push(ArtifactFinding {
-                family: "scenario-consistency".into(),
-                severity: "advisory".into(),
-                message: format!(
-                    "scenario {slug}.md has no corresponding task in tasks.md and the file \
-                     shows no pruning evidence"
-                ),
-                path: format!("{root}/{feature}/scenarios/{slug}.md"),
-            });
+    let done = status == "done";
+    let unmapped: Vec<String> = slugs
+        .into_iter()
+        .filter(|slug| !scenario_mapped(tasks, slug))
+        .collect();
+    // One history walk for every unmapped slug, and only when a `done` spec
+    // actually has one — the common case does no git work at all.
+    let ever = if done && !unmapped.is_empty() {
+        ever_tasked_slugs(repo, root, feature, &unmapped)
+    } else {
+        None
+    };
+    for slug in unmapped {
+        // On a `done` spec the mapping is not a durable index, so absence in
+        // the current file is not evidence of anything. Only a scenario that
+        // never had a task in any revision is a finding; an unconsultable
+        // history (`None`) suppresses every one.
+        if done && ever.as_ref().is_none_or(|seen| seen.contains(&slug)) {
+            continue;
+        }
+        let message = if done {
+            format!(
+                "scenario {slug}.md has no task in tasks.md and never had one in its history, \
+                 so it may describe behavior that was never implemented — or it may document \
+                 already-shipped behavior written after the fact, which this check cannot \
+                 distinguish. The operator decides; nothing is reopened automatically"
+            )
+        } else {
+            format!(
+                "scenario {slug}.md has no corresponding task in tasks.md and the file \
+                 shows no pruning evidence"
+            )
+        };
+        findings.push(ArtifactFinding {
+            family: "scenario-consistency".into(),
+            severity: "advisory".into(),
+            message,
+            path: format!("{root}/{feature}/scenarios/{slug}.md"),
+        });
+    }
+}
+
+/// Which of `slugs` any revision of the feature's `tasks.md` ever named.
+///
+/// The pickaxe question — *did a task for this scenario exist at any point* —
+/// answered by walking the file's history and testing each blob. A scenario
+/// that was implemented had a task before it was pruned; one that was
+/// hand-added and never implemented never did.
+///
+/// **Fails safe toward the missed finding.** `None` means the history could not
+/// be consulted at all — no git repository, an unreadable walk — and the caller
+/// treats that as *every slug was tasked*, suppressing every finding. §tasks-phase mandates that direction explicitly
+/// (*"a pruned spent task never produces a finding"*), so a check that cannot
+/// consult history must not manufacture one from its own blindness. This is the
+/// opposite default from [`crate::primitives::mechanical_sweep`], where an
+/// unreadable diff withholds an *exemption*; there the unprovable thing is a
+/// claim of sameness, here it is a claim of absence.
+fn ever_tasked_slugs(
+    repo: &Path,
+    root: &str,
+    feature: &str,
+    slugs: &[String],
+) -> Option<BTreeSet<String>> {
+    let rel = format!("{root}/{feature}/tasks.md");
+    let repository = git2::Repository::discover(repo).ok()?;
+    let mut walk = repository.revwalk().ok()?;
+    walk.push_head().ok()?;
+    let mut seen: BTreeSet<String> = BTreeSet::new();
+    for oid in walk.flatten() {
+        if seen.len() == slugs.len() {
+            break;
+        }
+        let Ok(tree) = repository.find_commit(oid).and_then(|c| c.tree()) else {
+            continue;
+        };
+        let Ok(entry) = tree.get_path(Path::new(&rel)) else {
+            continue;
+        };
+        let Ok(blob) = repository.find_blob(entry.id()) else {
+            continue;
+        };
+        let Ok(text) = std::str::from_utf8(blob.content()) else {
+            continue;
+        };
+        for slug in slugs {
+            if !seen.contains(slug) && text.contains(slug.as_str()) {
+                seen.insert(slug.clone());
+            }
         }
     }
+    Some(seen)
 }
 
 /// List scenario slugs (`*.md` basenames without extension) under the

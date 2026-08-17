@@ -2,6 +2,22 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.29.7] — 2026-08-17
+
+The runtime half of spec 000's `scenario-without-task-visibility`: a scenario hand-added to a `done` spec, never implemented and carrying no questions, used to be invisible to every check.
+
+### Changed
+
+- **`check-artifacts`' scenario→task mapping no longer skips `done` specs wholesale.** It returned before examining anything (`if status == "done" { return; }`), on the reasoning that a spent task may have been pruned and `tasks.md` is not a durable index (§tasks-phase). That is true of the file's *current* contents and false of its *history*: an implemented scenario had a task at some point, and one hand-added and never implemented never did. On a `done` spec an unmapped scenario is now a finding only when **no revision of `tasks.md` ever named its slug**, so the pruned case stays a non-finding on evidence rather than on a blanket skip.
+
+  Derived, never declared — a marker would be missed by exactly the authors who bypassed `/ductus:amend` to hand-add the scenario in the first place. Reading the code was excluded by `analyze.md`'s own Scope Boundaries.
+
+  **Advisory, and honest about its limit.** History proves no task ever existed; it cannot separate a scenario documenting already-shipped behavior from one describing unimplemented work. The finding says which of those it cannot tell and leaves the reopen to the operator rather than performing it.
+
+  **Any inability to consult history suppresses the finding** — no repository, unreadable history, non-UTF-8 blob. §tasks-phase mandates that direction, so a check that cannot look must not manufacture a finding from its own blindness. This is deliberately the opposite default from `mechanical_sweep`, where an unreadable diff withholds an *exemption*: there the unprovable thing is a claim of sameness, here a claim of absence.
+
+  Measured over this repo's 46 `done` specs before shipping: one unmapped scenario existed and *was* tasked historically, so the file-shape alternative would have produced exactly one finding and it a false positive. This rule produces zero, and a fixture reproducing the never-tasked shape does fire.
+
 ## [0.29.6] — 2026-08-17
 
 Two findings from `/ductus:review` against spec 027, both in `check-orphaned-references` itself — code shipped hours earlier in `0.29.4`.

@@ -27,17 +27,53 @@ The direct edit is legitimate on a non-`done` spec (no back-edge is owed), so th
 
 ## Edge Cases
 
-- **The criterion duplicates an existing one** — a normalized-whitespace, case-insensitive comparison is the same dedup shape `append-question` applies to `## Open Questions`; a match reports the existing entry rather than appending a near-twin.
-- **The spec is `draft`** — `/{project}:clarify` already owns this and the route should not compete with it.
-- **The spec is `done`** — see the Behavior note above; the choice between back-edge and refusal is part of the open question.
-- **A missing `## Acceptance Criteria` section** — created in template order, the way `append-question` creates a missing `## Open Questions` section, rather than refusing.
-- **The criterion describes behavior with no implementation yet** — that is the normal case on a reopened spec, and is exactly why it lands unchecked.
+- **The criterion duplicates an existing one** — a normalized-whitespace, case-insensitive comparison is the same dedup shape `append-question` applies to `## Open Questions
 
-## Open Questions
-
-- Which command owns the route — `/{project}:amend` gaining a third classifier route (question / scenario / criterion), or `/{project}:clarify` accepting a non-`draft` spec for a criteria-only pass? Amend is already the "add to this spec" verb and its classifier surface would absorb a third input shape, but its Scope Boundaries currently forbid other artifact edits; clarify already owns criteria authoring and its verification prose, but its `draft` gate is load-bearing (it is the resolver, not the back-edge entry point, per spec 014) and widening it risks reopening the recovery-path ambiguity that gate closed.
-- On a `done` spec, does the route take a back-edge to `in-progress` or refuse and redirect? A new criterion is unverified behavior, which argues for the reopen the scenario route already performs; but §spec-lifecycle defines the `done` back-edge as scenario-triggered, and a criterion is not a scenario, so adding a second trigger to that edge is a lifecycle change rather than a command addition.
+*None — see Resolved Questions.*
 
 ## Resolved Questions
 
-*None yet.*
+- **Which command owns the route?** **`/{project}:amend`, as a third classifier
+  route (question / scenario / criterion).** Resolved 2026-08-17.
+
+  The deciding property is which command already performs a back-edge mutation
+  on a classified input, and that is amend by its own contract: it documents
+  the question route (`clarified` / `planned` / `in-progress` → `draft`) and
+  the scenario route (`done` → `in-progress`) as writes it performs itself.
+  `clarify.md` disclaims the role in its own body — *"This command is the
+  resolver, not the back-edge entry point"* — and its non-`draft` handling is a
+  recovery branch for *"a state that should not occur via normal usage"*.
+  Routing criteria through clarify would widen a gate its documentation calls
+  load-bearing and re-blur the split spec 014 drew deliberately.
+
+  The objection recorded in the question — that amend's Scope Boundaries forbid
+  other artifact edits — is real but narrow: amend already writes questions,
+  scenarios, tasks, status and the session file, so criteria extend that list
+  rather than opening a new class of write.
+
+- **On a `done` spec, back-edge or refuse?** **Back-edge to `in-progress` — and
+  no lifecycle change is needed, because the edge already exists.** Resolved
+  2026-08-17.
+
+  The question was posed on the belief that *"§spec-lifecycle defines the `done`
+  back-edge as scenario-triggered"*. It does not. §spec-lifecycle states that
+  **three** back-edges exist, and the third is *"Backward via meaningful body
+  edit — `done` → `in-progress` when any artifact under `specs/{feature}/` is
+  edited meaningfully… Anything else — **new scope**, changed semantics,
+  factual corrections, restructuring — is a meaningful edit and triggers the
+  back-edge **via the same `/amend` flow used for scenarios**."*
+
+  A new acceptance criterion is a body edit, it is new scope, and it is none of
+  the three enumerated mechanical exemptions. The edge therefore already
+  applies; the criterion route uses it rather than adding a second trigger.
+  Exemption **(c)** makes the boundary explicit in the other direction: assigning
+  an `AC{n}` *label* is mechanical *"because an identifier names a requirement
+  without stating one"*, so the constitution had already separated a criterion's
+  label from its text.
+
+  Refusing was additionally ruled out by what follows from it: nothing detects
+  an unchecked criterion on a `done` spec — `check-artifacts`' criterion
+  families cover path existence and labels, not verification state — so a
+  refused criterion would be recorded somewhere no gate ever reads. Reopening
+  routes it into `/{project}:implement`'s criterion-verification step, which is
+  the gate that actually verifies criteria.

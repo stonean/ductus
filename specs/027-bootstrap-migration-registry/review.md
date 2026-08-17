@@ -1,12 +1,12 @@
 ---
 spec: 027-bootstrap-migration-registry
-reviewed-at: 2026-08-17T01:55:47Z
-reviewed-against: f1aed19
+reviewed-at: 2026-08-17T02:24:23Z
+reviewed-against: 11ff132d453c829246d6b9394ec862603a60b0d6
 diff-base: c8d0121313f7994cb939dcf6781366f4645f8b10
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-captured-issues: 1
+captured-issues: 0
 skipped-passes: []
 ---
 
@@ -14,15 +14,13 @@ skipped-passes: []
 
 ## Summary
 
-All five passes ran over the 40-file scope resolved from `c8d0121..HEAD` — the work that landed 027's `migration-chain-reference-integrity` and its runtime half. Clean at close: 0 MUST, 0 SHOULD, 0 low-confidence, nothing waived, no pass skipped.
+Re-run after `/ductus:audit` Family 19 reported this spec's review stale: the sweep that removed a named adopter project from the repository edited `scenarios/migration-chain-reference-integrity.md`, a durable contract, after the prior verdict was recorded.
 
-Two findings were raised and **fixed** rather than recorded, per this repo's rule that a SHOULD gates `done` exactly as a MUST does. Both were in `check-orphaned-references` itself, shipped hours earlier in `0.29.4`, and both are the same shape — a claim wider than what the code had established. A candidate path built from a referrer file's *contents* could carry `..` past the repo root and still be reported as a broken *managed* reference, which asserts something about a path the check does not govern; and `covers` carried a second prefix disjunct that could never fire, because its input is normalized a line earlier. Fixed in `0.29.6` with two regression tests, including the sibling-prefix case (`.ductus` must not cover `.ductus-cache/`).
+The staleness is correct and the exemption correctly did not apply. The sweep was a token substitution in intent but not in form — the replacement text varied by sentence (`the adopter still carries`, `the real adopter bootstrap`, `the adopter bootstrap`), so no single pair recurs across two files and `mechanical_sweep`'s repo-wide test rightly declines to exempt it. A conservative gate on a prose-only edit is the cheap direction of error.
 
-The security pass gave the traversal the most attention and concluded it was never exploitable: the primitive is existence-only and opens nothing, and the referrer files are the adopter's own committed artifacts, so no trust boundary is crossed. It was fixed on correctness grounds, not security ones — and on consistency, since `apply-manifest` already refuses a destination that escapes the repo root.
+Passes re-run over the same 40-file scope: 0 MUST, 0 SHOULD, 0 low-confidence, nothing waived, no pass skipped. The delta since the prior verdict is prose only — no runtime behavior, no contract semantics — and the two defects that verdict recorded as fixed (the repo-escaping candidate path and the unreachable `covers` disjunct) remain fixed.
 
-The reuse pass found the opposite of a finding: `check-orphaned-references` reaches for `check_artifacts::adopter_destinations` and `ships_to_adopter` rather than restating the ships-elsewhere rule, and `load_json_arg` is one generic helper serving both manifest hydrators.
-
-Verification: 953 tests pass (`--locked --release`), clippy clean on `--all-targets`, `scripts/audit/run-all.sh` exit 0, markdownlint clean over 420 files. The primitive was also run against this repository — 0 findings, 4 referrers examined, 0 skipped — and against a fixture reproducing both adopter defects, which it reports.
+Verification: 953 tests pass (`--locked --release`), clippy clean on `--all-targets`, markdownlint clean over 420 files.
 
 ## MUST violations (blocking)
 
@@ -42,7 +40,7 @@ Verification: 953 tests pass (`--locked --release`), clippy clean on `--all-targ
 
 ## Captured issues
 
-- [ ] rule: `AGENTS.md` carries adopter-beneficial rules in a file adopters never receive — surveyed 2026-08-17, ~12 of 56 entries are strongly universal; §recommendations was promoted to the constitution as the first instance and is the model. The rest needs a spec.
+*None.*
 
 ## Observations
 

@@ -5,16 +5,19 @@ argument-hint: "[input text]"
 
 # Amend
 
-Add input to the targeted spec or scenario. `/amend` classifies the input as either a **question** (an unresolved decision recorded under `## Open Questions`) or a **scenario** (a concrete behavior captured under `scenarios/{slug}.md`), routes through the matching path, and on the spec target performs whichever back-edge keeps the lifecycle invariant.
+Add input to the targeted spec or scenario. `/amend` classifies the input as a **question** (an unresolved decision recorded under `## Open Questions`), a **scenario** (a concrete behavior captured under `scenarios/{slug}.md`), or a **criterion** (a testable requirement recorded under `## Acceptance Criteria`), routes through the matching path, and on the spec target performs whichever back-edge keeps the lifecycle invariant.
 
 ## Purpose
 
 Captures additions to a spec that arise at any point in the pipeline — during review, planning, implementation, or just thinking. `/amend` is the single verb for "I have a thing to add to this spec." The framework classifies the input and routes it; the user approves the classification (or flips it) at the same approval gate that already exists for the refined wording.
 
-Two back-edges keep the spec lifecycle honest, both owned by `/amend`:
+The back-edges that keep the spec lifecycle honest are owned by `/amend`:
 
 - **Question route — `clarified` / `planned` / `in-progress` → `draft`.** Recording a new open question on a non-`draft` spec leaves the spec in an internally inconsistent state ("status says questions resolved, body has unresolved questions"); the same write reverts status to `draft`. The user's acceptance of the refined question at the approval gate is the consent for the mutation; no separate prompt fires.
 - **Scenario route — `done` → `in-progress`.** Recording a scenario on a `done` spec reopens it via the documented reopen cycle (§spec-lifecycle). The scenario's task is implemented, the spec returns to `done`.
+- **Criterion route — `done` → `in-progress`.** Recording a new acceptance criterion on a `done` spec reopens it. This adds **no new edge**: §spec-lifecycle's third back-edge already covers a *meaningful body edit*, and a new criterion is new scope, so it takes that edge "via the same `/amend` flow used for scenarios". The criterion is appended unlabelled and the label assigned by `label-criteria` — never by hand, since the assignment is `max(highest label in body, next-criterion)` and a hand-written guess collides with a retired label eventually. On a spec below `done` the criterion is recorded with no status change: `clarified` and later already tolerate criteria, and only `done` asserts they are all verified.
+
+  Why this route belongs here rather than on `/ductus:clarify`: clarify is the resolver, not the back-edge entry point (spec 014), and its `draft` gate is load-bearing. `/amend` already classifies an input and performs the matching mutation, so a third route extends a surface that exists instead of widening a gate that was narrowed deliberately. See [000's `criterion-route-after-draft`](../../specs/000-slash-commands/scenarios/criterion-route-after-draft.md) for the full reasoning.
 
 ## Context
 

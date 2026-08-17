@@ -123,12 +123,12 @@ Done when: the scenario's described behavior is correctly implemented; every gov
 
 ## 17. Implement scenario: scenario-without-task-visibility
 
-- [ ] Implement the behavior described in `scenarios/scenario-without-task-visibility.md`
+- [x] Implement the behavior described in `scenarios/scenario-without-task-visibility.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested; a committed, question-free scenario with no task surfaces on a `done` spec, while 041's pruned-task non-finding is preserved.
 
 ## 18. Implement scenario: criterion-route-after-draft
 
-- [ ] Implement the behavior described in `scenarios/criterion-route-after-draft.md`
+- [x] Implement the behavior described in `scenarios/criterion-route-after-draft.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested; a spec past `draft` gains an acceptance criterion through a command route rather than a hand edit, the criterion lands unchecked for the completion gate to verify, and the `done`-spec case behaves as the resolved open question specifies.
