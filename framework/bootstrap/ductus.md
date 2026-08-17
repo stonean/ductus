@@ -19,7 +19,7 @@ The same `ductus.md` supports every agent the framework knows about. The set of 
 
 ## Instructions
 
-> **For agent runtimes**: backticked primitive names in this section (`fetch-archive`, `extract-archive`, `apply-manifest`, `merge-managed-block`, `enforce-manifest`) map to MCP tools the optional [ductus runtime](https://crates.io/crates/ductus) exposes under bare `<primitive>` names (e.g., `fetch-archive`). Hosts wrap them with a server-name prefix taken from the agent's MCP registration (Claude: `mcp__ductus__fetch-archive`; Auggie: `mcp:ductus:fetch-archive`). When the server is registered for your session, **call the corresponding tool** for each step listed below — that is the deterministic path. When it is not registered, walk the markdown-only reference below (`tar -xzf`, `curl`, etc.) to produce the same result. The two paths share a contract; neither one wraps the other.
+> **For agent runtimes**: backticked primitive names in this section (`fetch-archive`, `extract-archive`, `apply-manifest`, `merge-managed-block`, `enforce-manifest`) map to MCP tools the [ductus runtime](https://crates.io/crates/ductus) exposes under bare `<primitive>` names (e.g., `fetch-archive`). Hosts wrap them with a server-name prefix taken from the agent's MCP registration (Claude: `mcp__ductus__fetch-archive`; Auggie: `mcp:ductus:fetch-archive`). When the server is registered for your session, **call the corresponding tool** for each step listed below — that is the deterministic path. When it is not registered, walk the markdown-only reference below (`tar -xzf`, `curl`, etc.) to produce the same result. The two paths share a contract; neither one wraps the other.
 
 **Procedural fidelity.** Execute the steps below as written. The only confirmation prompts to issue are those the procedure specifies: project inputs (§Inputs), agent-selection prompts on `--add-agent` / first-run (§Agent Selection), and the registry-driven migration prompts (§Pre-run Migrations — outer "apply N pending migrations" prompt plus any per-entry inner prompts the procedure files specify). Do not stop to warn about uncommitted edits to update-strategy files, custom slash commands that **Slash command cleanup** is about to remove, or "data loss" from the stale → write-and-abort path. The procedure already encodes safety: `.ductus/config.toml` `[pinned] files` is the opt-out, the stale path writes upstream and aborts cleanly (recoverable from git), and slash-command cleanup is unconditional for unpinned files. Extra prompts duplicate information the procedure already gives the user and stall routine runs.
 
@@ -904,7 +904,7 @@ After **Per-Agent Scaffolding** completes, manage the project's git pre-commit h
 
 Two files participate, with different ownership models:
 
-- **`.githooks/ductus-pre-commit`** is ductus-owned. Placed by the **Shared Files** manifest with `update` strategy; carries the `# managed-by: ductus` sentinel on line 2; rewritten on every `/ductus` run unless pinned in `.ductus/config.toml`. Holds the generator orchestration (currently `.ductus/scripts/gen-spec-deps.sh --staged` and `.ductus/scripts/gen-cross-service-refs.sh --staged` plus output staging). Both run with `--staged` so a commit only rewrites the specs it touches, never unrelated ones. It additionally runs `ductus label-criteria` once per staged spec — the acceptance-criterion labelling pass (spec 013), which is the backstop for a criterion typed by hand in an editor. That step is a *runtime primitive* rather than a shipped script, so it is guarded on the binary being present and its failure is swallowed: the runtime is optional (§runtime-boundary), and a ductus predating `label-criteria` exits non-zero on the unknown subcommand. Per-spec invocation gives it the same staged scoping the generators get from `--staged`.
+- **`.githooks/ductus-pre-commit`** is ductus-owned. Placed by the **Shared Files** manifest with `update` strategy; carries the `# managed-by: ductus` sentinel on line 2; rewritten on every `/ductus` run unless pinned in `.ductus/config.toml`. Holds the generator orchestration (currently `.ductus/scripts/gen-spec-deps.sh --staged` and `.ductus/scripts/gen-cross-service-refs.sh --staged` plus output staging). Both run with `--staged` so a commit only rewrites the specs it touches, never unrelated ones. It additionally runs `ductus label-criteria` once per staged spec — the acceptance-criterion labelling pass (spec 013), which is the backstop for a criterion typed by hand in an editor. That step is a *runtime primitive* rather than a shipped script, so it is guarded on the binary being present and its failure is swallowed: the hook has to survive a checkout whose runtime has not been acquired yet (a fresh clone, or the `/ductus` run that is itself doing the acquiring), and a ductus predating `label-criteria` exits non-zero on the unknown subcommand. Per-spec invocation gives it the same staged scoping the generators get from `--staged`.
 - **`.githooks/pre-commit`** is adopter-owned. Placed by the manifest with `create` strategy on first install; never overwritten thereafter. Initial content invokes `./.githooks/ductus-pre-commit`; adopters add their own pre-commit checks above or below that invocation.
 
 This section's job is to wire git up to actually run the outer hook (`git config core.hooksPath .githooks`) without clobbering whatever hook system the project already uses.
@@ -1046,7 +1046,7 @@ Nothing is emitted when the set is empty — a State A run has no restart to ann
 
 When acquisition was attempted and **failed** (the run halts, so this line accompanies the halt rather than a completed scaffold), append one line after the file summary:
 
-> Tip: this run used the markdown path. Installing the `ductus` runtime makes `/ductus` and the pipeline commands much cheaper in tokens — see [Runtime](https://github.com/stonean/ductus#runtime). Once it's on your `PATH`, `/ductus` wires it in automatically.
+> Tip: acquisition failed, so this run halted before the deterministic path was available — there is no markdown-only mode to degrade into. Recover either by placing the pinned binary into the store by hand (the halt message above names the store path and the release URL) or by setting `[runtime] path` in `.ductus/config.toml` to a binary you supply, then re-run `/ductus`. Your `PATH` is not consulted. See [The runtime](https://github.com/stonean/ductus#the-runtime) in the ductus README.
 
 Omit the tip in **State A** (the runtime is already live) and **State B** (the run aborted in pre-flight before this output). State B's file disclosure rides the **Pre-flight abort** message, not this output.
 
@@ -1088,7 +1088,7 @@ Next steps:
 4. Use `/{project}:log` to record any known issues or bugs into `specs/inbox.md`.
 5. Run `/{project}:groom` to walk the inbox and route each item to its proper spec or scenario.
 6. Create your first feature spec: `/{project}:specify {feature description}`.
-7. Optional: install the deterministic runtime for faster slash commands — see [Runtime](https://github.com/stonean/ductus#runtime) in the ductus README.
+7. The deterministic runtime is already acquired and wired by this run — you do not install it. See [The runtime](https://github.com/stonean/ductus#the-runtime) in the ductus README for how it is pinned and upgraded.
 
 To adopt an additional agent later, re-run `/ductus --add-agent`.
 
@@ -1106,7 +1106,7 @@ Updated agents: {comma-separated `name` of selected agents}.
 
 Review changes to updated files and commit when ready. To adopt an additional agent, re-run `/ductus --add-agent`.
 
-Tip: `specs/` is plain markdown and works in any PKM tool (Obsidian, Logseq, Foam) or as a published site (Quartz, MkDocs). Optional: install the deterministic runtime for faster slash commands — see [Runtime](https://github.com/stonean/ductus#runtime) in the ductus README.
+Tip: `specs/` is plain markdown and works in any PKM tool (Obsidian, Logseq, Foam) or as a published site (Quartz, MkDocs). `/ductus` keeps the deterministic runtime current on every run — see [The runtime](https://github.com/stonean/ductus#the-runtime) in the ductus README.
 
 ---
 
