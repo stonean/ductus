@@ -1,6 +1,6 @@
 ---
 title: "010-agent-autonomy — spec"
-status: in-progress
+status: done
 dependencies: [000-slash-commands]
 tags: [agent, process]
 review:
@@ -21,26 +21,31 @@ Evaluate capabilities found in autonomous agent orchestration tools (e.g., GSD-2
 
 Each capability is evaluated independently. The outcome for each is one of: **adopt** (add to governance), **adapt** (modify the concept to fit governance's model), or **decline** (not a fit).
 
-## State at hand-off (2026-08-16)
+## Completion record (2026-08-17)
 
-**Substantively finished; blocked only on a stale review.** Task 17 shipped in
-`ductus-v0.29.2`. No unchecked tasks, no scenario open questions, every
-acceptance criterion met.
+**Closed.** Task 17 — the next-step offer — shipped in `ductus-v0.29.2`, and the
+scenario's open question was resolved by the operator: **name one task, and say
+how many remain after it.** A menu re-renders a slice of `tasks.md` after every
+completion; the count recovers most of its value, and looking further ahead is a
+free-text redirect like any other. The reasoning is in the scenario's Resolved
+Questions.
 
-The scenario's open question — one next task or several — was resolved by the
-operator: **name one, and say how many remain after it.** A menu re-renders a
-slice of `tasks.md` after every completion; the count recovers most of its value,
-and looking further ahead is a free-text redirect like any other. The reasoning
-is in the scenario's Resolved Questions.
-
-`check-review-gate` blocks the `done` transition because
+What actually held the spec open at the end was a stale review:
 [`implement-offers-the-next-step`](scenarios/implement-offers-the-next-step.md)
-was edited after the recorded `reviewed-against` — a real contract change, not a
-rename, so the mechanical-sweep exemption correctly does not apply.
+was edited after the recorded `reviewed-against`, a real contract change rather
+than a rename, so the mechanical-sweep exemption correctly did not apply. The
+closing `/{project}:review` run reported one advisory `QUAL-CLAIM-001` against
+`SweepIndex::build` — the staleness machinery itself — which was **fixed** rather
+than carried, per this repo's rule that a SHOULD gates `done` exactly as a MUST
+does. That fix shipped as `ductus-v0.29.3`.
 
-**One `/{project}:review` run against 010 closes this spec.** Its computed scope
-is small (unlike 022's, which resolves ~551 files), which makes it the cheapest
-spec on the board to finish. Nothing else is outstanding here.
+Three acceptance criteria are annotated **superseded** in place: AC7 and AC8
+(the `[simple]` marker and its `/{project}:plan` proposal step, dropped by
+`017-derive-dont-ask`) and half of AC14 (`framework/workflows/`, sunset by
+`043-workflows-sunset`). They stay checked because 010 delivered them; the
+removals belong to the later specs. The annotations exist because nothing
+detects a later spec invalidating an earlier one's criterion — an inbox item
+records that gap.
 
 ## Capabilities Under Evaluation
 
