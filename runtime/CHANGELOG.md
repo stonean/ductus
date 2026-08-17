@@ -2,6 +2,15 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.29.6] — 2026-08-17
+
+Two findings from `/ductus:review` against spec 027, both in `check-orphaned-references` itself — code shipped hours earlier in `0.29.4`.
+
+### Fixed
+
+- **A reference that escapes the repo is no longer treated as a managed path.** Candidates come from a referrer file's *contents*, and `.` and `/` are both path characters, so `.ductus/../../elsewhere/gone.md` matched a managed-root prefix and was joined onto the repo root unexamined. Nothing was opened — the check is existence-only — so this was never an exploit; it was a category error. A path outside the repo is not a ductus-managed path, so reporting it as a broken managed reference makes a claim about something this check does not govern. `apply-manifest` already refuses a destination that escapes the repo root; the same rule now applies where paths *enter* rather than only where they are written.
+- **`covers` carried a disjunct that could never fire.** The directory-prefix test read `target.starts_with("{dir}/") || claimed.ends_with('/') && target.starts_with(claimed)`, but `claimed` is normalized with `trim_end_matches('/')` a line earlier, so the second arm matched nothing the first had not already matched. One prefix test now, with both written forms of a registry entry (`.ductus/` and `.ductus`) covered by a test that also pins the sibling-prefix case (`.ductus` must not cover `.ductus-cache/`).
+
 ## [0.29.5] — 2026-08-17
 
 The runtime half of spec 048's `state-b-continues-in-session` — a CLI argument surface for the two primitives that had none, which is what a State-B `/ductus` run needs to finish its work in the session that acquires the runtime instead of deferring it to the next one.

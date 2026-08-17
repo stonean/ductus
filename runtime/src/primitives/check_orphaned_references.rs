@@ -181,7 +181,7 @@ fn managed_paths_in(line: &str, roots: &[String]) -> BTreeSet<String> {
                     .last()
                     .unwrap_or(0);
             let candidate = trim_trailing_punctuation(&line[start..end]);
-            if candidate.len() > root.len() && !is_pattern(candidate) {
+            if candidate.len() > root.len() && !is_pattern(candidate) && stays_in_repo(candidate) {
                 found.insert(candidate.to_string());
             }
         }
@@ -207,6 +207,21 @@ fn is_path_char(c: char) -> bool {
 /// `AGENTS.md` and `README.md`, which is where the false positives showed up.
 fn is_pattern(candidate: &str) -> bool {
     candidate.contains('*') || candidate.contains("NNN")
+}
+
+/// Whether a candidate stays inside the repo.
+///
+/// The candidate comes from a file's *contents*, and `.` and `/` are both path
+/// characters, so `.ductus/../../elsewhere` matches a managed root and would be
+/// joined onto the repo root unexamined. Nothing is opened — the check is
+/// existence-only — so this is not an exploit so much as a category error: a
+/// path outside the repo is not a ductus-managed path, and reporting it as a
+/// broken managed reference would be a finding about something this check does
+/// not govern. `apply-manifest` already refuses a destination that escapes the
+/// repo root; same rule, applied where paths enter rather than where they are
+/// written.
+fn stays_in_repo(candidate: &str) -> bool {
+    !candidate.split('/').any(|segment| segment == "..")
 }
 
 /// Strip sentence and markup punctuation a path can pick up from prose.
@@ -296,8 +311,12 @@ fn covers(claimed: &str, target: &str) -> bool {
     if claimed == target {
         return true;
     }
+    // One prefix test, not two: the trailing-slash form (`.ductus/`) and the
+    // bare form (`.ductus`) both normalize to the same directory here, so the
+    // second disjunct this used to carry could never fire on an input the
+    // first did not already match.
     let dir = claimed.trim_end_matches('/');
-    target.starts_with(&format!("{dir}/")) || claimed.ends_with('/') && target.starts_with(claimed)
+    target.starts_with(&format!("{dir}/"))
 }
 
 // -- watermark -----------------------------------------------------------------
@@ -542,6 +561,38 @@ mod tests {
             "a declared adopter destination is not local breakage: {:?}",
             result.findings
         );
+    }
+
+    #[test]
+    fn a_reference_that_escapes_the_repo_is_not_a_managed_path() {
+        // `.` and `/` are both path characters, so a traversal matches a
+        // managed-root prefix. A path outside the repo is not a ductus-managed
+        // path, so it is not this check's business either way.
+        let tmp = adopter();
+        write(
+            &tmp.path().join("AGENTS.md"),
+            "See `.ductus/../../elsewhere/gone.md` and `.ductus/still-gone.md`.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        let targets: Vec<&str> = result.findings.iter().map(|f| f.target.as_str()).collect();
+        assert_eq!(
+            targets,
+            vec![".ductus/still-gone.md"],
+            "only the in-repo reference is reported: {:?}",
+            result.findings
+        );
+    }
+
+    #[test]
+    fn covers_matches_a_directory_entry_in_either_written_form() {
+        // The registry writes `.ductus/` and `.ductus` interchangeably; both
+        // must cover a file beneath it, and neither may cover a sibling whose
+        // name merely starts with the same characters.
+        assert!(covers(".ductus/", ".ductus/constitution.md"));
+        assert!(covers(".ductus", ".ductus/constitution.md"));
+        assert!(covers(".ductus/*", ".ductus/constitution.md"));
+        assert!(covers(".ductus/constitution.md", ".ductus/constitution.md"));
+        assert!(!covers(".ductus", ".ductus-cache/x.md"));
     }
 
     #[test]

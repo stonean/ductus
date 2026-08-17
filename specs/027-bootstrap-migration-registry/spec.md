@@ -1,9 +1,9 @@
 ---
-status: in-progress
+status: done
 dependencies: [026-framework-self-audit]
 review:
-  last-run: 2026-05-22T02:32:17Z
-  reviewed-against: 3e0053f36dcbc30969ec55221856101451a57f97
+  last-run: 2026-08-17T01:55:47Z
+  reviewed-against: f1aed19
   must-violations: 0
   should-violations: 0
   low-confidence: 0
@@ -15,24 +15,30 @@ next-criterion: 30
 
 Replace the monotonically-growing prose-encoded Pre-run Migrations section in [framework/bootstrap/ductus.md](../../framework/bootstrap/ductus.md) with a machine-readable registry of convention removals. Adopters record the last migration they applied; bootstrap runs only newer entries. After a per-entry sunset, migrations drop from the active registry but stay documented in an adopter-facing changelog. A new [`/audit`](../026-framework-self-audit/spec.md) family fails when a removed convention has no registry entry, so future removals can't ship without an adopter path.
 
-## State at hand-off (2026-08-16)
+## Completion record (2026-08-17)
 
-Reopened `done → in-progress` to carry one scenario:
-`migration-chain-reference-integrity`, **task 12, unstarted**.
+**Closed.** The spec was reopened `done → in-progress` to carry one scenario,
+`migration-chain-reference-integrity`, and that scenario is now shipped.
 
-Each registry entry is authored against the layout at its own `introduced_in`
-and is correct there; nothing validates the **composition** an adopter far
-enough behind actually executes. Three instances surfaced in one day during
-048's `papur` bootstrap — a dangling constitution `@import`, a pre-commit hook
-calling generators moved twice, and stale `gvrn` grants nothing prunes. The
-first two are fixed in `ductus-rename`; the scenario captures the class and
-proposes a **derived** post-batch check rather than a per-entry referrers list.
+Its open question asked whether the check belonged in the bootstrap procedure or
+in an `/{project}:audit` family. **Neither, as posed** — `/{project}:audit` is
+maintainer-only and absent from the Shared Files manifest, so an audit family
+could only ever check this repository, never the adopter whose config both
+motivating instances were found in. The rule lives in `/{project}:analyze`
+§Project-level consistency, which ships to adopters and already exists for this
+subject, with the bootstrap's migration batch as a second call site because the
+registry it holds is what makes attribution possible. One primitive,
+`check-orphaned-references`, serves both; its attribution degrades from
+`registry` to `watermark` explicitly rather than silently. Released in
+`ductus-v0.29.4`, with two follow-up fixes in `0.29.6` found by this spec's own
+review.
 
-**Its one open question is deliberate and is the operator's**: should the check
-live in the bootstrap procedure (sees the batch, can name the responsible
-migration) or as an `/{project}:audit` family (catches a newly authored hazard
-before it reaches an adopter)? That is why `check-artifacts` reports an advisory
-here. Do not guess it.
+AC6, AC23 and AC24 are annotated for **dated naming**: they say `.govern.toml`,
+which no longer exists. The behaviour each requires is unchanged and shipped —
+only the filename moved, by `042-consolidate-govern-per-project-files-under-govern-directory`
+and `049-rename-govern-to-ductus`. The legacy name is still load-bearing inside
+the migration chain itself, since a migration must name the file it migrates
+*from*.
 
 ## Motivation
 
@@ -103,7 +109,7 @@ This family is the gate that makes the registry load-bearing: a maintainer who r
 
 ### Adopter state
 
-- [x] AC6: `.govern.toml` schema documents a `[migrations]` section with a `last_applied` field (string, slug-valued). Absent field means "no migrations applied" — bootstrap runs every active entry.
+- [x] AC6: `.govern.toml` schema documents a `[migrations]` section with a `last_applied` field (string, slug-valued). Absent field means "no migrations applied" — bootstrap runs every active entry. — **superseded naming**: `.govern.toml` no longer exists; the same section now lives in `.ductus/config.toml`, moved by `042-consolidate-govern-per-project-files-under-govern-directory` and renamed by `049-rename-govern-to-ductus`. The behaviour this criterion requires is unchanged and shipped; only the filename is dated.
 - [x] AC7: On `/ductus` re-run against an adopter whose `last_applied` equals the newest active entry's `id`, the migration loop performs zero filesystem reads beyond loading the registry and reports zero migrations applied.
 - [x] AC8: On `/ductus` re-run against an adopter whose `last_applied` is older than the newest entry, only entries newer than `last_applied` (per SemVer comparison on `introduced_in`, lexicographic tie-break on `id`) execute.
 - [x] AC9: After each migration completes successfully, `last_applied` is updated to that entry's `id` before the next entry begins. An aborted batch resumes from the next-pending entry on the following `/ductus` run.
@@ -135,8 +141,8 @@ This family is the gate that makes the registry load-bearing: a maintainer who r
 ### Edge cases and failure modes
 
 - [x] AC22: Empty registry (`framework/migrations.toml` exists but contains zero `[[migrations]]` entries): the bootstrap loop is a no-op, no batch prompt is emitted, no `last_applied` write occurs.
-- [x] AC23: `.govern.toml` exists but has no `[migrations]` section: treated as "no migrations applied" — bootstrap runs every active entry. Subsequent run writes the `[migrations]` section.
-- [x] AC24: `.govern.toml` `[migrations].last_applied` references an `id` that no longer exists in the active registry (sunsetted since the adopter's last run): bootstrap treats the field as "before the oldest active entry" and runs every active entry. A warning is emitted: `last_applied was "{id}" which has been retired; see CHANGELOG.md for its recipe`.
+- [x] AC23: `.govern.toml` exists but has no `[migrations]` section: treated as "no migrations applied" — bootstrap runs every active entry. Subsequent run writes the `[migrations]` section. — **superseded naming**: `.govern.toml` no longer exists; the same section now lives in `.ductus/config.toml`, moved by `042-consolidate-govern-per-project-files-under-govern-directory` and renamed by `049-rename-govern-to-ductus`. The behaviour this criterion requires is unchanged and shipped; only the filename is dated.
+- [x] AC24: `.govern.toml` `[migrations].last_applied` references an `id` that no longer exists in the active registry (sunsetted since the adopter's last run): bootstrap treats the field as "before the oldest active entry" and runs every active entry. A warning is emitted: `last_applied was "{id}" which has been retired; see CHANGELOG.md for its recipe`. — **superseded naming**: `.govern.toml` no longer exists; the same section now lives in `.ductus/config.toml`, moved by `042-consolidate-govern-per-project-files-under-govern-directory` and renamed by `049-rename-govern-to-ductus`. The behaviour this criterion requires is unchanged and shipped; only the filename is dated.
 - [x] AC25: Two TOML entries share the same `id`: bootstrap aborts at registry-parse time with a clear error. Family 10's no-orphan check would also fail on a subsequent `/audit`.
 - [x] AC26: Malformed `framework/migrations.toml` (TOML parse error): bootstrap aborts before running any migration, matching existing 022 TOML-parse-error semantics.
 - [x] AC27: `framework/migrations/{id}.md` referenced by a TOML entry does not exist in the fetched archive: bootstrap aborts the batch at that entry, reports `migration {id}: procedure file missing from archive`, and `last_applied` retains its prior value. Family 10's no-broken-references check would have caught this at maintainer time.
