@@ -209,11 +209,11 @@ Runtime half of [049's rename](../049-rename-govern-to-ductus/spec.md): the per-
 
 ## 94. check-orphaned-references matches historical roots and declares its scope
 
-- [ ] `managed_roots` gains `.govern/`, `scripts/gen-`, `scripts/lib/`, with the historical-root reasoning in the doc comment
-- [ ] `CheckOrphanedReferencesResult` gains `matched-prefixes`, populated from the roots the run used
-- [ ] the pre-existing test that worked around the blind spot is corrected to assert the retired-root reference is now reported
-- [ ] tests: the pre-042 generator orphan reports; an adopter-owned script does not; a clean result declares its prefixes
-- [ ] 022 `data-model.md`: result JSON, the managed-roots bullet, and the scope-honesty bullet
-- [ ] version bump, CHANGELOG entry, and a `ductus-v*` tag — the change reaches no adopter without it
+- [x] `managed_roots` gains `.govern/`, `scripts/gen-`, `scripts/lib/`, with the historical-root reasoning in the doc comment
+- [x] `CheckOrphanedReferencesResult` gains `matched-prefixes`, populated from the roots the run used
+- [x] the pre-existing test that worked around the blind spot is corrected to assert the retired-root reference is now reported
+- [x] tests: the pre-042 generator orphan reports; an adopter-owned script does not; a clean result declares its prefixes
+- [x] 022 `data-model.md`: result JSON, the managed-roots bullet, and the scope-honesty bullet
+- [x] version bump, CHANGELOG entry, and a `ductus-v*` tag — the change reaches no adopter without it
 
 - **Done when**: `managed_roots` returns the historical roots `.govern/`, `scripts/gen-` and `scripts/lib/` alongside the current ones; the result carries `matched-prefixes`; a bare pre-042 generator reference is reported, an adopter-owned `scripts/build.sh` is not, and a clean result names the prefixes it matched — each covered by a test. 022's `data-model.md` records the field and the historical-root reasoning. Released, since the change is under `runtime/src/`.
