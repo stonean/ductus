@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [017-derive-dont-ask, 022-deterministic-runtime, 023-govern-refinement, 024-rule-loader, 025-rule-opt-out]
 review:
   last-run: 2026-08-16T13:09:52Z
@@ -8,7 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 15
+next-criterion: 16
 ---
 
 # 026 — Framework self-audit (`/audit`)
@@ -130,6 +130,7 @@ The maintainer reviews findings and routes each to a fix path:
 - [x] AC12: `/audit`'s exit code is `0` when no findings are present and `1` when any finding is present. CI can gate releases on the exit code without parsing the report.
 - [x] AC13: `/audit` writes its output to stdout in a maintainer-friendly format: one section per check family, one finding per row within a family, with severity / location / message / suggested-fix columns. No `audit.md` report file is produced (unlike `/ductus:review`'s `review.md`) — the framework-level audit is run interactively, not stored as an artifact.
 - [x] AC14: The boundary with `/ductus:analyze` is documented in `framework/commands/audit.md` §Notes (or equivalent): `/ductus:analyze` is feature-spec-scoped; `/audit` is framework-scoped; the two never duplicate a check. Adopters never invoke `/audit` — it is a ductus-maintainer tool.
+- [x] AC15: **Adopter shell behavior** runs the shipped `framework/bootstrap/hooks/ductus-pre-commit` and `.ductus/scripts/**` against a generated fixture shaped like an adopter's tree — a non-default `[paths] specs-root`, config only at `.ductus/config.toml`, and the runtime reachable only through the `.ductus/bin/ductus` pointer with nothing named `ductus` on `PATH` — and asserts that the spec root resolves to the configured value, that the hook reaches the runtime, and that no generator rewrite is left unstaged. The fixture is built at both the default and a configured root so neither failure masks the other, the runtime is stubbed so the family stays hermetic, and any precondition that prevents the fixture from being built is emitted as a finding rather than skipped.
 
 ## Open Questions
 

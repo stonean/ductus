@@ -47,12 +47,19 @@ scripts/gen-help-tables.sh
 git add framework/bootstrap/configure/claude.md framework/bootstrap/configure/auggie.md
 git add .claude/commands/ductus/ 2>/dev/null || true
 git add framework/commands/help.md
+# Scope to the configured spec root, the same way the generators above do.
+# This repo uses the default `specs`, so a hardcoded path happens to work here
+# — which is exactly why the shipped hook carried the same bug unnoticed until
+# an adopter fixture exercised a renamed spec tree (Family 22).
+. .ductus/scripts/lib/specs-root.sh
+SPECS_ROOT="$(resolve_specs_root)"
+
 # Re-stage only spec files already part of this commit, so the generator's
 # derived `dependencies:` rewrite is captured without sweeping in untracked
 # `/specify` drafts or unstaged edits to other tracked specs
 # (spec 017 / tracked-specs-not-worktree).
-staged_specs="$(git diff --cached --name-only -- specs \
-  | { grep -E '^specs/[0-9][0-9][0-9]-[^/]+/(spec|spec-and-plan)\.md$' || true; })"
+staged_specs="$(git diff --cached --name-only -- "$SPECS_ROOT" \
+  | { grep -E "^$SPECS_ROOT/[0-9][0-9][0-9]-[^/]+/(spec|spec-and-plan)\.md\$" || true; })"
 
 # Acceptance-criterion labelling (spec 013). Prefer this repo's own release
 # build over an installed ductus: the framework repo is where the primitive is

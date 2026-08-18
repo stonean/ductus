@@ -16,7 +16,7 @@ Audit `ductus`'s own framework artifacts for the kinds of drift `/ductus:analyze
 
 `/audit` fills that gap. It loads no rule files — its checks are about *framework consistency*, not spec quality. Each check family produces structured findings on stdout. Exit code is binary: `0` when no findings, `1` when any finding is present. CI uses the exit code as a release gate.
 
-See [spec 026](../../specs/026-framework-self-audit/spec.md) for the design and the [026 plan](../../specs/026-framework-self-audit/plan.md) for the check families and the check-zero precondition pass. The family set has grown since the original design — `scripts/audit/run-all.sh` runs the seventeen families enumerated in the markdown-only reference below. Family numbers are stable identifiers: Family 3 (registry equivalence) was retired with the workflows feature (spec 043), leaving a numbering gap.
+See [spec 026](../../specs/026-framework-self-audit/spec.md) for the design and the [026 plan](../../specs/026-framework-self-audit/plan.md) for the check families and the check-zero precondition pass. The family set has grown since the original design — `scripts/audit/run-all.sh` runs the twenty-one families enumerated in the markdown-only reference below. Family numbers are stable identifiers: Family 3 (registry equivalence) was retired with the workflows feature (spec 043), leaving a numbering gap.
 
 ## Scope Boundaries
 
@@ -60,6 +60,10 @@ When the runtime is not on `PATH`, walk the same scripts directly. Each prints f
 19. Run `scripts/audit/review-freshness.sh` (Family 19 — no `done` spec ships with a review that predates its own code: a spec whose durable contracts changed since its `review.reviewed-against` sha is stale, which every other check passes because they assert only that a review exists and does not block).
 
 20. Run `scripts/audit/version-agreement.sh` (Family 20 — the repo-root `version` pin, `runtime/Cargo.toml`, and the newest `runtime/CHANGELOG.md` heading carry the same SemVer. The release tag is deliberately not compared: the release commit precedes the tag push, so asserting it here would fail every release mid-flight).
+
+21. Run `scripts/audit/transitional-bootstrap-parity.sh` (Family 21 — the retired `framework/bootstrap/govern.md` path stays byte-identical to `framework/bootstrap/ductus.md`. Every pre-rename adopter's self-update fetch resolves to the retired path, so drift there ships stale content to them verbatim and a deletion 404s their run before migrations).
+
+22. Run `scripts/audit/adopter-shell-behavior.sh` (Family 22 — the shipped adopter shell works in an adopter's tree, not just in ours. Stands up a fixture with a non-default `[paths] specs-root`, config only at the converged tier, and the runtime reachable only through `.ductus/bin/ductus`, then runs the real `framework/bootstrap/hooks/ductus-pre-commit` in it. This repo runs *different copies* of that job — its own `.githooks/pre-commit`, the default spec root, a locally built runtime — so every assumption those mask is invisible to a green run here; three silent defects reached adopters through that gap on 2026-08-17. The runtime is stubbed, keeping the family hermetic and identical in CI).
 
 ## Boundary with `/ductus:analyze`
 

@@ -37,12 +37,21 @@ cd "$ROOT"
 .ductus/scripts/gen-spec-deps.sh --staged
 .ductus/scripts/gen-cross-service-refs.sh --staged
 
+# Scope to the project's configured spec root (spec 040), resolved the same way
+# the generators above resolve it. A hardcoded `specs` silently matches nothing
+# for a project that renamed its spec tree, which leaves every rewrite below
+# unstaged: the generators still fix the file on disk, but the commit captures
+# the superseded frontmatter. `specs_root_of` validates the name against
+# [A-Za-z0-9_-], so it is safe both as a path and interpolated into the regex.
+. .ductus/scripts/lib/specs-root.sh
+SPECS_ROOT="$(resolve_specs_root)"
+
 # Re-stage only spec files already part of this commit, so the derived
 # `dependencies:` / `references:` rewrites are captured without sweeping in
 # untracked `/specify` drafts or unstaged edits to other tracked specs
 # (spec 017 / tracked-specs-not-worktree).
-staged_specs="$(git diff --cached --name-only -- specs \
-  | { grep -E '^specs/[0-9][0-9][0-9]-[^/]+/(spec|spec-and-plan)\.md$' || true; })"
+staged_specs="$(git diff --cached --name-only -- "$SPECS_ROOT" \
+  | { grep -E "^$SPECS_ROOT/[0-9][0-9][0-9]-[^/]+/(spec|spec-and-plan)\.md\$" || true; })"
 
 # Resolve the runtime the way /ductus actually registers it: the repo-relative
 # pointer `.ductus/bin/ductus`, which every run materializes and which resolves

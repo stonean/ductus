@@ -235,3 +235,16 @@ Record backfilled 2026-08-16. The family shipped as `scripts/audit/migration-cov
 - [x] Registered in `scripts/audit/run-all.sh` as Family 10 and in `framework/commands/audit.md`'s family list
 
 - **Done when**: the family runs in `run-all.sh`, reports a missing procedure body and a stale `target_paths` entry, and this spec's scenario→task mapping is clean.
+
+### 27. Implement scenario: [family-22-adopter-shell-behavior](scenarios/family-22-adopter-shell-behavior.md)
+
+Opened by [048](../048-govern-acquired-runtime/spec.md)'s AC10 adopter runs, which found three silent defects in the shipped adopter shell that no check here could reach — because this repo runs different copies of that shell than adopters do.
+
+- [x] `scripts/audit/adopter-shell-behavior.sh` builds an adopter-shaped fixture — non-default `[paths] specs-root`, config only at `.ductus/config.toml`, runtime reachable only via the `.ductus/bin/ductus` pointer with nothing named `ductus` on `PATH` — and runs the real shipped `ductus-pre-commit` in it
+- [x] Asserts the configured spec root resolves, the hook reaches the runtime, and no generator rewrite is left unstaged
+- [x] Built at both the default and a configured root, so neither failure masks the other — the pointer-resolution assertion is only meaningful at the default root, where a scoping bug cannot suppress it
+- [x] Runtime is stubbed, so the family is hermetic and behaves identically in CI and locally — no `cargo build` dependency
+- [x] Every precondition failure (missing shipped file, no `mktemp`, git init failure) emits rather than skips
+- [x] Registered in `scripts/audit/run-all.sh` as Family 22 and in `framework/commands/audit.md`'s family list; Family 21's missing entry in that list was backfilled in the same pass, and both stale family counts corrected
+
+- **Done when**: the family goes red on the hardcoded-`specs` scoping in `framework/bootstrap/hooks/ductus-pre-commit`, green once that hook and `.githooks/pre-commit` resolve the root via `resolve_specs_root`, and `run-all.sh` is clean.
