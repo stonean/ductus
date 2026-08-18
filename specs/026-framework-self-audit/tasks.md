@@ -251,11 +251,11 @@ Opened by [048](../048-govern-acquired-runtime/spec.md)'s AC10 adopter runs, whi
 
 ### 28. Implement scenario: [family-23-sweep-target-manifest-parity](scenarios/family-23-sweep-target-manifest-parity.md)
 
-- [ ] Restore the literal live-artifact enumeration to `AGENTS.md` §Workflow's dead-references entry — `framework/`, `scripts/`, `.ductus/scripts/`, `runtime/` (incl. `tests/fixtures/`, `tests/golden/`, `tests/parity/`), `.github/`, `docs/`, `README.md`, `AGENTS.md`, `specs/NNN-*/` — dropped when 050 rewrote the entry as a pointer mirror
-- [ ] Repair the three dangling pointers: the entry's own "the live-artifact paths above" / "the artifact set above", and `framework/constitution.md` §spec-lifecycle case (a)'s deferral to "the `AGENTS.md` rename rule's scope"
-- [ ] Leave the constitution's §drift-prevention wording categorical — it ships to adopters, whose layouts differ; only the contributor-side mirror carries literal paths
-- [ ] `scripts/audit/sweep-target-manifest-parity.sh` extracts the enumeration and asserts every **source** path in the Shared Files manifest is covered by some entry, prefix-based
-- [ ] Emit the count of entries extracted and paths examined, and state that coverage was verified manifest → list only; a zero-entry extraction is an error, not a pass
-- [ ] Register as Family 23 in `scripts/audit/run-all.sh` and in `framework/commands/audit.md`'s family list, correcting the family count in both
+- [x] Restore the literal live-artifact enumeration to `AGENTS.md` §Workflow's dead-references entry — `framework/`, `scripts/`, `.ductus/scripts/`, `runtime/` (incl. `tests/fixtures/`, `tests/golden/`, `tests/parity/`), `.github/`, `docs/`, `README.md`, `AGENTS.md`, `specs/NNN-*/` — dropped when 050 rewrote the entry as a pointer mirror
+- [x] Repair the three dangling pointers: the entry's own "the live-artifact paths above" / "the artifact set above", and `framework/constitution.md` §spec-lifecycle case (a)'s deferral to "the `AGENTS.md` rename rule's scope"
+- [x] Leave the constitution's §drift-prevention wording categorical — it ships to adopters, whose layouts differ; only the contributor-side mirror carries literal paths
+- [x] `scripts/audit/sweep-target-manifest-parity.sh` extracts the enumeration and asserts every **source** path in the Shared Files manifest is covered by some entry, prefix-based
+- [x] Emit the count of entries extracted and paths examined, and state that coverage was verified manifest → list only; a zero-entry extraction is an error, not a pass
+- [x] Register as Family 23 in `scripts/audit/run-all.sh` and in `framework/commands/audit.md`'s family list, correcting the family count in both
 
 - **Done when**: the family goes red when the enumeration is reverted to the pre-042 `scripts/` form (the shape 049's sweep actually grepped), green against the restored list save for the one true finding it surfaces, and `scripts/audit/run-all.sh` is clean once that finding is resolved.

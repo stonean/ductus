@@ -51,10 +51,21 @@ Two halves, landing together. Shipping the family without its input, or the
 input without the family, reproduces the failure mode in a new place.
 
 **Restore the list.** `AGENTS.md` carries the literal enumeration again — this
-is contributor-side, repo-specific detail, which is what that file is for — and
-the three dangling pointers are repaired to name it. The constitution stays
+is contributor-side, repo-specific detail, which is what that file is for —
+delimited by `<!-- audit:sweep-targets:begin -->` / `<!-- audit:sweep-targets:end -->`
+so the family has something stable to extract. The constitution stays
 categorical: literal repo paths would be meaningless in a document adopters
 install, and 050's decision there was right.
+
+§spec-lifecycle case (a) is repaired the other way — by removing the deferral
+rather than making it resolve. It pointed at "the `AGENTS.md` rename rule's
+scope", and `framework/templates/project/agents.md` ships adopters an
+`AGENTS.md` with no rename rule in it, so the pointer dangled for every adopter
+however this repository's own copy read. It now names the constitution's own
+§drift-prevention enumeration, which is already there, already categorical, and
+already the right level for a reader whose layout is not ours. The two
+`AGENTS.md`-internal pointers ("the live-artifact paths above", "the artifact
+set above") resolve once the list is back in the entry that carries them.
 
 **Then check it.** Family 23 asserts that every **source** path in the
 `framework/bootstrap/ductus.md` **Shared Files** manifest is covered by some
@@ -96,12 +107,22 @@ rejected on the strength of it.
   covered by `specs/NNN-*/`'s sibling entry for `specs/`, and
   `framework/commands/plan.md` by `framework/`. Requiring an exact row per file
   would fire on every manifest row and make the family noise.
-- **The list is prose, not config.** It lives in `AGENTS.md` because that is
-  where a contributor reads it; extracting it means parsing a known-shaped
-  sentence. Moving it to a machine-owned file would make extraction trivial and
-  the rule invisible to the person who has to follow it — which is the trade
-  this family accepts, and the reason the parse failure above is treated as an
-  error rather than a skip.
+- **The list stays in prose, delimited rather than relocated.** It lives in
+  `AGENTS.md` because that is where a contributor reads it; moving it to a
+  machine-owned file would make extraction trivial and the rule invisible to
+  the person who has to follow it. HTML comment markers around the inline list
+  buy reliable extraction without either cost, and they are already house idiom
+  (`<!-- §anchor -->`, `<!-- audit:ignore-promotion -->`). The markers are load
+  bearing, so the entry says so.
+- **A marked region on a single line breaks the obvious extraction.** The whole
+  entry is one long bullet, so both markers sit on one line — and a `sed` range
+  whose start and end regexes match the *same* line does not close there, it
+  resumes hunting on the next line and runs to EOF. The failure is silent and
+  *generous*: it yields a superset of the list, so every manifest path looks
+  covered and the family reports clean for the wrong reason. It surfaced during
+  implementation only because the entry count was printed — 280 where a dozen
+  was expected — which is the reported-counts requirement above paying for
+  itself before the family had even landed.
 
 ## Open Questions
 

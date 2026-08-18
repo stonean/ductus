@@ -8,7 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 16
+next-criterion: 17
 ---
 
 # 026 — Framework self-audit (`/audit`)
@@ -131,6 +131,7 @@ The maintainer reviews findings and routes each to a fix path:
 - [x] AC13: `/audit` writes its output to stdout in a maintainer-friendly format: one section per check family, one finding per row within a family, with severity / location / message / suggested-fix columns. No `audit.md` report file is produced (unlike `/ductus:review`'s `review.md`) — the framework-level audit is run interactively, not stored as an artifact.
 - [x] AC14: The boundary with `/ductus:analyze` is documented in `framework/commands/audit.md` §Notes (or equivalent): `/ductus:analyze` is feature-spec-scoped; `/audit` is framework-scoped; the two never duplicate a check. Adopters never invoke `/audit` — it is a ductus-maintainer tool.
 - [x] AC15: **Adopter shell behavior** runs the shipped `framework/bootstrap/hooks/ductus-pre-commit` and `.ductus/scripts/**` against a generated fixture shaped like an adopter's tree — a non-default `[paths] specs-root`, config only at `.ductus/config.toml`, and the runtime reachable only through the `.ductus/bin/ductus` pointer with nothing named `ductus` on `PATH` — and asserts that the spec root resolves to the configured value, that the hook reaches the runtime, and that no generator rewrite is left unstaged. The fixture is built at both the default and a configured root so neither failure masks the other, the runtime is stubbed so the family stays hermetic, and any precondition that prevents the fixture from being built is emitted as a finding rather than skipped.
+- [x] AC16: **Sweep-target manifest parity** asserts that the live-artifact enumeration a rename sweep greps — delimited in `AGENTS.md` by `<!-- audit:sweep-targets:begin -->` / `<!-- audit:sweep-targets:end -->` — covers every source path the **Shared Files** manifest ships, so a relocated directory cannot leave the list naming somewhere clean while the sweep misses the files that moved. The check runs manifest → list only and reports that direction along with the entry and path counts, since it proves no shipped file goes unswept but not that the list is complete; an empty extraction on either side is a finding rather than a pass.
 
 ## Open Questions
 
