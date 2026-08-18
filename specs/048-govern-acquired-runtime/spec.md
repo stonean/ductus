@@ -151,10 +151,10 @@ as retired, so `workflows/registry.json` surviving is the documented outcome. A
 `[migrations].applied` set was built on that misreading and reverted in
 `4ceb799`. Both runs had behaved correctly the whole time.
 
-**AC10 is still the operator's to tick**, and it remains unticked here. Every
-other criterion is met, no task or subtask is outstanding, the review gate
-passes, and `check-artifacts` is clean — so ticking it is the only thing between
-this spec and `done`.
+**AC10 was the operator's to tick, and was ticked on 2026-08-18 after run 5**
+(§Run 5 below). Every other criterion was already met, with no task or subtask
+outstanding, the review gate passing and `check-artifacts` clean, so that tick
+was the last thing between this spec and `done`.
 
 ### What a further adoption run needs to know
 
@@ -292,15 +292,40 @@ run at all.
   under `026-framework-self-audit`) — it holds the live-artifact
   enumeration a rename sweep greps against the **Shared Files** manifest. Like
   Family 22 it is a repo-side check, not something an adopter run exercises.
-- **A fifth run's value is unchanged by the above**: it still tests idempotency
-  and State A, which no run has reached, and it still cannot re-test the
-  migration chain without a reset plus hand-rebuilt gitignored state.
-- **AC10 remains the operator's to tick and remains unticked.** Every other
-  criterion is met, no task or subtask is outstanding, `check-review-gate`
-  passes and `check-artifacts` is clean with nothing skipped — verified again at
-  `5411c2c`. Ticking it is still the only thing between this spec and `done`,
-  and an agent must neither tick it nor infer permission to run a bootstrap
-  against a project outside this repository.
+- **A fifth run was expected to test idempotency and State A** on the converged
+  subject. It did not: the subject was reset and its gitignored state rebuilt by
+  hand first, so run 5 re-ran the full migration chain instead. See §Run 5.
+
+### Run 5 (2026-08-18) — AC10 closed
+
+**AC10 was verified end to end and ticked.** The subject was reset to the same
+pre-042 shape the earlier runs used — legacy root config, root constitution,
+`scripts/` generators, the retired bootstrap entry-point filename — with the
+three gitignored files no reset restores rebuilt by hand: an MCP config naming
+the retired server key and bare command, a root session file, and the
+pre-rename permission seed reconstructed from this repository's own history.
+The store was emptied so the run began with no runtime, and the retired binary
+was deliberately left installed, which is the state `ductus-rename` documents.
+
+**Two steps, matching the reworded criterion.** Step 1 was the inherent
+self-update hop: it wrote upstream byte-identically to the *installed*
+filename — verified with `cmp` against `framework/bootstrap/ductus.md` — and
+aborted naming the command the adopter actually has. Step 2 acquired `0.29.10`
+into the store, materialized the pointer, wired MCP, seeded permissions in the
+same pre-flight pass, then completed the run through the CLI: five migrations,
+the criterion backfill (117 criteria across 15 specs, independently recounted),
+Shared Files, and scaffolding — closing with the single tool-surface restart.
+
+**One defect and one reporting error.** The defect is filed in
+`specs/inbox.md`: the retired-name MCP server stays live through the run that
+retires it, because the adopter's config names it and the binary is still
+installed, and §State B never says the retired tools are off-limits. It let a
+stale primitive write legacy-path state, and left one retired permission entry
+that the rename migration had already passed. The reporting error was step 1's
+claim that the live retired runtime meant State A; State A is namespace-scoped
+to `mcp__ductus__*`, so the claim was true of the pre-rename procedure that host
+was executing and false of the one it had just installed — the hazard
+`AGENTS.md` §Workflow records about run summaries, observed again.
 
 **Original 2026-08-17 note follows.**
 
@@ -436,7 +461,7 @@ runtime instead of one with known fixes missing.
 - [x] AC15: A repo-root `version` file carries one SemVer line, and it matches `runtime/Cargo.toml`, the newest `runtime/CHANGELOG.md` heading, and the newest `ductus-v*` tag; a self-audit family asserts that agreement
 - [x] AC8: An adopter whose MCP config names the bare `ductus` command has it rewritten to the ductus-owned path by the registered migration, and re-running the migration is a no-op
 - [x] AC9: The pre-flight binary probe checks the ductus-owned store rather than `PATH`, and the §Permission Setup seed grants exactly what that probe needs
-- [ ] AC10: An adopter with no runtime reaches the deterministic path in one `/ductus` run plus one restart — acquisition, MCP wiring, and tool permissions all land in the same pre-flight pass, the run then completes its remaining work through the CLI in that same session, and the single closing restart hands over to the MCP tool surface
+- [x] AC10: An adopter with no runtime reaches the deterministic path in one `/ductus` run plus one restart — acquisition, MCP wiring, and tool permissions all land in the same pre-flight pass, the run then completes its remaining work through the CLI in that same session, and the single closing restart hands over to the MCP tool surface
 - [x] AC11: `.github/workflows/markdown-only-pipeline.yml` — the job asserting the retired opt-in invariant — is replaced by one that exercises acquisition end-to-end on each supported platform and fails when the runtime cannot be obtained. That path no longer exists: the file is renamed to `.github/workflows/framework-checks.yml`, and the acquisition invariant is asserted by the `acquire` job in `.github/workflows/runtime-release.yml` plus the hand-dispatchable `.github/workflows/runtime-acquisition.yml`.
 - [x] AC16: The constitution is amended in the same change: §runtime-boundary principle 3 and the Opt-in invariant are replaced by the requirement, §text-first-artifacts' "usable standalone" is narrowed to the artifacts, and no live artifact still describes the runtime as optional
 - [x] AC18: A project setting `.ductus/config.toml`'s `[runtime]` path key gets no download, a pointer resolving to the named binary, and a warning — not a halt — when that binary's version differs from the pin
