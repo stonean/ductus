@@ -156,7 +156,7 @@ The shipped `framework/templates/ci/adopter-generators.yml` is NOT modified.
 | `scripts/audit/check-zero.sh` | Create | Orchestrates the 9 generator/lint scripts as the precondition pass |
 | `scripts/audit/cross-doc-consistency.sh` | Create | Family 1 — README spec-status table, pipeline diagrams, back-edge wording |
 | `scripts/audit/manifest-parity.sh` | Create | Family 2 — installer file list parity, permission-set parity with normalization |
-| `scripts/audit/registry-equivalence.sh` | Create | Family 3 — workflow registry JSON ↔ workflow markdown files |
+| `scripts/audit/adopter-shell-behavior.sh` | Create | Family 22 — the shipped adopter hook and generators run against a generated adopter-shaped fixture |
 | `scripts/audit/placeholder-roundtrip.sh` | Create | Family 4 — hardcoded token detection in `framework/commands/*.md` |
 | `scripts/audit/template-alignment.sh` | Create | Family 5 — `analyze.md` blocking checks ↔ template scaffolding |
 | `scripts/audit/ssot-invariants.sh` | Create | Family 6 — duplicate normative rule text detection |

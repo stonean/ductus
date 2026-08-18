@@ -145,15 +145,26 @@ while IFS= read -r spec; do
     new_line="dependencies: [$(echo "$deps_csv" | sed 's/,/, /g')]"
   fi
 
-  # Replace the first `dependencies:` line that appears inside the frontmatter.
+  # Replace the first `dependencies:` entry inside the frontmatter — the key
+  # line *and* any indented continuation beneath it. Replacing only the key
+  # line is correct for the inline flow form this repo writes
+  # (`dependencies: [a, b]`) but corrupts the equally-valid block form:
+  #
+  #     dependencies:        ->   dependencies: []
+  #       - 000-stale                - 000-stale     <- orphaned, invalid YAML
+  #
+  # ...which the generator then reported as a successful `Updated`. The
+  # `skipping` idiom below is the one gen-cross-service-refs.sh already uses to
+  # splice `references:`; the two generators diverged on exactly this.
   tmp="$(mktemp)"
   awk -v new="$new_line" '
-    BEGIN { fm_seen = 0; in_fm = 0; replaced = 0 }
+    BEGIN { fm_seen = 0; in_fm = 0; replaced = 0; skipping = 0 }
     /^---[[:space:]]*$/ {
       if (!fm_seen) { in_fm = 1; fm_seen = 1; print; next }
-      if (in_fm)    { in_fm = 0; print; next }
+      if (in_fm)    { in_fm = 0; skipping = 0; print; next }
     }
-    in_fm && !replaced && /^dependencies:/ { print new; replaced = 1; next }
+    in_fm && skipping { if ($0 ~ /^[[:space:]]/) next; skipping = 0 }
+    in_fm && !replaced && /^dependencies:/ { print new; replaced = 1; skipping = 1; next }
     { print }
   ' "$spec" > "$tmp"
 

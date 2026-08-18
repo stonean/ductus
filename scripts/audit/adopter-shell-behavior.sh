@@ -96,7 +96,8 @@ STUB
   cat > "$fixture/$specs_dir/001-example/spec.md" <<'SPEC'
 ---
 status: draft
-dependencies: [000-stale-entry]
+dependencies:
+  - 000-stale-entry
 next-criterion: 1
 ---
 
@@ -153,16 +154,21 @@ SPEC
       "resolve the runtime through the .ductus/bin/ductus pointer, and scope staged specs with resolve_specs_root so the invoking block is reached"
   fi
 
-  # Assertion 3 is only meaningful if the generators actually rewrote the
-  # spec — with nothing to rewrite, "worktree and index agree" is vacuously
-  # true and this family would report clean having examined nothing, which is
-  # QUAL-CLAIM-001 in the check written to catch exactly that shape. The
-  # fixture seeds a stale `dependencies:` entry against a link-free body, so
-  # the entry surviving means the fixture stopped exercising the path.
+  # The stale entry must be gone. It is seeded in YAML **block** form against a
+  # link-free body, which makes this one check cover two failures at once:
+  #
+  #   * the generator never rewrote the spec at all — assertion 3 below then
+  #     compares an unchanged file against itself and reports clean having
+  #     examined nothing (QUAL-CLAIM-001, in the family written to catch that
+  #     shape);
+  #   * the generator rewrote the key but orphaned the block item beneath it,
+  #     leaving invalid YAML while reporting a successful `Updated` — the
+  #     defect found while building this fixture, which the inline form never
+  #     reaches because it has no continuation line to strand.
   if grep -q '000-stale-entry' "$fixture/$specs_dir/001-example/spec.md" 2>/dev/null; then
-    emit "scripts/audit/adopter-shell-behavior.sh" \
-      "with specs-root '$specs_dir' the seeded stale dependency survived, so gen-spec-deps.sh never rewrote the fixture spec and the re-stage assertion below proves nothing" \
-      "re-seed the fixture so the generator has a rewrite to make; a vacuous assertion reports clean without examining its subject"
+    emit ".ductus/scripts/gen-spec-deps.sh" \
+      "with specs-root '$specs_dir' the seeded block-form dependency survived the generator — either it never rewrote the spec, or it replaced the key and left the list item orphaned as invalid YAML" \
+      "replace the whole dependencies entry, key line plus indented continuation, the way gen-cross-service-refs.sh already splices references:"
   fi
 
   # Assertion 3 — staged-spec scoping honors the configured root. The
