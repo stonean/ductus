@@ -172,12 +172,56 @@ actually tests, and none of them is visible from `git status`:
 - **The fixes worth re-testing each need a specific starting shape**: the abort
   wording and the in-place self-update need an installed bootstrap predating
   acquisition; the MCP convergence needs the retired server key present
-  alongside the current one.
+  alongside the current one. The MCP convergence was validated on run 4 (below);
+  the two self-update fixes remain unvalidated by a live run, for a structural
+  reason recorded there.
 
 Findings from any run route to `specs/inbox.md` with the reproducing shape
 described and the subject's name omitted (`AGENTS.md` §Workflow). The subject is
 a project outside this repository, so a session reads it freely and writes
 nothing to it without an explicit go-ahead.
+
+### Runs 3 and 4 (2026-08-17, later the same day)
+
+Two further runs against the same pre-rename shape. Run 3 was abandoned at the
+stale hop once it surfaced a defect; run 4 executed the full chain and completed.
+**Three more defects, none reachable by any check in this repository**, all fixed
+and pushed:
+
+- The **Post-Write Integrity Check** asserted that a `claude-style` / `opencode`
+  installed file "must start with `# ductus`". It never has — the installer opens
+  with YAML frontmatter and its heading is line 14 — so the check failed on every
+  byte-perfect write while telling the host the write was corrupted. The
+  `antigravity` branch beside it was already correct, making this a per-layout
+  gap. Fixed in `396952e`.
+- `config_path_of` in the shipped `.ductus/scripts/lib/specs-root.sh` resolved
+  `.govern/config.toml` then the legacy root, with **no `.ductus/` tier**. A
+  converged adopter therefore resolved to a path that does not exist and fell
+  through to the default spec root, so any non-default `[paths] specs-root`
+  enumerated the wrong tree, derived nothing, and exited 0. Fixed in `a9188c7`.
+- The shipped pre-commit hook guarded its `label-criteria` backstop on
+  `command -v ductus` while spec 048 had moved the runtime into the store, which
+  is never on `PATH`. Spec 013's labelling backstop was therefore **dead for every
+  adopter since 048** — silent, exit 0. Fixed in `a4c897e`, verified end-to-end
+  against a fixture where the old guard leaves a criterion unlabelled and the new
+  one assigns `AC1:`.
+
+**`ductus-rename` step 9's MCP convergence is now validated** — it reported
+`removed (superseded MCP server): gvrn` and kept the resolved path. Reaching it
+required authoring the retired key by hand into the gitignored MCP config, which
+no reset restores; three earlier runs missed it for exactly that reason.
+
+**Two of the three defects were invisible here because the copy this repo
+dogfoods is a different file from the copy the manifest ships** — see `AGENTS.md`
+§Gotchas, which now carries the general rule. A repo-side fixture that would
+catch the class is filed in `specs/inbox.md`, routed to `026` via the back-edge.
+
+**Structurally unvalidated:** the two self-update fixes and the corrected
+integrity check all require the *running* procedure to be post-fix while the
+installed file is still stale. The stale hop always installs the current version,
+so the manifest self-install that follows is a no-op and its check never fires.
+That window only opens when upstream moves again while an adopter still carries
+the retired entry-point filename. All three are verified by inspection.
 
 **Original 2026-08-17 note follows.**
 
