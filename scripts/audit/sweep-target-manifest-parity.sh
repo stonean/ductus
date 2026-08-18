@@ -56,10 +56,21 @@ END_MARK="audit:sweep-targets:end"
 # it resumes hunting for the end pattern on the next line and runs to EOF. That
 # failure is silent and generous — it yields a superset of the list, so every
 # manifest path looks covered — which is why the entry count is reported.
-if grep -q -- "$BEGIN_MARK.*$END_MARK" "$LIST_FILE" 2>/dev/null; then
+# Both markers must be present. A lone begin marker would leave the range
+# below unterminated — the same silent over-collection, reached a different
+# way — so an unbalanced pair is reported rather than extracted from.
+if ! grep -q -- "$BEGIN_MARK" "$LIST_FILE" 2>/dev/null \
+  || ! grep -q -- "$END_MARK" "$LIST_FILE" 2>/dev/null; then
+  emit "$LIST_FILE" \
+    "live-artifact enumeration markers are missing or unbalanced — $BEGIN_MARK and $END_MARK must both be present" \
+    "restore both delimiting comments around the enumeration in $LIST_FILE §Workflow's dead-references entry"
+  exit "$drift"
+fi
+
+if grep -q -- "$BEGIN_MARK.*$END_MARK" "$LIST_FILE"; then
   raw="$(grep -- "$BEGIN_MARK.*$END_MARK" "$LIST_FILE")"
 else
-  raw="$(sed -n "/$BEGIN_MARK/,/$END_MARK/p" "$LIST_FILE" 2>/dev/null)"
+  raw="$(sed -n "/$BEGIN_MARK/,/$END_MARK/p" "$LIST_FILE")"
 fi
 segment="$(printf '%s\n' "$raw" \
   | sed -e "s/.*<!-- $BEGIN_MARK -->//" -e "s/<!-- $END_MARK -->.*//")"
@@ -100,7 +111,7 @@ fi
 # exactly. Prefix matching is deliberate — requiring one list row per shipped
 # file would fire on every manifest row and make the family noise.
 is_covered() {
-  covered_path="$1"
+  local covered_path="$1" entry prefix
   while IFS= read -r entry; do
     [ -z "$entry" ] && continue
     case "$entry" in
@@ -142,8 +153,10 @@ done <<< "$sources"
 printf 'sweep-target: %d enumeration entr%s, %d manifest source path%s examined' \
   "$entry_count" "$([ "$entry_count" -eq 1 ] && echo y || echo ies)" \
   "$examined" "$([ "$examined" -eq 1 ] && echo '' || echo s)" >&2
-[ "$templated" -gt 0 ] && printf ', %d templated path%s skipped' \
-  "$templated" "$([ "$templated" -eq 1 ] && echo '' || echo s)" >&2
+if [ "$templated" -gt 0 ]; then
+  printf ', %d templated path%s skipped' \
+    "$templated" "$([ "$templated" -eq 1 ] && echo '' || echo s)" >&2
+fi
 printf '; direction verified: manifest -> list (list completeness not checked)\n' >&2
 
 exit "$drift"

@@ -122,7 +122,9 @@ rejected on the strength of it.
   covered and the family reports clean for the wrong reason. It surfaced during
   implementation only because the entry count was printed — 280 where a dozen
   was expected — which is the reported-counts requirement above paying for
-  itself before the family had even landed.
+  itself before the family had even landed. A lone begin marker reaches the
+  same over-collection by a different route, so the family checks that both
+  markers are present before extracting anything.
 
 ## Open Questions
 
