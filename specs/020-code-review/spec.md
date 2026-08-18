@@ -1,10 +1,10 @@
 ---
 spec: 020-code-review
-status: in-progress
+status: done
 dependencies: []
 review:
-  last-run: 2026-05-17T22:55:00Z
-  reviewed-against: 3794d7ed2b30593b8b5ce292f1d27b168b46405b
+  last-run: 2026-08-18T02:36:35Z
+  reviewed-against: 2d894106fc9bcb5debdffaca119ffc0eca018460
   must-violations: 0
   should-violations: 0
   low-confidence: 0
