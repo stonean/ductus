@@ -6,38 +6,54 @@ section: "Follow-on scenarios"
 
 ## Context
 
-A pre-rename adopter reaches `/ductus` with the retired server key still in
-their MCP config *and* a retired binary still resolvable. Both halves persist by
-design: `ductus-rename` explicitly declines to touch an installed binary, and the
-retired crate is left published rather than yanked so existing installs keep
-resolving. The agent host launches that server at session start, so the very run
-that is about to retire the key executes with the retired runtime's tools live in
-its inventory for the whole session.
+An adopter reaches `/ductus` with a retired server key still in an MCP config
+*and* a retired binary still resolvable. Both halves persist by design:
+`ductus-rename` explicitly declines to touch an installed binary, and the retired
+crate is left published rather than yanked so existing installs keep resolving.
+The agent host launches that server at session start, so its tools sit in the
+inventory for the whole session.
 
-Detection is unaffected and behaves correctly. Tool-inventory introspection is
-scoped to `ductus`-namespaced tools, so a retired-namespace inventory yields no
-match, the store probe runs, and the run classifies **State B** — acquire, wire,
-continue. The gap is downstream of detection: §State B directs the host to invoke
-every remaining primitive as `{pointer-path} <primitive>`, but never says the
-retired tools are off-limits, and the bootstrap procedure does not mention the
-retired namespace at all. A host that reaches for a live tool over a CLI call is
-following the general preference for the deterministic path, not disregarding an
-instruction.
+Detection is unaffected and behaves correctly — tool-inventory introspection is
+scoped to `ductus`-namespaced tools, so a retired namespace never classifies a
+run as State A. The gap is downstream of detection: the procedure directs the
+host to the primitives (or, in State B, to the pointer CLI) but never says the
+retired tools are off-limits, and it did not mention the retired namespace at
+all. A host that reaches for a live tool is following the general preference for
+the deterministic path, not disregarding an instruction.
+
+**Two adopter shapes reach this, and only one of them is a migrating run.** The
+first is State B: a pre-rename adopter whose retired key this very run is about
+to remove. The second is State A and is the more durable of the two — for a
+`surface-instruction` agent the retired key lives in the user's *home* config,
+which `ductus-rename` warns about rather than rewriting, so it survives until the
+user acts on that warning. Once such a user also registers `ductus`, every
+subsequent session has both namespaces live, indefinitely.
 
 ## Behavior
 
-For the remainder of a State-B run, the host MUST ignore every MCP tool whose
-namespace is not `ductus`, and reach the runtime only through the pointer CLI. A
-retired-namespace tool is treated as absent: not called, not preferred over the
-CLI, and never read as evidence that a runtime is available.
+For the whole run, in **either** state, no MCP tool outside the `ductus`
+namespace may perform a step of the procedure, and none counts as evidence that
+the runtime is available. The requirement governs tools that would otherwise
+stand in for the runtime — a retired-namespace server above all — and says
+nothing about unrelated servers an adopter has registered for their own purposes,
+which the procedure never calls either way.
 
 The justification is the one that already makes namespace-scoped detection
 correct. A retired-namespace server is a *different runtime at a different
 version*, and its primitives resolve paths against the directory layout of the
-release that shipped them. During the single run that migrates that layout, those
-resolvers are wrong by construction — the migration is precisely what makes them
-wrong — so any write they perform lands in the pre-migration location, silently
-and with a success result.
+release that shipped them — a pre-`.ductus/` binary resolves `.govern/` and then
+the legacy root, neither of which a converged project has.
+
+How that goes wrong differs by state, which is why the rule is stated once for
+both rather than twice:
+
+- **State B** — the resolvers are wrong *by construction*, because this run is
+  what migrates the layout. A write lands in the pre-migration location and
+  reports success.
+- **State A** — the layout already moved, so the retired resolver falls through
+  to a path the project no longer has, and the silent default that follows is
+  the same failure the shipped `config_path_of` had before it gained a
+  `.ductus/` tier.
 
 ## Edge Cases
 
@@ -58,10 +74,11 @@ and with a success result.
   still off-limits. The rule is namespace-scoped rather than per-tool, so it
   needs no per-primitive risk assessment and cannot be eroded one exception at a
   time.
-- **`surface-instruction` agents.** Their MCP config lives at home level, so a
-  retired server can be live in a project whose MCP file this run never writes.
-  The rule binds identically: it governs which tools the host calls, not which
-  file registered them.
+- **An unrelated MCP server the adopter registered for their own work.** Out of
+  scope, and deliberately so — the requirement is about what may stand in for the
+  runtime, not a blanket prohibition on the host's other tools. Reading it as the
+  latter would make the procedure claim authority over the adopter's environment
+  that it neither needs nor has.
 
 ## Open Questions
 
