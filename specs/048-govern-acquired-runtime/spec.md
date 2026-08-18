@@ -269,10 +269,38 @@ three fixes above are exactly what it would exercise first.
 - **To exercise the migration chain again**, the subject must be reset *and* its
   gitignored state rebuilt by hand — see the reset gotcha above. The retired MCP
   key in particular cannot be recovered from history and must be authored.
-- **No runtime change has landed since `0.29.9`.** Everything after run 4 is
-  framework, shipped shell, specs and docs, so no version bump and no
-  `ductus-v*` tag is implied. Adopters receive it on their next run because the
-  archive tracks `main`.
+- **The current release is `ductus-v0.29.10`** (2026-08-18), superseding the
+  `0.29.9` this note originally named. See §Baseline below for what changed and
+  what it means for a further run.
+
+### Baseline as of 2026-08-18 — `ductus-v0.29.10`
+
+Nothing here changes AC10 or what a run must show; it changes the baseline a
+run starts from, which is what a cold session needs before deciding whether to
+run at all.
+
+- **`ductus-v0.29.10` is released and verified against the real published
+  assets** — all five acquisition legs of `runtime-release.yml` passed, as did
+  the framework self-audit release gate. The one runtime change is
+  `compute-review-scope` returning the review scope as the **union** of the
+  plan's Affected Files and the files modified since the diff base, rather than
+  whichever set was larger; see `022-deterministic-runtime`'s
+  `review-scope-union` scenario. It does not touch acquisition, the bootstrap,
+  migrations, or the shipped hook, so it changes nothing a bootstrap run
+  exercises.
+- **`/{project}:audit` Family 23 was added** (`sweep-target-manifest-parity`,
+  under `026-framework-self-audit`) — it holds the live-artifact
+  enumeration a rename sweep greps against the **Shared Files** manifest. Like
+  Family 22 it is a repo-side check, not something an adopter run exercises.
+- **A fifth run's value is unchanged by the above**: it still tests idempotency
+  and State A, which no run has reached, and it still cannot re-test the
+  migration chain without a reset plus hand-rebuilt gitignored state.
+- **AC10 remains the operator's to tick and remains unticked.** Every other
+  criterion is met, no task or subtask is outstanding, `check-review-gate`
+  passes and `check-artifacts` is clean with nothing skipped — verified again at
+  `5411c2c`. Ticking it is still the only thing between this spec and `done`,
+  and an agent must neither tick it nor infer permission to run a bootstrap
+  against a project outside this repository.
 
 **Original 2026-08-17 note follows.**
 
