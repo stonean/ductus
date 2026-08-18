@@ -8,7 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 13
+next-criterion: 14
 ---
 
 # 050 — Constitution
@@ -186,6 +186,7 @@ a fact already banked.
 - [ ] AC10: The constitution's existing section order and anchor set remain resolvable — no promotion renames or displaces an anchor another artifact cites
 - [ ] AC11: The constitution's canonical-sources map names this spec as the home for constitution-content work, so the ownership split above is recorded where a reader already looks for it rather than only here
 - [ ] AC12: The repo-root `version` pin, `runtime/Cargo.toml`, and `runtime/CHANGELOG.md` are untouched by this spec, and `/ductus:audit` Family 20 stays clean — a constitution-only change never moves the runtime acquisition pin
+- [ ] AC13: §spec-lifecycle states whether an edit that changes no claim — a typo or sweep-residue repair in a `done` spec's body — is a mechanical edit, so its enumerated cases read as a rule with a stated test rather than a closed list a fourth case must be argued into. The `045` chore held in `specs/inbox.md` is resolvable against that statement without further judgment
 
 ## Open Questions
 
