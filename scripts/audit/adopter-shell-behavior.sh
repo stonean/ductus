@@ -62,7 +62,8 @@ done
 # with a non-default root it isolates config-ladder and scoping. Sharing one
 # fixture between them would let either failure mask the other.
 build_and_run() {
-  specs_dir="$1"
+  local specs_dir="$1"
+  local fixture observed_root hook_out hook_status unstaged
   fixture="$(mktemp -d 2>/dev/null)" || fixture=""
   if [ -z "$fixture" ] || [ ! -d "$fixture" ]; then
     emit "scripts/audit/adopter-shell-behavior.sh" \
@@ -95,8 +96,7 @@ STUB
   cat > "$fixture/$specs_dir/001-example/spec.md" <<'SPEC'
 ---
 status: draft
-dependencies:
-  - 000-stale-entry
+dependencies: [000-stale-entry]
 next-criterion: 1
 ---
 
@@ -151,6 +151,18 @@ SPEC
     emit "framework/bootstrap/hooks/ductus-pre-commit" \
       "with specs-root '$specs_dir' the hook never invoked the runtime, although .ductus/bin/ductus was present and executable" \
       "resolve the runtime through the .ductus/bin/ductus pointer, and scope staged specs with resolve_specs_root so the invoking block is reached"
+  fi
+
+  # Assertion 3 is only meaningful if the generators actually rewrote the
+  # spec — with nothing to rewrite, "worktree and index agree" is vacuously
+  # true and this family would report clean having examined nothing, which is
+  # QUAL-CLAIM-001 in the check written to catch exactly that shape. The
+  # fixture seeds a stale `dependencies:` entry against a link-free body, so
+  # the entry surviving means the fixture stopped exercising the path.
+  if grep -q '000-stale-entry' "$fixture/$specs_dir/001-example/spec.md" 2>/dev/null; then
+    emit "scripts/audit/adopter-shell-behavior.sh" \
+      "with specs-root '$specs_dir' the seeded stale dependency survived, so gen-spec-deps.sh never rewrote the fixture spec and the re-stage assertion below proves nothing" \
+      "re-seed the fixture so the generator has a rewrite to make; a vacuous assertion reports clean without examining its subject"
   fi
 
   # Assertion 3 — staged-spec scoping honors the configured root. The
