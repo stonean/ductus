@@ -1,5 +1,5 @@
 ---
-status: draft
+status: clarified
 dependencies: []
 review:
   last-run: null
@@ -8,7 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 12
+next-criterion: 13
 ---
 
 # 050 — Constitution
@@ -19,16 +19,21 @@ it, how it is structured, and what reaches adopters through it.
 
 ## State at hand-off (2026-08-17)
 
-**Draft, and deliberately parked at the operator's judgment.** Created
+**Clarified 2026-08-17, after being parked at the operator's judgment.** Created
 2026-08-17 by `/{project}:groom`, which routed two inbox items here: the survey
 of `AGENTS.md` entries that are true for any ductus project but ship to nobody,
 and a criterion-verification rule that belongs in the constitution for the same
 reason. Both are recorded below; the inbox items were removed as migrated.
 
-The six Open Questions are real rather than scaffolding, and none should be
-answered by an agent acting alone — every answer ships to every adopter, and the
-last of them asks what else belongs in this spec's scope, which is a scoping
-decision rather than a research task. `/{project}:clarify` is the vehicle.
+The six Open Questions were real rather than scaffolding, and none was answered
+by an agent acting alone — every answer ships to every adopter, and the last of
+them asked what else belonged in this spec's scope, which is a scoping decision
+rather than a research task. They were walked through `/{project}:clarify` on
+2026-08-17 and are recorded under §Resolved Questions: three were operator
+decisions, and three turned out to be settled by existing sources rather than by
+preference — the version-pin question by Family 20 and the **Shared Files**
+manifest, the classification-location question by §Design Principles, and the
+retire-the-mirror question by this spec's own §Promotion mechanism.
 
 One question already has a caller waiting. `specs/inbox.md` carries a one-word
 sweep artifact in `045`'s **spec body** that is held here on purpose: repairing
@@ -40,7 +45,16 @@ counts as mechanical is a constitution question, and settling it here also
 settles that chore. The matching instance in `045`'s `plan.md` was already
 repaired, since a design record is not a durable contract.
 
-No implementation work has started and none should until the questions resolve.
+No implementation work has started. With the questions resolved, the spec is
+ready for `/{project}:plan`.
+
+**The survey is stale, and the classification pass must not inherit its count.**
+It was taken on 2026-08-17 against 56 entries. The rule-bearing sections now
+hold 54 — `Workflow` 34, `Gotchas` 16, `Boundaries` 2, `Design Principles` 2 —
+and two of those postdate the survey entirely, both learned from the same
+adopter runs that produced this spec's neighbours. AC1 asks that *every* entry
+carry a classification, so the pass is run against the file as it stands when
+the work happens, not against the survey's numbers.
 
 ## Ownership
 
@@ -121,8 +135,10 @@ Each entry is classified exactly once, with the reason recorded:
   the agent registry, the cargo and rustup gotchas, the primitive wiring sites.
   Stays in `AGENTS.md`, unchanged.
 - **borderline** — universal in substance but stated in terms of machinery an
-  adopter may not have. Resolving this group needs a decision rule rather than
-  a vote per entry; see Open Questions.
+  adopter may not have. Resolved by the **reword test** rather than a vote per
+  entry: promoted if and only if the rule can be restated without naming
+  repo-only machinery and without losing what makes it actionable. See
+  §Resolved Questions.
 
 Adopter-neutral wording is what separates the first group from the third. A
 rule may cite a runtime primitive, because every adopter has the runtime. A
@@ -169,12 +185,17 @@ a fact already banked.
 - [ ] AC9: `npx markdownlint-cli2` passes over `framework/constitution.md` and `AGENTS.md`
 - [ ] AC10: The constitution's existing section order and anchor set remain resolvable — no promotion renames or displaces an anchor another artifact cites
 - [ ] AC11: The constitution's canonical-sources map names this spec as the home for constitution-content work, so the ownership split above is recorded where a reader already looks for it rather than only here
+- [ ] AC12: The repo-root `version` pin, `runtime/Cargo.toml`, and `runtime/CHANGELOG.md` are untouched by this spec, and `/ductus:audit` Family 20 stays clean — a constitution-only change never moves the runtime acquisition pin
 
 ## Open Questions
 
-- What decision rule resolves the borderline group? The distinguishing property is whether a rule can be restated adopter-neutrally without losing what makes it actionable — a rule that survives rewording is universal, one that does not is project-only. That needs applying to the ~10 entries before it can be called a rule rather than a heuristic.
-- Do promoted rules join existing constitution sections or get their own? §recommendations became its own section, which suits a rule that stands alone; several candidates here are narrower and may read better as bullets under an existing section than as sections of their own.
-- Does a constitution-only change need a version bump? The constitution travels in the archive fetch rather than the runtime binary, so no `ductus-v*` tag is implied — but adopters pull it on their next `/ductus`, and it is worth stating explicitly whether the repo-root `version` pin is expected to move for a framework-only change.
-- Should the classification live in this spec's body, or in `AGENTS.md` itself as a per-entry marker? A marker in `AGENTS.md` would keep the classification next to the entry and survive future additions, but it adds authored state to every future entry — which the second §Design Principles entry warns against.
-- Does promoting a rule retire the corresponding `AGENTS.md` §Gotchas entry when the rule and the gotcha overlap, or are those separate registers that both stay?
-- Is there constitution work beyond this promotion that should land here — section reordering, splitting an overlong section, or retiring a principle no spec relies on? Worth deciding before this spec is planned, so its scope is settled rather than discovered.
+*None — all resolved.*
+
+## Resolved Questions
+
+- **What decision rule resolves the borderline group?** The **reword test**, applied per entry: a borderline entry is promoted if and only if it can be restated without naming machinery that exists only in this repository *and* without losing what makes it actionable. Applying it to each borderline entry is part of this spec's work, and the per-entry outcome plus its reason is exactly what AC1's audit trail records — so the property becomes a rule by being tested against the corpus rather than asserted over it. Resolved 2026-08-17.
+- **Do promoted rules join existing constitution sections or get their own?** **Bullets under an existing section by default; a new section only when the rule stands alone**, as §recommendations does. AC2 asks that the canonical text sit "under a named section with a stable anchor", which a bullet under an existing named section satisfies. Defaulting to bullets also keeps AC10 cheap: the constitution's largest sections already run to roughly 69 lines, so promoting about a dozen entries as sections would roughly double its top-level surface and raise one-paragraph rules to section rank. Resolved 2026-08-17.
+- **Does a constitution-only change need a version bump?** **No — and the repo-root `version` file must not move for one.** That file is the *runtime acquisition pin*: `/ductus` reads it to decide which release to fetch, and `/ductus:audit` Family 20 requires it to equal `runtime/Cargo.toml` and the newest `runtime/CHANGELOG.md` heading. Bumping it alone therefore fails Family 20, and bumping all three declares a runtime release that must be tagged `ductus-v<version>` or every adopter's acquisition points at assets that do not exist. The constitution reaches adopters by a different route entirely — the **Shared Files** manifest row copying `framework/constitution.md` to `.ductus/constitution.md` — so they receive it on their next `/ductus` because the archive tracks `main`. Settled from those sources rather than by preference. Resolved 2026-08-17.
+- **Should the classification live in this spec's body, or as a per-entry marker in `AGENTS.md`?** **In this spec's body.** A per-entry marker adds authored state to every future `AGENTS.md` entry, and §Design Principles treats "requires an author to remember to fill it in" as a hard filter on a new input rather than a tiebreaker — the same principle the question raises against itself. Resolved 2026-08-17.
+- **Does promoting a rule retire the corresponding `AGENTS.md` entry?** **No — the mirror stays, in every section including §Gotchas.** §Promotion mechanism above already fixes the shape: one normative statement in the constitution, one `AGENTS.md` line pointing at it and stating nothing of its own. Contributors read `AGENTS.md` as the index of how to work in this repository, so a rule that silently left it reads as a rule that was dropped. §Gotchas is not a separate register in this respect and takes the same pointer treatment as §Workflow. Resolved 2026-08-17.
+- **Is there constitution work beyond this promotion that should land here?** **No — scope stays as drafted:** the promotion plus the criterion-verification rule. Section reordering, splitting an overlong section, and retiring a principle no spec relies on are real work but a different subject; folding them in would make AC10 materially harder to hold and would mix two unrelated review surfaces in one spec. They get their own back-edge when a concrete complaint drives them. Resolved 2026-08-17.
