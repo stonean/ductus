@@ -8,11 +8,11 @@ Scope is `Workflow`, `Gotchas`, `Boundaries`, `Design Principles`. `Project
 Structure` and `Tech Stack` describe this repository rather than stating rules
 and are out of scope. Run against the file as it stands, not the survey's counts.
 
-- [ ] Enumerate every entry in the four rule-bearing sections
-- [ ] Assign each exactly one verdict — universal, borderline, project-only
-- [ ] Apply the reword test to each borderline entry: promoted iff it restates without repo-only machinery **and** without losing what makes it actionable
-- [ ] Record one reason per entry — for a promoted borderline, name the machinery removed and assert the rule still bites; for a rejected one, name what was lost
-- [ ] Write the table into `plan.md` as the AC1 audit trail
+- [x] Enumerate every entry in the four rule-bearing sections
+- [x] Assign each exactly one verdict — universal, borderline, project-only
+- [x] Apply the reword test to each borderline entry: promoted iff it restates without repo-only machinery **and** without losing what makes it actionable
+- [x] Record one reason per entry — for a promoted borderline, name the machinery removed and assert the rule still bites; for a rejected one, name what was lost
+- [x] Write the table into `plan.md` as the AC1 audit trail
 
 - **Done when**: every entry in the four sections has exactly one verdict and a reason in `plan.md`, and the counts of each verdict are stated.
 
