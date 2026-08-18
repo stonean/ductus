@@ -2,8 +2,8 @@
 status: in-progress
 dependencies: []
 review:
-  last-run: null
-  reviewed-against: null
+  last-run: 2026-08-17T21:40:00Z
+  reviewed-against: e318dbc
   must-violations: 0
   should-violations: 0
   low-confidence: 0
