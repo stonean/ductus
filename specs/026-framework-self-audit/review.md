@@ -1,8 +1,9 @@
 ---
 spec: 026-framework-self-audit
-reviewed-at: 2026-08-17T20:22:00Z
-reviewed-against: 7af28c3
-diff-base: f9dbc315c7a3801e64928c605ce48f603a7807ae
+scenario: family-23-sweep-target-manifest-parity
+reviewed-at: 2026-08-18T01:43:30Z
+reviewed-against: e6f70cafcff5cfea14e2a459db6ccc475cfd783a
+diff-base: ca3b59b8156c2218ba95b2c23621574b906bfdd4
 must-violations: 0
 should-violations: 0
 low-confidence: 0
@@ -38,8 +39,8 @@ skipped-passes: []
 
 ## Observations
 
-- bug: gen-spec-deps.sh corrupts YAML block-list `dependencies:` frontmatter into invalid YAML while reporting success — given a `dependencies:` key whose value is an indented block-list item, it rewrites the key to `dependencies: []` and leaves the orphaned list item beneath it, then prints `Updated <path>` and exits 0. Every spec in this repo uses the inline flow form, which is why it has never surfaced here; an adopter who hand-writes block style has the file silently corrupted on commit by the pre-commit hook. Found while building Family 22's fixture. — `.ductus/scripts/gen-spec-deps.sh`
-- convention: 026's plan.md Affected Files still lists scripts/audit/registry-equivalence.sh, deleted when Family 3 was retired by 043 — so compute-review-scope resolves a plan-affected set that is larger than the real modified set and wins the larger-of rule, scoping the review to files the change never touched while omitting the ones it did. — `specs/026-framework-self-audit/plan.md`
+- convention: /{project}:review's file scope is the *larger* of the plan's Affected Files and the files modified since diff-base, never their union — so on this run the 15-entry plan list won and the resolved scope excluded every file the change actually touched, including the new family script, AGENTS.md, and the constitution. The failure grows with spec maturity: any done spec whose plan lists more files than a follow-on scenario touches gets reviewed against the wrong set, and the report gives no sign that the changed files were never examined. Same shape as QUAL-CLAIM-001 one level up — the review reports on a subject it did not look at. — `framework/commands/review.md`
+- convention: scripts/audit/run-all.sh captures each family's output with `output="$($script 2>&1)"` and prints it only when the family exits non-zero, so anything a family writes to stderr to qualify a clean result is discarded on exactly the runs where it qualifies something. Family 23 emits its entry/path counts and the direction it verified (manifest -> list, list completeness unchecked) this way; an operator reading an aggregate /{project}:audit pass never sees it. Affects all 22 families, not just this one. — `scripts/audit/run-all.sh`
 
 ## Skipped passes
 
