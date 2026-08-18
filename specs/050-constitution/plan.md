@@ -122,10 +122,24 @@ carries that weight.
 ## Classification
 
 Every rule-bearing entry, one verdict and one reason each (AC1). Entries are
-cited by section and position as of this pass. **25 promoted, 1 already
+cited by section and position as of this pass. **23 to promote, 3 already
 promoted, 28 project-only — 54 total.**
 
 `R` marks a verdict reached through the reword test rather than directly.
+
+Two entries were reclassified after checking the constitution rather than the
+survey: **W14 and W15 are already promoted.** They are cases (b) and (c) of
+§spec-lifecycle's mechanical-edit rule, and both `AGENTS.md` entries already
+cite the section by anchor — they were in the target shape before this spec
+started. The survey counted them as pending because it read `AGENTS.md` alone.
+
+That check also surfaced a defect this promotion fixes rather than causes.
+§spec-lifecycle's back-edge paragraph cites "the **Design Principles** rule:
+never depend on human diligence" — a rule that lives in `AGENTS.md`, which the
+**Shared Files** manifest never ships. So the one artifact every adopter
+receives cites a rule none of them can read. Promoting DP2 resolves the
+dangling reference; DP1's substance appears at §recommendations as a supporting
+clause rather than as a principle in its own right.
 
 ### Promoted — universal
 
@@ -137,8 +151,6 @@ promoted, 28 project-only — 54 total.**
 | W10 — the project config is a shared database | Adopters add config sections per spec; the anti-pattern of reopening the config's originating spec is the same |
 | W11 — no dead references in live artifacts | **R** — the artifact list is restated generically (specs, commands, rules, docs, README) rather than naming this repo's directories |
 | W12 — a behavior change needs a prose-claim sweep | Identifier greps miss stale claims in any project; the failure mode is the wording, not the paths |
-| W14 — cross-service reference edits are mechanical | Cross-service references ship to adopters; the non-reopening rule is part of that contract |
-| W15 — criterion-label assignment is mechanical | Adopters receive the labelling pass and the same back-edge question |
 | W16 — never hand-write an `AC{n}` label | The counter is adopter frontmatter and the collision risk is identical |
 | W18 — use the file-writing tool, not shell redirects, for the session file | **R** — stated as the session file rather than a permission-entry anecdote; adopters carry the same per-path grants |
 | W21 — reopen a `done` spec via `set-status` for on-disk edits | The back-edge and the refinement loop are both adopter-facing |
@@ -162,6 +174,8 @@ promoted, 28 project-only — 54 total.**
 | Entry | Reason |
 | --- | --- |
 | W5 — work a recommendation out before presenting it | Promoted 2026-08-17 as §recommendations; the entry is already the pointer-shaped mirror this spec generalises |
+| W15 — criterion-label assignment is mechanical | Adopters receive the labelling pass and the same back-edge question |
+| W14 — cross-service reference edits are mechanical | Cross-service references ship to adopters; the non-reopening rule is part of that contract |
 
 ### Project-only
 

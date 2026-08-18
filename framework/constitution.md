@@ -37,6 +37,17 @@ These are evaluation criteria, not implementation instructions. Use them to iden
 
 Per-task token tracking and budget ceilings require a runtime `ductus` does not have — that work belongs to the AI platform. `ductus` contributes by offering cost-aware patterns the user can opt into. The current levers: the stuck-detection step in `/{project}:implement` catches runaway loops before they compound spend; default-off autonomy keeps the human in the loop unless `--auto` is explicitly passed. For runtime cost controls, point the adopter at the platform's tooling — Claude Code's `/cost`, the Anthropic usage dashboard, Cursor's request limits, and equivalents.
 
+<!-- §design-principles -->
+
+### Design principles
+
+Two constraints on anything the pipeline asks an author or a check to do. Both
+are hard filters rather than tiebreakers: a design that fails one is redesigned
+or deferred, not shipped with a note.
+
+- **A check that cannot run MUST never be indistinguishable from a check that passed.** When a script, gate, or artifact check skips part of its subject, cannot reach it, or has no basis to inspect it, it MUST say so — a distinct result, a `guidance` field, a count of what *was* examined — rather than the same zero, empty list, or success string a genuinely-clean run produces. The failure is asymmetric and silent: nothing errors, a gate passes, and the missing check surfaces later when someone re-derives the result by hand. The states where a check *cannot* run are disproportionately the states where something is wrong. When adding a gate, prove it **fails** before trusting that it passes — break the thing it guards and watch it go red. This is `QUAL-CLAIM-001` (see [§rules](#rules)) applied to the pipeline's own machinery.
+- **Never design a pipeline feature that depends on human diligence.** Any artifact section, frontmatter field, command behavior, or workflow step that requires an author to *remember* — to fill something in, set a flag, or update a document alongside a change — will be skipped, and skipped precisely in the cases where it mattered most. When proposing a new input, ask what happens when an author forgets. If the answer is "the feature degrades silently," derive the input instead — from existing artifacts, frontmatter, or history — or do not ship it. Deferring the feature is the correct outcome when no derivable design exists; shipping the disciplined version "for now" is not.
+
 <!-- §grounding -->
 
 ## Grounding
@@ -128,7 +139,7 @@ The top-level directory name (`specs` above) is the documented default; a projec
 draft ──/clarify──▶ clarified ──/plan──▶ planned ──/implement──▶ in-progress ──[/review gate]──▶ done
 ```
 
-Forward edges only — `/clarify` raises status to `clarified`, `/plan` to `planned`, `/implement` to `in-progress` and then to `done`. The `in-progress → done` transition is gated by `/review`: `/implement` MUST NOT write `status: done` while the spec's `review.last-run` is unset or `review.blocking` is `true`. `/review` is a gate, not a state transition — it records findings and updates the `review:` frontmatter block, but does not change `status`. The gate composes with `/analyze` (which flags drifted `done` specs) and the shipped CI template (which fails PRs that bypass the local checks) per the **Design Principles** rule: never depend on human diligence. Three back-edges exist:
+Forward edges only — `/clarify` raises status to `clarified`, `/plan` to `planned`, `/implement` to `in-progress` and then to `done`. The `in-progress → done` transition is gated by `/review`: `/implement` MUST NOT write `status: done` while the spec's `review.last-run` is unset or `review.blocking` is `true`. `/review` is a gate, not a state transition — it records findings and updates the `review:` frontmatter block, but does not change `status`. The gate composes with `/analyze` (which flags drifted `done` specs) and the shipped CI template (which fails PRs that bypass the local checks) per [§design-principles](#design-principles): never depend on human diligence. Three back-edges exist:
 
 - **Backward via new questions** — `clarified` / `planned` / `in-progress` → `draft` when `/amend` records a new open question; the next `/clarify` resolves the question and the spec advances forward again. `draft` is the only status that tolerates open questions, so it is the destination; `/amend` performs the status mutation in the same write that records the question.
 - **Backward via new scenario** — `done` → `in-progress` when `/amend` records a scenario. The scenario's task is implemented and the spec returns to `done`. A scenario that *carries open questions* takes this same edge, **not** the question edge above: that edge exists because `draft` is the only status tolerating open questions **in the spec body**, and a scenario's questions are a separate signal that leaves the body untouched. Reverting to `draft` would assert a body state that is not true and route to feature-targeted `/clarify`, which does not read scenarios. The questions still bind — a spec does not reach `done` while any remain (see the `done` row above) — but the routing pressure comes from that gate, not from the status.
