@@ -119,6 +119,83 @@ substantive risk the checks do *not* cover is AC5 — whether a promoted rule
 truly holds for an adopter — which is why the reword test's recorded reason
 carries that weight.
 
+## Classification
+
+Every rule-bearing entry, one verdict and one reason each (AC1). Entries are
+cited by section and position as of this pass. **25 promoted, 1 already
+promoted, 28 project-only — 54 total.**
+
+`R` marks a verdict reached through the reword test rather than directly.
+
+### Promoted — universal
+
+| Entry | Reason |
+| --- | --- |
+| W4 — SHOULD gates `done` | Every adopter runs the review command and inherits its blocking semantics; a spec sitting at `done` with an unaddressed finding is indistinguishable from unfinished work anywhere |
+| W6 — superseded criterion recorded on the criterion | Specs, criteria and `review.md` are all adopter artifacts, and `write-review` regenerates the Summary wholesale for them too |
+| W7 — `reviewed-against` already contains what it reviewed | **R** — drops the Family 19 citation; the ordering rule (commit, review, commit the review) stands on its own and adopters' freshness check reads the same field |
+| W10 — the project config is a shared database | Adopters add config sections per spec; the anti-pattern of reopening the config's originating spec is the same |
+| W11 — no dead references in live artifacts | **R** — the artifact list is restated generically (specs, commands, rules, docs, README) rather than naming this repo's directories |
+| W12 — a behavior change needs a prose-claim sweep | Identifier greps miss stale claims in any project; the failure mode is the wording, not the paths |
+| W14 — cross-service reference edits are mechanical | Cross-service references ship to adopters; the non-reopening rule is part of that contract |
+| W15 — criterion-label assignment is mechanical | Adopters receive the labelling pass and the same back-edge question |
+| W16 — never hand-write an `AC{n}` label | The counter is adopter frontmatter and the collision risk is identical |
+| W18 — use the file-writing tool, not shell redirects, for the session file | **R** — stated as the session file rather than a permission-entry anecdote; adopters carry the same per-path grants |
+| W21 — reopen a `done` spec via `set-status` for on-disk edits | The back-edge and the refinement loop are both adopter-facing |
+| W22 — a new rule goes to its surface's home spec | Adopters own rule files and hit the same spec-proliferation pressure |
+| W24 — syncing a canonical table on a `done` spec is mechanical | Follows from the canonical-sources map, which adopters receive |
+| W27 — a CI check that reads history needs full history | **R** — the shipped adopter CI template runs exactly such a check, so this is adopter-facing already |
+| W28 — a test that reads history changes its workflow too | **R** — same family as W27; stated as history/inputs rather than this repo's workflow filenames |
+| W29 — a chore route means fix it, not park it | The groom command and its five routes ship unchanged |
+| W30 — restoring a spec directory reverts uncommitted pipeline state | Status flips and ticked criteria are tracked-file writes in every adopter repo |
+| W31 — renaming a repo orphans path-keyed contributor state | **R** — generalised from this rename to any; no migration can reach state keyed to a path outside the repo |
+| W32 — read a declarative entry before reporting it misbehaved | Adopters run the migration registry and read its gating fields; this is §grounding applied to a data row |
+| G5 — never `git add -A` | The untracked-draft hazard is created by the pipeline itself, which adopters run |
+| G11 — a body link creates a `dependencies:` edge | The dependency generator ships; citing versus depending is an adopter distinction |
+| G12 — `create-scenario` appends its own question scaffolding | An adopter-facing primitive with adopter-facing output |
+| B2 — never edit an installed command file directly | **R** — stated as "the installer overwrites it; pin it instead" rather than naming this repo's generator, which is what makes it matter to an adopter |
+| DP1 — a check that cannot run must not look like one that passed | Already `QUAL-CLAIM-001` in a shipped rule file; the design-time statement belongs beside it |
+| DP2 — never design features that depend on human diligence | The hardest constraint on any pipeline artifact an adopter authors |
+
+### Already promoted
+
+| Entry | Reason |
+| --- | --- |
+| W5 — work a recommendation out before presenting it | Promoted 2026-08-17 as §recommendations; the entry is already the pointer-shaped mirror this spec generalises |
+
+### Project-only
+
+| Entry | Reason |
+| --- | --- |
+| W1 — commit directly to `main` | This repo's trunk-based flow; adopters choose their own branching |
+| W2 — never recreate the retired repository name | Concerns this project's distribution redirect, not an adopter's pipeline |
+| W3 — a `runtime/` change ships via a tag | Adopters have no `runtime/` and cut no release |
+| W8 — never record another project's name here | Arises from using outside projects to test this framework |
+| W9 — read a command's source before describing it | Loses nothing an adopter needs that §grounding does not already state |
+| W13 — cover every agent in the registry | The registry is the framework's own enumeration |
+| W17 — run the installer per its spec, no ad-hoc prompts | Canonical statement already ships inside the installer itself; this is its mirror |
+| W19 — repo-relative paths in tool calls | Agent tool hygiene rather than pipeline governance; genericised it stops biting |
+| W20 — never use frozen-archaeology phrasing | The substance (specs are living documents) is already §spec-lifecycle; what remains is a phrasing ban local to this repo |
+| W23 — route runtime work to spec 022 | Names this repository's own spec |
+| W25 — backtick a primitive only when the walker can bind its arguments | Concerns authoring framework command sources |
+| W26 — do not build twice and read the second output | A cargo-specific shell trap in this repo's toolchain |
+| W33 — a real adopter run is the only test of composition | About testing this framework against adopters |
+| W34 — a run summary is evidence only about what it wrote | Restates §grounding's prefer-the-source rule for a narrow case; the general rule already ships |
+| G1 — run the linter via `npx` | Tooling preference, not a rule |
+| G2 — the command generator's substitutions | Framework build step |
+| G3 — a command edit is invisible until the generator re-runs | Framework build step |
+| G4 — `init.md` is the generator's one exception | Framework build step |
+| G6 — a new adopter-facing generator wires into three sites | Framework authoring |
+| G7 — `write_atomic_bytes` discards file mode | Runtime internals |
+| G8 — the toolchain pins clippy and rustfmt | Runtime build |
+| G9 — a new primitive wires into six sites | Runtime authoring |
+| G10 — `audit:ignore-promotion` does not change the parser | Framework command authoring |
+| G13 — a version bump needs one unlocked build | Runtime release |
+| G14 — gitignored adopter state survives a reset | About testing adopters, not being one |
+| G15 — the dogfooded copy is not the shipped copy | Structurally impossible for an adopter, who has only the shipped copy |
+| G16 — `path` is a reserved array in zsh | A shell trap with no pipeline connection |
+| B1 — no host-level enforcement of the deterministic path | A framework design non-goal |
+
 ## Affected Files
 
 | File | Action | Purpose |
