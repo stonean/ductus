@@ -174,19 +174,19 @@ a fact already banked.
 
 ## Acceptance Criteria
 
-- [ ] AC1: Every entry in `AGENTS.md` carries exactly one classification — universal, borderline, or project-only — and the reason it was assigned, so the classification is auditable rather than asserted
-- [ ] AC2: Each entry classified universal has its canonical normative text in `framework/constitution.md` under a named section with a stable anchor
-- [ ] AC3: Each promoted entry's `AGENTS.md` line points at its constitution section and states no normative content of its own, so grepping a promoted rule's distinctive phrasing finds one statement and one pointer
-- [ ] AC4: No entry classified project-only is altered by this spec
-- [ ] AC5: Every promoted rule is worded so it holds for an adopter: it cites the constitution, the pipeline commands, the artifacts, or runtime primitives, and never a path that exists only in this repository
-- [ ] AC6: The constitution states that a spec's ticked acceptance criteria are verified against the tree before it closes, naming both gaps that make the check necessary — that `check-artifacts` examines `done` specs only, and that a false claim whose paths resolve is not detectable
-- [ ] AC7: An adopter receives every promoted rule: the sections promoted here are present in the constitution the **Shared Files** manifest copies to `.ductus/constitution.md`
-- [ ] AC8: `/ductus:audit` passes with the promoted sections in place, Family 1 (cross-doc claim consistency) included, so no promotion contradicts a claim another document makes
-- [ ] AC9: `npx markdownlint-cli2` passes over `framework/constitution.md` and `AGENTS.md`
-- [ ] AC10: The constitution's existing section order and anchor set remain resolvable — no promotion renames or displaces an anchor another artifact cites
-- [ ] AC11: The constitution's canonical-sources map names this spec as the home for constitution-content work, so the ownership split above is recorded where a reader already looks for it rather than only here
-- [ ] AC12: The repo-root `version` pin, `runtime/Cargo.toml`, and `runtime/CHANGELOG.md` are untouched by this spec, and `/ductus:audit` Family 20 stays clean — a constitution-only change never moves the runtime acquisition pin
-- [ ] AC13: §spec-lifecycle states whether an edit that changes no claim — a typo or sweep-residue repair in a `done` spec's body — is a mechanical edit, so its enumerated cases read as a rule with a stated test rather than a closed list a fourth case must be argued into. The `045` chore held in `specs/inbox.md` is resolvable against that statement without further judgment
+- [x] AC1: Every entry in `AGENTS.md` carries exactly one classification — universal, borderline, or project-only — and the reason it was assigned, so the classification is auditable rather than asserted
+- [x] AC2: Each entry classified universal has its canonical normative text in `framework/constitution.md` under a named section with a stable anchor
+- [x] AC3: Each promoted entry's `AGENTS.md` line points at its constitution section and states no normative content of its own, so grepping a promoted rule's distinctive phrasing finds one statement and one pointer
+- [x] AC4: No entry classified project-only is altered by this spec
+- [x] AC5: Every promoted rule is worded so it holds for an adopter: it cites the constitution, the pipeline commands, the artifacts, or runtime primitives, and never a path that exists only in this repository
+- [x] AC6: The constitution states that a spec's ticked acceptance criteria are verified against the tree before it closes, naming both gaps that make the check necessary — that `check-artifacts` examines `done` specs only, and that a false claim whose paths resolve is not detectable
+- [x] AC7: An adopter receives every promoted rule: the sections promoted here are present in the constitution the **Shared Files** manifest copies to `.ductus/constitution.md`
+- [x] AC8: `/ductus:audit` passes with the promoted sections in place, Family 1 (cross-doc claim consistency) included, so no promotion contradicts a claim another document makes
+- [x] AC9: `npx markdownlint-cli2` passes over `framework/constitution.md` and `AGENTS.md`
+- [x] AC10: The constitution's existing section order and anchor set remain resolvable — no promotion renames or displaces an anchor another artifact cites
+- [x] AC11: The constitution's canonical-sources map names this spec as the home for constitution-content work, so the ownership split above is recorded where a reader already looks for it rather than only here
+- [x] AC12: The repo-root `version` pin, `runtime/Cargo.toml`, and `runtime/CHANGELOG.md` are untouched by this spec, and `/ductus:audit` Family 20 stays clean — a constitution-only change never moves the runtime acquisition pin
+- [x] AC13: §spec-lifecycle states whether an edit that changes no claim — a typo or sweep-residue repair in a `done` spec's body — is a mechanical edit, so its enumerated cases read as a rule with a stated test rather than a closed list a fourth case must be argued into. The `045` chore held in `specs/inbox.md` is resolvable against that statement without further judgment
 
 ## Open Questions
 
