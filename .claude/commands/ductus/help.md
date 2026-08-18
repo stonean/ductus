@@ -13,7 +13,7 @@ A static, at-a-glance guide to the pipeline: the states a spec moves through, th
 ## Scope Boundaries
 
 - Prints a fixed guide. Do NOT read spec files, list directories, run generators, or invoke any primitive — this command has no runtime path and no side effects.
-- The command tables in the guide are generated from each command's frontmatter `description:` by `scripts/gen-help-tables.sh` (kept in sync by the pre-commit hook and `/ductus:audit`), not assembled at print time.
+- The command tables in the guide are pre-generated from each command's frontmatter `description:` — print them as written, and do NOT assemble them at print time.
 
 ## Instructions
 
