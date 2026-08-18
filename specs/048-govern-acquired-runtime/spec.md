@@ -223,6 +223,57 @@ so the manifest self-install that follows is a no-op and its check never fires.
 That window only opens when upstream moves again while an adopter still carries
 the retired entry-point filename. All three are verified by inspection.
 
+### After run 4 — three more defects, found without a run
+
+Run 4 completed the chain, so the next round of work was repo-side. Hunting the
+*class* of the two defects above rather than waiting for a fifth run found three
+more, all shipping to adopters and all silent:
+
+- The shipped pre-commit hook's staged-spec detection hardcoded `specs`, while
+  the generators resolve the configured root. On a non-default
+  `[paths] specs-root` it matched nothing, so the re-stage loop never ran — and
+  since the dependency generator does no staging of its own, **every commit
+  landed with frontmatter the generators had already superseded on disk**.
+- The same generator turned YAML **block-form** `dependencies:` into invalid
+  YAML — rewrote the key to `[]`, left the list item orphaned beneath it,
+  printed `Updated` and exited 0. Every spec here uses the inline form, which is
+  why it never surfaced. Its sibling generator had the correct idiom already;
+  the two had diverged.
+- Both were invisible here because **the copy this repo dogfoods is a different
+  file from the copy the manifest ships**, and this repo uses the default spec
+  root. `AGENTS.md` §Gotchas now carries that rule.
+
+`/{project}:audit` **Family 22** (`scripts/audit/adopter-shell-behavior.sh`) was
+added to close the class: it builds an adopter-shaped fixture — non-default
+`[paths] specs-root`, config only at the converged tier, runtime reachable only
+through the repo-relative pointer with nothing on `PATH` — and runs the real
+shipped hook in it, at both the default and a configured root so neither failure
+masks the other. The runtime is stubbed, so it is hermetic and needs no build.
+
+**A fifth run therefore starts from a better baseline than run 4 did**, and the
+three fixes above are exactly what it would exercise first.
+
+### State of the subject and the repo (for a cold session)
+
+- **The subject is converged.** Its config, constitution and generators sit under
+  the current directory layout, its MCP config names the repo-relative pointer,
+  the pointer exists, and the store matches the pin. It carries a large number of
+  **uncommitted** paths from run 4 — the rename, the moves, and the criterion
+  backfill across its specs. Committing those first is what makes a further run's
+  diff readable.
+- **A run against it now tests idempotency and State A**, not the migration
+  chain: zero migrations pending, the MCP server live for the first time (all
+  four runs so far were State B driving primitives through the CLI), and the
+  refreshed hook, whose repaired backstop can be proven by staging a spec edit
+  with an unlabelled criterion and committing.
+- **To exercise the migration chain again**, the subject must be reset *and* its
+  gitignored state rebuilt by hand — see the reset gotcha above. The retired MCP
+  key in particular cannot be recovered from history and must be authored.
+- **No runtime change has landed since `0.29.9`.** Everything after run 4 is
+  framework, shipped shell, specs and docs, so no version bump and no
+  `ductus-v*` tag is implied. Adopters receive it on their next run because the
+  archive tracks `main`.
+
 **Original 2026-08-17 note follows.**
 
 **Two blockers, and only one belongs to an agent.**
