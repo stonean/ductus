@@ -4,8 +4,9 @@
 //!
 //! - **diff-base** — the commit the spec advanced to `in-progress` at (shared
 //!   with `check-stuck`), or a caller-supplied `--since` override.
-//! - **scope** — the larger of the plan's `Affected Files` set and the set of
-//!   files modified since `diff-base` (review walks the bigger surface).
+//! - **scope** — the union of the plan's `Affected Files` set and the set of
+//!   files modified since `diff-base`. Both, because either alone can omit
+//!   what the review exists to look at.
 //! - **captured-issues** — lines added to `{specs-root}/inbox.md` in the window
 //!   (`diff-base..HEAD`), the incidental issues logged during the work.
 //!
@@ -62,14 +63,19 @@ pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewSc
 
     let plan_affected = read_plan_affected(&feature_dir);
 
-    // "Whichever set is larger" — review walks the bigger surface. On a tie,
-    // prefer the git-derived modified-since set (authoritative for what the
-    // work actually touched).
-    let scope = if plan_affected.len() > modified_since.len() {
-        plan_affected.clone()
-    } else {
-        modified_since.clone()
-    };
+    // Union, not "whichever set is larger". Choosing one set can exclude the
+    // files the work actually touched: a mature spec's plan lists its whole
+    // surface, so on a small follow-on scenario the plan set wins on size and
+    // the review is scoped to files the change never went near — the gate
+    // reporting on a subject it did not examine. The union is bounded by
+    // |plan| + |modified| and the two overlap heavily in practice.
+    let scope: Vec<String> = plan_affected
+        .iter()
+        .chain(modified_since.iter())
+        .cloned()
+        .collect::<BTreeSet<String>>()
+        .into_iter()
+        .collect();
 
     Ok(ComputeReviewScopeResult {
         diff_base,
@@ -254,7 +260,7 @@ mod tests {
     }
 
     #[test]
-    fn plan_affected_wins_when_it_is_the_larger_set() {
+    fn scope_unions_plan_affected_with_modified_since() {
         let tmp = tempfile::tempdir().unwrap();
         let repo = Repository::init(tmp.path()).unwrap();
         let spec_path = tmp.path().join("specs/001-x/spec.md");
@@ -279,8 +285,32 @@ mod tests {
             result.plan_affected,
             vec!["src/one.rs", "src/two.rs", "src/three.rs"]
         );
-        // plan_affected (3) > modified_since (2: only.rs + plan.md) → plan wins.
-        assert_eq!(result.scope, result.plan_affected);
+        // The regression this guards: plan_affected (3) outnumbers
+        // modified_since (2: only.rs + plan.md), so the old larger-of rule
+        // returned the plan set alone and `src/only.rs` — the only source file
+        // the work actually touched — was never reviewed.
+        assert!(
+            result.scope.contains(&"src/only.rs".to_string()),
+            "the file the work touched must be in scope, not dropped for being \
+             in the smaller set: {:?}",
+            result.scope
+        );
+        for f in &result.plan_affected {
+            assert!(result.scope.contains(f), "plan-affected {f} missing");
+        }
+        for f in &result.modified_since {
+            assert!(result.scope.contains(f), "modified-since {f} missing");
+        }
+        // Union, deduplicated and sorted.
+        let mut expected: Vec<String> = result
+            .plan_affected
+            .iter()
+            .chain(result.modified_since.iter())
+            .cloned()
+            .collect();
+        expected.sort();
+        expected.dedup();
+        assert_eq!(result.scope, expected);
     }
 
     #[test]

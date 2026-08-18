@@ -2,6 +2,19 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.29.10] — 2026-08-18
+
+### Fixed
+
+- `compute-review-scope` returns `scope` as the **union** of `plan-affected` and
+  `modified-since` rather than whichever set is larger. Taking one set alone
+  could exclude the files the work touched: a mature spec's `plan.md` lists its
+  whole surface, so on a small follow-on scenario the plan set won on size and
+  the review was scoped to files the change never went near, with nothing in the
+  report signalling that the changed code went unexamined. The failure grew with
+  spec maturity, which is backwards for a quality gate. See
+  `specs/022-deterministic-runtime/scenarios/review-scope-union.md`.
+
 ## [0.29.9] — 2026-08-17
 
 ### Fixed

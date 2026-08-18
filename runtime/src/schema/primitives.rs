@@ -170,7 +170,7 @@ pub struct ComputeReviewScopeResult {
     /// Resolved diff-base sha (empty when the spec never reached `in-progress`
     /// and no `--since` was given).
     pub diff_base: String,
-    /// The review scope: the larger of `plan-affected` and `modified-since`.
+    /// The review scope: the union of `plan-affected` and `modified-since`.
     pub scope: Vec<String>,
     /// Files changed between `diff-base` and HEAD, sorted.
     pub modified_since: Vec<String>,

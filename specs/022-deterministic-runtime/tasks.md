@@ -217,3 +217,15 @@ Runtime half of [049's rename](../049-rename-govern-to-ductus/spec.md): the per-
 - [x] version bump, CHANGELOG entry, and a `ductus-v*` tag — the change reaches no adopter without it
 
 - **Done when**: `managed_roots` returns the historical roots `.govern/`, `scripts/gen-` and `scripts/lib/` alongside the current ones; the result carries `matched-prefixes`; a bare pre-042 generator reference is reported, an adopter-owned `scripts/build.sh` is not, and a clean result names the prefixes it matched — each covered by a test. 022's `data-model.md` records the field and the historical-root reasoning. Released, since the change is under `runtime/src/`.
+
+## 95. Implement scenario: [review-scope-union](scenarios/review-scope-union.md) — a gate must look at what changed
+
+- [x] `compute-review-scope` returns `scope` as the deduplicated, sorted union of `plan-affected` and `modified-since` instead of whichever set is larger
+- [x] The regression test asserts the file the work touched is in scope — the exact file the larger-of rule dropped — rather than asserting set equality with one input
+- [x] Module doc and `ComputeReviewScopeResult`'s field doc state the union
+- [x] `framework/commands/review.md` §Inputs and Instructions step 1 drop the "not a union" wording; generated command copies re-rendered
+- [x] `specs/020-code-review/spec.md`'s scope definition updated via the back-edge — it states the rule in prose and a behavior change makes it a stale claim
+- [x] `review-runtime-acceleration.md`'s two statements of the old rule corrected, and 022's §spec note that cited it as the reason a re-review is large
+- [x] Version bump, CHANGELOG entry, and a `ductus-v*` tag — a `runtime/src/` change reaches no adopter without it
+
+- **Done when**: `compute-review-scope` returns the union; a review of a follow-on scenario on a mature spec includes the files that scenario touched; the four prose surfaces that stated larger-of agree with shipped behavior; `cargo test`, `cargo clippy -- -D warnings`, `npx markdownlint-cli2` and `scripts/audit/run-all.sh` all clean; released under a `ductus-v*` tag.

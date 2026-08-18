@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [021-runtime-boundary]
 review:
   last-run: 2026-08-17T22:10:16Z
@@ -319,9 +319,12 @@ only the `done` transition, which is not being sought.
 
 Re-running `/{project}:review` here is nonetheless **a large job, and for a
 different reason than staleness**: `compute-review-scope` resolves 551 files
-(`diff-base 8c57d4bd`, `plan-affected` 33), because scope is the larger of the
-plan's Affected Files and everything modified since a diff base that predates
-the `0.28.0` cycle. Shrinking the staleness number does not shrink the review —
+(`diff-base 8c57d4bd`, `plan-affected` 33), because scope unions the plan's
+Affected Files with everything modified since a diff base that predates the
+`0.28.0` cycle — and that second set dominates here whatever the combining rule
+(it was already 551 under the superseded larger-of rule; see
+[review-scope-union](scenarios/review-scope-union.md)). Shrinking the staleness
+number does not shrink the review —
 the two are independent, and conflating them is what made the earlier note read
 as if a smaller number would mean a smaller job.
 

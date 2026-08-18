@@ -1,6 +1,6 @@
 ---
 spec: 020-code-review
-status: done
+status: in-progress
 dependencies: []
 review:
   last-run: 2026-05-17T22:55:00Z
@@ -245,9 +245,12 @@ advances to `done`.
   language is authoritative: **MUST/MUST NOT** are blocking violations,
   **SHOULD/SHOULD NOT** are advisory.
 - **Scope** — files referenced by the target's `plan.md` under `Affected Files`,
-  plus any files modified since the spec advanced to `in-progress` (whichever
-  set is larger). Lightweight-track features use the `Affected Files` section
-  of `spec-and-plan.md`.
+  unioned with any files modified since the spec advanced to `in-progress`.
+  This originally read "whichever set is larger"; taking one set alone scoped a
+  follow-on scenario's review to a mature spec's plan surface and omitted every
+  file the change actually touched, so [022](../022-deterministic-runtime/spec.md)'s
+  `review-scope-union` scenario made it a union. Lightweight-track features use
+  the `Affected Files` section of `spec-and-plan.md`.
 - **Config** — `.govern.toml` `[review] tech-stack-verified` (boolean,
   default `false`): when `true`, the tech-stack alignment check (see
   Behavior step 1) is skipped on every run until the operator clears the
