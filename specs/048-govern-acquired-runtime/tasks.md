@@ -131,6 +131,6 @@ Phase 1 is independently safe and lands first so later work is written against a
 
 ### 14. Implement scenario: [retired-namespace-tools-are-off-limits](scenarios/retired-namespace-tools-are-off-limits.md) — a retired server's tools are treated as absent
 
-- [ ] Implement the behavior described in `scenarios/retired-namespace-tools-are-off-limits.md`
+- [x] Implement the behavior described in `scenarios/retired-namespace-tools-are-off-limits.md`
 
 - **Done when**: `framework/bootstrap/ductus.md` §State B binds the host to the `ductus` namespace for the remainder of the run — retired-namespace MCP tools are not called, not preferred over the pointer CLI, and not read as evidence a runtime is available — and the reasoning names the resolver-vs-layout mismatch rather than restating the detection rule. The parity suite passes unchanged.
