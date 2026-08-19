@@ -1,9 +1,9 @@
 ---
 spec: 040-configurable-specs-dir
-scenario: command-prose-resolves-spec-root
-reviewed-at: 2026-08-19T13:51:00Z
-reviewed-against: f4c3bbd3058b7babf0c757c815341802cfe21c8e
-diff-base: 130f4cf5dc9e02ee3045446527c3e5b115411d65
+scenario: spec-root-rule-stated-once
+reviewed-at: 2026-08-19T15:25:17Z
+reviewed-against: 830e42a0d06396e62f2346c694d5ebd0c075742d
+diff-base: c8ae24d8fd9c91686443e3c367541a94e1ba70a4
 must-violations: 0
 should-violations: 0
 low-confidence: 0
@@ -15,7 +15,21 @@ skipped-passes: []
 
 ## Summary
 
-Re-run against f4c3bbd, the commit that contains the work, for the reason recorded in 022's review this cycle: the prior run reviewed the change while uncommitted, so `reviewed-against` named a commit predating it and Family 19 correctly reported the review stale once the command-prose-resolves-spec-root scenario landed. No finding changed; the reviewed tree is byte-identical to the one the prior run examined. No MUST or SHOULD violations. The change is prose-only — no runtime code was touched, so the security and efficiency passes have no subject, and the reuse pass confirmed the correct outcome: the fix reuses specify.md's existing Spec-root resolution note verbatim rather than inventing a second form. The quality pass found and the change fixed one defect in the fix itself: the note read "every `specs/…` path below", making coverage depend on where it sat, with two host-acted sites above their note; reworded to "in this command" across all six files including specify.md so one form exists and position stops mattering. Triage confirmed neither of those two was a live defect — implement.md step 13 describes a filter diff-cross-spec owns, and amend.md:35 is a scope declaration whose acted-on counterpart at :60 is covered. Two breakages introduced during the sweep were caught by the gates and fixed: a step naming two backticked primitives, and MD028 where the new note landed adjacent to the agent-runtimes blockquote.
+Clean at `830e42a` — 0 MUST, 0 SHOULD, 0 low-confidence, across all five passes.
+
+Scope is task 12's de-duplication: `framework/constitution.md`, the six command sources (`specify`, `log`, `groom`, `review`, `amend`, `implement`), their six generated copies under `.claude/commands/ductus/`, and `tasks.md`. Prose and generated artifacts only — no runtime, script, or workflow change, so no version bump and no `ductus-v*` tag.
+
+**The change is a net deletion**: 15 insertions, 36 deletions across 14 files. Seven statements of the spec-root substitution rule become one. `QUAL-CLAIM-001` is the rule this scenario is really about at the artifact level — the sibling sweep's fix worked but left a claim the corpus could not keep true, since nothing made the seven copies converge and the next command file added would silently lack one.
+
+**The canonical statement now carries the instruction.** The prior text described runtime behavior ("wherever a command or the runtime constructs a path under it, it resolves `[paths] specs-root`"), which is a fact, not a directive to the host — precisely the gap the six blockquotes grew to fill. It now states the substitution imperatively, scopes it to the markdown-only path, says explicitly that it applies to commands added later, and records that commands reference rather than restate it. That last clause is load-bearing in the new direction: with the notes gone, the failure mode inverts from "a new command forgets to paste the note" to "a new command's author does not know the rule reaches them," and one sentence closes both.
+
+**Verified by sweep, not assumed.** Zero occurrences of the restatement phrasing survive anywhere under `framework/` or `.claude/`; the only remaining match for "Spec-root resolution" is the new canonical-sources table row, which is the pointer rather than a copy. The two exemptions the scenario names are intact and were checked individually: `framework/bootstrap/ductus.md`'s note (load-bearing — `/ductus` scaffolds the constitution, so it runs where none exists to reference), and the sites the sibling scenario rewrote to name the resolved root as a literal *argument* rather than guidance (`log.md`'s `lint-markdown` target, `groom.md`'s inbox read), which are untouched. Deleting duplicated guidance is not deleting a resolved path, and the diff bears that out.
+
+**Two shapes of removal, handled separately.** In `specify`, `review`, and `implement` the note was a standalone blockquote. In `log`, `groom`, and `amend` it was a second paragraph *inside* the agent-runtimes blockquote, so the bare `>` continuation line had to go with it or the surviving blockquote would have carried a trailing empty quote line. Both cases render clean under `markdownlint-cli2`.
+
+AC11's substantive holding is preserved exactly: `specs/` stays literal and no `{specs-root}` placeholders enter human-read documents. What drops from seven to one is the number of places the *caveat* is repeated, not the number of places the default appears — which is what the scenario committed to and what the diff does.
+
+Checks: `markdownlint-cli2` (440 files, 0 issues), `lint-procedure-parseability`, `lint-tool-coverage`, `lint-frontmatter`, `lint-rule-ids`, `derive-dependencies` / `derive-references` (no drift, 51 examined), `gen-help-tables --dry-run`, and `scripts/audit/run-all.sh` — all clean, the audit re-run against the committed tree.
 
 ## MUST violations (blocking)
 
