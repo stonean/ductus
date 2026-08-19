@@ -72,6 +72,6 @@ and are out of scope. Run against the file as it stands, not the survey's counts
 
 ## 9. Completion-claim filter in §design-principles
 
-- [ ] Implement the behavior described in `scenarios/completion-claims-carry-no-caveats.md`
+- [x] Implement the behavior described in `scenarios/completion-claims-carry-no-caveats.md`
 
 - **Done when**: `framework/constitution.md` §design-principles carries the filter stating that incomplete work must never be indistinguishable from complete work, naming the three dispositions and the measurement rule; §implement-phase's SHOULD bullet references it rather than restating it; the section preamble no longer hardcodes a bullet count. Family 6 (SSOT invariants) stays green, confirming the rule is stated once.
