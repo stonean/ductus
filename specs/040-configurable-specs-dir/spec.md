@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [002-project-scaffolding, 003-bootstrap-automation, 017-derive-dont-ask, 022-deterministic-runtime]
 review:
   last-run: 2026-08-19T13:51:00Z
