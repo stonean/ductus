@@ -497,3 +497,30 @@ jobs:
             staged/*.tar.gz.sha256
             staged/ductus.cdx.json
             staged/ductus.cdx.json.sha256
+
+  # The constitution's **acquisition invariant** (§runtime-boundary) in its
+  # literal form: fetch the PUBLISHED asset over the wire, verify its sidecar
+  # digest, install it into a temporary store, and execute it — on a runner
+  # natively matching each target.
+  #
+  # `acquire` above cannot be this job. It gates the publish, so it necessarily
+  # runs before the release exists and reads the staged artifacts instead.
+  # Those are the same bytes release-assets uploads, but "the same bytes" is an
+  # argument, not a check: the upload itself and the download URL an adopter
+  # actually uses go unexercised unless something fetches them.
+  #
+  # This job gates nothing — by the time it runs, both halves are already out —
+  # and that is the honest shape rather than a shortcoming. Its purpose is to
+  # make a release nobody can acquire loud on the release run, instead of
+  # leaving it for the first adopter who tries. The alternative was to reword
+  # the constitution down to whatever the pipeline still happened to check; a
+  # job that runs is worth more than a sentence that accommodates.
+  #
+  # It calls runtime-acquisition.yml rather than restating it, so the automatic
+  # path and the hand-dispatched one cannot drift apart. AGENTS.md's first
+  # Design Principle is what makes that reuse load-bearing: a second copy of
+  # this sequence would be a check that could rot without anything saying so.
+  verify-published:
+    name: Verify the published release is acquirable
+    needs: release-assets
+    uses: ./.github/workflows/runtime-acquisition.yml

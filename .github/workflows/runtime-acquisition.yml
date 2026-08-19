@@ -20,19 +20,30 @@ name: runtime-acquisition
 # that procedure changes, this job changes with it — it is the executable copy
 # of the same sequence.
 
-# NOTE: this workflow is **manual only**. It used to declare
-# `on: release: [published]`, which never fired: GitHub does not trigger
-# workflows from events created with the default GITHUB_TOKEN, and
-# runtime-release.yml creates its release with exactly that. The invariant is
-# enforced by the `acquire` job inside runtime-release.yml, which gates the
-# crates.io publish. That job reads the *staged* build artifacts rather than a
-# download URL, because the GitHub release is now created after the publish it
-# gates and so does not exist yet when it runs (spec 048,
-# scenarios/release-halves-publish-together.md). The bytes are identical —
-# release-assets uploads those same artifacts unmodified — so what this copy
-# adds is the one step the gate cannot take: fetching over the wire from the
-# published release. Dispatch it to re-validate an already-published release.
+# NOTE: this workflow used to declare `on: release: [published]`, which never
+# fired: GitHub does not trigger workflows from events created with the default
+# GITHUB_TOKEN, and runtime-release.yml creates its release with exactly that.
+# So it is reached two ways, neither of them that one.
+#
+# `workflow_call` is the automatic path — runtime-release.yml's
+# `verify-published` job calls this after the release is created, which is what
+# keeps the constitution's acquisition invariant exercised against the
+# PUBLISHED assets on every tag. That matters because the `acquire` job which
+# gates the crates.io publish necessarily runs *before* the release exists
+# (spec 048, scenarios/release-halves-publish-together.md) and so reads the
+# staged build artifacts instead. Those are the same bytes, but "the same
+# bytes" is an argument rather than a check: the upload and the download URL an
+# adopter actually uses go unexercised unless something fetches them.
+#
+# `workflow_dispatch` is the manual path, for re-validating an
+# already-published release by hand after the fact.
 on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to acquire (defaults to the repo-root version pin)'
+        required: false
+        type: string
   workflow_dispatch:
     inputs:
       version:

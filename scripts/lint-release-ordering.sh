@@ -21,6 +21,13 @@
 #      everything gating it. That is not hypothetical: ductus-v0.28.0's first
 #      attempt failed its audit, published no binaries, and still left a GitHub
 #      release carrying nothing but an SBOM.
+#   3. Some job after `release-assets` exercises acquisition against the
+#      published assets. The gating `acquire` job runs before the release
+#      exists and so reads staged artifacts; without a post-release check, the
+#      constitution's §runtime-boundary acquisition invariant would be enforced
+#      only by a hand-dispatched workflow. AGENTS.md records that exact shape —
+#      an invariant cited by name and never once executed — as one of this
+#      repo's four most expensive failures.
 #
 # Source of truth: specs/048-govern-acquired-runtime/scenarios/release-halves-publish-together.md
 # Consumed by: .github/workflows/framework-checks.yml
@@ -45,6 +52,7 @@ done
 WORKFLOW="$ROOT/.github/workflows/runtime-release.yml"
 REL="${WORKFLOW#"$ROOT"/}"
 RELEASE_ACTION="softprops/action-gh-release"
+ACQUISITION_WORKFLOW="runtime-acquisition.yml"
 
 if [ ! -f "$WORKFLOW" ]; then
   echo "$REL: not found — this lint cannot examine its subject, which is not the same as clean"
@@ -56,12 +64,13 @@ fi
 # structural enough to read off the indentation. BSD awk (every macOS machine)
 # has to run this verbatim, so: no gensub, no length(array), no /\s/.
 #
-# Emits one `<job> <needs-csv> <uses-release-action>` line per job.
+# Emits one `<job> <needs-csv> <uses-release-action> <calls-acquisition>` line
+# per job.
 summary="$(
   awk '
     function flush() {
-      if (job != "") print job, (needs == "" ? "-" : needs), uploads
-      job = ""; needs = ""; uploads = "no"; in_needs = 0
+      if (job != "") print job, (needs == "" ? "-" : needs), uploads, verifies
+      job = ""; needs = ""; uploads = "no"; verifies = "no"; in_needs = 0
     }
     # Job keys are only recognized inside the top-level `jobs:` mapping. `on:`
     # has two-space children too (`  push:`), and reading one of those as a job
@@ -102,8 +111,10 @@ summary="$(
     }
     /^    [A-Za-z0-9_-]+:/ { in_needs = 0 }
     index($0, RELEASE_ACTION) > 0 { uploads = "yes" }
+    index($0, ACQUISITION_WORKFLOW) > 0 { verifies = "yes" }
     END { flush() }
-  ' RELEASE_ACTION="$RELEASE_ACTION" "$WORKFLOW"
+  ' RELEASE_ACTION="$RELEASE_ACTION" \
+    ACQUISITION_WORKFLOW="$ACQUISITION_WORKFLOW" "$WORKFLOW"
 )"
 
 if [ -z "$summary" ]; then
@@ -116,7 +127,8 @@ errors=0
 release_needs=""
 found_release_job=0
 found_publish_job=0
-while read -r job needs uploads; do
+found_published_check=0
+while read -r job needs uploads verifies; do
   [ -n "$job" ] || continue
   case "$job" in
     release-assets)
@@ -128,6 +140,16 @@ while read -r job needs uploads; do
       if [ "$uploads" = "yes" ]; then
         echo "$REL: job '$job' uses $RELEASE_ACTION — only release-assets may, or the release object can be created ahead of the publish that gates it"
         errors=$((errors + 1))
+      fi
+      ;;
+  esac
+  # The post-release acquisition check must run AFTER the release exists;
+  # calling the acquisition workflow earlier would fetch a URL that is not
+  # there yet, which is the mistake this assertion is shaped to catch.
+  case ",$needs," in
+    *,release-assets,*)
+      if [ "$verifies" = "yes" ]; then
+        found_published_check=1
       fi
       ;;
   esac
@@ -156,6 +178,11 @@ if [ "$found_release_job" -eq 1 ]; then
       errors=$((errors + 1))
       ;;
   esac
+fi
+
+if [ "$found_published_check" -eq 0 ]; then
+  echo "$REL: no job runs after release-assets and calls $ACQUISITION_WORKFLOW — nothing would exercise acquisition against the published assets, leaving the constitution's acquisition invariant to a hand-dispatched workflow"
+  errors=$((errors + 1))
 fi
 
 if [ "$errors" -gt 0 ]; then

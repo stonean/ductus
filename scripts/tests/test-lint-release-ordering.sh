@@ -16,6 +16,8 @@
 #   F. an absent workflow fails rather than passing vacuously
 #   G. the block-sequence `needs:` form is read, not mistaken for an empty list
 #   H. `on:`'s two-space children are not read as jobs
+#   I. dropping the post-release acquisition check fails
+#   J. moving that check ahead of the release fails
 #
 # Usage: scripts/tests/test-lint-release-ordering.sh
 
@@ -118,6 +120,29 @@ if probe h-on-block "s|^      - 'ductus-v\*'\$|      - 'ductus-v*'  # softprops/
   pass "H: on:'s children are not read as jobs"
 else
   fail "H: a key under on: was read as a job: $(cat "$WORK/h-on-block/out")"
+fi
+
+# I. without a post-release check, nothing fetches the published asset over the
+#    wire on a tag, and the constitution's acquisition invariant falls back to a
+#    workflow someone has to remember to dispatch.
+if probe i-no-published-check 's|^    uses: ./.github/workflows/runtime-acquisition.yml$|    runs-on: ubuntu-latest\
+    steps:\
+      - run: "true"|'; then
+  fail "I: a workflow with no post-release acquisition check was accepted"
+elif grep -q "no job runs after release-assets" "$WORK/i-no-published-check/out"; then
+  pass "I: a missing post-release acquisition check is rejected"
+else
+  fail "I: rejected for the wrong reason: $(cat "$WORK/i-no-published-check/out")"
+fi
+
+# J. the check only means anything after the release exists. Called earlier it
+#    would fetch a URL that is not there yet — a green job proving nothing.
+if probe j-check-too-early 's|^    needs: release-assets$|    needs: build|'; then
+  fail "J: an acquisition check running before the release was accepted"
+elif grep -q "no job runs after release-assets" "$WORK/j-check-too-early/out"; then
+  pass "J: an acquisition check ahead of the release is rejected"
+else
+  fail "J: rejected for the wrong reason: $(cat "$WORK/j-check-too-early/out")"
 fi
 
 echo
