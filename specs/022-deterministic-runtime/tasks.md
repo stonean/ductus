@@ -229,3 +229,9 @@ Runtime half of [049's rename](../049-rename-govern-to-ductus/spec.md): the per-
 - [x] Version bump, CHANGELOG entry, and a `ductus-v*` tag — a `runtime/src/` change reaches no adopter without it
 
 - **Done when**: `compute-review-scope` returns the union; a review of a follow-on scenario on a mature spec includes the files that scenario touched; the four prose surfaces that stated larger-of agree with shipped behavior; `cargo test`, `cargo clippy -- -D warnings`, `npx markdownlint-cli2` and `scripts/audit/run-all.sh` all clean; released under a `ductus-v*` tag.
+
+## 96. Report adopter-authored framework-path references in `specs/system.md`
+
+- [ ] Implement the behavior described in `scenarios/orphan-check-adopter-authored-references.md`
+
+- **Done when**: `check-orphaned-references` includes `specs/system.md` in `REFERRERS` and reports a stale framework-path reference found there, resolving the path through `[paths] specs-root` rather than a hardcoded `specs/`; an absent file stays distinguishable from an examined-and-clean one. Repair remains out of scope — the framework did not author the reference. Runtime change: not delivered to any adopter until the version is bumped across `version`, `runtime/Cargo.toml` and `runtime/CHANGELOG.md` and a matching `ductus-v<version>` tag is pushed.
