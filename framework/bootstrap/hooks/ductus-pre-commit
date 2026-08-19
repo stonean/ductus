@@ -70,6 +70,33 @@ if [ -z "$ductus_bin" ]; then
   exit 1
 fi
 
+# A reachable runtime is not necessarily a CAPABLE one. /ductus's State A
+# treated "a ductus tool is in my inventory" as sufficient and never compared
+# the live runtime against the framework's pin, so a project could carry a
+# runtime older than the primitives this hook calls. That is not hypothetical:
+# on 2026-08-19 an adopter's store held 0.29.10 against a pin of 0.31.0, and
+# because the shell generators these primitives replaced had already been
+# deleted, every commit halted on a bare `unrecognized subcommand` from clap —
+# a message that names the symptom and not one thing the adopter can act on.
+#
+# /ductus now version-checks in State A, which prevents the state. This asks
+# the narrower question the hook actually depends on — can this binary run what
+# I am about to call — so it also covers a hand-placed binary and any future
+# primitive this hook grows. Probing capability rather than parsing a version
+# means there is no pin for the hook to get out of sync with.
+for primitive in derive-dependencies derive-references; do
+  if ! "$ductus_bin" "$primitive" --help > /dev/null 2>&1; then
+    installed="$("$ductus_bin" --version 2>/dev/null || echo 'version unknown')"
+    echo "ductus: pre-commit halted — the installed runtime is too old." >&2
+    echo "  $ductus_bin reports: $installed" >&2
+    echo "  It has no \`$primitive\` subcommand, which this hook calls to derive" >&2
+    echo "  the spec frontmatter indexes this commit captures." >&2
+    echo "  Run /ductus to acquire the pinned runtime, or commit with" >&2
+    echo "  --no-verify to bypass this hook deliberately." >&2
+    exit 1
+  fi
+done
+
 "$ductus_bin" derive-dependencies --write --staged > /dev/null
 "$ductus_bin" derive-references --write --staged > /dev/null
 

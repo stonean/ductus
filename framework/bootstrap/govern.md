@@ -208,7 +208,15 @@ The reason is not tidiness. A retired-namespace server is a *different runtime a
 
 #### State A — runtime live this session
 
-A `ductus`-namespaced tool is available to this session, so the runtime is live and the rest of the run takes the **deterministic primitive path**. ductus contributes nothing to the **pending-restart set**, and detection emits no message.
+A `ductus`-namespaced tool is available to this session, so the runtime is live and the rest of the run takes the **deterministic primitive path**.
+
+**Live is not current — version-check it against `{pin}` before trusting it.** Probe the resolved binary (the `[runtime] path` when the project configures one, else `{store-path}`) and read its reported version. This is the same probe **Runtime acquisition** step 2 performs, and the **Permission Setup** seed pre-authorizes it.
+
+- **Reports `{pin}`** — proceed. ductus contributes nothing to the **pending-restart set**, and detection emits no message. This is the routine path.
+- **A project-supplied `[runtime] path` reports something else** — emit Branch 1's warning and continue. A project naming a path has stated deliberately which binary it wants.
+- **Anything else** — the runtime is **live but stale**. Acquire `{pin}` per **Runtime acquisition** Branch 2, then run the rest of this session through `{pointer-path} <primitive>` rather than the MCP tools: the server was spawned at session start and is still the old binary, so its tool surface stays stale no matter what is now in the store. Add the acquisition to the **deferred-restart set** and carry the notice to the **Closing restart**, exactly as State B does.
+
+A live-but-stale runtime fails in the direction hardest to attribute. It is missing primitives the framework has since come to depend on, and `/ductus` reports success because a tool *was* in the inventory — so the failure surfaces later, somewhere else, as someone else's problem. Observed 2026-08-19 in an adopter project: the store held `0.29.10` while the framework pinned `0.31.0`, so the pre-commit hook that same run refreshed called `derive-dependencies` and `derive-references`, which that binary does not carry, and the shell generators they replaced had already been deleted. Every commit in that project halted, and nothing in the `/ductus` run said the runtime was behind. Detection that stops at "a tool is in my inventory" answers the wrong question: what the run needs to know is whether the runtime it is about to depend on is the one this framework revision was tested against.
 
 State A is a **binding execution contract, not a preference.** Detecting the runtime and then walking the prose `curl`/`tar`/`python3` path anyway is the exact failure 029 exists to prevent — it spends the markdown path's tokens despite a cheaper path being live, and it is what makes the State-B wire-and-restart pointless. For the rest of this run:
 

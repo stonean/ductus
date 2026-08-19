@@ -146,3 +146,9 @@ Phase 1 is independently safe and lands first so later work is written against a
 - [x] Implement the behavior described in `scenarios/pin-is-readable-when-acquisition-needs-it.md`
 
 - **Done when**: `{tempdir}` is created in the Pre-flight Phase preamble before either check; Runtime acquisition step 1 fetches the pin from raw into `{tempdir}/version` and reads it there, with §Derived values naming that path; the self-update check states the directory already exists rather than creating a second one; the halt survives with a message naming the pin URL; `{staging-dir}` no longer appears in the procedure; `framework/bootstrap/govern.md` is byte-identical (Family 21); and a fresh greenfield adoption reaches an installed, version-matching runtime with **no hand-supplied pin**.
+
+### 17. Version-check the runtime in State A
+
+- [x] Implement the behavior described in `scenarios/state-a-version-checks-the-pin.md`
+
+- **Done when**: State A probes the resolved binary against `{pin}` and branches three ways — proceed silently on a match, warn and continue for a project-supplied `[runtime] path`, and otherwise acquire `{pin}` then run the remainder through `{pointer-path} <primitive>` with the acquisition carried to the Closing restart, since the running MCP server holds the old binary regardless of the store; `framework/bootstrap/govern.md` is byte-identical (Family 21); and the shipped `ductus-pre-commit` hook probes each primitive's availability before calling it, halting with the installed version and the missing subcommand rather than a bare clap error. Proven against a stale runtime that lacks the subcommands (guard halts with a diagnosis) and a current one (guard silent); Family 22 green.
