@@ -1,12 +1,12 @@
 ---
 spec: 022-deterministic-runtime
-scenario: adopter-generator-promotion
-reviewed-at: 2026-08-19T13:51:00Z
-reviewed-against: f4c3bbd3058b7babf0c757c815341802cfe21c8e
+scenario: derive-unparseable-frontmatter-is-reported
+reviewed-at: 2026-08-19T14:05:51Z
+reviewed-against: 66c2cf8c007087410ae5f807bdcc6146c62101b6
 diff-base: 9c06b2dfd5f16618c50fd3a0186caf534a517778
 must-violations: 0
 should-violations: 0
-low-confidence: 1
+low-confidence: 0
 captured-issues: 0
 skipped-passes: []
 ---
@@ -15,7 +15,7 @@ skipped-passes: []
 
 ## Summary
 
-Re-run against f4c3bbd, the commit that contains the work. The prior run recorded reviewed-against d35bbc2d — the pre-commit HEAD — because it reviewed the change while it was still uncommitted. That satisfied the pre-done gate but left `reviewed-against` naming a commit predating the work, so /ductus:audit Family 19 correctly reported the review stale once the work landed: data-model.md and the adopter-generator-promotion scenario are durable contracts that moved after the recorded sha. No finding changed; the reviewed tree is byte-identical to the one the prior run examined. Findings from that run stand: no MUST or SHOULD violations, one low-confidence QUAL-CLAIM-001 recorded below. The quality pass had found and the change fixed a real regression — the frontmatter-fence test written three different ways across the scanner and the two splices, none matching the shell's column-anchored form, letting an indented `---` inside a YAML block scalar end the frontmatter early so a `dependencies:` key below it was silently never rewritten; fixed by extracting one shared `is_frontmatter_fence` predicate with regression tests in both directions. The reuse pass consolidated two byte-identical golden helpers into tests/common, and the efficiency pass bounded the untracked-spec scan to the spec root and made the inline-code strip borrow on the common path.
+Reviewed the derive-unparseable-frontmatter-is-reported scenario against 66c2cf8, the commit containing it — the ordering AGENTS.md prescribes and which the previous cycle got wrong. No MUST or SHOULD violations; the spec is not blocked, and the QUAL-CLAIM-001 finding the prior review carried is resolved rather than carried forward: both derive results now name the specs they could not examine, so an empty `updated` asserts examined-and-clean only alongside an empty `unparseable`. The reuse pass confirms the detector went into the shared scanner beside `is_frontmatter_fence` rather than into either splice — a second copy of that test is precisely the drift extracting the fence predicate was meant to end, and the two primitives reach the gap by different routes (one loses its insertion anchor, the other never locates its key) which would have made divergent copies easy. The quality pass checked the boundary the rule turns on: a file with no frontmatter at all is deliberately not unparseable, since there is no block to close and reporting every plain markdown file would bury the signal, and that exemption is covered by a unit test. The security and efficiency passes have no subject — the change is one early-return per spec on a condition already computed by reading the file. Two mutations verified the tests can fail: a detector that always returns false restores the silent skip and fails the golden suite; one that drops the opening-fence guard reports every file and fails the unit test.
 
 ## MUST violations (blocking)
 
@@ -27,13 +27,7 @@ Re-run against f4c3bbd, the commit that contains the work. The prior run recorde
 
 ## Low-confidence findings
 
-### LOW-CONFIDENCE: QUAL-CLAIM-001 — an unterminated frontmatter block yields a clean result for a spec that was not processed
-
-- **File**: `runtime/src/primitives/derive_references.rs:345-395`
-- **Rule**: A result that reports a clean, empty, or in-sync state SHOULD distinguish "examined the subject and found nothing" from "could not examine the subject", rather than emitting the same value for both.
-- **Finding**: splice_references only places the block at a `dependencies:` line or at the closing `---`. A spec whose frontmatter is unterminated AND carries no `dependencies:` key never reaches either insertion point, so the rewrite is skipped and the spec is silently absent from `updated` — indistinguishable in the result from a spec that genuinely needed no change. Narrow (it requires both conditions plus a cross-service link), and `validate-frontmatter` owns reporting malformed frontmatter, which is why this is recorded rather than fixed here: the honest fix is an `unparseable` field on both results, a deliberate schema addition rather than a review-time patch.
-- **Auto-fixable**: no
-- **Suggested fix**: Add an `unparseable: Vec<String>` field to both derive results, populated when the frontmatter fence is never closed, so an empty `updated` means examined-and-clean only when `unparseable` is also empty. Mirrors `check-artifacts`' `skipped` and `derive-boundary`'s `guidance`.
+*None.*
 
 ## Waived findings
 
