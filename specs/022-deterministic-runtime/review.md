@@ -1,8 +1,8 @@
 ---
 spec: 022-deterministic-runtime
 scenario: adopter-generator-promotion
-reviewed-at: 2026-08-19T12:47:42Z
-reviewed-against: d35bbc2d0a91b367be87cae68378cae8065bec67
+reviewed-at: 2026-08-19T13:51:00Z
+reviewed-against: f4c3bbd3058b7babf0c757c815341802cfe21c8e
 diff-base: 9c06b2dfd5f16618c50fd3a0186caf534a517778
 must-violations: 0
 should-violations: 0
@@ -15,7 +15,7 @@ skipped-passes: []
 
 ## Summary
 
-Reviewed the adopter-generator-promotion cutover: the two new derivation primitives, the shared body scanner and corpus-enumeration helpers, the CLI blocking contract, both pre-commit hooks, Family 22, the CI workflows, and the migration. No MUST violations; the spec is not blocked. The quality pass found and the change fixed one real regression: the frontmatter-fence test had been written three different ways across the scanner and the two splices (a trimmed compare, a trim-start compare, a trim-end compare), none matching the shell's column-anchored `^---[[:space:]]*$`. The trimmed form treated an indented `---` inside a YAML block scalar as the closing fence, so a `dependencies:` key below it was silently never rewritten — the exact silent-staleness class this promotion exists to remove, reintroduced in new code. Fixed by extracting one `is_frontmatter_fence` predicate the three sites share, with regression tests for both the indented-fence and trailing-whitespace directions. The reuse pass consolidated two byte-identical golden helpers into `tests/common`, and the efficiency pass bounded the untracked-spec scan to the spec root (it was a full worktree status on every commit) and made the inline-code strip borrow on the common path. One SHOULD remains, recorded below at low confidence.
+Re-run against f4c3bbd, the commit that contains the work. The prior run recorded reviewed-against d35bbc2d — the pre-commit HEAD — because it reviewed the change while it was still uncommitted. That satisfied the pre-done gate but left `reviewed-against` naming a commit predating the work, so /ductus:audit Family 19 correctly reported the review stale once the work landed: data-model.md and the adopter-generator-promotion scenario are durable contracts that moved after the recorded sha. No finding changed; the reviewed tree is byte-identical to the one the prior run examined. Findings from that run stand: no MUST or SHOULD violations, one low-confidence QUAL-CLAIM-001 recorded below. The quality pass had found and the change fixed a real regression — the frontmatter-fence test written three different ways across the scanner and the two splices, none matching the shell's column-anchored form, letting an indented `---` inside a YAML block scalar end the frontmatter early so a `dependencies:` key below it was silently never rewritten; fixed by extracting one shared `is_frontmatter_fence` predicate with regression tests in both directions. The reuse pass consolidated two byte-identical golden helpers into tests/common, and the efficiency pass bounded the untracked-spec scan to the spec root and made the inline-code strip borrow on the common path.
 
 ## MUST violations (blocking)
 
