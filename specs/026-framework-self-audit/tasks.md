@@ -259,3 +259,15 @@ Opened by [048](../048-govern-acquired-runtime/spec.md)'s AC10 adopter runs, whi
 - [x] Register as Family 23 in `scripts/audit/run-all.sh` and in `framework/commands/audit.md`'s family list, correcting the family count in both
 
 - **Done when**: the family goes red when the enumeration is reverted to the pre-042 `scripts/` form (the shape 049's sweep actually grepped), green against the restored list save for the one true finding it surfaces, and `scripts/audit/run-all.sh` is clean once that finding is resolved.
+
+### 29. Family 24 — rename-sweep residue
+
+- [x] Implement the behavior described in `scenarios/family-24-rename-sweep-residue.md`
+
+- **Done when**: `scripts/audit/rename-sweep-residue.sh` reports the project name in verb position across the markdown corpus, is wired into `run-all.sh` as Family 24, is listed in `scripts/audit/README.md`, and reports its examined-file count on stderr with a degenerate scan treated as a finding. Proven red against the pre-repair corpus (8 findings) and green at HEAD (0).
+
+### 30. Family 25 — unbalanced inline markup
+
+- [x] Implement the behavior described in `scenarios/family-25-unbalanced-inline-markup.md`
+
+- **Done when**: `scripts/audit/unbalanced-inline-markup.sh` reports odd backtick or odd `**` counts outside fenced code blocks in `AGENTS.md` and `framework/templates/project/agents.md`, is wired into `run-all.sh` as Family 25, is listed in `scripts/audit/README.md`, names its examined files on stderr, and reports a wrapped bullet rather than narrowing silently. Proven red against the pre-repair corpus (2 findings) and green at HEAD (0).
