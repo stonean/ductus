@@ -19,13 +19,11 @@ This command does not require a session target — items in the inbox span the w
 
 - This command only appends a single line to `specs/inbox.md`. Do NOT modify any other file. Do NOT read or write source code, test files, specs, plans, or scenarios.
 - Do NOT walk the decision tree, classify the item, or suggest a spec — that is `/ductus:groom`'s job. Keep the recording step fast and uninterpreted.
-- Reference: §brownfield-inbox (constitution loaded by `/ductus:target` — do not re-read).
+- Reference: §brownfield-inbox, §spec-phase (spec-root resolution) (constitution loaded by `/ductus:target` — do not re-read).
 
 ## Instructions
 
 > **For agent runtimes**: the Invoke steps below call the MCP tools of the ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. Before the server is registered — the window between acquisition and the restart that loads it — walk the same prose using the host file-reading tools (Read, Edit, Write) per the Markdown-only reference below.
->
-> **Spec-root resolution.** Every `specs/…` path in this command resolves under the configured `[paths] specs-root` (default `specs`; spec 040, constitution §spec-phase). When `.ductus/config.toml` sets `[paths] specs-root`, substitute that name for the literal `specs/` throughout. The runtime primitives already resolve it; only this markdown-only path performs the substitution by hand.
 
 <!-- audit:ignore-promotion -->
 1. Capture the item. If `$ARGUMENTS` is provided, treat it as the item text. Otherwise, ask the user: "What do you want to log?" Optionally ask follow-up questions if the item is so terse it would be unrecoverable later (e.g., "broken" with no context) — one short clarification is enough; do not interrogate.

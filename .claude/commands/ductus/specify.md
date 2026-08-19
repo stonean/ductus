@@ -57,8 +57,6 @@ If the constitution has not been loaded in this session (e.g., `/ductus:target` 
 
 The full new-feature-creation procedure (directory creation, template copy, frontmatter conventions, session write, and next-step prompt) is documented below for the markdown-only path. The numbered steps above invoke the mechanical primitives plus the writeSpecBody extension that automate the deterministic phases.
 
-> **Spec-root resolution.** Every `specs/…` path in this command is written under the configured `[paths] specs-root` (default `specs`; spec 040, constitution §spec-phase). When `.ductus/config.toml` sets `[paths] specs-root`, substitute that name for the literal `specs/` throughout this file — the feature-number scan, the new feature directory, the `templates/spec.md` source, and the session `path`. The literal `specs/` is the documented default; the runtime primitives already resolve it, so only this markdown-only path performs the substitution by hand.
-
 ### Route before scaffolding
 
 Run this **before** the feature directory exists — creating a spec is the one

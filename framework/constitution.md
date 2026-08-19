@@ -115,7 +115,9 @@ specs/
       {slug}.md          # One file per scenario
 ```
 
-The top-level directory name (`specs` above) is the documented default; a project may rename it via `.ductus/config.toml` `[paths] specs-root` (e.g. to avoid colliding with a sibling framework's `spec/`, like RSpec's). When the key is unset every command and the runtime default to `specs`, so an adopter who never sets it sees unchanged behavior. The literal `specs/` throughout this constitution and the command sources is that default; wherever a command or the runtime constructs a path under it, it resolves `[paths] specs-root` (spec 040).
+The top-level directory name (`specs` above) is the documented default; a project may rename it via `.ductus/config.toml` `[paths] specs-root` (e.g. to avoid colliding with a sibling framework's `spec/`, like RSpec's). When the key is unset every command and the runtime default to `specs`, so an adopter who never sets it sees unchanged behavior. The literal `specs/` throughout this constitution and the command sources is that default.
+
+**This is an instruction, not only a fact.** Wherever a command acts on a path under the spec root, substitute the configured name for the literal `specs/`. The primitives resolve `[paths] specs-root` themselves, so the substitution is the host's to perform on the markdown-only path — and it applies to every command, including ones added after this line. Commands reference this rule rather than restating it: seven copies had accumulated before spec 040 collapsed them here, and every copy was one more thing to keep in sync ([§drift-prevention](#drift-prevention)).
 
 <!-- §spec-requirements -->
 
@@ -568,6 +570,7 @@ For every kind of fact described in multiple places, one location is authoritati
 | Where contributor knowledge is recorded (git vs. per-user agent memory) | `framework/constitution.md` §drift-prevention (Shared knowledge stays in git) |
 | Open-state tell list and decision-drift check grammars | `specs/045-decision-state-drift-detection/data-model.md` |
 | Scenario→task referencing rule (what counts as a task referencing a scenario) | `specs/022-deterministic-runtime/data-model.md` (`scenario-consistency`) |
+| Spec-root resolution (substituting `[paths] specs-root` for the literal `specs/`) | `framework/constitution.md` §spec-phase |
 | Constitution content — what belongs in it, how it is organized, which rules adopters receive | `specs/050-constitution/spec.md` (a spec that changes *behavior* still amends the principle its change contradicts, in the same change) |
 
 When adding a new kind of fact that may be referenced from multiple documents, name its canonical source explicitly here.

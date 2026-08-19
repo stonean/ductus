@@ -22,7 +22,7 @@ Quality gate before `done`: audit the feature's implementation against the proje
 
 - Reads the target spec, its `plan.md` (for Affected Files), the in-scope source files, the selected rule files, `AGENTS.md`, and `.ductus/config.toml`; diffs `specs/inbox.md` over the review window. Do NOT review files outside the resolved scope, and do NOT introduce review criteria from outside the project's rule files and `AGENTS.md`.
 - Writes exactly three artifacts: `specs/NNN/review.md`, the target spec's frontmatter `review:` block, and — when the run recorded any observations — one `specs/inbox.md` bullet per observation (all three via `write-review`); with `--waive`, appends a waiver entry; with `--fix`, applies auto-fixable findings to the working tree. No other files are modified — status transitions belong to `/{project}:implement`.
-- Reference: §runtime-host-integration, §brownfield-inbox, §text-first-artifacts (constitution loaded by `/{project}:target` — do not re-read).
+- Reference: §runtime-host-integration, §brownfield-inbox, §text-first-artifacts, §spec-phase (spec-root resolution) (constitution loaded by `/{project}:target` — do not re-read).
 
 ## Inputs
 
@@ -110,8 +110,6 @@ Run once per targeted feature (every in-progress or done spec under `--all`, oth
 ## Markdown-only reference
 
 The numbered Instructions above are the deterministic path — the runtime's primitives own the rule-file selection, waiver arithmetic, scope resolution, and report scaffolding, and the five passes cross the boundary at the `performReview` extension point. When no runtime is available, walk the detailed procedure below by hand, for each targeted feature, in order.
-
-> **Spec-root resolution.** Every `specs/…` path in this command resolves under the configured `[paths] specs-root` (default `specs`; spec 040, constitution §spec-phase). When `.ductus/config.toml` sets `[paths] specs-root`, substitute that name for the literal `specs/` throughout. The runtime primitives already resolve it; only this markdown-only path performs the substitution by hand.
 
 ### 1. Resolve target and scope
 

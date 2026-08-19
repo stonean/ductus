@@ -46,7 +46,7 @@ Default is unset — without the flag, the user confirms each task as today.
 - The runtime write boundary is derived in step 2 from git history; the plan's **Affected Files** section is a planning aid, not authoritative.
 - Do NOT read or modify files belonging to other features' spec directories.
 - Do NOT read source code speculatively — only read files relevant to the current task.
-- Reference: §implement-phase, §pipeline-boundaries, §text-first-artifacts, §brownfield-inbox (Automatic issue capture), plus the rule-file directory's `configuration-cross.md` (`specs/rules/configuration-cross.md` in adopter projects; `framework/rules/configuration-cross.md` in ductus's own repo) for constants and env-vars (constitution loaded by `/ductus:target` — do not re-read).
+- Reference: §implement-phase, §pipeline-boundaries, §text-first-artifacts, §brownfield-inbox (Automatic issue capture), §spec-phase (spec-root resolution), plus the rule-file directory's `configuration-cross.md` (`specs/rules/configuration-cross.md` in adopter projects; `framework/rules/configuration-cross.md` in ductus's own repo) for constants and env-vars (constitution loaded by `/ductus:target` — do not re-read).
 - Appending an incidentally-discovered issue to `specs/inbox.md` (per §brownfield-inbox Automatic issue capture) is a ductus-artifact write, in the same category as the `mark-task` write to `tasks.md` — it is **not** subject to the runtime write boundary and does not trigger an out-of-boundary halt. The deterministic path for the append is the `append-inbox` primitive; if unavailable, append the bullet with the host's file tools per the markdown-only path (Walk through tasks, step 5).
 
 ## Instructions
@@ -90,8 +90,6 @@ Default is unset — without the flag, the user confirms each task as today.
 ## Markdown-only reference
 
 The full setup, walk-through, completion gate, and stuck-detection details are documented below for the markdown-only path. The numbered steps above invoke the mechanical primitives that automate each phase; the host applies the same procedure against the markdown-only path when the runtime is unavailable.
-
-> **Spec-root resolution.** Every `specs/…` path in this command resolves under the configured `[paths] specs-root` (default `specs`; spec 040, constitution §spec-phase). When `.ductus/config.toml` sets `[paths] specs-root`, substitute that name for the literal `specs/` throughout. The runtime primitives already resolve it; only this markdown-only path performs the substitution by hand.
 
 ### Setup details
 

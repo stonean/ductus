@@ -33,13 +33,11 @@ Read `.ductus/session.toml`. If the session includes a `scenario` and `scenario-
 - Spec `status` is read from the YAML frontmatter at the top of the file. It is mutated by this command only on a back-edge (clarified+ → draft or done → in-progress).
 - For the impact display, this command may read sibling specs' frontmatter (only) under `specs/` to detect dependents. It does not read sibling spec bodies.
 - For the re-open precondition and the reconcile pass, this command may run `git status --porcelain` scoped to the feature directory to detect uncommitted scenario/task edits. It does not read the diff bodies or run any other git command. The reconcile pass additionally reads `specs/{feature}/tasks.md` to find the tasks referencing each candidate scenario, and appends a task there on confirmation; it never reads or rewrites the scenario bodies.
-- Reference: §spec-requirements, §spec-lifecycle, §scenarios, §text-first-artifacts, §bug-handling (constitution loaded by `/{project}:target` — do not re-read).
+- Reference: §spec-requirements, §spec-lifecycle, §scenarios, §text-first-artifacts, §bug-handling, §spec-phase (spec-root resolution) (constitution loaded by `/{project}:target` — do not re-read).
 
 ## Instructions
 
 > **For agent runtimes**: the Invoke steps below call the MCP tools of the ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. Before the server is registered — the window between acquisition and the restart that loads it — walk the same prose using the host file-reading tools (Read, Edit, Write).
->
-> **Spec-root resolution.** Every `specs/…` path in this command resolves under the configured `[paths] specs-root` (default `specs`; spec 040, constitution §spec-phase). When `.ductus/config.toml` sets `[paths] specs-root`, substitute that name for the literal `specs/` throughout. The runtime primitives already resolve it; only this markdown-only path performs the substitution by hand.
 
 ### Confirm target
 

@@ -89,6 +89,6 @@ Done when: every spec-path error message reflects `[paths] specs-root`, and a re
 
 ## 12. State the spec-root substitution rule once
 
-- [ ] Implement the behavior described in `scenarios/spec-root-rule-stated-once.md`
+- [x] Implement the behavior described in `scenarios/spec-root-rule-stated-once.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
