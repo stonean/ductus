@@ -1,8 +1,8 @@
 ---
 spec: 026-framework-self-audit
-reviewed-at: 2026-08-19T00:57:34Z
-reviewed-against: 9dead357eec9a932ae6191ff1f14c3be5131afac
-diff-base: 1c1b6225b397ef7370cdbac768ace046544b1573
+reviewed-at: 2026-08-19T01:07:52Z
+reviewed-against: 9c06b2dfd5f16618c50fd3a0186caf534a517778
+diff-base: 38b97b7413e04a6bf5e7f6dd712a7c60e7862f95
 must-violations: 0
 should-violations: 0
 low-confidence: 0
@@ -16,19 +16,16 @@ skipped-passes: []
 
 Clean — 0 MUST, 0 SHOULD, 0 low-confidence, 0 observations.
 
-Scope: Families 24 and 25 — `scripts/audit/rename-sweep-residue.sh`, `scripts/audit/unbalanced-inline-markup.sh`, their wiring in `run-all.sh`, the `scripts/audit/README.md` entries, both scenarios, and AC17/AC18.
+Scope: two corrections to the spec body's Resolved Questions and two to the `audit-ci-hard-gate` scenario. No code, no check-family behavior.
 
-Both families were **measured before being designed**, per §recommendations: the deciding quantity was computed for each candidate detector rather than argued from shape. Family 24's union reports 8 findings at the pre-repair commit — exactly the 8 real sites — and 0 at HEAD. Family 25 reports 2 — exactly the two malformed entries — and 0 at HEAD. Family 25's two-file scope is a measured choice, not an omission: the wider corpus carries 283 lines of legitimately wrapped bold, so widening would trade 2 real findings for 283 false ones.
+The two in this spec were the most consequential of the nine corrected across four documents, because neither was merely descriptive:
 
-Both were **proven red before being trusted green**, per §design-principles. Family 24 against two seeded residue sites; Family 25 against both original defect shapes, a seeded wrapped bullet, and a missing target file. Each returns exit 1 on the seeded input and 0 after restore.
+- The bootstrap-order entry told future authors to register new generators in `markdown-only-pipeline.yml`'s orchestration step. That is a forward-looking instruction, and it pointed at a file `048-govern-acquired-runtime` removed — an author following it would have gone looking for something that does not exist. Now names `framework-checks.yml`.
+- The `audit-ci-hard-gate` scenario carried two markdown links to that same deleted file, which resolve to nothing, and described the gate flip as outstanding work. Verified against CI rather than assumed: `continue-on-error` is absent from the audit step in `framework-checks.yml` and from `runtime-release.yml`'s `audit` job, so both flips have shipped. The scenario now records that, and names the workflow without a link precisely because the target is gone.
 
-Neither family can report clean without saying what it examined. Family 24 emits its examined-file count and treats a zero-file scan as a finding; Family 25 names its two targets on stderr, states that corpus-wide balance is *not* checked, treats a missing target as a finding rather than a skip, and reports a wrapped bullet rather than narrowing its own scope once the single-line convention lapses.
+A scenario is a durable requirement document, so a broken link and a shipped-but-described-as-pending gate are worse there than in a spec body: the scenario is what a reader consults to learn what the system currently promises.
 
-Contract conformance: both source `lib.sh` with `|| exit 1`, call `audit_family`, emit through `emit`, end on `exit "$drift"`, are directly invocable from any working directory, and are read-only. Bash 3.2 compatible with POSIX sed/grep/awk only — the portability trap that left Family 7 dead on macOS. `shellcheck` clean, with one scoped `SC2016` disable carrying its rationale.
-
-One defect was found and fixed during construction rather than filed: Family 24 initially reported its own README entry, which quotes the residue as an example. Suppressing by file would have been the wrong repair, so the detector now strips code spans and quoted spans before matching — a discriminator with a real basis, since the genuine residue reads as ordinary prose, which is precisely what let it survive.
-
-Verification at HEAD: 25 families green, markdownlint clean over 432 files, `shellcheck` clean.
+No audit family covers a markdown link to a deleted CI file — Family 8 looks for renamed *commands*, and `check-orphaned-references` scopes to adopter-owned referrers. Deliberately not filed as a new family: the corpus turned up exactly one instance, and the measurement that would justify a check has not been done. Recorded here rather than in the inbox, per the standing rule against frontfilling machinery observations.
 
 ## MUST violations (blocking)
 

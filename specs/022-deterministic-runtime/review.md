@@ -1,9 +1,8 @@
 ---
 spec: 022-deterministic-runtime
-scenario: orphan-check-adopter-authored-references
-reviewed-at: 2026-08-19T00:56:38Z
-reviewed-against: 74924ca6bacb3652443bd4be0ea2f647c2df2b86
-diff-base: 8c2b67aca4bbfe07fdd633e0fa32b0de5846e3b9
+reviewed-at: 2026-08-19T01:07:52Z
+reviewed-against: 9c06b2dfd5f16618c50fd3a0186caf534a517778
+diff-base: 38b97b7413e04a6bf5e7f6dd712a7c60e7862f95
 must-violations: 0
 should-violations: 0
 low-confidence: 0
@@ -17,19 +16,15 @@ skipped-passes: []
 
 Clean — 0 MUST, 0 SHOULD, 0 low-confidence, 0 observations.
 
-Scope: the `orphan-check-adopter-authored-references` scenario and its implementation. The diff base is the documented `--since` override (`8c2b67a`, the commit before 022 was reopened) rather than the recorded `in-progress` base, which predates the 0.28.0 cycle and resolves several hundred files — see AGENTS.md §Gotchas. The override narrows the scope to this cycle's work only; nothing about the recorded base is stale.
+Scope: four prose-claim corrections in the spec body, no code. Each described `.github/workflows/markdown-only-pipeline.yml` in present tense; `048-govern-acquired-runtime` renamed that workflow to `framework-checks.yml` and retired the absent-from-`PATH` invariant it asserted.
 
-Reviewed: `runtime/src/primitives/check_orphaned_references.rs` (referrer set now resolved rather than const), `framework/commands/analyze.md`, `specs/022-deterministic-runtime/data-model.md`, `runtime/CHANGELOG.md`, and the version sites.
+The corrections are grounded rather than assumed. Before rewriting, both lints the prose makes claims about were located in current CI: `lint-tool-coverage.sh` at `framework-checks.yml:61` and `lint-procedure-parseability.sh` at `framework-checks.yml:133`. So the §Bash script relationships claim was stale prose about a live check, not a dead check — a distinction that changes the fix from "restore a lost lint" to "correct a claim", and one worth making before editing rather than after.
 
-Security: no new I/O surface. The added referrer is read-only, path-joined under the repo root, and passes through the existing `stays_in_repo` guard, so a traversal in an adopter-authored reference is still not treated as a managed path.
+The §Non-Goals entry keeps its reasoning intact: the rejected per-command opt-out is still rejected, and only the supporting clause about the retired workflow moved to past tense. Correcting a rationale's factual support must not silently relitigate the decision it supports.
 
-Reuse: the change threads the already-loaded `Paths` layout through `managed_roots` and `referrers` rather than adding a second config read — the one defect this review found, fixed in `74924ca` before recording.
+AC6 and AC12 already carried supersession annotations and were not touched.
 
-Claim discipline (`QUAL-CLAIM-001`): an absent `system.md` remains neither a finding nor a skip, and `examined` is what distinguishes "nothing there" from "examined and clean". Verified by a dedicated test rather than by inspection.
-
-Verification: two of the three new tests were proven red against the unchanged primitive before being trusted green; the third is a guard that correctly holds either way. Full suite 1042 passing, clippy clean, `cargo fmt` clean, 25 audit families green, markdownlint clean over 432 files.
-
-Not delivered: `runtime/` changes reach no adopter until `ductus-v0.29.11` is tagged and pushed. The version is bumped across all three sites and the tag is outstanding.
+This spec was closed once with these claims left standing, on the reasoning that the fix would reopen it and that Family 8's disposition permits leaving prose as-is. That was the wrong call: the disposition is the maintainer's, not the reviewer's, and a release is the moment for everything to be true. Reopened and fixed.
 
 ## MUST violations (blocking)
 
