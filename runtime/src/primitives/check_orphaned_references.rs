@@ -72,8 +72,7 @@ const FIXED_REFERRERS: &[&str] = &[
 /// `specs/system.md` would silently examine nothing on a project that renamed
 /// its root — the same exit-0-over-a-wrong-path failure `config_path_of`
 /// produced in the shipped `specs-root.sh`.
-fn referrers(repo: &Path) -> Vec<String> {
-    let layout = paths::Paths::load(repo);
+fn referrers(layout: &paths::Paths) -> Vec<String> {
     let mut list: Vec<String> = FIXED_REFERRERS
         .iter()
         .map(|referrer| (*referrer).to_string())
@@ -101,7 +100,11 @@ pub fn run(
     _args: &CheckOrphanedReferencesArgs,
     repo: &Path,
 ) -> Result<CheckOrphanedReferencesResult> {
-    let roots = managed_roots(repo);
+    // Loaded once and shared: both the referrer list and the managed roots are
+    // derived from the configured spec root, and reading the config twice to
+    // answer one question is work with no second answer behind it.
+    let layout = paths::Paths::load(repo);
+    let roots = managed_roots(&layout);
     let registry = read_registry(repo);
     // Paths this repo declares it *ships into* an adopter rather than holds.
     // In an adopter checkout the manifest is not installed, so this is empty
@@ -116,7 +119,7 @@ pub fn run(
     let mut examined = Vec::new();
     let mut skipped = Vec::new();
 
-    for referrer in referrers(repo) {
+    for referrer in referrers(&layout) {
         let full = repo.join(&referrer);
         if !full.exists() {
             // Not every project has every referrer. An absent file is not an
@@ -189,8 +192,7 @@ pub fn run(
 /// the framework owned `scripts/gen-*.sh` and `scripts/lib/`, never the whole
 /// directory, so a root of `scripts/` would flag an adopter's own
 /// `scripts/build.sh` — noise this check must not produce.
-fn managed_roots(repo: &Path) -> Vec<String> {
-    let layout = paths::Paths::load(repo);
+fn managed_roots(layout: &paths::Paths) -> Vec<String> {
     let mut roots = vec![
         ".ductus/".to_string(),
         ".githooks/".to_string(),
