@@ -1,9 +1,9 @@
 ---
 spec: 048-govern-acquired-runtime
-scenario: release-halves-publish-together
-reviewed-at: 2026-08-19T15:14:21Z
-reviewed-against: c650cb8809769eea9f24cd91f9caa8a2045e0fd9
-diff-base: 02c386bb2db6cefd013cfba629b1aa2fa9b066b5
+scenario: pin-is-readable-when-acquisition-needs-it
+reviewed-at: 2026-08-19T16:22:13Z
+reviewed-against: e3028e37629c10e0cd3630749914e2041d196390
+diff-base: 2ad7cdc0000000000000000000000000000000
 must-violations: 0
 should-violations: 0
 low-confidence: 0
@@ -15,19 +15,23 @@ skipped-passes: []
 
 ## Summary
 
-Clean at `c650cb8` — 0 MUST, 0 SHOULD, 0 low-confidence, across all five passes. The observation the prior run recorded is resolved, not carried: `c650cb8` restored the invariant rather than reworded it, and the inbox bullet is removed.
+Clean at `e3028e3` — 0 MUST, 0 SHOULD, 0 low-confidence, 0 observations.
 
-Scope is task 15's release-ordering work: `.github/workflows/runtime-release.yml`, `.github/workflows/runtime-acquisition.yml`, `.github/workflows/framework-checks.yml`, `scripts/lint-release-ordering.sh`, and `scripts/tests/test-lint-release-ordering.sh`.
+Scope: `framework/bootstrap/ductus.md`, its byte-identical `govern.md` mirror, the new scenario, and task 16.
 
-**The ordering.** `publish` now runs before the GitHub release is created and `release-assets` depends on it, so the chain is `audit, build → acquire → sbom → publish → release-assets → verify-published`. crates.io is the irreversible half — a version can be yanked but never unpublished — so it is attempted first, and a failure leaves the recoverable half undone instead. Every gate that guarded `publish` before still guards it, and asset completeness moved further upstream: each `acquire` leg downloads its own target's staged artifact by exact name, so a target that produced nothing fails before anything irreversible happens.
+**The defect was a blocking one and the fix is verified, not argued.** `/ductus` could not acquire the runtime on a greenfield adoption: every first-time adopter is State B by definition, State B's first act is Runtime acquisition, and its step 1 read the pin from a file that only exists after the archive extract hundreds of lines later. The halt was deliberate — guessing a version would install an untested runtime — so a faithful walk stopped. Underneath it sat a second defect: `{tempdir}` was created inside the self-update check, which runs *after* runtime detection, so even fetching the pin during acquisition had nowhere to fetch it to. The second check owned the resource the first one needed.
 
-**Two jobs had to move off the published release**, because both assumed it existed. `acquire` now reads staged artifacts. `sbom` now stages a `release-asset-*` artifact instead of attaching itself to the release — load-bearing, not cosmetic: uploading to a release creates the release object when absent, which is how `ductus-v0.28.0`'s first attempt left a tag carrying an SBOM and no binaries. `BE-DEPS-003` holds throughout; the SBOM is still generated during the build from the resolved `Cargo.lock` graph and still ships attached to the release.
+**Three changes, each minimal.** `{tempdir}` moves to the Pre-flight preamble; acquisition step 1 fetches the pin into it; `{staging-dir}` retires. That last one is worth naming: it appeared only in these steps, was never defined in §Derived values, and named what the rest of the document calls `{tempdir}` — an undefined placeholder sitting in the one procedure every first-run adopter executes.
 
-**Three defects were found by review and fixed before this report.** `retention-days: 1` on the staged assets was sized for a `release-assets` that ran minutes after the build; it is now the last consumer in a longer chain whose documented recovery is a re-run, so a next-day re-run would have failed on expired artifacts rather than on the real cause. The lint mis-parsed two YAML shapes — job keys matched anywhere, so `on:`'s two-space child `push:` read as a job, and the block-sequence `needs:` form read as an empty list, a false alarm on a correct workflow. And the reordering had quietly narrowed the constitution's §runtime-boundary acquisition invariant to a dispatch-only workflow; `verify-published` restores it, calling `runtime-acquisition.yml` through `workflow_call` after the release exists so the published asset is fetched over the wire on every tag. Reuse rather than a second copy keeps the automatic and hand-dispatched paths from drifting.
+**`govern.md` was updated in the same change**, byte-identically. Family 21 exists precisely for this: every pre-rename adopter's self-update fetch resolves to that path, so fixing only `ductus.md` would have shipped the broken procedure to exactly the adopters who cannot yet reach the fixed one. The family confirms parity.
 
-`QUAL-CLAIM-001` was the rule most at risk and is satisfied deliberately at every exit of the new lint: an absent workflow, a parse yielding no jobs, a renamed `publish` or `release-assets`, and a `verify-published` moved ahead of the release each fail loudly rather than passing vacuously. Ten test cases pin that, and the two negative cases for the post-release check are the ones that matter most — a check that runs too early would fetch a URL that is not there yet and pass while proving nothing.
+**Verified by re-running the greenfield adoption against the fixed bootstrap with nothing supplied by hand** — the prior run needed the pin handed to it to get past step 1. Pin fetched and read at step 1, archive and sidecar fetched, digest verified before install, store installed, re-probe reporting `0.31.0` against pin `0.31.0`, the self-update fetch reusing the same `{tempdir}` rather than creating a second, and the pointer resolving and executing. The harness asserts each step rather than printing progress, so a regression fails it.
 
-Workflow and scripts only — no `runtime/` change, so no three-way version bump and no `ductus-v*` tag. The new ordering takes effect on the next tag pushed after this lands.
+**The one property the fix trades away is stated rather than buried.** The pin and the framework tree now arrive in two fetches instead of travelling in one archive, so they agree because both name `main`. A push landing between them is the sole divergence, bounded by one run, and the next `/ductus` re-acquires because acquisition is idempotent and re-probes the store. The prior arrangement made that divergence impossible — by reading a file that was not there.
+
+`QUAL-CLAIM-001` is satisfied in the direction that matters here: the halt survives with an accurate message naming the pin URL, so an offline adopter still fails loudly rather than proceeding on a guessed version. Only the reason it can fail has moved.
+
+Verified against the whole CI surface: markdownlint, six `lint-*` scripts, both `scripts/tests` suites, shellcheck over every tracked shell file, actionlint, all three generators plus both derive primitives with a clean tree after, `scripts/audit/run-all.sh` (27 families, re-run after committing), and under `runtime/` `cargo fmt --check`, `clippy --release --all-targets --locked -- -D warnings`, and `cargo test --release --locked` — the last of which matters here, since a bootstrap edit is the class of change that moved a parity golden earlier this session.
 
 ## MUST violations (blocking)
 
