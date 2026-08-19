@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # scripts/audit/run-all.sh — `/audit` aggregator.
 #
-# Runs the check-zero precondition pass followed by the twenty-four family
+# Runs the check-zero precondition pass followed by the twenty-five family
 # check scripts. Aggregates findings to stdout under per-family headers
 # and exits 1 when any family (or check-zero) produced findings.
 # Family numbers are stable identifiers: Family 3 (registry equivalence)
@@ -68,5 +68,6 @@ run_check "Family 22 — adopter shell behavior" "scripts/audit/adopter-shell-be
 run_check "Family 23 — sweep-target manifest parity" "scripts/audit/sweep-target-manifest-parity.sh"
 run_check "Family 24 — rename-sweep residue" "scripts/audit/rename-sweep-residue.sh"
 run_check "Family 25 — unbalanced inline markup" "scripts/audit/unbalanced-inline-markup.sh"
+run_check "Family 26 — broken relative links" "scripts/audit/broken-relative-links.sh"
 
 exit "$drift"

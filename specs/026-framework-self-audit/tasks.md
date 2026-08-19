@@ -271,3 +271,9 @@ Opened by [048](../048-govern-acquired-runtime/spec.md)'s AC10 adopter runs, whi
 - [x] Implement the behavior described in `scenarios/family-25-unbalanced-inline-markup.md`
 
 - **Done when**: `scripts/audit/unbalanced-inline-markup.sh` reports odd backtick or odd `**` counts outside fenced code blocks in `AGENTS.md` and `framework/templates/project/agents.md`, is wired into `run-all.sh` as Family 25, is listed in `scripts/audit/README.md`, names its examined files on stderr, and reports a wrapped bullet rather than narrowing silently. Proven red against the pre-repair corpus (2 findings) and green at HEAD (0).
+
+### 31. Family 26 — broken relative links
+
+- [x] Implement the behavior described in `scenarios/family-26-broken-relative-links.md`
+
+- **Done when**: `scripts/audit/broken-relative-links.sh` reports every unresolvable relative markdown link with a `file:line` anchor and a repair path, strips inline code spans and fenced blocks without shifting line numbers, excludes generated copies and adopter templates by construction while counting both, treats a failed file listing as a finding, is wired into `run-all.sh` as Family 26 and listed in `scripts/audit/README.md`. Proven red against a seeded depth error and a failed listing; the 28 pre-existing broken links are fixed.
