@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: []
 review:
   last-run: 2026-08-17T21:40:00Z
@@ -8,7 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 14
+next-criterion: 15
 ---
 
 # 050 — Constitution
@@ -187,6 +187,7 @@ a fact already banked.
 - [x] AC11: The constitution's canonical-sources map names this spec as the home for constitution-content work, so the ownership split above is recorded where a reader already looks for it rather than only here
 - [x] AC12: The repo-root `version` pin, `runtime/Cargo.toml`, and `runtime/CHANGELOG.md` are untouched by this spec, and `/ductus:audit` Family 20 stays clean — a constitution-only change never moves the runtime acquisition pin
 - [x] AC13: §spec-lifecycle states whether an edit that changes no claim — a typo or sweep-residue repair in a `done` spec's body — is a mechanical edit, so its enumerated cases read as a rule with a stated test rather than a closed list a fourth case must be argued into. The `045` chore held in `specs/inbox.md` is resolvable against that statement without further judgment
+- [ ] AC14: **Completion-claim filter.** §design-principles carries a hard filter stating that work which is not complete must never be indistinguishable from work that is, naming the three dispositions for known residue — fix it, record it where the pipeline resurfaces it with the status following that record, or record an out-of-scope decision with its reason — and requiring that residue knowable only by measurement be measured rather than caveated. §implement-phase's outstanding-SHOULD rule references the filter as its most frequent instance rather than restating it, so the rule is stated once and Family 6 stays green.
 
 ## Open Questions
 
