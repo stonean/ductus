@@ -5,6 +5,14 @@ name: runtime-release
 # Releases before 0.28.0 were tagged gvrn-v*; those tags and their assets are
 # left exactly as published (spec 049).
 # The release notes are sourced from runtime/CHANGELOG.md.
+#
+# Job order is load-bearing and reads top to bottom:
+#   audit ─┐
+#          ├─→ acquire ─→ sbom ─→ publish ─→ release-assets
+#   build ─┘
+# The crate publishes BEFORE the GitHub release is created. See the
+# release-assets comment at the bottom for why that direction and not the
+# other one (spec 048, scenarios/release-halves-publish-together.md).
 
 on:
   push:
@@ -178,11 +186,240 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # The publish gate: every target's assets are present, or the release gets
-  # none of them. `needs: build` already skips this job when a matrix leg
-  # fails outright; the explicit manifest below additionally catches a leg
-  # that SUCCEEDED without producing its asset, which the job graph cannot
-  # see. Spec 048, task 2.
+  # The **acquisition invariant** from constitution §runtime-boundary, run
+  # against the assets this pipeline just built — fetch, verify the sidecar
+  # digest, install, and execute, on a runner that natively matches each
+  # target.
+  #
+  # It reads the STAGED artifacts rather than a release download URL, because
+  # by design no GitHub release exists yet when this runs (see release-assets
+  # at the bottom). The bytes are the same bytes: release-assets uploads these
+  # staged artifacts unmodified. What this job no longer covers on its own is
+  # the upload itself — `runtime-acquisition.yml` is the hand-dispatchable
+  # copy that fetches from the published URL when a release needs
+  # re-validating after the fact.
+  #
+  # It also subsumes the asset-completeness gate for everything downstream:
+  # the matrix names all five targets and each leg downloads its own staged
+  # artifact by exact name, so a target that produced no asset fails here —
+  # before `publish`, before anything is irreversible.
+  #
+  # It lives in this workflow rather than in its own `on: release: [published]`
+  # workflow because GitHub does not trigger workflows from events created with
+  # the default GITHUB_TOKEN. A standalone workflow would have looked correct,
+  # been referenced by the constitution, and never once run.
+  #
+  # `publish` depends on this: an adopter acquires the release assets, not
+  # the crate, so shipping a crate whose binaries cannot be fetched and run
+  # would publish the half nobody uses and skip the half everybody does.
+  acquire:
+    name: Acquire ${{ matrix.target }}
+    needs: [audit, build]
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Natively-matching runners: this job executes what it installs,
+        # which is the half of acquisition a digest check cannot prove. That
+        # is why it differs from the build matrix above, which cross-compiles
+        # two targets and never runs them.
+        include:
+          - target: aarch64-apple-darwin
+            runner: macos-latest
+          # Executed on Apple Silicon under Rosetta 2 rather than on native
+          # Intel: GitHub has retired its Intel macOS images, and the
+          # macos-13 label this used to name never picks up a runner — the
+          # job sits queued until it times out, which reads as a hang rather
+          # than a missing runner. Rosetta proves the binary loads and runs;
+          # it does not prove native Intel execution, and nothing available
+          # here can.
+          - target: x86_64-apple-darwin
+            runner: macos-latest
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            runner: ubuntu-24.04-arm
+          - target: x86_64-pc-windows-msvc
+            runner: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # By exact name, not by pattern: this leg must fail when ITS target
+      # staged nothing, rather than quietly proceeding on another target's
+      # assets.
+      - name: Download the staged assets for this target
+        uses: actions/download-artifact@v4
+        with:
+          name: release-asset-${{ matrix.target }}
+          path: staged
+
+      - name: Verify, install, execute
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < version)"
+          target="${{ matrix.target }}"
+          archive="ductus-${target}.tar.gz"
+
+          store="$(mktemp -d)/store"
+          staging="$(mktemp -d)"
+          # A missing sidecar is a failure here, not a skip: release assets
+          # always carry theirs, so `cp` failing is the correct outcome.
+          cp "staged/${archive}" "staged/${archive}.sha256" "$staging/"
+          cd "$staging"
+
+          # Verify BEFORE installing anything.
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum -c "${archive}.sha256"
+          else
+            shasum -a 256 -c "${archive}.sha256"
+          fi
+
+          mkdir -p "$store"
+          tar -xzf "$archive"
+          binary="ductus"
+          [ "$target" = "x86_64-pc-windows-msvc" ] && binary="ductus.exe"
+          mv "$binary" "$store/$binary"
+          chmod +x "$store/$binary"
+
+          # Execute it: a binary that installs but will not run is an
+          # acquisition failure, which is why the probe runs it rather than
+          # reading a recorded marker.
+          reported="$("$store/$binary" --version)"
+          echo "reported: $reported"
+          case "$reported" in
+            *"$version"*) ;;
+            *)
+              echo "::error::installed binary reports '$reported', expected $version"
+              exit 1
+              ;;
+          esac
+
+  # CycloneDX SBOM (BE-DEPS-003) — generated during the release build
+  # from the resolved Cargo.lock graph and shipped with the same release.
+  # The graph is identical across the target matrix, so one SBOM covers
+  # every artifact; attached to the release, it shares the artifacts'
+  # retention lifetime.
+  sbom:
+    name: SBOM (CycloneDX)
+    # Staged as a workflow artifact and uploaded by release-assets, NOT
+    # uploaded here. Uploading to a release creates the release object when it
+    # does not exist, so a job that attaches an SBOM directly is a job that can
+    # bring the release into being ahead of everything gating it. That is not
+    # hypothetical: on the first ductus-v0.28.0 attempt — audit failed, no
+    # binaries published — the tag still had a GitHub release carrying nothing
+    # but an SBOM. A release with no runtime in it is worse than no release: it
+    # reads as published to anyone looking, and to the acquisition job. With
+    # the release now created last, staging is what keeps that true.
+    needs: acquire
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: runtime
+    steps:
+      - uses: actions/checkout@v7
+
+      # Pinned — keep in sync with runtime/rust-toolchain.toml.
+      # `components` must match the toolchain file (see build job above).
+      - uses: dtolnay/rust-toolchain@1.97.0
+        with:
+          components: clippy, rustfmt
+
+      - name: Install cargo-cyclonedx
+        run: cargo install --locked cargo-cyclonedx
+
+      # --override-filename pins the output name (it replaces the whole
+      # stem, so the .cdx convention must be part of the value); the
+      # default naming has varied across cargo-cyclonedx versions.
+      - name: Generate SBOM
+        run: |
+          cargo cyclonedx --format json --override-filename ductus.cdx
+          shasum -a 256 ductus.cdx.json > ductus.cdx.json.sha256
+
+      # `release-asset-*` so release-assets' merge-multiple download collects
+      # it alongside the five platform archives.
+      - name: Stage the SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-asset-sbom
+          path: |
+            runtime/ductus.cdx.json
+            runtime/ductus.cdx.json.sha256
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish to crates.io
+    # The first irreversible act in the pipeline, and deliberately the first
+    # one attempted: a published crate version can be yanked but never
+    # unpublished, while a GitHub release can be deleted and recreated. See
+    # release-assets below.
+    #
+    # Every gate that guarded this publish before the reordering still guards
+    # it. `audit` and `build` are listed even though `acquire` already implies
+    # them, so the gate set is readable here rather than reconstructed from
+    # the graph.
+    #
+    # `sbom` is one of them because BE-DEPS-003 requires every production
+    # artifact to ship with a machine-readable bill of materials. On
+    # ductus-v0.29.9 the SBOM upload hit a transient GitHub 5xx, the job
+    # failed, and the crates.io publish went ahead regardless — sbom was a
+    # sibling of publish rather than a dependency, so the release sat with ten
+    # binaries and no SBOM until the failed job was re-run by hand. A job that
+    # reads like a gate for something that does not depend on it is the same
+    # defect this file already carried once, when release-assets needed only
+    # build.
+    #
+    # Re-running this job for a version already on crates.io fails with "crate
+    # version already uploaded". That is safe — it is not a partial write —
+    # but the failure is indistinguishable from a real one without reading the
+    # log.
+    needs: [audit, build, acquire, sbom]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: runtime
+    steps:
+      - uses: actions/checkout@v7
+      # Pinned — keep in sync with runtime/rust-toolchain.toml.
+      # `components` must match the toolchain file (see build job above).
+      - uses: dtolnay/rust-toolchain@1.97.0
+        with:
+          components: clippy, rustfmt
+      - name: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --locked
+
+  # The GitHub release — created LAST, once the crate is on crates.io.
+  #
+  # A release has two halves and nothing makes them atomic: the GitHub release
+  # carrying the platform binaries, and the crates.io publish carrying the
+  # source crate. This job used to run first, so a failed `cargo publish` left
+  # a downloadable release whose crate did not exist — inconsistent in the
+  # direction that is hardest to notice, because the GitHub release is the half
+  # adopters see and nothing downstream complains. It happened three times:
+  # ductus-v0.29.9 (the SBOM upload hit a transient 5xx), then ductus-v0.30.0
+  # and ductus-v0.31.0 on 2026-08-19 (an expired CARGO_REGISTRY_TOKEN, 403
+  # Forbidden on both; each needed a manual re-run, and 0.31.0 needed a second
+  # one because Actions resolves secrets at job start, so rotating the token
+  # mid-run does not reach a job already in flight).
+  #
+  # crates.io is the irreversible half, so it is attempted first. Ordering does
+  # not make the two transactional — nothing can, across two registries. The
+  # narrower claim is the one worth holding: the recoverable half is the only
+  # one that can be left undone, and a failed release now leaves nothing
+  # user-visible at all. The inverse split (crate published, this job fails) is
+  # strictly better than what it replaces: its inputs are already-built
+  # artifacts and re-running it is cheap, whereas a missing publish for an
+  # already-tagged version is the case that needed manual re-runs.
+  # Spec 048, scenarios/release-halves-publish-together.md.
+  #
+  # The manifest below is belt-and-suspenders, not the completeness gate: that
+  # is `acquire`, which fails before `publish` when a target staged nothing.
+  # What this catches is the narrower case of an artifact that vanished between
+  # the two, and it keeps the job honest about uploading a complete set or
+  # none.
   #
   # REQUIRED_TARGETS must match the build matrix. Drift in the safe direction
   # (a target added to the matrix but not here) publishes an extra asset;
@@ -190,13 +427,7 @@ jobs:
   # this gate loudly, which is the direction that matters.
   release-assets:
     name: Publish release assets (complete set only)
-    # `audit` is load-bearing here, not decoration. Until 0.28.0 this job
-    # needed only `build`, so a tag whose self-audit FAILED still published
-    # its binaries — the audit gated `publish` (crates.io) alone. That made
-    # AGENTS.md's "any finding aborts the publish" true of the crate and
-    # false of the assets an adopter actually downloads, and it is the half
-    # that matters: acquisition fetches assets, not the crate.
-    needs: [audit, build]
+    needs: publish
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -234,6 +465,15 @@ jobs:
             fi
             echo "ok: $(basename "$archive") + sidecar"
           done
+          # BE-DEPS-003: the SBOM ships with the artifacts it describes. It
+          # is staged by the sbom job rather than attached there, so its
+          # absence is this job's to catch.
+          if [ ! -f "staged/ductus.cdx.json" ] || [ ! -f "staged/ductus.cdx.json.sha256" ]; then
+            echo "::error::no SBOM or SBOM sidecar among the staged assets"
+            missing=1
+          else
+            echo "ok: ductus.cdx.json + sidecar"
+          fi
           if [ "$missing" -ne 0 ]; then
             echo "::error::release withheld — the asset set is incomplete."
             echo "A partial release locks out every adopter on the missing platform."
@@ -246,170 +486,5 @@ jobs:
           files: |
             staged/*.tar.gz
             staged/*.tar.gz.sha256
-
-  # CycloneDX SBOM (BE-DEPS-003) — generated during the release build
-  # from the resolved Cargo.lock graph and attached to the same release.
-  # The graph is identical across the target matrix, so one SBOM covers
-  # every artifact; attached to the release, it shares the artifacts'
-  # retention lifetime.
-  sbom:
-    name: SBOM (CycloneDX)
-    # Gated behind release-assets for the same reason. Uploading an SBOM
-    # creates the release object when it does not exist, so on the first
-    # ductus-v0.28.0 attempt — audit failed, no binaries published — the tag
-    # still had a GitHub release carrying nothing but an SBOM. A release with
-    # no runtime in it is worse than no release: it reads as published to
-    # anyone looking, and to the acquisition job.
-    needs: release-assets
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: runtime
-    steps:
-      - uses: actions/checkout@v7
-
-      # Pinned — keep in sync with runtime/rust-toolchain.toml.
-      # `components` must match the toolchain file (see build job above).
-      - uses: dtolnay/rust-toolchain@1.97.0
-        with:
-          components: clippy, rustfmt
-
-      - name: Install cargo-cyclonedx
-        run: cargo install --locked cargo-cyclonedx
-
-      # --override-filename pins the output name (it replaces the whole
-      # stem, so the .cdx convention must be part of the value); the
-      # default naming has varied across cargo-cyclonedx versions.
-      - name: Generate SBOM
-        run: |
-          cargo cyclonedx --format json --override-filename ductus.cdx
-          shasum -a 256 ductus.cdx.json > ductus.cdx.json.sha256
-
-      - name: Upload SBOM to release
-        uses: softprops/action-gh-release@v3
-        with:
-          files: |
-            runtime/ductus.cdx.json
-            runtime/ductus.cdx.json.sha256
-
-  # The **acquisition invariant** from constitution §runtime-boundary, run
-  # against the assets this pipeline just published — fetch, verify the
-  # sidecar digest, install, and execute, on a runner that natively matches
-  # each target.
-  #
-  # It lives here rather than in its own `on: release: [published]` workflow
-  # because GitHub does not trigger workflows from events created with the
-  # default GITHUB_TOKEN. A standalone workflow would have looked correct,
-  # been referenced by the constitution, and never once run. runtime-
-  # acquisition.yml survives for manual re-validation via workflow_dispatch.
-  #
-  # `publish` depends on this: an adopter acquires the release assets, not
-  # the crate, so shipping a crate whose binaries cannot be fetched and run
-  # would publish the half nobody uses and skip the half everybody does.
-  acquire:
-    name: Acquire ${{ matrix.target }}
-    needs: release-assets
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        # Natively-matching runners: this job executes what it installs,
-        # which is the half of acquisition a digest check cannot prove. That
-        # is why it differs from the build matrix above, which cross-compiles
-        # two targets and never runs them.
-        include:
-          - target: aarch64-apple-darwin
-            runner: macos-latest
-          # Executed on Apple Silicon under Rosetta 2 rather than on native
-          # Intel: GitHub has retired its Intel macOS images, and the
-          # macos-13 label this used to name never picks up a runner — the
-          # job sits queued until it times out, which reads as a hang rather
-          # than a missing runner. Rosetta proves the binary loads and runs;
-          # it does not prove native Intel execution, and nothing available
-          # here can.
-          - target: x86_64-apple-darwin
-            runner: macos-latest
-          - target: x86_64-unknown-linux-gnu
-            runner: ubuntu-latest
-          - target: aarch64-unknown-linux-gnu
-            runner: ubuntu-24.04-arm
-          - target: x86_64-pc-windows-msvc
-            runner: windows-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Acquire, verify, install, execute
-        shell: bash
-        run: |
-          set -euo pipefail
-          version="$(tr -d '[:space:]' < version)"
-          target="${{ matrix.target }}"
-          base="https://github.com/stonean/ductus/releases/download/ductus-v${version}"
-          archive="ductus-${target}.tar.gz"
-
-          store="$(mktemp -d)/store"
-          staging="$(mktemp -d)"
-          cd "$staging"
-
-          # Fetch archive + sidecar. A missing sidecar is a failure here, not
-          # a skip: release assets always carry theirs.
-          curl -fsSL "${base}/${archive}" -o "$archive"
-          curl -fsSL "${base}/${archive}.sha256" -o "${archive}.sha256"
-
-          # Verify BEFORE installing anything.
-          if command -v sha256sum >/dev/null 2>&1; then
-            sha256sum -c "${archive}.sha256"
-          else
-            shasum -a 256 -c "${archive}.sha256"
-          fi
-
-          mkdir -p "$store"
-          tar -xzf "$archive"
-          binary="ductus"
-          [ "$target" = "x86_64-pc-windows-msvc" ] && binary="ductus.exe"
-          mv "$binary" "$store/$binary"
-          chmod +x "$store/$binary"
-
-          # Execute it: a binary that installs but will not run is an
-          # acquisition failure, which is why the probe runs it rather than
-          # reading a recorded marker.
-          reported="$("$store/$binary" --version)"
-          echo "reported: $reported"
-          case "$reported" in
-            *"$version"*) ;;
-            *)
-              echo "::error::installed binary reports '$reported', expected $version"
-              exit 1
-              ;;
-          esac
-
-  publish:
-    name: Publish to crates.io
-    # Also gated on release-assets: publishing the crate while the GitHub
-    # release carries no downloadable binaries would leave the two halves of
-    # one release disagreeing about whether it happened (spec 048, task 2).
-    #
-    # And on sbom, because BE-DEPS-003 requires every production artifact to
-    # ship with a machine-readable bill of materials. On ductus-v0.29.9 the SBOM
-    # upload hit a transient GitHub 5xx, the job failed, and the crates.io
-    # publish went ahead regardless — sbom was a sibling of publish rather than
-    # a dependency, so the release sat with ten binaries and no SBOM until the
-    # failed job was re-run by hand. A job that reads like a gate for something
-    # that does not depend on it is the same defect this file already carried
-    # once, when release-assets needed only build.
-    needs: [audit, build, release-assets, acquire, sbom]
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: runtime
-    steps:
-      - uses: actions/checkout@v7
-      # Pinned — keep in sync with runtime/rust-toolchain.toml.
-      # `components` must match the toolchain file (see build job above).
-      - uses: dtolnay/rust-toolchain@1.97.0
-        with:
-          components: clippy, rustfmt
-      - name: cargo publish
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish --locked
+            staged/ductus.cdx.json
+            staged/ductus.cdx.json.sha256

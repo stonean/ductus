@@ -96,6 +96,21 @@ jobs:
       - name: (i) Rule-ID grammar lint
         run: bash scripts/lint-rule-ids.sh
 
+      # (k) The release pipeline must attempt the irreversible half first: the
+      # crates.io publish, which can be yanked but never unpublished, before the
+      # GitHub release, which can be deleted and recreated. Three releases
+      # shipped half-released before that ordering landed (spec 048,
+      # scenarios/release-halves-publish-together.md), and each was recovered by
+      # hand. The guarantee is one `needs:` edge in a workflow that only ever
+      # runs on a tag push, so nothing exercises it until a release is already
+      # half out the door — which is exactly the case for asserting it on every
+      # PR instead. Its own test suite runs alongside, because a guard for a
+      # silent failure is worth nothing unless it is shown to fail.
+      - name: (k) Release ordering
+        run: |
+          bash scripts/lint-release-ordering.sh
+          bash scripts/tests/test-lint-release-ordering.sh
+
       # (j) The shell surface is the framework's own machinery — the audit
       # families that form the release gate, the generators, the lints, the
       # installer and the hooks. The Rust half has been gated at

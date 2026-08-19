@@ -137,6 +137,6 @@ Phase 1 is independently safe and lands first so later work is written against a
 
 ### 15. Publish the crate before creating the GitHub release
 
-- [ ] Implement the behavior described in `scenarios/release-halves-publish-together.md`
+- [x] Implement the behavior described in `scenarios/release-halves-publish-together.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
