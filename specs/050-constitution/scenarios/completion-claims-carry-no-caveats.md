@@ -12,15 +12,15 @@ Each disclosure was accurate. That is what made it durable: it reads as candour,
 
 The cost is not the caveat's accuracy but its channel. A status field is re-read by every later command, generator, and reader; a sentence in a summary or a commit message is read once. Recording the exception in the second while advancing the first means `done` no longer means done, and no consumer of the status can tell which specs carry residue. When one of the three caveats was finally investigated, the "unmeasured" gap it described turned out to be 28 broken links — a number that took thirty seconds to obtain, and that the caveat had substituted itself for.
 
-The constitution already stated this principle for one source of residue. [§implement-phase](../../framework/constitution.md#implement-phase)'s SHOULD rule says a spec at `done` with an open finding *"is indistinguishable from unfinished work, and nothing ever comes back to it"* — the same asymmetry [§design-principles](../../framework/constitution.md#design-principles) states for checks. It was scoped to review findings, and the residue here came from elsewhere, so nothing bound it.
+The constitution already stated this principle for one source of residue. [§implement-phase](../../../framework/constitution.md#implement-phase)'s SHOULD rule says a spec at `done` with an open finding *"is indistinguishable from unfinished work, and nothing ever comes back to it"* — the same asymmetry [§design-principles](../../../framework/constitution.md#design-principles) states for checks. It was scoped to review findings, and the residue here came from elsewhere, so nothing bound it.
 
 ## Behavior
 
-[§design-principles](../../framework/constitution.md#design-principles) carries a filter stating that work which is not complete must never be indistinguishable from work that is, and naming the only three dispositions for something known to be outstanding: fix it; record it where the pipeline surfaces it again, with the status following that record; or decide it is out of scope and record the decision with its reason. Disclosing it in prose beside a completion claim is none of the three.
+[§design-principles](../../../framework/constitution.md#design-principles) carries a filter stating that work which is not complete must never be indistinguishable from work that is, and naming the only three dispositions for something known to be outstanding: fix it; record it where the pipeline surfaces it again, with the status following that record; or decide it is out of scope and record the decision with its reason. Disclosing it in prose beside a completion claim is none of the three.
 
 The filter also binds the measurement case, because that is the form the failure took here: where the residue is knowable only by measuring, it is measured. An unmeasured gap is a task, not a caveat.
 
-[§implement-phase](../../framework/constitution.md#implement-phase)'s SHOULD rule is rewritten to reference the filter as the instance where it fires most often, rather than restating it — a second copy would drift, and the SSOT invariants family exists to catch exactly that.
+[§implement-phase](../../../framework/constitution.md#implement-phase)'s SHOULD rule is rewritten to reference the filter as the instance where it fires most often, rather than restating it — a second copy would drift, and the SSOT invariants family exists to catch exactly that.
 
 The section preamble no longer carries a count of its own bullets. It read "Two constraints … Both are hard filters" while four bullets followed, which is the same staleness the constitution warns about elsewhere, sitting in the section that warns about it.
 
