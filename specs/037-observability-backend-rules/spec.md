@@ -38,7 +38,7 @@ Observability rules default to **SHOULD** (the right metrics, spans, and targets
 ### Boundaries (cross-reference, do not duplicate)
 
 - **Logging and audit trail** are already `security-backend.md` §BE-LOG (`BE-LOG-005`/`BE-LOG-006`) — this set cites them and covers the rest of observability; `TRACE` extends `BE-LOG-006` rather than restating it.
-- **Operator-tunable values** (scrape intervals, probe timeouts, alert thresholds) are `configuration-cross.md` `CFG-CONST-*` / `CFG-ENV-*` — these rules require the value to exist; the config rules ductus how it is named and validated.
+- **Operator-tunable values** (scrape intervals, probe timeouts, alert thresholds) are `configuration-cross.md` `CFG-CONST-*` / `CFG-ENV-*` — these rules require the value to exist; the config rules govern how it is named and validated.
 
 ## Acceptance Criteria
 

@@ -255,7 +255,7 @@ Not every captured item is a requirement gap. An inbox item may be a **chore** �
 
 When a bug is reported, follow this decision tree in order. The first matching condition determines the route:
 
-1. **No rule covers this cross-cutting concern** — the bug surfaces a class of behavior the framework should ductus at the rules tier (perf budget, observability commitment, security control, accessibility minimum, etc.). Promote to a rule (new or amended), then fix the code.
+1. **No rule covers this cross-cutting concern** — the bug surfaces a class of behavior the framework should govern at the rules tier (perf budget, observability commitment, security control, accessibility minimum, etc.). Promote to a rule (new or amended), then fix the code.
 2. **No spec exists for the behavior** — the bug is a feature-level gap. Write the spec first, then fix the code.
 3. **Spec exists but is ambiguous or incomplete** — the bug is a spec deficiency. Correct or enhance the spec, then fix the implementation.
 4. **Spec is clear but implementation is wrong** — add a scenario capturing the correct behavior, then fix the code.

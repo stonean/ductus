@@ -13,7 +13,7 @@ next-criterion: 8
 
 # 034 — Backend performance rules
 
-Introduce `framework/rules/performance-backend.md`, the backend counterpart to `performance-frontend.md`: an enforceable rule set covering server-side performance concerns the framework should ductus across features. The file follows the canonical rule schema and is installed and enforced under the **backend** surface.
+Introduce `framework/rules/performance-backend.md`, the backend counterpart to `performance-frontend.md`: an enforceable rule set covering server-side performance concerns the framework should govern across features. The file follows the canonical rule schema and is installed and enforced under the **backend** surface.
 
 ## Motivation
 
@@ -41,7 +41,7 @@ Performance rules default to **SHOULD** (advisory; thresholds are context-depend
 
 - **Pagination** is already `api-backend.md` §BE-PAGE — `performance-backend.md` cites it, never restates it.
 - **Unbounded-input DoS bounds** are `security-backend.md` `BE-INPUT-006` — the perf rules cite it for request-size limits rather than re-deriving them.
-- **Operator-tunable values** (the *configuration* of timeouts, pool sizes, batch sizes) are `configuration-cross.md` `CFG-CONST-*` / `CFG-ENV-*` — perf rules require the value to exist and be bounded; the config rules ductus how it is named and validated.
+- **Operator-tunable values** (the *configuration* of timeouts, pool sizes, batch sizes) are `configuration-cross.md` `CFG-CONST-*` / `CFG-ENV-*` — perf rules require the value to exist and be bounded; the config rules govern how it is named and validated.
 - **Server-side deadlines, downstream-call timeouts, retries, and circuit breakers** are **out of scope** here: they are as much reliability as performance and are deferred to a future `reliability-backend.md` rule set (a separate Task-9 set). This keeps `performance-backend.md` focused on throughput and latency efficiency.
 
 ## Acceptance Criteria

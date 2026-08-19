@@ -103,7 +103,7 @@ No new files, no template changes, no data model.
 
 ## Open Questions Resolved
 
-All open questions were resolved during `/ductus:clarify`; the spec's `## Resolved Questions` section records the rationale for each. The decisions that ductus this plan:
+All open questions were resolved during `/ductus:clarify`; the spec's `## Resolved Questions` section records the rationale for each. The decisions that govern this plan:
 
 - `/amend` owns the back-edge, mirroring `/elaborate`.
 - The destination status is `draft` (the only state that tolerates open questions), not `clarified`.

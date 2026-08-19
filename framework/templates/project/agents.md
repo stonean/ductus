@@ -6,7 +6,7 @@
 
 ## Constitution
 
-See [constitution.md](.ductus/constitution.md) — guiding principles, development pipeline, spec lifecycle, and quality standards that ductus this project.
+See [constitution.md](.ductus/constitution.md) — guiding principles, development pipeline, spec lifecycle, and quality standards that govern this project.
 
 ## Tech Stack
 
