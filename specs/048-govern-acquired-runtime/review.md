@@ -1,9 +1,9 @@
 ---
 spec: 048-govern-acquired-runtime
-scenario: pin-is-readable-when-acquisition-needs-it
-reviewed-at: 2026-08-19T16:22:13Z
-reviewed-against: e3028e37629c10e0cd3630749914e2041d196390
-diff-base: 2ad7cdc0000000000000000000000000000000
+scenario: state-a-version-checks-the-pin
+reviewed-at: 2026-08-19T16:29:28Z
+reviewed-against: 171d50249565cb97da31134ee68c959ef1c1f5ce
+diff-base: e63cd5f7a77ad44ab749478c1b0cc8905d1bcdfb
 must-violations: 0
 should-violations: 0
 low-confidence: 0
@@ -15,23 +15,23 @@ skipped-passes: []
 
 ## Summary
 
-Clean at `e3028e3` — 0 MUST, 0 SHOULD, 0 low-confidence, 0 observations.
+Clean at `171d502` — 0 MUST, 0 SHOULD, 0 low-confidence, 0 observations.
 
-Scope: `framework/bootstrap/ductus.md`, its byte-identical `govern.md` mirror, the new scenario, and task 16.
+Scope: `framework/bootstrap/ductus.md`, its byte-identical `govern.md` mirror, `framework/bootstrap/hooks/ductus-pre-commit`, the new scenario, and task 17.
 
-**The defect was a blocking one and the fix is verified, not argued.** `/ductus` could not acquire the runtime on a greenfield adoption: every first-time adopter is State B by definition, State B's first act is Runtime acquisition, and its step 1 read the pin from a file that only exists after the archive extract hundreds of lines later. The halt was deliberate — guessing a version would install an untested runtime — so a faithful walk stopped. Underneath it sat a second defect: `{tempdir}` was created inside the self-update check, which runs *after* runtime detection, so even fetching the pin during acquisition had nowhere to fetch it to. The second check owned the resource the first one needed.
+**The defect was found in a real adopter project, which is the only test of composition this project has.** Detection resolved State A on tool-inventory introspection alone; State A then declared the runtime live and emitted nothing; and §Runtime acquisition — the only place `{pin}` is compared against anything — runs only in State B. A registered-but-old runtime therefore passed silently on every run. The adopter's store held `0.29.10` against a pin of `0.31.0`, so the pre-commit hook that same `/ductus` run refreshed called primitives that binary does not carry, with the shell generators they replaced already deleted, and every commit halted.
 
-**Three changes, each minimal.** `{tempdir}` moves to the Pre-flight preamble; acquisition step 1 fetches the pin into it; `{staging-dir}` retires. That last one is worth naming: it appeared only in these steps, was never defined in §Derived values, and named what the rest of the document calls `{tempdir}` — an undefined placeholder sitting in the one procedure every first-run adopter executes.
+`QUAL-CLAIM-001` is the rule, one level up from code: **`/ductus` reported success.** A tool *was* in the inventory, so detection answered truthfully — it answered the wrong question. That is the same failure mode as a check that cannot run wearing the costume of one that passed, and it is why the fix is a version comparison rather than a better message.
 
-**`govern.md` was updated in the same change**, byte-identically. Family 21 exists precisely for this: every pre-rename adopter's self-update fetch resolves to that path, so fixing only `ductus.md` would have shipped the broken procedure to exactly the adopters who cannot yet reach the fixed one. The family confirms parity.
+**Two fixes, at different distances from the failure.** State A now probes the resolved binary and branches three ways — silent on a match, Branch 1's existing warning for a project-supplied `[runtime] path` whose owner chose it deliberately, and otherwise acquire `{pin}`. The non-obvious clause is what follows an acquisition: re-acquiring does **not** refresh the running MCP server, which was spawned once at session start and holds the old binary regardless of what is now in the store, so the run switches to `{pointer-path} <primitive>` for the remainder. Continuing to call the live tools would execute the stale code the check just diagnosed. That is the move State B already makes, for the same reason, so this adds no new mechanism.
 
-**Verified by re-running the greenfield adoption against the fixed bootstrap with nothing supplied by hand** — the prior run needed the pin handed to it to get past step 1. Pin fetched and read at step 1, archive and sidecar fetched, digest verified before install, store installed, re-probe reporting `0.31.0` against pin `0.31.0`, the self-update fetch reusing the same `{tempdir}` rather than creating a second, and the pointer resolving and executing. The harness asserts each step rather than printing progress, so a regression fails it.
+**The hook guard exists because the State A fix cannot rescue anyone already broken** — reaching it requires running `/ductus`, and a project whose commits are halting may not get that far. It probes *capability* rather than parsing a version, which is the stronger form here: there is no pin for the hook to drift from, and a hand-placed binary or a primitive this hook grows later is covered by the same question. Proven against a runtime lacking the subcommands (halts naming the installed version and the missing subcommand) and against a current one (silent), in isolated fixtures.
 
-**The one property the fix trades away is stated rather than buried.** The pin and the framework tree now arrive in two fetches instead of travelling in one archive, so they agree because both name `main`. A push landing between them is the sole divergence, bounded by one run, and the next `/ductus` re-acquires because acquisition is idempotent and re-probes the store. The prior arrangement made that divergence impossible — by reading a file that was not there.
+**Two existing families were the risk and both were checked directly rather than assumed.** Family 22 exercises the shipped hook in an adopter-shaped tree — its stub exits 0 for every argument, so the capability probe passes, and its assertions are substring matches, so the two extra `--help` invocations do not disturb them; it is green. Family 21 confirms `govern.md` is byte-identical, which is what keeps a fix from reaching only the adopters who can already reach the fixed procedure.
 
-`QUAL-CLAIM-001` is satisfied in the direction that matters here: the halt survives with an accurate message naming the pin URL, so an offline adopter still fails loudly rather than proceeding on a guessed version. Only the reason it can fail has moved.
+**This is the mirror of the greenfield defect fixed immediately before it.** That one blocked adopters with *no* runtime; this one silently degraded adopters with the *wrong* one. Between them, acquisition was correct only for the adopter who was already current — worth recording, because two defects that look unrelated shared one cause: `{pin}` was consulted in exactly one branch of a two-branch decision.
 
-Verified against the whole CI surface: markdownlint, six `lint-*` scripts, both `scripts/tests` suites, shellcheck over every tracked shell file, actionlint, all three generators plus both derive primitives with a clean tree after, `scripts/audit/run-all.sh` (27 families, re-run after committing), and under `runtime/` `cargo fmt --check`, `clippy --release --all-targets --locked -- -D warnings`, and `cargo test --release --locked` — the last of which matters here, since a bootstrap edit is the class of change that moved a parity golden earlier this session.
+Verified against the whole CI surface: markdownlint, six `lint-*` scripts, both `scripts/tests` suites, shellcheck over every tracked shell file (including the edited hook), actionlint, all three generators plus both derive primitives with a clean tree after, `scripts/audit/run-all.sh` re-run after committing, and under `runtime/` `cargo fmt --check`, `clippy -D warnings`, and `cargo test --release --locked`.
 
 ## MUST violations (blocking)
 

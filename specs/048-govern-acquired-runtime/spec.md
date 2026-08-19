@@ -2,8 +2,8 @@
 status: in-progress
 dependencies: [021-runtime-boundary, 027-bootstrap-migration-registry, 029-bootstrap-runtime-autowire, 042-consolidate-govern-per-project-files-under-govern-directory]
 review:
-  last-run: 2026-08-19T16:22:13Z
-  reviewed-against: e3028e37629c10e0cd3630749914e2041d196390
+  last-run: 2026-08-19T16:29:28Z
+  reviewed-against: 171d50249565cb97da31134ee68c959ef1c1f5ce
   must-violations: 0
   should-violations: 0
   low-confidence: 0
