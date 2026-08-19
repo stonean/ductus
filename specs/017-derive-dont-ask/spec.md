@@ -2,8 +2,8 @@
 status: done
 dependencies: []
 review:
-  last-run: 2026-08-16T13:52:53Z
-  reviewed-against: 090ab0258fbbe93ce2e6044b4e0cde43a499d716
+  last-run: 2026-08-19T01:24:46Z
+  reviewed-against: 4bfaaeec9e5af5d89d92811828412ca950d63cec
   must-violations: 0
   should-violations: 0
   low-confidence: 0
