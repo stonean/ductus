@@ -14,6 +14,8 @@
 #   D. publish renamed fails, for the same reason
 #   E. the release-upload action in another job fails
 #   F. an absent workflow fails rather than passing vacuously
+#   G. the block-sequence `needs:` form is read, not mistaken for an empty list
+#   H. `on:`'s two-space children are not read as jobs
 #
 # Usage: scripts/tests/test-lint-release-ordering.sh
 
@@ -96,6 +98,26 @@ elif grep -q "not found" "$WORK/f-absent/out"; then
   pass "F: an absent workflow is rejected"
 else
   fail "F: rejected for the wrong reason: $(cat "$WORK/f-absent/out")"
+fi
+
+# G. `needs:` as a block sequence is the same graph written differently. A lint
+#    that reads it as an empty list cries wolf on a correct workflow, and a lint
+#    that cries wolf gets ignored.
+if probe g-block-needs 's|^    needs: publish$|    needs:\
+      - publish|'; then
+  pass "G: the block-sequence needs form is accepted"
+else
+  fail "G: block-sequence needs misread: $(cat "$WORK/g-block-needs/out")"
+fi
+
+# H. `on:` has two-space children (`  push:`) with exactly the shape of a job
+#    key. Reading one as a job attributes every following line to it — here, a
+#    release-upload mention inside the trigger block, which used to surface as
+#    a finding against a job named "push".
+if probe h-on-block "s|^      - 'ductus-v\*'\$|      - 'ductus-v*'  # softprops/action-gh-release|"; then
+  pass "H: on:'s children are not read as jobs"
+else
+  fail "H: a key under on: was read as a job: $(cat "$WORK/h-on-block/out")"
 fi
 
 echo

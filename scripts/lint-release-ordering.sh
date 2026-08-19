@@ -59,24 +59,50 @@ fi
 # Emits one `<job> <needs-csv> <uses-release-action>` line per job.
 summary="$(
   awk '
-    # A job key: exactly two spaces of indent, directly under `jobs:`.
+    function flush() {
+      if (job != "") print job, (needs == "" ? "-" : needs), uploads
+      job = ""; needs = ""; uploads = "no"; in_needs = 0
+    }
+    # Job keys are only recognized inside the top-level `jobs:` mapping. `on:`
+    # has two-space children too (`  push:`), and reading one of those as a job
+    # would attribute the steps that follow it to the wrong owner — a quiet
+    # mis-parse in a lint whose whole value is being right about the graph.
+    /^[A-Za-z0-9_-]+:/ {
+      flush()
+      in_jobs = ($0 ~ /^jobs:[[:space:]]*$/)
+      next
+    }
+    !in_jobs { next }
     /^  [A-Za-z0-9_-]+:[[:space:]]*$/ {
-      if (job != "") print job, needs, uploads
+      flush()
       job = $1
       sub(/:$/, "", job)
-      needs = "-"
-      uploads = "no"
       next
     }
     job == "" { next }
-    /^    needs:/ {
+    # Inline form: `needs: publish` or `needs: [audit, build]`.
+    /^    needs:[[:space:]]*[^[:space:]]/ {
       needs = $0
       sub(/^    needs:[[:space:]]*/, "", needs)
       gsub(/[][ ]/, "", needs)
+      in_needs = 0
       next
     }
+    # Block-sequence form: a bare `needs:` followed by `- <job>` lines. Reading
+    # this as an empty needs list would report a correctly-ordered workflow as
+    # broken — a false alarm trains the reader to ignore the lint, which costs
+    # more than the check is worth.
+    /^    needs:[[:space:]]*$/ { needs = ""; in_needs = 1; next }
+    in_needs && /^      -[[:space:]]*[^[:space:]]/ {
+      item = $0
+      sub(/^      -[[:space:]]*/, "", item)
+      gsub(/[][", ]/, "", item)
+      needs = (needs == "" ? item : needs "," item)
+      next
+    }
+    /^    [A-Za-z0-9_-]+:/ { in_needs = 0 }
     index($0, RELEASE_ACTION) > 0 { uploads = "yes" }
-    END { if (job != "") print job, needs, uploads }
+    END { flush() }
   ' RELEASE_ACTION="$RELEASE_ACTION" "$WORKFLOW"
 )"
 

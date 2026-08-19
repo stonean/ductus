@@ -176,6 +176,14 @@ jobs:
       # saying so. Spec 048 makes the runtime required, so a platform missing
       # its asset locks those adopters out of the pipeline entirely; the
       # release-assets job below publishes only once the set is complete.
+      #
+      # retention-days outlives one pipeline run on purpose. These artifacts
+      # used to be consumed minutes later, by a release-assets job that ran
+      # right after this one. They are now consumed by the LAST job in the
+      # chain, and the documented recovery from a failed publish is to fix the
+      # cause and re-run — which took a token rotation on ductus-v0.30.0. A
+      # one-day retention would make "re-run tomorrow" fail on expired
+      # artifacts rather than on the thing that actually broke.
       - name: Stage release assets
         uses: actions/upload-artifact@v4
         with:
@@ -184,7 +192,7 @@ jobs:
             runtime/target/${{ matrix.target }}/release/ductus-${{ matrix.target }}.tar.gz
             runtime/target/${{ matrix.target }}/release/ductus-${{ matrix.target }}.tar.gz.sha256
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
 
   # The **acquisition invariant** from constitution §runtime-boundary, run
   # against the assets this pipeline just built — fetch, verify the sidecar
@@ -337,7 +345,8 @@ jobs:
           shasum -a 256 ductus.cdx.json > ductus.cdx.json.sha256
 
       # `release-asset-*` so release-assets' merge-multiple download collects
-      # it alongside the five platform archives.
+      # it alongside the five platform archives; same retention as those, for
+      # the same re-run reason.
       - name: Stage the SBOM
         uses: actions/upload-artifact@v4
         with:
@@ -346,7 +355,7 @@ jobs:
             runtime/ductus.cdx.json
             runtime/ductus.cdx.json.sha256
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
 
   publish:
     name: Publish to crates.io
