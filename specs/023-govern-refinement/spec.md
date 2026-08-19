@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [022-deterministic-runtime]
 review:
   last-run: 2026-08-14T20:16:13Z
@@ -136,7 +136,7 @@ The list is sourced from `framework/runtime-tools.txt` to avoid drift. Each tool
 - [x] AC29: `framework/constitution.md` §brownfield-process retains its three-phase structure ("Capture → incremental growth → promotion"); step 1 rewrites to point at `/specify` and explicitly notes sparse acceptance criteria are valid for brownfield use. The §brownfield-process anchor name is preserved (no cascading reference updates required).
 - [x] AC30: The Status → next action tables in `framework/commands/target.md` and `framework/commands/status.md` point at `/amend` for the `done` row instead of `/elaborate`.
 - [x] AC31: `scripts/lint-tool-coverage.sh` passes after the rewrites; the runtime's parseability check passes against the rewritten `framework/commands/specify.md` and `framework/commands/amend.md`.
-- [x] AC32: The markdown-only CI workflow (`.github/workflows/markdown-only-pipeline.yml`) passes with the runtime absent from `PATH`; the runtime CI workflow continues to pass.
+- [x] AC32: The markdown-only CI workflow (`.github/workflows/markdown-only-pipeline.yml`) passes with the runtime absent from `PATH`; the runtime CI workflow continues to pass. Delivered as written; that workflow no longer exists — `048-govern-acquired-runtime` made the runtime required and acquired, which retired the absent-from-`PATH` invariant this criterion asserts, and replaced the workflow with `.github/workflows/framework-checks.yml`. The runtime CI workflow half still holds.
 - [x] AC33: `framework/commands/amend.md` runs a reconcile pass on a no-input invocation against a `done`, `planned`, or `in-progress` spec: for each scenario in the on-disk delta it reads every referencing task — checked and unchecked — matching on the scenario slug in a task's heading, subtask text, or `Done when` clause (the same rule `/{project}:analyze`'s `scenario-consistency` family applies), skips a scenario carrying a pending task, prompts per remaining scenario rather than batching, appends a task via `append-task` with the existing slug on confirm, and folds the `done → in-progress` back-edge into that same confirmation. A `draft` or `clarified` spec is not reached. See [`scenarios/extend-existing-scenario-task.md`](scenarios/extend-existing-scenario-task.md).
 
 ## Open Questions
