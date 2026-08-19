@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [017-derive-dont-ask, 022-deterministic-runtime, 023-govern-refinement, 024-rule-loader, 025-rule-opt-out]
 review:
   last-run: 2026-08-18T01:43:30Z
@@ -8,7 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 17
+next-criterion: 19
 ---
 
 # 026 — Framework self-audit (`/audit`)
@@ -132,6 +132,8 @@ The maintainer reviews findings and routes each to a fix path:
 - [x] AC14: The boundary with `/ductus:analyze` is documented in `framework/commands/audit.md` §Notes (or equivalent): `/ductus:analyze` is feature-spec-scoped; `/audit` is framework-scoped; the two never duplicate a check. Adopters never invoke `/audit` — it is a ductus-maintainer tool.
 - [x] AC15: **Adopter shell behavior** runs the shipped `framework/bootstrap/hooks/ductus-pre-commit` and `.ductus/scripts/**` against a generated fixture shaped like an adopter's tree — a non-default `[paths] specs-root`, config only at `.ductus/config.toml`, and the runtime reachable only through the `.ductus/bin/ductus` pointer with nothing named `ductus` on `PATH` — and asserts that the spec root resolves to the configured value, that the hook reaches the runtime, and that no generator rewrite is left unstaged. The fixture is built at both the default and a configured root so neither failure masks the other, the runtime is stubbed so the family stays hermetic, and any precondition that prevents the fixture from being built is emitted as a finding rather than skipped.
 - [x] AC16: **Sweep-target manifest parity** asserts that the live-artifact enumeration a rename sweep greps — delimited in `AGENTS.md` by `<!-- audit:sweep-targets:begin -->` / `<!-- audit:sweep-targets:end -->` — covers every source path the **Shared Files** manifest ships, so a relocated directory cannot leave the list naming somewhere clean while the sweep misses the files that moved. The check runs manifest → list only and reports that direction along with the entry and path counts, since it proves no shipped file goes unswept but not that the list is complete; an empty extraction on either side is a finding rather than a pass.
+- [x] AC17: **Rename-sweep residue** asserts that the project name never appears where English grammar requires a verb, catching the residue a word-boundary rename sweep leaves when the retired name was also an ordinary verb. Detection is two closed word classes — a modal followed by the project name, and the project name followed by a demonstrative or wh-word — so it is exact rather than heuristic; `the`, `to`, and `that` are excluded because each is ordinary before the name. A scan that examines no files is a finding rather than a pass, and the examined-file count is reported.
+- [x] AC18: **Unbalanced inline markup** asserts that no line in `AGENTS.md` or the `AGENTS.md` template carries an odd number of backticks or `**` markers outside fenced code blocks — the malformed-entry class markdownlint cannot see, since an unclosed backtick never becomes a code span. Scoped to those two files because their bullets are single-line, which is what makes a per-line check exact; the family reports that scope on stderr so a clean exit is never read as a corpus-wide guarantee, and reports a wrapped bullet rather than narrowing silently once the convention lapses.
 
 ## Open Questions
 
