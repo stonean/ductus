@@ -13,7 +13,7 @@ it. The mechanism is `NON_ASSERTION_MARKERS`, a closed list of phrases.
 
 Re-measuring across all 47 specs found 25 findings. Reading each criterion
 rather than classifying by path prefix — the discipline
-[045's data-model](../045-decision-state-drift-detection/data-model.md) records
+[045's data-model](../../045-decision-state-drift-detection/data-model.md) records
 as the correction to an earlier mis-triage — splits them three ways:
 
 - **19 adopter-scope.** Paths `ductus` creates in an adopter's checkout

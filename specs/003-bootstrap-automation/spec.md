@@ -112,7 +112,7 @@ Before scaffolding, verify the target directory does not already exist. If it do
 
 - **Running setup automatically** — no. Init runs from the governance repo; setup runs in the new project's Claude session. Tell the user to start a new session and run `/{project}:setup`. Promotes smaller, more accurate context per session.
 - **Initial commit** — leave to the user. They may want to review generated files, fill in AGENTS.md, or make adjustments before committing.
-- **Minimal flag** — not now. Templates are empty prompts that cost nothing to include. If a project doesn't use events, they delete `events.md`. See [specs/spec.md](../spec.md#future-considerations) for deferred rationale.
+- **Minimal flag** — not now. Templates are empty prompts that cost nothing to include. If a project doesn't use events, they delete `events.md`. See [specs/README.md](../README.md#future-considerations) for deferred rationale.
 - **Existing directory** — verify it doesn't exist and stop if it does. Running in an existing directory risks overwriting files. The manual bootstrap steps in the README cover adding governance to existing projects.
 - **Command location** — `.claude/commands/ductus/init.md`, invoked as `/ductus:init`. Consistent with the slash command pattern from spec 000.
 - **Language-specific gitignore** — init asks for primary language(s) and fetches patterns from github.com/github/gitignore to append to the minimal .gitignore template.

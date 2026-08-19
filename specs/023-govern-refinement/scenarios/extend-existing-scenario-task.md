@@ -14,7 +14,7 @@ So a scenario whose requirement is *extended* rather than created has no route t
 - `/{project}:plan` — gates on `clarified`; a spec on the reopen cycle sits at `in-progress` and fails the gate.
 - `/{project}:implement` — reads `tasks.md` and finds nothing to do.
 
-[§implement-phase](../../framework/constitution.md#implement-phase)'s "if new work is discovered, add it as a task first" therefore has no mechanism on the reopen cycle, and the standing workaround is calling the `append-task` primitive directly — the runtime doing what no command exposes. This is the same shape as the gap 046 closed: a reachable pipeline state with no command routing out of it.
+[§implement-phase](../../../framework/constitution.md#implement-phase)'s "if new work is discovered, add it as a task first" therefore has no mechanism on the reopen cycle, and the standing workaround is calling the `append-task` primitive directly — the runtime doing what no command exposes. This is the same shape as the gap 046 closed: a reachable pipeline state with no command routing out of it.
 
 ## Behavior
 

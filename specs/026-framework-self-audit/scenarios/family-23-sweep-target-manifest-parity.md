@@ -6,7 +6,7 @@ section: "Check families"
 
 ## Context
 
-[§drift-prevention](../../framework/constitution.md#drift-prevention) tells a
+[§drift-prevention](../../../framework/constitution.md#drift-prevention) tells a
 sweep to **keep its own target list current**, because a list naming a
 relocated directory sends the grep somewhere clean and the sweep silently
 misses the files that moved. That rule is the residue of a real failure: 042
@@ -17,7 +17,7 @@ the legacy root with no `.ductus/` tier. A converged adopter therefore resolved
 to a path that does not exist, fell through to the default spec root, and
 exited 0.
 
-**The list the rule protects no longer exists.** [050](../050-constitution/spec.md)
+**The list the rule protects no longer exists.** [050](../../050-constitution/spec.md)
 promoted the rule into the constitution in categorical form — "specs, rules,
 command sources, scripts the pipeline runs, CI configuration, docs, and the
 README" — which is correct for a document that ships to adopters, whose repo
@@ -32,14 +32,14 @@ Three live pointers now dangle:
 - The `AGENTS.md` entry still says to grep "the live-artifact paths above" and
   describes a substitution "applied uniformly across the artifact set above".
   Nothing above it lists paths.
-- [§spec-lifecycle](../../framework/constitution.md#spec-lifecycle) case (a)
+- [§spec-lifecycle](../../../framework/constitution.md#spec-lifecycle) case (a)
   defines a mechanical edit as a substitution applied uniformly "per the
   `AGENTS.md` rename rule's scope" — which is now a pointer back to the
   constitution's categorical list. The mechanical-edit rule's scope is
   circular, and that rule is what decides whether a `done` spec reopens.
 - The only surviving copies of the enumeration sit in
-  [023](../023-govern-refinement/spec.md)'s `living-specs` scenario and
-  [043](../043-workflows-sunset/spec.md)'s plan, both citing "AGENTS.md line
+  [023](../../023-govern-refinement/spec.md)'s `living-specs` scenario and
+  [043](../../043-workflows-sunset/spec.md)'s plan, both citing "AGENTS.md line
   42" — itself stale.
 
 So the gap is not that the list drifts unchecked; it is that there is nothing
@@ -74,7 +74,7 @@ sweep greps in *this* repository, while destinations describe an adopter's
 tree.
 
 The check was measured before being proposed
-([§recommendations](../../framework/constitution.md#recommendations)):
+([§recommendations](../../../framework/constitution.md#recommendations)):
 
 - Against the restored list today it produces exactly one finding —
   `.markdownlint-cli2.jsonc`, shipped to adopters and uncovered by any entry.
@@ -95,7 +95,7 @@ rejected on the strength of it.
   `.github/`, `docs/`). The family must say which direction it verified rather
   than let a clean run imply both — a check that examined half its subject and
   reports the same zero as one that examined all of it is
-  [§design-principles](../../framework/constitution.md#design-principles)'s
+  [§design-principles](../../../framework/constitution.md#design-principles)'s
   first failure.
 - **A list that cannot be parsed is a finding, never a pass.** If the
   enumeration's markers are renamed or the section is restructured, extraction

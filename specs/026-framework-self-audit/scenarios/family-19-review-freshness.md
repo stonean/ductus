@@ -39,7 +39,7 @@ caught by measuring against this repo before wiring anything:
 | Rule | Fires on | Why it fails |
 | --- | --- | --- |
 | Plan's **Affected Files** | 42 of 48 | Old specs list shared surfaces (`AGENTS.md`, `README.md`, `framework/bootstrap/ductus.md`) that every later spec also touches, so spec 004 reads stale because spec 042 edited `AGENTS.md` |
-| The whole spec directory | 31 of 48 | `tasks.md` churns on every ticked checkbox and is ephemeral by construction ([§tasks-phase](../../framework/constitution.md#tasks-phase)); `plan.md` churns as Affected Files are revised |
+| The whole spec directory | 31 of 48 | `tasks.md` churns on every ticked checkbox and is ephemeral by construction ([§tasks-phase](../../../framework/constitution.md#tasks-phase)); `plan.md` churns as Affected Files are revised |
 | **Durable contracts** | 10 of 48 | Ships |
 
 (The three counts are snapshots taken on 2026-08-03. The shipped rule's count drains as reviews are refreshed — it was 9 within the hour, once reviewing 026 cleared its own entry.)

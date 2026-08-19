@@ -10,7 +10,7 @@ This repo's `.ductus/config.toml` carries only a `[review]` block — no `[host]
 
 The fallback itself is correct, documented behavior — `project` is explicitly the shared, committed value naming the slash-command namespace, and a repo that never sets it gets its basename. So this is not a runtime defect. It is drift between two committed artifacts that must agree: the configured namespace and the installed one.
 
-It went unnoticed for a long time because nothing compares them. A repo whose rendered commands do not match its installed commands is exactly the drift [§drift-prevention](../../framework/constitution.md#drift-prevention) exists to catch, and the framework's own dogfooding did not catch it. Surfaced 2026-07-30 while implementing spec 046 task 5, whose new dashboard callout is one more place the wrong namespace appears.
+It went unnoticed for a long time because nothing compares them. A repo whose rendered commands do not match its installed commands is exactly the drift [§drift-prevention](../../../framework/constitution.md#drift-prevention) exists to catch, and the framework's own dogfooding did not catch it. Surfaced 2026-07-30 while implementing spec 046 task 5, whose new dashboard callout is one more place the wrong namespace appears.
 
 ## Behavior
 

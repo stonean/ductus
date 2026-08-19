@@ -9,7 +9,7 @@ section: "Follow-on scenarios"
 `compute-review-scope` resolved the review file scope as **whichever of the
 plan's `Affected Files` and the files-modified-since-`diff-base` was larger** —
 one set or the other, explicitly not their union. The rule came from
-[020](../020-code-review/spec.md)'s original scope definition and the command
+[020](../../020-code-review/spec.md)'s original scope definition and the command
 source stated it emphatically ("not a union; ties resolve to the modified-since
 set"), so it read as deliberate rather than as an oversight.
 
@@ -20,7 +20,7 @@ size, and the review is scoped to files the change never went near — while the
 report gives no sign that the changed code was never examined.
 
 This is not hypothetical, and it was found from the inside: the review of
-[026](../026-framework-self-audit/spec.md)'s Family 23 resolved a 15-entry
+[026](../../026-framework-self-audit/spec.md)'s Family 23 resolved a 15-entry
 plan-affected set against an 11-entry modified-since set, so the scope handed
 to the passes excluded the new family script, `AGENTS.md`, and
 `framework/constitution.md` — every file the change introduced or edited. The

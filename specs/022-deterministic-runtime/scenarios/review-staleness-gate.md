@@ -48,7 +48,7 @@ So the two enforcement points now apply the *identical* rule rather than
 deliberately different ones — `is_durable_contract` here mirrors
 `scripts/audit/review-freshness.sh` exactly. `tasks.md` and `plan.md` are
 excluded because the first is ephemeral by construction
-([§tasks-phase](../../framework/constitution.md#tasks-phase)) and the second
+([§tasks-phase](../../../framework/constitution.md#tasks-phase)) and the second
 churns as Affected Files are revised; `review.md` and `spec.md` because
 `write-review` touches both, so counting them would make every review stale the
 instant it was recorded.

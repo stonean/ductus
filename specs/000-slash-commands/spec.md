@@ -137,5 +137,5 @@ trigger recorded — only `## Open Questions` entries count against the gate.
 - **Setup and web fetch permissions** — leave to project-specific customization. The setup command handles universal operations (git, lint, file reads). Projects add their own web fetch domains.
 - **Validate and markdown lint** — validate includes a markdownlint check as part of its PASS/FAIL report. Lint compliance is a quality gate defined in the constitution.
 - **Specify and dependencies** — specify accepts only a description. Dependencies are set during writing and clarifying, not at creation time.
-- **Retire/archive command** — deferred. See [specs/spec.md](../spec.md#future-considerations). Projects can manually update status or delete directories.
+- **Retire/archive command** — deferred. See [specs/README.md](../README.md#future-considerations). Projects can manually update status or delete directories.
 - **Lightweight track handling** — the `specify` command detects lightweight track eligibility by prompting qualifying questions. Creates `spec-and-plan.md` when all answers indicate small and clear. Pipeline commands adapt based on which file exists.

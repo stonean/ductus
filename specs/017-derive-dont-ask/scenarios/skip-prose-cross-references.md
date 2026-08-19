@@ -8,7 +8,7 @@ section: "Generators and Hooks"
 
 `scripts/gen-spec-deps.sh` (per Q7 / AC23) is authoritative — the pre-commit hook regenerates each spec's frontmatter `dependencies` from inline markdown links to sibling spec directories in the body (links matching `](../NNN-slug/...)` or `](specs/NNN-slug/...)` outside fenced code blocks; script lines 39–70). The design assumes every body link expresses a dependency.
 
-In practice authors write two kinds of cross-references: (1) **dependency** links — "this spec needs the rule loader from [024-rule-loader](../024-rule-loader/spec.md)" — which the generator's current behavior is built for; and (2) **navigational** links — "`/jobs` was added by [018-scheduled-jobs](../018-scheduled-jobs/spec.md)" — which are informational and don't make the citing spec depend on the referenced one. The generator silently promotes (2) to (1).
+In practice authors write two kinds of cross-references: (1) **dependency** links — "this spec needs the rule loader from [024-rule-loader](../../024-rule-loader/spec.md)" — which the generator's current behavior is built for; and (2) **navigational** links — "`/jobs` was added by `018-scheduled-jobs`" — which are informational and don't make the citing spec depend on the referenced one. The generator silently promotes (2) to (1).
 
 When bidirectional navigational links exist between two specs, both ends gain a dependency on the other, producing a cycle. In one adopter project (anvil), bidirectional prose references produced 9 direct 2-cycles (e.g., 001↔012, 001↔018, 005↔009, 006↔010). None blocked work — every involved spec was already past the gate — but the dep graph surfaced by `/anvil:status`, the dashboard's `blocked-by` callout, and `traverse-deps` becomes unreliable.
 

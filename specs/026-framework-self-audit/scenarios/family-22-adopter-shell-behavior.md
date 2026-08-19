@@ -17,7 +17,7 @@ facts masks a class of assumption, and a green run here says nothing about any
 of them.
 
 Three defects reached adopters through that gap on 2026-08-17, found only by a
-real adopter bootstrap under [048](../048-govern-acquired-runtime/spec.md)'s
+real adopter bootstrap under [048](../../048-govern-acquired-runtime/spec.md)'s
 AC10. All were silent and all exited 0:
 
 - `config_path_of` resolved `.govern/config.toml` then the legacy root with no
@@ -25,10 +25,10 @@ AC10. All were silent and all exited 0:
   and the generators enumerated a tree that was not theirs.
 - The hook guarded its `label-criteria` backstop on `command -v ductus`, while
   048 had moved the runtime into the ductus-owned store — never on `PATH`. The
-  [013](../013-text-first-artifacts/spec.md) labelling backstop was dead for
+  [013](../../013-text-first-artifacts/spec.md) labelling backstop was dead for
   every adopter for four releases.
 - The hook's staged-spec detection hardcoded `specs`. On a non-default
-  `[paths] specs-root` ([040](../040-configurable-specs-dir/spec.md)) it matched
+  `[paths] specs-root` ([040](../../040-configurable-specs-dir/spec.md)) it matched
   nothing, so the re-stage loop never ran and each commit captured frontmatter
   the generators had already superseded on disk.
 
@@ -69,12 +69,12 @@ family stays hermetic: no `cargo build`, identical behavior in CI and locally.
   shipped file, an unavailable `mktemp`, or a git repo that fails to initialize
   each emit rather than skip. This family exists because checks that cannot run
   are what let the three defects ship, so it must not join them
-  ([§quality-cross `QUAL-CLAIM-001`](../036-quality-cross-rules/spec.md)).
+  ([§quality-cross `QUAL-CLAIM-001`](../../036-quality-cross-rules/spec.md)).
 - **The spec root is interpolated into a regex.** `specs_root_of` validates the
   name against `[A-Za-z0-9_-]`, which is what makes that safe; the generators
   rely on the same guarantee.
 - **The stub is not a runtime conformance test.** Whether `label-criteria`
-  labels correctly belongs to [022](../022-deterministic-runtime/spec.md) and
+  labels correctly belongs to [022](../../022-deterministic-runtime/spec.md) and
   its own suite. Asserting only *that the hook reached it* keeps the boundary
   clean and the family fast.
 
