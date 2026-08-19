@@ -277,3 +277,15 @@ Opened by [048](../048-govern-acquired-runtime/spec.md)'s AC10 adopter runs, whi
 - [x] Implement the behavior described in `scenarios/family-26-broken-relative-links.md`
 
 - **Done when**: `scripts/audit/broken-relative-links.sh` reports every unresolvable relative markdown link with a `file:line` anchor and a repair path, strips inline code spans and fenced blocks without shifting line numbers, excludes generated copies and adopter templates by construction while counting both, treats a failed file listing as a finding, is wired into `run-all.sh` as Family 26 and listed in `scripts/audit/README.md`. Proven red against a seeded depth error and a failed listing; the 28 pre-existing broken links are fixed.
+
+### 32. Family 27 — done-spec unchecked criteria
+
+- [x] Implement the behavior described in `scenarios/family-27-done-spec-unchecked-criteria.md`
+
+- **Done when**: `scripts/audit/done-spec-criteria.sh` reports every `status: done` spec carrying an unchecked acceptance criterion with a `file:line` anchor and the criterion label, reads status from frontmatter and the checkbox from the Acceptance Criteria section rather than by loose grep, skips fenced blocks, enumerates specs from git while counting untracked skips, reports the examined `done`-spec count on stderr, treats an empty enumeration as a finding, and is wired into `run-all.sh` as Family 27, `framework/commands/audit.md`, and `scripts/audit/README.md`. Proven red against a seeded unchecked criterion on a `done` spec and against an empty enumeration; green at HEAD.
+
+### 33. Family 28 — audit family registry parity
+
+- [x] Implement the behavior described in `scenarios/family-28-audit-family-registry-parity.md`
+
+- **Done when**: `scripts/audit/audit-family-parity.sh` derives the family set from `run-all.sh`, from `audit.md`'s enumerated entries, and the script list from `scripts/audit/README.md`, reports registered-but-undocumented and documented-but-unregistered separately with their differing repairs, hardcodes neither set, needs no allowance for retired numbers, ignores prose mentions and the generated copy, treats an empty derivation on either side as a finding, and is wired into `run-all.sh` as Family 28, `framework/commands/audit.md`, and `scripts/audit/README.md`. Proven red against a family removed from each list in turn and against an empty derivation; green at HEAD.

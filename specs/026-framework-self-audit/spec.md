@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [017-derive-dont-ask, 022-deterministic-runtime, 023-govern-refinement, 024-rule-loader, 025-rule-opt-out]
 review:
   last-run: 2026-08-19T15:38:58Z
@@ -8,7 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 20
+next-criterion: 22
 ---
 
 # 026 — Framework self-audit (`/audit`)
@@ -135,6 +135,8 @@ The maintainer reviews findings and routes each to a fix path:
 - [x] AC17: **Rename-sweep residue** asserts that the project name never appears where English grammar requires a verb, catching the residue a word-boundary rename sweep leaves when the retired name was also an ordinary verb. Detection is two closed word classes — a modal followed by the project name, and the project name followed by a demonstrative or wh-word — so it is exact rather than heuristic; `the`, `to`, and `that` are excluded because each is ordinary before the name. A scan that examines no files is a finding rather than a pass, and the examined-file count is reported.
 - [x] AC18: **Unbalanced inline markup** asserts that no line in `AGENTS.md` or the `AGENTS.md` template carries an odd number of backticks or `**` markers outside fenced code blocks — the malformed-entry class markdownlint cannot see, since an unclosed backtick never becomes a code span. Scoped to those two files because their bullets are single-line, which is what makes a per-line check exact; the family reports that scope on stderr so a clean exit is never read as a corpus-wide guarantee, and reports a wrapped bullet rather than narrowing silently once the convention lapses.
 - [x] AC19: **Broken relative links** asserts that every relative markdown link resolves, closing the gap between `MD051` (which validates heading fragments and never checks that the file exists) and `check-orphaned-references` (which scopes to adopter-owned referrers and ductus-managed prefixes). Findings anchor to `file:line` and distinguish the two repair paths — a depth error, whose corrected path the family states outright, from a target a later spec deleted, which is named in prose rather than linked. Inline code spans are stripped so a document *describing* a link is never reported as making a broken one; fences are skipped without shifting line numbers; generated copies and adopter templates are excluded by construction and counted; a failed file listing is a finding rather than a silent pass.
+- [x] AC20: **Done-spec unchecked criteria** asserts that no spec at `status: done` carries an unchecked acceptance criterion, anchoring each finding to `file:line` with the criterion's label and naming both repairs — tick it, or reopen the spec — since the family cannot tell which is right. Only `done` specs are examined, because unchecked criteria are the expected state everywhere else; status is read from the frontmatter block and the checkbox from the Acceptance Criteria section, never by a repo-wide grep for either token; fenced blocks are skipped so a document quoting checkbox syntax is not reported as carrying one; specs are enumerated from git with untracked ones skipped and counted; and the examined `done`-spec count is reported, so a clean exit says what it examined and an empty enumeration is a finding rather than a pass.
+- [x] AC21: **Audit family registry parity** asserts that the family set `scripts/audit/run-all.sh` registers, the set `framework/commands/audit.md` enumerates, and the scripts listed in `scripts/audit/README.md` §Scripts all agree, reporting registered-but-undocumented and documented-but-unregistered separately because the repairs differ. Both sets are derived rather than hardcoded — a hardcoded expectation would be a third copy of the fact under test — retired family numbers need no allowance because a spent number appears in neither list, only the enumerated `(Family N — …)` entries count so prose mentions do not, the generated copy of `audit.md` is not a subject, and an empty derivation on either side is a finding rather than the agreement two empty sets would otherwise report.
 
 ## Open Questions
 

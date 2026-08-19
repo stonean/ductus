@@ -69,5 +69,7 @@ run_check "Family 23 — sweep-target manifest parity" "scripts/audit/sweep-targ
 run_check "Family 24 — rename-sweep residue" "scripts/audit/rename-sweep-residue.sh"
 run_check "Family 25 — unbalanced inline markup" "scripts/audit/unbalanced-inline-markup.sh"
 run_check "Family 26 — broken relative links" "scripts/audit/broken-relative-links.sh"
+run_check "Family 27 — done-spec unchecked criteria" "scripts/audit/done-spec-criteria.sh"
+run_check "Family 28 — audit family registry parity" "scripts/audit/audit-family-parity.sh"
 
 exit "$drift"
