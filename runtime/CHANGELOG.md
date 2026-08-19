@@ -2,6 +2,29 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.29.11] — 2026-08-19
+
+### Fixed
+
+- `check-orphaned-references` now examines the spec root's `system.md`
+  alongside `CLAUDE.md`, `AGENTS.md`, `README.md`, and `.githooks/pre-commit`.
+  `system.md` is `create`-strategy and adopter-owned like the other four, but
+  nothing had it in scope on either side: `ductus-rename` step 3 re-points the
+  constitution reference in three of them and no migration step names
+  `system.md`, while the orphan check did not look at it. An adopter whose
+  `system.md` referenced a framework path was therefore left with a file
+  pointing at a directory that no longer existed, and the run completed clean —
+  found on a live adopter bootstrap by a host reading the file rather than by
+  any check.
+
+  The referrer is resolved through `[paths] specs-root`, so a project that
+  renamed its spec root is examined at its configured location; a hardcoded
+  `specs/system.md` would have examined nothing there and reported clean for
+  the wrong reason. Consistent with the existing contract, the check
+  **reports** rather than repairs: a migration re-points only the references
+  the framework itself wrote, so an adopter-authored one is surfaced and left
+  to the adopter.
+
 ## [0.29.10] — 2026-08-18
 
 ### Fixed

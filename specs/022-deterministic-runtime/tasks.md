@@ -232,6 +232,6 @@ Runtime half of [049's rename](../049-rename-govern-to-ductus/spec.md): the per-
 
 ## 96. Report adopter-authored framework-path references in `specs/system.md`
 
-- [ ] Implement the behavior described in `scenarios/orphan-check-adopter-authored-references.md`
+- [x] Implement the behavior described in `scenarios/orphan-check-adopter-authored-references.md`
 
 - **Done when**: `check-orphaned-references` includes `specs/system.md` in `REFERRERS` and reports a stale framework-path reference found there, resolving the path through `[paths] specs-root` rather than a hardcoded `specs/`; an absent file stays distinguishable from an examined-and-clean one. Repair remains out of scope — the framework did not author the reference. Runtime change: not delivered to any adopter until the version is bumped across `version`, `runtime/Cargo.toml` and `runtime/CHANGELOG.md` and a matching `ductus-v<version>` tag is pushed.

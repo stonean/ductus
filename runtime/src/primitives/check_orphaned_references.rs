@@ -42,12 +42,48 @@ use crate::schema::primitives::{
 /// three, and `.githooks/pre-commit` is the adopter-owned invoker that
 /// `govern-dir-consolidate` and `ductus-rename` moved generators out from
 /// under.
-const REFERRERS: &[&str] = &[
+///
+/// A fifth referrer — the spec root's `system.md` — is appended by
+/// [`referrers`], because it is the one that must be resolved against config
+/// rather than spelled literally.
+const FIXED_REFERRERS: &[&str] = &[
     "CLAUDE.md",
     "AGENTS.md",
     "README.md",
     ".githooks/pre-commit",
 ];
+
+/// The referrer set for this repo, with the spec root resolved.
+///
+/// `system.md` is `create`-strategy and adopter-owned exactly like the four
+/// above, but nothing had it in scope on either side: no migration step names
+/// it (`ductus-rename` step 3 re-points the constitution reference in
+/// `CLAUDE.md`, `AGENTS.md` and `README.md` only), and it was absent from this
+/// list — so a run completed clean while the file pointed at a directory that
+/// no longer existed. Found on a live adopter bootstrap by a host reading the
+/// file, which is the only thing that could have found it.
+///
+/// The asymmetry with the other four is deliberate and stays: the framework
+/// **repairs** only references it authored, so an adopter's own reference is
+/// reported and left alone. Reporting is the whole of the fix — it is what
+/// stops the run looking clean over a reference already known to be broken.
+///
+/// Resolved through `[paths] specs-root` rather than hardcoded. A literal
+/// `specs/system.md` would silently examine nothing on a project that renamed
+/// its root — the same exit-0-over-a-wrong-path failure `config_path_of`
+/// produced in the shipped `specs-root.sh`.
+fn referrers(repo: &Path) -> Vec<String> {
+    let layout = paths::Paths::load(repo);
+    let mut list: Vec<String> = FIXED_REFERRERS
+        .iter()
+        .map(|referrer| (*referrer).to_string())
+        .collect();
+    list.push(format!(
+        "{}/system.md",
+        layout.specs_root.trim_end_matches('/')
+    ));
+    list
+}
 
 /// Attribution modes, reported so a caller can tell one from the other.
 const ATTRIBUTION_REGISTRY: &str = "registry";
@@ -80,8 +116,8 @@ pub fn run(
     let mut examined = Vec::new();
     let mut skipped = Vec::new();
 
-    for referrer in REFERRERS {
-        let full = repo.join(referrer);
+    for referrer in referrers(repo) {
+        let full = repo.join(&referrer);
         if !full.exists() {
             // Not every project has every referrer. An absent file is not an
             // unexamined one — there is nothing there to examine — so it is
@@ -90,12 +126,12 @@ pub fn run(
         }
         let Ok(text) = std::fs::read_to_string(&full) else {
             skipped.push(OrphanedReferenceSkip {
-                path: (*referrer).to_string(),
+                path: referrer.clone(),
                 reason: "file exists but could not be read as UTF-8 text".into(),
             });
             continue;
         };
-        examined.push((*referrer).to_string());
+        examined.push(referrer.clone());
         for (idx, line) in text.lines().enumerate() {
             for target in managed_paths_in(line, &roots) {
                 if repo.join(target.trim_end_matches('/')).exists() {
@@ -105,7 +141,7 @@ pub fn run(
                     continue;
                 }
                 findings.push(OrphanedReference {
-                    referrer: (*referrer).to_string(),
+                    referrer: referrer.clone(),
                     line: u32::try_from(idx + 1).unwrap_or(u32::MAX),
                     migration: registry
                         .as_ref()
@@ -697,6 +733,75 @@ mod tests {
         );
         let result = run(&args(), tmp.path()).unwrap();
         assert!(result.findings.is_empty(), "{:?}", result.findings);
+    }
+
+    #[test]
+    fn an_adopter_authored_reference_in_system_md_is_reported() {
+        // The defect a live adopter bootstrap surfaced. `specs/system.md` is
+        // `create`-strategy and adopter-owned: nothing rescaffolds it, no
+        // migration step names it, and it was absent from the referrer list —
+        // so the run completed clean while the file pointed at a directory
+        // that no longer existed.
+        let tmp = adopter();
+        write(
+            &tmp.path().join("specs/system.md"),
+            "# System\n\nSee [the constitution](.govern/constitution.md).\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        let targets: Vec<&str> = result.findings.iter().map(|f| f.target.as_str()).collect();
+        assert_eq!(
+            targets,
+            vec![".govern/constitution.md"],
+            "{:?}",
+            result.findings
+        );
+        assert_eq!(result.findings[0].referrer, "specs/system.md");
+        assert!(result.examined.contains(&"specs/system.md".to_string()));
+    }
+
+    #[test]
+    fn the_system_md_referrer_follows_the_configured_spec_root() {
+        // A literal `specs/system.md` would examine nothing on a project that
+        // renamed its root, and report clean for the wrong reason — the
+        // exit-0-over-a-wrong-path shape `config_path_of` produced in the
+        // shipped specs-root.sh.
+        let tmp = tempdir().unwrap();
+        write(
+            &tmp.path().join(".ductus/config.toml"),
+            "[paths]\nspecs-root = \"governance\"\n",
+        );
+        write(
+            &tmp.path().join("governance/system.md"),
+            "# System\n\nSee `.ductus/gone.md`.\n",
+        );
+        // Same reference under the default root, which this project does not
+        // use: it must not be examined at all.
+        write(
+            &tmp.path().join("specs/system.md"),
+            "# System\n\nSee `.ductus/also-gone.md`.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        let targets: Vec<&str> = result.findings.iter().map(|f| f.target.as_str()).collect();
+        assert_eq!(targets, vec![".ductus/gone.md"], "{:?}", result.findings);
+        assert!(
+            result
+                .examined
+                .contains(&"governance/system.md".to_string())
+        );
+        assert!(!result.examined.contains(&"specs/system.md".to_string()));
+    }
+
+    #[test]
+    fn an_absent_system_md_is_neither_a_finding_nor_a_skip() {
+        // The adopter who deleted or never received it. Nothing there is not
+        // the same as something examined and found clean — `examined` is what
+        // carries that distinction.
+        let tmp = adopter();
+        write(&tmp.path().join("AGENTS.md"), "Nothing managed here.\n");
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(result.findings.is_empty(), "{:?}", result.findings);
+        assert!(result.skipped.is_empty());
+        assert!(!result.examined.contains(&"specs/system.md".to_string()));
     }
 
     #[test]
