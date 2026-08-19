@@ -1,8 +1,8 @@
 ---
 spec: 026-framework-self-audit
-reviewed-at: 2026-08-19T15:38:58Z
-reviewed-against: f6456b2aa988c29a91986b3c07f218688635cd82
-diff-base: 0f0225f4f45aa6b34ed06c75dd6bf99ad81b2475
+reviewed-at: 2026-08-19T15:56:20Z
+reviewed-against: 6d11a7d1baa4102684f11cce43f2ccca2c3dad6f
+diff-base: 5e4f1892a6fbd7b1639b1f828a644a4086a9a1d8
 must-violations: 0
 should-violations: 0
 low-confidence: 0
@@ -14,17 +14,23 @@ skipped-passes: []
 
 ## Summary
 
-Clean at `f6456b2` — 0 MUST, 0 SHOULD, 0 low-confidence. Two observations, both captured to the inbox.
+Clean at `6d11a7d` — 0 MUST, 0 SHOULD, 0 low-confidence, 0 observations. Both inbox items this spec opened are closed by the work rather than carried.
 
-This run reviews the close-out fix in `f6456b2`, not the whole window since `0f0225f` (which spans several specs' work that carried their own reviews). The change is three files: `framework/commands/audit.md`, its generated copy, and `specs/026-framework-self-audit/spec.md`.
+Scope: two new families (`done-spec-criteria.sh`, `audit-family-parity.sh`), their two scenarios, their registration in `run-all.sh` / `audit.md` / `README.md`, AC20–AC21, tasks 32–33, and two `AGENTS.md` entries.
 
-**Family list restored to parity.** `run-all.sh` registers 25 families (1–2, 4–26); `audit.md` enumerated 1–2 and 4–23, so Families 24 (rename-sweep residue), 25 (unbalanced inline markup), and 26 (broken relative links) were absent in any form. The three missing were the three most recently added, which is the direction this drift always runs. Each new entry is written from its script's own header rather than paraphrased from the family name — what it asserts, the incident that motivated it, and what a clean exit does and does not mean, matching the surrounding entries' shape. Verified by comparing both extracted number sets, which now agree exactly.
+**Family 27** reports a spec at `status: done` carrying an unchecked acceptance criterion. `QUAL-CLAIM-001` is the rule it embodies and the rule it obeys: status is parsed from the frontmatter block rather than grepped — `status: done` appears in prose across the corpus, including in this family's own scenario — the checkbox is read only inside the Acceptance Criteria section, fences are skipped, specs are enumerated from git with untracked ones skipped *and counted*, the examined `done`-spec count is reported on stderr, and an empty enumeration is a finding rather than the pass two empty sets would produce. The finding names both repairs because the family genuinely cannot tell which is right.
 
-**AC19 ticked.** Its work was complete and always had been: task 31 checked, `scripts/audit/broken-relative-links.sh` executable, registered at `run-all.sh:71`, listed in `scripts/audit/README.md`, exits 0. Only the checkbox lagged. It was ticked in place rather than through a `done → in-progress → done` cycle: §spec-lifecycle's back-edge fires on a *meaningful* edit — new scope, changed semantics — and this changes no requirement, it records that an existing one was met. Ticking criteria is what the completion gate itself does on the way to `done`, so this restores the state that gate should have left rather than creating a new one.
+**Family 28** binds three registries that had drifted. Both sets are derived, never hardcoded — a hardcoded expectation would be a third copy of the fact under test — and compared as `(number, script)` pairs, so an entry naming the right family against the wrong script is caught from both directions. Retired numbers need no special case: Family 3 is spent and absent from both, so they agree.
 
-**`QUAL-CLAIM-001` is the rule both defects sit under**, one level up from code: each was a green signal that meant less than it appeared to. That is why neither is closed as a one-off — the two observations record the missing checks rather than the fixed instances, since the instances are cheap and the gaps will recur. Building either check is its own scope and is deliberately not done here.
+**Its own first draft carried the defect it exists to prevent**, and that is worth recording rather than quietly fixing. Anchoring the extraction to `(Family N — …)` matched only families 14+; the older entries are bare `(Family 7).`, so the first run reported twelve *correct* entries as undocumented. A parity check whose findings are wrong is worse than none — it would have sent a maintainer rewriting a list that was already right. The script header carries that, and the both-spellings rule is now explicit.
 
-Checks: `markdownlint-cli2` (440 files, 0 issues), `lint-procedure-parseability`, `lint-tool-coverage`, `lint-frontmatter`, `derive-dependencies` (no drift, 51 examined), `gen-help-tables --dry-run`, generated command copies re-rendered, and `scripts/audit/run-all.sh` — all clean, the audit re-run against the committed tree. Repo-wide, zero unchecked acceptance criteria and zero unchecked task checkboxes remain.
+**Neither family was trusted until it failed.** Family 27 was proven red against a seeded unchecked criterion on a `done` spec, a corpus with no `done` specs, and no tracked specs at all — and proven to stay *clean* on the four near-misses that would make it noise: a fenced checkbox, a prose `status: done`, a checkbox in a different section, and an unchecked criterion on an `in-progress` spec. Family 28 was proven red against each list losing a family in turn, a missing README entry, an empty derivation on either side, a right-number/wrong-script entry, and a missing subject file. Both proofs ran in isolated fixture repos, so the real tree was never mutated to test a check against it.
+
+**Family 25 then caught an unbalanced `**` in the first new `AGENTS.md` entry** — a glob written inside an inline code span. It is behaving exactly as specified: it deliberately does not strip code spans, which is what makes the per-line check exact for its two files. The line was rewritten rather than the family loosened. That is the correct direction, and it is the second time this session an existing check earned its place.
+
+Verified against the whole CI surface rather than the part that looked related — the miss that produced the previous round: `markdownlint-cli2` (442 files), six `scripts/lint-*.sh`, both `scripts/tests/*.sh` suites, `shellcheck -S warning` over every tracked shell file, `actionlint`, all three generators plus `derive-dependencies --write` / `derive-references --write` with a clean tree after, `scripts/audit/run-all.sh` re-run *after* committing, and under `runtime/`: `cargo fmt --check`, `cargo clippy --release --all-targets --locked -- -D warnings`, and `cargo test --release --locked` (1013 unit tests plus every integration and parity target).
+
+`check-artifacts` also caught a real defect mid-implementation: `next-criterion` was left at 20 against a body whose highest label is AC21, so the next assignment would have reissued a live label. Corrected to 22 and re-verified clean.
 
 ## MUST violations (blocking)
 
@@ -48,8 +54,7 @@ Checks: `markdownlint-cli2` (440 files, 0 issues), `lint-procedure-parseability`
 
 ## Observations
 
-- other: the self-audit has no family asserting that a spec at `status: done` carries no unchecked acceptance criterion. 026 reached done in e9262df with AC19 unticked and every check stayed green — run-all.sh exits 0, check-artifacts reports the feature clean, CI passes. The completion gate is supposed to make this unreachable (it refuses the transition while any criterion is unchecked), so reaching it means the gate was bypassed or its marking step failed, and nothing downstream notices either way. — `scripts/audit/run-all.sh`
-- other: nothing asserts parity between `/ductus:audit`'s enumerated family list in framework/commands/audit.md and the families run-all.sh actually registers. The list had stopped at 23 while run-all.sh ran 25 families, and the three missing were the most recently added — the direction this drift always goes. Families 18 and 23 already exist as list-vs-registry parity checks, so the shape is established; this registry just never got one. — `framework/commands/audit.md`
+*None.*
 
 ## Skipped passes
 
