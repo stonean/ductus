@@ -494,3 +494,52 @@ fn dependencies_frontmatter_is_never_touched() {
     assert!(body.contains("dependencies: [002-b, 003-c]"), "{body}");
     let _ = spec_with("");
 }
+
+#[test]
+fn an_unterminated_frontmatter_block_is_reported_not_silently_skipped() {
+    // QUAL-CLAIM-001: the spec is reachable and still goes underived, so an
+    // empty `updated` must not read as examined-and-clean.
+    let dir = tempfile::tempdir().unwrap();
+    let specs = [SpecFile {
+        slug: "001-a",
+        // Frontmatter opened, never closed, and no `dependencies:` key — the
+        // splice has neither anchor.
+        body: "---\nstatus: done\n\n[x](https://github.com/other/t/specs/003-user/spec.md)\n",
+    }];
+    build_fixture(dir.path(), "specs", &specs, Some(CONFIG_CHECKED_OUT), &[]);
+    let before = fs::read_to_string(dir.path().join("specs/001-a/spec.md")).unwrap();
+
+    let result = run_primitive(dir.path(), &["--write"]);
+
+    assert_eq!(
+        fs::read_to_string(dir.path().join("specs/001-a/spec.md")).unwrap(),
+        before,
+        "an unparseable spec must not be rewritten"
+    );
+    assert_eq!(
+        result["unparseable"][0], "specs/001-a/spec.md",
+        "unparseable spec was silently skipped: {result}"
+    );
+    assert_eq!(result["updated"].as_array().unwrap().len(), 0, "{result}");
+    assert_eq!(result["drift"], false);
+}
+
+#[test]
+fn a_well_formed_corpus_reports_nothing_unparseable() {
+    // The other half of the pair: empty `unparseable` has to mean something,
+    // so it must be reachable on a clean corpus.
+    let dir = tempfile::tempdir().unwrap();
+    let specs = [SpecFile {
+        slug: "001-a",
+        body: "---\nstatus: done\ndependencies: []\n---\n\n\
+               [x](https://github.com/other/t/specs/003-user/spec.md)\n",
+    }];
+    build_fixture(dir.path(), "specs", &specs, Some(CONFIG_CHECKED_OUT), &[]);
+    let result = run_primitive(dir.path(), &["--write"]);
+    assert_eq!(
+        result["unparseable"].as_array().unwrap().len(),
+        0,
+        "{result}"
+    );
+    assert_eq!(result["drift"], true);
+}

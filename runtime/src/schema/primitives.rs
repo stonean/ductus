@@ -652,6 +652,15 @@ pub struct DeriveDependenciesResult {
     /// entry is a self-link. Empty means acyclic. This is a **domain
     /// outcome**: the caller decides whether it blocks.
     pub cycles: Vec<Vec<String>>,
+    /// Specs whose frontmatter opens a block it never closes, so nothing could
+    /// be derived from them. Reported rather than repaired — `validate-frontmatter`
+    /// owns diagnosing a malformed block — and never an error: an unparseable
+    /// spec is an unknown, not drift.
+    ///
+    /// The contract this completes: an empty `updated` means examined-and-clean
+    /// only when `unparseable` is also empty (`QUAL-CLAIM-001`), the same
+    /// pairing `check-artifacts` has with `skipped`.
+    pub unparseable: Vec<String>,
     /// Repo-relative spec-root directory the run enumerated (spec 040), so a
     /// caller can tell a genuinely empty corpus from a misconfigured root.
     pub specs_root: String,
@@ -698,6 +707,15 @@ pub struct DeriveReferencesResult {
     /// different state from "no references found" — an unreadable or absent
     /// config looks identical in `updated` alone.
     pub registered_services: u32,
+    /// Specs whose frontmatter opens a block it never closes, so nothing could
+    /// be derived from them. Reported rather than repaired — `validate-frontmatter`
+    /// owns diagnosing a malformed block — and never an error: an unparseable
+    /// spec is an unknown, not drift.
+    ///
+    /// The contract this completes: an empty `updated` means examined-and-clean
+    /// only when `unparseable` is also empty (`QUAL-CLAIM-001`), the same
+    /// pairing `check-artifacts` has with `skipped`.
+    pub unparseable: Vec<String>,
     /// Spec-root directory name the run enumerated (spec 040).
     pub specs_root: String,
     /// Whether the run actually wrote. A result read out of context cannot

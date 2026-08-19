@@ -40,7 +40,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-use crate::primitives::spec_links::{harvestable_lines, is_frontmatter_fence};
+use crate::primitives::spec_links::{
+    harvestable_lines, has_unterminated_frontmatter, is_frontmatter_fence,
+};
 use crate::primitives::{Result, read_text, rel_path, write_atomic};
 use crate::schema::paths;
 use crate::schema::primitives::{DeriveDependenciesArgs, DeriveDependenciesResult};
@@ -67,6 +69,7 @@ pub fn run(args: &DeriveDependenciesArgs, repo: &Path) -> Result<DeriveDependenc
     let mut graph: BTreeMap<String, Vec<String>> = BTreeMap::new();
     let mut updated = Vec::new();
     let mut unwritten = Vec::new();
+    let mut unparseable = Vec::new();
 
     for spec in &tracked {
         let path = repo.join(spec);
@@ -75,6 +78,12 @@ pub fn run(args: &DeriveDependenciesArgs, repo: &Path) -> Result<DeriveDependenc
         }
         let own_slug = super::spec_feature_slug(spec, &specs_root).unwrap_or_default();
         let content = read_text(&path)?;
+        if has_unterminated_frontmatter(&content) {
+            // No closing fence means the splice below has no anchor, so the
+            // spec is left alone. Say so rather than letting it read as clean.
+            unparseable.push(spec.clone());
+            continue;
+        }
 
         let deps = harvest(&content, &specs_root);
         graph.insert(own_slug, deps.iter().cloned().collect());
@@ -106,6 +115,7 @@ pub fn run(args: &DeriveDependenciesArgs, repo: &Path) -> Result<DeriveDependenc
         unwritten,
         examined: u32::try_from(tracked.len()).unwrap_or(u32::MAX),
         untracked_skipped: untracked,
+        unparseable,
         cycles,
         specs_root: rel_path(&specs_dir, repo),
         wrote: args.write,

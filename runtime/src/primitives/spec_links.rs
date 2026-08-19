@@ -41,6 +41,26 @@ pub(crate) fn is_frontmatter_fence(line: &str) -> bool {
         .is_some_and(|rest| rest.trim().is_empty())
 }
 
+/// Whether `content` opens a frontmatter block it never closes.
+///
+/// Both frontmatter splices anchor their write inside the block — one replaces
+/// a key found there, the other inserts before the closing fence — so an
+/// unterminated block leaves each of them with no anchor and nothing written.
+/// Detected here rather than in either splice, because a second copy of this
+/// test is the drift the shared fence predicate exists to prevent.
+///
+/// A file with **no** frontmatter at all is not unparseable: there is no block
+/// to close and nothing is derived from it, so reporting every such file would
+/// bury the signal this exists to raise.
+pub(crate) fn has_unterminated_frontmatter(content: &str) -> bool {
+    let mut lines = content.lines();
+    match lines.next() {
+        Some(first) if is_frontmatter_fence(first) => {}
+        _ => return false,
+    }
+    !lines.any(is_frontmatter_fence)
+}
+
 /// A body line that survived every exclusion, with its 1-based line number.
 ///
 /// The line number is carried because a caller reporting a malformed link
@@ -251,6 +271,32 @@ x: 1
     fn a_file_without_frontmatter_is_scanned_in_full() {
         let content = "just a body\n](../001-a/spec.md)\n";
         assert_eq!(texts(content).len(), 2);
+    }
+
+    #[test]
+    fn an_unterminated_frontmatter_block_is_detected() {
+        assert!(has_unterminated_frontmatter("---\nstatus: done\n\nbody\n"));
+        assert!(has_unterminated_frontmatter("---\nstatus: done\n"));
+    }
+
+    #[test]
+    fn a_closed_block_and_a_file_without_frontmatter_are_both_parseable() {
+        assert!(!has_unterminated_frontmatter(
+            "---\nstatus: done\n---\nbody\n"
+        ));
+        // No block to close: not unparseable, or every plain markdown file
+        // would be reported and bury the real signal.
+        assert!(!has_unterminated_frontmatter("just a body\n"));
+        assert!(!has_unterminated_frontmatter(""));
+    }
+
+    #[test]
+    fn an_indented_fence_does_not_close_the_block() {
+        // The column-zero anchor matters here too: a `---` inside a block
+        // scalar must not make an unterminated block look terminated.
+        assert!(has_unterminated_frontmatter(
+            "---\ndescription: |\n  ---\n  more\n"
+        ));
     }
 
     #[test]

@@ -2,6 +2,21 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.31.0] — 2026-08-19
+
+### Added
+
+- **`unparseable` on both `derive-*` results.** A spec whose frontmatter opens
+  a block it never closes gave neither splice an anchor, so it was left alone
+  and never appeared in `updated` — byte-identical to a spec that genuinely
+  needed no change. It is now named. Reported rather than repaired, and never
+  an error: an unparseable spec is an unknown, not drift, so the CLI's blocking
+  contract is unchanged. The contract this completes is `QUAL-CLAIM-001`'s —
+  an empty `updated` means examined-and-clean only when `unparseable` is also
+  empty, the same pairing `check-artifacts` has with `skipped`. A file with no
+  frontmatter at all is not unparseable; there is no block to close. Detection
+  lives in the shared scanner so the two primitives cannot drift on it.
+
 ## [0.30.0] — 2026-08-19
 
 ### Added

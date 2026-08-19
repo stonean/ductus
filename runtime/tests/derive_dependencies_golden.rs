@@ -484,3 +484,30 @@ fn a_second_run_is_a_no_op_on_both_sides() {
     );
     assert_eq!(read_specs(dir.path(), "specs", &specs), converged);
 }
+
+#[test]
+fn an_unterminated_frontmatter_block_is_reported_not_silently_skipped() {
+    // Same gap, different cause: the splice only rewrites a `dependencies:`
+    // key found inside the block, so an unterminated one is never located.
+    let dir = tempfile::tempdir().unwrap();
+    let specs = [SpecFile {
+        slug: "001-a",
+        body: "---\nstatus: done\ndependencies: [999-wrong]\n\n[b](../002-b/spec.md)\n",
+    }];
+    build_fixture(dir.path(), "specs", &specs, None);
+    let before = fs::read_to_string(dir.path().join("specs/001-a/spec.md")).unwrap();
+
+    let (code, result) = run_primitive_with(dir.path(), &["--write"]);
+
+    assert_eq!(
+        fs::read_to_string(dir.path().join("specs/001-a/spec.md")).unwrap(),
+        before,
+        "an unparseable spec must not be rewritten"
+    );
+    assert_eq!(
+        result["unparseable"][0], "specs/001-a/spec.md",
+        "unparseable spec was silently skipped: {result}"
+    );
+    assert_eq!(result["updated"].as_array().unwrap().len(), 0, "{result}");
+    assert_eq!(code, 0, "an unknown is not drift and must not block");
+}

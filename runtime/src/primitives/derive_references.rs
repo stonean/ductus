@@ -50,7 +50,9 @@ use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-use crate::primitives::spec_links::{harvestable_lines, is_frontmatter_fence};
+use crate::primitives::spec_links::{
+    harvestable_lines, has_unterminated_frontmatter, is_frontmatter_fence,
+};
 use crate::primitives::{Result, inline_code_spans, read_text, write_atomic};
 use crate::schema::paths;
 use crate::schema::primitives::{DeriveReferencesArgs, DeriveReferencesResult};
@@ -91,12 +93,17 @@ pub fn run(args: &DeriveReferencesArgs, repo: &Path) -> Result<DeriveReferencesR
     let untracked = super::list_untracked_specs(repo, &specs_root);
 
     let mut updated = Vec::new();
+    let mut unparseable = Vec::new();
     for spec in &specs {
         let path = repo.join(spec);
         if !path.is_file() {
             continue;
         }
         let content = read_text(&path)?;
+        if has_unterminated_frontmatter(&content) {
+            unparseable.push(spec.clone());
+            continue;
+        }
         let records = harvest(&content, &registry);
         let rewritten = splice_references(&content, &records);
         if rewritten == content {
@@ -113,6 +120,7 @@ pub fn run(args: &DeriveReferencesArgs, repo: &Path) -> Result<DeriveReferencesR
         updated,
         examined: u32::try_from(specs.len()).unwrap_or(u32::MAX),
         untracked_skipped: untracked,
+        unparseable,
         registered_services: u32::try_from(registry.len()).unwrap_or(u32::MAX),
         specs_root,
         wrote: args.write,

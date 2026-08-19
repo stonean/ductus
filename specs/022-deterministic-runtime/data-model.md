@@ -857,6 +857,7 @@ hardcoding `--dry-run`; this is that guarantee expressed in the argument.
   "untracked-skipped": [],
   "cycles": [],
   "specs-root": "specs",
+  "unparseable": [],
   "wrote": false
 }
 ```
@@ -874,6 +875,15 @@ hardcoding `--dry-run`; this is that guarantee expressed in the argument.
   the pre-commit hook and CI, where blocking is expressed as an exit code.
 - `registered-services` (`derive-references` only) — registry size, so "no
   references found" stays distinguishable from "no readable config".
+- `unparseable` — specs whose frontmatter opens a block it never closes, so
+  neither splice could find its anchor and nothing was derived. Reported, never
+  repaired (`validate-frontmatter` owns diagnosing a malformed block) and never
+  an error: an unparseable spec is an unknown, not drift, so it does not affect
+  the CLI's blocking contract. **An empty `updated` means examined-and-clean
+  only when `unparseable` is also empty** — the `QUAL-CLAIM-001` pairing
+  `check-artifacts` has with `skipped` and `derive-boundary` with `guidance`.
+  A file with no frontmatter at all is not unparseable: there is no block to
+  close, and reporting every such file would bury the signal.
 
 `derive-dependencies` writes `dependencies: []` when a spec has no sibling
 links — the key present and empty. `derive-references` instead removes the

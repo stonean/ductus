@@ -241,3 +241,9 @@ Runtime half of [049's rename](../049-rename-govern-to-ductus/spec.md): the per-
 - [x] Implement the behavior described in `scenarios/adopter-generator-promotion.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 98. Report unparseable frontmatter from both derive primitives
+
+- [x] Implement the behavior described in `scenarios/derive-unparseable-frontmatter-is-reported.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
