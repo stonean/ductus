@@ -55,8 +55,6 @@ Configure the repo-root `opencode.json` `permission` block with the OpenCode per
      "markdownlint *": "allow",
      "markdownlint-cli2 *": "allow",
      "npx markdownlint-cli2 *": "allow",
-     ".ductus/scripts/gen-*": "allow",
-     "./.ductus/scripts/gen-*": "allow",
      "scripts/install-hooks.sh *": "allow",
      "./scripts/install-hooks.sh *": "allow",
      "./.githooks/pre-commit": "allow",

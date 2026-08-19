@@ -6,6 +6,7 @@ on:
       - 'framework/**'
       - 'specs/**'
       - 'scripts/gen-*.sh'
+      - 'runtime/src/primitives/derive_*.rs'
       - 'scripts/tests/**'
       - 'AGENTS.md'
       - '.githooks/**'
@@ -24,6 +25,23 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # The two frontmatter derivations are runtime primitives since spec 022's
+      # adopter-generator-promotion, so this workflow now needs the binary.
+      - uses: dtolnay/rust-toolchain@1.97.0
+        with:
+          components: clippy, rustfmt
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            runtime/target
+          key: ${{ runner.os }}-generators-${{ hashFiles('runtime/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-generators-
+      - name: Build the runtime
+        run: cd runtime && cargo build --release --locked --quiet
+
       - name: Run gen-configure-mcp
         run: ./scripts/gen-configure-mcp.sh
 
@@ -33,11 +51,11 @@ jobs:
       - name: Run gen-help-tables
         run: ./scripts/gen-help-tables.sh
 
-      - name: Run gen-spec-deps
-        run: ./.ductus/scripts/gen-spec-deps.sh
+      - name: Derive spec dependencies
+        run: ./runtime/target/release/ductus derive-dependencies --write
 
-      - name: Run gen-cross-service-refs
-        run: ./.ductus/scripts/gen-cross-service-refs.sh
+      - name: Derive cross-service references
+        run: ./runtime/target/release/ductus derive-references --write
 
       - name: Fail if any generator produced a diff
         run: |
@@ -46,8 +64,4 @@ jobs:
             exit 1
           fi
 
-      - name: Run gen-spec-deps tests
-        run: ./scripts/tests/test-gen-spec-deps.sh
 
-      - name: Run gen-cross-service-refs tests
-        run: ./scripts/tests/test-gen-cross-service-refs.sh

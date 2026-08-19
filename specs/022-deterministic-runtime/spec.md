@@ -2,11 +2,11 @@
 status: done
 dependencies: [021-runtime-boundary]
 review:
-  last-run: 2026-08-19T01:24:46Z
-  reviewed-against: 4bfaaeec9e5af5d89d92811828412ca950d63cec
+  last-run: 2026-08-19T12:47:42Z
+  reviewed-against: d35bbc2d0a91b367be87cae68378cae8065bec67
   must-violations: 0
   should-violations: 0
-  low-confidence: 0
+  low-confidence: 1
   blocking: false
 next-criterion: 20
 ---
@@ -208,7 +208,8 @@ The two workflows are independent. The runtime workflow MUST NOT install the bin
 
 Stable relationships post-rewrite:
 
-- **`gen-*.sh`** (called by the pre-commit hook) — stay bash. The runtime never replaces them: pre-commit has no LLM in the loop, so they fail the eligibility rule from §runtime-boundary principle 3. The runtime's `run-generator` primitive is a thin wrapper for procedure use; pre-commit continues to call the bash scripts directly.
+- **The two frontmatter derivations are primitives, not scripts.** `dependencies:` and `references:` are derived by `derive-dependencies` and `derive-references`; `.ductus/scripts/gen-spec-deps.sh`, `gen-cross-service-refs.sh`, and their shared `lib/specs-root.sh` were removed by the [adopter-generator-promotion](scenarios/adopter-generator-promotion.md) scenario. This reverses what this section said before, and the reversal is worth recording: the old rule read *"stay bash — pre-commit has no LLM in the loop, so they fail the eligibility rule from §runtime-boundary principle 3"*, which misread the criteria. "No LLM in the loop" is not a disqualifier — the eligibility criteria require **determinism**, and criterion 2(b) names "a bash script the framework invokes (pre-commit hooks, generators, CI)" as *currently mechanical*, which is the eligible case. The reason that actually held was principle 3 as it then read — "the runtime MUST NOT be a prerequisite for any pipeline gate" — and a pre-commit hook is a pipeline gate. `048-govern-acquired-runtime` retired that principle, and with it the constraint. (Named, not linked: an inline link here would induce a dependency edge 022 → 048, and 048 already depends transitively on 022 — the cycle check caught exactly that when this bullet was first written.)
+- **`run-generator`** stays, and its scope narrows to what it was always for: invoking an *adopter-owned* generator from a procedure, with `--dry-run` hardcoded so a walker dispatch can never write. ductus's own two derivations are no longer among its callers.
 - **`lint-frontmatter.sh`** — repositioned as the markdown-only fallback for the runtime's `validate-frontmatter` primitive. Same intent, two implementations, both ship; the prose Instructions invoke whichever is available.
 - **`lint-tool-coverage.sh`** — stays bash-only with no runtime counterpart. It ran exclusively in `markdown-only-pipeline.yml`, which asserted the runtime was absent, so a runtime version would have been unreachable there. That workflow was removed by `048-govern-acquired-runtime`; the lint now runs in `.github/workflows/framework-checks.yml` and in `scripts/audit/check-zero.sh`. It stays bash-only regardless — the reasoning that a runtime counterpart buys nothing here survives the move.
 

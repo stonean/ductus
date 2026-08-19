@@ -43,7 +43,7 @@ If the constitution has not been loaded in this session (e.g., `/ductus:target` 
 
 4. Invoke `create-feature` with the feature description from `$ARGUMENTS` as the title. The primitive computes the next feature number from the existing NNN-prefixed directories under the configured specs root, derives the kebab-case slug, creates `specs/{NNN-slug}/`, and copies the spec template into it atomically (mode-preserving); it resolves the template from `{specs-root}/templates/spec.md` and falls back to the framework source layout `framework/templates/spec/spec.md` (the ductus repo's own layout). An already-existing target directory is the `created: false` domain outcome — report the collision and stop rather than overwrite.
 
-5. <!-- llm:writeSpecBody --> Fill the new spec body following §spec-requirements: a Motivation section, Acceptance Criteria with concrete and testable checkboxes (sparse acceptance criteria are valid for brownfield use — leave the section with a comment noting criteria will emerge from real work), Open Questions, and any inline links to other specs that .ductus/scripts/gen-spec-deps.sh will derive the frontmatter dependencies from. The host returns the markdown body for the new file; the walker forwards the response through the context.
+5. <!-- llm:writeSpecBody --> Fill the new spec body following §spec-requirements: a Motivation section, Acceptance Criteria with concrete and testable checkboxes (sparse acceptance criteria are valid for brownfield use — leave the section with a comment noting criteria will emerge from real work), Open Questions, and any inline links to other specs that `derive-dependencies` will derive the frontmatter dependencies from. The host returns the markdown body for the new file; the walker forwards the response through the context.
 
 6. Invoke `label-criteria` against the new feature to assign a stable `AC{n}:` label to every criterion the step above wrote, and to record `next-criterion` in the frontmatter. The initial batch is labelled in the run that created it, so a criterion can be cited by label in the same conversation that authored it — that is the moment citation matters most. The pass is idempotent and writes nothing when the section is empty, so a brownfield spec with a placeholder comment and no criteria is unaffected. **Never derive the label in the LLM**: picking `max + 1` means tallying the list, which is exactly the counting this labelling exists to remove.
 
@@ -57,7 +57,7 @@ If the constitution has not been loaded in this session (e.g., `/ductus:target` 
 
 The full new-feature-creation procedure (directory creation, template copy, frontmatter conventions, session write, and next-step prompt) is documented below for the markdown-only path. The numbered steps above invoke the mechanical primitives plus the writeSpecBody extension that automate the deterministic phases.
 
-> **Spec-root resolution.** Every `specs/…` path below is written under the configured `[paths] specs-root` (default `specs`; spec 040, constitution §spec-phase). When `.ductus/config.toml` sets `[paths] specs-root`, substitute that name for the literal `specs/` throughout — the feature-number scan, the new feature directory, the `templates/spec.md` source, and the session `path`. The literal `specs/` is the documented default; the runtime primitives already resolve it, so only this markdown-only path performs the substitution by hand.
+> **Spec-root resolution.** Every `specs/…` path in this command is written under the configured `[paths] specs-root` (default `specs`; spec 040, constitution §spec-phase). When `.ductus/config.toml` sets `[paths] specs-root`, substitute that name for the literal `specs/` throughout this file — the feature-number scan, the new feature directory, the `templates/spec.md` source, and the session `path`. The literal `specs/` is the documented default; the runtime primitives already resolve it, so only this markdown-only path performs the substitution by hand.
 
 ### Route before scaffolding
 
@@ -130,7 +130,7 @@ Fill in the spec following `.ductus/constitution.md` rules (§spec-requirements,
 - No language-specific code, function signatures, or package paths.
 - Acceptance criteria must be concrete and testable when present. For brownfield use, sparse acceptance criteria are expected and valid — leave the section with a placeholder comment if no criteria are known yet; criteria emerge as real work touches the feature (§brownfield-process).
 - List all open questions in the spec body.
-- When the spec depends on other specs, link them inline in the body (e.g., `[NNN-feature](../NNN-feature/spec.md)`) — `.ductus/scripts/gen-spec-deps.sh` (run by the pre-commit hook) derives the `dependencies:` frontmatter from those links on every commit.
+- When the spec depends on other specs, link them inline in the body (e.g., `[NNN-feature](../NNN-feature/spec.md)`) — `ductus derive-dependencies` (run by the pre-commit hook) derives the `dependencies:` frontmatter from those links on every commit.
 
 ### Label the acceptance criteria
 

@@ -80,3 +80,9 @@ Done when: the non-`specs` cycle reaches `done`, and existing default-`specs` su
 - [x] Test that an error raised under a renamed root names the configured root and contains no `specs/`
 
 Done when: every spec-path error message reflects `[paths] specs-root`, and a renamed-root test asserts it. Discovered at the completion gate — the in-scope fix that replaced the deferred inbox item (a renamed-root adopter must not see a misleading `specs/foo` path on error).
+
+## 11. Resolve the spec root in command prose that acts on a path
+
+- [x] Implement the behavior described in `scenarios/command-prose-resolves-spec-root.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.

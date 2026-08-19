@@ -42,14 +42,16 @@ use crate::schema::primitives::{
     CheckStuckArgs, CheckStuckResult, CheckboxToggleResult, ComputeReviewScopeArgs,
     ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult, CreatePlanArtifactsArgs,
     CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult, DashboardArgs,
-    DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult, DeriveRoutingCandidatesArgs,
-    DeriveRoutingCandidatesResult, DiffCrossSpecArgs, DiffCrossSpecResult, DiscoverRuleFilesArgs,
-    DiscoverRuleFilesResult, EnforceManifestArgs, EnforceManifestResult, ExtractArchiveArgs,
-    ExtractArchiveResult, FetchArchiveArgs, FetchArchiveResult, GateConfirmArgs, LabelCriteriaArgs,
-    LabelCriteriaResult, LintMarkdownArgs, LintMarkdownResult, MarkCriterionArgs, MarkTaskArgs,
-    MergeManagedBlockArgs, MergeManagedBlockResult, MergePermissionsArgs, MergePermissionsResult,
-    MigrateSessionFileArgs, MigrateSessionFileResult, ProcessWaiversArgs, ProcessWaiversResult,
-    PruneTasksArgs, PruneTasksResult, ReadSpecArgs, ReadSpecResult, ReadTasksArgs, ReadTasksResult,
+    DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult, DeriveDependenciesArgs,
+    DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
+    DeriveRoutingCandidatesArgs, DeriveRoutingCandidatesResult, DiffCrossSpecArgs,
+    DiffCrossSpecResult, DiscoverRuleFilesArgs, DiscoverRuleFilesResult, EnforceManifestArgs,
+    EnforceManifestResult, ExtractArchiveArgs, ExtractArchiveResult, FetchArchiveArgs,
+    FetchArchiveResult, GateConfirmArgs, LabelCriteriaArgs, LabelCriteriaResult, LintMarkdownArgs,
+    LintMarkdownResult, MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs,
+    MergeManagedBlockResult, MergePermissionsArgs, MergePermissionsResult, MigrateSessionFileArgs,
+    MigrateSessionFileResult, ProcessWaiversArgs, ProcessWaiversResult, PruneTasksArgs,
+    PruneTasksResult, ReadSpecArgs, ReadSpecResult, ReadTasksArgs, ReadTasksResult,
     RemoveInboxItemArgs, RemoveInboxItemResult, ResolveAnchorArgs, ResolveAnchorResult,
     ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs, ResolveReferencesResult,
     RunGeneratorArgs, RunGeneratorResult, SetStatusArgs, SetStatusResult, TraverseDepsArgs,
@@ -805,6 +807,32 @@ impl GovRuntimeServer {
         params: Parameters<CheckOrphanedReferencesArgs>,
     ) -> Result<Json<CheckOrphanedReferencesResult>, String> {
         primitives::check_orphaned_references::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "derive-dependencies",
+        description = "Regenerate every tracked spec's frontmatter `dependencies:` from the sibling-spec inline links in its body, then report any cycle in the derived graph. Body links are authoritative; the frontmatter is a derived index (spec 017). Links inside frontmatter, fenced code, blockquote-prefixed lines, or a `## See also` section do not induce edges; `## References` does. A spec with no sibling links gets `dependencies: []` — the key present and empty, which is deliberately unlike `derive-references`' absent-when-empty rule. Self-links are recorded rather than stripped so the cycle check surfaces them. `dry-run` reports without writing and pairs with `drift` for a CI check; `staged` limits the rewrite to specs in the pending commit while the cycle check still spans the full graph. Untracked specs are never enumerated and are reported in `untracked-skipped`, so an empty `updated` is not a claim that they are in sync. A cycle is a domain outcome in `cycles`, not an error — the caller decides whether it blocks."
+    )]
+    async fn derive_dependencies(
+        &self,
+        params: Parameters<DeriveDependenciesArgs>,
+    ) -> Result<Json<DeriveDependenciesResult>, String> {
+        primitives::derive_dependencies::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "derive-references",
+        description = "Regenerate every tracked spec's frontmatter `references:` from the cross-service spec links in its body (spec 030). Strictly distinct from `dependencies:` — a reference is informative navigation and never enters the blocking dependency graph; this primitive never reads or writes that field, and relative sibling links are never references. Matches absolute http(s) links whose path holds `/<root>/NNN-slug/spec(-and-plan).md`, resolving each repo against the `[services]` registry: a registered service with a reachable checkout matches only that checkout's own `[paths] specs-root`, while an unreachable or unregistered repo accepts any single segment and records `service: null` rather than dropping the reference. Applies the shared body exclusions plus one of its own — a backticked link is an illustrative example, not a reference. Absent-when-empty: a spec with no cross-service links carries no `references:` key and a stale block is removed, deliberately unlike `derive-dependencies`' `dependencies: []`. `registered-services` reports the registry size, so 'no references' is distinguishable from 'no readable config'."
+    )]
+    async fn derive_references(
+        &self,
+        params: Parameters<DeriveReferencesArgs>,
+    ) -> Result<Json<DeriveReferencesResult>, String> {
+        primitives::derive_references::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

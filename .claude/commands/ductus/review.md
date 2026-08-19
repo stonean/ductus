@@ -111,6 +111,8 @@ Run once per targeted feature (every in-progress or done spec under `--all`, oth
 
 The numbered Instructions above are the deterministic path — the runtime's primitives own the rule-file selection, waiver arithmetic, scope resolution, and report scaffolding, and the five passes cross the boundary at the `performReview` extension point. When no runtime is available, walk the detailed procedure below by hand, for each targeted feature, in order.
 
+> **Spec-root resolution.** Every `specs/…` path in this command resolves under the configured `[paths] specs-root` (default `specs`; spec 040, constitution §spec-phase). When `.ductus/config.toml` sets `[paths] specs-root`, substitute that name for the literal `specs/` throughout. The runtime primitives already resolve it; only this markdown-only path performs the substitution by hand.
+
 ### 1. Resolve target and scope
 
 1. Resolve the working feature from `--all` or the current `/ductus:target`.

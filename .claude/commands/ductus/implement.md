@@ -91,6 +91,8 @@ Default is unset — without the flag, the user confirms each task as today.
 
 The full setup, walk-through, completion gate, and stuck-detection details are documented below for the markdown-only path. The numbered steps above invoke the mechanical primitives that automate each phase; the host applies the same procedure against the markdown-only path when the runtime is unavailable.
 
+> **Spec-root resolution.** Every `specs/…` path in this command resolves under the configured `[paths] specs-root` (default `specs`; spec 040, constitution §spec-phase). When `.ductus/config.toml` sets `[paths] specs-root`, substitute that name for the literal `specs/` throughout. The runtime primitives already resolve it; only this markdown-only path performs the substitution by hand.
+
 ### Setup details
 
 - Read `.ductus/session.toml` for the session target, including optional `scenario` and `scenario-path` fields.
@@ -98,7 +100,7 @@ The full setup, walk-through, completion gate, and stuck-detection details are d
 - Read `specs/{feature}/plan.md` for technical decisions and affected files.
 - Read the spec file for acceptance criteria and contracts.
 - If a scenario is targeted, read the scenario file for scenario-specific context, behavior, and edge cases. The scenario scopes which part of the feature is the primary focus for this implementation session.
-- **Recompute dependencies (safety net).** Run `.ductus/scripts/gen-spec-deps.sh --dry-run` (via the `run-generator` primitive; the generator walks every spec — there is no per-spec mode). If it reports a diff, the `dependencies:` frontmatter is stale from uncommitted body edits; surface that and recommend committing (the pre-commit hook syncs it) or running the generator manually. Do not run it for real from this command.
+- **Recompute dependencies (safety net).** Invoke `derive-dependencies` (report-only by default; it walks every spec — there is no per-spec mode). If it reports drift, the `dependencies:` frontmatter is stale from uncommitted body edits; surface that and recommend committing (the pre-commit hook syncs it) or running `ductus derive-dependencies --write` manually. Do not pass `--write` from this command.
 
 ### Stuck-detection details
 

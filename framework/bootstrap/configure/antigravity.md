@@ -53,8 +53,6 @@ Configure `{cli-config-dir}/settings.json` with the Antigravity tool permissions
    - `command(npx markdownlint-cli2)`
 
    **Shell — hooks and generators (`ductus`'s pre-commit pipeline):**
-   - `command(.ductus/scripts/gen-.*)`
-   - `command(./.ductus/scripts/gen-.*)`
    - `command(./.githooks/pre-commit)`
    - `command(scripts/install-hooks.sh)`
    - `command(./scripts/install-hooks.sh)`

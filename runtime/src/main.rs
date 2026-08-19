@@ -13,13 +13,14 @@ use ductus::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, CheckArtifactsArgs,
     CheckOrphanedReferencesArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStuckArgs,
     ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs,
-    DashboardArgs, DeriveBoundaryArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs,
-    DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs,
-    GateConfirmArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
-    MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs, ProcessWaiversArgs,
-    PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RemoveInboxItemArgs, ResolveAnchorArgs,
-    ResolveFeatureArgs, ResolveReferencesArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
-    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs,
+    DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveReferencesArgs,
+    DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs,
+    ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, LabelCriteriaArgs, LintMarkdownArgs,
+    MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
+    MigrateSessionFileArgs, ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs,
+    RemoveInboxItemArgs, ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs,
+    RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteReviewArgs,
+    WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -138,6 +139,10 @@ enum Command {
     DeriveRoutingCandidates(DeriveRoutingCandidatesArgs),
     /// Report adopter-owned files whose references to ductus-managed paths no longer resolve.
     CheckOrphanedReferences(CheckOrphanedReferencesArgs),
+    /// Regenerate every spec's frontmatter `dependencies:` from its body links; report cycles.
+    DeriveDependencies(DeriveDependenciesArgs),
+    /// Regenerate every spec's frontmatter `references:` from its cross-service body links.
+    DeriveReferences(DeriveReferencesArgs),
     /// Run /ductus:analyze's residual deterministic artifact-check families for a feature.
     CheckArtifacts(CheckArtifactsArgs),
     /// Reduce a feature's tasks.md — drop spent task sections or reset to template state.
@@ -226,6 +231,64 @@ fn emit_result<T: serde::Serialize, E: std::fmt::Display>(
             ExitCode::from(1)
         }
     }
+}
+
+/// Like [`emit_result`], but maps a successful *domain* outcome to a non-zero
+/// exit status.
+///
+/// The primitives report findings as data: a dependency cycle, or drift found
+/// under `--dry-run`, is a domain outcome rather than an operational error, so
+/// the MCP surface returns it in the payload and lets the host decide what it
+/// means. The CLI is a different caller with a different contract — it is
+/// invoked from pre-commit hooks and CI, where "this blocks" is expressed as
+/// an exit code and nothing is around to read JSON. That policy belongs here,
+/// at the surface that needs it, not in the primitive.
+fn emit_result_gated<T, E, F>(result: std::result::Result<T, E>, blocks: F) -> ExitCode
+where
+    T: serde::Serialize,
+    E: std::fmt::Display,
+    F: FnOnce(&T) -> bool,
+{
+    match result {
+        Ok(value) => {
+            let blocked = blocks(&value);
+            match serde_json::to_string(&value) {
+                Ok(text) => {
+                    println!("{text}");
+                    if blocked {
+                        ExitCode::from(1)
+                    } else {
+                        ExitCode::SUCCESS
+                    }
+                }
+                Err(err) => {
+                    eprintln!("failed to serialize result: {err}");
+                    ExitCode::from(1)
+                }
+            }
+        }
+        Err(err) => {
+            eprintln!("{err}");
+            ExitCode::from(1)
+        }
+    }
+}
+
+/// Render dependency cycles to stderr in the shape the shell generator used,
+/// so the message an author sees on a blocked commit is unchanged.
+fn report_cycles(cycles: &[Vec<String>]) {
+    if cycles.is_empty() {
+        return;
+    }
+    for cycle in cycles {
+        if let Some(first) = cycle.first() {
+            eprintln!("cycle: {} -> {first}", cycle.join(" -> "));
+        }
+    }
+    eprintln!();
+    eprintln!("derive-dependencies: dependency graph contains cycles (see above).");
+    eprintln!("The body inline links above induced cycles in the derived dep graph.");
+    eprintln!("Remove or move the offending links under '## See also' before committing.");
 }
 
 fn cwd() -> PathBuf {
@@ -582,6 +645,23 @@ fn main() -> ExitCode {
         }
         Command::CheckOrphanedReferences(args) => {
             emit_result(primitives::check_orphaned_references::run(&args, &repo))
+        }
+        Command::DeriveDependencies(args) => {
+            let outcome = primitives::derive_dependencies::run(&args, &repo);
+            if let Ok(result) = &outcome {
+                report_cycles(&result.cycles);
+            }
+            // A cycle always blocks. Drift blocks only on a *report-only*
+            // run, which is the CI check ("the committed indexes are stale");
+            // on a writing run the drift was just resolved, so it is not a
+            // failure.
+            emit_result_gated(outcome, |r| !r.cycles.is_empty() || (!r.wrote && r.drift))
+        }
+        Command::DeriveReferences(args) => {
+            // No graph here, so stale-on-a-report-only-run is the only blocker.
+            emit_result_gated(primitives::derive_references::run(&args, &repo), |r| {
+                !r.wrote && r.drift
+            })
         }
         Command::CheckArtifacts(args) => {
             emit_result(primitives::check_artifacts::run(&args, &repo))

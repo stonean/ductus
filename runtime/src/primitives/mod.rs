@@ -26,6 +26,8 @@ pub mod create_plan_artifacts;
 pub mod create_scenario;
 pub mod dashboard;
 pub mod derive_boundary;
+pub mod derive_dependencies;
+pub mod derive_references;
 pub mod derive_routing_candidates;
 pub mod diff_cross_spec;
 pub mod discover_rule_files;
@@ -51,6 +53,7 @@ pub mod resolve_feature;
 pub mod resolve_references;
 pub mod run_generator;
 pub mod set_status;
+pub(crate) mod spec_links;
 pub mod traverse_deps;
 pub mod validate_frontmatter;
 pub mod write_review;
@@ -1419,6 +1422,140 @@ pub(crate) fn feature_number(name: &str) -> Option<u32> {
 /// the primitives that consume this (`resolve-feature`, `create-feature`,
 /// `dashboard`, and `interpreter::payload`'s inbox router) all report the
 /// empty case as "no features" rather than an operational error.
+/// Whether a repo-relative path is a feature spec under `specs_root`:
+/// `{root}/NNN-slug/(spec|spec-and-plan).md`.
+///
+/// The shared membership rule for the two frontmatter-index generators. Both
+/// enumerate the same corpus, and a second copy of this predicate is how the
+/// shell versions drifted.
+pub(crate) fn is_spec_path(path: &str, specs_root: &str) -> bool {
+    let Some(rest) = path
+        .strip_prefix(specs_root)
+        .and_then(|r| r.strip_prefix('/'))
+    else {
+        return false;
+    };
+    let mut parts = rest.split('/');
+    let (Some(feature), Some(file), None) = (parts.next(), parts.next(), parts.next()) else {
+        return false;
+    };
+    is_feature_slug(feature) && matches!(file, "spec.md" | "spec-and-plan.md")
+}
+
+/// The `NNN-slug` feature directory owning a repo-relative spec path.
+pub(crate) fn spec_feature_slug(path: &str, specs_root: &str) -> Option<String> {
+    path.strip_prefix(specs_root)?
+        .strip_prefix('/')?
+        .split('/')
+        .next()
+        .map(str::to_string)
+}
+
+/// Feature-spec paths tracked by git, repo-relative, sorted.
+///
+/// Scoped to the git index rather than a worktree glob so an untracked
+/// in-progress draft is never rewritten and never enters a derived index
+/// (spec 017, `tracked-specs-not-worktree`). Falls back to a worktree walk
+/// only outside a git repo, where there is no index.
+pub(crate) fn list_tracked_specs(repo: &Path, specs_root: &str) -> Vec<String> {
+    if let Ok(repository) = git2::Repository::open(repo)
+        && let Ok(index) = repository.index()
+    {
+        let mut out: Vec<String> = index
+            .iter()
+            .filter_map(|entry| String::from_utf8(entry.path).ok())
+            .filter(|path| is_spec_path(path, specs_root))
+            .collect();
+        out.sort();
+        out.dedup();
+        return out;
+    }
+    let mut out = Vec::new();
+    let specs_dir = repo.join(specs_root);
+    for feature in list_feature_dirs(&specs_dir) {
+        for name in ["spec.md", "spec-and-plan.md"] {
+            if specs_dir.join(&feature).join(name).is_file() {
+                out.push(format!("{specs_root}/{feature}/{name}"));
+            }
+        }
+    }
+    out.sort();
+    out
+}
+
+/// Feature-spec paths present in the worktree but not tracked by git —
+/// exactly the set [`list_tracked_specs`] excludes by design.
+///
+/// Exists so a generator can report what it did *not* examine. A zero rewrite
+/// count means "I rewrote nothing", not "everything is in sync": an untracked
+/// draft is never enumerated, so a bare in-sync claim would assert a property
+/// of files the generator cannot vouch for. Empty outside a git repo, where
+/// the fallback already walks everything.
+pub(crate) fn list_untracked_specs(repo: &Path, specs_root: &str) -> Vec<String> {
+    let Ok(repository) = git2::Repository::open(repo) else {
+        return Vec::new();
+    };
+    let mut opts = git2::StatusOptions::new();
+    opts.include_untracked(true)
+        .recurse_untracked_dirs(true)
+        .include_ignored(false)
+        // Bound the walk to the spec tree. Without a pathspec this is a full
+        // worktree status on every run — including the pre-commit path, where
+        // it would scan build output and vendored trees to answer a question
+        // only about `{specs-root}/`.
+        .pathspec(specs_root);
+    let Ok(statuses) = repository.statuses(Some(&mut opts)) else {
+        return Vec::new();
+    };
+    let mut out: Vec<String> = Vec::new();
+    for entry in statuses.iter() {
+        if !entry.status().contains(git2::Status::WT_NEW) {
+            continue;
+        }
+        // `path()` errors on a non-UTF-8 path, which cannot be a spec under
+        // the validated slug grammar anyway.
+        let Ok(path) = entry.path() else { continue };
+        if is_spec_path(path, specs_root) {
+            out.push(path.to_string());
+        }
+    }
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// Feature-spec paths staged in the index for the pending commit — the
+/// `--staged` rewrite set, so committing one spec never rewrites the derived
+/// frontmatter of unrelated specs. Empty outside a git repo.
+pub(crate) fn list_staged_specs(
+    repo: &Path,
+    specs_root: &str,
+) -> std::collections::BTreeSet<String> {
+    let Ok(repository) = git2::Repository::open(repo) else {
+        return std::collections::BTreeSet::new();
+    };
+    // HEAD tree against the index. An unborn HEAD (no commits yet) diffs the
+    // index against nothing, which is the correct "everything staged" answer.
+    let head_tree = repository
+        .head()
+        .ok()
+        .and_then(|head| head.peel_to_tree().ok());
+    let Ok(diff) = repository.diff_tree_to_index(head_tree.as_ref(), None, None) else {
+        return std::collections::BTreeSet::new();
+    };
+    let mut out = std::collections::BTreeSet::new();
+    for delta in diff.deltas() {
+        for file in [delta.new_file(), delta.old_file()] {
+            if let Some(path) = file.path().and_then(Path::to_str)
+                && is_spec_path(path, specs_root)
+            {
+                out.insert(path.to_string());
+            }
+        }
+    }
+    out
+}
+
 pub(crate) fn list_feature_dirs(specs_dir: &Path) -> Vec<String> {
     let Ok(entries) = std::fs::read_dir(specs_dir) else {
         return Vec::new();
@@ -2371,5 +2508,35 @@ mod tests {
         let outside = line.rfind("still open").unwrap();
         assert!(spans.iter().any(|s| s.contains(&inside)));
         assert!(!spans.iter().any(|s| s.contains(&outside)));
+    }
+}
+
+#[cfg(test)]
+mod spec_corpus_tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
+    use super::{is_spec_path, spec_feature_slug};
+
+    #[test]
+    fn spec_path_recognition_is_scoped_to_the_root_and_shape() {
+        assert!(is_spec_path("specs/001-a/spec.md", "specs"));
+        assert!(is_spec_path("specs/001-a/spec-and-plan.md", "specs"));
+        assert!(!is_spec_path("specs/001-a/plan.md", "specs"));
+        assert!(!is_spec_path("specs/001-a/scenarios/x.md", "specs"));
+        assert!(!is_spec_path("specs/inbox.md", "specs"));
+        assert!(!is_spec_path("other/001-a/spec.md", "specs"));
+        assert!(!is_spec_path("specs/not-a-feature/spec.md", "specs"));
+        // A non-default root (spec 040) is honored, and the default is not.
+        assert!(is_spec_path("governance/001-a/spec.md", "governance"));
+        assert!(!is_spec_path("specs/001-a/spec.md", "governance"));
+    }
+
+    #[test]
+    fn feature_slug_is_the_directory_component() {
+        assert_eq!(
+            spec_feature_slug("specs/022-deterministic-runtime/spec.md", "specs").as_deref(),
+            Some("022-deterministic-runtime")
+        );
+        assert_eq!(spec_feature_slug("other/001-a/spec.md", "specs"), None);
     }
 }

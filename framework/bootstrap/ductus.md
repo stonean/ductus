@@ -733,9 +733,6 @@ These files are scaffolded **once per `/ductus` invocation**, regardless of how 
 | `framework/rules/security-backend.md` | `specs/rules/security-backend.md` |
 | `framework/rules/security-frontend.md` | `specs/rules/security-frontend.md` |
 | `framework/bootstrap/hooks/ductus-pre-commit` | `.githooks/ductus-pre-commit` |
-| `.ductus/scripts/gen-spec-deps.sh` | `.ductus/scripts/gen-spec-deps.sh` |
-| `.ductus/scripts/gen-cross-service-refs.sh` | `.ductus/scripts/gen-cross-service-refs.sh` |
-| `.ductus/scripts/lib/specs-root.sh` | `.ductus/scripts/lib/specs-root.sh` |
 | `.markdownlint-cli2.jsonc` | `.markdownlint-cli2.jsonc` |
 | `framework/templates/spec/spec.md` | `specs/templates/spec.md` |
 | `framework/templates/spec/plan.md` | `specs/templates/plan.md` |
@@ -913,7 +910,7 @@ After **Per-Agent Scaffolding** completes, manage the project's git pre-commit h
 
 Two files participate, with different ownership models:
 
-- **`.githooks/ductus-pre-commit`** is ductus-owned. Placed by the **Shared Files** manifest with `update` strategy; carries the `# managed-by: ductus` sentinel on line 2; rewritten on every `/ductus` run unless pinned in `.ductus/config.toml`. Holds the generator orchestration (currently `.ductus/scripts/gen-spec-deps.sh --staged` and `.ductus/scripts/gen-cross-service-refs.sh --staged` plus output staging). Both run with `--staged` so a commit only rewrites the specs it touches, never unrelated ones. It additionally runs `ductus label-criteria` once per staged spec — the acceptance-criterion labelling pass (spec 013), which is the backstop for a criterion typed by hand in an editor. That step is a *runtime primitive* rather than a shipped script, so it is guarded on the binary being present and its failure is swallowed: the hook has to survive a checkout whose runtime has not been acquired yet (a fresh clone, or the `/ductus` run that is itself doing the acquiring), and a ductus predating `label-criteria` exits non-zero on the unknown subcommand. Per-spec invocation gives it the same staged scoping the generators get from `--staged`.
+- **`.githooks/ductus-pre-commit`** is ductus-owned. Placed by the **Shared Files** manifest with `update` strategy; carries the `# managed-by: ductus` sentinel on line 2; rewritten on every `/ductus` run unless pinned in `.ductus/config.toml`. Holds the derivation orchestration (currently `ductus derive-dependencies --write --staged` and `ductus derive-references --write --staged` plus output staging). Both run with `--staged` so a commit only rewrites the specs it touches, never unrelated ones. An unreachable runtime **halts** the commit rather than skipping the pass: these primitives produce derived frontmatter the commit captures, so a silent skip would land values they had already superseded. That is safe to make blocking because the hook cannot outrun the binary — `/ductus` wires `core.hooksPath` and acquires the runtime in the same run, and `core.hooksPath` is local git config a clone never carries, so a fresh clone has no hook until `/ductus` has run. `git commit --no-verify` is the deliberate bypass. It additionally runs `ductus label-criteria` once per staged spec — the acceptance-criterion labelling pass (spec 013), the backstop for a criterion typed by hand in an editor. That step keeps a *swallowed* failure, and the reason is blast radius rather than optionality: a missing `AC{n}` label is caught by `/ductus:analyze` and assigned on the next pass, so nothing wrong is committed, while a stale derived index is committed wrong data.
 - **`.githooks/pre-commit`** is adopter-owned. Placed by the manifest with `create` strategy on first install; never overwritten thereafter. Initial content invokes `./.githooks/ductus-pre-commit`; adopters add their own pre-commit checks above or below that invocation.
 
 This section's job is to wire git up to actually run the outer hook (`git config core.hooksPath .githooks`) without clobbering whatever hook system the project already uses.
@@ -927,7 +924,7 @@ Detection runs in this order — first match wins:
 
 The detection ladder no longer treats `.githooks/pre-commit` itself as a ductus-managed file — under the new model the outer file is adopter-owned, so its presence is not a signal that ductus installed it. Migration of pre-existing ductus-installed hooks (from spec-017 adopters) is handled by the **Migration from spec-017 hook** subsection below, which runs before the detection ladder.
 
-`.ductus/scripts/gen-spec-deps.sh` and `.ductus/scripts/gen-cross-service-refs.sh` ship in the **Shared Files** manifest with `update` strategy. Every `/ductus` run refreshes them from upstream so adopters pick up generator fixes automatically. Adopters who have customized a script can list it in `.ductus/config.toml` `pinned.files` to opt out of overwrites.
+The two frontmatter derivations are **runtime primitives**, not shipped scripts: `ductus derive-dependencies` and `ductus derive-references` (spec 022, `adopter-generator-promotion`). They arrive with the runtime `/ductus` acquires, so there is nothing to scaffold, refresh, or pin — a generator fix reaches adopters through the version bump that ships the binary. The pre-existing `.ductus/scripts/` entries were removed by the `generator-primitives` migration.
 
 ### Migration from spec-017 hook
 

@@ -74,8 +74,6 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
    - `Bash(git config --get core.hooksPath)`
    - `Bash(git config --unset core.hooksPath)`
    - `Bash(./.githooks/pre-commit)`
-   - `Bash(.ductus/scripts/gen-*.sh)`
-   - `Bash(./.ductus/scripts/gen-*.sh)`
    - `Bash(scripts/install-hooks.sh)`
    - `Bash(./scripts/install-hooks.sh)`
 
@@ -125,6 +123,8 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
    - `mcp__ductus__check-artifacts`
    - `mcp__ductus__derive-routing-candidates`
    - `mcp__ductus__check-orphaned-references`
+   - `mcp__ductus__derive-dependencies`
+   - `mcp__ductus__derive-references`
    <!-- generated:mcp-allow:end -->
 
 3. Canonical `permissions.deny` entries:

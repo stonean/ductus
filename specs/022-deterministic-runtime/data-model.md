@@ -832,6 +832,54 @@ Eight families, mirroring `/ductus:analyze`'s markdown-only reference exactly (s
 
 `skipped` records each target a family could not examine, as `{family, reason, path}` over the closed reason set `target-missing` / `target-unparseable` / `no-readable-state` / `root-absent` / `ships-to-adopter` / `artifact-unreadable` / `not-a-live-claim`. It exists because the two families added by [045 — Decision-state drift detection](../045-decision-state-drift-detection/spec.md) read *targets* — a link's destination, a criterion's path — and 045 forbids escalating an unreadable one into a finding. Without the list, a family that examined every target and found nothing would return exactly what a family that could examine nothing returns, which is the shape `QUAL-CLAIM-001` forbids. `clean` is unchanged and still means `findings.is_empty()`, so the assurance lives in the pair: `clean: true` with an empty `skipped` is verified-clean, `clean: true` with a non-empty `skipped` is partially examined. The five families predating 045, and `criterion-labels` after them, always return it empty — their subjects are fully examinable by construction — and hosts render its entries in the Informational tier, where the cross-service reference unknowns already sit. `target-unparseable` has a second producer beyond an unreadable file: a sibling whose path traverses a symlink at or below the feature directory is reported unexaminable rather than followed, which is how `link-adjacent-drift` closes the half of its trust boundary lexical resolution cannot see without giving up repeat-run determinism ([sibling-symlink-trust-boundary](scenarios/sibling-symlink-trust-boundary.md)).
 
+### `derive-dependencies` / `derive-references` — the frontmatter index derivations
+
+The two derived frontmatter indexes, promoted out of the shipped bash
+generators by the `adopter-generator-promotion` scenario. Both harvest links
+from the same body region — the shared scanner drops frontmatter, fenced code,
+blockquote-prefixed lines, and `## See also` sections; `## References` is
+deliberately not an opt-out — and differ in what they match and what they write.
+
+Both accept `write` (perform the rewrite) and `staged` (limit the rewrite to
+specs in the pending commit). **`write` is off by default**: the subprocess
+interpreter has no per-step argument binding, so a step naming a primitive in a
+code span is dispatched with no arguments at all. A writing default would make
+every safety-net step in `/target`, `/clarify`, `/plan`, and `/implement`
+rewrite the whole corpus. `run-generator` reaches the same guarantee by
+hardcoding `--dry-run`; this is that guarantee expressed in the argument.
+
+```json
+{
+  "drift": true,
+  "updated": ["specs/017-derive-dont-ask/spec.md"],
+  "unwritten": [],
+  "examined": 51,
+  "untracked-skipped": [],
+  "cycles": [],
+  "specs-root": "specs",
+  "wrote": false
+}
+```
+
+- `unwritten` (`derive-dependencies` only) — specs examined and found drifted
+  but deliberately not written, the `staged` case. Neither "in sync" nor "not
+  examined", so they are reported separately rather than folded into either.
+- `untracked-skipped` — untracked specs are never enumerated or rewritten
+  (spec 017, `tracked-specs-not-worktree`). Reported so an empty `updated`
+  cannot be read as "everything is in sync".
+- `cycles` (`derive-dependencies` only) — each cycle's members sorted, the
+  cycles sorted by least member; a single-member entry is a self-link. A
+  **domain outcome**, not an error: the MCP surface returns it and the host
+  decides. The CLI surface maps it to a non-zero exit, because its callers are
+  the pre-commit hook and CI, where blocking is expressed as an exit code.
+- `registered-services` (`derive-references` only) — registry size, so "no
+  references found" stays distinguishable from "no readable config".
+
+`derive-dependencies` writes `dependencies: []` when a spec has no sibling
+links — the key present and empty. `derive-references` instead removes the
+`references:` key entirely. The asymmetry is deliberate: unifying the two would
+rewrite frontmatter across every spec in a corpus.
+
 ## Extension-point schemas (initial release)
 
 The three initial-release single-shot extension points, plus the follow-on points: `askClarifyQuestion` and `routeInboxItem`, whose typed shapes ship ahead of their scenarios per the extension-request-hygiene scenario, and `verifyCriteria`, which ships with the implement-completion-gate scenario as `/ductus:implement`'s criterion-verification seam. Each has request and response payload schemas; the runtime validates incoming responses against these and emits `error: schema-mismatch` on failure. An extension identifier outside this closed set is an `error: unknown-extension` at request-build time — never a raw walker-context dump. In every request that carries legacy-compat context fields after its typed prefix (`writeCode`, `writeSpecBody`, `performReview`), walker-internal accumulator keys (prior `llm:*` response echoes and the accumulated `findings` array) are filtered out; primitive results threaded through the context (`scope`, `diff-base`, `selected`, `rules-dir`, `notices`, …) pass through.

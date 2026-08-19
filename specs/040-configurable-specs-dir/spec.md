@@ -2,8 +2,8 @@
 status: done
 dependencies: [002-project-scaffolding, 003-bootstrap-automation, 017-derive-dont-ask, 022-deterministic-runtime]
 review:
-  last-run: 2026-06-30T12:06:10Z
-  reviewed-against: eb6cd1f562f1fd630c09e1cdaba8f722479bc1c2
+  last-run: 2026-08-19T13:39:02Z
+  reviewed-against: d35bbc2d0a91b367be87cae68378cae8065bec67
   must-violations: 0
   should-violations: 0
   low-confidence: 0

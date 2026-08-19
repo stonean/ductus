@@ -8,8 +8,18 @@
 # against known-stale generator output produces misleading findings (per
 # spec 026's bootstrap-order resolution).
 #
-# Order matters: gen-spec-deps.sh runs first so downstream checks see
-# fresh `dependencies:` frontmatter if anything was out of sync.
+# Order matters: the frontmatter derivations run first so downstream checks
+# see fresh `dependencies:` / `references:` if anything was out of sync.
+#
+# Those two are runtime primitives since spec 022's adopter-generator-promotion,
+# so this pass needs the binary. It builds it explicitly rather than assuming a
+# prior step did: `lint-procedure-parseability.sh` below also builds it, but
+# depending on the *order of a later entry* to satisfy an earlier one is the
+# kind of implicit coupling that breaks silently when the list is reordered.
+# Cargo is a no-op when nothing changed, so the second build is free.
+#
+# The primitives are invoked WITHOUT `--write`: report-only is their default,
+# and this is a precondition pass, not a repair pass.
 
 set -uo pipefail
 # shellcheck source-path=SCRIPTDIR source=lib.sh
@@ -20,8 +30,16 @@ audit_family check-zero
 # flag they support (`--dry-run` for the older generators; `--check` was
 # added to `gen-claude-commands.sh` by spec 026 task 2 to close the gap).
 # Lints already run in read-only mode by design — no flag.
+runtime_bin="runtime/target/release/ductus"
+if ! (cd runtime && cargo build --release --quiet) 2>/dev/null; then
+  emit "runtime/" "cargo build --release failed — the frontmatter derivations cannot run" \
+    "fix the build; a precondition that cannot run must not read as a pass"
+  exit "$drift"
+fi
+
 checks=(
-  ".ductus/scripts/gen-spec-deps.sh --dry-run"
+  "$runtime_bin derive-dependencies"
+  "$runtime_bin derive-references"
   "scripts/gen-help-tables.sh --dry-run"
   "scripts/gen-configure-mcp.sh --dry-run"
   "scripts/gen-claude-commands.sh --check"

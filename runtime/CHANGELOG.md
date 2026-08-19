@@ -2,6 +2,48 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.30.0] — 2026-08-19
+
+### Added
+
+- **`derive-dependencies` and `derive-references` primitives.** The two derived
+  frontmatter indexes — `dependencies:` from body links to sibling specs, and
+  `references:` from cross-service spec URLs — are now derived by the runtime.
+  Both take `--staged` (limit the rewrite to the pending commit) and `--write`;
+  **without `--write` they report and never touch the tree.** Read-only is the
+  default because the subprocess interpreter dispatches a backticked primitive
+  with no arguments, so a writing default would let a safety-net step in
+  `/target` or `/clarify` rewrite the whole corpus. `derive-dependencies` also
+  runs the dependency-cycle check over the full graph and exits non-zero on a
+  cycle, or on drift found by a report-only run — the shape a pre-commit hook
+  and CI read.
+
+### Removed
+
+- **The shipped bash generators.** `.ductus/scripts/gen-spec-deps.sh`,
+  `.ductus/scripts/gen-cross-service-refs.sh`, and their shared
+  `lib/specs-root.sh` are deleted, along with their two bash test suites. The
+  `generator-primitives` migration removes them from adopter trees and warns
+  when a *pinned* pre-commit hook still calls them. §runtime-boundary principle
+  3 names shell pipelines that parse frontmatter or markdown structure as not a
+  sanctioned substitute for a primitive; the constraint that had kept them in
+  shell — the runtime being optional — was retired by 0.28's acquisition work.
+
+### Changed
+
+- **The pre-commit hook halts when the runtime is unreachable**, rather than
+  skipping the derivation. These indexes are captured by the commit, so a
+  silent skip lands values the primitives had already superseded — the failure
+  that reached adopters on 2026-08-17. Safe to make blocking because the hook
+  cannot outrun the binary: `/ductus` wires `core.hooksPath` and acquires the
+  runtime in the same run, and `core.hooksPath` is local git config a clone
+  never carries. `git commit --no-verify` is the deliberate bypass.
+  `label-criteria` keeps its swallowed failure — a missing `AC{n}` label is
+  recoverable and audited, while a stale index is committed wrong data.
+- The hook matches staged specs by *shape* (any leading segment, then
+  `NNN-slug/spec.md`) instead of a configured root name, so it has no value to
+  get wrong on a non-default `[paths] specs-root`.
+
 ## [0.29.11] — 2026-08-19
 
 ### Fixed

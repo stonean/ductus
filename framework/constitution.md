@@ -468,8 +468,8 @@ The frontmatter schema applies to **spec files** (`spec.md`) and **scenario file
 | Field | Required | Type | Allowed values | Description |
 | --- | --- | --- | --- | --- |
 | `status` | yes | string | `draft`, `clarified`, `planned`, `in-progress`, `done` | Spec lifecycle state |
-| `dependencies` | yes | list of strings | spec slugs (e.g., `002-events`); empty list permitted | **Generated** by `.ductus/scripts/gen-spec-deps.sh` from inline markdown links to sibling specs in the body. Not hand-authored. Author opt-out: links under a `## See also` heading are treated as navigational and do not produce edges (`## References` remains a dep-producing section). |
-| `references` | no | list of `{service, spec}` entries | registered service alias + target `NNN-slug`; empty or absent permitted | **Generated** by `.ductus/scripts/gen-cross-service-refs.sh` from inline body links to a registered service's canonical repo URL. Not hand-authored, and **strictly distinct from `dependencies`** — informative cross-service navigation that never enters the blocking dependency graph (spec 030). |
+| `dependencies` | yes | list of strings | spec slugs (e.g., `002-events`); empty list permitted | **Generated** by the `derive-dependencies` runtime primitive from inline markdown links to sibling specs in the body. Not hand-authored. Author opt-out: links under a `## See also` heading are treated as navigational and do not produce edges (`## References` remains a dep-producing section). |
+| `references` | no | list of `{service, spec}` entries | registered service alias + target `NNN-slug`; empty or absent permitted | **Generated** by the `derive-references` runtime primitive from inline body links to a registered service's canonical repo URL. Not hand-authored, and **strictly distinct from `dependencies`** — informative cross-service navigation that never enters the blocking dependency graph (spec 030). |
 | `next-criterion` | no | integer | ≥ 1; absent means no criterion has been labelled yet | **Maintained by the runtime's labelling pass.** The `AC{n}` label the next acceptance criterion receives. Monotonically non-decreasing — deleting a criterion never lowers it — so a retired label is never reissued to a different requirement. Not hand-authored; the audit requires it to exceed every `AC{n}` label present in the body (spec 013). |
 
 #### Scenario files
@@ -487,7 +487,7 @@ Additional fields beyond those listed above are permitted and ignored by uninter
 `/ductus:analyze` checks frontmatter against this schema with the following severity:
 
 - **Hard fail** — frontmatter block missing on a spec or scenario file; frontmatter YAML malformed; `status` missing or not in the allowed set; `dependencies` missing or not a list; both `section` and the legacy `spec-ref` missing on a scenario.
-- **Advisory** — cross-reference checks; body inline links to sibling specs that are not yet in the generator-managed `dependencies` (informational — the next commit's `gen-spec-deps.sh` run will resolve).
+- **Advisory** — cross-reference checks; body inline links to sibling specs that are not yet in the generator-managed `dependencies` (informational — the next commit's `derive-dependencies` pass will resolve).
 - **Informational** — unknown fields present.
 
 Hard fails block the validation pass. Advisory and informational findings are reported but do not block.

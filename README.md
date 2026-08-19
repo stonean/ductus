@@ -230,7 +230,7 @@ For the full schema, see [specs/019-config-decisions/data-model.md](specs/019-co
 
 When a project spans multiple services — each its own repo with its own `ductus` install — a spec can link a spec in another service and see its live lifecycle status. The reference is a standard markdown link to the linked spec's **canonical repo URL**; that URL is identity and navigation only and is **never fetched**. `ductus` reads the linked spec's `status` from its **local checkout**, resolved through the `.ductus/config.toml [services]` registry.
 
-References are informative, never dependencies: they do not enter `dependencies:`, do not gate completion, and never block a pipeline gate. They are harvested into a derived `references:` frontmatter index — distinct from `dependencies:` — by `.ductus/scripts/gen-cross-service-refs.sh`; you never hand-author it.
+References are informative, never dependencies: they do not enter `dependencies:`, do not gate completion, and never block a pipeline gate. They are harvested into a derived `references:` frontmatter index — distinct from `dependencies:` — by the `derive-references` runtime primitive; you never hand-author it.
 
 ### Documenting a reference in a spec
 
@@ -241,7 +241,7 @@ Tokens follow the contract in
 [api 014-auth-tokens](https://github.com/acme/api/blob/main/specs/014-auth-tokens/spec.md).
 ```
 
-On the next commit (or any `.ductus/scripts/gen-cross-service-refs.sh` run) the generator harvests that link into the frontmatter:
+On the next commit (or any `ductus derive-references --write` run) the derivation harvests that link into the frontmatter:
 
 ```yaml
 references:

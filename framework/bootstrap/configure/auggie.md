@@ -59,7 +59,6 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
    - `{ "toolName": "launch-process", "shellInputRegex": "^git config core\\.hooksPath", "permission": { "type": "allow" } }`
    - `{ "toolName": "launch-process", "shellInputRegex": "^git config --(get|unset) core\\.hooksPath", "permission": { "type": "allow" } }`
    - `{ "toolName": "launch-process", "shellInputRegex": "^\\./.githooks/pre-commit", "permission": { "type": "allow" } }`
-   - `{ "toolName": "launch-process", "shellInputRegex": "^\\./?\\.ductus/scripts/gen-.*\\.sh", "permission": { "type": "allow" } }`
    - `{ "toolName": "launch-process", "shellInputRegex": "^\\./?scripts/install-hooks\\.sh", "permission": { "type": "allow" } }`
 
    **Runtime MCP tools (`mcp:ductus:*` — generated from `framework/runtime-tools.txt`):**
@@ -108,6 +107,8 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
    - `{ "toolName": "mcp:ductus:check-artifacts", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:derive-routing-candidates", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:check-orphaned-references", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:derive-dependencies", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:derive-references", "permission": { "type": "allow" } }`
    <!-- generated:mcp-allow:end -->
 
    **Shell commands — denied (destructive):**

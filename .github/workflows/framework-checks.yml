@@ -48,10 +48,37 @@ jobs:
         with:
           node-version: '20'
 
-      - name: (b) Bash generator scripts run clean
+      # The two frontmatter derivations are runtime primitives since spec
+      # 022's adopter-generator-promotion, so this step needs the binary and
+      # the toolchain block below has to precede it. Step (f) reuses the same
+      # build as a cache-warm no-op.
+      # Pinned — keep in sync with runtime/rust-toolchain.toml.
+      # `components` must match the toolchain file: any cargo command run
+      # under runtime/ makes rustup honor rust-toolchain.toml, and if the
+      # declared components are missing it auto-installs them mid-build —
+      # a path that hits rustup's "detected conflict: 'bin/cargo-fmt'" bug.
+      - uses: dtolnay/rust-toolchain@1.97.0
+        with:
+          components: clippy, rustfmt
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            runtime/target
+          key: ${{ runner.os }}-runtime-parseability-${{ hashFiles('runtime/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-runtime-parseability-
+      - name: Build the runtime
+        run: cd runtime && cargo build --release --locked --quiet
+
+      - name: (b) Generators and derived indexes are in sync
         run: |
-          bash .ductus/scripts/gen-spec-deps.sh --dry-run
-          bash .ductus/scripts/gen-cross-service-refs.sh --dry-run
+          # Report-only by default — the primitives never write without
+          # --write — and they exit non-zero when the committed indexes are
+          # stale, which is exactly this check.
+          ./runtime/target/release/ductus derive-dependencies
+          ./runtime/target/release/ductus derive-references
           bash scripts/gen-help-tables.sh --dry-run
 
       - name: (c) markdownlint passes
@@ -105,25 +132,7 @@ jobs:
           echo "linting $count shell script(s)"
           printf '%s\n' "$files" | xargs shellcheck -S warning
 
-      # Step (f) builds a workflow-private copy of the runtime binary at
-      # runtime/target/release/ductus and invokes it via a *relative path*.
-      # Pinned — keep in sync with runtime/rust-toolchain.toml.
-      # `components` must match the toolchain file: any cargo command run
-      # under runtime/ makes rustup honor rust-toolchain.toml, and if the
-      # declared components are missing it auto-installs them mid-build —
-      # a path that hits rustup's "detected conflict: 'bin/cargo-fmt'" bug.
-      - uses: dtolnay/rust-toolchain@1.97.0
-        with:
-          components: clippy, rustfmt
-      - uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            runtime/target
-          key: ${{ runner.os }}-runtime-parseability-${{ hashFiles('runtime/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-runtime-parseability-
+      # Step (f) invokes the runtime binary built above via a *relative path*.
       # Build with --locked here so a stale Cargo.lock fails loudly; the
       # script's own `cargo build --release` then becomes a cache-warm
       # no-op against the same target dir.

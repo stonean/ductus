@@ -3,7 +3,7 @@
 {"type":"progress","message":"dispatching primitive `traverse-deps`","step":"3","primitive":"traverse-deps"}
 {"type":"progress","message":"dispatching primitive `resolve-anchor`","step":"4","primitive":"resolve-anchor"}
 {"type":"progress","message":"dispatching primitive `check-rule-ids`","step":"5","primitive":"check-rule-ids"}
-{"type":"progress","message":"dispatching primitive `run-generator`","step":"6","primitive":"run-generator"}
+{"type":"progress","message":"dispatching primitive `derive-dependencies`","step":"6","primitive":"derive-dependencies"}
 {"type":"progress","message":"dispatching primitive `lint-markdown`","step":"7","primitive":"lint-markdown"}
 {"type":"progress","message":"dispatching primitive `check-artifacts`","step":"8","primitive":"check-artifacts"}
 {"type":"progress","message":"dispatching primitive `check-orphaned-references`","step":"9","primitive":"check-orphaned-references"}

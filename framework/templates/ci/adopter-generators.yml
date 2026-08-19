@@ -5,7 +5,7 @@
 # check run:
 #
 #   1. Generator sync — generated frontmatter (currently spec `dependencies:`,
-#      via .ductus/scripts/gen-spec-deps.sh) must match its sources. Safety net for
+#      via `ductus derive-dependencies`) must match its sources. Safety net for
 #      contributors who never installed the local pre-commit hook
 #      (.githooks/pre-commit, set up by /ductus).
 #
@@ -25,7 +25,6 @@ on:
   pull_request:
     paths:
       - 'specs/**'
-      - '.ductus/scripts/gen-*.sh'
       - '.githooks/**'
   push:
     branches:
@@ -41,13 +40,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run gen-spec-deps
-        run: ./.ductus/scripts/gen-spec-deps.sh
+      - name: Derive spec dependencies
+        run: .ductus/bin/ductus derive-dependencies --write
 
       - name: Fail if any generator produced a diff
         run: |
           if ! git diff --exit-code; then
-            echo "::error::Spec dependencies are out of sync with body links. Run /ductus to install the pre-commit hook, or run .ductus/scripts/gen-spec-deps.sh locally and re-commit."
+            echo "::error::Spec dependencies are out of sync with body links. Run /ductus to install the pre-commit hook, or run 'ductus derive-dependencies --write' locally and re-commit."
             exit 1
           fi
 

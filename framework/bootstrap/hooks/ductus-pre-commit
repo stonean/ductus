@@ -3,63 +3,40 @@
 #
 # Adopter pre-commit hook installed by /ductus.
 #
-# Runs adopter-relevant generators on every commit and stages their outputs.
-# Both run with --staged: only specs that are part of this commit are rewritten,
-# so committing one spec never dirties or restages the derived frontmatter of
-# unrelated specs. Currently runs:
-#   1. .ductus/scripts/gen-spec-deps.sh — frontmatter `dependencies:` from body
-#                                         inline links to sibling specs (also
-#                                         runs the dependency-cycle check, which
-#                                         spans the full spec graph)
-#   2. .ductus/scripts/gen-cross-service-refs.sh — frontmatter `references:` from body
-#                                         inline links to other services' specs
-#                                         (distinct from dependencies)
+# Regenerates the derived frontmatter indexes for the specs in this commit and
+# stages the results. Both passes are runtime primitives, invoked with
+# `--staged` so committing one spec never rewrites the derived frontmatter of
+# an unrelated one:
+#
+#   1. ductus derive-dependencies --write --staged — frontmatter `dependencies:` from
+#      body inline links to sibling specs. Also runs the dependency-cycle
+#      check, which spans the full spec graph (a staged edge can close a cycle
+#      through a spec that is not staged) and exits non-zero on a cycle.
+#   2. ductus derive-references --write --staged — frontmatter `references:` from body
+#      inline links to other services' specs. Strictly distinct from
+#      dependencies (spec 030).
 #
 # It then runs the acceptance-criterion labelling pass over each staged spec —
-# `ductus label-criteria`, which assigns the stable `AC{n}:` label a criterion is
-# cited by and maintains the `next-criterion` counter (spec 013). This is the
-# backstop for a criterion typed by hand in an editor rather than through a
-# ductus command. Unlike the generators above it is a runtime primitive rather
-# than a bash script, so it runs only when the runtime is reachable and its
-# failure never blocks a commit: the runtime is not a prerequisite for any
-# pipeline gate, and a binary predating `label-criteria` exits non-zero on the
-# unknown subcommand.
+# `ductus label-criteria`, which assigns the stable `AC{n}:` label a criterion
+# is cited by and maintains the `next-criterion` counter (spec 013). This is
+# the backstop for a criterion typed by hand in an editor rather than through
+# a ductus command.
 #
-# This file is overwritten by /ductus unless listed in .ductus/config.toml `pinned.files`.
-# The `# managed-by: ductus` sentinel above is how /ductus detects that the file
-# is one it owns.
+# This file is overwritten by /ductus unless listed in .ductus/config.toml
+# `pinned.files`. The `# managed-by: ductus` sentinel above is how /ductus
+# detects that the file is one it owns.
 
 set -euo pipefail
 shopt -s nullglob
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
-.ductus/scripts/gen-spec-deps.sh --staged
-.ductus/scripts/gen-cross-service-refs.sh --staged
-
-# Scope to the project's configured spec root (spec 040), resolved the same way
-# the generators above resolve it. A hardcoded `specs` silently matches nothing
-# for a project that renamed its spec tree, which leaves every rewrite below
-# unstaged: the generators still fix the file on disk, but the commit captures
-# the superseded frontmatter. `specs_root_of` validates the name against
-# [A-Za-z0-9_-], so it is safe both as a path and interpolated into the regex.
-. .ductus/scripts/lib/specs-root.sh
-SPECS_ROOT="$(resolve_specs_root)"
-
-# Re-stage only spec files already part of this commit, so the derived
-# `dependencies:` / `references:` rewrites are captured without sweeping in
-# untracked `/specify` drafts or unstaged edits to other tracked specs
-# (spec 017 / tracked-specs-not-worktree).
-staged_specs="$(git diff --cached --name-only -- "$SPECS_ROOT" \
-  | { grep -E "^$SPECS_ROOT/[0-9][0-9][0-9]-[^/]+/(spec|spec-and-plan)\.md\$" || true; })"
-
-# Resolve the runtime the way /ductus actually registers it: the repo-relative
-# pointer `.ductus/bin/ductus`, which every run materializes and which resolves
-# to the ductus-owned store (or to a project's own `[runtime] path`). PATH is a
+# Resolve the runtime the way /ductus registers it: the repo-relative pointer
+# `.ductus/bin/ductus`, which every run materializes and which resolves to the
+# ductus-owned store (or to a project's own `[runtime] path`). PATH is a
 # fallback for a hand-installed binary only. Since spec 048 moved the runtime
-# into the store, /ductus never puts `ductus` on PATH — so a PATH-only guard is
-# false for every adopter and skips this step silently on all of them, which is
-# a check that cannot run wearing the costume of one that passed.
+# into the store, /ductus never puts `ductus` on PATH — so a PATH-only guard
+# would be false for every adopter.
 ductus_bin=""
 if [ -x .ductus/bin/ductus ]; then
   ductus_bin=".ductus/bin/ductus"
@@ -67,13 +44,60 @@ elif command -v ductus > /dev/null; then
   ductus_bin="ductus"
 fi
 
+# An unreachable runtime HALTS the generator pass rather than skipping it.
+#
+# The generators produce derived frontmatter that this commit captures, so a
+# silent skip lands `dependencies:` / `references:` that the generators would
+# have superseded — which is exactly the defect class that reached adopters on
+# 2026-08-17, and exactly the "check that cannot run wearing the costume of one
+# that passed" shape. §runtime-boundary settles the direction: acquisition
+# failure halts rather than degrades, "because a requirement that quietly is
+# not one leaves both paths alive".
+#
+# This is safe to make blocking because the hook cannot outrun the binary:
+# /ductus wires `core.hooksPath` and acquires the runtime in the same run, and
+# `core.hooksPath` is local git config that a clone never carries — so a fresh
+# clone has no ductus hook at all until /ductus has run.
+#
+# The escape hatch is the one git already provides: `git commit --no-verify`.
+if [ -z "$ductus_bin" ]; then
+  echo "ductus: pre-commit halted — the ductus runtime is not reachable." >&2
+  echo "  Looked for .ductus/bin/ductus, then \`ductus\` on PATH." >&2
+  echo "  The spec frontmatter indexes (dependencies:, references:) are" >&2
+  echo "  derived on commit, so skipping them would capture stale values." >&2
+  echo "  Run /ductus to acquire the runtime, or commit with --no-verify to" >&2
+  echo "  bypass this hook deliberately." >&2
+  exit 1
+fi
+
+"$ductus_bin" derive-dependencies --write --staged > /dev/null
+"$ductus_bin" derive-references --write --staged > /dev/null
+
+# Re-stage only spec files already part of this commit, so the derived
+# rewrites are captured without sweeping in untracked `/specify` drafts or
+# unstaged edits to other tracked specs (spec 017 / tracked-specs-not-worktree).
+#
+# The spec root is matched by *shape* rather than by name — any single leading
+# segment, then `NNN-slug/spec.md`. A hardcoded `specs` silently matches
+# nothing for a project that renamed its spec tree (spec 040), which leaves
+# every rewrite above unstaged: the generators still fix the file on disk, but
+# the commit captures the superseded frontmatter. That is the third of the
+# three defects that reached adopters on 2026-08-17. Matching on shape means
+# the hook has no configured value to get wrong, and the runtime stays the only
+# thing that resolves `[paths] specs-root`.
+staged_specs="$(git diff --cached --name-only \
+  | { grep -E "^[^/]+/[0-9][0-9][0-9]-[^/]+/(spec|spec-and-plan)\.md\$" || true; })"
+
 if [ -n "$staged_specs" ]; then
   printf '%s\n' "$staged_specs" | while IFS= read -r f; do
     [ -f "$f" ] || continue
-    if [ -n "$ductus_bin" ]; then
-      "$ductus_bin" label-criteria --feature "$(basename "$(dirname "$f")")" \
-        > /dev/null 2>&1 || true
-    fi
+    # `label-criteria` keeps a swallowed failure, unlike the generators above,
+    # and the reason is blast radius rather than optionality: a missing AC{n}
+    # label is caught by /ductus:analyze and assigned on the next pass, so
+    # nothing wrong is committed. A stale derived index is committed wrong
+    # data. The two are not the same risk and do not get the same policy.
+    "$ductus_bin" label-criteria --feature "$(basename "$(dirname "$f")")" \
+      > /dev/null 2>&1 || true
     git add "$f"
   done
 fi

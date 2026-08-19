@@ -57,4 +57,6 @@ pub(crate) const PRIMITIVE_REGISTRY: &[&str] = &[
     "check-artifacts",
     "derive-routing-candidates",
     "check-orphaned-references",
+    "derive-dependencies",
+    "derive-references",
 ];

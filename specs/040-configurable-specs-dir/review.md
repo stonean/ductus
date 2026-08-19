@@ -1,12 +1,13 @@
 ---
 spec: 040-configurable-specs-dir
-reviewed-at: 2026-06-30T12:06:10Z
-reviewed-against: eb6cd1f562f1fd630c09e1cdaba8f722479bc1c2
-diff-base: cfc1023ace626499343fc23a823905708e151955
+scenario: command-prose-resolves-spec-root
+reviewed-at: 2026-08-19T13:39:02Z
+reviewed-against: d35bbc2d0a91b367be87cae68378cae8065bec67
+diff-base: 130f4cf5dc9e02ee3045446527c3e5b115411d65
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-captured-issues: 0
+captured-issues: 1
 skipped-passes: []
 ---
 
@@ -14,33 +15,32 @@ skipped-passes: []
 
 ## Summary
 
-Re-review after the fixes in `eb6cd1f`. **0 MUST, 0 SHOULD — clean, not blocking.** All three advisory findings from the prior run (`41d25f6`) are resolved: the redundant per-call `.govern.toml` read is gone — `dashboard::load_specs` and `traverse_deps::run` each resolve the root exactly once and thread it through `load_one_spec` / `visit`; `validate_specs_root` (and the mirrored bash check) now enforce the conservative, regex-safe `[A-Za-z0-9_-]` charset, with the spec's well-formedness rule, AC, and the `/ductus`+`/ductus:init` operator messages updated to match; and `resolve_specs_root` is extracted to `scripts/lib/specs-root.sh`, sourced by both generators (one definition) and shipped via the Shared Files manifest. The fixes introduce no new findings — re-reviewed adversarially across all five passes. Verification: `cargo test` 412/0, clippy clean, both generator suites green through the shared lib, framework self-audit (incl. manifest-parity) 0 findings, markdown-only opt-in lints pass. Security/performance/reliability rules remain N/A — a CLI runtime plus bash generators with no network, datastore, or credential surface.
-
-One non-blocking, out-of-scope note (not a counted finding): the sibling enumeration helpers `list_specs` / `staged_specs` remain duplicated across the two generators. That duplication predates 040 (the feature only modified them to resolve the configured root, it did not introduce them); now that `scripts/lib/specs-root.sh` exists, they are natural candidates to move into the same lib in a future hygiene pass.
+Reviewed the command-prose-resolves-spec-root scenario: the Spec-root resolution note propagated to amend.md, groom.md, implement.md, log.md and review.md, the two argument-literal rewrites, and the regenerated command copies. No MUST or SHOULD violations; the spec is not blocked. The change is prose-only — no runtime code was touched, so the security and efficiency passes have no subject and the reuse pass confirmed the correct outcome: the fix reuses specify.md's existing note verbatim rather than inventing a second form. The quality pass found and the change fixed one defect in the fix itself: the note read "every `specs/…` path below", making its coverage depend on where it sat, and two host-acted sites (amend.md's Scope Boundaries declaration, implement.md step 13) sat above their note. Reworded to "in this command" across all six files including specify.md, so one form exists and coverage no longer depends on position. Triage of those two confirmed neither was a live defect — implement.md step 13 describes a filter diff-cross-spec owns, and amend.md:35 is a scope declaration whose acted-on counterpart at :60 is covered — but the positional fragility was real and is gone. Two parseability/lint breakages introduced during the sweep were caught by the gates and fixed: a step naming two backticked primitives (log.md step 3, where append-inbox is a cross-reference not a dispatch) and MD028 blank-line-inside-blockquote where the new note landed adjacent to the agent-runtimes blockquote, resolved by folding it in as a second paragraph.
 
 ## MUST violations (blocking)
 
-_None._
+*None.*
 
 ## SHOULD violations (advisory)
 
-_None._
+*None.*
 
 ## Low-confidence findings
 
-_None._
+*None.*
 
 ## Waived findings
 
-_None._
+*None.*
 
-## Captured issues (pending /ductus:groom)
+## Captured issues
 
-_None outstanding._ The single capture below is **resolved**; the checkbox-free
-form left it reading as pending after grooming had already routed it.
+- [ ] bug: command prose hardcodes `specs/` instead of resolving `[paths] specs-root` — resolved by this scenario; the 12 host-acted sites now carry the Spec-root resolution note and the two argument-literals (log.md step 3, groom.md step 1) were rewritten.
 
-- Cross-service reference resolution assumes the _referenced_ service uses `specs/` — `gen-cross-service-refs.sh`'s URL matcher (`/specs/NNN-slug/`) targets another repo's layout, which this project's `[paths] specs-root` does not ductus. Deferred from 040's scope (a referenced service that renamed _its_ root is a cross-repo concern); run `/ductus:groom` to route. — **Resolved**: `/ductus:groom` routed it to [030's `referenced-service-spec-root` scenario](../030-cross-service-references/scenarios/referenced-service-spec-root.md). `.ductus/scripts/gen-cross-service-refs.sh` now resolves the spec-root segment per registered service in two tiers — a reachable checkout's own ductus config `[paths] specs-root` (via `specs_root_of`/`config_path_of`), and any single `[A-Za-z0-9_-]` segment when the checkout is unreachable — so the segment is no longer hardcoded to `specs`.
+## Observations
+
+*None.*
 
 ## Skipped passes
 
-_None._
+*None.*

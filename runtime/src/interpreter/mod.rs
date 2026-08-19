@@ -61,13 +61,14 @@ use crate::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, CheckArtifactsArgs,
     CheckOrphanedReferencesArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStuckArgs,
     ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs,
-    DashboardArgs, DeriveBoundaryArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs,
-    DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs,
-    GateConfirmArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
-    MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs, ProcessWaiversArgs,
-    PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RemoveInboxItemArgs, ResolveAnchorArgs,
-    ResolveFeatureArgs, ResolveReferencesArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
-    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs,
+    DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveReferencesArgs,
+    DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs,
+    ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, LabelCriteriaArgs, LintMarkdownArgs,
+    MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
+    MigrateSessionFileArgs, ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs,
+    RemoveInboxItemArgs, ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs,
+    RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteReviewArgs,
+    WriteSessionArgs,
 };
 use crate::schema::procedure::{Procedure, Step, StepNumber};
 use crate::schema::protocol::{ErrorLocation, ProtocolMessage};
@@ -735,6 +736,12 @@ fn dispatch_primitive(
         }
         "check-orphaned-references" => {
             call!(CheckOrphanedReferencesArgs, check_orphaned_references)
+        }
+        "derive-dependencies" => {
+            call!(DeriveDependenciesArgs, derive_dependencies)
+        }
+        "derive-references" => {
+            call!(DeriveReferencesArgs, derive_references)
         }
         "check-artifacts" => call!(CheckArtifactsArgs, check_artifacts),
         "prune-tasks" => call!(PruneTasksArgs, prune_tasks),

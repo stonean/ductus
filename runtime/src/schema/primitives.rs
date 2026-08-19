@@ -600,6 +600,111 @@ pub struct SetStatusResult {
     pub path: String,
 }
 
+// -- derive-dependencies -----------------------------------------------------
+
+/// Args for `derive-dependencies`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct DeriveDependenciesArgs {
+    /// Perform the rewrite. **Off by default: the primitive reports without
+    /// writing.**
+    ///
+    /// Read-only is the default because the subprocess interpreter has no
+    /// per-step argument binding — a step naming this primitive in a code span
+    /// is dispatched with no arguments at all. If writing were the default,
+    /// every safety-net step in `/target`, `/clarify`, `/plan`, and
+    /// `/implement` would silently rewrite `dependencies:` across the whole
+    /// corpus. `run-generator` reaches the same guarantee by hardcoding
+    /// `--dry-run` on the scripts it invokes; this is that guarantee, expressed
+    /// in the argument.
+    #[serde(default)]
+    #[arg(long)]
+    pub write: bool,
+    /// Rewrite only specs staged in the git index for the pending commit,
+    /// instead of every tracked spec. The cycle check still spans the full
+    /// graph — a staged edge can close a cycle through an unstaged spec. For
+    /// pre-commit use, so committing one spec never rewrites another.
+    #[serde(default)]
+    #[arg(long)]
+    pub staged: bool,
+}
+
+/// Result for `derive-dependencies`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct DeriveDependenciesResult {
+    /// Whether any spec was rewritten (or, under `dry-run`, would be).
+    pub drift: bool,
+    /// Repo-relative paths of the specs rewritten, sorted.
+    pub updated: Vec<String>,
+    /// Specs examined and found drifted but deliberately not written —
+    /// the `staged` case. Neither "in sync" nor "not examined", so they are
+    /// reported separately rather than folded into either.
+    pub unwritten: Vec<String>,
+    /// Count of tracked specs examined.
+    pub examined: u32,
+    /// Untracked specs in the worktree, which are never enumerated or
+    /// rewritten (spec 017). Reported so an empty `updated` cannot be read as
+    /// "everything is in sync" — these were not examined at all.
+    pub untracked_skipped: Vec<String>,
+    /// Dependency cycles in the derived graph, each listing its members
+    /// sorted, the cycles themselves sorted by least member. A single-member
+    /// entry is a self-link. Empty means acyclic. This is a **domain
+    /// outcome**: the caller decides whether it blocks.
+    pub cycles: Vec<Vec<String>>,
+    /// Repo-relative spec-root directory the run enumerated (spec 040), so a
+    /// caller can tell a genuinely empty corpus from a misconfigured root.
+    pub specs_root: String,
+    /// Whether the run actually wrote.
+    pub wrote: bool,
+}
+
+// -- derive-references -------------------------------------------------------
+
+/// Args for `derive-references`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct DeriveReferencesArgs {
+    /// Perform the rewrite. Off by default, for the reason recorded on
+    /// [`DeriveDependenciesArgs::write`].
+    #[serde(default)]
+    #[arg(long)]
+    pub write: bool,
+    /// Rewrite only specs staged in the git index for the pending commit.
+    /// Each spec's `references:` is a pure function of its own body — there
+    /// is no cross-spec graph — so this narrows the enumeration itself.
+    #[serde(default)]
+    #[arg(long)]
+    pub staged: bool,
+}
+
+/// Result for `derive-references`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct DeriveReferencesResult {
+    /// Whether any spec was rewritten (or, under `dry-run`, would be).
+    pub drift: bool,
+    /// Repo-relative paths of the specs rewritten, sorted.
+    pub updated: Vec<String>,
+    /// Count of specs examined — the staged set under `staged`, else every
+    /// tracked spec.
+    pub examined: u32,
+    /// Untracked specs in the worktree, never enumerated or rewritten
+    /// (spec 017). Reported so an empty `updated` cannot be read as
+    /// "everything is in sync".
+    pub untracked_skipped: Vec<String>,
+    /// Number of services resolved from the `[services]` registry. Zero means
+    /// every harvested reference records `service: null`, which is a very
+    /// different state from "no references found" — an unreadable or absent
+    /// config looks identical in `updated` alone.
+    pub registered_services: u32,
+    /// Spec-root directory name the run enumerated (spec 040).
+    pub specs_root: String,
+    /// Whether the run actually wrote. A result read out of context cannot
+    /// then be mistaken for one that changed the tree.
+    pub wrote: bool,
+}
+
 // -- derive-boundary ---------------------------------------------------------
 
 /// Args for `derive-boundary`.

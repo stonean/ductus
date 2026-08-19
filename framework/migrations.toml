@@ -165,3 +165,18 @@ target_paths = [
   "framework/skills/",
 ]
 procedure_file = "framework/migrations/workflows-sunset.md"
+
+[[migrations]]
+id = "generator-primitives"
+introduced_in = "0.30.0"
+# No sunset_after: an adopter carrying the retired scripts has a pre-commit
+# hook whose targets no longer exist, so the entry stays active until every
+# tree is converged. The removal is safe on any release because the primitives
+# arrive with the runtime `/ductus` acquires in the same run.
+summary = "Remove the shipped frontmatter generators — .ductus/scripts/gen-spec-deps.sh, gen-cross-service-refs.sh and lib/specs-root.sh — now that the derivations are the derive-dependencies and derive-references runtime primitives (spec 022, adopter-generator-promotion)"
+target_paths = [
+  ".ductus/scripts/gen-spec-deps.sh",
+  ".ductus/scripts/gen-cross-service-refs.sh",
+  ".ductus/scripts/lib/specs-root.sh",
+]
+procedure_file = "framework/migrations/generator-primitives.md"
