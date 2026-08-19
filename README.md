@@ -137,7 +137,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/stonean/d
 
 OpenCode installs the bootstrap as a verbatim command at `.opencode/command/ductus.md` (invoked `/ductus`) and reads `AGENTS.md` natively — no `CLAUDE.md`. `/ductus` wires the `ductus` runtime automatically by writing the project's root `opencode.json`; because OpenCode loads config once at startup, restart it after the first wiring (see [Registering the runtime](#registering-the-runtime)).
 
-The same bootstrap supports every agent, so re-run `/ductus --add-agent` from any adopted agent later to add others. `/ductus` acquires the runtime and wires it in the same run — automatically for Claude and OpenCode (both keep MCP config in a committed repo file), or by surfacing a one-time registration step for Auggie and Antigravity (see [Registering the runtime](#the-runtime)).
+The same bootstrap supports every agent, so re-run `/ductus --add-agent` from any adopted agent later to add others. `/ductus` acquires the runtime and wires it in the same run — automatically for Claude and OpenCode (both keep MCP config in a committed repo file), or by surfacing a one-time registration step for Auggie and Antigravity (see [Registering the runtime](#registering-the-runtime)).
 
 ## Brownfield adoption
 
