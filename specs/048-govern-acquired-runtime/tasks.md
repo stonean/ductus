@@ -134,3 +134,9 @@ Phase 1 is independently safe and lands first so later work is written against a
 - [x] Implement the behavior described in `scenarios/retired-namespace-tools-are-off-limits.md`
 
 - **Done when**: `framework/bootstrap/ductus.md` binds the host to the `ductus` namespace in **both** states and for the whole run — no tool outside the namespace performs a procedure step or counts as evidence a runtime is available — stated once under §ductus runtime detection rather than inside either state, with the reasoning naming the resolver-vs-layout mismatch and the requirement scoped to runtime stand-ins so it does not read as a blanket ban on the adopter's other MCP servers. Mirrored byte-identically to `framework/bootstrap/govern.md`. The parity suite passes unchanged.
+
+### 15. Publish the crate before creating the GitHub release
+
+- [ ] Implement the behavior described in `scenarios/release-halves-publish-together.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
