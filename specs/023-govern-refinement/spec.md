@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [022-deterministic-runtime]
 review:
   last-run: 2026-08-19T01:07:52Z
