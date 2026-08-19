@@ -140,3 +140,9 @@ Phase 1 is independently safe and lands first so later work is written against a
 - [x] Implement the behavior described in `scenarios/release-halves-publish-together.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+### 16. Make the version pin readable when acquisition needs it
+
+- [x] Implement the behavior described in `scenarios/pin-is-readable-when-acquisition-needs-it.md`
+
+- **Done when**: `{tempdir}` is created in the Pre-flight Phase preamble before either check; Runtime acquisition step 1 fetches the pin from raw into `{tempdir}/version` and reads it there, with §Derived values naming that path; the self-update check states the directory already exists rather than creating a second one; the halt survives with a message naming the pin URL; `{staging-dir}` no longer appears in the procedure; `framework/bootstrap/govern.md` is byte-identical (Family 21); and a fresh greenfield adoption reaches an installed, version-matching runtime with **no hand-supplied pin**.
