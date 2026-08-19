@@ -31,6 +31,13 @@ history:
   rotated; `0.31.0` needed a second re-run because its publish job had already
   started and captured the stale secret at job start.
 
+**Both 2026-08-19 releases are fully recovered — nothing operational is
+outstanding.** crates.io reports `max_version: 0.31.0`, and the GitHub
+releases for `ductus-v0.30.0` and `ductus-v0.31.0` are live with all five
+platform assets and their SBOMs. This scenario is about the *class*, not about
+repairing those two; a session picking it up should change the workflow, not
+re-run anything.
+
 The shape is the same each time: the irreversible half succeeds, the
 recoverable half fails, and the release is left inconsistent in the direction
 that is hardest to notice — because the GitHub release is the half adopters
