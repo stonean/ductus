@@ -75,3 +75,9 @@ and are out of scope. Run against the file as it stands, not the survey's counts
 - [x] Implement the behavior described in `scenarios/completion-claims-carry-no-caveats.md`
 
 - **Done when**: `framework/constitution.md` §design-principles carries the filter stating that incomplete work must never be indistinguishable from complete work, naming the three dispositions and the measurement rule; §implement-phase's SHOULD bullet references it rather than restating it; the section preamble no longer hardcodes a bullet count. Family 6 (SSOT invariants) stays green, confirming the rule is stated once.
+
+## 10. Findings route by scope in §brownfield-inbox
+
+- [x] Implement the behavior described in `scenarios/findings-route-by-scope.md`
+
+- **Done when**: `framework/constitution.md` §brownfield-inbox's Automatic issue capture carries the scope-routing bullet naming all three tiers, states that `tasks.md` is not a second capture queue and that a chore with no feature home stays an inbox item, and its closing sentence names both destinations. The `AGENTS.md` entry is a pointer carrying no normative text of its own (§Promotion mechanism, AC3). `npx markdownlint-cli2` and `scripts/audit/run-all.sh` clean, Family 1 and Family 6 included, on a committed tree.
