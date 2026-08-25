@@ -36,7 +36,16 @@ OPENCODE_SRC="$ROOT/framework/bootstrap/configure/opencode.md"
 # Track every mktemp we create so early-exit paths (set -e, signals,
 # splice failures) don't leak temp files into $TMPDIR.
 cleanup_files=()
-cleanup() { [ "${#cleanup_files[@]}" -gt 0 ] && rm -f "${cleanup_files[@]}"; }
+# `if` rather than a trailing `&&`: with the array still empty — every early
+# exit above the first mktemp, including `--help` — the `&&` short-circuits to
+# 1, and that becomes the EXIT trap's status and therefore the script's, so
+# `--help` exited 1 and `--bogus` reported 1 instead of its documented 2. The
+# `|| true` variant would fix the status by also swallowing a real `rm` failure.
+cleanup() {
+  if [ "${#cleanup_files[@]}" -gt 0 ]; then
+    rm -f "${cleanup_files[@]}"
+  fi
+}
 trap cleanup EXIT
 
 dry_run=0

@@ -219,8 +219,62 @@ build_and_run() {
   rm -rf "$fixture"
 }
 
+# --- Case 3: a staged spec DELETION does not fail the hook -------------------
+#
+# The re-stage loop walks paths from `git diff --cached --name-only`, which
+# includes deletions — a path that is staged but no longer on disk. Under
+# `set -euo pipefail` that turns the loop's own guard into a failure mode: an
+# adopter carrying `[ -f "$f" ] && git add "$f"` as the body's *last* command
+# gets exit 1 from the `&&` on every deleted spec, and the whole commit dies.
+# `|| continue` avoids it, and does so without the `|| true` variant that would
+# also swallow a genuine `git add` failure.
+#
+# This shape is not hypothetical and it is not grep-able: the hook reads
+# correctly and the loop is only wrong for input this repo rarely produces.
+# It shipped to adopters between 2026-07-22 (2715b5b) and 2026-08-14 (2339eb0),
+# where it was corrected *incidentally* while wiring `label-criteria` — nobody
+# was looking at the deletion path, and nothing would have told them if the
+# rewrite had kept the `&&`. A downstream project reported it on 2026-08-25,
+# still running the pre-rename hook. So: exercise the deleted-spec path.
+check_survives_deleted_spec() {
+  local fixture hook_out hook_status
+  fixture="$(mktemp -d 2>/dev/null)" || fixture=""
+  if [ -z "$fixture" ] || ! scaffold "$fixture" specs; then
+    emit "scripts/audit/adopter-shell-behavior.sh" \
+      "could not build the deleted-spec fixture" \
+      "ensure mktemp and git work here — a skipped run must not read as a pass"
+    [ -n "$fixture" ] && rm -rf "$fixture"
+    return
+  fi
+  install_stub "$fixture"
+
+  # A deletion needs something to delete *from*, so unlike the other cases this
+  # one commits the scaffolded tree first, then stages the removal.
+  if ! (
+    cd "$fixture" || exit 1
+    git commit -qm seed && git rm -q "specs/001-example/spec.md"
+  ) > /dev/null 2>&1; then
+    emit "scripts/audit/adopter-shell-behavior.sh" \
+      "could not stage a spec deletion in the fixture" \
+      "ensure git can commit and rm here — a skipped run must not read as a pass"
+    rm -rf "$fixture"
+    return
+  fi
+
+  hook_out="$(cd "$fixture" && PATH=/usr/bin:/bin bash .githooks/ductus-pre-commit 2>&1)"
+  hook_status=$?
+  if [ "$hook_status" -ne 0 ]; then
+    emit "framework/bootstrap/hooks/ductus-pre-commit" \
+      "the shipped hook exited $hook_status on a commit that deletes a spec: ${hook_out:-<no output>}" \
+      "guard the re-stage loop with \`[ -f \"\$f\" ] || continue\` on its own line — a trailing \`&&\` short-circuits to 1 under set -e and kills the commit"
+  fi
+
+  rm -rf "$fixture"
+}
+
 check_halts_without_runtime
 build_and_run specs      # default root — isolates runtime resolution
 build_and_run features   # configured root (spec 040) — isolates scoping
+check_survives_deleted_spec
 
 exit "$drift"
