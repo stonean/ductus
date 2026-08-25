@@ -84,9 +84,9 @@ and are out of scope. Run against the file as it stands, not the survey's counts
 
 ## 11. Sweep the prose claims the scope-routing rule falsifies
 
-- [ ] `framework/commands/implement.md` step 5 (*Capture incidental issues*) states the three tiers — today it sends every issue outside the current task's scope to `specs/inbox.md`, which is wrong for the whole middle tier
-- [ ] `framework/templates/project/inbox.md`'s Rules block names the scope test, so an adopter reading only the header does not route a spec-scoped finding to the inbox
-- [ ] This repo's `specs/inbox.md` header is kept in sync with that template
-- [ ] Regenerate `.claude/commands/ductus/` and run the full CI surface — `framework/commands/*.md` is runtime-adjacent, so `cargo test --release --locked` is part of the gate, not the markdown checks alone
+- [x] `framework/commands/implement.md` step 5 (*Capture incidental issues*) states the three tiers — today it sends every issue outside the current task's scope to `specs/inbox.md`, which is wrong for the whole middle tier
+- [x] `framework/templates/project/inbox.md`'s Rules block names the scope test, so an adopter reading only the header does not route a spec-scoped finding to the inbox
+- [x] This repo's `specs/inbox.md` header is kept in sync with that template
+- [x] Regenerate `.claude/commands/ductus/` and run the full CI surface — `framework/commands/*.md` is runtime-adjacent, so `cargo test --release --locked` is part of the gate, not the markdown checks alone
 
 - **Done when**: An agent implementing a task routes a finding by scope wherever it reads the procedure — `implement.md`, the shipped inbox template, and this repo's inbox agree with §brownfield-inbox rather than predating it. `npx markdownlint-cli2`, `scripts/audit/run-all.sh`, and `cargo test --release --locked` clean on a committed tree; if `implement-basic.jsonl` shifts, it is re-blessed filtered to that one golden with the diff confirmed to be the two sha fields only.

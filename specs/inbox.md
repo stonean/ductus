@@ -2,6 +2,10 @@
 
 <!-- Rules:
      - Do not frontfill bugs that are not being actively worked on.
+     - A bug or omission inside the scope of the spec currently in progress does NOT belong
+       here — it becomes a task on that spec's tasks.md. The inbox is for findings with no
+       home yet; an in-progress spec is already the home, so an item logged here is routed
+       straight back to it (constitution §brownfield-inbox, scope decides the destination).
      - Write specs for areas being actively touched — let adoption spread naturally.
      - As specs are written, items migrate from here into spec updates or new scenarios.
      - Chores (project maintenance with no feature home — lint/formatting cleanup,
