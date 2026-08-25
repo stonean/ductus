@@ -1,8 +1,8 @@
 ---
 spec: 050-constitution
 scenario: findings-route-by-scope
-reviewed-at: 2026-08-25T18:22:15Z
-reviewed-against: 670308bf522d3ef43174d429ff0d9832afe9bb81
+reviewed-at: 2026-08-25T18:36:17Z
+reviewed-against: 09d954565dea9f7787f04d0097b4017f54b99a8e
 diff-base: 670308bf522d3ef43174d429ff0d9832afe9bb81
 must-violations: 0
 should-violations: 0
@@ -15,11 +15,15 @@ skipped-passes: []
 
 ## Summary
 
-Five passes over the scope (`framework/constitution.md`, `AGENTS.md`, `specs/050-constitution/plan.md`, `specs/045-decision-state-drift-detection/spec.md`, `specs/inbox.md`) against the eleven selected rule files: 0 MUST, 0 SHOULD, 0 low-confidence. The scope is governance prose, and the loaded rule set verifies code patterns, so no rule ID anchors here — the counts are honest about what the rules could examine, not a statement that the change is complete.
+Final review of this back-edge. Five passes over the scope — `framework/constitution.md`, `AGENTS.md`, `framework/commands/implement.md` and its generated copy, `framework/templates/project/inbox.md`, `specs/inbox.md`, `runtime/tests/golden/implement-basic.jsonl`, and this spec's own artifacts — against the eleven selected rule files: 0 MUST, 0 SHOULD, 0 low-confidence, `blocking: false`. The scope is governance prose and one golden fixture, and the loaded rule files verify code patterns, so no rule ID anchors here. The counts describe what the rules could examine; the substantive findings of this back-edge came from reading the artifacts against each other, and all three are resolved below.
 
-The finding of record is an **incomplete prose-claim sweep**, and it is the reason this spec stays `in-progress`. The scope-routing rule added to §brownfield-inbox falsifies a behavioral claim at the enforcement point where it fires most often: `framework/commands/implement.md` step 5 (*Capture incidental issues*) still instructs an agent to append **any** issue outside the current task's scope to `specs/inbox.md`, which is now wrong for the entire middle tier the new bullet exists to define. The shipped `framework/templates/project/inbox.md` header and this repo's own `specs/inbox.md` header enumerate what belongs in the inbox and never mention the scope test, so an adopter reading only the header routes spec-scoped findings there. Neither file is in this review's scope — the finding anchors to the in-scope constitution change that falsified them — and the drift is invisible to the audit families, which check anchors and manifests rather than meaning. Recorded as task 11 rather than captured to the inbox, per the rule this spec just landed: the finding is inside the in-progress spec's scope, so the inbox would route it back here.
+**The prose-claim sweep (first review, task 11).** `implement.md` step 5 sent every issue outside the current task's scope to `specs/inbox.md`, which was wrong for the entire middle tier the new rule defines — and that step, not the constitution, is what an agent reads at the moment it decides. It now routes by scope explicitly and names `/{project}:amend` for a requirement gap. The shipped inbox template and this repo's inbox carry the same test in their header blocks, which are the whole specification of the inbox for anyone who never opens the constitution.
 
-Two adjacencies were checked and cleared. Against §bug-handling: the new bullet does not turn `tasks.md` into a durable record — it names `/{project}:amend` as the route for a requirement gap and keeps a chore with no feature home in the inbox, which is the clause §bug-handling's *never standalone chores* is aimed at. Against `groom.md`: the five-route decision tree governs items that have already reached the inbox, so preventing an arrival contradicts nothing in it. `scripts/audit/run-all.sh` is clean on the committed tree, Family 1 (cross-doc claim consistency) and Family 6 (SSOT invariants) included, and `npx markdownlint-cli2` is clean over all five files.
+**A wrong reason in the record.** `e7eda2a`'s message justified leaving `append-task` unbackticked by claiming the exec parser dispatches on the code span rather than on the section. False — `runtime/src/parser/mod.rs:7` scopes the parser to `## Instructions`, which is why the backticked `append-inbox` beside it was always safe. The claim was inferred from a passing lint instead of read from the parser, the shortcut §grounding names. Corrected in `6474430`; recorded here because a commit message cannot be rewritten.
+
+**AC15 was ticked before it held.** The criterion asserts the `AGENTS.md` mirror points without restating; the How-to-apply enumerated all three tiers, a second copy of the constitution's list and the thing §Promotion mechanism forbids. Caught by verifying the criterion against the tree at the completion gate rather than trusting its checkbox — the rule this spec itself promoted in task 4, doing the work it was promoted to do. Fixed in `09d9545`; AC3's grep now resolves "Scope decides the destination" to one statement and one pointer.
+
+Both `implement-basic.jsonl` re-blessings were filtered to that one golden and word-diffed before acceptance: each diff is the two git-derived sha fields and nothing else, and `{{runtime-version}}` survives both. Full gate green on the committed tree — 1013 unit tests, 11 parity goldens, `npx markdownlint-cli2`, `scripts/audit/run-all.sh` (Families 1 and 6 included), the six `lint-*.sh` scripts, `scripts/tests/*.sh`. All 11 tasks and all 15 acceptance criteria are checked, with AC15 verified against the tree rather than assumed.
 
 ## MUST violations (blocking)
 
