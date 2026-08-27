@@ -17,7 +17,7 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
 
 1. Invoke `merge-permissions` (MCP: `merge-permissions`) to install the canonical `permissions.allow` and `permissions.deny` sets into `{cli-config-dir}/settings.local.json` and dedup exact-match entries from both arrays. The primitive creates the file if missing (with `{"permissions":{"allow":[],"deny":[]}}`), reads it otherwise, and writes atomically (tempfile + rename). It preserves untouched top-level keys and unspecified keys under `permissions` byte-for-byte; the action emitted is `created`, `updated`, or `unchanged` with per-array counts of entries added vs. duplicates removed. Otherwise (markdown-only path), the host walks the canonical sets below: read the file, ensure every canonical entry is present, remove exact-match duplicates from `permissions.allow` and `permissions.deny`, write atomically.
 
-2. Canonical `permissions.allow` entries:
+2. Canonical `permissions.allow` entries. **Only the bulleted entries below are canonical** — a pattern appearing in the surrounding prose is explanation, never an entry to install, and some of it names patterns that must *not* be added:
 
    **File operations:**
    - `Edit`
@@ -47,7 +47,7 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    - `Bash(git status *)`
    - `Bash(git show *)`
 
-   **Git commands targeting another working tree (`-C <path>`):** intentionally **none**. An allow pattern must never place its wildcard before the subcommand: `Bash(git -C * status *)` lets that leading `*` span inserted options, not just the path, so `git -C . -c core.pager='!sh -c "…"' status` matches and is approved with no prompt — and both `-c` and `--exec-path` run arbitrary commands. The seven `-C` variants that once lived here were removed for exactly the over-broadening reason `framework/bootstrap/configure/antigravity.md` gives for omitting them there. `git -C` invocations fall through to the host's normal Ask prompt; do not re-add them. The same hazard does not apply to the deny set below, where a wildcard that matches more only refuses more.
+   **Git commands targeting another working tree (`-C <path>`):** intentionally **none**. An allow pattern must never place its wildcard before the subcommand: a `Bash(git -C <wildcard> status <wildcard>)` shape lets that leading wildcard span inserted options, not just the path, so `git -C . -c core.pager='!sh -c "…"' status` matches and is approved with no prompt — and both `-c` and `--exec-path` run arbitrary commands. The seven `-C` variants that once lived here were removed for exactly the over-broadening reason `framework/bootstrap/configure/antigravity.md` gives for omitting them there. `git -C` invocations fall through to the host's normal Ask prompt; do not re-add them. The same hazard does not apply to the deny set below, where a wildcard that matches more only refuses more.
 
    **Utility:**
    - `Bash(curl *)`

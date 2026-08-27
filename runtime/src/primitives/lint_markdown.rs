@@ -1,6 +1,7 @@
 //! `lint-markdown` — wrap `npx markdownlint-cli2` and surface violations.
 //!
-//! The primitive spawns `npx markdownlint-cli2` (optionally with `--fix`)
+//! The primitive spawns a repo-local `node_modules/.bin/markdownlint-cli2`
+//! when one exists, else `npx markdownlint-cli2` (optionally with `--fix`)
 //! against the given paths, captures combined stdout/stderr, and parses
 //! each line into a [`MarkdownViolation`]. Exit code 1 (violations found)
 //! and 2+ (config or runtime error) both flow through as `clean: false`;
@@ -15,16 +16,73 @@ use regex::Regex;
 use crate::primitives::{PrimitiveError, Result};
 use crate::schema::primitives::{LintMarkdownArgs, LintMarkdownResult, MarkdownViolation};
 
+/// Pick the markdownlint-cli2 invocation: a repo-local
+/// `node_modules/.bin/markdownlint-cli2` when one exists, else `npx`.
+///
+/// Returns `(program, via_npx)`; `via_npx` tells the caller whether to pass
+/// `markdownlint-cli2` as the first argument, since the local binary *is* the
+/// tool while `npx` needs to be told what to run.
+///
+/// The local branch exists because `npx` is not reliably on `PATH`: under nvm
+/// it is a lazy-loading shell function, and a spawned process inherits `PATH`
+/// but never the parent shell's functions, so `Command::new("npx")` cannot
+/// resolve it. Checking for a vendored binary is a path test — deterministic,
+/// and cheap enough to do on every call.
+///
+/// Deliberately NOT a login shell. Sourcing a contributor's profile to find a
+/// linter would be slow on every lint, non-deterministic across shell configs,
+/// and a code-execution surface — it inverts the determinism the runtime
+/// boundary exists to guarantee.
+fn resolve_markdownlint(repo: &Path) -> (String, bool) {
+    // Windows ships npx as a `.cmd` shim, which `Command::new("npx")` cannot
+    // resolve (CreateProcess needs the explicit extension); the vendored
+    // binary carries the same distinction.
+    let local_name = if cfg!(windows) {
+        "markdownlint-cli2.cmd"
+    } else {
+        "markdownlint-cli2"
+    };
+    let local = repo.join("node_modules").join(".bin").join(local_name);
+    if local.exists() {
+        // Reported as what was launched when it fails, rather than silently
+        // falling back to npx: a vendored tool that cannot run is a condition
+        // worth seeing, not one to paper over.
+        return (local.to_string_lossy().into_owned(), false);
+    }
+    let npx = if cfg!(windows) { "npx.cmd" } else { "npx" };
+    (npx.to_string(), true)
+}
+
+/// Guidance for a spawn failure, or `None` when none applies.
+///
+/// Attached only to `NotFound` on the `npx` branch. A permissions error, or a
+/// vendored binary that will not run, has nothing to do with `PATH`, and
+/// stapling a `PATH` explanation to it would assert a cause the primitive has
+/// no basis for — the same misattribution this scenario removes, pointed the
+/// other way.
+fn launch_guidance(kind: std::io::ErrorKind, via_npx: bool) -> Option<String> {
+    (kind == std::io::ErrorKind::NotFound && via_npx).then(|| {
+        "not found on PATH. Note that a shell-function `npx` — nvm's lazy loader, where \
+         `command -v npx` prints `npx` with no path — is invisible to a spawned process, \
+         which inherits PATH but never the parent shell's functions. Put the real Node \
+         `bin` directory on PATH, or vendor markdownlint-cli2 so \
+         `node_modules/.bin/markdownlint-cli2` is used directly."
+            .to_string()
+    })
+}
+
 /// Execute the `lint-markdown` primitive.
 ///
 /// # Errors
 ///
-/// Returns [`PrimitiveError::Io`] when `npx` cannot be spawned. A non-zero
-/// markdownlint-cli2 exit code is not an error — it's recorded in the
-/// result alongside the parsed violations.
+/// Returns [`PrimitiveError::ToolLaunch`] when the resolved
+/// markdownlint-cli2 invocation cannot be spawned — naming the executable
+/// rather than the repository, since the repo is the working directory and
+/// never the thing that was missing. A non-zero markdownlint-cli2 exit code
+/// is not an error — it's recorded in the result alongside the parsed
+/// violations. [`PrimitiveError::InvalidArgument`] is returned for a path
+/// beginning with `-`.
 pub fn run(args: &LintMarkdownArgs, repo: &Path) -> Result<LintMarkdownResult> {
-    // Windows ships npx as a `.cmd` shim, which `Command::new("npx")`
-    // cannot resolve (CreateProcess needs the explicit extension).
     // A path beginning with `-` would be parsed by markdownlint-cli2 as an
     // option, not a file — `--config=evil.json` can load a `customRules` JS
     // module, i.e. arbitrary code under this primitive's permission. Reject
@@ -40,9 +98,11 @@ pub fn run(args: &LintMarkdownArgs, repo: &Path) -> Result<LintMarkdownResult> {
             });
         }
     }
-    let npx = if cfg!(windows) { "npx.cmd" } else { "npx" };
-    let mut cmd = Command::new(npx);
-    cmd.arg("markdownlint-cli2");
+    let (program, via_npx) = resolve_markdownlint(repo);
+    let mut cmd = Command::new(&program);
+    if via_npx {
+        cmd.arg("markdownlint-cli2");
+    }
     if args.fix {
         cmd.arg("--fix");
     }
@@ -51,8 +111,9 @@ pub fn run(args: &LintMarkdownArgs, repo: &Path) -> Result<LintMarkdownResult> {
     }
     cmd.current_dir(repo);
 
-    let output = cmd.output().map_err(|source| PrimitiveError::Io {
-        path: repo.into(),
+    let output = cmd.output().map_err(|source| PrimitiveError::ToolLaunch {
+        program: program.clone(),
+        guidance: launch_guidance(source.kind(), via_npx),
         source,
     })?;
 
@@ -174,5 +235,106 @@ mod tests {
         assert!(v.is_some(), "non-greedy [^:]+ accepts spaces before colon");
         let v = v.unwrap();
         assert_eq!(v.path, "path with space.md");
+    }
+
+    // --- tool resolution (spec 022, lint-markdown-tool-resolution) ----------
+
+    #[test]
+    fn prefers_a_vendored_markdownlint_over_npx() {
+        let tmp = tempfile::tempdir().unwrap();
+        let bin = tmp.path().join("node_modules").join(".bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let name = if cfg!(windows) {
+            "markdownlint-cli2.cmd"
+        } else {
+            "markdownlint-cli2"
+        };
+        std::fs::write(bin.join(name), "#!/bin/sh\nexit 0\n").unwrap();
+
+        let (program, via_npx) = resolve_markdownlint(tmp.path());
+        assert!(
+            program.contains("node_modules"),
+            "the vendored binary must win: {program}"
+        );
+        assert!(
+            !via_npx,
+            "the local binary is the tool; it must not be passed as an npx argument"
+        );
+    }
+
+    #[test]
+    fn falls_back_to_npx_when_nothing_is_vendored() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (program, via_npx) = resolve_markdownlint(tmp.path());
+        assert!(program.starts_with("npx"), "{program}");
+        assert!(via_npx, "npx must be told what to run");
+    }
+
+    #[test]
+    fn a_not_found_npx_carries_the_path_guidance() {
+        // The observed failure: npx is a shell function, so a spawned process
+        // cannot resolve it, and the operator needs to be told that rather
+        // than shown a path that exists.
+        let guidance = launch_guidance(std::io::ErrorKind::NotFound, true)
+            .expect("a missing npx must explain itself");
+        assert!(guidance.contains("not found on PATH"), "{guidance}");
+        assert!(
+            guidance.contains("shell-function"),
+            "the nvm case is the whole point: {guidance}"
+        );
+    }
+
+    #[test]
+    fn a_non_not_found_failure_carries_no_path_guidance() {
+        // A permissions error has nothing to do with PATH. Attaching the
+        // explanation anyway would be the same misattribution this change
+        // removes, pointed the other way.
+        assert!(launch_guidance(std::io::ErrorKind::PermissionDenied, true).is_none());
+        assert!(launch_guidance(std::io::ErrorKind::Other, true).is_none());
+    }
+
+    #[test]
+    fn a_vendored_binary_failure_carries_no_path_guidance() {
+        // The local branch did not consult PATH, so PATH cannot be the fix.
+        assert!(launch_guidance(std::io::ErrorKind::NotFound, false).is_none());
+    }
+
+    #[test]
+    fn a_broken_vendored_binary_names_itself_rather_than_falling_back() {
+        // A vendored tool that cannot run is a condition worth seeing. The
+        // error must name that path, not npx.
+        let tmp = tempfile::tempdir().unwrap();
+        let bin = tmp.path().join("node_modules").join(".bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let name = if cfg!(windows) {
+            "markdownlint-cli2.cmd"
+        } else {
+            "markdownlint-cli2"
+        };
+        // A directory is reliably unspawnable on every platform, without
+        // depending on permission bits that CI may normalize.
+        std::fs::create_dir(bin.join(name)).unwrap();
+
+        let err = run(
+            &LintMarkdownArgs {
+                paths: vec!["README.md".into()],
+                fix: false,
+            },
+            tmp.path(),
+        )
+        .expect_err("an unspawnable vendored binary must error");
+        let rendered = err.to_string();
+        assert!(
+            rendered.contains("could not launch"),
+            "must name the launch, not an I/O path: {rendered}"
+        );
+        assert!(
+            rendered.contains("node_modules"),
+            "must name the vendored binary it actually tried: {rendered}"
+        );
+        assert!(
+            !rendered.contains("not found on PATH"),
+            "the local branch never consulted PATH: {rendered}"
+        );
     }
 }

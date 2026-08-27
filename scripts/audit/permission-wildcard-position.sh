@@ -33,9 +33,11 @@
 #   29a configure/claude.md — bullet entries of the form `- `Bash(...)`` inside
 #       the `permissions.allow` section, whose bounds are derived from the
 #       numbered headings rather than hardcoded line numbers. Anchoring to the
-#       bullet form is load-bearing: the section's own prose cites the unsafe
-#       pattern as an example of what not to write, and a looser grep would
-#       report that explanation as a violation of itself.
+#       bullet form is load-bearing: the section's prose explains the unsafe
+#       shape as a counter-example, and a looser grep would report that
+#       explanation as a violation of itself. The prose now spells the shape
+#       with <wildcard> placeholders rather than a copyable literal, so this is
+#       defence in depth rather than the only guard.
 #   29b configure/opencode.md — `"pattern": "allow"` keys in the `bash` action
 #       map. Value-scoped, so the `"deny"` keys in the same object are excluded
 #       without needing section bounds.
@@ -85,17 +87,25 @@ mid_wildcard() {
 }
 
 # 29a — claude.md, bullet-form Bash() entries inside the allow section.
+# Initialized before the branch below: when the headings do not parse, that
+# branch is skipped, and a summary line referencing an unset counter would die
+# on `set -u` — turning a legible finding into a shell error. Found by this
+# family firing on its own subject after the heading text changed.
+claude_count=0
+
 # The section's list number is not read — only where the heading sits. Matching
 # `^[0-9]+\.` rather than a literal "2."/"3." keeps the bounds derived, so
-# renumbering the command's steps moves the window instead of breaking it.
-start_line="$(grep -nE '^[0-9]+\. Canonical `permissions\.allow` entries:' "$CLAUDE" | cut -d: -f1 | head -1)"
-end_line="$(grep -nE '^[0-9]+\. Canonical `permissions\.deny` entries:' "$CLAUDE" | cut -d: -f1 | head -1)"
+# renumbering the command's steps moves the window instead of breaking it. The
+# trailing colon is not required: the heading carries a sentence after it in
+# some revisions, and anchoring to punctuation made an editorial edit read as a
+# broken parse.
+start_line="$(grep -nE '^[0-9]+\. Canonical `permissions\.allow` entries' "$CLAUDE" | cut -d: -f1 | head -1)"
+end_line="$(grep -nE '^[0-9]+\. Canonical `permissions\.deny` entries' "$CLAUDE" | cut -d: -f1 | head -1)"
 
 if [ -z "$start_line" ] || [ -z "$end_line" ]; then
   emit "$CLAUDE" "could not locate the canonical allow/deny section headings — the parse is broken, not the file" \
     "check the \"N. Canonical \`permissions.allow\` entries:\" heading format"
 else
-  claude_count=0
   while IFS=: read -r lineno entry; do
     [ -n "${entry:-}" ] || continue
     claude_count=$((claude_count + 1))

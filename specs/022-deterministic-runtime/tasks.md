@@ -258,3 +258,14 @@ Runtime half of [049's rename](../049-rename-govern-to-ductus/spec.md): the per-
 - [x] Document the same detection on the markdown-only path in the completion gate's step 5, and regenerate `.claude/commands/ductus/implement.md`
 
 - **Done when**: `framework/commands/implement.md` enumerates four gate checks everywhere it enumerates them (step 14's inline list and `blocked_by` list, and the completion gate's step 5, whose "all three checks" count is corrected), with `ReviewStale` described in the same shape as the other three so the markdown-only path enforces the gate the primitive enforces; `check-review-gate` emits `guidance` naming any durable contract with uncommitted changes and stating that staleness could not be determined against it, without changing `passed`; `/ductus:implement` surfaces that guidance in the pre-transition summary; the guidance is absent when every durable contract is committed; and the regenerated `.claude/commands/ductus/implement.md` matches.
+
+## 100. Implement scenario: [lint-markdown-tool-resolution](scenarios/lint-markdown-tool-resolution.md) — name the tool that could not be launched
+
+- [x] Add a resolution step that prefers `node_modules/.bin/markdownlint-cli2` at the repo root, falling back to `npx` / `npx.cmd`
+- [x] Replace the `PrimitiveError::Io { path: repo }` mapping with a distinct outcome naming the executable that failed to launch, so the repo path stops standing in for the missing program
+- [x] Attach not-found guidance only on `ENOENT` — naming the nvm shell-function case and the two fixes (real Node `bin` on `PATH`, or vendor `markdownlint-cli2`) — and leave other spawn errors carrying their OS error unadorned
+- [x] Add tests: local binary preferred when present, fallback to npx when absent, ENOENT names the executable and carries guidance, non-ENOENT failure omits the guidance, and the unchanged non-zero-exit contract
+- [x] Confirm `check-review-gate` surfaces the improved error unchanged, and that no login shell is spawned on any path
+- [x] Bump all three version sites and add a CHANGELOG entry, then tag `ductus-v<version>` — a `runtime/` change is not landed without it (AGENTS.md §Workflow)
+
+- **Done when**: `lint-markdown` prefers a repo-root `node_modules/.bin/markdownlint-cli2` when present and falls back to `npx` (`npx.cmd` on Windows); a spawn failure names the executable rather than the repo path, and on `ENOENT` carries guidance that a shell-function `npx` is invisible to a spawned process; a non-`ENOENT` spawn failure keeps the OS error without the `PATH` guidance; the `markdownlint-cli2` non-zero exit contract is unchanged; and no login shell is invoked at any point.

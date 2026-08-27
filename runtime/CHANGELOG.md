@@ -2,6 +2,35 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.33.0] — 2026-08-27
+
+### Added
+
+- **`lint-markdown` prefers a vendored `markdownlint-cli2`.** When
+  `node_modules/.bin/markdownlint-cli2` exists at the repo root it is invoked
+  directly, removing the `npx` dependency for projects that vendor the tool.
+  A path check, not a shell — deterministic and cheap enough per call. A
+  vendored binary that cannot be launched reports *itself* rather than falling
+  back to `npx`, because a broken vendored tool is a condition worth seeing.
+
+### Fixed
+
+- **A spawn failure names the executable, not the repository.** `lint-markdown`
+  mapped any spawn error to `Io { path: repo }`, so an unresolvable `npx`
+  produced `I/O error on <repo>: No such file or directory` — which reads as a
+  missing repository or fixture, the one thing that is definitely present. The
+  new `PrimitiveError::ToolLaunch` names what could not be launched, and on
+  `NotFound` explains that a shell-function `npx` (nvm's lazy loader) is
+  invisible to a spawned process, which inherits `PATH` but never the parent
+  shell's functions. Guidance is attached only to `NotFound`, and only on the
+  `npx` branch: a permissions error, or a failure of a vendored binary that
+  never consulted `PATH`, must not carry a `PATH` explanation. This is the
+  misdirection that cost most of a session on 2026-08-27 — it blocked
+  `check-review-gate` twice (forcing the markdown-only fallback), failed
+  `runtime/tests/mcp.rs` on an unmodified tree, and got a commit rejected by
+  the pre-commit hook, each presenting as an unrelated failure. It is invisible
+  in CI, where `npx` is a real binary.
+
 ## [0.32.0] — 2026-08-27
 
 ### Added

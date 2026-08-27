@@ -319,6 +319,27 @@ pub enum PrimitiveError {
         /// One-line reason describing the rejection.
         reason: String,
     },
+    /// An external tool could not be launched. Distinct from
+    /// [`PrimitiveError::Io`] because that variant names a *path the
+    /// primitive was operating on*, and using it for a spawn failure named
+    /// the repository — the one thing that was definitely present — while
+    /// the missing executable went unnamed. Observed 2026-08-27: an
+    /// unresolvable `npx` reported "I/O error on <repo>: No such file or
+    /// directory", which reads as a missing fixture and sent the reader
+    /// looking for the wrong thing (spec 022, scenario
+    /// `lint-markdown-tool-resolution`).
+    #[error("could not launch {program}: {source}{}", .guidance.as_ref().map(|g| format!(" — {g}")).unwrap_or_default())]
+    ToolLaunch {
+        /// The executable that could not be launched, as invoked.
+        program: String,
+        /// Underlying spawn error.
+        #[source]
+        source: std::io::Error,
+        /// Actionable guidance, attached only when the failure is
+        /// `NotFound` — a permissions or other spawn error must not carry
+        /// a `PATH` explanation it has no basis for.
+        guidance: Option<String>,
+    },
     /// `set-status` was invoked with a `from` or `to` value outside the
     /// constitution's lifecycle set. Transition-edge legality stays with
     /// procedures; the primitive guards set membership only.
