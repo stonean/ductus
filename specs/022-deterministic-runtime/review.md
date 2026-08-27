@@ -1,9 +1,9 @@
 ---
 spec: 022-deterministic-runtime
-scenario: review-gate-unexaminable-contracts
-reviewed-at: 2026-08-27T16:14:53Z
-reviewed-against: 1913abbf57595f1faba26801934fad0a75cf4b83
-diff-base: a4df343d01d56901d79bb82476ec69c9e47a0126
+scenario: lint-markdown-tool-resolution
+reviewed-at: 2026-08-27T18:16:43Z
+reviewed-against: 27ec059d499b41dd1f47be5f605df9024bceb508
+diff-base: 8393841
 must-violations: 0
 should-violations: 0
 low-confidence: 0
@@ -15,17 +15,19 @@ skipped-passes: []
 
 ## Summary
 
-Reviewed at `1913abb`. 0 MUST, 0 SHOULD.
+Reviewed at `27ec059`, the commit carrying the work. 0 MUST, 0 SHOULD.
 
-The previous run's `QUAL-CLAIM-001` SHOULD is **resolved, not waived**. `unexaminable_contracts_guidance` returned `None` both when every durable contract was committed and when git could not be queried, so a caller read a bare pass as assurance in a state where nothing had been examined — the same conflation the function exists to remove one level up. It now reports that the working tree could not be inspected, distinctly from finding nothing dirty, and `a_working_tree_that_cannot_be_inspected_is_not_reported_as_clean` covers it. Resolving rather than accepting was the right call precisely because the finding was against this scenario's own contract: an exception here would have been the scenario contradicting itself.
+Scope: `runtime/src/primitives/lint_markdown.rs` (tool resolution, the reworked spawn-failure path, six new tests), `runtime/src/primitives/mod.rs` (the new `ToolLaunch` variant), the three version sites, the 022 scenario and task, plus two carried edits — the `configure/claude.md` canonical-boundary chore and the Family 29 script repair it exposed.
 
-Fixing it surfaced a second instance in the existing tests. `passes_when_lint_clean_and_review_current` asserted `guidance.is_none()` against a bare tempdir with no git repository — an assertion that encoded the old conflation, since the gate cannot inspect a non-repo and silence there could never have meant "examined and clean". It now asserts the honest outcome, with the genuinely-clean path covered separately by `a_clean_tree_emits_no_unexaminable_guidance`, which commits first. A test that had to change to accommodate the fix is worth naming: it was asserting the defect.
+Security: the change reduces surface rather than adding it. The vendored-binary branch is a path existence check followed by a direct spawn — no shell, no `PATH` search of adopter-controlled directories beyond what `Command` already did, and no profile sourcing. The scenario's rejection of a login-shell resolution is the load-bearing decision here: it would have been the expedient fix and a genuine code-execution surface, since sourcing a contributor's profile to locate a linter runs arbitrary shell under the primitive's permission. The existing leading-`-` argument guard (which blocks `--config` loading arbitrary JS) is untouched and still runs before resolution.
 
-Release state is now correct. The prior commit changed `runtime/` without a version bump, so it sat on `main` reachable by no adopter — `AGENTS.md` §Workflow makes the bump and the `ductus-v<version>` tag part of the completion gate rather than a separate chore, and `ductus-v0.31.0` was already tagged. All three sites now read 0.32.0 (repo-root `version`, `runtime/Cargo.toml`, a matching `CHANGELOG.md` section); Family 20 and `lint-release-ordering.sh` both pass. The parity goldens needed no re-bless — the version is a placeholder the harness substitutes — and the release binary was rebuilt first, per the same entry.
+Quality: the guidance predicate is correctly narrow. `launch_guidance` fires only on `NotFound` **and** only on the `npx` branch, so neither a permissions error nor a broken vendored binary carries a `PATH` explanation it has no basis for — that would be the same misattribution this scenario removes, pointed the other way, and it is covered by two dedicated tests. Extracting it from the closure is what made it directly testable; forcing a real `ENOENT` from a spawn would have required manipulating the test process's environment. The unspawnable-vendored-binary test uses a directory rather than permission bits, which is reliably unspawnable on every platform and does not depend on CI normalizing modes.
 
-Security, reuse, efficiency, and simplicity are unchanged from the prior run and re-checked: no new surface, `is_durable_contract` still shared with `stale_review_block` rather than restated, one pathspec-bounded status walk, and no new abstraction — the fail-distinctly change is a closure returning the same `Option<String>` the field already carried.
+Reuse and simplicity: `resolve_markdownlint` returns `(program, via_npx)` rather than branching at two call sites, and the Windows `.cmd` distinction moved into it so both branches state it once. `ToolLaunch` is a new variant rather than a reuse of `Io` because the two carry different subjects — `Io` names a path the primitive was operating on, and using it for a spawn failure is precisely what named the repository instead of the missing program. Efficiency: one added `Path::exists` per lint.
 
-Verification: 1020 lib tests, parity 11/11, mcp 26/26, every other target green; `cargo fmt --check` and `clippy --release --all-targets --locked -- -D warnings` clean; the six repo lint scripts clean; `shellcheck -S warning` over the tracked shell set clean; `markdownlint-cli2 '**/*.md'` clean; the 29-family audit green. The audit is re-run after this commit and before tagging, per the entry that exists because a green pre-commit audit is not evidence for the families that read history.
+Verified end to end against the real repository, not fixtures alone: under `PATH=/usr/bin:/bin` the primitive now reports `could not launch npx: No such file or directory (os error 2) — not found on PATH…` with the nvm explanation, where it previously reported `I/O error on <repo>: No such file or directory`. The `check-review-gate` caller inherits this unchanged.
+
+Release state: all three version sites read 0.33.0 with a matching CHANGELOG section; Family 20 and `lint-release-ordering.sh` pass; goldens needed no re-bless (version is a placeholder) and the release binary was rebuilt first. Full gate green — 1026 lib tests, parity 11/11, mcp 26/26, every other target; `cargo fmt --check` and `clippy --release --all-targets --locked -- -D warnings` clean; six lint scripts, `shellcheck -S warning` over the tracked shell set, `markdownlint-cli2 '**/*.md'`, and the 29-family audit all clean. The audit is re-run after this commit and before tagging.
 
 ## MUST violations (blocking)
 
