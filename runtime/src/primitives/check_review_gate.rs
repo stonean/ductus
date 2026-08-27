@@ -185,8 +185,23 @@ pub(crate) fn run_with_lint(
 /// same reason: widening it to every dirty file under the feature would fire
 /// on nearly every run (`tasks.md` is rewritten by `mark-task` on each task)
 /// and be learned-ignored, which is worse than not reporting at all.
+///
+/// A git failure returns guidance rather than `None`. Returning `None` there
+/// would emit the same value for "every contract is committed" and "the
+/// working tree could not be inspected", which is the `QUAL-CLAIM-001`
+/// conflation this whole function exists to remove one level up — a
+/// self-inflicted instance of it, caught by this scenario's own review.
 fn unexaminable_contracts_guidance(repo: &Path, rel_dir: &str) -> Option<String> {
-    let repository = git2::Repository::discover(repo).ok()?;
+    let cannot_inspect = |reason: &str| {
+        Some(format!(
+            "Staleness could not be determined: the working tree could not be inspected ({reason}), \
+             so uncommitted durable contracts — if any — were not examined."
+        ))
+    };
+
+    let Ok(repository) = git2::Repository::discover(repo) else {
+        return cannot_inspect("no git repository found");
+    };
     let mut options = git2::StatusOptions::new();
     options
         .include_untracked(true)
@@ -196,7 +211,9 @@ fn unexaminable_contracts_guidance(repo: &Path, rel_dir: &str) -> Option<String>
         // full worktree status on every completion attempt, to answer a
         // question only about this spec's durable contracts.
         .pathspec(rel_dir);
-    let statuses = repository.statuses(Some(&mut options)).ok()?;
+    let Ok(statuses) = repository.statuses(Some(&mut options)) else {
+        return cannot_inspect("git status failed");
+    };
 
     let prefix = format!("{rel_dir}/");
     // `path()` errors on a non-UTF-8 path, which cannot be a durable contract
@@ -479,8 +496,19 @@ mod tests {
         assert!(result.passed);
         assert!(result.blocked_by.is_none());
         assert!(result.message.is_none());
-        assert!(result.guidance.is_none());
         assert!(result.violations.is_empty());
+        // This fixture is a bare tempdir with no git repository, so the gate
+        // genuinely cannot inspect the working tree and says so. The
+        // assertion used to read `guidance.is_none()`, which is precisely the
+        // conflation this scenario removes: silence has to mean "examined and
+        // clean", and it cannot mean that here. The genuinely-clean case is
+        // `a_clean_tree_emits_no_unexaminable_guidance`, which commits first.
+        assert!(
+            result
+                .guidance
+                .is_some_and(|g| g.contains("could not be inspected")),
+            "a non-repo fixture must not read as an examined-clean tree"
+        );
     }
 
     // --- gate check 5: review staleness -------------------------------------
@@ -1219,6 +1247,26 @@ mod tests {
             result.guidance.is_none(),
             "bookkeeping churn is not a contract: {:?}",
             result.guidance
+        );
+    }
+
+    #[test]
+    fn a_working_tree_that_cannot_be_inspected_is_not_reported_as_clean() {
+        // The QUAL-CLAIM-001 finding this scenario's own review raised against
+        // it: `None` for "could not look" is the same value as `None` for
+        // "nothing dirty", so a caller reads a bare pass as assurance. Not a
+        // git repository at all is the reachable form — `stale_review_block`
+        // returns before touching git when `reviewed-against` is empty, so the
+        // discovery here can be the first one attempted.
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+
+        let guidance = unexaminable_contracts_guidance(tmp.path(), "specs/007-gate");
+        let guidance = guidance.expect("an uninspectable tree must not read as clean");
+        assert!(guidance.contains("could not be inspected"), "{guidance}");
+        assert!(
+            !guidance.contains("uncommitted durable contract(s):"),
+            "it must not claim to have found specific files: {guidance}"
         );
     }
 }

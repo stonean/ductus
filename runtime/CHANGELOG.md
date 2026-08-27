@@ -2,6 +2,37 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.32.0] — 2026-08-27
+
+### Added
+
+- **`check-review-gate` names the durable contracts it could not examine.** The
+  staleness check compares committed trees, so a `scenarios/*.md` or
+  `data-model.md` living only in the working tree is outside it — and at the
+  moment the gate runs, that is the normal state rather than an edge case: a
+  scenario written during the session is uncommitted, `reviewed-against` is
+  `HEAD`, the diff is empty, and `passed: true` reads as "examined and current"
+  when nothing was examined. A passing gate now carries `guidance` naming those
+  contracts. It does **not** block — committing before reviewing is a workflow
+  choice, not an error; what it removes is a clean verdict that is silent about
+  its own blind spot, the `QUAL-CLAIM-001` contract applied to the gate itself.
+  A genuine `ReviewStale` block still wins, a clean tree emits nothing so
+  silence keeps meaning "examined", and a working tree that cannot be inspected
+  at all reports that rather than returning the same value as "nothing dirty".
+  Scoped to durable contracts for the same reason the staleness check is:
+  `tasks.md` is rewritten by `mark-task` on every task, and a notice that fires
+  on nearly every run is learned-ignored.
+
+### Fixed
+
+- **`/ductus:implement`'s gate enumerations were one check short.** Step 14 and
+  the completion gate's step 5 both listed three checks — the latter opening
+  with "evaluates all three checks below" — while the primitive evaluates four.
+  `ReviewStale` appeared in neither, so the deterministic path and the
+  documented markdown-only fallback enforced different gates, with the fallback
+  the weaker one and silently so. The primitive's own module doc had drifted
+  the same way ("all three block reasons" against five variants).
+
 ## [0.31.0] — 2026-08-19
 
 ### Added
