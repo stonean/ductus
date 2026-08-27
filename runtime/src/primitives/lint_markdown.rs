@@ -299,6 +299,20 @@ mod tests {
         assert!(launch_guidance(std::io::ErrorKind::NotFound, false).is_none());
     }
 
+    // Unix-only: forcing a *spawn* failure needs something the OS refuses to
+    // execute, and the trick used here does not transfer. On Windows this test
+    // failed in CI with `LintMarkdownResult { clean: false, exit_code: 1 }` —
+    // the spawn succeeded and the process exited non-zero, most likely because
+    // a `.cmd` target is resolved through the command processor rather than
+    // executed directly. The behavior under test is not platform-specific;
+    // only this way of provoking it is. The other half of the contract — that
+    // a vendored-binary failure carries no PATH guidance — is asserted
+    // platform-independently by `a_vendored_binary_failure_carries_no_path_guidance`.
+    //
+    // The first version of this comment claimed a directory is "reliably
+    // unspawnable on every platform". That was an unverified cross-platform
+    // assertion, and CI disproved it.
+    #[cfg(unix)]
     #[test]
     fn a_broken_vendored_binary_names_itself_rather_than_falling_back() {
         // A vendored tool that cannot run is a condition worth seeing. The
@@ -306,14 +320,9 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let bin = tmp.path().join("node_modules").join(".bin");
         std::fs::create_dir_all(&bin).unwrap();
-        let name = if cfg!(windows) {
-            "markdownlint-cli2.cmd"
-        } else {
-            "markdownlint-cli2"
-        };
-        // A directory is reliably unspawnable on every platform, without
-        // depending on permission bits that CI may normalize.
-        std::fs::create_dir(bin.join(name)).unwrap();
+        // A directory cannot be executed on Unix, and unlike permission bits
+        // it is not something CI might normalize.
+        std::fs::create_dir(bin.join("markdownlint-cli2")).unwrap();
 
         let err = run(
             &LintMarkdownArgs {
