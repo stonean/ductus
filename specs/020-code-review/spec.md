@@ -9,7 +9,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 14
+next-criterion: 15
 ---
 
 # 020 — `/ductus:review` code review command with blocking gate
@@ -56,6 +56,7 @@ tools — a discipline dependency the framework should remove.
 - [x] AC11: **Tech-stack alignment gate**: before running review passes, `/ductus:review` confirms the project's `AGENTS.md` `Tech Stack` section exists and appears consistent with the implementation in scope. Misalignment or a missing/empty section is a blocking error, not a warning. Adopters can persist a successful check by setting `.govern.toml [review] tech-stack-verified = true`, after which subsequent runs skip the check until the operator manually clears the key.
 - [x] AC12: **Empty scope**: a target with an empty resolved scope (no implementation files) produces a `review.md` recording 0 findings across all five passes, `blocking: false`, and exits `0`.
 - [x] AC13: **Cross-pass dedupe**: when the same finding (matching rule ID, file, and overlapping line range) is produced by more than one pass, only the highest-severity instance is retained in `must-violations` and `should-violations`; lower-severity duplicates are dropped from the counts and report.
+- [x] AC14: **Flag parsing is specified and surfaced**: the command body documents how `$ARGUMENTS` is parsed for every flag in the Flags table, and `argument-hint` names each of them, so no flag is documented without being surfaced. A `--since` with no value and an unrecognized flag are each reported to the operator rather than silently absorbed. `/audit` holds `argument-hint` and the Flags table in agreement, so a flag added later cannot reopen the gap without a finding.
 
 ## Non-goals
 
