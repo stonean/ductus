@@ -20,7 +20,7 @@ which reads as a missing repository or fixture directory — the one thing that 
 
 The consequences ran through the whole pipeline, because `lint-markdown` is gate check 1 of `check-review-gate`: the MCP tool errored, `check-review-gate` could not be reached at all (twice, forcing the documented markdown-only fallback), `runtime/tests/mcp.rs:86` failed on an unmodified tree, and a `git commit` was rejected by the pre-commit hook's `cargo test`. Every one of those presented as an unrelated failure. The same suite passes in CI, where `npx` is a real binary — so this is invisible to the one signal that would otherwise catch it.
 
-What the runtime must **not** do is reach for a login shell to resolve the function. That would be slow on every lint, non-deterministic across contributors' shell configs, and a code-execution surface — sourcing a user's profile to find a linter inverts [§runtime-boundary](../../framework/constitution.md#runtime-boundary)'s determinism guarantee. The fix is to look where a program can legitimately look, and to say plainly when it cannot find it.
+What the runtime must **not** do is reach for a login shell to resolve the function. That would be slow on every lint, non-deterministic across contributors' shell configs, and a code-execution surface — sourcing a user's profile to find a linter inverts [§runtime-boundary](../../../framework/constitution.md#runtime-boundary)'s determinism guarantee. The fix is to look where a program can legitimately look, and to say plainly when it cannot find it.
 
 ## Behavior
 
