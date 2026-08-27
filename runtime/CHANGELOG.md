@@ -2,6 +2,53 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.34.0] — 2026-08-27
+
+### Fixed
+
+- **`derive-references` reports drift it examined but did not write.** Under
+  `--staged` the primitive narrowed its *enumeration* to the staged set, on the
+  recorded reasoning that a spec's `references:` is a pure function of its own
+  body, so "enumerated" and "written" coincide and the in-sync claim was
+  already sound. That reasoning was wrong. A `references:` entry is a function
+  of the body **and** the `[services]` registry — the harvest resolves each
+  link's repo URL through the registry to produce the `service:` alias. Rename
+  a service alias and every referencing spec drifts while none of them is
+  touched; an untouched spec is never staged, so staged mode could never
+  examine one, on any commit. An adopter carried dead references for nine
+  commits behind this while the pre-commit hook reported the tree in sync every
+  time. The walk now spans every tracked spec and `--staged` filters only the
+  write, with drifted-but-unstaged specs reported in the new `unwritten` field —
+  the same field, with the same meaning, its sibling already had. Write
+  behavior is unchanged: committing one spec still never rewrites another.
+- **Both derive primitives name the tracked specs they could not read.** They
+  enumerate the git index and skip `!path.is_file()`, but reported
+  `examined: tracked.len()` — so a spec tracked in the index and deleted from
+  the worktree without the deletion being staged was counted as examined
+  without being read, and appeared in none of the result's other lists. Both
+  results gain `absent`, and `examined` now counts specs actually read.
+- **`append-task` no longer discards a supplied `slug` when `body` is given.**
+  The argument was documented as "ignored when `body` is supplied", which
+  silently broke the task-references-its-scenario promise `/ductus:groom` and
+  `/ductus:amend` both make: a caller assembling its own body lost the
+  `scenarios/{slug}.md` line with nothing to catch it, and the
+  `scenario-consistency` family reads that line, so such a task looked like one
+  with no scenario rather than one whose link was dropped. The pointer now
+  renders above the caller's items whenever both are supplied. A caller wanting
+  a bare body says so by omitting `slug`.
+
+### Added
+
+- **`check-command-flags`** — reports flags a command's Flags table documents
+  but its `argument-hint:` frontmatter omits. `argument-hint` is the surface a
+  host renders when it offers a command, so a flag absent from it is one the
+  operator is never shown: an adopter reported `--since` as "doesn't show as an
+  option" while `review.md`'s table listed eight flags and its hint named three,
+  and the flag had been plumbed through `compute-review-scope` the whole time.
+  Surfaced as `/audit` Family 30. Maintainer scope — the subject is
+  `framework/commands/`, where the divergence originates, not the generated
+  copies an adopter cannot repair.
+
 ## [0.33.0] — 2026-08-27
 
 ### Added
