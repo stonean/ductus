@@ -4,13 +4,20 @@
 //! 022, scenario coverage-expansion-primitives), which the host previously
 //! walked by hand on every completion attempt: first the feature
 //! directory's markdown lint (through the `lint-markdown` machinery,
-//! replacing the raw `npx markdownlint-cli2` invocation), then the spec
-//! frontmatter `review:` block. The first failing check wins and produces
-//! the canonical `blocked: …` message — with the adopter's `[host]
-//! project` command namespace substituted into the `/{project}:review`
-//! references — plus, on `must-violations`, the resolve-or-waive
-//! guidance. A blocked gate is a domain outcome the host acts on (halt,
-//! do not propose the transition), never an operational error.
+//! replacing the raw `npx markdownlint-cli2` invocation), then unresolved
+//! scenario open questions, then the spec frontmatter `review:` block,
+//! then whether the recorded review is still current. The first failing
+//! check wins and produces the canonical `blocked: …` message — with the
+//! adopter's `[host] project` command namespace substituted into the
+//! `/{project}:review` references — plus, on `must-violations`, the
+//! resolve-or-waive guidance and, on `review-stale`, the re-run guidance.
+//! A blocked gate is a domain outcome the host acts on (halt, do not
+//! propose the transition), never an operational error.
+//!
+//! A **passing** gate can still carry `guidance`: the staleness check
+//! compares committed trees, so it names any durable contract that was
+//! uncommitted and therefore outside what it examined. That notice never
+//! changes `passed` — see [`unexaminable_contracts_guidance`].
 
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -35,7 +42,7 @@ use crate::schema::primitives::{
 /// [`PrimitiveError::FeatureNotFound`] when the feature directory does
 /// not exist, [`PrimitiveError::Io`] when `spec.md` is unreadable or
 /// `npx` cannot be spawned, or [`PrimitiveError::Yaml`] for a malformed
-/// frontmatter block. Every gate verdict — including all three block
+/// frontmatter block. Every gate verdict — including all five block
 /// reasons — is a domain outcome in the result.
 pub fn run(args: &CheckReviewGateArgs, repo: &Path) -> Result<CheckReviewGateResult> {
     run_with_lint(args, repo, lint_markdown::run)
@@ -150,13 +157,73 @@ pub(crate) fn run_with_lint(
         return Ok(stale);
     }
 
+    // The gate passes. Before saying so, name what it could not examine: the
+    // staleness diff above compares committed trees, so a durable contract
+    // living only in the working tree is outside it. At this moment that is
+    // the normal state rather than an edge case — a scenario written during
+    // the session is uncommitted, `reviewed-against` is HEAD, the diff is
+    // empty, and a bare `passed: true` reads as "examined and current" when
+    // nothing was examined. Reporting it does not block: committing before
+    // reviewing is a workflow choice. It only stops the clean verdict from
+    // being silent about its own blind spot, which is `QUAL-CLAIM-001`
+    // applied to the gate itself — the same failure `stale_review_block`
+    // already records against an unresolvable `reviewed-against`.
     Ok(CheckReviewGateResult {
         passed: true,
         blocked_by: None,
         message: None,
-        guidance: None,
+        guidance: unexaminable_contracts_guidance(repo, &rel_dir),
         violations: vec![],
     })
+}
+
+/// Durable contracts under `rel_dir` with uncommitted changes — modified,
+/// staged, or untracked. `None` when every one of them is committed, so the
+/// common case stays quiet and its silence genuinely means "examined".
+///
+/// Scoped to the same durable contracts the staleness check uses, and for the
+/// same reason: widening it to every dirty file under the feature would fire
+/// on nearly every run (`tasks.md` is rewritten by `mark-task` on each task)
+/// and be learned-ignored, which is worse than not reporting at all.
+fn unexaminable_contracts_guidance(repo: &Path, rel_dir: &str) -> Option<String> {
+    let repository = git2::Repository::discover(repo).ok()?;
+    let mut options = git2::StatusOptions::new();
+    options
+        .include_untracked(true)
+        .recurse_untracked_dirs(true)
+        .include_ignored(false)
+        // Bound the walk to the feature tree. Without a pathspec this is a
+        // full worktree status on every completion attempt, to answer a
+        // question only about this spec's durable contracts.
+        .pathspec(rel_dir);
+    let statuses = repository.statuses(Some(&mut options)).ok()?;
+
+    let prefix = format!("{rel_dir}/");
+    // `path()` errors on a non-UTF-8 path, which cannot be a durable contract
+    // under the validated slug grammar anyway.
+    let dirty: BTreeSet<String> = statuses
+        .iter()
+        .filter_map(|entry| entry.path().ok().map(|p| p.replace('\\', "/")))
+        .filter(|path| path.strip_prefix(&prefix).is_some_and(is_durable_contract))
+        .collect();
+
+    if dirty.is_empty() {
+        return None;
+    }
+    let shown: Vec<&str> = dirty.iter().take(3).map(String::as_str).collect();
+    let more = dirty.len().saturating_sub(shown.len());
+    let tail = if more > 0 {
+        format!(" (+{more} more)")
+    } else {
+        String::new()
+    };
+    Some(format!(
+        "Staleness could not be determined against {} uncommitted durable contract(s): {}{tail}. \
+         The check compares committed trees, so these were not examined; commit them and re-run \
+         the review if the recorded verdict should describe them.",
+        dirty.len(),
+        shown.join(", ")
+    ))
 }
 
 /// The staleness gate check: `Some(blocked)` when one of the spec's
@@ -983,5 +1050,175 @@ mod tests {
                 "expected InvalidPath for {bad:?}"
             );
         }
+    }
+
+    // --- unexaminable contracts: what the gate could not look at -------------
+
+    #[test]
+    fn an_untracked_scenario_is_reported_as_unexaminable() {
+        // The observed 2026-08-27 shape. `create-scenario` wrote the file this
+        // session, so it exists on disk and in no tree the staleness diff
+        // consults; `reviewed-against` is HEAD, the diff is empty, and without
+        // this the gate reports a bare clean verdict.
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        let base = git_commit_all(tmp.path(), "base");
+        seed_reviewed_at(tmp.path(), &base);
+
+        fs::create_dir_all(tmp.path().join("specs/007-gate/scenarios")).unwrap();
+        fs::write(
+            tmp.path().join("specs/007-gate/scenarios/fresh.md"),
+            "# Fresh\n\n## Open Questions\n\n*None.*\n",
+        )
+        .unwrap();
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(result.passed, "the notice must not block: {result:?}");
+        assert!(result.blocked_by.is_none());
+        assert!(result.message.is_none());
+        let guidance = result
+            .guidance
+            .expect("clean verdict must name its blind spot");
+        assert!(guidance.contains("could not be determined"), "{guidance}");
+        assert!(guidance.contains("scenarios/fresh.md"), "{guidance}");
+    }
+
+    #[test]
+    fn a_modified_committed_contract_is_reported_as_unexaminable() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        fs::create_dir_all(tmp.path().join("specs/007-gate/scenarios")).unwrap();
+        fs::write(
+            tmp.path().join("specs/007-gate/scenarios/retry.md"),
+            "# Retry\n\n## Open Questions\n\n*None.*\n",
+        )
+        .unwrap();
+        let base = git_commit_all(tmp.path(), "base");
+        seed_reviewed_at(tmp.path(), &base);
+
+        // Edited but not committed: invisible to a tree-to-tree diff.
+        fs::write(
+            tmp.path().join("specs/007-gate/scenarios/retry.md"),
+            "# Retry\n\nUncommitted contract change.\n\n## Open Questions\n\n*None.*\n",
+        )
+        .unwrap();
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(result.passed, "{result:?}");
+        let guidance = result.guidance.expect("dirty contract must be named");
+        assert!(guidance.contains("scenarios/retry.md"), "{guidance}");
+    }
+
+    #[test]
+    fn a_staged_only_change_is_reported_as_unexaminable() {
+        // Staged is still not committed, so the diff cannot see it either.
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        fs::create_dir_all(tmp.path().join("specs/007-gate/scenarios")).unwrap();
+        fs::write(
+            tmp.path().join("specs/007-gate/scenarios/retry.md"),
+            "# Retry\n\n## Open Questions\n\n*None.*\n",
+        )
+        .unwrap();
+        let base = git_commit_all(tmp.path(), "base");
+        seed_reviewed_at(tmp.path(), &base);
+
+        fs::write(
+            tmp.path().join("specs/007-gate/scenarios/retry.md"),
+            "# Retry\n\nStaged change.\n\n## Open Questions\n\n*None.*\n",
+        )
+        .unwrap();
+        let repository = git2::Repository::open(tmp.path()).unwrap();
+        let mut index = repository.index().unwrap();
+        index
+            .add_path(Path::new("specs/007-gate/scenarios/retry.md"))
+            .unwrap();
+        index.write().unwrap();
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(result.passed, "{result:?}");
+        assert!(
+            result.guidance.unwrap().contains("scenarios/retry.md"),
+            "a staged-only change is still uncommitted"
+        );
+    }
+
+    #[test]
+    fn a_genuine_stale_block_wins_over_the_unexaminable_notice() {
+        // Both conditions at once. The notice is not a softer substitute for a
+        // check that actually fired, so the block must survive.
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        fs::create_dir_all(tmp.path().join("specs/007-gate/scenarios")).unwrap();
+        fs::write(
+            tmp.path().join("specs/007-gate/scenarios/retry.md"),
+            "# Retry\n\n## Open Questions\n\n*None.*\n",
+        )
+        .unwrap();
+        let base = git_commit_all(tmp.path(), "base");
+        seed_reviewed_at(tmp.path(), &base);
+
+        // Committed change -> genuinely stale.
+        fs::write(
+            tmp.path().join("specs/007-gate/scenarios/retry.md"),
+            "# Retry\n\nCommitted contract change.\n\n## Open Questions\n\n*None.*\n",
+        )
+        .unwrap();
+        git_commit_all(tmp.path(), "stale it");
+        // Plus an uncommitted one.
+        fs::write(
+            tmp.path().join("specs/007-gate/scenarios/other.md"),
+            "# Other\n\n## Open Questions\n\n*None.*\n",
+        )
+        .unwrap();
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(!result.passed, "{result:?}");
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::ReviewStale));
+        assert!(result.message.unwrap().contains("review is stale"));
+    }
+
+    #[test]
+    fn a_clean_tree_emits_no_unexaminable_guidance() {
+        // The common case stays quiet, so its silence means "examined".
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        fs::create_dir_all(tmp.path().join("specs/007-gate/scenarios")).unwrap();
+        fs::write(
+            tmp.path().join("specs/007-gate/scenarios/retry.md"),
+            "# Retry\n\n## Open Questions\n\n*None.*\n",
+        )
+        .unwrap();
+        let base = git_commit_all(tmp.path(), "base");
+        seed_reviewed_at(tmp.path(), &base);
+        git_commit_all(tmp.path(), "commit the reviewed-at edit");
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(result.passed, "{result:?}");
+        assert!(result.guidance.is_none(), "{:?}", result.guidance);
+    }
+
+    #[test]
+    fn dirty_bookkeeping_files_are_not_reported_as_unexaminable() {
+        // `tasks.md` is rewritten by `mark-task` on every task, so widening the
+        // scope past durable contracts would fire on nearly every run and be
+        // learned-ignored. Same scoping as the staleness check itself.
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        let base = git_commit_all(tmp.path(), "base");
+        seed_reviewed_at(tmp.path(), &base);
+        git_commit_all(tmp.path(), "commit the reviewed-at edit");
+
+        for name in ["tasks.md", "plan.md", "review.md"] {
+            fs::write(tmp.path().join("specs/007-gate").join(name), "# churn\n").unwrap();
+        }
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(result.passed, "{result:?}");
+        assert!(
+            result.guidance.is_none(),
+            "bookkeeping churn is not a contract: {:?}",
+            result.guidance
+        );
     }
 }

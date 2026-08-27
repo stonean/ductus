@@ -247,3 +247,14 @@ Runtime half of [049's rename](../049-rename-govern-to-ductus/spec.md): the per-
 - [x] Implement the behavior described in `scenarios/derive-unparseable-frontmatter-is-reported.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 99. Implement scenario: [review-gate-unexaminable-contracts](scenarios/review-gate-unexaminable-contracts.md) — a gate must say what it could not examine
+
+- [x] Correct `framework/commands/implement.md` step 14 and completion-gate step 5 to enumerate all four checks, including `ReviewStale` with its blocked message, and fix the "all three checks" count
+- [x] Extend `check-review-gate` to detect durable contracts (`scenarios/*.md`, `data-model.md`) with uncommitted changes — modified, staged, or untracked — and emit `guidance` naming them and stating staleness could not be determined against them, leaving `passed` unchanged
+- [x] Confirm a real `ReviewStale` block still wins over the guidance when a contract is both dirty and already stale in committed history
+- [x] Scope the detection to durable contracts only, so a dirty `tasks.md` / `plan.md` / `review.md` / `spec.md` does not fire the notice on nearly every run
+- [x] Add tests: untracked scenario, modified scenario, staged-only change, dirty-and-stale precedence, clean tree emits no guidance, and a feature with no durable contracts
+- [x] Document the same detection on the markdown-only path in the completion gate's step 5, and regenerate `.claude/commands/ductus/implement.md`
+
+- **Done when**: `framework/commands/implement.md` enumerates four gate checks everywhere it enumerates them (step 14's inline list and `blocked_by` list, and the completion gate's step 5, whose "all three checks" count is corrected), with `ReviewStale` described in the same shape as the other three so the markdown-only path enforces the gate the primitive enforces; `check-review-gate` emits `guidance` naming any durable contract with uncommitted changes and stating that staleness could not be determined against it, without changing `passed`; `/ductus:implement` surfaces that guidance in the pre-transition summary; the guidance is absent when every durable contract is committed; and the regenerated `.claude/commands/ductus/implement.md` matches.
