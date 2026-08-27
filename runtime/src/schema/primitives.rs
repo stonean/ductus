@@ -679,9 +679,13 @@ pub struct DeriveReferencesArgs {
     #[serde(default)]
     #[arg(long)]
     pub write: bool,
-    /// Rewrite only specs staged in the git index for the pending commit.
-    /// Each spec's `references:` is a pure function of its own body — there
-    /// is no cross-spec graph — so this narrows the enumeration itself.
+    /// Write only specs staged in the git index for the pending commit,
+    /// instead of every tracked spec. The enumeration still spans every
+    /// tracked spec: a reference derives from the body **and** the
+    /// `[services]` registry, so a service rename drifts specs nobody
+    /// touched, and an untouched spec is never staged. Those land in
+    /// [`DeriveReferencesResult::unwritten`]. For pre-commit use, so
+    /// committing one spec never rewrites another.
     #[serde(default)]
     #[arg(long)]
     pub staged: bool,
@@ -695,8 +699,21 @@ pub struct DeriveReferencesResult {
     pub drift: bool,
     /// Repo-relative paths of the specs rewritten, sorted.
     pub updated: Vec<String>,
-    /// Count of specs examined — the staged set under `staged`, else every
-    /// tracked spec.
+    /// Specs examined and found drifted but deliberately not written — the
+    /// `staged` case. Neither "in sync" nor "not examined", so they are
+    /// reported separately rather than folded into either.
+    ///
+    /// This field carries more weight here than on
+    /// [`DeriveDependenciesResult::unwritten`]. A dependency derives from the
+    /// spec body alone, so it can only drift when that spec is edited — which
+    /// stages it. A reference derives from the body *and* the `[services]`
+    /// registry, so renaming a service alias drifts every referencing spec
+    /// while leaving all of them untouched, and therefore unstaged. Without
+    /// this list the pre-commit hook reports such a tree in sync on every
+    /// commit indefinitely.
+    pub unwritten: Vec<String>,
+    /// Count of tracked specs examined. Every tracked spec, `staged` or not —
+    /// the filter applies to the write, not the walk.
     pub examined: u32,
     /// Untracked specs in the worktree, never enumerated or rewritten
     /// (spec 017). Reported so an empty `updated` cannot be read as
@@ -1628,13 +1645,17 @@ pub struct AppendTaskArgs {
     /// line using the explicit `slug` argument below.
     #[arg(long)]
     pub body: Option<Vec<String>>,
-    /// Scenario slug used by the default-body line. Required when `body`
-    /// is omitted (the default body needs a slug to fill
-    /// `scenarios/{slug}.md`). Ignored when `body` is supplied — the
-    /// caller has provided the full body, so no slug is needed. Pairs
-    /// with the slug previously passed to `create-scenario` when both
-    /// primitives are invoked together by the scenario branch of
-    /// `/ductus:amend`.
+    /// Scenario slug rendered as the `scenarios/{slug}.md` pointer line.
+    /// Required when `body` is omitted (there would otherwise be no body at
+    /// all). When `body` **is** supplied the pointer is still rendered, above
+    /// the caller's items — a supplied slug is never silently discarded.
+    ///
+    /// It used to be "ignored when `body` is supplied", which quietly broke
+    /// the task-references-its-scenario promise `/ductus:groom` and
+    /// `/ductus:amend` both make; a caller who wanted a bare custom body says
+    /// so by omitting `slug`. Pairs with the slug previously passed to
+    /// `create-scenario` when both primitives are invoked together by the
+    /// scenario branch of `/ductus:amend`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
     pub slug: Option<String>,

@@ -130,18 +130,29 @@ fn render_task_block(number: u32, args: &AppendTaskArgs, heading_level: u8) -> S
     let mut out = String::new();
     let hashes = "#".repeat(heading_level as usize);
     let _ = writeln!(out, "{hashes} {number}. {}\n", args.title);
-    if let Some(items) = &args.body {
-        for item in items {
-            let _ = writeln!(out, "- [ ] {}", strip_bullet_marker(item));
-        }
-    } else if let Some(slug) = &args.slug {
-        // Default single sub-item. The "scenarios/{slug}.md" pointer mirrors
-        // the convention `/ductus:amend`'s scenario branch uses; `slug` comes from
-        // the explicit argument (required when body is omitted; see Q1).
+    // A supplied `slug` is never silently discarded — it renders the scenario
+    // pointer whether or not the caller also supplied a body, and when both
+    // are given the pointer leads. `/ductus:groom` and `/ductus:amend` both
+    // promise a task that references its scenario, and `slug` used to be
+    // documented as "ignored when body is supplied", so a caller who assembled
+    // its own body lost that linkage with nothing to catch it: the
+    // `scenario-consistency` family reads the rendered `scenarios/{slug}.md`
+    // line, so such a task looked like one with no scenario rather than one
+    // whose link was dropped (scenario
+    // `append-task-honours-slug-with-explicit-body`).
+    //
+    // The "scenarios/{slug}.md" pointer mirrors the convention
+    // `/ductus:amend`'s scenario branch uses.
+    if let Some(slug) = &args.slug {
         let _ = writeln!(
             out,
             "- [ ] Implement the behavior described in `scenarios/{slug}.md`"
         );
+    }
+    if let Some(items) = &args.body {
+        for item in items {
+            let _ = writeln!(out, "- [ ] {}", strip_bullet_marker(item));
+        }
     }
     // The `(None, None)` branch is unreachable — run() refuses that
     // combination before calling this function. No `else` arm here so the
@@ -704,6 +715,115 @@ mod tests {
         run(&args("specs/042-foo", "First", "done."), tmp.path()).unwrap();
         let body = fs::read_to_string(tmp.path().join("specs/042-foo/tasks.md")).unwrap();
         assert!(body.contains("[plan](plan.md)"));
+    }
+
+    // --- slug/body interaction ------------------------------------------------
+
+    #[test]
+    fn a_supplied_slug_renders_even_when_body_is_supplied() {
+        let tmp = tempdir().unwrap();
+        make_feature_with_spec(tmp.path(), "specs/042-foo", "042 — Foo");
+        let tasks_path = tmp.path().join("specs/042-foo/tasks.md");
+        fs::write(&tasks_path, "# 042 — Foo Tasks\n").unwrap();
+        let mut a = args("specs/042-foo", "Custom", "it is done.");
+        a.slug = Some("my-scenario".into());
+        a.body = Some(vec!["first custom item".into(), "second".into()]);
+        run(&a, tmp.path()).unwrap();
+        let body = fs::read_to_string(&tasks_path).unwrap();
+
+        let pointer = "- [ ] Implement the behavior described in `scenarios/my-scenario.md`";
+        assert!(body.contains(pointer), "scenario pointer dropped:\n{body}");
+        assert!(body.contains("- [ ] first custom item"), "{body}");
+        assert!(body.contains("- [ ] second"), "{body}");
+        // The pointer leads; the caller's items follow.
+        assert!(
+            body.find(pointer).unwrap() < body.find("- [ ] first custom item").unwrap(),
+            "pointer did not lead the body:\n{body}"
+        );
+    }
+
+    #[test]
+    fn a_body_without_a_slug_renders_no_pointer() {
+        // The caller named no scenario, so there is none to link. This is how
+        // a caller asks for a bare custom body.
+        let tmp = tempdir().unwrap();
+        make_feature_with_spec(tmp.path(), "specs/042-foo", "042 — Foo");
+        let tasks_path = tmp.path().join("specs/042-foo/tasks.md");
+        fs::write(&tasks_path, "# 042 — Foo Tasks\n").unwrap();
+        let mut a = args("specs/042-foo", "Custom", "it is done.");
+        a.slug = None;
+        a.body = Some(vec!["only this".into()]);
+        run(&a, tmp.path()).unwrap();
+        let body = fs::read_to_string(&tasks_path).unwrap();
+        assert!(body.contains("- [ ] only this"), "{body}");
+        assert!(
+            !body.contains("Implement the behavior described in"),
+            "pointer rendered with no slug supplied:\n{body}"
+        );
+    }
+
+    #[test]
+    fn an_empty_body_with_a_slug_renders_the_pointer_alone() {
+        // Same output as omitting `body` entirely — the consistent reading
+        // rather than a special case.
+        let tmp = tempdir().unwrap();
+        make_feature_with_spec(tmp.path(), "specs/042-foo", "042 — Foo");
+        let tasks_path = tmp.path().join("specs/042-foo/tasks.md");
+        fs::write(&tasks_path, "# 042 — Foo Tasks\n").unwrap();
+        let mut a = args("specs/042-foo", "Custom", "it is done.");
+        a.slug = Some("only-scenario".into());
+        a.body = Some(Vec::new());
+        run(&a, tmp.path()).unwrap();
+        let body = fs::read_to_string(&tasks_path).unwrap();
+        assert!(
+            body.contains("- [ ] Implement the behavior described in `scenarios/only-scenario.md`"),
+            "{body}"
+        );
+    }
+
+    #[test]
+    fn the_default_body_path_is_unchanged() {
+        let tmp = tempdir().unwrap();
+        make_feature_with_spec(tmp.path(), "specs/042-foo", "042 — Foo");
+        let tasks_path = tmp.path().join("specs/042-foo/tasks.md");
+        fs::write(&tasks_path, "# 042 — Foo Tasks\n").unwrap();
+        let mut a = args("specs/042-foo", "Plain", "it is done.");
+        a.slug = Some("plain-scenario".into());
+        a.body = None;
+        run(&a, tmp.path()).unwrap();
+        let body = fs::read_to_string(&tasks_path).unwrap();
+        assert!(
+            body.contains(
+                "- [ ] Implement the behavior described in `scenarios/plain-scenario.md`"
+            ),
+            "{body}"
+        );
+        // Exactly one sub-item.
+        let items = body.lines().filter(|l| l.starts_with("- [ ] ")).count();
+        assert_eq!(items, 1, "expected a single default sub-item:\n{body}");
+    }
+
+    #[test]
+    fn the_phased_path_renders_the_pointer_too() {
+        // Flat and phased share one renderer, so the prepend cannot diverge
+        // between them — asserted rather than assumed.
+        let tmp = tempdir().unwrap();
+        make_feature_with_spec(tmp.path(), "specs/042-foo", "042 — Foo");
+        let tasks_path = tmp.path().join("specs/042-foo/tasks.md");
+        fs::write(&tasks_path, phased_tasks_md()).unwrap();
+        let mut a = args("specs/042-foo", "Ship it", "shipped.");
+        a.slug = Some("phased-scenario".into());
+        a.body = Some(vec!["custom phased item".into()]);
+        a.parent_heading = Some("Phase B — Implementation".into());
+        run(&a, tmp.path()).unwrap();
+        let body = fs::read_to_string(&tasks_path).unwrap();
+        assert!(
+            body.contains(
+                "- [ ] Implement the behavior described in `scenarios/phased-scenario.md`"
+            ),
+            "scenario pointer dropped on the phased path:\n{body}"
+        );
+        assert!(body.contains("- [ ] custom phased item"), "{body}");
     }
 
     // --- phased-structure tests -----------------------------------------------

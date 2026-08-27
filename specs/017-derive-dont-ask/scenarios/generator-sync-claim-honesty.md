@@ -30,7 +30,9 @@ The `M` clause is omitted when nothing was skipped, so the ordinary all-tracked 
 No changes (N tracked spec(s) in sync; D drifted spec(s) left unwritten — not staged; M untracked spec(s) skipped — git add to include)
 ```
 
-Each clause appears only when its count is non-zero. This case is specific to `gen-spec-deps.sh`: `gen-cross-service-refs.sh` writes every spec it enumerates, so for it "enumerated" and "written" are the same set and its claim was already sound.
+Each clause appears only when its count is non-zero. This case was believed specific to `gen-spec-deps.sh`, on the reasoning that `gen-cross-service-refs.sh` writes every spec it enumerates, so for it "enumerated" and "written" are the same set and its claim was already sound.
+
+**That reasoning was wrong, and the correction is recorded below** — see *The third state applies to both derivations (2026-08-27)*. The two generators are now the `derive-dependencies` and `derive-references` primitives, and both report the drifted-but-unwritten state.
 
 **`gen-cross-service-refs.sh` gets the same treatment.** It enumerates through the same `list_specs()` and prints the same shape of claim about references, so it carries the identical defect and the identical fix.
 
@@ -47,6 +49,16 @@ The assessment above was specified here but its result was never written down, s
 The correction is a verified claim rather than a reworded one: the command groups are arrays feeding both the rendered tables and a coverage assertion against the directory (minus the same maintainer-only exclusion `installer-command-parity.sh` uses), and an unlisted command now exits 6 naming the command and the remedy. The message names its subject — `No changes (14 command(s) in sync)`. Because `check-zero` runs this generator, `/ductus:audit` and the release gate inherit the check.
 
 **The reporting this scenario specifies is now tested.** Its three clauses had no assertion anywhere — `run_gen` captured stdout that no test read — so a regression to a bare "all specs in sync" would have gone unnoticed. Test R in `scripts/tests/test-gen-spec-deps.sh` covers the in-sync count, the skipped clause and its omission, and the drifted clause and its omission; reverting the message to its pre-scenario form fails three of its assertions.
+
+### The third state applies to both derivations (2026-08-27)
+
+The claim above — that the drifted-but-unwritten state is specific to the dependency derivation — held only for a field derived from the spec body alone, and `references:` is not one.
+
+A `dependencies:` edge is a pure function of the body, so it can only drift when its own spec is edited, which stages that spec and makes it visible to a staged-mode run. A `references:` entry is a function of the body **and** the `[services]` registry: the harvest resolves each link's repo URL through that registry to produce the `service:` alias. Rename a service alias and every referencing spec drifts while none of them is touched — and an untouched spec is never staged.
+
+So "enumerated equals written" was true of the reference derivation only because it had narrowed its enumeration to the staged set, which is precisely what made the drift unreportable. An adopter carried dead references for nine commits after a `[services]` rename while the pre-commit hook reported the tree in sync every time; the dependency derivation would have reported the same tree, on the same commit, as drifted.
+
+The conclusion inverts: the reference derivation needs the full walk **more** than the dependency one does, not less. `derive-references` now enumerates every tracked spec and filters only the write, and its result carries `unwritten` — the same field, with the same meaning, as its sibling's. The corrected reasoning lives in [022's `derive-references-unstaged-drift-is-reported`](../../022-deterministic-runtime/scenarios/derive-references-unstaged-drift-is-reported.md), which is the authority for the primitive's behavior; this section exists so the scenario that asserted the opposite does not still read as current.
 
 ## Edge Cases
 

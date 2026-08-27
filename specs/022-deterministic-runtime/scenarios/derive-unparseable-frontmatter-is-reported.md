@@ -70,9 +70,19 @@ that an unknown is never escalated into a defect holds here too.
   there is no block to close, nothing is derived from it, and reporting every
   such file would bury the real signal. Only an *opened but unterminated*
   block counts.
-- **`--staged` scoping applies unchanged.** An unparseable spec outside the
-  staged set is not enumerated, so it cannot appear; the field describes what
-  this run examined, not the corpus.
+- **`--staged` scoping applies unchanged.** The field describes what this run
+  examined, not the corpus.
+
+  This bullet originally added "an unparseable spec outside the staged set is
+  not enumerated, so it cannot appear", which was true of `derive-references`
+  only while that primitive narrowed its *enumeration* to the staged set.
+  [`derive-references-unstaged-drift-is-reported`](derive-references-unstaged-drift-is-reported.md)
+  removed that narrowing — a reference derives from the `[services]` registry
+  as well as the body, so a service rename drifts specs nobody staged. Both
+  primitives now walk every tracked spec and filter only the write, so an
+  unparseable **tracked** spec is reported whether or not it is staged. What
+  still cannot appear is an unparseable *untracked* spec, which neither
+  primitive enumerates (`untracked-skipped` is where that scope is stated).
 - **The field is additive.** Existing consumers ignore it, and the MCP goldens
   that assert the ordinary payload stay byte-identical when it is empty —
   which is what keeps this from being a breaking change to the wire contract.

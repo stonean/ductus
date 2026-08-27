@@ -29,6 +29,27 @@
 //! reference. `derive-dependencies` has no such rule — the two generators
 //! genuinely differ here, and the difference is load-bearing.
 //!
+//! ## The registry is a second input, and it changes what `--staged` means
+//!
+//! A `dependencies:` edge is a pure function of the spec body, so it can only
+//! drift when that spec is edited — which stages it, which makes it visible to
+//! a staged-mode run. A `references:` entry is **not**: it is a function of the
+//! body *and* the `[services]` registry, because [`harvest`] resolves each
+//! link's repo URL through that registry to produce the `service:` alias.
+//!
+//! So renaming a service alias drifts every spec referencing it while leaving
+//! those specs untouched — and an untouched spec is never staged. An earlier
+//! version narrowed the *enumeration* to the staged set under `--staged`,
+//! which made that entire class structurally invisible: an adopter carried
+//! dead references for nine commits while the pre-commit hook reported the
+//! tree in sync every time.
+//!
+//! The walk therefore spans every tracked spec and `--staged` filters only the
+//! write, with drifted-but-unstaged specs reported in `unwritten`. This
+//! primitive needs the full walk *more* than `derive-dependencies` does, not
+//! less — the opposite of what the original rationale concluded. See
+//! `scenarios/derive-references-unstaged-drift-is-reported.md`.
+//!
 //! ## Root-aware matching
 //!
 //! The spec-root segment of a referenced URL is **not** hardcoded to `specs`:
@@ -79,22 +100,26 @@ pub fn run(args: &DeriveReferencesArgs, repo: &Path) -> Result<DeriveReferencesR
     let specs_root = paths::Paths::load(repo).specs_root;
     let registry = load_registry(repo);
 
-    // Each spec's `references:` is a pure function of its own body — there is
-    // no cross-spec graph here, unlike the dependency cycle check. So
-    // `--staged` narrows the enumeration itself rather than filtering a full
-    // walk.
-    let specs = if args.staged {
-        super::list_staged_specs(repo, &specs_root)
-            .into_iter()
-            .collect()
-    } else {
-        super::list_tracked_specs(repo, &specs_root)
-    };
+    // Every tracked spec is enumerated, exactly as `derive-dependencies` does,
+    // and `--staged` filters only the *write*. The enumeration is deliberately
+    // NOT narrowed to the staged set: a reference is derived from the body
+    // **and** the `[services]` registry, so renaming a service alias drifts
+    // every spec that references it while leaving those specs untouched — and
+    // an untouched spec is never staged. Narrowing the walk made that entire
+    // class structurally invisible to the pre-commit hook, for any number of
+    // commits (scenario `derive-references-unstaged-drift-is-reported`).
+    let tracked = super::list_tracked_specs(repo, &specs_root);
     let untracked = super::list_untracked_specs(repo, &specs_root);
+    let staged = if args.staged {
+        Some(super::list_staged_specs(repo, &specs_root))
+    } else {
+        None
+    };
 
     let mut updated = Vec::new();
+    let mut unwritten = Vec::new();
     let mut unparseable = Vec::new();
-    for spec in &specs {
+    for spec in &tracked {
         let path = repo.join(spec);
         if !path.is_file() {
             continue;
@@ -109,6 +134,15 @@ pub fn run(args: &DeriveReferencesArgs, repo: &Path) -> Result<DeriveReferencesR
         if rewritten == content {
             continue;
         }
+        // Differs. Whether it is written depends on the staged filter.
+        let is_target = staged.as_ref().is_none_or(|set| set.contains(spec));
+        if !is_target {
+            // Examined and found drifted, but deliberately left alone so
+            // committing one spec never rewrites another. Reporting this as
+            // "in sync" would assert the opposite of what was observed.
+            unwritten.push(spec.clone());
+            continue;
+        }
         if args.write {
             write_atomic(&path, &rewritten)?;
         }
@@ -118,7 +152,8 @@ pub fn run(args: &DeriveReferencesArgs, repo: &Path) -> Result<DeriveReferencesR
     Ok(DeriveReferencesResult {
         drift: !updated.is_empty(),
         updated,
-        examined: u32::try_from(specs.len()).unwrap_or(u32::MAX),
+        unwritten,
+        examined: u32::try_from(tracked.len()).unwrap_or(u32::MAX),
         untracked_skipped: untracked,
         unparseable,
         registered_services: u32::try_from(registry.len()).unwrap_or(u32::MAX),

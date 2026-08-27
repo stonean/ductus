@@ -426,7 +426,59 @@ fn staged_scoping_agrees() {
         "unstaged spec was rewritten: {}",
         rust_specs[1].1
     );
+    // The walk spans every tracked spec; `--staged` filters only the write.
+    assert_eq!(result["examined"], 2, "{result}");
+    // The unstaged spec was examined and found drifted, so it is reported
+    // rather than folded into the silence of a clean run.
+    assert_eq!(
+        result["unwritten"][0], "specs/002-b/spec.md",
+        "drifted-but-unstaged spec not reported: {result}"
+    );
+}
+
+/// A `[services]` alias rename drifts every referencing spec while leaving
+/// those specs untouched — so none of them is ever staged, and a run that
+/// narrowed its enumeration to the staged set could never see them. An
+/// adopter carried dead references for nine commits behind exactly this,
+/// with the pre-commit hook reporting the tree in sync every time.
+///
+/// This is the case that distinguishes `references:` from `dependencies:`:
+/// the registry is a second input, so drift here does not imply an edit.
+#[test]
+fn a_service_rename_drifts_specs_nobody_touched() {
+    let specs = [SpecFile {
+        slug: "001-a",
+        body: "---\nstatus: done\ndependencies: []\nreferences:\n  \
+               - service: api\n    spec: 003-user\n---\n\n\
+               [x](https://github.com/acme/api/specs/003-user/spec.md)\n",
+    }];
+
+    let dir = tempfile::tempdir().unwrap();
+    build_fixture(dir.path(), "specs", &specs, Some(CONFIG_CHECKED_OUT), &[]);
+
+    // Baseline: the committed tree is in sync.
+    let before = run_primitive(dir.path(), &[]);
+    assert_eq!(before["drift"], false, "fixture not in sync: {before}");
+
+    // Rename the alias, same repo URL. Stage only the config — spec 001 is
+    // never edited, so it cannot be staged.
+    write(
+        &dir.path().join(".ductus/config.toml"),
+        "[services.svc-api]\nrepo = \"https://github.com/acme/api\"\npath = \"checkouts/api\"\n",
+    );
+    let repository = Repository::open(dir.path()).unwrap();
+    let mut index = repository.index().unwrap();
+    index.add_path(Path::new(".ductus/config.toml")).unwrap();
+    index.write().unwrap();
+
+    let result = run_primitive(dir.path(), &["--staged"]);
+    assert_eq!(
+        result["unwritten"][0], "specs/001-a/spec.md",
+        "registry-rename drift went unreported under --staged: {result}"
+    );
     assert_eq!(result["examined"], 1, "{result}");
+    // Nothing is written: the spec is not staged, and that rule is unchanged.
+    assert_eq!(result["updated"].as_array().unwrap().len(), 0, "{result}");
 }
 
 #[test]

@@ -893,9 +893,14 @@ hardcoding `--dry-run`; this is that guarantee expressed in the argument.
 }
 ```
 
-- `unwritten` (`derive-dependencies` only) — specs examined and found drifted
-  but deliberately not written, the `staged` case. Neither "in sync" nor "not
-  examined", so they are reported separately rather than folded into either.
+- `unwritten` — specs examined and found drifted but deliberately not written,
+  the `staged` case. Neither "in sync" nor "not examined", so they are reported
+  separately rather than folded into either. Present on **both** derive
+  primitives. It was scoped to `derive-dependencies` until the
+  `derive-references-unstaged-drift-is-reported` scenario: a `references:` entry
+  derives from the body *and* the `[services]` registry, so a service rename
+  drifts specs nobody edited — and an unedited spec is never staged. Narrowing
+  the reference walk to the staged set made that class structurally invisible.
 - `untracked-skipped` — untracked specs are never enumerated or rewritten
   (spec 017, `tracked-specs-not-worktree`). Reported so an empty `updated`
   cannot be read as "everything is in sync".
