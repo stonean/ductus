@@ -641,12 +641,20 @@ pub struct DeriveDependenciesResult {
     /// the `staged` case. Neither "in sync" nor "not examined", so they are
     /// reported separately rather than folded into either.
     pub unwritten: Vec<String>,
-    /// Count of tracked specs examined.
+    /// Count of tracked specs actually read. Excludes any listed in
+    /// `absent`, so it never overstates what the run inspected.
     pub examined: u32,
     /// Untracked specs in the worktree, which are never enumerated or
     /// rewritten (spec 017). Reported so an empty `updated` cannot be read as
     /// "everything is in sync" — these were not examined at all.
     pub untracked_skipped: Vec<String>,
+    /// Specs tracked in the git index but absent from the worktree — deleted
+    /// without the deletion being staged. Nothing can be derived from them, so
+    /// they are named rather than dropped: they are excluded from `examined`,
+    /// and reporting neither would let `examined` assert a subject the run
+    /// never read (`QUAL-CLAIM-001`, recorded by 022's review on 2026-08-27).
+    #[serde(default)]
+    pub absent: Vec<String>,
     /// Dependency cycles in the derived graph, each listing its members
     /// sorted, the cycles themselves sorted by least member. A single-member
     /// entry is a self-link. Empty means acyclic. This is a **domain
@@ -712,8 +720,10 @@ pub struct DeriveReferencesResult {
     /// this list the pre-commit hook reports such a tree in sync on every
     /// commit indefinitely.
     pub unwritten: Vec<String>,
-    /// Count of tracked specs examined. Every tracked spec, `staged` or not —
-    /// the filter applies to the write, not the walk.
+    /// Count of tracked specs actually read. Every tracked spec is walked,
+    /// `staged` or not — the filter applies to the write, not the walk — but
+    /// specs listed in `absent` are excluded, so this never overstates what
+    /// the run inspected.
     pub examined: u32,
     /// Untracked specs in the worktree, never enumerated or rewritten
     /// (spec 017). Reported so an empty `updated` cannot be read as
@@ -733,6 +743,13 @@ pub struct DeriveReferencesResult {
     /// only when `unparseable` is also empty (`QUAL-CLAIM-001`), the same
     /// pairing `check-artifacts` has with `skipped`.
     pub unparseable: Vec<String>,
+    /// Specs tracked in the git index but absent from the worktree — deleted
+    /// without the deletion being staged. Nothing can be derived from them, so
+    /// they are named rather than dropped: they are excluded from `examined`,
+    /// and reporting neither would let `examined` assert a subject the run
+    /// never read (`QUAL-CLAIM-001`, recorded by 022's review on 2026-08-27).
+    #[serde(default)]
+    pub absent: Vec<String>,
     /// Spec-root directory name the run enumerated (spec 040).
     pub specs_root: String,
     /// Whether the run actually wrote. A result read out of context cannot

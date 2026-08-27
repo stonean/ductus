@@ -436,6 +436,39 @@ fn staged_scoping_agrees() {
     );
 }
 
+/// A spec tracked in the index but deleted from the worktree cannot be read,
+/// so counting it in `examined` would assert a subject the run never inspected
+/// — the QUAL-CLAIM-001 shape 022's own review flagged against this primitive.
+#[test]
+fn a_tracked_but_absent_spec_is_named_not_counted() {
+    let specs = [
+        SpecFile {
+            slug: "001-a",
+            body: "---\nstatus: done\ndependencies: []\n---\n\nnothing\n",
+        },
+        SpecFile {
+            slug: "002-b",
+            body: "---\nstatus: done\ndependencies: []\n---\n\nnothing\n",
+        },
+    ];
+    let dir = tempfile::tempdir().unwrap();
+    build_fixture(dir.path(), "specs", &specs, Some(CONFIG_CHECKED_OUT), &[]);
+
+    // Delete one from the worktree without staging the deletion: git ls-files
+    // still lists it.
+    fs::remove_file(dir.path().join("specs/002-b/spec.md")).unwrap();
+
+    let result = run_primitive(dir.path(), &[]);
+    assert_eq!(
+        result["absent"][0], "specs/002-b/spec.md",
+        "absent spec not named: {result}"
+    );
+    assert_eq!(
+        result["examined"], 1,
+        "examined counted a spec that was never read: {result}"
+    );
+}
+
 /// A `[services]` alias rename drifts every referencing spec while leaving
 /// those specs untouched — so none of them is ever staged, and a run that
 /// narrowed its enumeration to the staged set could never see them. An

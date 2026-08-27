@@ -2,10 +2,10 @@
 status: in-progress
 dependencies: [021-runtime-boundary]
 review:
-  last-run: 2026-08-27T18:18:22Z
-  reviewed-against: 530dc7a377de3630a73765cd03b0ad55cb1cd06b
+  last-run: 2026-08-27T22:32:15Z
+  reviewed-against: 8779616d5f1799fd3dfa91e51c6680b01b0477f6
   must-violations: 0
-  should-violations: 0
+  should-violations: 1
   low-confidence: 0
   blocking: false
 next-criterion: 20

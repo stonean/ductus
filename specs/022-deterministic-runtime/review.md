@@ -1,11 +1,10 @@
 ---
 spec: 022-deterministic-runtime
-scenario: lint-markdown-tool-resolution
-reviewed-at: 2026-08-27T18:18:22Z
-reviewed-against: 530dc7a377de3630a73765cd03b0ad55cb1cd06b
-diff-base: 8393841
+reviewed-at: 2026-08-27T22:32:15Z
+reviewed-against: 8779616d5f1799fd3dfa91e51c6680b01b0477f6
+diff-base: 31348ff7dfd8b8b3cd108b8d0e7829c8b184dd14
 must-violations: 0
-should-violations: 0
+should-violations: 1
 low-confidence: 0
 captured-issues: 0
 skipped-passes: []
@@ -15,21 +14,7 @@ skipped-passes: []
 
 ## Summary
 
-Reviewed at `530dc7a`. 0 MUST, 0 SHOULD.
-
-Re-run because `ReviewStale` blocked the transition: the prior review recorded `27ec059`, and `530dc7a` then corrected a relative-link depth in `scenarios/lint-markdown-tool-resolution.md` — a durable contract. The gate refused the `done` transition and named the file, which is the check working rather than a problem: a one-character path fix is still an edit to the artifact a review reads. The link error itself was caught by Family 26 only *after* the commit, because that family enumerates tracked files and the new scenario was untracked before it — the same git-visibility property that makes "re-run the audit after committing, before tagging" a rule rather than a suggestion. Content is otherwise unchanged from the `27ec059` review, whose findings stand.
-
-Scope: `runtime/src/primitives/lint_markdown.rs` (tool resolution, the reworked spawn-failure path, six new tests), `runtime/src/primitives/mod.rs` (the new `ToolLaunch` variant), the three version sites, the 022 scenario and task, plus two carried edits — the `configure/claude.md` canonical-boundary chore and the Family 29 script repair it exposed.
-
-Security: the change reduces surface rather than adding it. The vendored-binary branch is a path existence check followed by a direct spawn — no shell, no profile sourcing, no widening of what `Command` already searched. The scenario's rejection of a login-shell resolution is the load-bearing decision: it would have been the expedient fix and a genuine code-execution surface, since sourcing a contributor's profile to locate a linter runs arbitrary shell under this primitive's permission. The existing leading-`-` guard (which blocks `--config` loading arbitrary JS) is untouched and still runs before resolution.
-
-Quality: the guidance predicate is correctly narrow — `launch_guidance` fires only on `NotFound` **and** only on the `npx` branch, so neither a permissions error nor a broken vendored binary carries a `PATH` explanation it has no basis for. That would be this same misattribution pointed the other way, and two dedicated tests hold it. Extracting the predicate from the closure is what made it testable; forcing a real `ENOENT` would have meant manipulating the test process's environment. The unspawnable-binary test uses a directory rather than permission bits — reliably unspawnable everywhere, and not dependent on CI preserving modes.
-
-Reuse and simplicity: `resolve_markdownlint` returns `(program, via_npx)` rather than branching at two call sites, and the Windows `.cmd` distinction moved into it so both branches state it once. `ToolLaunch` is a new variant rather than a reuse of `Io` because the two carry different subjects — `Io` names a path the primitive was operating on, and pressing it into service for a spawn failure is exactly what named the repository instead of the missing program. Efficiency: one added `Path::exists` per lint.
-
-Verified end to end against the real repository: under `PATH=/usr/bin:/bin` the primitive reports `could not launch npx: … — not found on PATH…` with the nvm explanation, where it previously reported `I/O error on <repo>: No such file or directory`. `check-review-gate` inherits it unchanged.
-
-Release state: all three version sites read 0.33.0 with a matching CHANGELOG section; Family 20 and `lint-release-ordering.sh` pass; goldens needed no re-bless and the release binary was rebuilt first. Full gate green — 1026 lib tests, parity 11/11, mcp 26/26; fmt and clippy clean; six lint scripts, shellcheck, markdownlint, and the 29-family audit all clean against committed state.
+0 MUST violation(s), 1 SHOULD violation(s), 0 low-confidence finding(s). blocking: no.
 
 ## MUST violations (blocking)
 
@@ -37,7 +22,13 @@ Release state: all three version sites read 0.33.0 with a matching CHANGELOG sec
 
 ## SHOULD violations (advisory)
 
-*None.*
+### SHOULD: QUAL-CLAIM-001 — `examined` counts tracked specs the `is_file()` guard skipped without reading
+
+- **File**: `runtime/src/primitives/derive_references.rs:124-156`
+- **Rule**: A result that reports a clean, empty, or in-sync state SHOULD distinguish "examined the subject and found nothing" from "could not examine the subject", rather than emitting the same value for both. When a code path skips part of its subject, cannot reach it, or has no basis to inspect it, its output SHOULD say so — through a distinct return variant, an accompanying status or guidance field, or a message naming what was not examined — instead of a bare zero, empty collection, or success string that a caller will read as positive assurance.
+- **Finding**: Both derive primitives enumerate `list_tracked_specs` (the git index) and then `continue` on `!path.is_file()`, but report `examined: tracked.len()`. A spec that is tracked yet absent from the worktree — in the index and deleted without staging the deletion — is skipped without being read, and lands in none of `updated`, `unwritten`, `unparseable`, or `untracked-skipped` while still being counted as examined. This is the same defect one level over from the one this change just closed: the count asserts a subject size the run did not actually inspect. `derive_dependencies.rs:76,116` carries the identical pattern.
+- **Auto-fixable**: no
+- **Suggested fix**: Collect the skipped paths into a field (e.g. `absent`, alongside the existing `unparseable`) and either subtract them from `examined` or report both numbers, so a caller can tell a fully-read corpus from a partially-read one. Apply to both primitives in the same change — they share the enumeration and would otherwise disagree about what `examined` means.
 
 ## Low-confidence findings
 
@@ -53,7 +44,8 @@ Release state: all three version sites read 0.33.0 with a matching CHANGELOG sec
 
 ## Observations
 
-*None.*
+- convention: `check_command_flags::argument_hint` hand-rolls frontmatter-block extraction (first-line `---`, scan to closing fence) that `primitives::split_frontmatter` already provides, including its CRLF-opener and empty-block handling. Reusing it via `.ok()` would drop ~15 lines and remove a second definition of where frontmatter ends. Maps to no loaded rule — there is no reuse rule ID in the rule set. — `runtime/src/primitives/check_command_flags.rs`
+- perf: the adopter pre-commit hook now performs two independent full walks of the tracked spec corpus per commit — `derive-dependencies` and `derive-references` each list the index and read every spec, since `derive-references` no longer narrows its enumeration under `--staged`. Negligible at 51 specs and deliberate (the narrowing was the defect), but the cost is now O(corpus) twice on every commit rather than once, and the two run as separate processes so nothing shares the read. Worth revisiting if a large corpus makes commits slow. — `framework/bootstrap/hooks/ductus-pre-commit`
 
 ## Skipped passes
 

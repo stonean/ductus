@@ -884,6 +884,7 @@ hardcoding `--dry-run`; this is that guarantee expressed in the argument.
   "drift": true,
   "updated": ["specs/017-derive-dont-ask/spec.md"],
   "unwritten": [],
+  "absent": [],
   "examined": 51,
   "untracked-skipped": [],
   "cycles": [],
@@ -901,6 +902,12 @@ hardcoding `--dry-run`; this is that guarantee expressed in the argument.
   derives from the body *and* the `[services]` registry, so a service rename
   drifts specs nobody edited — and an unedited spec is never staged. Narrowing
   the reference walk to the staged set made that class structurally invisible.
+- `absent` — specs tracked in the git index but missing from the worktree
+  (deleted without staging the deletion). Nothing can be derived from one, so it
+  is named rather than dropped, and it is excluded from `examined`. Added
+  2026-08-27 after 022's own review flagged the count as a `QUAL-CLAIM-001`
+  instance: `examined` was the enumeration size, which asserted a subject the
+  run had not read. Present on both derive primitives.
 - `untracked-skipped` — untracked specs are never enumerated or rewritten
   (spec 017, `tracked-specs-not-worktree`). Reported so an empty `updated`
   cannot be read as "everything is in sync".

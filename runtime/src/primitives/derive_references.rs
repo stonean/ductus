@@ -119,11 +119,20 @@ pub fn run(args: &DeriveReferencesArgs, repo: &Path) -> Result<DeriveReferencesR
     let mut updated = Vec::new();
     let mut unwritten = Vec::new();
     let mut unparseable = Vec::new();
+    let mut absent = Vec::new();
+    let mut read_count: usize = 0;
     for spec in &tracked {
         let path = repo.join(spec);
         if !path.is_file() {
+            // Tracked in the index but not on disk — deleted without the
+            // deletion being staged. Nothing can be derived from it, and it is
+            // neither drift nor "in sync", so it is named rather than dropped:
+            // counting it in `examined` would assert a subject that was never
+            // read (`QUAL-CLAIM-001`).
+            absent.push(spec.clone());
             continue;
         }
+        read_count += 1;
         let content = read_text(&path)?;
         if has_unterminated_frontmatter(&content) {
             unparseable.push(spec.clone());
@@ -153,9 +162,10 @@ pub fn run(args: &DeriveReferencesArgs, repo: &Path) -> Result<DeriveReferencesR
         drift: !updated.is_empty(),
         updated,
         unwritten,
-        examined: u32::try_from(tracked.len()).unwrap_or(u32::MAX),
+        examined: u32::try_from(read_count).unwrap_or(u32::MAX),
         untracked_skipped: untracked,
         unparseable,
+        absent,
         registered_services: u32::try_from(registry.len()).unwrap_or(u32::MAX),
         specs_root,
         wrote: args.write,

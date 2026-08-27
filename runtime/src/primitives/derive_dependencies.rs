@@ -70,12 +70,19 @@ pub fn run(args: &DeriveDependenciesArgs, repo: &Path) -> Result<DeriveDependenc
     let mut updated = Vec::new();
     let mut unwritten = Vec::new();
     let mut unparseable = Vec::new();
+    let mut absent = Vec::new();
+    let mut read_count: usize = 0;
 
     for spec in &tracked {
         let path = repo.join(spec);
         if !path.is_file() {
+            // Tracked in the index but not on disk. Named rather than dropped,
+            // for the reason recorded on `derive_references` — counting it in
+            // `examined` asserts a subject that was never read.
+            absent.push(spec.clone());
             continue;
         }
+        read_count += 1;
         let own_slug = super::spec_feature_slug(spec, &specs_root).unwrap_or_default();
         let content = read_text(&path)?;
         if has_unterminated_frontmatter(&content) {
@@ -113,9 +120,10 @@ pub fn run(args: &DeriveDependenciesArgs, repo: &Path) -> Result<DeriveDependenc
         drift: !updated.is_empty(),
         updated,
         unwritten,
-        examined: u32::try_from(tracked.len()).unwrap_or(u32::MAX),
+        examined: u32::try_from(read_count).unwrap_or(u32::MAX),
         untracked_skipped: untracked,
         unparseable,
+        absent,
         cycles,
         specs_root: rel_path(&specs_dir, repo),
         wrote: args.write,
