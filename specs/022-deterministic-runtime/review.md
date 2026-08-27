@@ -1,11 +1,11 @@
 ---
 spec: 022-deterministic-runtime
 scenario: review-gate-unexaminable-contracts
-reviewed-at: 2026-08-27T15:57:13Z
-reviewed-against: 6ef37297f51f6675297ae36ebf77d27a10210102
+reviewed-at: 2026-08-27T16:14:53Z
+reviewed-against: 1913abbf57595f1faba26801934fad0a75cf4b83
 diff-base: a4df343d01d56901d79bb82476ec69c9e47a0126
 must-violations: 0
-should-violations: 1
+should-violations: 0
 low-confidence: 0
 captured-issues: 0
 skipped-passes: []
@@ -15,17 +15,17 @@ skipped-passes: []
 
 ## Summary
 
-Reviewed at `6ef3729`, the commit carrying the work — committed before reviewing this time, so `reviewed-against` names the code the verdict describes rather than the commit before it. `--since=a4df343` gives a `modified-since` of exactly the seven committed files.
+Reviewed at `1913abb`. 0 MUST, 0 SHOULD.
 
-Scope: `runtime/src/primitives/check_review_gate.rs` (new `unexaminable_contracts_guidance`, two doc-comment miscounts corrected, six new tests), `framework/commands/implement.md` and its generated mirror (the gate enumerations), `runtime/tests/golden/implement-basic.jsonl`, and the 022 spec artifacts.
+The previous run's `QUAL-CLAIM-001` SHOULD is **resolved, not waived**. `unexaminable_contracts_guidance` returned `None` both when every durable contract was committed and when git could not be queried, so a caller read a bare pass as assurance in a state where nothing had been examined — the same conflation the function exists to remove one level up. It now reports that the working tree could not be inspected, distinctly from finding nothing dirty, and `a_working_tree_that_cannot_be_inspected_is_not_reported_as_clean` covers it. Resolving rather than accepting was the right call precisely because the finding was against this scenario's own contract: an exception here would have been the scenario contradicting itself.
 
-0 MUST, 1 SHOULD. The SHOULD is `QUAL-CLAIM-001` against the new function itself: it returns `None` both when every durable contract is committed and when git cannot be queried, which is the same conflation of "examined and clean" with "could not examine" that this scenario exists to remove one level up. It is advisory and does not block; the codebase already accepts a documented fail-open of the same shape in `stale_review_block`, so closing it is a consistency call. It is recorded rather than waived because the reviewer did not decide it — see the finding for the two exits.
+Fixing it surfaced a second instance in the existing tests. `passes_when_lint_clean_and_review_current` asserted `guidance.is_none()` against a bare tempdir with no git repository — an assertion that encoded the old conflation, since the gate cannot inspect a non-repo and silence there could never have meant "examined and clean". It now asserts the honest outcome, with the genuinely-clean path covered separately by `a_clean_tree_emits_no_unexaminable_guidance`, which commits first. A test that had to change to accommodate the fix is worth naming: it was asserting the defect.
 
-Security: no new attack surface. The function reads git status and writes nothing; there is no eval, no user-controlled input, and no path is constructed from anything but the validated feature slug. Reuse: correct — it shares `is_durable_contract` with `stale_review_block` rather than restating the scoping rule, and it follows the established `StatusOptions` + `pathspec` pattern already used in `primitives/mod.rs`, including the pathspec bound that keeps this off a full-worktree walk on every completion attempt. Quality: `path()` is handled as the `Result` git2 0.21 returns rather than assumed UTF-8, results are collected into a `BTreeSet` so the output is deduplicated and ordered, and the `+N more` tail matches `stale_review_block`'s existing truncation. Efficiency: one pathspec-bounded status walk. Simplicity: no new abstraction — a single function returning `Option<String>` into a field the result already had.
+Release state is now correct. The prior commit changed `runtime/` without a version bump, so it sat on `main` reachable by no adopter — `AGENTS.md` §Workflow makes the bump and the `ductus-v<version>` tag part of the completion gate rather than a separate chore, and `ductus-v0.31.0` was already tagged. All three sites now read 0.32.0 (repo-root `version`, `runtime/Cargo.toml`, a matching `CHANGELOG.md` section); Family 20 and `lint-release-ordering.sh` both pass. The parity goldens needed no re-bless — the version is a placeholder the harness substitutes — and the release binary was rebuilt first, per the same entry.
 
-The golden change is mechanical and was verified as such: `implement-basic.jsonl` differs from its previous revision by exactly the two fixture git shas (`first-commit`, `current-head`) and nothing else, which is the expected consequence of editing `framework/commands/implement.md` — the parity harness copies that file into the fixture repo, so its tree hash moves. It was re-blessed, not hand-edited.
+Security, reuse, efficiency, and simplicity are unchanged from the prior run and re-checked: no new surface, `is_durable_contract` still shared with `stale_review_block` rather than restated, one pathspec-bounded status walk, and no new abstraction — the fail-distinctly change is a closure returning the same `Option<String>` the field already carried.
 
-Verification: full suite green with `npx` resolvable — 1019 lib tests, parity 11/11, mcp 26/26, plus every other target; `cargo fmt` and `clippy --all-targets` clean; the full 29-family audit green; `markdownlint-cli2 '**/*.md'` clean. Behavior confirmed against this repository rather than fixtures alone: 022, carrying its uncommitted scenario, returns `passed: true` with guidance naming `scenarios/review-gate-unexaminable-contracts.md`; 023, fully committed, returns `passed: true` with no guidance.
+Verification: 1020 lib tests, parity 11/11, mcp 26/26, every other target green; `cargo fmt --check` and `clippy --release --all-targets --locked -- -D warnings` clean; the six repo lint scripts clean; `shellcheck -S warning` over the tracked shell set clean; `markdownlint-cli2 '**/*.md'` clean; the 29-family audit green. The audit is re-run after this commit and before tagging, per the entry that exists because a green pre-commit audit is not evidence for the families that read history.
 
 ## MUST violations (blocking)
 
@@ -33,13 +33,7 @@ Verification: full suite green with `npx` resolvable — 1019 lib tests, parity 
 
 ## SHOULD violations (advisory)
 
-### SHOULD: QUAL-CLAIM-001 — unexaminable_contracts_guidance returns None both when every contract is committed and when git cannot be queried
-
-- **File**: `runtime/src/primitives/check_review_gate.rs:180-200`
-- **Rule**: A result that reports a clean, empty, or in-sync state SHOULD distinguish "examined the subject and found nothing" from "could not examine the subject", rather than emitting the same value for both. When a code path skips part of its subject, cannot reach it, or has no basis to inspect it, its output SHOULD say so — through a distinct return variant, an accompanying status or guidance field, or a message naming what was not examined — instead of a bare zero, empty collection, or success string that a caller will read as positive assurance.
-- **Finding**: The new function chains `.ok()?` on `Repository::discover` and `statuses`, so a git failure returns `None` — the identical value it returns when every durable contract is genuinely committed. The gate then emits a bare `passed: true` and the caller reads it as "examined and current", which is precisely the shape this scenario was written to remove one level up. Largely unreachable in practice, since `stale_review_block` has already discovered the same repository immediately before, but it is reachable when `reviewed-against` is empty and that function returns before touching git.
-- **Auto-fixable**: no
-- **Suggested fix**: Distinguish the two outcomes — return a two-variant result (or a distinct guidance string naming that the working tree could not be inspected) so a caller can tell "nothing dirty" from "could not look". Advisory: the codebase already accepts a documented fail-open in `stale_review_block` (tested by `staleness_fails_open_on_an_unresolvable_sha`), so this is a consistency call rather than a defect.
+*None.*
 
 ## Low-confidence findings
 
