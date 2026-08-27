@@ -3,8 +3,8 @@ spec: 020-code-review
 status: in-progress
 dependencies: []
 review:
-  last-run: 2026-08-18T02:36:35Z
-  reviewed-against: 2d894106fc9bcb5debdffaca119ffc0eca018460
+  last-run: 2026-08-27T22:43:13Z
+  reviewed-against: bb96fef3d83dec618fbadbccc7e021a73720ce5d
   must-violations: 0
   should-violations: 0
   low-confidence: 0
