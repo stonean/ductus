@@ -2724,6 +2724,78 @@ pub struct CheckOrphanedReferencesResult {
     pub last_applied: String,
 }
 
+// -- check-command-flags -------------------------------------------------------
+
+/// Args for `check-command-flags`. Reports flags a command's Flags table
+/// documents but its `argument-hint:` frontmatter omits — the surface a host
+/// renders, so an omitted flag is one the operator is never shown. Maintainer
+/// scope: the subject is `framework/commands/`, where the divergence
+/// originates, not the generated copies an adopter cannot repair.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckCommandFlagsArgs {}
+
+/// One documented-but-unsurfaced flag.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct CommandFlagFinding {
+    /// Repo-relative path of the command source.
+    pub command: String,
+    /// The flag the table documents, e.g. `--since`. Empty for the
+    /// whole-file case — a Flags table with no `argument-hint` at all — which
+    /// names no single flag because every one of them is unsurfaced.
+    #[serde(default)]
+    pub flag: String,
+    /// What is wrong, in the maintainer's terms.
+    pub reason: String,
+}
+
+/// A command file the check could not read, recorded so an empty `findings`
+/// is never mistaken for a verified-clean surface.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct CommandFlagSkip {
+    /// Repo-relative path that went unexamined.
+    pub path: String,
+    /// Why, in the maintainer's terms.
+    pub reason: String,
+}
+
+/// Result for `check-command-flags`.
+///
+/// `findings` empty with `skipped` empty is **examined and clean** — but only
+/// over the subject `with-flags-table` names. A command documenting flags in
+/// prose rather than a table is examined and contributes nothing, so the two
+/// counts are what let a caller state which claim it is making
+/// (`QUAL-CLAIM-001`).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckCommandFlagsResult {
+    /// Unsurfaced flags, in command then table order.
+    #[serde(default)]
+    pub findings: Vec<CommandFlagFinding>,
+    /// Command sources read, repo-relative and sorted.
+    #[serde(default)]
+    pub examined: Vec<String>,
+    /// The subset of `examined` that carries a Flags table — the actual
+    /// subject. A clean result quantifies itself from this, not from
+    /// `examined`, since a command with no table cannot produce a finding.
+    #[serde(default)]
+    pub with_flags_table: Vec<String>,
+    /// Command sources that could not be read.
+    #[serde(default)]
+    pub skipped: Vec<CommandFlagSkip>,
+    /// Directory the run enumerated, so a caller can tell a genuinely
+    /// table-free corpus from a wrong working directory.
+    pub commands_dir: String,
+    /// Set when the run examined command files but found no Flags table at
+    /// all. Two empty sets compare equal, so without this an extraction
+    /// failure returns the payload of a clean run. Empty otherwise — the
+    /// common case stays quiet, so its silence means "examined and current".
+    #[serde(default)]
+    pub guidance: String,
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]

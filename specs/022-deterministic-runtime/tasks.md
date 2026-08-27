@@ -269,3 +269,15 @@ Runtime half of [049's rename](../049-rename-govern-to-ductus/spec.md): the per-
 - [x] Bump all three version sites and add a CHANGELOG entry, then tag `ductus-v<version>` — a `runtime/` change is not landed without it (AGENTS.md §Workflow)
 
 - **Done when**: `lint-markdown` prefers a repo-root `node_modules/.bin/markdownlint-cli2` when present and falls back to `npx` (`npx.cmd` on Windows); a spawn failure names the executable rather than the repo path, and on `ENOENT` carries guidance that a shell-function `npx` is invisible to a spawned process; a non-`ENOENT` spawn failure keeps the OS error without the `PATH` guidance; the `markdownlint-cli2` non-zero exit contract is unchanged; and no login shell is invoked at any point.
+
+## 101. Implement scenario: [derive-references-unstaged-drift-is-reported](scenarios/derive-references-unstaged-drift-is-reported.md) — a reference drifts from config, not just from its own body
+
+- [ ] Implement the behavior described in `scenarios/derive-references-unstaged-drift-is-reported.md`
+
+- **Done when**: `derive-references` enumerates every tracked spec and filters only the write by the staged set; `DeriveReferencesResult` carries `unwritten`; the scratch-repo reproduction (a `[services]` alias rename with no spec staged) reports the drifted spec under `--staged` instead of `drift: false`; `data-model.md` no longer scopes `unwritten` to `derive-dependencies`; the falsified paragraph in 017's `generator-sync-claim-honesty` and the `QUAL-CLAIM-001` Source note in `framework/rules/quality-cross.md` are corrected; the `--staged` edge case in `derive-unparseable-frontmatter-is-reported` is updated; golden tests cover the registry-rename case
+
+## 102. Implement scenario: [append-task-honours-slug-with-explicit-body](scenarios/append-task-honours-slug-with-explicit-body.md) — a supplied slug is never silently discarded
+
+- [ ] Implement the behavior described in `scenarios/append-task-honours-slug-with-explicit-body.md`
+
+- **Done when**: `append-task` prepends the `scenarios/{slug}.md` line when both `body` and `slug` are supplied, and is unchanged when either is absent; the `slug` field's "Ignored when `body` is supplied" sentence is replaced in `runtime/src/schema/primitives.rs`; flat and phased rendering share the one prepend path; tests cover body-plus-slug, body-without-slug, empty-body-plus-slug, and the unchanged default-body path

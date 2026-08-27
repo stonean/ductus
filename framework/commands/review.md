@@ -1,6 +1,6 @@
 ---
 description: Audit code against rules — security, reuse, quality, efficiency, simplicity. Writes review.md; blocks done on MUST violations.
-argument-hint: "[--all] [--fix] [feature]"
+argument-hint: "[--all] [--fix] [--security|--simplicity|--quality] [--since=<ref>] [--waive <rule-id> --reason <text>] [feature]"
 ---
 
 # /{project}:review
@@ -17,6 +17,20 @@ advances to `done`.
 ## Purpose
 
 Quality gate before `done`: audit the feature's implementation against the project's rule files across five dimensions (security, reuse, quality, efficiency, simplicity), record the findings in `specs/NNN/review.md`, and set the spec's `review.blocking` frontmatter so `/{project}:implement`, `/{project}:analyze`, and the CI hook can hold the spec out of `done` while MUST violations stand. Waivers (with recorded justification) are the sanctioned escape.
+
+## Context
+
+Use the session target from `.ductus/session.toml`. If `$ARGUMENTS` carries a feature identifier, use it to override the session target — resolve that override through `resolve-feature` (exact directory name, feature number, or unique partial slug; `ambiguous` and `not-found` are domain outcomes to surface). With `--all` the target is every spec at `in-progress` or `done` and a feature identifier is redundant; report it rather than silently ignoring it. If no session target is set and no feature argument is provided, stop and tell the user to run `/{project}:target` first.
+
+### Parsing `$ARGUMENTS`
+
+Parse `$ARGUMENTS` for flags in any position, then treat the remaining text as the optional feature identifier. Every flag is per-invocation and none is persisted to the session file — what to review is an execution-time decision, not session state. [Flags](#flags) below is the authoritative table of what each one _does_; this step is how each is _recognized_:
+
+- **`--all`**, **`--fix`**, **`--security`**, **`--simplicity`**, **`--quality`** — bare toggles, no value.
+- **`--since=<ref>`** — takes its value in `--since=<ref>` form; pass it to `compute-review-scope` as `since` (step 1). A bare `--since` with no value is an operator error: report it and stop. Do not fall back to the default diff base — a silent fallback reviews a different window than the one asked for, and reports it under a heading that claims otherwise.
+- **`--waive <rule-id> --reason "<text>"`** — a pair; each is an operator error without the other. Repeatable to waive more than one finding in a single invocation.
+
+Report an unrecognized `--flag` and stop. Never absorb it into the feature identifier: treating `--sinse=HEAD~5` as a feature name resolves to `not-found` at best, and at worst to a real feature whose review then silently covers the wrong scope.
 
 ## Scope Boundaries
 

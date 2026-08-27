@@ -37,13 +37,13 @@ use crate::primitives::gate_confirm::GatePromptPayload;
 use crate::schema::primitives::{
     AppendInboxArgs, AppendInboxResult, AppendQuestionArgs, AppendQuestionResult, AppendTaskArgs,
     AppendTaskResult, ApplyManifestArgs, ApplyManifestResult, CheckArtifactsArgs,
-    CheckArtifactsResult, CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult,
-    CheckReviewGateArgs, CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult,
-    CheckStuckArgs, CheckStuckResult, CheckboxToggleResult, ComputeReviewScopeArgs,
-    ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult, CreatePlanArtifactsArgs,
-    CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult, DashboardArgs,
-    DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult, DeriveDependenciesArgs,
-    DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
+    CheckArtifactsResult, CheckCommandFlagsArgs, CheckCommandFlagsResult,
+    CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult, CheckReviewGateArgs,
+    CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult, CheckStuckArgs, CheckStuckResult,
+    CheckboxToggleResult, ComputeReviewScopeArgs, ComputeReviewScopeResult, CreateFeatureArgs,
+    CreateFeatureResult, CreatePlanArtifactsArgs, CreatePlanArtifactsResult, CreateScenarioArgs,
+    CreateScenarioResult, DashboardArgs, DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult,
+    DeriveDependenciesArgs, DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
     DeriveRoutingCandidatesArgs, DeriveRoutingCandidatesResult, DiffCrossSpecArgs,
     DiffCrossSpecResult, DiscoverRuleFilesArgs, DiscoverRuleFilesResult, EnforceManifestArgs,
     EnforceManifestResult, ExtractArchiveArgs, ExtractArchiveResult, FetchArchiveArgs,
@@ -807,6 +807,19 @@ impl GovRuntimeServer {
         params: Parameters<CheckOrphanedReferencesArgs>,
     ) -> Result<Json<CheckOrphanedReferencesResult>, String> {
         primitives::check_orphaned_references::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "check-command-flags",
+        description = "Report flags a command's Flags table documents but its `argument-hint:` frontmatter omits. `argument-hint` is the surface a host renders when it offers a command, so an omitted flag is one the operator is never shown \u{2014} the defect an adopter hit when review.md's table listed eight flags and its hint named three. Maintainer scope: the subject is framework/commands/, where the divergence originates, not the generated copies an adopter cannot repair. Only a `Flags` section's table rows count (a command documenting flags in prose is examined and contributes nothing), and only each row's first cell, so behavior prose naming another flag is not a finding; fenced example tables are excluded. Empty `findings` means examined-and-clean over `with-flags-table`, not over `examined`; an unreadable file lands in `skipped`, and `guidance` is set when no Flags table was found at all, which is an extraction failure rather than a clean corpus."
+    )]
+    async fn check_command_flags(
+        &self,
+        params: Parameters<CheckCommandFlagsArgs>,
+    ) -> Result<Json<CheckCommandFlagsResult>, String> {
+        primitives::check_command_flags::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

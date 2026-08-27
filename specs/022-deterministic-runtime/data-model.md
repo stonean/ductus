@@ -788,6 +788,37 @@ Result:
 
 The complement of `append-inbox` and the deterministic surface behind `/ductus:groom`'s per-item removal (step 8). Removes the first bullet from `{specs-root}/inbox.md` whose text — after the `-` bullet marker and an optional `[ ]`/`[x]` checkbox are stripped via the shared bullet grammar — equals the trimmed `item`, writing atomically. Bullet scanning is comment/fence-aware (shared with `append-inbox`), so a `-` line inside an HTML comment is neither counted nor removable. A double blank left at the removal seam is collapsed and the file ends in a single newline. A no-match, or a missing inbox file, is a clean domain outcome (`removed: false`), never an operational error; `remaining-count` reports the bullets left after the operation. Embedded newlines in `item` are rejected (single-line rule).
 
+### `check-command-flags` — flags a command documents but never surfaces
+
+Args: none.
+
+Result:
+
+```json
+{
+  "findings": [
+    {
+      "command": "framework/commands/review.md",
+      "flag": "--since",
+      "reason": "Flags table documents --since but argument-hint omits it, so it is never surfaced"
+    }
+  ],
+  "examined": ["framework/commands/amend.md", "framework/commands/review.md"],
+  "with-flags-table": ["framework/commands/review.md"],
+  "skipped": [],
+  "commands-dir": "framework/commands",
+  "guidance": ""
+}
+```
+
+The runtime half of [020](../020-code-review/spec.md)'s `review-flag-parsing-is-specified`, invoked from `/audit` Family 30 (`scripts/audit/command-flag-hint-parity.sh`). `argument-hint` is the surface a host renders when it offers a command, so a flag absent from it is a flag the operator is never shown — the defect an adopter reported as `--since` "doesn't show as an option" while `review.md`'s Flags table listed eight entries and its hint named three. Measured against that state: 6 findings (`--security`, `--simplicity`, `--quality`, `--since`, `--waive`, `--reason`); 0 once the hint was corrected.
+
+- **The subject is `framework/commands/*.md`, the sources.** Not the generated copies under a host's commands directory: a copy carries whatever its source carries, so checking both reports every finding twice and neither copy is the one to fix. It also settles where the check belongs — an adopter told their installed `review.md` disagrees with itself cannot act on it, because the file is regenerated from ductus and the repair is a ductus release. That is why this is `/audit` (maintainer, at the source) rather than `/{project}:analyze`, whose command-frontmatter family is deliberately frontmatter-only and reads the installed copies.
+- **Only a `Flags` section's table rows count, and only each row's first cell.** The behavior column routinely cross-references other flags (`Composes with all other flags`), and harvesting it would manufacture a finding against whichever row mentioned one. A single row may still name two flags — `--waive <rule-id> --reason "<text>"` is one row and both halves of a pair — so the cell is scanned rather than matched once.
+- **A command documenting flags in prose is examined and contributes nothing.** `implement.md` describes `--auto` under a `### Flags` heading with no table, and its hint names it — correct, and invisible to a table-shaped check. This is why `with-flags-table` exists alongside `examined`: an empty `findings` means *every tabled flag is surfaced*, never *every documented flag is surfaced*, and a caller quantifying a clean verdict states which one it means (`QUAL-CLAIM-001`).
+- **`guidance` is set when the run examined command files and found no Flags table at all.** Two empty sets compare equal, so without it an extraction failure returns the payload of a clean run — the same reasoning `derive-boundary` records for an underivable git window. Empty otherwise, so its silence means "examined and current".
+- **Section membership comes from the shared fence- and comment-aware scanner** (`section_line_indices`), not a second heading walk. These command bodies embed example output and artifact fragments; a table row inside a fence is an illustration, not the command's contract. Reusing the scanner is also what keeps the check out of the `awk`/`sed` markdown-parsing shape [§runtime-boundary](../../framework/constitution.md#runtime-boundary) principle 3 names — Family 30's script is a shell entry point over this primitive, not a shell reimplementation of it.
+
 ### `check-artifacts` — deterministic artifact-check families for one feature
 
 Args:

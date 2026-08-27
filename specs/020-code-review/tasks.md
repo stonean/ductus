@@ -88,3 +88,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] **Resolution: introduced a grandfather rule during this task.** The validate review-drift check and the CI gate exempt `done` specs whose frontmatter has no `review:` block at all — these predate `/ductus:review` and require no backfill. Specs that have the block but `last-run: null` are still flagged (operator has signaled opt-in but hasn't reviewed). Verified the gate exits clean against the current repo (20 existing `done` specs grandfathered; in-progress 020 silently exempt by status).
 - [x] Updated `framework/commands/analyze.md` (Review state drift section) and `framework/templates/ci/adopter-generators.yml` (Review-blocking gate step) with the grandfather logic.
 - **Done when**: `/ductus:analyze --all` exits clean, or every flagged spec has a documented disposition (review run + clean, or waiver recorded).
+
+## 12. Implement scenario: [review-flag-parsing-is-specified](scenarios/review-flag-parsing-is-specified.md) — a documented flag that is never parsed is a claim, not a capability
+
+- [x] Implement the behavior described in `scenarios/review-flag-parsing-is-specified.md`
+
+- **Done when**: `framework/commands/review.md` carries an explicit `$ARGUMENTS` parse step covering every flag in its Flags table, in the shape `analyze.md` and `implement.md` establish; its `argument-hint` names every documented flag; an unrecognized flag is reported rather than absorbed into the feature override; `/ductus:analyze`'s command-frontmatter family asserts hint-versus-table agreement so the next added flag cannot silently reopen the gap; the other commands with Flags tables are assessed and corrected only where the divergence is real; the regenerated `.claude/commands/ductus/review.md` reflects all of it

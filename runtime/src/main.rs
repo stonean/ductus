@@ -11,12 +11,12 @@ use ductus::mcp::server::GovRuntimeServer;
 use ductus::primitives;
 use ductus::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, CheckArtifactsArgs,
-    CheckOrphanedReferencesArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStuckArgs,
-    ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs,
-    DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveReferencesArgs,
-    DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs,
-    ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, LabelCriteriaArgs, LintMarkdownArgs,
-    MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
+    CheckCommandFlagsArgs, CheckOrphanedReferencesArgs, CheckReviewGateArgs, CheckRuleIdsArgs,
+    CheckStuckArgs, ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs,
+    CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs,
+    DeriveReferencesArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs,
+    EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, LabelCriteriaArgs,
+    LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
     MigrateSessionFileArgs, ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs,
     RemoveInboxItemArgs, ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs,
     RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteReviewArgs,
@@ -139,6 +139,8 @@ enum Command {
     DeriveRoutingCandidates(DeriveRoutingCandidatesArgs),
     /// Report adopter-owned files whose references to ductus-managed paths no longer resolve.
     CheckOrphanedReferences(CheckOrphanedReferencesArgs),
+    /// Report flags a command's Flags table documents but its `argument-hint` omits.
+    CheckCommandFlags(CheckCommandFlagsArgs),
     /// Regenerate every spec's frontmatter `dependencies:` from its body links; report cycles.
     DeriveDependencies(DeriveDependenciesArgs),
     /// Regenerate every spec's frontmatter `references:` from its cross-service body links.
@@ -645,6 +647,9 @@ fn main() -> ExitCode {
         }
         Command::CheckOrphanedReferences(args) => {
             emit_result(primitives::check_orphaned_references::run(&args, &repo))
+        }
+        Command::CheckCommandFlags(args) => {
+            emit_result(primitives::check_command_flags::run(&args, &repo))
         }
         Command::DeriveDependencies(args) => {
             let outcome = primitives::derive_dependencies::run(&args, &repo);
