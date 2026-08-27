@@ -239,3 +239,13 @@ Done when: `/ductus:review` returns clean and the spec frontmatter's `review.blo
 - [x] Implement the behavior described in `scenarios/extend-existing-scenario-task.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested; an existing scenario that gains new behavior has a command route that appends a linked task without recreating the scenario file, and a `done` parent spec takes the `done → in-progress` back-edge on that route.
+
+### 21. Remove wildcard-before-subcommand allows from the `/configure` canonical allow-set
+
+- [x] Remove the seven `Bash(git -C * add|commit|push|log|diff|status|show *)` allow entries from `framework/bootstrap/configure/claude.md:51-57`, replacing them with a rationale comment that cites the same over-broadening reasoning as `configure/antigravity.md:89`
+- [x] Confirm the deny-side `git -C *` entries at `claude.md:147-152` are left intact, with a note that over-broad denial is intentional and must not be narrowed
+- [x] Regenerate `.claude/commands/ductus/configure.md` via the command generator and confirm the pre-commit hook (spec 017 row 11) stages it
+- [x] Add a `/ductus:audit` check that fails when any `configure/*.md` canonical allow-set contains a wildcard before the subcommand, skipping hosts whose format cannot express the shape (`auggie.md`'s anchored regexes)
+- [x] Verify no adopter-facing migration is implied: `/ductus:configure` still does not rewrite non-canonical entries already in an adopter's `settings.local.json`
+
+- **Done when**: The seven `Bash(git -C * <sub> *)` allow entries are gone from `framework/bootstrap/configure/claude.md` §§5–6 with a rationale comment in their place, the deny-side `git -C *` entries at lines 147-152 are retained and documented as intentionally broad, the regenerated `.claude/commands/ductus/configure.md` matches, and `/ductus:audit` fails on any wildcard-before-subcommand pattern in a host's canonical allow-set.

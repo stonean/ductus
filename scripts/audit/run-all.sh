@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # scripts/audit/run-all.sh — `/audit` aggregator.
 #
-# Runs the check-zero precondition pass followed by the twenty-five family
+# Runs the check-zero precondition pass followed by the twenty-six family
 # check scripts. Aggregates findings to stdout under per-family headers
 # and exits 1 when any family (or check-zero) produced findings.
 # Family numbers are stable identifiers: Family 3 (registry equivalence)
@@ -71,5 +71,6 @@ run_check "Family 25 — unbalanced inline markup" "scripts/audit/unbalanced-inl
 run_check "Family 26 — broken relative links" "scripts/audit/broken-relative-links.sh"
 run_check "Family 27 — done-spec unchecked criteria" "scripts/audit/done-spec-criteria.sh"
 run_check "Family 28 — audit family registry parity" "scripts/audit/audit-family-parity.sh"
+run_check "Family 29 — permission wildcard position" "scripts/audit/permission-wildcard-position.sh"
 
 exit "$drift"

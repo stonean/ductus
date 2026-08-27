@@ -47,14 +47,7 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    - `Bash(git status *)`
    - `Bash(git show *)`
 
-   **Git commands targeting another working tree (`-C <path>`):**
-   - `Bash(git -C * add *)`
-   - `Bash(git -C * commit *)`
-   - `Bash(git -C * push *)`
-   - `Bash(git -C * log *)`
-   - `Bash(git -C * diff *)`
-   - `Bash(git -C * status *)`
-   - `Bash(git -C * show *)`
+   **Git commands targeting another working tree (`-C <path>`):** intentionally **none**. An allow pattern must never place its wildcard before the subcommand: `Bash(git -C * status *)` lets that leading `*` span inserted options, not just the path, so `git -C . -c core.pager='!sh -c "…"' status` matches and is approved with no prompt — and both `-c` and `--exec-path` run arbitrary commands. The seven `-C` variants that once lived here were removed for exactly the over-broadening reason `framework/bootstrap/configure/antigravity.md` gives for omitting them there. `git -C` invocations fall through to the host's normal Ask prompt; do not re-add them. The same hazard does not apply to the deny set below, where a wildcard that matches more only refuses more.
 
    **Utility:**
    - `Bash(curl *)`
@@ -150,6 +143,8 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    - `Bash(git -C * reset --hard *)`
    - `Bash(git -C * rm *)`
    - `Bash(git -C * clean -fd *)`
+
+   The six `git -C *` patterns above keep their leading wildcard deliberately, and must not be narrowed to match the allow set: on the deny side a pattern that matches more refuses more, so the same shape that is a hole in an allow entry is a stronger guard here.
 
    **Other dangerous commands:**
    - `Bash(chmod -R 777 *)`
