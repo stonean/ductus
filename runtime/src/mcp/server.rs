@@ -38,11 +38,12 @@ use crate::schema::primitives::{
     AppendInboxArgs, AppendInboxResult, AppendQuestionArgs, AppendQuestionResult, AppendTaskArgs,
     AppendTaskResult, ApplyManifestArgs, ApplyManifestResult, CheckArtifactsArgs,
     CheckArtifactsResult, CheckCommandFlagsArgs, CheckCommandFlagsResult,
-    CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult, CheckReviewGateArgs,
-    CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult, CheckStuckArgs, CheckStuckResult,
-    CheckboxToggleResult, ComputeReviewScopeArgs, ComputeReviewScopeResult, CreateFeatureArgs,
-    CreateFeatureResult, CreatePlanArtifactsArgs, CreatePlanArtifactsResult, CreateScenarioArgs,
-    CreateScenarioResult, DashboardArgs, DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult,
+    CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult, CheckReviewAgreementArgs,
+    CheckReviewAgreementResult, CheckReviewGateArgs, CheckReviewGateResult, CheckRuleIdsArgs,
+    CheckRuleIdsResult, CheckStuckArgs, CheckStuckResult, CheckboxToggleResult,
+    ComputeReviewScopeArgs, ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult,
+    CreatePlanArtifactsArgs, CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult,
+    DashboardArgs, DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult,
     DeriveDependenciesArgs, DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
     DeriveRoutingCandidatesArgs, DeriveRoutingCandidatesResult, DiffCrossSpecArgs,
     DiffCrossSpecResult, DiscoverRuleFilesArgs, DiscoverRuleFilesResult, EnforceManifestArgs,
@@ -820,6 +821,19 @@ impl GovRuntimeServer {
         params: Parameters<CheckCommandFlagsArgs>,
     ) -> Result<Json<CheckCommandFlagsResult>, String> {
         primitives::check_command_flags::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "check-review-agreement",
+        description = "A spec's frontmatter `review:` block agrees with its own review.md frontmatter. The same review is recorded twice \u{2014} last-run/reviewed-at, reviewed-against, and the three counts \u{2014} and nothing held the two together: 031 and 041 both carried should-violations: 1 in spec.md while their reports recorded 0, invisible because every gate reads only one of the two files. Also reports `blocking: false` alongside a non-zero must-violations, and a finding waived in review.md with no matching `review.waivers` entry \u{2014} a waiver with no structural existence, so the count it should retire never moves. Fields on only one side are not compared. Subject is the intersection of specs carrying both records, the only ones that can disagree; a spec with one record lands in `single-sided` rather than being dropped, and `guidance` is set when nothing carries both, since comparing nothing reports agreement."
+    )]
+    async fn check_review_agreement(
+        &self,
+        params: Parameters<CheckReviewAgreementArgs>,
+    ) -> Result<Json<CheckReviewAgreementResult>, String> {
+        primitives::check_review_agreement::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

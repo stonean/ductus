@@ -117,6 +117,7 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    - `mcp__ductus__derive-routing-candidates`
    - `mcp__ductus__check-orphaned-references`
    - `mcp__ductus__check-command-flags`
+   - `mcp__ductus__check-review-agreement`
    - `mcp__ductus__derive-dependencies`
    - `mcp__ductus__derive-references`
    <!-- generated:mcp-allow:end -->

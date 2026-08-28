@@ -115,7 +115,14 @@ def frontmatter(text):
 
 
 def scalar(fm, key, indent=""):
-    m = re.search(rf"^{indent}{re.escape(key)}:\s*(.*)$", fm, re.M)
+    # `[ \t]*` never `\s*`: `\s` matches a newline, so a greedy run after the
+    # colon walks past an empty value onto the next line and returns *that*
+    # line's content as this key's — a bare `reviewed-against:` returned
+    # "must-violations: 7". Verified 2026-08-28; latent, because the template
+    # writes `null` rather than an empty value. The durable fix is Family 31's:
+    # this parse belongs in the runtime, which deserializes frontmatter with a
+    # YAML reader that cannot express the bug (§runtime-boundary).
+    m = re.search(rf"^{indent}{re.escape(key)}:[ \t]*(.*)$", fm, re.M)
     if not m:
         return None
     v = m.group(1).strip().strip('"\'')

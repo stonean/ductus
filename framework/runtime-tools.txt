@@ -60,5 +60,6 @@ check-artifacts
 derive-routing-candidates
 check-orphaned-references
 check-command-flags
+check-review-agreement
 derive-dependencies
 derive-references

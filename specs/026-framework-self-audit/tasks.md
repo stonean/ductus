@@ -298,9 +298,9 @@ Opened by [048](../048-govern-acquired-runtime/spec.md)'s AC10 adopter runs, whi
 
 ### 35. Family 31 — move the check into a runtime primitive
 
-- [ ] Extract the comparison into a `check-review-agreement` primitive under `runtime/src/primitives/`, reusing the runtime's frontmatter scanners rather than a fifth hand-rolled regex copy
-- [ ] Register at the six existing sites: `primitives/mod.rs`, `main.rs`, `interpreter/mod.rs`, `mcp/server.rs`, `schema/registry.rs`, `schema/primitives.rs`
-- [ ] Reduce `scripts/audit/review-block-agreement.sh` to the Family 30 entry-point shape — resolve `.ductus/bin/ductus` falling back to `runtime/target/release/ductus`, call the primitive, render through `emit`, treat an unreachable runtime as a finding
-- [ ] Fix the same `\s*` newline-swallow bug in `scripts/audit/review-freshness.sh`'s `scalar()`, or fold Family 19 onto the same primitive
+- [x] Extract the comparison into a `check-review-agreement` primitive under `runtime/src/primitives/`, reusing the runtime's frontmatter scanners rather than a fifth hand-rolled regex copy
+- [x] Register at all eight sites — six in `runtime/src` (`primitives/mod.rs`, `main.rs` enum + dispatch, `interpreter/mod.rs`, `mcp/server.rs`, `schema/registry.rs`, `schema/primitives.rs`) plus `framework/runtime-tools.txt` and the per-agent MCP allowlists via `scripts/gen-configure-mcp.sh`; the `mcp.rs` manifest test and `check-zero` are what surface the last two
+- [x] Reduce `scripts/audit/review-block-agreement.sh` to the Family 30 entry-point shape — resolve `.ductus/bin/ductus` falling back to `runtime/target/release/ductus`, call the primitive, render through `emit`, treat an unreachable runtime as a finding
+- [x] Fix the same `\s*` newline-swallow bug in `scripts/audit/review-freshness.sh`'s `scalar()`, or fold Family 19 onto the same primitive
 
 - **Done when**: `check-review-agreement` exists as a runtime primitive with unit tests covering the five paired fields, the `blocking`/`must-violations` rule, the orphan-waiver rule, an empty subject set, and unparseable frontmatter on either side; `scripts/audit/review-block-agreement.sh` is a thin entry point carrying no markdown parsing of its own; `scripts/lint-tool-coverage.sh` and `cargo test` pass; `scripts/audit/run-all.sh` exits 0 with Family 31 still proven red against a seeded divergence in each direction; and REUSE-001 from the 2026-08-28 review is resolved.

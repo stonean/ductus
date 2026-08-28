@@ -108,6 +108,7 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
    - `{ "toolName": "mcp:ductus:derive-routing-candidates", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:check-orphaned-references", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:check-command-flags", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:check-review-agreement", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:derive-dependencies", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:derive-references", "permission": { "type": "allow" } }`
    <!-- generated:mcp-allow:end -->
