@@ -2,6 +2,62 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.35.0] — 2026-08-28
+
+### Added
+
+- **`check-review-agreement` — a spec's frontmatter `review:` block must agree
+  with its own `review.md`.** The same review is recorded twice: the spec's
+  block carries `last-run`, `reviewed-against`, the three counts, `blocking`,
+  and any `waivers`; the report beside it carries `reviewed-at`,
+  `reviewed-against`, and the same three counts. Nothing held the two together,
+  and they drifted — 031 and 041 both carried `should-violations: 1` in
+  `spec.md` while their reports recorded `0`, for weeks. The drift is invisible
+  because every gate reads exactly one of the two files: `check-review-gate`
+  and `/ductus:analyze`'s review-drift check read the block, while `/audit`
+  Family 19 resolves `reviewed-against` without ever comparing the counts on
+  either side of it. The cost runs both ways — a stale non-zero count reads as
+  outstanding work that does not exist, and a stale zero would hide real
+  findings from every gate that trusts the number.
+
+  The primitive compares the five fields both files record, keyed by meaning
+  rather than by name since the timestamp is spelled `last-run` on one side and
+  `reviewed-at` on the other, and names `review.md` as the source of record in
+  every repair: it is what `/ductus:review` writes from the pass it just ran,
+  while the block is the summary copied forward for the gates. Two rules
+  internal to the block are asserted alongside them, because the observed
+  failure reached the counts through them — `blocking: false` alongside a
+  non-zero `must-violations`, and a finding waived in the report with no
+  matching `review.waivers` entry, which is a waiver with no structural
+  existence, so the count it should have retired never moves.
+
+  Fields present on only one side (`diff-base`, `captured-issues`,
+  `skipped-passes`; `blocking`, `waivers`) are not compared — they are not
+  duplicated facts, and demanding they match would invent a binding the
+  artifacts never claimed. The subject is the intersection of specs carrying
+  both records, the only ones that can disagree; a spec carrying one is counted
+  in `single-sided` and left to Family 19 and `check-review-gate` rather than
+  dropped. Unparseable frontmatter on a report that exists is a finding rather
+  than a skip, and an empty subject sets `guidance`, because comparing nothing
+  reports agreement — the false green the check exists to prevent. Surfaced as
+  `/audit` Family 31, whose script is a thin entry point over this primitive.
+
+### Changed
+
+- **Runtime eligibility is a default, not a permission**
+  ([§runtime-boundary](../framework/constitution.md#runtime-boundary)). A
+  capability that is deterministic, already mechanical, and specifiable as
+  prose is implemented as a primitive; a shell script is the fallback, taken
+  only when a criterion genuinely fails. The framework still needs shell entry
+  points — a hook, a CI step, an `/audit` family — but the entry point resolves
+  the runtime and calls the primitive rather than reimplementing the check.
+  A script that parses frontmatter or markdown structure has already failed
+  principle 3, whether it reaches for `awk` or an embedded interpreter. The
+  rule was written against a worked example: Family 31's first implementation
+  hand-rolled a frontmatter parser whose `\s*` after the key matched a newline,
+  so an empty value walked the match onto the next line and returned that
+  line's content, reporting a spec that was correct.
+
 ## [0.34.0] — 2026-08-27
 
 ### Fixed
