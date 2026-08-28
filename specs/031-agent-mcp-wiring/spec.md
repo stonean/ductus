@@ -2,12 +2,18 @@
 status: done
 dependencies: [012-multi-agent-govern, 028-antigravity-agent, 029-bootstrap-runtime-autowire]
 review:
-  last-run: 2026-06-18T23:30:38Z
-  reviewed-against: ef1aaccca59ac6e982fdda8f0b14f2cd78daf5c8
+  last-run: 2026-08-28T01:24:04Z
+  reviewed-against: a9be853143093fc9891a87048ba286fc187ddfcd
   must-violations: 0
-  should-violations: 1
+  should-violations: 0
   low-confidence: 0
   blocking: false
+  waivers:
+    - rule: SIMPLICITY
+      file: framework/bootstrap/ductus.md
+      reason: "`scope` documents a real conceptual distinction readers care about — committed-in-repo vs user-config-dir vs home-global — and the three-line table costs nothing; removing it would trade reader clarity for a metric. Keeping it was the finding's own recommendation."
+      waived-at: 2026-08-02T00:00:00Z
+      waived-by: andrew.n.stone@gmail.com
 next-criterion: 9
 ---
 
