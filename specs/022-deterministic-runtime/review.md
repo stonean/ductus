@@ -1,12 +1,12 @@
 ---
 spec: 022-deterministic-runtime
-reviewed-at: 2026-08-27T22:41:40Z
-reviewed-against: 78dd6238bb6deaf0cf02d2d4ac565223ac4ae09a
-diff-base: 31348ff7dfd8b8b3cd108b8d0e7829c8b184dd14
+reviewed-at: 2026-08-28T00:11:31Z
+reviewed-against: ca473fd324c763af21dc8ff5ee0d7220b490fb6c
+diff-base: 7e98cc48963acaad87b9c2d86071bc8d5eaa5c27
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-captured-issues: 2
+captured-issues: 0
 skipped-passes: []
 ---
 
@@ -14,11 +14,15 @@ skipped-passes: []
 
 ## Summary
 
-Re-run after the previous run's single SHOULD was fixed rather than carried. 0 MUST, 0 SHOULD, 0 low-confidence across all five passes; not blocking.
+0 MUST, 0 SHOULD, 0 low-confidence across all five passes; not blocking.
 
-The window covers three changes to the derive primitives and one to `append-task`. `derive-references` now enumerates every tracked spec and filters only the write, reporting drifted-but-unstaged specs in `unwritten` — closing a gap that let a `[services]` alias rename leave dead references in place for nine commits while the pre-commit hook reported the tree in sync. `append-task` no longer discards a supplied `slug` when `body` is given. Both primitives gained `absent`, which was the previous run's `QUAL-CLAIM-001` finding: they enumerated the git index, skipped `!path.is_file()`, and still counted those specs in `examined`, asserting a subject the run never read. `examined` now counts specs actually read, and the MCP tool descriptions name the field so the caller-facing contract matches the result.
+**The diff base resolved itself this time.** The two previous runs in this round needed a manual `--since=<base>~1` because the base landed on the commit carrying the work. `compute-review-scope` now peels the transition commit to its first parent, and this review's window opens at `7e98cc4` without an override — covering `compute_review_scope.rs` and `check_command_flags.rs`, the two files it exists to examine. The fix is exercised by the run that reports on it.
 
-Security: no new input-handling surface — `slug` already passed `BE-INPUT-002`'s allowlist validation unconditionally, and the change makes that validation load-bearing on a path where the value was previously discarded. Reuse, efficiency, and simplicity passes found nothing against the loaded rules; two things they surfaced map to no loaded rule and are recorded as observations rather than invented findings.
+Window covers four changes. `derive-references` enumerates every tracked spec and filters only the write, reporting drifted-but-unstaged specs in `unwritten` — the gap that let a `[services]` alias rename leave dead references in place for nine commits. Both derive primitives gained `absent` and now count only specs they actually read. `append-task` stopped discarding a supplied `slug` when `body` is given. And `compute-review-scope` bases the window on the transition commit's parent, so work committed alongside an `/ductus:amend` back-edge flip is inside it.
+
+All three items this round's earlier reviews captured to the inbox are addressed rather than carried past the tag: `argument_hint` now delegates to `split_frontmatter` (with tests for the empty-block and CRLF-opener cases the hand-rolled scan got wrong), the extra corpus walk was measured at ~20 ms per commit and the measurement recorded in the scenario that caused it, and the diff-base defect became a scenario and a fix.
+
+Security: `transition_parent` consumes a sha produced internally by `find_in_progress_commit`, not caller input, and a parentless commit falls back rather than erroring. Quality: the shared lookup is unchanged, so `check-stuck` still counts from the transition commit itself — a helper returning different commits to its two callers is the drift the placement avoids. Efficiency and simplicity found nothing; the `argument_hint` refactor removed a second definition of where frontmatter ends rather than adding one.
 
 ## MUST violations (blocking)
 
@@ -38,13 +42,11 @@ Security: no new input-handling surface — `slug` already passed `BE-INPUT-002`
 
 ## Captured issues
 
-- [ ] convention: `check_command_flags::argument_hint` hand-rolls frontmatter-block extraction (first-line `---`, scan to closing fence) that `primitives::split_frontmatter` already provides, including its CRLF-opener and empty-block handling. Reusing it via `.ok()` would drop ~15 lines and remove a second definition of where frontmatter ends. Maps to no loaded rule — there is no reuse rule ID in the rule set. — `runtime/src/primitives/check_command_flags.rs` (captured during review of 022-deterministic-runtime)
-- [ ] perf: the adopter pre-commit hook now performs two independent full walks of the tracked spec corpus per commit — `derive-dependencies` and `derive-references` each list the index and read every spec, since `derive-references` no longer narrows its enumeration under `--staged`. Negligible at 51 specs and deliberate (the narrowing was the defect), but the cost is now O(corpus) twice on every commit rather than once, and the two run as separate processes so nothing shares the read. Worth revisiting if a large corpus makes commits slow. — `framework/bootstrap/hooks/ductus-pre-commit` (captured during review of 022-deterministic-runtime)
+*None.*
 
 ## Observations
 
-- convention: `check_command_flags::argument_hint` hand-rolls frontmatter-block extraction (first-line `---`, scan to closing fence) that `primitives::split_frontmatter` already provides, including its CRLF-opener and empty-block handling. Reusing it via `.ok()` would drop ~15 lines and remove a second definition of where frontmatter ends. Maps to no loaded rule — there is no reuse rule ID in the rule set. — `runtime/src/primitives/check_command_flags.rs`
-- perf: the adopter pre-commit hook now performs two independent full walks of the tracked spec corpus per commit — `derive-dependencies` and `derive-references` each list the index and read every spec, since `derive-references` no longer narrows its enumeration under `--staged`. Negligible at 51 specs and deliberate (the narrowing was the defect), but the cost is now O(corpus) twice on every commit rather than once, and the two run as separate processes so nothing shares the read. Worth revisiting if a large corpus makes commits slow. — `framework/bootstrap/hooks/ductus-pre-commit`
+*None.*
 
 ## Skipped passes
 
