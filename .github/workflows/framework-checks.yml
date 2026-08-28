@@ -48,6 +48,15 @@ jobs:
         with:
           node-version: '20'
 
+      # Installs the pinned markdownlint-cli2 from package-lock.json. Without
+      # it, step (c)'s `npx` would fetch whatever is latest that day, so the
+      # version CI enforces could differ from the one the manifest records —
+      # a pin nothing honors is worse than no pin, since it reads as a
+      # guarantee. `npm ci` fails on a lockfile that disagrees with
+      # package.json, which is the property wanted here.
+      - name: Install pinned lint tooling
+        run: npm ci
+
       # The two frontmatter derivations are runtime primitives since spec
       # 022's adopter-generator-promotion, so this step needs the binary and
       # the toolchain block below has to precede it. Step (f) reuses the same

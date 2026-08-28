@@ -1,0 +1,13 @@
+{
+  "name": "ductus-tooling",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Declares the Node tooling ductus's checks require. ductus ships a Rust runtime and markdown — this is not a build dependency and is never published. It exists so the markdownlint-cli2 requirement is discoverable and pinned rather than tribal knowledge: `npx markdownlint-cli2` silently resolves whatever version is latest that day, so contributors and CI could disagree with nothing recording which version was meant. Run `npm ci` to install it locally; the runtime's lint-markdown primitive then prefers node_modules/.bin/markdownlint-cli2 over spawning npx, which matters because npx under a lazy-loading nvm is a shell function that a spawned process cannot see.",
+  "license": "MIT",
+  "scripts": {
+    "lint": "markdownlint-cli2"
+  },
+  "devDependencies": {
+    "markdownlint-cli2": "0.23.2"
+  }
+}
