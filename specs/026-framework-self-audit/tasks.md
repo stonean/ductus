@@ -295,3 +295,12 @@ Opened by [048](../048-govern-acquired-runtime/spec.md)'s AC10 adopter runs, whi
 - [x] Implement the behavior described in `scenarios/family-31-review-block-agreement.md`
 
 - **Done when**: `scripts/audit/review-block-agreement.sh` derives both records from frontmatter — `spec.md`'s `review:` block and the sibling `review.md` — and reports every disagreement across the five paired fields (`last-run`/`reviewed-at`, `reviewed-against`, and the three counts) with the spec, the field, and both values, naming `review.md` as the source of record in the fix; also reports `blocking: false` alongside a non-zero `must-violations`, and a waiver present in `review.md` with no matching `review.waivers` entry in `spec.md`. Hardcodes neither side, compares only specs carrying both files, never compares single-sided fields, reads frontmatter only, treats an empty subject set or unparseable frontmatter as a finding, reports the examined count on stderr, and is wired into `run-all.sh` as Family 31, `framework/commands/audit.md`, and `scripts/audit/README.md`. Proven red against a seeded count divergence in each direction and against an empty subject set; green at HEAD.
+
+### 35. Family 31 — move the check into a runtime primitive
+
+- [ ] Extract the comparison into a `check-review-agreement` primitive under `runtime/src/primitives/`, reusing the runtime's frontmatter scanners rather than a fifth hand-rolled regex copy
+- [ ] Register at the six existing sites: `primitives/mod.rs`, `main.rs`, `interpreter/mod.rs`, `mcp/server.rs`, `schema/registry.rs`, `schema/primitives.rs`
+- [ ] Reduce `scripts/audit/review-block-agreement.sh` to the Family 30 entry-point shape — resolve `.ductus/bin/ductus` falling back to `runtime/target/release/ductus`, call the primitive, render through `emit`, treat an unreachable runtime as a finding
+- [ ] Fix the same `\s*` newline-swallow bug in `scripts/audit/review-freshness.sh`'s `scalar()`, or fold Family 19 onto the same primitive
+
+- **Done when**: `check-review-agreement` exists as a runtime primitive with unit tests covering the five paired fields, the `blocking`/`must-violations` rule, the orphan-waiver rule, an empty subject set, and unparseable frontmatter on either side; `scripts/audit/review-block-agreement.sh` is a thin entry point carrying no markdown parsing of its own; `scripts/lint-tool-coverage.sh` and `cargo test` pass; `scripts/audit/run-all.sh` exits 0 with Family 31 still proven red against a seeded divergence in each direction; and REUSE-001 from the 2026-08-28 review is resolved.

@@ -6,6 +6,10 @@ Per-family check scripts for `/audit`. See [spec 026](../../specs/026-framework-
 
 Every script in this directory follows the same contract:
 
+**Before writing one of these scripts, check whether the check belongs in the runtime instead.** A family that is deterministic, already mechanical, and specifiable as prose meets [§runtime-boundary](../../framework/constitution.md#runtime-boundary)'s eligibility criteria, and meeting them is a default rather than a permission: the check is implemented as a primitive in `runtime/` and the script here becomes a thin entry point that resolves the binary and calls it. `/audit`'s contract requires the shell entry point either way — `run-all.sh` registers scripts, and Family 28 asserts that registry — so this is a question of where the *logic* lives, never of whether the script exists.
+
+`command-flag-hint-parity.sh` (Family 30) is the reference shape: the check is the `check-command-flags` primitive, and the script resolves `.ductus/bin/ductus` (falling back to `runtime/target/release/ductus`), calls it, and renders the result through `emit`. Reaching for an embedded `python3` heredoc to parse frontmatter or markdown structure is the signal that a check took the fallback without earning it — the runtime already parses both, its scanners are tested, and each hand-rolled copy drifts from the others. Several families here predate that standard and still parse markdown in-script; they are the legacy shape, not the pattern to copy.
+
 - **Output.** Findings written to stdout, one per line, in the format `FAMILY | LOCATION | MESSAGE | SUGGESTED-FIX` (pipe-separated, columns aligned for readability when the runtime renders the aggregated output).
 - **Exit code.** `0` when no findings; `1` when any finding is present. Aggregated by `/audit` via logical OR — any family with findings makes the whole audit fail.
 - **Read-only.** No file modifications. Scripts may write to `$TMPDIR` for intermediate computation but must not touch the working tree.

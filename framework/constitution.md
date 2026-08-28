@@ -527,6 +527,10 @@ A capability is runtime-eligible only when **all three** hold:
 
 A capability that fails any criterion stays out of the runtime. Anything that requires reading prose for intent is permanently LLM-owned regardless of how mechanical its surface looks.
 
+**Eligibility is a default, not a permission.** A capability meeting all three criteria is implemented as a runtime primitive; a shell script is the fallback, taken only when a criterion genuinely fails. The framework still needs shell entry points — a pre-commit hook, a CI step, an `/audit` family — and those keep their scripts, but the entry point resolves the runtime and calls the primitive rather than reimplementing the check inside itself. A script that parses frontmatter or markdown structure to do its work has already failed principle 3, whether it reaches for `awk` or for an embedded interpreter: the language is not what the principle turns on. The cost of ignoring this is not hypothetical — each hand-rolled parser is a fresh copy of a parse the runtime already owns and has tested, and the copies drift, so a bug fixed in one survives in the others.
+
+The pull is toward the script, because a script runs immediately and a primitive is a build away. Weigh that honestly: the build is a one-time cost paid by the author, and the parser is a permanent cost paid by every reader afterward.
+
 #### Acquisition invariant
 
 The repository's CI MUST include a job that exercises acquisition end-to-end on every supported platform: fetch the published asset for the target, verify its sidecar digest, install it into a temporary store, and execute the installed binary. A change that causes this job to fail — i.e. a release whose assets an adopter cannot actually acquire — is a constitution violation, not a feature.
