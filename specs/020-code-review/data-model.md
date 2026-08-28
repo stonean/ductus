@@ -78,7 +78,7 @@ Written to `specs/NNN-feature/review.md` — one review artifact per spec, regar
 spec: 020-code-review
 reviewed-at: 2026-05-10T14:32:00Z
 reviewed-against: <sha-of-HEAD>
-diff-base: <sha-where-status-became-in-progress>
+diff-base: <sha of the parent of the in-progress transition commit>
 must-violations: 0
 should-violations: 3
 low-confidence: 2

@@ -45,7 +45,6 @@
 
 use std::path::Path;
 
-use crate::primitives::spec_links::is_frontmatter_fence;
 use crate::primitives::{Result, read_text, rel_path, section_line_indices};
 use crate::schema::primitives::{
     CheckCommandFlagsArgs, CheckCommandFlagsResult, CommandFlagFinding, CommandFlagSkip,
@@ -116,7 +115,7 @@ pub fn run(_args: &CheckCommandFlagsArgs, repo: &Path) -> Result<CheckCommandFla
         }
         with_flags_table.push(rel.clone());
 
-        let Some(hint) = argument_hint(&content) else {
+        let Some(hint) = argument_hint(&content, path) else {
             findings.push(CommandFlagFinding {
                 command: rel,
                 flag: String::new(),
@@ -165,21 +164,21 @@ pub fn run(_args: &CheckCommandFlagsArgs, repo: &Path) -> Result<CheckCommandFla
 /// The `argument-hint:` value from the leading frontmatter block, with
 /// surrounding quotes stripped.
 ///
+/// Where the frontmatter block ends is [`super::split_frontmatter`]'s
+/// question, not this function's — it already handles the CRLF opener and the
+/// empty-block (`---\n---\n`) case, and a second definition here would be a
+/// second place for that boundary to drift. A file with no frontmatter is
+/// `None` rather than an error, which is why the result is discarded with
+/// `.ok()`: an absent block is a legitimate state for a command file, not a
+/// failure to report.
+///
 /// Scans the frontmatter only. An `argument-hint:` line in the body is prose
 /// about the field — several command files discuss it — and is not the
 /// declaration a host reads.
-fn argument_hint(content: &str) -> Option<String> {
-    let mut lines = content.lines();
-    // Only a `---` on the very first line opens the block.
-    match lines.next() {
-        Some(first) if is_frontmatter_fence(first) => {}
-        _ => return None,
-    }
-    for raw in lines {
+fn argument_hint(content: &str, path: &Path) -> Option<String> {
+    let (frontmatter, _body) = super::split_frontmatter(content, path).ok()?;
+    for raw in frontmatter.lines() {
         let line = raw.strip_suffix('\r').unwrap_or(raw);
-        if is_frontmatter_fence(line) {
-            return None;
-        }
         if let Some(value) = line.strip_prefix("argument-hint:") {
             let trimmed = value.trim();
             let unquoted = trimmed
@@ -295,12 +294,38 @@ mod tests {
     #[test]
     fn reads_the_hint_from_frontmatter_only() {
         let content = command(Some("[--all] [feature]"), "argument-hint: not frontmatter");
-        assert_eq!(argument_hint(&content).unwrap(), "[--all] [feature]");
+        assert_eq!(
+            argument_hint(&content, Path::new("review.md")).unwrap(),
+            "[--all] [feature]"
+        );
     }
 
     #[test]
     fn a_file_without_frontmatter_has_no_hint() {
-        assert!(argument_hint("# Title\n\nargument-hint: \"[--x]\"\n").is_none());
+        assert!(
+            argument_hint(
+                "# Title\n\nargument-hint: \"[--x]\"\n",
+                Path::new("review.md")
+            )
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn an_empty_frontmatter_block_yields_no_hint_without_erroring() {
+        // `---\n---\n` is the case a hand-rolled scan gets wrong: the closing
+        // fence is the very next line. split_frontmatter handles it, so this
+        // is None (no hint declared), not a swallowed error.
+        assert!(argument_hint("---\n---\n\n# Title\n", Path::new("x.md")).is_none());
+    }
+
+    #[test]
+    fn a_crlf_frontmatter_opener_is_read() {
+        let content = "---\r\ndescription: x\r\nargument-hint: \"[--all]\"\r\n---\r\n\r\nbody\r\n";
+        assert_eq!(
+            argument_hint(content, Path::new("x.md")).unwrap(),
+            "[--all]"
+        );
     }
 
     #[test]

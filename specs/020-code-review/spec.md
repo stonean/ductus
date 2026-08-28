@@ -268,7 +268,7 @@ advances to `done`.
 | `--simplicity` | Run only the reuse / quality / efficiency / simplicity passes |
 | `--quality` | Run only the correctness / bug-detection pass |
 | `--fix` | Apply auto-fixable findings (see [Auto-fix scope](#auto-fix-scope) below) |
-| `--since=<ref>` | Override the diff base (default: commit at which spec advanced to `in-progress`) |
+| `--since=<ref>` | Override the diff base (default: the parent of the commit at which the spec advanced to `in-progress`, so work committed with the transition is inside the window) |
 | `--waive <rule-id> --reason "<text>"` | Record a waiver for a MUST violation (see [Waivers](#waivers)) |
 
 ## Pipeline position
@@ -386,7 +386,7 @@ Write the report to `specs/NNN-feature/review.md`. A scenario-targeted run still
 spec: 042-example-feature
 reviewed-at: 2026-05-10T14:32:00Z
 reviewed-against: <sha-of-HEAD>
-diff-base: <sha-where-status-became-in-progress>
+diff-base: <sha of the parent of the in-progress transition commit>
 must-violations: 0
 should-violations: 3
 low-confidence: 2

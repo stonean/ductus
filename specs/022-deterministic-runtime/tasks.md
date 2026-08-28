@@ -281,3 +281,9 @@ Runtime half of [049's rename](../049-rename-govern-to-ductus/spec.md): the per-
 - [x] Implement the behavior described in `scenarios/append-task-honours-slug-with-explicit-body.md`
 
 - **Done when**: `append-task` prepends the `scenarios/{slug}.md` line when both `body` and `slug` are supplied, and is unchanged when either is absent; the `slug` field's "Ignored when `body` is supplied" sentence is replaced in `runtime/src/schema/primitives.rs`; flat and phased rendering share the one prepend path; tests cover body-plus-slug, body-without-slug, empty-body-plus-slug, and the unchanged default-body path
+
+## 103. Implement scenario: [review-base-includes-the-transition-commit](scenarios/review-base-includes-the-transition-commit.md) — a review window must contain the commit that opened it
+
+- [x] Implement the behavior described in `scenarios/review-base-includes-the-transition-commit.md`
+
+- **Done when**: `compute-review-scope` peels the resolved in-progress commit to its first parent before diffing, so work committed together with the back-edge flip is inside the review window; an explicit `--since` is used verbatim with no parent walk; a parentless transition commit falls back to itself; `find_in_progress_commit` is unchanged and `check-stuck` still counts from the transition commit itself; tests cover the flip-plus-work commit (the 017/020 shape), the flip-alone commit, the `--since` passthrough, and the root-commit fallback

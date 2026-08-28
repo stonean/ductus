@@ -122,6 +122,19 @@ corpus, which is the drift the canonical-source map exists to prevent.
   written against the old enumeration and no longer holds for this primitive:
   with the full walk, an unparseable tracked spec is reported whether or not it
   is staged. The sibling scenario's edge case is updated to say so.
+- **The full walk costs the pre-commit hook one extra corpus read, and it was
+  measured rather than assumed.** The hook runs both derive primitives, so
+  after this change every commit reads every tracked spec twice instead of once
+  plus a staged subset. Measured on ductus's own corpus (51 specs, 876 KB) on
+  2026-08-27: `derive-references` 23.6 ms per run, `derive-dependencies`
+  71.3 ms (it also runs Tarjan's SCC over the graph), ~95 ms for the pair. The
+  added cost against the old staged-only reference walk is roughly 20 ms per
+  commit — below the threshold where a hook is noticeable, and the correctness
+  it buys is a class of drift that was previously unreportable at any cost.
+  Recorded here so the trade-off is not re-litigated from intuition; the two
+  primitives run as separate processes and share no read, so collapsing them
+  would mean one combined command, which is a larger change than this
+  measurement justifies.
 - **The field is additive.** Existing consumers ignore it and the MCP goldens
   that assert the ordinary payload stay byte-identical when it is empty.
 - **`data-model.md` records it.** That file currently scopes `unwritten` to

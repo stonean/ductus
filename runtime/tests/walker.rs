@@ -243,17 +243,20 @@ fn review_primitive_results_thread_into_perform_review_and_write_review() {
     let spec = |status: &str| format!("---\nstatus: {status}\ndependencies: []\n---\n\n# X\n");
     let spec_path = tmp.path().join("specs/001-x/spec.md");
 
-    // History: 001-x goes planned → in-progress (the diff-base commit),
-    // then a source file is added — the review scope. The rule file lands
-    // in the first commit so it predates diff-base and stays out of scope.
+    // History: 001-x goes planned → in-progress, then a source file is added —
+    // the review scope. The diff base is the **parent** of the transition
+    // commit, so the transition itself is inside the window (scenario
+    // `review-base-includes-the-transition-commit`); the rule file lands in
+    // that parent commit, which is therefore the boundary rather than a member
+    // of the window.
     write_file(&spec_path, &spec("planned"));
     write_file(
         &tmp.path().join("framework/rules/security-backend.md"),
         "# Security\n\n- **SEC-BE-001**: no secrets in logs.\n",
     );
-    commit_all(&repo, "feat: plan");
+    let diff_base = commit_all(&repo, "feat: plan");
     write_file(&spec_path, &spec("in-progress"));
-    let diff_base = commit_all(&repo, "chore: begin");
+    commit_all(&repo, "chore: begin");
     write_file(&tmp.path().join("src/a.rs"), "fn a() {}\n");
     commit_all(&repo, "feat: implement");
 

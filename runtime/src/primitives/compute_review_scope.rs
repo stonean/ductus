@@ -2,8 +2,12 @@
 //!
 //! Resolves three things the review command needs, from git history:
 //!
-//! - **diff-base** — the commit the spec advanced to `in-progress` at (shared
-//!   with `check-stuck`), or a caller-supplied `--since` override.
+//! - **diff-base** — the **parent** of the commit the spec advanced to
+//!   `in-progress` at (the transition itself is found by the lookup shared with
+//!   `check-stuck`), or a caller-supplied `--since` override used verbatim. The
+//!   parent, because `base..HEAD` excludes the base's own changes and the
+//!   reopen flow commits the back-edge flip together with the work it
+//!   authorises — see `scenarios/review-base-includes-the-transition-commit.md`.
 //! - **scope** — the union of the plan's `Affected Files` set and the set of
 //!   files modified since `diff-base`. Both, because either alone can omit
 //!   what the review exists to look at.
@@ -46,12 +50,29 @@ pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewSc
     let spec_rel = format!("{}/{}/spec.md", layout.specs_root, args.feature);
 
     let diff_base = match &args.since {
+        // An explicit base is used verbatim. No parent walk: an operator naming
+        // a commit means that commit, and quietly reviewing one more than they
+        // asked for would be its own scope surprise.
         Some(reference) => repository
             .revparse_single(reference)?
             .peel_to_commit()?
             .id()
             .to_string(),
-        None => find_in_progress_commit(&repository, &spec_rel)?.unwrap_or_default(),
+        // The transition commit is the *boundary* of the work window, and a
+        // boundary belongs inside the window it bounds — so the base is its
+        // parent. `base..HEAD` excludes the base's own changes, which is
+        // harmless when `/ductus:implement` flips `planned -> in-progress` in a
+        // commit holding only the status line, and silently fatal in the reopen
+        // flow: `/ductus:amend`'s `done -> in-progress` back-edge is naturally
+        // committed together with the work it authorises, so the window started
+        // after the work and contained none of it. Two specs recorded 0 MUST /
+        // 0 SHOULD over an empty subject that way on 2026-08-27 before the
+        // operator caught it (scenario
+        // `review-base-includes-the-transition-commit`).
+        None => match find_in_progress_commit(&repository, &spec_rel)? {
+            Some(sha) => transition_parent(&repository, &sha)?,
+            None => String::new(),
+        },
     };
 
     let inbox_rel = format!("{}/inbox.md", layout.specs_root);
@@ -88,6 +109,26 @@ pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewSc
 
 /// Diff `base_sha..HEAD`: return the sorted set of changed file paths and the
 /// lines added to `inbox_rel` in that window.
+/// The first parent of the status-transition commit `sha`, or `sha` itself
+/// when it has no parent.
+///
+/// A root transition commit has nothing earlier to diff from, so it stays as
+/// it resolves today rather than erroring — an unusual history is not a defect
+/// to halt a review on.
+///
+/// Deliberately applied here rather than inside `find_in_progress_commit`:
+/// `check-stuck` shares that lookup and counts `tasks.md` commits *since* the
+/// transition, where the transition commit itself is correctly the origin. A
+/// shared helper returning different commits to its two callers would be the
+/// drift this placement keeps out.
+fn transition_parent(repository: &Repository, sha: &str) -> Result<String> {
+    let commit = repository.find_commit(Oid::from_str(sha)?)?;
+    Ok(match commit.parent(0) {
+        Ok(parent) => parent.id().to_string(),
+        Err(_) => sha.to_string(),
+    })
+}
+
 fn diff_since(
     repo: &Repository,
     base_sha: &str,
@@ -233,13 +274,77 @@ mod tests {
     }
 
     #[test]
-    fn diff_base_is_the_in_progress_commit_and_scope_lists_modified_files() {
+    fn diff_base_is_the_transition_commits_parent_and_scope_lists_modified_files() {
         let (tmp, sha) = repo_with_progress();
         let result = run(&args("001-x", None), tmp.path()).unwrap();
-        assert_eq!(result.diff_base, sha);
+        // The base is the parent of the transition, so the transition commit
+        // is inside the window rather than excluded from it.
+        let parent = Repository::discover(tmp.path())
+            .unwrap()
+            .find_commit(Oid::from_str(&sha).unwrap())
+            .unwrap()
+            .parent(0)
+            .unwrap()
+            .id()
+            .to_string();
+        assert_eq!(result.diff_base, parent);
         assert!(result.modified_since.contains(&"src/a.rs".to_string()));
         assert!(result.modified_since.contains(&"src/b.rs".to_string()));
-        assert_eq!(result.scope, result.modified_since);
+        // Widening by the transition commit adds only its status-line change.
+        assert!(
+            result
+                .modified_since
+                .contains(&"specs/001-x/spec.md".to_string()),
+            "{:?}",
+            result.modified_since
+        );
+    }
+
+    /// The 017/020 shape: `/ductus:amend`'s back-edge flip committed together
+    /// with the work it authorises. A base *at* that commit excludes the work,
+    /// so the review examines nothing and still reports clean.
+    #[test]
+    fn work_committed_with_the_back_edge_flip_is_inside_the_window() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let spec_path = tmp.path().join("specs/001-x/spec.md");
+        write(&spec_path, &spec("done"));
+        write(&tmp.path().join("src/old.rs"), "fn old() {}\n");
+        commit_all(&repo, "feat: ship it");
+
+        // One commit: the reopen and the deliverable together.
+        write(&spec_path, &spec("in-progress"));
+        write(&tmp.path().join("src/new.rs"), "fn new() {}\n");
+        commit_all(&repo, "fix: reopen and implement");
+
+        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        assert!(
+            result.modified_since.contains(&"src/new.rs".to_string()),
+            "the reviewed deliverable fell outside the window: {:?}",
+            result.modified_since
+        );
+        assert!(
+            result.scope.contains(&"src/new.rs".to_string()),
+            "{:?}",
+            result.scope
+        );
+    }
+
+    /// A transition commit with no parent has nothing earlier to diff from.
+    #[test]
+    fn a_root_transition_commit_falls_back_to_itself() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        write(
+            &tmp.path().join("specs/001-x/spec.md"),
+            &spec("in-progress"),
+        );
+        let sha = commit_all(&repo, "feat: root");
+        write(&tmp.path().join("src/a.rs"), "fn a() {}\n");
+        commit_all(&repo, "feat: more");
+
+        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        assert_eq!(result.diff_base, sha, "root commit should be its own base");
     }
 
     #[test]
@@ -257,6 +362,15 @@ mod tests {
             .to_string();
         assert_eq!(result.diff_base, head);
         assert!(result.modified_since.is_empty());
+    }
+
+    #[test]
+    fn since_is_used_verbatim_with_no_parent_walk() {
+        // An operator naming a commit means that commit. Passing the
+        // transition sha explicitly must resolve to it, not to its parent.
+        let (tmp, sha) = repo_with_progress();
+        let result = run(&args("001-x", Some(&sha)), tmp.path()).unwrap();
+        assert_eq!(result.diff_base, sha);
     }
 
     #[test]

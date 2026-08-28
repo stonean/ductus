@@ -90,7 +90,7 @@ Report an unrecognized `--flag` and stop. Never absorb it into the feature ident
 | `--simplicity` | Run only the reuse / quality / efficiency / simplicity passes |
 | `--quality` | Run only the correctness / bug-detection pass |
 | `--fix` | Apply auto-fixable findings (see [Auto-fix scope](#auto-fix-scope) below) |
-| `--since=<ref>` | Override the diff base (default: commit at which spec advanced to `in-progress`) |
+| `--since=<ref>` | Override the diff base (default: the parent of the commit at which the spec advanced to `in-progress`, so work committed with the transition is inside the window) |
 | `--waive <rule-id> --reason "<text>"` | Record a waiver for a MUST violation (see [Waivers](#waivers)) |
 
 ## Pipeline position
@@ -111,7 +111,7 @@ records `must-violations: > 0`. See [Blocking semantics](#blocking-semantics).
 
 Run once per targeted feature (every in-progress or done spec under `--all`, otherwise the current `/{project}:target`), in order. Resolve a `[feature]` argument through `resolve-feature` (exact name / number / unique partial slug), and enumerate the `--all` set from `dashboard`'s per-spec status inventory (`specs[].status ∈ {in-progress, done}`) rather than a directory scan. The detailed walk — rule-selection notices, waiver semantics, the report skeleton, and the pass definitions — lives under the Markdown-only reference section below.
 
-1. Invoke `compute-review-scope` to resolve the diff base (the commit the spec advanced to in-progress at, or a `--since` override), the review file scope (the **union** of the plan's Affected Files and the files modified since the diff base — both sets, because either alone can omit what the review exists to look at), and the inbox additions captured in that window. When the scope is empty, jump straight to the write-review step (step 9) — it emits the nothing-to-review-yet, non-blocking report. Otherwise confirm tech-stack alignment first (host judgment, not a primitive): read the active config file; when its `[review] tech-stack-verified` flag is true, skip the check; else compare the AGENTS.md Tech Stack section against the code in scope, halting with the tech-stack-misalignment message on a mismatch, and — on success — confirm before persisting the flag (the same confirm-before-write gate the other pipeline steps use; see the tech-stack alignment step in the markdown-only reference) and write `[review] tech-stack-verified = true` to the **active config file** (the newest existing of `.ductus/config.toml`, `.govern/config.toml`, or the legacy root `.govern.toml`, else `.ductus/config.toml`; specs 042 and 049 — a write outside the `/ductus` migrations never creates a partial `.ductus/config.toml` alongside a lingering older file). Only the flag read is deterministic — the alignment judgment stays with the host.
+1. Invoke `compute-review-scope` to resolve the diff base (the **parent** of the commit the spec advanced to in-progress at, so work committed together with an `/{project}:amend` back-edge flip is inside the window rather than excluded from it; or a `--since` override, which is used verbatim), the review file scope (the **union** of the plan's Affected Files and the files modified since the diff base — both sets, because either alone can omit what the review exists to look at), and the inbox additions captured in that window. When the scope is empty, jump straight to the write-review step (step 9) — it emits the nothing-to-review-yet, non-blocking report. Otherwise confirm tech-stack alignment first (host judgment, not a primitive): read the active config file; when its `[review] tech-stack-verified` flag is true, skip the check; else compare the AGENTS.md Tech Stack section against the code in scope, halting with the tech-stack-misalignment message on a mismatch, and — on success — confirm before persisting the flag (the same confirm-before-write gate the other pipeline steps use; see the tech-stack alignment step in the markdown-only reference) and write `[review] tech-stack-verified = true` to the **active config file** (the newest existing of `.ductus/config.toml`, `.govern/config.toml`, or the legacy root `.govern.toml`, else `.ductus/config.toml`; specs 042 and 049 — a write outside the `/ductus` migrations never creates a partial `.ductus/config.toml` alongside a lingering older file). Only the flag read is deterministic — the alignment judgment stays with the host.
 2. Invoke `discover-rule-files` to select this run's rule files — suffix classification, the `[rules] surfaces` selection, and the disabled-rule-files filter — and emit the ordered notice lines it returns verbatim.
 3. <!-- llm:performReview --> Run the **security** pass over the in-scope files against the loaded security rules, returning one finding per violation (rule id, severity, file, line range, confidence, explanation).
 4. <!-- llm:performReview --> Run the **reuse** pass: flag logic that duplicates existing utilities or belongs in shared code.
@@ -351,7 +351,7 @@ Write the report to `specs/NNN-feature/review.md`. A scenario-targeted run still
 spec: 042-example-feature
 reviewed-at: 2026-05-10T14:32:00Z
 reviewed-against: <sha-of-HEAD>
-diff-base: <sha-where-status-became-in-progress>
+diff-base: <sha of the parent of the in-progress transition commit>
 must-violations: 0
 should-violations: 3
 low-confidence: 2
