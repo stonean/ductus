@@ -27,6 +27,20 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   the worktree without the deletion being staged was counted as examined
   without being read, and appeared in none of the result's other lists. Both
   results gain `absent`, and `examined` now counts specs actually read.
+- **A review window now contains the commit that opened it.**
+  `compute-review-scope` resolved the diff base to the commit at which the spec
+  advanced to `in-progress`, and `base..HEAD` excludes that commit's own
+  changes. Harmless in the flow the design assumed — `/ductus:implement` flips
+  `planned -> in-progress` in a commit holding only the status line — and
+  silently fatal in the reopen flow, where `/ductus:amend`'s back-edge is
+  naturally committed together with the work it authorises: the window then
+  started after the work and held none of it. Two specs in one round would have
+  recorded 0 MUST / 0 SHOULD having examined nothing, caught only because the
+  scope list was read by hand. The base is now the transition commit's first
+  parent. An explicit `--since` is used verbatim — no parent walk, since an
+  operator naming a commit means that commit — and a parentless transition
+  falls back to itself. `find_in_progress_commit` is unchanged, so `check-stuck`
+  still counts from the transition commit itself.
 - **`append-task` no longer discards a supplied `slug` when `body` is given.**
   The argument was documented as "ignored when `body` is supplied", which
   silently broke the task-references-its-scenario promise `/ductus:groom` and
