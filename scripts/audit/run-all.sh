@@ -73,5 +73,6 @@ run_check "Family 27 — done-spec unchecked criteria" "scripts/audit/done-spec-
 run_check "Family 28 — audit family registry parity" "scripts/audit/audit-family-parity.sh"
 run_check "Family 29 — permission wildcard position" "scripts/audit/permission-wildcard-position.sh"
 run_check "Family 30 — command flag/hint parity" "scripts/audit/command-flag-hint-parity.sh"
+run_check "Family 31 — review block agreement" "scripts/audit/review-block-agreement.sh"
 
 exit "$drift"

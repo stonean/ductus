@@ -6,7 +6,7 @@ review:
   reviewed-against: 50cc0702cf621c3766668c66275a83c47c0c6455
   must-violations: 0
   should-violations: 0
-  low-confidence: 1
+  low-confidence: 0
   blocking: false
 next-criterion: 17
 ---
