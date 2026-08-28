@@ -14,7 +14,7 @@ skipped-passes: []
 
 ## Summary
 
-Post-fix run: the QUAL-REUSE SHOULD from the 64b926c pass is resolved — `config_path` now derives from `config_display_name` (50cc070), so the new-wins choice lives once and the read path and provenance tag cannot disagree on the resolution rule; behavior unit-proven identical across all four presence cases. The tasks 14–15 delta plus release prep otherwise stands as reviewed: no new attack surface (display literals, doc comments, fixed-constant path helper), no new input handling, network calls, or secrets. 0 MUST, 0 SHOULD; 1 low-confidence note retained (probe-to-use race — read and display still resolve at separate moments at the call sites, though the choice logic is now single-sourced; mitigated by the serial pipeline and atomic writes). No issues captured to the inbox in the window. Not blocking.
+Post-fix run: the QUAL-REUSE SHOULD from the 64b926c pass is resolved — `config_path` now derives from `config_display_name` (50cc070), so the new-wins choice lives once and the read path and provenance tag cannot disagree on the resolution rule; behavior unit-proven identical across all four presence cases. The tasks 14–15 delta plus release prep otherwise stands as reviewed: no new attack surface (display literals, doc comments, fixed-constant path helper), no new input handling, network calls, or secrets. 0 MUST, 0 SHOULD, 0 low-confidence — the probe-to-use race this run recorded as a low-confidence note was resolved 2026-08-02 under 022's `config-resolution-single-probe` scenario, and is kept under Low-confidence findings with that resolution recorded. No issues captured to the inbox in the window. Not blocking.
 
 ## MUST violations (blocking)
 
