@@ -59,7 +59,7 @@ Newline-delimited JSON. Each line is one complete JSON object terminated by `\n`
 ```json
 {
   "type": "llm-request",
-  "extension-point": "writeCode | writeSpecBody | assessSpecQuality | performReview | askClarifyQuestion | routeInboxItem",
+  "extension-point": "writeCode | writeSpecBody | assessSpecQuality | performReview | askClarifyQuestion | routeInboxItem | routeFold | verifyCriteria",
   "request-id": "<opaque string, unique per request>",
   "request": { }
 }
@@ -935,7 +935,7 @@ rewrite frontmatter across every spec in a corpus.
 
 ## Extension-point schemas (initial release)
 
-The three initial-release single-shot extension points, plus the follow-on points: `askClarifyQuestion` and `routeInboxItem`, whose typed shapes ship ahead of their scenarios per the extension-request-hygiene scenario, and `verifyCriteria`, which ships with the implement-completion-gate scenario as `/ductus:implement`'s criterion-verification seam. Each has request and response payload schemas; the runtime validates incoming responses against these and emits `error: schema-mismatch` on failure. An extension identifier outside this closed set is an `error: unknown-extension` at request-build time — never a raw walker-context dump. In every request that carries legacy-compat context fields after its typed prefix (`writeCode`, `writeSpecBody`, `performReview`), walker-internal accumulator keys (prior `llm:*` response echoes and the accumulated `findings` array) are filtered out; primitive results threaded through the context (`scope`, `diff-base`, `selected`, `rules-dir`, `notices`, …) pass through.
+The three initial-release single-shot extension points, plus the follow-on points: `askClarifyQuestion` and `routeInboxItem`, whose typed shapes ship ahead of their scenarios per the extension-request-hygiene scenario; `verifyCriteria`, which ships with the implement-completion-gate scenario as `/ductus:implement`'s criterion-verification seam; and `routeFold`, `/ductus:fold`'s body-edit-or-scenario decision (spec 051). Each has request and response payload schemas; the runtime validates incoming responses against these and emits `error: schema-mismatch` on failure. An extension identifier outside this closed set is an `error: unknown-extension` at request-build time — never a raw walker-context dump. In every request that carries legacy-compat context fields after its typed prefix (`writeCode`, `writeSpecBody`, `performReview`), walker-internal accumulator keys (prior `llm:*` response echoes and the accumulated `findings` array) are filtered out; primitive results threaded through the context (`scope`, `diff-base`, `selected`, `rules-dir`, `notices`, …) pass through.
 
 ### `assessSpecQuality`
 
@@ -1111,6 +1111,41 @@ Response payload:
 ```
 
 `route` is one of the request's `routes` vocabulary (closed set — anything else is a schema mismatch); `feature` is present when the route targets an existing spec; `reason` is optional prose the host may surface in the per-item confirmation prompt.
+
+### `routeFold` (follow-on)
+
+Introduced by [051-branch-scoped-spec-numbering](../051-branch-scoped-spec-numbering/spec.md): `/ductus:fold` asks, per branch-scoped spec, what shape its content takes in the upstream spec it folds into. **Deliberately not `routeInboxItem`.** That point's vocabulary is a closed five-route set answering *where in the corpus does this work belong*; a fold has already been told where — its `folds-into` names the destination — and is asking only what shape the content takes on arrival. Widening the inbox vocabulary to cover it would break the closedness its other callers depend on.
+
+Request payload:
+
+```json
+{
+  "feature": "1234.1-retry-budget",
+  "spec-content": "...full spec text of the branch-scoped spec...",
+  "scenarios": [
+    { "slug": "backoff-ceiling", "section": "Retry policy" }
+  ],
+  "fold-target": "021-webhook-delivery",
+  "target-content": "...full spec text of the upstream spec...",
+  "target-status": "done",
+  "target-sections": ["Motivation", "Retry policy", "Acceptance Criteria"],
+  "routes": ["body-edit", "scenario"]
+}
+```
+
+`target-content` and `target-sections` are both present because "which section" is unanswerable without the document: `target-sections` is the closed vocabulary a `body-edit` route names, so the router picks a heading the file actually has rather than inventing one. `target-status` drives the guarded `done` → `in-progress` reopen the fold performs. `scenarios` lists what the source spec carries; those cross over on *either* route — the route decides the body's shape, never its scenarios'.
+
+Response payload:
+
+```json
+{
+  "route": "scenario",
+  "scenario": "backoff-ceiling",
+  "reason": "A durable behavioral split, not a clarification of the existing policy."
+}
+```
+
+`route` is one of the request's `routes` vocabulary (closed set — anything else is a schema mismatch). Exactly one of `section` (on `body-edit`) and `scenario` (on `scenario`) is meaningful; both are optional in the schema rather than modelled as a sum type, because a missing field on the chosen arm is something the *command* surfaces to the operator at its confirmation prompt rather than a deserialization failure. `reason` is optional prose the host may surface at that prompt, which is where the routing is approved before any write.
 
 ### `verifyCriteria` (follow-on)
 

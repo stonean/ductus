@@ -146,8 +146,8 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 
 ## 17. Add `routeFold` to spec 022's extension-point enumeration
 
-- [ ] Add `routeFold` to the closed extension-point set in `specs/022-deterministic-runtime/data-model.md` — both the protocol envelope's `extension-point` union and the extension-point section that enumerates the set
-- [ ] Document its request/response shape as the sibling points are documented, and say what distinguishes it from `routeInboxItem`: that vocabulary answers *where in the corpus does this work belong*, while a fold has already been told where
-- [ ] Leave 022's status alone — a canonical record synced to shipped behavior is a mechanical edit under §spec-lifecycle
+- [x] Add `routeFold` to the closed extension-point set in `specs/022-deterministic-runtime/data-model.md` — both the protocol envelope's `extension-point` union and the extension-point section that enumerates the set
+- [x] Document its request/response shape as the sibling points are documented, and say what distinguishes it from `routeInboxItem`: that vocabulary answers *where in the corpus does this work belong*, while a fold has already been told where
+- [x] Leave 022's status alone — a canonical record synced to shipped behavior is a mechanical edit under §spec-lifecycle
 
 - **Done when**: 022's data model enumerates every extension point the runtime actually exposes, and the cross-spec write is explained in its commit message rather than surfacing at the gate as an unaccounted sibling-spec change (§cross-spec-impact).
