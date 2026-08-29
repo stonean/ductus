@@ -65,6 +65,8 @@ Three new primitives carry the deterministic half; the rest is existing ones (`c
 - `retire-feature` — remove the branch-scoped directory, refusing when the fold target does not exist so a retirement can never strand content (AC28).
 - `check-unfolded-specs` — report branch-scoped directories present in the working tree, with their `folds-into` targets, for `/ductus:analyze` to surface (AC21).
 
+A declared fold target is also **outstanding work**, not merely a recorded intent, so it participates in the two surfaces that report outstanding work: `dashboard` reports a spec carrying `folds-into` as pending rather than `done`, and `check-review-gate` blocks `in-progress → done` while it is present. The gate placement mirrors the unresolved-scenario-questions check it sits beside — both say the same thing, that a spec with undischarged obligations is not complete. The consequence is that the branch-scoped form has no `done` state at all: it is retired, not completed (AC34, AC35, AC36).
+
 Atomicity is per branch-scoped spec (AC29): each spec's fold completes its writes and its retirement before the next begins, so an interruption leaves every spec either fully folded or untouched. This is the granularity the existing primitives already give — each is individually atomic — rather than a transaction spanning the whole run, which nothing in the runtime provides.
 
 `check-orphaned-references` is the verifier, not the repair path. Its report-don't-repair stance rests on a migration knowing only its own hop (`runtime/src/primitives/check_orphaned_references.rs:8`, `:16`); fold-back knows both endpoints, so it rewrites and the check confirms the result is clean (AC22).

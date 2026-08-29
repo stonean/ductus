@@ -2146,6 +2146,51 @@ pub struct CreateFeatureArgs {
     /// hyphen, leading/trailing hyphens trimmed.
     #[arg(long)]
     pub title: String,
+    /// Branch identifier, for branch-scoped creation (spec 051).
+    ///
+    /// Absent is the default and unchanged path: the feature takes the
+    /// next sequential number. Present switches to the branch-scoped
+    /// form, `<identifier>.<n>-<slug>`, where the counter runs within
+    /// this identifier alone.
+    ///
+    /// (Written with angle brackets rather than braces because clap
+    /// renders this doc comment as `--help` text and expands a
+    /// brace-wrapped `n` there as a newline escape.)
+    ///
+    /// The value is an opaque operator-supplied token, not a number —
+    /// trackers disagree (`PROJ-1111`, `1111-PROJ`) — and is sanitized by
+    /// the same rule that derives a slug from a title, so the caller must
+    /// echo the `identifier` this primitive returns rather than assume
+    /// its input survived verbatim.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[arg(long)]
+    pub branch_id: Option<String>,
+    /// The upstream spec this branch-scoped spec folds back into, written
+    /// to its `folds-into:` frontmatter.
+    ///
+    /// Requires `branch_id`, and is mutually exclusive with
+    /// `no_fold_target` — with `branch_id` set, exactly one of the two
+    /// must be supplied. Omitting both is refused rather than defaulted:
+    /// a silently absent fold target turns a staging spec into a
+    /// permanent one, which is the spec proliferation fold-back exists to
+    /// prevent (AC30).
+    ///
+    /// Validated for *shape* only. The target normally lives on the
+    /// upstream branch and is absent from the tree creating this spec, so
+    /// requiring it to resolve would refuse the feature's normal case.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[arg(long)]
+    pub fold_into: Option<String>,
+    /// Declare explicitly that this branch-scoped spec has no upstream
+    /// home, so it is renumbered into the global sequence at merge rather
+    /// than folded into anything.
+    ///
+    /// The other half of the `fold_into` choice. It exists so that "no
+    /// fold target" is something the operator states, never something
+    /// reached by leaving an argument off.
+    #[serde(default)]
+    #[arg(long)]
+    pub no_fold_target: bool,
 }
 
 /// Result for `create-feature`.
@@ -2164,6 +2209,15 @@ pub struct CreateFeatureResult {
     /// directory; absent on the refusal outcome.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub template: Option<String>,
+    /// The **sanitized** branch identifier actually used; absent on a
+    /// sequential creation.
+    ///
+    /// Returned because sanitization can change what the operator typed
+    /// (`PROJ-1111` becomes `proj-1111`), and a transformation the
+    /// operator never sees is one they discover from a directory name
+    /// later. The calling command echoes this at its confirmation prompt.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub identifier: Option<String>,
 }
 
 // -- create-plan-artifacts -------------------------------------------------
@@ -3801,16 +3855,35 @@ mod tests {
         use super::{CreateFeatureArgs, CreateFeatureResult};
         let args = CreateFeatureArgs {
             title: "Deterministic Runtime!".into(),
+            branch_id: None,
+            fold_into: None,
+            no_fold_target: false,
         };
         let value: serde_json::Value = serde_json::to_value(&args).unwrap();
         assert_eq!(value["title"], "Deterministic Runtime!");
+        // The branch-scoped arguments are absent from a sequential
+        // request, not null: an adopter's stored payload predates them.
+        assert!(!value.as_object().unwrap().contains_key("branch-id"));
+        assert!(!value.as_object().unwrap().contains_key("fold-into"));
         assert_eq!(round_trip(&args), args);
+
+        let branch_args = CreateFeatureArgs {
+            title: "Staged Change".into(),
+            branch_id: Some("proj-1111".into()),
+            fold_into: Some("022-deterministic-runtime".into()),
+            no_fold_target: false,
+        };
+        let bv: serde_json::Value = serde_json::to_value(&branch_args).unwrap();
+        assert_eq!(bv["branch-id"], "proj-1111");
+        assert_eq!(bv["fold-into"], "022-deterministic-runtime");
+        assert_eq!(round_trip(&branch_args), branch_args);
 
         let result = CreateFeatureResult {
             created: true,
             feature: "043-deterministic-runtime".into(),
             path: "specs/043-deterministic-runtime".into(),
             template: Some("framework/templates/spec/spec.md".into()),
+            identifier: None,
         };
         let rv: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert_eq!(rv["created"], true);
@@ -3823,6 +3896,7 @@ mod tests {
             feature: "043-deterministic-runtime".into(),
             path: "specs/043-deterministic-runtime".into(),
             template: None,
+            identifier: None,
         };
         let fv: serde_json::Value = serde_json::to_value(&refused).unwrap();
         assert!(!fv.as_object().unwrap().contains_key("template"));

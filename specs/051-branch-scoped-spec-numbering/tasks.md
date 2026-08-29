@@ -22,18 +22,18 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 
 ## 3. Add branch-scoped creation to `create-feature`
 
-- [ ] Add the `branch-id` and `fold-into` arguments and the `identifier` result field to the schema
-- [ ] Make the fold target an explicit choice: branch-scoped creation supplies a target or an explicit "none", and never defaults silently
-- [ ] Sanitize `branch-id` through `derive_slug`; refuse an identifier that sanitizes to empty through the existing `InvalidArgument` path
-- [ ] Compute `.{n}` as `max + 1` over `BranchScoped` forms matching the sanitized identifier
-- [ ] Test: first and second spec under one identifier; identifiers differing only in case landing in one namespace; `PROJ-1111` and `1111-PROJ` sanitizing as specified; an identifier containing `.`; an existing directory returning `created: false`
+- [x] Add the `branch-id` and `fold-into` arguments and the `identifier` result field to the schema
+- [x] Make the fold target an explicit choice: branch-scoped creation supplies a target or an explicit "none", and never defaults silently
+- [x] Sanitize `branch-id` through `derive_slug`; refuse an identifier that sanitizes to empty through the existing `InvalidArgument` path
+- [x] Compute `.{n}` as `max + 1` over `BranchScoped` forms matching the sanitized identifier
+- [x] Test: first and second spec under one identifier; identifiers differing only in case landing in one namespace; `PROJ-1111` and `1111-PROJ` sanitizing as specified; an identifier containing `.`; an existing directory returning `created: false`
 
 - **Done when**: creation with no `branch-id` produces byte-identical behavior to today, creation with one produces `{identifier}.{n}-{slug}` with the sanitized identifier returned, and a branch-scoped spec cannot be created without the operator having chosen a fold target or explicitly declined one (AC1, AC8, AC9, AC10, AC11, AC12, AC26, AC27, AC30).
 
 ## 4. Keep the sequential counter independent
 
-- [ ] Restrict `next_feature_number` to `Sequential` forms
-- [ ] Test: a spec root of `050-a` plus `1234.1-b` yields `051-…` next; a root holding only branch-scoped directories yields `001-…`
+- [x] Restrict `next_feature_number` to `Sequential` forms
+- [x] Test: a spec root of `050-a` plus `1234.1-b` yields `051-…` next; a root holding only branch-scoped directories yields `001-…`
 
 - **Done when**: no branch-scoped directory can influence the sequential counter (AC2, AC3, AC4, AC14).
 
@@ -60,8 +60,11 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 - [ ] Implement the primitive per the data model, reporting each branch-scoped directory with its `folds-into` and status, plus an `examined` count
 - [ ] Register it in `runtime/src/schema/primitives.rs`, the MCP server, and `framework/runtime-tools.txt`
 - [ ] Test: a corpus with no branch-scoped directories reports empty with a non-zero `examined`
+- [ ] Teach the pipeline view that a declared `folds-into` is outstanding work: the spec is reported as carrying a pending fold, never as `done`
+- [ ] Block `in-progress → done` in the pre-`done` gate while `folds-into` is present, naming the pending fold — the same category as an unresolved scenario question
+- [ ] Test both: a spec with `folds-into` reports outstanding and fails the gate; one that declared no fold target does neither
 
-- **Done when**: every surviving branch-scoped directory is reported with its declared fold target, and an empty result is distinguishable from an unexamined corpus (AC21).
+- **Done when**: every surviving branch-scoped directory is reported with its declared fold target, a pending fold holds its spec short of `done` in both the pipeline view and the gate, and an empty result is distinguishable from an unexamined corpus (AC21, AC34, AC35, AC36).
 
 ## 8. Surface un-folded specs in `/ductus:analyze`
 

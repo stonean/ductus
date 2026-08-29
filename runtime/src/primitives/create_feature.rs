@@ -21,7 +21,7 @@ use std::path::Path;
 
 use crate::primitives::apply_manifest::mirror_source_mode;
 use crate::primitives::{
-    PrimitiveError, Result, list_feature_dirs, parse_feature_dir, resolve_template,
+    FeatureForm, PrimitiveError, Result, list_feature_dirs, parse_feature_dir, resolve_template,
     write_atomic_bytes,
 };
 use crate::schema::paths;
@@ -45,24 +45,35 @@ pub fn run(args: &CreateFeatureArgs, repo: &Path) -> Result<CreateFeatureResult>
             reason: "title derives to an empty slug (no ASCII alphanumeric characters)".into(),
         });
     }
+    let branch = resolve_branch_scope(args)?;
 
     let root = paths::Paths::load(repo).specs_root;
     let specs_dir = repo.join(&root);
-    let number = next_feature_number(&specs_dir);
-    let feature = format!("{number:03}-{slug}");
+    let feature = match &branch {
+        None => format!("{:03}-{slug}", next_feature_number(&specs_dir)),
+        Some(scope) => {
+            let n = next_branch_number(&specs_dir, &scope.identifier);
+            format!("{}.{n}-{slug}", scope.identifier)
+        }
+    };
     let feature_dir = specs_dir.join(&feature);
     let rel_dir = format!("{root}/{feature}");
+    let identifier = branch.as_ref().map(|scope| scope.identifier.clone());
 
     // Refusal domain outcome: the derived directory already exists.
-    // `next_feature_number` makes this unreachable for well-formed spec
-    // roots (max + 1 exceeds every existing prefix), but a racing writer
-    // or a hand-created directory must never be overwritten.
+    // The counters make this unreachable for well-formed spec roots (max
+    // + 1 exceeds every existing number under the same scheme), but a
+    // racing writer or a hand-created directory must never be
+    // overwritten. It is also what makes two contributors creating under
+    // one identifier at the same moment safe: both compute the same `n`,
+    // and the loser is refused rather than clobbering the winner.
     if feature_dir.exists() {
         return Ok(CreateFeatureResult {
             created: false,
             feature,
             path: rel_dir,
             template: None,
+            identifier,
         });
     }
 
@@ -73,13 +84,21 @@ pub fn run(args: &CreateFeatureArgs, repo: &Path) -> Result<CreateFeatureResult>
         path: template_abs.clone(),
         source,
     })?;
+    // Stamp the fold target into the template *before* anything is
+    // written, so a template that cannot carry the key is refused with
+    // nothing on disk rather than leaving a branch-scoped spec whose
+    // upstream home was silently dropped.
+    let spec_bytes = match branch.as_ref().and_then(|scope| scope.fold_into.as_deref()) {
+        None => template_bytes,
+        Some(target) => stamp_fold_target(&template_bytes, target, &template_rel)?,
+    };
 
     std::fs::create_dir_all(&feature_dir).map_err(|source| PrimitiveError::Io {
         path: feature_dir.clone(),
         source,
     })?;
     let dest = feature_dir.join("spec.md");
-    write_atomic_bytes(&dest, &template_bytes)?;
+    write_atomic_bytes(&dest, &spec_bytes)?;
     mirror_source_mode(&template_abs, &dest)?;
 
     Ok(CreateFeatureResult {
@@ -87,7 +106,159 @@ pub fn run(args: &CreateFeatureArgs, repo: &Path) -> Result<CreateFeatureResult>
         feature,
         path: rel_dir,
         template: Some(template_rel),
+        identifier,
     })
+}
+
+/// A validated branch-scoped creation request.
+struct BranchScope {
+    /// The sanitized identifier, already in the slug grammar.
+    identifier: String,
+    /// The upstream spec to fold into; `None` is the *declared* no-home
+    /// case, never an omitted argument.
+    fold_into: Option<String>,
+}
+
+/// Validate the branch-scoped arguments as a group, or confirm that this
+/// is an ordinary sequential creation.
+///
+/// The group is refused rather than defaulted in every ambiguous case.
+/// The one that matters is `branch_id` with neither `fold_into` nor
+/// `no_fold_target`: defaulting there would turn a staging spec into a
+/// permanent one on a forgotten argument, which is exactly the
+/// proliferation fold-back exists to prevent.
+fn resolve_branch_scope(args: &CreateFeatureArgs) -> Result<Option<BranchScope>> {
+    let invalid = |argument: &str, reason: String| PrimitiveError::InvalidArgument {
+        primitive: "create-feature".into(),
+        argument: argument.into(),
+        reason,
+    };
+
+    let Some(raw) = args.branch_id.as_deref() else {
+        // The fold-target arguments describe a branch-scoped spec, so
+        // they are meaningless here — accepting and ignoring them would
+        // let a caller believe a fold target was recorded.
+        if args.fold_into.is_some() {
+            return Err(invalid(
+                "fold-into",
+                "fold-into requires branch-id: only a branch-scoped spec folds back".into(),
+            ));
+        }
+        if args.no_fold_target {
+            return Err(invalid(
+                "no-fold-target",
+                "no-fold-target requires branch-id: only a branch-scoped spec folds back".into(),
+            ));
+        }
+        return Ok(None);
+    };
+
+    let identifier = derive_slug(raw);
+    if identifier.is_empty() {
+        return Err(invalid(
+            "branch-id",
+            format!(
+                "branch-id {raw:?} sanitizes to an empty identifier \
+                 (no ASCII alphanumeric characters)"
+            ),
+        ));
+    }
+
+    let fold_into = match (args.fold_into.as_deref(), args.no_fold_target) {
+        (Some(_), true) => {
+            return Err(invalid(
+                "fold-into",
+                "fold-into and no-fold-target are mutually exclusive: supply exactly one".into(),
+            ));
+        }
+        (None, false) => {
+            return Err(invalid(
+                "fold-into",
+                "branch-scoped creation requires an explicit fold target: supply fold-into \
+                 <feature>, or no-fold-target to declare there is none. Omitting both would \
+                 make a staging spec permanent by default"
+                    .into(),
+            ));
+        }
+        (None, true) => None,
+        (Some(target), false) => {
+            // Shape only. The target normally lives on the upstream
+            // branch and is absent from this tree, so requiring it to
+            // resolve would refuse the feature's normal case.
+            if !matches!(
+                parse_feature_dir(target),
+                Some(FeatureForm::Sequential { .. })
+            ) {
+                return Err(invalid(
+                    "fold-into",
+                    format!(
+                        "fold-into {target:?} is not a sequential feature name (NNN-slug); a \
+                         branch-scoped spec cannot fold into another branch-scoped spec"
+                    ),
+                ));
+            }
+            Some(target.to_string())
+        }
+    };
+
+    Ok(Some(BranchScope {
+        identifier,
+        fold_into,
+    }))
+}
+
+/// Insert `folds-into: {target}` just above the frontmatter's closing
+/// fence, mirroring how `label-criteria` inserts `next-criterion:`.
+///
+/// Refuses a template with no frontmatter block: the key has nowhere to
+/// live, and silently dropping it would lose the branch-scoped spec's
+/// only record of where it belongs.
+fn stamp_fold_target(template: &[u8], target: &str, template_rel: &str) -> Result<Vec<u8>> {
+    let malformed = || PrimitiveError::InvalidArgument {
+        primitive: "create-feature".into(),
+        argument: "fold-into".into(),
+        reason: format!(
+            "spec template {template_rel} has no frontmatter block, so folds-into cannot be \
+             recorded"
+        ),
+    };
+    let text = std::str::from_utf8(template).map_err(|_| malformed())?;
+    let newline = if text.contains("\r\n") { "\r\n" } else { "\n" };
+    let lines: Vec<&str> = text.split('\n').map(|l| l.trim_end_matches('\r')).collect();
+    if lines.first() != Some(&"---") {
+        return Err(malformed());
+    }
+    let close = lines
+        .iter()
+        .skip(1)
+        .position(|l| *l == "---")
+        .ok_or_else(malformed)?
+        + 1;
+
+    let mut out: Vec<String> = lines.into_iter().map(str::to_string).collect();
+    out.insert(close, format!("folds-into: {target}"));
+    Ok(out.join(newline).into_bytes())
+}
+
+/// The next `{n}` under one branch identifier: the max existing counter
+/// for that identifier, plus one.
+///
+/// Scoped to the identifier, so counters under different identifiers are
+/// independent and two branches cannot collide. The rule is `max + 1`,
+/// the same one the sequential counter uses — which means a retired
+/// number is reusable, accepted because fold-back re-points every in-repo
+/// link before a directory is retired.
+fn next_branch_number(specs_dir: &Path, identifier: &str) -> u32 {
+    list_feature_dirs(specs_dir)
+        .iter()
+        .filter_map(|name| parse_feature_dir(name))
+        .filter_map(|form| match form {
+            FeatureForm::BranchScoped { identifier: id, n } if id == identifier => Some(n),
+            _ => None,
+        })
+        .max()
+        .unwrap_or(0)
+        + 1
 }
 
 /// Derive the kebab-case directory slug from a feature title: every ASCII
@@ -147,6 +318,249 @@ mod tests {
     fn args(title: &str) -> CreateFeatureArgs {
         CreateFeatureArgs {
             title: title.into(),
+            branch_id: None,
+            fold_into: None,
+            no_fold_target: false,
+        }
+    }
+
+    /// Branch-scoped creation with an explicit "no upstream home".
+    fn branch_args(title: &str, branch_id: &str) -> CreateFeatureArgs {
+        CreateFeatureArgs {
+            title: title.into(),
+            branch_id: Some(branch_id.into()),
+            fold_into: None,
+            no_fold_target: true,
+        }
+    }
+
+    #[test]
+    fn branch_scoped_creation_counts_within_its_identifier() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_with_installed_template(tmp.path());
+
+        let first = run(&branch_args("Staged change", "1234"), tmp.path()).unwrap();
+        assert_eq!(first.feature, "1234.1-staged-change");
+        assert_eq!(first.identifier.as_deref(), Some("1234"));
+
+        let second = run(&branch_args("Another change", "1234"), tmp.path()).unwrap();
+        assert_eq!(second.feature, "1234.2-another-change");
+
+        // A different identifier starts its own counter rather than
+        // continuing the first one.
+        let other = run(&branch_args("Elsewhere", "5678"), tmp.path()).unwrap();
+        assert_eq!(other.feature, "5678.1-elsewhere");
+    }
+
+    #[test]
+    fn a_branch_scoped_only_root_still_starts_the_sequence_at_001() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_with_installed_template(tmp.path());
+        run(&branch_args("Staged change", "1234"), tmp.path()).unwrap();
+        run(&branch_args("Another change", "5678"), tmp.path()).unwrap();
+
+        // No sequential directory exists, and the branch-scoped ones
+        // contribute nothing, so the sequence begins where it would in an
+        // empty root — not at 1235 or 5679.
+        let first = run(&args("First sequential"), tmp.path()).unwrap();
+        assert_eq!(first.feature, "001-first-sequential");
+    }
+
+    #[test]
+    fn branch_scoped_creation_leaves_the_sequential_counter_alone() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_with_installed_template(tmp.path());
+        fs::create_dir_all(tmp.path().join("specs/050-existing")).unwrap();
+
+        run(&branch_args("Staged change", "1234"), tmp.path()).unwrap();
+
+        // The branch-scoped directory contributes no sequential number,
+        // so the next sequential spec is still 051 — not 1235.
+        let next = run(&args("Next sequential"), tmp.path()).unwrap();
+        assert_eq!(next.feature, "051-next-sequential");
+    }
+
+    #[test]
+    fn branch_identifier_is_sanitized_and_reported() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_with_installed_template(tmp.path());
+
+        // Trackers disagree on shape; both forms are accepted as opaque
+        // tokens and lowercased into the directory grammar.
+        let jira = run(&branch_args("Ticket work", "PROJ-1111"), tmp.path()).unwrap();
+        assert_eq!(jira.feature, "proj-1111.1-ticket-work");
+        assert_eq!(jira.identifier.as_deref(), Some("proj-1111"));
+
+        let gitlab = run(&branch_args("Item work", "1111-PROJ"), tmp.path()).unwrap();
+        assert_eq!(gitlab.feature, "1111-proj.1-item-work");
+
+        // A dot in the identifier collapses to a hyphen, so it can never
+        // be confused with the `.{n}` delimiter.
+        let dotted = run(&branch_args("Dotted", "proj.7"), tmp.path()).unwrap();
+        assert_eq!(dotted.feature, "proj-7.1-dotted");
+    }
+
+    #[test]
+    fn identifiers_differing_only_in_case_share_one_namespace() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_with_installed_template(tmp.path());
+
+        let first = run(&branch_args("First", "PROJ-1111"), tmp.path()).unwrap();
+        assert_eq!(first.feature, "proj-1111.1-first");
+
+        // Not a second namespace starting at .1 — the same one, continuing.
+        let second = run(&branch_args("Second", "proj-1111"), tmp.path()).unwrap();
+        assert_eq!(second.feature, "proj-1111.2-second");
+    }
+
+    #[test]
+    fn an_existing_branch_scoped_path_is_refused_not_overwritten() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_with_installed_template(tmp.path());
+
+        // The refusal is unreachable through a hand-created *directory*:
+        // the counter would see it and hand out the number after it. It
+        // is reached the same way the sequential case is — the derived
+        // path already exists as a plain file, which `exists()` reports
+        // but `list_feature_dirs` does not count.
+        fs::write(tmp.path().join("specs/1234.1-taken"), "not a dir\n").unwrap();
+
+        let refused = run(&branch_args("Taken", "1234"), tmp.path()).unwrap();
+        assert!(
+            !refused.created,
+            "refusal is a domain outcome, not an error"
+        );
+        assert_eq!(refused.feature, "1234.1-taken");
+        assert!(refused.template.is_none());
+        // The identifier is reported on the refusal too, so the caller
+        // can name the namespace that collided.
+        assert_eq!(refused.identifier.as_deref(), Some("1234"));
+        let body = fs::read_to_string(tmp.path().join("specs/1234.1-taken")).unwrap();
+        assert_eq!(body, "not a dir\n", "existing path untouched");
+    }
+
+    #[test]
+    fn an_explicit_fold_target_is_stamped_into_the_frontmatter() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_with_installed_template(tmp.path());
+        let result = run(
+            &CreateFeatureArgs {
+                title: "Staged change".into(),
+                branch_id: Some("1234".into()),
+                fold_into: Some("022-deterministic-runtime".into()),
+                no_fold_target: false,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        let spec = fs::read_to_string(
+            tmp.path()
+                .join("specs")
+                .join(&result.feature)
+                .join("spec.md"),
+        )
+        .unwrap();
+        assert!(
+            spec.contains("folds-into: 022-deterministic-runtime"),
+            "fold target not recorded:\n{spec}"
+        );
+        // Inserted inside the frontmatter block, above the closing fence.
+        let fm_end = spec.find("\n---\n").unwrap();
+        assert!(spec.find("folds-into:").unwrap() < fm_end);
+    }
+
+    #[test]
+    fn declining_a_fold_target_records_no_key() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_with_installed_template(tmp.path());
+        let result = run(&branch_args("No home", "1234"), tmp.path()).unwrap();
+        let spec = fs::read_to_string(
+            tmp.path()
+                .join("specs")
+                .join(&result.feature)
+                .join("spec.md"),
+        )
+        .unwrap();
+        assert!(!spec.contains("folds-into:"));
+    }
+
+    #[test]
+    fn branch_scoped_creation_refuses_an_unstated_fold_target() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_with_installed_template(tmp.path());
+        let err = run(
+            &CreateFeatureArgs {
+                title: "Staged change".into(),
+                branch_id: Some("1234".into()),
+                fold_into: None,
+                no_fold_target: false,
+            },
+            tmp.path(),
+        )
+        .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidArgument { argument, .. } if argument == "fold-into"),
+            "expected a fold-into refusal, got {err:?}"
+        );
+        // Nothing was created: the refusal happens before any write.
+        assert!(!tmp.path().join("specs/1234.1-staged-change").exists());
+    }
+
+    #[test]
+    fn branch_scoped_argument_groups_are_validated() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_with_installed_template(tmp.path());
+
+        let cases: [(CreateFeatureArgs, &str); 4] = [
+            // Both halves of the choice at once is a contradiction.
+            (
+                CreateFeatureArgs {
+                    title: "T".into(),
+                    branch_id: Some("1234".into()),
+                    fold_into: Some("022-x".into()),
+                    no_fold_target: true,
+                },
+                "fold-into",
+            ),
+            // An identifier with nothing alphanumeric in it.
+            (
+                CreateFeatureArgs {
+                    title: "T".into(),
+                    branch_id: Some("!!!".into()),
+                    fold_into: None,
+                    no_fold_target: true,
+                },
+                "branch-id",
+            ),
+            // A fold target that is not a sequential feature name: a
+            // branch-scoped spec cannot fold into another one.
+            (
+                CreateFeatureArgs {
+                    title: "T".into(),
+                    branch_id: Some("1234".into()),
+                    fold_into: Some("5678.1-other".into()),
+                    no_fold_target: false,
+                },
+                "fold-into",
+            ),
+            // Fold arguments without branch-id describe nothing.
+            (
+                CreateFeatureArgs {
+                    title: "T".into(),
+                    branch_id: None,
+                    fold_into: Some("022-x".into()),
+                    no_fold_target: false,
+                },
+                "fold-into",
+            ),
+        ];
+
+        for (case, expected) in cases {
+            let err = run(&case, tmp.path()).unwrap_err();
+            assert!(
+                matches!(&err, PrimitiveError::InvalidArgument { argument, .. } if argument == expected),
+                "expected {expected:?} refusal, got {err:?}"
+            );
         }
     }
 
