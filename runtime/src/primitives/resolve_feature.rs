@@ -299,6 +299,32 @@ mod tests {
         }
     }
 
+    /// A corpus that passes 999 keeps working: the four-digit name
+    /// `create-feature` produces resolves by number like any other, and
+    /// `1000` is not confused with the branch namespace `1000` — the two
+    /// forms are matched separately, so naming both is `ambiguous` rather
+    /// than a silent pick.
+    #[test]
+    fn resolves_a_sequential_number_past_999() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path());
+        write(
+            &tmp.path().join("specs/1000-thousandth/spec.md"),
+            "---\nstatus: draft\ndependencies: []\n---\n\n# Thousandth\n",
+        );
+
+        let result = run(&args("1000", None), tmp.path()).unwrap();
+        assert_eq!(result.outcome, ResolveFeatureOutcome::Resolved);
+        assert_eq!(result.feature.as_deref(), Some("1000-thousandth"));
+
+        write(
+            &tmp.path().join("specs/1000.1-staged/spec.md"),
+            "---\nstatus: draft\ndependencies: []\nfolds-into: 1000-thousandth\n---\n\n# Staged\n",
+        );
+        let both = run(&args("1000", None), tmp.path()).unwrap();
+        assert_eq!(both.outcome, ResolveFeatureOutcome::Ambiguous);
+    }
+
     #[test]
     fn resolves_unique_partial_slug_case_insensitively() {
         let tmp = tempdir().unwrap();

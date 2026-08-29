@@ -1489,7 +1489,21 @@ pub(crate) fn parse_feature_dir(name: &str) -> Option<FeatureForm> {
     }
 }
 
-/// `NNN-` followed by at least one character.
+/// At least three digits, then `-`, then at least one character.
+///
+/// **Three is a minimum, not a width.** `create-feature` formats the
+/// number with `{number:03}`, which pads *up to* three digits and then
+/// keeps counting, so the 1000th spec in a corpus is named `1000-slug`.
+/// A rule that demanded exactly three digits — as this one did — made
+/// that directory invisible to every corpus reader the moment it was
+/// created, by a predicate disagreeing with the formatter that produced
+/// the name.
+///
+/// A run longer than three digits carrying a leading zero is rejected, so
+/// the name/number mapping stays injective: `{number:03}` never emits
+/// `0500-`, and accepting it would give `500` two spellings — one of
+/// which `next_feature_number` and `resolve-feature` would then disagree
+/// about.
 ///
 /// Deliberately does **not** hold the trailing slug to the slug grammar:
 /// this form predates the grammar's enforcement, and an adopter's spec
@@ -1497,16 +1511,17 @@ pub(crate) fn parse_feature_dir(name: &str) -> Option<FeatureForm> {
 /// would make those directories invisible to every corpus reader at once
 /// — a silent regression rather than a reported one.
 fn parse_sequential(name: &str) -> Option<FeatureForm> {
-    let bytes = name.as_bytes();
-    let well_formed = bytes.len() >= 5
-        && bytes[0].is_ascii_digit()
-        && bytes[1].is_ascii_digit()
-        && bytes[2].is_ascii_digit()
-        && bytes[3] == b'-';
-    if !well_formed {
+    let (digits, slug) = name.split_once('-')?;
+    if slug.is_empty() || digits.len() < 3 {
         return None;
     }
-    let number = name.get(..3)?.parse::<u32>().ok()?;
+    if !digits.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    if digits.len() > 3 && digits.starts_with('0') {
+        return None;
+    }
+    let number = digits.parse::<u32>().ok()?;
     Some(FeatureForm::Sequential { number })
 }
 
@@ -2095,7 +2110,40 @@ mod tests {
             Some(FeatureForm::Sequential { number: 7 })
         );
         assert_eq!(parse_feature_dir("abc-nope"), None);
-        assert_eq!(parse_feature_dir("22"), None); // too short for a 3-byte slice
+        assert_eq!(parse_feature_dir("22"), None); // fewer than three digits
+        assert_eq!(parse_feature_dir("22-short"), None);
+        assert_eq!(parse_feature_dir("050"), None); // digits but no slug
+    }
+
+    /// The three-digit pad is a minimum width, not a fixed one: the 1000th
+    /// spec in a corpus is named `1000-slug` by `create-feature`'s
+    /// `{number:03}` formatter, and a predicate demanding exactly three
+    /// digits made that directory invisible to every corpus reader the
+    /// moment it was created. The formatter and the membership rule have
+    /// to agree across the whole range, not just the first 1000.
+    #[test]
+    fn parse_feature_dir_reads_a_sequential_number_past_999() {
+        assert_eq!(
+            parse_feature_dir("1000-thousandth"),
+            Some(FeatureForm::Sequential { number: 1000 })
+        );
+        assert_eq!(
+            parse_feature_dir("12345-far-future"),
+            Some(FeatureForm::Sequential { number: 12345 })
+        );
+        // Injective by construction: `{number:03}` never emits a leading
+        // zero past three digits, so accepting one would give 500 two
+        // spellings that the counter and feature resolution would then
+        // disagree about.
+        assert_eq!(parse_feature_dir("0500-padded-twice"), None);
+        // Still branch-scoped — the dot is examined before the digits are.
+        assert_eq!(
+            parse_feature_dir("1000.1-staged"),
+            Some(FeatureForm::BranchScoped {
+                identifier: "1000".into(),
+                n: 1,
+            })
+        );
     }
 
     #[test]
@@ -2569,7 +2617,12 @@ mod tests {
 
     #[test]
     fn is_feature_slug_accepts_canonical_form() {
-        for slug in &["022-deterministic-runtime", "000-blocker", "999-foo"] {
+        for slug in &[
+            "022-deterministic-runtime",
+            "000-blocker",
+            "999-foo",
+            "1000-foo",
+        ] {
             assert!(is_feature_slug(slug), "expected acceptance for {slug:?}");
         }
     }
@@ -2583,7 +2636,7 @@ mod tests {
             "022",
             "abc-something",
             "22-too-short",
-            "0220-too-long-prefix", // first 3 chars are digits but 4th isn't '-'
+            "0220-too-long-prefix", // four digits with a leading zero: not a `{number:03}` name
         ] {
             assert!(!is_feature_slug(bad), "expected rejection for {bad:?}");
         }

@@ -344,6 +344,36 @@ mod tests {
         assert_eq!(first.feature, "001-first-sequential");
     }
 
+    /// The counter's doc comment always said numbers past 999 render
+    /// four-digit, but `parse_feature_dir` demanded exactly three — so the
+    /// 1000th spec was created with a name its own membership predicate
+    /// rejected, making it invisible to every corpus reader. The formatter
+    /// and the predicate have to agree, and this is where they meet.
+    #[test]
+    fn the_thousandth_spec_is_created_with_a_name_the_predicate_accepts() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_with_installed_template(tmp.path());
+        fs::create_dir_all(tmp.path().join("specs/999-last-three-digit")).unwrap();
+
+        let next = run(&args("Thousandth spec"), tmp.path()).unwrap();
+        assert_eq!(next.feature, "1000-thousandth-spec");
+
+        // Visible to the corpus, which is the half the bug broke: the
+        // directory existed but no reader could see it.
+        assert!(
+            list_feature_dirs(&tmp.path().join("specs")).contains(&next.feature),
+            "the new directory must be enumerable"
+        );
+        assert_eq!(
+            parse_feature_dir(&next.feature).and_then(|f| f.sequential_number()),
+            Some(1000)
+        );
+
+        // And the counter keeps going from there rather than restarting.
+        let after = run(&args("One after"), tmp.path()).unwrap();
+        assert_eq!(after.feature, "1001-one-after");
+    }
+
     #[test]
     fn branch_scoped_creation_leaves_the_sequential_counter_alone() {
         let tmp = tempfile::tempdir().unwrap();

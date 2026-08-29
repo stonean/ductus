@@ -151,3 +151,13 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 - [x] Leave 022's status alone — a canonical record synced to shipped behavior is a mechanical edit under §spec-lifecycle
 
 - **Done when**: 022's data model enumerates every extension point the runtime actually exposes, and the cross-spec write is explained in its commit message rather than surfacing at the gate as an unaccounted sibling-spec change (§cross-spec-impact).
+
+## 18. Let the sequential form survive its own counter passing 999
+
+- [x] Widen `parse_sequential` to `{3+ digits}-{any}`, so the name `create-feature`'s `{number:03}` minimum-width pad produces for the 1000th spec is one the predicate accepts
+- [x] Keep the name/number mapping injective: reject a run longer than three digits that carries a leading zero, since `{number:03}` never emits one
+- [x] Test: `1000-slug` parses as `Sequential { number: 1000 }`; `0500-a` is rejected; `05-a` and `050` stay rejected; a 1000-spec corpus yields `1000-` next and resolves `1000` to it
+- [x] Record the widened form in the constitution's §numbering — the pad is a minimum width, not a fixed one
+- [x] Remove the item from `specs/inbox.md`
+
+- **Done when**: a spec created past 999 is visible to every corpus reader, `create-feature`'s formatter and `parse_feature_dir`'s membership rule agree on the whole range of `u32`, and the inbox item is discharged rather than left for `/ductus:groom`.
