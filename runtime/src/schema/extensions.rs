@@ -6,8 +6,9 @@
 //! `writeSpecBody`), `performReview`, and the follow-on points —
 //! `askClarifyQuestion` and `routeInboxItem`, whose typed shapes ship
 //! ahead of their scenarios per the extension-request-hygiene scenario,
-//! plus `verifyCriteria`, the implement-completion-gate scenario's
-//! criterion-verification seam. The runtime emits these as the `request`
+//! `verifyCriteria`, the implement-completion-gate scenario's
+//! criterion-verification seam, and `routeFold`, `/{project}:fold`'s
+//! body-edit-or-scenario decision (spec 051). The runtime emits these as the `request`
 //! field of `llm-request` envelopes and validates incoming `llm-response`
 //! payloads against them.
 
@@ -369,6 +370,107 @@ pub struct RouteInboxItemResponse {
     pub reason: Option<String>,
 }
 
+// -- routeFold -----------------------------------------------------------------
+
+/// One scenario the branch-scoped spec carries into the fold.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct FoldSourceScenario {
+    /// Scenario file basename without `.md`.
+    pub slug: String,
+    /// Its frontmatter `section` (or the legacy `spec-ref`); empty when
+    /// unreadable.
+    pub section: String,
+}
+
+/// Request payload for `routeFold` — one branch-scoped spec's content and
+/// the upstream spec it folds into, presented for the body-edit-or-scenario
+/// decision (spec 051).
+///
+/// **Deliberately not `routeInboxItem`.** That point's vocabulary is a
+/// closed five-route set — `rule`, `spec`, `scenario`, `chore`, `discard` —
+/// answering "where does this piece of work belong in the corpus". This one
+/// answers a different question with a different answer set: the home is
+/// already known (`folds-into` named it), and what is undecided is the
+/// *shape* the content takes once it arrives. Folding the two would widen a
+/// closed vocabulary that other callers rely on being closed.
+///
+/// The source spec's own **scenarios are context, not subjects**. A scenario
+/// is already an organizational split of a spec, so it crosses over as a
+/// scenario unchanged; what has no obvious home is the spec *body*, and that
+/// is what the route decides. They are listed here so the router can see
+/// what is arriving alongside the body — a body whose substance is already
+/// covered by a scenario it ships with routes differently from one that
+/// stands alone.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RouteFoldRequest {
+    /// The branch-scoped feature directory under decision.
+    pub feature: String,
+    /// Its `spec.md`, whole — the content being folded.
+    pub spec_content: String,
+    /// Scenarios it carries, sorted by slug. Empty when it has none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub scenarios: Vec<FoldSourceScenario>,
+    /// The upstream feature its `folds-into` names.
+    pub fold_target: String,
+    /// The upstream spec's `spec.md`, whole — the document the content is
+    /// being folded into, without which "which section" is unanswerable.
+    pub target_content: String,
+    /// The upstream spec's frontmatter `status`; empty when unreadable.
+    /// Drives the guarded `done` → `in-progress` reopen the fold performs.
+    pub target_status: String,
+    /// The upstream spec's `##` section headings, in body order — the
+    /// vocabulary a `body-edit` route names, so the router picks an
+    /// existing section rather than inventing one the file does not have.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub target_sections: Vec<String>,
+    /// Closed route vocabulary: `body-edit`, `scenario`.
+    pub routes: Vec<String>,
+}
+
+/// Fold-route discriminator — what shape the folded content takes in its
+/// upstream home.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum FoldRoute {
+    /// The content belongs in the upstream spec's own body, under a named
+    /// section.
+    BodyEdit,
+    /// The content is a durable behavioral split that belongs as its own
+    /// scenario under the upstream spec.
+    Scenario,
+}
+
+/// Response payload for `routeFold` — the routing decision for one
+/// branch-scoped spec.
+///
+/// Exactly one of [`Self::section`] and [`Self::scenario`] is meaningful,
+/// selected by [`Self::route`]. Both are optional in the schema rather than
+/// modelled as a sum type because the host answers in JSON and a missing
+/// field on the chosen arm is a decision the *command* must surface to the
+/// operator at the confirmation prompt — not a deserialization failure that
+/// would lose the rest of an otherwise usable answer.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RouteFoldResponse {
+    /// Chosen route from the request's `routes` vocabulary.
+    pub route: FoldRoute,
+    /// On `body-edit`: the target spec section the content is folded into,
+    /// named from the request's `target-sections`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub section: Option<String>,
+    /// On `scenario`: the slug of the scenario to create under the target
+    /// spec.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scenario: Option<String>,
+    /// Optional prose justification the host surfaces in the per-spec
+    /// confirmation prompt, which is where the operator approves the
+    /// routing before any write.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+}
+
 // -- verifyCriteria ------------------------------------------------------------
 
 /// One acceptance criterion presented for verification. Mirrors the
@@ -483,8 +585,9 @@ pub enum ValidationError {
 ///
 /// Returns [`ValidationError::UnknownExtension`] when `identifier` is not
 /// `assessSpecQuality`, `writeCode`, `writeSpecBody`, `performReview`,
-/// `askClarifyQuestion`, `routeInboxItem`, or `verifyCriteria`; otherwise
-/// [`ValidationError::Schema`] when deserialization fails.
+/// `askClarifyQuestion`, `routeInboxItem`, `routeFold`, or
+/// `verifyCriteria`; otherwise [`ValidationError::Schema`] when
+/// deserialization fails.
 pub fn validate_response(identifier: &str, response: &Value) -> Result<(), ValidationError> {
     macro_rules! check {
         ($ty:ty) => {{
@@ -512,6 +615,7 @@ pub fn validate_response(identifier: &str, response: &Value) -> Result<(), Valid
         "performReview" => check!(PerformReviewResponse),
         "askClarifyQuestion" => check!(AskClarifyQuestionResponse),
         "routeInboxItem" => check!(RouteInboxItemResponse),
+        "routeFold" => check!(RouteFoldResponse),
         "verifyCriteria" => check!(VerifyCriteriaResponse),
         other => Err(ValidationError::UnknownExtension(other.into())),
     }
@@ -652,8 +756,9 @@ mod tests {
     use super::{
         AskClarifyQuestionRequest, AskClarifyQuestionResponse, AssessSpecQualityFinding,
         AssessSpecQualityRequest, AssessSpecQualityResponse, AssessSpecQualityRule,
-        ClarifyQuestion, FindingLocation, InboxRoute, PerformReviewRequest, PerformReviewResponse,
-        PlanRelevantFile, ReviewRuleFile, ReviewScopeFile, RouteInboxItemRequest,
+        ClarifyQuestion, FindingLocation, FoldRoute, FoldSourceScenario, InboxRoute,
+        PerformReviewRequest, PerformReviewResponse, PlanRelevantFile, ReviewRuleFile,
+        ReviewScopeFile, RouteFoldRequest, RouteFoldResponse, RouteInboxItemRequest,
         RouteInboxItemResponse, RouteInboxSpec, VerifyCriteriaRequest, VerifyCriteriaResponse,
         VerifyCriterion, VerifyCriterionResult, WriteCodeAction, WriteCodeEdit, WriteCodeRequest,
         WriteCodeResponse, WriteCodeTask, WriteSpecBodyRequest, WriteSpecBodyResponse,
@@ -1375,6 +1480,105 @@ mod tests {
                 assert!(source.to_string().contains("met"));
             }
             other => panic!("expected Schema, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn route_fold_request_round_trips_with_its_source_scenarios() {
+        let request = RouteFoldRequest {
+            feature: "1234.1-widget-cache".into(),
+            spec_content: "---\nstatus: in-progress\nfolds-into: 050-alpha\n---\n\n# staged\n"
+                .into(),
+            scenarios: vec![FoldSourceScenario {
+                slug: "eviction".into(),
+                section: "Behavior".into(),
+            }],
+            fold_target: "050-alpha".into(),
+            target_content: "---\nstatus: done\n---\n\n## Motivation\n".into(),
+            target_status: "done".into(),
+            target_sections: vec!["Motivation".into()],
+            routes: vec!["body-edit".into(), "scenario".into()],
+        };
+        let value = serde_json::to_value(&request).unwrap();
+        assert_eq!(value["feature"], "1234.1-widget-cache");
+        assert_eq!(value["fold-target"], "050-alpha");
+        assert_eq!(value["target-status"], "done");
+        assert_eq!(value["scenarios"][0]["slug"], "eviction");
+        assert_eq!(value["target-sections"][0], "Motivation");
+        assert_eq!(round_trip(&request), request);
+    }
+
+    /// A spec carrying no scenarios omits the key entirely, so the common
+    /// case is not padded with an empty array.
+    #[test]
+    fn route_fold_request_omits_empty_scenarios() {
+        let request = RouteFoldRequest {
+            feature: "1234.1-staged".into(),
+            spec_content: String::new(),
+            scenarios: vec![],
+            fold_target: "050-alpha".into(),
+            target_content: String::new(),
+            target_status: String::new(),
+            target_sections: vec![],
+            routes: vec!["body-edit".into(), "scenario".into()],
+        };
+        let value = serde_json::to_value(&request).unwrap();
+        assert!(value.get("scenarios").is_none());
+        assert!(value.get("target-sections").is_none());
+    }
+
+    #[test]
+    fn route_fold_response_names_the_section_or_the_scenario() {
+        let body_edit = RouteFoldResponse {
+            route: FoldRoute::BodyEdit,
+            section: Some("Behavior".into()),
+            scenario: None,
+            reason: Some("Extends the existing eviction rule.".into()),
+        };
+        let value = serde_json::to_value(&body_edit).unwrap();
+        assert_eq!(value["route"], "body-edit");
+        assert_eq!(value["section"], "Behavior");
+        assert!(value.get("scenario").is_none());
+        assert_eq!(round_trip(&body_edit), body_edit);
+
+        let scenario = RouteFoldResponse {
+            route: FoldRoute::Scenario,
+            section: None,
+            scenario: Some("widget-cache".into()),
+            reason: None,
+        };
+        let value = serde_json::to_value(&scenario).unwrap();
+        assert_eq!(value["route"], "scenario");
+        assert_eq!(value["scenario"], "widget-cache");
+        assert!(value.get("section").is_none());
+    }
+
+    /// The two vocabularies stay disjoint: a fold route is not an inbox
+    /// route and vice versa, which is what keeps the inbox set closed.
+    #[test]
+    fn the_fold_and_inbox_route_vocabularies_do_not_overlap() {
+        use super::validate_response;
+
+        validate_response("routeFold", &serde_json::json!({ "route": "body-edit" })).unwrap();
+        assert!(validate_response("routeFold", &serde_json::json!({ "route": "chore" })).is_err());
+        assert!(
+            validate_response(
+                "routeInboxItem",
+                &serde_json::json!({ "route": "body-edit" })
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn route_fold_rejects_a_route_outside_its_vocabulary() {
+        use super::{ValidationError, validate_response};
+
+        let err =
+            validate_response("routeFold", &serde_json::json!({ "route": "rewrite" })).unwrap_err();
+        match err {
+            ValidationError::Schema { identifier, .. } => assert_eq!(identifier, "routeFold"),
+            other => panic!("expected schema mismatch, got {other:?}"),
         }
     }
 

@@ -94,9 +94,9 @@ Phases 1 and 2's field work are complete and committed; task 7 is the next one. 
 
 ## 11. Add the fold-routing extension point
 
-- [ ] Define the request/response types in `runtime/src/schema/extensions.rs` and the payload builder in `runtime/src/interpreter/payload.rs`
-- [ ] Keep the vocabulary separate from `routeInboxItem`'s closed five-route set
-- [ ] Test the payload shape, including a branch-scoped spec that carries its own scenarios
+- [x] Define the request/response types in `runtime/src/schema/extensions.rs` and the payload builder in `runtime/src/interpreter/payload.rs`
+- [x] Keep the vocabulary separate from `routeInboxItem`'s closed five-route set
+- [x] Test the payload shape, including a branch-scoped spec that carries its own scenarios
 
 - **Done when**: the extension point returns a body-edit-or-scenario decision per branch-scoped spec, with the target section or scenario slug named.
 

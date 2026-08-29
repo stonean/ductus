@@ -38,9 +38,9 @@ use crate::host::Host;
 use crate::primitives::read_tasks;
 use crate::schema::extensions::{
     AskClarifyQuestionRequest, AssessSpecQualityRequest, AssessSpecQualityRule, ClarifyQuestion,
-    PerformReviewRequest, PlanRelevantFile, ReviewRuleFile, ReviewScopeFile, RouteInboxItemRequest,
-    RouteInboxSpec, VerifyCriteriaRequest, VerifyCriterion, WriteCodeRequest, WriteCodeTask,
-    WriteSpecBodyRequest,
+    FoldSourceScenario, PerformReviewRequest, PlanRelevantFile, ReviewRuleFile, ReviewScopeFile,
+    RouteFoldRequest, RouteInboxItemRequest, RouteInboxSpec, VerifyCriteriaRequest,
+    VerifyCriterion, WriteCodeRequest, WriteCodeTask, WriteSpecBodyRequest,
 };
 use crate::schema::primitives::ReadTasksArgs;
 
@@ -126,6 +126,10 @@ impl PayloadError {
 /// - `routeInboxItem` — builds [`RouteInboxItemRequest`] from the
 ///   `item-text` context key, the fixed route vocabulary, and a scan of
 ///   the spec root for available features. Typed shape only.
+/// - `routeFold` — builds [`RouteFoldRequest`] from the branch-scoped spec
+///   resolved via `path`/`feature`, its own scenarios, and the upstream
+///   spec its `folds-into` names (see [`build_route_fold_request`]). Typed
+///   shape only.
 /// - `verifyCriteria` — builds [`VerifyCriteriaRequest`] from the spec
 ///   resolved via `path`/`feature` and the completion gate's merged
 ///   `acceptance-criteria` result (see
@@ -159,6 +163,7 @@ pub fn build_extension_request(
         "assessSpecQuality" => Ok(build_assess_spec_quality_request(context, repo, step_prose)),
         "askClarifyQuestion" => Ok(build_ask_clarify_question_request(context, repo)),
         "routeInboxItem" => Ok(build_route_inbox_item_request(context, repo)),
+        "routeFold" => Ok(build_route_fold_request(context, repo)),
         "verifyCriteria" => Ok(build_verify_criteria_request(context, repo)),
         other => Err(PayloadError::UnknownExtension {
             identifier: other.to_string(),
@@ -213,7 +218,7 @@ fn typed_with_legacy_context<T: Serialize>(typed: &T, context: &Map<String, Valu
 /// Serialize a typed request as the entire payload, with no legacy context
 /// tail. Shared epilogue for the builders the data model documents as
 /// bare-typed (`assessSpecQuality`, `askClarifyQuestion`, `routeInboxItem`,
-/// `verifyCriteria`) — the previous raw walker-context dump is exactly the
+/// `routeFold`, `verifyCriteria`) — the previous raw walker-context dump is exactly the
 /// behavior those builders replace.
 fn typed_only<T: Serialize>(typed: &T) -> Value {
     serde_json::to_value(typed).unwrap_or(Value::Null)
@@ -599,6 +604,140 @@ fn load_available_specs(repo: &Path) -> Vec<RouteInboxSpec> {
             }
         })
         .collect()
+}
+
+/// The fold decision's route vocabulary. Two leaves, and deliberately not
+/// [`INBOX_ROUTES`]: that set answers "where in the corpus does this work
+/// belong", while this one answers "what shape does content whose home is
+/// already known take once it arrives". Widening the inbox set to carry a
+/// second question would break the closedness its other callers rely on.
+const FOLD_ROUTES: [&str; 2] = ["body-edit", "scenario"];
+
+/// Build the `routeFold` request for one branch-scoped spec. Typed shape
+/// only — no legacy context dump:
+///
+/// - `feature` / `spec-content` — the branch-scoped spec resolved through
+///   the same `path`/`feature` preference every other builder uses, read
+///   off disk.
+/// - `scenarios` — the scenarios it carries, sorted by slug. Context rather
+///   than subjects: a scenario is already an organizational split and
+///   crosses over unchanged, so what the route decides is the body's shape.
+/// - `fold-target` — read from the spec's own `folds-into` frontmatter, not
+///   from a context key. The field *is* the record of where this spec
+///   belongs, so taking the target from anywhere else would let a walker
+///   fold a spec somewhere it never claimed to go.
+/// - `target-content` / `target-status` / `target-sections` — the upstream
+///   spec, without which "which section" has no answer the router could
+///   give. The section list is what keeps it naming a heading the file
+///   actually has.
+///
+/// Best-effort throughout: an unreadable file yields an empty string rather
+/// than an error, matching every sibling builder. A missing target is not
+/// special-cased here — `retire-feature` refuses on it at the end of the
+/// fold, which is the moment that check can be made honestly.
+fn build_route_fold_request(context: &Map<String, Value>, repo: &Path) -> Value {
+    let spec_path = resolve_spec_path(context, repo);
+    let spec_content = read_repo_file(repo, &spec_path).unwrap_or_default();
+    let specs_root = crate::schema::paths::Paths::load(repo).specs_root;
+    let feature = spec_path
+        .strip_prefix(&format!("{specs_root}/"))
+        .and_then(|rest| rest.split('/').next())
+        .unwrap_or_default()
+        .to_string();
+
+    let feature_dir = repo.join(&specs_root).join(&feature);
+    let scenarios = load_fold_source_scenarios(&feature_dir);
+
+    let fold_target = folds_into(&spec_content).unwrap_or_default();
+    let target_spec = repo.join(&specs_root).join(&fold_target).join("spec.md");
+    let target_content = if fold_target.is_empty() {
+        String::new()
+    } else {
+        std::fs::read_to_string(&target_spec).unwrap_or_default()
+    };
+    let target_status =
+        crate::primitives::frontmatter_status(&target_content, &target_spec).unwrap_or_default();
+    let target_sections = section_headings(&target_content);
+
+    let typed = RouteFoldRequest {
+        feature,
+        spec_content,
+        scenarios,
+        fold_target,
+        target_content,
+        target_status,
+        target_sections,
+        routes: FOLD_ROUTES.iter().map(ToString::to_string).collect(),
+    };
+    typed_only(&typed)
+}
+
+/// The scenarios a branch-scoped spec carries, sorted by slug through the
+/// shared [`crate::primitives::list_scenario_files`] listing — the same set
+/// `check-artifacts` derives scenario slugs from, so the fold sees exactly
+/// what the artifact checks see.
+fn load_fold_source_scenarios(feature_dir: &Path) -> Vec<FoldSourceScenario> {
+    let scenarios_dir = feature_dir.join("scenarios");
+    crate::primitives::list_scenario_files(&scenarios_dir)
+        .into_iter()
+        .map(|name| FoldSourceScenario {
+            slug: name.trim_end_matches(".md").to_string(),
+            section: crate::primitives::read_scenario_section(&scenarios_dir.join(&name))
+                .unwrap_or_default(),
+        })
+        .collect()
+}
+
+/// A spec's declared `folds-into` target, read from its frontmatter block.
+///
+/// Scanned rather than deserialized so a frontmatter carrying an unrelated
+/// malformed key still yields the target: this builder feeds a decision the
+/// operator confirms, and refusing to route because some other field is
+/// wrong would be a worse failure than routing on the field that parsed.
+fn folds_into(spec_content: &str) -> Option<String> {
+    use crate::primitives::spec_links::is_frontmatter_fence;
+
+    let mut lines = spec_content.lines();
+    if lines
+        .next()
+        .is_none_or(|first| !is_frontmatter_fence(first))
+    {
+        return None;
+    }
+    for line in lines {
+        if is_frontmatter_fence(line) {
+            return None;
+        }
+        if let Some(value) = line.strip_prefix("folds-into:") {
+            let bare = value.trim().trim_matches(['"', '\'']);
+            if !bare.is_empty() {
+                return Some(bare.to_string());
+            }
+        }
+    }
+    None
+}
+
+/// The `##` headings of a spec body, in body order, with fenced regions
+/// skipped — a `## ` inside a code block is an example, not a section, and
+/// offering one as a fold destination would name a place that does not
+/// exist.
+fn section_headings(content: &str) -> Vec<String> {
+    let mut headings = Vec::new();
+    let mut fenced = false;
+    for line in content.lines() {
+        if line.trim_start().starts_with("```") {
+            fenced = !fenced;
+            continue;
+        }
+        if fenced {
+            continue;
+        }
+        if let Some(text) = line.strip_prefix("## ") {
+            headings.push(text.trim().to_string());
+        }
+    }
+    headings
 }
 
 /// Read a spec file's frontmatter `status`, best-effort: empty string
@@ -2077,6 +2216,137 @@ mod tests {
         for kept in ["scope", "diff-base", "rules-dir", "selected", "notices"] {
             assert!(obj.contains_key(kept), "primitive result `{kept}` dropped");
         }
+    }
+
+    /// The payload's shape, over a branch-scoped spec that carries its own
+    /// scenarios — the case the source scenarios exist to cover.
+    #[test]
+    fn build_route_fold_request_emits_typed_shape_with_source_scenarios() {
+        let tmp = tempdir().unwrap();
+        let staged = tmp.path().join("specs/1234.1-widget-cache");
+        fs::create_dir_all(staged.join("scenarios")).unwrap();
+        fs::write(
+            staged.join("spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\nfolds-into: 050-alpha\n---\n\n# staged\n",
+        )
+        .unwrap();
+        fs::write(
+            staged.join("scenarios/eviction.md"),
+            "---\nsection: Behavior\n---\n\n# Eviction\n",
+        )
+        .unwrap();
+        fs::write(
+            staged.join("scenarios/warmup.md"),
+            "---\nsection: Motivation\n---\n\n# Warmup\n",
+        )
+        .unwrap();
+        let target = tmp.path().join("specs/050-alpha");
+        fs::create_dir_all(&target).unwrap();
+        fs::write(
+            target.join("spec.md"),
+            "---\nstatus: done\ndependencies: []\n---\n\n# alpha\n\n## Motivation\n\nx\n\n             ```text\n## Not A Section\n```\n\n## Behavior\n\ny\n",
+        )
+        .unwrap();
+
+        let mut ctx = Map::new();
+        ctx.insert(
+            "feature".into(),
+            Value::String("1234.1-widget-cache".into()),
+        );
+        // A dump key that must NOT leak into the typed payload.
+        ctx.insert("stdout".into(), Value::String("noise".into()));
+
+        let value = build_route_fold_request(&ctx, tmp.path());
+        let keys: Vec<&str> = value
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
+        assert_eq!(
+            keys,
+            vec![
+                "feature",
+                "spec-content",
+                "scenarios",
+                "fold-target",
+                "target-content",
+                "target-status",
+                "target-sections",
+                "routes",
+            ]
+        );
+        assert_eq!(value["feature"], "1234.1-widget-cache");
+        assert!(
+            value["spec-content"]
+                .as_str()
+                .unwrap()
+                .contains("folds-into: 050-alpha")
+        );
+        // Source scenarios are context, sorted by slug.
+        assert_eq!(value["scenarios"][0]["slug"], "eviction");
+        assert_eq!(value["scenarios"][0]["section"], "Behavior");
+        assert_eq!(value["scenarios"][1]["slug"], "warmup");
+        // The target is taken from the spec's own `folds-into`, not a
+        // context key.
+        assert_eq!(value["fold-target"], "050-alpha");
+        assert_eq!(value["target-status"], "done");
+        // A `## ` inside a fence is an example, not a fold destination.
+        assert_eq!(
+            value["target-sections"],
+            serde_json::json!(["Motivation", "Behavior"])
+        );
+        assert_eq!(
+            value["routes"],
+            serde_json::json!(["body-edit", "scenario"])
+        );
+    }
+
+    /// A spec with no scenarios and an unresolvable target still produces a
+    /// payload: the target's absence is `retire-feature`'s refusal to make
+    /// at the end of the fold, not this builder's.
+    #[test]
+    fn build_route_fold_request_degrades_rather_than_failing() {
+        let tmp = tempdir().unwrap();
+        let staged = tmp.path().join("specs/1234.1-staged");
+        fs::create_dir_all(&staged).unwrap();
+        fs::write(
+            staged.join("spec.md"),
+            "---\nstatus: draft\ndependencies: []\nfolds-into: 099-elsewhere\n---\n\n# staged\n",
+        )
+        .unwrap();
+
+        let mut ctx = Map::new();
+        ctx.insert("path".into(), Value::String("specs/1234.1-staged".into()));
+
+        let value = build_route_fold_request(&ctx, tmp.path());
+        assert_eq!(value["feature"], "1234.1-staged");
+        assert_eq!(value["fold-target"], "099-elsewhere");
+        assert_eq!(value["target-content"], "");
+        assert_eq!(value["target-status"], "");
+        assert!(value.get("scenarios").is_none());
+        assert!(value.get("target-sections").is_none());
+    }
+
+    /// A spec declaring no fold target yields an empty one rather than
+    /// inventing a destination.
+    #[test]
+    fn build_route_fold_request_leaves_an_undeclared_target_empty() {
+        let tmp = tempdir().unwrap();
+        let staged = tmp.path().join("specs/1234.1-standalone");
+        fs::create_dir_all(&staged).unwrap();
+        fs::write(
+            staged.join("spec.md"),
+            "---\nstatus: draft\ndependencies: []\n---\n\n# standalone\n",
+        )
+        .unwrap();
+
+        let mut ctx = Map::new();
+        ctx.insert("feature".into(), Value::String("1234.1-standalone".into()));
+
+        let value = build_route_fold_request(&ctx, tmp.path());
+        assert_eq!(value["fold-target"], "");
+        assert_eq!(value["target-content"], "");
     }
 
     #[test]
