@@ -1,7 +1,7 @@
 ---
 spec: 022-deterministic-runtime
-reviewed-at: 2026-08-28T00:11:31Z
-reviewed-against: ca473fd324c763af21dc8ff5ee0d7220b490fb6c
+reviewed-at: 2026-08-29T18:43:37Z
+reviewed-against: 9be5b00d9b45651578dadfa0de6410495e50b048
 diff-base: 7e98cc48963acaad87b9c2d86071bc8d5eaa5c27
 must-violations: 0
 should-violations: 0
@@ -14,15 +14,15 @@ skipped-passes: []
 
 ## Summary
 
-0 MUST, 0 SHOULD, 0 low-confidence across all five passes; not blocking.
+0 MUST, 0 SHOULD, 0 low-confidence across all five passes; not blocking. One observation captured to the inbox.
 
-**The diff base resolved itself this time.** The two previous runs in this round needed a manual `--since=<base>~1` because the base landed on the commit carrying the work. `compute-review-scope` now peels the transition commit to its first parent, and this review's window opens at `7e98cc4` without an override — covering `compute_review_scope.rs` and `check_command_flags.rs`, the two files it exists to examine. The fix is exercised by the run that reports on it.
+**Window.** The diff base is unchanged from the previous run (`7e98cc4`), which reported clean at `ca473fd`; this run therefore concentrated on the ~7,200 lines added since that review — spec 051's branch-scoped numbering work end to end, plus `check-review-agreement` (audit Family 31) and the fold command surfaces.
 
-Window covers four changes. `derive-references` enumerates every tracked spec and filters only the write, reporting drifted-but-unstaged specs in `unwritten` — the gap that let a `[services]` alias rename leave dead references in place for nine commits. Both derive primitives gained `absent` and now count only specs they actually read. `append-task` stopped discarding a supplied `slug` when `body` is given. And `compute-review-scope` bases the window on the transition commit's parent, so work committed alongside an `/ductus:amend` back-edge flip is inside it.
+**Security found one MUST and it was fixed inside this run rather than recorded as blocking.** `build_route_fold_request` read the *source* spec through `read_repo_file` — canonicalize plus containment against the repo root — and then read the *target* spec two lines later with a raw `fs::read_to_string` on a path built by joining the `folds-into` frontmatter value onto the spec root. That value is hand-authored, nothing guarantees `validate-frontmatter` ran before a fold, and the shape check it performs is not a containment check; a `folds-into` carrying `../` resolved outside the repo and the file it named was placed in `target-content` and shipped to the host. BE-INPUT-004 is a MUST, the helper that satisfies it was already in use one read earlier, and the fix was to stop bypassing it (`9be5b00`, with a regression test that plants a `spec.md` outside the repo root and points a traversing target at it). The finding is recorded here and in that commit rather than in the counts, because the counts state what is outstanding.
 
-All three items this round's earlier reviews captured to the inbox are addressed rather than carried past the tag: `argument_hint` now delegates to `split_frontmatter` (with tests for the empty-block and CRLF-opener cases the hand-rolled scan got wrong), the extra corpus walk was measured at ~20 ms per commit and the measurement recorded in the scenario that caused it, and the diff-base defect became a scenario and a fix.
+**The rest of the new surface holds.** `retire-feature` — the only irreversible primitive added — validates both arguments for traversal, refuses the sequential form before touching the filesystem, and requires the target to hold a `spec.md`, so no ordering of bad input reaches `remove_dir_all` against a spec that should survive; already-absent is a domain outcome, so an interrupted fold converges on re-run. `rewrite-spec-links` matches by whole path segment rather than prefix, which is what stops `1234.1-widget` re-pointing links inside `1234.1-widget-cache` — a wrong rewrite would be worse than the dangling link `check-orphaned-references` can still see. `check-unfolded-specs` halts on a branch-scoped directory whose `spec.md` cannot be read rather than skipping it, and counts `examined` before the form check, so an empty result reads as "walked the corpus and found none staged" rather than "walked nothing".
 
-Security: `transition_parent` consumes a sha produced internally by `find_in_progress_commit`, not caller input, and a parentless commit falls back rather than erroring. Quality: the shared lookup is unchanged, so `check-stuck` still counts from the transition commit itself — a helper returning different commits to its two callers is the drift the placement avoids. Efficiency and simplicity found nothing; the `argument_hint` refactor removed a second definition of where frontmatter ends rather than adding one.
+Reuse, efficiency, and simplicity found nothing against the loaded rules. The one thing worth saying that no rule covers is recorded as an observation: `rewrite-spec-links` is the only file-rewriting primitive that does not preserve CRLF line endings, and the convention it departs from is implemented separately in two siblings — which is itself the argument for a shared helper.
 
 ## MUST violations (blocking)
 
@@ -46,7 +46,7 @@ Security: `transition_parent` consumes a sha produced internally by `find_in_pro
 
 ## Observations
 
-*None.*
+- convention: rewrite-spec-links rewrites a file line-wise with `lines()` + a bare `\n`, so a rewrite on a CRLF checkout converts the whole file to LF — a one-link change lands as a whole-file diff. Two siblings preserve the ending deliberately (create_feature::stamp_fold_target detects `\r\n`; derive_references picks its line_ending the same way) and check_stuck carries CRLF regression tests, so the convention is established and this is the one writer that departs from it. A shared line-ending-preserving rewrite helper would settle it in one place rather than three. — `runtime/src/primitives/rewrite_spec_links.rs`
 
 ## Skipped passes
 
