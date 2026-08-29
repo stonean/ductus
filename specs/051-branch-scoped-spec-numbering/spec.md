@@ -131,13 +131,13 @@ The framework's existing failure vocabulary covers these: an argument that canno
 - [x] AC35: The pre-`done` gate blocks `in-progress → done` while `folds-into` is present, naming the pending fold as the reason
 - [x] AC22: Inbound body links to a retired branch-scoped directory are re-pointed at the fold target by the fold-back itself, and `check-orphaned-references` reports clean afterwards
 - [x] AC23: `dependencies:` and `references:` frontmatter across the corpus is correct after the first commit following a fold-back, with no hand-editing of either
-- [ ] AC24: Folding into a `done` upstream spec sets that spec to `in-progress`, and the spec cannot return to `done` until `/ductus:review` has run against the merged code
+- [x] AC24: Folding into a `done` upstream spec sets that spec to `in-progress`, and the spec cannot return to `done` until `/ductus:review` has run against the merged code
 - [x] AC25: Fold-back adds no new back-edge to §spec-lifecycle — the transition it performs is one of the two already defined there
 - [x] AC37: Branch-scoped creation requires a fold target: there is no way to create a branch-scoped spec that names none
 - [x] AC26: An identifier that sanitizes to an empty string is refused before any directory is created
 - [x] AC27: A branch-scoped directory that already exists is reported as a domain outcome and never overwritten, including when two contributors create under the same identifier concurrently
 - [x] AC28: Fold-back naming a target spec that does not exist refuses and leaves the branch-scoped spec in place
-- [ ] AC29: Fold-back is atomic per branch-scoped spec: an interruption leaves each spec either fully folded and retired, or untouched
+- [x] AC29: Fold-back is atomic per branch-scoped spec: an interruption leaves each spec either fully folded and retired, or untouched
 
 ## Open Questions
 

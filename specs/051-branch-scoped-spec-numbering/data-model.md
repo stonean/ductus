@@ -1,6 +1,6 @@
 # 051 — Branch-scoped spec numbering Data Model
 
-The feature introduces one directory-name grammar, one parsed form, one frontmatter field, and argument/result additions to `create-feature` plus three new primitives. No database is involved — the durable structures are on disk.
+The feature introduces one directory-name grammar, one parsed form, one frontmatter field, four new primitives, and argument/result additions to `create-feature` and `append-task`. No database is involved — the durable structures are on disk.
 
 ## Directory-name grammar
 
@@ -83,6 +83,27 @@ An absent key is never a finding on a *sequential* spec, which has no fold targe
 | `feature` | in | string | Must parse as `BranchScoped`; a sequential feature is refused. |
 | `fold-target` | in | string | Must exist. Refusal when it does not is what prevents stranding content. |
 | `retired` | out | boolean | `false` is the domain outcome for "already gone", not an error. |
+
+### `invalidate-review` (new)
+
+| Field | Direction | Type | Notes |
+| --- | --- | --- | --- |
+| `feature` | in | string | The **upstream** spec whose recorded review no longer describes it — not the branch-scoped one being retired. |
+| `invalidated` | out | boolean | `false` is the domain outcome for a spec recording no current review: already in this state, so a re-run converges. |
+| `path` | out | string | Repo-relative spec path, present either way. |
+| `previous-last-run` | out | optional string | The `last-run` that was cleared, so the caller can say *what* it invalidated. |
+
+Resets `review.last-run` and `reviewed-against` to null, zeroes the counts, and clears `blocking` — the un-reviewed state the pre-`done` gate blocks on. **Waivers survive verbatim**, adopter-authored extra fields included: an invalidation says the review is out of date, not that an operator's recorded judgement about a finding was withdrawn.
+
+It exists because the gate's staleness check diffs the spec's *durable contracts* (`scenarios/*.md`, `data-model.md`) and `spec.md` is deliberately outside that set. A fold routed into the upstream spec's **body** therefore moves no durable contract, and the spec would return to `done` on a review that never saw the code the fold brought with it. The fold knows what the diff cannot see, so it says so rather than leaving the gate to infer it.
+
+### `append-task` (extended)
+
+| Field | Direction | Type | Notes |
+| --- | --- | --- | --- |
+| `appended` | out | boolean | `false` is the dedup domain outcome: a `slug` was supplied and an existing task already points at `scenarios/{slug}.md`, so `task-number` names that task and `tasks.md` is unchanged. |
+
+Reported separately from `created` because the two answer different questions — `created` is about the *file*, `appended` about the *task*. The dedup keys on the whole rendered pointer, so a slug that is a prefix of an existing one is still its own task; without a slug there is no pointer to key on and the call appends as before. This is what lets an interrupted fold be completed by re-running it rather than doubling the upstream spec's task list.
 
 ### `check-unfolded-specs` (new)
 
