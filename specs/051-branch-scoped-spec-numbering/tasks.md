@@ -70,8 +70,8 @@ Phases 1 and 2's field work are complete and committed; task 7 is the next one. 
 
 ## 8. Surface un-folded specs in `/ductus:analyze`
 
-- [ ] Add the check to `framework/commands/analyze.md` as a reported finding
-- [ ] Verify the command still parses under `runtime/src/parser/mod.rs`'s step-numbering assertions
+- [x] Add the check to `framework/commands/analyze.md` as a reported finding
+- [x] Verify the command still parses under `runtime/src/parser/mod.rs`'s step-numbering assertions
 
 - **Done when**: `/ductus:analyze` reports surviving branch-scoped specs, and the command-parse test passes (AC21).
 
