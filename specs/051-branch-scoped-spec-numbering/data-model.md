@@ -48,13 +48,13 @@ folds-into: 022-deterministic-runtime
 
 | Key | Type | Presence | Written by | Read by |
 | --- | --- | --- | --- | --- |
-| `folds-into` | string — a sequential feature directory name, which may not exist in this branch | Optional, but chosen explicitly; absent means "no upstream home" (the renumbering case) | `create-feature` at creation; `rewrite-spec-links` on a rename | fold-back, `check-unfolded-specs`, `validate-frontmatter` |
+| `folds-into` | string — a sequential feature directory name, which may not exist in this branch | **Required** on a branch-scoped spec, absent on a sequential one | `create-feature` at creation; `rewrite-spec-links` on a rename | fold-back, `check-unfolded-specs`, `validate-frontmatter`, `dashboard` |
 
 **Declared, not derived.** Unlike `dependencies:` and `references:`, nothing in the repository can derive this value — it records intent stated nowhere else. It survives every existing frontmatter writer because each splices only its own key rather than re-serializing the block.
 
 **Validation — shape only.** `validate-frontmatter` reports a finding when `folds-into` is present and does not *parse* as a sequential feature name (`NNN-slug`), which forbids chaining one branch-scoped spec into another. It never checks that the named feature exists: the target normally lives on the upstream branch and is absent from the tree declaring it, so an unresolvable target is the expected state before a merge, not a defect. Existence is enforced at fold-back by `retire-feature`.
 
-An absent key is never a finding either: a sequential spec has no fold target, and a branch-scoped spec may legitimately declare none.
+An absent key is never a finding on a *sequential* spec, which has no fold target by definition. A branch-scoped spec always carries one — creation refuses without it — so an absent key there means the spec was hand-edited, which is the supported way to make it stand on its own.
 
 ## Primitive argument and result shapes
 
@@ -63,7 +63,7 @@ An absent key is never a finding either: a sequential spec has no fold target, a
 | Field | Direction | Type | Notes |
 | --- | --- | --- | --- |
 | `branch-id` | in | optional string | Absent → sequential numbering, unchanged. Present → branch-scoped. |
-| `fold-into` | in | optional string | Written to `folds-into:`. Requires `branch-id`. |
+| `fold-into` | in | string | Written to `folds-into:`. **Required** with `branch-id`, refused without it. |
 | `identifier` | out | optional string | The **sanitized** identifier actually used, so the caller can echo it before the directory exists. |
 | `feature`, `path`, `created`, `template` | out | unchanged | `created: false` remains the already-exists domain outcome. |
 

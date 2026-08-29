@@ -275,7 +275,6 @@ fn create_feature_scaffolds_under_configured_root() {
             title: "Rooted Feature".into(),
             branch_id: None,
             fold_into: None,
-            no_fold_target: false,
         },
         tmp.path(),
     )

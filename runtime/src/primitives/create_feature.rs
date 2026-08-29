@@ -88,9 +88,9 @@ pub fn run(args: &CreateFeatureArgs, repo: &Path) -> Result<CreateFeatureResult>
     // written, so a template that cannot carry the key is refused with
     // nothing on disk rather than leaving a branch-scoped spec whose
     // upstream home was silently dropped.
-    let spec_bytes = match branch.as_ref().and_then(|scope| scope.fold_into.as_deref()) {
+    let spec_bytes = match branch.as_ref() {
         None => template_bytes,
-        Some(target) => stamp_fold_target(&template_bytes, target, &template_rel)?,
+        Some(scope) => stamp_fold_target(&template_bytes, &scope.fold_into, &template_rel)?,
     };
 
     std::fs::create_dir_all(&feature_dir).map_err(|source| PrimitiveError::Io {
@@ -114,19 +114,18 @@ pub fn run(args: &CreateFeatureArgs, repo: &Path) -> Result<CreateFeatureResult>
 struct BranchScope {
     /// The sanitized identifier, already in the slug grammar.
     identifier: String,
-    /// The upstream spec to fold into; `None` is the *declared* no-home
-    /// case, never an omitted argument.
-    fold_into: Option<String>,
+    /// The upstream spec this spec folds back into.
+    fold_into: String,
 }
 
 /// Validate the branch-scoped arguments as a group, or confirm that this
 /// is an ordinary sequential creation.
 ///
-/// The group is refused rather than defaulted in every ambiguous case.
-/// The one that matters is `branch_id` with neither `fold_into` nor
-/// `no_fold_target`: defaulting there would turn a staging spec into a
-/// permanent one on a forgotten argument, which is exactly the
-/// proliferation fold-back exists to prevent.
+/// `fold_into` is required with `branch_id`, and refused without it. A
+/// branch-scoped spec exists in order to be folded: the number is what
+/// keeps the merge clean, and the target is what makes the spec
+/// actionable once it lands, so a branch-scoped spec naming no target is
+/// not a case this framework has.
 fn resolve_branch_scope(args: &CreateFeatureArgs) -> Result<Option<BranchScope>> {
     let invalid = |argument: &str, reason: String| PrimitiveError::InvalidArgument {
         primitive: "create-feature".into(),
@@ -135,19 +134,13 @@ fn resolve_branch_scope(args: &CreateFeatureArgs) -> Result<Option<BranchScope>>
     };
 
     let Some(raw) = args.branch_id.as_deref() else {
-        // The fold-target arguments describe a branch-scoped spec, so
-        // they are meaningless here — accepting and ignoring them would
-        // let a caller believe a fold target was recorded.
+        // A fold target describes a branch-scoped spec, so it is
+        // meaningless here: accepting and ignoring it would let a caller
+        // believe one was recorded.
         if args.fold_into.is_some() {
             return Err(invalid(
                 "fold-into",
                 "fold-into requires branch-id: only a branch-scoped spec folds back".into(),
-            ));
-        }
-        if args.no_fold_target {
-            return Err(invalid(
-                "no-fold-target",
-                "no-fold-target requires branch-id: only a branch-scoped spec folds back".into(),
             ));
         }
         return Ok(None);
@@ -164,46 +157,33 @@ fn resolve_branch_scope(args: &CreateFeatureArgs) -> Result<Option<BranchScope>>
         ));
     }
 
-    let fold_into = match (args.fold_into.as_deref(), args.no_fold_target) {
-        (Some(_), true) => {
-            return Err(invalid(
-                "fold-into",
-                "fold-into and no-fold-target are mutually exclusive: supply exactly one".into(),
-            ));
-        }
-        (None, false) => {
-            return Err(invalid(
-                "fold-into",
-                "branch-scoped creation requires an explicit fold target: supply fold-into \
-                 <feature>, or no-fold-target to declare there is none. Omitting both would \
-                 make a staging spec permanent by default"
-                    .into(),
-            ));
-        }
-        (None, true) => None,
-        (Some(target), false) => {
-            // Shape only. The target normally lives on the upstream
-            // branch and is absent from this tree, so requiring it to
-            // resolve would refuse the feature's normal case.
-            if !matches!(
-                parse_feature_dir(target),
-                Some(FeatureForm::Sequential { .. })
-            ) {
-                return Err(invalid(
-                    "fold-into",
-                    format!(
-                        "fold-into {target:?} is not a sequential feature name (NNN-slug); a \
-                         branch-scoped spec cannot fold into another branch-scoped spec"
-                    ),
-                ));
-            }
-            Some(target.to_string())
-        }
+    let Some(target) = args.fold_into.as_deref() else {
+        return Err(invalid(
+            "fold-into",
+            "branch-scoped creation requires fold-into <feature>: the spec exists in order \
+             to be folded into an upstream spec"
+                .into(),
+        ));
     };
+    // Shape only. The target normally lives on the upstream branch and is
+    // absent from this tree, so requiring it to resolve would refuse the
+    // feature's normal case.
+    if !matches!(
+        parse_feature_dir(target),
+        Some(FeatureForm::Sequential { .. })
+    ) {
+        return Err(invalid(
+            "fold-into",
+            format!(
+                "fold-into {target:?} is not a sequential feature name (NNN-slug); a \
+                 branch-scoped spec cannot fold into another branch-scoped spec"
+            ),
+        ));
+    }
 
     Ok(Some(BranchScope {
         identifier,
-        fold_into,
+        fold_into: target.to_string(),
     }))
 }
 
@@ -320,17 +300,15 @@ mod tests {
             title: title.into(),
             branch_id: None,
             fold_into: None,
-            no_fold_target: false,
         }
     }
 
-    /// Branch-scoped creation with an explicit "no upstream home".
+    /// Branch-scoped creation against a stock upstream fold target.
     fn branch_args(title: &str, branch_id: &str) -> CreateFeatureArgs {
         CreateFeatureArgs {
             title: title.into(),
             branch_id: Some(branch_id.into()),
-            fold_into: None,
-            no_fold_target: true,
+            fold_into: Some("022-upstream".into()),
         }
     }
 
@@ -448,7 +426,6 @@ mod tests {
                 title: "Staged change".into(),
                 branch_id: Some("1234".into()),
                 fold_into: Some("022-deterministic-runtime".into()),
-                no_fold_target: false,
             },
             tmp.path(),
         )
@@ -470,22 +447,7 @@ mod tests {
     }
 
     #[test]
-    fn declining_a_fold_target_records_no_key() {
-        let tmp = tempfile::tempdir().unwrap();
-        seed_with_installed_template(tmp.path());
-        let result = run(&branch_args("No home", "1234"), tmp.path()).unwrap();
-        let spec = fs::read_to_string(
-            tmp.path()
-                .join("specs")
-                .join(&result.feature)
-                .join("spec.md"),
-        )
-        .unwrap();
-        assert!(!spec.contains("folds-into:"));
-    }
-
-    #[test]
-    fn branch_scoped_creation_refuses_an_unstated_fold_target() {
+    fn branch_scoped_creation_requires_a_fold_target() {
         let tmp = tempfile::tempdir().unwrap();
         seed_with_installed_template(tmp.path());
         let err = run(
@@ -493,7 +455,6 @@ mod tests {
                 title: "Staged change".into(),
                 branch_id: Some("1234".into()),
                 fold_into: None,
-                no_fold_target: false,
             },
             tmp.path(),
         )
@@ -511,24 +472,13 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         seed_with_installed_template(tmp.path());
 
-        let cases: [(CreateFeatureArgs, &str); 4] = [
-            // Both halves of the choice at once is a contradiction.
-            (
-                CreateFeatureArgs {
-                    title: "T".into(),
-                    branch_id: Some("1234".into()),
-                    fold_into: Some("022-x".into()),
-                    no_fold_target: true,
-                },
-                "fold-into",
-            ),
+        let cases: [(CreateFeatureArgs, &str); 3] = [
             // An identifier with nothing alphanumeric in it.
             (
                 CreateFeatureArgs {
                     title: "T".into(),
                     branch_id: Some("!!!".into()),
-                    fold_into: None,
-                    no_fold_target: true,
+                    fold_into: Some("022-upstream".into()),
                 },
                 "branch-id",
             ),
@@ -539,17 +489,15 @@ mod tests {
                     title: "T".into(),
                     branch_id: Some("1234".into()),
                     fold_into: Some("5678.1-other".into()),
-                    no_fold_target: false,
                 },
                 "fold-into",
             ),
-            // Fold arguments without branch-id describe nothing.
+            // A fold target without branch-id describes nothing.
             (
                 CreateFeatureArgs {
                     title: "T".into(),
                     branch_id: None,
-                    fold_into: Some("022-x".into()),
-                    no_fold_target: false,
+                    fold_into: Some("022-upstream".into()),
                 },
                 "fold-into",
             ),

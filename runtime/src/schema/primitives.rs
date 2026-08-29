@@ -2168,12 +2168,11 @@ pub struct CreateFeatureArgs {
     /// The upstream spec this branch-scoped spec folds back into, written
     /// to its `folds-into:` frontmatter.
     ///
-    /// Requires `branch_id`, and is mutually exclusive with
-    /// `no_fold_target` — with `branch_id` set, exactly one of the two
-    /// must be supplied. Omitting both is refused rather than defaulted:
-    /// a silently absent fold target turns a staging spec into a
-    /// permanent one, which is the spec proliferation fold-back exists to
-    /// prevent (AC30).
+    /// Required with `branch_id` and meaningless without it. A
+    /// branch-scoped spec exists in order to be folded, so there is no
+    /// way to create one that names no target: the number exists to keep
+    /// the merge clean, and the target is what makes the spec actionable
+    /// once it lands.
     ///
     /// Validated for *shape* only. The target normally lives on the
     /// upstream branch and is absent from the tree creating this spec, so
@@ -2181,16 +2180,6 @@ pub struct CreateFeatureArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
     pub fold_into: Option<String>,
-    /// Declare explicitly that this branch-scoped spec has no upstream
-    /// home, so it is renumbered into the global sequence at merge rather
-    /// than folded into anything.
-    ///
-    /// The other half of the `fold_into` choice. It exists so that "no
-    /// fold target" is something the operator states, never something
-    /// reached by leaving an argument off.
-    #[serde(default)]
-    #[arg(long)]
-    pub no_fold_target: bool,
 }
 
 /// Result for `create-feature`.
@@ -3857,7 +3846,6 @@ mod tests {
             title: "Deterministic Runtime!".into(),
             branch_id: None,
             fold_into: None,
-            no_fold_target: false,
         };
         let value: serde_json::Value = serde_json::to_value(&args).unwrap();
         assert_eq!(value["title"], "Deterministic Runtime!");
@@ -3871,7 +3859,6 @@ mod tests {
             title: "Staged Change".into(),
             branch_id: Some("proj-1111".into()),
             fold_into: Some("022-deterministic-runtime".into()),
-            no_fold_target: false,
         };
         let bv: serde_json::Value = serde_json::to_value(&branch_args).unwrap();
         assert_eq!(bv["branch-id"], "proj-1111");

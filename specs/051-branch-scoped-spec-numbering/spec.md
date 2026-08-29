@@ -8,7 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 37
+next-criterion: 38
 ---
 
 # 051 — Branch-scoped spec numbering
@@ -48,21 +48,23 @@ Nothing about the choice persists. A committed setting was rejected: `.ductus/co
 
 ### Fold-back on merge
 
-Branch-scoped specs are a staging form, not a permanent home. When the branch merges upstream, each `{branch-id}.{n}` spec is folded into the spec it was standing in for: its content is merged into that spec's body, or — where the content is a durable elaboration of one section — into a scenario under it, and the `{branch-id}.{n}` directory is retired.
+Branch-scoped specs are a staging form, not a permanent home. The merge itself is clean **by construction** — a branch-scoped number cannot collide with anything upstream — so nothing about fold-back is coupled to the merge. It happens **after** the merge lands, on the upstream branch, as its own step: the spec's content is merged into the spec it was standing in for, or — where the content is a durable elaboration of one section — into a scenario under it, and the `{branch-id}.{n}` directory is retired.
+
+Until then it is an ordinary spec in every other respect: it advances through the pipeline, carries tasks and scenarios, and is reviewed like any other. The number keeps the merge clean; the target is what makes the spec actionable once it lands.
+
+The hand-off runs through the pipeline view. After the merge, `/ductus:status` lists the specs carrying a `folds-into`, which is how anyone on the team finds work waiting to be folded. They target one and run the fold command against it.
 
 The upstream spec a branch-scoped spec stands in for is named when the branch-scoped spec is created, and recorded in that spec's frontmatter as a **declared** field — not a derived index. It cannot be a plain inline body link: `derive-dependencies` harvests sibling links into `dependencies:`, and a branch-scoped spec does not *depend on* its upstream spec, it is a fragment of it. Recording it by hand does not cut against spec 017's derive-don't-ask principle either, because there is nothing in the repository to derive it from — it records an intent stated nowhere else.
 
 **The target normally names a spec the branch cannot see.** A branch-scoped spec exists precisely because the upstream branch has moved, so the spec it folds into routinely lives on that upstream branch and is absent from the working tree that declares the field — including the motivating case where upstream created the target after this branch forked. Absence is therefore the expected state, never a finding: validation checks the field's **shape**, and the target's existence is enforced at fold-back, when the two trees are finally joined. A check that demanded a resolvable target before the merge would fire on the feature's normal case and could not, in any event, see the tree that would satisfy it.
 
-**Naming the target is an explicit choice, not a defaulted argument.** Branch-scoped creation asks: name the upstream spec, or declare that there is none. The empty case is the renumbering path below, and it is reachable only by choosing it. A silently omitted argument would turn a staging spec into a permanent new spec without anyone deciding to — which is the spec proliferation the fold-back mechanism exists to prevent.
+**The target is required, not optional.** Branch-scoped creation names the upstream spec or does not happen, so the field is never absent from a branch-scoped spec. A branch-scoped spec exists in order to be folded — the number keeps the merge clean, the target is what makes it actionable once it lands — so one naming no target is not a case this framework has.
 
 **The field is maintained like any other pointer.** When a feature directory is renamed, `folds-into` fields naming it are updated alongside the body links that name it. A pointer whose whole job is to survive until the merge cannot be the one thing a rename leaves behind.
 
 Fold-back is a **command**, not a documented procedure performed by hand. It follows the shape `/ductus:groom` already uses: a semantic extension point decides, per branch-scoped spec, whether the content becomes a body edit or a scenario, and deterministic primitives perform the writes, the status changes, and the directory's retirement. Leaving the step to convention would make the retirement of the directory and the rewriting of inbound links depend on human diligence, which §design-principles rejects and which the anti-proliferation stance cannot tolerate — an un-folded branch spec is precisely a permanent second home for a concern.
 
 **A declared fold target is outstanding work, so it holds the spec short of `done`.** While a spec carries `folds-into`, the fold has not happened, and the pipeline view reports it as an outstanding item rather than as complete — the same way an unchecked task or an unresolved scenario question does. The pre-`done` gate blocks the transition on the same ground and names the pending fold. The consequence is worth stating plainly: a branch-scoped spec's terminal state is **retirement, not `done`**. It is discharged into its upstream home and ceases to exist; it never sits in the corpus as a completed spec, because a completed staging spec is a contradiction — the staging existed to be undone.
-
-A branch-scoped spec that declared no upstream home is not held: it carries no `folds-into`, nothing is pending against it, and it reaches `done` like any other spec before being renumbered into the global sequence.
 
 The fold-back is a **reviewed** step, not an automatic one. Deferring it to merge time is the point: the reviewer sees the branch's content against the upstream spec *as it now stands*, including whatever the upstream branch changed while the feature branch was open, rather than against the version the branch forked from.
 
@@ -72,7 +74,7 @@ Retiring the directory includes re-pointing what pointed at it. Fold-back rewrit
 
 A detection check flags branch-scoped specs that outlive the branch that created them, so an un-folded spec surfaces on its own rather than silently becoming permanent.
 
-A spec created in branch-scoped mode that has no upstream home to fold into is renumbered into the global sequence instead.
+Two corrections stay **manual by design**, and the framework automates neither. When a `folds-into` names the wrong spec, the pipeline view says so and someone edits the value. When the team decides the spec should stand on its own after all, they renumber the directory by hand and remove the key. Both are judgments about where work belongs, made once by a person who knows the answer; automating either would mean inferring an intent the repository does not record.
 
 ### Interaction with existing surfaces
 
@@ -93,7 +95,7 @@ The framework's existing failure vocabulary covers these: an argument that canno
 - **Target directory already exists** — reported as the `created: false` domain outcome with no overwrite, the same guarantee the sequential path gives. This is also what makes two contributors creating a spec under the same identifier at the same time safe: both compute the same `max + 1`, and the second is refused rather than overwriting the first.
 - **Spec root holding only branch-scoped directories** — the sequential counter is unaffected and the next sequential spec is `001-slug`, because branch-scoped directories contribute no sequential prefix.
 - **Fold target names a spec that no longer exists** — fold-back refuses and reports, leaving the branch-scoped spec in place. A retired directory whose content was never folded anywhere is the one outcome this feature must not produce silently.
-- **Fold target is empty** — the renumbering path: the spec is renumbered into the global sequence rather than folded, and the detection check stops flagging it.
+- **Fold target names the wrong spec** — reported by the pipeline view and corrected by hand. The framework does not guess a better target.
 - **Fold target is not `done`** — no back-edge applies; the upstream spec's status is untouched. Only a `done` upstream spec is reopened, matching the back-edge rules, which move a spec backward only from `done`.
 - **Two branch-scoped specs folding into the same upstream spec** — each is folded and retired independently; the upstream spec is reopened at most once, and the second fold finds it already `in-progress`.
 - **A branch-scoped spec carrying its own scenarios** — the scenarios move with the content into the upstream spec's `scenarios/` directory. A scenario slug already taken under the upstream spec is reported rather than overwritten.
@@ -120,7 +122,6 @@ The framework's existing failure vocabulary covers these: an argument that canno
 - [ ] AC6: A fold-back command folds a branch-scoped spec's content into a named upstream spec, after which the branch-scoped directory no longer exists and no reference to it dangles
 - [ ] AC18: Fold-back routes each branch-scoped spec to either a body edit or a scenario on the upstream spec, and the operator confirms the routing before any write
 - [ ] AC19: A branch-scoped spec records its upstream fold target in frontmatter, and that field is never rewritten by the dependency or reference generators
-- [ ] AC30: Naming the fold target is an explicit choice at creation — the operator either names an upstream spec or declares there is none — with no silent default in either direction
 - [ ] AC31: A `folds-into` naming a spec absent from the current branch's working tree is never reported as a finding
 - [ ] AC32: Frontmatter validation checks `folds-into` for shape only; the target's existence is enforced at fold-back, not before
 - [ ] AC33: Renaming a feature directory updates every `folds-into` field naming it, in the same action that re-points body links
@@ -128,12 +129,11 @@ The framework's existing failure vocabulary covers these: an argument that canno
 - [ ] AC21: A branch-scoped spec still present after its branch has merged is flagged by a detection check
 - [ ] AC34: A spec declaring `folds-into` is never reported as `done` by the pipeline view; it is reported as carrying an outstanding fold
 - [ ] AC35: The pre-`done` gate blocks `in-progress → done` while `folds-into` is present, naming the pending fold as the reason
-- [ ] AC36: A branch-scoped spec that declared no fold target is not held short of `done` by this rule
 - [ ] AC22: Inbound body links to a retired branch-scoped directory are re-pointed at the fold target by the fold-back itself, and `check-orphaned-references` reports clean afterwards
 - [ ] AC23: `dependencies:` and `references:` frontmatter across the corpus is correct after the first commit following a fold-back, with no hand-editing of either
 - [ ] AC24: Folding into a `done` upstream spec sets that spec to `in-progress`, and the spec cannot return to `done` until `/ductus:review` has run against the merged code
 - [ ] AC25: Fold-back adds no new back-edge to §spec-lifecycle — the transition it performs is one of the two already defined there
-- [ ] AC7: A branch-scoped spec with no upstream home can be renumbered into the global sequence
+- [ ] AC37: Branch-scoped creation requires a fold target: there is no way to create a branch-scoped spec that names none
 - [ ] AC26: An identifier that sanitizes to an empty string is refused before any directory is created
 - [ ] AC27: A branch-scoped directory that already exists is reported as a domain outcome and never overwritten, including when two contributors create under the same identifier concurrently
 - [ ] AC28: Fold-back naming a target spec that does not exist refuses and leaves the branch-scoped spec in place
@@ -155,4 +155,5 @@ The framework's existing failure vocabulary covers these: an argument that canno
 - **Does the `.{n}` counter recover when a branch-scoped directory is deleted?** The counter is `max + 1` over the branch-scoped directories currently present under that identifier — one rule shared with the sequential form (`runtime/src/primitives/create_feature.rs:117`) — so a retired number is reusable. This is an accepted limitation, not an oversight: fold-back re-points every in-repo link before retiring a directory, leaving only out-of-repo references (a PR comment, a commit message, a ticket) exposed to a reissue, and no in-repo counter can govern those. A monotonic counter derived from git history was rejected for requiring a full-history revwalk the codebase flags as CPU-bound and unbounded (`runtime/src/mcp/server.rs:226`); a committed high-water-mark file was rejected because every branch would write it, conflicting on exactly the merges this feature exists to keep clean.
 - **What grammar constrains the operator-supplied identifier?** It is sanitized, not rejected, by the rule spec creation already applies to titles: ASCII alphanumerics lowercased, every other run collapsed to a single hyphen (`runtime/src/primitives/create_feature.rs:96`), producing the `^[a-z0-9]+(?:-[a-z0-9]+)*$` form `validate_slug` enforces (`runtime/src/primitives/mod.rs:882`). Rejection was rejected because every Jira-style identifier is uppercase, so the common input would fail on first use. The sanitized value is echoed at the confirmation prompt, so the transformation is never silent. A `.` in the identifier collapses to a hyphen, which keeps the `{branch-id}.{n}` delimiter unambiguous by construction, and identifiers differing only in case name a single namespace — which a case-insensitive filesystem would impose anyway.
 - **Must the fold target exist in the branch that declares it?** No, and requiring it would break the feature's normal case. A branch-scoped spec exists because the upstream branch has diverged, so its target routinely lives on that upstream branch — including when upstream created the target after this branch forked, which is one of the situations that motivates branch-scoped numbering in the first place. Frontmatter validation therefore checks shape, not resolvability, and an unresolvable target is never a finding before the merge. Existence is enforced at fold-back, which is both the first moment the two trees are joined and the only moment the answer matters.
-- **Should a pending fold hold a spec short of `done`?** Yes. A declared `folds-into` is outstanding work — the fold has not happened — so it belongs in the same category as an unchecked task or an unresolved scenario question: the pipeline view reports the spec as outstanding, and the pre-`done` gate blocks the transition naming the pending fold. This makes the branch-scoped form's terminal state retirement rather than `done`, which is the honest reading: a staging spec exists to be undone, so a completed one is a contradiction. A spec that declared no upstream home is untouched by the rule, since nothing is pending against it — its renumbering is a rename, not a content migration.
+- **Should a pending fold hold a spec short of `done`?** Yes. A declared `folds-into` is outstanding work — the fold has not happened — so it belongs in the same category as an unchecked task or an unresolved scenario question: the pipeline view reports the spec as outstanding, and the pre-`done` gate blocks the transition naming the pending fold. This makes the branch-scoped form's terminal state retirement rather than `done`, which is the honest reading: a staging spec exists to be undone, so a completed one is a contradiction.
+- **What happens to a branch-scoped spec with no upstream spec to fold into?** The case does not exist: the fold target is required at creation. A branch-scoped spec is created *in order to be folded*, and the number exists only to keep the merge clean until it can be. Renumbering into the global sequence is not an automated path — if the team decides a spec should stand on its own, they rename the directory and remove the key by hand, and the same is true of correcting a target that names the wrong spec. Both are judgments about where work belongs, and the repository records nothing a tool could infer them from.

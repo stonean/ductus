@@ -23,7 +23,7 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 ## 3. Add branch-scoped creation to `create-feature`
 
 - [x] Add the `branch-id` and `fold-into` arguments and the `identifier` result field to the schema
-- [x] Make the fold target an explicit choice: branch-scoped creation supplies a target or an explicit "none", and never defaults silently
+- [x] Require the fold target: branch-scoped creation without one is refused, and no "no target" path exists
 - [x] Sanitize `branch-id` through `derive_slug`; refuse an identifier that sanitizes to empty through the existing `InvalidArgument` path
 - [x] Compute `.{n}` as `max + 1` over `BranchScoped` forms matching the sanitized identifier
 - [x] Test: first and second spec under one identifier; identifiers differing only in case landing in one namespace; `PROJ-1111` and `1111-PROJ` sanitizing as specified; an identifier containing `.`; an existing directory returning `created: false`
@@ -60,11 +60,11 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 - [ ] Implement the primitive per the data model, reporting each branch-scoped directory with its `folds-into` and status, plus an `examined` count
 - [ ] Register it in `runtime/src/schema/primitives.rs`, the MCP server, and `framework/runtime-tools.txt`
 - [ ] Test: a corpus with no branch-scoped directories reports empty with a non-zero `examined`
-- [ ] Teach the pipeline view that a declared `folds-into` is outstanding work: the spec is reported as carrying a pending fold, never as `done`
+- [ ] Teach the pipeline view that a declared `folds-into` is outstanding work: the spec is reported as carrying a pending fold, never as `done`, and a target that does not resolve in this tree is called out on the same line
 - [ ] Block `in-progress → done` in the pre-`done` gate while `folds-into` is present, naming the pending fold — the same category as an unresolved scenario question
-- [ ] Test both: a spec with `folds-into` reports outstanding and fails the gate; one that declared no fold target does neither
+- [ ] Test: a spec with `folds-into` reports outstanding and fails the gate, and one whose target does not resolve is reported as needing correction
 
-- **Done when**: every surviving branch-scoped directory is reported with its declared fold target, a pending fold holds its spec short of `done` in both the pipeline view and the gate, and an empty result is distinguishable from an unexamined corpus (AC21, AC34, AC35, AC36).
+- **Done when**: every surviving branch-scoped directory is reported with its declared fold target, a pending fold holds its spec short of `done` in both the pipeline view and the gate, and an empty result is distinguishable from an unexamined corpus (AC21, AC34, AC35).
 
 ## 8. Surface un-folded specs in `/ductus:analyze`
 
@@ -101,7 +101,7 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 ## 12. Add the `/ductus:fold` command
 
 - [ ] Write `framework/commands/fold.md`: enumerate branch-scoped specs, route each at the extension point, confirm with the operator, then per spec — apply the content, rewrite links, reopen a `done` upstream spec with a guarded `set-status`, and retire the directory
-- [ ] Handle the empty-`folds-into` case as the renumbering path
+- [ ] Operate on the session-targeted spec, the one `/ductus:status` surfaced as carrying a pending fold
 - [ ] Add `fold` to the parser's command list in `runtime/src/parser/mod.rs`
 - [ ] Regenerate the help and installer surfaces (`scripts/gen-help-tables.sh`, `scripts/gen-claude-commands.sh`, `framework/bootstrap/*`)
 
