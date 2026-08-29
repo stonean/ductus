@@ -191,10 +191,10 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 
 ## 22. Preserve line endings through a file rewrite
 
-- [ ] Implement the behavior described in `scenarios/rewrites-preserve-line-endings.md`
-- [ ] Extract the line-ending-preserving rewrite into one shared helper, so the three primitives that need it stop each carrying their own detection
-- [ ] Route `rewrite-spec-links` through it — it is the writer that currently converts a CRLF file to LF whenever it re-points a single link
-- [ ] Test a CRLF fixture end to end: one link changes, every other byte survives, and the endings are unchanged
+- [x] Implement the behavior described in `scenarios/rewrites-preserve-line-endings.md`
+- [x] Extract the line-ending-preserving rewrite into one shared helper, so the three primitives that need it stop each carrying their own detection
+- [x] Route `rewrite-spec-links` through it — it is the writer that currently converts a CRLF file to LF whenever it re-points a single link
+- [x] Test a CRLF fixture end to end: one link changes, every other byte survives, and the endings are unchanged
 
 - **Done when**: no primitive that rewrites an existing text file changes its line endings as a side effect, and the detection lives in one place rather than three.
 

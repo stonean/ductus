@@ -214,11 +214,7 @@ fn splice_dependencies(content: &str, deps: &BTreeSet<String>) -> String {
         )
     };
 
-    let line_ending = if content.contains("\r\n") {
-        "\r\n"
-    } else {
-        "\n"
-    };
+    let line_ending = super::line_ending_of(content);
     let mut out: Vec<String> = Vec::new();
     let mut fm_seen = false;
     let mut in_fm = false;

@@ -395,11 +395,7 @@ fn build_block(records: &[Reference]) -> Option<Vec<String>> {
 /// Absent-when-empty: with no records the block is removed and not replaced.
 fn splice_references(content: &str, records: &[Reference]) -> String {
     let block = build_block(records);
-    let line_ending = if content.contains("\r\n") {
-        "\r\n"
-    } else {
-        "\n"
-    };
+    let line_ending = super::line_ending_of(content);
 
     let mut out: Vec<String> = Vec::new();
     let mut fm_seen = false;

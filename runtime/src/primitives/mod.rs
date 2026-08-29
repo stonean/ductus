@@ -496,6 +496,81 @@ pub(crate) fn split_frontmatter_with_offset<'a>(
 }
 
 /// Read a UTF-8 file, surfacing path context on failure.
+/// The line ending an existing text file uses, for a rewrite that has to
+/// give the file back the way it found it.
+///
+/// A primitive that reassembles a file it did not create — splitting it into
+/// lines, changing some, and re-joining — silently rewrites every line's
+/// ending unless it asks. `str::lines()` strips a trailing `\r`, so joining
+/// with a bare `\n` converts a CRLF checkout's file to LF as a side effect
+/// of changing one line: a one-line edit lands as a whole-file diff, and
+/// worse, a writer that reassembles only *part* of a file leaves the two
+/// halves disagreeing.
+///
+/// **This is the one place the detection lives.** It replaced three
+/// independent copies (`derive-dependencies`, `derive-references`, and
+/// `create-feature`'s fold-target stamp), each of which had solved it alone
+/// while seven other writers had not solved it at all. A second copy is how
+/// they diverge (spec 051, scenario `rewrites-preserve-line-endings`).
+///
+/// **Mixed endings resolve to the dominant one**, ties to `\n`. A file whose
+/// endings already disagree has no state to preserve, so it is normalized
+/// rather than having the disagreement encoded permanently; and a file with
+/// no line ending at all — empty, or one unterminated line — carries no
+/// evidence either way, so it takes the platform-neutral default.
+pub(crate) fn line_ending_of(content: &str) -> &'static str {
+    let crlf = content.matches("\r\n").count();
+    // Every `\r\n` contains an `\n`, so the bare-LF count is the difference.
+    let bare_lf = content.matches('\n').count() - crlf;
+    if crlf > bare_lf { "\r\n" } else { "\n" }
+}
+
+/// Re-join `lines` with `ending`, terminated by exactly one `ending`.
+///
+/// The shape most reassembling writers want: a file is a sequence of lines
+/// and ends with a single newline. Callers that must preserve an *absent*
+/// trailing newline join by hand with [`line_ending_of`]'s result instead.
+pub(crate) fn join_lines_terminated<S: AsRef<str>>(lines: &[S], ending: &str) -> String {
+    let mut out = String::new();
+    for line in lines {
+        out.push_str(line.as_ref());
+        out.push_str(ending);
+    }
+    out
+}
+
+/// Re-terminate every line of `text` with `ending`.
+///
+/// The companion to [`line_ending_of`] for writers that assemble their
+/// output with `\n` throughout — rendering new blocks with `writeln!`,
+/// splicing, stitching — and would need the ending threaded through a dozen
+/// pushes to do it line by line. Those normalize once at the end instead,
+/// which is both smaller and harder to get half-right: a threaded parameter
+/// that one push forgets produces a mixed file, and mixed is the outcome
+/// worth avoiding most (spec 051, scenario
+/// `rewrites-preserve-line-endings`).
+///
+/// Idempotent: input already using `ending` comes back unchanged, because
+/// each line is stripped of a trailing `\r` before the ending is applied.
+/// The tail after the final `\n` is emitted as-is — it is an unterminated
+/// line, not a line ending, so there is nothing to convert.
+pub(crate) fn with_line_ending(text: &str, ending: &str) -> String {
+    // Fast path: already LF-only and LF is what was asked for.
+    if ending == "\n" && !text.contains('\r') {
+        return text.to_string();
+    }
+    let mut out = String::with_capacity(text.len() + text.len() / 32);
+    let mut rest = text;
+    while let Some(idx) = rest.find('\n') {
+        let line = &rest[..idx];
+        out.push_str(line.strip_suffix('\r').unwrap_or(line));
+        out.push_str(ending);
+        rest = &rest[idx + 1..];
+    }
+    out.push_str(rest);
+    out
+}
+
 pub(crate) fn read_text(path: &Path) -> Result<String> {
     std::fs::read_to_string(path).map_err(|source| PrimitiveError::Io {
         path: path.into(),
@@ -2098,6 +2173,53 @@ mod tests {
         for good in &["a", "022", "retry-on-timeout", "spec-042-foo", "x1-y2-z3"] {
             validate_slug(good).unwrap();
         }
+    }
+
+    #[test]
+    fn line_ending_of_reads_the_file_it_is_given() {
+        assert_eq!(line_ending_of("a\r\nb\r\n"), "\r\n");
+        assert_eq!(line_ending_of("a\nb\n"), "\n");
+        // No line ending at all — empty, or one unterminated line — carries
+        // no evidence either way, so the platform-neutral default applies.
+        assert_eq!(line_ending_of(""), "\n");
+        assert_eq!(line_ending_of("no newline here"), "\n");
+    }
+
+    /// Mixed endings have no state to preserve, so the dominant one governs
+    /// and ties go to LF. `contains("\r\n")` — what the three retired copies
+    /// each used — would have answered CRLF for a mostly-LF file carrying one
+    /// stray CRLF.
+    #[test]
+    fn line_ending_of_resolves_a_mixed_file_to_the_dominant_ending() {
+        assert_eq!(line_ending_of("a\nb\nc\nd\r\n"), "\n");
+        assert_eq!(line_ending_of("a\r\nb\r\nc\r\nd\n"), "\r\n");
+        // A tie is not evidence for CRLF.
+        assert_eq!(line_ending_of("a\r\nb\n"), "\n");
+    }
+
+    #[test]
+    fn with_line_ending_converts_and_is_idempotent() {
+        assert_eq!(with_line_ending("a\nb\n", "\r\n"), "a\r\nb\r\n");
+        assert_eq!(with_line_ending("a\r\nb\r\n", "\n"), "a\nb\n");
+        // Applying an ending a file already uses changes nothing — the
+        // property that lets writers normalize unconditionally.
+        assert_eq!(with_line_ending("a\r\nb\r\n", "\r\n"), "a\r\nb\r\n");
+        assert_eq!(with_line_ending("a\nb\n", "\n"), "a\nb\n");
+    }
+
+    /// The tail after the final `\n` is an unterminated line, not a line
+    /// ending, so it survives verbatim and no terminator is invented for it.
+    #[test]
+    fn with_line_ending_leaves_an_unterminated_final_line_alone() {
+        assert_eq!(with_line_ending("a\nb", "\r\n"), "a\r\nb");
+        assert_eq!(with_line_ending("", "\r\n"), "");
+    }
+
+    #[test]
+    fn join_lines_terminated_ends_with_exactly_one_ending() {
+        assert_eq!(join_lines_terminated(&["a", "b"], "\r\n"), "a\r\nb\r\n");
+        assert_eq!(join_lines_terminated(&["a"], "\n"), "a\n");
+        assert_eq!(join_lines_terminated::<&str>(&[], "\n"), "");
     }
 
     #[test]

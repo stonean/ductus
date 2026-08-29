@@ -203,7 +203,7 @@ fn stamp_fold_target(template: &[u8], target: &str, template_rel: &str) -> Resul
         ),
     };
     let text = std::str::from_utf8(template).map_err(|_| malformed())?;
-    let newline = if text.contains("\r\n") { "\r\n" } else { "\n" };
+    let newline = super::line_ending_of(text);
     let lines: Vec<&str> = text.split('\n').map(|l| l.trim_end_matches('\r')).collect();
     if lines.first() != Some(&"---") {
         return Err(malformed());

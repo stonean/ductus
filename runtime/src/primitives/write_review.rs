@@ -526,7 +526,15 @@ fn update_spec_review_block(
 
     let block = render_review_yaml(args, must, should, low, &surviving);
     let new_fm = splice_review_block(fm_text, &block);
-    Ok(format!("---\n{new_fm}\n---\n{body}"))
+    // The splice joins with `\n` and the fences are literal, while `body` is
+    // carried through untouched — so on a CRLF spec the two halves would
+    // disagree. Normalize the whole file to its own ending instead: a
+    // partially-converted file is the outcome no later reader can tell from
+    // a hand-edit.
+    Ok(crate::primitives::with_line_ending(
+        &format!("---\n{new_fm}\n---\n{body}"),
+        crate::primitives::line_ending_of(content),
+    ))
 }
 
 /// Whether a waiver's `(rule, file)` anchor is in the expired set.

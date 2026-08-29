@@ -110,6 +110,11 @@ pub fn run(args: &AppendTaskArgs, repo: &Path) -> Result<AppendTaskResult> {
         }
         TasksStructure::Phased => insert_phased_task(&existing, next_number, args)?,
     };
+    // The block above is rendered with `\n` throughout and the insert paths
+    // push `\n` in a dozen places; normalize once here rather than threading
+    // the ending through each, so appending a task cannot convert a CRLF
+    // `tasks.md` to LF (or leave the appended block disagreeing with it).
+    let new_content = super::with_line_ending(&new_content, super::line_ending_of(&existing));
     write_atomic(&tasks_path, &new_content)?;
 
     Ok(AppendTaskResult {

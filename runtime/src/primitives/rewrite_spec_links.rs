@@ -152,6 +152,10 @@ fn repo_relative(repo: &Path, path: &Path) -> String {
 /// `folds-into` moves there, so `dependencies:` and `references:` are left
 /// untouched for the generators that own them.
 fn rewrite_content(content: &str, from: &str, target: &FoldTarget) -> (String, u32) {
+    // The file's own ending, not a bare `\n`. `lines()` strips a trailing
+    // `\r`, so re-joining with `\n` would convert a CRLF checkout's file to
+    // LF as a side effect of re-pointing one link.
+    let ending = crate::primitives::line_ending_of(content);
     let mut out = String::with_capacity(content.len());
     let mut count = 0;
     // A trailing newline is not a line, and `lines()` drops it; re-add it
@@ -163,12 +167,12 @@ fn rewrite_content(content: &str, from: &str, target: &FoldTarget) -> (String, u
         let is_fence = spec_links::is_frontmatter_fence(line);
         if index == 0 && is_fence {
             in_frontmatter = true;
-            push_line(&mut out, line);
+            push_line(&mut out, line, ending);
             continue;
         }
         if in_frontmatter && is_fence {
             in_frontmatter = false;
-            push_line(&mut out, line);
+            push_line(&mut out, line, ending);
             continue;
         }
 
@@ -178,19 +182,21 @@ fn rewrite_content(content: &str, from: &str, target: &FoldTarget) -> (String, u
             rewrite_body_line(line, from, target)
         };
         count += moved;
-        push_line(&mut out, &rewritten);
+        push_line(&mut out, &rewritten, ending);
     }
 
-    if !ends_with_newline {
-        out.pop();
+    if !ends_with_newline && out.len() >= ending.len() {
+        // Drop the ending this loop added past the final line — the whole
+        // ending, not one byte, or a CRLF file is left with a stray `\r`.
+        out.truncate(out.len() - ending.len());
     }
     (out, count)
 }
 
 /// Append `line` and a newline.
-fn push_line(out: &mut String, line: &str) {
+fn push_line(out: &mut String, line: &str, ending: &str) {
     out.push_str(line);
-    out.push('\n');
+    out.push_str(ending);
 }
 
 /// Re-point a `folds-into:` line naming `from`, leaving every other

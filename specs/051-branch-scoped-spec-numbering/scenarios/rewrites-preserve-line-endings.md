@@ -10,12 +10,12 @@ Fold-back re-points every inbound pointer to a retiring directory by rewriting t
 
 `str::lines()` strips a trailing `\r` from every line it yields. So on a checkout whose files carry CRLF endings, a rewrite that changes one link re-emits **every** line with LF — converting the whole file, silently, as a side effect of moving a pointer.
 
-Two sibling primitives already do this correctly, each having solved it independently:
+Sibling primitives already do this correctly, each having solved it independently:
 
 - `create_feature::stamp_fold_target` detects `\r\n` in the template and joins with the ending it found (`runtime/src/primitives/create_feature.rs:206`).
 - `derive_references` picks its `line_ending` the same way (`runtime/src/primitives/derive_references.rs:398`).
 
-And `check_stuck` carries CRLF regression tests recording that a hand-rolled splitter missing the `\r\n` close fence was a real defect (`runtime/src/primitives/check_stuck.rs:215`, `:351`). The convention is established, and `rewrite-spec-links` is the one writer that departs from it.
+And `check_stuck` carries CRLF regression tests recording that a hand-rolled splitter missing the `\r\n` close fence was a real defect (`runtime/src/primitives/check_stuck.rs:215`, `:351`). The convention is established. `rewrite-spec-links` is the writer that was *reported* as departing from it; it is not the only one (see Behavior).
 
 The runtime's CI runs on three platforms, so this is not hypothetical — but it is invisible to a repository whose files are already LF, which is why it survived review of the primitive itself and was found only by comparing it against its siblings.
 
@@ -23,7 +23,21 @@ The runtime's CI runs on three platforms, so this is not hypothetical — but it
 
 A primitive that rewrites an existing text file preserves that file's line endings. A file read as CRLF is written back as CRLF; a file read as LF is written back as LF. The rewrite's diff is confined to the lines whose content actually changed.
 
-The rule is a property of *rewriting*, not of `rewrite-spec-links`: three primitives now need it and each has its own copy of the detection. The line-ending-preserving rewrite belongs in one shared helper that all three call, so a fourth writer inherits the behavior rather than rediscovering the defect. That consolidation is the point of the scenario — fixing only `rewrite-spec-links` would leave the same trap set for the next primitive that walks a file line by line.
+The rule is a property of *rewriting*, not of `rewrite-spec-links`. Measured across the primitives that reassemble a file they did not create: **three carry the detection** — `derive_dependencies`, `derive_references`, and `create_feature::stamp_fold_target`, three independent copies of the same few lines — and **seven do not**:
+
+| Writer | What a CRLF file becomes |
+| --- | --- |
+| `rewrite_spec_links` | whole file → LF |
+| `remove_inbox_item` | whole file → LF |
+| `append_question` | whole file → LF |
+| `prune_tasks` | whole file → LF |
+| `append_task` (phased insert; `stitch` on append) | whole file → LF; an appended block → **mixed** |
+| `write_review` (frontmatter splice) | frontmatter → LF, body preserved → **mixed** |
+| `invalidate_review` | **mixed**, inherited from the splice it reuses |
+
+The two **mixed** outcomes are the sharper failure. A clean conversion is at least uniform and shows up as one large diff; a partial one leaves a file whose halves disagree, which no subsequent reader can distinguish from a hand-edit. Every spec reviewed on a CRLF checkout is in that state today.
+
+So the detection belongs in **one** shared place that every writer calls, and the three existing copies are retired into it. Fixing only the writer that was reported would leave six traps set and a helper with one caller — which is the same duplication one level up.
 
 A file with mixed endings has no correct answer to preserve, so the dominant ending governs and the file is normalized to it. That is a deliberate choice rather than an oversight: mixed endings are already a defect in the file, and preserving them line-by-line would encode it permanently.
 

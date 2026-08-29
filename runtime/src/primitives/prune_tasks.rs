@@ -332,7 +332,7 @@ fn reduce_keep_pending(content: &str, blocks: &[Block]) -> (String, Vec<PruneSec
     // No spent section and no dropped phase: leave the file byte-for-byte
     // unchanged rather than reformat seams.
     let new_content = if dropped_any {
-        render(&kept_lines)
+        render(&kept_lines, super::line_ending_of(content))
     } else {
         content.to_string()
     };
@@ -383,19 +383,22 @@ fn section_record(block: &Block, action: PruneAction) -> PruneSection {
 
 /// Render kept blocks: one blank line between blocks, single trailing
 /// newline, no leading blanks — `markdownlint`-clean seams.
-fn render(blocks: &[&Block]) -> String {
+///
+/// `ending` is the source file's own, so pruning a task never converts a
+/// CRLF checkout's `tasks.md` to LF as a side effect.
+fn render(blocks: &[&Block], ending: &str) -> String {
     let rendered: Vec<String> = blocks
         .iter()
-        .map(|b| render_block(&b.lines))
+        .map(|b| render_block(&b.lines, ending))
         .filter(|s| !s.is_empty())
         .collect();
-    let mut out = rendered.join("\n\n");
-    out.push('\n');
+    let mut out = rendered.join(&format!("{ending}{ending}"));
+    out.push_str(ending);
     out
 }
 
 /// Join a block's lines, trimming leading and trailing blank lines.
-fn render_block(lines: &[String]) -> String {
+fn render_block(lines: &[String], ending: &str) -> String {
     let mut start = 0;
     let mut end = lines.len();
     while start < end && lines[start].trim().is_empty() {
@@ -404,7 +407,7 @@ fn render_block(lines: &[String]) -> String {
     while end > start && lines[end - 1].trim().is_empty() {
         end -= 1;
     }
-    lines[start..end].join("\n")
+    lines[start..end].join(ending)
 }
 
 fn size_of(content: &str) -> SizeSummary {

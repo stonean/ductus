@@ -165,7 +165,21 @@ fn normalize(text: &str) -> String {
 /// Insert `- {question}` into the `## Open Questions` section of
 /// `content`, creating the section when absent. Returns the rewritten
 /// content and whether the section was created.
+/// Join the assembled lines with the file's own ending, trailing blank lines
+/// trimmed and exactly one ending at the end.
+///
+/// `trim_end` also strips a trailing `\r`, so the terminator this adds is the
+/// only one left and the file's ending is whatever it was.
+fn terminated(lines: &[String], ending: &str) -> String {
+    let mut body = lines.join(ending);
+    let trimmed = body.trim_end().len();
+    body.truncate(trimmed);
+    body.push_str(ending);
+    body
+}
+
 fn insert_question(content: &str, question: &str) -> (String, bool) {
+    let ending = super::line_ending_of(content);
     let lines: Vec<&str> = content.lines().collect();
     let bullet = format!("- {question}");
 
@@ -210,7 +224,7 @@ fn insert_question(content: &str, question: &str) -> (String, bool) {
             out.push(String::new());
             out.extend(lines[end..].iter().map(|l| (*l).to_string()));
         }
-        return (format!("{}\n", out.join("\n").trim_end()), false);
+        return (terminated(&out, ending), false);
     }
 
     // Section absent: create it before `## Resolved Questions` when that
@@ -238,7 +252,7 @@ fn insert_question(content: &str, question: &str) -> (String, bool) {
         out.push(String::new());
         out.extend(block);
     }
-    (format!("{}\n", out.join("\n").trim_end()), true)
+    (terminated(&out, ending), true)
 }
 
 /// Index of the line whose trimmed text equals the given ATX heading.

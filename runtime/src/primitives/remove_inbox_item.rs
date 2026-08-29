@@ -82,14 +82,14 @@ fn remove_bullet(content: &str, target: &str) -> Option<String> {
     let mut kept: Vec<&str> = Vec::with_capacity(lines.len().saturating_sub(1));
     kept.extend_from_slice(&lines[..idx]);
     kept.extend_from_slice(&lines[idx + 1..]);
-    Some(normalize(&kept))
+    Some(normalize(&kept, super::line_ending_of(content)))
 }
 
 /// Join the kept lines, collapse any run of two or more blank lines to a
 /// single blank (removing a bullet between blank-separated items would
 /// otherwise double the blank and trip markdownlint MD012), trim leading
 /// and trailing blank lines, and end with exactly one newline.
-fn normalize(lines: &[&str]) -> String {
+fn normalize(lines: &[&str], ending: &str) -> String {
     let mut out: Vec<&str> = Vec::with_capacity(lines.len());
     let mut prev_blank = false;
     for line in lines {
@@ -106,7 +106,7 @@ fn normalize(lines: &[&str]) -> String {
     while out.last().is_some_and(|l| l.trim().is_empty()) {
         out.pop();
     }
-    format!("{}\n", out.join("\n"))
+    super::join_lines_terminated(&out, ending)
 }
 
 #[cfg(test)]

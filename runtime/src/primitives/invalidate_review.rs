@@ -95,7 +95,13 @@ pub fn run(args: &InvalidateReviewArgs, repo: &Path) -> Result<InvalidateReviewR
     let block = block.trim_end_matches('\n').to_string();
 
     let new_fm = splice_review_block(fm_text, &block);
-    write_atomic(&spec_path, &format!("---\n{new_fm}\n---\n{body}"))?;
+    // Same normalization write-review applies, and for the same reason: the
+    // splice is LF while `body` is carried through as it was read.
+    let updated = super::with_line_ending(
+        &format!("---\n{new_fm}\n---\n{body}"),
+        super::line_ending_of(&content),
+    );
+    write_atomic(&spec_path, &updated)?;
 
     Ok(InvalidateReviewResult {
         invalidated: true,
