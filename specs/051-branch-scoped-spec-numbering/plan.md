@@ -131,21 +131,24 @@ Adding a directory form and a command touches the framework's own registries, an
 
 ## Implementation notes
 
-Recorded during implementation, for whoever picks this up next. **Tasks 1–12 are complete and committed; tasks 13 and 14 remain.** Read this section before touching anything — it carries what the task checkboxes cannot.
+Recorded during implementation. All 21 tasks are complete and committed; this section is the record of what shipped and why, not a handoff. It carries what the task checkboxes cannot.
 
-### Where the work stands
+### What shipped
 
-| Tasks | State | Commits |
-| --- | --- | --- |
-| 1–6 | Done | `d71c4ff`, `b136a94`, `508b48d`, `32ba568`, `e86f612` |
-| 7 | Done, split into two commits | `75a0cfd` (primitive + registration), `2170c4f` (dashboard + gate) |
-| 8–12 | Done, one commit each | `b145136`, `542c9f1`, `6e5662b`, `6a92d3c`, `ace609e` |
-| 13 | **Next.** Constitution §numbering and §spec-lifecycle | — |
-| 14 | **Then.** `/ductus:specify` branch-scoped creation | — |
+| Tasks | Commits |
+| --- | --- |
+| 1–6 | `d71c4ff`, `b136a94`, `508b48d`, `32ba568`, `e86f612` |
+| 7 (split across two) | `75a0cfd` (primitive + registration), `2170c4f` (dashboard + gate) |
+| 8–12 | `b145136`, `542c9f1`, `6e5662b`, `6a92d3c`, `ace609e` |
+| 13–14 | `3d1adb2` (constitution), `238e0ca` (`/ductus:specify`) |
+| 15–19 | `c776f09`, `0daf542`, `ea93425`, `599f0ef`, `9be5b00` |
+| 20–21 | `1657a4d` |
+
+**Tasks 14–21 were added during implementation**, each because something the original breakdown did not cover turned out to be load-bearing. Task 14 because the plan's Affected Files named `specify.md` while no task touched it, leaving four criteria unowned. Tasks 15–16 because task 7 shipped gate and pipeline-view behavior without documenting it in the command sources §drift-prevention makes canonical. Task 17 because 022's data model enumerated a closed extension-point set that `routeFold` had already joined. Task 18 to discharge an inbox defect rather than route it. Task 19 from the security pass of the review. Tasks 20–21 because AC24 and AC29 claimed more than the implementation delivered, and the gate would not tick them.
 
 ### Write boundary
 
-The work spans more than the derived boundary, and always has. `derive-boundary` grows only as commits land, so it reports a subset; the remaining tasks additionally need `framework/constitution.md` (task 13) and `framework/commands/**` (task 14). The boundary is not seedable from the session file — `write-boundary` is an exec-walker context value, not a `session.toml` key — so **the grant has to come from the operator each session that needs it.** Ask for it once at the start rather than halting mid-task.
+The work spanned more than the derived boundary throughout. `derive-boundary` grows only as commits land, so it reports a subset of what a session needs; the later tasks additionally needed `framework/constitution.md`, `framework/commands/**`, and `scripts/**`. The boundary is not seedable from the session file — `write-boundary` is an exec-walker context value, not a `session.toml` key — so **the grant has to come from the operator each session that needs it.** Ask for it once at the start rather than halting mid-task.
 
 ### Verification each task is held to
 
@@ -167,7 +170,7 @@ Task 4 needed only its second test case: the restriction to `Sequential` landed 
 
 Task 7 absorbed the pipeline-view requirement (AC34–AC36) when it arrived, and was landed as two commits against one checkbox — the primitive and its registration, then the two reporting surfaces. The seam held; if a later task grows the same way, the same split is available without renumbering anything.
 
-### Decisions taken in tasks 7–12 that the checkboxes do not carry
+### Decisions the checkboxes do not carry
 
 These were judgement calls, not transcriptions of the plan. A later change that contradicts one is reopening a decision, not fixing an oversight.
 
@@ -180,16 +183,20 @@ These were judgement calls, not transcriptions of the plan. A later change that 
 - **`routeFold` is a separate extension point from `routeInboxItem`**, deliberately. That set answers *where in the corpus does this work belong*; a fold has already been told where. Widening the inbox vocabulary would break the closedness its other callers depend on.
 - **`/ductus:fold` re-targets the session after retiring the directory** (step 12). Without it every follow-on command lands on a path that is gone. The source spec's own scenarios cross over on *either* route — the route decides the body's shape, never its scenarios'.
 - **`framework/bootstrap/govern.md` is held byte-identical to `ductus.md`** by audit Family 21. Adding the `fold.md` installer row meant copying the file across; any future manifest edit needs the same.
+- **`/ductus:specify`'s branch-scoped step is prose, not a `gate-confirm`.** A gate step dispatches unconditionally on the exec path, so making it one would have put a prompt in front of every sequential creation — the thing AC4 forbids. The re-blessed `specify-basic.jsonl` shows the consequence: step numbers shift by one and no new event appears, which is the evidence that the sequential walk is byte-for-byte the walk it was.
+- **The sequential form accepts three digits *or more*, but rejects padding beyond the minimum.** `1000-slug` is a feature directory; `0500-a` is not. Keeping the name/number mapping injective is the reason — two spellings of 500 would make `next_feature_number` and `resolve-feature` disagree — not tidiness.
+- **A fold invalidates the upstream spec's review explicitly rather than relying on the staleness check.** That check reads durable contracts, and a body-edit fold writes only `spec.md`, which it deliberately excludes. The fold knows what the diff cannot see, so it says so. Waivers survive the invalidation: it asserts the review is out of date, not that an operator's judgement about a finding was withdrawn.
+- **An interrupted fold is *recoverable*, not atomic, and the command says so.** The runtime has no multi-file transaction. Every per-spec write is a no-op where a previous run already landed — which is what `append-task`'s new scenario-pointer dedup provides for the one step that lacked it — so the recovery is a second run rather than a rollback. Claiming per-spec all-or-nothing would have been claiming a transaction.
 
-### Settle these before the completion gate
+### How the completion gate was cleared
 
-Three things stand between task 14 and `done`. None is blocking work, but the gate will not pass without the first two.
+Three things stood between the last task and `done`, and each is recorded here because how it was settled is a decision, not a formality.
 
-1. **The spec has never been reviewed.** `spec.md`'s frontmatter carries `review.last-run: null`, so `check-review-gate` blocks with `not reviewed`. Run `/ductus:review` after task 14, not before — a review recorded against pre-task-14 code would be stale the moment it lands.
-2. **All 37 acceptance criteria are unchecked.** The completion gate verifies each one semantically and marks them individually via `mark-criterion` (0-based body order). Budget a session for it; AC13, AC10, AC30 and AC37 are what task 14 exists to satisfy, and AC17 is task 13.
-3. **Spec 022's `data-model.md` does not document `routeFold`.** Its §extension-points section enumerates the closed set, and `routeFold` is now in it. Adding the row is a **cross-spec write** the plan's Affected Files does not sanction, so it was deliberately not made — `diff-cross-spec` would surface it at the gate as an unexplained sibling-spec change. Decide whether to make it (and say so in the commit) or record why not.
+1. **The spec had never been reviewed**, so `check-review-gate` blocked with `not reviewed`. Reviewed after the last code task rather than before — a verdict recorded against a tree still being changed is stale the moment the next task lands, which is exactly what happened once anyway: the first pass was recorded at `6efa502`, tasks 20–21 then moved `data-model.md`, and the review was re-run (`8fd2c7a`) rather than caveated.
+2. **All 34 acceptance criteria were unchecked.** They were verified individually and marked by label. Two did not pass on the first walk: **AC24** (a body-edit fold left the upstream spec's review stale, because the gate's staleness check excludes `spec.md`) and **AC29** (per-primitive atomicity is not the per-spec all-or-nothing the criterion claimed). Both became tasks 21 and 20 rather than being ticked on a generous reading.
+3. **Spec 022's `data-model.md` did not document `routeFold`.** The row was added (`ea93425`) — a deliberate **cross-spec write** the plan's Affected Files did not sanction, so it is named in its commit rather than left to surface at the gate as an unexplained sibling-spec change (§cross-spec-impact). It made 022's own review stale, which was cleared by re-reviewing 022 (`6efa502`).
 
-An unrelated defect was captured to `specs/inbox.md` during this feature — a spec numbered past 999 gets a name `parse_feature_dir` rejects, because `create-feature`'s `{number:03}` pad and the predicate's three-digit rule disagree. Pre-existing; route it with `/ductus:groom`, not here.
+The defect captured to `specs/inbox.md` during this feature — a spec numbered past 999 gets a name `parse_feature_dir` rejects, because `create-feature`'s `{number:03}` pad is a minimum width and the predicate demanded exactly three digits — was fixed here rather than routed (task 18, `599f0ef`), and its inbox bullet removed. Two observations from the reviews remain in the inbox for `/ductus:groom`: `rewrite-spec-links` does not preserve CRLF line endings where two siblings deliberately do, and `/ductus:fold` rewrites corpus-wide links before the step that enforces the fold target exists.
 
 ### Conventions this feature established
 

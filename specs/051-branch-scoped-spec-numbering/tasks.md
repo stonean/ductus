@@ -2,9 +2,9 @@
 
 Tasks derived from the [plan](plan.md). Complete in order.
 
-Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Phase 2 (6–8) adds the fold target and its detection. Phase 3 (9–13) adds the fold-back command. Task 14 was added during implementation. Each phase leaves the corpus in a working state.
+Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Phase 2 (6–8) adds the fold target and its detection. Phase 3 (9–13) adds the fold-back command. Each phase leaves the corpus in a working state.
 
-**Tasks 1–12 are complete and committed. Tasks 13 and 14 remain**, in that order. Before reading further, read the plan's **Implementation notes** section: it carries everything a resuming session needs that these checkboxes cannot express — the write boundary the remaining work requires, the verification commands each task is held to, the decisions taken in tasks 7–12 that are not visible here, and the three items that must be settled before the completion gate can pass.
+**All 21 tasks are complete.** Tasks 14–21 were added during implementation — command-level work the original breakdown missed, documentation the runtime had outgrown, a captured defect, and the two acceptance criteria that turned out to claim more than the code delivered. The plan's **Implementation notes** section records which commit landed each, why each was added, and the decisions these checkboxes cannot express.
 
 ## 1. Introduce the directory-form parse
 
