@@ -169,7 +169,7 @@ fn render_table(
         };
         rows.push(format!(
             "| {feature} | {} | {} | {} | {} | {} | {} | {} |",
-            spec.status,
+            status_cell(spec),
             mark(spec.has_plan),
             mark(spec.has_tasks),
             mark(spec.has_data_model),
@@ -267,6 +267,32 @@ fn render_callouts(
             detail.join("; ")
         ));
     }
+    // Pending-fold callout: the row-level qualification says a fold is
+    // outstanding, this collects the backlog into one line so it can be read
+    // without scanning the table. Rendered independently of the callouts
+    // above for the same reason they are independent of each other.
+    let pending: Vec<&DashboardSpec> = specs.iter().filter(|s| s.folds_into.is_some()).collect();
+    if !pending.is_empty() {
+        let detail: Vec<String> = pending
+            .iter()
+            .map(|s| {
+                let target = s.folds_into.as_deref().unwrap_or("—");
+                if s.fold_target_missing {
+                    format!("{} → {target} (not in this tree)", s.slug)
+                } else {
+                    format!("{} → {target}", s.slug)
+                }
+            })
+            .collect();
+        lines.push(format!(
+            "{} spec(s) with an outstanding fold: {}. Run /{project}:fold on each; a \
+             branch-scoped spec is retired by fold-back, not completed. A target reported \
+             as not in this tree is the normal state before the merge — it lives on the \
+             upstream branch — so correct it only when it is a typo.",
+            pending.len(),
+            detail.join("; ")
+        ));
+    }
     if !tags_union.is_empty() {
         lines.push(format!("tags: {}", tags_union.join(", ")));
     }
@@ -361,6 +387,22 @@ fn next_action(spec: &DashboardSpec, project: &str) -> String {
     if spec.scenario_open_question_count >= 1 {
         return "clarify (scenario)".to_string();
     }
+    if let Some(target) = &spec.folds_into {
+        // A declared fold is outstanding work, so it owns the cell for every
+        // status — `done` included, which a spec carrying an undischarged
+        // fold has no honest claim to (spec 051 AC34). It sits *below* the
+        // two overrides above rather than beside them because an open
+        // question is the more upstream defect: the content gets settled
+        // before it gets moved.
+        let mut action = format!("/{project}:fold → {target}");
+        if spec.fold_target_missing {
+            // Called out on the row itself, which is the only place an
+            // operator scanning the view would see it. A report, not a
+            // verdict — see `DashboardSpec::fold_target_missing`.
+            action.push_str(" (target not in this tree)");
+        }
+        return action;
+    }
     match spec.status.as_str() {
         "draft" => format!("/{project}:clarify"),
         "clarified" => format!("/{project}:plan"),
@@ -368,6 +410,22 @@ fn next_action(spec: &DashboardSpec, project: &str) -> String {
         "done" => "done (spec is complete)".to_string(),
         other => other.to_string(),
     }
+}
+
+/// The Status cell. A spec declaring `folds-into` is qualified as carrying
+/// a pending fold, so the view never reports it as simply `done` — the fold
+/// is work the spec still owes, and a branch-scoped spec is retired by
+/// fold-back rather than completed (spec 051 AC34).
+///
+/// The frontmatter value is kept alongside the qualification rather than
+/// replaced by it: the view's job is to show where a spec sits, and
+/// `in-progress` and a hand-edited `done` are different situations for the
+/// operator even though both are held short of complete.
+fn status_cell(spec: &DashboardSpec) -> String {
+    if spec.folds_into.is_some() {
+        return format!("{} (fold pending)", spec.status);
+    }
+    spec.status.clone()
 }
 
 /// Recovery state: a spec past clarification whose body has re-acquired
@@ -441,6 +499,14 @@ fn load_specs(repo: &Path) -> Result<Vec<DashboardSpec>> {
         .map(|s| (s.slug.clone(), s.status.clone()))
         .collect();
     for spec in &mut entries {
+        // Resolution is against the corpus just walked, which is the only
+        // tree this call can see. `true` therefore means "not here", never
+        // "does not exist" — before the merge, the target normally lives on
+        // the upstream branch.
+        spec.fold_target_missing = spec
+            .folds_into
+            .as_ref()
+            .is_some_and(|target| !status_by_slug.contains_key(target));
         spec.blocked_by = spec
             .dependencies
             .iter()
@@ -499,6 +565,9 @@ fn load_one_spec(specs_dir: &Path, root: &str, slug: &str) -> Result<DashboardSp
         scenario_open_question_count: u32::try_from(scenario_questions.len()).unwrap_or(u32::MAX),
         scenarios_with_questions,
         blocked_by: Vec::new(),
+        folds_into: frontmatter.folds_into,
+        // Filled in by the caller, which needs every slug known first.
+        fold_target_missing: false,
     })
 }
 
@@ -719,6 +788,187 @@ mod tests {
     /// is absent, so these tests double as legacy-fallback coverage.
     fn write_session_toml(repo: &Path, body: &str) {
         std::fs::write(repo.join(".govern.session.toml"), body).unwrap();
+    }
+
+    /// AC34: a spec declaring `folds-into` is reported as carrying an
+    /// outstanding fold, and the row's Next Action is the fold rather than
+    /// the status-driven action — `done` included, which a spec owing a
+    /// fold has no honest claim to.
+    #[test]
+    fn a_declared_fold_holds_a_spec_short_of_done() {
+        let tmp = TempDir::new().unwrap();
+        pin_project(tmp.path(), "");
+        write_spec(
+            tmp.path(),
+            "050-upstream",
+            "status: done\ndependencies: []\n",
+            "",
+        );
+        write_spec(
+            tmp.path(),
+            "1234.1-staged",
+            "status: done\ndependencies: []\nfolds-into: 050-upstream\n",
+            "",
+        );
+
+        let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
+
+        let staged = result
+            .specs
+            .iter()
+            .find(|s| s.slug == "1234.1-staged")
+            .expect("the branch-scoped spec is enumerated");
+        assert_eq!(staged.folds_into.as_deref(), Some("050-upstream"));
+        assert!(!staged.fold_target_missing);
+
+        let row = row_for(&result.rendered_markdown, "1234.1-staged");
+        assert!(row.contains("done (fold pending)"), "{row}");
+        assert!(row.contains("/ductus:fold → 050-upstream"), "{row}");
+        assert!(!row.contains("done (spec is complete)"), "{row}");
+
+        // The upstream spec is untouched: it declares no fold.
+        let upstream = row_for(&result.rendered_markdown, "050-upstream");
+        assert!(upstream.contains("done (spec is complete)"), "{upstream}");
+        assert!(!upstream.contains("fold pending"), "{upstream}");
+    }
+
+    /// A target absent from this tree is called out on the same row. It is
+    /// a report, not a verdict: before the merge the target normally lives
+    /// on the upstream branch, and this view cannot tell which tree it is
+    /// looking at.
+    #[test]
+    fn an_unresolvable_fold_target_is_called_out_on_the_row() {
+        let tmp = TempDir::new().unwrap();
+        pin_project(tmp.path(), "");
+        write_spec(
+            tmp.path(),
+            "1234.1-staged",
+            "status: in-progress\ndependencies: []\nfolds-into: 099-elsewhere\n",
+            "",
+        );
+
+        let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
+
+        assert!(result.specs[0].fold_target_missing);
+        let row = row_for(&result.rendered_markdown, "1234.1-staged");
+        assert!(row.contains("/ductus:fold → 099-elsewhere"), "{row}");
+        assert!(row.contains("(target not in this tree)"), "{row}");
+        // Reported, never blocked: the callout says so in the operator's
+        // terms rather than leaving the absence to be read as a defect.
+        assert!(
+            result
+                .rendered_markdown
+                .contains("normal state before the merge"),
+            "{}",
+            result.rendered_markdown
+        );
+    }
+
+    /// The backlog is collected into one callout line so it can be read
+    /// without scanning the table, in the same shape as the blocked and
+    /// scenario-question callouts.
+    #[test]
+    fn outstanding_folds_are_collected_into_a_callout() {
+        let tmp = TempDir::new().unwrap();
+        pin_project(tmp.path(), "");
+        write_spec(
+            tmp.path(),
+            "050-upstream",
+            "status: done\ndependencies: []\n",
+            "",
+        );
+        write_spec(
+            tmp.path(),
+            "1234.1-staged",
+            "status: in-progress\ndependencies: []\nfolds-into: 050-upstream\n",
+            "",
+        );
+        write_spec(
+            tmp.path(),
+            "1234.2-also",
+            "status: draft\ndependencies: []\nfolds-into: 099-elsewhere\n",
+            "",
+        );
+
+        let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
+
+        let callout = result
+            .rendered_markdown
+            .lines()
+            .find(|l| l.contains("outstanding fold"))
+            .expect("the pending-fold callout is rendered");
+        assert!(
+            callout.starts_with("2 spec(s) with an outstanding fold:"),
+            "{callout}"
+        );
+        assert!(
+            callout.contains("1234.1-staged → 050-upstream"),
+            "{callout}"
+        );
+        assert!(
+            callout.contains("1234.2-also → 099-elsewhere (not in this tree)"),
+            "{callout}"
+        );
+    }
+
+    /// A corpus with no fold declared renders exactly as before — the
+    /// callout is absent rather than rendered empty.
+    #[test]
+    fn a_corpus_without_folds_renders_no_fold_callout() {
+        let tmp = TempDir::new().unwrap();
+        write_spec(
+            tmp.path(),
+            "050-upstream",
+            "status: done\ndependencies: []\n",
+            "",
+        );
+
+        let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
+
+        assert!(!result.rendered_markdown.contains("outstanding fold"));
+        assert!(!result.rendered_markdown.contains("fold pending"));
+        assert_eq!(result.specs[0].folds_into, None);
+        assert!(!result.specs[0].fold_target_missing);
+    }
+
+    /// An unresolved scenario question is the more upstream defect, so it
+    /// keeps the Next Action cell — the content gets settled before it gets
+    /// moved.
+    #[test]
+    fn a_scenario_question_outranks_a_pending_fold_in_the_next_action() {
+        let tmp = TempDir::new().unwrap();
+        pin_project(tmp.path(), "");
+        write_spec(
+            tmp.path(),
+            "1234.1-staged",
+            "status: in-progress\ndependencies: []\nfolds-into: 050-upstream\n",
+            "",
+        );
+        let scenarios = tmp.path().join("specs/1234.1-staged/scenarios");
+        std::fs::create_dir_all(&scenarios).unwrap();
+        std::fs::write(
+            scenarios.join("a.md"),
+            "---\nsection: X\n---\n\n# A\n\n## Open Questions\n\n- Which way?\n",
+        )
+        .unwrap();
+
+        let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
+
+        let row = row_for(&result.rendered_markdown, "1234.1-staged");
+        assert!(row.contains("clarify (scenario)"), "{row}");
+        // The fold is still reported — it is outstanding either way.
+        assert!(row.contains("fold pending"), "{row}");
+    }
+
+    /// The rendered table row naming `slug`, for the assertions above.
+    fn row_for(markdown: &str, slug: &str) -> String {
+        markdown
+            .lines()
+            .find(|l| {
+                l.starts_with(&format!("| {slug} |")) || l.starts_with(&format!("| **{slug}** |"))
+            })
+            .unwrap_or_else(|| panic!("no table row for {slug} in:\n{markdown}"))
+            .to_string()
     }
 
     #[test]

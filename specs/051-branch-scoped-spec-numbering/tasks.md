@@ -59,12 +59,12 @@ Phases 1 and 2's field work are complete and committed; task 7 is the next one. 
 
 ## 7. Add `check-unfolded-specs`
 
-- [ ] Implement the primitive per the data model, reporting each branch-scoped directory with its `folds-into` and status, plus an `examined` count
-- [ ] Register it in `runtime/src/schema/primitives.rs`, the MCP server, and `framework/runtime-tools.txt`
-- [ ] Test: a corpus with no branch-scoped directories reports empty with a non-zero `examined`
-- [ ] Teach the pipeline view that a declared `folds-into` is outstanding work: the spec is reported as carrying a pending fold, never as `done`, and a target that does not resolve in this tree is called out on the same line
-- [ ] Block `in-progress → done` in the pre-`done` gate while `folds-into` is present, naming the pending fold — the same category as an unresolved scenario question
-- [ ] Test: a spec with `folds-into` reports outstanding and fails the gate, and one whose target does not resolve is reported as needing correction
+- [x] Implement the primitive per the data model, reporting each branch-scoped directory with its `folds-into` and status, plus an `examined` count
+- [x] Register it in `runtime/src/schema/primitives.rs`, the MCP server, and `framework/runtime-tools.txt`
+- [x] Test: a corpus with no branch-scoped directories reports empty with a non-zero `examined`
+- [x] Teach the pipeline view that a declared `folds-into` is outstanding work: the spec is reported as carrying a pending fold, never as `done`, and a target that does not resolve in this tree is called out on the same line
+- [x] Block `in-progress → done` in the pre-`done` gate while `folds-into` is present, naming the pending fold — the same category as an unresolved scenario question
+- [x] Test: a spec with `folds-into` reports outstanding and fails the gate, and one whose target does not resolve is reported as needing correction
 
 - **Done when**: every surviving branch-scoped directory is reported with its declared fold target, a pending fold holds its spec short of `done` in both the pipeline view and the gate, and an empty result is distinguishable from an unexamined corpus (AC21, AC34, AC35).
 

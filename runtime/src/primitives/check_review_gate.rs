@@ -5,8 +5,9 @@
 //! walked by hand on every completion attempt: first the feature
 //! directory's markdown lint (through the `lint-markdown` machinery,
 //! replacing the raw `npx markdownlint-cli2` invocation), then unresolved
-//! scenario open questions, then the spec frontmatter `review:` block,
-//! then whether the recorded review is still current. The first failing
+//! scenario open questions, then an undischarged `folds-into` fold, then
+//! the spec frontmatter `review:` block, then whether the recorded review
+//! is still current. The first failing
 //! check wins and produces the canonical `blocked: …` message — with the
 //! adopter's `[host] project` command namespace substituted into the
 //! `/{project}:review` references — plus, on `must-violations`, the
@@ -42,7 +43,7 @@ use crate::schema::primitives::{
 /// [`PrimitiveError::FeatureNotFound`] when the feature directory does
 /// not exist, [`PrimitiveError::Io`] when `spec.md` is unreadable or
 /// `npx` cannot be spawned, or [`PrimitiveError::Yaml`] for a malformed
-/// frontmatter block. Every gate verdict — including all five block
+/// frontmatter block. Every gate verdict — including all six block
 /// reasons — is a domain outcome in the result.
 pub fn run(args: &CheckReviewGateArgs, repo: &Path) -> Result<CheckReviewGateResult> {
     run_with_lint(args, repo, lint_markdown::run)
@@ -106,7 +107,7 @@ pub(crate) fn run_with_lint(
         return Ok(blocked);
     }
 
-    // Gate checks 3 and 4: the spec frontmatter `review:` block.
+    // The spec's frontmatter, read once for gate checks 3 through 5.
     let spec_path = feature_dir.join("spec.md");
     let content = read_text(&spec_path)?;
     let (fm_text, _body) = split_frontmatter(&content, &spec_path)?;
@@ -117,6 +118,12 @@ pub(crate) fn run_with_lint(
         })?;
     let project = Host::load(repo).project;
 
+    // Gate check 3: the spec has no undischarged fold.
+    if let Some(blocked) = pending_fold_block(frontmatter.folds_into.as_deref(), &project) {
+        return Ok(blocked);
+    }
+
+    // Gate checks 4 and 5: the spec frontmatter `review:` block.
     let review = match frontmatter.review {
         Some(review) if review.last_run.is_some() => review,
         // Absent block or null `last-run`: the spec has never completed a
@@ -150,7 +157,7 @@ pub(crate) fn run_with_lint(
         });
     }
 
-    // Gate check 5: the recorded review still describes the current code.
+    // Gate check 6: the recorded review still describes the current code.
     if let Some(stale) =
         stale_review_block(repo, &rel_dir, review.reviewed_against.as_deref(), &project)
     {
@@ -390,6 +397,46 @@ fn is_durable_contract(rel_within_feature: &str) -> bool {
     (rel_within_feature.starts_with("scenarios/") && is_md) || rel_within_feature == "data-model.md"
 }
 
+/// The pending-fold gate check: `Some(blocked)` when the spec declares a
+/// `folds-into` target, `None` when it declares none.
+///
+/// Ordered beside the scenario-open-questions check and ahead of the
+/// `review:` block because it is the same kind of claim: a spec carrying an
+/// obligation nobody has discharged is not a candidate for `done`, so
+/// whether its review is fresh does not yet matter. The consequence is that
+/// the branch-scoped form has no `done` state at all — it is retired by
+/// fold-back, not completed, which is the honest reading of a staging spec
+/// (spec 051 AC35).
+///
+/// **Presence only** — the target's existence is deliberately not checked.
+/// A branch-scoped spec exists because upstream moved, so before the merge
+/// its target normally lives on the upstream branch; requiring it to resolve
+/// would block the feature's normal case over a tree this gate cannot see.
+/// `retire-feature` enforces existence at fold-back, in the first tree
+/// holding both.
+///
+/// Absence is never a finding. A sequential spec has no fold target by
+/// definition, and removing the key by hand is the supported way to make a
+/// branch-scoped spec stand on its own.
+fn pending_fold_block(folds_into: Option<&str>, project: &str) -> Option<CheckReviewGateResult> {
+    let target = folds_into?;
+    Some(CheckReviewGateResult {
+        passed: false,
+        blocked_by: Some(ReviewGateBlock::PendingFold),
+        message: Some(format!(
+            "blocked: spec folds into {target} and the fold has not happened — \
+             resolve it before completing"
+        )),
+        guidance: Some(format!(
+            "Run /{project}:fold to fold this spec into {target} and retire its \
+             directory: a branch-scoped spec is retired by fold-back, not completed. \
+             A spec that should stand on its own instead is renamed to the sequential \
+             NNN- form with its folds-into key removed."
+        )),
+        violations: vec![],
+    })
+}
+
 /// The scenario-open-questions gate check: `Some(blocked)` when any
 /// scenario under `feature_dir` carries an unresolved open question,
 /// `None` when the check passes.
@@ -486,6 +533,81 @@ mod tests {
             clean: true,
             exit_code: 0,
         })
+    }
+
+    /// A branch-scoped spec: reviewed, clean, and every other check would
+    /// pass — the fold is the only thing holding it short of `done`.
+    const PENDING_FOLD: &str = "---\nstatus: in-progress\ndependencies: []\nfolds-into: 050-upstream\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
+
+    #[test]
+    fn a_declared_fold_blocks_the_done_transition() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), PENDING_FOLD);
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+
+        assert!(!result.passed);
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::PendingFold));
+        assert_eq!(
+            result.message.as_deref(),
+            Some(
+                "blocked: spec folds into 050-upstream and the fold has not happened — resolve it before completing"
+            )
+        );
+        let guidance = result.guidance.expect("the block carries guidance");
+        assert!(guidance.contains("/ductus:fold"), "{guidance}");
+        assert!(guidance.contains("retired by fold-back"), "{guidance}");
+    }
+
+    /// The block does not depend on the target resolving, and deliberately:
+    /// a branch-scoped spec exists because upstream moved, so before the
+    /// merge its target normally lives on the branch this tree forked from.
+    /// Checking resolvability here would refuse the feature's normal case
+    /// over a tree the gate cannot see.
+    #[test]
+    fn the_fold_block_does_not_depend_on_the_target_existing() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), PENDING_FOLD);
+        // Nothing named `050-upstream` is anywhere in this corpus.
+        assert!(!tmp.path().join("specs/050-upstream").exists());
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::PendingFold));
+    }
+
+    /// Ordering: an unresolved scenario question is the more upstream
+    /// defect and keeps the cell, so the fold block is not what a
+    /// contributor is sent to fix first.
+    #[test]
+    fn a_scenario_question_outranks_a_pending_fold() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), PENDING_FOLD);
+        fs::create_dir_all(tmp.path().join("specs/007-gate/scenarios")).unwrap();
+        fs::write(
+            tmp.path().join("specs/007-gate/scenarios/a.md"),
+            "---\nsection: X\n---\n\n# A\n\n## Open Questions\n\n- Which way?\n",
+        )
+        .unwrap();
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+
+        assert_eq!(
+            result.blocked_by,
+            Some(ReviewGateBlock::ScenarioOpenQuestions)
+        );
+    }
+
+    /// The converse, so the new check cannot be read as blocking every
+    /// spec: absence of the key is never a finding.
+    #[test]
+    fn a_spec_without_a_fold_target_is_untouched_by_the_check() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+
+        assert_ne!(result.blocked_by, Some(ReviewGateBlock::PendingFold));
     }
 
     #[test]

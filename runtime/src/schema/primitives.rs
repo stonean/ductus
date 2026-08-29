@@ -1008,6 +1008,24 @@ pub struct DashboardSpec {
     /// every dependency is at `clarified` or later. The caller renders the
     /// "blocked specs" callout straight from a non-empty array.
     pub blocked_by: Vec<String>,
+    /// The upstream spec this one folds back into, when it declares one
+    /// (spec 051). A declared fold is work that has not happened, so the
+    /// view reports the spec as carrying it rather than as complete.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub folds_into: Option<String>,
+    /// `true` when [`Self::folds_into`] names a feature absent from this
+    /// spec corpus; `false` when it resolves, and `false` whenever no fold
+    /// is declared.
+    ///
+    /// A **report**, never a verdict. A branch-scoped spec exists because
+    /// upstream moved, so before the merge its target normally lives on the
+    /// upstream branch — absent here is the ordinary case, and this view
+    /// cannot tell which tree it is looking at. Surfacing it is what lets an
+    /// operator recognize a typo they would otherwise meet as a fold-back
+    /// refusal weeks later; treating it as an error would fire on the
+    /// feature's normal case.
+    #[serde(default)]
+    pub fold_target_missing: bool,
 }
 
 /// Config review-state summary returned alongside the per-spec
@@ -2323,6 +2341,17 @@ pub enum ReviewGateBlock {
     /// first avoids sending a contributor to review a design that is about
     /// to change (spec 046).
     ScenarioOpenQuestions,
+    /// The spec declares `folds-into`: it is a branch-scoped staging spec
+    /// whose content has not yet been folded into its upstream home
+    /// (spec 051).
+    ///
+    /// The same category as an unresolved scenario question, and ordered
+    /// beside it for the same reason: both say the spec carries an
+    /// undischarged obligation, which makes asking whether its review is
+    /// fresh beside the point. The consequence is that the branch-scoped
+    /// form has no `done` state at all — it is retired by fold-back, not
+    /// completed.
+    PendingFold,
     /// The spec has no completed review: the `review:` block is absent or
     /// its `last-run` is null.
     NotReviewed,
