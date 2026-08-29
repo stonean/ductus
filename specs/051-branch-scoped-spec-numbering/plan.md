@@ -131,11 +131,33 @@ Adding a directory form and a command touches the framework's own registries, an
 
 ## Implementation notes
 
-Recorded during implementation, for whoever picks this up next.
+Recorded during implementation, for whoever picks this up next. **Tasks 1–12 are complete and committed; tasks 13 and 14 remain.** Read this section before touching anything — it carries what the task checkboxes cannot.
+
+### Where the work stands
+
+| Tasks | State | Commits |
+| --- | --- | --- |
+| 1–6 | Done | `d71c4ff`, `b136a94`, `508b48d`, `32ba568`, `e86f612` |
+| 7 | Done, split into two commits | `75a0cfd` (primitive + registration), `2170c4f` (dashboard + gate) |
+| 8–12 | Done, one commit each | `b145136`, `542c9f1`, `6e5662b`, `6a92d3c`, `ace609e` |
+| 13 | **Next.** Constitution §numbering and §spec-lifecycle | — |
+| 14 | **Then.** `/ductus:specify` branch-scoped creation | — |
 
 ### Write boundary
 
-The work spans more than the derived boundary. `derive-boundary` grows only as commits land, so it currently yields `runtime/src/primitives/**`, `runtime/src/schema/**`, `runtime/tests/**`, `framework/templates/**`, and `specs/**`. The remaining tasks also need `framework/commands/**`, `framework/constitution.md`, `framework/runtime-tools.txt`, `framework/bootstrap/**`, `scripts/**`, and `runtime/src/{mcp,parser,interpreter}/**`. The boundary is not seedable from the session file — `write-boundary` is an exec-walker context value, not a `session.toml` key — so the grant has to come from the operator each session that needs it.
+The work spans more than the derived boundary, and always has. `derive-boundary` grows only as commits land, so it reports a subset; the remaining tasks additionally need `framework/constitution.md` (task 13) and `framework/commands/**` (task 14). The boundary is not seedable from the session file — `write-boundary` is an exec-walker context value, not a `session.toml` key — so **the grant has to come from the operator each session that needs it.** Ask for it once at the start rather than halting mid-task.
+
+### Verification each task is held to
+
+Run all of these before calling a task done, from the repo root unless noted:
+
+- `cargo test` and `cargo clippy --all-targets` (under `runtime/`) — clippy must be silent, not merely non-erroring; `unwrap_used` and `expect_used` are `warn`, so a new test module needs `#![allow(clippy::unwrap_used, clippy::expect_used)]` like every sibling.
+- `npx markdownlint-cli2`
+- `scripts/audit/run-all.sh` — must exit 0. Its `check-zero` precondition compares the installed command copies against their sources, so **run `scripts/gen-claude-commands.sh` first** after any `framework/commands/**` edit or the audit fails on drift the pre-commit hook would have fixed anyway.
+- `scripts/lint-tool-coverage.sh`
+- `cargo fmt` before committing — the pre-commit hook runs rustfmt plus the full suite and rejects on a formatting diff.
+
+Commit after each task, with a message explaining *why*, not just what.
 
 ### Sequencing already applied
 
@@ -143,10 +165,32 @@ Task 3 wrote the `folds-into` key rather than leaving it to task 6, because acce
 
 Task 4 needed only its second test case: the restriction to `Sequential` landed with task 1's parse, and its first case was already covered by task 3.
 
-### What task 7 absorbed
+Task 7 absorbed the pipeline-view requirement (AC34–AC36) when it arrived, and was landed as two commits against one checkbox — the primitive and its registration, then the two reporting surfaces. The seam held; if a later task grows the same way, the same split is available without renumbering anything.
 
-Task 7 grew past its original scope when the pipeline-view requirement arrived (AC34–AC36). It now carries `check-unfolded-specs`, the `dashboard` reporting of a pending fold, the `check-review-gate` block, and the unresolvable-target callout. It is the largest remaining unit and would split cleanly into the primitive and the two reporting surfaces if that helps.
+### Decisions taken in tasks 7–12 that the checkboxes do not carry
 
-### Two conventions this feature established
+These were judgement calls, not transcriptions of the plan. A later change that contradicts one is reopening a decision, not fixing an oversight.
 
-`parse_feature_dir` is the only place a feature directory is recognized, and `feature_dir_cmp` the only place the mixed corpus is ordered. Both are recorded in `AGENTS.md` under Gotchas, along with clap's `{n}` expansion in `--help` text, which bit twice while documenting the new arguments.
+- **`check-unfolded-specs` halts on a branch-scoped directory with no readable `spec.md`** rather than skipping it. The check's entire output is what each spec declares, so a row it cannot honestly fill would understate the backlog it exists to report.
+- **`dashboard` keeps the frontmatter status beside the qualification** — `done (fold pending)`, not `fold pending` — because `in-progress` and a hand-edited `done` are different situations for the operator even though both are held short of complete. The Next Action cell is handed to the fold for every status; an unresolved scenario question still outranks it, since content gets settled before it gets moved.
+- **Neither `dashboard` nor `check-review-gate` checks that the fold target resolves.** That silence is load-bearing: before the merge the target normally lives on the branch this tree forked from, so a resolvability check would refuse the feature's normal case. The dashboard *reports* the absence on the row; `retire-feature` enforces it.
+- **`/ductus:analyze`'s finding is advisory and the doc says it stays advisory**, with the reason attached: nothing in the tree records that a branch merged, so the check cannot separate an open branch from a merged one. Promoting it would fire on every open branch.
+- **`rewrite-spec-links` matches by whole path segment**, not a fixed `../` prefix — that is what makes a link from a scenario (`../../050-a/spec.md`) work without a second rule and stops `1234.1-staged` matching inside `1234.1-staged-cache`. A scenario-targeted `to` replaces each link's tail and drops any `#fragment`, because the retiring directory's files did not survive individually. Cross-service URLs are skipped. The scan is scoped to `.md` under the spec root — a link from `README.md` is outside it, and `check-orphaned-references` is what would report that.
+- **`retire-feature`'s refusals are errors while already-gone is an outcome.** A refusal means the call should not have been made and a walker must stop; a missing directory means a previous run finished that spec, so a re-run converges. A target directory holding no `spec.md` does not satisfy the existence check — it is not a home content can have landed in.
+- **`routeFold` is a separate extension point from `routeInboxItem`**, deliberately. That set answers *where in the corpus does this work belong*; a fold has already been told where. Widening the inbox vocabulary would break the closedness its other callers depend on.
+- **`/ductus:fold` re-targets the session after retiring the directory** (step 12). Without it every follow-on command lands on a path that is gone. The source spec's own scenarios cross over on *either* route — the route decides the body's shape, never its scenarios'.
+- **`framework/bootstrap/govern.md` is held byte-identical to `ductus.md`** by audit Family 21. Adding the `fold.md` installer row meant copying the file across; any future manifest edit needs the same.
+
+### Settle these before the completion gate
+
+Three things stand between task 14 and `done`. None is blocking work, but the gate will not pass without the first two.
+
+1. **The spec has never been reviewed.** `spec.md`'s frontmatter carries `review.last-run: null`, so `check-review-gate` blocks with `not reviewed`. Run `/ductus:review` after task 14, not before — a review recorded against pre-task-14 code would be stale the moment it lands.
+2. **All 37 acceptance criteria are unchecked.** The completion gate verifies each one semantically and marks them individually via `mark-criterion` (0-based body order). Budget a session for it; AC13, AC10, AC30 and AC37 are what task 14 exists to satisfy, and AC17 is task 13.
+3. **Spec 022's `data-model.md` does not document `routeFold`.** Its §extension-points section enumerates the closed set, and `routeFold` is now in it. Adding the row is a **cross-spec write** the plan's Affected Files does not sanction, so it was deliberately not made — `diff-cross-spec` would surface it at the gate as an unexplained sibling-spec change. Decide whether to make it (and say so in the commit) or record why not.
+
+An unrelated defect was captured to `specs/inbox.md` during this feature — a spec numbered past 999 gets a name `parse_feature_dir` rejects, because `create-feature`'s `{number:03}` pad and the predicate's three-digit rule disagree. Pre-existing; route it with `/ductus:groom`, not here.
+
+### Conventions this feature established
+
+`parse_feature_dir` is the only place a feature directory is recognized, and `feature_dir_cmp` the only place the mixed corpus is ordered. Both are recorded in `AGENTS.md` under Gotchas, along with clap's `{n}` expansion in `--help` text (which bit twice while documenting the new arguments) and the sites a new command has to be registered at.

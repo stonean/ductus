@@ -2,9 +2,9 @@
 
 Tasks derived from the [plan](plan.md). Complete in order.
 
-Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Phase 2 (6–8) adds the fold target and its detection. Phase 3 (9–13) adds the fold-back command. Each phase leaves the corpus in a working state.
+Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Phase 2 (6–8) adds the fold target and its detection. Phase 3 (9–13) adds the fold-back command. Task 14 was added during implementation. Each phase leaves the corpus in a working state.
 
-Phases 1 and 2's field work are complete and committed; task 7 is the next one. The plan's **Implementation notes** section carries what a resuming session needs that these checkboxes cannot express — the write boundary the remaining tasks require, and what task 7 absorbed when the pipeline-view requirement arrived.
+**Tasks 1–12 are complete and committed. Tasks 13 and 14 remain**, in that order. Before reading further, read the plan's **Implementation notes** section: it carries everything a resuming session needs that these checkboxes cannot express — the write boundary the remaining work requires, the verification commands each task is held to, the decisions taken in tasks 7–12 that are not visible here, and the three items that must be settled before the completion gate can pass.
 
 ## 1. Introduce the directory-form parse
 
@@ -116,3 +116,13 @@ Phases 1 and 2's field work are complete and committed; task 7 is the next one. 
 - [ ] Run the audit families that check cross-doc agreement
 
 - **Done when**: both sections describe the shipped behavior, and `scripts/audit/run-all.sh` reports no new findings (AC17).
+
+## 14. Teach `/ductus:specify` branch-scoped creation
+
+- [ ] Add the branch-scoped path to `framework/commands/specify.md`: pass `branch-id` and `fold-into` to `create-feature` when the operator asks for a branch-scoped spec
+- [ ] Prompt for the identifier when branch-scoped creation is requested without one — offering a candidate extracted from the current git branch name when one can be extracted, and prompting with no candidate when it cannot (AC13)
+- [ ] Echo the **sanitized** identifier `create-feature` returns at the confirmation prompt, before any directory exists — the operator's input is not what they get (AC10)
+- [ ] Require a fold target on that path: there is no way to create a branch-scoped spec that names none (AC37, AC30)
+- [ ] Verify the command still parses under `runtime/src/parser/mod.rs`'s step-numbering assertions, and re-bless `runtime/tests/golden/specify-basic.jsonl` if the dispatch sequence changed
+
+- **Done when**: `/ductus:specify` can create a branch-scoped spec end to end — identifier prompted and sanitized-value echoed before creation, fold target required — and sequential creation with no identifier is unchanged (AC10, AC13, AC30, AC37). Added during implementation: the plan's Affected Files names `framework/commands/specify.md` but the original task breakdown covered no command-level work for it, leaving these four criteria without a task.
