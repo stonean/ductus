@@ -137,10 +137,10 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 
 ## 16. Document the pending fold in `/ductus:status`'s pipeline view
 
-- [ ] Record in `framework/commands/status.md` that a spec declaring `folds-into` is rendered as carrying a pending fold rather than as `done`, with the frontmatter status kept beside the qualification
-- [ ] Record that the Next Action cell is handed to the fold at every status, and that an unresolved scenario question still outranks it — content is settled before it is moved
-- [ ] Record that a fold target which does not resolve in this tree is called out on the same line, and that this is a report rather than a check: before the merge the target normally lives on the branch this one forked from
-- [ ] Regenerate the installed command copies and re-run the audit
+- [x] Record in `framework/commands/status.md` that a spec declaring `folds-into` is rendered as carrying a pending fold rather than as `done`, with the frontmatter status kept beside the qualification
+- [x] Record that the Next Action cell is handed to the fold at every status, and that an unresolved scenario question still outranks it — content is settled before it is moved
+- [x] Record that a fold target which does not resolve in this tree is called out on the same line, and that this is a report rather than a check: before the merge the target normally lives on the branch this one forked from
+- [x] Regenerate the installed command copies and re-run the audit
 
 - **Done when**: the pipeline view's documented rendering matches what `dashboard` emits for a spec carrying `folds-into`, including the Next Action precedence and the unresolvable-target callout (AC34).
 
