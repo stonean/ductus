@@ -161,3 +161,10 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 - [x] Remove the item from `specs/inbox.md`
 
 - **Done when**: a spec created past 999 is visible to every corpus reader, `create-feature`'s formatter and `parse_feature_dir`'s membership rule agree on the whole range of `u32`, and the inbox item is discharged rather than left for `/ductus:groom`.
+
+## 19. Contain the `routeFold` payload's fold-target read
+
+- [x] Read the upstream spec through `read_repo_file`'s canonicalize-and-contain check in `build_route_fold_request`, rather than the raw `std::fs::read_to_string` that bypasses it — `folds-into` is hand-authored frontmatter, and the same function already reads the source spec through the guarded helper two lines earlier (BE-INPUT-004)
+- [x] Test that a `folds-into` carrying a traversal yields an empty `target-content` rather than a file from outside the repo
+
+- **Done when**: no path built from a spec artifact's declared value reaches the filesystem in the payload builder without the containment check every sibling read already applies, and the escape is covered by a test (BE-INPUT-004).

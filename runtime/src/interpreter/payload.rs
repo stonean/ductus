@@ -650,10 +650,18 @@ fn build_route_fold_request(context: &Map<String, Value>, repo: &Path) -> Value 
 
     let fold_target = folds_into(&spec_content).unwrap_or_default();
     let target_spec = repo.join(&specs_root).join(&fold_target).join("spec.md");
+    // Read through the contained helper, not `fs::read_to_string`.
+    // `folds-into` is hand-authored frontmatter, so it is an artifact-supplied
+    // value flowing into a filesystem path — the case BE-INPUT-004 governs and
+    // the case `read_repo_file`'s canonicalize-and-contain check exists for.
+    // Nothing guarantees `validate-frontmatter` ran first, and the content
+    // read here is shipped to the host, so a `folds-into` carrying `../`
+    // would exfiltrate a `spec.md` from outside the repo. The source spec two
+    // lines above already goes through this helper; this is the same read.
     let target_content = if fold_target.is_empty() {
         String::new()
     } else {
-        std::fs::read_to_string(&target_spec).unwrap_or_default()
+        read_repo_file(repo, &format!("{specs_root}/{fold_target}/spec.md")).unwrap_or_default()
     };
     let target_status =
         crate::primitives::frontmatter_status(&target_content, &target_spec).unwrap_or_default();
@@ -2330,6 +2338,39 @@ mod tests {
 
     /// A spec declaring no fold target yields an empty one rather than
     /// inventing a destination.
+    /// BE-INPUT-004: `folds-into` is hand-authored, so it must not reach the
+    /// filesystem uncontained. A traversing target reads nothing rather than
+    /// lifting a `spec.md` from outside the repo into a payload bound for the
+    /// host.
+    #[test]
+    fn build_route_fold_request_refuses_a_traversing_fold_target() {
+        let tmp = tempdir().unwrap();
+        // A `spec.md` outside the repo root, reachable only by traversal.
+        let outside = tmp.path().join("outside");
+        fs::create_dir_all(&outside).unwrap();
+        fs::write(outside.join("spec.md"), "SECRET-OUTSIDE-THE-REPO\n").unwrap();
+
+        let repo = tmp.path().join("repo");
+        let staged = repo.join("specs/1234.1-staged");
+        fs::create_dir_all(&staged).unwrap();
+        fs::write(
+            staged.join("spec.md"),
+            "---\nstatus: draft\ndependencies: []\nfolds-into: ../../outside\n---\n\n# staged\n",
+        )
+        .unwrap();
+
+        let mut ctx = Map::new();
+        ctx.insert("feature".into(), Value::String("1234.1-staged".into()));
+
+        let value = build_route_fold_request(&ctx, &repo);
+        assert_eq!(value["fold-target"], "../../outside");
+        assert_eq!(
+            value["target-content"], "",
+            "a traversing fold target must read nothing"
+        );
+        assert_eq!(value["target-status"], "");
+    }
+
     #[test]
     fn build_route_fold_request_leaves_an_undeclared_target_empty() {
         let tmp = tempdir().unwrap();
