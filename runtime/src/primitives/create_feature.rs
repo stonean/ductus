@@ -21,7 +21,8 @@ use std::path::Path;
 
 use crate::primitives::apply_manifest::mirror_source_mode;
 use crate::primitives::{
-    PrimitiveError, Result, feature_number, list_feature_dirs, resolve_template, write_atomic_bytes,
+    PrimitiveError, Result, list_feature_dirs, parse_feature_dir, resolve_template,
+    write_atomic_bytes,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{CreateFeatureArgs, CreateFeatureResult};
@@ -114,10 +115,15 @@ fn derive_slug(title: &str) -> String {
 /// prefix across feature directories, plus one. `1` when the spec root is
 /// missing or holds no feature directories. Numbers past 999 render
 /// four-digit (the `{:03}` pad only guarantees a minimum width).
+///
+/// Branch-scoped directories contribute nothing: they carry no sequential
+/// number, so a spec root holding `050-a` and `1234.1-b` still yields
+/// `051`. The counter is a property of the sequential form alone.
 fn next_feature_number(specs_dir: &Path) -> u32 {
     list_feature_dirs(specs_dir)
         .iter()
-        .filter_map(|name| feature_number(name))
+        .filter_map(|name| parse_feature_dir(name))
+        .filter_map(|form| form.sequential_number())
         .max()
         .unwrap_or(0)
         + 1

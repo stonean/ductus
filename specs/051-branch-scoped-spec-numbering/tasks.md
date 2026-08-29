@@ -6,17 +6,17 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 
 ## 1. Introduce the directory-form parse
 
-- [ ] Add `FeatureForm` and `parse_feature_dir` to `runtime/src/primitives/mod.rs` per the [data model](data-model.md) grammar
-- [ ] Redefine `is_feature_slug` in terms of it and remove `feature_number`, updating its two callers (`resolve_feature.rs`, `create_feature.rs`) to match on `Sequential`
-- [ ] Unit-test both forms plus the rejections: no `.`-free branch form, leading-zero `n`, empty identifier, empty slug, uppercase input, `1234.1-slug` yielding no sequential number
+- [x] Add `FeatureForm` and `parse_feature_dir` to `runtime/src/primitives/mod.rs` per the [data model](data-model.md) grammar
+- [x] Redefine `is_feature_slug` in terms of it and remove `feature_number`, updating its two callers (`resolve_feature.rs`, `create_feature.rs`) to match on `Sequential`
+- [x] Unit-test both forms plus the rejections: no `.`-free branch form, leading-zero `n`, empty identifier, empty slug, uppercase input, `1234.1-slug` yielding no sequential number
 
 - **Done when**: `parse_feature_dir` is the only place either directory form is recognized, `feature_number` no longer exists, and the existing `is_feature_slug` acceptance and rejection tests still pass unchanged.
 
 ## 2. Make both forms visible to every corpus reader
 
-- [ ] Confirm `list_feature_dirs` and `is_spec_path` accept both forms through the new parse
-- [ ] Order branch-scoped directories by identifier then `n`, sequential ones by number, with a defined total order across the mixed corpus
-- [ ] Add tests over a fixture spec root holding both forms, asserting `dashboard`, `derive-dependencies`, and `derive-references` each see the branch-scoped directory
+- [x] Confirm `list_feature_dirs` and `is_spec_path` accept both forms through the new parse
+- [x] Order branch-scoped directories by identifier then `n`, sequential ones by number, with a defined total order across the mixed corpus
+- [x] Add tests over a fixture spec root holding both forms, asserting `dashboard`, `derive-dependencies`, and `derive-references` each see the branch-scoped directory
 
 - **Done when**: a spec root containing `050-a` and `1234.1-b` yields both directories from every corpus-reading surface, in a stable documented order (AC5, AC15).
 

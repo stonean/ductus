@@ -886,24 +886,33 @@ pub(crate) fn validate_slug(slug: &str) -> Result<()> {
             reason: "slug is empty".into(),
         });
     }
+    if !is_slug_grammar(slug) {
+        return Err(PrimitiveError::InvalidSlug {
+            slug: slug.into(),
+            reason: "slug must match ^[a-z0-9]+(?:-[a-z0-9]+)*$ \
+                     (lowercase letters, digits, single hyphens)"
+                .into(),
+        });
+    }
+    Ok(())
+}
+
+/// Whether `s` matches the framework slug grammar
+/// `^[a-z0-9]+(?:-[a-z0-9]+)*$`. The predicate behind [`validate_slug`],
+/// shared with [`parse_feature_dir`]'s branch-scoped identifier check so
+/// one definition of the alphabet serves both — a second copy is how a
+/// grammar and the names it admits drift apart.
+pub(crate) fn is_slug_grammar(s: &str) -> bool {
     // Allowlist, segment by segment: each `-`-delimited segment must be
     // non-empty (rejecting a leading/trailing hyphen and a `--` run) and
     // hold only lowercase ASCII letters and digits.
-    for segment in slug.split('-') {
-        if segment.is_empty()
-            || !segment
-                .bytes()
-                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
-        {
-            return Err(PrimitiveError::InvalidSlug {
-                slug: slug.into(),
-                reason: "slug must match ^[a-z0-9]+(?:-[a-z0-9]+)*$ \
-                         (lowercase letters, digits, single hyphens)"
-                    .into(),
-            });
-        }
-    }
-    Ok(())
+    !s.is_empty()
+        && s.split('-').all(|segment| {
+            !segment.is_empty()
+                && segment
+                    .bytes()
+                    .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
+        })
 }
 
 /// Per-line skip state shared by the `tasks.md` / spec structural walkers.
@@ -1416,27 +1425,119 @@ pub(crate) fn section_line_indices(lines: &[&str], heading: &str) -> Vec<usize> 
     out
 }
 
-/// `true` when `name` matches the `NNN-feature` convention: three ASCII
-/// digits, a literal hyphen, and at least one trailing character. Used
-/// by primitives that walk `specs/` and need to distinguish feature
-/// directories from sibling artifacts (`templates/`, `inbox.md`, ad-hoc
-/// notes, dotfiles).
-pub(crate) fn is_feature_slug(name: &str) -> bool {
+/// The two directory forms a feature can take under the spec root
+/// (spec 051, constitution §numbering).
+///
+/// `Sequential` is the permanent `NNN-slug` form. `BranchScoped` is the
+/// temporary `{identifier}.{n}-slug` staging form a story branch creates
+/// when it cannot edit an upstream spec in place; it exists only until
+/// fold-back discharges it into that spec.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum FeatureForm {
+    /// `NNN-slug` — three ASCII digits, a hyphen, and a slug.
+    Sequential {
+        /// The three-digit prefix as a number.
+        number: u32,
+    },
+    /// `{identifier}.{n}-slug` — a branch namespace and its counter.
+    BranchScoped {
+        /// The branch identifier, already in the slug grammar.
+        identifier: String,
+        /// The per-identifier counter, `1`-based.
+        n: u32,
+    },
+}
+
+impl FeatureForm {
+    /// The sequential number, or `None` for a branch-scoped directory.
+    ///
+    /// The `None` arm is the point: a branch-scoped directory has no
+    /// place in the global sequence, so no caller can read one out of it.
+    /// The predecessor of this method parsed the first three bytes of any
+    /// name, which answered `Some(123)` for `1234.1-slug` — a silent
+    /// collision with `123-slug` in feature resolution and in the
+    /// next-number computation.
+    pub(crate) fn sequential_number(&self) -> Option<u32> {
+        match *self {
+            Self::Sequential { number } => Some(number),
+            Self::BranchScoped { .. } => None,
+        }
+    }
+}
+
+/// Parse a directory name into its [`FeatureForm`], or `None` when it is
+/// not a feature directory at all.
+///
+/// The single place either form is recognized. Primitives that walk the
+/// spec root and must tell feature directories from sibling artifacts
+/// (`templates/`, `inbox.md`, ad-hoc notes, dotfiles) reach the
+/// filesystem through [`list_feature_dirs`] and [`is_spec_path`], both of
+/// which delegate here — so widening the corpus happens once rather than
+/// once per consumer. A duplicated membership rule is how the shell
+/// versions of the frontmatter generators drifted.
+///
+/// The branch-scoped form splits on the **first** `.`, which is
+/// unambiguous because the identifier is held to the slug grammar and so
+/// cannot contain one.
+pub(crate) fn parse_feature_dir(name: &str) -> Option<FeatureForm> {
+    match name.split_once('.') {
+        Some((identifier, rest)) => parse_branch_scoped(identifier, rest),
+        None => parse_sequential(name),
+    }
+}
+
+/// `NNN-` followed by at least one character.
+///
+/// Deliberately does **not** hold the trailing slug to the slug grammar:
+/// this form predates the grammar's enforcement, and an adopter's spec
+/// root may hold directories that would fail it. Tightening the rule here
+/// would make those directories invisible to every corpus reader at once
+/// — a silent regression rather than a reported one.
+fn parse_sequential(name: &str) -> Option<FeatureForm> {
     let bytes = name.as_bytes();
-    bytes.len() >= 5
+    let well_formed = bytes.len() >= 5
         && bytes[0].is_ascii_digit()
         && bytes[1].is_ascii_digit()
         && bytes[2].is_ascii_digit()
-        && bytes[3] == b'-'
+        && bytes[3] == b'-';
+    if !well_formed {
+        return None;
+    }
+    let number = name.get(..3)?.parse::<u32>().ok()?;
+    Some(FeatureForm::Sequential { number })
 }
 
-/// Parse a feature directory's three-digit `NNN-` prefix into its numeric
-/// value. `None` when the first three bytes aren't a parseable number
-/// (callers typically pre-filter with [`is_feature_slug`], so this is
-/// belt-and-suspenders). Shared by `resolve-feature` (numeric-identifier
-/// match) and `create-feature` (next-number computation).
-pub(crate) fn feature_number(name: &str) -> Option<u32> {
-    name.get(..3)?.parse::<u32>().ok()
+/// `{identifier}.{n}-{slug}`, given the halves either side of the first `.`.
+///
+/// The new form is machine-generated end to end — `create-feature`
+/// sanitizes the identifier and derives the slug — so both halves are
+/// held to the slug grammar. `n` is `[1-9][0-9]*`: a leading zero would
+/// let `1234.01-x` and `1234.1-x` name the same counter value from two
+/// directories.
+fn parse_branch_scoped(identifier: &str, rest: &str) -> Option<FeatureForm> {
+    if !is_slug_grammar(identifier) {
+        return None;
+    }
+    let (digits, slug) = rest.split_once('-')?;
+    if !is_slug_grammar(slug) {
+        return None;
+    }
+    if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) || digits.starts_with('0') {
+        return None;
+    }
+    let n = digits.parse::<u32>().ok()?;
+    Some(FeatureForm::BranchScoped {
+        identifier: identifier.to_string(),
+        n,
+    })
+}
+
+/// `true` when `name` is a feature directory in either form.
+///
+/// Retained as the reading the call sites want; the recognition itself
+/// lives in [`parse_feature_dir`].
+pub(crate) fn is_feature_slug(name: &str) -> bool {
+    parse_feature_dir(name).is_some()
 }
 
 /// List feature directories (`NNN-slug`) under the spec root, sorted by
@@ -1589,8 +1690,67 @@ pub(crate) fn list_feature_dirs(specs_dir: &Path) -> Vec<String> {
         .filter_map(|e| e.file_name().into_string().ok())
         .filter(|name| is_feature_slug(name))
         .collect();
-    features.sort();
+    features.sort_by(|a, b| feature_dir_cmp(a, b));
     features
+}
+
+/// Total order over a mixed spec root, shared by every surface that
+/// presents features so a reader never sees two orders for one directory
+/// — the guarantee [`scenario_name_cmp`] gives scenarios.
+///
+/// Sequential directories sort first, by number; branch-scoped ones
+/// follow, grouped by identifier and then ordered by counter. Grouping
+/// the transient form after the permanent one keeps the pipeline view's
+/// familiar shape: a reader scanning for `037-` does not step over a
+/// branch namespace to reach it.
+///
+/// The counter is compared **numerically**, which is the whole reason a
+/// comparator is needed rather than a plain sort: `1234.10-x` precedes
+/// `1234.2-x` lexicographically. Sequential names are unaffected — their
+/// prefix is exactly three digits, so byte order and numeric order agree
+/// — and a corpus holding only sequential directories comes back in the
+/// order it always did.
+///
+/// The name is the final tiebreak, so the order is total: two directories
+/// that agree on form, number, identifier, and counter still sort
+/// deterministically.
+pub(crate) fn feature_dir_cmp(a: &str, b: &str) -> std::cmp::Ordering {
+    use std::cmp::Ordering;
+
+    /// Sequential before branch-scoped; an unparseable name (which
+    /// `list_feature_dirs` has already filtered out) sorts last rather
+    /// than panicking.
+    fn rank(form: Option<&FeatureForm>) -> u8 {
+        match form {
+            Some(FeatureForm::Sequential { .. }) => 0,
+            Some(FeatureForm::BranchScoped { .. }) => 1,
+            None => 2,
+        }
+    }
+
+    let (fa, fb) = (parse_feature_dir(a), parse_feature_dir(b));
+    let by_form = rank(fa.as_ref()).cmp(&rank(fb.as_ref()));
+    if by_form != Ordering::Equal {
+        return by_form;
+    }
+    let within = match (&fa, &fb) {
+        (
+            Some(FeatureForm::Sequential { number: x }),
+            Some(FeatureForm::Sequential { number: y }),
+        ) => x.cmp(y),
+        (
+            Some(FeatureForm::BranchScoped {
+                identifier: ia,
+                n: na,
+            }),
+            Some(FeatureForm::BranchScoped {
+                identifier: ib,
+                n: nb,
+            }),
+        ) => ia.cmp(ib).then_with(|| na.cmp(nb)),
+        _ => Ordering::Equal,
+    };
+    within.then_with(|| a.cmp(b))
 }
 
 /// List the scenario markdown files directly under `scenarios_dir`, sorted
@@ -1922,11 +2082,108 @@ mod tests {
     }
 
     #[test]
-    fn feature_number_parses_nnn_prefix() {
-        assert_eq!(feature_number("022-deterministic-runtime"), Some(22));
-        assert_eq!(feature_number("007-webhooks"), Some(7));
-        assert_eq!(feature_number("abc-nope"), None);
-        assert_eq!(feature_number("22"), None); // too short for a 3-byte slice
+    fn parse_feature_dir_reads_the_sequential_form() {
+        assert_eq!(
+            parse_feature_dir("022-deterministic-runtime"),
+            Some(FeatureForm::Sequential { number: 22 })
+        );
+        assert_eq!(
+            parse_feature_dir("007-webhooks"),
+            Some(FeatureForm::Sequential { number: 7 })
+        );
+        assert_eq!(parse_feature_dir("abc-nope"), None);
+        assert_eq!(parse_feature_dir("22"), None); // too short for a 3-byte slice
+    }
+
+    #[test]
+    fn parse_feature_dir_reads_the_branch_scoped_form() {
+        assert_eq!(
+            parse_feature_dir("1234.1-thing"),
+            Some(FeatureForm::BranchScoped {
+                identifier: "1234".into(),
+                n: 1,
+            })
+        );
+        // The identifier is an opaque token, not a number: a Jira-style
+        // `PROJ-1111` sanitizes to `proj-1111` before it reaches here.
+        assert_eq!(
+            parse_feature_dir("proj-1111.12-thing"),
+            Some(FeatureForm::BranchScoped {
+                identifier: "proj-1111".into(),
+                n: 12,
+            })
+        );
+    }
+
+    #[test]
+    fn parse_feature_dir_rejects_malformed_branch_scoped_names() {
+        for bad in &[
+            "1234.0-thing",   // n is 1-based
+            "1234.01-thing",  // leading zero would alias 1234.1
+            "1234.-thing",    // no counter
+            "1234.1-",        // no slug
+            "1234.1thing",    // no hyphen after the counter
+            ".1-thing",       // no identifier
+            "PROJ.1-thing",   // identifier outside the slug grammar
+            "1234.1.2-thing", // a second dot leaves a non-numeric counter
+            "inbox.md",       // sibling artifact, not a feature
+            ".hidden",
+        ] {
+            assert_eq!(
+                parse_feature_dir(bad),
+                None,
+                "expected rejection for {bad:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn feature_dir_cmp_orders_a_mixed_corpus() {
+        let mut names = vec![
+            "1234.10-late".to_string(),
+            "051-b".to_string(),
+            "proj-9.1-other".to_string(),
+            "1234.2-early".to_string(),
+            "007-a".to_string(),
+        ];
+        names.sort_by(|a, b| feature_dir_cmp(a, b));
+        assert_eq!(
+            names,
+            vec![
+                // Sequential first, by number.
+                "007-a".to_string(),
+                "051-b".to_string(),
+                // Then branch-scoped, grouped by identifier, counter
+                // compared numerically — 2 before 10, which a plain
+                // lexicographic sort would invert.
+                "1234.2-early".to_string(),
+                "1234.10-late".to_string(),
+                "proj-9.1-other".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn feature_dir_cmp_leaves_a_sequential_only_corpus_in_byte_order() {
+        // Three-digit prefixes make byte order and numeric order agree,
+        // so an existing spec root is presented exactly as before.
+        let names = ["000-a", "007-b", "051-c", "999-d"];
+        let mut by_cmp = names.to_vec();
+        by_cmp.sort_by(|a, b| feature_dir_cmp(a, b));
+        let mut by_bytes = names.to_vec();
+        by_bytes.sort_unstable();
+        assert_eq!(by_cmp, by_bytes);
+    }
+
+    #[test]
+    fn only_the_sequential_form_carries_a_sequential_number() {
+        let sequential = parse_feature_dir("123-thing").expect("sequential parses");
+        assert_eq!(sequential.sequential_number(), Some(123));
+
+        // The misparse this type exists to prevent: `1234.1-thing` must not
+        // read as feature 123.
+        let branch = parse_feature_dir("1234.1-thing").expect("branch-scoped parses");
+        assert_eq!(branch.sequential_number(), None);
     }
 
     #[test]

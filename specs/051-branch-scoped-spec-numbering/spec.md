@@ -1,5 +1,5 @@
 ---
-status: planned
+status: in-progress
 dependencies: [022-deterministic-runtime, 040-configurable-specs-dir]
 review:
   last-run: null

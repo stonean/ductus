@@ -25,7 +25,7 @@
 use std::path::Path;
 
 use crate::primitives::{
-    PrimitiveError, Result, feature_number, frontmatter_status, list_feature_dirs,
+    PrimitiveError, Result, frontmatter_status, list_feature_dirs, parse_feature_dir,
     read_scenario_section, read_text, validate_slug,
 };
 use crate::schema::paths;
@@ -97,14 +97,18 @@ fn match_identifier(features: &[String], identifier: &str) -> Match {
         return Match::One(exact.clone());
     }
     // 2. Feature number: all-digit identifier compared against the parsed
-    //    three-digit prefix, so `7` and `007` both match `007-foo`.
+    //    three-digit prefix, so `7` and `007` both match `007-foo`. Only
+    //    the sequential form carries such a number, so a branch-scoped
+    //    `1234.1-foo` can never be matched here by its leading digits.
     if identifier.bytes().all(|b| b.is_ascii_digit()) {
         let Ok(number) = identifier.parse::<u32>() else {
             return Match::None; // longer than u32 — nothing can match
         };
         let matches: Vec<String> = features
             .iter()
-            .filter(|f| feature_number(f) == Some(number))
+            .filter(|f| {
+                parse_feature_dir(f).and_then(|form| form.sequential_number()) == Some(number)
+            })
             .cloned()
             .collect();
         return classify(matches);

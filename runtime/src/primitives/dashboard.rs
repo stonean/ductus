@@ -20,8 +20,8 @@ use serde::Deserialize;
 use crate::host::Host;
 use crate::primitives::resolve_references::{self, load_services};
 use crate::primitives::{
-    PrimitiveError, Result, ScenarioFrontmatter, feature_number, list_feature_dirs,
-    list_scenario_files, read_spec, read_text, section_lines, split_frontmatter,
+    PrimitiveError, Result, ScenarioFrontmatter, list_feature_dirs, list_scenario_files,
+    parse_feature_dir, read_spec, read_text, section_lines, split_frontmatter,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -401,13 +401,22 @@ fn mark(present: bool) -> &'static str {
 /// The Dependencies column: sorted three-digit `NNN` prefixes from the
 /// dependency slugs (`—` when empty; a slug without an `NNN-` prefix
 /// passes through raw rather than vanishing).
+///
+/// A branch-scoped dependency takes the pass-through arm: it carries no
+/// sequential number, so it renders as its own name. Abbreviating it to
+/// the first three digits would print `123` for `1234.1-thing`, naming a
+/// different spec.
 fn dependency_prefixes(dependencies: &[String]) -> String {
     if dependencies.is_empty() {
         return "—".to_string();
     }
     let mut prefixes: Vec<String> = dependencies
         .iter()
-        .map(|dep| feature_number(dep).map_or_else(|| dep.clone(), |n| format!("{n:03}")))
+        .map(|dep| {
+            parse_feature_dir(dep)
+                .and_then(|form| form.sequential_number())
+                .map_or_else(|| dep.clone(), |n| format!("{n:03}"))
+        })
         .collect();
     prefixes.sort();
     prefixes.join(", ")

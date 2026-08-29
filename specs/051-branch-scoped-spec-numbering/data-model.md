@@ -6,17 +6,20 @@ The feature introduces one directory-name grammar, one parsed form, one frontmat
 
 ```text
 feature-dir  := sequential | branch-scoped
-sequential   := NNN "-" slug                  ; NNN = three ASCII digits
+sequential   := NNN "-" any                   ; NNN = three ASCII digits
 branch-scoped:= identifier "." n "-" slug
 identifier   := segment ("-" segment)*        ; excludes "." by construction
 slug         := segment ("-" segment)*
 segment      := [a-z0-9]+
 n            := [1-9][0-9]*                   ; no leading zeros
+any          := one or more characters        ; not held to the slug grammar
 ```
 
 The parse splits `branch-scoped` on the **first** `.`. That is unambiguous because `identifier` cannot contain one: the operator's input is sanitized to `segment ("-" segment)*` before it is used, collapsing any `.` to a hyphen.
 
 `sequential` is unchanged from today and is recognized by the absence of a `.`.
+
+**The two forms are held to different standards, deliberately.** The branch-scoped form is machine-generated end to end — `create-feature` sanitizes the identifier and derives the slug — so both halves are validated against the slug grammar. The sequential form's trailing slug is accepted as-is, exactly as it is today: that form predates the grammar's enforcement, and an adopter's spec root may hold a directory that would fail it. Tightening the rule there would make such a directory invisible to every corpus reader at once — a silent regression rather than a reported one — so the legacy form keeps the legacy leniency.
 
 ## Parsed form
 
