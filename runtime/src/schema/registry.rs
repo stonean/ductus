@@ -61,4 +61,5 @@ pub(crate) const PRIMITIVE_REGISTRY: &[&str] = &[
     "check-review-agreement",
     "derive-dependencies",
     "derive-references",
+    "check-unfolded-specs",
 ];

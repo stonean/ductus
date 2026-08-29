@@ -350,6 +350,20 @@ pub struct Frontmatter {
     /// Topic tags (e.g., `[format, process, pipeline]`).
     #[serde(default)]
     pub tags: Vec<String>,
+    /// The upstream spec a branch-scoped spec folds back into, when the
+    /// spec declares one (spec 051).
+    ///
+    /// Declared rather than derived: nothing in the repository can compute
+    /// it, and no generator rewrites it. Its presence means the fold has
+    /// not happened yet, which is outstanding work — so the pipeline view
+    /// reports the spec as pending and the pre-`done` gate blocks on it.
+    ///
+    /// The named spec routinely does **not** exist in this working tree: a
+    /// branch-scoped spec exists because upstream moved, so its target
+    /// normally lives on the upstream branch. Absence is the expected
+    /// state before a merge, never a defect.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub folds_into: Option<String>,
     /// Last-review block, when set.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub review: Option<ReviewBlock>,
@@ -2966,6 +2980,59 @@ pub struct CheckReviewAgreementResult {
     pub guidance: String,
 }
 
+// -- check-unfolded-specs ------------------------------------------------------
+
+/// Args for `check-unfolded-specs`. Takes none: the subject is the whole
+/// spec corpus, which the primitive resolves through `[paths] specs-root`
+/// exactly as every other corpus reader does.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckUnfoldedSpecsArgs {}
+
+/// One branch-scoped spec still present in the working tree.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct UnfoldedSpec {
+    /// Directory basename (e.g., `1234.1-widget-cache`).
+    pub feature: String,
+    /// The branch identifier the directory is numbered under — the `1234`
+    /// of `1234.1-widget-cache`. Reported separately so a caller can group
+    /// a branch's specs without re-parsing the name.
+    pub identifier: String,
+    /// The upstream spec this one folds into, or `None` when the spec
+    /// declares none.
+    ///
+    /// `None` is a real state rather than an error: `create-feature`
+    /// refuses branch-scoped creation without a target, so a spec reaching
+    /// here without one was hand-edited to stand on its own — the
+    /// supported way to keep such a directory. A caller reports it, and
+    /// does not infer a target for it.
+    #[serde(default)]
+    pub folds_into: Option<String>,
+    /// The spec's frontmatter `status`, so a caller can say where in the
+    /// pipeline the un-folded work sits.
+    pub status: String,
+}
+
+/// Result for `check-unfolded-specs`.
+///
+/// Empty `unfolded` with a non-zero `examined` is **examined and clean**;
+/// empty with `examined` zero means the corpus held no feature directories
+/// at all, which is not the same claim (`QUAL-CLAIM-001`).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckUnfoldedSpecsResult {
+    /// Surviving branch-scoped specs, in the corpus order
+    /// `list_feature_dirs` establishes.
+    #[serde(default)]
+    pub unfolded: Vec<UnfoldedSpec>,
+    /// Feature directories scanned — **every** form, not just the
+    /// branch-scoped ones. The count bounds the claim by subject: it is what
+    /// separates "no branch-scoped specs survive" from "nothing was looked
+    /// at", which an empty list alone cannot express.
+    pub examined: u32,
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -3011,6 +3078,7 @@ mod tests {
                 status: "clarified".into(),
                 dependencies: vec!["021-runtime-boundary".into()],
                 tags: vec![],
+                folds_into: None,
                 review: Some(ReviewBlock::default()),
             },
             sections: vec![SpecSection {

@@ -120,6 +120,7 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
    - `mcp__ductus__check-review-agreement`
    - `mcp__ductus__derive-dependencies`
    - `mcp__ductus__derive-references`
+   - `mcp__ductus__check-unfolded-specs`
    <!-- generated:mcp-allow:end -->
 
 3. Canonical `permissions.deny` entries:

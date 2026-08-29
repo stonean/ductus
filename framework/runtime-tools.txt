@@ -63,3 +63,4 @@ check-command-flags
 check-review-agreement
 derive-dependencies
 derive-references
+check-unfolded-specs

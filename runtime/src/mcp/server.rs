@@ -40,11 +40,12 @@ use crate::schema::primitives::{
     CheckArtifactsResult, CheckCommandFlagsArgs, CheckCommandFlagsResult,
     CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult, CheckReviewAgreementArgs,
     CheckReviewAgreementResult, CheckReviewGateArgs, CheckReviewGateResult, CheckRuleIdsArgs,
-    CheckRuleIdsResult, CheckStuckArgs, CheckStuckResult, CheckboxToggleResult,
-    ComputeReviewScopeArgs, ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult,
-    CreatePlanArtifactsArgs, CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult,
-    DashboardArgs, DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult,
-    DeriveDependenciesArgs, DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
+    CheckRuleIdsResult, CheckStuckArgs, CheckStuckResult, CheckUnfoldedSpecsArgs,
+    CheckUnfoldedSpecsResult, CheckboxToggleResult, ComputeReviewScopeArgs,
+    ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult, CreatePlanArtifactsArgs,
+    CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult, DashboardArgs,
+    DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult, DeriveDependenciesArgs,
+    DeriveDependenciesResult, DeriveReferencesArgs, DeriveReferencesResult,
     DeriveRoutingCandidatesArgs, DeriveRoutingCandidatesResult, DiffCrossSpecArgs,
     DiffCrossSpecResult, DiscoverRuleFilesArgs, DiscoverRuleFilesResult, EnforceManifestArgs,
     EnforceManifestResult, ExtractArchiveArgs, ExtractArchiveResult, FetchArchiveArgs,
@@ -795,6 +796,19 @@ impl GovRuntimeServer {
         params: Parameters<DeriveRoutingCandidatesArgs>,
     ) -> Result<Json<DeriveRoutingCandidatesResult>, String> {
         primitives::derive_routing_candidates::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "check-unfolded-specs",
+        description = "Report branch-scoped specs (`<identifier>.<n>-<slug>`) still present in the working tree, each with the upstream spec its `folds-into:` names and its current status. A branch-scoped directory is a staging form discharged by fold-back; nothing runs on the merge itself, so a merged branch leaves its staging directories behind silently — this is what notices. Read-only, and it reports rather than repairs: which upstream section the content belongs in is the operator's judgement at fold-back. A `folds-into` naming a spec absent from this tree is reported as declared, never as broken — that absence is the normal pre-merge state, and existence is enforced at fold-back by retire-feature. Empty `unfolded` means examined-and-clean only when `examined` is non-zero."
+    )]
+    async fn check_unfolded_specs(
+        &self,
+        params: Parameters<CheckUnfoldedSpecsArgs>,
+    ) -> Result<Json<CheckUnfoldedSpecsResult>, String> {
+        primitives::check_unfolded_specs::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

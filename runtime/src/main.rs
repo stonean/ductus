@@ -12,15 +12,16 @@ use ductus::primitives;
 use ductus::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, CheckArtifactsArgs,
     CheckCommandFlagsArgs, CheckOrphanedReferencesArgs, CheckReviewAgreementArgs,
-    CheckReviewGateArgs, CheckRuleIdsArgs, CheckStuckArgs, ComputeReviewScopeArgs,
-    CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs,
-    DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveReferencesArgs, DeriveRoutingCandidatesArgs,
-    DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs,
-    FetchArchiveArgs, GateConfirmArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs,
-    MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs,
-    ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RemoveInboxItemArgs,
-    ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs, RunGeneratorArgs, SetStatusArgs,
-    TraverseDepsArgs, ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs,
+    CheckReviewGateArgs, CheckRuleIdsArgs, CheckStuckArgs, CheckUnfoldedSpecsArgs,
+    ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs,
+    DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveReferencesArgs,
+    DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs,
+    ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, LabelCriteriaArgs, LintMarkdownArgs,
+    MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
+    MigrateSessionFileArgs, ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs,
+    RemoveInboxItemArgs, ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs,
+    RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteReviewArgs,
+    WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -143,6 +144,8 @@ enum Command {
     CheckCommandFlags(CheckCommandFlagsArgs),
     /// Report specs whose frontmatter `review:` block disagrees with their own review.md.
     CheckReviewAgreement(CheckReviewAgreementArgs),
+    /// Report branch-scoped specs still in the tree, with the upstream spec each folds into.
+    CheckUnfoldedSpecs(CheckUnfoldedSpecsArgs),
     /// Regenerate every spec's frontmatter `dependencies:` from its body links; report cycles.
     DeriveDependencies(DeriveDependenciesArgs),
     /// Regenerate every spec's frontmatter `references:` from its cross-service body links.
@@ -655,6 +658,9 @@ fn main() -> ExitCode {
         }
         Command::CheckReviewAgreement(args) => {
             emit_result(primitives::check_review_agreement::run(&args, &repo))
+        }
+        Command::CheckUnfoldedSpecs(args) => {
+            emit_result(primitives::check_unfolded_specs::run(&args, &repo))
         }
         Command::DeriveDependencies(args) => {
             let outcome = primitives::derive_dependencies::run(&args, &repo);
