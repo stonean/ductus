@@ -153,3 +153,90 @@ fn resolve_feature_finds_a_branch_scoped_directory_by_name() {
     );
     assert_eq!(result.feature.as_deref(), Some(BRANCH_SCOPED));
 }
+
+/// A declared `folds-into` must survive every primitive that rewrites spec
+/// frontmatter.
+///
+/// The field is safe only because none of these writers re-serializes the
+/// block — each splices its own key and leaves the rest byte-identical. That
+/// is a property of their implementations rather than a guarantee any of them
+/// states, so it is pinned here: if one ever switches to a parse-and-emit
+/// round trip, a branch-scoped spec would silently lose the only record of
+/// where it belongs, and the loss would surface as a fold-back that cannot
+/// find its target.
+#[test]
+fn the_fold_target_survives_every_frontmatter_writer() {
+    use ductus::schema::primitives::{LabelCriteriaArgs, SetStatusArgs, ValidateFrontmatterArgs};
+
+    let tmp = tempfile::tempdir().unwrap();
+    seed(tmp.path());
+    let spec_path = tmp.path().join("specs").join(BRANCH_SCOPED).join("spec.md");
+
+    // Declare the fold target, plus a criterion for label-criteria to
+    // label and a sibling link for derive-dependencies to harvest.
+    let original = fs::read_to_string(&spec_path).unwrap();
+    let with_target = original.replace(
+        "dependencies: []",
+        &format!("dependencies: []\nfolds-into: {SEQUENTIAL}"),
+    ) + "\n## Acceptance Criteria\n\n- [ ] A criterion to label.\n";
+    fs::write(&spec_path, &with_target).unwrap();
+
+    let carries_target = |stage: &str| {
+        let body = fs::read_to_string(&spec_path).unwrap();
+        assert!(
+            body.contains(&format!("folds-into: {SEQUENTIAL}")),
+            "fold target lost after {stage}:\n{body}"
+        );
+    };
+
+    primitives::set_status::run(
+        &SetStatusArgs {
+            feature: BRANCH_SCOPED.into(),
+            from: "draft".into(),
+            to: "clarified".into(),
+        },
+        tmp.path(),
+    )
+    .unwrap();
+    carries_target("set-status");
+
+    primitives::derive_dependencies::run(
+        &DeriveDependenciesArgs {
+            write: true,
+            staged: false,
+        },
+        tmp.path(),
+    )
+    .unwrap();
+    carries_target("derive-dependencies");
+
+    primitives::label_criteria::run(
+        &LabelCriteriaArgs {
+            feature: BRANCH_SCOPED.into(),
+        },
+        tmp.path(),
+    )
+    .unwrap();
+    carries_target("label-criteria");
+
+    // Every writer ran, and each one's own key landed — so the survival
+    // above is not the vacuous result of nothing having been written.
+    let final_body = fs::read_to_string(&spec_path).unwrap();
+    assert!(final_body.contains("status: clarified"), "{final_body}");
+    assert!(
+        final_body.contains(&format!("dependencies: [{SEQUENTIAL}]")),
+        "{final_body}"
+    );
+    assert!(final_body.contains("next-criterion:"), "{final_body}");
+
+    // And the result still validates: a fold target naming a spec that is
+    // present here is as acceptable as one that is not.
+    let validated = primitives::validate_frontmatter::run(
+        &ValidateFrontmatterArgs {
+            path: format!("specs/{BRANCH_SCOPED}/spec.md"),
+        },
+        tmp.path(),
+    )
+    .unwrap();
+    assert!(validated.clean, "{:?}", validated.findings);
+}

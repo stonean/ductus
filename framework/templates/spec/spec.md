@@ -26,6 +26,18 @@ review:
      `dependencies` list is generated from inline markdown links to sibling specs
      in the body — do not edit it by hand.
 
+     Branch-scoped specs: a spec created with a branch-style number
+     (`{branch-id}.{n}-slug`, e.g. `1234.1-slug`) carries one extra
+     frontmatter key, `folds-into:`, naming the upstream spec it folds back
+     into. It is written by /{project}:specify at creation and is the one
+     frontmatter field you may edit by hand — correcting a target that names
+     the wrong spec, or removing it (and renaming the directory) when the team
+     decides the spec should stand on its own. The named spec normally lives
+     on the upstream branch and is absent from your working tree; that is
+     expected, not an error. While the key is present the spec carries
+     outstanding work, so it is reported by /{project}:status and cannot reach
+     `done` — after the merge, target it and fold it.
+
      Cross-service references: to reference a spec in another service (its own
      repo with its own ductus install), write a normal inline markdown link to
      that spec's absolute canonical URL in the body — shaped like (backticks

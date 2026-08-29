@@ -8,7 +8,9 @@ use std::path::Path;
 
 use serde_norway::Value as YamlValue;
 
-use crate::primitives::{Result, read_text, resolve_path, split_frontmatter};
+use crate::primitives::{
+    FeatureForm, Result, parse_feature_dir, read_text, resolve_path, split_frontmatter,
+};
 use crate::schema::primitives::{
     FrontmatterFinding, ValidateFrontmatterArgs, ValidateFrontmatterResult,
 };
@@ -112,12 +114,59 @@ pub fn run(args: &ValidateFrontmatterArgs, repo: &Path) -> Result<ValidateFrontm
         }),
     }
 
+    if let Some(folds_into) = map.get("folds-into") {
+        validate_folds_into(folds_into, &mut findings);
+    }
+
     if let Some(review) = map.get("review") {
         validate_review_block(review, &mut findings);
     }
 
     let clean = findings.is_empty();
     Ok(ValidateFrontmatterResult { findings, clean })
+}
+
+/// Check the optional `folds-into` key: the upstream spec a
+/// branch-scoped spec folds back into (spec 051).
+///
+/// **Shape only, never resolvability.** The value routinely names a spec
+/// this working tree cannot see: a branch-scoped spec exists because the
+/// upstream branch moved, so its target normally lives on that branch —
+/// sometimes created there after this branch forked. Requiring the target
+/// to resolve would fire on the feature's normal case, and could not see
+/// the tree that would satisfy it in any event. Existence is enforced at
+/// fold-back, which runs after the merge, in the first tree holding both.
+///
+/// Requiring the *sequential* form is not incidental: it is what forbids
+/// chaining one branch-scoped spec into another, so a fold always ends at
+/// a permanent home in one hop.
+///
+/// Absence is never a finding. A sequential spec has no fold target by
+/// definition, and while `create-feature` refuses branch-scoped creation
+/// without one, removing the key by hand is the supported way to make
+/// such a spec stand on its own.
+fn validate_folds_into(folds_into: &YamlValue, findings: &mut Vec<FrontmatterFinding>) {
+    let YamlValue::String(target) = folds_into else {
+        findings.push(FrontmatterFinding {
+            severity: "blocking".into(),
+            field: "folds-into".into(),
+            message: "folds-into must be a string feature name".into(),
+        });
+        return;
+    };
+    if !matches!(
+        parse_feature_dir(target),
+        Some(FeatureForm::Sequential { .. })
+    ) {
+        findings.push(FrontmatterFinding {
+            severity: "blocking".into(),
+            field: "folds-into".into(),
+            message: format!(
+                "folds-into {target:?} is not a sequential feature name (NNN-slug); a \
+                 branch-scoped spec folds into a permanent spec, not another staged one"
+            ),
+        });
+    }
 }
 
 fn validate_review_block(review: &YamlValue, findings: &mut Vec<FrontmatterFinding>) {
@@ -174,6 +223,65 @@ mod tests {
         .unwrap();
         assert!(result.clean, "expected clean, got {:?}", result.findings);
         assert!(result.findings.is_empty());
+    }
+
+    /// Run the validator over a frontmatter block, returning the findings.
+    fn findings_for(frontmatter: &str) -> Vec<FrontmatterFinding> {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("spec.md");
+        std::fs::write(&path, format!("---\n{frontmatter}---\n\n# X\n")).unwrap();
+        run(
+            &ValidateFrontmatterArgs {
+                path: path.to_string_lossy().into(),
+            },
+            tmp.path(),
+        )
+        .unwrap()
+        .findings
+    }
+
+    #[test]
+    fn a_fold_target_naming_an_absent_feature_is_not_a_finding() {
+        // The target normally lives on the upstream branch, so it is
+        // absent from the tree that declares it. That is the feature's
+        // normal case, not a defect — and nothing here could see the
+        // tree that would resolve it anyway.
+        let findings =
+            findings_for("status: draft\ndependencies: []\nfolds-into: 022-nowhere-near-here\n");
+        assert!(findings.is_empty(), "unexpected findings: {findings:?}");
+    }
+
+    #[test]
+    fn a_fold_target_naming_a_branch_scoped_spec_is_blocking() {
+        // Chaining one staged spec into another would leave a fold that
+        // does not end at a permanent home.
+        let findings = findings_for("status: draft\ndependencies: []\nfolds-into: 5678.1-other\n");
+        assert_eq!(findings.len(), 1, "got {findings:?}");
+        assert_eq!(findings[0].field, "folds-into");
+        assert_eq!(findings[0].severity, "blocking");
+    }
+
+    #[test]
+    fn a_malformed_fold_target_is_blocking() {
+        for bad in ["not-a-feature", "22-short", ""] {
+            let findings = findings_for(&format!(
+                "status: draft\ndependencies: []\nfolds-into: {bad:?}\n"
+            ));
+            assert_eq!(findings.len(), 1, "expected one finding for {bad:?}");
+            assert_eq!(findings[0].field, "folds-into");
+        }
+        // Wrong type, not just wrong shape.
+        let findings = findings_for("status: draft\ndependencies: []\nfolds-into: [022-a]\n");
+        assert_eq!(findings.len(), 1, "got {findings:?}");
+        assert_eq!(findings[0].field, "folds-into");
+    }
+
+    #[test]
+    fn an_absent_fold_target_is_never_a_finding() {
+        // A sequential spec has none by definition, and removing the key
+        // by hand is the supported way to make a staged spec stand alone.
+        let findings = findings_for("status: draft\ndependencies: []\n");
+        assert!(findings.is_empty(), "unexpected findings: {findings:?}");
     }
 
     #[test]

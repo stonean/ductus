@@ -47,11 +47,11 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 
 ## 6. Add the `folds-into` frontmatter field
 
-- [ ] Write `folds-into:` from `create-feature`'s `fold-into` argument; omit the key when the argument is absent
-- [ ] Add the `validate-frontmatter` shape check: present ⇒ *parses* as a sequential feature name. Do not check that the feature exists — the target normally lives on the upstream branch and is absent here
-- [ ] Test that a `folds-into` naming a feature absent from the corpus produces no finding, and that one naming a branch-scoped feature does
-- [ ] Document the key in `framework/templates/spec/spec.md`
-- [ ] Test that `set-status`, `derive-dependencies`, and `label-criteria` each leave the key byte-identical
+- [x] Write `folds-into:` from `create-feature`'s `fold-into` argument; omit the key when the argument is absent
+- [x] Add the `validate-frontmatter` shape check: present ⇒ *parses* as a sequential feature name. Do not check that the feature exists — the target normally lives on the upstream branch and is absent here
+- [x] Test that a `folds-into` naming a feature absent from the corpus produces no finding, and that one naming a branch-scoped feature does
+- [x] Document the key in `framework/templates/spec/spec.md`
+- [x] Test that `set-status`, `derive-dependencies`, and `label-criteria` each leave the key byte-identical
 
 - **Done when**: the key round-trips through every existing frontmatter writer untouched, a malformed `folds-into` is a reported finding, and one naming an absent feature is not (AC19, AC20, AC31, AC32).
 
