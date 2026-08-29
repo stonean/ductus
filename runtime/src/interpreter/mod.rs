@@ -64,8 +64,8 @@ use crate::schema::primitives::{
     ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs,
     DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveReferencesArgs,
     DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs,
-    ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, LabelCriteriaArgs, LintMarkdownArgs,
-    MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
+    ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs,
+    LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
     MigrateSessionFileArgs, ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs,
     RemoveInboxItemArgs, ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs,
     RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
@@ -747,6 +747,7 @@ fn dispatch_primitive(
         "check-unfolded-specs" => call!(CheckUnfoldedSpecsArgs, check_unfolded_specs),
         "rewrite-spec-links" => call!(RewriteSpecLinksArgs, rewrite_spec_links),
         "retire-feature" => call!(RetireFeatureArgs, retire_feature),
+        "invalidate-review" => call!(InvalidateReviewArgs, invalidate_review),
         "derive-dependencies" => {
             call!(DeriveDependenciesArgs, derive_dependencies)
         }

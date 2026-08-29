@@ -49,17 +49,18 @@ use crate::schema::primitives::{
     DeriveRoutingCandidatesArgs, DeriveRoutingCandidatesResult, DiffCrossSpecArgs,
     DiffCrossSpecResult, DiscoverRuleFilesArgs, DiscoverRuleFilesResult, EnforceManifestArgs,
     EnforceManifestResult, ExtractArchiveArgs, ExtractArchiveResult, FetchArchiveArgs,
-    FetchArchiveResult, GateConfirmArgs, LabelCriteriaArgs, LabelCriteriaResult, LintMarkdownArgs,
-    LintMarkdownResult, MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs,
-    MergeManagedBlockResult, MergePermissionsArgs, MergePermissionsResult, MigrateSessionFileArgs,
-    MigrateSessionFileResult, ProcessWaiversArgs, ProcessWaiversResult, PruneTasksArgs,
-    PruneTasksResult, ReadSpecArgs, ReadSpecResult, ReadTasksArgs, ReadTasksResult,
-    RemoveInboxItemArgs, RemoveInboxItemResult, ResolveAnchorArgs, ResolveAnchorResult,
-    ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs, ResolveReferencesResult,
-    RetireFeatureArgs, RetireFeatureResult, RewriteSpecLinksArgs, RewriteSpecLinksResult,
-    RunGeneratorArgs, RunGeneratorResult, SetStatusArgs, SetStatusResult, TraverseDepsArgs,
-    TraverseDepsResult, ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteReviewArgs,
-    WriteReviewResult, WriteSessionArgs, WriteSessionResult,
+    FetchArchiveResult, GateConfirmArgs, InvalidateReviewArgs, InvalidateReviewResult,
+    LabelCriteriaArgs, LabelCriteriaResult, LintMarkdownArgs, LintMarkdownResult,
+    MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergeManagedBlockResult,
+    MergePermissionsArgs, MergePermissionsResult, MigrateSessionFileArgs, MigrateSessionFileResult,
+    ProcessWaiversArgs, ProcessWaiversResult, PruneTasksArgs, PruneTasksResult, ReadSpecArgs,
+    ReadSpecResult, ReadTasksArgs, ReadTasksResult, RemoveInboxItemArgs, RemoveInboxItemResult,
+    ResolveAnchorArgs, ResolveAnchorResult, ResolveFeatureArgs, ResolveFeatureResult,
+    ResolveReferencesArgs, ResolveReferencesResult, RetireFeatureArgs, RetireFeatureResult,
+    RewriteSpecLinksArgs, RewriteSpecLinksResult, RunGeneratorArgs, RunGeneratorResult,
+    SetStatusArgs, SetStatusResult, TraverseDepsArgs, TraverseDepsResult, ValidateFrontmatterArgs,
+    ValidateFrontmatterResult, WriteReviewArgs, WriteReviewResult, WriteSessionArgs,
+    WriteSessionResult,
 };
 
 /// Canonical MCP tool names exposed by the server, in manifest order —
@@ -810,6 +811,19 @@ impl GovRuntimeServer {
         params: Parameters<RetireFeatureArgs>,
     ) -> Result<Json<RetireFeatureResult>, String> {
         primitives::retire_feature::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "invalidate-review",
+        description = "Reset a spec's `review:` frontmatter block to the un-reviewed state — `last-run` and `reviewed-against` nulled, counts zeroed, `blocking` cleared — so the pre-`done` gate demands a fresh review before the spec can complete. The gate's staleness check diffs the spec's durable contracts (scenarios/*.md, data-model.md); spec.md is deliberately outside that set, so a fold-back that routes content into the upstream spec's BODY moves no durable contract and leaves a review that never saw the code the fold brought with it. This is how the fold says what the diff cannot see. Waivers survive verbatim, adopter-authored extra fields included: an invalidation says the review is out of date, not that an operator's recorded judgement about a finding was withdrawn. `invalidated: false` is the domain outcome for a spec that records no current review — already in this state — so a re-run of an interrupted fold converges rather than halting."
+    )]
+    async fn invalidate_review(
+        &self,
+        params: Parameters<InvalidateReviewArgs>,
+    ) -> Result<Json<InvalidateReviewResult>, String> {
+        primitives::invalidate_review::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

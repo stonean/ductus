@@ -64,4 +64,5 @@ pub(crate) const PRIMITIVE_REGISTRY: &[&str] = &[
     "check-unfolded-specs",
     "rewrite-spec-links",
     "retire-feature",
+    "invalidate-review",
 ];

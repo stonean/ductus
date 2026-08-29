@@ -16,8 +16,8 @@ use ductus::schema::primitives::{
     ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs,
     DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveReferencesArgs,
     DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs,
-    ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, LabelCriteriaArgs, LintMarkdownArgs,
-    MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
+    ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs,
+    LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
     MigrateSessionFileArgs, ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs,
     RemoveInboxItemArgs, ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs,
     RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
@@ -150,6 +150,8 @@ enum Command {
     RewriteSpecLinks(RewriteSpecLinksArgs),
     /// Remove a folded branch-scoped feature directory, guarded on its fold target existing.
     RetireFeature(RetireFeatureArgs),
+    /// Reset a spec's review block to the un-reviewed state, so the pre-done gate demands a fresh review.
+    InvalidateReview(InvalidateReviewArgs),
     /// Regenerate every spec's frontmatter `dependencies:` from its body links; report cycles.
     DeriveDependencies(DeriveDependenciesArgs),
     /// Regenerate every spec's frontmatter `references:` from its cross-service body links.
@@ -670,6 +672,9 @@ fn main() -> ExitCode {
             emit_result(primitives::rewrite_spec_links::run(&args, &repo))
         }
         Command::RetireFeature(args) => emit_result(primitives::retire_feature::run(&args, &repo)),
+        Command::InvalidateReview(args) => {
+            emit_result(primitives::invalidate_review::run(&args, &repo))
+        }
         Command::DeriveDependencies(args) => {
             let outcome = primitives::derive_dependencies::run(&args, &repo);
             if let Ok(result) = &outcome {

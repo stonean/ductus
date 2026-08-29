@@ -104,39 +104,39 @@ The framework's existing failure vocabulary covers these: an argument that canno
 
 ## Acceptance Criteria
 
-- [ ] AC1: A spec created in branch-scoped mode under branch identifier `1234` is named `1234.1-{slug}`; the next one created under the same identifier is `1234.2-{slug}`
-- [ ] AC8: The `.{n}` counter is `max + 1` over the branch-scoped directories present under that identifier, and is unaffected by directories under any other identifier
-- [ ] AC9: The identifier is accepted as an opaque operator-supplied token, not required to be numeric: `PROJ-1111` yields `proj-1111.1-{slug}` and `1111-PROJ` yields `1111-proj.1-{slug}`
-- [ ] AC10: A non-conforming identifier is sanitized to `^[a-z0-9]+(?:-[a-z0-9]+)*$` rather than rejected, and the sanitized value is shown at the confirmation prompt before any directory is created
-- [ ] AC11: An identifier containing `.` has it collapsed to a hyphen, so the `{branch-id}.{n}` delimiter is never ambiguous
-- [ ] AC12: Identifiers differing only in case resolve to one namespace
-- [ ] AC13: When branch-scoped creation is requested without an identifier, spec creation prompts for one — offering a candidate extracted from the current git branch name when one can be extracted, and prompting with no candidate when it cannot; the operator's confirmed or corrected value is the one used
-- [ ] AC2: Creating a branch-scoped spec does not change the number the next sequential (`NNN`) spec receives — a spec root containing `050-…` and `1234.1-…` still yields `051-…`
-- [ ] AC3: Two branches creating specs under different branch identifiers produce no colliding directory names, and both sets survive a merge of one branch into the other
-- [ ] AC4: Sequential `NNN` numbering remains the default: spec creation with no identifier supplied behaves exactly as it does today, and no persisted setting can change that
-- [ ] AC14: No branch-scoped state is persisted to any committed file — merging a branch that created branch-scoped specs leaves the upstream branch's spec-creation behavior unchanged
-- [ ] AC5: Branch-scoped directories are enumerated by every surface that reads the spec corpus (pipeline view, feature resolution, dependency traversal, reference resolution, audit) — none of them treats a branch-scoped directory as a non-spec
-- [ ] AC15: The membership predicate accepting both directory forms is defined in exactly one place; no consumer carries its own copy
-- [ ] AC16: Resolving the identifier `123` matches the sequential spec `123-…` and never a branch-scoped `1234.1-…`, and resolving `1234` matches the branch-scoped set and never a sequential spec
-- [ ] AC17: The constitution's §numbering defines both directory forms, and §spec-lifecycle states that a branch-scoped spec is a staging form discharged by fold-back
-- [ ] AC6: A fold-back command folds a branch-scoped spec's content into a named upstream spec, after which the branch-scoped directory no longer exists and no reference to it dangles
-- [ ] AC18: Fold-back routes each branch-scoped spec to either a body edit or a scenario on the upstream spec, and the operator confirms the routing before any write
-- [ ] AC19: A branch-scoped spec records its upstream fold target in frontmatter, and that field is never rewritten by the dependency or reference generators
-- [ ] AC31: A `folds-into` naming a spec absent from the current branch's working tree is never reported as a finding
-- [ ] AC32: Frontmatter validation checks `folds-into` for shape only; the target's existence is enforced at fold-back, not before
-- [ ] AC33: Renaming a feature directory updates every `folds-into` field naming it, in the same action that re-points body links
-- [ ] AC20: Naming an upstream spec in the fold-target field does not add that spec to `dependencies:`
-- [ ] AC21: A branch-scoped spec still present after its branch has merged is flagged by a detection check
-- [ ] AC34: A spec declaring `folds-into` is never reported as `done` by the pipeline view; it is reported as carrying an outstanding fold
-- [ ] AC35: The pre-`done` gate blocks `in-progress → done` while `folds-into` is present, naming the pending fold as the reason
-- [ ] AC22: Inbound body links to a retired branch-scoped directory are re-pointed at the fold target by the fold-back itself, and `check-orphaned-references` reports clean afterwards
-- [ ] AC23: `dependencies:` and `references:` frontmatter across the corpus is correct after the first commit following a fold-back, with no hand-editing of either
+- [x] AC1: A spec created in branch-scoped mode under branch identifier `1234` is named `1234.1-{slug}`; the next one created under the same identifier is `1234.2-{slug}`
+- [x] AC8: The `.{n}` counter is `max + 1` over the branch-scoped directories present under that identifier, and is unaffected by directories under any other identifier
+- [x] AC9: The identifier is accepted as an opaque operator-supplied token, not required to be numeric: `PROJ-1111` yields `proj-1111.1-{slug}` and `1111-PROJ` yields `1111-proj.1-{slug}`
+- [x] AC10: A non-conforming identifier is sanitized to `^[a-z0-9]+(?:-[a-z0-9]+)*$` rather than rejected, and the sanitized value is shown at the confirmation prompt before any directory is created
+- [x] AC11: An identifier containing `.` has it collapsed to a hyphen, so the `{branch-id}.{n}` delimiter is never ambiguous
+- [x] AC12: Identifiers differing only in case resolve to one namespace
+- [x] AC13: When branch-scoped creation is requested without an identifier, spec creation prompts for one — offering a candidate extracted from the current git branch name when one can be extracted, and prompting with no candidate when it cannot; the operator's confirmed or corrected value is the one used
+- [x] AC2: Creating a branch-scoped spec does not change the number the next sequential (`NNN`) spec receives — a spec root containing `050-…` and `1234.1-…` still yields `051-…`
+- [x] AC3: Two branches creating specs under different branch identifiers produce no colliding directory names, and both sets survive a merge of one branch into the other
+- [x] AC4: Sequential `NNN` numbering remains the default: spec creation with no identifier supplied behaves exactly as it does today, and no persisted setting can change that
+- [x] AC14: No branch-scoped state is persisted to any committed file — merging a branch that created branch-scoped specs leaves the upstream branch's spec-creation behavior unchanged
+- [x] AC5: Branch-scoped directories are enumerated by every surface that reads the spec corpus (pipeline view, feature resolution, dependency traversal, reference resolution, audit) — none of them treats a branch-scoped directory as a non-spec
+- [x] AC15: The membership predicate accepting both directory forms is defined in exactly one place; no consumer carries its own copy
+- [x] AC16: Resolving the identifier `123` matches the sequential spec `123-…` and never a branch-scoped `1234.1-…`, and resolving `1234` matches the branch-scoped set and never a sequential spec
+- [x] AC17: The constitution's §numbering defines both directory forms, and §spec-lifecycle states that a branch-scoped spec is a staging form discharged by fold-back
+- [x] AC6: A fold-back command folds a branch-scoped spec's content into a named upstream spec, after which the branch-scoped directory no longer exists and no reference to it dangles
+- [x] AC18: Fold-back routes each branch-scoped spec to either a body edit or a scenario on the upstream spec, and the operator confirms the routing before any write
+- [x] AC19: A branch-scoped spec records its upstream fold target in frontmatter, and that field is never rewritten by the dependency or reference generators
+- [x] AC31: A `folds-into` naming a spec absent from the current branch's working tree is never reported as a finding
+- [x] AC32: Frontmatter validation checks `folds-into` for shape only; the target's existence is enforced at fold-back, not before
+- [x] AC33: Renaming a feature directory updates every `folds-into` field naming it, in the same action that re-points body links
+- [x] AC20: Naming an upstream spec in the fold-target field does not add that spec to `dependencies:`
+- [x] AC21: A branch-scoped spec still present after its branch has merged is flagged by a detection check
+- [x] AC34: A spec declaring `folds-into` is never reported as `done` by the pipeline view; it is reported as carrying an outstanding fold
+- [x] AC35: The pre-`done` gate blocks `in-progress → done` while `folds-into` is present, naming the pending fold as the reason
+- [x] AC22: Inbound body links to a retired branch-scoped directory are re-pointed at the fold target by the fold-back itself, and `check-orphaned-references` reports clean afterwards
+- [x] AC23: `dependencies:` and `references:` frontmatter across the corpus is correct after the first commit following a fold-back, with no hand-editing of either
 - [ ] AC24: Folding into a `done` upstream spec sets that spec to `in-progress`, and the spec cannot return to `done` until `/ductus:review` has run against the merged code
-- [ ] AC25: Fold-back adds no new back-edge to §spec-lifecycle — the transition it performs is one of the two already defined there
-- [ ] AC37: Branch-scoped creation requires a fold target: there is no way to create a branch-scoped spec that names none
-- [ ] AC26: An identifier that sanitizes to an empty string is refused before any directory is created
-- [ ] AC27: A branch-scoped directory that already exists is reported as a domain outcome and never overwritten, including when two contributors create under the same identifier concurrently
-- [ ] AC28: Fold-back naming a target spec that does not exist refuses and leaves the branch-scoped spec in place
+- [x] AC25: Fold-back adds no new back-edge to §spec-lifecycle — the transition it performs is one of the two already defined there
+- [x] AC37: Branch-scoped creation requires a fold target: there is no way to create a branch-scoped spec that names none
+- [x] AC26: An identifier that sanitizes to an empty string is refused before any directory is created
+- [x] AC27: A branch-scoped directory that already exists is reported as a domain outcome and never overwritten, including when two contributors create under the same identifier concurrently
+- [x] AC28: Fold-back naming a target spec that does not exist refuses and leaves the branch-scoped spec in place
 - [ ] AC29: Fold-back is atomic per branch-scoped spec: an interruption leaves each spec either fully folded and retired, or untouched
 
 ## Open Questions

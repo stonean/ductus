@@ -554,32 +554,45 @@ fn render_review_yaml(
     let _ = writeln!(block, "  should-violations: {should}");
     let _ = writeln!(block, "  low-confidence: {low}");
     let _ = writeln!(block, "  blocking: {}", must > 0);
-    if !waivers.is_empty() {
-        block.push_str("  waivers:\n");
-        for waiver in waivers {
-            let fields = [
-                ("rule", waiver.rule.as_deref()),
-                ("file", waiver.file.as_deref()),
-                ("reason", waiver.reason.as_deref()),
-                ("waived-at", waiver.waived_at.as_deref()),
-                ("waived-by", waiver.waived_by.as_deref()),
-            ];
-            let mut first = true;
-            for (key, value) in fields {
-                if let Some(value) = value {
-                    let indent = if first { "    - " } else { "      " };
-                    let _ = writeln!(block, "{indent}{key}: {}", yaml_string(value));
-                    first = false;
-                }
-            }
-            for (key, value) in &waiver.extra {
+    render_waivers(&mut block, waivers);
+    block.trim_end_matches('\n').to_string()
+}
+
+/// Append the `waivers:` list to a rendered `review:` block, preserving
+/// every adopter-authored extra field verbatim (§text-first-artifacts'
+/// open-schema rule).
+///
+/// Shared with `invalidate-review`, which drops the review's scalars but
+/// must not drop operator state: a waiver is a recorded judgement, and an
+/// invalidation says the *review* is out of date, not that the judgement
+/// was withdrawn.
+pub(crate) fn render_waivers(block: &mut String, waivers: &[RawWaiverFull]) {
+    if waivers.is_empty() {
+        return;
+    }
+    block.push_str("  waivers:\n");
+    for waiver in waivers {
+        let fields = [
+            ("rule", waiver.rule.as_deref()),
+            ("file", waiver.file.as_deref()),
+            ("reason", waiver.reason.as_deref()),
+            ("waived-at", waiver.waived_at.as_deref()),
+            ("waived-by", waiver.waived_by.as_deref()),
+        ];
+        let mut first = true;
+        for (key, value) in fields {
+            if let Some(value) = value {
                 let indent = if first { "    - " } else { "      " };
-                render_extra_field(&mut block, indent, key, value);
+                let _ = writeln!(block, "{indent}{key}: {}", yaml_string(value));
                 first = false;
             }
         }
+        for (key, value) in &waiver.extra {
+            let indent = if first { "    - " } else { "      " };
+            render_extra_field(block, indent, key, value);
+            first = false;
+        }
     }
-    block.trim_end_matches('\n').to_string()
 }
 
 /// Append one adopter-authored waiver field, preserving it across the
@@ -626,7 +639,7 @@ fn render_extra_field(block: &mut String, indent: &str, key: &str, value: &serde
 /// Replace the `review:` block region of a frontmatter body with `block`,
 /// preserving surrounding top-level keys. Appends the block when no `review:`
 /// key is present.
-fn splice_review_block(fm_text: &str, block: &str) -> String {
+pub(crate) fn splice_review_block(fm_text: &str, block: &str) -> String {
     let lines: Vec<&str> = fm_text.lines().collect();
     let start = lines
         .iter()
@@ -716,15 +729,20 @@ fn needs_quote(value: &str) -> bool {
 /// Minimal spec frontmatter shape: just the `review.waivers` list, parsed
 /// loosely so a malformed waiver entry survives as reportable state.
 #[derive(Deserialize)]
-struct SpecReviewFm {
+pub(crate) struct SpecReviewFm {
     #[serde(default)]
-    review: Option<RawReviewBlock>,
+    pub(crate) review: Option<RawReviewBlock>,
 }
 
 #[derive(Deserialize, Default)]
-struct RawReviewBlock {
+pub(crate) struct RawReviewBlock {
+    /// The recorded review timestamp. `None` (absent or explicit `null`) is
+    /// the un-reviewed state the pre-`done` gate blocks on, and the state
+    /// `invalidate-review` restores.
+    #[serde(default, rename = "last-run")]
+    pub(crate) last_run: Option<String>,
     #[serde(default)]
-    waivers: Vec<RawWaiverFull>,
+    pub(crate) waivers: Vec<RawWaiverFull>,
 }
 
 /// One waiver entry with every field optional, so pruning preserves the full
@@ -734,7 +752,7 @@ struct RawReviewBlock {
 /// open-schema rule holds across a re-render — an org-specific policy field is
 /// never silently dropped. `BTreeMap` keeps the extras in deterministic order.
 #[derive(Deserialize)]
-struct RawWaiverFull {
+pub(crate) struct RawWaiverFull {
     #[serde(default)]
     rule: Option<String>,
     #[serde(default)]

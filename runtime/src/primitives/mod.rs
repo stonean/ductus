@@ -38,6 +38,7 @@ pub mod enforce_manifest;
 pub mod extract_archive;
 pub mod fetch_archive;
 pub mod gate_confirm;
+pub mod invalidate_review;
 pub mod label_criteria;
 pub mod lint_markdown;
 pub mod mark_criterion;

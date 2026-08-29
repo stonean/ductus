@@ -82,6 +82,26 @@ pub fn run(args: &AppendTaskArgs, repo: &Path) -> Result<AppendTaskResult> {
         Err(err) => return Err(err),
     };
 
+    // Dedup guard: a `slug` renders a pointer at `scenarios/{slug}.md`, so
+    // an existing task already carrying that pointer is this same work
+    // already recorded. Return its number rather than appending a second
+    // task for it, which is what makes a re-run of an interrupted
+    // `/{project}:fold`, `/{project}:groom`, or `/{project}:amend` converge
+    // instead of doubling the list (spec 051, AC29). The slug-less case has
+    // no pointer to key on, so a caller-supplied body appends as before —
+    // two custom bodies are not the same task merely for landing on one
+    // spec.
+    if let Some(slug) = &args.slug
+        && let Some(existing_number) = task_number_referencing_scenario(&existing, slug)
+    {
+        return Ok(AppendTaskResult {
+            task_number: existing_number,
+            path: rel_path(&tasks_path, repo),
+            created: created_now,
+            appended: false,
+        });
+    }
+
     let next_number = next_task_number(&existing);
     let new_content = match detect_tasks_structure(&existing) {
         TasksStructure::Flat => {
@@ -96,7 +116,47 @@ pub fn run(args: &AppendTaskArgs, repo: &Path) -> Result<AppendTaskResult> {
         task_number: next_number,
         path: rel_path(&tasks_path, repo),
         created: created_now,
+        appended: true,
     })
+}
+
+/// The number of the task whose block already points at
+/// `scenarios/{slug}.md`, if any.
+///
+/// Matches the rendered pointer by its backticked path so a slug cannot
+/// match inside a longer one — `retry` must not find `retry-budget`, the
+/// same whole-token care [`parse_feature_dir`](super::parse_feature_dir)'s
+/// callers take with directory names.
+///
+/// Walks both heading levels because `tasks.md` is flat (`## N.`) or phased
+/// (`### N.`) and a pointer is equally findable in either.
+fn task_number_referencing_scenario(existing: &str, slug: &str) -> Option<u32> {
+    use crate::primitives::{SkipScanner, parse_atx_heading};
+
+    let needle = format!("`scenarios/{slug}.md`");
+    let mut skip = SkipScanner::default();
+    let mut current: Option<u32> = None;
+    for line in existing.lines() {
+        // The same fence- and comment-aware scanner the numbering walk uses,
+        // so the `## 1.` examples inside the template's guidance comment are
+        // as invisible here as they are there.
+        if skip.skip(line) {
+            continue;
+        }
+        if let Some((level, text)) = parse_atx_heading(line) {
+            if level == 2 || level == 3 {
+                current = text
+                    .find('.')
+                    .and_then(|dot| text.get(..dot))
+                    .and_then(|num| num.parse::<u32>().ok());
+            }
+            continue;
+        }
+        if current.is_some() && line.contains(&needle) {
+            return current;
+        }
+    }
+    None
 }
 
 /// Reject a single-line text argument that carries an embedded newline
@@ -404,6 +464,85 @@ mod tests {
         fs::create_dir_all(tmp.join(feature_path)).unwrap();
         let body = format!("---\nstatus: in-progress\ndependencies: []\n---\n\n# {h1}\n\nIntro.\n");
         fs::write(tmp.join(feature_path).join("spec.md"), body).unwrap();
+    }
+
+    /// AC29: a re-run of an interrupted fold must converge rather than
+    /// double the task list. The `slug` renders a pointer, and a task
+    /// already carrying that pointer is this same work already recorded.
+    #[test]
+    fn a_second_append_for_the_same_scenario_appends_nothing() {
+        let tmp = tempdir().unwrap();
+        make_feature_with_spec(tmp.path(), "specs/042-foo", "042 — Foo");
+        let tasks_path = tmp.path().join("specs/042-foo/tasks.md");
+
+        let first = run(
+            &args(
+                "specs/042-foo",
+                "Implement retry",
+                "the scenario is implemented.",
+            ),
+            tmp.path(),
+        )
+        .unwrap();
+        assert!(first.appended);
+        let after_first = fs::read_to_string(&tasks_path).unwrap();
+
+        let second = run(
+            &args(
+                "specs/042-foo",
+                "Implement retry",
+                "the scenario is implemented.",
+            ),
+            tmp.path(),
+        )
+        .unwrap();
+        assert!(!second.appended, "the second call must not append");
+        assert_eq!(
+            second.task_number, first.task_number,
+            "the existing task's number is what the caller gets back"
+        );
+        assert_eq!(
+            fs::read_to_string(&tasks_path).unwrap(),
+            after_first,
+            "tasks.md must be byte-identical after the deduped call"
+        );
+    }
+
+    /// The guard keys on the whole rendered pointer, so a slug that is a
+    /// prefix of an existing one is still its own task — the same
+    /// whole-token care the feature-directory match takes.
+    #[test]
+    fn a_prefix_slug_is_not_treated_as_the_same_scenario() {
+        let tmp = tempdir().unwrap();
+        make_feature_with_spec(tmp.path(), "specs/042-foo", "042 — Foo");
+
+        let mut budget = args("specs/042-foo", "Budget", "done.");
+        budget.slug = Some("retry-budget".into());
+        run(&budget, tmp.path()).unwrap();
+
+        let mut retry = args("specs/042-foo", "Retry", "done.");
+        retry.slug = Some("retry".into());
+        let result = run(&retry, tmp.path()).unwrap();
+
+        assert!(result.appended, "`retry` must not match `retry-budget`");
+        assert_eq!(result.task_number, 2);
+    }
+
+    /// Without a slug there is no pointer to key on, so two custom bodies
+    /// are two tasks — the dedup is deliberately narrow.
+    #[test]
+    fn a_slugless_body_still_appends_every_time() {
+        let tmp = tempdir().unwrap();
+        make_feature_with_spec(tmp.path(), "specs/042-foo", "042 — Foo");
+
+        let mut a = args("specs/042-foo", "Custom", "done.");
+        a.slug = None;
+        a.body = Some(vec!["do the thing".into()]);
+
+        assert!(run(&a, tmp.path()).unwrap().appended);
+        let second = run(&a, tmp.path()).unwrap();
+        assert!(second.appended);
+        assert_eq!(second.task_number, 2);
     }
 
     #[test]

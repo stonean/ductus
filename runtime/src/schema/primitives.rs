@@ -1740,6 +1740,16 @@ pub struct AppendTaskResult {
     /// Whether `tasks.md` was created by this invocation. `false` when an
     /// existing file was extended.
     pub created: bool,
+    /// Whether a task block was actually written. `false` is the dedup
+    /// domain outcome: a `slug` was supplied and an existing task already
+    /// points at `scenarios/{slug}.md`, so `task_number` names that task
+    /// rather than a new one and `tasks.md` is unchanged.
+    ///
+    /// Reported rather than folded into `created` because the two answer
+    /// different questions — `created` is about the *file*, this is about
+    /// the *task* — and a caller re-running an interrupted fold needs to
+    /// distinguish "recorded now" from "already recorded" (spec 051, AC29).
+    pub appended: bool,
 }
 
 // -- prune-tasks -------------------------------------------------------------
@@ -3159,6 +3169,38 @@ pub struct RetireFeatureResult {
     /// Repo-relative path of the directory, present either way so a caller
     /// can name what it retired — or what it found already gone.
     pub path: String,
+}
+
+// -- invalidate-review ---------------------------------------------------------
+
+/// Args for `invalidate-review`. Resets a spec's `review:` block to the
+/// un-reviewed state, so the pre-`done` gate demands a fresh review.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct InvalidateReviewArgs {
+    /// The feature whose recorded review no longer describes it — the
+    /// **upstream** spec on a fold, not the branch-scoped one being
+    /// retired.
+    #[arg(long)]
+    pub feature: String,
+}
+
+/// Result for `invalidate-review`.
+///
+/// `invalidated: false` is the domain outcome for a spec that records no
+/// current review: it is already in the state this primitive produces, so a
+/// re-run converges rather than halting.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct InvalidateReviewResult {
+    /// Whether this call reset a recorded review.
+    pub invalidated: bool,
+    /// Repo-relative path of the spec file, present either way.
+    pub path: String,
+    /// The `last-run` value that was cleared, so the caller can say what it
+    /// invalidated rather than only that it did. Absent when nothing was.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous_last_run: Option<String>,
 }
 
 #[cfg(test)]

@@ -168,3 +168,23 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 - [x] Test that a `folds-into` carrying a traversal yields an empty `target-content` rather than a file from outside the repo
 
 - **Done when**: no path built from a spec artifact's declared value reaches the filesystem in the payload builder without the containment check every sibling read already applies, and the escape is covered by a test (BE-INPUT-004).
+
+## 20. Make an interrupted fold safe to re-run
+
+- [x] Give `append-task` a dedup guard keyed on the scenario pointer: when `slug` names a scenario an existing task block already references, return that task's number with `appended: false` rather than adding a second task for the same work — the guard `append-inbox` already has, absent here
+- [x] Leave the slug-less case alone: a custom body carries no pointer to key on, so it appends as it does today
+- [x] State the resumption contract in `framework/commands/fold.md`: every step is a no-op when its effect is already present, so an interrupted fold is completed by re-running it against the same spec — and say which step provides that for each of the seven writes
+- [x] Give the body-edit step its own re-run guard in the same prose: the routing step already holds both documents, so content already present in the target section is recognized and not folded twice
+- [x] Test that a second `append-task` naming the same scenario appends nothing
+
+- **Done when**: no step of a fold double-applies when the fold is re-run after an interruption, the two steps that could (`append-task` and the body edit) are guarded, and the resumption contract is written down where the operator reads it (AC29).
+
+## 21. A fold invalidates the upstream spec's recorded review
+
+- [x] Add an `invalidate-review` primitive: null the spec's `review.last-run` and `reviewed-against`, zero the counts, clear `blocking`, and preserve operator-authored `waivers` — returning `invalidated: false` when there was no current review, so a re-run converges
+- [x] Wire it at the six Rust sites plus `framework/runtime-tools.txt`, per the registration gotcha in `AGENTS.md`
+- [x] Call it from `framework/commands/fold.md` against the **upstream** spec, on every route — not only the `done` reopen, since a fold into an already-`in-progress` spec leaves the same stale review behind
+- [x] Say why in the command prose: the staleness check reads durable contracts, and a body-edit fold writes only `spec.md`, which it deliberately excludes — so without this the upstream spec returns to `done` on a review that never saw the code the fold brought with it
+- [x] Test the invalidation, the preserved waivers, and the already-invalid re-run
+
+- **Done when**: an upstream spec that has received a fold cannot reach `done` until `/ductus:review` has run against it again, on either route (AC24).
