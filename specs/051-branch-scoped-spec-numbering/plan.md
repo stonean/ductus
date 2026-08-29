@@ -88,7 +88,9 @@ Adding a directory form and a command touches the framework's own registries, an
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `runtime/src/primitives/mod.rs` | Modify | `parse_feature_dir` + `FeatureForm`; redefine `is_feature_slug`, retire `feature_number` in favour of the parsed form |
+| `runtime/src/primitives/mod.rs` | Modify | `parse_feature_dir` + `FeatureForm`; redefine `is_feature_slug`, retire `feature_number` in favour of the parsed form; `feature_dir_cmp` for the mixed corpus; `is_slug_grammar` factored out of `validate_slug` |
+| `runtime/src/primitives/dashboard.rs` | Modify | **Not predicted.** A third `feature_number` caller: the Dependencies column would have rendered a branch-scoped dependency as its first three digits |
+| `runtime/tests/mixed_corpus.rs` | Create | Both forms seen by every corpus reader; the fold target's survival through every frontmatter writer |
 | `runtime/src/primitives/create_feature.rs` | Modify | `branch-id` / `fold-into` arguments, branch-scoped counter, sanitized-identifier result field |
 | `runtime/src/primitives/resolve_feature.rs` | Modify | Per-form matching; ambiguity across forms |
 | `runtime/src/primitives/validate_frontmatter.rs` | Modify | `folds-into` shape check — parse only, never resolvability |
@@ -126,3 +128,25 @@ Adding a directory form and a command touches the framework's own registries, an
 - **Fold-back is not automatic at merge.** Nothing runs on the merge itself; the detection check reports surviving branch-scoped directories after the fact. This is deliberate — fold-back is a reviewed step — but it means an un-folded spec is visible only once someone runs the check.
 - **Phase 1 ships a form the framework can hold but not yet discharge.** Between phases 1 and 3, fold-back is a manual procedure. Sequencing the phases the other way is not possible, since fold-back's writes depend on the grammar and the field.
 - **`specs/system.md` does not exist in this repository**, so the cross-validation against shared architecture conventions that the plan phase normally performs had nothing to read here. The framework's own equivalent — the constitution and the audit families — was used instead.
+
+## Implementation notes
+
+Recorded during implementation, for whoever picks this up next.
+
+### Write boundary
+
+The work spans more than the derived boundary. `derive-boundary` grows only as commits land, so it currently yields `runtime/src/primitives/**`, `runtime/src/schema/**`, `runtime/tests/**`, `framework/templates/**`, and `specs/**`. The remaining tasks also need `framework/commands/**`, `framework/constitution.md`, `framework/runtime-tools.txt`, `framework/bootstrap/**`, `scripts/**`, and `runtime/src/{mcp,parser,interpreter}/**`. The boundary is not seedable from the session file — `write-boundary` is an exec-walker context value, not a `session.toml` key — so the grant has to come from the operator each session that needs it.
+
+### Sequencing already applied
+
+Task 3 wrote the `folds-into` key rather than leaving it to task 6, because accepting a `fold-into` argument without persisting it would have left a knowingly-broken tree between the two. Task 6 kept the validation, the template documentation, and the round-trip tests.
+
+Task 4 needed only its second test case: the restriction to `Sequential` landed with task 1's parse, and its first case was already covered by task 3.
+
+### What task 7 absorbed
+
+Task 7 grew past its original scope when the pipeline-view requirement arrived (AC34–AC36). It now carries `check-unfolded-specs`, the `dashboard` reporting of a pending fold, the `check-review-gate` block, and the unresolvable-target callout. It is the largest remaining unit and would split cleanly into the primitive and the two reporting surfaces if that helps.
+
+### Two conventions this feature established
+
+`parse_feature_dir` is the only place a feature directory is recognized, and `feature_dir_cmp` the only place the mixed corpus is ordered. Both are recorded in `AGENTS.md` under Gotchas, along with clap's `{n}` expansion in `--help` text, which bit twice while documenting the new arguments.

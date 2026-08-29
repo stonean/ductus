@@ -4,6 +4,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Phase 2 (6–8) adds the fold target and its detection. Phase 3 (9–13) adds the fold-back command. Each phase leaves the corpus in a working state.
 
+Phases 1 and 2's field work are complete and committed; task 7 is the next one. The plan's **Implementation notes** section carries what a resuming session needs that these checkboxes cannot express — the write boundary the remaining tasks require, and what task 7 absorbed when the pipeline-view requirement arrived.
+
 ## 1. Introduce the directory-form parse
 
 - [x] Add `FeatureForm` and `parse_feature_dir` to `runtime/src/primitives/mod.rs` per the [data model](data-model.md) grammar
