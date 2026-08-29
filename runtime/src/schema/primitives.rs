@@ -3062,6 +3062,59 @@ pub struct CheckUnfoldedSpecsResult {
     pub examined: u32,
 }
 
+// -- rewrite-spec-links --------------------------------------------------------
+
+/// Args for `rewrite-spec-links`. Re-points every inbound pointer to a
+/// retiring or renamed feature directory at its fold target — body links
+/// across the corpus and the `folds-into` frontmatter field alike.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct RewriteSpecLinksArgs {
+    /// The retiring or renamed feature directory name, e.g.
+    /// `1234.1-widget-cache`. Matched as a whole path segment, so a
+    /// directory whose name merely starts with this one is left alone.
+    #[arg(long)]
+    pub from: String,
+    /// The fold target: a feature directory name, optionally with a
+    /// scenario slug after a `/` — `050-alpha` or `050-alpha/eviction`.
+    ///
+    /// Without a scenario the rewrite is a rename and preserves each
+    /// link's tail, so `../<from>/plan.md` becomes `../050-alpha/plan.md`.
+    /// With one, the retiring directory's files did not survive
+    /// individually — their content landed in that single scenario — so
+    /// every inbound link collapses onto
+    /// `<feature>/scenarios/<slug>.md`.
+    #[arg(long)]
+    pub to: String,
+}
+
+/// One file whose inbound pointers were re-pointed.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RewrittenFile {
+    /// Repo-relative path of the rewritten file.
+    pub path: String,
+    /// Pointers re-pointed within it — body links plus any `folds-into`
+    /// field. A file appears here only when this is non-zero.
+    pub count: u32,
+}
+
+/// Result for `rewrite-spec-links`.
+///
+/// An empty `rewritten` with a non-zero `examined` is **examined and
+/// nothing pointed here**; empty with `examined` zero means no markdown was
+/// scanned at all, which is not the same claim (`QUAL-CLAIM-001`).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RewriteSpecLinksResult {
+    /// Files changed, in spec-root path order.
+    #[serde(default)]
+    pub rewritten: Vec<RewrittenFile>,
+    /// Markdown files scanned under the spec root — the subject the empty
+    /// case describes.
+    pub examined: u32,
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]

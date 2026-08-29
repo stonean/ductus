@@ -62,4 +62,5 @@ pub(crate) const PRIMITIVE_REGISTRY: &[&str] = &[
     "derive-dependencies",
     "derive-references",
     "check-unfolded-specs",
+    "rewrite-spec-links",
 ];

@@ -64,3 +64,4 @@ check-review-agreement
 derive-dependencies
 derive-references
 check-unfolded-specs
+rewrite-spec-links

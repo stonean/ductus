@@ -68,8 +68,8 @@ use crate::schema::primitives::{
     MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
     MigrateSessionFileArgs, ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs,
     RemoveInboxItemArgs, ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs,
-    RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteReviewArgs,
-    WriteSessionArgs,
+    RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
+    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs,
 };
 use crate::schema::procedure::{Procedure, Step, StepNumber};
 use crate::schema::protocol::{ErrorLocation, ProtocolMessage};
@@ -746,6 +746,9 @@ fn dispatch_primitive(
         }
         "check-unfolded-specs" => {
             call!(CheckUnfoldedSpecsArgs, check_unfolded_specs)
+        }
+        "rewrite-spec-links" => {
+            call!(RewriteSpecLinksArgs, rewrite_spec_links)
         }
         "derive-dependencies" => {
             call!(DeriveDependenciesArgs, derive_dependencies)

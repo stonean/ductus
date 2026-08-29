@@ -77,10 +77,10 @@ Phases 1 and 2's field work are complete and committed; task 7 is the next one. 
 
 ## 9. Add `rewrite-spec-links`
 
-- [ ] Implement the primitive: re-point inbound body links from a retiring or renamed feature directory at the fold target, reporting `rewritten` and `examined`
-- [ ] Include `folds-into` fields naming that directory — the frontmatter pointer moves with the body links, not after them
-- [ ] Leave frontmatter alone — `dependencies:` and `references:` regenerate from body links via the pre-commit hook
-- [ ] Test: sibling `../{feature}/spec.md` links, scenario-targeted links, a `folds-into` naming the moved directory, and a corpus with no inbound pointers
+- [x] Implement the primitive: re-point inbound body links from a retiring or renamed feature directory at the fold target, reporting `rewritten` and `examined`
+- [x] Include `folds-into` fields naming that directory — the frontmatter pointer moves with the body links, not after them
+- [x] Leave frontmatter alone — `dependencies:` and `references:` regenerate from body links via the pre-commit hook
+- [x] Test: sibling `../{feature}/spec.md` links, scenario-targeted links, a `folds-into` naming the moved directory, and a corpus with no inbound pointers
 
 - **Done when**: every inbound pointer to the retiring directory — body links and `folds-into` fields alike — names the fold target, and `dependencies:`/`references:` were left to the generators rather than hand-edited (AC22, AC23, AC33).
 

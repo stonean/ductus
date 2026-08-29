@@ -56,9 +56,10 @@ use crate::schema::primitives::{
     PruneTasksResult, ReadSpecArgs, ReadSpecResult, ReadTasksArgs, ReadTasksResult,
     RemoveInboxItemArgs, RemoveInboxItemResult, ResolveAnchorArgs, ResolveAnchorResult,
     ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs, ResolveReferencesResult,
-    RunGeneratorArgs, RunGeneratorResult, SetStatusArgs, SetStatusResult, TraverseDepsArgs,
-    TraverseDepsResult, ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteReviewArgs,
-    WriteReviewResult, WriteSessionArgs, WriteSessionResult,
+    RewriteSpecLinksArgs, RewriteSpecLinksResult, RunGeneratorArgs, RunGeneratorResult,
+    SetStatusArgs, SetStatusResult, TraverseDepsArgs, TraverseDepsResult, ValidateFrontmatterArgs,
+    ValidateFrontmatterResult, WriteReviewArgs, WriteReviewResult, WriteSessionArgs,
+    WriteSessionResult,
 };
 
 /// Canonical MCP tool names exposed by the server, in manifest order —
@@ -796,6 +797,19 @@ impl GovRuntimeServer {
         params: Parameters<DeriveRoutingCandidatesArgs>,
     ) -> Result<Json<DeriveRoutingCandidatesResult>, String> {
         primitives::derive_routing_candidates::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "rewrite-spec-links",
+        description = "Re-point every inbound pointer to a retiring or renamed feature directory at its fold target: markdown body links across the spec corpus and the `folds-into` frontmatter field alike. The frontmatter key is included deliberately — it is the one pointer whose job is to survive until the merge, so a rename that repaired body links and left it behind would break exactly the thing the field exists for. `dependencies:` and `references:` are NOT touched: they are derived from body links, and derive-dependencies / derive-references regenerate them from the rewritten bodies on the next commit. Matching is by whole path segment, so a directory whose name merely shares a prefix is left alone, and cross-service URLs are never rewritten. `to` is `<feature>` (a rename — each link's tail survives) or `<feature>/<scenario>` (a fold into one scenario — the tail named files that did not survive, so it is replaced). Empty `rewritten` means examined-and-nothing-pointed-here only when `examined` is non-zero."
+    )]
+    async fn rewrite_spec_links(
+        &self,
+        params: Parameters<RewriteSpecLinksArgs>,
+    ) -> Result<Json<RewriteSpecLinksResult>, String> {
+        primitives::rewrite_spec_links::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }
