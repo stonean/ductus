@@ -111,9 +111,9 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 
 ## 13. Update the constitution
 
-- [ ] Amend §numbering to define both directory forms, naming the branch-scoped one as temporary
-- [ ] Amend §spec-lifecycle to record that a branch-scoped spec is a staging form discharged by fold-back, reconciling it with the anti-proliferation stance
-- [ ] Run the audit families that check cross-doc agreement
+- [x] Amend §numbering to define both directory forms, naming the branch-scoped one as temporary
+- [x] Amend §spec-lifecycle to record that a branch-scoped spec is a staging form discharged by fold-back, reconciling it with the anti-proliferation stance
+- [x] Run the audit families that check cross-doc agreement
 
 - **Done when**: both sections describe the shipped behavior, and `scripts/audit/run-all.sh` reports no new findings (AC17).
 

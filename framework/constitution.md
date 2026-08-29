@@ -142,7 +142,7 @@ The top-level directory name (`specs` above) is the documented default; a projec
 | `clarified` | All open questions resolved, acceptance criteria are concrete and testable |
 | `planned` | Plan and tasks exist, readiness check passed |
 | `in-progress` | Implementation has started |
-| `done` | All acceptance criteria verified, code merged, and no scenario under the spec carries unresolved open questions |
+| `done` | All acceptance criteria verified, code merged, no scenario under the spec carries unresolved open questions, and no fold is outstanding |
 
 ```text
 draft ──/clarify──▶ clarified ──/plan──▶ planned ──/implement──▶ in-progress ──[/review gate]──▶ done
@@ -157,6 +157,12 @@ Forward edges only — `/clarify` raises status to `clarified`, `/plan` to `plan
 The three cases share one test, and it is the test rather than the list that decides a case the list does not name: an edit is mechanical when the diff is **determinable without author judgment** *and* **changes no claim the spec makes** — no requirement added, removed, or reworded; no behavior described differently; no fact corrected. An edit that changes no claim is therefore mechanical even when it matches none of (a)–(c): repairing a typo, or sweep residue where a substitution landed in a sentence it did not fit, restores the text to what it already meant and asserts nothing new. A **factual correction is not this** — correcting a claim that was wrong changes what the spec asserts, and takes the back-edge. Stating the test rather than extending the list is deliberate: a closed enumeration makes every new case an argument about whether it deserves an exception, when the question is only ever whether a claim moved.
 
 This avoids spec proliferation; scenarios evolve the existing spec rather than spawning a new one. Spec bodies are living documents that represent current state — git history is the historical record of what was written when.
+
+**A branch-scoped spec is a staging form, not a fourth state.** A spec numbered `{identifier}.{n}-{slug}` ([§numbering](#numbering-convention)) is created on a branch that cannot coordinate a sequential number, and it declares in `folds-into:` the upstream spec whose statement it is really making. It moves through `draft` → `clarified` → `planned` → `in-progress` like any other spec, but it has no `done` state: a declared fold target is outstanding work, so the pipeline view reports the spec as carrying a pending fold and the pre-`done` gate blocks `in-progress → done` while the key is present. It is retired, not completed. Fold-back is the discharge — it folds the content into the upstream spec as a body edit or as a scenario, re-points every inbound pointer, and removes the staging directory.
+
+Fold-back adds **no new back-edge**. Reopening a `done` upstream spec is one of the two `done → in-progress` edges already defined above: the scenario edge when the content lands as a scenario, the meaningful-body-edit edge when it lands in the body. An upstream spec that is not `done` is left where it is.
+
+This holds the anti-proliferation stance rather than relaxing it. A branch-scoped spec is a place to write on a branch, not a second durable home for a concern — its lifetime ends at the merge that makes the upstream spec reachable, and what survives is one spec, edited. A branch-scoped directory that outlives its branch is drift, and a detection check reports it.
 
 Three operational rules follow from the lifecycle and apply on every project:
 
@@ -677,7 +683,15 @@ The originating spec's acceptance criteria include delivering the cross-spec upd
 
 ## Numbering Convention
 
-Feature directories use three-digit zero-padded numbers: `000-skeleton`, `001-observability`, `002-events`. Numbers establish creation order and suggest a natural implementation sequence, but dependencies between features determine the actual build order.
+Feature directories take one of two forms.
+
+**Sequential** — three-digit zero-padded numbers: `000-skeleton`, `001-observability`, `002-events`. Numbers establish creation order and suggest a natural implementation sequence, but dependencies between features determine the actual build order. This is the default and the destination form: spec creation with no branch identifier supplied numbers sequentially, and no persisted setting changes that.
+
+**Branch-scoped** — `{identifier}.{n}-{slug}`, where `{identifier}` is an operator-supplied token sanitized to `^[a-z0-9]+(?:-[a-z0-9]+)*$` and `{n}` counts from 1 within that identifier: `1234.1-retry-budget`, `1234.2-backoff`. The identifier namespaces the counter, so branches numbering under different identifiers cannot collide at merge. The two counters are independent in both directions — a spec root holding `050-a` and `1234.1-b` still yields `051-` next, and a branch-scoped directory never advances the sequential sequence.
+
+**The branch-scoped form is temporary.** It exists so work on a branch can be specified without claiming a sequential number the branch has no way to coordinate. Every branch-scoped spec declares in its `folds-into:` frontmatter key the sequential spec it stands in for, and is discharged into that spec by fold-back rather than completed in place — see [§spec-lifecycle](#spec-lifecycle).
+
+The membership rule that recognizes a feature directory accepts both forms and is defined in exactly one place. A surface that reads the spec corpus calls it rather than restating the digit convention; a second copy of the rule is how the two forms drift apart.
 
 <!-- §markdown-standards -->
 
