@@ -56,10 +56,10 @@ use crate::schema::primitives::{
     PruneTasksResult, ReadSpecArgs, ReadSpecResult, ReadTasksArgs, ReadTasksResult,
     RemoveInboxItemArgs, RemoveInboxItemResult, ResolveAnchorArgs, ResolveAnchorResult,
     ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs, ResolveReferencesResult,
-    RewriteSpecLinksArgs, RewriteSpecLinksResult, RunGeneratorArgs, RunGeneratorResult,
-    SetStatusArgs, SetStatusResult, TraverseDepsArgs, TraverseDepsResult, ValidateFrontmatterArgs,
-    ValidateFrontmatterResult, WriteReviewArgs, WriteReviewResult, WriteSessionArgs,
-    WriteSessionResult,
+    RetireFeatureArgs, RetireFeatureResult, RewriteSpecLinksArgs, RewriteSpecLinksResult,
+    RunGeneratorArgs, RunGeneratorResult, SetStatusArgs, SetStatusResult, TraverseDepsArgs,
+    TraverseDepsResult, ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteReviewArgs,
+    WriteReviewResult, WriteSessionArgs, WriteSessionResult,
 };
 
 /// Canonical MCP tool names exposed by the server, in manifest order —
@@ -797,6 +797,19 @@ impl GovRuntimeServer {
         params: Parameters<DeriveRoutingCandidatesArgs>,
     ) -> Result<Json<DeriveRoutingCandidatesResult>, String> {
         primitives::derive_routing_candidates::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "retire-feature",
+        description = "Remove a branch-scoped feature directory (`<identifier>.<n>-<slug>`) once its content has been folded into the upstream spec that receives it — the last step of a fold and the only irreversible one. This is where the fold target's existence is finally enforced: everything earlier checks `folds-into` for shape only, because a branch-scoped spec exists precisely because upstream diverged, so before the merge its target normally lives on the upstream branch. Fold-back runs after the merge, in the first tree holding both, which is the first moment the question has an answer worth refusing on. Refuses when `fold-target` names no feature directory holding a spec.md (a directory with no spec is not a home content can have landed in), and refuses a sequential `NNN-slug` feature outright — the sequential form is permanent. `retired: false` is the domain outcome for a directory already gone, so re-running an interrupted fold converges rather than halting."
+    )]
+    async fn retire_feature(
+        &self,
+        params: Parameters<RetireFeatureArgs>,
+    ) -> Result<Json<RetireFeatureResult>, String> {
+        primitives::retire_feature::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

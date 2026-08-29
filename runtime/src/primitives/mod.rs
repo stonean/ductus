@@ -54,6 +54,7 @@ pub mod remove_inbox_item;
 pub mod resolve_anchor;
 pub mod resolve_feature;
 pub mod resolve_references;
+pub mod retire_feature;
 pub mod rewrite_spec_links;
 pub mod run_generator;
 pub mod set_status;

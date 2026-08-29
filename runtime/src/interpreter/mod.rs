@@ -68,7 +68,7 @@ use crate::schema::primitives::{
     MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
     MigrateSessionFileArgs, ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs,
     RemoveInboxItemArgs, ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs,
-    RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
+    RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
     ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs,
 };
 use crate::schema::procedure::{Procedure, Step, StepNumber};
@@ -744,12 +744,9 @@ fn dispatch_primitive(
         "check-review-agreement" => {
             call!(CheckReviewAgreementArgs, check_review_agreement)
         }
-        "check-unfolded-specs" => {
-            call!(CheckUnfoldedSpecsArgs, check_unfolded_specs)
-        }
-        "rewrite-spec-links" => {
-            call!(RewriteSpecLinksArgs, rewrite_spec_links)
-        }
+        "check-unfolded-specs" => call!(CheckUnfoldedSpecsArgs, check_unfolded_specs),
+        "rewrite-spec-links" => call!(RewriteSpecLinksArgs, rewrite_spec_links),
+        "retire-feature" => call!(RetireFeatureArgs, retire_feature),
         "derive-dependencies" => {
             call!(DeriveDependenciesArgs, derive_dependencies)
         }

@@ -3115,6 +3115,52 @@ pub struct RewriteSpecLinksResult {
     pub examined: u32,
 }
 
+// -- retire-feature ------------------------------------------------------------
+
+/// Args for `retire-feature`. Removes a branch-scoped feature directory once
+/// its content has been folded into the upstream spec that receives it.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct RetireFeatureArgs {
+    /// The branch-scoped feature directory to remove, e.g.
+    /// `1234.1-widget-cache`.
+    ///
+    /// Must parse as the branch-scoped form. A sequential `NNN-slug`
+    /// feature is refused outright: the sequential form is permanent, and a
+    /// primitive that could delete one would make an irreversible
+    /// operation reachable from a typo.
+    #[arg(long)]
+    pub feature: String,
+    /// The upstream feature the content was folded into. It must exist,
+    /// and that check is the whole point of the argument — it is what
+    /// stops a retirement from stranding content nothing else holds.
+    ///
+    /// A fold routed into a scenario still names the **feature** here: the
+    /// scenario lives inside it, so the feature's existence is what the
+    /// check needs to establish.
+    #[arg(long)]
+    pub fold_target: String,
+}
+
+/// Result for `retire-feature`.
+///
+/// `retired: false` is the domain outcome for a directory that was already
+/// gone — a re-run of an interrupted fold, not an error. Both refusals (a
+/// sequential feature, an absent fold target) are operational errors
+/// instead: each means the call should not have been made, and reporting
+/// them as an outcome would let a walker continue past a destructive step
+/// it had just declined to take.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RetireFeatureResult {
+    /// Whether this call removed the directory. `false` means it was
+    /// already absent.
+    pub retired: bool,
+    /// Repo-relative path of the directory, present either way so a caller
+    /// can name what it retired — or what it found already gone.
+    pub path: String,
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]

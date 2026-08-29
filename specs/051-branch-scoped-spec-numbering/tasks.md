@@ -86,9 +86,9 @@ Phases 1 and 2's field work are complete and committed; task 7 is the next one. 
 
 ## 10. Add `retire-feature`
 
-- [ ] Implement the primitive: remove a `BranchScoped` directory, refusing when the fold target does not exist — this is the one place the target's existence is enforced, since nothing before the merge can see it — and refusing a `Sequential` feature outright
-- [ ] Return `retired: false` as the domain outcome for an already-absent directory
-- [ ] Test both refusals and the already-gone case
+- [x] Implement the primitive: remove a `BranchScoped` directory, refusing when the fold target does not exist — this is the one place the target's existence is enforced, since nothing before the merge can see it — and refusing a `Sequential` feature outright
+- [x] Return `retired: false` as the domain outcome for an already-absent directory
+- [x] Test both refusals and the already-gone case
 
 - **Done when**: a branch-scoped directory can be retired only when its fold target exists, and a sequential feature can never be retired by this primitive (AC28).
 

@@ -63,4 +63,5 @@ pub(crate) const PRIMITIVE_REGISTRY: &[&str] = &[
     "derive-references",
     "check-unfolded-specs",
     "rewrite-spec-links",
+    "retire-feature",
 ];

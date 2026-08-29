@@ -65,3 +65,4 @@ derive-dependencies
 derive-references
 check-unfolded-specs
 rewrite-spec-links
+retire-feature

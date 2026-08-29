@@ -122,6 +122,7 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    - `mcp__ductus__derive-references`
    - `mcp__ductus__check-unfolded-specs`
    - `mcp__ductus__rewrite-spec-links`
+   - `mcp__ductus__retire-feature`
    <!-- generated:mcp-allow:end -->
 
 3. Canonical `permissions.deny` entries:

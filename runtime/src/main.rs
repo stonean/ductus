@@ -20,7 +20,7 @@ use ductus::schema::primitives::{
     MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
     MigrateSessionFileArgs, ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs,
     RemoveInboxItemArgs, ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs,
-    RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
+    RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
     ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs,
 };
 
@@ -148,6 +148,8 @@ enum Command {
     CheckUnfoldedSpecs(CheckUnfoldedSpecsArgs),
     /// Re-point inbound body links and folds-into fields from a feature directory at its fold target.
     RewriteSpecLinks(RewriteSpecLinksArgs),
+    /// Remove a folded branch-scoped feature directory, guarded on its fold target existing.
+    RetireFeature(RetireFeatureArgs),
     /// Regenerate every spec's frontmatter `dependencies:` from its body links; report cycles.
     DeriveDependencies(DeriveDependenciesArgs),
     /// Regenerate every spec's frontmatter `references:` from its cross-service body links.
@@ -667,6 +669,7 @@ fn main() -> ExitCode {
         Command::RewriteSpecLinks(args) => {
             emit_result(primitives::rewrite_spec_links::run(&args, &repo))
         }
+        Command::RetireFeature(args) => emit_result(primitives::retire_feature::run(&args, &repo)),
         Command::DeriveDependencies(args) => {
             let outcome = primitives::derive_dependencies::run(&args, &repo);
             if let Ok(result) = &outcome {
