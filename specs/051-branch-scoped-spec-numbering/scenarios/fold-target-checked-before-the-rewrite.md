@@ -10,7 +10,9 @@ section: "Fold-back on merge"
 
 So the enforcement runs *after* the corpus-wide rewrite that assumes it. Step 12's own prose names that refusal as reachable: it says a refusal there "is the answer to a `folds-into` that step 1 reported as unresolved". If it fires, the tree is left with every inbound link re-pointed at a spec that does not exist, and the staging directory still present — the corpus edited on the strength of a destination that was never checked.
 
-The window is narrow rather than closed. The body-edit write (step 6) and `create-scenario` (step 7) both need the upstream spec to exist, so most routes fail earlier and never reach step 11. But "narrow because the earlier steps happen to need the same thing" is a property of the current step list, not a guarantee — a route that skipped those steps, or a target directory that exists without a `spec.md`, reaches the rewrite with the check still ahead of it.
+**The window turns out to be closed already — by accident, which is the problem.** `invalidate-review` (step 10) errors `FeatureNotFound` on a missing target and runs unconditionally on every route, so today nothing reaches step 11 without the target existing. That step was added for an unrelated reason: to stop a body-edit fold leaving the upstream spec's review stale. It establishes this fact as a side effect of needing the file for its own work.
+
+A guarantee that rests on a neighbouring step's side effect is one a later change removes silently. `invalidate-review`'s own contract is that it *converges* — `invalidated: false` where there is nothing to invalidate — and extending that convergence to a missing feature would be a reasonable-looking change that quietly reopens this. The same is true of the other steps that happen to need the target: the body-edit write and `create-scenario` need it, but a body-edit route carrying no scenarios exercises neither.
 
 AC29 promises a fold leaves each spec fully folded or untouched, and the resumption contract added alongside it makes every step a no-op where a previous run landed. Neither covers this: re-running after the refusal does not un-rewrite the links, because the rewrite is idempotent in the wrong direction — once re-pointed, nothing names the retiring directory any more, so a second run finds nothing to repair.
 
@@ -18,9 +20,11 @@ AC29 promises a fold leaves each spec fully folded or untouched, and the resumpt
 
 The fold target's existence is established before any write that depends on it, not after. A fold whose target does not resolve refuses with the corpus untouched — the same refusal, the same message, reached before the rewrite rather than after it.
 
-`retire-feature` keeps its own check. It is the last line of defense on the one irreversible step and must not be weakened to a caller's promise: the primitive is callable on its own, and a check that exists only in the command is a check an operator can walk past. What changes is that the command establishes the same fact earlier, so the refusal is reached with nothing to undo.
+The check belongs in `rewrite-spec-links` itself, not in the command that calls it. The primitive already takes the target as an argument, so it needs nothing threaded to it; it runs on both the runtime and the exec paths without depending on per-step argument binding; and it is the thing that should refuse — a primitive that re-points pointers at a destination is where "does the destination exist" is answered, however it is called.
 
-The alternative — recording why the refusal cannot fire once the rewrite has run — is not available, because it can: step 12's prose already describes the case.
+`retire-feature` keeps its own check regardless. It is the last line of defense on the one irreversible step and must not be weakened to a caller's promise: the primitive is callable on its own, and by then a refusal means something different — that the target went missing mid-run, not that nobody asked.
+
+The alternative — recording why the refusal cannot fire once the rewrite has run — is not available, and not for the reason first supposed. It is unavailable because the property must survive changes to steps that do not know they are providing it.
 
 ## Edge Cases
 

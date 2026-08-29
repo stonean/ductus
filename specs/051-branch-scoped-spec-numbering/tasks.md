@@ -200,10 +200,10 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 
 ## 23. Establish the fold target before the corpus-wide rewrite
 
-- [ ] Implement the behavior described in `scenarios/fold-target-checked-before-the-rewrite.md`
-- [ ] Check the fold target's existence in `framework/commands/fold.md` before step 11's `rewrite-spec-links`, on the same terms `retire-feature` enforces — a directory holding a `spec.md`, not merely a directory
-- [ ] Leave `retire-feature`'s own check in place: it guards the one irreversible step and the primitive is callable on its own, so a caller's promise is not a substitute
-- [ ] Correct step 12's prose, which currently names its refusal as the answer to an unresolved `folds-into` — by then the question is already settled
-- [ ] Renumber and re-verify the command's step assertions, and re-bless any golden whose dispatch sequence changed
+- [x] Implement the behavior described in `scenarios/fold-target-checked-before-the-rewrite.md`
+- [x] Check the fold target's existence in `framework/commands/fold.md` before step 11's `rewrite-spec-links`, on the same terms `retire-feature` enforces — a directory holding a `spec.md`, not merely a directory
+- [x] Leave `retire-feature`'s own check in place: it guards the one irreversible step and the primitive is callable on its own, so a caller's promise is not a substitute
+- [x] Correct step 12's prose, which currently names its refusal as the answer to an unresolved `folds-into` — by then the question is already settled
+- [x] Renumber and re-verify the command's step assertions, and re-bless any golden whose dispatch sequence changed
 
 - **Done when**: a fold whose target does not resolve refuses with the corpus untouched, and no inbound link is ever re-pointed at a spec whose existence has not been established (AC29).

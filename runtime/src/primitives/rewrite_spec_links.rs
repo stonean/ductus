@@ -87,9 +87,43 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
             reason: "must name the retiring or renamed feature directory".into(),
         });
     }
+    // Both arguments reach a filesystem path below — `from` as a path
+    // component to skip, `to` as the directory whose existence is checked —
+    // so neither may carry a parent-directory escape (BE-INPUT-004).
+    super::validate_no_traversal(&args.from)?;
+    super::validate_no_traversal(&args.to)?;
     let target = FoldTarget::parse(&args.to)?;
     let layout = paths::Paths::load(repo);
     let specs_dir = repo.join(&layout.specs_root);
+
+    // Refuse before writing anything when the destination does not exist.
+    //
+    // This primitive re-points pointers across the whole corpus, so a run
+    // against a target that is not there leaves every inbound link naming a
+    // spec nobody can open — and the rewrite is idempotent in the *wrong*
+    // direction for recovery: once re-pointed, nothing names the original
+    // any more, so a second run finds nothing to repair.
+    //
+    // The check belongs here rather than in the calling command. Today
+    // `/{project}:fold` happens to establish the same fact one step earlier,
+    // because `invalidate-review` errors on a missing feature — but that is
+    // a side effect of a step added for an unrelated reason (spec 051 task
+    // 21), not a guarantee. A primitive that re-points links at a
+    // destination is the thing that should refuse an absent one, on both
+    // paths and however it is called.
+    //
+    // Same terms `retire-feature` enforces: a directory holding a `spec.md`,
+    // not merely a directory — a directory with no spec is not a home
+    // content can have landed in. The scenario half of a `{feature}/{slug}`
+    // target is deliberately not checked, because the feature's existence is
+    // what makes the link resolvable at all and the scenario is written by
+    // an earlier step of the same fold.
+    if !specs_dir.join(&target.feature).join("spec.md").is_file() {
+        return Err(PrimitiveError::FeatureNotFound {
+            root: layout.specs_root.clone(),
+            feature: target.feature.clone(),
+        });
+    }
 
     let mut rewritten: Vec<RewrittenFile> = Vec::new();
     let mut examined: u32 = 0;
@@ -306,6 +340,7 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::run;
+    use crate::primitives::PrimitiveError;
     use crate::schema::primitives::RewriteSpecLinksArgs;
     use std::fs;
     use std::path::Path;
@@ -325,6 +360,17 @@ mod tests {
 
     fn read(repo: &Path, rel: &str) -> String {
         fs::read_to_string(repo.join("specs").join(rel)).unwrap()
+    }
+
+    /// Give the fold target a `spec.md`. The primitive refuses to re-point
+    /// links at a destination that is not a home, so a fixture that omits
+    /// this is exercising a state the fold cannot reach.
+    fn seed_target(repo: &Path, feature: &str) {
+        write(
+            repo,
+            &format!("{feature}/spec.md"),
+            "---\nstatus: done\ndependencies: []\n---\n\n# target\n",
+        );
     }
 
     #[test]
@@ -370,6 +416,7 @@ mod tests {
             "050-alpha/scenarios/eviction.md",
             "---\nsection: Cache\n---\n\nPer [staged](../../1234.1-staged/spec.md).\n",
         );
+        seed_target(tmp.path(), "050-alpha");
 
         let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
 
@@ -422,6 +469,7 @@ mod tests {
             "1234.1-other/spec.md",
             "---\nstatus: draft\ndependencies: [050-alpha]\nfolds-into: 050-alpha\n---\n\n# other\n",
         );
+        seed_target(tmp.path(), "060-beta");
 
         let result = run(&args("050-alpha", "060-beta"), tmp.path()).unwrap();
 
@@ -444,11 +492,91 @@ mod tests {
             "1234.1-other/spec.md",
             "---\nstatus: draft\ndependencies: []\nfolds-into: 050-alpha\n---\n\n# other\n",
         );
+        seed_target(tmp.path(), "060-beta");
 
         run(&args("050-alpha", "060-beta/eviction"), tmp.path()).unwrap();
 
         let other = read(tmp.path(), "1234.1-other/spec.md");
         assert!(other.contains("folds-into: 060-beta"), "{other}");
+    }
+
+    /// AC29: the corpus is left untouched when the destination does not
+    /// exist. Recovery is not available here — the rewrite is idempotent in
+    /// the wrong direction, so once links are re-pointed nothing names the
+    /// original and a second run finds nothing to repair.
+    #[test]
+    fn an_absent_fold_target_refuses_with_the_corpus_untouched() {
+        let tmp = tempfile::tempdir().unwrap();
+        let before = "---\nstatus: draft\ndependencies: []\n---\n\nSee [staged](../1234.1-staged/spec.md).\n";
+        write(tmp.path(), "060-beta/spec.md", before);
+
+        let err = run(&args("1234.1-staged", "050-nowhere"), tmp.path()).unwrap_err();
+
+        assert!(
+            matches!(err, PrimitiveError::FeatureNotFound { ref feature, .. } if feature == "050-nowhere"),
+            "unexpected error: {err:?}"
+        );
+        assert_eq!(
+            read(tmp.path(), "060-beta/spec.md"),
+            before,
+            "the inbound link must not have moved"
+        );
+    }
+
+    /// Same terms `retire-feature` enforces: a directory with no `spec.md` is
+    /// not a home content can have landed in, so it does not satisfy the
+    /// check merely by existing.
+    #[test]
+    fn a_target_directory_without_a_spec_is_not_a_home() {
+        let tmp = tempfile::tempdir().unwrap();
+        write(
+            tmp.path(),
+            "060-beta/spec.md",
+            "---\nstatus: draft\ndependencies: []\n---\n\n[x](../1234.1-staged/spec.md)\n",
+        );
+        fs::create_dir_all(tmp.path().join("specs/050-alpha")).unwrap();
+
+        let err = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap_err();
+
+        assert!(matches!(err, PrimitiveError::FeatureNotFound { .. }));
+    }
+
+    /// A scenario-targeted `to` is checked on its **feature** half — that is
+    /// what makes the rewritten link resolvable, and the scenario is written
+    /// by an earlier step of the same fold.
+    #[test]
+    fn a_scenario_target_is_checked_on_its_feature() {
+        let tmp = tempfile::tempdir().unwrap();
+        write(
+            tmp.path(),
+            "060-beta/spec.md",
+            "---\nstatus: draft\ndependencies: []\n---\n\n[x](../1234.1-staged/spec.md)\n",
+        );
+
+        // Feature absent: refused, scenario half notwithstanding.
+        let err = run(&args("1234.1-staged", "050-alpha/eviction"), tmp.path()).unwrap_err();
+        assert!(matches!(err, PrimitiveError::FeatureNotFound { .. }));
+
+        // Feature present: accepted, without the scenario file existing yet.
+        seed_target(tmp.path(), "050-alpha");
+        let result = run(&args("1234.1-staged", "050-alpha/eviction"), tmp.path()).unwrap();
+        assert_eq!(result.rewritten.len(), 1);
+    }
+
+    /// BE-INPUT-004: neither argument may escape the spec root, since both
+    /// reach a filesystem path.
+    #[test]
+    fn a_traversing_argument_is_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+
+        for (from, to) in [("../../etc", "050-alpha"), ("1234.1-staged", "../../etc")] {
+            let err = run(&args(from, to), tmp.path()).unwrap_err();
+            assert!(
+                matches!(err, PrimitiveError::InvalidPath { .. }),
+                "expected a path refusal for ({from:?}, {to:?}), got {err:?}"
+            );
+        }
     }
 
     #[test]
