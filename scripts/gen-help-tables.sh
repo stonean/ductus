@@ -106,6 +106,7 @@ pipeline_entries=(
 refine_entries=(
   '/{project}:amend' "$CMD_DIR/amend.md"
   '/{project}:prune' "$CMD_DIR/prune.md"
+  '/{project}:fold'  "$CMD_DIR/fold.md"
 )
 
 brownfield_entries=(

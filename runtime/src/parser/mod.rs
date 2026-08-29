@@ -1165,6 +1165,7 @@ mod tests {
             "status",
             "target",
             "analyze",
+            "fold",
             "implement",
             "plan",
             "specify",

@@ -102,10 +102,10 @@ Phases 1 and 2's field work are complete and committed; task 7 is the next one. 
 
 ## 12. Add the `/ductus:fold` command
 
-- [ ] Write `framework/commands/fold.md`: enumerate branch-scoped specs, route each at the extension point, confirm with the operator, then per spec — apply the content, rewrite links, reopen a `done` upstream spec with a guarded `set-status`, and retire the directory
-- [ ] Operate on the session-targeted spec, the one `/ductus:status` surfaced as carrying a pending fold
-- [ ] Add `fold` to the parser's command list in `runtime/src/parser/mod.rs`
-- [ ] Regenerate the help and installer surfaces (`scripts/gen-help-tables.sh`, `scripts/gen-claude-commands.sh`, `framework/bootstrap/*`)
+- [x] Write `framework/commands/fold.md`: enumerate branch-scoped specs, route each at the extension point, confirm with the operator, then per spec — apply the content, rewrite links, reopen a `done` upstream spec with a guarded `set-status`, and retire the directory
+- [x] Operate on the session-targeted spec, the one `/ductus:status` surfaced as carrying a pending fold
+- [x] Add `fold` to the parser's command list in `runtime/src/parser/mod.rs`
+- [x] Regenerate the help and installer surfaces (`scripts/gen-help-tables.sh`, `scripts/gen-claude-commands.sh`, `framework/bootstrap/*`)
 
 - **Done when**: folding a branch-scoped spec into a `done` upstream spec leaves that spec `in-progress` with the content applied, the directory gone, no dangling links, and every installer-parity audit family passing (AC6, AC7, AC18, AC24, AC25, AC29).
 

@@ -855,6 +855,7 @@ Fetch each command template and copy it into `{config_dir}/commands/{project}/`.
 | --- | --- |
 | `framework/commands/amend.md` | `{config_dir}/commands/{project}/amend.md` |
 | `framework/commands/clarify.md` | `{config_dir}/commands/{project}/clarify.md` |
+| `framework/commands/fold.md` | `{config_dir}/commands/{project}/fold.md` |
 | `framework/commands/groom.md` | `{config_dir}/commands/{project}/groom.md` |
 | `framework/commands/help.md` | `{config_dir}/commands/{project}/help.md` |
 | `framework/commands/implement.md` | `{config_dir}/commands/{project}/implement.md` |

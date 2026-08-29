@@ -63,6 +63,7 @@ Each feature lives in `specs/NNN-feature-name/` and progresses through these sta
 | --- | --- |
 | `/ductus:amend` | Add a question or a scenario to the targeted spec (classifier-driven). |
 | `/ductus:prune` | Prune a feature's tasks.md — drop spent task sections, or reset to template state. |
+| `/ductus:fold` | Fold a branch-scoped spec into its upstream home and retire the staging directory. |
 
 <!-- generated:commands-refine:end -->
 
