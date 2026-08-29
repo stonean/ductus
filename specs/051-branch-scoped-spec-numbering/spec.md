@@ -1,6 +1,6 @@
 ---
-status: clarified
-dependencies: [022-deterministic-runtime]
+status: planned
+dependencies: [022-deterministic-runtime, 040-configurable-specs-dir]
 review:
   last-run: null
   reviewed-against: null
@@ -66,7 +66,7 @@ A spec created in branch-scoped mode that has no upstream home to fold into is r
 
 ### Interaction with existing surfaces
 
-The three-digit convention is not only prose in the constitution's §numbering — it is a predicate in code. `is_feature_slug` (`runtime/src/primitives/mod.rs:1424`) accepts exactly three ASCII digits followed by a hyphen, and every surface that enumerates the corpus reaches the filesystem through it: `list_feature_dirs` (`:1590`) and `is_spec_path` (`:1465`), and through those, the pipeline view, feature resolution, spec creation, and both frontmatter-index generators. A `1234.1-slug` directory does not misbehave under the current predicate; it is invisible to all of them.
+Branch-scoped directories live under the same configured spec root as sequential ones ([040-configurable-specs-dir](../040-configurable-specs-dir/spec.md)); the root's name is orthogonal to the form of the directories inside it. What is not orthogonal is the form itself. The three-digit convention is not only prose in the constitution's §numbering — it is a predicate in code. `is_feature_slug` (`runtime/src/primitives/mod.rs:1424`) accepts exactly three ASCII digits followed by a hyphen, and every surface that enumerates the corpus reaches the filesystem through it: `list_feature_dirs` (`:1590`) and `is_spec_path` (`:1465`), and through those, the pipeline view, feature resolution, spec creation, and both frontmatter-index generators. A `1234.1-slug` directory does not misbehave under the current predicate; it is invisible to all of them.
 
 So the convention changes on both surfaces at once. §numbering defines **two** directory forms: the permanent sequential `NNN-slug`, and the temporary `{branch-id}.{n}-slug` staging form that exists only until fold-back. The shared predicate widens to match, in the one place it is defined, so no consumer grows a second copy of the rule — a duplicated membership predicate is how the shell versions of these generators drifted.
 
