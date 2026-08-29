@@ -23,11 +23,12 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 ## 3. Add branch-scoped creation to `create-feature`
 
 - [ ] Add the `branch-id` and `fold-into` arguments and the `identifier` result field to the schema
+- [ ] Make the fold target an explicit choice: branch-scoped creation supplies a target or an explicit "none", and never defaults silently
 - [ ] Sanitize `branch-id` through `derive_slug`; refuse an identifier that sanitizes to empty through the existing `InvalidArgument` path
 - [ ] Compute `.{n}` as `max + 1` over `BranchScoped` forms matching the sanitized identifier
 - [ ] Test: first and second spec under one identifier; identifiers differing only in case landing in one namespace; `PROJ-1111` and `1111-PROJ` sanitizing as specified; an identifier containing `.`; an existing directory returning `created: false`
 
-- **Done when**: creation with no `branch-id` produces byte-identical behavior to today, and creation with one produces `{identifier}.{n}-{slug}` with the sanitized identifier returned (AC1, AC8, AC9, AC10, AC11, AC12, AC26, AC27).
+- **Done when**: creation with no `branch-id` produces byte-identical behavior to today, creation with one produces `{identifier}.{n}-{slug}` with the sanitized identifier returned, and a branch-scoped spec cannot be created without the operator having chosen a fold target or explicitly declined one (AC1, AC8, AC9, AC10, AC11, AC12, AC26, AC27, AC30).
 
 ## 4. Keep the sequential counter independent
 
@@ -47,11 +48,12 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 ## 6. Add the `folds-into` frontmatter field
 
 - [ ] Write `folds-into:` from `create-feature`'s `fold-into` argument; omit the key when the argument is absent
-- [ ] Add the `validate-frontmatter` shape check: present ⇒ names an existing sequential feature
+- [ ] Add the `validate-frontmatter` shape check: present ⇒ *parses* as a sequential feature name. Do not check that the feature exists — the target normally lives on the upstream branch and is absent here
+- [ ] Test that a `folds-into` naming a feature absent from the corpus produces no finding, and that one naming a branch-scoped feature does
 - [ ] Document the key in `framework/templates/spec/spec.md`
 - [ ] Test that `set-status`, `derive-dependencies`, and `label-criteria` each leave the key byte-identical
 
-- **Done when**: the key round-trips through every existing frontmatter writer untouched, and a `folds-into` naming a missing feature is a reported finding (AC19, AC20, AC28).
+- **Done when**: the key round-trips through every existing frontmatter writer untouched, a malformed `folds-into` is a reported finding, and one naming an absent feature is not (AC19, AC20, AC31, AC32).
 
 ## 7. Add `check-unfolded-specs`
 
@@ -70,15 +72,16 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 
 ## 9. Add `rewrite-spec-links`
 
-- [ ] Implement the primitive: re-point inbound body links from a retiring feature directory at the fold target, reporting `rewritten` and `examined`
+- [ ] Implement the primitive: re-point inbound body links from a retiring or renamed feature directory at the fold target, reporting `rewritten` and `examined`
+- [ ] Include `folds-into` fields naming that directory — the frontmatter pointer moves with the body links, not after them
 - [ ] Leave frontmatter alone — `dependencies:` and `references:` regenerate from body links via the pre-commit hook
-- [ ] Test: sibling `../{feature}/spec.md` links, scenario-targeted links, and a corpus with no inbound links
+- [ ] Test: sibling `../{feature}/spec.md` links, scenario-targeted links, a `folds-into` naming the moved directory, and a corpus with no inbound pointers
 
-- **Done when**: every inbound body link to the retiring directory points at the fold target, and no frontmatter was hand-edited to achieve it (AC22, AC23).
+- **Done when**: every inbound pointer to the retiring directory — body links and `folds-into` fields alike — names the fold target, and `dependencies:`/`references:` were left to the generators rather than hand-edited (AC22, AC23, AC33).
 
 ## 10. Add `retire-feature`
 
-- [ ] Implement the primitive: remove a `BranchScoped` directory, refusing when the fold target does not exist, and refusing a `Sequential` feature outright
+- [ ] Implement the primitive: remove a `BranchScoped` directory, refusing when the fold target does not exist — this is the one place the target's existence is enforced, since nothing before the merge can see it — and refusing a `Sequential` feature outright
 - [ ] Return `retired: false` as the domain outcome for an already-absent directory
 - [ ] Test both refusals and the already-gone case
 

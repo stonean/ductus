@@ -45,11 +45,13 @@ folds-into: 022-deterministic-runtime
 
 | Key | Type | Presence | Written by | Read by |
 | --- | --- | --- | --- | --- |
-| `folds-into` | string — a sequential feature directory name | Optional; absent means "no upstream home" (the renumbering case) | `create-feature` at creation | fold-back, `check-unfolded-specs`, `validate-frontmatter` |
+| `folds-into` | string — a sequential feature directory name, which may not exist in this branch | Optional, but chosen explicitly; absent means "no upstream home" (the renumbering case) | `create-feature` at creation; `rewrite-spec-links` on a rename | fold-back, `check-unfolded-specs`, `validate-frontmatter` |
 
 **Declared, not derived.** Unlike `dependencies:` and `references:`, nothing in the repository can derive this value — it records intent stated nowhere else. It survives every existing frontmatter writer because each splices only its own key rather than re-serializing the block.
 
-**Validation.** `validate-frontmatter` reports a finding when `folds-into` is present and does not name an existing sequential feature. Absence is never a finding: a sequential spec has no fold target, and a branch-scoped spec may legitimately have none.
+**Validation — shape only.** `validate-frontmatter` reports a finding when `folds-into` is present and does not *parse* as a sequential feature name (`NNN-slug`), which forbids chaining one branch-scoped spec into another. It never checks that the named feature exists: the target normally lives on the upstream branch and is absent from the tree declaring it, so an unresolvable target is the expected state before a merge, not a defect. Existence is enforced at fold-back by `retire-feature`.
+
+An absent key is never a finding either: a sequential spec has no fold target, and a branch-scoped spec may legitimately declare none.
 
 ## Primitive argument and result shapes
 
@@ -66,9 +68,9 @@ folds-into: 022-deterministic-runtime
 
 | Field | Direction | Type | Notes |
 | --- | --- | --- | --- |
-| `from` | in | string | The retiring branch-scoped feature directory name. |
+| `from` | in | string | The retiring or renamed feature directory name. |
 | `to` | in | string | The fold target — a feature, optionally with a scenario slug. |
-| `rewritten` | out | list of `{path, count}` | Files whose body links were re-pointed. |
+| `rewritten` | out | list of `{path, count}` | Files whose body links or `folds-into` fields were re-pointed. |
 | `examined` | out | integer | Files scanned, so an empty `rewritten` is not read as "nothing was checked". |
 
 ### `retire-feature` (new)

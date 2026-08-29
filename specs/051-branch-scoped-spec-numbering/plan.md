@@ -43,11 +43,13 @@ The sanitized identifier is returned in the result so the calling command can ec
 
 ### The fold target is a declared frontmatter key
 
-`folds-into: {feature}` on the branch-scoped spec, written at creation, absent when there is no upstream home (the renumbering case, AC7).
+`folds-into: {feature}` on the branch-scoped spec, written at creation. The value is an explicit choice — creation asks for the upstream spec or for an explicit declaration that there is none — so the empty case (the renumbering path, AC7) is reachable only by choosing it, never by omitting an argument (AC30).
 
 This is safe against every existing frontmatter writer because none of them re-serializes the block — each splices its own line and leaves the rest byte-identical: `set-status` edits the `status:` line at a recorded offset (`runtime/src/primitives/set_status.rs`), `derive-dependencies` splices only the `dependencies:` key and any block-form continuation (`runtime/src/primitives/derive_dependencies.rs:207`), and `label-criteria` rewrites or inserts only `next-criterion:` (`runtime/src/primitives/label_criteria.rs:256`). So the key survives every generator untouched (AC19).
 
-It is deliberately *not* an inline body link: `derive-dependencies` harvests sibling links into `dependencies:`, which would assert an edge that misstates the relationship (AC20). `validate-frontmatter` checks only `status` and `dependencies` (`runtime/src/primitives/validate_frontmatter.rs:69`, `:91`) and does not reject unknown keys, so no carve-out is needed — but it gains a shape check: when `folds-into` is present it must name an existing sequential feature, which is what turns a stale fold target into a reported finding rather than a fold-back-time surprise (AC28).
+It is deliberately *not* an inline body link: `derive-dependencies` harvests sibling links into `dependencies:`, which would assert an edge that misstates the relationship (AC20). `validate-frontmatter` checks only `status` and `dependencies` (`runtime/src/primitives/validate_frontmatter.rs:69`, `:91`) and does not reject unknown keys, so no carve-out is needed.
+
+**Validation checks shape, not resolvability.** The target routinely names a spec the declaring branch cannot see — a branch-scoped spec exists *because* upstream diverged, and the spec it folds into normally lives on that upstream branch, sometimes created there after this branch forked. A check requiring a resolvable target would fire on the feature's normal case, and could not see the tree that would satisfy it in any event. So the check is: `folds-into`, when present, parses as a sequential feature name (AC32) — which also forbids chaining a branch-scoped spec into another branch-scoped spec — and an unresolvable target is never a finding before the merge (AC31). Existence is enforced at fold-back by `retire-feature`, which is the first moment the two trees are joined and the only moment the answer matters (AC28).
 
 ### Feature resolution reports ambiguity rather than choosing
 
@@ -59,7 +61,7 @@ It is deliberately *not* an inline body link: `derive-dependencies` harvests sib
 
 Three new primitives carry the deterministic half; the rest is existing ones (`create-scenario`, `append-task`, `set-status`, `read-spec`):
 
-- `rewrite-spec-links` — re-point inbound body links from the retiring directory at the fold target across the corpus. The derived frontmatter needs no separate handling: `derive-dependencies` and `derive-references` regenerate `dependencies:` and `references:` from body links on the next commit through the pre-commit hook (`.githooks/pre-commit:68`), so fixing the body links fixes the indexes (AC23).
+- `rewrite-spec-links` — re-point every inbound pointer to a retiring or renamed feature directory: body links across the corpus **and** any `folds-into` field naming it (AC33). The frontmatter key is included deliberately — it is the one pointer whose job is to survive until the merge, so a rename that repaired body links and left it behind would break exactly the thing the field exists for. The derived frontmatter needs no separate handling: `derive-dependencies` and `derive-references` regenerate `dependencies:` and `references:` from body links on the next commit through the pre-commit hook (`.githooks/pre-commit:68`), so fixing the body links fixes the indexes (AC23).
 - `retire-feature` — remove the branch-scoped directory, refusing when the fold target does not exist so a retirement can never strand content (AC28).
 - `check-unfolded-specs` — report branch-scoped directories present in the working tree, with their `folds-into` targets, for `/ductus:analyze` to surface (AC21).
 
@@ -87,8 +89,8 @@ Adding a directory form and a command touches the framework's own registries, an
 | `runtime/src/primitives/mod.rs` | Modify | `parse_feature_dir` + `FeatureForm`; redefine `is_feature_slug`, retire `feature_number` in favour of the parsed form |
 | `runtime/src/primitives/create_feature.rs` | Modify | `branch-id` / `fold-into` arguments, branch-scoped counter, sanitized-identifier result field |
 | `runtime/src/primitives/resolve_feature.rs` | Modify | Per-form matching; ambiguity across forms |
-| `runtime/src/primitives/validate_frontmatter.rs` | Modify | `folds-into` shape check |
-| `runtime/src/primitives/rewrite_spec_links.rs` | Create | Re-point inbound body links at the fold target |
+| `runtime/src/primitives/validate_frontmatter.rs` | Modify | `folds-into` shape check — parse only, never resolvability |
+| `runtime/src/primitives/rewrite_spec_links.rs` | Create | Re-point inbound body links and `folds-into` fields at the fold target |
 | `runtime/src/primitives/retire_feature.rs` | Create | Remove a folded branch-scoped directory, guarded on the target existing |
 | `runtime/src/primitives/check_unfolded_specs.rs` | Create | Report surviving branch-scoped directories |
 | `runtime/src/schema/primitives.rs` | Modify | Argument and result shapes for the above |
@@ -118,6 +120,7 @@ Adding a directory form and a command touches the framework's own registries, an
 ### Known limitations
 
 - **A retired `.{n}` number is reusable.** In-repo links are re-pointed before retirement, so the exposure is references outside the repository — a pull-request comment, a commit message, a ticket. Accepted; no in-repo counter can govern those.
+- **A fold target is unverifiable until the merge.** Nothing before fold-back can tell a correct target from a typo, because the tree that would settle it is on another branch. A mistyped target survives the whole branch and surfaces as a fold-back refusal.
 - **Fold-back is not automatic at merge.** Nothing runs on the merge itself; the detection check reports surviving branch-scoped directories after the fact. This is deliberate — fold-back is a reviewed step — but it means an un-folded spec is visible only once someone runs the check.
 - **Phase 1 ships a form the framework can hold but not yet discharge.** Between phases 1 and 3, fold-back is a manual procedure. Sequencing the phases the other way is not possible, since fold-back's writes depend on the grammar and the field.
 - **`specs/system.md` does not exist in this repository**, so the cross-validation against shared architecture conventions that the plan phase normally performs had nothing to read here. The framework's own equivalent — the constitution and the audit families — was used instead.
