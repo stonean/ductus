@@ -188,3 +188,22 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 - [x] Test the invalidation, the preserved waivers, and the already-invalid re-run
 
 - **Done when**: an upstream spec that has received a fold cannot reach `done` until `/ductus:review` has run against it again, on either route (AC24).
+
+## 22. Preserve line endings through a file rewrite
+
+- [ ] Implement the behavior described in `scenarios/rewrites-preserve-line-endings.md`
+- [ ] Extract the line-ending-preserving rewrite into one shared helper, so the three primitives that need it stop each carrying their own detection
+- [ ] Route `rewrite-spec-links` through it — it is the writer that currently converts a CRLF file to LF whenever it re-points a single link
+- [ ] Test a CRLF fixture end to end: one link changes, every other byte survives, and the endings are unchanged
+
+- **Done when**: no primitive that rewrites an existing text file changes its line endings as a side effect, and the detection lives in one place rather than three.
+
+## 23. Establish the fold target before the corpus-wide rewrite
+
+- [ ] Implement the behavior described in `scenarios/fold-target-checked-before-the-rewrite.md`
+- [ ] Check the fold target's existence in `framework/commands/fold.md` before step 11's `rewrite-spec-links`, on the same terms `retire-feature` enforces — a directory holding a `spec.md`, not merely a directory
+- [ ] Leave `retire-feature`'s own check in place: it guards the one irreversible step and the primitive is callable on its own, so a caller's promise is not a substitute
+- [ ] Correct step 12's prose, which currently names its refusal as the answer to an unresolved `folds-into` — by then the question is already settled
+- [ ] Renumber and re-verify the command's step assertions, and re-bless any golden whose dispatch sequence changed
+
+- **Done when**: a fold whose target does not resolve refuses with the corpus untouched, and no inbound link is ever re-pointed at a spec whose existence has not been established (AC29).
