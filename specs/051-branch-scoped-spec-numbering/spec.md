@@ -1,0 +1,139 @@
+---
+status: clarified
+dependencies: [022-deterministic-runtime]
+review:
+  last-run: null
+  reviewed-against: null
+  must-violations: 0
+  should-violations: 0
+  low-confidence: 0
+  blocking: false
+next-criterion: 30
+---
+
+# 051 — Branch-scoped spec numbering
+
+A second numbering form for feature directories, scoped to the branch that creates them: a spec created on a story branch is numbered from a branch identifier (`1234.1-slug`, `1234.2-slug`, …) instead of the sequential three-digit scheme, and the specs so numbered are folded back into their upstream home when the branch merges.
+
+## Motivation
+
+Feature directories were numbered by a single global sequence: `create-feature` scanned the `NNN-` prefixes under the spec root and took the maximum plus one ([022-deterministic-runtime](../022-deterministic-runtime/spec.md)), and the convention was stated as three-digit zero-padded numbers establishing creation order (constitution §numbering). That sequence was shared by every branch, and nothing coordinated it across them.
+
+Two costs followed from that when work ran on more than one branch at a time:
+
+- **Number collisions.** Two branches that each ran `/ductus:specify` both claimed the same next number. The collision did not surface until merge, when two unrelated `051-` directories met.
+- **Edit conflicts on a shared spec.** Adding a scenario or a body edit to an existing spec on a feature branch conflicted with upstream edits to the same spec. The conflict was textual, in a file whose value is that it reads as one coherent statement, so resolving it meant re-reading the merged spec rather than accepting either side.
+
+The workaround contributors reached for was to write a *new* spec rather than edit the existing one, and to number it out of the shared sequence so it could not collide. That workaround was undocumented and unsupported: the number it needed was not one `create-feature` would issue, and nothing told the contributor what to do with the extra directory once the branch landed.
+
+## Behavior
+
+### Branch-scoped numbers
+
+When a spec is created in branch-scoped mode, its directory number is `{branch-id}.{n}` rather than `{NNN}`: under identifier `1234`, the first spec on the branch is `1234.1-{slug}`, the next `1234.2-{slug}`, and so on. The `.{n}` component autoincrements within the branch identifier, independently of the global sequence and of any other branch's identifier.
+
+The branch identifier is **supplied by the operator**, and is an opaque token rather than necessarily a number. Teams name branches for their tracker and the trackers disagree — a Jira branch carries `PROJ-1111`, a GitLab work-item branch `1111-PROJ` — so the framework parses no branch-name grammar and treats whatever the operator supplies as the namespace. Spec creation MAY propose a candidate extracted from the current branch name and ask the operator to confirm or correct it; the proposal is a convenience, never authoritative. A branch name yielding no recognizable candidate still prompts, with no candidate offered, and the operator's confirmed value is what is used.
+
+Whatever the operator supplies is sanitized to the directory grammar rather than rejected: the identifier passes through the same rule spec creation already applies to a title — every ASCII alphanumeric lowercased, every run of anything else collapsed to a single hyphen (`runtime/src/primitives/create_feature.rs:96`), yielding the `^[a-z0-9]+(?:-[a-z0-9]+)*$` form `validate_slug` enforces (`runtime/src/primitives/mod.rs:882`). `PROJ-1111` becomes `proj-1111`; `1111-PROJ` becomes `1111-proj`. Refusing non-conforming input was considered and dropped: every Jira-style identifier is uppercase, so the common case would error on first use. The transformation is never silent — the confirmation prompt shows the sanitized identifier, so the operator sees the namespace they will actually get. Two consequences fall out: an identifier carrying a `.` has it collapsed to a hyphen, leaving the `{branch-id}.{n}` delimiter unambiguous by construction; and identifiers differing only in case name one namespace, which is what a case-insensitive filesystem would enforce regardless.
+
+The counter is `max + 1` over the branch-scoped directories currently present under that identifier — the same rule `create-feature` already applies to the sequential form (`runtime/src/primitives/create_feature.rs:117`), so one rule covers both. A retired number is therefore reusable. That is accepted rather than engineered against: fold-back re-points every in-repo link before a directory is retired, so a reissued number can collide only with a reference outside the repository — a pull-request comment, a commit message, a ticket — which no in-repo counter can govern. A monotonic counter read from git history was rejected for requiring a full-history revwalk the codebase already flags as CPU-bound and unbounded (`runtime/src/mcp/server.rs:226`); a persisted high-water mark was rejected for being committed state every branch writes, conflicting on exactly the merges this feature exists to keep clean.
+
+Two branches with different identifiers cannot collide by construction, and a branch-scoped number never consumes a number from the global sequence — so an upstream branch that has already created `051-` and `052-` does not constrain, and is not constrained by, a branch working under `1234.n`.
+
+### Mode selection
+
+There is no branch-scoped *mode* to turn on: **supplying an identifier is the opt-in**, per spec creation. Spec creation with no identifier numbers sequentially, exactly as it does today, so a project that never supplies one observes no change. Spec creation with an identifier — passed directly, or requested by the flag that prompts for one — produces a branch-scoped spec under that identifier.
+
+Nothing about the choice persists. A committed setting was rejected: `.ductus/config.toml` is shared, so a mode recorded there applies on every branch including the upstream one, and it merges upstream with the branch that set it — leaving `main` in branch-scoped mode until someone notices. The framework has no committed-yet-branch-local state to hold such a setting, and the one per-branch surface it does have (`session.toml`) is gitignored and per-contributor.
+
+### Fold-back on merge
+
+Branch-scoped specs are a staging form, not a permanent home. When the branch merges upstream, each `{branch-id}.{n}` spec is folded into the spec it was standing in for: its content is merged into that spec's body, or — where the content is a durable elaboration of one section — into a scenario under it, and the `{branch-id}.{n}` directory is retired.
+
+The upstream spec a branch-scoped spec stands in for is named when the branch-scoped spec is created, and recorded in that spec's frontmatter as a **declared** field — not a derived index. It cannot be a plain inline body link: `derive-dependencies` harvests sibling links into `dependencies:`, and a branch-scoped spec does not *depend on* its upstream spec, it is a fragment of it. Recording it by hand does not cut against spec 017's derive-don't-ask principle either, because there is nothing in the repository to derive it from — it records an intent stated nowhere else. A branch-scoped spec with no upstream home leaves the field empty, which is the renumbering case below.
+
+Fold-back is a **command**, not a documented procedure performed by hand. It follows the shape `/ductus:groom` already uses: a semantic extension point decides, per branch-scoped spec, whether the content becomes a body edit or a scenario, and deterministic primitives perform the writes, the status changes, and the directory's retirement. Leaving the step to convention would make the retirement of the directory and the rewriting of inbound links depend on human diligence, which §design-principles rejects and which the anti-proliferation stance cannot tolerate — an un-folded branch spec is precisely a permanent second home for a concern.
+
+The fold-back is a **reviewed** step, not an automatic one. Deferring it to merge time is the point: the reviewer sees the branch's content against the upstream spec *as it now stands*, including whatever the upstream branch changed while the feature branch was open, rather than against the version the branch forked from.
+
+Folding into a `done` upstream spec **reopens it** `done → in-progress`, over the back-edges §spec-lifecycle already defines rather than a new one: the scenario half of a fold-back is the "Backward via new scenario" edge verbatim, and the body-edit half is a meaningful edit — it adds scope, so it matches none of the three mechanical exemptions. Tasks covering work already implemented on the branch are marked complete rather than re-implemented; what the reopen actually compels is the review gate, since `in-progress → done` requires `/ductus:review` to have run. That is the point rather than a cost: the merged code is reviewed against the upstream spec as it now stands.
+
+Retiring the directory includes re-pointing what pointed at it. Fold-back rewrites inbound body links from the retiring `{branch-id}.{n}` directory to the fold target — the upstream spec, or the scenario the content landed in — in the same action, and the derived indexes follow on the next commit, since `derive-dependencies` and `derive-references` regenerate `dependencies:` and `references:` from body links through the pre-commit hook. `check-orphaned-references` then verifies the post-condition rather than serving as the repair mechanism. Its report-don't-repair stance is not violated: that primitive declines to rewrite because "each migration knows only its own hop" and a wrong guess is worse than a precise report (`runtime/src/primitives/check_orphaned_references.rs:8`, `:16`) — fold-back knows both endpoints exactly, because it *is* the hop.
+
+A detection check flags branch-scoped specs that outlive the branch that created them, so an un-folded spec surfaces on its own rather than silently becoming permanent.
+
+A spec created in branch-scoped mode that has no upstream home to fold into is renumbered into the global sequence instead.
+
+### Interaction with existing surfaces
+
+The three-digit convention is not only prose in the constitution's §numbering — it is a predicate in code. `is_feature_slug` (`runtime/src/primitives/mod.rs:1424`) accepts exactly three ASCII digits followed by a hyphen, and every surface that enumerates the corpus reaches the filesystem through it: `list_feature_dirs` (`:1590`) and `is_spec_path` (`:1465`), and through those, the pipeline view, feature resolution, spec creation, and both frontmatter-index generators. A `1234.1-slug` directory does not misbehave under the current predicate; it is invisible to all of them.
+
+So the convention changes on both surfaces at once. §numbering defines **two** directory forms: the permanent sequential `NNN-slug`, and the temporary `{branch-id}.{n}-slug` staging form that exists only until fold-back. The shared predicate widens to match, in the one place it is defined, so no consumer grows a second copy of the rule — a duplicated membership predicate is how the shell versions of these generators drifted.
+
+§spec-lifecycle's anti-proliferation stance ("scenarios evolve the existing spec rather than spawning a new one") is reconciled rather than weakened: a branch-scoped spec is not a rival home for a concern, it is a staging area for an edit that could not be applied in place, and fold-back is what discharges it. A branch-scoped spec that is never folded back is a defect in the workflow, not a permanent second home.
+
+Ordering is defined for the mixed corpus: sequential specs order by number as they do today, and branch-scoped specs group under their identifier rather than interleaving into the sequential range on a numeric reading of their leading digits. `feature_number` (`runtime/src/primitives/mod.rs:1438`) parses the first three bytes, so an unwidened reading of `1234.1-slug` yields `123` — a silent collision with `123-…` in feature resolution, and the reason the parse must be made form-aware rather than left to fall through.
+
+### Edge cases and failure modes
+
+The framework's existing failure vocabulary covers these: an argument that cannot yield a valid name is an `InvalidArgument` / `InvalidSlug` refusal, and a target that already exists is a **domain outcome** (`created: false`) reported to the operator rather than an error, exactly as `create-feature` treats an existing directory today.
+
+- **Identifier sanitizes to empty** (`"!!!"`, whitespace) — refused before anything is created, the way an empty derived slug is refused today (`runtime/src/primitives/create_feature.rs:41`). No directory is left behind.
+- **Identifier equal to an existing sequential number** — identifier `051` alongside a sequential `051-slug` produces `051.1-slug`, which is a distinct directory and not a collision. Resolving the bare identifier `051` then matches both forms; that is reported as an ambiguous match, the outcome feature resolution already produces for multiple matches, never silently resolved to one.
+- **Target directory already exists** — reported as the `created: false` domain outcome with no overwrite, the same guarantee the sequential path gives. This is also what makes two contributors creating a spec under the same identifier at the same time safe: both compute the same `max + 1`, and the second is refused rather than overwriting the first.
+- **Spec root holding only branch-scoped directories** — the sequential counter is unaffected and the next sequential spec is `001-slug`, because branch-scoped directories contribute no sequential prefix.
+- **Fold target names a spec that no longer exists** — fold-back refuses and reports, leaving the branch-scoped spec in place. A retired directory whose content was never folded anywhere is the one outcome this feature must not produce silently.
+- **Fold target is empty** — the renumbering path: the spec is renumbered into the global sequence rather than folded, and the detection check stops flagging it.
+- **Fold target is not `done`** — no back-edge applies; the upstream spec's status is untouched. Only a `done` upstream spec is reopened, matching the back-edge rules, which move a spec backward only from `done`.
+- **Two branch-scoped specs folding into the same upstream spec** — each is folded and retired independently; the upstream spec is reopened at most once, and the second fold finds it already `in-progress`.
+- **A branch-scoped spec carrying its own scenarios** — the scenarios move with the content into the upstream spec's `scenarios/` directory. A scenario slug already taken under the upstream spec is reported rather than overwritten.
+- **Fold-back interrupted partway** — each fold-back is atomic per branch-scoped spec, so an interruption leaves each spec either fully folded and retired, or untouched and still flagged. There is no half-folded state.
+- **Branch merged with no fold-back performed** — the detection check flags every surviving branch-scoped directory; nothing is rewritten automatically at merge time, since fold-back is a reviewed step.
+
+## Acceptance Criteria
+
+- [ ] AC1: A spec created in branch-scoped mode under branch identifier `1234` is named `1234.1-{slug}`; the next one created under the same identifier is `1234.2-{slug}`
+- [ ] AC8: The `.{n}` counter is `max + 1` over the branch-scoped directories present under that identifier, and is unaffected by directories under any other identifier
+- [ ] AC9: The identifier is accepted as an opaque operator-supplied token, not required to be numeric: `PROJ-1111` yields `proj-1111.1-{slug}` and `1111-PROJ` yields `1111-proj.1-{slug}`
+- [ ] AC10: A non-conforming identifier is sanitized to `^[a-z0-9]+(?:-[a-z0-9]+)*$` rather than rejected, and the sanitized value is shown at the confirmation prompt before any directory is created
+- [ ] AC11: An identifier containing `.` has it collapsed to a hyphen, so the `{branch-id}.{n}` delimiter is never ambiguous
+- [ ] AC12: Identifiers differing only in case resolve to one namespace
+- [ ] AC13: When branch-scoped creation is requested without an identifier, spec creation prompts for one — offering a candidate extracted from the current git branch name when one can be extracted, and prompting with no candidate when it cannot; the operator's confirmed or corrected value is the one used
+- [ ] AC2: Creating a branch-scoped spec does not change the number the next sequential (`NNN`) spec receives — a spec root containing `050-…` and `1234.1-…` still yields `051-…`
+- [ ] AC3: Two branches creating specs under different branch identifiers produce no colliding directory names, and both sets survive a merge of one branch into the other
+- [ ] AC4: Sequential `NNN` numbering remains the default: spec creation with no identifier supplied behaves exactly as it does today, and no persisted setting can change that
+- [ ] AC14: No branch-scoped state is persisted to any committed file — merging a branch that created branch-scoped specs leaves the upstream branch's spec-creation behavior unchanged
+- [ ] AC5: Branch-scoped directories are enumerated by every surface that reads the spec corpus (pipeline view, feature resolution, dependency traversal, reference resolution, audit) — none of them treats a branch-scoped directory as a non-spec
+- [ ] AC15: The membership predicate accepting both directory forms is defined in exactly one place; no consumer carries its own copy
+- [ ] AC16: Resolving the identifier `123` matches the sequential spec `123-…` and never a branch-scoped `1234.1-…`, and resolving `1234` matches the branch-scoped set and never a sequential spec
+- [ ] AC17: The constitution's §numbering defines both directory forms, and §spec-lifecycle states that a branch-scoped spec is a staging form discharged by fold-back
+- [ ] AC6: A fold-back command folds a branch-scoped spec's content into a named upstream spec, after which the branch-scoped directory no longer exists and no reference to it dangles
+- [ ] AC18: Fold-back routes each branch-scoped spec to either a body edit or a scenario on the upstream spec, and the operator confirms the routing before any write
+- [ ] AC19: A branch-scoped spec records its upstream fold target in frontmatter, and that field is never rewritten by the dependency or reference generators
+- [ ] AC20: Naming an upstream spec in the fold-target field does not add that spec to `dependencies:`
+- [ ] AC21: A branch-scoped spec still present after its branch has merged is flagged by a detection check
+- [ ] AC22: Inbound body links to a retired branch-scoped directory are re-pointed at the fold target by the fold-back itself, and `check-orphaned-references` reports clean afterwards
+- [ ] AC23: `dependencies:` and `references:` frontmatter across the corpus is correct after the first commit following a fold-back, with no hand-editing of either
+- [ ] AC24: Folding into a `done` upstream spec sets that spec to `in-progress`, and the spec cannot return to `done` until `/ductus:review` has run against the merged code
+- [ ] AC25: Fold-back adds no new back-edge to §spec-lifecycle — the transition it performs is one of the two already defined there
+- [ ] AC7: A branch-scoped spec with no upstream home can be renumbered into the global sequence
+- [ ] AC26: An identifier that sanitizes to an empty string is refused before any directory is created
+- [ ] AC27: A branch-scoped directory that already exists is reported as a domain outcome and never overwritten, including when two contributors create under the same identifier concurrently
+- [ ] AC28: Fold-back naming a target spec that does not exist refuses and leaves the branch-scoped spec in place
+- [ ] AC29: Fold-back is atomic per branch-scoped spec: an interruption leaves each spec either fully folded and retired, or untouched
+
+## Open Questions
+
+*None — all resolved.*
+
+## Resolved Questions
+
+- **How is the branch identifier supplied?** The operator supplies it, and it is authoritative. Branch-naming conventions vary too widely for the framework to parse — a Jira branch carries `PROJ-1111` while a GitLab work-item branch carries `1111-PROJ` — so the identifier is an opaque token, not a number, and no branch-name grammar is defined. Spec creation may *propose* a candidate extracted from the current branch name and ask the operator to confirm or correct it; the proposal is a convenience only. The runtime already links libgit2 and discovers the repository (`runtime/src/interpreter/payload.rs:967`, and `runtime/src/primitives/compute_review_scope.rs:25`), so reading the branch name adds no dependency. `.ductus/session.toml` was rejected as the home for the identifier: it is gitignored and per-contributor (`runtime/src/schema/primitives.rs:1899`), so a value stored there is invisible to teammates on the same branch and goes stale on checkout.
+- **Is branch-scoped mode opted into per invocation, or configured once?** Per invocation, and there is no separate mode: supplying an identifier *is* the opt-in. This keeps the default path byte-identical to today's behavior and persists nothing. A setting in `.ductus/config.toml` was rejected because that file is committed and shared — the setting would apply on every branch, and would merge upstream with the branch that set it. A sticky per-branch mode was rejected for needing a committed-yet-branch-local state file the framework does not have.
+- **Does §numbering change, or is branch-scoped numbering an exception to it?** §numbering is amended to define both forms — the permanent `NNN-slug` and the temporary `{branch-id}.{n}-slug` staging form — and §spec-lifecycle gains the reconciliation with its anti-proliferation stance: a branch-scoped spec is staging for an edit that could not be applied in place, not a rival home, and fold-back discharges it. The alternative (leave §numbering alone, document an exception in this spec) was rejected because the convention is enforced in code as well as stated in prose: `is_feature_slug` (`runtime/src/primitives/mod.rs:1424`) has to widen for branch-scoped directories to be visible at all, and a constitution that still said "three digits" would describe a rule the code no longer enforces. Moving branch-scoped specs outside the spec root was rejected for breaking sibling `../NNN-slug/` dependency links and hiding the specs from `/ductus:status` until fold-back.
+- **Is fold-back a command, or a documented manual procedure?** A command, paired with a detection check that flags branch-scoped specs outliving their branch. The semantic call (body edit vs scenario) is not an obstacle: `/ductus:groom` already makes a routing decision at an extension point and then performs deterministic writes through primitives, and fold-back is the same shape. A manual procedure was rejected because it leaves the directory's retirement and the rewriting of inbound links dependent on human diligence, which §design-principles rejects (`framework/constitution.md:151`) — and an un-folded branch spec is exactly the permanent second home the anti-proliferation stance exists to prevent.
+- **Does folding into a `done` upstream spec reopen it?** Yes, `done → in-progress`, over the back-edges §spec-lifecycle already defines — no new edge is invented. The scenario half of a fold-back is the "Backward via new scenario" edge (`framework/constitution.md:154`); the body-edit half is a meaningful edit under "Backward via meaningful body edit" (`:155`), since folded content adds scope and matches none of the three mechanical exemptions. Work already implemented on the branch is not re-implemented — its tasks are marked complete — but the reopen compels the review gate (`:151`), so the merged code is reviewed against the upstream spec as it now stands. Preserving `done` with only a refreshed review block was rejected for carving a fourth mechanical exemption for an edit that plainly adds scope.
+- **What holds the link to the upstream spec?** A declared frontmatter field on the branch-scoped spec, named at creation. A plain inline body link was rejected because `derive-dependencies` would harvest it into `dependencies:`, asserting an edge that misstates the relationship — a branch-scoped spec is a fragment of its upstream spec, not a dependent of it. Hand-authoring the field does not violate spec 017's derive-don't-ask principle, which governs *derived* indexes: nothing in the repository can derive a fold target, because it records intent stated nowhere else. `validate-frontmatter` checks only `status` and `dependencies` (`runtime/src/primitives/validate_frontmatter.rs:69`, `:91`) and does not reject unknown keys, so the field needs no validation carve-out. Deferring the question to fold-back time was rejected because the person merging is often not the person who wrote the branch, and a detection check with no target can report only that a spec is un-folded, never into what.
+- **Do cross-spec links resolve after fold-back, and what rewrites them?** Fold-back rewrites the inbound body links itself, re-pointing them from the retiring directory at the fold target, and the derived frontmatter follows automatically — `derive-dependencies` and `derive-references` regenerate `dependencies:` and `references:` from body links on every commit (`.githooks/pre-commit:68`). `check-orphaned-references` verifies the result rather than being the repair path. Its deliberate report-don't-repair stance does not argue against this: that primitive declines to rewrite because each migration knows only its own hop and a wrong guess beats a precise report (`runtime/src/primitives/check_orphaned_references.rs:8`, `:16`), whereas fold-back knows both endpoints exactly. Leaving a redirect stub was rejected because the directory would not actually be retired, and the spec root would accumulate stubs every surface then has to hide.
+- **Does the `.{n}` counter recover when a branch-scoped directory is deleted?** The counter is `max + 1` over the branch-scoped directories currently present under that identifier — one rule shared with the sequential form (`runtime/src/primitives/create_feature.rs:117`) — so a retired number is reusable. This is an accepted limitation, not an oversight: fold-back re-points every in-repo link before retiring a directory, leaving only out-of-repo references (a PR comment, a commit message, a ticket) exposed to a reissue, and no in-repo counter can govern those. A monotonic counter derived from git history was rejected for requiring a full-history revwalk the codebase flags as CPU-bound and unbounded (`runtime/src/mcp/server.rs:226`); a committed high-water-mark file was rejected because every branch would write it, conflicting on exactly the merges this feature exists to keep clean.
+- **What grammar constrains the operator-supplied identifier?** It is sanitized, not rejected, by the rule spec creation already applies to titles: ASCII alphanumerics lowercased, every other run collapsed to a single hyphen (`runtime/src/primitives/create_feature.rs:96`), producing the `^[a-z0-9]+(?:-[a-z0-9]+)*$` form `validate_slug` enforces (`runtime/src/primitives/mod.rs:882`). Rejection was rejected because every Jira-style identifier is uppercase, so the common input would fail on first use. The sanitized value is echoed at the confirmation prompt, so the transformation is never silent. A `.` in the identifier collapses to a hyphen, which keeps the `{branch-id}.{n}` delimiter unambiguous by construction, and identifiers differing only in case name a single namespace — which a case-insensitive filesystem would impose anyway.
