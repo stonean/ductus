@@ -11,9 +11,19 @@
 //! Matching order:
 //!
 //! 1. **Exact directory name** — `022-deterministic-runtime`.
-//! 2. **Feature number** — an all-digit identifier (`7` or `007`) matches
-//!    every feature whose three-digit `NNN-` prefix parses to the same
-//!    number, so both forms resolve identically.
+//! 2. **Feature number or branch identifier** — matched per directory
+//!    form, and both forms are searched. An all-digit identifier (`7` or
+//!    `007`) matches every *sequential* feature whose prefix parses to
+//!    the same number, so both spellings resolve identically; any
+//!    identifier matches a *branch-scoped* feature whose identifier is
+//!    the same string, compared case-insensitively and never numerically,
+//!    because an identifier is an opaque token where `01234` and `1234`
+//!    name different namespaces.
+//!
+//!    A string can legitimately name both forms — `051` against a
+//!    sequential `051-slug` and a branch namespace `051.n-slug` — and
+//!    both matches are returned, so that collision surfaces as
+//!    `ambiguous` rather than being silently resolved to one form.
 //! 3. **Partial slug substring** — case-insensitive substring over the
 //!    directory names. Unique match resolves; multiple matches yield the
 //!    `ambiguous` outcome with the sorted candidate list; zero yield
@@ -25,7 +35,7 @@
 use std::path::Path;
 
 use crate::primitives::{
-    PrimitiveError, Result, frontmatter_status, list_feature_dirs, parse_feature_dir,
+    FeatureForm, PrimitiveError, Result, frontmatter_status, list_feature_dirs, parse_feature_dir,
     read_scenario_section, read_text, validate_slug,
 };
 use crate::schema::paths;
@@ -81,6 +91,7 @@ pub fn run(args: &ResolveFeatureArgs, repo: &Path) -> Result<ResolveFeatureResul
 }
 
 /// Match classification for one identifier against the feature list.
+#[derive(Debug, PartialEq, Eq)]
 enum Match {
     /// Exactly one feature matched.
     One(String),
@@ -96,22 +107,48 @@ fn match_identifier(features: &[String], identifier: &str) -> Match {
     if let Some(exact) = features.iter().find(|f| f.as_str() == identifier) {
         return Match::One(exact.clone());
     }
-    // 2. Feature number: all-digit identifier compared against the parsed
-    //    three-digit prefix, so `7` and `007` both match `007-foo`. Only
-    //    the sequential form carries such a number, so a branch-scoped
-    //    `1234.1-foo` can never be matched here by its leading digits.
-    if identifier.bytes().all(|b| b.is_ascii_digit()) {
-        let Ok(number) = identifier.parse::<u32>() else {
-            return Match::None; // longer than u32 — nothing can match
-        };
-        let matches: Vec<String> = features
+    // 2. Feature number or branch identifier, matched per form.
+    //
+    //    A sequential feature matches an all-digit identifier by number,
+    //    so `7` and `007` both find `007-foo`. A branch-scoped feature
+    //    matches by identifier *string*, never by number: the identifier
+    //    is an opaque token, so `01234` and `1234` are different
+    //    namespaces even though they parse to the same integer. Only the
+    //    sequential form carries a number at all, so a branch-scoped
+    //    `1234.1-foo` can never be found by its leading digits.
+    //
+    //    Both forms are searched together, so a string naming each of
+    //    them — `051` against `051-foo` and `051.1-bar` — returns two
+    //    matches and surfaces as `ambiguous`. Preferring a form here
+    //    would be a wrong answer the operator cannot see.
+    let lowered = identifier.to_lowercase();
+    let by_identifier = |features: &[String], number: Option<u32>| -> Vec<String> {
+        features
             .iter()
-            .filter(|f| {
-                parse_feature_dir(f).and_then(|form| form.sequential_number()) == Some(number)
+            .filter(|f| match parse_feature_dir(f) {
+                Some(FeatureForm::Sequential { number: n }) => Some(n) == number,
+                Some(FeatureForm::BranchScoped { identifier: id, .. }) => id == lowered,
+                None => false,
             })
             .cloned()
-            .collect();
-        return classify(matches);
+            .collect()
+    };
+
+    if identifier.bytes().all(|b| b.is_ascii_digit()) {
+        // An identifier longer than u32 can still name a branch
+        // namespace, so it is `None` rather than an early return.
+        let number = identifier.parse::<u32>().ok();
+        // Returned even when empty: an all-digit identifier that matches
+        // nothing is `not-found`, not an invitation to substring-search
+        // digits against every slug in the corpus.
+        return classify(by_identifier(features, number));
+    }
+    // A non-numeric branch identifier (`proj-1111`) is an exact match on
+    // the namespace, checked before the substring pass so it resolves as
+    // an identifier rather than as an accidental prefix of one directory.
+    let branch_matches = by_identifier(features, None);
+    if !branch_matches.is_empty() {
+        return classify(branch_matches);
     }
     // 3. Case-insensitive partial slug substring.
     let needle = identifier.to_lowercase();
@@ -287,6 +324,86 @@ mod tests {
         );
         assert!(result.feature.is_none());
         assert!(result.status.is_none());
+    }
+
+    #[test]
+    fn a_number_never_matches_a_branch_scoped_directory() {
+        // The misparse this guards: `1234.1-staged` once read as feature
+        // 123 through its leading digits.
+        let features = vec!["123-real".to_string(), "1234.1-staged".to_string()];
+        assert_eq!(
+            match_identifier(&features, "123"),
+            Match::One("123-real".to_string())
+        );
+    }
+
+    #[test]
+    fn a_branch_identifier_matches_its_whole_namespace() {
+        let features = vec![
+            "007-unrelated".to_string(),
+            "1234.1-first".to_string(),
+            "1234.2-second".to_string(),
+        ];
+        // Every spec staged under the identifier, and nothing else. Two
+        // matches is the ambiguous outcome, which is the honest answer:
+        // the identifier names a namespace, not one spec.
+        assert_eq!(
+            match_identifier(&features, "1234"),
+            Match::Many(vec![
+                "1234.1-first".to_string(),
+                "1234.2-second".to_string()
+            ])
+        );
+    }
+
+    #[test]
+    fn a_string_naming_both_forms_is_ambiguous() {
+        let features = vec!["051-sequential".to_string(), "051.1-staged".to_string()];
+        assert_eq!(
+            match_identifier(&features, "051"),
+            Match::Many(vec![
+                "051-sequential".to_string(),
+                "051.1-staged".to_string()
+            ])
+        );
+    }
+
+    #[test]
+    fn a_branch_identifier_is_matched_as_a_string_not_a_number() {
+        let features = vec!["01234.1-padded".to_string(), "1234.1-plain".to_string()];
+        // Same integer, different namespaces: the identifier is an opaque
+        // token, so zero-padding names something else.
+        assert_eq!(
+            match_identifier(&features, "1234"),
+            Match::One("1234.1-plain".to_string())
+        );
+        assert_eq!(
+            match_identifier(&features, "01234"),
+            Match::One("01234.1-padded".to_string())
+        );
+    }
+
+    #[test]
+    fn a_non_numeric_branch_identifier_resolves_as_an_identifier() {
+        let features = vec![
+            "proj-1111.1-work".to_string(),
+            "022-proj-1111-notes".to_string(),
+        ];
+        // Both directories contain the string, but only one *is* the
+        // namespace, so the identifier pass wins before the substring
+        // pass can call it ambiguous.
+        assert_eq!(
+            match_identifier(&features, "PROJ-1111"),
+            Match::One("proj-1111.1-work".to_string())
+        );
+    }
+
+    #[test]
+    fn an_all_digit_identifier_matching_nothing_stays_not_found() {
+        // It must not fall through to the substring pass and match digits
+        // buried inside an unrelated slug.
+        let features = vec!["042-error-999-handling".to_string()];
+        assert_eq!(match_identifier(&features, "999"), Match::None);
     }
 
     #[test]

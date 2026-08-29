@@ -39,9 +39,9 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 
 ## 5. Teach feature resolution both forms
 
-- [ ] Match sequential identifiers against `Sequential` numbers and branch identifiers against `BranchScoped` identifiers, exactly per form
-- [ ] Return every match so a string naming both forms produces the existing `Ambiguous` outcome
-- [ ] Test: `123` against `123-a` and `1234.1-b`; `1234` against the branch set; `051` against both `051-a` and `051.1-b`
+- [x] Match sequential identifiers against `Sequential` numbers and branch identifiers against `BranchScoped` identifiers, exactly per form
+- [x] Return every match so a string naming both forms produces the existing `Ambiguous` outcome
+- [x] Test: `123` against `123-a` and `1234.1-b`; `1234` against the branch set; `051` against both `051-a` and `051.1-b`
 
 - **Done when**: resolving `123` never matches `1234.1-…`, and an identifier naming both forms is reported ambiguous rather than silently resolved (AC16).
 
