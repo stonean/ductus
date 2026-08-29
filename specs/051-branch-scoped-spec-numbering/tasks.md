@@ -126,3 +126,28 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 - [x] Verify the command still parses under `runtime/src/parser/mod.rs`'s step-numbering assertions, and re-bless `runtime/tests/golden/specify-basic.jsonl` if the dispatch sequence changed
 
 - **Done when**: `/ductus:specify` can create a branch-scoped spec end to end — identifier prompted and sanitized-value echoed before creation, fold target required — and sequential creation with no identifier is unchanged (AC10, AC13, AC30, AC37). Added during implementation: the plan's Affected Files names `framework/commands/specify.md` but the original task breakdown covered no command-level work for it, leaving these four criteria without a task.
+
+## 15. Document the pending-fold gate check in `/ductus:implement`
+
+- [x] Add the pending-fold check to the completion gate's documented check order in `framework/commands/implement.md` — third, between the unresolved-scenario-questions check and the `review:` block, which is where `check-review-gate` runs it
+- [x] State why it sits there: a declared `folds-into` is outstanding work in the same category as an unresolved scenario question, and a staging spec is retired rather than completed
+- [x] Regenerate the installed command copies and re-run the audit
+
+- **Done when**: the gate's documented check order matches the order `check-review-gate` evaluates, so the command source — canonical for command behavior per §drift-prevention — no longer contradicts the runtime (AC35).
+
+## 16. Document the pending fold in `/ductus:status`'s pipeline view
+
+- [ ] Record in `framework/commands/status.md` that a spec declaring `folds-into` is rendered as carrying a pending fold rather than as `done`, with the frontmatter status kept beside the qualification
+- [ ] Record that the Next Action cell is handed to the fold at every status, and that an unresolved scenario question still outranks it — content is settled before it is moved
+- [ ] Record that a fold target which does not resolve in this tree is called out on the same line, and that this is a report rather than a check: before the merge the target normally lives on the branch this one forked from
+- [ ] Regenerate the installed command copies and re-run the audit
+
+- **Done when**: the pipeline view's documented rendering matches what `dashboard` emits for a spec carrying `folds-into`, including the Next Action precedence and the unresolvable-target callout (AC34).
+
+## 17. Add `routeFold` to spec 022's extension-point enumeration
+
+- [ ] Add `routeFold` to the closed extension-point set in `specs/022-deterministic-runtime/data-model.md` — both the protocol envelope's `extension-point` union and the extension-point section that enumerates the set
+- [ ] Document its request/response shape as the sibling points are documented, and say what distinguishes it from `routeInboxItem`: that vocabulary answers *where in the corpus does this work belong*, while a fold has already been told where
+- [ ] Leave 022's status alone — a canonical record synced to shipped behavior is a mechanical edit under §spec-lifecycle
+
+- **Done when**: 022's data model enumerates every extension point the runtime actually exposes, and the cross-spec write is explained in its commit message rather than surfacing at the gate as an unaccounted sibling-spec change (§cross-spec-impact).
