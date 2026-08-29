@@ -51,12 +51,17 @@ fn routing_gate_precedes_create_feature() {
         ("1", "primitive:derive-routing-candidates"),
         ("2", "extension:routeInboxItem"),
         ("3", "primitive:gate-confirm"),
-        ("4", "primitive:create-feature"),
-        ("5", "extension:writeSpecBody"),
-        ("6", "primitive:label-criteria"),
-        ("7", "primitive:lint-markdown"),
-        ("8", "primitive:gate-confirm"),
-        ("9", "primitive:write-session"),
+        // Step 4 is prose on purpose: settling the branch identifier and the
+        // fold target is a conversation with the operator, and it has to
+        // happen before create-feature so the sanitized identifier can be
+        // previewed while nothing is on disk yet (spec 051, AC10/AC13).
+        ("4", "prose"),
+        ("5", "primitive:create-feature"),
+        ("6", "extension:writeSpecBody"),
+        ("7", "primitive:label-criteria"),
+        ("8", "primitive:lint-markdown"),
+        ("9", "primitive:gate-confirm"),
+        ("10", "primitive:write-session"),
     ]
     .into_iter()
     .map(|(n, k)| (n.to_string(), k.to_string()))

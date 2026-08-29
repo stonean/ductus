@@ -119,10 +119,10 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 
 ## 14. Teach `/ductus:specify` branch-scoped creation
 
-- [ ] Add the branch-scoped path to `framework/commands/specify.md`: pass `branch-id` and `fold-into` to `create-feature` when the operator asks for a branch-scoped spec
-- [ ] Prompt for the identifier when branch-scoped creation is requested without one — offering a candidate extracted from the current git branch name when one can be extracted, and prompting with no candidate when it cannot (AC13)
-- [ ] Echo the **sanitized** identifier `create-feature` returns at the confirmation prompt, before any directory exists — the operator's input is not what they get (AC10)
-- [ ] Require a fold target on that path: there is no way to create a branch-scoped spec that names none (AC37, AC30)
-- [ ] Verify the command still parses under `runtime/src/parser/mod.rs`'s step-numbering assertions, and re-bless `runtime/tests/golden/specify-basic.jsonl` if the dispatch sequence changed
+- [x] Add the branch-scoped path to `framework/commands/specify.md`: pass `branch-id` and `fold-into` to `create-feature` when the operator asks for a branch-scoped spec
+- [x] Prompt for the identifier when branch-scoped creation is requested without one — offering a candidate extracted from the current git branch name when one can be extracted, and prompting with no candidate when it cannot (AC13)
+- [x] Echo the **sanitized** identifier `create-feature` returns at the confirmation prompt, before any directory exists — the operator's input is not what they get (AC10)
+- [x] Require a fold target on that path: there is no way to create a branch-scoped spec that names none (AC37, AC30)
+- [x] Verify the command still parses under `runtime/src/parser/mod.rs`'s step-numbering assertions, and re-bless `runtime/tests/golden/specify-basic.jsonl` if the dispatch sequence changed
 
 - **Done when**: `/ductus:specify` can create a branch-scoped spec end to end — identifier prompted and sanitized-value echoed before creation, fold target required — and sequential creation with no identifier is unchanged (AC10, AC13, AC30, AC37). Added during implementation: the plan's Affected Files names `framework/commands/specify.md` but the original task breakdown covered no command-level work for it, leaving these four criteria without a task.
