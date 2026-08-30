@@ -2,6 +2,31 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.40.0] — 2026-08-30
+
+### Added
+
+- **`check-artifacts`' `review-state-drift` family reports an outstanding
+  SHOULD on a `done` spec.** §implement-phase is explicit that advisory is not
+  ignorable at the gate: a SHOULD is addressed by being **fixed**, which drops
+  it from the count, or by being moved under `review.md`'s **Waived findings**
+  with its rationale, which also drops it — so a non-zero count at `done`
+  means neither happened and the finding is still filed under its original
+  heading. Nothing caught this. The review-block-agreement family compares the
+  frontmatter `review:` block against `review.md`, but one review run writes
+  both, so a fix applied *during* a pass that never re-runs leaves the two
+  consistently stale and that family clean; a spec sat in exactly that state,
+  its own report reading "Fixed during this pass" beside a count of 1, and a
+  hand sweep found it rather than the tooling.
+
+  The message names **both** dispositions, because a SHOULD whose answer is
+  "keep as-is" is waived rather than fixed and naming only the first would
+  push an operator toward the wrong one. `--fix` reverts the status and never
+  edits the count: the count belongs to the review that regenerates it, and
+  rewriting it here would erase the finding rather than resolve it. A spec
+  still in flight carrying a SHOULD is not a finding — the rule is about the
+  state `done` asserts.
+
 ## [0.39.0] — 2026-08-30
 
 ### Added
