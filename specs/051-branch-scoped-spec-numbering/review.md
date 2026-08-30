@@ -1,12 +1,12 @@
 ---
 spec: 051-branch-scoped-spec-numbering
-reviewed-at: 2026-08-29T19:03:18Z
-reviewed-against: 4b9b887bfa73309f64c935391e0f5adbd806b53b
-diff-base: c3ed65fec51210b39f8212ab26117d6f738eaec8
+reviewed-at: 2026-08-30T01:19:43Z
+reviewed-against: d9c87b0b248abbb70d711a095704a23bb8b5d2ea
+diff-base: eb52e24a8bf9ce362430abe583d2ef63dd9bafc9
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-captured-issues: 2
+captured-issues: 1
 skipped-passes: []
 ---
 
@@ -14,19 +14,19 @@ skipped-passes: []
 
 ## Summary
 
-0 MUST, 0 SHOULD, 0 low-confidence across all five passes; not blocking. Two captured issues outstanding, both awaiting `/ductus:groom`.
+0 MUST, 0 SHOULD, 0 low-confidence; not blocking. One captured issue outstanding.
 
-**Re-run against the finished tree.** The first pass of this review recorded its verdict at `6efa502`; tasks 20 and 21 then added a primitive and a result field, and documenting them in `data-model.md` — a durable contract — made that verdict stale by the same rule this spec's own gate applies. This run covers the same window plus that work.
+**The quality pass found a real defect, in the work this review was called to check.** Task 22's done-when — no primitive that rewrites an existing text file changes its line endings — was not met when the task was marked complete. Two writers were missed: `prune-tasks --reset`, which lifts the `#` heading from the file it is resetting and hardcodes `\n` for the rest, and `append-inbox`, which kept the existing content's endings and appended its bullet with `\n`, producing the mixed file the scenario names as the sharper failure. Both fixed in `d9c87b0` before this report was written, so the counts state what is outstanding rather than what was found.
 
-**One MUST was found across the two runs and fixed rather than left to block.** `build_route_fold_request` read the fold target with a raw `fs::read_to_string` on a path built by joining the `folds-into` frontmatter value onto the spec root, bypassing the `read_repo_file` containment check it used for the source spec two lines earlier. `folds-into` is hand-authored, nothing guarantees `validate-frontmatter` ran before a fold, and the content read is shipped to the host, so a target carrying `../` lifted a `spec.md` from outside the repo into the payload. BE-INPUT-004 is a MUST; fixed in `9be5b00` with a regression test that plants a file outside the repo root and points a traversing target at it. The counts are zero because they state what is outstanding.
+**Why they were missed is the more useful finding.** The first sweep covered seven writers because seven is what reading the code turned up, and its test enumerated those seven. A test that enumerates what someone thought of verifies the thinking, not the property — the same shape as the original defect one level up. `prune-tasks`'s parameter was literally named `_content` because it had been deliberately ignored, which is what let a careful read walk past it.
 
-**The two newest primitives were examined on the same terms as the rest.** `invalidate-review` writes through the same splice `write-review` uses rather than a second frontmatter writer, preserves waivers verbatim — extras included, so an adopter's policy field is not dropped — and treats "no current review" as `invalidated: false` rather than an error, so it converges with the other six per-spec writes. `append-task`'s dedup keys on the whole rendered `scenarios/{slug}.md` pointer through the shared fence-aware scanner, so a prefix slug is still its own task and the template's commented `## 1.` examples stay invisible to it; the guard is scoped to the slug case, leaving a caller-supplied body appending as before.
+**So the sweep now enumerates the code.** `tests/line_ending_discipline.rs` requires every primitive calling the text writer to show evidence it accounts for endings — `split_inclusive('\n')`, so terminators never leave the data (the stronger pattern, already used by `mark-task`, `mark-criterion`, `set-status` and `label-criteria`), or detect-and-restore through the shared helpers — or carry an exemption with a stated reason. A companion test rejects any exemption naming a file that no longer writes text, and it earned its keep on the first run by rejecting an entry added for a primitive that only ever wrote bytes.
 
-**The one irreversible primitive remains the most carefully guarded.** `retire-feature` validates both arguments for traversal, refuses the sequential form before touching the filesystem, and requires the target to hold a `spec.md` — so no ordering of bad input reaches `remove_dir_all` against a spec that should survive. `rewrite-spec-links` matches by whole path segment, so a wrong rewrite — silent and permanent — is traded for a dangling link that `check-orphaned-references` can still report.
+**The lint's limit is recorded rather than implied.** Its evidence check is per file, not per function, so a file handling endings in one writer and not another passes — which is precisely how both misses survived, each file already carrying an evidence token elsewhere. Reverting both fixes leaves the lint green. Per-path coverage is `crlf_preservation.rs`'s job; the two tests are complements and neither is sufficient. Closing the gap properly means per-function analysis, which is a parser rather than a lint. Saying so is QUAL-CLAIM-001 applied to the test itself: a green run must not imply a check that did not run.
 
-**Claim honesty (QUAL-CLAIM-001) holds across every new surface.** `check-unfolded-specs` counts `examined` before the form check and halts on an unreadable branch-scoped `spec.md` rather than skipping it; `rewrite-spec-links` reports `examined` beside `rewritten`; `dashboard` reports an unresolvable fold target as *not in this tree* rather than *missing*, which is the honest claim for a check that can see only one branch.
+**Task 23's work holds.** `rewrite-spec-links` refuses an absent destination before writing anything, with both arguments through `validate_no_traversal` (BE-INPUT-004). The check sits in the primitive rather than the command deliberately: the fold happens to establish the same fact one step earlier through `invalidate-review`, but that is a side effect of a step added for an unrelated reason, and a property held by a neighbour's side effect is one nobody knows they are maintaining. Three existing tests failed on the new check and were corrected by seeding real targets rather than exempted — their fixtures had been re-pointing links at a spec that did not exist.
 
-Reuse, efficiency, and simplicity found nothing against the loaded rules. The waiver renderer was extracted from `write-review` for the new primitive rather than copied, which is the reuse pass's own preference applied in the window it was reviewing. Both outstanding observations were recorded in earlier runs and remain in the inbox; neither maps to a loaded rule and neither is a finding.
+Security, efficiency and simplicity found nothing against the loaded rules. `line_ending_of` cannot underflow, since every `\r\n` contains an `\n` and the bare-LF count is their difference; `with_line_ending` is idempotent and leaves a mid-line `\r` alone. Every behavioral case added in this window was confirmed to fail against the pre-fix tree — a CRLF test written on an all-LF repository otherwise proves nothing.
 
 ## MUST violations (blocking)
 
@@ -46,8 +46,7 @@ Reuse, efficiency, and simplicity found nothing against the loaded rules. The wa
 
 ## Captured issues
 
-- [ ] convention: rewrite-spec-links rewrites a file line-wise with `lines()` + a bare `\n`, so a rewrite on a CRLF checkout converts the whole file to LF — a one-link change lands as a whole-file diff. Two siblings preserve the ending deliberately (create_feature::stamp_fold_target detects `\r\n`; derive_references picks its line_ending the same way) and check_stuck carries CRLF regression tests, so the convention is established and this is the one writer that departs from it. A shared line-ending-preserving rewrite helper would settle it in one place rather than three. — `runtime/src/primitives/rewrite_spec_links.rs` (captured during review of 022-deterministic-runtime)
-- [ ] other: /ductus:fold rewrites corpus-wide links (step 11) before retire-feature enforces that the fold target exists (step 12), and that step's own prose names its refusal as the answer to an unresolved folds-into — so the refusal is documented as reachable from a state where inbound links have already been re-pointed at a spec that does not exist. The window is narrow (the body-edit write and create-scenario both need the target too), but narrow by accident is not closed. Either check the target before the rewrite, or record why the refusal cannot fire once the rewrite has run. — `framework/commands/fold.md` (captured during review of 051-branch-scoped-spec-numbering)
+- [ ] bug: the three-digit spec-number rule survives in five shell copies the runtime's single predicate does not reach, so a spec numbered past 999 is silently skipped by them — `.githooks/pre-commit:86` and the shipped `framework/bootstrap/hooks/ductus-pre-commit:116` (label-criteria never runs on such a spec), plus `scripts/lint-frontmatter.sh`, `scripts/audit/sibling-coupling.sh` and `scripts/audit/introducing-drift.sh`, which glob the same shape and exit 0 while never having seen the directory. Still outstanding; routing already decided (a scenario, not a new spec).
 
 ## Observations
 
