@@ -65,19 +65,34 @@ RENAMED_TOKENS=(
   ".govern/|.ductus/|per-project directory renamed (spec 049)"
 )
 
-# Iterate done spec bodies. A "done" spec has `status: done` in its
-# frontmatter.
-for spec_file in specs/[0-9][0-9][0-9]-*/spec.md; do
-  status="$(awk '
-    /^---$/ { count++; if (count == 2) exit; next }
-    count == 1 && /^status:/ {
-      sub(/^status: *"?/, "")
-      sub(/"?$/, "")
-      print
-      exit
-    }
-  ' "$spec_file")"
-  [ "$status" != "done" ] && continue
+# Iterate done spec bodies.
+#
+# Corpus and status both come from the runtime. The glob this replaced
+# demanded exactly three digits, so a spec numbered past 999 was skipped
+# while the family still exited 0; the awk beside it was another hand-rolled
+# frontmatter reader in a repo whose runtime parses frontmatter for a living
+# (spec 051, AGENTS.md Design Principles).
+bin="$(ductus_bin)"
+if [ -z "$bin" ]; then
+  emit "(precondition)" \
+    "ductus runtime not reachable — the introducing-drift check could not enumerate the corpus" \
+    "run /ductus to acquire the runtime, or build it with cargo build --release in runtime/"
+  exit "$drift"
+fi
+
+corpus="$(spec_corpus "$bin")"
+if [ -z "$corpus" ]; then
+  emit "(precondition)" \
+    "ductus dashboard returned no specs — the introducing-drift check could not enumerate the corpus" \
+    "run $bin dashboard directly to see the error"
+  exit "$drift"
+fi
+
+while IFS="$(printf '\t')" read -r slug status; do
+  [ -n "$slug" ] || continue
+  [ "$status" = "done" ] || continue
+  spec_file="specs/$slug/spec.md"
+  [ -f "$spec_file" ] || continue
   # File-level skip: bail before walking lines if the marker is present.
   if grep -q '<!-- audit:ignore-introducing-drift:file -->' "$spec_file"; then
     continue
@@ -98,6 +113,8 @@ for spec_file in specs/[0-9][0-9][0-9]-*/spec.md; do
       emit "$spec_file:$line_no" "references old name \`$old\` ($hint)" "rewrite to past tense or replace with \`$new\`; see scenarios/living-specs.md pattern (small /ductus:amend cycle)"
     done < <(grep -nF "\`$old\`" "$spec_file" 2>/dev/null || true)
   done
-done
+done <<EOF
+$corpus
+EOF
 
 exit "$drift"

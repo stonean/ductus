@@ -46,3 +46,47 @@ emit() {
   echo "$AUDIT_FAMILY | $1 | $2 | $3"
   drift=1
 }
+
+# ductus_bin — echo the path to a usable runtime binary, or nothing.
+#
+# The three tiers in preference order: the adopter-owned pointer, this repo's
+# release build, then `PATH`. Declared here because four families now need it
+# and a fourth copy is how the tiers drift — the same reasoning that put the
+# directory-membership rule in one predicate (spec 051).
+#
+# Returns empty rather than failing: whether an unreachable runtime is a
+# precondition finding or a silent skip is the caller's decision, not this
+# helper's, and every family so far treats it as a finding.
+ductus_bin() {
+  if [ -x .ductus/bin/ductus ]; then
+    echo ".ductus/bin/ductus"
+  elif [ -x runtime/target/release/ductus ]; then
+    echo "runtime/target/release/ductus"
+  elif command -v ductus > /dev/null 2>&1; then
+    command -v ductus
+  fi
+}
+
+# spec_corpus BIN — echo `slug<TAB>status` for every feature directory the
+# runtime recognizes, one per line.
+#
+# The corpus comes from `dashboard`, so a family never carries its own copy
+# of the directory-membership rule and never hand-rolls a frontmatter
+# `status:` scan. Both were real defects: a `[0-9][0-9][0-9]-*` glob skips
+# the 1000th spec entirely, and a hand-rolled `\s*`-based scalar read walked
+# past an empty value onto the next line and produced a confidently-wrong
+# finding (AGENTS.md, Design Principles).
+#
+# Non-zero exit with no output when the runtime cannot enumerate the corpus;
+# the caller reports that rather than treating it as an empty corpus.
+spec_corpus() {
+  "$1" dashboard 2> /dev/null | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except ValueError:
+    sys.exit(1)
+for spec in data.get("specs", []):
+    print("%s\t%s" % (spec.get("slug", ""), spec.get("status", "")))
+'
+}

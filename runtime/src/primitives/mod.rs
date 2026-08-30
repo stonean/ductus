@@ -2175,6 +2175,118 @@ mod tests {
         }
     }
 
+    /// The shell surfaces that cannot call the runtime carry a copy of the
+    /// directory-membership rule, and this holds the copies to it.
+    ///
+    /// Three files match spec paths with a pattern rather than a primitive,
+    /// each for the same reason: the pre-commit hooks run before any binary
+    /// is resolvable, and `lint-frontmatter.sh` exists to find malformed
+    /// frontmatter so it cannot depend on something that parses frontmatter.
+    /// A copy is the right answer there; an *unwatched* copy is not. Both
+    /// gaps this test now guards were live before it existed — a
+    /// digits-only pattern skipped the 1000th spec, and it skipped every
+    /// branch-scoped directory outright, so `label-criteria` never ran on
+    /// one and spec 013's backstop was dead for it.
+    ///
+    /// The property is one-sided on purpose: **the pattern must accept
+    /// everything `parse_feature_dir` accepts.** A false negative is a spec
+    /// silently dropped from a hook or a lint; a false positive is a path
+    /// handed to a primitive that resolves it and declines, which is noise
+    /// rather than damage. The known divergences are pinned below so they
+    /// read as decisions rather than oversights.
+    #[test]
+    fn the_shell_spec_pattern_accepts_what_the_grammar_accepts() {
+        /// The alternation every shell copy carries, verbatim.
+        const ALTERNATION: &str =
+            r"(([0-9][0-9][0-9]|[1-9][0-9][0-9][0-9]+)|[a-z0-9]+(-[a-z0-9]+)*\.[1-9][0-9]*)";
+        const CARRIERS: &[&str] = &[
+            ".githooks/pre-commit",
+            "framework/bootstrap/hooks/ductus-pre-commit",
+            "scripts/lint-frontmatter.sh",
+        ];
+
+        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("runtime/ has a parent")
+            .to_path_buf();
+
+        for rel in CARRIERS {
+            let path = repo.join(rel);
+            let source =
+                std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("cannot read {rel}: {e}"));
+            assert!(
+                source.contains(ALTERNATION),
+                "{rel} no longer carries the shared feature-directory alternation.\n\
+                 Expected to find: {ALTERNATION}\n\
+                 The two pre-commit hooks are separate files and both need the edit; \
+                 a fix applied to one leaves the other — and every adopter — behind."
+            );
+        }
+
+        let pattern = regex::Regex::new(&format!("^{ALTERNATION}-.+$"))
+            .expect("the shared alternation compiles");
+
+        // Names the runtime accepts. Every one must match, or a real spec is
+        // invisible to a hook or a lint.
+        for name in &[
+            "000-skeleton",
+            "050-alpha",
+            "999-last-three-digit",
+            "1000-thousandth",
+            "12345-far-future",
+            "1234.1-staged",
+            "1234.10-late",
+            "proj-1111.12-ticket-work",
+            "1111-proj.1-item-work",
+        ] {
+            assert!(
+                parse_feature_dir(name).is_some(),
+                "table drift: the runtime no longer accepts {name:?}"
+            );
+            assert!(
+                pattern.is_match(name),
+                "the shell pattern drops {name:?}, which the runtime accepts — \
+                 a spec invisible to the hooks and the frontmatter lint"
+            );
+        }
+
+        // Names both must reject. A pattern looser than the grammar here
+        // would put a directory no corpus reader can see in front of a lint.
+        for name in &[
+            "05-short",      // fewer than three digits
+            "0500-padded",   // padding past the `{number:03}` minimum
+            "1234.0-zero",   // the branch counter is 1-based
+            "1234.01-alias", // a leading zero would alias `.1`
+            "templates",     // a sibling directory, not a feature
+            "inbox.md",
+        ] {
+            assert!(
+                parse_feature_dir(name).is_none(),
+                "table drift: the runtime now accepts {name:?}"
+            );
+            assert!(
+                !pattern.is_match(name),
+                "the shell pattern accepts {name:?}, which the runtime rejects"
+            );
+        }
+
+        // Pinned divergences: the pattern is a superset in exactly these
+        // ways, because a regex over a path segment cannot hold the slug to
+        // the grammar `validate_slug` enforces. Harmless in the one-sided
+        // direction — the primitive that receives the path declines it.
+        for name in &["1234.1-Uppercase", "1234.1-under_score"] {
+            assert!(
+                parse_feature_dir(name).is_none(),
+                "table drift: the runtime now accepts {name:?}"
+            );
+            assert!(
+                pattern.is_match(name),
+                "the documented superset narrowed; if that is deliberate, \
+                 move {name:?} into the reject table above"
+            );
+        }
+    }
+
     #[test]
     fn line_ending_of_reads_the_file_it_is_given() {
         assert_eq!(line_ending_of("a\r\nb\r\n"), "\r\n");

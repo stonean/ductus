@@ -55,12 +55,20 @@ if [ ! -f "$HOOK" ]; then
   exit "$drift"
 fi
 
-# scaffold FIXTURE SPECS_DIR — lay down an adopter-shaped tree. Returns
-# non-zero when the fixture could not be built (a finding, never a skip).
+# scaffold FIXTURE SPECS_DIR [FEATURE] — lay down an adopter-shaped tree.
+# Returns non-zero when the fixture could not be built (a finding, never a
+# skip).
+#
+# FEATURE defaults to `001-example`. It is a parameter because the hook
+# matches spec paths by *shape*, and a fixture that only ever uses a
+# three-digit name cannot tell a hook that handles every directory form from
+# one that silently drops all but the oldest — which is what it did until
+# spec 051 task 24: a spec numbered past 999, and every branch-scoped spec,
+# went unstaged and therefore unlabelled.
 scaffold() {
-  local fixture="$1" specs_dir="$2"
+  local fixture="$1" specs_dir="$2" feature="${3:-001-example}"
   mkdir -p "$fixture/.ductus/bin" "$fixture/.githooks" \
-           "$fixture/$specs_dir/001-example" || return 1
+           "$fixture/$specs_dir/$feature" || return 1
   cp "$HOOK" "$fixture/.githooks/ductus-pre-commit" || return 1
   chmod +x "$fixture/.githooks/ductus-pre-commit" || return 1
   printf '[paths]\nspecs-root = "%s"\n' "$specs_dir" > "$fixture/.ductus/config.toml"
@@ -68,7 +76,7 @@ scaffold() {
   # A spec whose `dependencies:` frontmatter is stale against its link-free
   # body, seeded in YAML **block** form so a rewrite has a continuation line to
   # strand. The stub below collapses it, standing in for the primitive.
-  cat > "$fixture/$specs_dir/001-example/spec.md" <<'SPEC'
+  cat > "$fixture/$specs_dir/$feature/spec.md" <<'SPEC'
 ---
 status: draft
 dependencies:
@@ -105,7 +113,7 @@ echo "$@" >> "$root/.ductus-stub-invoked"
 if [ "${1:-}" = "derive-dependencies" ]; then
   # Stand in for the primitive: collapse the seeded block-form entry, so the
   # hook's re-stage loop has a real worktree change to capture.
-  for f in "$root"/*/001-example/spec.md; do
+  for f in "$root"/*/*/spec.md; do
     [ -f "$f" ] || continue
     sed -e 's/^dependencies:$/dependencies: []/' -e '/^  - 000-stale-entry$/d' \
       "$f" > "$f.tmp" && mv "$f.tmp" "$f"
@@ -155,12 +163,12 @@ check_halts_without_runtime() {
 # bug is invisible and the run isolates runtime resolution; with a non-default
 # root it isolates scoping. Sharing one fixture would let either mask the other.
 build_and_run() {
-  local specs_dir="$1"
+  local specs_dir="$1" feature="${2:-001-example}"
   local fixture invoked hook_out hook_status unstaged
   fixture="$(mktemp -d 2>/dev/null)" || fixture=""
-  if [ -z "$fixture" ] || ! scaffold "$fixture" "$specs_dir"; then
+  if [ -z "$fixture" ] || ! scaffold "$fixture" "$specs_dir" "$feature"; then
     emit "scripts/audit/adopter-shell-behavior.sh" \
-      "could not build a fixture for specs-root '$specs_dir'" \
+      "could not build a fixture for specs-root '$specs_dir' feature '$feature'" \
       "ensure mktemp and git work here — a skipped run must not read as a pass"
     [ -n "$fixture" ] && rm -rf "$fixture"
     return
@@ -171,7 +179,7 @@ build_and_run() {
   hook_status=$?
   if [ "$hook_status" -ne 0 ]; then
     emit "framework/bootstrap/hooks/ductus-pre-commit" \
-      "the shipped hook exited $hook_status in an adopter fixture with specs-root '$specs_dir': ${hook_out:-<no output>}" \
+      "the shipped hook exited $hook_status in an adopter fixture with specs-root '$specs_dir', feature '$feature': ${hook_out:-<no output>}" \
       "run it against a tree with that spec root and a store-only runtime"
   fi
 
@@ -199,9 +207,9 @@ build_and_run() {
   # Assertion 3 — the derivation reached the spec. If it did not, assertion 4
   # would compare an unchanged file against itself and report clean having
   # examined nothing (QUAL-CLAIM-001, the shape this family exists to catch).
-  if grep -q '000-stale-entry' "$fixture/$specs_dir/001-example/spec.md" 2>/dev/null; then
+  if grep -q '000-stale-entry' "$fixture/$specs_dir/$feature/spec.md" 2>/dev/null; then
     emit "framework/bootstrap/hooks/ductus-pre-commit" \
-      "with specs-root '$specs_dir' the seeded stale dependency survived — the hook's derivation step never reached the spec" \
+      "with specs-root '$specs_dir' and feature '$feature' the seeded stale dependency survived — the hook's derivation step never reached the spec" \
       "invoke derive-dependencies from the repo root so it enumerates the configured spec tree"
   fi
 
@@ -212,8 +220,8 @@ build_and_run() {
   unstaged="$(cd "$fixture" && git diff --name-only 2>/dev/null)"
   if [ -n "$unstaged" ]; then
     emit "framework/bootstrap/hooks/ductus-pre-commit" \
-      "with specs-root '$specs_dir', the worktree and index disagree on $unstaged after the hook ran — a rewrite was left unstaged" \
-      "match staged specs by shape (any leading segment, then NNN-slug/spec.md) rather than a hardcoded 'specs' path"
+      "with specs-root '$specs_dir' and feature '$feature', the worktree and index disagree on $unstaged after the hook ran — a rewrite was left unstaged" \
+      "match staged specs by shape — any leading segment, then a feature directory in either form parse_feature_dir accepts (NNN-slug with three-or-more digits, or identifier.n-slug) — rather than a hardcoded root or an exactly-three-digit run"
   fi
 
   rm -rf "$fixture"
@@ -275,6 +283,13 @@ check_survives_deleted_spec() {
 check_halts_without_runtime
 build_and_run specs      # default root — isolates runtime resolution
 build_and_run features   # configured root (spec 040) — isolates scoping
+# Both directory forms the runtime recognizes, against the shipped hook.
+# A digits-only filter passes the two runs above and drops both of these,
+# which is precisely the state that shipped until spec 051 task 24: the
+# criteria of a spec past 999, and of every branch-scoped spec, went
+# unlabelled with nothing reporting it.
+build_and_run specs 1000-thousandth   # sequential past the three-digit pad
+build_and_run specs 1234.1-staged     # branch-scoped staging form (spec 051)
 check_survives_deleted_spec
 
 exit "$drift"

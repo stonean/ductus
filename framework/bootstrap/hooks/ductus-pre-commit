@@ -112,8 +112,19 @@ done
 # three defects that reached adopters on 2026-08-17. Matching on shape means
 # the hook has no configured value to get wrong, and the runtime stays the only
 # thing that resolves `[paths] specs-root`.
+#
+# The alternation mirrors `parse_feature_dir`, and both directory forms are
+# in it. Sequential: three digits, or four or more with no leading zero,
+# because `create-feature` pads to a *minimum* of three and the 1000th spec
+# is `1000-slug`. Branch-scoped: `{identifier}.{n}-{slug}` (spec 051), which
+# a digits-only pattern rejects outright — so before this the criteria of
+# every branch-scoped spec went unlabelled, silently. A hook demanding exactly three
+# would silently stop labelling that spec's criteria. This is a copy of a rule
+# whose home is the runtime, and a copy on purpose — the hook runs before any
+# binary is resolvable — so a runtime test holds the two in agreement rather
+# than trusting a reader to notice they drifted.
 staged_specs="$(git diff --cached --name-only \
-  | { grep -E "^[^/]+/[0-9][0-9][0-9]-[^/]+/(spec|spec-and-plan)\.md\$" || true; })"
+  | { grep -E "^[^/]+/(([0-9][0-9][0-9]|[1-9][0-9][0-9][0-9]+)|[a-z0-9]+(-[a-z0-9]+)*\.[1-9][0-9]*)-[^/]+/(spec|spec-and-plan)\.md\$" || true; })"
 
 if [ -n "$staged_specs" ]; then
   printf '%s\n' "$staged_specs" | while IFS= read -r f; do

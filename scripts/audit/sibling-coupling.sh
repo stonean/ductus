@@ -27,24 +27,37 @@ set -uo pipefail
 audit_family sibling-coupling
 
 # Collect non-done spec directories.
+#
+# The corpus and each spec's status both come from the runtime rather than a
+# glob and a hand-rolled frontmatter scan. The glob this replaced demanded
+# exactly three digits, so it skipped a spec numbered past 999 entirely and
+# exited 0 having never seen it; the awk scan was another copy of a
+# frontmatter reader the runtime already owns (spec 051).
+bin="$(ductus_bin)"
+if [ -z "$bin" ]; then
+  emit "(precondition)" \
+    "ductus runtime not reachable — the sibling-coupling check could not enumerate the corpus" \
+    "run /ductus to acquire the runtime, or build it with cargo build --release in runtime/"
+  exit "$drift"
+fi
+
+corpus="$(spec_corpus "$bin")"
+if [ -z "$corpus" ]; then
+  emit "(precondition)" \
+    "ductus dashboard returned no specs — the sibling-coupling check could not enumerate the corpus" \
+    "run $bin dashboard directly to see the error"
+  exit "$drift"
+fi
+
 non_done_specs=()
-for spec_dir in specs/[0-9][0-9][0-9]-*/; do
-  spec_file="$spec_dir/spec.md"
-  [ -f "$spec_file" ] || continue
-  # Extract status from frontmatter (assumes the standard YAML block).
-  status="$(awk '
-    /^---$/ { count++; if (count == 2) exit; next }
-    count == 1 && /^status:/ {
-      sub(/^status: *"?/, "")
-      sub(/"?$/, "")
-      print
-      exit
-    }
-  ' "$spec_file")"
+while IFS="$(printf '\t')" read -r slug status; do
+  [ -n "$slug" ] || continue
   if [ "$status" != "done" ]; then
-    non_done_specs+=("$(basename "$spec_dir")")
+    non_done_specs+=("$slug")
   fi
-done
+done <<EOF
+$corpus
+EOF
 
 # Nothing to compare when fewer than two non-done specs exist.
 if [ "${#non_done_specs[@]}" -lt 2 ]; then
@@ -55,7 +68,7 @@ fi
 # Returns the set of referenced spec slugs (e.g., "024-rule-loader").
 extract_sibling_links() {
   local file="$1"
-  grep -oE '\(\.\./[0-9][0-9][0-9]-[a-z][a-z0-9-]*/[^)]*\)' "$file" \
+  grep -oE '\(\.\./([0-9][0-9][0-9]|[1-9][0-9][0-9][0-9]+)-[a-z][a-z0-9-]*/[^)]*\)' "$file" \
     | sed -E 's|\(\.\./([^/)]+)/.*\)|\1|' \
     | sort -u
 }
@@ -124,7 +137,7 @@ for i in "${!non_done_specs[@]}"; do
       in_section { print }
     ' "specs/$spec_b/spec.md")"
     # spec_a's slug-without-NNN-prefix is the lookup pattern.
-    a_slug="${spec_a#[0-9][0-9][0-9]-}"
+    a_slug="${spec_a#*-}"
     if grep -qE "Why split from .*${a_slug}:" <<< "$resolved"; then
       continue
     fi

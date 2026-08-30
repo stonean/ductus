@@ -35,16 +35,40 @@ done
 
 shopt -s nullglob
 
+# A feature directory takes either form `parse_feature_dir` accepts:
+# sequential `NNN-slug`, where the digit run is a *minimum* of three (the
+# 1000th spec is `1000-slug`), or branch-scoped `{identifier}.{n}-slug`
+# (spec 051). The glob below is a deliberate superset — globs cannot express
+# either rule — so the loop filters each candidate against the same
+# alternation the pre-commit hooks carry, keeping this lint's corpus
+# identical to the runtime's.
+#
+# Pattern rather than a runtime call, and the reason is this lint's own job:
+# it exists to find malformed frontmatter, so it must keep working on a
+# corpus a frontmatter-parsing primitive would refuse to read. Its agreement
+# with `parse_feature_dir` is held by `runtime/tests/spec_path_shape.rs`
+# rather than by a reader's memory.
+FEATURE_DIR_RE='^(([0-9][0-9][0-9]|[1-9][0-9][0-9][0-9]+)|[a-z0-9]+(-[a-z0-9]+)*\.[1-9][0-9]*)-'
+
 errors=0
 files=(
-  "$ROOT"/specs/[0-9][0-9][0-9]-*/spec.md
-  "$ROOT"/specs/[0-9][0-9][0-9]-*/spec-and-plan.md
-  "$ROOT"/specs/[0-9][0-9][0-9]-*/scenarios/*.md
+  "$ROOT"/specs/*-*/spec.md
+  "$ROOT"/specs/*-*/spec-and-plan.md
+  "$ROOT"/specs/*-*/scenarios/*.md
 )
 
 for f in "${files[@]}"; do
   [ -f "$f" ] || continue
   rel="${f#"$ROOT"/}"
+
+  # Drop the superset's extras: a directory the runtime would not recognize
+  # is not this lint's subject either, or the two disagree in the opposite
+  # direction and CI reports on a directory no corpus reader can see.
+  feature_dir="${rel#*/}"
+  feature_dir="${feature_dir%%/*}"
+  if ! printf '%s' "$feature_dir" | grep -Eq "$FEATURE_DIR_RE"; then
+    continue
+  fi
 
   # Check 1: frontmatter delimited block at top.
   first_line="$(head -n 1 "$f")"
