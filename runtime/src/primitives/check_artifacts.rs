@@ -499,6 +499,39 @@ fn check_review_drift(
             message: "review drift: done spec has unresolved MUST violations \
                       (review.blocking true) — see review.md"
                 .into(),
+            path: spec_rel.clone(),
+        });
+    }
+    // An outstanding SHOULD at `done` is the state §implement-phase names
+    // and forbids: "advisory is not ignorable at the gate". A SHOULD is
+    // addressed by being **fixed** — which drops it from the count — or by
+    // being moved under the review's waived section with its rationale, which
+    // also drops it. A non-zero count therefore means neither happened, and
+    // the finding is still filed under its original heading.
+    //
+    // Nothing caught this before, and the reason is worth recording: Family
+    // 31 compares the frontmatter `review:` block against `review.md`, but
+    // one `/{project}:review` run writes both. A fix applied *during* a pass
+    // that never re-runs leaves the two consistently stale and that family
+    // clean. 023 sat at `done` with `should-violations: 1` while its own
+    // report said "Fixed during this pass", and a hand sweep found it, not
+    // the tooling (spec 023 review, 2026-08-30).
+    //
+    // Blocking, like its two siblings above, because the claim is the same
+    // shape: this spec should not be `done` in this state, and `--fix`
+    // reverts it rather than editing the count — the count is the review's to
+    // write, and rewriting it here would erase the finding instead of
+    // resolving it.
+    if review.should_violations > 0 {
+        findings.push(ArtifactFinding {
+            family: "review-state-drift".into(),
+            severity: "blocking".into(),
+            message: format!(
+                "review drift: done spec has {} outstanding SHOULD violation(s) — fix each, or \
+                 move it under review.md's Waived findings with its rationale, then re-run the \
+                 review so the count states what is outstanding",
+                review.should_violations
+            ),
             path: spec_rel,
         });
     }
@@ -1882,6 +1915,83 @@ mod tests {
             result.findings[0]
                 .message
                 .contains("unresolved MUST violations")
+        );
+    }
+
+    #[test]
+    fn done_spec_with_outstanding_should_yields_blocking_finding() {
+        // The 023 shape, reproduced. It sat at `done` with
+        // `should-violations: 1` while its own report said the finding was
+        // "Fixed during this pass" — and nothing caught it, because Family 31
+        // compares the frontmatter block against review.md and one review run
+        // writes both, so the two were consistently stale.
+        let tmp = tempdir().unwrap();
+        write(
+            tmp.path(),
+            "specs/042-demo/spec.md",
+            &spec(
+                "done",
+                Some(
+                    "  last-run: 2026-07-01T00:00:00Z\n  blocking: false\n  must-violations: 0\n  should-violations: 1",
+                ),
+            ),
+        );
+        write(tmp.path(), "specs/042-demo/plan.md", "# Plan\n");
+        write(tmp.path(), "specs/042-demo/tasks.md", GOOD_TASKS);
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(families(&result), vec![("review-state-drift", "blocking")]);
+        let msg = &result.findings[0].message;
+        assert!(msg.contains("1 outstanding SHOULD"), "{msg}");
+        // The fix names both dispositions, because a SHOULD whose answer is
+        // "keep as-is" is waived rather than fixed, and a message naming only
+        // the first would push an operator toward the wrong one.
+        assert!(msg.contains("Waived findings"), "{msg}");
+    }
+
+    #[test]
+    fn done_spec_with_zero_should_is_clean() {
+        let tmp = tempdir().unwrap();
+        write(
+            tmp.path(),
+            "specs/042-demo/spec.md",
+            &spec(
+                "done",
+                Some(
+                    "  last-run: 2026-07-01T00:00:00Z\n  blocking: false\n  must-violations: 0\n  should-violations: 0",
+                ),
+            ),
+        );
+        write(tmp.path(), "specs/042-demo/plan.md", "# Plan\n");
+        write(tmp.path(), "specs/042-demo/tasks.md", GOOD_TASKS);
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(result.clean, "{:?}", result.findings);
+    }
+
+    #[test]
+    fn an_outstanding_should_on_a_spec_still_in_flight_is_not_a_finding() {
+        // A SHOULD is real remaining work, and a spec that has not claimed
+        // completion is allowed to carry it. The rule is about the *state*
+        // `done` asserts, not about the finding existing.
+        let tmp = tempdir().unwrap();
+        write(
+            tmp.path(),
+            "specs/042-demo/spec.md",
+            &spec(
+                "in-progress",
+                Some(
+                    "  last-run: 2026-07-01T00:00:00Z\n  blocking: false\n  must-violations: 0\n  should-violations: 3",
+                ),
+            ),
+        );
+        write(tmp.path(), "specs/042-demo/plan.md", "# Plan\n");
+        write(tmp.path(), "specs/042-demo/tasks.md", GOOD_TASKS);
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(
+            !families(&result)
+                .iter()
+                .any(|(f, _)| *f == "review-state-drift"),
+            "{:?}",
+            result.findings
         );
     }
 

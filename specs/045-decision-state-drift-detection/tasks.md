@@ -142,3 +142,12 @@ Tasks 3–10 are authored as scenarios under [022 — Deterministic Runtime](../
 - [x] Do not `BLESS=1` any golden — the parity goldens carry the `{{runtime-version}}` placeholder and no golden should change
 
 - **Done when**: `gvrn-v0.26.0` is tagged, pushed, and published green, and the goldens are byte-identical to their pre-bump state.
+
+## 15. Catch an outstanding SHOULD on a done spec
+
+- [x] Extend `review-state-drift` with a third check: `should-violations > 0` on a `done` spec is blocking, alongside the unreviewed and blocking-MUST checks it already makes
+- [x] Name both dispositions in the message — fixed, or waived with its rationale — since a SHOULD whose answer is "keep as-is" is waived rather than fixed
+- [x] Leave `--fix` reverting the status rather than editing the count: the count is the review's to write, and rewriting it would erase the finding instead of resolving it
+- [x] Prove it fires on the state that got past everything, and stays silent on a spec still in flight, which is allowed to carry one
+
+- **Done when**: a `done` spec carrying a non-zero SHOULD count is reported as blocking by `check-artifacts`, a spec at any other status carrying one is not, the message names both dispositions, and the corpus reports zero.

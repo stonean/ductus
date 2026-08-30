@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [013-text-first-artifacts, 022-deterministic-runtime, 046-scenario-open-question-visibility]
 review:
   last-run: 2026-08-30T23:27:06Z
