@@ -217,3 +217,14 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 - [x] Verify a `1000-` spec is staged by the hook, linted, and examined by both families — and that `0500-a` is skipped by all of them, matching the runtime's rejection
 
 - **Done when**: a spec directory the runtime recognizes is recognized by every shell surface of the project, both hook copies included, and no surface carries its own copy of the digit rule that could drift from `parse_feature_dir` unnoticed (AC15).
+
+## 25. Cut the release that carries this work to adopters
+
+- [x] Bump all three artifacts to `0.36.0` in one commit — the repo-root `version` file, `runtime/Cargo.toml`, and a matching `runtime/CHANGELOG.md` section — since `/audit` Family 20 fails when they disagree and `/ductus` reads `version` to decide which runtime to acquire
+- [x] Minor rather than patch: four new primitives, a new command, and new `create-feature` arguments are added surface, not a bug fix
+- [x] Write the CHANGELOG section as a record of what changed for an adopter — the second directory form, `/{project}:fold` and the four primitives behind it, the `folds-into` key, and the two defects fixed on the way (line endings across every text writer, and the numbering grammar reaching the shell surfaces)
+- [x] Run `cargo build --release --offline` once so the lockfile absorbs the version change, then confirm `--locked` succeeds again — per the `AGENTS.md` gotcha, `--locked` refuses the crate's own version bump
+- [x] Run `scripts/audit/run-all.sh` locally before proposing the tag: it is a hard release gate in the tag pipeline, and a finding there aborts the publish, the asset upload and the SBOM
+- [x] Stop at the commit. The push and the `ductus-v0.36.0` tag are the operator's — the crates.io publish can be yanked but never unpublished
+
+- **Done when**: the three version artifacts agree at `0.36.0` with a CHANGELOG section describing this feature, the audit passes locally, and the tree is one reviewed commit away from a release the operator can push — with the push and tag deliberately left to them.

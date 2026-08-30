@@ -2,6 +2,92 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.36.0] — 2026-08-30
+
+### Added
+
+- **A second feature-directory form, scoped to the branch that creates it.**
+  A spec created on a story branch can be numbered `{identifier}.{n}-{slug}`
+  — `1234.1-retry-budget` — instead of taking a number from the global
+  sequence. The identifier namespaces the counter, so two branches numbering
+  under different identifiers cannot collide at merge, and neither counter
+  influences the other: a spec root holding `050-a` and `1234.1-b` still
+  yields `051-` next. The identifier is an opaque operator token, not a
+  number, because trackers disagree (`PROJ-1111`, `1111-PROJ`); it is
+  sanitized to the directory grammar rather than refused, and the sanitized
+  value is shown before any directory exists.
+
+  The form is **temporary by construction**. Every branch-scoped spec
+  declares in `folds-into:` the sequential spec it stands in for, and it has
+  no `done` state at all — the pipeline view reports it as carrying a pending
+  fold and the pre-`done` gate blocks while the key is present. It is
+  retired, not completed.
+
+- **`/{project}:fold` — the command that discharges a branch-scoped spec**
+  into its upstream home, run after the merge on the upstream branch, which
+  is the first tree in which both specs exist. It routes the content to a
+  body edit or a scenario, re-points every inbound pointer, reopens a `done`
+  upstream spec through the back-edge §spec-lifecycle already defines, and
+  removes the staging directory.
+
+- **Four primitives behind it.** `check-unfolded-specs` reports branch-scoped
+  directories still present with their declared targets — nothing runs on a
+  merge, so this is what notices. `rewrite-spec-links` re-points body links
+  and `folds-into` fields in one action, matching by whole path segment so a
+  directory sharing a prefix is untouched, and refusing a destination that is
+  not a home. `retire-feature` removes a branch-scoped directory, refusing
+  unless the fold target exists — the one place that existence is enforced,
+  since before the merge the target normally lives on another branch.
+  `invalidate-review` resets a spec's `review:` block to the un-reviewed
+  state, preserving operator-recorded waivers.
+
+- **`create-feature` gains `branch-id` and `fold-into`**, and returns the
+  sanitized `identifier` it used. Absent `branch-id`, behavior is unchanged.
+  `fold-into` is required with it: a branch-scoped spec exists in order to be
+  folded, so there is no way to create one that names no home.
+
+- **`append-task` reports `appended`**, and dedups on the scenario pointer: a
+  task already referencing `scenarios/{slug}.md` is returned rather than
+  duplicated, which is what lets an interrupted fold be completed by
+  re-running it.
+
+### Fixed
+
+- **A spec numbered past 999 was invisible to every corpus reader.**
+  `create-feature` formats `{number:03}` — a *minimum* width — so the 1000th
+  spec is `1000-slug`, while the membership predicate demanded exactly three
+  digits. The directory was created successfully and then seen by nothing.
+  The predicate now accepts three-or-more digits, rejecting padding beyond
+  the minimum so one number keeps one spelling.
+
+- **The same rule survived in five shell surfaces the predicate never
+  reached.** Both pre-commit hooks selected staged specs with a digits-only
+  pattern, so `label-criteria` never ran on a spec past 999 — nor on **any
+  branch-scoped spec**, whose form a digits-only pattern rejects outright.
+  Three lint and audit surfaces globbed the same shape and skipped such a
+  directory while exiting 0. The hooks now match either form and a runtime
+  test holds them to the predicate; the audit families ask the runtime for
+  the corpus instead of globbing, which also retired their hand-rolled
+  frontmatter scans.
+
+- **Seven primitives rewrote a text file without preserving its line
+  endings**, converting a CRLF checkout's file to LF as a side effect of
+  changing one line — and two of them converted only *part* of a file,
+  leaving the halves disagreeing. Detection now lives in one helper that
+  every text writer goes through, enforced by a lint over the sources rather
+  than a list of the writers someone thought of.
+
+- **`routeFold`'s payload builder read its fold target uncontained**, so a
+  hand-authored `folds-into` carrying `../` lifted a file from outside the
+  repository into a payload bound for the host.
+
+### Changed
+
+- **§numbering defines both directory forms** and states that three digits is
+  a minimum width; **§spec-lifecycle** records the branch-scoped form as a
+  staging form discharged by fold-back, with no `done` state, reconciled
+  against the anti-proliferation stance it does not relax.
+
 ## [0.35.0] — 2026-08-28
 
 ### Added
