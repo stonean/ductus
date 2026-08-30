@@ -37,11 +37,11 @@ use crate::primitives::gate_confirm::GatePromptPayload;
 use crate::schema::primitives::{
     AppendInboxArgs, AppendInboxResult, AppendQuestionArgs, AppendQuestionResult, AppendTaskArgs,
     AppendTaskResult, ApplyManifestArgs, ApplyManifestResult, CheckArtifactsArgs,
-    CheckArtifactsResult, CheckCommandFlagsArgs, CheckCommandFlagsResult,
-    CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult, CheckReviewAgreementArgs,
-    CheckReviewAgreementResult, CheckReviewGateArgs, CheckReviewGateResult, CheckRuleIdsArgs,
-    CheckRuleIdsResult, CheckStuckArgs, CheckStuckResult, CheckUnfoldedSpecsArgs,
-    CheckUnfoldedSpecsResult, CheckboxToggleResult, ComputeReviewScopeArgs,
+    CheckArtifactsResult, CheckCommandFlagsArgs, CheckCommandFlagsResult, CheckCorpusLinksArgs,
+    CheckCorpusLinksResult, CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult,
+    CheckReviewAgreementArgs, CheckReviewAgreementResult, CheckReviewGateArgs,
+    CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult, CheckStuckArgs, CheckStuckResult,
+    CheckUnfoldedSpecsArgs, CheckUnfoldedSpecsResult, CheckboxToggleResult, ComputeReviewScopeArgs,
     ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult, CreatePlanArtifactsArgs,
     CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult, DashboardArgs,
     DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult, DeriveDependenciesArgs,
@@ -863,6 +863,19 @@ impl GovRuntimeServer {
         params: Parameters<CheckUnfoldedSpecsArgs>,
     ) -> Result<Json<CheckUnfoldedSpecsResult>, String> {
         primitives::check_unfolded_specs::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "check-corpus-links",
+        description = "Report relative markdown links in the spec corpus that resolve to nothing \u{2014} the failure an adopter creates by deleting or renaming a spec directory, which dangles every inbound pointer with no error and no gate. Fills the gap between three checks that each miss it: check-orphaned-references scopes to adopter-owned bootstrap referrers, /ductus:analyze is bounded to one feature plus its dependencies, and /ductus:audit Family 26 is maintainer-only. Read-only, and reports rather than repairs \u{2014} a depth error is re-pointed while a deliberate removal is named in prose, and a rewrite that guessed wrong is worse than a precise report. Resolution is lexical against the citing file's own directory, never canonicalized, so the answer is a property of the text rather than of the checkout. Inline code spans are stripped before matching (documentation quoting link syntax is not making a link), fenced blocks and frontmatter are skipped, and blockquoted lines are NOT \u{2014} that exemption belongs to derive-dependencies, where it decides whether a link induces an edge. Empty `broken` means clean only when `skipped` is empty and `examined` is non-empty; `guidance` is set when the scan could not establish a subject at all. Targets carrying NNN, a {placeholder}, a `*`, or a bare `...` are counted in `shapes-skipped` rather than tested, and the spec root's templates/ are excluded by construction and counted."
+    )]
+    async fn check_corpus_links(
+        &self,
+        params: Parameters<CheckCorpusLinksArgs>,
+    ) -> Result<Json<CheckCorpusLinksResult>, String> {
+        primitives::check_corpus_links::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

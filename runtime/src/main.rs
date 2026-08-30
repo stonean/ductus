@@ -11,17 +11,18 @@ use ductus::mcp::server::GovRuntimeServer;
 use ductus::primitives;
 use ductus::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, CheckArtifactsArgs,
-    CheckCommandFlagsArgs, CheckOrphanedReferencesArgs, CheckReviewAgreementArgs,
-    CheckReviewGateArgs, CheckRuleIdsArgs, CheckStuckArgs, CheckUnfoldedSpecsArgs,
-    ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs, CreateScenarioArgs,
-    DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs, DeriveReferencesArgs,
-    DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs, EnforceManifestArgs,
-    ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs,
-    LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs,
-    MigrateSessionFileArgs, ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs,
-    RemoveInboxItemArgs, ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs,
-    RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
-    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs, WriteSupersessionAnnotationArgs,
+    CheckCommandFlagsArgs, CheckCorpusLinksArgs, CheckOrphanedReferencesArgs,
+    CheckReviewAgreementArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStuckArgs,
+    CheckUnfoldedSpecsArgs, ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs,
+    CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs,
+    DeriveReferencesArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs,
+    EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs,
+    InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
+    MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs, ProcessWaiversArgs,
+    PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RemoveInboxItemArgs, ResolveAnchorArgs,
+    ResolveFeatureArgs, ResolveReferencesArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
+    RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteReviewArgs,
+    WriteSessionArgs, WriteSupersessionAnnotationArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -139,6 +140,7 @@ enum Command {
     /// Derive the existing homes — specs, rule surfaces — proposed work could belong to.
     DeriveRoutingCandidates(DeriveRoutingCandidatesArgs),
     /// Report adopter-owned files whose references to ductus-managed paths no longer resolve.
+    CheckCorpusLinks(CheckCorpusLinksArgs),
     CheckOrphanedReferences(CheckOrphanedReferencesArgs),
     /// Report flags a command's Flags table documents but its `argument-hint` omits.
     CheckCommandFlags(CheckCommandFlagsArgs),
@@ -304,6 +306,39 @@ fn report_cycles(cycles: &[Vec<String>]) {
     eprintln!("derive-dependencies: dependency graph contains cycles (see above).");
     eprintln!("The body inline links above induced cycles in the derived dep graph.");
     eprintln!("Remove or move the offending links under '## See also' before committing.");
+}
+
+/// Render broken corpus links to stderr, so an author whose commit is blocked
+/// sees the citation and the fix rather than a JSON blob.
+///
+/// Each line is `path:line` first, which is what an editor and a terminal both
+/// make clickable.
+fn report_broken_links(result: &ductus::schema::primitives::CheckCorpusLinksResult) {
+    for link in &result.broken {
+        eprintln!(
+            "broken link: {}:{} -> `{}` — {}",
+            link.path, link.line, link.target, link.guidance
+        );
+    }
+    for skip in &result.skipped {
+        eprintln!(
+            "unreadable: {} ({}) — its links were never checked",
+            skip.path, skip.reason
+        );
+    }
+    if !result.guidance.is_empty() {
+        eprintln!("check-corpus-links: {}", result.guidance);
+    }
+    if !result.broken.is_empty() {
+        eprintln!();
+        eprintln!(
+            "check-corpus-links: {} relative link(s) in {} resolve to nothing.",
+            result.broken.len(),
+            result.specs_root
+        );
+        eprintln!("Re-point them, or — when a later spec removed the target — name it in prose");
+        eprintln!("instead of linking it. `git commit --no-verify` bypasses this deliberately.");
+    }
 }
 
 fn cwd() -> PathBuf {
@@ -657,6 +692,21 @@ fn main() -> ExitCode {
         }
         Command::DeriveRoutingCandidates(args) => {
             emit_result(primitives::derive_routing_candidates::run(&args, &repo))
+        }
+        Command::CheckCorpusLinks(args) => {
+            let outcome = primitives::check_corpus_links::run(&args, &repo);
+            if let Ok(result) = &outcome {
+                report_broken_links(result);
+            }
+            // A broken link blocks the commit — that is the whole point: a
+            // deletion should fail at the commit that makes it rather than at
+            // a reader's next traversal. A scan that could not establish a
+            // subject, or could not read a file, blocks for the *other*
+            // reason: a check that could not run must never exit like one
+            // that passed.
+            emit_result_gated(outcome, |r| {
+                !r.broken.is_empty() || !r.guidance.is_empty() || !r.skipped.is_empty()
+            })
         }
         Command::CheckOrphanedReferences(args) => {
             emit_result(primitives::check_orphaned_references::run(&args, &repo))

@@ -106,6 +106,7 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
    - `{ "toolName": "mcp:ductus:remove-inbox-item", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:check-artifacts", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:derive-routing-candidates", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:check-corpus-links", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:check-orphaned-references", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:check-command-flags", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:check-review-agreement", "permission": { "type": "allow" } }`

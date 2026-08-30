@@ -2946,6 +2946,95 @@ pub struct CheckOrphanedReferencesResult {
     pub last_applied: String,
 }
 
+// -- check-corpus-links --------------------------------------------------------
+
+/// Args for `check-corpus-links`. Reports relative markdown links in the
+/// **spec corpus** that resolve to nothing.
+///
+/// Three checks sit near this ground and none of them covers it:
+/// `check-orphaned-references` scopes to the adopter-owned bootstrap referrers
+/// pointing into ductus-managed roots, `/{project}:analyze` is bounded to one
+/// feature plus its declared dependencies, and `/{project}:audit` Family 26
+/// performs exactly the right check but is maintainer-only — adopters never
+/// invoke it. So an adopter who deletes or renames a spec directory dangles
+/// every inbound pointer and nothing reports it (spec 022 scenario
+/// `adopter-corpus-link-integrity`).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckCorpusLinksArgs {}
+
+/// One relative link whose target does not exist.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct BrokenCorpusLink {
+    /// Repo-relative path of the file carrying the link.
+    pub path: String,
+    /// 1-based line number, counting from the top of the file (frontmatter
+    /// included), so the citation matches what an editor shows.
+    pub line: usize,
+    /// The link target exactly as written, fragment included.
+    pub target: String,
+    /// What to do about it. A target that resolves one directory up is the
+    /// dominant class — a scenario lives one tier deeper than its spec, so
+    /// one `../` too few renders fine and resolves to nothing — and naming
+    /// that case turns a report into a fix.
+    pub guidance: String,
+}
+
+/// A file the scan could not read.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct CorpusLinkSkip {
+    /// Repo-relative path of the file.
+    pub path: String,
+    /// Why it could not be examined.
+    pub reason: String,
+}
+
+/// Result for `check-corpus-links`.
+///
+/// `broken` empty with `skipped` empty **and** a non-zero `examined` is
+/// examined-and-clean. `broken` empty with anything in `skipped`, or with
+/// `examined` at zero, is **could not examine** — a caller must not render
+/// either as assurance (`QUAL-CLAIM-001`). That distinction is the whole
+/// reason the counts are returned rather than a bare list.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckCorpusLinksResult {
+    /// Broken links, in file then line order.
+    #[serde(default)]
+    pub broken: Vec<BrokenCorpusLink>,
+    /// Markdown files actually read, repo-relative — the subject the verdict
+    /// describes. Zero examined with zero broken is not a clean corpus.
+    #[serde(default)]
+    pub examined: Vec<String>,
+    /// Files that could not be read. Never silent: an unreadable file is a
+    /// file whose links were never checked.
+    #[serde(default)]
+    pub skipped: Vec<CorpusLinkSkip>,
+    /// Files excluded **by construction**, because a link that does not
+    /// resolve here is their correct state: the adopter-facing templates
+    /// under `{specs-root}/templates/`, whose links resolve in a scaffolded
+    /// feature directory rather than in the template's own.
+    ///
+    /// Counted rather than dropped, so the scope of the verdict is legible.
+    pub excluded_by_construction: u32,
+    /// Link targets skipped as documentation **shapes** rather than
+    /// references — a target carrying `NNN`, a `{placeholder}`, a `*`, or a
+    /// bare `...`. Prose names link syntax as often as it names files, and
+    /// testing a shape against the filesystem manufactures findings out of
+    /// documentation.
+    pub shapes_skipped: u32,
+    /// The spec root the scan walked, repo-relative — the configured
+    /// `[paths] specs-root`, not an assumed `specs`.
+    pub specs_root: String,
+    /// Set when the scan could not establish a subject at all: the spec root
+    /// is absent or unreadable, so zero examined means *nothing was looked
+    /// at* rather than *nothing is broken*. Empty otherwise.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub guidance: String,
+}
+
 // -- check-command-flags -------------------------------------------------------
 
 /// Args for `check-command-flags`. Reports flags a command's Flags table

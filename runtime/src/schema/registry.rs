@@ -56,6 +56,7 @@ pub(crate) const PRIMITIVE_REGISTRY: &[&str] = &[
     "remove-inbox-item",
     "check-artifacts",
     "derive-routing-candidates",
+    "check-corpus-links",
     "check-orphaned-references",
     "check-command-flags",
     "check-review-agreement",

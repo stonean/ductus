@@ -290,6 +290,6 @@ Runtime half of [049's rename](../049-rename-govern-to-ductus/spec.md): the per-
 
 ## 104. Implement scenario: [adopter-corpus-link-integrity](scenarios/adopter-corpus-link-integrity.md) — adopters get no corpus-wide link check
 
-- [ ] Implement the behavior described in `scenarios/adopter-corpus-link-integrity.md`
+- [x] Implement the behavior described in `scenarios/adopter-corpus-link-integrity.md`
 
 - **Done when**: A runtime primitive reports every relative markdown link in the spec corpus that resolves to nothing, the adopter pre-commit hook invokes it, an unreadable listing is reported as a finding rather than a clean pass, and inline code spans are stripped so documentation describing link syntax produces no false positives.
