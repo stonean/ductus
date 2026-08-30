@@ -21,7 +21,7 @@ Install `ductus` into any project:
 curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/stonean/ductus/main/install.sh | sh
 ```
 
-This installs the `/ductus` bootstrap command for Claude Code — see [Installing per agent](#installing-per-agent) to target Auggie, Antigravity, or OpenCode instead. Then, in your agent, run:
+This installs the `/ductus` bootstrap command for Claude Code — see [Installing per agent](docs/slash-commands.md#installing-per-agent) to target Auggie, Antigravity, or OpenCode instead. Then, in your agent, run:
 
 ```text
 /ductus my-project
@@ -56,7 +56,7 @@ draft ──/clarify──▶ clarified ──/plan──▶ planned ──/impl
 
 `/analyze` can run at any time to check a feature's artifacts against each other — it's a safety check, not a gate.
 
-You don't have to start at `draft`. A brownfield feature can enter with a sparse sketch spec and gain precision as you touch the code; a `done` feature reopens automatically when a bug or change request surfaces. See [docs/introduction.md](docs/introduction.md) for the full mental model, and [framework/constitution.md](framework/constitution.md) for the authoritative rules.
+You don't have to start at `draft`. A brownfield feature can enter with a sparse sketch spec and gain precision as you touch the code; a `done` feature reopens automatically when a bug or change request surfaces. See [framework/constitution.md](framework/constitution.md) for the authoritative rules.
 
 ## Commands
 
@@ -65,163 +65,32 @@ Adoption installs a full set of verb-named, session-aware commands. Use `/target
 Each entry below says what the command **does**; the section it links to says when you would reach for it and why it exists.
 
 - **Pipeline — advance state**
-  - [`/specify`](#specify--a-new-feature-spec-targeted-for-the-session) — create a spec for new work no existing spec covers, and target it
-  - [`/clarify`](#clarify--open-questions-resolved-and-the-spec-advanced-to-clarified) — resolve the spec's open questions and advance it to `clarified`
-  - [`/plan`](#plan--technical-decisions-affected-files-and-an-ordered-task-list) — turn the spec into technical decisions, affected files, and an ordered task list
-  - [`/implement`](#implement--the-code-and-the-specs-move-to-in-progress-then-done) — work the task list and write the code
-  - [`/review`](#review--reviewmd-and-a-hold-on-done-while-violations-stand) — analyze the code against the applicable rules, and block `done` on violations
-  - [`/analyze`](#analyze--a-report-of-where-a-features-own-artifacts-disagree) — audit a feature's artifacts against each other: drifted checkboxes, stale reviews, dead links
+  - [`/specify`](docs/slash-commands.md#specify--a-new-feature-spec-targeted-for-the-session) — create a spec for new work no existing spec covers, and target it
+  - [`/clarify`](docs/slash-commands.md#clarify--open-questions-resolved-and-the-spec-advanced-to-clarified) — resolve the spec's open questions and advance it to `clarified`
+  - [`/plan`](docs/slash-commands.md#plan--technical-decisions-affected-files-and-an-ordered-task-list) — turn the spec into technical decisions, affected files, and an ordered task list
+  - [`/implement`](docs/slash-commands.md#implement--the-code-and-the-specs-move-to-in-progress-then-done) — work the task list and write the code
+  - [`/review`](docs/slash-commands.md#review--reviewmd-and-a-hold-on-done-while-violations-stand) — analyze the code against the applicable rules, and block `done` on violations
+  - [`/analyze`](docs/slash-commands.md#analyze--a-report-of-where-a-features-own-artifacts-disagree) — audit a feature's artifacts against each other: drifted checkboxes, stale reviews, dead links
 - **Refine — adjust a spec's artifacts**
-  - [`/amend`](#amend--a-question-or-scenario-recorded-with-the-lifecycle-back-edge-taken) — add a question or scenario to a spec, reopening it if its status requires
-  - [`/supersede`](#supersede--the-supersedes-key-on-one-spec-the-annotation-on-the-other) — record that a newer spec counters an older one, and annotate the older one
+  - [`/amend`](docs/slash-commands.md#amend--a-question-or-scenario-recorded-with-the-lifecycle-back-edge-taken) — add a question or scenario to a spec, reopening it if its status requires
+  - [`/supersede`](docs/slash-commands.md#supersede--the-supersedes-key-on-one-spec-the-annotation-on-the-other) — record that a newer spec counters an older one, and annotate the older one
 - **Destructive — these remove content**
-  - [`/prune`](#prune--spent-task-sections-in-one-tasksmd) — drop completed task sections from `tasks.md`, which is not for durable content
-  - [`/fold`](#fold--the-branch-scoped-staging-directory-after-migrating-its-content) — merge a branch-scoped spec into its durable home and remove the staging directory
-  - [`/consolidate`](#consolidate--an-entire-spec-directory) — re-point every reference to a replaced spec, then remove it
+  - [`/prune`](docs/slash-commands.md#prune--spent-task-sections-in-one-tasksmd) — drop completed task sections from `tasks.md`, which is not for durable content
+  - [`/fold`](docs/slash-commands.md#fold--the-branch-scoped-staging-directory-after-migrating-its-content) — merge a branch-scoped spec into its durable home and remove the staging directory
+  - [`/consolidate`](docs/slash-commands.md#consolidate--an-entire-spec-directory) — re-point every reference to a replaced spec, then remove it
 - **Brownfield — absorb existing reality**
-  - [`/log`](#log--one-raw-line-in-specsinboxmd) — add an item to `specs/inbox.md` to be picked up later with `/groom`
-  - [`/groom`](#groom--every-inbox-item-routed-to-its-real-home) — walk the inbox and route each item to a rule, a spec, or a scenario
+  - [`/log`](docs/slash-commands.md#log--one-raw-line-in-specsinboxmd) — add an item to `specs/inbox.md` to be picked up later with `/groom`
+  - [`/groom`](docs/slash-commands.md#groom--every-inbox-item-routed-to-its-real-home) — walk the inbox and route each item to a rule, a spec, or a scenario
 - **Orient**
-  - [`/target`](#target--the-sessions-working-feature) — set the feature the other commands act on
-  - [`/status`](#status--the-pipeline-view-of-every-feature) — show every feature's pipeline status and what is holding it back
-  - [`/link`](#link--a-registered-sibling-service-so-cross-service-references-resolve) — register another service's repo so cross-service references resolve
-  - [`/help`](#help--the-command-reference-generated-from-what-is-installed) — show the command reference for this project
+  - [`/target`](docs/slash-commands.md#target--the-sessions-working-feature) — set the feature the other commands act on
+  - [`/status`](docs/slash-commands.md#status--the-pipeline-view-of-every-feature) — show every feature's pipeline status and what is holding it back
+  - [`/link`](docs/slash-commands.md#link--a-registered-sibling-service-so-cross-service-references-resolve) — register another service's repo so cross-service references resolve
+  - [`/help`](docs/slash-commands.md#help--the-command-reference-generated-from-what-is-installed) — show the command reference for this project
 - **Bootstrap — one-time per project**
-  - [`/ductus`](#ductus--the-framework-installed-or-updated-in-this-project) — install or update the framework in this project
-  - [`/configure`](#configure--agent-permissions-for-the-ductus-commands) — grant your agent the permissions the `ductus` commands need
+  - [`/ductus`](docs/slash-commands.md#ductus--the-framework-installed-or-updated-in-this-project) — install or update the framework in this project
+  - [`/configure`](docs/slash-commands.md#configure--agent-permissions-for-the-ductus-commands) — grant your agent the permissions the `ductus` commands need
 
-### Pipeline — advance state
-
-#### `/specify` — a new feature spec, targeted for the session
-
-**Reach for it when you have new work and no spec covers it.** It creates the feature directory and makes it the session target.
-
-Before scaffolding anything it checks whether an existing spec already owns the work, because a duplicate spec is the one mistake here that is expensive to undo. It takes a rich description or a one-line sketch — sparse brownfield input is expected, not merely tolerated.
-
-Flags: `--branch` / `--branch-id <id>` with `--fold-into <feature>` create the branch-scoped form (see `/fold`), and `--supersedes <feature>` records that this spec counters an existing one.
-
-#### `/clarify` — open questions resolved, and the spec advanced to `clarified`
-
-**Reach for it when the spec has open questions and you are about to plan against it.** It walks them one at a time and records each answer with its reasoning.
-
-Planning over an unresolved question is how a plan gets written twice.
-
-#### `/plan` — technical decisions, affected files, and an ordered task list
-
-**Reach for it when the spec is settled and you need to know what the change actually touches.** Persistence-heavy features also get a data model.
-
-#### `/implement` — the code, and the spec's move to `in-progress` then `done`
-
-**Reach for it when it is time to write code.** It walks the task list one task at a time, and is the only command that writes application code.
-
-The spec reaches `done` once every task and acceptance criterion is checked and the review gate passes — not before.
-
-#### `/review` — `review.md`, and a hold on `done` while violations stand
-
-**Reach for it before you call a feature done.** It audits the code against the project's rule files across five dimensions: security, reuse, quality, efficiency, and simplicity.
-
-MUST violations keep the spec out of `done` until they are fixed or waived with a recorded reason — so "we will fix it later" leaves a trace instead of evaporating. `--all`, `--fix`, and `--waive <rule-id> --reason "<text>"` are supported.
-
-#### `/analyze` — a report of where a feature's own artifacts disagree
-
-**Reach for it when something is out of sync and you want to know what.** A task list that no longer matches the plan, a ticked criterion whose file is gone, a spec at `done` with a blocking review.
-
-Unlike `/review`, it audits artifacts against *each other* rather than against code, and it runs at any time — it is a safety check, not a gate. Read-only; `--fix` corrects checkbox drift and `--all` scans every feature.
-
-### Refine — adjust a spec's artifacts
-
-**Commands split on how many specs they write, and that is what decides whether a capability is a flag or a command of its own.** `/amend`, `/prune`, `/clarify`, `/plan` and `/implement` each write **one** spec, and each declares that single-spec scope. `/fold`, `/supersede` and `/consolidate` write **two**, so none of them fits inside a single-spec command as a flag — widening one to accommodate a two-spec operation qualifies every statement it makes about its own scope. That is why `--supersedes` is a flag on `/specify` (which is writing the spec anyway) while a *retroactive* supersession is `/supersede`, and why `/fold` gains no `--into`.
-
-#### `/amend` — a question or scenario recorded, with the lifecycle back-edge taken
-
-**Reach for it when a question or a new behavior surfaces against a spec that has already moved on.**
-
-It takes the back-edge for you: a new question reopens the spec to `draft`, a new scenario reopens a `done` spec to `in-progress`. A spec's status never quietly disagrees with its content. One spec.
-
-#### `/supersede` — the `supersedes:` key on one spec, the annotation on the other
-
-**Reach for it when a later spec countered an earlier one and nothing records that.**
-
-Without a marker, a reader — human or agent — cannot tell a live decision from one that was overturned, and the reflex is to delete the stale spec, which strands every pointer into it. This writes the key on the newer spec and a reciprocal annotation on the older one naming what no longer holds.
-
-The earlier spec **stays**, annotated, as the record of what shipped. Use `/specify --supersedes` instead when you are writing the countering spec right now. Two specs.
-
-### Destructive — these remove content
-
-Three commands delete rather than rewrite. All three confirm before they act, and none writes a backup.
-
-#### `/prune` — spent task sections in one `tasks.md`
-
-**Reach for it when `tasks.md` has turned into a changelog of finished work and you cannot see what is left.** It drops fully-checked task sections, or `--reset` takes the file back to template state.
-
-Scoped to a single artifact the framework classes as ephemeral work-tracking: the durable record of what was done lives in the spec, the code, and git history — which is also the only recovery. One spec.
-
-#### `/fold` — the branch-scoped staging directory, after migrating its content
-
-**Reach for it when a spec was created on a branch only to avoid colliding with the upstream branch's spec, and that branch has now merged.**
-
-Two branches each adding the next `NNN-` spec is a merge conflict in the one file two people are most likely to add at once. So `/specify --branch` numbers the second one from a branch identifier instead — `1234.1-slug` — which cannot collide, and the merge is clean by construction.
-
-That number is scaffolding, not a home. `/fold` is how you take it down: run it on the upstream branch after the merge, and the staging spec's content moves into the durable spec it was standing in for (as a body edit, or as a scenario under it), every inbound pointer is re-pointed, and the directory is removed.
-
-**The point is that one feature ends up with one durable home** — rather than its decisions spread across a permanent spec and a leftover branch spec nobody ever consolidated. A branch-scoped spec is therefore **retired, not completed**: `/status` reports one as pending and the `done` gate blocks while the fold is outstanding, so the framework will not let you forget it. Two specs.
-
-#### `/consolidate` — an entire spec directory
-
-`spec.md`, its scenarios, plan, tasks, and review.
-
-**Reach for it when one spec replaces another and you want only the new one left.** Two triggers lead here:
-
-- **The feature was redefined or dropped, and a new spec took its place.** The old spec is not a historical record of something that shipped — it is a description of a thing that no longer exists in that form, and keeping it means readers keep finding it.
-- **The old spec was never really a separate concern.** It overlapped a sibling from the start, or duplicates one you have since written.
-
-**The reference cleanup is the point, not a side effect.** Deleting a spec directory by hand is easy; what is hard is that every inbound pointer into it — sibling body links, scenario links a tier deeper, and the `dependencies:` edges derived from them — is now dead, and nothing in a plain `rm -rf` tells you so. `/consolidate` re-points all of them at the target *before* it removes anything, which is what the constitution's **no dead references in live artifacts** rule requires and what `rm -rf` cannot give you. The pre-commit hook's corpus-wide link check is the backstop if anything is missed.
-
-It confirms before acting, naming the source's scenarios individually, because it **migrates no content** — it does not verify that the new spec covers what the old one said, and deliberately does not try to. If you want that check, ask your agent to compare the two specs before you confirm; that is a question an agent answers well and a poor fit for a flag. Recovery is git history. Two specs.
-
-Reach for `/supersede` instead when the old spec *did* ship and you want the record kept: that spec stays on disk, annotated with what no longer holds.
-
-> **This is the only one of the three that removes a durable artifact.** The other two remove something that was never meant to last: `tasks.md` sections are ephemeral work-tracking, and a branch-scoped directory is a staging form whose content `/fold` has just migrated into its durable home. Consolidation is different in kind — it **migrates nothing**. The guard proves the target exists, never that anything actually landed there, so the confirmation names the content you are losing, scenario by scenario, rather than merely naming the directory. Reach for `/supersede` instead whenever the earlier spec actually delivered something: that spec is the record of what shipped, and consolidating it would invert the relationship.
-
-### Brownfield — absorb existing reality
-
-#### `/log` — one raw line in `specs/inbox.md`
-
-**Reach for it when you notice something mid-task and do not want to derail to deal with it.** No triage, no routing, no decision — that is `/groom`'s job, later.
-
-#### `/groom` — every inbox item routed to its real home
-
-**Reach for it when the inbox has accumulated and you are ready to decide where each item belongs.**
-
-It walks the list one item at a time and routes each: a rule for a cross-cutting concern, a new spec, a scenario under an existing spec, a chore left alone, or a discard. Each route is confirmed before anything is written, and a `done` spec is reopened when an item lands under it.
-
-### Orient
-
-#### `/target` — the session's working feature
-
-**Reach for it when you are about to work on a different feature.** Sets the feature (or `feature/scenario`) for the session, so the other commands stop needing an argument.
-
-#### `/status` — the pipeline view of every feature
-
-**Reach for it when you need to answer "where is everything?"** A dashboard of every feature's progress, or a focused view of the current target — including which specs are blocked, which carry unresolved scenario questions, and which have a pending fold.
-
-#### `/link` — a registered sibling service, so cross-service references resolve
-
-**Reach for it when a spec in this repo relates to a spec in another service's repo.** Registering the service in `.ductus/config.toml` makes a cross-service reference resolve to the linked spec's real status instead of a dead link. `--list` shows registered services and their resolution health.
-
-#### `/help` — the command reference, generated from what is installed
-
-**Reach for it when you forget which command does what.** Generated rather than hand-maintained, so it cannot describe a command set the project does not have.
-
-### Bootstrap — one-time per project
-
-#### `/ductus` — the framework installed or updated in this project
-
-**Reach for it when adopting the framework, or pulling the latest version of it.** The installer that placed every other command. Idempotent — safe to re-run any time.
-
-#### `/configure` — agent permissions for the `ductus` commands
-
-**Reach for it when your agent keeps asking permission for the same `ductus` operations.** Configures the permission set so the pipeline stops prompting on every step.
+Each command is documented in full — what it is for, why it exists, and what it will not do — in **[docs/slash-commands.md](docs/slash-commands.md)**.
 
 ## Rules
 
@@ -301,7 +170,9 @@ The waiver is anchored to the `(rule, file)` pair, so code moving within a file 
 
 ### Writing your own
 
-Add a file to `specs/rules/` with one of the three suffixes and it is discovered automatically — no registration step. Give each rule a permanent ID, state it in RFC 2119 language, and record the rationale: a rule whose reasoning is not written down is one nobody can argue with when it is wrong. Rule files ductus ships are overwritten on update unless you pin them in `.ductus/config.toml` `[pinned] files`.
+Add a file to `specs/rules/` with one of the three suffixes and it is discovered automatically — no registration step, no manifest entry. Give each rule a permanent ID, state it in RFC 2119 language, and record the rationale: a rule whose reasoning is not written down is one nobody can argue with when it is wrong.
+
+**A rule file you wrote is yours.** `/ductus` only ever rewrites the rule files it ships; it does not touch, move, or delete a file you added, on any upgrade. The one case that needs a decision is a shipped file you have *edited* — that one is overwritten on the next update unless you pin it in `.ductus/config.toml` `[pinned] files`. Upstreaming the change is usually better than pinning: a pinned file stops receiving fixes.
 
 ## Installing (per agent)
 
@@ -319,7 +190,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/stonean/d
 curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/stonean/ductus/main/install.sh | sh -s -- auggie
 ```
 
-Auggie needs a one-time manual MCP registration (`auggie mcp add ductus …`) — see [Registering the runtime](#registering-the-runtime).
+Auggie needs a one-time manual MCP registration (`auggie mcp add ductus …`) — see [Registering the runtime](docs/slash-commands.md#registering-the-runtime).
 
 ### Antigravity
 
@@ -335,9 +206,9 @@ Then run `/ductus {project-name}`. The installer creates the right directory for
 curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/stonean/ductus/main/install.sh | sh -s -- opencode
 ```
 
-OpenCode installs the bootstrap as a verbatim command at `.opencode/command/ductus.md` (invoked `/ductus`) and reads `AGENTS.md` natively — no `CLAUDE.md`. `/ductus` wires the `ductus` runtime automatically by writing the project's root `opencode.json`; because OpenCode loads config once at startup, restart it after the first wiring (see [Registering the runtime](#registering-the-runtime)).
+OpenCode installs the bootstrap as a verbatim command at `.opencode/command/ductus.md` (invoked `/ductus`) and reads `AGENTS.md` natively — no `CLAUDE.md`. `/ductus` wires the `ductus` runtime automatically by writing the project's root `opencode.json`; because OpenCode loads config once at startup, restart it after the first wiring (see [Registering the runtime](docs/slash-commands.md#registering-the-runtime)).
 
-The same bootstrap supports every agent, so re-run `/ductus --add-agent` from any adopted agent later to add others. `/ductus` acquires the runtime and wires it in the same run — automatically for Claude and OpenCode (both keep MCP config in a committed repo file), or by surfacing a one-time registration step for Auggie and Antigravity (see [Registering the runtime](#registering-the-runtime)).
+The same bootstrap supports every agent, so re-run `/ductus --add-agent` from any adopted agent later to add others. `/ductus` acquires the runtime and wires it in the same run — automatically for Claude and OpenCode (both keep MCP config in a committed repo file), or by surfacing a one-time registration step for Auggie and Antigravity (see [Registering the runtime](docs/slash-commands.md#registering-the-runtime)).
 
 ## Brownfield adoption
 
@@ -411,7 +282,7 @@ From that session on, the pipeline takes the deterministic path. File writes are
 - **`[pinned]`** — list destination paths `ductus` should never overwrite, even files it normally updates (e.g. a customized `.ductus/constitution.md`).
 - **`[rules]`** — declare which rule surfaces your project needs: `surfaces = ["backend"]`, `["frontend"]`, or both. `/ductus` prompts for this on first run, then installs only the matching rule files (cross-cutting `-cross` rules always apply) and `/review` enforces only those. Leave it unset to let `ductus` derive the surface from your stack and install every rule file.
 - **`[paths]`** — rename the top-level directory that holds every `ductus` artifact: `specs-root = "governance"`. Defaults to `specs`; set it to avoid colliding with a sibling framework's directory (e.g. RSpec's `spec/`). `/ductus` prompts for it on first run; once set, every command and the runtime resolve it. A single directory name — no path separators, no `..`, no leading slash.
-- **`[services]`** — register sibling services so cross-service reference links resolve to the linked spec's lifecycle status (see [Cross-service references](#cross-service-references)). Add entries with `/link`, not by hand.
+- **`[services]`** — register sibling services so cross-service reference links resolve to the linked spec's lifecycle status (see [Cross-service references](docs/slash-commands.md#cross-service-references)). Add entries with `/link`, not by hand.
 
 ```toml
 [pinned]
@@ -510,7 +381,7 @@ This repo is the source for everything `ductus` ships, plus its own dogfooded sp
   - [commands/](framework/commands/) — slash command sources
   - [bootstrap/](framework/bootstrap/) — the `ductus.md` installer and per-agent permission files
 - **[install.sh](install.sh)** — the `curl … | sh` installer that places the `/ductus` bootstrap command for your agent
-- **[docs/introduction.md](docs/introduction.md)** — the long-form pitch for spec-driven development
+- **[docs/slash-commands.md](docs/slash-commands.md)** — the full reference for every slash command
 - **[runtime/](runtime/)** — the `ductus` deterministic runtime (Rust)
 - **[specs/](specs/)** — `ductus`'s own feature specs; it develops itself with its own pipeline. See [specs/README.md](specs/README.md) for cross-cutting decisions and deferred work.
 - **[scripts/](scripts/)** — maintenance and generator scripts
