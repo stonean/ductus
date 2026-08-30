@@ -170,7 +170,12 @@ if [ ! -f "$MAINTAINER_ONLY" ]; then
   echo "gen-help-tables: $MAINTAINER_ONLY not found — cannot tell a withheld command from a missing row" >&2
   exit 6
 fi
-excluded_commands="$(sed -E 's/#.*//; s/[[:space:]]//g' "$MAINTAINER_ONLY" | grep -v '^$' | sort -u)"
+# `|| true` is load-bearing: under `set -e` with `pipefail`, a `grep` that
+# matches nothing exits 1 and aborts the script here — before the guard below
+# can say why. Without it the fail-closed path exits 1 silently instead of 6
+# with the explanation, which is the same "a check that could not run looks
+# like something else" failure the guard exists to prevent.
+excluded_commands="$(sed -E 's/#.*//; s/[[:space:]]//g' "$MAINTAINER_ONLY" | grep -v '^$' | sort -u || true)"
 if [ -z "$excluded_commands" ]; then
   echo "gen-help-tables: $MAINTAINER_ONLY is empty — refusing to treat every command as adopter-facing" >&2
   exit 6
@@ -181,7 +186,7 @@ uncovered="$(comm -23 <(printf '%s\n' "$expected_commands") <(printf '%s\n' "$co
 if [ -n "$uncovered" ]; then
   echo "gen-help-tables: command(s) under framework/commands/ with no help.md row:" >&2
   printf '  %s\n' $uncovered >&2
-  echo "add each to the matching *_entries array in $(basename "$0"), or to its excluded_commands list if it is maintainer-only" >&2
+  echo "add each to the matching *_entries array in $(basename "$0"), or to scripts/maintainer-only-commands.txt if it is deliberately withheld from adopters" >&2
   exit 6
 fi
 command_count="$(printf '%s\n' "$covered_commands" | grep -c . || true)"
