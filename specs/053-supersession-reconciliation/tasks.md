@@ -27,10 +27,10 @@ Runtime first — the bounded read, the annotation form, the extension point —
 
 ## 3. Register the classification extension point
 
-- [ ] Add `classifyClaims` to `build_extension_request` in `runtime/src/interpreter/payload.rs`, beside `routeFold` and `performReview`
-- [ ] Build its request from the `read-supersession-pair` result: both specs, the scenarios, and the four-outcome vocabulary
-- [ ] Give it its own vocabulary rather than reusing `routeFold`'s or `routeInboxItem`'s — those answer *where does this belong*, this answers *what did the later spec do to this claim*
-- [ ] Add a test that an unknown identifier still errors, so the registry stays closed
+- [x] Add `classifyClaims` to `build_extension_request` in `runtime/src/interpreter/payload.rs`, beside `routeFold` and `performReview`
+- [x] Build its request from the `read-supersession-pair` result: both specs, the scenarios, and the four-outcome vocabulary
+- [x] Give it its own vocabulary rather than reusing `routeFold`'s or `routeInboxItem`'s — those answer *where does this belong*, this answers *what did the later spec do to this claim*
+- [x] Add a test that an unknown identifier still errors, so the registry stays closed
 
 - **Done when**: a walker reaching a `classifyClaims` step emits a request carrying the bounded pair, and the extension registry rejects an unknown identifier as it did before.
 

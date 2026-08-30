@@ -429,6 +429,89 @@ pub struct RouteFoldRequest {
     pub routes: Vec<String>,
 }
 
+/// The four outcomes `classifyClaims` may return for one claim.
+///
+/// A **closed** vocabulary, sent with the request so the classifier answers
+/// in the framework's terms rather than inventing its own. Deliberately not
+/// `routeFold`'s or `routeInboxItem`'s: those answer *where does this work
+/// belong*, this answers *what did the later spec do to this claim*.
+pub const CLAIM_CLASSIFICATIONS: [&str; 4] = [
+    "superseded",
+    "still-standing",
+    "conflicting",
+    "unclassified",
+];
+
+/// One claim of the superseded spec, offered for classification.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct SupersededClaim {
+    /// `criterion`, `body-prose`, or `scenario`. Decides what may be *done*
+    /// with the claim, not just how it reads: a criterion is annotated and
+    /// never edited, because it records a delivery event.
+    pub kind: String,
+    /// `AC7` for a criterion, the heading for body prose, the slug for a
+    /// scenario claim — the anchor a later write addresses.
+    pub anchor: String,
+    /// The claim as written. The classifier judges the spec's own words
+    /// rather than a summary of them.
+    pub text: String,
+}
+
+/// Request payload for the `classifyClaims` extension point.
+///
+/// Built from a `read-supersession-pair` result, so the bound on what may be
+/// read is enforced before the request is assembled rather than trusted to
+/// the classifier: there is no field here by which a plan, a data model, or a
+/// third spec could reach the host.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ClassifyClaimsRequest {
+    /// The superseded feature — whose claims these are.
+    pub superseded: String,
+    /// The superseding feature — the spec that countered it.
+    pub superseding: String,
+    /// The superseding spec's body, whole. What it *declares it removes* is
+    /// the only basis for a `superseded` verdict.
+    pub superseding_content: String,
+    /// The claims to classify, in body order then scenario order.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub claims: Vec<SupersededClaim>,
+    /// Closed classification vocabulary.
+    pub classifications: Vec<String>,
+    /// Files the read could not examine, carried through so the classifier
+    /// is never asked to account for a claim that was never loaded — and so
+    /// a caller cannot mistake a partial classification for a complete one.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub unreadable: Vec<String>,
+}
+
+/// One classified claim, as the host returns it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ClassifiedClaim {
+    /// The claim's anchor, echoed so the caller can address the write.
+    pub anchor: String,
+    /// One of [`CLAIM_CLASSIFICATIONS`].
+    pub classification: String,
+    /// One sentence of reasoning, quoting what in the superseding spec drove
+    /// it. An operator settling a conflict needs the evidence; a bare verdict
+    /// is not reviewable.
+    #[serde(default)]
+    pub rationale: String,
+}
+
+/// Response payload for `classifyClaims`.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ClassifyClaimsResponse {
+    /// Every claim examined, **including** the still-standing ones. Omitting
+    /// them would make "examined and untouched" indistinguishable from
+    /// "never looked at".
+    #[serde(default)]
+    pub classified: Vec<ClassifiedClaim>,
+}
+
 /// Fold-route discriminator — what shape the folded content takes in its
 /// upstream home.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
