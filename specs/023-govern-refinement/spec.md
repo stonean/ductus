@@ -2,10 +2,10 @@
 status: done
 dependencies: [022-deterministic-runtime]
 review:
-  last-run: 2026-08-30T15:22:00Z
-  reviewed-against: d1c56d429153541bbdbb6111eaaca8db9968245f
+  last-run: 2026-08-30T23:02:22Z
+  reviewed-against: 5b9be37caf1da07caf621f95485ea45849ff5ff1
   must-violations: 0
-  should-violations: 1
+  should-violations: 0
   low-confidence: 0
   blocking: false
 next-criterion: 41
@@ -132,7 +132,7 @@ The list is sourced from `framework/runtime-tools.txt` to avoid drift. Each tool
 - [x] AC25: `framework/commands/review.md`'s frontmatter `description:` reads exactly `Audit code against rules — security, reuse, quality, efficiency, simplicity. Writes review.md; blocks done on MUST violations.`
 - [x] AC26: The "Audit artifacts" / "Audit code" parallelism is preserved verbatim — both descriptions begin with that exact phrase so the distinction is visible at first glance in `/help` tables and in any consumer that surfaces command descriptions.
 - [x] AC27: `/ductus:analyze` passes against this spec with no hard-fail or blocking findings (replacing the prior AC referencing `/ductus:validate`).
-- [x] AC28: `README.md`, `AGENTS.md`, `specs/README.md`, `framework/commands/help.md`, `docs/introduction.md`, `framework/templates/project/project-readme.md`, `framework/templates/project/agents.md`, `framework/bootstrap/ductus.md`, and any other prose under `framework/`, `specs/`, and `docs/` no longer reference `/capture`, `/elaborate`, or the lightweight track. Help tables regenerate cleanly via `scripts/gen-help-tables.sh`.
+- [x] AC28: `README.md`, `AGENTS.md`, `specs/README.md`, `framework/commands/help.md`, `docs/introduction.md`, `framework/templates/project/project-readme.md`, `framework/templates/project/agents.md`, `framework/bootstrap/ductus.md`, and any other prose under `framework/`, `specs/`, and `docs/` no longer reference `/capture`, `/elaborate`, or the lightweight track. Help tables regenerate cleanly via `scripts/gen-help-tables.sh`. — `docs/introduction.md` no longer exists: it was removed on 2026-08-30 when its command reference moved to `docs/slash-commands.md` and the rest was superseded by the README and the constitution. The sweep this criterion records was performed and holds for every file that still exists.
 - [x] AC29: `framework/constitution.md` §brownfield-process retains its three-phase structure ("Capture → incremental growth → promotion"); step 1 rewrites to point at `/specify` and explicitly notes sparse acceptance criteria are valid for brownfield use. The §brownfield-process anchor name is preserved (no cascading reference updates required).
 - [x] AC30: The Status → next action tables in `framework/commands/target.md` and `framework/commands/status.md` point at `/amend` for the `done` row instead of `/elaborate`.
 - [x] AC31: `scripts/lint-tool-coverage.sh` passes after the rewrites; the runtime's parseability check passes against the rewritten `framework/commands/specify.md` and `framework/commands/amend.md`.
