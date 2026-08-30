@@ -287,3 +287,9 @@ Runtime half of [049's rename](../049-rename-govern-to-ductus/spec.md): the per-
 - [x] Implement the behavior described in `scenarios/review-base-includes-the-transition-commit.md`
 
 - **Done when**: `compute-review-scope` peels the resolved in-progress commit to its first parent before diffing, so work committed together with the back-edge flip is inside the review window; an explicit `--since` is used verbatim with no parent walk; a parentless transition commit falls back to itself; `find_in_progress_commit` is unchanged and `check-stuck` still counts from the transition commit itself; tests cover the flip-plus-work commit (the 017/020 shape), the flip-alone commit, the `--since` passthrough, and the root-commit fallback
+
+## 104. Implement scenario: [adopter-corpus-link-integrity](scenarios/adopter-corpus-link-integrity.md) — adopters get no corpus-wide link check
+
+- [ ] Implement the behavior described in `scenarios/adopter-corpus-link-integrity.md`
+
+- **Done when**: A runtime primitive reports every relative markdown link in the spec corpus that resolves to nothing, the adopter pre-commit hook invokes it, an unreadable listing is reported as a finding rather than a clean pass, and inline code spans are stripped so documentation describing link syntax produces no false positives.

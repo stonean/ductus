@@ -304,3 +304,9 @@ Opened by [048](../048-govern-acquired-runtime/spec.md)'s AC10 adopter runs, whi
 - [x] Fix the same `\s*` newline-swallow bug in `scripts/audit/review-freshness.sh`'s `scalar()`, or fold Family 19 onto the same primitive
 
 - **Done when**: `check-review-agreement` exists as a runtime primitive with unit tests covering the five paired fields, the `blocking`/`must-violations` rule, the orphan-waiver rule, an empty subject set, and unparseable frontmatter on either side; `scripts/audit/review-block-agreement.sh` is a thin entry point carrying no markdown parsing of its own; `scripts/lint-tool-coverage.sh` and `cargo test` pass; `scripts/audit/run-all.sh` exits 0 with Family 31 still proven red against a seeded divergence in each direction; and REUSE-001 from the 2026-08-28 review is resolved.
+
+### 36. Implement scenario: [readme-command-parity](scenarios/readme-command-parity.md) — the README is the one adopter surface with no parity check
+
+- [ ] Implement the behavior described in `scenarios/readme-command-parity.md`
+
+- **Done when**: A new audit family fails when a command shipped to adopters is absent from the README's command tables, reusing Family 16's maintainer-only exclusion set rather than restating it, leaving `/audit`'s deliberate absence unreported, and reporting an unreadable README or command directory as a finding rather than a pass.
