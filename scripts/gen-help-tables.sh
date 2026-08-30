@@ -157,13 +157,24 @@ covered_commands="$(
 actual_commands="$(for f in "$CMD_DIR"/*.md; do basename "$f" .md; done | sort -u)"
 
 # Maintainer-only commands intentionally absent from the adopter-facing help
-# tables. Mirrors installer-command-parity.sh's `excl` (audit.md's own header
-# declares it maintainer-only). Add a line here when a command is deliberately
-# withheld from help.md.
-excluded_commands="$(sort -u <<'EOF'
-audit
-EOF
-)"
+# tables. Read from scripts/maintainer-only-commands.txt — the single source
+# shared with installer-command-parity.sh (Family 16) and
+# readme-command-parity.sh (Family 33). This used to be a second copy of that
+# list, carrying a comment that said so.
+#
+# A missing or empty list is fatal rather than "nothing is excluded": the
+# coverage assertion below would then demand a help.md row for a command
+# deliberately withheld from adopters, and fail every run.
+MAINTAINER_ONLY="$ROOT/scripts/maintainer-only-commands.txt"
+if [ ! -f "$MAINTAINER_ONLY" ]; then
+  echo "gen-help-tables: $MAINTAINER_ONLY not found — cannot tell a withheld command from a missing row" >&2
+  exit 6
+fi
+excluded_commands="$(sed -E 's/#.*//; s/[[:space:]]//g' "$MAINTAINER_ONLY" | grep -v '^$' | sort -u)"
+if [ -z "$excluded_commands" ]; then
+  echo "gen-help-tables: $MAINTAINER_ONLY is empty — refusing to treat every command as adopter-facing" >&2
+  exit 6
+fi
 
 expected_commands="$(comm -23 <(printf '%s\n' "$actual_commands") <(printf '%s\n' "$excluded_commands"))"
 uncovered="$(comm -23 <(printf '%s\n' "$expected_commands") <(printf '%s\n' "$covered_commands"))"

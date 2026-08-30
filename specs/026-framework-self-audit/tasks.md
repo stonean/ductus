@@ -307,6 +307,6 @@ Opened by [048](../048-govern-acquired-runtime/spec.md)'s AC10 adopter runs, whi
 
 ### 36. Implement scenario: [readme-command-parity](scenarios/readme-command-parity.md) — the README is the one adopter surface with no parity check
 
-- [ ] Implement the behavior described in `scenarios/readme-command-parity.md`
+- [x] Implement the behavior described in `scenarios/readme-command-parity.md`
 
 - **Done when**: A new audit family fails when a command shipped to adopters is absent from the README's command tables, reusing Family 16's maintainer-only exclusion set rather than restating it, leaving `/audit`'s deliberate absence unreported, and reporting an unreadable README or command directory as a finding rather than a pass.

@@ -67,6 +67,26 @@ ductus_bin() {
   fi
 }
 
+# maintainer_only_commands — echo the base name of each command deliberately
+# withheld from adopters, one per line.
+#
+# Read from `scripts/maintainer-only-commands.txt` rather than restated here.
+# The list had already been copied once — Family 16 held it and
+# gen-help-tables.sh held a second with a comment saying it mirrored the first
+# — and Family 33 would have made three. A set restated once per consumer is
+# exactly the drift these parity families exist to catch, so keeping it in one
+# file is the same reasoning that put the runtime-resolution tiers in
+# `ductus_bin` above.
+#
+# A missing or unreadable file echoes nothing, which every caller must treat
+# as a finding rather than as "nothing is excluded": an empty exclusion set
+# silently converts a deliberate omission into a reported defect.
+maintainer_only_commands() {
+  local file="$ROOT/scripts/maintainer-only-commands.txt"
+  [ -f "$file" ] || return 0
+  sed -E 's/#.*//; s/[[:space:]]//g' "$file" | grep -v '^$' | sort -u
+}
+
 # spec_corpus BIN — echo `slug<TAB>status` for every feature directory the
 # runtime recognizes, one per line.
 #

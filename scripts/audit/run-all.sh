@@ -75,5 +75,6 @@ run_check "Family 29 — permission wildcard position" "scripts/audit/permission
 run_check "Family 30 — command flag/hint parity" "scripts/audit/command-flag-hint-parity.sh"
 run_check "Family 31 — review block agreement" "scripts/audit/review-block-agreement.sh"
 run_check "Family 32 — permission entry shape" "scripts/audit/permission-entry-shape.sh"
+run_check "Family 33 — README command parity" "scripts/audit/readme-command-parity.sh"
 
 exit "$drift"

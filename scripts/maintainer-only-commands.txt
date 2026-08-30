@@ -1,0 +1,25 @@
+# Commands under framework/commands/ that are deliberately NOT shipped to
+# adopters — withheld from the /ductus installer manifest, from help.md's
+# command tables, and from the README.
+#
+# The single source for that set. Three consumers read this file:
+#
+#   * scripts/audit/installer-command-parity.sh (Family 16) — the manifest
+#     must not carry them;
+#   * scripts/audit/readme-command-parity.sh (Family 33) — the README must
+#     not be faulted for omitting them;
+#   * scripts/gen-help-tables.sh — help.md's coverage assertion must not
+#     demand a row for them.
+#
+# It exists as one file because it was three copies. Family 16 held the
+# list, gen-help-tables.sh held a second with a comment saying it mirrored
+# the first, and Family 33 would have been the third — and a set restated
+# once per consumer is the drift the parity families exist to catch, in the
+# lists the parity families themselves depend on.
+#
+# One name per line (the command's base name, no `.md`). Blank lines and
+# `#` comments are ignored. Add a name here when a command is deliberately
+# maintainer-only, and say why in its own file's header.
+
+# audit is maintainer-only — see framework/commands/audit.md's own header.
+audit

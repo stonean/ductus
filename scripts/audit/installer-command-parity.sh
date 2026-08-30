@@ -49,12 +49,17 @@ manifest="$(grep -oE '^\| `framework/commands/[a-z-]+\.md`' "$DUCTUS" \
 actual="$(for f in "$SRC_DIR"/*.md; do basename "$f" .md; done | sort -u)"
 
 # Maintainer-only commands intentionally excluded from the adopter manifest.
-# audit is maintainer-only (see framework/commands/audit.md's own header).
-# Add a line here when a new command is deliberately withheld from /ductus.
-excl="$(sort -u <<'EOF'
-audit
-EOF
-)"
+# Read from scripts/maintainer-only-commands.txt through lib.sh, so this
+# family, Family 33, and gen-help-tables.sh share one list rather than three.
+# An empty result is a finding, not an empty exclusion set: without the list
+# a deliberately-withheld command reads as a manifest row that is missing.
+excl="$(maintainer_only_commands)"
+if [ -z "$excl" ]; then
+  emit "scripts/maintainer-only-commands.txt" \
+    "the maintainer-only command list is missing or empty, so every deliberate omission would be reported as drift" \
+    "restore scripts/maintainer-only-commands.txt with one command base name per line"
+  exit "$drift"
+fi
 
 # Expected manifest = actual source files minus maintainer-only exclusions.
 expected="$(comm -23 <(printf '%s' "$actual") <(printf '%s' "$excl"))"
