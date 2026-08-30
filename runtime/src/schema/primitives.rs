@@ -1700,6 +1700,25 @@ pub struct WriteSupersessionAnnotationArgs {
     /// the one naming what stopped being true.
     #[arg(long)]
     pub substance: String,
+    /// The `AC{n}` label of a single criterion to annotate, when the
+    /// annotation is criterion-level rather than whole-spec (spec 053).
+    ///
+    /// **A granularity, not a second primitive.** The constitution's
+    /// `§supersession-annotations` states one rule at three granularities,
+    /// so one writer owns it: absent, this writes the whole-spec sunset
+    /// banner; present, it appends the annotation to that criterion's line.
+    /// Splitting the two would put two writers behind one concept, and spec
+    /// 052's review found the concrete cost of that — two surfaces answering
+    /// "is this spec already annotated?" differently, drifting until a review
+    /// compared them.
+    ///
+    /// The **section-level** granularity stays hand-authored. The
+    /// constitution documents it, no caller needs it programmatically, and a
+    /// third code path serving nobody is the overengineering the simplicity
+    /// pass exists to catch.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[arg(long)]
+    pub criterion: Option<String>,
 }
 
 /// Result of `write-supersession-annotation`.
@@ -1713,6 +1732,10 @@ pub struct WriteSupersessionAnnotationResult {
     /// distinct from accumulation, which stacks annotations from
     /// *different* superseding specs.
     pub already_present: bool,
+    /// The `AC{n}` label annotated, when the write was criterion-level.
+    /// Absent for the whole-spec banner.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub criterion: Option<String>,
     /// Repo-relative path of the annotated spec.
     pub path: String,
 }

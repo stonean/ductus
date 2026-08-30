@@ -16,12 +16,12 @@ Runtime first — the bounded read, the annotation form, the extension point —
 
 ## 2. Add the criterion granularity to the annotation writer
 
-- [ ] Add an optional `criterion` label argument to `WriteSupersessionAnnotationArgs`
-- [ ] With it absent, write today's whole-spec banner unchanged — every existing test must pass untouched
-- [ ] With it present, append the annotation to that criterion's line, citing the superseding spec **by name** and never by link
-- [ ] Leave the criterion's checkbox and its own text byte-identical, so a superseded criterion stays ticked
-- [ ] Reuse the slug-boundary matching from `blockquote_cites` for the already-present check, so `043-workflows` is not satisfied by `043-workflows-sunset`
-- [ ] Add tests: a first criterion annotation; a repeat writing nothing; a criterion whose label does not exist reported as a domain outcome; the checkbox and text unchanged; `derive-dependencies` deriving no edge from the annotated spec
+- [x] Add an optional `criterion` label argument to `WriteSupersessionAnnotationArgs`
+- [x] With it absent, write today's whole-spec banner unchanged — every existing test must pass untouched
+- [x] With it present, append the annotation to that criterion's line, citing the superseding spec **by name** and never by link
+- [x] Leave the criterion's checkbox and its own text byte-identical, so a superseded criterion stays ticked
+- [x] Reuse the slug-boundary matching from `blockquote_cites` for the already-present check, so `043-workflows` is not satisfied by `043-workflows-sunset`
+- [x] Add tests: a first criterion annotation; a repeat writing nothing; a criterion whose label does not exist reported as a domain outcome; the checkbox and text unchanged; `derive-dependencies` deriving no edge from the annotated spec
 
 - **Done when**: one primitive writes both granularities, a criterion annotation cites by name and induces no `dependencies:` edge, the criterion stays ticked with its text unchanged, and every pre-existing whole-spec test passes without modification.
 

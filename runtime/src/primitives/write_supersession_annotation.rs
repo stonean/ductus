@@ -31,8 +31,8 @@ use std::fmt::Write as _;
 use std::path::Path;
 
 use crate::primitives::{
-    PrimitiveError, Result, blockquote_cites, read_text, rel_path, split_frontmatter,
-    validate_no_traversal, write_atomic,
+    PrimitiveError, Result, blockquote_cites, names_feature, read_text, rel_path,
+    split_frontmatter, validate_no_traversal, write_atomic,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -101,6 +101,21 @@ pub fn run(
     let head = &content[..head_len];
 
     let path = rel_path(&spec_path, repo);
+    let eol = if body.contains("\r\n") { "\r\n" } else { "\n" };
+
+    // Criterion-level: a granularity of the same rule, not a second concept.
+    if let Some(label) = args.criterion.as_deref() {
+        return annotate_criterion(
+            &spec_path,
+            head,
+            body,
+            label,
+            &args.superseded_by,
+            args.substance.trim(),
+            path,
+        );
+    }
+
     // The same predicate `check-artifacts`' reciprocity family uses. The two
     // once disagreed — this side demanded the link form, that side accepted a
     // bare name — so a hand-annotated spec satisfied the check and still
@@ -109,11 +124,11 @@ pub fn run(
         return Ok(WriteSupersessionAnnotationResult {
             written: false,
             already_present: true,
+            criterion: None,
             path,
         });
     }
 
-    let eol = if body.contains("\r\n") { "\r\n" } else { "\n" };
     let block = render(&args.superseded_by, args.substance.trim(), eol);
     let new_body = insert_at_lead(body, &block, eol);
 
@@ -121,7 +136,89 @@ pub fn run(
     Ok(WriteSupersessionAnnotationResult {
         written: true,
         already_present: false,
+        criterion: None,
         path,
+    })
+}
+
+/// Append the annotation to one criterion's line.
+///
+/// **The criterion is annotated, never edited** (spec 053 AC6). Its checkbox
+/// and its own text are left byte-identical and the line only grows, so a
+/// superseded criterion stays ticked: it *was* delivered, and the removal
+/// belongs to the later spec. Editing it would falsify a delivery record.
+///
+/// **Cited by name, never linked.** A criterion is a plain list item with no
+/// blockquote exemption, so a markdown link here would be harvested by
+/// `derive-dependencies` into this spec's `dependencies:` — giving it a
+/// dependency on its own successor. The whole-spec banner may link precisely
+/// because it is blockquoted.
+fn annotate_criterion(
+    spec_path: &Path,
+    head: &str,
+    body: &str,
+    label: &str,
+    superseding: &str,
+    substance: &str,
+    path: String,
+) -> Result<WriteSupersessionAnnotationResult> {
+    let Some(idx) = criterion_line(body, label) else {
+        return Err(PrimitiveError::InvalidArgument {
+            primitive: "write-supersession-annotation".into(),
+            argument: "criterion".into(),
+            reason: format!(
+                "{label:?} names no acceptance criterion in this spec; a label is the stable \
+                 identifier a criterion is cited by, so a miss is a wrong reference rather than \
+                 a criterion to create"
+            ),
+        });
+    };
+
+    let lines: Vec<&str> = body.split_inclusive('\n').collect();
+    let line = lines[idx];
+    // The same slug-boundary matching the whole-spec form uses, so a repeat
+    // is recognized and `043-workflows` is not satisfied by a line naming
+    // `043-workflows-sunset`.
+    if names_feature(line, superseding) {
+        return Ok(WriteSupersessionAnnotationResult {
+            written: false,
+            already_present: true,
+            criterion: Some(label.to_string()),
+            path,
+        });
+    }
+
+    let (text, eol) = match line.strip_suffix("\r\n") {
+        Some(text) => (text, "\r\n"),
+        None => (line.strip_suffix('\n').unwrap_or(line), "\n"),
+    };
+    let annotated = format!("{text} — superseded by {superseding}: {substance}{eol}");
+
+    let mut out = String::with_capacity(body.len() + annotated.len());
+    out.push_str(&lines[..idx].concat());
+    out.push_str(&annotated);
+    out.push_str(&lines[idx + 1..].concat());
+
+    write_atomic(spec_path, &format!("{head}{out}"))?;
+    Ok(WriteSupersessionAnnotationResult {
+        written: true,
+        already_present: false,
+        criterion: Some(label.to_string()),
+        path,
+    })
+}
+
+/// Index of the `split_inclusive('\n')` line carrying criterion `label`.
+///
+/// Matched on the `- [ ] {label}:` form the labelling pass writes, so prose
+/// elsewhere in the body that merely cites the label is not mistaken for the
+/// criterion itself.
+fn criterion_line(body: &str, label: &str) -> Option<usize> {
+    let needle = format!("{label}:");
+    body.split_inclusive('\n').position(|line| {
+        let t = line.trim_start();
+        (t.starts_with("- [ ] ") || t.starts_with("- [x] ") || t.starts_with("- [X] "))
+            && t[6..].trim_start().starts_with(&needle)
     })
 }
 
@@ -221,6 +318,7 @@ mod tests {
             feature: feature.into(),
             superseded_by: by.into(),
             substance: substance.into(),
+            criterion: None,
         }
     }
 
@@ -427,6 +525,27 @@ mod tests {
         );
     }
 
+    fn criterion_args(
+        feature: &str,
+        by: &str,
+        label: &str,
+        substance: &str,
+    ) -> WriteSupersessionAnnotationArgs {
+        WriteSupersessionAnnotationArgs {
+            feature: feature.into(),
+            superseded_by: by.into(),
+            substance: substance.into(),
+            criterion: Some(label.into()),
+        }
+    }
+
+    const CRITERIA_SPEC: &str = concat!(
+        "---\nstatus: done\ndependencies: []\n---\n\n",
+        "# 005 — Workflows\n\nLead.\n\n## Acceptance Criteria\n\n",
+        "- [x] AC1: Workflow files are scaffolded during bootstrap\n",
+        "- [x] AC2: Something unrelated\n",
+    );
+
     #[test]
     fn a_hand_written_name_only_annotation_suppresses_a_second_write() {
         // The corpus spec 052's retroactive path exists for: twelve specs
@@ -437,15 +556,13 @@ mod tests {
         // same spec as reciprocally annotated.
         let (tmp, _path) = repo_with(
             "005-workflows",
-            "---\nstatus: done\ndependencies: []\n---\n\n# 005 — Workflows\n\nLead.\n\n             > **Sunset (043-workflows-sunset):** the generated workflow files no longer \
-             exist.\n",
+            concat!(
+                "---\nstatus: done\ndependencies: []\n---\n\n# 005 — Workflows\n\nLead.\n\n",
+                "> **Sunset (043-workflows-sunset):** the generated files no longer exist.\n",
+            ),
         );
         let result = run(
-            &WriteSupersessionAnnotationArgs {
-                feature: "005-workflows".into(),
-                superseded_by: "043-workflows-sunset".into(),
-                substance: "the generated workflow files no longer exist".into(),
-            },
+            &args("005-workflows", "043-workflows-sunset", "gone"),
             tmp.path(),
         )
         .unwrap();
@@ -455,19 +572,139 @@ mod tests {
 
     #[test]
     fn a_longer_sibling_slug_does_not_satisfy_a_citation_of_its_prefix() {
-        // `043-workflows-sunset` names what it sunsets, so the corpus is full
-        // of slugs that are prefixes of other slugs. A substring match would
-        // read the sunset spec's own name as a citation of `043-workflows`.
+        // `043-workflows-sunset` names what it sunsets, so slugs that are
+        // prefixes of other slugs are this corpus's convention rather than an
+        // edge case.
         let (tmp, _path) = repo_with(
             "005-workflows",
-            "---\nstatus: done\ndependencies: []\n---\n\n# 005 — Workflows\n\nLead.\n\n             > **Sunset (043-workflows-sunset):** gone.\n",
+            concat!(
+                "---\nstatus: done\ndependencies: []\n---\n\n# 005 — Workflows\n\nLead.\n\n",
+                "> **Sunset (043-workflows-sunset):** gone.\n",
+            ),
         );
         let result = run(
-            &WriteSupersessionAnnotationArgs {
-                feature: "005-workflows".into(),
-                superseded_by: "043-workflows".into(),
-                substance: "a different spec entirely".into(),
-            },
+            &args(
+                "005-workflows",
+                "043-workflows",
+                "a different spec entirely",
+            ),
+            tmp.path(),
+        )
+        .unwrap();
+        assert!(result.written, "{result:?}");
+    }
+
+    #[test]
+    fn a_criterion_annotation_appends_and_leaves_the_checkbox_and_text_alone() {
+        let (tmp, path) = repo_with("005-workflows", CRITERIA_SPEC);
+        let result = run(
+            &criterion_args(
+                "005-workflows",
+                "043-workflows-sunset",
+                "AC1",
+                "the generated files no longer exist",
+            ),
+            tmp.path(),
+        )
+        .unwrap();
+        assert!(result.written);
+        assert_eq!(result.criterion.as_deref(), Some("AC1"));
+
+        let after = read(&path);
+        assert!(
+            after.contains(concat!(
+                "- [x] AC1: Workflow files are scaffolded during bootstrap",
+                " — superseded by 043-workflows-sunset:",
+                " the generated files no longer exist\n",
+            )),
+            "{after}"
+        );
+        // The untouched criterion is byte-identical.
+        assert!(
+            after.contains("- [x] AC2: Something unrelated\n"),
+            "{after}"
+        );
+    }
+
+    #[test]
+    fn a_criterion_annotation_cites_by_name_and_never_links() {
+        // A criterion is a plain list item with no blockquote exemption, so a
+        // link here would make the annotated spec depend on its successor.
+        let (tmp, path) = repo_with("005-workflows", CRITERIA_SPEC);
+        run(
+            &criterion_args("005-workflows", "043-workflows-sunset", "AC1", "gone"),
+            tmp.path(),
+        )
+        .unwrap();
+        let after = read(&path);
+        assert!(
+            !after.contains("](../043-workflows-sunset"),
+            "a criterion annotation must not link: {after}"
+        );
+        assert!(
+            after.contains("superseded by 043-workflows-sunset"),
+            "{after}"
+        );
+    }
+
+    #[test]
+    fn a_criterion_annotation_induces_no_dependency_edge() {
+        // The criterion form's counterpart to the banner's blockquote proof.
+        // The banner is exempt because it is blockquoted; a criterion has no
+        // such exemption, so its safety comes from citing by name instead —
+        // and this asserts the outcome both routes must reach.
+        use crate::primitives::spec_links::harvestable_lines;
+
+        let (tmp, path) = repo_with("005-workflows", CRITERIA_SPEC);
+        run(
+            &criterion_args("005-workflows", "043-workflows-sunset", "AC1", "gone"),
+            tmp.path(),
+        )
+        .unwrap();
+
+        let annotated = read(&path);
+        // The criterion line IS harvestable — it is a plain list item — so
+        // this proves the citation form rather than an exemption.
+        let harvestable: Vec<&str> = harvestable_lines(&annotated)
+            .iter()
+            .map(|l| l.text)
+            .collect();
+        assert!(
+            harvestable.iter().any(|l| l.contains("AC1:")),
+            "the criterion line must be harvestable, or this test proves nothing"
+        );
+        assert!(
+            !harvestable
+                .iter()
+                .any(|l| l.contains("](../043-workflows-sunset")),
+            "no harvestable line may carry a link to the superseding spec: {harvestable:?}"
+        );
+    }
+
+    #[test]
+    fn a_repeat_criterion_annotation_writes_nothing() {
+        let (tmp, path) = repo_with("005-workflows", CRITERIA_SPEC);
+        let a = criterion_args("005-workflows", "043-workflows-sunset", "AC1", "gone");
+        run(&a, tmp.path()).unwrap();
+        let once = read(&path);
+        let result = run(&a, tmp.path()).unwrap();
+        assert!(result.already_present, "{result:?}");
+        assert!(!result.written);
+        assert_eq!(read(&path), once);
+    }
+
+    #[test]
+    fn a_longer_sibling_slug_does_not_satisfy_a_criterion_citation() {
+        let (tmp, _path) = repo_with(
+            "005-workflows",
+            concat!(
+                "---\nstatus: done\ndependencies: []\n---\n\n# 005\n\nLead.\n\n",
+                "## Acceptance Criteria\n\n",
+                "- [x] AC1: A claim — superseded by 043-workflows-sunset: gone\n",
+            ),
+        );
+        let result = run(
+            &criterion_args("005-workflows", "043-workflows", "AC1", "different spec"),
             tmp.path(),
         )
         .unwrap();
@@ -475,5 +712,39 @@ mod tests {
             result.written,
             "a citation of 043-workflows-sunset must not satisfy 043-workflows: {result:?}"
         );
+    }
+
+    #[test]
+    fn an_unknown_criterion_label_is_refused_rather_than_created() {
+        let (tmp, path) = repo_with("005-workflows", CRITERIA_SPEC);
+        let before = read(&path);
+        let err = run(
+            &criterion_args("005-workflows", "043-workflows-sunset", "AC99", "gone"),
+            tmp.path(),
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::InvalidArgument { .. }),
+            "{err:?}"
+        );
+        assert_eq!(read(&path), before);
+    }
+
+    #[test]
+    fn a_criterion_annotation_leaves_the_frontmatter_untouched() {
+        for status in ["draft", "clarified", "planned", "in-progress", "done"] {
+            let body = CRITERIA_SPEC.replace("status: done", &format!("status: {status}"));
+            let (tmp, path) = repo_with("005-workflows", &body);
+            let before = read(&path);
+            let head_before = before.split("---").take(2).collect::<Vec<_>>().join("---");
+            run(
+                &criterion_args("005-workflows", "043-workflows-sunset", "AC1", "gone"),
+                tmp.path(),
+            )
+            .unwrap();
+            let after = read(&path);
+            let head_after = after.split("---").take(2).collect::<Vec<_>>().join("---");
+            assert_eq!(head_before, head_after, "status {status} was modified");
+        }
     }
 }

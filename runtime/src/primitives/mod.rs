@@ -1119,7 +1119,7 @@ pub(crate) fn blockquote_cites(body: &str, feature: &str) -> bool {
 /// A slug's own alphabet is `[a-z0-9-]`, so an adjacent character from that
 /// set means the match is part of a different name. Every other neighbour —
 /// `/`, `]`, `(`, a space, the line edge — is a real boundary.
-fn names_feature(line: &str, feature: &str) -> bool {
+pub(crate) fn names_feature(line: &str, feature: &str) -> bool {
     let is_slug_byte = |b: u8| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-';
     let bytes = line.as_bytes();
     let mut from = 0;
