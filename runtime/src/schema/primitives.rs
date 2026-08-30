@@ -1679,6 +1679,44 @@ pub struct CreateScenarioResult {
     pub created: String,
 }
 
+// -- write-supersession-annotation -------------------------------------------
+
+/// Args for `write-supersession-annotation`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct WriteSupersessionAnnotationArgs {
+    /// The **superseded** feature — the spec receiving the annotation.
+    #[arg(long)]
+    pub feature: String,
+    /// The **superseding** feature the annotation cites.
+    #[arg(long)]
+    pub superseded_by: String,
+    /// The authored substance: what no longer holds.
+    ///
+    /// Crosses the runtime boundary as one payload, the content-ingestion
+    /// convention `create-scenario` already uses. The primitive contributes
+    /// the frame and never invents this — a generated banner can name the
+    /// superseding spec and nothing else, and the sentence a reader needs is
+    /// the one naming what stopped being true.
+    #[arg(long)]
+    pub substance: String,
+}
+
+/// Result of `write-supersession-annotation`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct WriteSupersessionAnnotationResult {
+    /// `true` when the annotation was written.
+    pub written: bool,
+    /// `true` when an annotation already cited this superseding spec, so
+    /// nothing was written. A re-run converging, not a failure — and
+    /// distinct from accumulation, which stacks annotations from
+    /// *different* superseding specs.
+    pub already_present: bool,
+    /// Repo-relative path of the annotated spec.
+    pub path: String,
+}
+
 // -- label-criteria ----------------------------------------------------------
 
 /// Args for `label-criteria`.

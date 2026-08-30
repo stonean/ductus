@@ -64,6 +64,7 @@ pub mod traverse_deps;
 pub mod validate_frontmatter;
 pub mod write_review;
 pub mod write_session;
+pub mod write_supersession_annotation;
 
 /// Operational errors common to every primitive. Domain outcomes (findings,
 /// violations, drift) are reported through the result struct; this enum is

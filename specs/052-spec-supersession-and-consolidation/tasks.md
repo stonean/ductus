@@ -15,12 +15,12 @@ Runtime first, then the command surfaces that call it, then documentation, then 
 
 ## 2. Add the `write-supersession-annotation` primitive
 
-- [ ] Create `runtime/src/primitives/write_supersession_annotation.rs` taking the superseded feature, the superseding feature, and the authored substance as one payload
-- [ ] Compile the frame: blockquote prefix, `**Sunset ([link]):**` citation, record-of-what-shipped closer
-- [ ] Insert after the H1 and lead paragraph, ahead of any annotation already present
-- [ ] Leave the superseded spec's `status` untouched at **any** lifecycle state — the write is a mechanical edit, not a `done`-only one
-- [ ] Return an already-applied outcome when an annotation naming this superseding spec is already present, rather than stacking a duplicate
-- [ ] Add tests covering a first annotation, a second from a *different* spec accumulating above it, a repeat from the *same* spec that writes nothing, and an unreadable target
+- [x] Create `runtime/src/primitives/write_supersession_annotation.rs` taking the superseded feature, the superseding feature, and the authored substance as one payload
+- [x] Compile the frame: blockquote prefix, `**Sunset ([link]):**` citation, record-of-what-shipped closer
+- [x] Insert after the H1 and lead paragraph, ahead of any annotation already present
+- [x] Leave the superseded spec's `status` untouched at **any** lifecycle state — the write is a mechanical edit, not a `done`-only one
+- [x] Return an already-applied outcome when an annotation naming this superseding spec is already present, rather than stacking a duplicate
+- [x] Add tests covering a first annotation, a second from a *different* spec accumulating above it, a repeat from the *same* spec that writes nothing, and an unreadable target
 
 - **Done when**: the primitive writes a blockquoted annotation naming the superseding spec, an annotation from a different spec stacks above it without replacing it, a repeat declaration writes nothing and reports it, and the superseded spec's status is byte-identical before and after at every lifecycle state.
 
