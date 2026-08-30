@@ -370,6 +370,24 @@ pub enum PrimitiveError {
         /// operator to choose from when retrying).
         available: String,
     },
+    /// `merge-permissions` was invoked with an entry present in both the
+    /// canonical `allow` set and the `revoke` set. The two passes would
+    /// fight — revoke removes it, the canonical-presence pass appends it
+    /// back — so the merge would never reach a fixed point and the
+    /// `unchanged` short-circuit could never fire. Rejected as a caller
+    /// error rather than resolved by pass order, because either order
+    /// silently discards half of what the caller asked for.
+    #[error(
+        "merge-permissions: {count} entr{plural} appear in both --allow and --revoke: {entries}"
+    )]
+    ConflictingRevoke {
+        /// Number of conflicting entries.
+        count: usize,
+        /// `y` / `ies`, so the message reads correctly for one or many.
+        plural: &'static str,
+        /// Comma-separated conflicting entries, in canonical-set order.
+        entries: String,
+    },
     /// JSON parse failure (e.g., `merge-permissions` reading a malformed
     /// `.claude/settings.local.json`).
     #[error("JSON parse error in {path}: {source}")]

@@ -15,6 +15,29 @@
 # Ordering: by `introduced_in` SemVer ascending, lexicographic tie-break
 # on `id`. File order in this TOML is not authoritative — the bootstrap
 # loop sorts on read.
+#
+# SCOPE — an entry applies ONCE PER REPOSITORY, not once per contributor.
+# `[migrations].last_applied` lives in the committed `.ductus/config.toml`,
+# so the first contributor to run `/ductus` applies the pending entries and
+# commits the advanced marker; everyone who pulls afterwards reads it, sees
+# nothing pending, and skips. That is correct for repo-shared state.
+#
+# The rule that follows is about remedy, not about paths: a migration MUST
+# NOT be the sole remedy for a defect in per-contributor (gitignored) state.
+# Touching such state is fine when a skipped contributor self-heals through
+# ordinary use — `session-file-consolidate` and `ductus-rename` both move a
+# session file, and the next `/{project}:target` writes the active path
+# anyway — but a cleanup that nothing else would ever perform reaches one
+# person and is then marked done for the whole repo, permanently.
+#
+# A cleanup that must reach every contributor belongs on the command that
+# owns the per-contributor file, which runs per-contributor and can be
+# idempotent. Worked example: `/ductus:configure` step 4 retires
+# formerly-canonical permission entries from the gitignored
+# `{cli-config-dir}/settings.local.json` (spec 023). Note that
+# `{config_dir}/commands/` is repo-shared despite living under `.claude/` —
+# the shipped `.gitignore` excepts it — so `workflows-sunset` is not a
+# counter-example.
 
 [[migrations]]
 id = "gitignore-marker-rename"

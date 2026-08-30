@@ -1472,6 +1472,28 @@ pub struct MergePermissionsArgs {
     #[serde(default)]
     #[arg(long, value_delimiter = ',')]
     pub deny: Vec<String>,
+    /// Formerly-canonical entries to remove from `permissions.allow`.
+    ///
+    /// Retirement is **allow-side only, by construction**. An over-broad
+    /// entry in a deny set refuses more rather than approving more, so the
+    /// same shape that is a hole in an allow entry is a stronger guard
+    /// there; a primitive that could sweep both arrays would let a caller
+    /// "finish the job" by narrowing the deny set into holes. Re-granting
+    /// something a deny entry refuses is a deliberate operation with its
+    /// own design, not a side effect of retiring a grant.
+    ///
+    /// Entries are removed by exact string match, so a pattern an adopter
+    /// authored themselves is never touched — only what the framework
+    /// itself once shipped and has since retired.
+    ///
+    /// An entry appearing in both `allow` and `revoke` is rejected
+    /// ([`crate::primitives::PrimitiveError::ConflictingRevoke`]) rather
+    /// than resolved by pass order: the canonical-presence pass would
+    /// re-add whatever the revoke pass removed, so the merge would never
+    /// reach a fixed point and `unchanged` would never be emitted.
+    #[serde(default)]
+    #[arg(long, value_delimiter = ',')]
+    pub revoke: Vec<String>,
 }
 
 /// Result for `merge-permissions`. Reports the action taken plus
@@ -1489,6 +1511,12 @@ pub struct MergePermissionsResult {
     pub allow_added: u32,
     /// Count of duplicate `allow` entries removed.
     pub allow_deduped: u32,
+    /// Count of retired `allow` entries removed — every copy of a
+    /// `revoke` member that was present. A doubled retired entry counts
+    /// twice here and not at all under `allow-deduped`: the retirement
+    /// is why both copies went, so attributing one of them to dedup
+    /// would credit that pass with work it did not do.
+    pub allow_revoked: u32,
     /// Count of canonical `deny` entries appended (not already present).
     pub deny_added: u32,
     /// Count of duplicate `deny` entries removed.
@@ -3726,10 +3754,12 @@ mod tests {
             path: ".claude/settings.local.json".into(),
             allow: vec!["Bash(ls *)".into(), "Edit".into()],
             deny: vec!["Bash(rm -rf *)".into()],
+            revoke: vec!["Write(.ductus/session.toml)".into()],
         };
         let value: serde_json::Value = serde_json::to_value(&args).unwrap();
         assert_eq!(value["path"], ".claude/settings.local.json");
         assert_eq!(value["allow"][0], "Bash(ls *)");
+        assert_eq!(value["revoke"][0], "Write(.ductus/session.toml)");
         assert_eq!(round_trip(&args), args);
 
         // A non-Claude host supplies its own settings path; the runtime
@@ -3738,6 +3768,7 @@ mod tests {
             path: ".augment/settings.json".into(),
             allow: vec![],
             deny: vec![],
+            revoke: vec![],
         };
         let v: serde_json::Value = serde_json::to_value(&auggie_args).unwrap();
         assert_eq!(v["path"], ".augment/settings.json");
@@ -3747,12 +3778,15 @@ mod tests {
             action: "updated".into(),
             allow_added: 2,
             allow_deduped: 1,
+            allow_revoked: 3,
             deny_added: 0,
             deny_deduped: 0,
         };
         let r_value: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert_eq!(r_value["allow-added"], 2);
         assert_eq!(r_value["allow-deduped"], 1);
+        // Kebab-case on the wire, matching every sibling count.
+        assert_eq!(r_value["allow-revoked"], 3);
         assert_eq!(round_trip(&result), result);
     }
 

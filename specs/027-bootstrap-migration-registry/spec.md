@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [026-framework-self-audit]
 review:
   last-run: 2026-08-17T02:24:23Z
@@ -8,7 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 30
+next-criterion: 31
 ---
 
 # 027 — Bootstrap Migration Registry
@@ -72,6 +72,12 @@ last_applied = "<entry-id>"
 ```
 
 When the field is absent, bootstrap treats it as "no migrations have been applied" and runs every active entry. When present, bootstrap runs only entries newer than the recorded id (registry order is authoritative; alphabetical or chronological is an open question). After all applicable entries succeed, bootstrap updates the field to the id of the newest entry in the active registry.
+
+**Scope: an entry applies once per repository, not once per contributor.** The marker lives in the committed config file, so the first contributor to run `/ductus` applies the pending entries and commits the advanced marker; everyone who pulls afterwards reads it, sees nothing pending, and skips. That is correct for repo-shared state — the edit genuinely happened once, for everyone.
+
+The rule that follows is about remedy, not about paths: **a migration must not be the sole remedy for a defect in per-contributor state.** Touching gitignored per-contributor state is fine when a skipped contributor self-heals through ordinary use — `session-file-consolidate` and `ductus-rename` both move a session file, and a teammate who skips either has their next `/{project}:target` write the active path anyway under the newest-tier rule, while the procedure exits silently when the legacy file is absent. It is not fine when nothing else would ever perform the cleanup: that reaches one person and is then marked done for the whole repo, permanently, with no later run able to correct it.
+
+A cleanup that must reach every contributor belongs on the command that owns the per-contributor file, which runs per-contributor and can be idempotent rather than marker-driven. The worked example is `/ductus:configure` step 4, which retires formerly-canonical permission entries from the gitignored `{cli-config-dir}/settings.local.json` (spec 023, `configure-retires-formerly-canonical-entries`); `/ductus` could not have hosted it in any case, since it never writes the full permission set. See `scenarios/migrations-apply-once-per-repo.md`.
 
 ## Bootstrap Loop
 
@@ -153,6 +159,10 @@ This family is the gate that makes the registry load-bearing: a maintainer who r
 
 - "Removal must ship with a migration entry" diff-check is implemented as a separate pre-commit hook in a follow-on spec or scenario — not in this spec. Reason: it's a diff operation against HEAD, not a static-state check, and would couple `/audit` to git history shape.
 - `apply-migrations` as a runtime primitive is deferred until Family 9 (`primitive-promotion-candidates.sh`) detects pattern duplication across procedure files.
+
+### Migration scope
+
+- [x] AC30: §Adopter State and `framework/migrations.toml`'s header comment both state that the registry applies an entry **once per repository**, not once per contributor — `[migrations].last_applied` lives in the committed config file, so the first contributor to run `/ductus` applies the pending entries and everyone who pulls afterwards skips them. The rule that follows is stated as one about remedy rather than paths: a migration must not be the sole remedy for a defect in per-contributor state. `session-file-consolidate` and `ductus-rename` are named as the self-healing precedent that keeps the rule from being over-read as "never touch per-contributor state" — a skipped contributor's stale session file is superseded by their next `/{project}:target` under the newest-tier rule, and the procedure exits silently when the legacy file is absent. A cleanup that must reach every contributor is directed to the command owning that file, with `/ductus:configure`'s permission retirement (spec 023, `configure-retires-formerly-canonical-entries`) as the worked example, noting that `/ductus` never writes the full permission set in any case. `target_paths` is recorded as needing no change: `gitignore-marker-rename` already targets a file it edits rather than removes, and Family 10's no-stale-target-paths check constrains only `framework/`-prefixed entries, so an edited-not-removed adopter path was always inside the contract. `{config_dir}/commands/` is noted as repo-shared despite living under `.claude/`, so `workflows-sunset` is not a counter-example. See [`scenarios/migrations-apply-once-per-repo.md`](scenarios/migrations-apply-once-per-repo.md).
 
 ## Open Questions
 

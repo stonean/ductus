@@ -249,3 +249,28 @@ Done when: `/ductus:review` returns clean and the spec frontmatter's `review.blo
 - [x] Verify no adopter-facing migration is implied: `/ductus:configure` still does not rewrite non-canonical entries already in an adopter's `settings.local.json`
 
 - **Done when**: The seven `Bash(git -C * <sub> *)` allow entries are gone from `framework/bootstrap/configure/claude.md` §§5–6 with a rationale comment in their place, the deny-side `git -C *` entries at lines 147-152 are retained and documented as intentionally broad, the regenerated `.claude/commands/ductus/configure.md` matches, and `/ductus:audit` fails on any wildcard-before-subcommand pattern in a host's canonical allow-set.
+
+### 22. Remove the inert `Write(path)` allow entries from the `/configure` canonical allow-set
+
+- [x] Implement the behavior described in `scenarios/configure-inert-write-path-entries.md`
+- [x] Remove `Write(.ductus/session.toml)` and `Write(.ductus/config.toml)` from `framework/bootstrap/configure/claude.md` §5, retaining the `Edit(...)` entries for both paths
+- [x] Add a rationale comment alongside the retained `Edit(...)` entries stating the invariant: a path-scoped allow entry uses `Edit(path)`, never `Write(path)`, because file permission checks match only `Edit` rules and those cover every file-editing tool
+- [x] Confirm the bare tool-level `Edit` and `Write` entries are left intact, with a note that they name tools rather than paths and are not subject to the invariant
+- [x] Decide whether to extend Family 29 (`scripts/audit/permission-wildcard-position.sh`) or add a new audit family for the `Write(path)` shape; note that Family 29's deny-set exclusion does not carry across unchanged, since a `Write(path)` deny entry is inert rather than dangerous
+- [x] Regenerate `.claude/commands/ductus/configure.md` via the command generator and confirm it matches the source rewrite
+
+- **Done when**: The two `Write(.ductus/*.toml)` entries are gone from `framework/bootstrap/configure/claude.md` §5 with a rationale comment in their place, the `Edit(...)` path entries and the bare `Edit` / `Write` tool entries are retained, the regenerated `.claude/commands/ductus/configure.md` matches, and `/ductus:audit` fails on any path-scoped `Write(path)` entry in a host's canonical allow set. A fresh `/ductus:configure` run produces a `settings.local.json` that Claude Code loads with no permission-rule warnings.
+
+### 23. Retire formerly-canonical permission entries from adopters via `/ductus:configure`
+
+- [x] Implement the behavior described in `scenarios/configure-retires-formerly-canonical-entries.md`
+- [x] Add a `revoke` argument to `merge-permissions` (allow-side only, by construction — no deny counterpart), running before the dedup and canonical-presence passes so every copy of a retired entry goes and none is re-added
+- [x] Reject an entry present in both `allow` and `revoke` with a `ConflictingRevoke` error, before any filesystem read, reporting every overlap at once
+- [x] Report the removals as `allow-revoked` on the result envelope, counting each copy of a doubled retired entry as retired rather than splitting it with `allow-deduped`
+- [x] Add step 4 to `framework/bootstrap/configure/claude.md`: the nine retired entries, grouped by reason and retiring version, passed as `revoke`; renumber the following steps
+- [x] Record in that section why the migration registry could not host this — repo-shared marker against a per-contributor gitignored target, and `/ductus` never writing the full permission set
+- [x] Update the command's scope boundary and its markdown-only prose so both paths perform the same exact-match splice
+- [x] Extend `/ductus:audit` Family 32 with check 32b: the retired list and the canonical allow set must stay disjoint
+- [x] Supersede the contrary decision on `configure-permission-pattern-safety`, which ruled that `/ductus:configure` does not retroactively strip an already-present entry
+
+- **Done when**: `/ductus:configure` run against a settings file carrying the seven `git -C` allow entries and the two `Write(.ductus/*.toml)` entries removes all nine, reports each removal, leaves the deny-side `git -C` entries and every adopter-authored near-miss untouched, and is `unchanged` on a second run. `merge-permissions` refuses a call whose `allow` and `revoke` overlap. Family 32 fails on a retired entry that is still canonical. Claude Code starts in that tree with no permission-rule warnings.
