@@ -114,6 +114,7 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
    - `{ "toolName": "mcp:ductus:check-unfolded-specs", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:rewrite-spec-links", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:retire-feature", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:write-supersession-annotation", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:invalidate-review", "permission": { "type": "allow" } }`
    <!-- generated:mcp-allow:end -->
 

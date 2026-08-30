@@ -66,4 +66,5 @@ derive-references
 check-unfolded-specs
 rewrite-spec-links
 retire-feature
+write-supersession-annotation
 invalidate-review

@@ -21,7 +21,7 @@ use ductus::schema::primitives::{
     MigrateSessionFileArgs, ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs,
     RemoveInboxItemArgs, ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs,
     RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
-    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs,
+    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs, WriteSupersessionAnnotationArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -150,6 +150,8 @@ enum Command {
     RewriteSpecLinks(RewriteSpecLinksArgs),
     /// Remove a folded branch-scoped feature directory, guarded on its fold target existing.
     RetireFeature(RetireFeatureArgs),
+    /// Record on a superseded spec that a later spec countered it.
+    WriteSupersessionAnnotation(WriteSupersessionAnnotationArgs),
     /// Reset a spec's review block to the un-reviewed state, so the pre-done gate demands a fresh review.
     InvalidateReview(InvalidateReviewArgs),
     /// Regenerate every spec's frontmatter `dependencies:` from its body links; report cycles.
@@ -672,6 +674,9 @@ fn main() -> ExitCode {
             emit_result(primitives::rewrite_spec_links::run(&args, &repo))
         }
         Command::RetireFeature(args) => emit_result(primitives::retire_feature::run(&args, &repo)),
+        Command::WriteSupersessionAnnotation(args) => {
+            emit_result(primitives::write_supersession_annotation::run(&args, &repo))
+        }
         Command::InvalidateReview(args) => {
             emit_result(primitives::invalidate_review::run(&args, &repo))
         }

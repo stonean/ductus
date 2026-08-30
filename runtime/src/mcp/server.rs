@@ -60,7 +60,7 @@ use crate::schema::primitives::{
     RewriteSpecLinksArgs, RewriteSpecLinksResult, RunGeneratorArgs, RunGeneratorResult,
     SetStatusArgs, SetStatusResult, TraverseDepsArgs, TraverseDepsResult, ValidateFrontmatterArgs,
     ValidateFrontmatterResult, WriteReviewArgs, WriteReviewResult, WriteSessionArgs,
-    WriteSessionResult,
+    WriteSessionResult, WriteSupersessionAnnotationArgs, WriteSupersessionAnnotationResult,
 };
 
 /// Canonical MCP tool names exposed by the server, in manifest order —
@@ -811,6 +811,19 @@ impl GovRuntimeServer {
         params: Parameters<RetireFeatureArgs>,
     ) -> Result<Json<RetireFeatureResult>, String> {
         primitives::retire_feature::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "write-supersession-annotation",
+        description = "Write onto a **superseded** spec the annotation recording that a later spec countered it — the half of a supersession a reader actually sees, where the `supersedes:` key on the superseding spec is bookkeeping. The frame is compiled in and the substance is authored: pass what no longer holds as `substance`, and the primitive contributes placement (after the H1 and its lead paragraph, ahead of any annotation already present), the blockquote wrapper, the `**Sunset ([link]):**` citation, and the closing record-of-what-shipped sentence. A blank substance is refused — a banner naming only the superseding spec tells a reader nothing. The blockquote is structural, not stylistic: `derive-dependencies` skips blockquote-prefixed lines, so the banner links its superseding spec without the annotated spec acquiring a dependency on its own successor. The frontmatter is spliced through byte-for-byte, so the spec keeps whatever status it had at any lifecycle state — the write is a mechanical edit and takes no back-edge. An annotation already citing this superseding spec returns `already-present: true` with `written: false`, so re-running an interrupted declaration converges; an annotation from a *different* spec stacks above it, newest first."
+    )]
+    async fn write_supersession_annotation(
+        &self,
+        params: Parameters<WriteSupersessionAnnotationArgs>,
+    ) -> Result<Json<WriteSupersessionAnnotationResult>, String> {
+        primitives::write_supersession_annotation::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

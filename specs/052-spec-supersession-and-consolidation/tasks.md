@@ -51,9 +51,9 @@ Runtime first, then the command surfaces that call it, then documentation, then 
 
 ## 6. Register the new primitive
 
-- [ ] Add the tool to `runtime/src/mcp/server.rs`
-- [ ] Add it to `framework/runtime-tools.txt`
-- [ ] Regenerate the MCP allow blocks via `scripts/gen-configure-mcp.sh`
+- [x] Add the tool to `runtime/src/mcp/server.rs`
+- [x] Add it to `framework/runtime-tools.txt`
+- [x] Regenerate the MCP allow blocks via `scripts/gen-configure-mcp.sh`
 
 - **Done when**: the primitive is callable over MCP and `/{project}:audit`'s tool-coverage family reports no drift.
 

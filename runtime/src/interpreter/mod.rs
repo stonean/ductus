@@ -69,7 +69,7 @@ use crate::schema::primitives::{
     MigrateSessionFileArgs, ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs,
     RemoveInboxItemArgs, ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs,
     RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
-    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs,
+    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs, WriteSupersessionAnnotationArgs,
 };
 use crate::schema::procedure::{Procedure, Step, StepNumber};
 use crate::schema::protocol::{ErrorLocation, ProtocolMessage};
@@ -651,6 +651,12 @@ enum DispatchError {
 /// Dispatch a primitive by name. Args are deserialized from `context`
 /// — any keys it doesn't need are ignored, so callers can pass a single
 /// merged binding map. Returns the primitive's result as a JSON value.
+// A flat dispatch match with one arm per primitive — the exec-path
+// counterpart of `main`'s CLI match, which carries the same allow for the
+// same reason. It grows by one arm with each primitive and is mechanical,
+// so the line-count lint is not meaningful here; splitting it would put
+// half the registry somewhere a reader would not think to look.
+#[allow(clippy::too_many_lines)]
 fn dispatch_primitive(
     name: &str,
     context: &Map<String, Value>,
@@ -747,6 +753,12 @@ fn dispatch_primitive(
         "check-unfolded-specs" => call!(CheckUnfoldedSpecsArgs, check_unfolded_specs),
         "rewrite-spec-links" => call!(RewriteSpecLinksArgs, rewrite_spec_links),
         "retire-feature" => call!(RetireFeatureArgs, retire_feature),
+        "write-supersession-annotation" => {
+            call!(
+                WriteSupersessionAnnotationArgs,
+                write_supersession_annotation
+            )
+        }
         "invalidate-review" => call!(InvalidateReviewArgs, invalidate_review),
         "derive-dependencies" => {
             call!(DeriveDependenciesArgs, derive_dependencies)
