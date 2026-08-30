@@ -2,6 +2,78 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [Unreleased]
+
+<!-- Version deliberately not bumped here: /audit Family 20 binds the repo-root
+     `version` pin, runtime/Cargo.toml, and the newest `## [X.Y.Z]` heading, and
+     Family 20 matches only a numeric heading — so this section is invisible to it
+     and 0.36.0 stays the newest release. The release commit renames this heading
+     to its version and bumps `version`, Cargo.toml, and Cargo.lock together. -->
+
+### Added
+
+- **`merge-permissions` retires formerly-canonical entries (`revoke`).** The
+  primitive installed and deduped but never removed, so an allow entry the
+  framework once shipped and has since dropped survived in every adopter tree
+  indefinitely — nothing owned the removal. A new `revoke: Vec<String>` names
+  the entries to retire; only exact string matches are removed, so a pattern an
+  adopter authored themselves is never touched however closely it resembles a
+  retired one. Retirement is **allow-side only by construction**: there is no
+  deny-side counterpart, because an over-broad deny entry refuses more rather
+  than approving more, and one argument spanning both arrays would invite
+  narrowing the deny set into holes. The revoke pass runs before dedup and
+  canonical-presence, so every copy of a retired entry is removed, none is
+  re-added, and a doubled retired entry is attributed wholly to the new
+  `allow-revoked` count rather than split with `allow-deduped`. An entry present
+  in both `allow` and `revoke` is rejected with the new
+  `PrimitiveError::ConflictingRevoke` before any filesystem read — naming every
+  overlap at once — because the two passes would otherwise fight, the merge
+  could never reach a fixed point, and the `unchanged` short-circuit that
+  preserves mtime could never fire. 15 new unit tests; 30 on the primitive.
+
+- **`/ductus:audit` Family 32 — permission entry shape**
+  (`scripts/audit/permission-entry-shape.sh`). 32a fails when a canonical
+  permission entry scopes a file path with `Write(path)` rather than
+  `Edit(path)`: Claude Code matches file permissions against `Edit` rules only,
+  and an `Edit` rule already covers every file-editing tool, so such an entry
+  grants nothing and the host warns about it at session start. Kept separate
+  from Family 29 despite the shared subject — that family's defect grants too
+  much, so deny is excluded there by construction, while this one grants
+  nothing, which is just as wrong on the deny side; both arrays are subjects
+  here, so one merged contract would have to relax the exclusion that keeps
+  Family 29 safe. 32b fails when an entry is both retired and still canonical,
+  moving a `ConflictingRevoke` that would otherwise fire in every adopter's
+  `/ductus:configure` run back to maintainer time. The bare `Edit` / `Write`
+  tool grants are excluded by construction (the extraction requires a
+  parenthesised argument), and the bullet anchor keeps the sections' own
+  counter-example prose outside every scanned window.
+
+### Changed
+
+- **`/ductus:configure` retires nine formerly-canonical permission entries.**
+  Adopters configured before ductus 0.33.0 carried seven
+  `Bash(git -C * <sub> *)` allows whose leading wildcard spans inserted options
+  — `-c` and `--exec-path` run arbitrary commands, so each approved arbitrary
+  execution with no prompt — and two inert `Write(.ductus/*.toml)` allows. A new
+  step 4 lists all nine and passes them to `merge-permissions` as `revoke`; the
+  markdown-only path performs the same exact-match splice. This supersedes spec
+  023's `configure-permission-pattern-safety` decision that the command does not
+  retroactively strip an already-present entry, annotated in place rather than
+  deleted.
+
+  Deliberately **not** a `/ductus` migration: `[migrations].last_applied` lives
+  in the committed `.ductus/config.toml` while `settings.local.json` is
+  gitignored, so the first teammate to run it would mark the entry applied for
+  the whole repo and strand everyone else permanently — and `/ductus` never
+  writes the full permission set in any case. Spec 027 now records that limit:
+  the registry applies an entry once per repository, and a migration must not be
+  the sole remedy for a defect in per-contributor state.
+
+- **The canonical allow set no longer ships `Write(.ductus/session.toml)` or
+  `Write(.ductus/config.toml)`.** Their `Edit(...)` siblings, which sat directly
+  beside them, are what granted the access all along. The bare `Edit` / `Write`
+  tool entries are unaffected — they name tools rather than paths.
+
 ## [0.36.0] — 2026-08-30
 
 ### Added
