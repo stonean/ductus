@@ -137,3 +137,12 @@ Preconditions matter more than the steps here. As of planning, `version`, `runti
 - [ ] Commit, push `main`, then tag at that commit and push the tag — in that order, with a short window between. The commit alone reaches nobody, and a pushed `version` bump without its tag sends every adopter after assets that do not exist
 
 - **Done when**: the preceding release is published, this spec's tag is pushed, the release workflow's self-audit gate passes, and acquisition is verified against the published assets on all five targets.
+
+## 16. Share one predicate for "is this spec already annotated?"
+
+- [x] Extract a shared predicate for "does this body carry a blockquoted citation of feature X?" and have both `write-supersession-annotation`'s already-present check and `check-artifacts`' `supersession-reciprocity` family call it
+- [x] Accept both citation forms — a markdown link and a bare name — since the reciprocity family already documents that contract and hand-written annotations cite by name
+- [x] Match on a slug boundary, so `005-workflows` is not satisfied by a line naming `005-workflows-sunset`
+- [x] Add a test proving a name-only annotation suppresses a second write, and one proving a longer sibling slug does not satisfy either surface
+
+- **Done when**: both surfaces answer "is this spec annotated for that superseding spec?" through one predicate, a re-declaration over a hand-annotated spec writes nothing rather than stacking a duplicate, and a slug that is a prefix of another satisfies neither.

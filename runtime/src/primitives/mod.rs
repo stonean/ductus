@@ -1080,6 +1080,64 @@ impl SkipScanner {
     }
 }
 
+/// Whether `body` carries a **blockquoted citation** of `feature` — the one
+/// question "is this spec already annotated as superseded by that one?".
+///
+/// Shared by the two surfaces that ask it, because they answered it
+/// differently and the disagreement was reachable. `write-supersession-annotation`
+/// required the markdown link form before it would report already-present,
+/// while `check-artifacts`' `supersession-reciprocity` family accepted a link
+/// *or* a bare name. A spec annotated by hand — which is the entire corpus
+/// spec 052's retroactive path exists for, twelve of them at the time it was
+/// written — therefore satisfied the check while still attracting a second,
+/// duplicate annotation from a declaration. One predicate is what stops the
+/// two drifting again, the same reasoning that put the harvest exclusions in
+/// [`spec_links`] once rather than once per generator.
+///
+/// **Blockquote-scoped on purpose.** An ordinary prose link to the
+/// superseding spec is a dependency-inducing reference and says nothing about
+/// whether an annotation was written; treating one as an annotation would
+/// silently suppress a real one.
+///
+/// **Matched on a slug boundary**, so a line naming `005-workflows-sunset`
+/// does not satisfy a citation of `005-workflows`. Without it the longer
+/// sibling slug — the exact shape this corpus uses, since a sunset spec is
+/// named after what it sunsets — reads as a citation of its own prefix.
+pub(crate) fn blockquote_cites(body: &str, feature: &str) -> bool {
+    if feature.is_empty() {
+        return false;
+    }
+    body.lines()
+        .filter(|line| line.trim_start().starts_with('>'))
+        .any(|line| names_feature(line, feature))
+}
+
+/// Whether `line` names `feature` as a whole slug rather than as the prefix
+/// or suffix of a longer one.
+///
+/// A slug's own alphabet is `[a-z0-9-]`, so an adjacent character from that
+/// set means the match is part of a different name. Every other neighbour —
+/// `/`, `]`, `(`, a space, the line edge — is a real boundary.
+fn names_feature(line: &str, feature: &str) -> bool {
+    let is_slug_byte = |b: u8| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-';
+    let bytes = line.as_bytes();
+    let mut from = 0;
+    while let Some(offset) = line[from..].find(feature) {
+        let start = from + offset;
+        let end = start + feature.len();
+        let before_ok = start == 0 || !is_slug_byte(bytes[start - 1]);
+        let after_ok = end == bytes.len() || !is_slug_byte(bytes[end]);
+        if before_ok && after_ok {
+            return true;
+        }
+        // Advance by one byte past this match's start so an overlapping
+        // occurrence later on the line is still found, and the loop cannot
+        // spin on a zero-width step.
+        from = start + 1;
+    }
+    false
+}
+
 /// Byte ranges of `line` that sit inside a markdown inline-code span — the
 /// content between a matched pair of equal-length backtick runs, per the
 /// `CommonMark` code-span rule. A backtick run with no later equal-length run

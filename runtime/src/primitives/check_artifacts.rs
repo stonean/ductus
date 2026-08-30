@@ -1492,10 +1492,11 @@ fn check_supersession_reciprocity(
             continue;
         };
 
-        let names_back = content
-            .lines()
-            .filter(|line| line.trim_start().starts_with('>'))
-            .any(|line| line.contains(feature));
+        // Shared with `write-supersession-annotation`'s already-present check,
+        // so the two surfaces cannot disagree about whether a spec is
+        // annotated — they did, and a hand-annotated spec satisfied this one
+        // while still attracting a duplicate from a declaration.
+        let names_back = crate::primitives::blockquote_cites(&content, feature);
 
         if !names_back {
             findings.push(ArtifactFinding {
@@ -3075,6 +3076,64 @@ mod tests {
             .expect("expected a reciprocity finding");
         assert_eq!(f.severity, "advisory");
         assert_eq!(f.path, "specs/005-workflows/spec.md");
+    }
+
+    #[test]
+    fn a_longer_sibling_slug_does_not_satisfy_reciprocity_for_its_prefix() {
+        // The corpus names a sunset spec after what it sunsets, so slugs that
+        // are prefixes of other slugs are the norm, not an edge case. A bare
+        // substring match reads `043-workflows-sunset` in the target's body as
+        // a citation of `043-workflows` and reports a missing annotation as
+        // present — the direction that matters, since this family exists to
+        // catch exactly that omission.
+        let tmp = tempdir().unwrap();
+        write(
+            tmp.path(),
+            "specs/042-demo/spec.md",
+            &spec_superseding("005-workflows"),
+        );
+        write(
+            tmp.path(),
+            "specs/005-workflows/spec.md",
+            "---\nstatus: done\ndependencies: []\n---\n\n# Workflows\n\n             > **Sunset (042-demo-extended):** something else.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(
+            result
+                .findings
+                .iter()
+                .any(|f| f.family == "supersession-reciprocity"),
+            "a citation of 042-demo-extended must not satisfy 042-demo: {:?}",
+            result.findings
+        );
+    }
+
+    #[test]
+    fn a_bare_name_in_a_blockquote_satisfies_reciprocity() {
+        // Hand-written annotations cite by name rather than by link, and this
+        // family's contract accepts both. Pinned here because the predicate is
+        // now shared with `write-supersession-annotation`, whose already-present
+        // check must agree — the two once did not.
+        let tmp = tempdir().unwrap();
+        write(
+            tmp.path(),
+            "specs/042-demo/spec.md",
+            &spec_superseding("005-workflows"),
+        );
+        write(
+            tmp.path(),
+            "specs/005-workflows/spec.md",
+            "---\nstatus: done\ndependencies: []\n---\n\n# Workflows\n\n             > **Sunset (042-demo):** the material below no longer holds.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(
+            !result
+                .findings
+                .iter()
+                .any(|f| f.family == "supersession-reciprocity"),
+            "unexpected: {:?}",
+            result.findings
+        );
     }
 
     #[test]

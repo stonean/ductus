@@ -31,8 +31,8 @@ use std::fmt::Write as _;
 use std::path::Path;
 
 use crate::primitives::{
-    PrimitiveError, Result, read_text, rel_path, split_frontmatter, validate_no_traversal,
-    write_atomic,
+    PrimitiveError, Result, blockquote_cites, read_text, rel_path, split_frontmatter,
+    validate_no_traversal, write_atomic,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -101,7 +101,11 @@ pub fn run(
     let head = &content[..head_len];
 
     let path = rel_path(&spec_path, repo);
-    if cites(body, &args.superseded_by) {
+    // The same predicate `check-artifacts`' reciprocity family uses. The two
+    // once disagreed — this side demanded the link form, that side accepted a
+    // bare name — so a hand-annotated spec satisfied the check and still
+    // attracted a duplicate annotation from a declaration.
+    if blockquote_cites(body, &args.superseded_by) {
         return Ok(WriteSupersessionAnnotationResult {
             written: false,
             already_present: true,
@@ -119,20 +123,6 @@ pub fn run(
         already_present: false,
         path,
     })
-}
-
-/// Whether the body already carries a blockquoted annotation citing
-/// `superseding`.
-///
-/// Scoped to blockquote lines on purpose. A sibling link to the same spec in
-/// ordinary prose is a dependency-inducing reference and says nothing about
-/// whether this spec has been annotated; treating one as an existing
-/// annotation would silently suppress a real one.
-fn cites(body: &str, superseding: &str) -> bool {
-    let target = format!("../{superseding}/spec.md");
-    body.lines()
-        .filter(|line| line.trim_start().starts_with('>'))
-        .any(|line| line.contains(&target))
 }
 
 /// Render the annotation block. The frame is everything except `substance`.
@@ -434,6 +424,56 @@ mod tests {
                 .any(|line| line.contains(target)),
             "un-blockquoted, the same link must be harvested — otherwise this test proves \
              nothing about the blockquote"
+        );
+    }
+
+    #[test]
+    fn a_hand_written_name_only_annotation_suppresses_a_second_write() {
+        // The corpus spec 052's retroactive path exists for: twelve specs
+        // were annotated by hand before the key existed, and those cite the
+        // superseding spec by name from a blockquote rather than by link.
+        // This side once demanded the link form, so a declaration over one of
+        // them stacked a duplicate — while `check-artifacts` reported the very
+        // same spec as reciprocally annotated.
+        let (tmp, _path) = repo_with(
+            "005-workflows",
+            "---\nstatus: done\ndependencies: []\n---\n\n# 005 — Workflows\n\nLead.\n\n             > **Sunset (043-workflows-sunset):** the generated workflow files no longer \
+             exist.\n",
+        );
+        let result = run(
+            &WriteSupersessionAnnotationArgs {
+                feature: "005-workflows".into(),
+                superseded_by: "043-workflows-sunset".into(),
+                substance: "the generated workflow files no longer exist".into(),
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert!(result.already_present, "{result:?}");
+        assert!(!result.written, "{result:?}");
+    }
+
+    #[test]
+    fn a_longer_sibling_slug_does_not_satisfy_a_citation_of_its_prefix() {
+        // `043-workflows-sunset` names what it sunsets, so the corpus is full
+        // of slugs that are prefixes of other slugs. A substring match would
+        // read the sunset spec's own name as a citation of `043-workflows`.
+        let (tmp, _path) = repo_with(
+            "005-workflows",
+            "---\nstatus: done\ndependencies: []\n---\n\n# 005 — Workflows\n\nLead.\n\n             > **Sunset (043-workflows-sunset):** gone.\n",
+        );
+        let result = run(
+            &WriteSupersessionAnnotationArgs {
+                feature: "005-workflows".into(),
+                superseded_by: "043-workflows".into(),
+                substance: "a different spec entirely".into(),
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert!(
+            result.written,
+            "a citation of 043-workflows-sunset must not satisfy 043-workflows: {result:?}"
         );
     }
 }
