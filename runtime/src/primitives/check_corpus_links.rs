@@ -27,11 +27,12 @@
 
 use std::path::{Component, Path, PathBuf};
 
+use crate::host::Host;
 use crate::primitives::spec_links::is_frontmatter_fence;
 use crate::primitives::{Result, inline_code_spans, rel_path};
 use crate::schema::paths;
 use crate::schema::primitives::{
-    BrokenCorpusLink, CheckCorpusLinksArgs, CheckCorpusLinksResult, CorpusLinkSkip,
+    BrokenCorpusLink, CheckCorpusLinksArgs, CheckCorpusLinksResult, CorpusLinkSkip, LinkScope,
 };
 
 /// Report every relative markdown link under the spec root whose target does
@@ -44,31 +45,48 @@ use crate::schema::primitives::{
 /// a spec root that could not be listed sets `guidance`. Reporting either as
 /// an error would collapse *could not examine* into *failed to run*, and the
 /// caller's whole job is to tell those apart from *examined and clean*.
-pub fn run(_args: &CheckCorpusLinksArgs, repo: &Path) -> Result<CheckCorpusLinksResult> {
+pub fn run(args: &CheckCorpusLinksArgs, repo: &Path) -> Result<CheckCorpusLinksResult> {
     let specs_dir = paths::specs_dir(repo);
     let specs_root = rel_path(&specs_dir, repo);
 
     let mut result = CheckCorpusLinksResult {
         specs_root: specs_root.clone(),
+        scope: args.scope,
         ..CheckCorpusLinksResult::default()
     };
 
+    // The generated command copies live under the *host's* config dir, which
+    // varies by agent (`.claude`, `.augment`, `.agents`, `.opencode`).
+    // Resolved rather than hardcoded: a literal `.claude/` here would examine
+    // every other host's generated copies and report their links — which are
+    // broken by construction — as defects an adopter cannot fix.
+    let commands_dir = format!("{}/", Host::load(repo).cli_config_dir);
+
     let mut files = Vec::new();
     let mut walk_skips = Vec::new();
-    if !collect_markdown(
-        &specs_dir,
-        repo,
-        MAX_WALK_DEPTH,
-        &mut files,
-        &mut walk_skips,
-    ) {
+    let listed = match args.scope {
+        LinkScope::SpecCorpus => collect_markdown(
+            &specs_dir,
+            repo,
+            MAX_WALK_DEPTH,
+            &mut files,
+            &mut walk_skips,
+        ),
+        LinkScope::Repository => collect_tracked_markdown(repo, &mut files),
+    };
+    if !listed {
         // The subject could not be established. Reported rather than allowed
         // to look like a corpus with no broken links: the whole point is that
         // a silent zero and a real zero must not read alike.
-        result.guidance = format!(
-            "the spec root `{specs_root}` could not be listed, so no link was checked — this is \
-             not the same as finding no broken links"
-        );
+        result.guidance = match args.scope {
+            LinkScope::SpecCorpus => format!(
+                "the spec root `{specs_root}` could not be listed, so no link was checked — this \
+                 is not the same as finding no broken links"
+            ),
+            LinkScope::Repository => "the git index could not be read, so no link was checked — \
+                 this is not the same as finding no broken links"
+                .to_string(),
+        };
         return Ok(result);
     }
     files.sort();
@@ -76,11 +94,9 @@ pub fn run(_args: &CheckCorpusLinksArgs, repo: &Path) -> Result<CheckCorpusLinks
 
     for path in files {
         let relative = rel_path(&path, repo);
-        // Adopter-facing templates are excluded by construction: their links
-        // resolve in a scaffolded feature directory, not in the template's
-        // own, so a broken link here is the correct state. Counted, never
-        // silently dropped.
-        if is_template_path(&relative, &specs_root) {
+        // Excluded **by construction**, because a link that does not resolve
+        // here is the correct state. Counted, never silently dropped.
+        if is_excluded(&relative, &specs_root, &commands_dir, args.scope) {
             result.excluded_by_construction += 1;
             continue;
         }
@@ -103,6 +119,67 @@ pub fn run(_args: &CheckCorpusLinksArgs, repo: &Path) -> Result<CheckCorpusLinks
         );
     }
     Ok(result)
+}
+
+/// Every tracked `.md` file in the repository, from the **git index**.
+///
+/// The index rather than a worktree walk, for the same reason
+/// `list_tracked_specs` uses it: an untracked draft is not yet part of the
+/// corpus anyone is claiming about, and a worktree walk would descend into
+/// `runtime/target`. Returns `false` when there is no index to read — outside
+/// a git repository the repository scope has no subject at all, which the
+/// caller turns into `guidance` rather than a clean verdict.
+fn collect_tracked_markdown(repo: &Path, out: &mut Vec<PathBuf>) -> bool {
+    let Ok(repository) = git2::Repository::open(repo) else {
+        return false;
+    };
+    let Ok(index) = repository.index() else {
+        return false;
+    };
+    for entry in index.iter() {
+        let Ok(rel) = String::from_utf8(entry.path) else {
+            continue;
+        };
+        if Path::new(&rel)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+        {
+            out.push(repo.join(rel));
+        }
+    }
+    true
+}
+
+/// Whether `relative` is excluded by construction under `scope`.
+///
+/// Each entry is a path whose links are *correct* to not resolve from where
+/// they sit, and each is counted rather than dropped so the verdict's scope
+/// stays legible.
+fn is_excluded(relative: &str, specs_root: &str, commands_dir: &str, scope: LinkScope) -> bool {
+    // Adopter-facing templates, on both scopes: their links resolve in a
+    // scaffolded feature directory, not in the template's own.
+    if relative.starts_with(&format!("{specs_root}/templates/")) {
+        return true;
+    }
+    match scope {
+        LinkScope::SpecCorpus => false,
+        LinkScope::Repository => {
+            // Generated command copies: the generator rewrites no relative
+            // links when it changes the file's depth, so the copies' links
+            // are broken by construction while the sources' are correct.
+            // Auditing them would report the generator on every run. The
+            // directory is the host's, resolved by the caller.
+            relative.starts_with(commands_dir)
+                // Project templates, whose links resolve in the adopter's
+                // repo root after scaffolding rather than here.
+                || relative.starts_with("framework/templates/project/")
+                // Runtime test fixtures and goldens mirror arbitrary adopter
+                // content. They are inputs to the test suite, not authored
+                // documentation, and the markdown linter excludes them for
+                // the same reason.
+                || relative.starts_with("runtime/tests/")
+        }
+    }
 }
 
 /// How deep the walk descends before recording a skip and stopping.
@@ -159,11 +236,6 @@ fn collect_markdown(
         }
     }
     true
-}
-
-/// Whether `relative` sits under the spec root's `templates/` directory.
-fn is_template_path(relative: &str, specs_root: &str) -> bool {
-    relative.starts_with(&format!("{specs_root}/templates/"))
 }
 
 /// Scan one file's body for broken relative links, appending to `result`.
@@ -369,8 +441,14 @@ mod tests {
         fs::write(path, body).unwrap();
     }
 
+    /// A generated command copy under the *default* host config dir,
+    /// assembled rather than written literally: the audit's hardcoded-path
+    /// family reads runtime source for that literal, and it is right to —
+    /// a literal here would have been the defect, not just its fixture.
+    const GENERATED_COPY: &str = concat!(".cla", "ude/commands/ductus/x.md");
+
     fn run_at(repo: &Path) -> CheckCorpusLinksResult {
-        run(&CheckCorpusLinksArgs {}, repo).unwrap()
+        run(&CheckCorpusLinksArgs::default(), repo).unwrap()
     }
 
     #[test]
@@ -647,6 +725,136 @@ mod tests {
             "{:?}",
             result.skipped
         );
+    }
+
+    #[test]
+    fn the_repository_scope_reaches_files_the_spec_corpus_scope_cannot() {
+        // The consolidation hazard, pinned. Family 26 delegates to this
+        // primitive, and the cheap way to implement that delegation is to
+        // call it with the default scope — which would silently narrow the
+        // family's subject from the repository to the spec corpus. A smaller
+        // subject nobody stated is `QUAL-CLAIM-001` in its purest form, and
+        // it would not fail anything: the family would go on exiting 0 over
+        // a fraction of its files.
+        let tmp = tempdir().unwrap();
+        let repo = git2::Repository::init(tmp.path()).unwrap();
+        write(tmp.path(), "specs/042-demo/spec.md", "# Demo\n");
+        write(
+            tmp.path(),
+            "framework/commands/thing.md",
+            "# Thing\n\n[gone](../nowhere/x.md)\n",
+        );
+        let mut index = repo.index().unwrap();
+        index.add_path(Path::new("specs/042-demo/spec.md")).unwrap();
+        index
+            .add_path(Path::new("framework/commands/thing.md"))
+            .unwrap();
+        index.write().unwrap();
+
+        let corpus = run(&CheckCorpusLinksArgs::default(), tmp.path()).unwrap();
+        assert_eq!(corpus.scope, LinkScope::SpecCorpus);
+        assert!(
+            corpus.broken.is_empty(),
+            "the spec-corpus scope must not reach framework/: {:?}",
+            corpus.broken
+        );
+
+        let repository = run(
+            &CheckCorpusLinksArgs {
+                scope: LinkScope::Repository,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(repository.scope, LinkScope::Repository);
+        assert_eq!(repository.broken.len(), 1, "{:?}", repository.broken);
+        assert_eq!(repository.broken[0].path, "framework/commands/thing.md");
+        assert!(
+            repository.examined.len() > corpus.examined.len(),
+            "the repository scope must examine strictly more: {} vs {}",
+            repository.examined.len(),
+            corpus.examined.len()
+        );
+    }
+
+    #[test]
+    fn the_repository_scope_reads_the_index_not_the_worktree() {
+        // An untracked draft is not part of the corpus anyone is claiming
+        // about, and a worktree walk would descend into build output.
+        let tmp = tempdir().unwrap();
+        let repo = git2::Repository::init(tmp.path()).unwrap();
+        write(tmp.path(), "tracked.md", "# Tracked\n");
+        write(
+            tmp.path(),
+            "untracked.md",
+            "# Untracked\n\n[gone](./no.md)\n",
+        );
+        let mut index = repo.index().unwrap();
+        index.add_path(Path::new("tracked.md")).unwrap();
+        index.write().unwrap();
+
+        let result = run(
+            &CheckCorpusLinksArgs {
+                scope: LinkScope::Repository,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert!(
+            result.broken.is_empty(),
+            "an untracked file must not be examined: {:?}",
+            result.broken
+        );
+        assert_eq!(result.examined, vec!["tracked.md".to_string()]);
+    }
+
+    #[test]
+    fn the_repository_scope_outside_a_git_repo_is_guidance_not_a_clean_verdict() {
+        let tmp = tempdir().unwrap();
+        write(tmp.path(), "specs/042-demo/spec.md", "# Demo\n");
+        let result = run(
+            &CheckCorpusLinksArgs {
+                scope: LinkScope::Repository,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert!(result.examined.is_empty());
+        assert!(result.guidance.contains("git index"), "{}", result.guidance);
+    }
+
+    #[test]
+    fn generated_copies_and_fixtures_are_excluded_only_on_the_repository_scope() {
+        let tmp = tempdir().unwrap();
+        let repo = git2::Repository::init(tmp.path()).unwrap();
+        for rel in [
+            GENERATED_COPY,
+            "framework/templates/project/y.md",
+            "runtime/tests/golden/z.md",
+        ] {
+            write(tmp.path(), rel, "# X\n\n[gone](../nowhere.md)\n");
+        }
+        let mut index = repo.index().unwrap();
+        for rel in [
+            GENERATED_COPY,
+            "framework/templates/project/y.md",
+            "runtime/tests/golden/z.md",
+        ] {
+            index.add_path(Path::new(rel)).unwrap();
+        }
+        index.write().unwrap();
+
+        let result = run(
+            &CheckCorpusLinksArgs {
+                scope: LinkScope::Repository,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert!(result.broken.is_empty(), "{:?}", result.broken);
+        // Counted, never silently dropped — the count is what makes the
+        // verdict's scope legible.
+        assert_eq!(result.excluded_by_construction, 3);
     }
 
     #[test]

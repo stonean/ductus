@@ -2948,8 +2948,35 @@ pub struct CheckOrphanedReferencesResult {
 
 // -- check-corpus-links --------------------------------------------------------
 
-/// Args for `check-corpus-links`. Reports relative markdown links in the
-/// **spec corpus** that resolve to nothing.
+/// Which markdown files `check-corpus-links` examines.
+///
+/// One resolver, two subjects. The link grammar, the code-span stripping,
+/// the shape filter, and the lexical resolution are identical either way —
+/// what differs is the enumeration, and it differs for a stated reason
+/// rather than by accident (spec 026 scenario `link-check-consolidation`).
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::ValueEnum,
+)]
+#[serde(rename_all = "kebab-case")]
+pub enum LinkScope {
+    /// Every `.md` file under the configured spec root. The default, and
+    /// the adopter-facing subject: it is what the shipped pre-commit hook
+    /// checks, and it needs no git index.
+    #[default]
+    SpecCorpus,
+    /// Every tracked `.md` file in the repository. The maintainer subject —
+    /// `/{project}:audit` Family 26 — which reaches framework sources,
+    /// scripts, and the audit's own documentation, none of which an adopter
+    /// has any business being told about.
+    ///
+    /// Enumerated from the **git index** rather than a worktree walk, so an
+    /// untracked draft is never reported and `runtime/target` is never
+    /// descended into.
+    Repository,
+}
+
+/// Args for `check-corpus-links`. Reports relative markdown links that
+/// resolve to nothing, over the subject `scope` names.
 ///
 /// Three checks sit near this ground and none of them covers it:
 /// `check-orphaned-references` scopes to the adopter-owned bootstrap referrers
@@ -2961,7 +2988,13 @@ pub struct CheckOrphanedReferencesResult {
 /// `adopter-corpus-link-integrity`).
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
-pub struct CheckCorpusLinksArgs {}
+pub struct CheckCorpusLinksArgs {
+    /// The subject to examine. Defaults to the spec corpus, so an adopter's
+    /// hook and every existing caller are unaffected by the widening.
+    #[serde(default)]
+    #[arg(long, value_enum, default_value_t)]
+    pub scope: LinkScope,
+}
 
 /// One relative link whose target does not exist.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -3032,8 +3065,14 @@ pub struct CheckCorpusLinksResult {
     /// documentation.
     pub shapes_skipped: u32,
     /// The spec root the scan walked, repo-relative — the configured
-    /// `[paths] specs-root`, not an assumed `specs`.
+    /// `[paths] specs-root`, not an assumed `specs`. Reported on both
+    /// scopes, since a repository scan still resolves it.
     pub specs_root: String,
+    /// The subject actually examined, echoed so a reader of the result is
+    /// never left inferring it from the counts. A repository scan and a
+    /// spec-corpus scan of the same tree differ by hundreds of files, and
+    /// a bare `examined` list does not say which one ran.
+    pub scope: LinkScope,
     /// Set when the scan could not establish a subject at all: the spec root
     /// is absent or unreadable, so zero examined means *nothing was looked
     /// at* rather than *nothing is broken*. Empty otherwise.

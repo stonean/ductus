@@ -37,6 +37,25 @@
 # from `scripts/maintainer-only-commands.txt` through lib.sh — the same list
 # Family 16 uses — because two copies of it is how the two would drift.
 #
+# HOW A COMMAND IS RECOGNIZED, AND THE CONSTRAINT THAT PUTS ON THE README.
+# A command counts as documented when the README contains the bare backticked
+# token `/name` somewhere. Anywhere: a table row, a heading, a callout — this
+# checks coverage, not a rendering.
+#
+# The constraint is the *bare* token. A command that appears only inside a
+# wider code span — `/specify --supersedes`, say — does not match, and reads
+# as undocumented. The failure is loud and in the safe direction (a false
+# finding a maintainer resolves by writing the bare token once), but it is a
+# rule about how the README may write a command name and it is stated here
+# because nothing else states it. It was met on the very next README edit
+# after this family shipped, when a table moved to HTML and `<code>/prune</code>`
+# stopped matching.
+#
+# Widening the matcher to recognize a command inside a longer span was
+# considered and is the obvious alternative; it risks matching prose that
+# merely mentions a flag, and documenting the constraint is the cheaper answer
+# to beat.
+#
 # A failed listing is a finding, never a clean pass: a README that could not
 # be read must not report as a README documenting everything.
 #
