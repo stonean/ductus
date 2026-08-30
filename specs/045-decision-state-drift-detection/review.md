@@ -1,8 +1,8 @@
 ---
 spec: 045-decision-state-drift-detection
-reviewed-at: 2026-08-30T23:27:06Z
-reviewed-against: 5f948e196d790d7dff035f6c02d93fb015176230
-diff-base: 1eda6f6f626eb368473b1dcae957392ba0e210d0
+reviewed-at: 2026-08-30T23:39:53Z
+reviewed-against: 98a228425cd34c78426cbbb7e57730eb5948abc3
+diff-base: c27a08f44206460a9306bebce800561f109d8407
 must-violations: 0
 should-violations: 0
 low-confidence: 0
@@ -14,17 +14,17 @@ skipped-passes: []
 
 ## Summary
 
-Incremental review over a reopen that produced no code. The `removal-claims-are-checkable` scenario was written, implemented against `check_artifacts.rs`, measured over all 54 specs, and withdrawn; the implementation is reverted and the finding is recorded as a resolved question. `criterion-path-existence` is byte-identical to its state before the reopen.
+Incremental review over the third `review-state-drift` check: an outstanding SHOULD on a `done` spec, plus its documentation in `/{project}:analyze`. All five passes ran. No findings.
 
-All five passes ran. No findings — there is no new code to find them in.
+The reuse pass is what decided the shape, and it is the reason this is three lines rather than a new audit family. `review-state-drift` already owns the claim "the `review:` block disagrees with the state `done` asserts", already runs only on `done` specs, and already carries the grandfather rule for pre-review specs. It also ships to adopters through `/{project}:analyze`, where a maintainer-only audit family would not have — and the defect it catches is not maintainer-specific.
 
-**What the reopen bought is the measurement, and it is worth more than the feature would have been.** The premise survived scrutiny: a criterion claiming a path is absent is exactly as checkable as one claiming presence, and 72 criteria across 18 specs had nothing verifying their substance. What failed is attribution. Of the 31 removal-marked criteria only 5 name a single path; 26 name several and make opposite claims about them in one sentence, so a phrase-position heuristic cannot tell which path "deleted" is about. Run over the corpus, the clause-scoped implementation produced 20 findings of which roughly 8 were false — `023`'s AC3 reporting `framework/constitution.md` as wrongly present because *deleted* referred to the verbs `/capture` and `/elaborate`.
+The quality pass looked at the `--fix` interaction, which is where this could have gone wrong. `--fix` reverts the status and does **not** touch the count. Editing the count would make the finding disappear while the SHOULD stayed unaddressed — erasing the evidence rather than resolving it, and the check would then be reporting on state it had itself rewritten. The count belongs to `/{project}:review`, which regenerates it from a pass; reverting the status is what pushes the operator back through that pass.
 
-It also **broke the existing remedy**, which is the part worth remembering. An annotation is appended at the end of a criterion; clause scoping stopped it qualifying the earlier clause, and six findings that annotations had correctly suppressed came back. A change that defeats the mechanism the corpus already relies on has to clear a much higher bar than one that merely adds coverage, and this did not.
+The message names **both** dispositions. `§implement-phase` gives two ways to address a SHOULD — fix it, or waive it with rationale — and a SHOULD whose answer is "keep as-is" takes the second. A message naming only "fix each" would push an operator toward the wrong one for exactly the findings most likely to be outstanding.
 
-The quality pass has one observation on process rather than code: the hand-walk of all 72 criteria happened *before* the implementation attempt, and that ordering is why the rejection is credible. The walk established which claims actually hold, so every finding the new check produced could be judged true or false against a known answer. Had the check been built first, its 20 findings would have looked like a discovery.
+Verified by seeding: 023's own shape reinstated on its spec makes the check fire, restoring it makes it silent, and the corpus reports zero. The negative case is pinned too — a spec still in flight carrying three SHOULDs is not a finding, because the rule is about the state `done` asserts, not about the finding existing.
 
-The withdrawal is recorded as a resolved question rather than a scenario carrying a "rejected" note, matching how this corpus already records the criterion-supersession check that was measured at 455 pairs. A scenario describes behavior that ships.
+Worth recording what this closes and what it does not. It catches the count disagreeing with `done`; it cannot catch a count that is itself wrong, because the count and `review.md` are written together by one run. That remains the structural blind spot, and it is why this check reads the *status* rather than trying to re-derive the count.
 
 ## MUST violations (blocking)
 
