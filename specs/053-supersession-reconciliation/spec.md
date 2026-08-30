@@ -2,8 +2,8 @@
 status: in-progress
 dependencies: [051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation]
 review:
-  last-run: null
-  reviewed-against: null
+  last-run: 2026-08-30T22:17:42Z
+  reviewed-against: 2e39f32a0222befbecd2de837f13cf026dbee975
   must-violations: 0
   should-violations: 0
   low-confidence: 0
@@ -62,18 +62,18 @@ A superseding spec declaring it removes something the superseded spec never clai
 
 ## Acceptance Criteria
 
-- [ ] AC1: Declaring a supersession walks the superseded spec's claims and classifies each as superseded, still standing, or conflicting
-- [ ] AC2: A conflicting claim is surfaced to the operator and is never resolved silently or by picking a side
-- [ ] AC3: A pair whose reconciliation is incomplete is reported as incomplete, never rendered indistinguishable from a fully reconciled pair
-- [ ] AC4: Reconciliation annotates by default and never edits a superseded claim without the operator confirming it
-- [ ] AC5: A confirmation offering to edit a `done` spec's body names the `done` to `in-progress` back-edge the edit causes, before the edit happens
-- [ ] AC6: Reconciliation never edits an acceptance criterion of the superseded spec; a superseded criterion stays ticked and is annotated
-- [ ] AC7: Reconciliation reads only the two declared specs and the superseded spec's scenarios — never a plan, data model, tasks file, source tree, or third spec
-- [ ] AC8: Reconciliation classifies a claim the superseding spec declares it removes, and reports a claim it cannot classify from the declared pair as unclassified rather than inferring it
-- [ ] AC9: The never-completed determination is left to the existing criterion-verification pass rather than reimplemented inside reconciliation
-- [ ] AC10: Reconciliation runs at declaration time, on both a creation-time and a retroactive declaration, and not at the superseding spec's completion gate
-- [ ] AC11: A superseded spec carrying no classifiable claims is reported as examined-with-nothing-to-reconcile, distinct from a reconciliation that examined claims and found no conflicts
-- [ ] AC12: A superseded spec or scenario that cannot be read or parsed is named in the result and excluded from the classified counts, never silently counted as reconciled
+- [x] AC1: Declaring a supersession walks the superseded spec's claims and classifies each as superseded, still standing, or conflicting
+- [x] AC2: A conflicting claim is surfaced to the operator and is never resolved silently or by picking a side
+- [x] AC3: A pair whose reconciliation is incomplete is reported as incomplete, never rendered indistinguishable from a fully reconciled pair
+- [x] AC4: Reconciliation annotates by default and never edits a superseded claim without the operator confirming it
+- [x] AC5: A confirmation offering to edit a `done` spec's body names the `done` to `in-progress` back-edge the edit causes, before the edit happens
+- [x] AC6: Reconciliation never edits an acceptance criterion of the superseded spec; a superseded criterion stays ticked and is annotated
+- [x] AC7: Reconciliation reads only the two declared specs and the superseded spec's scenarios — never a plan, data model, tasks file, source tree, or third spec
+- [x] AC8: Reconciliation classifies a claim the superseding spec declares it removes, and reports a claim it cannot classify from the declared pair as unclassified rather than inferring it
+- [x] AC9: The never-completed determination is left to the existing criterion-verification pass rather than reimplemented inside reconciliation
+- [x] AC10: Reconciliation runs at declaration time, on both a creation-time and a retroactive declaration, and not at the superseding spec's completion gate
+- [x] AC11: A superseded spec carrying no classifiable claims is reported as examined-with-nothing-to-reconcile, distinct from a reconciliation that examined claims and found no conflicts
+- [x] AC12: A superseded spec or scenario that cannot be read or parsed is named in the result and excluded from the classified counts, never silently counted as reconciled
 
 ## Open Questions
 
