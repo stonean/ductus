@@ -2,8 +2,8 @@
 status: in-progress
 dependencies: [013-text-first-artifacts, 041-task-pruning, 051-branch-scoped-spec-numbering]
 review:
-  last-run: null
-  reviewed-against: null
+  last-run: 2026-08-30T20:23:28Z
+  reviewed-against: 9f51730821bf1e89105bfa4c784c3820391f8cc9
   must-violations: 0
   should-violations: 0
   low-confidence: 0
