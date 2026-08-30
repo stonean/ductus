@@ -26,8 +26,8 @@ Runtime first, then the command surfaces that call it, then documentation, then 
 
 ## 3. Prove the blockquote keeps the link out of `dependencies:`
 
-- [ ] Write a test that annotates a spec, runs `derive-dependencies`, and asserts no edge appears from the superseded spec to its successor
-- [ ] Assert the same body with the annotation un-blockquoted *does* produce the edge, so the test fails if the exemption changes
+- [x] Write a test that annotates a spec, runs `derive-dependencies`, and asserts no edge appears from the superseded spec to its successor
+- [x] Assert the same body with the annotation un-blockquoted *does* produce the edge, so the test fails if the exemption changes
 
 - **Done when**: both assertions hold, pinning the blockquote as structural rather than stylistic.
 

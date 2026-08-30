@@ -368,4 +368,72 @@ mod tests {
         .unwrap_err();
         assert!(matches!(err, PrimitiveError::InvalidArgument { .. }));
     }
+
+    /// The whole annotation design rests on one property of a *different*
+    /// module: `spec_links` excludes blockquote-prefixed lines, so the banner
+    /// can link its superseding spec without the annotated spec acquiring a
+    /// dependency on its own successor. Nothing else pins that. If the
+    /// exemption is ever narrowed, every annotation this primitive has
+    /// written silently inverts an edge in the dependency graph, and the
+    /// first symptom would be a cycle in a corpus nobody had touched.
+    ///
+    /// So this asserts the composition end to end — real primitive output
+    /// through the real scanner — and asserts the negative case too, because
+    /// a test that only checks "no link found" would keep passing if the
+    /// scanner stopped finding links at all.
+    #[test]
+    fn the_annotations_link_is_exempt_from_dependency_harvesting() {
+        use crate::primitives::spec_links::harvestable_lines;
+
+        let (tmp, path) = repo_with("005-workflows", &spec("done"));
+        run(
+            &args(
+                "005-workflows",
+                "043-workflows-sunset",
+                "the feature was removed",
+            ),
+            tmp.path(),
+        )
+        .unwrap();
+
+        let annotated = read(&path);
+        let target = "../043-workflows-sunset/spec.md";
+
+        // The link is really in the file …
+        assert!(
+            annotated.contains(target),
+            "the annotation should carry the link a reader follows"
+        );
+
+        // … and the scanner that decides edges does not see it.
+        let harvestable: Vec<&str> = harvestable_lines(&annotated)
+            .iter()
+            .map(|l| l.text)
+            .collect();
+        assert!(
+            !harvestable.iter().any(|line| line.contains(target)),
+            "a blockquoted annotation must induce no dependency edge; harvestable lines were \
+             {harvestable:?}"
+        );
+
+        // The control: the same link, same file, blockquote prefix stripped,
+        // *is* harvested. Without this the assertion above would survive the
+        // scanner returning nothing at all.
+        let unquoted: String = annotated
+            .lines()
+            .map(|line| line.strip_prefix("> ").unwrap_or(line))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let harvestable_unquoted: Vec<&str> = harvestable_lines(&unquoted)
+            .iter()
+            .map(|l| l.text)
+            .collect();
+        assert!(
+            harvestable_unquoted
+                .iter()
+                .any(|line| line.contains(target)),
+            "un-blockquoted, the same link must be harvested — otherwise this test proves \
+             nothing about the blockquote"
+        );
+    }
 }
