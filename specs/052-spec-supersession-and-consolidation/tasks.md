@@ -105,8 +105,8 @@ Runtime first, then the command surfaces that call it, then documentation, then 
 
 ## 12. Install the new commands
 
-- [ ] Add `supersede.md` and `consolidate.md` to the Slash commands manifest in `framework/bootstrap/ductus.md`
-- [ ] Run `/{project}:audit` Family 16 and confirm installer-command parity
+- [x] Add `supersede.md` and `consolidate.md` to the Slash commands manifest in `framework/bootstrap/ductus.md`
+- [x] Run `/{project}:audit` Family 16 and confirm installer-command parity
 
 - **Done when**: both commands reach adopter projects through `/{project}` and Family 16 reports no drift.
 
