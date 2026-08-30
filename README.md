@@ -62,53 +62,64 @@ You don't have to start at `draft`. A brownfield feature can enter with a sparse
 
 Adoption installs a full set of verb-named, session-aware commands. Use `/target` to switch the working feature; `/specify` creates one and targets it automatically.
 
+Each table below says **when you would reach for a command**, not just what it does — several of these exist for a specific situation that is hard to guess from the name.
+
 ### Pipeline — advance state
 
-| Command | Purpose |
+| Command | When you reach for it |
 | --- | --- |
-| `/specify` | Create a new feature spec. Accepts rich (greenfield) or sparse (brownfield) input — richness scales with the description |
-| `/clarify` | Resolve open questions; advance the spec to `clarified` |
-| `/plan` | Create `plan.md` with technical decisions, affected files, and an ordered task list |
-| `/implement` | Work through tasks; move the spec to `in-progress`, then `done` |
-| `/review` | Audit code against the rules; write `review.md`; block `done` on MUST violations. `--all`, `--fix`, and `--waive <rule-id> --reason "<text>"` supported |
-| `/analyze` | Audit a feature's artifacts against each other. `--all` scans every feature; `--fix` auto-corrects checkbox drift |
+| `/specify` | **New work, and no spec covers it.** Creates the feature directory and targets it. Before scaffolding anything it checks whether an existing spec already owns the work, because a duplicate spec is the one mistake that is expensive to undo later. Takes a rich description or a one-line sketch — sparse brownfield input is expected, not merely tolerated. Flags: `--branch` / `--branch-id <id>` with `--fold-into <feature>` for the branch-scoped form (see `/fold`), and `--supersedes <feature>` when the new spec counters an existing one. |
+| `/clarify` | **The spec has open questions and you are about to plan against it.** Walks them one at a time, records each answer with its reasoning, and advances the spec to `clarified`. Planning over an unresolved question is how a plan gets written twice. |
+| `/plan` | **The spec is settled and you need to know what the change touches.** Produces technical decisions, an affected-files list, and an ordered task list — plus a data model when the feature is persistence-heavy. |
+| `/implement` | **Time to write code.** Walks the task list one task at a time, and is the only command that writes application code. Moves the spec to `in-progress`, then to `done` once every task and acceptance criterion is checked and the review gate passes. |
+| `/review` | **Before you call a feature done.** Audits the code against the project's rule files across five dimensions and writes `review.md`. MUST violations hold the spec out of `done` until they are fixed or waived with a recorded reason — so "we will fix it later" leaves a trace instead of evaporating. `--all`, `--fix`, and `--waive <rule-id> --reason "<text>"` supported. |
+| `/analyze` | **Something is out of sync and you want to know what.** Audits a feature's artifacts against *each other* — a task list that no longer matches the plan, a ticked criterion whose file is gone, a spec at `done` with a blocking review. Read-only; `--fix` corrects checkbox drift, `--all` scans every feature. |
 
 ### Refine — adjust a spec's artifacts
 
 **Commands split on how many specs they write, and that is what decides whether a capability is a flag or a command of its own.** `/amend`, `/prune`, `/clarify`, `/plan` and `/implement` each write **one** spec, and each declares that single-spec scope. `/fold`, `/supersede` and `/consolidate` write **two**, so none of them fits inside a single-spec command as a flag — widening one to accommodate a two-spec operation qualifies every statement it makes about its own scope. That is why `--supersedes` is a flag on `/specify` (which is writing the spec anyway) while a *retroactive* supersession is `/supersede`, and why `/fold` gains no `--into`.
 
-| Command | Purpose |
+| Command | When you reach for it |
 | --- | --- |
-| `/amend` | Add a question or scenario to the targeted spec. Owns the lifecycle back-edges (a new question reopens to `draft`; a new scenario reopens a `done` spec to `in-progress`). One spec |
-| `/prune` | Reduce the target's `tasks.md` — drop spent (completed) task sections, or `--reset` to template state. Confirmed, single-artifact; recovery is git history. One spec |
-| `/fold` | Fold a branch-scoped spec into the upstream spec its `folds-into:` names, re-point every inbound pointer, and retire the staging directory. Two specs |
-| `/supersede` | Record that one spec counters another: the `supersedes:` key on the superseding spec, and the reciprocal annotation on the spec it counters. The earlier spec stays, annotated, as the record of what shipped. Two specs |
-| `/consolidate` | Merge a spec into another and remove its directory, re-pointing every inbound pointer first. Two specs |
+| `/amend` | **A question or a new behavior surfaced against a spec that has already moved on.** Records it and takes the lifecycle back-edge for you — a new question reopens the spec to `draft`, a new scenario reopens a `done` spec to `in-progress` — so a spec's status never quietly disagrees with its content. One spec. |
+| `/fold` | **Two branches each need a spec, and both would claim the same next number.** That collision is a merge conflict in the one file two people are most likely to add at once. `/specify --branch` numbers the second one from a branch identifier instead — `1234.1-slug` — which cannot collide, so the merge is clean by construction. `/fold` is how you discharge it afterwards: run it on the upstream branch *after* the merge, and the staging spec's content moves into the spec it was standing in for (as a body edit or as a scenario), every inbound pointer is re-pointed, and the directory is retired. A branch-scoped spec is **retired, not completed** — `/status` reports one as pending, and the `done` gate blocks while the fold is outstanding. Two specs. |
+| `/supersede` | **A later spec countered an earlier one, and nothing records that.** Without a marker, a reader — human or agent — cannot tell a live decision from one that was overturned, and the reflex is to delete the stale spec, which strands every pointer into it. This writes the `supersedes:` key on the newer spec and a reciprocal annotation on the older one naming what no longer holds. The earlier spec **stays**, annotated, as the record of what shipped. Use `/specify --supersedes` instead when you are writing the countering spec right now. Two specs. |
 
-> **`/consolidate` is the only command that removes a durable artifact.** `/prune` destroys `tasks.md`, which the framework classes as ephemeral work-tracking; `spec.md` is a durable source of truth, and consolidation deletes it along with the scenarios, plan, tasks, and review in its directory. It migrates nothing — the guard proves the target exists, never that anything landed there — so the confirmation names content loss rather than directory removal, and recovery is git history alone. Reach for `/supersede` instead whenever the earlier spec actually delivered something: that spec is the record of what shipped, and consolidating it would invert the relationship.
+`/fold` does remove a directory, but only after moving its content into the spec it was standing in for — nothing is lost, which is why it sits here rather than in the table below.
+
+### Destructive — these remove content
+
+Two commands delete rather than rewrite. Both confirm before they act, neither writes a backup, and **git history is the only recovery** — so they are separated here rather than sitting as ordinary rows among commands that only ever add.
+
+| Command | What it destroys | When you reach for it |
+| --- | --- | --- |
+| `/prune` | Task sections in one `tasks.md` | **`tasks.md` has turned into a changelog of finished work and you cannot see what is left.** Drops spent (fully checked) task sections, or `--reset` back to template state. Scoped to a single artifact the framework classes as ephemeral work-tracking: the durable record of what was done lives in the spec, the code, and git. One spec. |
+| `/consolidate` | An entire spec directory — `spec.md`, scenarios, plan, tasks, review | **An old spec was never really a separate concern** — it overlapped a sibling from the start, or duplicates one you have since written. Re-points every inbound pointer at the target first, so nothing is left dangling, then removes the source. Two specs. |
+
+> **`/consolidate` is the only command that removes a durable artifact.** `tasks.md` is ephemeral work-tracking; `spec.md` is a source of truth. Consolidation **migrates nothing** — the guard proves the target exists, never that anything actually landed there — so the confirmation names the content you are losing, scenario by scenario, rather than merely naming the directory. Reach for `/supersede` instead whenever the earlier spec actually delivered something: that spec is the record of what shipped, and consolidating it would invert the relationship.
 
 ### Brownfield — absorb existing reality
 
-| Command | Purpose |
+| Command | When you reach for it |
 | --- | --- |
-| `/log` | Record a raw item to `specs/inbox.md` for later grooming |
-| `/groom` | Walk the inbox and route each item to its proper spec or scenario |
+| `/log` | **You noticed something mid-task and do not want to derail to deal with it.** Drops a raw one-liner into `specs/inbox.md` and gets out of the way. No triage, no routing, no decision — that is `/groom`'s job, later. |
+| `/groom` | **The inbox has accumulated and you are ready to decide where each item belongs.** Walks it one item at a time and routes each to its real home: a rule for a cross-cutting concern, a new spec, a scenario under an existing spec, a chore left alone, or a discard. Confirms each route before it writes, and reopens a `done` spec when an item lands under it. |
 
 ### Orient
 
-| Command | Purpose |
+| Command | When you reach for it |
 | --- | --- |
-| `/target` | Set the working feature (or `feature/scenario`) for the session |
-| `/status` | Dashboard of every feature's progress, or a focused view of the current target |
-| `/link` | Register a service in `.ductus/config.toml [services]` so cross-service references resolve to the linked spec's status; `--list` shows registered services and their resolution health |
-| `/help` | Project overview and command reference |
+| `/target` | **You are about to work on a different feature.** Sets the working feature (or `feature/scenario`) for the session, so the other commands stop needing an argument. |
+| `/status` | **"Where is everything?"** A dashboard of every feature's progress, or a focused view of the current target — including which specs are blocked, which have unresolved scenario questions, and which carry a pending fold. |
+| `/link` | **A spec in this repo relates to a spec in another service's repo.** Registers that service in `.ductus/config.toml` so a cross-service reference resolves to the linked spec's real status instead of a dead link. `--list` shows registered services and their resolution health. |
+| `/help` | **You forgot which command does what.** Project overview and command reference, generated from the installed commands rather than hand-maintained. |
 
 ### Bootstrap — one-time per project
 
-| Command | Purpose |
+| Command | When you reach for it |
 | --- | --- |
-| `/ductus` | Adopt or update `ductus` in a project (the installer that placed every other command) |
-| `/configure` | Configure agent permissions for `ductus` commands |
+| `/ductus` | **Adopting the framework, or pulling the latest version of it.** The installer that placed every other command. Idempotent — safe to re-run any time. |
+| `/configure` | **Your agent keeps asking permission for the same `ductus` operations.** Configures agent permissions for the `ductus` commands so the pipeline stops prompting on every step. |
 
 ## Installing (per agent)
 
