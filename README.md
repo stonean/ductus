@@ -62,31 +62,67 @@ You don't have to start at `draft`. A brownfield feature can enter with a sparse
 
 Adoption installs a full set of verb-named, session-aware commands. Use `/target` to switch the working feature; `/specify` creates one and targets it automatically.
 
-Each table below says **when you would reach for a command**, not just what it does — several of these exist for a specific situation that is hard to guess from the name.
+Each entry below leads with **when you would reach for it**, because several of these exist for a specific situation that is hard to guess from the name.
 
 ### Pipeline — advance state
 
-| Command | When you reach for it |
-| --- | --- |
-| `/specify` | **New work, and no spec covers it.** Creates the feature directory and targets it. Before scaffolding anything it checks whether an existing spec already owns the work, because a duplicate spec is the one mistake that is expensive to undo later. Takes a rich description or a one-line sketch — sparse brownfield input is expected, not merely tolerated. Flags: `--branch` / `--branch-id <id>` with `--fold-into <feature>` for the branch-scoped form (see `/fold`), and `--supersedes <feature>` when the new spec counters an existing one. |
-| `/clarify` | **The spec has open questions and you are about to plan against it.** Walks them one at a time, records each answer with its reasoning, and advances the spec to `clarified`. Planning over an unresolved question is how a plan gets written twice. |
-| `/plan` | **The spec is settled and you need to know what the change touches.** Produces technical decisions, an affected-files list, and an ordered task list — plus a data model when the feature is persistence-heavy. |
-| `/implement` | **Time to write code.** Walks the task list one task at a time, and is the only command that writes application code. Moves the spec to `in-progress`, then to `done` once every task and acceptance criterion is checked and the review gate passes. |
-| `/review` | **Before you call a feature done.** Audits the code against the project's rule files across five dimensions and writes `review.md`. MUST violations hold the spec out of `done` until they are fixed or waived with a recorded reason — so "we will fix it later" leaves a trace instead of evaporating. `--all`, `--fix`, and `--waive <rule-id> --reason "<text>"` supported. |
-| `/analyze` | **Something is out of sync and you want to know what.** Audits a feature's artifacts against *each other* — a task list that no longer matches the plan, a ticked criterion whose file is gone, a spec at `done` with a blocking review. Read-only; `--fix` corrects checkbox drift, `--all` scans every feature. |
+#### `/specify` — a new feature spec, targeted for the session
+
+**Reach for it when you have new work and no spec covers it.** It creates the feature directory and makes it the session target.
+
+Before scaffolding anything it checks whether an existing spec already owns the work, because a duplicate spec is the one mistake here that is expensive to undo. It takes a rich description or a one-line sketch — sparse brownfield input is expected, not merely tolerated.
+
+Flags: `--branch` / `--branch-id <id>` with `--fold-into <feature>` create the branch-scoped form (see `/fold`), and `--supersedes <feature>` records that this spec counters an existing one.
+
+#### `/clarify` — open questions resolved, and the spec advanced to `clarified`
+
+**Reach for it when the spec has open questions and you are about to plan against it.** It walks them one at a time and records each answer with its reasoning.
+
+Planning over an unresolved question is how a plan gets written twice.
+
+#### `/plan` — technical decisions, affected files, and an ordered task list
+
+**Reach for it when the spec is settled and you need to know what the change actually touches.** Persistence-heavy features also get a data model.
+
+#### `/implement` — the code, and the spec's move to `in-progress` then `done`
+
+**Reach for it when it is time to write code.** It walks the task list one task at a time, and is the only command that writes application code.
+
+The spec reaches `done` once every task and acceptance criterion is checked and the review gate passes — not before.
+
+#### `/review` — `review.md`, and a hold on `done` while violations stand
+
+**Reach for it before you call a feature done.** It audits the code against the project's rule files across five dimensions: security, reuse, quality, efficiency, and simplicity.
+
+MUST violations keep the spec out of `done` until they are fixed or waived with a recorded reason — so "we will fix it later" leaves a trace instead of evaporating. `--all`, `--fix`, and `--waive <rule-id> --reason "<text>"` are supported.
+
+#### `/analyze` — a report of where a feature's own artifacts disagree
+
+**Reach for it when something is out of sync and you want to know what.** A task list that no longer matches the plan, a ticked criterion whose file is gone, a spec at `done` with a blocking review.
+
+Unlike `/review`, it audits artifacts against *each other* rather than against code, and it runs at any time — it is a safety check, not a gate. Read-only; `--fix` corrects checkbox drift and `--all` scans every feature.
 
 ### Refine — adjust a spec's artifacts
 
 **Commands split on how many specs they write, and that is what decides whether a capability is a flag or a command of its own.** `/amend`, `/prune`, `/clarify`, `/plan` and `/implement` each write **one** spec, and each declares that single-spec scope. `/fold`, `/supersede` and `/consolidate` write **two**, so none of them fits inside a single-spec command as a flag — widening one to accommodate a two-spec operation qualifies every statement it makes about its own scope. That is why `--supersedes` is a flag on `/specify` (which is writing the spec anyway) while a *retroactive* supersession is `/supersede`, and why `/fold` gains no `--into`.
 
-| Command | When you reach for it |
-| --- | --- |
-| `/amend` | **A question or a new behavior surfaced against a spec that has already moved on.** Records it and takes the lifecycle back-edge for you — a new question reopens the spec to `draft`, a new scenario reopens a `done` spec to `in-progress` — so a spec's status never quietly disagrees with its content. One spec. |
-| `/supersede` | **A later spec countered an earlier one, and nothing records that.** Without a marker, a reader — human or agent — cannot tell a live decision from one that was overturned, and the reflex is to delete the stale spec, which strands every pointer into it. This writes the `supersedes:` key on the newer spec and a reciprocal annotation on the older one naming what no longer holds. The earlier spec **stays**, annotated, as the record of what shipped. Use `/specify --supersedes` instead when you are writing the countering spec right now. Two specs. |
+#### `/amend` — a question or scenario recorded, with the lifecycle back-edge taken
+
+**Reach for it when a question or a new behavior surfaces against a spec that has already moved on.**
+
+It takes the back-edge for you: a new question reopens the spec to `draft`, a new scenario reopens a `done` spec to `in-progress`. A spec's status never quietly disagrees with its content. One spec.
+
+#### `/supersede` — the `supersedes:` key on one spec, the annotation on the other
+
+**Reach for it when a later spec countered an earlier one and nothing records that.**
+
+Without a marker, a reader — human or agent — cannot tell a live decision from one that was overturned, and the reflex is to delete the stale spec, which strands every pointer into it. This writes the key on the newer spec and a reciprocal annotation on the older one naming what no longer holds.
+
+The earlier spec **stays**, annotated, as the record of what shipped. Use `/specify --supersedes` instead when you are writing the countering spec right now. Two specs.
 
 ### Destructive — these remove content
 
-Three commands delete rather than rewrite. All three confirm before they act, none writes a backup, and each gets its own section below because what it removes deserves more than a table cell.
+Three commands delete rather than rewrite. All three confirm before they act, and none writes a backup.
 
 #### `/prune` — spent task sections in one `tasks.md`
 
@@ -114,26 +150,43 @@ That number is scaffolding, not a home. `/fold` is how you take it down: run it 
 
 ### Brownfield — absorb existing reality
 
-| Command | When you reach for it |
-| --- | --- |
-| `/log` | **You noticed something mid-task and do not want to derail to deal with it.** Drops a raw one-liner into `specs/inbox.md` and gets out of the way. No triage, no routing, no decision — that is `/groom`'s job, later. |
-| `/groom` | **The inbox has accumulated and you are ready to decide where each item belongs.** Walks it one item at a time and routes each to its real home: a rule for a cross-cutting concern, a new spec, a scenario under an existing spec, a chore left alone, or a discard. Confirms each route before it writes, and reopens a `done` spec when an item lands under it. |
+#### `/log` — one raw line in `specs/inbox.md`
+
+**Reach for it when you notice something mid-task and do not want to derail to deal with it.** No triage, no routing, no decision — that is `/groom`'s job, later.
+
+#### `/groom` — every inbox item routed to its real home
+
+**Reach for it when the inbox has accumulated and you are ready to decide where each item belongs.**
+
+It walks the list one item at a time and routes each: a rule for a cross-cutting concern, a new spec, a scenario under an existing spec, a chore left alone, or a discard. Each route is confirmed before anything is written, and a `done` spec is reopened when an item lands under it.
 
 ### Orient
 
-| Command | When you reach for it |
-| --- | --- |
-| `/target` | **You are about to work on a different feature.** Sets the working feature (or `feature/scenario`) for the session, so the other commands stop needing an argument. |
-| `/status` | **"Where is everything?"** A dashboard of every feature's progress, or a focused view of the current target — including which specs are blocked, which have unresolved scenario questions, and which carry a pending fold. |
-| `/link` | **A spec in this repo relates to a spec in another service's repo.** Registers that service in `.ductus/config.toml` so a cross-service reference resolves to the linked spec's real status instead of a dead link. `--list` shows registered services and their resolution health. |
-| `/help` | **You forgot which command does what.** Project overview and command reference, generated from the installed commands rather than hand-maintained. |
+#### `/target` — the session's working feature
+
+**Reach for it when you are about to work on a different feature.** Sets the feature (or `feature/scenario`) for the session, so the other commands stop needing an argument.
+
+#### `/status` — the pipeline view of every feature
+
+**Reach for it when you need to answer "where is everything?"** A dashboard of every feature's progress, or a focused view of the current target — including which specs are blocked, which carry unresolved scenario questions, and which have a pending fold.
+
+#### `/link` — a registered sibling service, so cross-service references resolve
+
+**Reach for it when a spec in this repo relates to a spec in another service's repo.** Registering the service in `.ductus/config.toml` makes a cross-service reference resolve to the linked spec's real status instead of a dead link. `--list` shows registered services and their resolution health.
+
+#### `/help` — the command reference, generated from what is installed
+
+**Reach for it when you forget which command does what.** Generated rather than hand-maintained, so it cannot describe a command set the project does not have.
 
 ### Bootstrap — one-time per project
 
-| Command | When you reach for it |
-| --- | --- |
-| `/ductus` | **Adopting the framework, or pulling the latest version of it.** The installer that placed every other command. Idempotent — safe to re-run any time. |
-| `/configure` | **Your agent keeps asking permission for the same `ductus` operations.** Configures agent permissions for the `ductus` commands so the pipeline stops prompting on every step. |
+#### `/ductus` — the framework installed or updated in this project
+
+**Reach for it when adopting the framework, or pulling the latest version of it.** The installer that placed every other command. Idempotent — safe to re-run any time.
+
+#### `/configure` — agent permissions for the `ductus` commands
+
+**Reach for it when your agent keeps asking permission for the same `ductus` operations.** Configures the permission set so the pipeline stops prompting on every step.
 
 ## Installing (per agent)
 
