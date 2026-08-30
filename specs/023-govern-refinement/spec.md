@@ -2,10 +2,10 @@
 status: done
 dependencies: [022-deterministic-runtime]
 review:
-  last-run: 2026-08-30T14:57:14Z
+  last-run: 2026-08-30T15:22:00Z
   reviewed-against: d1c56d429153541bbdbb6111eaaca8db9968245f
   must-violations: 0
-  should-violations: 0
+  should-violations: 1
   low-confidence: 0
   blocking: false
 next-criterion: 41

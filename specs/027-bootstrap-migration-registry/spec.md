@@ -2,7 +2,7 @@
 status: done
 dependencies: [026-framework-self-audit]
 review:
-  last-run: 2026-08-30T14:57:14Z
+  last-run: 2026-08-30T15:22:00Z
   reviewed-against: d1c56d429153541bbdbb6111eaaca8db9968245f
   must-violations: 0
   should-violations: 0

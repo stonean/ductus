@@ -78,6 +78,12 @@
 # An empty extraction on a subject that exists is a finding, not a pass: a
 # canonical set that parses to zero entries means the parse broke, and
 # reporting clean on it is the false green /audit exists to prevent.
+#
+# The 32b summary distinguishes "no retired-entries section present, so no
+# overlap was examined" from "N retired entries checked" (QUAL-CLAIM-001).
+# An absent section is a legitimate state — nothing has been retired yet —
+# but reporting it as `0 retired entries` would render not-examined as
+# examined-and-clean, which is the exact shape that rule names.
 
 set -uo pipefail
 # shellcheck source-path=SCRIPTDIR source=lib.sh
@@ -152,6 +158,7 @@ check_section "$deny_start" "$deny_end" "deny"
 # Absent retired section: nothing has been retired yet, which is a valid
 # state and not a parse failure, so it is skipped rather than reported.
 retired_start="$(grep -nE '^[0-9]+\. Retired `permissions\.allow` entries' "$CLAUDE" | cut -d: -f1 | head -1)"
+retired_summary="no retired-entries section present, so no overlap was examined"
 if [ -n "$retired_start" ]; then
   retired_end="$(awk -v s="$retired_start" 'NR>s && /^[0-9]+\. / { print NR; exit }' "$CLAUDE")"
   if [ -z "$retired_end" ]; then
@@ -168,6 +175,7 @@ if [ -n "$retired_start" ]; then
   retired="$(entries_in "$retired_start" "$retired_end")"
   retired_count="$(printf '%s\n' "$retired" | grep -c '[^[:space:]]')"
 
+  retired_summary="$retired_count retired entries checked for overlap with the canonical set"
   if [ "$retired_count" -eq 0 ]; then
     emit "$CLAUDE:$retired_start" "the retired-entries section holds no bullet entries — the parse is broken, not the list" \
       "check the \"- \`Entry\`\" bullet format inside the retired section"
@@ -190,6 +198,6 @@ if [ "$entry_count" -eq 0 ]; then
     "check the \"- \`Tool(argument)\`\" bullet format inside both sections"
 fi
 
-echo "permission-entry-shape: checked $entry_count claude allow+deny entries for shape, and ${retired_count:-0} retired entries for overlap with the canonical set (opencode/auggie/antigravity skipped — none has a path-scoped file-permission form)" >&2
+echo "permission-entry-shape: checked $entry_count claude allow+deny entries for shape; $retired_summary (opencode/auggie/antigravity skipped — none has a path-scoped file-permission form)" >&2
 
 exit "$drift"
