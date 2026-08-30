@@ -33,10 +33,10 @@ Runtime first, then the command surfaces that call it, then documentation, then 
 
 ## 4. Gate `retire-feature`'s sequential refusal
 
-- [ ] Add an explicit opt-in argument to `RetireFeatureArgs` in `runtime/src/schema/primitives.rs`
-- [ ] In `retire_feature.rs`, apply Refusal 1 unless the argument is set; leave Refusal 2 (target holds a `spec.md`) untouched for both callers
-- [ ] Record in the doc comment why the refusal is gated rather than removed — it keeps an irreversible operation out of reach of a typo
-- [ ] Add tests: sequential without the flag refuses; sequential with it and a valid target succeeds; sequential with it and a target holding no `spec.md` still refuses
+- [x] Add an explicit opt-in argument to `RetireFeatureArgs` in `runtime/src/schema/primitives.rs`
+- [x] In `retire_feature.rs`, apply Refusal 1 unless the argument is set; leave Refusal 2 (target holds a `spec.md`) untouched for both callers
+- [x] Record in the doc comment why the refusal is gated rather than removed — it keeps an irreversible operation out of reach of a typo
+- [x] Add tests: sequential without the flag refuses; sequential with it and a valid target succeeds; sequential with it and a target holding no `spec.md` still refuses
 
 - **Done when**: `/{project}:fold`'s call path behaves identically to today, and a sequential directory is removable only when the opt-in and a valid target are both present.
 

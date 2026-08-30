@@ -1,9 +1,21 @@
-//! `retire-feature` — remove a branch-scoped directory once its content has
-//! been folded into the upstream spec that receives it.
+//! `retire-feature` — remove a feature directory whose content now lives
+//! elsewhere: a branch-scoped directory once it has been folded into the
+//! upstream spec that receives it, or a sequential one an operator has
+//! explicitly consolidated away (spec 052).
 //!
 //! The last step of a fold, and the only irreversible one. Everything before
 //! it — applying the content, re-pointing links, reopening the upstream spec —
 //! is a write another write can undo; this deletes a directory.
+//!
+//! **The sequential refusal is gated, never removed** (spec 052). It exists
+//! because an irreversible operation must not be reachable from a typo, and
+//! deleting it would discard that protection for every caller. Instead the
+//! caller opts in: `/{project}:fold` never does, so a mistyped feature name
+//! on a fold meets the refusal exactly as before, while consolidation opts in
+//! having already named both specs and confirmed the removal. The flag
+//! records a second explicit decision rather than weakening the first — and
+//! the anti-stranding guard below is not gated at all, because that guarantee
+//! is owed to both callers equally.
 //!
 //! **This is where the fold target's existence is finally enforced** (AC28).
 //! Nothing earlier can enforce it and the reason is structural: a
@@ -44,13 +56,27 @@ pub fn run(args: &RetireFeatureArgs, repo: &Path) -> Result<RetireFeatureResult>
     validate_no_traversal(&args.feature)?;
     validate_no_traversal(&args.fold_target)?;
 
-    // Refusal 1: the sequential form is permanent. Checked before anything
-    // touches the filesystem, so a typo naming a real spec cannot reach the
-    // removal below.
-    if !matches!(
-        parse_feature_dir(&args.feature),
-        Some(FeatureForm::BranchScoped { .. })
-    ) {
+    // Refusal 1: the sequential form is permanent *unless the caller says
+    // otherwise*. Checked before anything touches the filesystem, so a typo
+    // naming a real spec cannot reach the removal below.
+    //
+    // Gated rather than deleted (spec 052). The refusal exists because an
+    // irreversible operation must not be reachable from a typo, and that is
+    // still true for every caller that does not opt in: `/{project}:fold`
+    // never sets the flag, so a mistyped feature name on a fold meets this
+    // refusal exactly as it did before. Consolidation opts in having already
+    // named both specs and confirmed the removal, so the flag records a
+    // second explicit decision rather than relaxing the first.
+    //
+    // Refusal 2 below is deliberately *not* gated: it is what stops a
+    // retirement stranding content, and that guarantee is owed to both
+    // callers equally.
+    if !args.allow_sequential
+        && !matches!(
+            parse_feature_dir(&args.feature),
+            Some(FeatureForm::BranchScoped { .. })
+        )
+    {
         return Err(PrimitiveError::InvalidArgument {
             primitive: "retire-feature".into(),
             argument: "feature".into(),
@@ -120,6 +146,16 @@ mod tests {
         RetireFeatureArgs {
             feature: feature.into(),
             fold_target: fold_target.into(),
+            allow_sequential: false,
+        }
+    }
+
+    /// The consolidation call shape: the same arguments with the opt-in set.
+    fn consolidating(feature: &str, into: &str) -> RetireFeatureArgs {
+        RetireFeatureArgs {
+            feature: feature.into(),
+            fold_target: into.into(),
+            allow_sequential: true,
         }
     }
 
@@ -254,5 +290,65 @@ mod tests {
         let err = run(&args("../../etc", "050-alpha"), tmp.path()).unwrap_err();
 
         assert!(matches!(err, PrimitiveError::InvalidPath { .. }));
+    }
+
+    #[test]
+    fn a_sequential_feature_is_removed_when_the_caller_opts_in() {
+        // Consolidation's call shape. The directory goes, and the target it
+        // was consolidated into is untouched.
+        let tmp = tempfile::tempdir().unwrap();
+        write_spec(tmp.path(), "012-overlapping");
+        write_spec(tmp.path(), "030-the-survivor");
+
+        let result = run(
+            &consolidating("012-overlapping", "030-the-survivor"),
+            tmp.path(),
+        )
+        .unwrap();
+        assert!(result.retired);
+        assert!(!tmp.path().join("specs/012-overlapping").exists());
+        assert!(
+            tmp.path().join("specs/030-the-survivor/spec.md").is_file(),
+            "consolidation writes nothing to the target"
+        );
+    }
+
+    #[test]
+    fn the_opt_in_does_not_relax_the_anti_stranding_guard() {
+        // Refusal 2 is deliberately ungated: opting in to removing a
+        // sequential directory is not opting in to stranding its content.
+        let tmp = tempfile::tempdir().unwrap();
+        write_spec(tmp.path(), "012-overlapping");
+        fs::create_dir_all(tmp.path().join("specs/030-not-a-home")).unwrap();
+
+        let err = run(
+            &consolidating("012-overlapping", "030-not-a-home"),
+            tmp.path(),
+        )
+        .unwrap_err();
+        assert!(matches!(err, PrimitiveError::FeatureNotFound { .. }));
+        assert!(
+            tmp.path().join("specs/012-overlapping").exists(),
+            "a refused consolidation leaves the source in place"
+        );
+    }
+
+    #[test]
+    fn the_fold_call_shape_is_unchanged_by_the_gate() {
+        // The load-bearing assertion of the gate: every existing caller
+        // behaves exactly as it did. `/{project}:fold` never sets the flag,
+        // so a sequential name — the typo case the refusal exists for —
+        // still refuses, and a genuine branch-scoped fold still succeeds.
+        let tmp = tempfile::tempdir().unwrap();
+        write_spec(tmp.path(), "050-upstream");
+        write_spec(tmp.path(), "012-sequential");
+        write_spec(tmp.path(), "1234.1-staged");
+
+        let err = run(&args("012-sequential", "050-upstream"), tmp.path()).unwrap_err();
+        assert!(matches!(err, PrimitiveError::InvalidArgument { .. }));
+        assert!(tmp.path().join("specs/012-sequential").exists());
+
+        let result = run(&args("1234.1-staged", "050-upstream"), tmp.path()).unwrap();
+        assert!(result.retired);
     }
 }

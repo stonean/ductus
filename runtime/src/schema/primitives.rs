@@ -3222,9 +3222,9 @@ pub struct RetireFeatureArgs {
     /// `1234.1-widget-cache`.
     ///
     /// Must parse as the branch-scoped form. A sequential `NNN-slug`
-    /// feature is refused outright: the sequential form is permanent, and a
-    /// primitive that could delete one would make an irreversible
-    /// operation reachable from a typo.
+    /// feature is refused **unless** [`Self::allow_sequential`] is set: the
+    /// sequential form is permanent, and a primitive that could delete one
+    /// would make an irreversible operation reachable from a typo.
     #[arg(long)]
     pub feature: String,
     /// The upstream feature the content was folded into. It must exist,
@@ -3236,6 +3236,22 @@ pub struct RetireFeatureArgs {
     /// check needs to establish.
     #[arg(long)]
     pub fold_target: String,
+    /// Permit removing a **sequential** feature directory (spec 052).
+    ///
+    /// Off by default, which keeps the refusal exactly as it was for every
+    /// existing caller. `/{project}:fold` never sets it, so a mistyped
+    /// feature name during a fold still meets the refusal unchanged — which
+    /// is the protection the refusal exists for, and the reason it is gated
+    /// here rather than deleted.
+    ///
+    /// Consolidation sets it deliberately, having already named both specs
+    /// and confirmed the removal with the operator. The flag is not a
+    /// weaker refusal; it is the record that a second, explicit decision was
+    /// made. The anti-stranding guard below is untouched and applies to both
+    /// callers.
+    #[arg(long, default_value_t = false)]
+    #[serde(default)]
+    pub allow_sequential: bool,
 }
 
 /// Result for `retire-feature`.
