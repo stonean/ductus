@@ -1,6 +1,6 @@
 # ductus
 
-**Spec-driven development for AI coding agents.** Describe a feature in plain English; your agent turns it into a spec, a plan, tasks, and reviewed code — and every feature lands with a written record of *why* it was built the way it is.
+**Spec-driven development for AI coding agents.** Describe a feature in plain English; your agent turns it into a spec, a plan, tasks, and reviewed code — and every feature lands with a written record of _why_ it was built the way it is.
 
 `ductus` is tech-stack agnostic, ships as plain markdown, and works with Claude Code, Auggie, Antigravity, and OpenCode. There's nothing to compile and no dependency to add — you install a single command into your project and drive the rest through a handful of verb-named slash commands.
 
@@ -49,7 +49,7 @@ Every feature moves through one pipeline. The status on each spec tracks where i
 draft ──/clarify──▶ clarified ──/plan──▶ planned ──/implement──▶ in-progress ──/implement──▶ done
 ```
 
-- **Spec** (`/specify`, `/clarify`) — define *what* the feature does and *why*, with concrete acceptance criteria and a list of open questions. No open questions may remain before planning.
+- **Spec** (`/specify`, `/clarify`) — define _what_ the feature does and _why_, with concrete acceptance criteria and a list of open questions. No open questions may remain before planning.
 - **Plan** (`/plan`) — turn the spec into technical decisions, affected files, and an ordered task list. Persistence-heavy features also get a data model.
 - **Implement** (`/implement`) — work the tasks; this is where code is written. Status moves to `in-progress`, then `done` once the review gate passes.
 - **Review** (`/review`) — audit the implementation against the framework's rules (security, reuse, quality, efficiency, simplicity). Blocking violations keep the feature out of `done` until they're fixed or explicitly waived.
@@ -62,33 +62,33 @@ You don't have to start at `draft`. A brownfield feature can enter with a sparse
 
 Adoption installs a full set of verb-named, session-aware commands. Use `/target` to switch the working feature; `/specify` creates one and targets it automatically.
 
-Each entry below leads with **when you would reach for it**, because several of these exist for a specific situation that is hard to guess from the name. At a glance:
+Each entry below says what the command **does**; the section it links to says when you would reach for it and why it exists.
 
 - **Pipeline — advance state**
-  - [`/specify`](#specify--a-new-feature-spec-targeted-for-the-session) — new work, no spec covers it
-  - [`/clarify`](#clarify--open-questions-resolved-and-the-spec-advanced-to-clarified) — open questions stand between you and planning
-  - [`/plan`](#plan--technical-decisions-affected-files-and-an-ordered-task-list) — the spec is settled; what does it touch?
-  - [`/implement`](#implement--the-code-and-the-specs-move-to-in-progress-then-done) — write the code
-  - [`/review`](#review--reviewmd-and-a-hold-on-done-while-violations-stand) — before you call it done
-  - [`/analyze`](#analyze--a-report-of-where-a-features-own-artifacts-disagree) — something is out of sync and you want to know what
+  - [`/specify`](#specify--a-new-feature-spec-targeted-for-the-session) — create a spec for new work no existing spec covers, and target it
+  - [`/clarify`](#clarify--open-questions-resolved-and-the-spec-advanced-to-clarified) — resolve the spec's open questions and advance it to `clarified`
+  - [`/plan`](#plan--technical-decisions-affected-files-and-an-ordered-task-list) — turn the spec into technical decisions, affected files, and an ordered task list
+  - [`/implement`](#implement--the-code-and-the-specs-move-to-in-progress-then-done) — work the task list and write the code
+  - [`/review`](#review--reviewmd-and-a-hold-on-done-while-violations-stand) — analyze the code against the applicable rules, and block `done` on violations
+  - [`/analyze`](#analyze--a-report-of-where-a-features-own-artifacts-disagree) — audit a feature's artifacts against each other: drifted checkboxes, stale reviews, dead links
 - **Refine — adjust a spec's artifacts**
-  - [`/amend`](#amend--a-question-or-scenario-recorded-with-the-lifecycle-back-edge-taken) — a question or behavior surfaced against a spec that moved on
-  - [`/supersede`](#supersede--the-supersedes-key-on-one-spec-the-annotation-on-the-other) — a later spec countered an earlier one
+  - [`/amend`](#amend--a-question-or-scenario-recorded-with-the-lifecycle-back-edge-taken) — add a question or scenario to a spec, reopening it if its status requires
+  - [`/supersede`](#supersede--the-supersedes-key-on-one-spec-the-annotation-on-the-other) — record that a newer spec counters an older one, and annotate the older one
 - **Destructive — these remove content**
-  - [`/prune`](#prune--spent-task-sections-in-one-tasksmd) — `tasks.md` is not for durable content; clean it up
-  - [`/fold`](#fold--the-branch-scoped-staging-directory-after-migrating-its-content) — a branch-scoped spec has merged and needs its durable home
-  - [`/consolidate`](#consolidate--an-entire-spec-directory) — one spec replaces another; re-point every reference, then remove the old one
+  - [`/prune`](#prune--spent-task-sections-in-one-tasksmd) — drop completed task sections from `tasks.md`, which is not for durable content
+  - [`/fold`](#fold--the-branch-scoped-staging-directory-after-migrating-its-content) — merge a branch-scoped spec into its durable home and remove the staging directory
+  - [`/consolidate`](#consolidate--an-entire-spec-directory) — re-point every reference to a replaced spec, then remove it
 - **Brownfield — absorb existing reality**
-  - [`/log`](#log--one-raw-line-in-specsinboxmd) — noticed something, do not want to derail
-  - [`/groom`](#groom--every-inbox-item-routed-to-its-real-home) — the inbox has accumulated
+  - [`/log`](#log--one-raw-line-in-specsinboxmd) — add an item to `specs/inbox.md` to be picked up later with `/groom`
+  - [`/groom`](#groom--every-inbox-item-routed-to-its-real-home) — walk the inbox and route each item to a rule, a spec, or a scenario
 - **Orient**
-  - [`/target`](#target--the-sessions-working-feature) — switch the working feature
-  - [`/status`](#status--the-pipeline-view-of-every-feature) — where is everything?
-  - [`/link`](#link--a-registered-sibling-service-so-cross-service-references-resolve) — a spec here relates to one in another service's repo
-  - [`/help`](#help--the-command-reference-generated-from-what-is-installed) — which command does what?
+  - [`/target`](#target--the-sessions-working-feature) — set the feature the other commands act on
+  - [`/status`](#status--the-pipeline-view-of-every-feature) — show every feature's pipeline status and what is holding it back
+  - [`/link`](#link--a-registered-sibling-service-so-cross-service-references-resolve) — register another service's repo so cross-service references resolve
+  - [`/help`](#help--the-command-reference-generated-from-what-is-installed) — show the command reference for this project
 - **Bootstrap — one-time per project**
-  - [`/ductus`](#ductus--the-framework-installed-or-updated-in-this-project) — adopt or update the framework
-  - [`/configure`](#configure--agent-permissions-for-the-ductus-commands) — stop the permission prompts
+  - [`/ductus`](#ductus--the-framework-installed-or-updated-in-this-project) — install or update the framework in this project
+  - [`/configure`](#configure--agent-permissions-for-the-ductus-commands) — grant your agent the permissions the `ductus` commands need
 
 ### Pipeline — advance state
 
@@ -126,11 +126,11 @@ MUST violations keep the spec out of `done` until they are fixed or waived with 
 
 **Reach for it when something is out of sync and you want to know what.** A task list that no longer matches the plan, a ticked criterion whose file is gone, a spec at `done` with a blocking review.
 
-Unlike `/review`, it audits artifacts against *each other* rather than against code, and it runs at any time — it is a safety check, not a gate. Read-only; `--fix` corrects checkbox drift and `--all` scans every feature.
+Unlike `/review`, it audits artifacts against _each other_ rather than against code, and it runs at any time — it is a safety check, not a gate. Read-only; `--fix` corrects checkbox drift and `--all` scans every feature.
 
 ### Refine — adjust a spec's artifacts
 
-**Commands split on how many specs they write, and that is what decides whether a capability is a flag or a command of its own.** `/amend`, `/prune`, `/clarify`, `/plan` and `/implement` each write **one** spec, and each declares that single-spec scope. `/fold`, `/supersede` and `/consolidate` write **two**, so none of them fits inside a single-spec command as a flag — widening one to accommodate a two-spec operation qualifies every statement it makes about its own scope. That is why `--supersedes` is a flag on `/specify` (which is writing the spec anyway) while a *retroactive* supersession is `/supersede`, and why `/fold` gains no `--into`.
+**Commands split on how many specs they write, and that is what decides whether a capability is a flag or a command of its own.** `/amend`, `/prune`, `/clarify`, `/plan` and `/implement` each write **one** spec, and each declares that single-spec scope. `/fold`, `/supersede` and `/consolidate` write **two**, so none of them fits inside a single-spec command as a flag — widening one to accommodate a two-spec operation qualifies every statement it makes about its own scope. That is why `--supersedes` is a flag on `/specify` (which is writing the spec anyway) while a _retroactive_ supersession is `/supersede`, and why `/fold` gains no `--into`.
 
 #### `/amend` — a question or scenario recorded, with the lifecycle back-edge taken
 
@@ -175,11 +175,11 @@ That number is scaffolding, not a home. `/fold` is how you take it down: run it 
 - **The feature was redefined or dropped, and a new spec took its place.** The old spec is not a historical record of something that shipped — it is a description of a thing that no longer exists in that form, and keeping it means readers keep finding it.
 - **The old spec was never really a separate concern.** It overlapped a sibling from the start, or duplicates one you have since written.
 
-**The reference cleanup is the point, not a side effect.** Deleting a spec directory by hand is easy; what is hard is that every inbound pointer into it — sibling body links, scenario links a tier deeper, and the `dependencies:` edges derived from them — is now dead, and nothing in a plain `rm -rf` tells you so. `/consolidate` re-points all of them at the target *before* it removes anything, which is what the constitution's **no dead references in live artifacts** rule requires and what `rm -rf` cannot give you. The pre-commit hook's corpus-wide link check is the backstop if anything is missed.
+**The reference cleanup is the point, not a side effect.** Deleting a spec directory by hand is easy; what is hard is that every inbound pointer into it — sibling body links, scenario links a tier deeper, and the `dependencies:` edges derived from them — is now dead, and nothing in a plain `rm -rf` tells you so. `/consolidate` re-points all of them at the target _before_ it removes anything, which is what the constitution's **no dead references in live artifacts** rule requires and what `rm -rf` cannot give you. The pre-commit hook's corpus-wide link check is the backstop if anything is missed.
 
 It confirms before acting, naming the source's scenarios individually, because it **migrates no content** — it does not verify that the new spec covers what the old one said, and deliberately does not try to. If you want that check, ask your agent to compare the two specs before you confirm; that is a question an agent answers well and a poor fit for a flag. Recovery is git history. Two specs.
 
-Reach for `/supersede` instead when the old spec *did* ship and you want the record kept: that spec stays on disk, annotated with what no longer holds.
+Reach for `/supersede` instead when the old spec _did_ ship and you want the record kept: that spec stays on disk, annotated with what no longer holds.
 
 > **This is the only one of the three that removes a durable artifact.** The other two remove something that was never meant to last: `tasks.md` sections are ephemeral work-tracking, and a branch-scoped directory is a staging form whose content `/fold` has just migrated into its durable home. Consolidation is different in kind — it **migrates nothing**. The guard proves the target exists, never that anything actually landed there, so the confirmation names the content you are losing, scenario by scenario, rather than merely naming the directory. Reach for `/supersede` instead whenever the earlier spec actually delivered something: that spec is the record of what shipped, and consolidating it would invert the relationship.
 
@@ -285,10 +285,10 @@ The `ductus` runtime is the deterministic execution layer the pipeline runs on. 
 
 **You do not install it.** `/ductus` acquires it during adoption: it reads the runtime version this framework revision pins, downloads the matching release asset for your platform, verifies its checksum, and installs it into a ductus-owned store. Your `PATH` is not consulted, and nothing binary enters your repository.
 
-| | |
-| --- | --- |
-| The store | `~/.ductus/bin/ductus` — one binary per machine, written only by `/ductus` |
-| The pointer | `.ductus/bin/ductus` — per project, gitignored, resolves to the store |
+|             |                                                                            |
+| ----------- | -------------------------------------------------------------------------- |
+| The store   | `~/.ductus/bin/ductus` — one binary per machine, written only by `/ductus` |
+| The pointer | `.ductus/bin/ductus` — per project, gitignored, resolves to the store      |
 
 The pointer is what lets a committed MCP config work for the whole team: `.mcp.json` is shared, so a machine-specific absolute path in it would break every other contributor and every CI checkout. A repo-relative pointer resolves for all of them.
 
@@ -365,14 +365,14 @@ On the next commit (or any `ductus derive-references --write` run) the derivatio
 
 ```yaml
 references:
-  - service: api      # the [services] alias whose repo matches the URL host
+  - service: api # the [services] alias whose repo matches the URL host
     spec: 014-auth-tokens
 ```
 
 What the generator keys on:
 
 - **`NNN-slug` is the identity.** Everything in the URL before a `/blob/<ref>/` or `/tree/<ref>/` branch segment is the repo, matched against `.ductus/config.toml [services]` to resolve the alias; the branch is ignored, so two links to the same spec on different branches collapse to one reference. A URL matching no registered service is still recorded, with `service: null` (the `unregistered` outcome above).
-- **Absolute URL, not a sibling link.** `[label](../014-auth-tokens/spec.md)` is a *sibling* link and becomes a **dependency** (a different generator, the blocking `dependencies:` graph) — never a cross-service reference. Use the full canonical URL precisely so the two stay distinct.
+- **Absolute URL, not a sibling link.** `[label](../014-auth-tokens/spec.md)` is a _sibling_ link and becomes a **dependency** (a different generator, the blocking `dependencies:` graph) — never a cross-service reference. Use the full canonical URL precisely so the two stay distinct.
 - **Opt-outs are honored.** A link is **not** harvested if it sits under a `## See also` heading, inside a fenced code block, wrapped in `` `backticks` `` (inline code reads as an illustrative example, not a live link), or on a blockquote (`>`) line. These are the same navigational opt-outs `dependencies:` honors — use them for example or "see also" links you don't want to register.
 
 Register a service with `/link` (alias, repo URL, local checkout path, optional description):
@@ -386,13 +386,13 @@ description = "owns shared data models"
 
 The registry is **required for status resolution, optional for referencing** — an unregistered link is just navigation. `/status` shows each reference's resolution outcome (and, on `ok`, the linked status); `/analyze` reports a provably broken one as an Advisory finding. The outcome depends on what can be proven:
 
-| Outcome | Meaning |
-| --- | --- |
-| `ok` | Registered, checkout reachable, target spec resolves — surfaces the linked lifecycle status |
-| `unregistered` | The repo matches no `[services]` entry — a plain navigational link; run `/link` to register the service |
-| `not-checked-out` | Registered, but the local `path` is missing or unusable — `unknown`, never reported as broken |
-| `broken` | Registered and reachable, but the target spec does not resolve (renamed, moved, deleted, or mistyped) — an `/analyze` finding |
-| `status-unreadable` | The target exists but its `status` cannot be read — `unknown`, the defect is upstream's |
+| Outcome             | Meaning                                                                                                                       |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `ok`                | Registered, checkout reachable, target spec resolves — surfaces the linked lifecycle status                                   |
+| `unregistered`      | The repo matches no `[services]` entry — a plain navigational link; run `/link` to register the service                       |
+| `not-checked-out`   | Registered, but the local `path` is missing or unusable — `unknown`, never reported as broken                                 |
+| `broken`            | Registered and reachable, but the target spec does not resolve (renamed, moved, deleted, or mistyped) — an `/analyze` finding |
+| `status-unreadable` | The target exists but its `status` cannot be read — `unknown`, the defect is upstream's                                       |
 
 Status resolution runs only where the linked service is already checked out locally; `ductus` never fetches or clones a repo. For the full schema, see [specs/030-cross-service-references/data-model.md](specs/030-cross-service-references/data-model.md).
 
@@ -400,11 +400,11 @@ Status resolution runs only where the linked service is already checked out loca
 
 Re-run `/ductus` to pull the latest framework files. Each file is handled by one of three strategies:
 
-| Strategy | Behavior | Examples |
-| --- | --- | --- |
+| Strategy | Behavior                                   | Examples                                                  |
+| -------- | ------------------------------------------ | --------------------------------------------------------- |
 | `update` | Always overwritten with the latest version | `.ductus/constitution.md`, spec templates, slash commands |
-| `create` | Created on first run, skipped on re-run | `specs/system.md`, `specs/errors.md`, `specs/events.md` |
-| `skip` | Never overwritten | `AGENTS.md`, `CLAUDE.md` |
+| `create` | Created on first run, skipped on re-run    | `specs/system.md`, `specs/errors.md`, `specs/events.md`   |
+| `skip`   | Never overwritten                          | `AGENTS.md`, `CLAUDE.md`                                  |
 
 `.gitignore` uses a `merge` strategy — `ductus` patterns are appended below a `# ductus` marker. Pin individual files you've customized with `[pinned]` in `.ductus/config.toml` (above). `ductus` is a reference, not a runtime dependency: if you'd rather not use `/ductus`, diff the repo and apply changes at your own pace.
 
