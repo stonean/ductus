@@ -310,3 +310,9 @@ Opened by [048](../048-govern-acquired-runtime/spec.md)'s AC10 adopter runs, whi
 - [x] Implement the behavior described in `scenarios/readme-command-parity.md`
 
 - **Done when**: A new audit family fails when a command shipped to adopters is absent from the README's command tables, reusing Family 16's maintainer-only exclusion set rather than restating it, leaving `/audit`'s deliberate absence unreported, and reporting an unreadable README or command directory as a finding rather than a pass.
+
+### 37. Implement scenario: link-check-consolidation — one implementation of the link check, two scopes
+
+- [ ] Implement the behavior described in `scenarios/link-check-consolidation.md`
+
+- **Done when**: Family 26 and `check-corpus-links` resolve links through one implementation with the two subjects stated, a root-absolute target resolves against the repository root on both, the family's examined-file count has not dropped, and Family 33's token-recognition constraint is stated where an author meets it.

@@ -146,3 +146,9 @@ Preconditions matter more than the steps here. As of planning, `version`, `runti
 - [x] Add a test proving a name-only annotation suppresses a second write, and one proving a longer sibling slug does not satisfy either surface
 
 - **Done when**: both surfaces answer "is this spec annotated for that superseding spec?" through one predicate, a re-declaration over a hand-annotated spec writes nothing rather than stacking a duplicate, and a slug that is a prefix of another satisfies neither.
+
+## 17. Implement scenario: stranded-session-after-removal — one position on the session after a directory is removed
+
+- [ ] Implement the behavior described in `scenarios/stranded-session-after-removal.md`
+
+- **Done when**: the framework states one position on the session target after a feature directory is removed, both `/{project}:fold` and `/{project}:consolidate` implement it, the reason is recorded once rather than per command, and an operator whose target no longer resolves is told so by the command that removed it.
