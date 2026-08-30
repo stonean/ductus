@@ -75,7 +75,7 @@ Each entry below leads with **when you would reach for it**, because several of 
   - [`/amend`](#amend--a-question-or-scenario-recorded-with-the-lifecycle-back-edge-taken) — a question or behavior surfaced against a spec that moved on
   - [`/supersede`](#supersede--the-supersedes-key-on-one-spec-the-annotation-on-the-other) — a later spec countered an earlier one
 - **Destructive — these remove content**
-  - [`/prune`](#prune--spent-task-sections-in-one-tasksmd) — `tasks.md` is a changelog of finished work
+  - [`/prune`](#prune--spent-task-sections-in-one-tasksmd) — `tasks.md` is not for durable content; clean it up
   - [`/fold`](#fold--the-branch-scoped-staging-directory-after-migrating-its-content) — a branch-scoped spec has merged and needs its durable home
   - [`/consolidate`](#consolidate--an-entire-spec-directory) — one spec replaces another; re-point every reference, then remove the old one
 - **Brownfield — absorb existing reality**

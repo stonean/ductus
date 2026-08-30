@@ -68,6 +68,8 @@ Adding `--into` to `/{project}:fold` instead was considered and rejected: fold's
 
 An interruption *before* the rewrite leaves the corpus exactly as it was. One *between* the two leaves pointers re-pointed and the directory present, which the second run finishes.
 
+**On `ductus exec` steps 2 and 3 do not run**, because neither dispatches a primitive: nothing enumerates what the removal destroys, and no `supersedes:` edge is settled. The confirmation still fires and still requires an answer, so a human is in the loop — but the prompt they answer will not name the scenarios being destroyed or the declared edges that point at the source, which is most of what the confirmation exists to tell them. Treat the exec path as unsuitable for consolidating a spec anything else points at, and prefer the interactive walk; the reduction is documented rather than silent, per §runtime-host-integration's two-paths guarantee.
+
 1. Invoke `read-spec` (with `include-body`) against both specs — the source for its status, its body, and its own `supersedes:` list, and the target to establish that it holds a readable `spec.md`. A target that does not is the refusal both primitives enforce; report it and stop before anything is examined further, since there is no home for the content to have landed in.
 
 <!-- audit:ignore-promotion -->
