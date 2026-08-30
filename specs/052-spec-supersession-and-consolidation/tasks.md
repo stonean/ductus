@@ -59,11 +59,11 @@ Runtime first, then the command surfaces that call it, then documentation, then 
 
 ## 7. Add `--supersedes` to `/{project}:specify`
 
-- [ ] Add the flag to the Flags table and `argument-hint` in `framework/commands/specify.md` (Family 30 binds these)
-- [ ] Write `supersedes:` at creation and invoke the annotation primitive against each named spec
-- [ ] Write no markdown link to the superseded spec into the new spec's body — the pointer is frontmatter, so `derive-dependencies` derives no edge from the superseding spec to the one it supersedes
-- [ ] Offer the declaration as a selectable classification when `derive-routing-candidates` surfaces a candidate
-- [ ] Accept a named spec that is not `done`, naming consolidation as the likelier outcome and the reason, without refusing
+- [x] Add the flag to the Flags table and `argument-hint` in `framework/commands/specify.md` (Family 30 binds these)
+- [x] Write `supersedes:` at creation and invoke the annotation primitive against each named spec
+- [x] Write no markdown link to the superseded spec into the new spec's body — the pointer is frontmatter, so `derive-dependencies` derives no edge from the superseding spec to the one it supersedes
+- [x] Offer the declaration as a selectable classification when `derive-routing-candidates` surfaces a candidate
+- [x] Accept a named spec that is not `done`, naming consolidation as the likelier outcome and the reason, without refusing
 
 - **Done when**: creating a spec with the flag writes the key and the reciprocal annotation, omitting it leaves creation behaving exactly as today, and a non-`done` target produces guidance rather than a refusal.
 
