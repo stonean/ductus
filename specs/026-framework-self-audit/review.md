@@ -1,8 +1,8 @@
 ---
 spec: 026-framework-self-audit
-reviewed-at: 2026-08-30T19:57:37Z
-reviewed-against: ee970460de78db1d3bc0eca849aecf73ed761065
-diff-base: e21c4567
+reviewed-at: 2026-08-30T21:46:46Z
+reviewed-against: fd2501ab6c105ab12070e2c56543e8812f33e5f3
+diff-base: 2818a378784f5b364dec93d6cd6d5031711f390e
 must-violations: 0
 should-violations: 0
 low-confidence: 0
@@ -14,13 +14,19 @@ skipped-passes: []
 
 ## Summary
 
-Scope was Family 33 (`scripts/audit/readme-command-parity.sh`), the extraction of the maintainer-only command set into `scripts/maintainer-only-commands.txt`, its `lib.sh` accessor, and the three consumers now reading it — Family 16, Family 33, and `gen-help-tables.sh` — plus the registrations in `run-all.sh`, `audit.md`, and `scripts/audit/README.md`.
+Incremental review over the `link-check-consolidation` scenario and its implementation: the `LinkScope` argument on `check-corpus-links`, the git-index enumeration, the scope-dependent exclusions, Family 26 rewritten as an entry point, and Family 33's documented token constraint. The spec's earlier surface is unchanged since the previous review and is not re-examined.
 
-All five passes ran. The quality pass found one defect, fixed in `65856ce`: under `set -e` with `pipefail`, the `grep -v '^$'` that filters blank lines out of the maintainer-only list exits 1 when it matches nothing, killing `gen-help-tables.sh` before its empty-list guard could explain itself — so the fail-closed path exited 1 silently instead of 6 with the reason. That is the same defect class the guard was added to prevent, one level down: a check that could not run must not be indistinguishable from something else. It was in the reviewed task's own scope and so was fixed rather than recorded. The same commit repointed the uncovered-command message, which still named an `excluded_commands` list that no longer lives in that script.
+All five passes ran. One defect was found and fixed rather than recorded, and it was found by the audit rather than by reading.
 
-The three-consumer fail-closed behaviour was verified rather than reasoned about: emptying the list makes Family 16 and Family 33 each emit a precondition finding and `gen-help-tables.sh` exit 6. Family 33 itself was proven red against a seeded command with no README row and green once removed, which is the vacuity guard `AGENTS.md` requires of a new family — a family that has never been observed firing is a check nobody has evidence runs.
+The **security-adjacent** finding is the one worth naming: the consolidation hardcoded `.claude/` as an exclusion prefix in runtime source. That is correct for exactly one of the four hosts ductus ships to — every Auggie, Antigravity, and OpenCode adopter would have had their generated command copies examined, and those copies' links are broken *by construction* because the generator changes their depth without rewriting them. The result would have been a corpus-wide check reporting defects an adopter has no way to fix, in the file the adopter is told to trust. Resolved from `Host::load` instead (`fd2501a`). Family 13 exists for precisely this regression and caught it on the first full audit run; the test fixture is now assembled rather than written as a literal so it cannot re-trip the family it just proved.
 
-Nothing outstanding. The reuse pass is what the extraction answers: the exclusion set had already been copied once, and Family 33 would have been the third copy of a list the parity families themselves depend on. The simplicity pass raised nothing — the family is a set comparison with no parsing of its own. One observation maps to no loaded rule and is captured to the inbox.
+The reuse pass is what the change answers rather than raises. Two implementations of one rule had already diverged once — the primitive resolving a root-absolute target against the repository root while the family resolved it against the filesystem root — and delegation makes that divergence impossible rather than repaired.
+
+The quality pass looked hardest at the subject. The scenario named the narrowing hazard in advance, and it is the failure that would not have failed anything: calling the primitive with its default scope shrinks Family 26's subject from the repository to the spec corpus, and the family goes on exiting 0 over a fraction of its files. Verified by measurement rather than reasoning — 457 examined before, 457 after — pinned by a test asserting the repository scope examines strictly more than the spec-corpus scope, and reported on stderr on every run so a future narrowing is visible rather than inferred.
+
+`runtime/tests/` moved from a silent pre-filter to a counted exclusion, which is the same discipline applied to the family's own bookkeeping: `excluded-by-construction` now reads 97 rather than 27, and the files it names are stated rather than dropped.
+
+The efficiency and simplicity passes produced nothing. The git-index enumeration avoids descending into `runtime/target`, and no new primitive was added where an argument served.
 
 ## MUST violations (blocking)
 
@@ -44,7 +50,7 @@ Nothing outstanding. The reuse pass is what the extraction answers: the exclusio
 
 ## Observations
 
-- convention: Family 33 recognizes a documented command by the backticked token `/name`, so a command that only ever appeared inside a wider code span — `/specify --supersedes`, say — would be reported as undocumented. The failure is loud and in the safe direction (a false finding a maintainer resolves by adding the bare token), but it is an undocumented constraint on how the README may write a command name, and nothing states it where an author would meet it. — `scripts/audit/readme-command-parity.sh`
+*None.*
 
 ## Skipped passes
 
