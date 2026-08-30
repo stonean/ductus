@@ -42,10 +42,10 @@ Runtime first, then the command surfaces that call it, then documentation, then 
 
 ## 5. Add the `supersession-reciprocity` check family
 
-- [ ] Add the family to `runtime/src/primitives/check_artifacts.rs` at the advisory tier
-- [ ] For each declared `supersedes:` entry, report when the named spec's body does not name the superseding spec back
-- [ ] Report coverage as bounded to declared edges, so an undeclared corpus is never presented as clean
-- [ ] Add the family to `/{project}:analyze`'s enumerated check list in `framework/commands/analyze.md`
+- [x] Add the family to `runtime/src/primitives/check_artifacts.rs` at the advisory tier
+- [x] For each declared `supersedes:` entry, report when the named spec's body does not name the superseding spec back
+- [x] Report coverage as bounded to declared edges, so an undeclared corpus is never presented as clean
+- [x] Add the family to `/{project}:analyze`'s enumerated check list in `framework/commands/analyze.md`
 
 - **Done when**: the family fires on a declared edge whose target does not name it back, stays silent on a satisfied edge, never fires on an undeclared pair, and its result states the coverage bound.
 

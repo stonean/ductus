@@ -2688,13 +2688,15 @@ pub struct ArtifactFinding {
     /// Check family: `artifact-completeness`, `task-consistency`,
     /// `scenario-consistency`, `review-state-drift`,
     /// `scenario-open-questions`, `link-adjacent-drift`,
-    /// `criterion-path-existence`, or `criterion-labels`.
+    /// `criterion-path-existence`, `criterion-labels`, or
+    /// `supersession-reciprocity`.
     pub family: String,
     /// Severity tier per the reference's assignments: `blocking`
     /// (artifact completeness, task consistency, review state drift, and
     /// scenario open questions at `done`) or `advisory` (scenario
     /// consistency, scenario open questions below `done`, link-adjacent
-    /// drift, criterion path existence, criterion labels).
+    /// drift, criterion path existence, criterion labels, supersession
+    /// reciprocity).
     pub severity: String,
     /// Human-readable description of the finding.
     pub message: String,
