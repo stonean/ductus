@@ -51,6 +51,7 @@ pub mod migrate_session_file;
 pub mod process_waivers;
 pub mod prune_tasks;
 pub mod read_spec;
+pub mod read_supersession_pair;
 pub mod read_tasks;
 pub mod remove_inbox_item;
 pub mod resolve_anchor;

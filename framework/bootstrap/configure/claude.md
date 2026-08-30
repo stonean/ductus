@@ -74,6 +74,7 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
 
    <!-- generated:mcp-allow:start -->
    - `mcp__ductus__read-spec`
+   - `mcp__ductus__read-supersession-pair`
    - `mcp__ductus__read-tasks`
    - `mcp__ductus__mark-task`
    - `mcp__ductus__mark-criterion`

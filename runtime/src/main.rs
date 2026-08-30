@@ -19,10 +19,10 @@ use ductus::schema::primitives::{
     EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs,
     InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
     MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs, ProcessWaiversArgs,
-    PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RemoveInboxItemArgs, ResolveAnchorArgs,
-    ResolveFeatureArgs, ResolveReferencesArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
-    RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteReviewArgs,
-    WriteSessionArgs, WriteSupersessionAnnotationArgs,
+    PruneTasksArgs, ReadSpecArgs, ReadSupersessionPairArgs, ReadTasksArgs, RemoveInboxItemArgs,
+    ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs, RetireFeatureArgs,
+    RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
+    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs, WriteSupersessionAnnotationArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -67,6 +67,7 @@ enum Command {
 
     /// Parse spec frontmatter and body sections.
     ReadSpec(ReadSpecArgs),
+    ReadSupersessionPair(ReadSupersessionPairArgs),
     /// Parse `tasks.md` into a structured task list.
     ReadTasks(ReadTasksArgs),
     /// Validate frontmatter shape against the pipeline schema.
@@ -617,6 +618,9 @@ fn main() -> ExitCode {
             run_parse(&path, check)
         }
         Command::ReadSpec(args) => emit_result(primitives::read_spec::run(&args, &repo)),
+        Command::ReadSupersessionPair(args) => {
+            emit_result(primitives::read_supersession_pair::run(&args, &repo))
+        }
         Command::ReadTasks(args) => emit_result(primitives::read_tasks::run(&args, &repo)),
         Command::ValidateFrontmatter(args) => {
             emit_result(primitives::validate_frontmatter::run(&args, &repo))

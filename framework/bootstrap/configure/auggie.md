@@ -65,6 +65,7 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
 
    <!-- generated:mcp-allow:start -->
    - `{ "toolName": "mcp:ductus:read-spec", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:read-supersession-pair", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:read-tasks", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:mark-task", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:mark-criterion", "permission": { "type": "allow" } }`

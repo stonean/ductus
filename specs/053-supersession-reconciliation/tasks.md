@@ -6,11 +6,11 @@ Runtime first — the bounded read, the annotation form, the extension point —
 
 ## 1. Add the bounded read
 
-- [ ] Add `ReadSupersessionPairArgs` / `ReadSupersessionPairResult` to `runtime/src/schema/primitives.rs`, with no argument that could name a plan, data model, tasks file, source path, or third spec
-- [ ] Create `runtime/src/primitives/read_supersession_pair.rs` returning both specs' bodies and criteria plus the superseded spec's scenarios
-- [ ] Reuse `list_scenario_files` so scenario order matches every other surface, and report unreadable files the way `collect_scenario_open_questions` does — named, and excluded from `examined`
-- [ ] Record the read bound in the doc comment as the reason the primitive exists, not as a rule it follows
-- [ ] Add tests: a pair with scenarios; a pair with none; an unreadable scenario named and excluded; an absent superseding spec as a domain outcome
+- [x] Add `ReadSupersessionPairArgs` / `ReadSupersessionPairResult` to `runtime/src/schema/primitives.rs`, with no argument that could name a plan, data model, tasks file, source path, or third spec
+- [x] Create `runtime/src/primitives/read_supersession_pair.rs` returning both specs' bodies and criteria plus the superseded spec's scenarios
+- [x] Reuse `list_scenario_files` so scenario order matches every other surface, and report unreadable files the way `collect_scenario_open_questions` does — named, and excluded from `examined`
+- [x] Record the read bound in the doc comment as the reason the primitive exists, not as a rule it follows
+- [x] Add tests: a pair with scenarios; a pair with none; an unreadable scenario named and excluded; an absent superseding spec as a domain outcome
 
 - **Done when**: the primitive returns exactly the declared pair plus the superseded spec's scenarios, there is no argument by which a caller could request anything else, and an unreadable file is named in `unreadable` and absent from `examined`.
 
@@ -36,11 +36,11 @@ Runtime first — the bounded read, the annotation form, the extension point —
 
 ## 4. Register the new primitive
 
-- [ ] Add the CLI command enum plus dispatch arm in `runtime/src/main.rs`
-- [ ] Add the exec-path match arm in `runtime/src/interpreter/mod.rs`
-- [ ] Add the `#[tool]` in `runtime/src/mcp/server.rs`
-- [ ] Add it to `framework/runtime-tools.txt` and to `PRIMITIVE_REGISTRY` in `runtime/src/schema/registry.rs`
-- [ ] Run `cargo test --test mcp` first, then `scripts/gen-configure-mcp.sh` followed by `scripts/gen-claude-commands.sh`, in that order
+- [x] Add the CLI command enum plus dispatch arm in `runtime/src/main.rs`
+- [x] Add the exec-path match arm in `runtime/src/interpreter/mod.rs`
+- [x] Add the `#[tool]` in `runtime/src/mcp/server.rs`
+- [x] Add it to `framework/runtime-tools.txt` and to `PRIMITIVE_REGISTRY` in `runtime/src/schema/registry.rs`
+- [x] Run `cargo test --test mcp` first, then `scripts/gen-configure-mcp.sh` followed by `scripts/gen-claude-commands.sh`, in that order
 
 - **Done when**: `cargo test --test mcp` reports the manifest and the canonical registry set-equal, and `/{project}:audit`'s tool-coverage family reports no drift.
 

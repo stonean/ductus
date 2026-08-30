@@ -156,7 +156,12 @@ pub(crate) fn scenario_names(questions: &[ScenarioOpenQuestion]) -> Vec<&str> {
     names
 }
 
-fn parse_sections(body: &str, include_body: bool) -> Vec<SpecSection> {
+/// Split a spec body into its `##`-and-deeper sections, in document order.
+///
+/// Shared with `read-supersession-pair` rather than copied: a second section
+/// splitter is a second answer to "what are this spec's sections", and the
+/// two would drift on the first heading form one of them learned about.
+pub(crate) fn parse_sections(body: &str, include_body: bool) -> Vec<SpecSection> {
     let mut sections: Vec<SpecSection> = Vec::new();
     let mut pending_body: Vec<&str> = Vec::new();
     let mut current: Option<(String, u8)> = None;
@@ -212,7 +217,13 @@ fn parse_sections(body: &str, include_body: bool) -> Vec<SpecSection> {
 /// mid-sentence. The index derivation stays keyed to checkbox lines only —
 /// a continuation line never pushes a new entry — so the read/mark index
 /// contract is preserved.
-fn parse_checkboxes(body: &str, section_heading: &str) -> Vec<AcceptanceCriterion> {
+/// Parse the checkbox list under `section_heading` into criteria.
+///
+/// Shared with `read-supersession-pair` for the same reason as
+/// [`parse_sections`]: it already skips comments and fenced blocks, and a
+/// reconciliation that disagreed with `read-spec` about what a spec's
+/// criteria *are* would classify claims the rest of the pipeline cannot see.
+pub(crate) fn parse_checkboxes(body: &str, section_heading: &str) -> Vec<AcceptanceCriterion> {
     let lines: Vec<&str> = body.lines().collect();
     let mut out: Vec<AcceptanceCriterion> = Vec::new();
     for idx in section_line_indices(&lines, section_heading) {

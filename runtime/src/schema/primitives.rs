@@ -2946,6 +2946,105 @@ pub struct CheckOrphanedReferencesResult {
     pub last_applied: String,
 }
 
+// -- read-supersession-pair ----------------------------------------------------
+
+/// Args for `read-supersession-pair`. Loads exactly the two specs a
+/// declared supersession names, plus the superseded spec's scenarios.
+///
+/// **The absent arguments are the design.** Spec 053 bounds reconciliation's
+/// read to the declared pair and the superseded spec's scenarios — no plan,
+/// no data model, no tasks file, no source tree, no third spec. A rule the
+/// host is asked to remember is a diligence dependency, which
+/// §design-principles rejects; there is deliberately no argument here by
+/// which a caller could request any of them, so the bound is a property of
+/// the code rather than of anyone's care.
+///
+/// That bound is load-bearing rather than tidy. Without it, reconciliation
+/// is the corpus-wide criterion-supersession check that was measured and
+/// rejected — 455 pairs tested, 215 firing, every sampled one a false
+/// positive. A declared edge is what collapses the search to two specs.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct ReadSupersessionPairArgs {
+    /// The **superseded** feature — the one whose claims are walked.
+    #[arg(long)]
+    pub feature: String,
+    /// The **superseding** feature named by the declaration.
+    #[arg(long)]
+    pub superseded_by: String,
+}
+
+/// One spec as reconciliation reads it: status, body sections, criteria.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct SpecRead {
+    /// Feature directory name.
+    pub feature: String,
+    /// Repo-relative path of the spec file read.
+    pub path: String,
+    /// The spec's lifecycle status, verbatim.
+    pub status: String,
+    /// Body sections in document order, bodies populated.
+    #[serde(default)]
+    pub sections: Vec<SpecSection>,
+    /// Acceptance criteria in body order, labels retained.
+    #[serde(default)]
+    pub acceptance_criteria: Vec<AcceptanceCriterion>,
+}
+
+/// One scenario of the superseded spec.
+///
+/// A scenario is a spec at a lower level of abstraction and can carry a
+/// claim the supersession touches, which is why the read reaches them at
+/// all — and why it reaches only the *superseded* spec's.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ScenarioRead {
+    /// Scenario slug (the filename without `.md`).
+    pub slug: String,
+    /// Repo-relative path of the scenario file.
+    pub path: String,
+    /// The scenario's body, frontmatter stripped.
+    pub body: String,
+}
+
+/// Result for `read-supersession-pair`.
+///
+/// `unreadable` non-empty means the pair was **not** fully examined, and a
+/// caller must not render the classification that follows as complete
+/// (spec 053 AC3/AC12). `examined` bounds the claim by subject: it names the
+/// files actually read rather than asserting a property of the pair.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ReadSupersessionPairResult {
+    /// The spec being superseded — the one whose claims are classified.
+    pub superseded: SpecRead,
+    /// The spec that supersedes it.
+    pub superseding: SpecRead,
+    /// The superseded spec's scenarios, in the shared scenario order every
+    /// other surface uses.
+    #[serde(default)]
+    pub scenarios: Vec<ScenarioRead>,
+    /// Repo-relative paths of files that could not be read or parsed.
+    ///
+    /// Named, and excluded from `examined`. A file that will not parse
+    /// contributes no claim and is **not** escalated into a conflict —
+    /// nothing can be proven about a file that cannot be read — but it must
+    /// not vanish either, or an incomplete pass reads as a complete one.
+    #[serde(default)]
+    pub unreadable: Vec<String>,
+    /// Repo-relative paths actually read. The subject the result describes.
+    #[serde(default)]
+    pub examined: Vec<String>,
+    /// Set when the superseded spec offers nothing to classify — no
+    /// criteria and no body sections. Empty otherwise.
+    ///
+    /// *Examined and empty* is not *examined and clean*, and a brownfield
+    /// sketch spec is legitimately the former (AC11).
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub guidance: String,
+}
+
 // -- check-corpus-links --------------------------------------------------------
 
 /// Which markdown files `check-corpus-links` examines.

@@ -67,10 +67,10 @@ use crate::schema::primitives::{
     EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs,
     InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
     MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs, ProcessWaiversArgs,
-    PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RemoveInboxItemArgs, ResolveAnchorArgs,
-    ResolveFeatureArgs, ResolveReferencesArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
-    RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteReviewArgs,
-    WriteSessionArgs, WriteSupersessionAnnotationArgs,
+    PruneTasksArgs, ReadSpecArgs, ReadSupersessionPairArgs, ReadTasksArgs, RemoveInboxItemArgs,
+    ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs, RetireFeatureArgs,
+    RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
+    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs, WriteSupersessionAnnotationArgs,
 };
 use crate::schema::procedure::{Procedure, Step, StepNumber};
 use crate::schema::protocol::{ErrorLocation, ProtocolMessage};
@@ -704,6 +704,9 @@ fn dispatch_primitive(
     }
     match name {
         "read-spec" => call!(ReadSpecArgs, read_spec),
+        "read-supersession-pair" => {
+            call!(ReadSupersessionPairArgs, read_supersession_pair)
+        }
         "read-tasks" => call!(ReadTasksArgs, read_tasks),
         "mark-task" => call!(MarkTaskArgs, mark_task),
         "mark-criterion" => call!(MarkCriterionArgs, mark_criterion),
