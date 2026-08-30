@@ -22,7 +22,8 @@
 # than skipping them: they produce derived frontmatter this commit captures, so
 # a silent skip lands values the primitives would have superseded.
 #
-# It then runs `ductus check-corpus-links`, which reports every relative
+# Last — after every write above has landed and been staged — it runs
+# `ductus check-corpus-links`, which reports every relative
 # markdown link under the spec root that resolves to nothing and exits non-zero
 # on one (spec 022 / adopter-corpus-link-integrity). Corpus-wide rather than
 # staged-scoped, because the commit that breaks a link is usually the one that
@@ -75,13 +76,6 @@ fi
 
 "$ductus_bin" derive-dependencies --write > /dev/null
 "$ductus_bin" derive-references --write > /dev/null
-
-# Dangling spec-to-spec pointers. Blocking, for the same reason the cycle check
-# inside derive-dependencies above is: a staged edit can break something that is
-# not staged, so a staged-only scope would miss the case it exists for. stdout
-# is the JSON result and is discarded; the citations and fix guidance go to
-# stderr. `git commit --no-verify` is the deliberate bypass.
-"$ductus_bin" check-corpus-links > /dev/null
 
 # Stage any generator-produced changes to their known output paths.
 git add framework/bootstrap/configure/claude.md framework/bootstrap/configure/auggie.md
@@ -151,3 +145,14 @@ if [[ "${DUCTUS_ALLOW_EMPTY:-0}" != "1" ]] && git diff --cached --quiet; then
   echo "  re-run with DUCTUS_ALLOW_EMPTY=1." >&2
   exit 1
 fi
+
+# Dangling spec-to-spec pointers, checked LAST — after every write above has
+# landed and been staged. Blocking, for the same reason the cycle check inside
+# derive-dependencies is: a staged edit can break something that is not staged,
+# so a staged-only scope would miss the case it exists for. It runs last
+# because it is the only read-only step here — a blocking read before the
+# staging block would abort the commit with the derived rewrites unstaged, so a
+# blocked commit and a passing one would leave the tree in different states.
+# stdout is the JSON result and is discarded; the citations and fix guidance go
+# to stderr. `git commit --no-verify` is the deliberate bypass.
+"$ductus_bin" check-corpus-links > /dev/null

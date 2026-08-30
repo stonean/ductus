@@ -3018,6 +3018,12 @@ pub struct CheckCorpusLinksResult {
     /// feature directory rather than in the template's own.
     ///
     /// Counted rather than dropped, so the scope of the verdict is legible.
+    ///
+    /// Generated command copies (a host's commands directory) are **not**
+    /// counted here and are not an exclusion: they sit outside the spec root
+    /// entirely, so they were never part of this primitive's subject. The
+    /// distinction matters for reading the number — this counts what was in
+    /// scope and deliberately not examined, never everything unexamined.
     pub excluded_by_construction: u32,
     /// Link targets skipped as documentation **shapes** rather than
     /// references — a target carrying `NNN`, a `{placeholder}`, a `*`, or a

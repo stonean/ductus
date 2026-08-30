@@ -16,7 +16,8 @@
 #      inline links to other services' specs. Strictly distinct from
 #      dependencies (spec 030).
 #
-# It then checks the corpus for dangling pointers:
+# Finally — after every write above has landed and been staged — it checks the
+# corpus for dangling pointers:
 #
 #   3. ductus check-corpus-links — every relative markdown link under the spec
 #      root that resolves to nothing. Corpus-wide rather than staged-scoped,
@@ -26,9 +27,12 @@
 #      miss the case it exists for. It exits non-zero on a broken link, on an
 #      unreadable spec file, and on a spec root it could not list — the last
 #      two because a check that could not run must not exit like one that
-#      passed.
+#      passed. It is ordered last because it is the only read-only step: a
+#      blocking read before the staging block would abort the commit with the
+#      derived rewrites unstaged, leaving a blocked commit and a passing one
+#      in different tree states.
 #
-# It then runs the acceptance-criterion labelling pass over each staged spec —
+# Before that it runs the acceptance-criterion labelling pass over each staged spec —
 # `ductus label-criteria`, which assigns the stable `AC{n}:` label a criterion
 # is cited by and maintains the `next-criterion` counter (spec 013). This is
 # the backstop for a criterion typed by hand in an editor rather than through
@@ -112,24 +116,6 @@ done
 "$ductus_bin" derive-dependencies --write --staged > /dev/null
 "$ductus_bin" derive-references --write --staged > /dev/null
 
-# Dangling spec-to-spec pointers. Three checks sit near this ground and none
-# of them covers it: `check-orphaned-references` scopes to the adopter-owned
-# bootstrap referrers, `/ductus:analyze` is bounded to one feature plus its
-# dependencies, and `/ductus:audit` Family 26 is maintainer-only — adopters
-# never invoke it. So without this an adopter who deletes or renames a spec
-# directory dangles every inbound pointer and nothing reports it, with no
-# error and no gate, until a reader follows a pointer to nothing.
-#
-# Blocking, and corpus-wide. The precedent is the cycle check inside
-# `derive-dependencies` directly above, which likewise spans the full spec
-# graph and exits non-zero: a staged edge can break something that is not
-# staged. `git commit --no-verify` is the deliberate bypass, which is what
-# makes this safe to adopt into a repo that already carries broken links.
-#
-# stdout is the JSON result and is discarded; the human-readable citations
-# and the fix guidance go to stderr, which is what the author needs to see.
-"$ductus_bin" check-corpus-links > /dev/null
-
 # Re-stage only spec files already part of this commit, so the derived
 # rewrites are captured without sweeping in untracked `/specify` drafts or
 # unstaged edits to other tracked specs (spec 017 / tracked-specs-not-worktree).
@@ -169,3 +155,32 @@ if [ -n "$staged_specs" ]; then
     git add "$f"
   done
 fi
+
+# Dangling spec-to-spec pointers, checked LAST — after every write above has
+# landed and been staged.
+#
+# Three checks sit near this ground and none of them covers it:
+# `check-orphaned-references` scopes to the adopter-owned bootstrap referrers,
+# `/ductus:analyze` is bounded to one feature plus its dependencies, and
+# `/ductus:audit` Family 26 is maintainer-only — adopters never invoke it. So
+# without this an adopter who deletes or renames a spec directory dangles
+# every inbound pointer and nothing reports it, with no error and no gate,
+# until a reader follows a pointer to nothing.
+#
+# Blocking, and corpus-wide. The precedent is the cycle check inside
+# `derive-dependencies` above, which likewise spans the full spec graph and
+# exits non-zero: a staged edit can break something that is not staged, so a
+# staged-only scope would miss the case this exists for. `git commit
+# --no-verify` is the deliberate bypass, which is what makes this safe to
+# adopt into a repo that already carries broken links.
+#
+# It runs last because it is the only step here that *reads* rather than
+# writes: putting a blocking read before the staging block would abort the
+# commit with the derived rewrites sitting unstaged on disk, so a blocked
+# commit and a passing one would leave the tree in different states. Last
+# means the author fixes the link and re-commits against a tree the hook has
+# already finished preparing.
+#
+# stdout is the JSON result and is discarded; the human-readable citations
+# and the fix guidance go to stderr, which is what the author needs to see.
+"$ductus_bin" check-corpus-links > /dev/null

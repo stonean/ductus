@@ -54,7 +54,14 @@ pub fn run(_args: &CheckCorpusLinksArgs, repo: &Path) -> Result<CheckCorpusLinks
     };
 
     let mut files = Vec::new();
-    if !collect_markdown(&specs_dir, &mut files) {
+    let mut walk_skips = Vec::new();
+    if !collect_markdown(
+        &specs_dir,
+        repo,
+        MAX_WALK_DEPTH,
+        &mut files,
+        &mut walk_skips,
+    ) {
         // The subject could not be established. Reported rather than allowed
         // to look like a corpus with no broken links: the whole point is that
         // a silent zero and a real zero must not read alike.
@@ -65,6 +72,7 @@ pub fn run(_args: &CheckCorpusLinksArgs, repo: &Path) -> Result<CheckCorpusLinks
         return Ok(result);
     }
     files.sort();
+    result.skipped.append(&mut walk_skips);
 
     for path in files {
         let relative = rel_path(&path, repo);
@@ -85,7 +93,7 @@ pub fn run(_args: &CheckCorpusLinksArgs, repo: &Path) -> Result<CheckCorpusLinks
         };
         result.examined.push(relative.clone());
         let here = path.parent().unwrap_or(repo).to_path_buf();
-        scan_file(&text, &relative, &here, &mut result);
+        scan_file(&text, &relative, &here, repo, &mut result);
     }
 
     if result.examined.is_empty() && result.skipped.is_empty() {
@@ -97,20 +105,55 @@ pub fn run(_args: &CheckCorpusLinksArgs, repo: &Path) -> Result<CheckCorpusLinks
     Ok(result)
 }
 
+/// How deep the walk descends before recording a skip and stopping.
+///
+/// A spec corpus is three tiers at most (`{root}/{feature}/scenarios/`), so
+/// this is far past any real tree. It exists for the pathological one:
+/// `is_dir()` follows symlinks, so a link pointing at an ancestor makes the
+/// walk descend forever and overflow the stack. A cap turns that into a
+/// recorded skip, which is the same answer this primitive gives everywhere
+/// else — say what was not examined rather than die or, worse, return a
+/// clean-looking partial result.
+const MAX_WALK_DEPTH: u32 = 32;
+
 /// Walk `dir` recursively, appending every `.md` file to `out`.
 ///
-/// Returns `false` when the root itself could not be listed — the one case
-/// that must not read as a clean scan. A subdirectory that cannot be listed
-/// contributes nothing and does not fail the walk: the files it would have
-/// held are absent from `examined`, which is what bounds the verdict.
-fn collect_markdown(dir: &Path, out: &mut Vec<PathBuf>) -> bool {
+/// Returns `false` when the **root** itself could not be listed — the one
+/// case that must not read as a clean scan, and the caller turns it into
+/// `guidance`.
+///
+/// A *subdirectory* that cannot be listed, and one deeper than
+/// [`MAX_WALK_DEPTH`], each record a `skipped` entry instead. Letting either
+/// contribute nothing silently would be this primitive committing the defect
+/// it exists to catch: the files that directory holds would be absent from
+/// `examined`, and no caller can notice a list that is one shorter than it
+/// should be.
+fn collect_markdown(
+    dir: &Path,
+    repo: &Path,
+    depth_budget: u32,
+    out: &mut Vec<PathBuf>,
+    skipped: &mut Vec<CorpusLinkSkip>,
+) -> bool {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return false;
     };
     for entry in entries.filter_map(std::result::Result::ok) {
         let path = entry.path();
         if path.is_dir() {
-            collect_markdown(&path, out);
+            if depth_budget == 0 {
+                skipped.push(CorpusLinkSkip {
+                    path: rel_path(&path, repo),
+                    reason: "walk-depth-exceeded".into(),
+                });
+                continue;
+            }
+            if !collect_markdown(&path, repo, depth_budget - 1, out, skipped) {
+                skipped.push(CorpusLinkSkip {
+                    path: rel_path(&path, repo),
+                    reason: "directory-unreadable".into(),
+                });
+            }
         } else if path.extension().is_some_and(|ext| ext == "md") {
             out.push(path);
         }
@@ -124,7 +167,13 @@ fn is_template_path(relative: &str, specs_root: &str) -> bool {
 }
 
 /// Scan one file's body for broken relative links, appending to `result`.
-fn scan_file(text: &str, relative: &str, here: &Path, result: &mut CheckCorpusLinksResult) {
+fn scan_file(
+    text: &str,
+    relative: &str,
+    here: &Path,
+    repo: &Path,
+    result: &mut CheckCorpusLinksResult,
+) {
     let mut fm_seen = false;
     let mut in_fm = false;
     let mut in_fence = false;
@@ -164,7 +213,7 @@ fn scan_file(text: &str, relative: &str, here: &Path, result: &mut CheckCorpusLi
         // belongs to `derive-dependencies`, where it decides whether a link
         // induces an edge; a link inside a sunset banner still has to resolve.
         for target in link_targets(line) {
-            classify(target, relative, idx + 1, here, result);
+            classify(target, relative, idx + 1, here, repo, result);
         }
     }
 }
@@ -204,6 +253,7 @@ fn classify(
     relative: &str,
     line: usize,
     here: &Path,
+    repo: &Path,
     result: &mut CheckCorpusLinksResult,
 ) {
     // Scheme-bearing targets and bare fragments are out of scope: nothing on
@@ -223,14 +273,19 @@ fn classify(
         result.shapes_skipped += 1;
         return;
     }
-    // Resolution is **lexical**, against the citing file's own directory.
+    // Resolution is **lexical**, against the citing file's own directory —
+    // except for a root-absolute target, which every markdown renderer
+    // resolves against the *repository* root rather than the filesystem's.
     // Never canonicalized: canonicalization would make the result depend on
     // symlinks, so the same corpus would answer differently in two checkouts.
-    if lexical_join(here, rel).exists() {
+    let base = if rel.starts_with('/') { repo } else { here };
+    if lexical_join(base, rel).exists() {
         return;
     }
-    let deeper = lexical_join(here, &format!("../{rel}"));
-    let guidance = if deeper.exists() {
+    // The one-directory-up hint is meaningless for a root-absolute target:
+    // its base is fixed, so there is no depth to have got wrong.
+    let deeper = lexical_join(base, &format!("../{rel}"));
+    let guidance = if !rel.starts_with('/') && deeper.exists() {
         format!("the target resolves one directory up — write `../{rel}`")
     } else {
         "confirm the target still exists; if a later spec removed it, name it in prose instead of \
@@ -282,11 +337,17 @@ fn lexical_join(base: &Path, rel: &str) -> PathBuf {
     let mut out = base.to_path_buf();
     for component in Path::new(rel).components() {
         match component {
-            Component::CurDir => {}
             Component::ParentDir => {
                 out.pop();
             }
-            other => out.push(other.as_os_str()),
+            other @ Component::Normal(_) => out.push(other.as_os_str()),
+            // `.` contributes nothing, and a root or prefix component is
+            // dropped rather than pushed: `PathBuf::push` of an absolute path
+            // *replaces* the buffer, so pushing it would resolve `/foo`
+            // against the filesystem root — while the caller has already
+            // chosen the repo root as the base, which is where a markdown
+            // renderer resolves it.
+            Component::CurDir | Component::RootDir | Component::Prefix(_) => {}
         }
     }
     out
@@ -538,6 +599,54 @@ mod tests {
         let result = run_at(tmp.path());
         assert_eq!(result.specs_root, "requirements");
         assert_eq!(result.broken.len(), 1, "{:?}", result.broken);
+    }
+
+    #[test]
+    fn a_root_absolute_target_resolves_against_the_repo_root() {
+        // What a markdown renderer does with `/specs/...`. Resolving it
+        // against the *filesystem* root instead would report every one of
+        // them broken, or — worse on a machine that happens to have the
+        // path — report a link to somewhere outside the repo as fine.
+        let tmp = tempdir().unwrap();
+        write(tmp.path(), "specs/041-real/spec.md", "# Real\n");
+        write(
+            tmp.path(),
+            "specs/042-demo/spec.md",
+            "# Demo\n\n[ok](/specs/041-real/spec.md) [no](/specs/041-gone/spec.md)\n",
+        );
+        let result = run_at(tmp.path());
+        assert_eq!(result.broken.len(), 1, "{:?}", result.broken);
+        assert_eq!(result.broken[0].target, "/specs/041-gone/spec.md");
+        // The depth hint is meaningless for a fixed base, so it is not given.
+        assert!(
+            !result.broken[0].guidance.contains("one directory up"),
+            "{}",
+            result.broken[0].guidance
+        );
+    }
+
+    #[test]
+    fn a_directory_below_the_depth_cap_is_recorded_as_skipped() {
+        // The pathological case the cap exists for is a symlink loop, which
+        // `is_dir()` follows forever. Plain nesting reaches the same guard
+        // and is the testable form of it: what matters is that the walk says
+        // what it did not examine rather than dying, or quietly returning a
+        // partial result that reads as clean.
+        let tmp = tempdir().unwrap();
+        let mut deep = String::from("specs");
+        for _ in 0..(super::MAX_WALK_DEPTH + 2) {
+            deep.push_str("/d");
+        }
+        write(tmp.path(), &format!("{deep}/spec.md"), "# Deep\n");
+        let result = run_at(tmp.path());
+        assert!(
+            result
+                .skipped
+                .iter()
+                .any(|s| s.reason == "walk-depth-exceeded"),
+            "{:?}",
+            result.skipped
+        );
     }
 
     #[test]
