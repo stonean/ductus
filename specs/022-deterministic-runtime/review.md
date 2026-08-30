@@ -1,12 +1,12 @@
 ---
 spec: 022-deterministic-runtime
-reviewed-at: 2026-08-29T18:43:37Z
-reviewed-against: 9be5b00d9b45651578dadfa0de6410495e50b048
-diff-base: 7e98cc48963acaad87b9c2d86071bc8d5eaa5c27
+reviewed-at: 2026-08-30T19:54:06Z
+reviewed-against: df072b17da4db2e2b8b8c4d6c72b95884e9c5075
+diff-base: 1ab47904dd7cd253abd93eed6e1451b2bdd0bc96
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-captured-issues: 0
+captured-issues: 3
 skipped-passes: []
 ---
 
@@ -14,15 +14,11 @@ skipped-passes: []
 
 ## Summary
 
-0 MUST, 0 SHOULD, 0 low-confidence across all five passes; not blocking. One observation captured to the inbox.
+Scope was `check-corpus-links` (spec 022 scenario `adopter-corpus-link-integrity`) and its five registration sites, plus the two pre-commit hooks that invoke it. The runtime primitives under `runtime/src/primitives/` belonging to spec 052 — the annotation writer, the `retire-feature` gate, and the `supersession-reciprocity` family — are in this window by scope union but are 052's deliverable and are reviewed there.
 
-**Window.** The diff base is unchanged from the previous run (`7e98cc4`), which reported clean at `ca473fd`; this run therefore concentrated on the ~7,200 lines added since that review — spec 051's branch-scoped numbering work end to end, plus `check-review-agreement` (audit Family 31) and the fold command surfaces.
+All five passes ran. The quality pass found three defects in the new primitive, every one of them the check failing the contract it was written to enforce: an unbounded directory walk that `is_dir()`'s symlink-following turns into a stack overflow; an unlistable subdirectory contributing nothing silently, which is `QUAL-CLAIM-001` committed by the check built to catch it; and a root-absolute link target resolved against the filesystem root rather than the repo root, so `/specs/x.md` was tested against the wrong path entirely. All three were inside the reviewed task's own scope, so they were fixed rather than recorded — `100c289`, with two added tests (18 total on the primitive). The hook call moved to the end of both hooks in the same change: it is the only read-only step, and a blocking read placed before the staging block left a blocked commit with the derived rewrites unstaged, so a blocked commit and a passing one left the tree in different states.
 
-**Security found one MUST and it was fixed inside this run rather than recorded as blocking.** `build_route_fold_request` read the *source* spec through `read_repo_file` — canonicalize plus containment against the repo root — and then read the *target* spec two lines later with a raw `fs::read_to_string` on a path built by joining the `folds-into` frontmatter value onto the spec root. That value is hand-authored, nothing guarantees `validate-frontmatter` ran before a fold, and the shape check it performs is not a containment check; a `folds-into` carrying `../` resolved outside the repo and the file it named was placed in `target-content` and shipped to the host. BE-INPUT-004 is a MUST, the helper that satisfies it was already in use one read earlier, and the fix was to stop bypassing it (`9be5b00`, with a regression test that plants a `spec.md` outside the repo root and points a traversing target at it). The finding is recorded here and in that commit rather than in the counts, because the counts state what is outstanding.
-
-**The rest of the new surface holds.** `retire-feature` — the only irreversible primitive added — validates both arguments for traversal, refuses the sequential form before touching the filesystem, and requires the target to hold a `spec.md`, so no ordering of bad input reaches `remove_dir_all` against a spec that should survive; already-absent is a domain outcome, so an interrupted fold converges on re-run. `rewrite-spec-links` matches by whole path segment rather than prefix, which is what stops `1234.1-widget` re-pointing links inside `1234.1-widget-cache` — a wrong rewrite would be worse than the dangling link `check-orphaned-references` can still see. `check-unfolded-specs` halts on a branch-scoped directory whose `spec.md` cannot be read rather than skipping it, and counts `examined` before the form check, so an empty result reads as "walked the corpus and found none staged" rather than "walked nothing".
-
-Reuse, efficiency, and simplicity found nothing against the loaded rules. The one thing worth saying that no rule covers is recorded as an observation: `rewrite-spec-links` is the only file-rewriting primitive that does not preserve CRLF line endings, and the convention it departs from is implemented separately in two siblings — which is itself the argument for a shared helper.
+Nothing outstanding. The security, reuse, efficiency, and simplicity passes produced no findings: the primitive is read-only, opens no network or process, resolves paths lexically rather than through the filesystem, and reuses the runtime's tested `inline_code_spans` and `is_frontmatter_fence` scanners rather than re-implementing markdown structure parsing. Two observations map to no loaded rule and are captured to the inbox.
 
 ## MUST violations (blocking)
 
@@ -42,11 +38,14 @@ Reuse, efficiency, and simplicity found nothing against the loaded rules. The on
 
 ## Captured issues
 
-*None.*
+- [ ] Chore: sweep the README for current functionality — add /fold to the Commands section, document /specify's --branch, --branch-id, and --fold-into flags (other rows document theirs), cover the branch-scoped {identifier}.{n}-{slug} numbering form, and note that /status reports pending folds. Leave /audit absent — it is maintainer-only by design. The recurrence guard is homed at 026 scenario readme-command-parity; this is the one-time correction it will first surface.
+- [ ] other: `merge-permissions` `revoke` serves only the Claude permission shape, so the other three hosts have no retirement path — a formerly-canonical entry that ever ships in `configure/opencode.md`, `configure/auggie.md`, or `configure/antigravity.md` would survive in adopter trees indefinitely, the exact gap spec 023's retirement just closed for `claude.md`.
+- [ ] convention: spec 051's `data-model.md` still states `retire-feature`'s `feature` argument as "Must parse as `BranchScoped`; a sequential feature is refused", which 052 made incomplete — the refusal is now gated behind an explicit opt-in that `/{project}:consolidate` passes.
 
 ## Observations
 
-- convention: rewrite-spec-links rewrites a file line-wise with `lines()` + a bare `\n`, so a rewrite on a CRLF checkout converts the whole file to LF — a one-link change lands as a whole-file diff. Two siblings preserve the ending deliberately (create_feature::stamp_fold_target detects `\r\n`; derive_references picks its line_ending the same way) and check_stuck carries CRLF regression tests, so the convention is established and this is the one writer that departs from it. A shared line-ending-preserving rewrite helper would settle it in one place rather than three. — `runtime/src/primitives/rewrite_spec_links.rs`
+- bug: `scripts/audit/broken-relative-links.sh` (Family 26) resolves a root-absolute link target against the filesystem root, not the repo root — `os.path.join(here, '/specs/x.md')` discards `here` entirely, exactly the defect just fixed in `check-corpus-links`. No such link exists in this corpus today, so the family is not currently wrong about anything; it would be the moment one is written, and it would be wrong in the dangerous direction on a machine that happens to hold that absolute path. — `scripts/audit/broken-relative-links.sh`
+- other: Family 26 and the new `check-corpus-links` primitive now perform substantially the same check over overlapping subjects — the family covers the whole repository including maintainer-only files, the primitive covers the spec corpus and is what adopters actually run. The scenario deliberately left delegation undecided ('Family 26 is not necessarily retired by this'), and the Family 30 shape — logic in the runtime, script as entry point — is the obvious candidate. Deciding it would also collapse the divergence recorded in the observation above, since there would be one implementation to fix rather than two to keep in step. — `scripts/audit/broken-relative-links.sh`
 
 ## Skipped passes
 
