@@ -1,9 +1,9 @@
 ---
-status: in-progress
+status: done
 dependencies: [051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation]
 review:
-  last-run: 2026-08-30T22:17:42Z
-  reviewed-against: 2e39f32a0222befbecd2de837f13cf026dbee975
+  last-run: 2026-08-30T22:47:48Z
+  reviewed-against: fb80821690d889dc8461a4876a38a28ae904c19f
   must-violations: 0
   should-violations: 0
   low-confidence: 0
