@@ -142,9 +142,3 @@ Tasks 3–10 are authored as scenarios under [022 — Deterministic Runtime](../
 - [x] Do not `BLESS=1` any golden — the parity goldens carry the `{{runtime-version}}` placeholder and no golden should change
 
 - **Done when**: `gvrn-v0.26.0` is tagged, pushed, and published green, and the goldens are byte-identical to their pre-bump state.
-
-## 15. Implement scenario: removal-claims-are-checkable — invert the assertion instead of skipping it
-
-- [ ] Implement the behavior described in `scenarios/removal-claims-are-checkable.md`
-
-- **Done when**: a criterion asserting a path is absent is reported when that path is present, an adopter-scoped or content-level claim stays exempt with a reason that says why it is unverifiable rather than merely unchecked, a removal phrase is not attributed to every path on its line, and the family's own statement records that only the absence half is closed.
