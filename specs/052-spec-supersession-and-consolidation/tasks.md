@@ -79,12 +79,12 @@ Runtime first, then the command surfaces that call it, then documentation, then 
 
 ## 9. Create `/{project}:consolidate`
 
-- [ ] Write `framework/commands/consolidate.md` in the cleanup family, calling `rewrite-spec-links` then `retire-feature` with the opt-in argument
-- [ ] Perform none of fold's content migration — no body edit, scenario, task, status change, or review invalidation
-- [ ] Name every spec whose `supersedes:` points at the source and offer re-point, drop, or cancel, defaulting to none
-- [ ] Name the specs the source itself superseded, whose annotations cite a spec about to disappear
-- [ ] Have `gate-confirm` name **content loss**, not only directory removal — and name the source's scenarios specifically, since they are destroyed with the directory and migrated nowhere
-- [ ] Make an interrupted consolidation converge on re-run, per `rewrite-spec-links`' idempotence and `retire-feature`'s already-absent outcome
+- [x] Write `framework/commands/consolidate.md` in the cleanup family, calling `rewrite-spec-links` then `retire-feature` with the opt-in argument
+- [x] Perform none of fold's content migration — no body edit, scenario, task, status change, or review invalidation
+- [x] Name every spec whose `supersedes:` points at the source and offer re-point, drop, or cancel, defaulting to none
+- [x] Name the specs the source itself superseded, whose annotations cite a spec about to disappear
+- [x] Have `gate-confirm` name **content loss**, not only directory removal — and name the source's scenarios specifically, since they are destroyed with the directory and migrated nowhere
+- [x] Make an interrupted consolidation converge on re-run, per `rewrite-spec-links`' idempotence and `retire-feature`'s already-absent outcome
 
 - **Done when**: consolidation re-points every inbound pointer then removes the source, writes nothing to the target's own artifacts, refuses when the target holds no `spec.md`, and never re-points a `supersedes:` edge the operator has not settled.
 
