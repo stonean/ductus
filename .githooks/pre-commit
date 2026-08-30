@@ -22,6 +22,11 @@
 # than skipping them: they produce derived frontmatter this commit captures, so
 # a silent skip lands values the primitives would have superseded.
 #
+# It then normalizes staged markdown with `markdownlint-cli2 --fix` and
+# re-stages it, so a WYSIWYG editor's table padding and emphasis rewriting do
+# not fail the lint CI runs on push. Swallowed on failure — markdownlint is
+# advisory here and a missing npx must not block a commit.
+#
 # Last — after every write above has landed and been staged — it runs
 # `ductus check-corpus-links`, which reports every relative
 # markdown link under the spec root that resolves to nothing and exits non-zero
@@ -144,6 +149,38 @@ if [[ "${DUCTUS_ALLOW_EMPTY:-0}" != "1" ]] && git diff --cached --quiet; then
   echo "  Re-stage the files and retry. For an intentional empty commit," >&2
   echo "  re-run with DUCTUS_ALLOW_EMPTY=1." >&2
   exit 1
+fi
+
+# Normalize staged markdown, then re-stage it.
+#
+# A WYSIWYG editor rewrites a document's source on save — Typora re-pads every
+# table cell and rewrites *emphasis* as _emphasis_ — and this repo pins
+# MD060 to "compact" (constitution §markdown-standards). The two fight on every
+# edit, and the loser was CI: framework-checks runs `npx markdownlint-cli2` on
+# push, so a document edited in Typora fails a lint nobody violated on purpose.
+#
+# `--fix` repairs exactly this class, so the hook repairs it rather than asking
+# a contributor to remember a command or to abandon their editor. It runs over
+# the *staged* files only, so it never rewrites a document this commit does not
+# touch, and it re-stages what it changed the same way the derivations above do.
+#
+# Deliberately NOT in the shipped adopter hook: markdownlint is an npx dev
+# dependency of this repo, and an adopter's commit must not depend on a Node
+# toolchain they never asked for. This is a ductus-repo convenience, not a
+# framework rule.
+staged_md="$(git diff --cached --name-only --diff-filter=ACM \
+  | { grep -E '\.md$' || true; })"
+
+if [ -n "$staged_md" ]; then
+  # Swallowed on failure, and the reason is blast radius: markdownlint is
+  # advisory here — CI is the gate that actually blocks — so a missing npx
+  # must not stop a commit. A formatting nit reaching CI is recoverable; a
+  # contributor unable to commit is not.
+  printf '%s\n' "$staged_md" | xargs npx markdownlint-cli2 --fix > /dev/null 2>&1 || true
+  printf '%s\n' "$staged_md" | while IFS= read -r f; do
+    [ -f "$f" ] || continue
+    git add "$f"
+  done
 fi
 
 # Dangling spec-to-spec pointers, checked LAST — after every write above has
