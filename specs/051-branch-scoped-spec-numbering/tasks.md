@@ -207,3 +207,13 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 - [x] Renumber and re-verify the command's step assertions, and re-bless any golden whose dispatch sequence changed
 
 - **Done when**: a fold whose target does not resolve refuses with the corpus untouched, and no inbound link is ever re-pointed at a spec whose existence has not been established (AC29).
+
+## 24. Take the numbering grammar to the shell surfaces
+
+- [ ] Implement the behavior described in `scenarios/the-numbering-grammar-reaches-every-surface.md`
+- [ ] Widen the staged-spec filter in **both** hook copies — `.githooks/pre-commit` and the shipped `framework/bootstrap/hooks/ductus-pre-commit` — to accept three-or-more digits while still rejecting padding past three, keeping the leading-segment wildcard audit Family 22 depends on
+- [ ] Have `scripts/lint-frontmatter.sh` and the two audit families (`sibling-coupling.sh`, `introducing-drift.sh`) obtain the corpus from the runtime rather than globbing `[0-9][0-9][0-9]-*`, following the entry-point-in-shell / logic-in-a-primitive shape §runtime-boundary asks for
+- [ ] Add a check that the hook pattern and `parse_feature_dir` agree, so the two cannot drift apart again silently
+- [ ] Verify a `1000-` spec is staged by the hook, linted, and examined by both families — and that `0500-a` is skipped by all of them, matching the runtime's rejection
+
+- **Done when**: a spec directory the runtime recognizes is recognized by every shell surface of the project, both hook copies included, and no surface carries its own copy of the digit rule that could drift from `parse_feature_dir` unnoticed (AC15).

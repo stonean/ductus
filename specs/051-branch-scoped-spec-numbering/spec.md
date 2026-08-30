@@ -99,7 +99,7 @@ The framework's existing failure vocabulary covers these: an argument that canno
 - **Fold target is not `done`** — no back-edge applies; the upstream spec's status is untouched. Only a `done` upstream spec is reopened, matching the back-edge rules, which move a spec backward only from `done`.
 - **Two branch-scoped specs folding into the same upstream spec** — each is folded and retired independently; the upstream spec is reopened at most once, and the second fold finds it already `in-progress`.
 - **A branch-scoped spec carrying its own scenarios** — the scenarios move with the content into the upstream spec's `scenarios/` directory. A scenario slug already taken under the upstream spec is reported rather than overwritten.
-- **Fold-back interrupted partway** — each fold-back is atomic per branch-scoped spec, so an interruption leaves each spec either fully folded and retired, or untouched and still flagged. There is no half-folded state.
+- **Fold-back interrupted partway** — fold-back processes one branch-scoped spec at a time, completing its writes and its retirement before the next begins, so every spec *other than the one in flight* is untouched and still flagged. The one in flight is **recoverable rather than atomic**: the runtime provides per-file atomic writes, not multi-file transactions, so the recovery is to re-run the fold against that spec, and every step is a no-op where a previous run already landed. The one write that could not be recovered by re-running — the corpus-wide link rewrite, which is idempotent in the wrong direction — refuses before writing anything when the fold target does not exist.
 - **Branch merged with no fold-back performed** — the detection check flags every surviving branch-scoped directory; nothing is rewritten automatically at merge time, since fold-back is a reviewed step.
 
 ## Acceptance Criteria
@@ -137,7 +137,7 @@ The framework's existing failure vocabulary covers these: an argument that canno
 - [x] AC26: An identifier that sanitizes to an empty string is refused before any directory is created
 - [x] AC27: A branch-scoped directory that already exists is reported as a domain outcome and never overwritten, including when two contributors create under the same identifier concurrently
 - [x] AC28: Fold-back naming a target spec that does not exist refuses and leaves the branch-scoped spec in place
-- [x] AC29: Fold-back is atomic per branch-scoped spec: an interruption leaves each spec either fully folded and retired, or untouched
+- [x] AC29: Fold-back processes one branch-scoped spec at a time, so an interruption leaves every spec other than the one in flight untouched; the spec in flight is completed by re-running the fold, every step being a no-op where a previous run already landed
 
 ## Open Questions
 
