@@ -26,8 +26,8 @@ use std::path::Path;
 
 use ductus::primitives;
 use ductus::schema::primitives::{
-    AppendQuestionArgs, AppendTaskArgs, InvalidateReviewArgs, PruneTasksArgs, RemoveInboxItemArgs,
-    RewriteSpecLinksArgs, WriteReviewArgs,
+    AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, InvalidateReviewArgs, PruneTasksArgs,
+    RemoveInboxItemArgs, RewriteSpecLinksArgs, WriteReviewArgs,
 };
 
 /// Every `\n` in `text` is preceded by `\r` — i.e. the file is uniformly CRLF
@@ -206,6 +206,64 @@ fn prune_tasks_preserves_crlf() {
         after.contains("## 2. Pending") || after.contains("Pending"),
         "{after}"
     );
+}
+
+/// `--reset` rewrites the file down to its `# ` heading — which it lifts
+/// *from the file being reset*, so this is a rewrite of existing content and
+/// not the creation of new content. Its `content` parameter was named
+/// `_content` precisely because it had been ignored, which is what let the
+/// first sweep of this scenario walk past it.
+#[test]
+fn prune_tasks_reset_preserves_crlf() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repo = tmp.path();
+    write_crlf(&repo.join("specs/050-alpha/spec.md"), SPEC);
+    let tasks = repo.join("specs/050-alpha/tasks.md");
+    write_crlf(
+        &tasks,
+        "# 050 — Alpha Tasks\n\n## 1. Spent\n\n- [x] did it\n\n- **Done when**: done.\n",
+    );
+
+    primitives::prune_tasks::run(
+        &PruneTasksArgs {
+            feature: "050-alpha".into(),
+            reset: true,
+            force: true,
+            apply: true,
+        },
+        repo,
+    )
+    .unwrap();
+
+    assert_crlf(&tasks, "prune-tasks --reset");
+    let after = read(&tasks);
+    assert!(after.contains("# 050 — Alpha Tasks"), "{after}");
+}
+
+/// An append is the other half of the same rule: the existing content keeps
+/// its endings for free, so the bug is the *appended* line arriving with a
+/// different one — a file that disagrees with itself rather than one that
+/// converted cleanly.
+#[test]
+fn append_inbox_preserves_crlf() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repo = tmp.path();
+    let inbox = repo.join("specs/inbox.md");
+    write_crlf(&inbox, "# Inbox\n\n- [ ] an existing item\n");
+
+    primitives::append_inbox::run(
+        &AppendInboxArgs {
+            text: "a newly appended item".into(),
+            dedup_prefix: None,
+        },
+        repo,
+    )
+    .unwrap();
+
+    assert_crlf(&inbox, "append-inbox");
+    let after = read(&inbox);
+    assert!(after.contains("a newly appended item"), "{after}");
+    assert!(after.contains("an existing item"), "{after}");
 }
 
 /// `write-review` and `invalidate-review` share a frontmatter splice that

@@ -342,7 +342,7 @@ fn reduce_keep_pending(content: &str, blocks: &[Block]) -> (String, Vec<PruneSec
 /// reset reduction: existing H1 + [`CANONICAL_EMPTY_TASKS_BODY`]. Every task
 /// section is reported as removed.
 fn reduce_reset(
-    _content: &str,
+    content: &str,
     blocks: &[Block],
     tasks_path: &Path,
 ) -> Result<(String, Vec<PruneSection>, u32, u32)> {
@@ -355,7 +355,13 @@ fn reduce_reset(
             reason: "no top-level (`#`) heading to preserve the feature identity".to_string(),
         })?;
 
-    let new_content = format!("{h1}\n\n{CANONICAL_EMPTY_TASKS_BODY}");
+    // The H1 is lifted from the file being reset, so this is a rewrite of an
+    // existing file and not the creation of a new one — the ending it had is
+    // the ending it gets back.
+    let new_content = super::with_line_ending(
+        &format!("{h1}\n\n{CANONICAL_EMPTY_TASKS_BODY}"),
+        super::line_ending_of(content),
+    );
 
     let mut sections = Vec::new();
     let mut removed = 0u32;

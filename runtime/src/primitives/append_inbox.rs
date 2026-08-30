@@ -177,9 +177,15 @@ fn append_bullet(content: &str, text: &str) -> String {
 /// one trailing newline. Operates on the balanced prefix only — comment/fence
 /// awareness lives in [`append_bullet`].
 fn append_after(content: &str, bullet: &str) -> String {
+    // `trimmed` carries the file's own endings while the separator and the
+    // bullet below are written with `\n`, so without this the appended line
+    // would disagree with every line above it. Normalizing the whole result
+    // to the file's ending is what keeps an append from producing a mixed
+    // file (spec 051, scenario `rewrites-preserve-line-endings`).
+    let ending = super::line_ending_of(content);
     let trimmed = content.trim_end_matches(['\n', '\r']);
     if trimmed.is_empty() {
-        return format!("{bullet}\n");
+        return super::with_line_ending(&format!("{bullet}\n"), ending);
     }
     let last_line = trimmed.lines().last().unwrap_or("");
     let sep = if bullet_text(last_line).is_some() {
@@ -187,7 +193,7 @@ fn append_after(content: &str, bullet: &str) -> String {
     } else {
         "\n\n"
     };
-    format!("{trimmed}{sep}{bullet}\n")
+    super::with_line_ending(&format!("{trimmed}{sep}{bullet}\n"), ending)
 }
 
 /// Byte offset at which a trailing *unterminated* HTML comment or fenced code
