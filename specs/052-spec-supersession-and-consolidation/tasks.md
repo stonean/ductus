@@ -96,10 +96,10 @@ Runtime first, then the command surfaces that call it, then documentation, then 
 
 ## 11. Codify the annotation in the constitution
 
-- [ ] Document the annotation at whole-spec, section, and criterion granularity
-- [ ] State that the citation links from a blockquote and cites by name from a criterion, with the harvesting reason
-- [ ] State that the annotation is a mechanical edit taking no back-edge
-- [ ] State the non-claim phrasing requirement
+- [x] Document the annotation at whole-spec, section, and criterion granularity
+- [x] State that the citation links from a blockquote and cites by name from a criterion, with the harvesting reason
+- [x] State that the annotation is a mechanical edit taking no back-edge
+- [x] State the non-claim phrasing requirement
 
 - **Done when**: an adopter can apply the convention from the constitution alone, without reading a spec that already carries one.
 
