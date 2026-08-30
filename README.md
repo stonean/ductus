@@ -223,6 +223,86 @@ It walks the list one item at a time and routes each: a rule for a cross-cutting
 
 **Reach for it when your agent keeps asking permission for the same `ductus` operations.** Configures the permission set so the pipeline stops prompting on every step.
 
+## Rules
+
+**Rules are how `ductus` knows what "good" means for your project.** A spec says what a feature should do; the rules say what any code is held to regardless of feature — and `/review` audits the implementation against them before a spec can reach `done`. Without them the review has taste and nothing else.
+
+They are plain markdown in `specs/rules/`, and they are the **only** normative source a review may cite: `/review` is instructed not to invent criteria beyond these files and your `AGENTS.md`. That is what keeps two reviews of the same code from disagreeing, and what makes a finding arguable — every one quotes the rule it came from.
+
+**Every rule uses RFC 2119 language, and the distinction is load-bearing.** **MUST** / **MUST NOT** violations are blocking: they hold the spec out of `done` until they are fixed or waived with a recorded reason. **SHOULD** / **SHOULD NOT** violations are advisory — reported, never blocking.
+
+**Every rule carries a permanent ID** (`BE-AUTHN-003`, `FE-XSS-001`, `QUAL-CLAIM-001`). IDs are never renumbered or reused, even when a rule moves within its file, so a waiver, a code comment, or a spec can cite one and still mean the same thing years later.
+
+### Which rules load
+
+A rule file's **filename suffix** decides which projects load it, and there are exactly three:
+
+| Suffix | Loads for | Example |
+| --- | --- | --- |
+| `-backend.md` | projects with a backend surface | `security-backend.md` |
+| `-frontend.md` | projects with a frontend surface | `security-frontend.md` |
+| `-cross.md` | every project, unconditionally | `quality-cross.md` |
+
+Set `[rules] surfaces` in `.ductus/config.toml` to declare your surfaces (`["backend"]`, `["backend", "frontend"]`, or `[]` for cross-only); leave it unset and `ductus` falls back to the stack it detects. A file with an unrecognized suffix loads for *every* stack and warns — the default is never a silent skip.
+
+To stand a rule file down without deleting it, list it under `[[review.disabled-rule-files]]` with a mandatory `reason`. The reason is the audit trail, and it is why the opt-out is a config entry rather than a deletion.
+
+### Security — `security-backend.md`, `security-frontend.md`
+
+The reason the rule system exists. Backend covers authentication, authorization, input validation, data protection, API security, logging and audit, dependency management, and error handling. Frontend covers XSS, CSRF, secure client-side storage, authentication UX, content security policy, dependencies, and handling of sensitive data.
+
+These carry the highest proportion of **MUST** rules, because the failures they describe are exploitable rather than merely untidy.
+
+### Code quality — `quality-cross.md`
+
+Three failure modes that look like working code and are not, on any surface:
+
+- **Silent stubs** — an unimplemented path whose contract implies it does work, returning success anyway. A no-op rate limiter ships indistinguishably from a real one.
+- **Unverified external contracts** — code whose correctness depends on a schema, an API shape, or a file format it does not own, with nothing that fails loudly when the assumption is wrong.
+- **Unsubstantiated clean results** — a result that reports "clean" when it means "could not check". A caller cannot tell a verified-clean answer from an unverifiable one, and will read the reassuring one.
+
+### Reliability — `reliability-backend.md`
+
+Behavior under partial failure: bounded timeouts on every outbound call, retry discipline, circuit breakers, graceful shutdown that does not drop in-flight work, and bulkheads that shed load rather than queue unboundedly. These are design-time commitments a plan states, not patterns a linter finds.
+
+### Performance — `performance-backend.md`, `performance-frontend.md`
+
+Backend: query efficiency (N+1, unindexed filters, unbounded reads), caching with a stated expiry, connection-pool discipline, payload budgets, and offloading slow work off the request path. Frontend: Core Web Vitals budgets, bundle size, image delivery, resource loading, and web-font discipline.
+
+### API contracts — `api-backend.md`
+
+The shape, stability, and documentation of an interface other people call: versioning, pagination, status-code semantics, and breaking-change discipline. Deliberately separate from security — `security-backend.md` §BE-API owns the HTTP *attack* surface, this owns the *contract*.
+
+### Concurrency — `concurrency-backend.md`
+
+Shared-state races, locking and deadlock avoidance, transaction isolation, and distributed coordination.
+
+### Observability — `observability-backend.md`
+
+Metrics, distributed tracing, and health signaling — so a failure in production is diagnosable rather than merely visible.
+
+### Accessibility — `accessibility-frontend.md`
+
+WCAG 2.2 AA: semantic HTML, keyboard navigation and focus, ARIA usage, color and contrast, accessible forms, and text alternatives. AA is the baseline written into law in several jurisdictions, which is why it is a shipped rule file rather than a suggestion.
+
+### Configuration — `configuration-cross.md`
+
+Named constants and environment variables: no magic numbers, no undocumented env vars, and fail-fast on invalid configuration rather than starting up degraded.
+
+### Waivers
+
+When a **MUST** violation is intentional, record a waiver rather than silencing the gate:
+
+```bash
+/review --waive <rule-id> --reason "<text>"
+```
+
+The waiver is anchored to the `(rule, file)` pair, so code moving within a file keeps it while a rename or a fix expires it and the finding re-blocks — a waiver cannot quietly outlive the thing it excused. The schema is open, so an organization can require its own fields (a ticket, a second approver) and `ductus` preserves them. See [specs/020-code-review/data-model.md](specs/020-code-review/data-model.md).
+
+### Writing your own
+
+Add a file to `specs/rules/` with one of the three suffixes and it is discovered automatically — no registration step. Give each rule a permanent ID, state it in RFC 2119 language, and record the rationale: a rule whose reasoning is not written down is one nobody can argue with when it is wrong. Rule files ductus ships are overwritten on update unless you pin them in `.ductus/config.toml` `[pinned] files`.
+
 ## Installing (per agent)
 
 `ductus` operates a **live-on-main** model — the installer fetches the latest from `main`. Omit the agent to install for Claude Code, or name it explicitly.
@@ -407,21 +487,6 @@ Re-run `/ductus` to pull the latest framework files. Each file is handled by one
 | `skip` | Never overwritten | `AGENTS.md`, `CLAUDE.md` |
 
 `.gitignore` uses a `merge` strategy — `ductus` patterns are appended below a `# ductus` marker. Pin individual files you've customized with `[pinned]` in `.ductus/config.toml` (above). `ductus` is a reference, not a runtime dependency: if you'd rather not use `/ductus`, diff the repo and apply changes at your own pace.
-
-## Security rules
-
-`ductus` ships enforceable security rules using RFC 2119 language — **MUST/MUST NOT** are blocking, **SHOULD/SHOULD NOT** are advisory. `/review` loads the rule files for your configured `[rules] surfaces` — or, when that setting is unset, the rule files that match your detected stack.
-
-- [framework/rules/security-backend.md](framework/rules/security-backend.md) — auth, input validation, data protection, API security, logging, dependencies, error handling
-- [framework/rules/security-frontend.md](framework/rules/security-frontend.md) — XSS, CSRF, secure storage, auth handling, content security, dependencies
-
-When a MUST violation is intentional, record a waiver instead of silencing the gate:
-
-```bash
-/review --waive <rule-id> --reason "<text>"
-```
-
-Waivers are anchored to the rule ID and file path — if the file is renamed or the rule stops firing there, the waiver expires and the finding re-blocks. The waiver schema is open, so organizations can layer on their own required fields. See [specs/020-code-review/data-model.md](specs/020-code-review/data-model.md).
 
 ## Viewing artifacts
 
