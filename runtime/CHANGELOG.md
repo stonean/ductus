@@ -2,6 +2,96 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+<!-- Keep this heading non-numeric while the work is in flight. /ductus:audit
+     Family 20 binds the repo-root `version` pin, runtime/Cargo.toml, and the
+     newest `## [X.Y.Z]` heading, and it matches only numeric headings — so an
+     `[Unreleased]` section is invisible to it and the previous release stays
+     newest. Rename it to its version in the same commit that bumps the pin. -->
+
+## [Unreleased]
+
+### Added
+
+- **`write-supersession-annotation` — the reciprocal half of a declared
+  supersession.** A `supersedes:` key records the relation for tooling; what
+  stops a reader mistaking a countered spec for a live one is an annotation on
+  the spec that was countered. The primitive contributes the frame — placement
+  above any annotation already present, the blockquote wrapper, the
+  `> **Sunset ([link]):**` citation, and the closer recording that the spec
+  stays the account of what shipped — and the author contributes the substance,
+  the one sentence naming what stopped being true. The **blockquote is
+  structural, not stylistic**: `derive-dependencies` exempts blockquote-prefixed
+  lines, so the banner links its successor without the annotated spec acquiring
+  a dependency on it; un-blockquote the frame and every annotation silently
+  inverts the dependency graph. The frontmatter is spliced back byte for byte,
+  so the annotated spec keeps whatever status it holds at any lifecycle state —
+  the write is a mechanical edit taking no back-edge, and that guarantee is
+  structural rather than a rule the code remembers. An annotation already
+  citing the same superseding spec returns `already-present: true` and writes
+  nothing, so an interrupted declaration converges on a re-run instead of
+  stacking a duplicate. 12 unit tests.
+
+- **`check-artifacts` gains the `supersession-reciprocity` family** at the
+  advisory tier: a spec declaring `supersedes: X` whose named target's body
+  does not name it back. It reads only **declared** edges and never infers an
+  undeclared supersession — that check was measured at 455 criterion pairs with
+  215 firing and every sample a false positive. Its coverage bound is therefore
+  real and is stated in the family's contract and in `/{project}:analyze`'s
+  rendering rather than emitted as a per-spec skip: a corpus of hand-written
+  annotations carrying no key is invisible to it, and a spec declaring no edges
+  is not an unexamined target.
+
+- **`check-corpus-links` — every relative markdown link in the spec corpus that
+  resolves to nothing.** Three checks sat near this ground and none covered it:
+  `check-orphaned-references` scopes to the adopter-owned bootstrap referrers,
+  `/{project}:analyze` is bounded to one feature plus its dependencies, and
+  `/{project}:audit` Family 26 is maintainer-only — adopters never invoke it.
+  So an adopter who deleted or renamed a spec directory dangled every inbound
+  pointer with no error and no gate. The shipped pre-commit hook now runs it,
+  corpus-wide and blocking, so a deletion fails at the commit that makes it
+  rather than at a reader's next traversal. Resolution is **lexical**, never
+  canonicalized, so the verdict is a property of the text rather than of the
+  checkout's symlinks; a root-absolute target resolves against the repo root,
+  as a markdown renderer does. Inline code spans are stripped before matching —
+  load-bearing rather than tidy, since documentation quoting link syntax is not
+  making a link — while blockquoted lines are deliberately **not** skipped:
+  that exemption belongs to `derive-dependencies`, where it decides whether a
+  link induces an edge, and a sunset banner's link still has to resolve. An
+  unreadable file, a spec root that cannot be listed, and a walk deeper than
+  the depth cap each block and say so, because a check that could not run must
+  not exit like one that passed. 18 unit tests.
+
+### Changed
+
+- **`retire-feature`'s refusal of the sequential `NNN-slug` form is gated
+  rather than removed.** The refusal exists because that form is permanent and
+  a primitive able to delete one would put an irreversible operation within
+  reach of a typo. A new `allow-sequential` argument opts in, and only
+  `/{project}:consolidate` passes it, after naming both specs and confirming
+  the content loss with the operator; `/{project}:fold` does not pass it and
+  has no argument that would, so a mistyped feature name during a fold meets
+  the refusal exactly as before. The anti-stranding guard — the target must
+  hold a `spec.md` — is untouched and applies to both callers. The flag is not
+  a weaker refusal; it is the record that a second, explicit decision was made.
+
+- **`validate-frontmatter` validates `supersedes:`** for **shape only**: each
+  entry parses as a feature slug, and a self-reference is rejected. An
+  unresolvable-but-well-shaped entry is no finding — resolvability is enforced
+  by the declaring command, at the one moment both specs exist. This follows
+  the `folds-into:` precedent exactly.
+
+### Fixed
+
+- **One predicate now answers "is this spec already annotated?"** for both
+  surfaces that ask it. `write-supersession-annotation` accepted only the
+  markdown link form while the `supersession-reciprocity` family accepted a
+  link *or* a bare name — so a hand-annotated spec, which is the entire corpus
+  the retroactive declaration path exists for, satisfied the check and still
+  attracted a duplicate annotation. Matching also moved to a slug boundary: a
+  bare substring match reads `043-workflows-sunset` as a citation of
+  `043-workflows`, and naming a sunset spec after what it sunsets is this
+  corpus's convention rather than an edge case.
+
 ## [0.37.0] — 2026-08-30
 
 ### Added
