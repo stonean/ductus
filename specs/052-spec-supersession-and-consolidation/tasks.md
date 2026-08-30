@@ -90,7 +90,7 @@ Runtime first, then the command surfaces that call it, then documentation, then 
 
 ## 10. Note the gate in `/{project}:fold`
 
-- [ ] Record in `framework/commands/fold.md` step 12 that fold never passes the opt-in argument, so the sequential refusal still guards this path
+- [x] Record in `framework/commands/fold.md` step 12 that fold never passes the opt-in argument, so the sequential refusal still guards this path
 
 - **Done when**: fold's account of `retire-feature` matches the primitive's behavior after task 4.
 
