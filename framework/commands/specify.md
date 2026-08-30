@@ -74,7 +74,7 @@ If the constitution has not been loaded in this session (e.g., `/{project}:targe
 7. <!-- llm:writeSpecBody --> Fill the new spec body following §spec-requirements: a Motivation section, Acceptance Criteria with concrete and testable checkboxes (sparse acceptance criteria are valid for brownfield use — leave the section with a comment noting criteria will emerge from real work), Open Questions, and any inline links to other specs that `derive-dependencies` will derive the frontmatter dependencies from. The host returns the markdown body for the new file; the walker forwards the response through the context. **When step 5 settled a supersession, cite the superseded spec by name and write no markdown link to it.** The pointer is frontmatter; a body link to a sibling spec is harvested by `derive-dependencies` into `dependencies:`, which would make the superseding spec declare a dependency on the very spec it counters — silently, on the first commit through the pre-commit hook. The link belongs to the reciprocal annotation written in step 8, which carries it from inside a blockquote, the one construct `derive-dependencies` exempts.
 
 <!-- audit:ignore-promotion -->
-8. Write the declaration step 5 settled — the frontmatter key and its reciprocal annotation (host responsibility; conditional on step 5, so nothing dispatches when no supersession was settled). Stamp `supersedes:` into the new spec's frontmatter as a list naming each resolved feature: it is **hand-authored**, deliberately unlike the generated `dependencies:` and `references:` indexes beside it, which no command writes by hand (§text-first-artifacts, Frontmatter Schema). Then, once per named spec, write the reciprocal annotation onto it with write-supersession-annotation, passing the superseded feature, this new feature as the superseding one, and the **substance** — what no longer holds — as the authored payload. The primitive contributes the frame (placement, the blockquote wrapper, the `> **Sunset ({link}):**` citation, and the closer recording that the spec stays the record of what shipped) and never invents the substance: a generated banner can name the superseding spec and the date and nothing else, while the sentence a reader actually needs is the one naming what stopped being true. Phrase that sentence as a **non-claim** ("no longer exists", "is removed") rather than as an assertion whose truth depends on whether its paths resolve. An already-present result is a re-run converging rather than a failure — report it and continue. The operator's consent for this second-spec write is step 3's routing confirmation, or the flag they passed; no separate gate is added.
+8. Write the declaration step 5 settled — the frontmatter key and its reciprocal annotation (host responsibility; conditional on step 5, so nothing dispatches when no supersession was settled). Stamp `supersedes:` into the new spec's frontmatter as a list naming each resolved feature, then write the reciprocal annotation onto each of those specs with write-supersession-annotation, passing the superseded feature, this new feature as the superseding one, and the **substance** — what no longer holds — as the authored payload. What the two writes mean, and why the frame is generated while the substance is authored, is stated once in `supersede.md`'s **Declaration semantics**; this command performs the same declaration at creation time and does not restate it. An already-present result is a re-run converging rather than a failure — report it and continue. The operator's consent for this second-spec write is step 3's routing confirmation, or the flag they passed; no separate gate is added.
 
 9. Invoke `label-criteria` against the new feature to assign a stable `AC{n}:` label to every criterion the step above wrote, and to record `next-criterion` in the frontmatter. The initial batch is labelled in the run that created it, so a criterion can be cited by label in the same conversation that authored it — that is the moment citation matters most. The pass is idempotent and writes nothing when the section is empty, so a brownfield spec with a placeholder comment and no criteria is unaffected. **Never derive the label in the LLM**: picking `max + 1` means tallying the list, which is exactly the counting this labelling exists to remove.
 
@@ -197,46 +197,36 @@ Only when the operator asked for it — `--supersedes <feature>`, or the
 supersession answer to a routing candidate. With neither, this section does not
 apply and creation is unchanged.
 
-1. **Resolve each named spec** (primitive: `resolve-feature`), then read its
-   `status` (primitive: `read-spec`). A name that resolves to nothing is the
-   one refusal on this path: `supersedes:` is validated for *shape* only, and
-   resolvability is enforced by the declaring command, at the first moment both
-   specs exist.
-2. **A target that is not `done` is accepted, never refused.** Supersession's
-   justification is a spec that shipped and was later countered, which is the
-   whole reason the superseded spec stays on disk; a `draft` or `clarified`
-   spec delivered nothing to counter, so annotating it would record a decision
-   as enacted-then-undone when it was never enacted. Say that, name
+What a declaration *means* — the key, the annotation, the load-bearing
+blockquote, the generated frame and authored substance, accumulation versus a
+convergent re-run, and the descriptive edge — is stated once, in
+`supersede.md`'s **Declaration semantics**. That is its single canonical
+statement; do not restate it here. This command performs the same declaration
+at creation time, and only these parts are specific to that timing:
+
+1. **It is settled before anything is scaffolded**, alongside the
+   branch-scoped decision, so a refusal costs no directory. Resolve each named
+   spec (primitive: `resolve-feature`); a name resolving to nothing is the one
+   refusal on this path, since the frontmatter schema validates `supersedes:`
+   for shape only and this is the first moment both specs exist.
+2. **A target that is not `done` is accepted, never refused.** Read its status
+   (primitive: `read-spec`). Supersession's justification is a spec that
+   shipped and was later countered; a `draft` or `clarified` spec delivered
+   nothing to counter, so annotating it would record a decision as
+   enacted-then-undone when it was never enacted. Say that, name
    `/{project}:consolidate` as the likelier outcome, and proceed if the
    operator still wants the declaration. `in-progress` is genuinely ambiguous
    and the operator may hold context the status does not carry.
-3. **Write the key.** `supersedes:` is a **list** of feature slugs in the new
-   spec's frontmatter — one spec routinely counters several in a single
-   change, which is where it diverges from the scalar `folds-into:`. It is
-   hand-authored, unlike the generated `dependencies:` and `references:`
-   indexes beside it (§text-first-artifacts, Frontmatter Schema).
-4. **Write the reciprocal annotation** onto each superseded spec (primitive:
-   `write-supersession-annotation`). The key on the new spec is bookkeeping;
-   the annotation is what stops a reader — human or agent — mistaking a
-   countered spec for a live one. The primitive frames it and the author
-   supplies the substance, the same content-ingestion split `create-scenario`
-   uses. The blockquote wrapper is **load-bearing, not stylistic**:
-   `derive-dependencies` exempts blockquote-prefixed lines, so the banner may
-   link the superseding spec without the annotated spec acquiring a dependency
-   on it. Phrase the substance as a non-claim ("no longer exists", "is
-   removed") rather than as an assertion whose truth depends on whether its
-   paths resolve.
-5. **The annotated spec keeps its status.** The write is a mechanical edit
-   under §spec-lifecycle — it changes no claim that spec makes about what it
-   delivered — so it takes no back-edge at any lifecycle state.
-6. **Write no body link to the superseded spec** from the new spec. The
-   pointer is frontmatter; a plain body link is harvested into
-   `dependencies:`, making the superseding spec depend on the one it counters.
-   Cite it by name; the annotation carries the link.
-7. **A re-declaration converges.** An annotation already naming this
-   superseding spec is reported as already-applied and nothing is written —
-   distinct from accumulation, which stacks annotations from *different*
-   superseding specs, newest first.
+3. **The declaration is also offered as a classification on a routing
+   candidate**, beside *amend it* and *unrelated*. The candidate surfaces
+   anyway, so forgetting the flag costs nothing — which is what keeps the flag
+   from being a diligence dependency. The offer is not exhaustive: the
+   derivation matches over slug vocabulary, so a predecessor sharing none of
+   it surfaces as no candidate, and the flag stays available directly.
+4. **The writes are the same two** — the `supersedes:` key on the new spec,
+   and the reciprocal annotation on each named spec (primitive:
+   `write-supersession-annotation`). Consent for the second-spec write is the
+   routing confirmation, or the flag the operator passed.
 
 Declaring a supersession over **two specs that already exist** is
 `/{project}:supersede`, not this command; it produces the same key and the

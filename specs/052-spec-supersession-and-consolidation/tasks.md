@@ -69,11 +69,11 @@ Runtime first, then the command surfaces that call it, then documentation, then 
 
 ## 8. Create `/{project}:supersede`
 
-- [ ] Write `framework/commands/supersede.md` for declaration over two existing specs
-- [ ] State the declaration semantics once and reference them from `specify.md` rather than restating
-- [ ] Confirm through `gate-confirm` before any write
-- [ ] Make a re-declaration converge: no duplicate `supersedes:` entry, no second annotation, each step reporting already-applied as a domain outcome rather than a failure
-- [ ] Depend on nothing from 053 — the declaration is complete when the key and annotation are written
+- [x] Write `framework/commands/supersede.md` for declaration over two existing specs
+- [x] State the declaration semantics once and reference them from `specify.md` rather than restating
+- [x] Confirm through `gate-confirm` before any write
+- [x] Make a re-declaration converge: no duplicate `supersedes:` entry, no second annotation, each step reporting already-applied as a domain outcome rather than a failure
+- [x] Depend on nothing from 053 — the declaration is complete when the key and annotation are written
 
 - **Done when**: a supersession can be declared over two existing specs, producing the same key and annotation as a creation-time declaration, and re-running it changes nothing.
 

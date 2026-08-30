@@ -64,6 +64,7 @@ Each feature lives in `specs/NNN-feature-name/` and progresses through these sta
 | `/{project}:amend` | Add a question or a scenario to the targeted spec (classifier-driven). |
 | `/{project}:prune` | Prune a feature's tasks.md — drop spent task sections, or reset to template state. |
 | `/{project}:fold` | Fold a branch-scoped spec into its upstream home and retire the staging directory. |
+| `/{project}:supersede` | Declare that one spec supersedes another, over two specs that already exist. |
 
 <!-- generated:commands-refine:end -->
 
