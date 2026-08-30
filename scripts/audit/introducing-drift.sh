@@ -80,10 +80,9 @@ if [ -z "$bin" ]; then
   exit "$drift"
 fi
 
-corpus="$(spec_corpus "$bin")"
-if [ -z "$corpus" ]; then
+if ! corpus="$(spec_corpus "$bin")"; then
   emit "(precondition)" \
-    "ductus dashboard returned no specs — the introducing-drift check could not enumerate the corpus" \
+    "ductus dashboard could not be read — the introducing-drift check could not enumerate the corpus" \
     "run $bin dashboard directly to see the error"
   exit "$drift"
 fi

@@ -77,8 +77,12 @@ ductus_bin() {
 # past an empty value onto the next line and produced a confidently-wrong
 # finding (AGENTS.md, Design Principles).
 #
-# Non-zero exit with no output when the runtime cannot enumerate the corpus;
-# the caller reports that rather than treating it as an empty corpus.
+# **Exit status, not emptiness, is the failure signal.** A project with no
+# specs at all is a legitimately empty corpus, not a broken run — the python
+# below exits non-zero only when the JSON does not parse, which is what an
+# unusable `dashboard` produces. A caller testing `-z` instead would report a
+# precondition failure at every fresh adopter, inventing a finding out of an
+# empty repository.
 spec_corpus() {
   "$1" dashboard 2> /dev/null | python3 -c '
 import json, sys
