@@ -86,3 +86,12 @@ Runtime first — the bounded read, the annotation form, the extension point —
 - [x] Commit, push `main`, then tag at that commit and push the tag — in that order, with a short window between
 
 - **Done when**: the tag is pushed, the release workflow's self-audit gate passes, and acquisition is verified against the published assets on all five targets.
+
+## 10. Pin the three outcomes and the no-resolution refusal
+
+- [x] Assert the three outcomes are **pairwise distinguishable from the result alone** — examined-with-claims, nothing-to-reconcile, and could-not-examine must not share a field shape, so a later refactor cannot collapse two into one
+- [x] Assert the report step names all three states, so the host obligation is checked rather than trusted to prose
+- [x] Assert no step between `classifyClaims` and the report dispatches a primitive that could resolve a conflict, which is the structural half of AC2
+- [x] Add no runtime behavior: this closes a verification gap the review found, not a defect, so it obliges no release
+
+- **Done when**: the three outcomes are pinned as pairwise distinguishable by a test rather than by reading, the report step's obligation to name all three is asserted against the shipped command file, and nothing between classification and the report can resolve a conflict.

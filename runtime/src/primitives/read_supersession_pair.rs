@@ -408,4 +408,75 @@ mod tests {
         assert_eq!(result.superseded.path, "requirements/005-workflows/spec.md");
         assert!(result.unreadable.is_empty());
     }
+
+    /// The shape a caller reads a reconciliation outcome off: has claims,
+    /// could not examine something, nothing to reconcile.
+    fn shape(r: &ReadSupersessionPairResult) -> (bool, bool, bool) {
+        let has_claims = !r.superseded.acceptance_criteria.is_empty()
+            || !r.superseded.sections.is_empty()
+            || !r.scenarios.is_empty();
+        (has_claims, !r.unreadable.is_empty(), !r.guidance.is_empty())
+    }
+
+    #[test]
+    fn the_three_outcomes_are_pairwise_distinguishable_from_the_result_alone() {
+        // AC3, AC11, AC12 as one property. Each of the three states a
+        // reconciliation can reach must be recognizable from the result
+        // without consulting anything else — otherwise the report's
+        // obligation to distinguish them rests on the reporter's care, and
+        // the reassuring reading is the one a caller takes.
+        //
+        // Pinned as *pairwise distinct field shapes* rather than as three
+        // separate assertions, because the failure this guards against is a
+        // later refactor collapsing two states into one shape. Three passing
+        // assertions would not notice that; a distinctness check does.
+
+        // (a) Examined, with claims to classify.
+        let examined = tempdir().unwrap();
+        seed(examined.path());
+
+        // (b) Examined, nothing to reconcile — a brownfield sketch.
+        let empty = tempdir().unwrap();
+        write(
+            empty.path(),
+            "specs/005-workflows/spec.md",
+            "---\nstatus: draft\ndependencies: []\n---\n\n# Sketch\n",
+        );
+        write(
+            empty.path(),
+            "specs/043-sunset/spec.md",
+            &spec("done", "- [ ] AC1: A claim\n"),
+        );
+
+        // (c) Could not fully examine.
+        let unreadable = tempdir().unwrap();
+        write(
+            unreadable.path(),
+            "specs/005-workflows/spec.md",
+            &spec("done", "- [x] AC1: A claim\n"),
+        );
+
+        let a = shape(&pair(examined.path()));
+        let b = shape(&pair(empty.path()));
+        let c = shape(&pair(unreadable.path()));
+
+        assert_ne!(
+            a, b,
+            "examined-with-claims and nothing-to-reconcile share a shape"
+        );
+        assert_ne!(
+            a, c,
+            "examined-with-claims and could-not-examine share a shape"
+        );
+        assert_ne!(
+            b, c,
+            "nothing-to-reconcile and could-not-examine share a shape"
+        );
+
+        // And each is the shape its name implies, so the distinctness above
+        // is not three arbitrary triples that merely differ.
+        assert_eq!(a, (true, false, false), "examined-with-claims");
+        assert_eq!(b, (false, false, true), "nothing-to-reconcile");
+        assert_eq!(c, (true, true, false), "could-not-examine");
+    }
 }

@@ -178,3 +178,56 @@ fn fold_never_reaches_the_sequential_opt_in() {
          retire-feature matches the primitive's behavior"
     );
 }
+
+#[test]
+fn supersede_reports_all_three_reconciliation_outcomes() {
+    // The host half of AC3/AC11/AC12. `read-supersession-pair` makes the
+    // three states pairwise distinguishable in the *data* — that is pinned in
+    // the primitive's own tests — but the obligation to actually tell them
+    // apart in the report lives in prose, and prose is what drifts. This
+    // asserts the command still carries all three.
+    let source =
+        std::fs::read_to_string(workspace_root().join("framework/commands/supersede.md")).unwrap();
+    for state in [
+        "conflicts to settle",
+        "nothing to reconcile",
+        "could not fully examine",
+    ] {
+        assert!(
+            source.contains(state),
+            "supersede.md's report must name the {state:?} outcome — three states that read \
+             alike are the QUAL-CLAIM-001 failure this reconciliation is built to avoid"
+        );
+    }
+}
+
+#[test]
+fn nothing_between_classification_and_the_report_can_resolve_a_conflict() {
+    // The structural half of AC2. A conflict is surfaced and never resolved,
+    // and the cheapest way to keep that true is to give the walk no primitive
+    // that could do it: between `classifyClaims` and the report, the only
+    // dispatches are the criterion annotation (which takes a label, not a
+    // conflict) and the gate that guards a body-prose edit.
+    let steps = steps("supersede");
+    let classify = position(&steps, "extension:classifyClaims");
+    let report = steps.len() - 1;
+
+    let between: Vec<&str> = steps[classify + 1..report]
+        .iter()
+        .map(|(_, kind)| kind.as_str())
+        .collect();
+    for kind in &between {
+        assert!(
+            matches!(
+                *kind,
+                "prose" | "primitive:write-supersession-annotation" | "primitive:gate-confirm"
+            ),
+            "unexpected dispatch between classification and the report: {kind} — a primitive \
+             here is a primitive that could settle a conflict the operator has not"
+        );
+    }
+    assert!(
+        between.contains(&"primitive:write-supersession-annotation"),
+        "the superseded claims must still be annotated: {between:?}"
+    );
+}
