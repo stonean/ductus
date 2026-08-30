@@ -5,7 +5,7 @@
 #
 #   1b. Pipeline-diagram status sequence — extracts the ordered status names
 #       (draft → clarified → planned → in-progress → done) from
-#       framework/constitution.md §spec-lifecycle, docs/introduction.md, and
+#       framework/constitution.md §spec-lifecycle, README.md, and
 #       framework/templates/project/project-readme.md. Verifies all three
 #       visit the same five states in the same order. Command-name and gate
 #       annotation differences between docs are allowed (the canonical
@@ -58,17 +58,17 @@ sub_1b() {
   # Three files to compare; constitution is canonical. macOS ships bash 3.2
   # which lacks associative arrays, so use parallel scalars.
   local constitution="framework/constitution.md"
-  local introduction="docs/introduction.md"
+  local readme="README.md"
   local project_readme="framework/templates/project/project-readme.md"
 
-  local seq_constitution seq_introduction seq_project_readme
+  local seq_constitution seq_readme seq_project_readme
   local missing=0
   if ! seq_constitution="$(extract_diagram_states "$constitution")"; then
     emit "$constitution" "pipeline diagram not found (no line mentions all five states)" "add a pipeline diagram referencing draft → clarified → planned → in-progress → done"
     missing=1
   fi
-  if ! seq_introduction="$(extract_diagram_states "$introduction")"; then
-    emit "$introduction" "pipeline diagram not found (no line mentions all five states)" "add a pipeline diagram referencing draft → clarified → planned → in-progress → done"
+  if ! seq_readme="$(extract_diagram_states "$readme")"; then
+    emit "$readme" "pipeline diagram not found (no line mentions all five states)" "add a pipeline diagram referencing draft → clarified → planned → in-progress → done"
     missing=1
   fi
   if ! seq_project_readme="$(extract_diagram_states "$project_readme")"; then
@@ -78,8 +78,8 @@ sub_1b() {
   if [ "$missing" -eq 1 ]; then
     return
   fi
-  if [ "$seq_introduction" != "$seq_constitution" ]; then
-    emit "$introduction" "pipeline diagram state sequence differs from framework/constitution.md" "reconcile the diagram to visit the same five states in the same order as the constitution"
+  if [ "$seq_readme" != "$seq_constitution" ]; then
+    emit "$readme" "pipeline diagram state sequence differs from framework/constitution.md" "reconcile the diagram to visit the same five states in the same order as the constitution"
   fi
   if [ "$seq_project_readme" != "$seq_constitution" ]; then
     emit "$project_readme" "pipeline diagram state sequence differs from framework/constitution.md" "reconcile the diagram to visit the same five states in the same order as the constitution"
