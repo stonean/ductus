@@ -86,13 +86,60 @@ Each table below says **when you would reach for a command**, not just what it d
 
 ### Destructive — these remove content
 
-Three commands delete rather than rewrite. All three confirm before they act and none writes a backup. They are separated here rather than sitting as ordinary rows among commands that only ever add.
+Three commands delete rather than rewrite: `/prune`, `/fold`, and `/consolidate`. All three confirm before they act and none writes a backup. They are separated here rather than sitting as ordinary rows among commands that only ever add.
 
-| Command | What it removes | When you reach for it |
-| --- | --- | --- |
-| `/prune` | Spent task sections in one `tasks.md` | **`tasks.md` has turned into a changelog of finished work and you cannot see what is left.** Drops fully-checked task sections, or `--reset` back to template state. Scoped to a single artifact the framework classes as ephemeral work-tracking: the durable record of what was done lives in the spec, the code, and git. Recovery is git history. One spec. |
-| `/fold` | The branch-scoped staging directory — **after** migrating its content | **A spec was created on a branch only to avoid colliding with the upstream branch's spec, and the branch has now merged.** Two branches each adding the next `NNN-` spec is a merge conflict in the one file two people are most likely to add at once, so `/specify --branch` numbers the second from a branch identifier instead — `1234.1-slug` — which cannot collide. That number is scaffolding, not a home. `/fold` is how you take it down: run it on the upstream branch after the merge, and the staging spec's content moves into the durable spec it was standing in for (as a body edit or as a scenario), every inbound pointer is re-pointed, and the directory is removed. **The point is that one feature ends up with one durable home** rather than its decisions spread across a permanent spec and a leftover branch spec nobody consolidated. A branch-scoped spec is **retired, not completed** — `/status` reports one as pending and the `done` gate blocks while the fold is outstanding, so the framework will not let you forget it. Two specs. |
-| `/consolidate` | An entire spec directory — `spec.md`, scenarios, plan, tasks, review | **An old spec was never really a separate concern** — it overlapped a sibling from the start, or duplicates one you have since written. Re-points every inbound pointer at the target first, so nothing is left dangling, then removes the source. Recovery is git history. Two specs. |
+<table>
+  <thead>
+    <tr>
+      <th align="left">Command</th>
+      <th align="left">What it removes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>/prune</code></td>
+      <td>Spent task sections in one <code>tasks.md</code></td>
+    </tr>
+    <tr>
+      <td colspan="2">
+        <strong><code>tasks.md</code> has turned into a changelog of finished work and you cannot see what is left.</strong>
+        Drops fully-checked task sections, or <code>--reset</code> back to template state. Scoped to a single artifact the
+        framework classes as ephemeral work-tracking: the durable record of what was done lives in the spec, the code, and
+        git. Recovery is git history. One spec.
+      </td>
+    </tr>
+    <tr>
+      <td><code>/fold</code></td>
+      <td>The branch-scoped staging directory — <strong>after</strong> migrating its content</td>
+    </tr>
+    <tr>
+      <td colspan="2">
+        <strong>A spec was created on a branch only to avoid colliding with the upstream branch's spec, and the branch has
+        now merged.</strong> Two branches each adding the next <code>NNN-</code> spec is a merge conflict in the one file
+        two people are most likely to add at once, so <code>/specify --branch</code> numbers the second from a branch
+        identifier instead — <code>1234.1-slug</code> — which cannot collide. That number is scaffolding, not a home.
+        <code>/fold</code> is how you take it down: run it on the upstream branch after the merge, and the staging spec's
+        content moves into the durable spec it was standing in for (as a body edit or as a scenario), every inbound pointer
+        is re-pointed, and the directory is removed. <strong>The point is that one feature ends up with one durable
+        home</strong> rather than its decisions spread across a permanent spec and a leftover branch spec nobody
+        consolidated. A branch-scoped spec is <strong>retired, not completed</strong> — <code>/status</code> reports one as
+        pending and the <code>done</code> gate blocks while the fold is outstanding, so the framework will not let you
+        forget it. Two specs.
+      </td>
+    </tr>
+    <tr>
+      <td><code>/consolidate</code></td>
+      <td>An entire spec directory — <code>spec.md</code>, scenarios, plan, tasks, review</td>
+    </tr>
+    <tr>
+      <td colspan="2">
+        <strong>An old spec was never really a separate concern</strong> — it overlapped a sibling from the start, or
+        duplicates one you have since written. Re-points every inbound pointer at the target first, so nothing is left
+        dangling, then removes the source. Recovery is git history. Two specs.
+      </td>
+    </tr>
+  </tbody>
+</table>
 
 > **`/consolidate` is the only one of the three that removes a durable artifact.** The other two remove something that was never meant to last: `tasks.md` sections are ephemeral work-tracking, and a branch-scoped directory is a staging form whose content `/fold` has just migrated into its durable home. Consolidation is different in kind — it **migrates nothing**. The guard proves the target exists, never that anything actually landed there, so the confirmation names the content you are losing, scenario by scenario, rather than merely naming the directory. Reach for `/supersede` instead whenever the earlier spec actually delivered something: that spec is the record of what shipped, and consolidating it would invert the relationship.
 
