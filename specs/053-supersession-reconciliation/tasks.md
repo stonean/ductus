@@ -46,33 +46,33 @@ Runtime first — the bounded read, the annotation form, the extension point —
 
 ## 5. Reconcile at declaration time
 
-- [ ] Add the reconciliation steps to the **Declaration semantics** reference in `framework/commands/supersede.md` — the canonical statement both declaration routes already share
-- [ ] Order them: bounded read, `classifyClaims`, annotate each superseded claim, surface conflicts, report
-- [ ] Confirm `framework/commands/specify.md` inherits it through the pointer it already carries, and add nothing that restates it
-- [ ] Record why this runs at declaration rather than at the completion gate: the information is cheap while the superseding spec's claims are being authored and unrecoverable afterward
+- [x] Add the reconciliation steps to the **Declaration semantics** reference in `framework/commands/supersede.md` — the canonical statement both declaration routes already share
+- [x] Order them: bounded read, `classifyClaims`, annotate each superseded claim, surface conflicts, report
+- [x] Confirm `framework/commands/specify.md` inherits it through the pointer it already carries, and add nothing that restates it
+- [x] Record why this runs at declaration rather than at the completion gate: the information is cheap while the superseding spec's claims are being authored and unrecoverable afterward
 
 - **Done when**: both declaration routes reconcile through one statement of the procedure, `specify.md` restates none of it, and nothing in `check-review-gate` learns about reconciliation.
 
 ## 6. Surface conflicts without resolving them
 
-- [ ] Report every `Conflicting` claim with its rationale and both sides, and offer no resolution
-- [ ] Make the report distinguish the three outcomes by construction: examined-with-conflicts, examined-with-nothing-to-reconcile, and could-not-examine — naming the unexamined files rather than folding them into a total
-- [ ] Name a pass incomplete whenever `unreadable` is non-empty or `guidance` is set
+- [x] Report every `Conflicting` claim with its rationale and both sides, and offer no resolution
+- [x] Make the report distinguish the three outcomes by construction: examined-with-conflicts, examined-with-nothing-to-reconcile, and could-not-examine — naming the unexamined files rather than folding them into a total
+- [x] Name a pass incomplete whenever `unreadable` is non-empty or `guidance` is set
 
 - **Done when**: a conflict is never resolved by the command, and a reader of the report can tell a clean reconciliation from an empty one from an incomplete one without consulting anything else.
 
 ## 7. Gate the one edit that reopens a spec
 
-- [ ] Offer a body-prose edit only behind `gate-confirm`, with a prompt naming the `done → in-progress` back-edge **before** the edit
-- [ ] Perform the status change through `set-status` with a `from` guard, like every other back-edge
-- [ ] Never offer an edit for an acceptance criterion — annotation is the only outcome available there
+- [x] Offer a body-prose edit only behind `gate-confirm`, with a prompt naming the `done → in-progress` back-edge **before** the edit
+- [x] Perform the status change through `set-status` with a `from` guard, like every other back-edge
+- [x] Never offer an edit for an acceptance criterion — annotation is the only outcome available there
 
 - **Done when**: no body edit happens without a confirmation that named the reopen first, no criterion is ever offered for editing, and the reopen goes through the same guarded transition the rest of the pipeline uses.
 
 ## 8. Document the runtime-written criterion annotation
 
-- [ ] Record in `framework/constitution.md` `§supersession-annotations` that the criterion granularity may now be written by the runtime, and that the section granularity remains hand-authored
-- [ ] Add the reconciliation outcomes to `/{project}:analyze`'s enumerated list in `framework/commands/analyze.md`, including the coverage bound
+- [x] Record in `framework/constitution.md` `§supersession-annotations` that the criterion granularity may now be written by the runtime, and that the section granularity remains hand-authored
+- [x] Add the reconciliation outcomes to `/{project}:analyze`'s enumerated list in `framework/commands/analyze.md`, including the coverage bound
 
 - **Done when**: an adopter can tell from the constitution alone which granularities are mechanical and which are theirs to write.
 

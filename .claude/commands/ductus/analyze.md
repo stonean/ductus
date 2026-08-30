@@ -233,6 +233,8 @@ A named target that is absent or unreadable is **skipped**, never reported as un
 
 **The family sees only declared edges, and that bound is part of the result.** It never infers a supersession nobody declared: that inference was measured at 455 criterion pairs, 215 of which would have fired, every sample a false positive. A corpus carrying hand-written sunset annotations declares no `supersedes:` keys at all, so this family sees none of it. Say so when reporting — its silence is not evidence that no supersession is unrecorded. A spec declaring no edges produces neither a finding nor a `skipped` entry: it has no subject, which is different from having a target that could not be examined.
 
+**This family checks the relation, never the claims.** Whether the superseded spec's individual criteria and prose have been reconciled against the superseding spec is a different question, answered at declaration time by `/ductus:supersede` and `/ductus:specify --supersedes` rather than here. A satisfied reciprocity finding means the annotation exists; it says nothing about whether the claims beneath it were walked. The two bounds compound, and both belong in the same sentence when reporting: this family sees only *declared* edges, and only the *banner*, not the claims.
+
 ### Cross-spec references (advisory)
 
 - Event types mentioned in spec or plan align with `specs/events.md`

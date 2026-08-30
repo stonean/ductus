@@ -113,17 +113,45 @@ fn supersede_confirms_before_it_annotates_the_other_spec() {
         // with no primitive of its own.
         ("3", "prose"),
         ("4", "primitive:write-supersession-annotation"),
-        ("5", "prose"),
+        // Reconciliation (spec 053): the bounded read, the judgment at the
+        // boundary, then the criterion-level annotations it authorizes.
+        ("5", "primitive:read-supersession-pair"),
+        ("6", "extension:classifyClaims"),
+        ("7", "primitive:write-supersession-annotation"),
+        // Step 8 dispatches a second `gate-confirm`: surfacing conflicts
+        // resolves nothing, but the one edit reconciliation may make — body
+        // prose on a `done` spec — needs its own confirmation naming the
+        // reopen. Step 9's report is a host responsibility.
+        ("8", "primitive:gate-confirm"),
+        ("9", "prose"),
     ]
     .into_iter()
     .map(|(n, k)| (n.to_string(), k.to_string()))
     .collect();
     assert_eq!(steps, expected);
 
+    // `position` finds the *first* gate — the declaration's.
     let gate = position(&steps, "primitive:gate-confirm");
+    assert_eq!(
+        gate, 1,
+        "the declaration gate must be the first one: {steps:?}"
+    );
     assert!(
         position(&steps, "primitive:write-supersession-annotation") > gate,
         "the annotation writes to a second spec and must not precede the confirmation"
+    );
+    // Reconciliation reads and classifies before it annotates, and every
+    // part of it sits after the confirmation — it writes to the second spec
+    // too, one criterion at a time.
+    let read = position(&steps, "primitive:read-supersession-pair");
+    let classify = position(&steps, "extension:classifyClaims");
+    assert!(
+        read > gate,
+        "the reconciliation read must follow the confirmation"
+    );
+    assert!(
+        classify > read,
+        "classification needs the pair; it cannot precede the read"
     );
 }
 

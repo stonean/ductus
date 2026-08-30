@@ -159,6 +159,8 @@ The same rule runs the other way: the superseding spec's body carries **no markd
 
 **The frame is generated; the substance is authored.** Placement, the blockquote wrapper, the citation, and the closing sentence recording that the spec stays the account of what shipped are all mechanical. What no longer holds is not: a generated banner can name the superseding spec and the date and nothing else, and the sentence a reader needs is the one naming what stopped being true.
 
+**Which granularities the runtime writes.** The whole-spec banner and the criterion-level annotation are both written mechanically, by one writer taking the granularity as an argument — one rule, one implementation. The **section-level** note stays hand-authored: nothing in the pipeline needs it programmatically, and a third code path serving no caller is overengineering rather than completeness. Writing one by hand is the supported path, and the form above is its whole specification.
+
 **Writing an annotation is a mechanical edit** ([§spec-lifecycle](#spec-lifecycle)). It changes no claim the annotated spec makes about what it delivered, so it takes **no back-edge**: the spec keeps whatever status it holds, at any lifecycle state, and a `done` spec stays `done` as the record of what shipped. That is what makes the annotation cheap enough to apply without an operator intervening in the annotated spec's lifecycle.
 
 **Annotate only what was delivered.** A spec that never shipped delivered nothing to counter, so marking it as enacted-then-undone records a fiction; the right answer there is usually consolidation — merging it into the spec that covers it and removing its directory — rather than supersession.
