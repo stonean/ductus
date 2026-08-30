@@ -48,6 +48,8 @@ Nothing about the choice persists. A committed setting was rejected: `.ductus/co
 
 ### Fold-back on merge
 
+> **Post-completion note ([052 — Spec supersession and consolidation](../052-spec-supersession-and-consolidation/spec.md)):** `retire-feature`'s refusal of the permanent sequential `NNN-slug` form is now **gated rather than absolute**. The primitive carries an explicit opt-in that only `/{project}:consolidate` passes, having named both specs and confirmed the content loss with the operator; the anti-stranding refusal — the target must hold a `spec.md` — is unchanged and applies to both callers. **Nothing on this spec's path changed.** `/{project}:fold` does not pass the opt-in and has no argument that would, so a mistyped feature name during a fold still meets the refusal exactly as it always did, and a branch-scoped spec's terminal state is still retirement. The gate is not a weaker refusal; it is the record that a second, explicit decision was made.
+
 Branch-scoped specs are a staging form, not a permanent home. The merge itself is clean **by construction** — a branch-scoped number cannot collide with anything upstream — so nothing about fold-back is coupled to the merge. It happens **after** the merge lands, on the upstream branch, as its own step: the spec's content is merged into the spec it was standing in for, or — where the content is a durable elaboration of one section — into a scenario under it, and the `{branch-id}.{n}` directory is retired.
 
 Until then it is an ordinary spec in every other respect: it advances through the pipeline, carries tasks and scenarios, and is reviewed like any other. The number keeps the merge clean; the target is what makes the spec actionable once it lands.

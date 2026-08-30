@@ -120,8 +120,8 @@ Runtime first, then the command surfaces that call it, then documentation, then 
 
 ## 14. Record the cross-spec impact on 051
 
-- [ ] Note in `specs/051-branch-scoped-spec-numbering/spec.md` that `retire-feature`'s sequential refusal is gated by this spec, with a back-link
-- [ ] Apply it as a mechanical annotation so 051 stays `done`
+- [x] Note in `specs/051-branch-scoped-spec-numbering/spec.md` that `retire-feature`'s sequential refusal is gated by this spec, with a back-link
+- [x] Apply it as a mechanical annotation so 051 stays `done`
 
 - **Done when**: 051's account of the refusal matches shipped behavior and its status is unchanged.
 
