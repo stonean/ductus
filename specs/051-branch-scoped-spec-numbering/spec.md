@@ -2,8 +2,8 @@
 status: in-progress
 dependencies: [022-deterministic-runtime, 040-configurable-specs-dir]
 review:
-  last-run: 2026-08-30T01:19:43Z
-  reviewed-against: d9c87b0b248abbb70d711a095704a23bb8b5d2ea
+  last-run: 2026-08-30T01:55:08Z
+  reviewed-against: b985b9fff44c1b72af7df31455c224013d53f73d
   must-violations: 0
   should-violations: 0
   low-confidence: 0
