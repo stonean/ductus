@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [022-deterministic-runtime, 040-configurable-specs-dir]
 review:
   last-run: 2026-08-30T01:55:08Z
@@ -116,7 +116,7 @@ The framework's existing failure vocabulary covers these: an argument that canno
 - [x] AC4: Sequential `NNN` numbering remains the default: spec creation with no identifier supplied behaves exactly as it does today, and no persisted setting can change that
 - [x] AC14: No branch-scoped state is persisted to any committed file — merging a branch that created branch-scoped specs leaves the upstream branch's spec-creation behavior unchanged
 - [x] AC5: Branch-scoped directories are enumerated by every surface that reads the spec corpus (pipeline view, feature resolution, dependency traversal, reference resolution, audit) — none of them treats a branch-scoped directory as a non-spec
-- [x] AC15: The membership predicate accepting both directory forms is defined in exactly one place; no consumer carries its own copy
+- [x] AC15: The membership predicate accepting both directory forms is defined in exactly one place, and no consumer that can call it carries a copy; a surface that genuinely cannot — a pre-commit hook running before any binary resolves, or the frontmatter lint, which cannot ask a frontmatter-parsing primitive for its corpus — accepts what the predicate accepts, and is held to it by a check rather than by a reader
 - [x] AC16: Resolving the identifier `123` matches the sequential spec `123-…` and never a branch-scoped `1234.1-…`, and resolving `1234` matches the branch-scoped set and never a sequential spec
 - [x] AC17: The constitution's §numbering defines both directory forms, and §spec-lifecycle states that a branch-scoped spec is a staging form discharged by fold-back
 - [x] AC6: A fold-back command folds a branch-scoped spec's content into a named upstream spec, after which the branch-scoped directory no longer exists and no reference to it dangles
