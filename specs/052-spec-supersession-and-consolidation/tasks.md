@@ -134,7 +134,7 @@ Preconditions matter more than the steps here. As of planning, `version`, `runti
 - [x] Keep the heading non-numeric while work is in flight, with the comment recording why: `/{project}:audit` Family 20 binds the `version` pin, `runtime/Cargo.toml`, and the newest `## [X.Y.Z]` heading, and matches only numeric headings — so an `[Unreleased]` section is invisible to it and the previous release stays newest
 - [x] At release, rename that heading to its version and bump the repo-root `version`, `runtime/Cargo.toml`, and `Cargo.lock` in one commit. Do not re-bless the parity goldens — they store the version as a `{{runtime-version}}` placeholder, and blessing would hardcode a literal and destroy it
 - [x] Run `scripts/audit/run-all.sh` locally before tagging. It is a hard release gate, and a local pass is weaker evidence than it looks: `ductus-v0.28.0` was green locally and failed in CI on a BSD-awk incompatibility that exited 0 rather than reporting it could not run
-- [ ] Commit, push `main`, then tag at that commit and push the tag — in that order, with a short window between. The commit alone reaches nobody, and a pushed `version` bump without its tag sends every adopter after assets that do not exist
+- [x] Commit, push `main`, then tag at that commit and push the tag — in that order, with a short window between. The commit alone reaches nobody, and a pushed `version` bump without its tag sends every adopter after assets that do not exist
 
 - **Done when**: the preceding release is published, this spec's tag is pushed, the release workflow's self-audit gate passes, and acquisition is verified against the published assets on all five targets.
 
