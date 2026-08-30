@@ -84,6 +84,8 @@ An absent key is never a finding on a *sequential* spec, which has no fold targe
 | `fold-target` | in | string | Must exist. Refusal when it does not is what prevents stranding content. |
 | `retired` | out | boolean | `false` is the domain outcome for "already gone", not an error. |
 
+> **Post-completion note (052 — Spec supersession and consolidation):** the `feature` row above is no longer the whole rule. `retire-feature` gained an `allow-sequential` argument, off by default, so the sequential refusal is **gated rather than absolute**: `/{project}:consolidate` passes it after naming both specs and confirming the content loss, and nothing else does. `/{project}:fold` — this spec's only caller — does not pass it and has no argument that would, so the refusal behaves here exactly as the row describes. The `fold-target` row is unchanged and applies to both callers.
+
 ### `invalidate-review` (new)
 
 | Field | Direction | Type | Notes |

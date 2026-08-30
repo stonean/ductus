@@ -90,7 +90,7 @@ Phase 1 (tasks 1–5) makes branch-scoped directories creatable and visible. Pha
 - [x] Return `retired: false` as the domain outcome for an already-absent directory
 - [x] Test both refusals and the already-gone case
 
-- **Done when**: a branch-scoped directory can be retired only when its fold target exists, and a sequential feature can never be retired by this primitive (AC28).
+- **Done when**: a branch-scoped directory can be retired only when its fold target exists, and a sequential feature can never be retired by this primitive (AC28). *(Spec 052 later gated that second clause behind an explicit `allow-sequential` argument that only `/{project}:consolidate` passes; `/{project}:fold`'s path is unchanged.)*
 
 ## 11. Add the fold-routing extension point
 
