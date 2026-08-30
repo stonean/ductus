@@ -80,7 +80,12 @@ fn consolidate_confirms_before_it_rewrites_or_removes_anything() {
         ("4", "primitive:gate-confirm"),
         ("5", "primitive:rewrite-spec-links"),
         ("6", "primitive:retire-feature"),
+        // Steps 7 and 8 are prose: clearing the session is conditional on the
+        // session having named the source, and the report is a host
+        // responsibility. Both come *after* the removal — the session cannot
+        // be stranded until the directory is gone.
         ("7", "prose"),
+        ("8", "prose"),
     ]
     .into_iter()
     .map(|(n, k)| (n.to_string(), k.to_string()))

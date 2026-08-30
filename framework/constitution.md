@@ -688,6 +688,15 @@ The test before saving to per-user memory: *would this help a teammate?* If yes,
 
 The session state file (`.ductus/session.toml`) holds a single target by design. The pipeline is serial within a feature, and concurrent work on independent features uses two independent sessions in two terminals — not multi-target session state. Isolation is provided by the platform layer: `git worktree` keeps the working trees separate, and AI-agent platforms typically expose isolation primitives (Claude Code's `isolation: "worktree"` agent parameter, Cursor's worktree integration, etc.). Reach for those rather than asking `ductus` to track multiple targets at once.
 
+**A command that removes the targeted feature's directory must not leave the session pointing at it.** A target naming a directory that is gone is a dangling pointer in a file the framework itself owns — every follow-on command resolves it and fails, one step removed from the command that broke it. There are two acceptable outcomes and the choice between them is not stylistic:
+
+- **Re-target**, when the removal moved the content to a spec that continues the work. `/{project}:fold` is this case: the staging spec's content lands in its upstream home, so the operator's attention follows it there and the new target is a fact rather than a guess.
+- **Clear**, when it did not. `/{project}:consolidate` is this case: its target is a spec that already existed, which the operator may have no interest in — they were removing something, not adopting it. Re-targeting there would assert an intent nobody stated, while clearing says truthfully that there is now no target. Clearing preserves the per-contributor `cli-config-dir`, so the agent identity survives.
+
+Do either **only when the session actually named the removed feature**. A session pointing somewhere else is not the removal's business and is left alone.
+
+One bound is worth stating because nothing can close it: the session file is per-contributor and gitignored, so a teammate's session may still name the removed directory and no command in this repository can reach it. What the rule buys is that the *acting* contributor is never stranded, and that a teammate's next command fails on a target that is legibly absent rather than on one the framework could have cleared and did not.
+
 <!-- §cross-spec-impact -->
 
 ### Cross-Spec Impact
