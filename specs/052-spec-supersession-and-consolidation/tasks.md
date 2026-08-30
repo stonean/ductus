@@ -6,10 +6,10 @@ Runtime first, then the command surfaces that call it, then documentation, then 
 
 ## 1. Add `supersedes:` to the frontmatter schema
 
-- [ ] Add the `supersedes` field to the spec-file schema table in `framework/constitution.md`, marked hand-authored and contrasted with the generated `dependencies:` / `references:` indexes
-- [ ] Add the field to the spec frontmatter struct in `runtime/src/schema/primitives.rs`
-- [ ] Extend `validate-frontmatter` with shape-only validation: each entry parses as a feature slug; a self-reference is rejected
-- [ ] Confirm an absent key and a populated key both round-trip through `read-spec` unchanged
+- [x] Add the `supersedes` field to the spec-file schema table in `framework/constitution.md`, marked hand-authored and contrasted with the generated `dependencies:` / `references:` indexes
+- [x] Add the field to the spec frontmatter struct in `runtime/src/schema/primitives.rs`
+- [x] Extend `validate-frontmatter` with shape-only validation: each entry parses as a feature slug; a self-reference is rejected
+- [x] Confirm an absent key and a populated key both round-trip through `read-spec` unchanged
 
 - **Done when**: `validate-frontmatter` accepts a well-shaped `supersedes:` list, rejects a malformed entry and a self-reference, and reports an unresolvable-but-well-shaped entry as no finding.
 

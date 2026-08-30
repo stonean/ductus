@@ -364,6 +364,26 @@ pub struct Frontmatter {
     /// state before a merge, never a defect.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub folds_into: Option<String>,
+    /// The specs this spec supersedes, when it declares any (spec 052).
+    ///
+    /// Hand-authored, and deliberately unlike `dependencies` and
+    /// `references`, which are derived indexes no author edits. Nothing in
+    /// the repository can compute this one: which spec counters which is a
+    /// judgement the author holds while writing and that no later pass
+    /// recovers. Inferring it was measured and rejected — 215 of 455
+    /// criterion pairs would have fired, every sample a false positive.
+    ///
+    /// A **list**, because one spec routinely supersedes several at once.
+    /// That is the deliberate divergence from [`Self::folds_into`], which is
+    /// correctly scalar: a staging spec has exactly one home, while a
+    /// superseding spec may counter several predecessors in one change.
+    ///
+    /// **Absent when empty, never `[]`.** `dependencies: []` is a derived
+    /// index truthfully reporting "harvested, found none", so its presence
+    /// is evidence the derivation ran; an empty `supersedes` would instead
+    /// assert a considered decision nobody made.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supersedes: Vec<String>,
     /// Last-review block, when set.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub review: Option<ReviewBlock>,
@@ -3277,6 +3297,7 @@ mod tests {
                 dependencies: vec!["021-runtime-boundary".into()],
                 tags: vec![],
                 folds_into: None,
+                supersedes: vec![],
                 review: Some(ReviewBlock::default()),
             },
             sections: vec![SpecSection {
@@ -3305,6 +3326,52 @@ mod tests {
         assert_eq!(
             value["scenario-open-questions"][0]["scenario"],
             "framework-list-dedup"
+        );
+        // An empty `supersedes` is absent from the wire, never `[]`: the key
+        // is hand-authored, so an empty list would assert a decision nobody
+        // made. `dependencies` is the deliberate contrast — a derived index
+        // whose presence is evidence the derivation ran.
+        let fm = &value["frontmatter"];
+        assert!(fm.get("supersedes").is_none());
+        assert!(fm.get("dependencies").is_some());
+        assert_eq!(round_trip(&result), result);
+    }
+
+    #[test]
+    fn supersedes_round_trips_when_populated() {
+        let mut result = ReadSpecResult {
+            frontmatter: Frontmatter {
+                status: "done".into(),
+                dependencies: vec![],
+                tags: vec![],
+                folds_into: None,
+                supersedes: vec![],
+                review: None,
+            },
+            sections: vec![],
+            acceptance_criteria: vec![],
+            open_questions: vec![],
+            scenario_open_questions: vec![],
+            scenario_files_unreadable: vec![],
+            path: "specs/005-workflows/spec.md".into(),
+        };
+
+        // Absent when empty — asserted on the frontmatter node, since a key
+        // checked at the result root is absent whatever the field does, and
+        // the test would pass without testing anything.
+        let value: serde_json::Value = serde_json::to_value(&result).unwrap();
+        assert!(value["frontmatter"].get("supersedes").is_none());
+        assert!(value["frontmatter"].get("status").is_some());
+        assert_eq!(round_trip(&result), result);
+
+        // A list even for one entry, and several for one declaration — the
+        // divergence from the scalar `folds-into`.
+        result.frontmatter.supersedes = vec!["005-workflows".into(), "019-config-decisions".into()];
+        let value: serde_json::Value = serde_json::to_value(&result).unwrap();
+        assert_eq!(value["frontmatter"]["supersedes"][0], "005-workflows");
+        assert_eq!(
+            value["frontmatter"]["supersedes"][1],
+            "019-config-decisions"
         );
         assert_eq!(round_trip(&result), result);
     }

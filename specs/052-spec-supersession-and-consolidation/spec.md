@@ -1,5 +1,5 @@
 ---
-status: planned
+status: in-progress
 dependencies: [013-text-first-artifacts, 041-task-pruning, 051-branch-scoped-spec-numbering]
 review:
   last-run: null
