@@ -2,13 +2,7 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
-<!-- Keep this heading non-numeric while the work is in flight. /ductus:audit
-     Family 20 binds the repo-root `version` pin, runtime/Cargo.toml, and the
-     newest `## [X.Y.Z]` heading, and it matches only numeric headings — so an
-     `[Unreleased]` section is invisible to it and the previous release stays
-     newest. Rename it to its version in the same commit that bumps the pin. -->
-
-## [Unreleased]
+## [0.38.0] — 2026-08-30
 
 ### Added
 
