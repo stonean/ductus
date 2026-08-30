@@ -1,5 +1,5 @@
 ---
-status: clarified
+status: planned
 dependencies: [051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation]
 review:
   last-run: null
