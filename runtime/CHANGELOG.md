@@ -2,6 +2,78 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.39.0] — 2026-08-30
+
+### Added
+
+- **`read-supersession-pair` — the bounded read spec 053's reconciliation is
+  built on.** It loads the two specs a declared supersession names plus the
+  superseded spec's scenarios, and **the absent arguments are the design**:
+  there is no way to request a plan, a data model, a tasks file, a source
+  path, or a third spec, so the read bound is a property of the code rather
+  than a rule a caller is asked to remember. That bound is load-bearing —
+  without a declared edge to collapse the search to two specs, this is the
+  corpus-wide criterion-supersession check measured at 455 pairs with 215
+  firing and every sample a false positive. Only the *superseded* spec's
+  scenarios are read; the superseding spec's describe what it delivers, which
+  is a different question. An unreadable spec or scenario is a domain outcome
+  rather than an error: it lands in `unreadable`, is excluded from
+  `examined`, and is never escalated into a conflict, because nothing can be
+  proven about a file that will not parse. `guidance` marks a superseded spec
+  with nothing to classify at all — examined-and-empty, which is not
+  examined-and-clean. 9 unit tests.
+
+- **The `classifyClaims` extension point.** Deciding whether a superseding
+  spec removes, contradicts, or leaves alone a predecessor's claim is a
+  reading of two documents, so it crosses the runtime boundary rather than
+  pretending to be deterministic. Four closed outcomes — `superseded`,
+  `still-standing`, `conflicting`, `unclassified` — sent with the request so
+  the classifier answers in the framework's terms. Its vocabulary is
+  deliberately not `routeFold`'s or `routeInboxItem`'s: those answer *where
+  does this work belong*, this answers *what did the later spec do to this
+  claim*. The payload is built from `read-supersession-pair`'s result, so the
+  read bound holds at the boundary too, and `still-standing` claims are
+  carried rather than omitted — dropping them would make examined-and-
+  untouched indistinguishable from never-looked-at.
+
+- **`check-corpus-links` gains `--scope repository`.** One resolver, two
+  subjects: the default spec-corpus scope is what an adopter's pre-commit
+  hook checks, while the repository scope enumerates every *tracked* `.md`
+  file from the git index for `/{project}:audit` Family 26. The family
+  previously carried its own implementation of the same check and the two had
+  already diverged — the primitive resolving a root-absolute target against
+  the repository root, the family against the filesystem root. Delegating
+  makes that impossible rather than merely repaired. The index rather than a
+  worktree walk, so an untracked draft is never reported and build output is
+  never descended into. 4 further unit tests, including one pinning that the
+  repository scope examines strictly more than the spec-corpus scope — the
+  narrowing this consolidation could otherwise have introduced silently.
+
+### Changed
+
+- **`write-supersession-annotation` takes a `criterion` label.** A
+  *granularity*, not a second primitive: the constitution states one
+  supersession-annotation rule at three granularities, so one writer owns it.
+  Absent, it writes the whole-spec banner unchanged; present, it appends the
+  annotation to that criterion's line, citing the superseding spec **by name**
+  — a criterion is a plain list item with no blockquote exemption, so a link
+  there would be harvested into the annotated spec's own `dependencies:`. The
+  criterion is annotated, never edited: its checkbox and text are
+  byte-identical afterwards, so a superseded criterion stays ticked. An
+  unknown label is refused rather than treated as a criterion to create.
+  Section-level annotations remain hand-authored. 7 further unit tests; every
+  pre-existing whole-spec test passes untouched.
+
+### Fixed
+
+- **`check-corpus-links` no longer hardcodes a host's config directory.** The
+  generated-command-copy exclusion resolved `.claude/` literally, which is
+  correct for exactly one of the four hosts ductus ships to — every Auggie,
+  Antigravity, and OpenCode adopter would have had their generated copies
+  examined and their by-construction-broken links reported as defects they
+  cannot fix. Resolved from `Host::load` instead. `/{project}:audit` Family
+  13 exists for this regression and caught it.
+
 ## [0.38.0] — 2026-08-30
 
 ### Added

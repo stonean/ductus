@@ -78,11 +78,11 @@ Runtime first — the bounded read, the annotation form, the extension point —
 
 ## 9. Release the runtime change
 
-- [ ] Confirm the preceding release is complete: a pushed `ductus-v0.38.0` tag whose workflow published assets. If it is not, finish or unwind it first — do not bump past it
-- [ ] Add a fresh `## [Unreleased]` section to `runtime/CHANGELOG.md`, keeping the heading non-numeric while work is in flight so Family 20 still sees the previous release as newest
-- [ ] At release, rename that heading to its version and bump the repo-root `version`, `runtime/Cargo.toml`, and `Cargo.lock` in one commit. Do not re-bless the parity goldens — they hold the version as a `{{runtime-version}}` placeholder
-- [ ] Confirm every affected spec is `done` before the tag is cut
-- [ ] Run `scripts/audit/run-all.sh` locally before tagging, and again against the tag's own tree if it is not `HEAD`
-- [ ] Commit, push `main`, then tag at that commit and push the tag — in that order, with a short window between
+- [x] Confirm the preceding release is complete: a pushed `ductus-v0.38.0` tag whose workflow published assets. If it is not, finish or unwind it first — do not bump past it
+- [x] Add a fresh `## [Unreleased]` section to `runtime/CHANGELOG.md`, keeping the heading non-numeric while work is in flight so Family 20 still sees the previous release as newest
+- [x] At release, rename that heading to its version and bump the repo-root `version`, `runtime/Cargo.toml`, and `Cargo.lock` in one commit. Do not re-bless the parity goldens — they hold the version as a `{{runtime-version}}` placeholder
+- [x] Confirm every affected spec is `done` before the tag is cut
+- [x] Run `scripts/audit/run-all.sh` locally before tagging, and again against the tag's own tree if it is not `HEAD`
+- [x] Commit, push `main`, then tag at that commit and push the tag — in that order, with a short window between
 
 - **Done when**: the tag is pushed, the release workflow's self-audit gate passes, and acquisition is verified against the published assets on all five targets.
