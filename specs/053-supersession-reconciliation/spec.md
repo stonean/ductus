@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [051-branch-scoped-spec-numbering, 052-spec-supersession-and-consolidation]
 review:
   last-run: 2026-08-30T22:17:42Z
