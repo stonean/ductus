@@ -98,38 +98,38 @@ Reconciliation — what happens to the superseded spec's individual claims once 
 
 ## Acceptance Criteria
 
-- [ ] AC1: `/{project}:specify --supersedes <feature>` writes a `supersedes:` key naming that feature into the new spec's frontmatter
-- [ ] AC3: Creating a spec with `--supersedes` writes an annotation onto the superseded spec naming the superseding spec
-- [ ] AC5: `--supersedes` is offered as a selectable classification when `derive-routing-candidates` surfaces a candidate, and omitting the flag entirely leaves spec creation behaving exactly as it does today
-- [ ] AC6: The constitution documents the supersession annotation at whole-spec, section, and criterion granularity, including that the citation names the superseding spec rather than linking it
-- [ ] AC7: `/{project}:consolidate <spec> --into <spec>` re-points every inbound pointer to the source directory at the target, then removes the source directory
-- [ ] AC8: `/{project}:consolidate` refuses when the target directory holds no `spec.md`, and no pointer is rewritten by the refused run
-- [ ] AC9: `/{project}:consolidate` writes nothing to the target spec's body, scenarios, `tasks.md`, `status`, or `review:` block
-- [ ] AC10: The confirmation prompt shown before a consolidation names the loss of the source spec's content, not only the removal of its directory
-- [ ] AC11: `retire-feature` accepts a sequential feature directory only through an explicitly targeted consolidation, and `/{project}:fold` remains unable to retire one
-- [ ] AC12: `/{project}:fold` gains no flag or argument for naming a fold target, and its `folds-into:` single-source rule is unchanged
-- [ ] AC13: A spec declaring `supersedes: <feature>` whose named target's body does not name it back is reported as an advisory finding, and the check never infers an undeclared supersession
-- [ ] AC14: The annotation written on a superseded spec is blockquoted, so the link it carries to the superseding spec induces no `dependencies:` edge on the spec being annotated
-- [ ] AC15: A criterion-level supersession annotation cites the superseding spec by name rather than by link, since a plain list item's link is harvested into `dependencies:`
-- [ ] AC16: The annotation's substance — what no longer holds — is author-supplied; the primitive contributes the frame (placement, blockquote, citation, and the record-of-what-shipped closer) and never invents the substance
-- [ ] AC17: `supersedes:` holds a list of feature slugs, so one spec may supersede several in a single declaration
-- [ ] AC18: A second supersession annotation on an already-annotated spec accumulates rather than replacing the existing one, and the newest is placed first
-- [ ] AC24: A supersession naming a spec that is not `done` is accepted rather than refused, with consolidation named as the likelier outcome and the reason stated
-- [ ] AC25: `/{project}:consolidate` is installed into adopter projects by the bootstrap, and its documentation identifies it as the only command that removes a durable artifact
-- [ ] AC26: Consolidation names every spec whose `supersedes:` points at the source and offers re-point, drop, or cancel, defaulting to none of them
-- [ ] AC27: Consolidation names the specs the source itself superseded, whose annotations cite a spec the removal will delete
-- [ ] AC28: No `supersedes:` edge is re-pointed without the operator settling it, and consolidation is never refused on the presence of such an edge alone
-- [ ] AC29: The reciprocity check reports its coverage as bounded to declared `supersedes:` edges, so a corpus of undeclared supersessions is never reported as clean
-- [ ] AC33: A retroactive supersession is declared through its own command over two existing specs, not through a flag on a single-spec command
-- [ ] AC34: The README states which commands write to one spec and which write to two, and places `fold`, `consolidate`, and `supersede` in the two-spec group
-- [ ] AC38: The frontmatter schema documents `supersedes:` as a hand-authored list, distinct from the generated `dependencies:` and `references:` indexes that must not be edited by hand
-- [ ] AC39: Spec 051's account of `retire-feature`'s sequential-form refusal is updated to record that this spec relaxes it for an explicitly targeted consolidation
-- [ ] AC40: A supersession can be declared over two specs that already exist, producing the same `supersedes:` key and reciprocal annotation as a declaration made at creation, with no dependency on reconciliation
-- [ ] AC41: A spec that receives only the supersession annotation keeps whatever status it already had, at any lifecycle state — the write is mechanical and takes no back-edge
-- [ ] AC42: Consolidation destroys the source spec's scenarios with its directory and migrates none of them to the target, and the confirmation names the scenarios specifically rather than only naming content
-- [ ] AC43: Re-declaring an already-declared supersession adds no second `supersedes:` entry and writes no second annotation for the same superseding spec
-- [ ] AC44: An interrupted declaration or consolidation converges when re-run, each step reporting an already-applied outcome as a domain result rather than a failure
-- [ ] AC45: A declaring command writes no markdown link to the superseded spec into the superseding spec's body, and `derive-dependencies` derives no edge from the superseding spec to the superseded one
+- [x] AC1: `/{project}:specify --supersedes <feature>` writes a `supersedes:` key naming that feature into the new spec's frontmatter
+- [x] AC3: Creating a spec with `--supersedes` writes an annotation onto the superseded spec naming the superseding spec
+- [x] AC5: `--supersedes` is offered as a selectable classification when `derive-routing-candidates` surfaces a candidate, and omitting the flag entirely leaves spec creation behaving exactly as it does today
+- [x] AC6: The constitution documents the supersession annotation at whole-spec, section, and criterion granularity, including that the citation names the superseding spec rather than linking it
+- [x] AC7: `/{project}:consolidate <spec> --into <spec>` re-points every inbound pointer to the source directory at the target, then removes the source directory
+- [x] AC8: `/{project}:consolidate` refuses when the target directory holds no `spec.md`, and no pointer is rewritten by the refused run
+- [x] AC9: `/{project}:consolidate` writes nothing to the target spec's body, scenarios, `tasks.md`, `status`, or `review:` block
+- [x] AC10: The confirmation prompt shown before a consolidation names the loss of the source spec's content, not only the removal of its directory
+- [x] AC11: `retire-feature` accepts a sequential feature directory only through an explicitly targeted consolidation, and `/{project}:fold` remains unable to retire one
+- [x] AC12: `/{project}:fold` gains no flag or argument for naming a fold target, and its `folds-into:` single-source rule is unchanged
+- [x] AC13: A spec declaring `supersedes: <feature>` whose named target's body does not name it back is reported as an advisory finding, and the check never infers an undeclared supersession
+- [x] AC14: The annotation written on a superseded spec is blockquoted, so the link it carries to the superseding spec induces no `dependencies:` edge on the spec being annotated
+- [x] AC15: A criterion-level supersession annotation cites the superseding spec by name rather than by link, since a plain list item's link is harvested into `dependencies:`
+- [x] AC16: The annotation's substance — what no longer holds — is author-supplied; the primitive contributes the frame (placement, blockquote, citation, and the record-of-what-shipped closer) and never invents the substance
+- [x] AC17: `supersedes:` holds a list of feature slugs, so one spec may supersede several in a single declaration
+- [x] AC18: A second supersession annotation on an already-annotated spec accumulates rather than replacing the existing one, and the newest is placed first
+- [x] AC24: A supersession naming a spec that is not `done` is accepted rather than refused, with consolidation named as the likelier outcome and the reason stated
+- [x] AC25: `/{project}:consolidate` is installed into adopter projects by the bootstrap, and its documentation identifies it as the only command that removes a durable artifact
+- [x] AC26: Consolidation names every spec whose `supersedes:` points at the source and offers re-point, drop, or cancel, defaulting to none of them
+- [x] AC27: Consolidation names the specs the source itself superseded, whose annotations cite a spec the removal will delete
+- [x] AC28: No `supersedes:` edge is re-pointed without the operator settling it, and consolidation is never refused on the presence of such an edge alone
+- [x] AC29: The reciprocity check reports its coverage as bounded to declared `supersedes:` edges, so a corpus of undeclared supersessions is never reported as clean
+- [x] AC33: A retroactive supersession is declared through its own command over two existing specs, not through a flag on a single-spec command
+- [x] AC34: The README states which commands write to one spec and which write to two, and places `fold`, `consolidate`, and `supersede` in the two-spec group
+- [x] AC38: The frontmatter schema documents `supersedes:` as a hand-authored list, distinct from the generated `dependencies:` and `references:` indexes that must not be edited by hand
+- [x] AC39: Spec 051's account of `retire-feature`'s sequential-form refusal is updated to record that this spec relaxes it for an explicitly targeted consolidation
+- [x] AC40: A supersession can be declared over two specs that already exist, producing the same `supersedes:` key and reciprocal annotation as a declaration made at creation, with no dependency on reconciliation
+- [x] AC41: A spec that receives only the supersession annotation keeps whatever status it already had, at any lifecycle state — the write is mechanical and takes no back-edge
+- [x] AC42: Consolidation destroys the source spec's scenarios with its directory and migrates none of them to the target, and the confirmation names the scenarios specifically rather than only naming content
+- [x] AC43: Re-declaring an already-declared supersession adds no second `supersedes:` entry and writes no second annotation for the same superseding spec
+- [x] AC44: An interrupted declaration or consolidation converges when re-run, each step reporting an already-applied outcome as a domain result rather than a failure
+- [x] AC45: A declaring command writes no markdown link to the superseded spec into the superseding spec's body, and `derive-dependencies` derives no edge from the superseding spec to the superseded one
 
 ## Open Questions
 
