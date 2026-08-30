@@ -1,9 +1,9 @@
 ---
-status: in-progress
+status: done
 dependencies: [026-framework-self-audit]
 review:
-  last-run: 2026-08-17T02:24:23Z
-  reviewed-against: 11ff132d453c829246d6b9394ec862603a60b0d6
+  last-run: 2026-08-30T14:57:14Z
+  reviewed-against: d1c56d429153541bbdbb6111eaaca8db9968245f
   must-violations: 0
   should-violations: 0
   low-confidence: 0
