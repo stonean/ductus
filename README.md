@@ -177,7 +177,7 @@ That number is scaffolding, not a home. `/fold` is how you take it down: run it 
 
 **The reference cleanup is the point, not a side effect.** Deleting a spec directory by hand is easy; what is hard is that every inbound pointer into it — sibling body links, scenario links a tier deeper, and the `dependencies:` edges derived from them — is now dead, and nothing in a plain `rm -rf` tells you so. `/consolidate` re-points all of them at the target *before* it removes anything, which is what the constitution's **no dead references in live artifacts** rule requires and what `rm -rf` cannot give you. The pre-commit hook's corpus-wide link check is the backstop if anything is missed.
 
-It confirms before acting, naming the source's scenarios individually, because it **migrates no content** — it does not verify that the new spec covers what the old one said. Read the source once before you confirm. Recovery is git history. Two specs.
+It confirms before acting, naming the source's scenarios individually, because it **migrates no content** — it does not verify that the new spec covers what the old one said, and deliberately does not try to. If you want that check, ask your agent to compare the two specs before you confirm; that is a question an agent answers well and a poor fit for a flag. Recovery is git history. Two specs.
 
 Reach for `/supersede` instead when the old spec *did* ship and you want the record kept: that spec stays on disk, annotated with what no longer holds.
 
