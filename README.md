@@ -77,7 +77,7 @@ Each entry below leads with **when you would reach for it**, because several of 
 - **Destructive — these remove content**
   - [`/prune`](#prune--spent-task-sections-in-one-tasksmd) — `tasks.md` is a changelog of finished work
   - [`/fold`](#fold--the-branch-scoped-staging-directory-after-migrating-its-content) — a branch-scoped spec has merged and needs its durable home
-  - [`/consolidate`](#consolidate--an-entire-spec-directory) — a spec was never really a separate concern
+  - [`/consolidate`](#consolidate--an-entire-spec-directory) — one spec replaces another; re-point every reference, then remove the old one
 - **Brownfield — absorb existing reality**
   - [`/log`](#log--one-raw-line-in-specsinboxmd) — noticed something, do not want to derail
   - [`/groom`](#groom--every-inbox-item-routed-to-its-real-home) — the inbox has accumulated
@@ -170,7 +170,16 @@ That number is scaffolding, not a home. `/fold` is how you take it down: run it 
 
 `spec.md`, its scenarios, plan, tasks, and review.
 
-**Reach for it when an old spec was never really a separate concern** — it overlapped a sibling from the start, or it duplicates one you have since written. It re-points every inbound pointer at the target first, so nothing is left dangling, then removes the source. Recovery is git history. Two specs.
+**Reach for it when one spec replaces another and you want only the new one left.** Two triggers lead here:
+
+- **The feature was redefined or dropped, and a new spec took its place.** The old spec is not a historical record of something that shipped — it is a description of a thing that no longer exists in that form, and keeping it means readers keep finding it.
+- **The old spec was never really a separate concern.** It overlapped a sibling from the start, or duplicates one you have since written.
+
+**The reference cleanup is the point, not a side effect.** Deleting a spec directory by hand is easy; what is hard is that every inbound pointer into it — sibling body links, scenario links a tier deeper, and the `dependencies:` edges derived from them — is now dead, and nothing in a plain `rm -rf` tells you so. `/consolidate` re-points all of them at the target *before* it removes anything, which is what the constitution's **no dead references in live artifacts** rule requires and what `rm -rf` cannot give you. The pre-commit hook's corpus-wide link check is the backstop if anything is missed.
+
+It confirms before acting, naming the source's scenarios individually, because it **migrates no content** — it does not verify that the new spec covers what the old one said. Read the source once before you confirm. Recovery is git history. Two specs.
+
+Reach for `/supersede` instead when the old spec *did* ship and you want the record kept: that spec stays on disk, annotated with what no longer holds.
 
 > **This is the only one of the three that removes a durable artifact.** The other two remove something that was never meant to last: `tasks.md` sections are ephemeral work-tracking, and a branch-scoped directory is a staging form whose content `/fold` has just migrated into its durable home. Consolidation is different in kind — it **migrates nothing**. The guard proves the target exists, never that anything actually landed there, so the confirmation names the content you are losing, scenario by scenario, rather than merely naming the directory. Reach for `/supersede` instead whenever the earlier spec actually delivered something: that spec is the record of what shipped, and consolidating it would invert the relationship.
 
