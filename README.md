@@ -62,7 +62,33 @@ You don't have to start at `draft`. A brownfield feature can enter with a sparse
 
 Adoption installs a full set of verb-named, session-aware commands. Use `/target` to switch the working feature; `/specify` creates one and targets it automatically.
 
-Each entry below leads with **when you would reach for it**, because several of these exist for a specific situation that is hard to guess from the name.
+Each entry below leads with **when you would reach for it**, because several of these exist for a specific situation that is hard to guess from the name. At a glance:
+
+- **Pipeline — advance state**
+  - [`/specify`](#specify--a-new-feature-spec-targeted-for-the-session) — new work, no spec covers it
+  - [`/clarify`](#clarify--open-questions-resolved-and-the-spec-advanced-to-clarified) — open questions stand between you and planning
+  - [`/plan`](#plan--technical-decisions-affected-files-and-an-ordered-task-list) — the spec is settled; what does it touch?
+  - [`/implement`](#implement--the-code-and-the-specs-move-to-in-progress-then-done) — write the code
+  - [`/review`](#review--reviewmd-and-a-hold-on-done-while-violations-stand) — before you call it done
+  - [`/analyze`](#analyze--a-report-of-where-a-features-own-artifacts-disagree) — something is out of sync and you want to know what
+- **Refine — adjust a spec's artifacts**
+  - [`/amend`](#amend--a-question-or-scenario-recorded-with-the-lifecycle-back-edge-taken) — a question or behavior surfaced against a spec that moved on
+  - [`/supersede`](#supersede--the-supersedes-key-on-one-spec-the-annotation-on-the-other) — a later spec countered an earlier one
+- **Destructive — these remove content**
+  - [`/prune`](#prune--spent-task-sections-in-one-tasksmd) — `tasks.md` is a changelog of finished work
+  - [`/fold`](#fold--the-branch-scoped-staging-directory-after-migrating-its-content) — a branch-scoped spec has merged and needs its durable home
+  - [`/consolidate`](#consolidate--an-entire-spec-directory) — a spec was never really a separate concern
+- **Brownfield — absorb existing reality**
+  - [`/log`](#log--one-raw-line-in-specsinboxmd) — noticed something, do not want to derail
+  - [`/groom`](#groom--every-inbox-item-routed-to-its-real-home) — the inbox has accumulated
+- **Orient**
+  - [`/target`](#target--the-sessions-working-feature) — switch the working feature
+  - [`/status`](#status--the-pipeline-view-of-every-feature) — where is everything?
+  - [`/link`](#link--a-registered-sibling-service-so-cross-service-references-resolve) — a spec here relates to one in another service's repo
+  - [`/help`](#help--the-command-reference-generated-from-what-is-installed) — which command does what?
+- **Bootstrap — one-time per project**
+  - [`/ductus`](#ductus--the-framework-installed-or-updated-in-this-project) — adopt or update the framework
+  - [`/configure`](#configure--agent-permissions-for-the-ductus-commands) — stop the permission prompts
 
 ### Pipeline — advance state
 
