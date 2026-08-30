@@ -112,9 +112,9 @@ Runtime first, then the command surfaces that call it, then documentation, then 
 
 ## 13. Update the README
 
-- [ ] Add both commands to the command tables
-- [ ] Add the one-spec/two-spec distinction, placing `fold`, `consolidate`, and `supersede` in the two-spec group
-- [ ] Mark `/{project}:consolidate` as the only command that removes a durable artifact
+- [x] Add both commands to the command tables
+- [x] Add the one-spec/two-spec distinction, placing `fold`, `consolidate`, and `supersede` in the two-spec group
+- [x] Mark `/{project}:consolidate` as the only command that removes a durable artifact
 
 - **Done when**: the README documents both new commands and states the distinction that explains why they are commands rather than flags.
 

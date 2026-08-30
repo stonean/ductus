@@ -75,10 +75,17 @@ Adoption installs a full set of verb-named, session-aware commands. Use `/target
 
 ### Refine — adjust a spec's artifacts
 
+**Commands split on how many specs they write, and that is what decides whether a capability is a flag or a command of its own.** `/amend`, `/prune`, `/clarify`, `/plan` and `/implement` each write **one** spec, and each declares that single-spec scope. `/fold`, `/supersede` and `/consolidate` write **two**, so none of them fits inside a single-spec command as a flag — widening one to accommodate a two-spec operation qualifies every statement it makes about its own scope. That is why `--supersedes` is a flag on `/specify` (which is writing the spec anyway) while a *retroactive* supersession is `/supersede`, and why `/fold` gains no `--into`.
+
 | Command | Purpose |
 | --- | --- |
-| `/amend` | Add a question or scenario to the targeted spec. Owns the lifecycle back-edges (a new question reopens to `draft`; a new scenario reopens a `done` spec to `in-progress`) |
-| `/prune` | Reduce the target's `tasks.md` — drop spent (completed) task sections, or `--reset` to template state. Confirmed, single-artifact; recovery is git history |
+| `/amend` | Add a question or scenario to the targeted spec. Owns the lifecycle back-edges (a new question reopens to `draft`; a new scenario reopens a `done` spec to `in-progress`). One spec |
+| `/prune` | Reduce the target's `tasks.md` — drop spent (completed) task sections, or `--reset` to template state. Confirmed, single-artifact; recovery is git history. One spec |
+| `/fold` | Fold a branch-scoped spec into the upstream spec its `folds-into:` names, re-point every inbound pointer, and retire the staging directory. Two specs |
+| `/supersede` | Record that one spec counters another: the `supersedes:` key on the superseding spec, and the reciprocal annotation on the spec it counters. The earlier spec stays, annotated, as the record of what shipped. Two specs |
+| `/consolidate` | Merge a spec into another and remove its directory, re-pointing every inbound pointer first. Two specs |
+
+> **`/consolidate` is the only command that removes a durable artifact.** `/prune` destroys `tasks.md`, which the framework classes as ephemeral work-tracking; `spec.md` is a durable source of truth, and consolidation deletes it along with the scenarios, plan, tasks, and review in its directory. It migrates nothing — the guard proves the target exists, never that anything landed there — so the confirmation names content loss rather than directory removal, and recovery is git history alone. Reach for `/supersede` instead whenever the earlier spec actually delivered something: that spec is the record of what shipped, and consolidating it would invert the relationship.
 
 ### Brownfield — absorb existing reality
 
