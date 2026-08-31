@@ -293,3 +293,9 @@ Runtime half of [049's rename](../049-rename-govern-to-ductus/spec.md): the per-
 - [x] Implement the behavior described in `scenarios/adopter-corpus-link-integrity.md`
 
 - **Done when**: A runtime primitive reports every relative markdown link in the spec corpus that resolves to nothing, the adopter pre-commit hook invokes it, an unreadable listing is reported as a finding rather than a clean pass, and inline code spans are stripped so documentation describing link syntax produces no false positives.
+
+## 105. Decide whether constitution excerpts ship as Skills resources
+
+- [ ] Implement the behavior described in `scenarios/constitution-excerpts-as-skill-resources.md`
+
+- **Done when**: The scenario's three open questions are resolved, and either the chosen shape is implemented with the parity test and the measurement the scenario requires, or the scenario records that the inlined array stands and the task closes as a decision.
