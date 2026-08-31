@@ -2,6 +2,40 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.41.0] — 2026-08-31
+
+### Added
+
+- **`writeCode` requests say what the constitution-excerpt load could not
+  examine.** `load_constitution_excerpts` returned a bare `Vec<String>`, and
+  five states collapsed into the same value: the command file could not be
+  located, it could not be read, it declares no `Reference:` anchors, the
+  constitution could not be read, and — via a closing `filter_map` — an anchor
+  the command declared relevant resolved to nothing and was dropped from an
+  otherwise-populated array. Only the third is "examined and found nothing";
+  in the other four the host received a payload reading as "no constitutional
+  context applies" and wrote code without it, with no way to tell.
+
+  The request now carries `constitution-excerpts-unexaminable`, one entry per
+  cause (`command-file-missing:`, `command-file-unreadable:`,
+  `constitution-unreadable:`, `anchor-unresolved: §…`), omitted from the wire
+  when empty so a payload whose anchors all resolved is byte-identical to one
+  built before the field existed. It sits inside the stable cache prefix,
+  ahead of `write-boundary`, because it does not vary between tasks in one
+  walk. Labels are repo-relative: they ride in an outbound payload, and an
+  absolute path would carry the contributor's home directory with it. This is
+  `QUAL-CLAIM-001` applied to the payload bundler, the same shape `read-spec`'s
+  `scenario-files-unreadable` answers for scenarios.
+
+### Fixed
+
+- **A `Reference:` line naming one anchor twice no longer sends its excerpt
+  twice.** `parse_command_references` deduplicated with `Vec::dedup`, which
+  drops only *consecutive* repeats, so `§spec-phase, §text-first-artifacts,
+  §spec-phase` emitted the first section's body twice. Now an order-preserving
+  seen-set filter, so first-occurrence order — and with it the byte-stability
+  of the cache-anchored prefix for already-clean inputs — is unchanged.
+
 ## [0.40.0] — 2026-08-30
 
 ### Added
