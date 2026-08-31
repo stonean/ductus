@@ -26,9 +26,16 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   **Removed frontmatter key: `supersedes`.** It leaves the `Frontmatter`
   struct, so `read-spec` no longer surfaces it and `validate-frontmatter` no
   longer shape-checks it. This is a **silent** change for an adopter who has
-  written one: `validate-frontmatter` performs no unknown-key rejection, so
-  the key becomes inert YAML that reports clean rather than erroring. No
-  migration strips it, and no adopter spec content is edited.
+  written one, and silent in the safe direction — measured, not assumed:
+  `validate-frontmatter` performs no unknown-key rejection, so a spec
+  carrying the key reports `clean: true` with zero findings; `read-spec`
+  omits it from the parsed result rather than erroring; and the frontmatter
+  writers splice rather than re-serialize, so `set-status` and
+  `label-criteria` leave the key byte-for-byte intact on disk (verified
+  against a probe spec carrying `supersedes: [005-workflows,
+  019-config-decisions]`). The key becomes inert YAML the pipeline neither
+  reads nor destroys. No migration strips it, and no adopter spec content is
+  edited.
 
   Reason: supersession kept a countered spec on disk with an annotation,
   which accumulates specs that read as live but describe removed behavior.
