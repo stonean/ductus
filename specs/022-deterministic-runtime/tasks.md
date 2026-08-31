@@ -296,6 +296,14 @@ Runtime half of [049's rename](../049-rename-govern-to-ductus/spec.md): the per-
 
 ## 105. Decide whether constitution excerpts ship as Skills resources
 
-- [ ] Implement the behavior described in `scenarios/constitution-excerpts-as-skill-resources.md`
+- [x] Implement the behavior described in `scenarios/constitution-excerpts-as-skill-resources.md`
 
 - **Done when**: The scenario's three open questions are resolved, and either the chosen shape is implemented with the parity test and the measurement the scenario requires, or the scenario records that the inlined array stands and the task closes as a decision.
+
+## 106. Fix `parse_command_references` dedup — non-consecutive anchors slip through
+
+- [x] `runtime/src/interpreter/payload.rs:1290` calls `anchors.dedup()`, which removes only *consecutive* duplicates — a `Reference:` line naming the same anchor non-adjacently emits its excerpt twice into `constitution-excerpts`
+- [x] Replace with an order-preserving dedup (a seen-set retain), keeping first-occurrence order so the cache-anchored prefix stays byte-stable for unchanged inputs
+- [x] Add a unit test covering a `Reference:` line with a non-adjacent repeat
+
+- **Done when**: `parse_command_references` returns each anchor once regardless of position, first-occurrence order is preserved, and a unit test pins the non-adjacent-repeat case.

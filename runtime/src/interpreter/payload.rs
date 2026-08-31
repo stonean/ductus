@@ -27,6 +27,7 @@
 
 #![allow(clippy::expect_used)]
 
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
@@ -1292,11 +1293,17 @@ pub fn parse_command_references(command_content: &str) -> Vec<String> {
         if !trimmed.starts_with("Reference:") {
             continue;
         }
-        let mut anchors: Vec<String> = anchor_re
+        let mut seen = HashSet::new();
+        // Order-preserving dedup: `Vec::dedup` drops only *consecutive*
+        // repeats, so a `Reference:` line naming one anchor twice with
+        // another between them emitted its excerpt twice. First-occurrence
+        // order is kept so the cache-anchored prefix stays byte-stable for
+        // inputs that were already duplicate-free.
+        let anchors: Vec<String> = anchor_re
             .captures_iter(trimmed)
             .map(|c| c[1].to_string())
+            .filter(|anchor| seen.insert(anchor.clone()))
             .collect();
-        anchors.dedup();
         return anchors;
     }
     Vec::new()
@@ -1499,6 +1506,18 @@ mod tests {
                 "pipeline-boundaries".to_string(),
                 "text-first-artifacts".to_string()
             ]
+        );
+    }
+
+    #[test]
+    fn parse_command_references_dedups_non_adjacent_repeats() {
+        let cmd = "## Scope Boundaries\n\n\
+                   - Reference: \u{a7}spec-phase, \u{a7}text-first-artifacts, \u{a7}spec-phase.\n";
+        let anchors = parse_command_references(cmd);
+        assert_eq!(
+            anchors,
+            vec!["spec-phase".to_string(), "text-first-artifacts".to_string()],
+            "a repeated anchor must be emitted once, in first-occurrence order"
         );
     }
 
