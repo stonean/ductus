@@ -316,3 +316,15 @@ Opened by [048](../048-govern-acquired-runtime/spec.md)'s AC10 adopter runs, whi
 - [x] Implement the behavior described in `scenarios/link-check-consolidation.md`
 
 - **Done when**: Family 26 and `check-corpus-links` resolve links through one implementation with the two subjects stated, a root-absolute target resolves against the repository root on both, the family's examined-file count has not dropped, and Family 33's token-recognition constraint is stated where an author meets it.
+
+### 38. Family 34 — step-reference integrity
+
+- [x] Implement the behavior described in `scenarios/family-34-step-reference-integrity.md`
+- [x] Implement the check as the `check-step-references` runtime primitive, per the suite's primitives-first contract, with `scripts/audit/step-reference-integrity.sh` as the thin entry point
+- [x] Report three findings separately: a reference outside the file's step set, a step referring to its own number, and discontinuous numbering — and state, in the family header and both registries, that a reference renumbering shifted onto a different *existing* step is out of reach
+- [x] Fail closed on an empty extraction from a file that has an Instructions section, matching Families 17, 18, 23, and 28
+- [x] Scope the subject to the Instructions section, count out-of-subject mentions rather than resolving them, and exclude files holding several numbered lists rather than one procedure
+- [x] Register it in `scripts/audit/run-all.sh`, `framework/commands/audit.md`, and `scripts/audit/README.md` §Scripts — the three lists Family 28 holds together
+- [x] Prove it fails before keeping it: reintroduce one of the four stale references spec 054 fixed and confirm the family turns red
+
+- **Done when**: the family reports each of the three finding types, fails closed on an empty extraction, appears in all three registries Family 28 checks, and has been proven to fail on a deliberately reintroduced stale reference.

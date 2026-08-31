@@ -12,17 +12,17 @@ use ductus::primitives;
 use ductus::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, CheckArtifactsArgs,
     CheckCommandFlagsArgs, CheckCorpusLinksArgs, CheckOrphanedReferencesArgs,
-    CheckReviewAgreementArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStuckArgs,
-    CheckUnfoldedSpecsArgs, ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs,
-    CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs,
-    DeriveReferencesArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs,
-    EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs,
-    InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
-    MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs, ProcessWaiversArgs,
-    PruneTasksArgs, ReadSpecArgs, ReadSupersessionPairArgs, ReadTasksArgs, RemoveInboxItemArgs,
+    CheckReviewAgreementArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs,
+    CheckStuckArgs, CheckUnfoldedSpecsArgs, ComputeReviewScopeArgs, CreateFeatureArgs,
+    CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs,
+    DeriveDependenciesArgs, DeriveReferencesArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs,
+    DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs,
+    GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs,
+    MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs,
+    ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RemoveInboxItemArgs,
     ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs, RetireFeatureArgs,
     RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
-    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs, WriteSupersessionAnnotationArgs,
+    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -67,7 +67,6 @@ enum Command {
 
     /// Parse spec frontmatter and body sections.
     ReadSpec(ReadSpecArgs),
-    ReadSupersessionPair(ReadSupersessionPairArgs),
     /// Parse `tasks.md` into a structured task list.
     ReadTasks(ReadTasksArgs),
     /// Validate frontmatter shape against the pipeline schema.
@@ -145,6 +144,7 @@ enum Command {
     CheckOrphanedReferences(CheckOrphanedReferencesArgs),
     /// Report flags a command's Flags table documents but its `argument-hint` omits.
     CheckCommandFlags(CheckCommandFlagsArgs),
+    CheckStepReferences(CheckStepReferencesArgs),
     /// Report specs whose frontmatter `review:` block disagrees with their own review.md.
     CheckReviewAgreement(CheckReviewAgreementArgs),
     /// Report branch-scoped specs still in the tree, with the upstream spec each folds into.
@@ -154,7 +154,6 @@ enum Command {
     /// Remove a folded branch-scoped feature directory, guarded on its fold target existing.
     RetireFeature(RetireFeatureArgs),
     /// Record on a superseded spec that a later spec countered it.
-    WriteSupersessionAnnotation(WriteSupersessionAnnotationArgs),
     /// Reset a spec's review block to the un-reviewed state, so the pre-done gate demands a fresh review.
     InvalidateReview(InvalidateReviewArgs),
     /// Regenerate every spec's frontmatter `dependencies:` from its body links; report cycles.
@@ -618,9 +617,6 @@ fn main() -> ExitCode {
             run_parse(&path, check)
         }
         Command::ReadSpec(args) => emit_result(primitives::read_spec::run(&args, &repo)),
-        Command::ReadSupersessionPair(args) => {
-            emit_result(primitives::read_supersession_pair::run(&args, &repo))
-        }
         Command::ReadTasks(args) => emit_result(primitives::read_tasks::run(&args, &repo)),
         Command::ValidateFrontmatter(args) => {
             emit_result(primitives::validate_frontmatter::run(&args, &repo))
@@ -718,6 +714,9 @@ fn main() -> ExitCode {
         Command::CheckCommandFlags(args) => {
             emit_result(primitives::check_command_flags::run(&args, &repo))
         }
+        Command::CheckStepReferences(args) => {
+            emit_result(primitives::check_step_references::run(&args, &repo))
+        }
         Command::CheckReviewAgreement(args) => {
             emit_result(primitives::check_review_agreement::run(&args, &repo))
         }
@@ -728,9 +727,6 @@ fn main() -> ExitCode {
             emit_result(primitives::rewrite_spec_links::run(&args, &repo))
         }
         Command::RetireFeature(args) => emit_result(primitives::retire_feature::run(&args, &repo)),
-        Command::WriteSupersessionAnnotation(args) => {
-            emit_result(primitives::write_supersession_annotation::run(&args, &repo))
-        }
         Command::InvalidateReview(args) => {
             emit_result(primitives::invalidate_review::run(&args, &repo))
         }

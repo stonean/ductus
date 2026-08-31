@@ -12,7 +12,7 @@ Commands are **session-aware**: `/target` sets the feature the others act on, an
 
 Before scaffolding anything it checks whether an existing spec already owns the work, because a duplicate spec is the one mistake here that is expensive to undo. It takes a rich description or a one-line sketch — sparse brownfield input is expected, not merely tolerated.
 
-Flags: `--branch` / `--branch-id <id>` with `--fold-into <feature>` create the branch-scoped form (see `/fold`), and `--supersedes <feature>` records that this spec counters an existing one.
+Flags: `--branch` / `--branch-id <id>` with `--fold-into <feature>` create the branch-scoped form (see `/fold`).
 
 ### `/clarify` — open questions resolved, and the spec advanced to `clarified`
 
@@ -44,21 +44,13 @@ Unlike `/review`, it audits artifacts against *each other* rather than against c
 
 ## Refine — adjust a spec's artifacts
 
-**Commands split on how many specs they write, and that is what decides whether a capability is a flag or a command of its own.** `/amend`, `/prune`, `/clarify`, `/plan` and `/implement` each write **one** spec, and each declares that single-spec scope. `/fold`, `/supersede` and `/consolidate` write **two**, so none of them fits inside a single-spec command as a flag — widening one to accommodate a two-spec operation qualifies every statement it makes about its own scope. That is why `--supersedes` is a flag on `/specify` (which is writing the spec anyway) while a *retroactive* supersession is `/supersede`, and why `/fold` gains no `--into`.
+**Commands split on how many specs they write, and that is what decides whether a capability is a flag or a command of its own.** `/amend`, `/prune`, `/clarify`, `/plan` and `/implement` each write **one** spec, and each declares that single-spec scope. `/fold` and `/consolidate` write **two**, so neither fits inside a single-spec command as a flag — widening one to accommodate a two-spec operation qualifies every statement it makes about its own scope. That is why `/fold` gains no `--into`.
 
 ### `/amend` — a question or scenario recorded, with the lifecycle back-edge taken
 
 **Reach for it when a question or a new behavior surfaces against a spec that has already moved on.**
 
 It takes the back-edge for you: a new question reopens the spec to `draft`, a new scenario reopens a `done` spec to `in-progress`. A spec's status never quietly disagrees with its content. One spec.
-
-### `/supersede` — the `supersedes:` key on one spec, the annotation on the other
-
-**Reach for it when a later spec countered an earlier one and nothing records that.**
-
-Without a marker, a reader — human or agent — cannot tell a live decision from one that was overturned, and the reflex is to delete the stale spec, which strands every pointer into it. This writes the key on the newer spec and a reciprocal annotation on the older one naming what no longer holds.
-
-The earlier spec **stays**, annotated, as the record of what shipped. Use `/specify --supersedes` instead when you are writing the countering spec right now. Two specs.
 
 ## Destructive — these remove content
 
@@ -93,9 +85,9 @@ That number is scaffolding, not a home. `/fold` is how you take it down: run it 
 
 It confirms before acting, naming the source's scenarios individually, because it **migrates no content** — it does not verify that the new spec covers what the old one said, and deliberately does not try to. If you want that check, ask your agent to compare the two specs before you confirm; that is a question an agent answers well and a poor fit for a flag. Recovery is git history. Two specs.
 
-Reach for `/supersede` instead when the old spec *did* ship and you want the record kept: that spec stays on disk, annotated with what no longer holds.
+Reach for it only when the source spec no longer describes anything true. A spec that still describes live behavior is edited in place instead, through the `done → in-progress` back-edge.
 
-> **This is the only one of the three that removes a durable artifact.** The other two remove something that was never meant to last: `tasks.md` sections are ephemeral work-tracking, and a branch-scoped directory is a staging form whose content `/fold` has just migrated into its durable home. Consolidation is different in kind — it **migrates nothing**. The guard proves the target exists, never that anything actually landed there, so the confirmation names the content you are losing, scenario by scenario, rather than merely naming the directory. Reach for `/supersede` instead whenever the earlier spec actually delivered something: that spec is the record of what shipped, and consolidating it would invert the relationship.
+> **This is the only one of the three that removes a durable artifact.** The other two remove something that was never meant to last: `tasks.md` sections are ephemeral work-tracking, and a branch-scoped directory is a staging form whose content `/fold` has just migrated into its durable home. Consolidation is different in kind — it **migrates nothing**. The guard proves the target exists, never that anything actually landed there, so the confirmation names the content you are losing, scenario by scenario, rather than merely naming the directory.
 
 ## Brownfield — absorb existing reality
 

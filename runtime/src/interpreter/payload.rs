@@ -38,11 +38,10 @@ use serde_json::{Map, Value};
 use crate::host::Host;
 use crate::primitives::read_tasks;
 use crate::schema::extensions::{
-    AskClarifyQuestionRequest, AssessSpecQualityRequest, AssessSpecQualityRule,
-    CLAIM_CLASSIFICATIONS, ClarifyQuestion, ClassifyClaimsRequest, FoldSourceScenario,
-    PerformReviewRequest, PlanRelevantFile, ReviewRuleFile, ReviewScopeFile, RouteFoldRequest,
-    RouteInboxItemRequest, RouteInboxSpec, SupersededClaim, VerifyCriteriaRequest, VerifyCriterion,
-    WriteCodeRequest, WriteCodeTask, WriteSpecBodyRequest,
+    AskClarifyQuestionRequest, AssessSpecQualityRequest, AssessSpecQualityRule, ClarifyQuestion,
+    FoldSourceScenario, PerformReviewRequest, PlanRelevantFile, ReviewRuleFile, ReviewScopeFile,
+    RouteFoldRequest, RouteInboxItemRequest, RouteInboxSpec, VerifyCriteriaRequest,
+    VerifyCriterion, WriteCodeRequest, WriteCodeTask, WriteSpecBodyRequest,
 };
 use crate::schema::primitives::ReadTasksArgs;
 
@@ -166,7 +165,6 @@ pub fn build_extension_request(
         "askClarifyQuestion" => Ok(build_ask_clarify_question_request(context, repo)),
         "routeInboxItem" => Ok(build_route_inbox_item_request(context, repo)),
         "routeFold" => Ok(build_route_fold_request(context, repo)),
-        "classifyClaims" => Ok(build_classify_claims_request(context, repo)),
         "verifyCriteria" => Ok(build_verify_criteria_request(context, repo)),
         other => Err(PayloadError::UnknownExtension {
             identifier: other.to_string(),
@@ -680,87 +678,6 @@ fn build_route_fold_request(context: &Map<String, Value>, repo: &Path) -> Value 
         target_status,
         target_sections,
         routes: FOLD_ROUTES.iter().map(ToString::to_string).collect(),
-    };
-    typed_only(&typed)
-}
-
-/// Build the `classifyClaims` request from the declared pair.
-///
-/// The read is `read-supersession-pair`'s, so the bound on *what may be
-/// looked at* is enforced before this request exists rather than trusted to
-/// the classifier: there is no field here by which a plan, a data model, or a
-/// third spec could reach the host.
-///
-/// Claims come from the superseded spec's criteria, its body sections, and
-/// its scenarios — in that order, which is body order then scenario order, so
-/// two runs over one pair present the same list.
-fn build_classify_claims_request(context: &Map<String, Value>, repo: &Path) -> Value {
-    let specs_root = crate::schema::paths::Paths::load(repo).specs_root;
-    let superseded = context
-        .get("feature")
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .to_string();
-    let superseding = context
-        .get("superseded-by")
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .to_string();
-
-    let args = crate::schema::primitives::ReadSupersessionPairArgs {
-        feature: superseded.clone(),
-        superseded_by: superseding.clone(),
-    };
-    // A read that refuses (self-reference, traversal) yields an empty pair
-    // rather than a panic: the walker reports the empty classification and
-    // the caller sees `unreadable`/`guidance` rather than a crash.
-    let pair = crate::primitives::read_supersession_pair::run(&args, repo).unwrap_or_default();
-
-    let mut claims: Vec<SupersededClaim> = Vec::new();
-    for criterion in &pair.superseded.acceptance_criteria {
-        claims.push(SupersededClaim {
-            kind: "criterion".into(),
-            anchor: criterion
-                .label
-                .clone()
-                .unwrap_or_else(|| criterion.text.clone()),
-            text: criterion.text.clone(),
-        });
-    }
-    for section in &pair.superseded.sections {
-        if section.body.trim().is_empty() {
-            continue;
-        }
-        claims.push(SupersededClaim {
-            kind: "body-prose".into(),
-            anchor: section.heading.clone(),
-            text: section.body.clone(),
-        });
-    }
-    for scenario in &pair.scenarios {
-        claims.push(SupersededClaim {
-            kind: "scenario".into(),
-            anchor: scenario.slug.clone(),
-            text: scenario.body.clone(),
-        });
-    }
-
-    let superseding_content = if superseding.is_empty() {
-        String::new()
-    } else {
-        read_repo_file(repo, &format!("{specs_root}/{superseding}/spec.md")).unwrap_or_default()
-    };
-
-    let typed = ClassifyClaimsRequest {
-        superseded,
-        superseding,
-        superseding_content,
-        claims,
-        classifications: CLAIM_CLASSIFICATIONS
-            .iter()
-            .map(ToString::to_string)
-            .collect(),
-        unreadable: pair.unreadable,
     };
     typed_only(&typed)
 }
@@ -2905,119 +2822,13 @@ mod tests {
     }
 
     #[test]
-    fn build_classify_claims_request_carries_the_bounded_pair() {
-        let tmp = tempdir().unwrap();
-        let root = tmp.path();
-        std::fs::create_dir_all(root.join("specs/005-workflows/scenarios")).unwrap();
-        std::fs::create_dir_all(root.join("specs/043-sunset")).unwrap();
-        std::fs::write(
-            root.join("specs/005-workflows/spec.md"),
-            concat!(
-                "---\nstatus: done\ndependencies: []\n---\n\n# 005\n\nLead.\n\n",
-                "## Behavior\n\nIt scaffolds files.\n\n",
-                "## Acceptance Criteria\n\n- [x] AC1: Files are scaffolded\n",
-            ),
-        )
-        .unwrap();
-        std::fs::write(
-            root.join("specs/005-workflows/scenarios/one.md"),
-            "---\nsection: \"Behavior\"\n---\n\n# One\n\nA scenario claim.\n",
-        )
-        .unwrap();
-        std::fs::write(
-            root.join("specs/043-sunset/spec.md"),
-            "---\nstatus: done\ndependencies: []\n---\n\n# 043\n\nRemoves the scaffolding.\n",
-        )
-        .unwrap();
-
-        let mut ctx = Map::new();
-        ctx.insert("feature".into(), Value::String("005-workflows".into()));
-        ctx.insert("superseded-by".into(), Value::String("043-sunset".into()));
-
-        let request =
-            build_extension_request("classifyClaims", &ctx, root, "supersede", "").unwrap();
-
-        assert_eq!(request["superseded"], "005-workflows");
-        assert_eq!(request["superseding"], "043-sunset");
-        assert!(
-            request["superseding-content"]
-                .as_str()
-                .unwrap()
-                .contains("Removes the scaffolding")
-        );
-
-        let kinds: Vec<&str> = request["claims"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|c| c["kind"].as_str().unwrap())
-            .collect();
-        // Body order then scenario order, so two runs present the same list.
-        assert_eq!(
-            kinds,
-            vec!["criterion", "body-prose", "body-prose", "scenario"]
-        );
-        assert_eq!(request["claims"][0]["anchor"], "AC1");
-
-        let vocab: Vec<&str> = request["classifications"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|c| c.as_str().unwrap())
-            .collect();
-        assert_eq!(
-            vocab,
-            vec![
-                "superseded",
-                "still-standing",
-                "conflicting",
-                "unclassified"
-            ]
-        );
-
-        // Nothing outside the declared pair can reach the host through this
-        // payload — there is no field for a plan, a data model, or a tasks
-        // file, which is the read bound expressed as a shape.
-        let obj = request.as_object().unwrap();
-        for absent in ["plan", "plan-content", "data-model", "tasks", "sources"] {
-            assert!(!obj.contains_key(absent), "unexpected field {absent}");
-        }
-    }
-
-    #[test]
-    fn build_classify_claims_request_reports_what_it_could_not_read() {
-        let tmp = tempdir().unwrap();
-        let root = tmp.path();
-        std::fs::create_dir_all(root.join("specs/005-workflows")).unwrap();
-        std::fs::write(
-            root.join("specs/005-workflows/spec.md"),
-            "---\nstatus: done\ndependencies: []\n---\n\n# 005\n\n## Acceptance Criteria\n\n- [x] AC1: A claim\n",
-        )
-        .unwrap();
-
-        let mut ctx = Map::new();
-        ctx.insert("feature".into(), Value::String("005-workflows".into()));
-        ctx.insert("superseded-by".into(), Value::String("043-missing".into()));
-
-        let request =
-            build_extension_request("classifyClaims", &ctx, root, "supersede", "").unwrap();
-        let unreadable: Vec<&str> = request["unreadable"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|u| u.as_str().unwrap())
-            .collect();
-        assert_eq!(unreadable, vec!["specs/043-missing/spec.md"]);
-    }
-
-    #[test]
     fn an_unknown_extension_identifier_still_errors() {
         // The registry stays closed. A typo'd marker must not silently
         // produce an empty request the host then answers about nothing.
         let tmp = tempdir().unwrap();
         let ctx = Map::new();
         assert!(
-            build_extension_request("classifyClaimz", &ctx, tmp.path(), "supersede", "").is_err()
+            build_extension_request("classifyClaimz", &ctx, tmp.path(), "consolidate", "").is_err()
         );
     }
 }

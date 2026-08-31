@@ -1,8 +1,8 @@
 ---
 spec: 026-framework-self-audit
-reviewed-at: 2026-08-30T21:46:46Z
-reviewed-against: fd2501ab6c105ab12070e2c56543e8812f33e5f3
-diff-base: 2818a378784f5b364dec93d6cd6d5031711f390e
+reviewed-at: 2026-08-31T01:15:00Z
+reviewed-against: 8cee61afec3b5fcd0c7767a0e342ec9dff55f8fc
+diff-base: 2b885326a1125ebbd5515420039bb5d74152014c
 must-violations: 0
 should-violations: 0
 low-confidence: 0
@@ -14,19 +14,21 @@ skipped-passes: []
 
 ## Summary
 
-Incremental review over the `link-check-consolidation` scenario and its implementation: the `LinkScope` argument on `check-corpus-links`, the git-index enumeration, the scope-dependent exclusions, Family 26 rewritten as an entry point, and Family 33's documented token constraint. The spec's earlier surface is unchanged since the previous review and is not re-examined.
+Review of Family 34 — step-reference integrity, the family added to this spec by spec 054's captured observation. Zero MUST violations, zero SHOULD violations, zero low-confidence findings, not blocking.
 
-All five passes ran. One defect was found and fixed rather than recorded, and it was found by the audit rather than by reading.
+**Built as a primitive, which the suite's own contract required.** `scripts/audit/README.md` states that a deterministic, mechanical check belongs in the runtime and that reaching for an embedded `python3` heredoc to parse markdown structure is the signal a check took the fallback without earning it. This one parses markdown structure, so it is `check-step-references` with `step-reference-integrity.sh` as the thin entry point — the Family 30/31 shape. The scenario's task list originally said "deriving ... in the script", which contradicted that contract and was corrected rather than followed.
 
-The **security-adjacent** finding is the one worth naming: the consolidation hardcoded `.claude/` as an exclusion prefix in runtime source. That is correct for exactly one of the four hosts ductus ships to — every Auggie, Antigravity, and OpenCode adopter would have had their generated command copies examined, and those copies' links are broken *by construction* because the generator changes their depth without rewriting them. The result would have been a corpus-wide check reporting defects an adopter has no way to fix, in the file the adopter is told to trust. Resolved from `Host::load` instead (`fd2501a`). Family 13 exists for precisely this regression and caught it on the first full audit run; the test fixture is now assembled rather than written as a literal so it cannot re-trip the family it just proved.
+**The important property is what it declines to claim.** Of the four stale references that motivated the family, it catches one. Renumbering shifts a reference onto a *different existing* step — after 054's removals `specify.md` still had a step 6 and `consolidate.md` still had a step 4 — so three of the four resolve, to the wrong step. Only the self-reference is reachable without knowing what each step does. Closing that gap would mean matching prose against step content, a heuristic that fires falsely on correct references, and 045 already set the standard there in rejecting the criterion-supersession check at 455 pairs: a family that fires falsely is worse than the silence it replaces. The one-of-four bound is stated in the scenario, the primitive's header, the script's header, `audit.md`, and this suite's README — five places, because the failure mode being guarded against is a reader concluding the family covers the incident that produced it.
 
-The reuse pass is what the change answers rather than raises. Two implementations of one rule had already diverged once — the primitive resolving a root-absolute target against the repository root while the family resolved it against the filesystem root — and delegation makes that divergence impossible rather than repaired.
+**Subject bounds are measured, not asserted.** 19 files examined, 15 carrying one procedure. `amend.md` restarts numbering under each `###` subsection and `status.md` uses three separate one-item lists; both are legitimate authoring, and MD029 is disabled for these files so nothing pushes them to be otherwise. Merging those into one step set would have manufactured findings — the first implementation did exactly that and reported `amend.md` as discontinuous across 26 numbers, `status.md` across three, and `help.md` as an extraction failure. All three were false positives, caught before the family shipped by running it against the live corpus rather than a fixture. They are now named in `not-a-procedure` rather than examined. 96 `step N` mentions outside the Instructions section are counted, never resolved, so a clean exit is never read as *every step reference in the corpus resolves*; both counts go to stderr.
 
-The quality pass looked hardest at the subject. The scenario named the narrowing hazard in advance, and it is the failure that would not have failed anything: calling the primitive with its default scope shrinks Family 26's subject from the repository to the spec corpus, and the family goes on exiting 0 over a fraction of its files. Verified by measurement rather than reasoning — 457 examined before, 457 after — pinned by a test asserting the repository scope examines strictly more than the spec-corpus scope, and reported on stderr on every run so a future narrowing is visible rather than inferred.
+**Proven to fail before being kept**, which the task required. Reintroducing the exact self-reference 054 removed turns the family red with exit 1 and the correct message; restoring the file returns exit 0. An assertion nobody has watched fail is one nobody knows works — the same vacuity guard `AGENTS.md` requires of a new family, and the one 052's review relied on.
 
-`runtime/tests/` moved from a silent pre-filter to a counted exclusion, which is the same discipline applied to the family's own bookkeeping: `excluded-by-construction` now reads 97 rather than 27, and the files it names are stated rather than dropped.
+`QUAL-CLAIM-001` is satisfied structurally rather than by wording: `examined`, `with-steps`, `not-a-procedure`, `references-out-of-subject`, and `skipped` are distinct fields, so a caller can always tell *examined and clean* from *could not examine*. An unreachable runtime and an empty examined set are both findings.
 
-The efficiency and simplicity passes produced nothing. The git-index enumeration avoids descending into `runtime/target`, and no new primitive was added where an argument served.
+Registered in all three registries Family 28 holds together — `run-all.sh`, `audit.md`, and this suite's README — and Family 28 confirms the sets agree at 33 (families 1–2 and 4–34; Family 3 is retired). Runtime tools 69 → 70, configure files regenerated in the order `AGENTS.md` records.
+
+**Bounds on this review.** The scope is 39 paths from this spec's in-progress parent, spanning Family 34 and the worked-example substitution in `link-check-consolidation.md`. Both were examined. The 33 pre-existing families were not re-reviewed; they are unchanged by this work and carry their own history.
 
 ## MUST violations (blocking)
 

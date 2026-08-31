@@ -40,8 +40,9 @@ use crate::schema::primitives::{
     CheckArtifactsResult, CheckCommandFlagsArgs, CheckCommandFlagsResult, CheckCorpusLinksArgs,
     CheckCorpusLinksResult, CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult,
     CheckReviewAgreementArgs, CheckReviewAgreementResult, CheckReviewGateArgs,
-    CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult, CheckStuckArgs, CheckStuckResult,
-    CheckUnfoldedSpecsArgs, CheckUnfoldedSpecsResult, CheckboxToggleResult, ComputeReviewScopeArgs,
+    CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult, CheckStepReferencesArgs,
+    CheckStepReferencesResult, CheckStuckArgs, CheckStuckResult, CheckUnfoldedSpecsArgs,
+    CheckUnfoldedSpecsResult, CheckboxToggleResult, ComputeReviewScopeArgs,
     ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult, CreatePlanArtifactsArgs,
     CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult, DashboardArgs,
     DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult, DeriveDependenciesArgs,
@@ -54,14 +55,13 @@ use crate::schema::primitives::{
     MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergeManagedBlockResult,
     MergePermissionsArgs, MergePermissionsResult, MigrateSessionFileArgs, MigrateSessionFileResult,
     ProcessWaiversArgs, ProcessWaiversResult, PruneTasksArgs, PruneTasksResult, ReadSpecArgs,
-    ReadSpecResult, ReadSupersessionPairArgs, ReadSupersessionPairResult, ReadTasksArgs,
-    ReadTasksResult, RemoveInboxItemArgs, RemoveInboxItemResult, ResolveAnchorArgs,
-    ResolveAnchorResult, ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs,
-    ResolveReferencesResult, RetireFeatureArgs, RetireFeatureResult, RewriteSpecLinksArgs,
-    RewriteSpecLinksResult, RunGeneratorArgs, RunGeneratorResult, SetStatusArgs, SetStatusResult,
-    TraverseDepsArgs, TraverseDepsResult, ValidateFrontmatterArgs, ValidateFrontmatterResult,
-    WriteReviewArgs, WriteReviewResult, WriteSessionArgs, WriteSessionResult,
-    WriteSupersessionAnnotationArgs, WriteSupersessionAnnotationResult,
+    ReadSpecResult, ReadTasksArgs, ReadTasksResult, RemoveInboxItemArgs, RemoveInboxItemResult,
+    ResolveAnchorArgs, ResolveAnchorResult, ResolveFeatureArgs, ResolveFeatureResult,
+    ResolveReferencesArgs, ResolveReferencesResult, RetireFeatureArgs, RetireFeatureResult,
+    RewriteSpecLinksArgs, RewriteSpecLinksResult, RunGeneratorArgs, RunGeneratorResult,
+    SetStatusArgs, SetStatusResult, TraverseDepsArgs, TraverseDepsResult, ValidateFrontmatterArgs,
+    ValidateFrontmatterResult, WriteReviewArgs, WriteReviewResult, WriteSessionArgs,
+    WriteSessionResult,
 };
 
 /// Canonical MCP tool names exposed by the server, in manifest order —
@@ -259,19 +259,6 @@ fn node_is_numeric(map: &JsonObject) -> bool {
 
 #[tool_router]
 impl GovRuntimeServer {
-    #[tool(
-        name = "read-supersession-pair",
-        description = "Load exactly the two specs a declared supersession names, plus the superseded spec's scenarios \u{2014} the bounded read spec 053's reconciliation is built on. The ABSENT arguments are the design: there is no way to request a plan, data model, tasks file, source path, or third spec, so the read bound is a property of the code rather than a rule the caller has to remember. That bound is load-bearing \u{2014} without a declared edge to collapse the search to two specs, this is the corpus-wide criterion-supersession check that was measured at 455 pairs with 215 firing and every sample a false positive. Reading two full specs on a declared pointer's authority is not a widening: fold-back already declares the same bound. Only the SUPERSEDED spec's scenarios are read; the superseding spec's describe what it delivers, which is a different question. A spec or scenario that cannot be read is a domain outcome, not an error \u{2014} it lands in `unreadable` and is excluded from `examined`, because nothing can be proven about a file that will not parse and a read that died on one would say nothing about the files it could read. `guidance` is set when the superseded spec offers nothing to classify at all, which is examined-and-empty rather than examined-and-clean."
-    )]
-    async fn read_supersession_pair(
-        &self,
-        params: Parameters<ReadSupersessionPairArgs>,
-    ) -> Result<Json<ReadSupersessionPairResult>, String> {
-        primitives::read_supersession_pair::run(&params.0, self.repo())
-            .map(Json)
-            .map_err(|e| e.to_string())
-    }
-
     #[tool(
         name = "read-spec",
         description = "Parse spec frontmatter and body sections."
@@ -830,19 +817,6 @@ impl GovRuntimeServer {
     }
 
     #[tool(
-        name = "write-supersession-annotation",
-        description = "Write onto a **superseded** spec the annotation recording that a later spec countered it — the half of a supersession a reader actually sees, where the `supersedes:` key on the superseding spec is bookkeeping. The frame is compiled in and the substance is authored: pass what no longer holds as `substance`, and the primitive contributes placement (after the H1 and its lead paragraph, ahead of any annotation already present), the blockquote wrapper, the `**Sunset ([link]):**` citation, and the closing record-of-what-shipped sentence. A blank substance is refused — a banner naming only the superseding spec tells a reader nothing. The blockquote is structural, not stylistic: `derive-dependencies` skips blockquote-prefixed lines, so the banner links its superseding spec without the annotated spec acquiring a dependency on its own successor. The frontmatter is spliced through byte-for-byte, so the spec keeps whatever status it had at any lifecycle state — the write is a mechanical edit and takes no back-edge. An annotation already citing this superseding spec returns `already-present: true` with `written: false`, so re-running an interrupted declaration converges; an annotation from a *different* spec stacks above it, newest first."
-    )]
-    async fn write_supersession_annotation(
-        &self,
-        params: Parameters<WriteSupersessionAnnotationArgs>,
-    ) -> Result<Json<WriteSupersessionAnnotationResult>, String> {
-        primitives::write_supersession_annotation::run(&params.0, self.repo())
-            .map(Json)
-            .map_err(|e| e.to_string())
-    }
-
-    #[tool(
         name = "invalidate-review",
         description = "Reset a spec's `review:` frontmatter block to the un-reviewed state — `last-run` and `reviewed-against` nulled, counts zeroed, `blocking` cleared — so the pre-`done` gate demands a fresh review before the spec can complete. The gate's staleness check diffs the spec's durable contracts (scenarios/*.md, data-model.md); spec.md is deliberately outside that set, so a fold-back that routes content into the upstream spec's BODY moves no durable contract and leaves a review that never saw the code the fold brought with it. This is how the fold says what the diff cannot see. Waivers survive verbatim, adopter-authored extra fields included: an invalidation says the review is out of date, not that an operator's recorded judgement about a finding was withdrawn. `invalidated: false` is the domain outcome for a spec that records no current review — already in this state — so a re-run of an interrupted fold converges rather than halting."
     )]
@@ -903,6 +877,19 @@ impl GovRuntimeServer {
         params: Parameters<CheckOrphanedReferencesArgs>,
     ) -> Result<Json<CheckOrphanedReferencesResult>, String> {
         primitives::check_orphaned_references::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "check-step-references",
+        description = "Report `step N` prose references in a command file that name a numbered step the file does not have. A command numbers its Instructions steps and refers to them in prose; the numbers are the only binding, and removing a step renumbers everything after it while the prose keeps the old numbers. Three findings, because the repairs differ: `unresolved` (names a number the file lacks), `self-reference` (a step referring to its own number \u{2014} it resolves, so an existence check passes it, and it is almost always renumbering residue), and `discontinuous` (steps not running 1..n, which makes every reference after the gap ambiguous rather than wrong). Subject is the Instructions section alone: a `## Markdown-only reference` sub-procedure restarts at 1 and is a different list, so `references-out-of-subject` counts those mentions rather than resolving them, and an empty `findings` is never read as every reference in the file resolving. A qualified reference (groom\u{2019}s step 3) names another file\u{2019}s procedure and is excluded by construction. A file with an Instructions section from which no steps are extracted is a finding, not a pass \u{2014} two empty sets compare equal."
+    )]
+    async fn check_step_references(
+        &self,
+        params: Parameters<CheckStepReferencesArgs>,
+    ) -> Result<Json<CheckStepReferencesResult>, String> {
+        primitives::check_step_references::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

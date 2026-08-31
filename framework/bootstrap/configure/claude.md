@@ -74,7 +74,6 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
 
    <!-- generated:mcp-allow:start -->
    - `mcp__ductus__read-spec`
-   - `mcp__ductus__read-supersession-pair`
    - `mcp__ductus__read-tasks`
    - `mcp__ductus__mark-task`
    - `mcp__ductus__mark-criterion`
@@ -84,6 +83,7 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    - `mcp__ductus__process-waivers`
    - `mcp__ductus__compute-review-scope`
    - `mcp__ductus__write-review`
+   - `mcp__ductus__check-step-references`
    - `mcp__ductus__check-stuck`
    - `mcp__ductus__validate-frontmatter`
    - `mcp__ductus__resolve-anchor`
@@ -125,7 +125,6 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    - `mcp__ductus__check-unfolded-specs`
    - `mcp__ductus__rewrite-spec-links`
    - `mcp__ductus__retire-feature`
-   - `mcp__ductus__write-supersession-annotation`
    - `mcp__ductus__invalidate-review`
    <!-- generated:mcp-allow:end -->
 

@@ -56,22 +56,12 @@ fn routing_gate_precedes_create_feature() {
         // happen before create-feature so the sanitized identifier can be
         // previewed while nothing is on disk yet (spec 051, AC10/AC13).
         ("4", "prose"),
-        // Steps 5 and 8 are prose on purpose, for the same reason as step 4:
-        // a supersession declaration is settled with the operator (a
-        // `--supersedes` argument, or the classification offered on a routing
-        // candidate), and both are conditional on that settlement. Dispatching
-        // either unconditionally would make `ductus exec` resolve a target it
-        // was never given and annotate a spec nobody named — so on the exec
-        // path they reduce to the no-supersession line and creation behaves
-        // exactly as it does today (spec 052, AC5).
-        ("5", "prose"),
-        ("6", "primitive:create-feature"),
-        ("7", "extension:writeSpecBody"),
-        ("8", "prose"),
-        ("9", "primitive:label-criteria"),
-        ("10", "primitive:lint-markdown"),
-        ("11", "primitive:gate-confirm"),
-        ("12", "primitive:write-session"),
+        ("5", "primitive:create-feature"),
+        ("6", "extension:writeSpecBody"),
+        ("7", "primitive:label-criteria"),
+        ("8", "primitive:lint-markdown"),
+        ("9", "primitive:gate-confirm"),
+        ("10", "primitive:write-session"),
     ]
     .into_iter()
     .map(|(n, k)| (n.to_string(), k.to_string()))

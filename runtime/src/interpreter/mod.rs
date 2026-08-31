@@ -60,17 +60,17 @@ use crate::schema::extensions::{self, ValidationError, WriteCodeResponse};
 use crate::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, CheckArtifactsArgs,
     CheckCommandFlagsArgs, CheckCorpusLinksArgs, CheckOrphanedReferencesArgs,
-    CheckReviewAgreementArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStuckArgs,
-    CheckUnfoldedSpecsArgs, ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs,
-    CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs,
-    DeriveReferencesArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs,
-    EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs,
-    InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
-    MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs, ProcessWaiversArgs,
-    PruneTasksArgs, ReadSpecArgs, ReadSupersessionPairArgs, ReadTasksArgs, RemoveInboxItemArgs,
+    CheckReviewAgreementArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs,
+    CheckStuckArgs, CheckUnfoldedSpecsArgs, ComputeReviewScopeArgs, CreateFeatureArgs,
+    CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs,
+    DeriveDependenciesArgs, DeriveReferencesArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs,
+    DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs,
+    GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs,
+    MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs,
+    ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RemoveInboxItemArgs,
     ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs, RetireFeatureArgs,
     RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
-    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs, WriteSupersessionAnnotationArgs,
+    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs,
 };
 use crate::schema::procedure::{Procedure, Step, StepNumber};
 use crate::schema::protocol::{ErrorLocation, ProtocolMessage};
@@ -704,9 +704,6 @@ fn dispatch_primitive(
     }
     match name {
         "read-spec" => call!(ReadSpecArgs, read_spec),
-        "read-supersession-pair" => {
-            call!(ReadSupersessionPairArgs, read_supersession_pair)
-        }
         "read-tasks" => call!(ReadTasksArgs, read_tasks),
         "mark-task" => call!(MarkTaskArgs, mark_task),
         "mark-criterion" => call!(MarkCriterionArgs, mark_criterion),
@@ -751,6 +748,9 @@ fn dispatch_primitive(
         "check-orphaned-references" => {
             call!(CheckOrphanedReferencesArgs, check_orphaned_references)
         }
+        "check-step-references" => {
+            call!(CheckStepReferencesArgs, check_step_references)
+        }
         "check-command-flags" => {
             call!(CheckCommandFlagsArgs, check_command_flags)
         }
@@ -760,12 +760,6 @@ fn dispatch_primitive(
         "check-unfolded-specs" => call!(CheckUnfoldedSpecsArgs, check_unfolded_specs),
         "rewrite-spec-links" => call!(RewriteSpecLinksArgs, rewrite_spec_links),
         "retire-feature" => call!(RetireFeatureArgs, retire_feature),
-        "write-supersession-annotation" => {
-            call!(
-                WriteSupersessionAnnotationArgs,
-                write_supersession_annotation
-            )
-        }
         "invalidate-review" => call!(InvalidateReviewArgs, invalidate_review),
         "derive-dependencies" => {
             call!(DeriveDependenciesArgs, derive_dependencies)

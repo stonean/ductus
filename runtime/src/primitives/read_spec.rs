@@ -158,7 +158,7 @@ pub(crate) fn scenario_names(questions: &[ScenarioOpenQuestion]) -> Vec<&str> {
 
 /// Split a spec body into its `##`-and-deeper sections, in document order.
 ///
-/// Shared with `read-supersession-pair` rather than copied: a second section
+/// A single reader for the section scan, kept in one place rather than
 /// splitter is a second answer to "what are this spec's sections", and the
 /// two would drift on the first heading form one of them learned about.
 pub(crate) fn parse_sections(body: &str, include_body: bool) -> Vec<SpecSection> {
@@ -219,7 +219,7 @@ pub(crate) fn parse_sections(body: &str, include_body: bool) -> Vec<SpecSection>
 /// contract is preserved.
 /// Parse the checkbox list under `section_heading` into criteria.
 ///
-/// Shared with `read-supersession-pair` for the same reason as
+/// Kept in one place for the same reason as
 /// [`parse_sections`]: it already skips comments and fenced blocks, and a
 /// reconciliation that disagreed with `read-spec` about what a spec's
 /// criteria *are* would classify claims the rest of the pipeline cannot see.

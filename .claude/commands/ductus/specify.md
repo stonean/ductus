@@ -1,6 +1,6 @@
 ---
 description: Create a new feature spec.
-argument-hint: "[--branch] [--branch-id <identifier>] [--fold-into <feature>] [--supersedes <feature>] [feature description]"
+argument-hint: "[--branch] [--branch-id <identifier>] [--fold-into <feature>] [feature description]"
 parity:
   strict-fields:
     - frontmatter
@@ -32,12 +32,10 @@ If the constitution has not been loaded in this session (e.g., `/ductus:target` 
 | `--branch` | Create a branch-scoped spec, prompting for the identifier (a candidate is proposed from the current git branch name when one can be extracted) |
 | `--branch-id <identifier>` | Create a branch-scoped spec under this identifier, supplied directly. An opaque token, not a number: it is sanitized to `^[a-z0-9]+(?:-[a-z0-9]+)*$`, never refused |
 | `--fold-into <feature>` | The upstream sequential spec the branch-scoped spec folds back into, written to its `folds-into:` frontmatter. Required with the two flags above and meaningless without them |
-| `--supersedes <feature>` | The spec this new one counters. Writes `supersedes:` into the new spec's frontmatter and a reciprocal annotation onto the named spec. Repeatable — `supersedes:` is a list, because one spec routinely counters several in a single change. Independent of the three flags above and usable without any of them |
 
 ## Scope Boundaries
 
 - This command creates spec artifacts only. Do NOT read or write source code, test files, or implementation files.
-- With `--supersedes`, the run writes to a **second** spec — the reciprocal annotation on the one being superseded. That is the only case where this command touches a spec it did not create, and it is a **mechanical edit**: the annotated spec keeps whatever status it holds and takes no back-edge, because the annotation changes no claim that spec makes about what it delivered (§spec-lifecycle).
 - Read only what is needed: existing spec directory names (for numbering and routing), each candidate's `plan.md` Affected Files and frontmatter `status`, the rule-file directory listing, the spec template, and — only when branch-scoped creation is requested — the current git branch name, to propose an identifier candidate. Do NOT read other specs' bodies unless checking for naming conflicts.
 - The routing gate (step 1–3) writes nothing: it derives candidates, presents them, and confirms. A denial ends the run with no directory created and no session write.
 - Reference: §spec-phase, §spec-requirements, §numbering (both directory forms, and why the branch-scoped one is temporary), §spec-lifecycle (a branch-scoped spec is retired by fold-back, never completed), §text-first-artifacts, §brownfield-process, §bug-handling (the routing tree, canonical in `groom.md`).
@@ -50,39 +48,28 @@ If the constitution has not been loaded in this session (e.g., `/ductus:target` 
 
 2. <!-- llm:routeInboxItem --> Walk the **same** decision tree `/ductus:groom` walks (the **Groom decision tree** reference in `groom.md` is its single canonical statement — do not restate it here), over the feature description in place of an inbox item, with step 1's candidates as evidence. Return the route and, when it targets an existing spec, the feature. `spec` — no existing home covers this — is the route that proceeds to create one.
 
-3. Invoke `gate-confirm` with a `gate` name (e.g. `specify-route`) and a `prompt` naming the chosen route and the alternatives, so the operator confirms the routing **before** anything is scaffolded. When a candidate spec is `done`, the prompt names the `done → in-progress` back-edge accepting it implies, exactly as groom's per-item confirmation does. When the derivation reported no candidates and no skipped sources, say so and proceed — a fresh adopter sees one line, not a decision. When any source was **skipped**, report *could not derive candidates* and name the source: that is a different answer from *none found*, and stating it as the latter would claim a check ran that did not. Denial ends the run cleanly with nothing written, which is how the operator takes a candidate instead; the framework reports and does not veto, so creating a new spec over any candidate stays one keystroke away. A candidate admits a third answer beside *amend it* and *unrelated*: **this new spec supersedes it**, which continues the run at step 4 exactly as though `--supersedes {candidate}` had been passed. Offering it here is what keeps it from being a diligence dependency: the candidate surfaces anyway, so forgetting the flag costs nothing, and this is the one moment the relation is cheap — nothing recovers it afterward. The classification is not exhaustive, because the derivation matches over slug vocabulary and a predecessor sharing none of it surfaces as no candidate at all; the flag therefore stays available directly.
+3. Invoke `gate-confirm` with a `gate` name (e.g. `specify-route`) and a `prompt` naming the chosen route and the alternatives, so the operator confirms the routing **before** anything is scaffolded. When a candidate spec is `done`, the prompt names the `done → in-progress` back-edge accepting it implies, exactly as groom's per-item confirmation does. When the derivation reported no candidates and no skipped sources, say so and proceed — a fresh adopter sees one line, not a decision. When any source was **skipped**, report *could not derive candidates* and name the source: that is a different answer from *none found*, and stating it as the latter would claim a check ran that did not. Denial ends the run cleanly with nothing written, which is how the operator takes a candidate instead; the framework reports and does not veto, so creating a new spec over any candidate stays one keystroke away.
 
 <!-- audit:ignore-promotion -->
-4. Settle branch-scoped creation before anything is scaffolded (host responsibility; no primitive — the decision is a conversation with the operator, and the sanitization it previews belongs to create-feature in step 6). **Sequential numbering is the default and this step decides nothing without a request for the other form**: with neither `--branch` nor `--branch-id` present, continue at step 5 with the arguments unchanged and settle nothing here — that is the path §numbering calls the default, and the one an adopter who never asks for a branch-scoped spec must keep observing. Otherwise settle three things, in this order:
+4. Settle branch-scoped creation before anything is scaffolded (host responsibility; no primitive — the decision is a conversation with the operator, and the sanitization it previews belongs to create-feature in step 5). **Sequential numbering is the default and this step decides nothing without a request for the other form**: with neither `--branch` nor `--branch-id` present, continue at step 5 with the arguments unchanged and settle nothing here — that is the path §numbering calls the default, and the one an adopter who never asks for a branch-scoped spec must keep observing. Otherwise settle three things, in this order:
 
    - **The identifier.** `--branch-id <identifier>` supplies it directly; `--branch` requests branch-scoped creation without one, in which case prompt for it. Offer a candidate read from the current git branch name (`git rev-parse --abbrev-ref HEAD`) when a tracker-style token can be extracted from it, and prompt with **no** candidate when it cannot — a branch named `main` or `wip` yields nothing to propose, and inventing one would be worse than asking. The framework parses no branch-name grammar, so a candidate is a convenience the operator confirms or corrects, never an authority; the value they settle on is the value used.
    - **What the identifier will become.** A non-conforming identifier is sanitized rather than refused — lowercased, with every run of non-alphanumerics collapsed to a single hyphen — so `PROJ-1111` becomes `proj-1111`, `1111-PROJ` becomes `1111-proj`, and a `.` becomes a hyphen, which is what leaves the `{branch-id}.{n}` delimiter unambiguous. Name the sanitized form in the prompt, **before any directory exists**: a transformation the operator never sees is one they discover from a directory name later. Step 6 reports the identifier actually used, and that one is authoritative — say so if it differs from what was previewed here.
    - **The fold target, which is required.** `--fold-into <feature>` supplies it; prompt when it is absent. There is no path that creates a branch-scoped spec naming no upstream home: the number is what keeps the merge clean, and the target is what makes the spec actionable once it lands, so a staging spec with nowhere to land is not a case this framework has (§numbering, §spec-lifecycle). The target names a **sequential** spec and need not exist in this tree — a branch-scoped spec exists *because* upstream diverged, so its home routinely lives on the branch this one forked from, and existence is enforced at fold-back rather than here. An operator who will not name one is asking for a sequential spec: offer that, and end the run with nothing created if they decline both.
 
-   **On `ductus exec`** there is no operator to prompt, so this step reduces to passing through whatever `--branch-id` and `--fold-into` the invocation already supplied; branch-scoped creation without them is refused by the primitive in step 6 rather than prompted for. The reduction is documented rather than silent (§runtime-host-integration's two-paths guarantee).
+   **On `ductus exec`** there is no operator to prompt, so this step reduces to passing through whatever `--branch-id` and `--fold-into` the invocation already supplied; branch-scoped creation without them is refused by the primitive in step 5 rather than prompted for. The reduction is documented rather than silent (§runtime-host-integration's two-paths guarantee).
 
-<!-- audit:ignore-promotion -->
-5. Settle the supersession declaration, before anything is scaffolded (host responsibility; no primitive dispatches here — the decision is a conversation with the operator, and the writes it authorizes belong to step 8). **With neither `--supersedes` nor a supersession classification from step 3, this step decides nothing**: continue at step 6 with the arguments unchanged, and creation behaves exactly as it does without this feature. Otherwise settle two things, in this order:
+5. Invoke `create-feature` with the feature description from `$ARGUMENTS` as the title, plus the `branch-id` and `fold-into` arguments step 4 settled when it settled any. The primitive computes the next feature number from the existing NNN-prefixed directories under the configured specs root, derives the kebab-case slug, creates `specs/{NNN-slug}/`, and copies the spec template into it atomically (mode-preserving); it resolves the template from `{specs-root}/templates/spec.md` and falls back to the framework source layout `framework/templates/spec/spec.md` (the ductus repo's own layout). With `branch-id` supplied it instead sanitizes that identifier, numbers `{identifier}.{n}-{slug}` from the directories already under that identifier alone, stamps `folds-into:` into the new spec's frontmatter, and returns the **sanitized** `identifier` it used — report that value, since it is what the operator actually got. An already-existing target directory is the `created: false` domain outcome — report the collision and stop rather than overwrite; under one identifier that is also what makes two contributors creating at the same moment safe, the loser being refused rather than overwriting the winner.
 
-   - **Which specs are named.** Resolve each `--supersedes` argument to a feature directory with resolve-feature; `ambiguous` and `not-found` are domain outcomes to surface, and a name resolving to nothing is the one refusal on this path. The frontmatter schema validates `supersedes:` for **shape** only, so resolvability is enforced by the declaring command — this being the first moment both specs exist.
-   - **Whether each is `done`.** Read each resolved target's `status` with read-spec. A target that is not `done` is **accepted, never refused**: say that supersession's justification is a spec that shipped and was later countered, that a `draft` or `clarified` spec delivered nothing to counter — so annotating it would record a decision as enacted-then-undone when it was never enacted — and that `/ductus:consolidate` is the likelier outcome. Then proceed if the operator still wants the declaration. `in-progress` is genuinely ambiguous and the operator may hold context the status does not carry, so this reports and does not veto, exactly as step 1's derivation does.
+6. <!-- llm:writeSpecBody --> Fill the new spec body following §spec-requirements: a Motivation section, Acceptance Criteria with concrete and testable checkboxes (sparse acceptance criteria are valid for brownfield use — leave the section with a comment noting criteria will emerge from real work), Open Questions, and any inline links to other specs that `derive-dependencies` will derive the frontmatter dependencies from. The host returns the markdown body for the new file; the walker forwards the response through the context.
 
-   **On `ductus exec`** there is no operator to classify a candidate or answer the non-`done` guidance, so this step and step 8 reduce to the no-supersession line and creation proceeds unchanged — the declaration is an interactive surface, and a run that wrote one unattended would record a relation nobody declared. The reduction is documented rather than silent (§runtime-host-integration's two-paths guarantee).
+7. Invoke `label-criteria` against the new feature to assign a stable `AC{n}:` label to every criterion the step above wrote, and to record `next-criterion` in the frontmatter. The initial batch is labelled in the run that created it, so a criterion can be cited by label in the same conversation that authored it — that is the moment citation matters most. The pass is idempotent and writes nothing when the section is empty, so a brownfield spec with a placeholder comment and no criteria is unaffected. **Never derive the label in the LLM**: picking `max + 1` means tallying the list, which is exactly the counting this labelling exists to remove.
 
-6. Invoke `create-feature` with the feature description from `$ARGUMENTS` as the title, plus the `branch-id` and `fold-into` arguments step 4 settled when it settled any. The primitive computes the next feature number from the existing NNN-prefixed directories under the configured specs root, derives the kebab-case slug, creates `specs/{NNN-slug}/`, and copies the spec template into it atomically (mode-preserving); it resolves the template from `{specs-root}/templates/spec.md` and falls back to the framework source layout `framework/templates/spec/spec.md` (the ductus repo's own layout). With `branch-id` supplied it instead sanitizes that identifier, numbers `{identifier}.{n}-{slug}` from the directories already under that identifier alone, stamps `folds-into:` into the new spec's frontmatter, and returns the **sanitized** `identifier` it used — report that value, since it is what the operator actually got. An already-existing target directory is the `created: false` domain outcome — report the collision and stop rather than overwrite; under one identifier that is also what makes two contributors creating at the same moment safe, the loser being refused rather than overwriting the winner.
+8. Invoke `lint-markdown` against the new spec file to surface any markdown violations the LLM may have introduced.
 
-7. <!-- llm:writeSpecBody --> Fill the new spec body following §spec-requirements: a Motivation section, Acceptance Criteria with concrete and testable checkboxes (sparse acceptance criteria are valid for brownfield use — leave the section with a comment noting criteria will emerge from real work), Open Questions, and any inline links to other specs that `derive-dependencies` will derive the frontmatter dependencies from. The host returns the markdown body for the new file; the walker forwards the response through the context. **When step 5 settled a supersession, cite the superseded spec by name and write no markdown link to it.** The pointer is frontmatter; a body link to a sibling spec is harvested by `derive-dependencies` into `dependencies:`, which would make the superseding spec declare a dependency on the very spec it counters — silently, on the first commit through the pre-commit hook. The link belongs to the reciprocal annotation written in step 8, which carries it from inside a blockquote, the one construct `derive-dependencies` exempts.
+9. Invoke `gate-confirm` with a `gate` name (e.g. `specify-create`) and a `prompt` asking the user to approve creating the new feature and setting it as the session target before any session-file write. `gate-confirm` is non-blocking — it returns the prompt payload (`gate`, `prompt`, `request-id`) and the host routes the decision out-of-band. On confirmation, continue to the session write below; on denial, the walker exits cleanly without writing the session.
 
-<!-- audit:ignore-promotion -->
-8. Write the declaration step 5 settled — the frontmatter key and its reciprocal annotation (host responsibility; conditional on step 5, so nothing dispatches when no supersession was settled). Stamp `supersedes:` into the new spec's frontmatter as a list naming each resolved feature, then write the reciprocal annotation onto each of those specs with write-supersession-annotation, passing the superseded feature, this new feature as the superseding one, and the **substance** — what no longer holds — as the authored payload. What the two writes mean, and why the frame is generated while the substance is authored, is stated once in `supersede.md`'s **Declaration semantics**; this command performs the same declaration at creation time and does not restate it. An already-present result is a re-run converging rather than a failure — report it and continue. **Reconciliation runs here too**, on the same terms and through the same canonical statement: the declaration is not two writes and done, it walks the superseded spec's claims while the new spec's own claims are being authored and the intent is held. `supersede.md`'s **Declaration semantics** is where that lives; do not restate it. The operator's consent for these second-spec writes is step 3's routing confirmation, or the flag they passed; no separate gate is added, except the one reconciliation itself requires before editing body prose.
-
-9. Invoke `label-criteria` against the new feature to assign a stable `AC{n}:` label to every criterion the step above wrote, and to record `next-criterion` in the frontmatter. The initial batch is labelled in the run that created it, so a criterion can be cited by label in the same conversation that authored it — that is the moment citation matters most. The pass is idempotent and writes nothing when the section is empty, so a brownfield spec with a placeholder comment and no criteria is unaffected. **Never derive the label in the LLM**: picking `max + 1` means tallying the list, which is exactly the counting this labelling exists to remove.
-
-10. Invoke `lint-markdown` against the new spec file to surface any markdown violations the LLM may have introduced.
-
-11. Invoke `gate-confirm` with a `gate` name (e.g. `specify-create`) and a `prompt` asking the user to approve creating the new feature and setting it as the session target before any session-file write. `gate-confirm` is non-blocking — it returns the prompt payload (`gate`, `prompt`, `request-id`) and the host routes the decision out-of-band. On confirmation, continue to the session write below; on denial, the walker exits cleanly without writing the session.
-
-12. Invoke `write-session` with the new feature slug and its repo-relative spec directory — under the configured `[paths] specs-root` (default `specs`; spec 040) — as the feature and path arguments. This is a target write: the primitive stamps a fresh set-at while preserving any cli-config-dir already in the file (the per-contributor agent identity written by `/ductus`), at `.ductus/session.toml`, through tempfile + rename atomic-write semantics. On the markdown-only path, the host writes the file by hand per the markdown-only reference's Write the session target section — the cli-config-dir preservation rule there applies verbatim.
+10. Invoke `write-session` with the new feature slug and its repo-relative spec directory — under the configured `[paths] specs-root` (default `specs`; spec 040) — as the feature and path arguments. This is a target write: the primitive stamps a fresh set-at while preserving any cli-config-dir already in the file (the per-contributor agent identity written by `/ductus`), at `.ductus/session.toml`, through tempfile + rename atomic-write semantics. On the markdown-only path, the host writes the file by hand per the markdown-only reference's Write the session target section — the cli-config-dir preservation rule there applies verbatim.
 
 ## Markdown-only reference
 
@@ -118,17 +105,11 @@ with those candidates as evidence, and confirm the result with the user before
 anything is written:
 
 - **Candidates found** — name them, name the route each implies, and let the
-  operator pick: a scenario on `NNN`, a rule-file amendment, a new spec that
-  **supersedes** `NNN`, or a new spec anyway. A new spec stays creatable over
-  any candidate; this reports, it does not veto. The supersession answer is
-  offered here rather than left to a flag the operator has to remember,
-  because the candidate surfaces anyway and this is the one moment the
-  relation is cheap to record — nothing recovers it afterward. It is not an
-  exhaustive offer: the derivation matches over slug vocabulary, so a
-  predecessor sharing none of it surfaces as no candidate, which is why
-  `--supersedes` stays available directly. When a named candidate is `done`, say that accepting it reopens it
-  `done → in-progress`, so the operator consents to the back-edge before it
-  happens — the same wording groom's per-item confirmation uses.
+  operator pick: a scenario on `NNN`, a rule-file amendment, or a new spec
+  anyway. A new spec stays creatable over any candidate; this reports, it
+  does not veto. When a named candidate is `done`, say that accepting it
+  reopens it `done → in-progress`, so the operator consents to the back-edge
+  before it happens — the same wording groom's per-item confirmation uses.
 - **No candidates, nothing skipped** — say so in one line and proceed. Every
   source ran and matched nothing, so a new spec is the right answer. A fresh
   adopter with no rule files and a single-spec corpus is exactly this case and
@@ -190,52 +171,6 @@ persisted setting exists that could change it.
 
 The branch-scoped directory is a staging form: it is discharged by fold-back
 and never reaches `done` (§numbering, §spec-lifecycle).
-
-### Declare a supersession
-
-Only when the operator asked for it — `--supersedes <feature>`, or the
-supersession answer to a routing candidate. With neither, this section does not
-apply and creation is unchanged.
-
-What a declaration *means* — the key, the annotation, the load-bearing
-blockquote, the generated frame and authored substance, accumulation versus a
-convergent re-run, and the descriptive edge — is stated once, in
-`supersede.md`'s **Declaration semantics**. That is its single canonical
-statement; do not restate it here. This command performs the same declaration
-at creation time, and only these parts are specific to that timing:
-
-1. **It is settled before anything is scaffolded**, alongside the
-   branch-scoped decision, so a refusal costs no directory. Resolve each named
-   spec (primitive: `resolve-feature`); a name resolving to nothing is the one
-   refusal on this path, since the frontmatter schema validates `supersedes:`
-   for shape only and this is the first moment both specs exist.
-2. **A target that is not `done` is accepted, never refused.** Read its status
-   (primitive: `read-spec`). Supersession's justification is a spec that
-   shipped and was later countered; a `draft` or `clarified` spec delivered
-   nothing to counter, so annotating it would record a decision as
-   enacted-then-undone when it was never enacted. Say that, name
-   `/ductus:consolidate` as the likelier outcome, and proceed if the
-   operator still wants the declaration. `in-progress` is genuinely ambiguous
-   and the operator may hold context the status does not carry.
-3. **The declaration is also offered as a classification on a routing
-   candidate**, beside *amend it* and *unrelated*. The candidate surfaces
-   anyway, so forgetting the flag costs nothing — which is what keeps the flag
-   from being a diligence dependency. The offer is not exhaustive: the
-   derivation matches over slug vocabulary, so a predecessor sharing none of
-   it surfaces as no candidate, and the flag stays available directly.
-4. **The writes are the same two** — the `supersedes:` key on the new spec,
-   and the reciprocal annotation on each named spec (primitive:
-   `write-supersession-annotation`). Consent for the second-spec write is the
-   routing confirmation, or the flag the operator passed.
-5. **Reconciliation runs on this route too**, not only the retroactive one.
-   It is part of what declaring *means* rather than a step this command
-   adds, which is why it lives in the shared statement: the claims are
-   walked while the new spec's own are being authored, when the intent is
-   held and the comparison is cheap.
-
-Declaring a supersession over **two specs that already exist** is
-`/ductus:supersede`, not this command; it produces the same key and the
-same annotation.
 
 ### Fill the spec body
 

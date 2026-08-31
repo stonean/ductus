@@ -43,7 +43,7 @@
 # checks coverage, not a rendering.
 #
 # The constraint is the *bare* token. A command that appears only inside a
-# wider code span — `/specify --supersedes`, say — does not match, and reads
+# wider code span — `/specify --fold-into`, say — does not match, and reads
 # as undocumented. The failure is loud and in the safe direction (a false
 # finding a maintainer resolves by writing the bare token once), but it is a
 # rule about how the README may write a command name and it is stated here

@@ -75,7 +75,6 @@ Each entry below says what the command **does**; the section it links to says wh
   - [`/analyze`](docs/slash-commands.md#analyze--a-report-of-where-a-features-own-artifacts-disagree) — audit a feature's artifacts against each other: drifted checkboxes, stale reviews, dead links
 - **Refine — adjust a spec's artifacts**
   - [`/amend`](docs/slash-commands.md#amend--a-question-or-scenario-recorded-with-the-lifecycle-back-edge-taken) — add a question or scenario to a spec, reopening it if its status requires
-  - [`/supersede`](docs/slash-commands.md#supersede--the-supersedes-key-on-one-spec-the-annotation-on-the-other) — record that a newer spec counters an older one, and annotate the older one
 - **Destructive — these remove content**
   - [`/prune`](docs/slash-commands.md#prune--spent-task-sections-in-one-tasksmd) — drop completed task sections from `tasks.md`, which is not for durable content
   - [`/fold`](docs/slash-commands.md#fold--the-branch-scoped-staging-directory-after-migrating-its-content) — merge a branch-scoped spec into its durable home and remove the staging directory

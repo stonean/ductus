@@ -76,5 +76,6 @@ run_check "Family 30 — command flag/hint parity" "scripts/audit/command-flag-h
 run_check "Family 31 — review block agreement" "scripts/audit/review-block-agreement.sh"
 run_check "Family 32 — permission entry shape" "scripts/audit/permission-entry-shape.sh"
 run_check "Family 33 — README command parity" "scripts/audit/readme-command-parity.sh"
+run_check "Family 34 — step reference integrity" "scripts/audit/step-reference-integrity.sh"
 
 exit "$drift"

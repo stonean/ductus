@@ -2,6 +2,61 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.42.0] — 2026-08-31
+
+### Removed
+
+- **BREAKING: supersession is gone.** Two MCP tools, two CLI subcommands,
+  one extension point, one check family, and one frontmatter key are removed.
+  A host or script naming any of them will fail rather than degrade.
+
+  Removed tools and subcommands: `read-supersession-pair` and
+  `write-supersession-annotation`. Both leave all five registration sites —
+  the CLI enum and dispatch arm, the exec-path match arm, the `#[tool]`,
+  `PRIMITIVE_REGISTRY`, and `framework/runtime-tools.txt` (71 tools → 69).
+
+  Removed extension point: `classifyClaims`, with `SupersededClaim`,
+  `ClassifyClaimsRequest`, `ClassifiedClaim`, and `ClassifyClaimsResponse`.
+  The `CLAIM_CLASSIFICATIONS` vocabulary goes with it.
+
+  Removed check family: `supersession-reciprocity`. `check-artifacts` now
+  runs **eight** residual deterministic families rather than nine; a caller
+  counting families or matching on that name sees the difference.
+
+  **Removed frontmatter key: `supersedes`.** It leaves the `Frontmatter`
+  struct, so `read-spec` no longer surfaces it and `validate-frontmatter` no
+  longer shape-checks it. This is a **silent** change for an adopter who has
+  written one, and silent in the safe direction — measured, not assumed:
+  `validate-frontmatter` performs no unknown-key rejection, so a spec
+  carrying the key reports `clean: true` with zero findings; `read-spec`
+  omits it from the parsed result rather than erroring; and the frontmatter
+  writers splice rather than re-serialize, so `set-status` and
+  `label-criteria` leave the key byte-for-byte intact on disk (verified
+  against a probe spec carrying `supersedes: [005-workflows,
+  019-config-decisions]`). The key becomes inert YAML the pipeline neither
+  reads nor destroys. No migration strips it, and no adopter spec content is
+  edited.
+
+  Reason: supersession kept a countered spec on disk with an annotation,
+  which accumulates specs that read as live but describe removed behavior.
+  The two operations that keep a corpus true already existed — editing the
+  earlier spec in place through the `done → in-progress` back-edge, and
+  `/ductus:consolidate`. Spec 054.
+
+- **`blockquote_cites` and `names_feature`** leave `primitives::mod`. Both
+  existed only for the two removed surfaces, and `blockquote_cites` was
+  extracted specifically so the annotation writer and the reciprocity family
+  could not disagree about whether a spec was annotated. No third caller.
+
+### Unchanged, deliberately
+
+- **The blockquote exclusion in `spec_links.rs` stays.** It belongs to the
+  shared body scanner behind `derive-dependencies`, `derive-references`,
+  `check-corpus-links`, and `rewrite-spec-links`, and its reason — signpost
+  links on `done` specs are navigation, not dependencies — predates
+  supersession and outlives it. `derive-dependencies` produces byte-identical
+  output across this release.
+
 ## [0.41.0] — 2026-08-31
 
 ### Added
