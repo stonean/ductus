@@ -31,12 +31,12 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 4. Remove the command and rewrite what pointed at it
 
-- [ ] Delete `framework/commands/supersede.md`
-- [ ] `specify.md`: drop `[--supersedes <feature>]` from the `argument-hint:` frontmatter, the flag-table row, the second-spec scope boundary, step 5, step 8, the supersession answer in step 3, the body-link warning in step 7, the markdown-only **Declare a supersession** section, and both `ductus exec` reduction notes
-- [ ] `consolidate.md`: drop the decision-table row, step 3 and its **Settling `supersedes:` edges** reference, the `supersedes:` mentions in steps 1/4/5/8, and the exec note that step 3 does not run; rewrite the ship/no-ship guidance to ask whether the earlier spec still describes something true
-- [ ] `analyze.md`: nine residual families → eight; drop the reciprocity entry, its reference section, and the paragraph bounding what its silence means
-- [ ] `help.md`: drop the command row
-- [ ] Confirm no command source defers to `supersede.md` for Declaration semantics
+- [x] Delete `framework/commands/supersede.md`
+- [x] `specify.md`: drop `[--supersedes <feature>]` from the `argument-hint:` frontmatter, the flag-table row, the second-spec scope boundary, step 5, step 8, the supersession answer in step 3, the body-link warning in step 7, the markdown-only **Declare a supersession** section, and both `ductus exec` reduction notes
+- [x] `consolidate.md`: drop the decision-table row, step 3 and its **Settling `supersedes:` edges** reference, the `supersedes:` mentions in steps 1/4/5/8, and the exec note that step 3 does not run; rewrite the ship/no-ship guidance to ask whether the earlier spec still describes something true
+- [x] `analyze.md`: nine residual families → eight; drop the reciprocity entry, its reference section, and the paragraph bounding what its silence means
+- [x] `help.md`: drop the command row
+- [x] Confirm no command source defers to `supersede.md` for Declaration semantics
 
 - **Done when**: `grep -ri supersede framework/commands/` returns nothing and every surviving command file reads coherently without the deleted statements.
 

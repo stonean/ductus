@@ -104,7 +104,7 @@ Two adopter-side non-events, stated so their absence is deliberate rather than o
 ## Acceptance Criteria
 
 - [ ] AC1: `framework/commands/supersede.md` does not exist, and neither does any generated copy of it under a host command or skill directory
-- [ ] AC2: No command source defers to `supersede.md` for Declaration semantics or any other statement; `grep -ri supersede framework/commands/` returns nothing
+- [ ] AC2: No command source defers to `supersede.md` for Declaration semantics or any other statement, and none names `/{project}:supersede`, `--supersedes`, or the `supersedes:` key — the bare verb in `review.md`'s report-regeneration line is ordinary English and stays, per AC21
 - [ ] AC3: `/{project}:specify` accepts no `--supersedes` flag, dispatches no second-spec write, and offers no supersession answer on a routing candidate — a candidate admits *amend it* and *unrelated* only
 - [ ] AC4: `/{project}:consolidate` names no supersession alternative; its ship/no-ship decision table is rewritten to ask whether the earlier spec still describes something true
 - [ ] AC5: The constitution carries no `§supersession-annotations` section, no criterion-level supersession bullet in `§spec-requirements`, and no `supersedes` row in the spec frontmatter schema table
