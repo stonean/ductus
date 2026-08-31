@@ -1,12 +1,12 @@
 ---
 spec: 022-deterministic-runtime
-reviewed-at: 2026-08-30T19:54:06Z
-reviewed-against: df072b17da4db2e2b8b8c4d6c72b95884e9c5075
-diff-base: 1ab47904dd7cd253abd93eed6e1451b2bdd0bc96
+reviewed-at: 2026-08-31T00:44:57Z
+reviewed-against: 0a69e8c35f536891c4b595263393dcd22b1884fa
+diff-base: 45ac2c848c6cda764c74bfab9caf8bdf1a957cfb
 must-violations: 0
-should-violations: 0
+should-violations: 1
 low-confidence: 0
-captured-issues: 3
+captured-issues: 1
 skipped-passes: []
 ---
 
@@ -14,11 +14,7 @@ skipped-passes: []
 
 ## Summary
 
-Scope was `check-corpus-links` (spec 022 scenario `adopter-corpus-link-integrity`) and its five registration sites, plus the two pre-commit hooks that invoke it. The runtime primitives under `runtime/src/primitives/` belonging to spec 052 — the annotation writer, the `retire-feature` gate, and the `supersession-reciprocity` family — are in this window by scope union but are 052's deliverable and are reviewed there.
-
-All five passes ran. The quality pass found three defects in the new primitive, every one of them the check failing the contract it was written to enforce: an unbounded directory walk that `is_dir()`'s symlink-following turns into a stack overflow; an unlistable subdirectory contributing nothing silently, which is `QUAL-CLAIM-001` committed by the check built to catch it; and a root-absolute link target resolved against the filesystem root rather than the repo root, so `/specs/x.md` was tested against the wrong path entirely. All three were inside the reviewed task's own scope, so they were fixed rather than recorded — `100c289`, with two added tests (18 total on the primitive). The hook call moved to the end of both hooks in the same change: it is the only read-only step, and a blocking read placed before the staging block left a blocked commit with the derived rewrites unstaged, so a blocked commit and a passing one left the tree in different states.
-
-Nothing outstanding. The security, reuse, efficiency, and simplicity passes produced no findings: the primitive is read-only, opens no network or process, resolves paths lexically rather than through the filesystem, and reuses the runtime's tested `inline_code_spans` and `is_frontmatter_fence` scanners rather than re-implementing markdown structure parsing. Two observations map to no loaded rule and are captured to the inbox.
+0 MUST violation(s), 1 SHOULD violation(s), 0 low-confidence finding(s). blocking: no.
 
 ## MUST violations (blocking)
 
@@ -26,7 +22,13 @@ Nothing outstanding. The security, reuse, efficiency, and simplicity passes prod
 
 ## SHOULD violations (advisory)
 
-*None.*
+### SHOULD: QUAL-CLAIM-001 — an empty `constitution-excerpts` array cannot be told from a constitution that could not be read
+
+- **File**: `runtime/src/interpreter/payload.rs:1239-1258`
+- **Rule**: A result that reports a clean, empty, or in-sync state SHOULD distinguish *"examined the subject and found nothing"* from *"could not examine the subject"*, rather than emitting the same value for both. When a code path skips part of its subject, cannot reach it, or has no basis to inspect it, its output SHOULD say so — through a distinct return variant, an accompanying status or guidance field, or a message naming what was not examined — instead of a bare zero, empty collection, or success string that a caller will read as positive assurance.
+- **Finding**: `load_constitution_excerpts` returns a bare `Vec<String>`, and five distinct states collapse into the same value: the command file could not be located, the command file could not be read, the command declares no `Reference:` anchors, the constitution itself could not be read, and — via the closing `filter_map` — an anchor that resolves to nothing is silently dropped from an otherwise-populated array. Only the third is genuinely 'examined and found nothing'; the rest are 'could not examine', and the host receives an outbound `writeCode` payload that reads as 'no constitutional context applies' in every case. The repo already rejects this shape one call away: `resolve_anchor.rs:40` accumulates an `unresolved` set for exactly these anchors, and `read-spec` reports `scenario-files-unreadable` alongside its question list for exactly this reason.
+- **Auto-fixable**: no
+- **Suggested fix**: Return the unexaminable set alongside the excerpts rather than folding it into an empty vec, and surface it on `WriteCodeRequest` as a field carrying `skip_serializing_if = "Vec::is_empty"` — the shape task 89 used for `scenario-files-unreadable`, which keeps the clean payload byte-identical and re-blesses no parity golden. Distinguish at minimum an unreadable constitution from an anchor that did not resolve; a command file with no `Reference:` line stays the one honest empty case.
 
 ## Low-confidence findings
 
@@ -38,14 +40,11 @@ Nothing outstanding. The security, reuse, efficiency, and simplicity passes prod
 
 ## Captured issues
 
-- [ ] Chore: sweep the README for current functionality — add /fold to the Commands section, document /specify's --branch, --branch-id, and --fold-into flags (other rows document theirs), cover the branch-scoped {identifier}.{n}-{slug} numbering form, and note that /status reports pending folds. Leave /audit absent — it is maintainer-only by design. The recurrence guard is homed at 026 scenario readme-command-parity; this is the one-time correction it will first surface.
-- [ ] other: `merge-permissions` `revoke` serves only the Claude permission shape, so the other three hosts have no retirement path — a formerly-canonical entry that ever ships in `configure/opencode.md`, `configure/auggie.md`, or `configure/antigravity.md` would survive in adopter trees indefinitely, the exact gap spec 023's retirement just closed for `claude.md`.
-- [ ] convention: spec 051's `data-model.md` still states `retire-feature`'s `feature` argument as "Must parse as `BranchScoped`; a sequential feature is refused", which 052 made incomplete — the refusal is now gated behind an explicit opt-in that `/{project}:consolidate` passes.
+- [ ] chore: delete the stale "do not git push until 0.37.0 is tagged" entry from AGENTS.md §Workflow — the entry says to remove it once the release is tagged, and `ductus-v0.37.0` through `ductus-v0.40.0` all exist with the `version` file at 0.40.0, so the push block it describes no longer applies and reads as a live prohibition to any contributor who takes it at face value
 
 ## Observations
 
-- bug: `scripts/audit/broken-relative-links.sh` (Family 26) resolves a root-absolute link target against the filesystem root, not the repo root — `os.path.join(here, '/specs/x.md')` discards `here` entirely, exactly the defect just fixed in `check-corpus-links`. No such link exists in this corpus today, so the family is not currently wrong about anything; it would be the moment one is written, and it would be wrong in the dangerous direction on a machine that happens to hold that absolute path. — `scripts/audit/broken-relative-links.sh`
-- other: Family 26 and the new `check-corpus-links` primitive now perform substantially the same check over overlapping subjects — the family covers the whole repository including maintainer-only files, the primitive covers the spec corpus and is what adopters actually run. The scenario deliberately left delegation undecided ('Family 26 is not necessarily retired by this'), and the Family 30 shape — logic in the runtime, script as entry point — is the obvious candidate. Deciding it would also collapse the divergence recorded in the observation above, since there would be one implementation to fix rather than two to keep in step. — `scripts/audit/broken-relative-links.sh`
+*None.*
 
 ## Skipped passes
 

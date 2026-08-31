@@ -992,9 +992,12 @@ Request payload:
     "runtime/**",
     "specs/022-deterministic-runtime/**"
   ],
-  "constitution-excerpts": ["..."]
+  "constitution-excerpts": ["..."],
+  "constitution-excerpts-unexaminable": ["anchor-unresolved: §spec-phase"]
 }
 ```
+
+`constitution-excerpts-unexaminable` carries one entry per cause the excerpt load could not examine — `command-file-missing: {name}`, `command-file-unreadable: {path}`, `constitution-unreadable: {path}`, or `anchor-unresolved: §{anchor}` for an anchor the command's `Reference:` line declares that the constitution does not define. It is **omitted from the wire when empty** (`skip_serializing_if`), so a payload whose anchors all resolved is byte-identical to one built before the field existed, and it sits inside the stable cache prefix (it does not vary between tasks in one walk). Without it, five states collapsed into the same empty or short `constitution-excerpts` array and a host could not tell "no constitutional context applies" from "the context could not be loaded" — `QUAL-CLAIM-001`, the same shape `read-spec`'s `scenario-files-unreadable` answers for scenarios.
 
 Response payload:
 

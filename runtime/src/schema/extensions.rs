@@ -117,6 +117,21 @@ pub struct PlanRelevantFile {
 pub struct WriteCodeRequest {
     /// Constitution excerpts the runtime determined are relevant.
     pub constitution_excerpts: Vec<String>,
+    /// What the excerpt load could not examine, one entry per cause
+    /// (`command-file-missing: …`, `command-file-unreadable: …`,
+    /// `constitution-unreadable: …`, `anchor-unresolved: §…`). Empty in the
+    /// ordinary case, and omitted from the wire when empty, so a clean
+    /// payload is byte-identical to one built before this field existed.
+    ///
+    /// Present so a host can tell *"the command declares no `Reference:`
+    /// anchors"* from *"the constitution could not be read"* — an empty
+    /// `constitution-excerpts` alone means both, and the host would write
+    /// code with no constitutional context in either case without knowing
+    /// which. Never an error: the request is still emitted, per
+    /// `QUAL-CLAIM-001`. Part of the stable cache prefix (it does not vary
+    /// between tasks in one walk), so it sits ahead of `write-boundary`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub constitution_excerpts_unexaminable: Vec<String>,
     /// Files the plan named as relevant for this task.
     pub plan_relevant_files: Vec<PlanRelevantFile>,
     /// Runtime write boundary (glob patterns and concrete paths).
@@ -903,6 +918,7 @@ mod tests {
     #[test]
     fn write_code_round_trip() {
         let request = WriteCodeRequest {
+            constitution_excerpts_unexaminable: vec![],
             task: WriteCodeTask {
                 number: "3".into(),
                 heading: "Implement read-spec primitive".into(),
@@ -1227,6 +1243,7 @@ mod tests {
         // breakpoint between `write-boundary` and `task` rely on this layout.
         let request = WriteCodeRequest {
             constitution_excerpts: vec!["a".into()],
+            constitution_excerpts_unexaminable: vec![],
             plan_relevant_files: vec![PlanRelevantFile {
                 path: "p".into(),
                 content: "c".into(),

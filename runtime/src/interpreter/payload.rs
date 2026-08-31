@@ -360,12 +360,13 @@ fn build_write_code_request(
         .to_string();
 
     let plan_relevant_files = load_plan_relevant_files(&feature, repo)?;
-    let constitution_excerpts = load_constitution_excerpts(command_name, repo);
+    let excerpts = load_constitution_excerpts(command_name, repo);
     let write_boundary = read_write_boundary(context);
     let task = load_current_task(&feature, context, repo);
 
     let typed = WriteCodeRequest {
-        constitution_excerpts,
+        constitution_excerpts: excerpts.excerpts,
+        constitution_excerpts_unexaminable: excerpts.unexaminable,
         plan_relevant_files,
         write_boundary,
         task,
@@ -1237,25 +1238,44 @@ fn load_plan_relevant_files(
     Ok(out)
 }
 
-fn load_constitution_excerpts(command_name: &str, repo: &Path) -> Vec<String> {
+fn load_constitution_excerpts(command_name: &str, repo: &Path) -> ConstitutionExcerptScan {
     let Some(command_path) = locate_command_file(command_name, repo) else {
-        return Vec::new();
+        return ConstitutionExcerptScan::unexaminable(format!(
+            "command-file-missing: {command_name}"
+        ));
     };
     let Ok(command_content) = std::fs::read_to_string(&command_path) else {
-        return Vec::new();
+        return ConstitutionExcerptScan::unexaminable(format!(
+            "command-file-unreadable: {}",
+            command_path.display()
+        ));
     };
     let anchors = parse_command_references(&command_content);
     if anchors.is_empty() {
-        return Vec::new();
+        // The one honest empty case: the command declares no `Reference:`
+        // line, so there is nothing to load and nothing went unexamined.
+        return ConstitutionExcerptScan::default();
     }
     let constitution_path = repo.join("framework/constitution.md");
     let Ok(constitution) = std::fs::read_to_string(&constitution_path) else {
-        return Vec::new();
+        return ConstitutionExcerptScan::unexaminable(format!(
+            "constitution-unreadable: {}",
+            constitution_path.display()
+        ));
     };
-    anchors
-        .into_iter()
-        .filter_map(|anchor| extract_anchor_body(&constitution, &anchor))
-        .collect()
+    let mut scan = ConstitutionExcerptScan::default();
+    for anchor in anchors {
+        match extract_anchor_body(&constitution, &anchor) {
+            Some(body) => scan.excerpts.push(body),
+            // Dropping the anchor silently would leave a populated array
+            // that reads as complete while a section the command declared
+            // relevant is missing from it.
+            None => scan
+                .unexaminable
+                .push(format!("anchor-unresolved: §{anchor}")),
+        }
+    }
+    scan
 }
 
 fn locate_command_file(command_name: &str, repo: &Path) -> Option<PathBuf> {
@@ -1272,6 +1292,33 @@ fn locate_command_file(command_name: &str, repo: &Path) -> Option<PathBuf> {
         }
     }
     None
+}
+
+/// The outcome of a constitution-excerpt load: what was read, and what could
+/// not be. Two fields rather than one `Vec<String>` because five distinct
+/// states used to collapse into the same empty vec — an absent command file,
+/// an unreadable one, a command with no `Reference:` line, an unreadable
+/// constitution, and an anchor that resolves to nothing — and a host reading
+/// the resulting `writeCode` payload could not tell "no constitutional
+/// context applies" from "the context could not be loaded" (`QUAL-CLAIM-001`).
+#[derive(Debug, Default, PartialEq)]
+struct ConstitutionExcerptScan {
+    /// Resolved section bodies, in the order the command's `Reference:` line
+    /// named their anchors.
+    excerpts: Vec<String>,
+    /// One entry per cause the load could not examine; empty when every
+    /// declared anchor resolved.
+    unexaminable: Vec<String>,
+}
+
+impl ConstitutionExcerptScan {
+    /// A scan that read nothing, for the reason given.
+    fn unexaminable(reason: String) -> Self {
+        Self {
+            excerpts: Vec::new(),
+            unexaminable: vec![reason],
+        }
+    }
 }
 
 /// Extract anchor names from a command file's `Reference: §a, §b, §c` line
@@ -1583,6 +1630,120 @@ mod tests {
         assert_eq!(secret_pattern("runtime/src/main.rs"), None);
         assert_eq!(secret_pattern("README.md"), None);
         assert_eq!(secret_pattern("framework/constitution.md"), None);
+    }
+
+    /// Write a command file declaring `anchors` on its `Reference:` line.
+    fn write_command_file(repo: &std::path::Path, name: &str, anchors: &str) {
+        let dir = repo.join("framework/commands");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join(format!("{name}.md")),
+            format!("## Scope Boundaries\n\n- Reference: {anchors}.\n"),
+        )
+        .unwrap();
+    }
+
+    fn write_constitution(repo: &std::path::Path, body: &str) {
+        let dir = repo.join("framework");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("constitution.md"), body).unwrap();
+    }
+
+    #[test]
+    fn excerpt_scan_reports_an_anchor_that_resolves_to_nothing() {
+        let tmp = tempdir().unwrap();
+        write_command_file(tmp.path(), "implement", "§alpha, §ghost");
+        write_constitution(tmp.path(), "<!-- §alpha -->\n\nBody of alpha.\n");
+
+        let scan = load_constitution_excerpts("implement", tmp.path());
+        assert_eq!(
+            scan.excerpts.len(),
+            1,
+            "the resolved anchor is still loaded"
+        );
+        assert!(scan.excerpts[0].contains("Body of alpha."));
+        assert_eq!(
+            scan.unexaminable,
+            vec!["anchor-unresolved: §ghost".to_string()],
+            "a dropped anchor must be named, not silently absent"
+        );
+    }
+
+    #[test]
+    fn excerpt_scan_reports_an_unreadable_constitution() {
+        let tmp = tempdir().unwrap();
+        write_command_file(tmp.path(), "implement", "§alpha");
+        // No constitution written at all.
+
+        let scan = load_constitution_excerpts("implement", tmp.path());
+        assert!(scan.excerpts.is_empty());
+        assert_eq!(scan.unexaminable.len(), 1);
+        assert!(
+            scan.unexaminable[0].starts_with("constitution-unreadable: "),
+            "got {:?}",
+            scan.unexaminable[0]
+        );
+    }
+
+    #[test]
+    fn excerpt_scan_reports_a_missing_command_file() {
+        let tmp = tempdir().unwrap();
+        let scan = load_constitution_excerpts("nonesuch", tmp.path());
+        assert!(scan.excerpts.is_empty());
+        assert_eq!(
+            scan.unexaminable,
+            vec!["command-file-missing: nonesuch".to_string()]
+        );
+    }
+
+    #[test]
+    fn excerpt_scan_is_empty_both_ways_when_no_reference_line_is_declared() {
+        let tmp = tempdir().unwrap();
+        let dir = tmp.path().join("framework/commands");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join("implement.md"),
+            "## Scope Boundaries\n\nNothing.\n",
+        )
+        .unwrap();
+
+        let scan = load_constitution_excerpts("implement", tmp.path());
+        assert_eq!(
+            scan,
+            ConstitutionExcerptScan::default(),
+            "a command with no Reference: line is the one honest empty case"
+        );
+    }
+
+    #[test]
+    fn clean_write_code_request_omits_the_unexaminable_field() {
+        let request = WriteCodeRequest {
+            constitution_excerpts: vec!["body".to_string()],
+            constitution_excerpts_unexaminable: vec![],
+            plan_relevant_files: vec![],
+            write_boundary: vec!["runtime/**".to_string()],
+            task: WriteCodeTask {
+                number: "1".to_string(),
+                heading: "A task".to_string(),
+                subtasks: vec![],
+            },
+        };
+        let json = serde_json::to_string(&request).unwrap();
+        assert!(
+            !json.contains("constitution-excerpts-unexaminable"),
+            "an empty field must stay off the wire so clean payloads are \
+             byte-identical to pre-field ones: {json}"
+        );
+
+        let flagged = WriteCodeRequest {
+            constitution_excerpts_unexaminable: vec!["anchor-unresolved: §ghost".to_string()],
+            ..request
+        };
+        assert!(
+            serde_json::to_string(&flagged)
+                .unwrap()
+                .contains("constitution-excerpts-unexaminable")
+        );
     }
 
     #[test]
@@ -1994,11 +2155,15 @@ mod tests {
             .collect();
         // Cache-anchor order: constitution-excerpts, plan-relevant-files,
         // write-boundary, task — then legacy keys.
-        let prefix: Vec<&str> = keys.iter().take(4).copied().collect();
+        // The fixture repo carries no command file, so the excerpt load
+        // reports `command-file-missing` and the unexaminable key rides in
+        // the stable prefix beside the excerpts it explains.
+        let prefix: Vec<&str> = keys.iter().take(5).copied().collect();
         assert_eq!(
             prefix,
             vec![
                 "constitution-excerpts",
+                "constitution-excerpts-unexaminable",
                 "plan-relevant-files",
                 "write-boundary",
                 "task"
@@ -2279,11 +2444,12 @@ mod tests {
         assert!(!obj.contains_key("findings"));
         assert_eq!(obj["legacy-extra"], "kept");
         // The cache-anchor prefix is untouched by the filtering.
-        let prefix: Vec<&str> = obj.keys().map(String::as_str).take(4).collect();
+        let prefix: Vec<&str> = obj.keys().map(String::as_str).take(5).collect();
         assert_eq!(
             prefix,
             vec![
                 "constitution-excerpts",
+                "constitution-excerpts-unexaminable",
                 "plan-relevant-files",
                 "write-boundary",
                 "task"

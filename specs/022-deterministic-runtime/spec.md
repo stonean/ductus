@@ -2,10 +2,10 @@
 status: in-progress
 dependencies: [021-runtime-boundary]
 review:
-  last-run: 2026-08-30T19:54:06Z
-  reviewed-against: df072b17da4db2e2b8b8c4d6c72b95884e9c5075
+  last-run: 2026-08-31T00:44:57Z
+  reviewed-against: 0a69e8c35f536891c4b595263393dcd22b1884fa
   must-violations: 0
-  should-violations: 0
+  should-violations: 1
   low-confidence: 0
   blocking: false
 next-criterion: 20
@@ -137,7 +137,7 @@ The extension point inventory across the initial release and follow-on scenarios
 - `writeCode` — `/ductus:implement` walk-through-tasks step 4. Request: task description, plan-relevant files, write boundary. Response: list of file edits.
 - `writeSpecBody` — `/ductus:specify` and `/ductus:plan` template-fill moments. Request: template + feature description + section name. Response: filled-in section content.
 
-**Cache-breakpoint contract.** The `writeCode` request serializes its fields in this order: `constitution-excerpts`, `plan-relevant-files`, `write-boundary`, `task`. The first three are the stable prefix that does not vary between tasks in the same `/ductus:implement` walk; the suffix (`task`) is the per-task variable. Hosts that implement prompt caching SHOULD place a cache anchor immediately after `write-boundary` and before `task` so the prefix's token cost is paid once per walk rather than once per task. The contract is SHOULD, not MUST — hosts without prompt caching still produce correct results, just at higher token cost. Independent host integrations (Claude Code, Auggie, third-party) converge on the same anchor position by following this contract.
+**Cache-breakpoint contract.** The `writeCode` request serializes its fields in this order: `constitution-excerpts`, `constitution-excerpts-unexaminable` (present only when the load could not examine something — see `data-model.md`), `plan-relevant-files`, `write-boundary`, `task`. The first three are the stable prefix that does not vary between tasks in the same `/ductus:implement` walk; the suffix (`task`) is the per-task variable. Hosts that implement prompt caching SHOULD place a cache anchor immediately after `write-boundary` and before `task` so the prefix's token cost is paid once per walk rather than once per task. The contract is SHOULD, not MUST — hosts without prompt caching still produce correct results, just at higher token cost. Independent host integrations (Claude Code, Auggie, third-party) converge on the same anchor position by following this contract.
 
 **Deferred to scenarios on this spec**:
 
