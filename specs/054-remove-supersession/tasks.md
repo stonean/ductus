@@ -106,11 +106,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 12. Regenerate, verify, and audit
 
-- [ ] Run `scripts/gen-configure-mcp.sh` **then** `scripts/gen-claude-commands.sh`, in that order
-- [ ] Run `scripts/gen-help-tables.sh` and confirm the command tables regenerate to sixteen rows
-- [ ] Confirm `framework/bootstrap/configure/claude.md` and `configure/auggie.md` carry no supersession tool permissions and reproduce byte-for-byte
-- [ ] Run `check-corpus-links` and `check-orphaned-references` across the corpus
-- [ ] Run `/{project}:audit` and confirm zero findings, including Family 16 and Family 33
-- [ ] Grep the whole tree for `/{project}:supersede`, `--supersedes`, `supersedes:`, `§supersession-annotations`, `write-supersession-annotation`, and `read-supersession-pair`, and confirm every remaining hit is ordinary English
+- [x] Run `scripts/gen-configure-mcp.sh` **then** `scripts/gen-claude-commands.sh`, in that order
+- [x] Run `scripts/gen-help-tables.sh` and confirm the command tables regenerate to sixteen rows
+- [x] Confirm `framework/bootstrap/configure/claude.md` and `configure/auggie.md` carry no supersession tool permissions and reproduce byte-for-byte
+- [x] Run `check-corpus-links` and `check-orphaned-references` across the corpus
+- [x] Run `/{project}:audit` and confirm zero findings, including Family 16 and Family 33
+- [x] Grep the whole tree for `/{project}:supersede`, `--supersedes`, `supersedes:`, `§supersession-annotations`, `write-supersession-annotation`, and `read-supersession-pair`, and confirm every remaining hit is ordinary English
 
 - **Done when**: `/{project}:audit` reports zero findings, both link checks are clean, and no live artifact names a removed capability.

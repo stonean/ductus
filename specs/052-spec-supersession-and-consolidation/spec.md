@@ -2,8 +2,8 @@
 status: done
 dependencies: [041-task-pruning]
 review:
-  last-run: 2026-08-30T21:23:15Z
-  reviewed-against: 62381d05f0bd4d78396f4efcbdcae889c1dd8e06
+  last-run: 2026-08-31T00:00:00Z
+  reviewed-against: 88b2fad2f7d1b73c9294c1e1e3943b2e1dc3300e
   must-violations: 0
   should-violations: 0
   low-confidence: 0

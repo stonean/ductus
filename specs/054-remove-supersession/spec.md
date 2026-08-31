@@ -103,32 +103,32 @@ Two adopter-side non-events, stated so their absence is deliberate rather than o
 
 ## Acceptance Criteria
 
-- [ ] AC1: `framework/commands/supersede.md` does not exist, and neither does any generated copy of it under a host command or skill directory
-- [ ] AC2: No command source defers to `supersede.md` for Declaration semantics or any other statement, and none names `/{project}:supersede`, `--supersedes`, or the `supersedes:` key — the bare verb in `review.md`'s report-regeneration line is ordinary English and stays, per AC21
-- [ ] AC3: `/{project}:specify` accepts no `--supersedes` flag, dispatches no second-spec write, and offers no supersession answer on a routing candidate — a candidate admits *amend it* and *unrelated* only
-- [ ] AC4: `/{project}:consolidate` names no supersession alternative; its ship/no-ship decision table is rewritten to ask whether the earlier spec still describes something true
-- [ ] AC5: The constitution carries no `§supersession-annotations` section, no criterion-level supersession bullet in `§spec-requirements`, and no `supersedes` row in the spec frontmatter schema table
-- [ ] AC6: No anchor, link, or cross-reference anywhere in the repository resolves to a removed constitution section or to the removed command file — `check-corpus-links` and `check-orphaned-references` report clean
-- [ ] AC7: `write-supersession-annotation` and `read-supersession-pair` are absent from all five registration sites, and `cargo test --test mcp` passes with the manifest set-equal to the registry
-- [ ] AC8: The `classifyClaims` extension point and its request, response, and claim types are gone, and no extension point remains without a caller
-- [ ] AC9: `validate-frontmatter` contains no `supersedes` validation path
-- [ ] AC10: `check-artifacts` runs eight residual deterministic families, `supersession-reciprocity` is returned by no code path, and `analyze.md`'s enumeration and count match the implementation
-- [ ] AC11: `cargo build`, `cargo clippy`, and the full `cargo test` suite pass with no dead-code or unused-import warnings from the removal
-- [ ] AC12: `help.md`, `docs/slash-commands.md`, and `README.md` document sixteen commands with no `/supersede` among them, and `scripts/gen-help-tables.sh` carries no supersede entry
-- [ ] AC13: The installer manifest carries no `supersede.md` row, and every hardcoded command count in `framework/bootstrap/ductus.md` and `framework/bootstrap/govern.md` reads sixteen rather than seventeen
-- [ ] AC14: `framework/bootstrap/configure/claude.md` and `framework/bootstrap/configure/auggie.md` carry no supersession tool permissions, and `scripts/gen-configure-mcp.sh` reproduces them byte-for-byte
-- [ ] AC15: `/{project}:audit` reports zero findings, including Family 16 (installer-command-parity) and Family 33 (readme-command-parity)
-- [ ] AC16: No entry is added to `framework/migrations.toml` and no procedure file to `framework/migrations/`; an adopter carrying an installed supersede command has it removed by slash-command cleanup on the next `/{project}` run, in each of the three agent layouts, with a pinned path kept and no adopter spec content edited
-- [ ] AC17: `runtime/CHANGELOG.md` records the removal as breaking, naming both MCP tools, both CLI subcommands, and the frontmatter key that stops being validated
-- [ ] AC18: Spec 053's directory no longer exists, its content is consolidated into 052, and every inbound pointer to 053 — including this spec's own body link — resolves to 052
-- [ ] AC19: No live artifact references `/{project}:supersede`, `--supersedes`, the `supersedes:` key, `§supersession-annotations`, `write-supersession-annotation`, or `read-supersession-pair` — command sources, constitution, bootstrap, docs, README, `AGENTS.md`, `scripts/`, and every spec body included
-- [ ] AC20: The `` `/specify --supersedes` `` worked example is replaced by a surviving flag in `scripts/audit/readme-command-parity.sh`, `scripts/audit/README.md`, and `specs/026-framework-self-audit/scenarios/link-check-consolidation.md`, uniformly and in one edit, leaving 026 at `done`
-- [ ] AC21: Ordinary-English uses of "supersede" that name no capability — the pre-commit hooks, `framework/rules/security-backend.md`, `review.md`'s report-regeneration line — are unchanged
-- [ ] AC22: Spec 052 is `done`, carries no supersession section and no acceptance criterion whose deliverable was removed, retains its consolidation content and its existing directory name, and its H1 names consolidation alone
-- [ ] AC23: `blockquote_cites` is absent from the runtime and referenced by no caller
-- [ ] AC24: The blockquote exclusion in `runtime/src/primitives/spec_links.rs` is unchanged, and `derive-dependencies` produces byte-identical `dependencies:` frontmatter across the corpus before and after this change
-- [ ] AC25: `validate-frontmatter` reports `clean` on a spec whose frontmatter carries a `supersedes:` key, emitting no finding at any severity
-- [ ] AC26: `docs/slash-commands.md`'s flag-versus-command paragraph states the two-spec rule with no exception, naming `/fold` and `/consolidate` as the two-spec commands
+- [x] AC1: `framework/commands/supersede.md` does not exist, and neither does any generated copy of it under a host command or skill directory
+- [x] AC2: No command source defers to `supersede.md` for Declaration semantics or any other statement, and none names `/{project}:supersede`, `--supersedes`, or the `supersedes:` key — the bare verb in `review.md`'s report-regeneration line is ordinary English and stays, per AC21
+- [x] AC3: `/{project}:specify` accepts no `--supersedes` flag, dispatches no second-spec write, and offers no supersession answer on a routing candidate — a candidate admits *amend it* and *unrelated* only
+- [x] AC4: `/{project}:consolidate` names no supersession alternative; its ship/no-ship decision table is rewritten to ask whether the earlier spec still describes something true
+- [x] AC5: The constitution carries no `§supersession-annotations` section, no criterion-level supersession bullet in `§spec-requirements`, and no `supersedes` row in the spec frontmatter schema table
+- [x] AC6: No anchor, link, or cross-reference anywhere in the repository resolves to a removed constitution section or to the removed command file — `check-corpus-links` and `check-orphaned-references` report clean
+- [x] AC7: `write-supersession-annotation` and `read-supersession-pair` are absent from all five registration sites, and `cargo test --test mcp` passes with the manifest set-equal to the registry
+- [x] AC8: The `classifyClaims` extension point and its request, response, and claim types are gone, and no extension point remains without a caller
+- [x] AC9: `validate-frontmatter` contains no `supersedes` validation path
+- [x] AC10: `check-artifacts` runs eight residual deterministic families, `supersession-reciprocity` is returned by no code path, and `analyze.md`'s enumeration and count match the implementation
+- [x] AC11: `cargo build`, `cargo clippy`, and the full `cargo test` suite pass with no dead-code or unused-import warnings from the removal
+- [x] AC12: `help.md`, `docs/slash-commands.md`, and `README.md` document sixteen commands with no `/supersede` among them, and `scripts/gen-help-tables.sh` carries no supersede entry
+- [x] AC13: The installer manifest carries no `supersede.md` row, and every hardcoded command count in `framework/bootstrap/ductus.md` and `framework/bootstrap/govern.md` reads sixteen rather than seventeen
+- [x] AC14: `framework/bootstrap/configure/claude.md` and `framework/bootstrap/configure/auggie.md` carry no supersession tool permissions, and `scripts/gen-configure-mcp.sh` reproduces them byte-for-byte
+- [x] AC15: `/{project}:audit` reports zero findings, including Family 16 (installer-command-parity) and Family 33 (readme-command-parity)
+- [x] AC16: No entry is added to `framework/migrations.toml` and no procedure file to `framework/migrations/`; an adopter carrying an installed supersede command has it removed by slash-command cleanup on the next `/{project}` run, in each of the three agent layouts, with a pinned path kept and no adopter spec content edited
+- [x] AC17: `runtime/CHANGELOG.md` records the removal as breaking, naming both MCP tools, both CLI subcommands, and the frontmatter key that stops being validated
+- [x] AC18: Spec 053's directory no longer exists, its content is consolidated into 052, and every inbound pointer to 053 — including this spec's own body link — resolves to 052
+- [x] AC19: No live artifact references `/{project}:supersede`, `--supersedes`, the `supersedes:` key, `§supersession-annotations`, `write-supersession-annotation`, or `read-supersession-pair` — command sources, constitution, bootstrap, docs, README, `AGENTS.md`, `scripts/`, and every spec body included
+- [x] AC20: The `` `/specify --supersedes` `` worked example is replaced by a surviving flag in `scripts/audit/readme-command-parity.sh`, `scripts/audit/README.md`, and `specs/026-framework-self-audit/scenarios/link-check-consolidation.md`, uniformly and in one edit, leaving 026 at `done`
+- [x] AC21: Ordinary-English uses of "supersede" that name no capability — the pre-commit hooks, `framework/rules/security-backend.md`, `review.md`'s report-regeneration line — are unchanged
+- [x] AC22: Spec 052 is `done`, carries no supersession section and no acceptance criterion whose deliverable was removed, retains its consolidation content and its existing directory name, and its H1 names consolidation alone
+- [x] AC23: `blockquote_cites` is absent from the runtime and referenced by no caller
+- [x] AC24: The blockquote exclusion in `runtime/src/primitives/spec_links.rs` is unchanged, and `derive-dependencies` produces byte-identical `dependencies:` frontmatter across the corpus before and after this change
+- [x] AC25: `validate-frontmatter` reports `clean` on a spec whose frontmatter carries a `supersedes:` key, emitting no finding at any severity
+- [x] AC26: `docs/slash-commands.md`'s flag-versus-command paragraph states the two-spec rule with no exception, naming `/fold` and `/consolidate` as the two-spec commands
 
 ## Open Questions
 
