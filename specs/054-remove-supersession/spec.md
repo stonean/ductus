@@ -2,8 +2,8 @@
 status: in-progress
 dependencies: [050-constitution, 052-spec-supersession-and-consolidation]
 review:
-  last-run: null
-  reviewed-against: null
+  last-run: 2026-08-31T00:30:00Z
+  reviewed-against: 018f8be23ebc2ccd339263d0075a77b7bab534c2
   must-violations: 0
   should-violations: 0
   low-confidence: 0
