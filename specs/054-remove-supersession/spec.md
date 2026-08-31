@@ -1,6 +1,6 @@
 ---
-status: clarified
-dependencies: [050-constitution, 052-spec-supersession-and-consolidation, 053-supersession-reconciliation]
+status: in-progress
+dependencies: [050-constitution, 052-spec-supersession-and-consolidation]
 review:
   last-run: null
   reviewed-against: null
@@ -25,7 +25,7 @@ The two operations that keep the corpus honest already existed before supersessi
 
 The cost of carrying it was real and had barely begun to be paid: a command, a flag on a second command, a hand-authored frontmatter key with its own validator, a constitution section defining three annotation granularities and the blockquote rule that keeps them out of the dependency graph, two runtime primitives across five registration sites each, an extension point with a four-outcome classification vocabulary, a check family whose own documentation has to state at length what its silence does *not* mean, and a shared already-present predicate binding the annotation writer to `check-artifacts`.
 
-The machinery shipped in [052 — Spec supersession and consolidation](../052-spec-supersession-and-consolidation/spec.md) and [053 — Supersession reconciliation](../053-supersession-reconciliation/spec.md) and has not been used. **No spec in the corpus carries a `supersedes:` key.** The one sunset banner in the corpus — on `005-workflows`, written when `043-workflows-sunset` removed the feature — was hand-authored before any of this existed, which is itself the evidence that the prose convention never needed a command, a key, a primitive, or a check to produce it. Removing the machinery now costs one migration and no corpus rewrite; removing it after adoption would cost both.
+The machinery shipped in [052 — Spec supersession and consolidation](../052-spec-supersession-and-consolidation/spec.md) — the declaration and its annotation, plus the reconciliation pass that followed — and has not been used. **No spec in the corpus carries a `supersedes:` key.** The one sunset banner in the corpus — on `005-workflows`, written when `043-workflows-sunset` removed the feature — was hand-authored before any of this existed, which is itself the evidence that the prose convention never needed a command, a key, a primitive, or a check to produce it. Removing the machinery now costs no migration and no corpus rewrite; removing it after adoption would cost both.
 
 `/{project}:consolidate` shipped in the same spec and **stays**. It is the operation that removes the dead reference rather than annotating it.
 
