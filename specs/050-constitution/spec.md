@@ -1,9 +1,9 @@
 ---
-status: in-progress
+status: done
 dependencies: []
 review:
-  last-run: 2026-08-25T18:36:17Z
-  reviewed-against: 09d954565dea9f7787f04d0097b4017f54b99a8e
+  last-run: 2026-08-31T18:20:00Z
+  reviewed-against: 07d8487f9acf89f6987075804872d55f0ec5c4c5
   must-violations: 0
   should-violations: 0
   low-confidence: 0
