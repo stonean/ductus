@@ -1245,9 +1245,12 @@ fn load_constitution_excerpts(command_name: &str, repo: &Path) -> ConstitutionEx
         ));
     };
     let Ok(command_content) = std::fs::read_to_string(&command_path) else {
+        // Repo-relative: the label rides in an outbound payload, and an
+        // absolute path would carry the contributor's home directory with it.
+        let shown = command_path.strip_prefix(repo).unwrap_or(&command_path);
         return ConstitutionExcerptScan::unexaminable(format!(
             "command-file-unreadable: {}",
-            command_path.display()
+            shown.display()
         ));
     };
     let anchors = parse_command_references(&command_content);
@@ -1258,10 +1261,9 @@ fn load_constitution_excerpts(command_name: &str, repo: &Path) -> ConstitutionEx
     }
     let constitution_path = repo.join("framework/constitution.md");
     let Ok(constitution) = std::fs::read_to_string(&constitution_path) else {
-        return ConstitutionExcerptScan::unexaminable(format!(
-            "constitution-unreadable: {}",
-            constitution_path.display()
-        ));
+        return ConstitutionExcerptScan::unexaminable(
+            "constitution-unreadable: framework/constitution.md".to_string(),
+        );
     };
     let mut scan = ConstitutionExcerptScan::default();
     for anchor in anchors {
@@ -1678,10 +1680,10 @@ mod tests {
         let scan = load_constitution_excerpts("implement", tmp.path());
         assert!(scan.excerpts.is_empty());
         assert_eq!(scan.unexaminable.len(), 1);
-        assert!(
-            scan.unexaminable[0].starts_with("constitution-unreadable: "),
-            "got {:?}",
-            scan.unexaminable[0]
+        assert_eq!(
+            scan.unexaminable,
+            vec!["constitution-unreadable: framework/constitution.md".to_string()],
+            "the label is repo-relative — it rides in an outbound payload"
         );
     }
 
