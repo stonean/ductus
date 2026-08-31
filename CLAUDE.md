@@ -3,6 +3,21 @@
 @import framework/constitution.md
 @import AGENTS.md
 
+## Non-negotiables
+
+> Restated here, not only in `AGENTS.md`, because a rule that depends on an agent
+> reading a 90KB file in full is a diligence dependency, which
+> [§design-principles](framework/constitution.md#design-principles) rejects. This
+> file is small and always loaded whole, so the rule is unmissable by construction
+> rather than by care.
+
+- **Commit directly to `main`. This repo is trunk-based — never branch first.**
+  `ductus` is live-on-main: the installer and everything `/ductus` fetches track
+  `main`, so there is no release branch and no feature-branch/PR step. The
+  general "branch off the default branch before committing" default does **not**
+  apply here. Branch only when the user explicitly asks. Full entry, with its
+  history, in `AGENTS.md` §Workflow.
+
 ## Auto-Memory Routing
 
 > Agent-specific routing for the constitution's *shared knowledge stays in git* principle ([§drift-prevention](framework/constitution.md#drift-prevention)).
