@@ -1,4 +1,4 @@
-# 052 — Spec supersession and consolidation Tasks
+# 052 — Spec consolidation Tasks
 
 Tasks derived from the [plan](plan.md). Complete in order.
 
