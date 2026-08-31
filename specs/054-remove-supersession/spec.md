@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [050-constitution, 052-spec-supersession-and-consolidation]
 review:
   last-run: 2026-08-31T00:30:00Z

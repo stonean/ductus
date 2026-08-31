@@ -36,5 +36,3 @@
         specs/008-security-rules/spec.md): `- [ ] {Rule ID}: {artifact} does not address — {summary}`.
 
      When an item is migrated, remove it from this list. -->
-
-- [ ] convention: nothing verifies that a `step N` cross-reference in a command file resolves to a step that exists. Removing steps 5 and 8 from specify.md and step 3 from consolidate.md left four stale references — one of which had become a self-reference — and they were caught by reading, not by any check. The same class of error is reachable by any future edit that inserts or removes a numbered step. — `framework/commands/specify.md` (captured during review of 054-remove-supersession)

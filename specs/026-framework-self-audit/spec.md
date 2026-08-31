@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [017-derive-dont-ask, 022-deterministic-runtime, 023-govern-refinement, 024-rule-loader, 025-rule-opt-out]
 review:
   last-run: 2026-08-30T21:46:46Z
