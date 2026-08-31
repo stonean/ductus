@@ -1,10 +1,10 @@
 ---
 spec: 022-deterministic-runtime
-reviewed-at: 2026-08-31T00:44:57Z
-reviewed-against: 0a69e8c35f536891c4b595263393dcd22b1884fa
+reviewed-at: 2026-08-31T00:57:50Z
+reviewed-against: bc231336baa9f84affa27b581db0201586a83ae1
 diff-base: 45ac2c848c6cda764c74bfab9caf8bdf1a957cfb
 must-violations: 0
-should-violations: 1
+should-violations: 0
 low-confidence: 0
 captured-issues: 1
 skipped-passes: []
@@ -14,7 +14,7 @@ skipped-passes: []
 
 ## Summary
 
-0 MUST violation(s), 1 SHOULD violation(s), 0 low-confidence finding(s). blocking: no.
+Clean. Five passes over the window `45ac2c8..bc23133` — the `writeCode` payload bundler (`payload.rs`, `extensions.rs`), one re-blessed parity golden, and the governance prose the rule files do not cover. The prior run's single SHOULD (`QUAL-CLAIM-001`, an empty `constitution-excerpts` array indistinguishable from a constitution that could not be read) is fixed at `c7797ae`, not waived: `load_constitution_excerpts` now returns a scan carrying what it read and what it could not, surfaced as `constitution-excerpts-unexaminable` with `skip_serializing_if` so a clean payload stays byte-identical. Its own follow-on — absolute paths in those labels, which would carry a contributor's home directory into an outbound payload — is fixed at `bc23133`. 0 MUST, 0 SHOULD, 0 low-confidence; not blocking.
 
 ## MUST violations (blocking)
 
@@ -22,13 +22,7 @@ skipped-passes: []
 
 ## SHOULD violations (advisory)
 
-### SHOULD: QUAL-CLAIM-001 — an empty `constitution-excerpts` array cannot be told from a constitution that could not be read
-
-- **File**: `runtime/src/interpreter/payload.rs:1239-1258`
-- **Rule**: A result that reports a clean, empty, or in-sync state SHOULD distinguish *"examined the subject and found nothing"* from *"could not examine the subject"*, rather than emitting the same value for both. When a code path skips part of its subject, cannot reach it, or has no basis to inspect it, its output SHOULD say so — through a distinct return variant, an accompanying status or guidance field, or a message naming what was not examined — instead of a bare zero, empty collection, or success string that a caller will read as positive assurance.
-- **Finding**: `load_constitution_excerpts` returns a bare `Vec<String>`, and five distinct states collapse into the same value: the command file could not be located, the command file could not be read, the command declares no `Reference:` anchors, the constitution itself could not be read, and — via the closing `filter_map` — an anchor that resolves to nothing is silently dropped from an otherwise-populated array. Only the third is genuinely 'examined and found nothing'; the rest are 'could not examine', and the host receives an outbound `writeCode` payload that reads as 'no constitutional context applies' in every case. The repo already rejects this shape one call away: `resolve_anchor.rs:40` accumulates an `unresolved` set for exactly these anchors, and `read-spec` reports `scenario-files-unreadable` alongside its question list for exactly this reason.
-- **Auto-fixable**: no
-- **Suggested fix**: Return the unexaminable set alongside the excerpts rather than folding it into an empty vec, and surface it on `WriteCodeRequest` as a field carrying `skip_serializing_if = "Vec::is_empty"` — the shape task 89 used for `scenario-files-unreadable`, which keeps the clean payload byte-identical and re-blesses no parity golden. Distinguish at minimum an unreadable constitution from an anchor that did not resolve; a command file with no `Reference:` line stays the one honest empty case.
+*None.*
 
 ## Low-confidence findings
 
