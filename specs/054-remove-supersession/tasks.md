@@ -4,28 +4,28 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 1. Consolidate 053 into 052
 
-- [ ] Run `/{project}:consolidate` with 053 as the source and 052 as the target, while `consolidate.md` is still intact
-- [ ] Confirm the prompt names 053's content loss and that no `supersedes:` edge is reported (none exists in the corpus)
-- [ ] Verify `rewrite-spec-links` re-pointed this spec's own body link from 053 to 052, and that `specs/053-supersession-reconciliation/` is gone
-- [ ] Commit before anything else, so the pre-commit hook regenerates `dependencies:` from the rewritten links
+- [x] Run `/{project}:consolidate` with 053 as the source and 052 as the target, while `consolidate.md` is still intact
+- [x] Confirm the prompt names 053's content loss and that no `supersedes:` edge is reported (none exists in the corpus)
+- [x] Verify `rewrite-spec-links` re-pointed this spec's own body link from 053 to 052, and that `specs/053-supersession-reconciliation/` is gone
+- [x] Commit before anything else, so the pre-commit hook regenerates `dependencies:` from the rewritten links
 
 - **Done when**: `specs/053-supersession-reconciliation/` does not exist, no file in the tree links to it, and the corpus has no dangling pointer.
 
 ## 2. Edit 052 down and return it to `done`
 
-- [ ] `set-status` 052 from `done` to `in-progress` (meaningful body edit, §spec-lifecycle)
-- [ ] Delete its supersession sections and every acceptance criterion whose deliverable this change removes; leave `next-criterion` alone so retired labels are never reissued
-- [ ] Retitle the H1 to name consolidation alone; leave the directory name unchanged
-- [ ] Confirm what remains describes `/{project}:consolidate` truthfully and nothing else
-- [ ] `set-status` 052 back to `done`
+- [x] `set-status` 052 from `done` to `in-progress` (meaningful body edit, §spec-lifecycle)
+- [x] Delete its supersession sections and every acceptance criterion whose deliverable this change removes; leave `next-criterion` alone so retired labels are never reissued
+- [x] Retitle the H1 to name consolidation alone; leave the directory name unchanged
+- [x] Confirm what remains describes `/{project}:consolidate` truthfully and nothing else
+- [x] `set-status` 052 back to `done`
 
 - **Done when**: 052 is `done`, mentions supersession nowhere, and its surviving criteria all describe things that still exist.
 
 ## 3. Replace the `/specify --supersedes` worked example — its own commit
 
-- [ ] Substitute `/specify --fold-into` for `` `/specify --supersedes` `` in `scripts/audit/readme-command-parity.sh`, `scripts/audit/README.md`, and `specs/026-framework-self-audit/scenarios/link-check-consolidation.md`
-- [ ] Confirm the replacement is a flag on the same command inside a wider code span, so it still illustrates Family 33's matching property
-- [ ] Commit this substitution alone, bundled with nothing else
+- [x] Substitute `/specify --fold-into` for `` `/specify --supersedes` `` in `scripts/audit/readme-command-parity.sh`, `scripts/audit/README.md`, and `specs/026-framework-self-audit/scenarios/link-check-consolidation.md`
+- [x] Confirm the replacement is a flag on the same command inside a wider code span, so it still illustrates Family 33's matching property
+- [x] Commit this substitution alone, bundled with nothing else
 
 - **Done when**: the three files carry one uniform substitution in a single commit, and 026 is still `done`.
 
