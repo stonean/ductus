@@ -36,5 +36,3 @@
         specs/008-security-rules/spec.md): `- [ ] {Rule ID}: {artifact} does not address — {summary}`.
 
      When an item is migrated, remove it from this list. -->
-
-- [ ] chore: delete the stale "do not git push until 0.37.0 is tagged" entry from AGENTS.md §Workflow — the entry says to remove it once the release is tagged, and `ductus-v0.37.0` through `ductus-v0.40.0` all exist with the `version` file at 0.40.0, so the push block it describes no longer applies and reads as a live prohibition to any contributor who takes it at face value
