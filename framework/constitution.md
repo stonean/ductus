@@ -66,6 +66,18 @@ Grounding is the working-discipline counterpart to the **Verified** principle: *
 2. **Live, reachable state** — a connected dev or read-only database, a running dev server, logs, a REPL, `--help` output, an actual test run. When such a source is on hand, query it rather than infer schema, data shape, or behavior.
 3. **Inference** — permitted only for what no reachable source can answer, and then stated as an assumption, never asserted as fact.
 
+### A partial read is not a read
+
+Grounding governs *whether* a source was consulted. It governs the **completeness** of that consultation too, because a read that returned part of its subject satisfies "read the file" while delivering something else.
+
+A tool that elides content has not delivered the source. Truncation to a preview, a saved-output pointer, a page or line cap, a `head`/`tail` window, a match-only search — each returns a fragment. The elided remainder is unread, and the prohibition above applies to it unchanged: reasoning as though it said nothing is reasoning from a source that went unread.
+
+There are two dispositions, and prose is not a third. **Read the remainder** — follow the pointer, page through the ranges — or **state what was not examined**, in the artifact where a later reader meets the claim rather than in a summary they will never see. Where both a reader that reports its subject's size and takes an offset and a command whose output is capped downstream are available, the explicit reader is the grounded choice: a downstream cap is applied after the fact and says nothing about what it dropped relative to what was needed.
+
+This is `QUAL-CLAIM-001` turned on the agent instead of on its code. That rule requires a result to distinguish *examined and found nothing* from *could not examine*; this requires the agent's own reading to do the same. The failure is asymmetric in the usual direction — a truncated read reads as success, since the content that arrived is genuine and the missing part is invisible precisely because it is missing — and the subjects most likely to be truncated (a governing document, a long procedure, a wide diff) are the ones where the missed content matters most.
+
+**Nothing enforces this, and that is stated rather than implied.** No gate intercepts a tool choice. It is a governed requirement, cited by `/{project}:review` and `/{project}:analyze` when a claim rests on a partial read, in the same way the rest of this section is cited. A rule that implied enforcement it does not have would be committing the defect it describes.
+
 <!-- §recommendations -->
 
 ### Recommendations

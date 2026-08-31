@@ -90,3 +90,15 @@ and are out of scope. Run against the file as it stands, not the survey's counts
 - [x] Regenerate `.claude/commands/ductus/` and run the full CI surface — `framework/commands/*.md` is runtime-adjacent, so `cargo test --release --locked` is part of the gate, not the markdown checks alone
 
 - **Done when**: An agent implementing a task routes a finding by scope wherever it reads the procedure — `implement.md`, the shipped inbox template, and this repo's inbox agree with §brownfield-inbox rather than predating it. `npx markdownlint-cli2`, `scripts/audit/run-all.sh`, and `cargo test --release --locked` clean on a committed tree; if `implement-basic.jsonl` shifts, it is re-blessed filtered to that one golden with the diff confirmed to be the two sha fields only.
+
+## 12. §grounding — a partial read is not a read
+
+- [x] Implement the behavior described in `scenarios/a-partial-read-is-not-a-read.md`
+- [x] Add the subsection to `framework/constitution.md` §grounding, after **Sources, in order of authority**, stating that a tool which elides content has not delivered the source
+- [x] State the two dispositions — read the remainder, or name what was not examined where a later reader meets the claim — and that prose beside a completion claim is not a third
+- [x] Tie it to `QUAL-CLAIM-001` explicitly, so a reviewer can cite the binding rather than argue the analogy
+- [x] State the limit honestly: nothing intercepts a tool choice, so this is a governed requirement cited by `/{project}:review` and `/{project}:analyze`, not a gate
+- [x] Add a second `CLAUDE.md` §Non-negotiables entry pointing at the new §grounding rule — one line, no restatement, since the constitution is its home and a second copy would drift (the trunk-based entry stays project-specific and does **not** move into the constitution, which ships to adopters who may not be trunk-based)
+- [x] Verify no other constitution section already states a competing rule about partial reads, and that the SSOT invariants family stays clean
+
+- **Done when**: `framework/constitution.md` §grounding carries the subsection, it ships to adopters unchanged, `CLAUDE.md` points at it rather than restating it, and `/{project}:audit` reports zero findings.

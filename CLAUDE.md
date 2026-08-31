@@ -17,6 +17,11 @@
   general "branch off the default branch before committing" default does **not**
   apply here. Branch only when the user explicitly asks. Full entry, with its
   history, in `AGENTS.md` §Workflow.
+- **A truncation notice is not a read.** When a tool returns a preview, a
+  saved-output pointer, or any capped fragment, the rest is unread — follow the
+  pointer or say what you did not examine. The rule and its reasoning live in
+  [§grounding](framework/constitution.md#grounding); this is a pointer, not a
+  second copy.
 
 ## Auto-Memory Routing
 
