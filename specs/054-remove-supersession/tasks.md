@@ -60,47 +60,47 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 7. Remove the two primitives and their five registration sites each
 
-- [ ] Delete `runtime/src/primitives/write_supersession_annotation.rs` and `read_supersession_pair.rs`, and their `pub mod` lines
-- [ ] Remove both from the CLI command enum and dispatch arms in `runtime/src/main.rs`, the exec-path match arms in `runtime/src/interpreter/mod.rs`, the `#[tool]` definitions in `runtime/src/mcp/server.rs`, and `PRIMITIVE_REGISTRY` in `runtime/src/schema/registry.rs`
-- [ ] Remove their args and result types from `runtime/src/schema/primitives.rs`, including the `criterion` granularity argument
-- [ ] Remove the `classifyClaims` extension point: `SupersededClaim`, `ClassifyClaimsRequest` and its response type in `runtime/src/schema/extensions.rs`, and `build_classify_claims_request` in `runtime/src/interpreter/payload.rs`
-- [ ] Run `cargo test --test mcp` before anything else — it prints the exact manifest/registry divergence on a half-removal
+- [x] Delete `runtime/src/primitives/write_supersession_annotation.rs` and `read_supersession_pair.rs`, and their `pub mod` lines
+- [x] Remove both from the CLI command enum and dispatch arms in `runtime/src/main.rs`, the exec-path match arms in `runtime/src/interpreter/mod.rs`, the `#[tool]` definitions in `runtime/src/mcp/server.rs`, and `PRIMITIVE_REGISTRY` in `runtime/src/schema/registry.rs`
+- [x] Remove their args and result types from `runtime/src/schema/primitives.rs`, including the `criterion` granularity argument
+- [x] Remove the `classifyClaims` extension point: `SupersededClaim`, `ClassifyClaimsRequest` and its response type in `runtime/src/schema/extensions.rs`, and `build_classify_claims_request` in `runtime/src/interpreter/payload.rs`
+- [x] Run `cargo test --test mcp` before anything else — it prints the exact manifest/registry divergence on a half-removal
 
 - **Done when**: `cargo test --test mcp` passes with the manifest set-equal to the registry, and no extension point remains without a caller.
 
 ## 8. Remove the validator, the check family, and the shared predicate
 
-- [ ] Remove `validate_supersedes`, its call site, and its five tests from `runtime/src/primitives/validate_frontmatter.rs`
-- [ ] Remove `check_supersession_reciprocity`, its call site, and the `supersession-reciprocity` family tests from `runtime/src/primitives/check_artifacts.rs`
-- [ ] Remove `blockquote_cites` from `runtime/src/primitives/mod.rs` — both its callers are now gone
-- [ ] Correct the two `read_spec.rs` comments that name `read-supersession-pair` as a second caller
-- [ ] Leave the blockquote exclusion in `runtime/src/primitives/spec_links.rs` untouched — it serves four other primitives and predates supersession
+- [x] Remove `validate_supersedes`, its call site, and its five tests from `runtime/src/primitives/validate_frontmatter.rs`
+- [x] Remove `check_supersession_reciprocity`, its call site, and the `supersession-reciprocity` family tests from `runtime/src/primitives/check_artifacts.rs`
+- [x] Remove `blockquote_cites` from `runtime/src/primitives/mod.rs` — both its callers are now gone
+- [x] Correct the two `read_spec.rs` comments that name `read-supersession-pair` as a second caller
+- [x] Leave the blockquote exclusion in `runtime/src/primitives/spec_links.rs` untouched — it serves four other primitives and predates supersession
 
 - **Done when**: `validate-frontmatter` reports `clean` on a spec carrying a `supersedes:` key, `check-artifacts` returns eight residual families, and `spec_links.rs` is unchanged.
 
 ## 9. Trim the tests and re-bless the golden
 
-- [ ] Delete the three supersede tests from `runtime/tests/two_spec_commands.rs`; keep `consolidate_confirms_before_it_rewrites_or_removes_anything`, `fold_never_reaches_the_sequential_opt_in`, and the shared helpers
-- [ ] Re-bless `runtime/tests/golden/specify-basic.jsonl` and read the diff to confirm it is the flag and the two declaration steps leaving, nothing else
-- [ ] `cargo build`, `cargo clippy`, and the full `cargo test` under `runtime/`
+- [x] Delete the three supersede tests from `runtime/tests/two_spec_commands.rs`; keep `consolidate_confirms_before_it_rewrites_or_removes_anything`, `fold_never_reaches_the_sequential_opt_in`, and the shared helpers
+- [x] Re-bless `runtime/tests/golden/specify-basic.jsonl` and read the diff to confirm it is the flag and the two declaration steps leaving, nothing else
+- [x] `cargo build`, `cargo clippy`, and the full `cargo test` under `runtime/`
 
 - **Done when**: the suite passes with no dead-code or unused-import warnings, and the golden diff is attributable only to `specify.md`'s rewrite.
 
 ## 10. Sweep docs, README, scripts, and AGENTS.md
 
-- [ ] `docs/slash-commands.md`: delete the `/supersede` section, both "reach for `/supersede` instead" callouts under `/consolidate`, and the `--supersedes` clause in `/specify`'s flag line; restate the flag-versus-command paragraph as the rule without its exception, naming `/fold` and `/consolidate`
-- [ ] `README.md`: delete the `/supersede` bullet and its deep link into `docs/slash-commands.md`
-- [ ] `scripts/gen-help-tables.sh`: drop the `/{project}:supersede` entry
-- [ ] `AGENTS.md`: retarget the five-registration-sites gotcha at a primitive that still exists, keeping the lesson
-- [ ] Leave ordinary-English uses of the verb alone — the pre-commit hooks, `framework/rules/security-backend.md`, `review.md`'s report-regeneration line
+- [x] `docs/slash-commands.md`: delete the `/supersede` section, both "reach for `/supersede` instead" callouts under `/consolidate`, and the `--supersedes` clause in `/specify`'s flag line; restate the flag-versus-command paragraph as the rule without its exception, naming `/fold` and `/consolidate`
+- [x] `README.md`: delete the `/supersede` bullet and its deep link into `docs/slash-commands.md`
+- [x] `scripts/gen-help-tables.sh`: drop the `/{project}:supersede` entry
+- [x] `AGENTS.md`: retarget the five-registration-sites gotcha at a primitive that still exists, keeping the lesson
+- [x] Leave ordinary-English uses of the verb alone — the pre-commit hooks, `framework/rules/security-backend.md`, `review.md`'s report-regeneration line
 
 - **Done when**: sixteen commands are documented with no `/supersede` among them, and every ordinary-English use of the verb is unchanged.
 
 ## 11. Version bump and changelog
 
-- [ ] Bump `runtime/Cargo.toml` and `version` from `0.41.0` to `0.42.0`
-- [ ] Add the `runtime/CHANGELOG.md` 0.42.0 section recording the removal as breaking: both MCP tools, both CLI subcommands, the `classifyClaims` extension point, and the frontmatter key that stops being validated
-- [ ] `cargo build --release` to refresh the parity binary
+- [x] Bump `runtime/Cargo.toml` and `version` from `0.41.0` to `0.42.0`
+- [x] Add the `runtime/CHANGELOG.md` 0.42.0 section recording the removal as breaking: both MCP tools, both CLI subcommands, the `classifyClaims` extension point, and the frontmatter key that stops being validated
+- [x] `cargo build --release` to refresh the parity binary
 
 - **Done when**: the changelog names every removed surface and no golden diff is attributable to the version line.
 

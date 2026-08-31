@@ -54,14 +54,13 @@ use crate::schema::primitives::{
     MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergeManagedBlockResult,
     MergePermissionsArgs, MergePermissionsResult, MigrateSessionFileArgs, MigrateSessionFileResult,
     ProcessWaiversArgs, ProcessWaiversResult, PruneTasksArgs, PruneTasksResult, ReadSpecArgs,
-    ReadSpecResult, ReadSupersessionPairArgs, ReadSupersessionPairResult, ReadTasksArgs,
-    ReadTasksResult, RemoveInboxItemArgs, RemoveInboxItemResult, ResolveAnchorArgs,
-    ResolveAnchorResult, ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs,
-    ResolveReferencesResult, RetireFeatureArgs, RetireFeatureResult, RewriteSpecLinksArgs,
-    RewriteSpecLinksResult, RunGeneratorArgs, RunGeneratorResult, SetStatusArgs, SetStatusResult,
-    TraverseDepsArgs, TraverseDepsResult, ValidateFrontmatterArgs, ValidateFrontmatterResult,
-    WriteReviewArgs, WriteReviewResult, WriteSessionArgs, WriteSessionResult,
-    WriteSupersessionAnnotationArgs, WriteSupersessionAnnotationResult,
+    ReadSpecResult, ReadTasksArgs, ReadTasksResult, RemoveInboxItemArgs, RemoveInboxItemResult,
+    ResolveAnchorArgs, ResolveAnchorResult, ResolveFeatureArgs, ResolveFeatureResult,
+    ResolveReferencesArgs, ResolveReferencesResult, RetireFeatureArgs, RetireFeatureResult,
+    RewriteSpecLinksArgs, RewriteSpecLinksResult, RunGeneratorArgs, RunGeneratorResult,
+    SetStatusArgs, SetStatusResult, TraverseDepsArgs, TraverseDepsResult, ValidateFrontmatterArgs,
+    ValidateFrontmatterResult, WriteReviewArgs, WriteReviewResult, WriteSessionArgs,
+    WriteSessionResult,
 };
 
 /// Canonical MCP tool names exposed by the server, in manifest order —
@@ -259,19 +258,6 @@ fn node_is_numeric(map: &JsonObject) -> bool {
 
 #[tool_router]
 impl GovRuntimeServer {
-    #[tool(
-        name = "read-supersession-pair",
-        description = "Load exactly the two specs a declared supersession names, plus the superseded spec's scenarios \u{2014} the bounded read spec 053's reconciliation is built on. The ABSENT arguments are the design: there is no way to request a plan, data model, tasks file, source path, or third spec, so the read bound is a property of the code rather than a rule the caller has to remember. That bound is load-bearing \u{2014} without a declared edge to collapse the search to two specs, this is the corpus-wide criterion-supersession check that was measured at 455 pairs with 215 firing and every sample a false positive. Reading two full specs on a declared pointer's authority is not a widening: fold-back already declares the same bound. Only the SUPERSEDED spec's scenarios are read; the superseding spec's describe what it delivers, which is a different question. A spec or scenario that cannot be read is a domain outcome, not an error \u{2014} it lands in `unreadable` and is excluded from `examined`, because nothing can be proven about a file that will not parse and a read that died on one would say nothing about the files it could read. `guidance` is set when the superseded spec offers nothing to classify at all, which is examined-and-empty rather than examined-and-clean."
-    )]
-    async fn read_supersession_pair(
-        &self,
-        params: Parameters<ReadSupersessionPairArgs>,
-    ) -> Result<Json<ReadSupersessionPairResult>, String> {
-        primitives::read_supersession_pair::run(&params.0, self.repo())
-            .map(Json)
-            .map_err(|e| e.to_string())
-    }
-
     #[tool(
         name = "read-spec",
         description = "Parse spec frontmatter and body sections."
@@ -825,19 +811,6 @@ impl GovRuntimeServer {
         params: Parameters<RetireFeatureArgs>,
     ) -> Result<Json<RetireFeatureResult>, String> {
         primitives::retire_feature::run(&params.0, self.repo())
-            .map(Json)
-            .map_err(|e| e.to_string())
-    }
-
-    #[tool(
-        name = "write-supersession-annotation",
-        description = "Write onto a **superseded** spec the annotation recording that a later spec countered it — the half of a supersession a reader actually sees, where the `supersedes:` key on the superseding spec is bookkeeping. The frame is compiled in and the substance is authored: pass what no longer holds as `substance`, and the primitive contributes placement (after the H1 and its lead paragraph, ahead of any annotation already present), the blockquote wrapper, the `**Sunset ([link]):**` citation, and the closing record-of-what-shipped sentence. A blank substance is refused — a banner naming only the superseding spec tells a reader nothing. The blockquote is structural, not stylistic: `derive-dependencies` skips blockquote-prefixed lines, so the banner links its superseding spec without the annotated spec acquiring a dependency on its own successor. The frontmatter is spliced through byte-for-byte, so the spec keeps whatever status it had at any lifecycle state — the write is a mechanical edit and takes no back-edge. An annotation already citing this superseding spec returns `already-present: true` with `written: false`, so re-running an interrupted declaration converges; an annotation from a *different* spec stacks above it, newest first."
-    )]
-    async fn write_supersession_annotation(
-        &self,
-        params: Parameters<WriteSupersessionAnnotationArgs>,
-    ) -> Result<Json<WriteSupersessionAnnotationResult>, String> {
-        primitives::write_supersession_annotation::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

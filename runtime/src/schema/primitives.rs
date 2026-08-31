@@ -364,26 +364,6 @@ pub struct Frontmatter {
     /// state before a merge, never a defect.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub folds_into: Option<String>,
-    /// The specs this spec supersedes, when it declares any (spec 052).
-    ///
-    /// Hand-authored, and deliberately unlike `dependencies` and
-    /// `references`, which are derived indexes no author edits. Nothing in
-    /// the repository can compute this one: which spec counters which is a
-    /// judgement the author holds while writing and that no later pass
-    /// recovers. Inferring it was measured and rejected — 215 of 455
-    /// criterion pairs would have fired, every sample a false positive.
-    ///
-    /// A **list**, because one spec routinely supersedes several at once.
-    /// That is the deliberate divergence from [`Self::folds_into`], which is
-    /// correctly scalar: a staging spec has exactly one home, while a
-    /// superseding spec may counter several predecessors in one change.
-    ///
-    /// **Absent when empty, never `[]`.** `dependencies: []` is a derived
-    /// index truthfully reporting "harvested, found none", so its presence
-    /// is evidence the derivation ran; an empty `supersedes` would instead
-    /// assert a considered decision nobody made.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub supersedes: Vec<String>,
     /// Last-review block, when set.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub review: Option<ReviewBlock>,
@@ -1679,67 +1659,6 @@ pub struct CreateScenarioResult {
     pub created: String,
 }
 
-// -- write-supersession-annotation -------------------------------------------
-
-/// Args for `write-supersession-annotation`.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
-#[serde(rename_all = "kebab-case")]
-pub struct WriteSupersessionAnnotationArgs {
-    /// The **superseded** feature — the spec receiving the annotation.
-    #[arg(long)]
-    pub feature: String,
-    /// The **superseding** feature the annotation cites.
-    #[arg(long)]
-    pub superseded_by: String,
-    /// The authored substance: what no longer holds.
-    ///
-    /// Crosses the runtime boundary as one payload, the content-ingestion
-    /// convention `create-scenario` already uses. The primitive contributes
-    /// the frame and never invents this — a generated banner can name the
-    /// superseding spec and nothing else, and the sentence a reader needs is
-    /// the one naming what stopped being true.
-    #[arg(long)]
-    pub substance: String,
-    /// The `AC{n}` label of a single criterion to annotate, when the
-    /// annotation is criterion-level rather than whole-spec (spec 053).
-    ///
-    /// **A granularity, not a second primitive.** The constitution's
-    /// `§supersession-annotations` states one rule at three granularities,
-    /// so one writer owns it: absent, this writes the whole-spec sunset
-    /// banner; present, it appends the annotation to that criterion's line.
-    /// Splitting the two would put two writers behind one concept, and spec
-    /// 052's review found the concrete cost of that — two surfaces answering
-    /// "is this spec already annotated?" differently, drifting until a review
-    /// compared them.
-    ///
-    /// The **section-level** granularity stays hand-authored. The
-    /// constitution documents it, no caller needs it programmatically, and a
-    /// third code path serving nobody is the overengineering the simplicity
-    /// pass exists to catch.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[arg(long)]
-    pub criterion: Option<String>,
-}
-
-/// Result of `write-supersession-annotation`.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
-pub struct WriteSupersessionAnnotationResult {
-    /// `true` when the annotation was written.
-    pub written: bool,
-    /// `true` when an annotation already cited this superseding spec, so
-    /// nothing was written. A re-run converging, not a failure — and
-    /// distinct from accumulation, which stacks annotations from
-    /// *different* superseding specs.
-    pub already_present: bool,
-    /// The `AC{n}` label annotated, when the write was criterion-level.
-    /// Absent for the whole-spec banner.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub criterion: Option<String>,
-    /// Repo-relative path of the annotated spec.
-    pub path: String,
-}
-
 // -- label-criteria ----------------------------------------------------------
 
 /// Args for `label-criteria`.
@@ -2712,13 +2631,12 @@ pub struct ArtifactFinding {
     /// `scenario-consistency`, `review-state-drift`,
     /// `scenario-open-questions`, `link-adjacent-drift`,
     /// `criterion-path-existence`, `criterion-labels`, or
-    /// `supersession-reciprocity`.
     pub family: String,
     /// Severity tier per the reference's assignments: `blocking`
     /// (artifact completeness, task consistency, review state drift, and
     /// scenario open questions at `done`) or `advisory` (scenario
     /// consistency, scenario open questions below `done`, link-adjacent
-    /// drift, criterion path existence, criterion labels, supersession
+    /// drift, criterion path existence, and criterion labels
     /// reciprocity).
     pub severity: String,
     /// Human-readable description of the finding.
@@ -2967,105 +2885,6 @@ pub struct CheckOrphanedReferencesResult {
     /// means *no migration has been applied*, not *a migration named ""*.
     #[serde(default)]
     pub last_applied: String,
-}
-
-// -- read-supersession-pair ----------------------------------------------------
-
-/// Args for `read-supersession-pair`. Loads exactly the two specs a
-/// declared supersession names, plus the superseded spec's scenarios.
-///
-/// **The absent arguments are the design.** Spec 053 bounds reconciliation's
-/// read to the declared pair and the superseded spec's scenarios — no plan,
-/// no data model, no tasks file, no source tree, no third spec. A rule the
-/// host is asked to remember is a diligence dependency, which
-/// §design-principles rejects; there is deliberately no argument here by
-/// which a caller could request any of them, so the bound is a property of
-/// the code rather than of anyone's care.
-///
-/// That bound is load-bearing rather than tidy. Without it, reconciliation
-/// is the corpus-wide criterion-supersession check that was measured and
-/// rejected — 455 pairs tested, 215 firing, every sampled one a false
-/// positive. A declared edge is what collapses the search to two specs.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
-#[serde(rename_all = "kebab-case")]
-pub struct ReadSupersessionPairArgs {
-    /// The **superseded** feature — the one whose claims are walked.
-    #[arg(long)]
-    pub feature: String,
-    /// The **superseding** feature named by the declaration.
-    #[arg(long)]
-    pub superseded_by: String,
-}
-
-/// One spec as reconciliation reads it: status, body sections, criteria.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
-pub struct SpecRead {
-    /// Feature directory name.
-    pub feature: String,
-    /// Repo-relative path of the spec file read.
-    pub path: String,
-    /// The spec's lifecycle status, verbatim.
-    pub status: String,
-    /// Body sections in document order, bodies populated.
-    #[serde(default)]
-    pub sections: Vec<SpecSection>,
-    /// Acceptance criteria in body order, labels retained.
-    #[serde(default)]
-    pub acceptance_criteria: Vec<AcceptanceCriterion>,
-}
-
-/// One scenario of the superseded spec.
-///
-/// A scenario is a spec at a lower level of abstraction and can carry a
-/// claim the supersession touches, which is why the read reaches them at
-/// all — and why it reaches only the *superseded* spec's.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
-pub struct ScenarioRead {
-    /// Scenario slug (the filename without `.md`).
-    pub slug: String,
-    /// Repo-relative path of the scenario file.
-    pub path: String,
-    /// The scenario's body, frontmatter stripped.
-    pub body: String,
-}
-
-/// Result for `read-supersession-pair`.
-///
-/// `unreadable` non-empty means the pair was **not** fully examined, and a
-/// caller must not render the classification that follows as complete
-/// (spec 053 AC3/AC12). `examined` bounds the claim by subject: it names the
-/// files actually read rather than asserting a property of the pair.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
-pub struct ReadSupersessionPairResult {
-    /// The spec being superseded — the one whose claims are classified.
-    pub superseded: SpecRead,
-    /// The spec that supersedes it.
-    pub superseding: SpecRead,
-    /// The superseded spec's scenarios, in the shared scenario order every
-    /// other surface uses.
-    #[serde(default)]
-    pub scenarios: Vec<ScenarioRead>,
-    /// Repo-relative paths of files that could not be read or parsed.
-    ///
-    /// Named, and excluded from `examined`. A file that will not parse
-    /// contributes no claim and is **not** escalated into a conflict —
-    /// nothing can be proven about a file that cannot be read — but it must
-    /// not vanish either, or an incomplete pass reads as a complete one.
-    #[serde(default)]
-    pub unreadable: Vec<String>,
-    /// Repo-relative paths actually read. The subject the result describes.
-    #[serde(default)]
-    pub examined: Vec<String>,
-    /// Set when the superseded spec offers nothing to classify — no
-    /// criteria and no body sections. Empty otherwise.
-    ///
-    /// *Examined and empty* is not *examined and clean*, and a brownfield
-    /// sketch spec is legitimately the former (AC11).
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub guidance: String,
 }
 
 // -- check-corpus-links --------------------------------------------------------
@@ -3609,7 +3428,6 @@ mod tests {
                 dependencies: vec!["021-runtime-boundary".into()],
                 tags: vec![],
                 folds_into: None,
-                supersedes: vec![],
                 review: Some(ReviewBlock::default()),
             },
             sections: vec![SpecSection {
@@ -3639,52 +3457,8 @@ mod tests {
             value["scenario-open-questions"][0]["scenario"],
             "framework-list-dedup"
         );
-        // An empty `supersedes` is absent from the wire, never `[]`: the key
-        // is hand-authored, so an empty list would assert a decision nobody
-        // made. `dependencies` is the deliberate contrast — a derived index
-        // whose presence is evidence the derivation ran.
         let fm = &value["frontmatter"];
-        assert!(fm.get("supersedes").is_none());
         assert!(fm.get("dependencies").is_some());
-        assert_eq!(round_trip(&result), result);
-    }
-
-    #[test]
-    fn supersedes_round_trips_when_populated() {
-        let mut result = ReadSpecResult {
-            frontmatter: Frontmatter {
-                status: "done".into(),
-                dependencies: vec![],
-                tags: vec![],
-                folds_into: None,
-                supersedes: vec![],
-                review: None,
-            },
-            sections: vec![],
-            acceptance_criteria: vec![],
-            open_questions: vec![],
-            scenario_open_questions: vec![],
-            scenario_files_unreadable: vec![],
-            path: "specs/005-workflows/spec.md".into(),
-        };
-
-        // Absent when empty — asserted on the frontmatter node, since a key
-        // checked at the result root is absent whatever the field does, and
-        // the test would pass without testing anything.
-        let value: serde_json::Value = serde_json::to_value(&result).unwrap();
-        assert!(value["frontmatter"].get("supersedes").is_none());
-        assert!(value["frontmatter"].get("status").is_some());
-        assert_eq!(round_trip(&result), result);
-
-        // A list even for one entry, and several for one declaration — the
-        // divergence from the scalar `folds-into`.
-        result.frontmatter.supersedes = vec!["005-workflows".into(), "019-config-decisions".into()];
-        let value: serde_json::Value = serde_json::to_value(&result).unwrap();
-        assert_eq!(value["frontmatter"]["supersedes"][0], "005-workflows");
-        assert_eq!(
-            value["frontmatter"]["supersedes"][1],
-            "019-config-decisions"
-        );
         assert_eq!(round_trip(&result), result);
     }
 

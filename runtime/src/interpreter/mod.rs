@@ -67,10 +67,10 @@ use crate::schema::primitives::{
     EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs,
     InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
     MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs, ProcessWaiversArgs,
-    PruneTasksArgs, ReadSpecArgs, ReadSupersessionPairArgs, ReadTasksArgs, RemoveInboxItemArgs,
-    ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs, RetireFeatureArgs,
-    RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
-    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs, WriteSupersessionAnnotationArgs,
+    PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RemoveInboxItemArgs, ResolveAnchorArgs,
+    ResolveFeatureArgs, ResolveReferencesArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
+    RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteReviewArgs,
+    WriteSessionArgs,
 };
 use crate::schema::procedure::{Procedure, Step, StepNumber};
 use crate::schema::protocol::{ErrorLocation, ProtocolMessage};
@@ -704,9 +704,6 @@ fn dispatch_primitive(
     }
     match name {
         "read-spec" => call!(ReadSpecArgs, read_spec),
-        "read-supersession-pair" => {
-            call!(ReadSupersessionPairArgs, read_supersession_pair)
-        }
         "read-tasks" => call!(ReadTasksArgs, read_tasks),
         "mark-task" => call!(MarkTaskArgs, mark_task),
         "mark-criterion" => call!(MarkCriterionArgs, mark_criterion),
@@ -760,12 +757,6 @@ fn dispatch_primitive(
         "check-unfolded-specs" => call!(CheckUnfoldedSpecsArgs, check_unfolded_specs),
         "rewrite-spec-links" => call!(RewriteSpecLinksArgs, rewrite_spec_links),
         "retire-feature" => call!(RetireFeatureArgs, retire_feature),
-        "write-supersession-annotation" => {
-            call!(
-                WriteSupersessionAnnotationArgs,
-                write_supersession_annotation
-            )
-        }
         "invalidate-review" => call!(InvalidateReviewArgs, invalidate_review),
         "derive-dependencies" => {
             call!(DeriveDependenciesArgs, derive_dependencies)

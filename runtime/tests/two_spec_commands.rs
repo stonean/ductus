@@ -71,21 +71,18 @@ fn consolidate_confirms_before_it_rewrites_or_removes_anything() {
     let steps = steps("consolidate");
     let expected: Vec<(String, String)> = [
         ("1", "primitive:read-spec"),
-        // Steps 2 and 3 are prose on purpose: enumerating what the removal
-        // destroys is a directory walk, and settling a `supersedes:` edge is
-        // a decision only the operator may make — re-pointing one silently
-        // would give the declaring spec a claim nobody made.
+        // Step 2 is prose on purpose: enumerating what the removal destroys
+        // is a directory walk, not a decision.
         ("2", "prose"),
-        ("3", "prose"),
-        ("4", "primitive:gate-confirm"),
-        ("5", "primitive:rewrite-spec-links"),
-        ("6", "primitive:retire-feature"),
-        // Steps 7 and 8 are prose: clearing the session is conditional on the
+        ("3", "primitive:gate-confirm"),
+        ("4", "primitive:rewrite-spec-links"),
+        ("5", "primitive:retire-feature"),
+        // Steps 6 and 7 are prose: clearing the session is conditional on the
         // session having named the source, and the report is a host
         // responsibility. Both come *after* the removal — the session cannot
         // be stranded until the directory is gone.
+        ("6", "prose"),
         ("7", "prose"),
-        ("8", "prose"),
     ]
     .into_iter()
     .map(|(n, k)| (n.to_string(), k.to_string()))
@@ -101,58 +98,6 @@ fn consolidate_confirms_before_it_rewrites_or_removes_anything() {
             "{writer} must not run before the confirmation"
         );
     }
-}
-
-#[test]
-fn supersede_confirms_before_it_annotates_the_other_spec() {
-    let steps = steps("supersede");
-    let expected: Vec<(String, String)> = [
-        ("1", "primitive:read-spec"),
-        ("2", "primitive:gate-confirm"),
-        // Step 3 is prose: appending to `supersedes:` is a frontmatter edit
-        // with no primitive of its own.
-        ("3", "prose"),
-        ("4", "primitive:write-supersession-annotation"),
-        // Reconciliation (spec 053): the bounded read, the judgment at the
-        // boundary, then the criterion-level annotations it authorizes.
-        ("5", "primitive:read-supersession-pair"),
-        ("6", "extension:classifyClaims"),
-        ("7", "primitive:write-supersession-annotation"),
-        // Step 8 dispatches a second `gate-confirm`: surfacing conflicts
-        // resolves nothing, but the one edit reconciliation may make — body
-        // prose on a `done` spec — needs its own confirmation naming the
-        // reopen. Step 9's report is a host responsibility.
-        ("8", "primitive:gate-confirm"),
-        ("9", "prose"),
-    ]
-    .into_iter()
-    .map(|(n, k)| (n.to_string(), k.to_string()))
-    .collect();
-    assert_eq!(steps, expected);
-
-    // `position` finds the *first* gate — the declaration's.
-    let gate = position(&steps, "primitive:gate-confirm");
-    assert_eq!(
-        gate, 1,
-        "the declaration gate must be the first one: {steps:?}"
-    );
-    assert!(
-        position(&steps, "primitive:write-supersession-annotation") > gate,
-        "the annotation writes to a second spec and must not precede the confirmation"
-    );
-    // Reconciliation reads and classifies before it annotates, and every
-    // part of it sits after the confirmation — it writes to the second spec
-    // too, one criterion at a time.
-    let read = position(&steps, "primitive:read-supersession-pair");
-    let classify = position(&steps, "extension:classifyClaims");
-    assert!(
-        read > gate,
-        "the reconciliation read must follow the confirmation"
-    );
-    assert!(
-        classify > read,
-        "classification needs the pair; it cannot precede the read"
-    );
 }
 
 #[test]
@@ -176,58 +121,5 @@ fn fold_never_reaches_the_sequential_opt_in() {
         source.contains("opt-in"),
         "fold.md must record that it never passes the opt-in, so its account of \
          retire-feature matches the primitive's behavior"
-    );
-}
-
-#[test]
-fn supersede_reports_all_three_reconciliation_outcomes() {
-    // The host half of AC3/AC11/AC12. `read-supersession-pair` makes the
-    // three states pairwise distinguishable in the *data* — that is pinned in
-    // the primitive's own tests — but the obligation to actually tell them
-    // apart in the report lives in prose, and prose is what drifts. This
-    // asserts the command still carries all three.
-    let source =
-        std::fs::read_to_string(workspace_root().join("framework/commands/supersede.md")).unwrap();
-    for state in [
-        "conflicts to settle",
-        "nothing to reconcile",
-        "could not fully examine",
-    ] {
-        assert!(
-            source.contains(state),
-            "supersede.md's report must name the {state:?} outcome — three states that read \
-             alike are the QUAL-CLAIM-001 failure this reconciliation is built to avoid"
-        );
-    }
-}
-
-#[test]
-fn nothing_between_classification_and_the_report_can_resolve_a_conflict() {
-    // The structural half of AC2. A conflict is surfaced and never resolved,
-    // and the cheapest way to keep that true is to give the walk no primitive
-    // that could do it: between `classifyClaims` and the report, the only
-    // dispatches are the criterion annotation (which takes a label, not a
-    // conflict) and the gate that guards a body-prose edit.
-    let steps = steps("supersede");
-    let classify = position(&steps, "extension:classifyClaims");
-    let report = steps.len() - 1;
-
-    let between: Vec<&str> = steps[classify + 1..report]
-        .iter()
-        .map(|(_, kind)| kind.as_str())
-        .collect();
-    for kind in &between {
-        assert!(
-            matches!(
-                *kind,
-                "prose" | "primitive:write-supersession-annotation" | "primitive:gate-confirm"
-            ),
-            "unexpected dispatch between classification and the report: {kind} — a primitive \
-             here is a primitive that could settle a conflict the operator has not"
-        );
-    }
-    assert!(
-        between.contains(&"primitive:write-supersession-annotation"),
-        "the superseded claims must still be annotated: {between:?}"
     );
 }

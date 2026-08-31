@@ -15,7 +15,6 @@
 /// supplied by the host's MCP registration.
 pub(crate) const PRIMITIVE_REGISTRY: &[&str] = &[
     "read-spec",
-    "read-supersession-pair",
     "read-tasks",
     "mark-task",
     "mark-criterion",
@@ -67,5 +66,4 @@ pub(crate) const PRIMITIVE_REGISTRY: &[&str] = &[
     "rewrite-spec-links",
     "retire-feature",
     "invalidate-review",
-    "write-supersession-annotation",
 ];

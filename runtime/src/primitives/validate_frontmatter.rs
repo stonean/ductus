@@ -118,18 +118,6 @@ pub fn run(args: &ValidateFrontmatterArgs, repo: &Path) -> Result<ValidateFrontm
         validate_folds_into(folds_into, &mut findings);
     }
 
-    if let Some(supersedes) = map.get("supersedes") {
-        // The spec's own feature directory, used only for the
-        // self-reference check. A scenario file's parent is `scenarios`,
-        // which matches no feature name, so the check simply never fires
-        // there — correct, since the key belongs to spec files.
-        let own_feature = path
-            .parent()
-            .and_then(std::path::Path::file_name)
-            .and_then(std::ffi::OsStr::to_str);
-        validate_supersedes(supersedes, own_feature, &mut findings);
-    }
-
     if let Some(review) = map.get("review") {
         validate_review_block(review, &mut findings);
     }
@@ -178,70 +166,6 @@ fn validate_folds_into(folds_into: &YamlValue, findings: &mut Vec<FrontmatterFin
                  branch-scoped spec folds into a permanent spec, not another staged one"
             ),
         });
-    }
-}
-
-/// Check the optional `supersedes` key: the specs this one supersedes
-/// (spec 052).
-///
-/// **Shape only, never resolvability** — the same split `folds-into`
-/// takes, for a different reason. There the target routinely lives on
-/// another branch; here both specs normally exist, but the key is written
-/// by a declaring command that has already refused an unresolvable target,
-/// and a second copy of that check here would be the drift this project
-/// spends its effort avoiding. What shape validation owns is the corpus
-/// nobody declared through a command: a hand-edited key.
-///
-/// Any feature form is accepted. `folds-into` requires the sequential form
-/// because chaining one staging spec into another would leave a fold with
-/// no permanent home; superseding carries no such chain, so restricting the
-/// form here would invent a constraint the spec does not state.
-///
-/// A **self-reference is rejected**: a spec cannot supersede itself, and
-/// unlike `derive-dependencies` — which records self-links deliberately so
-/// its cycle check can surface them — nothing downstream would catch it.
-fn validate_supersedes(
-    supersedes: &YamlValue,
-    own_feature: Option<&str>,
-    findings: &mut Vec<FrontmatterFinding>,
-) {
-    let YamlValue::Sequence(entries) = supersedes else {
-        findings.push(FrontmatterFinding {
-            severity: "blocking".into(),
-            field: "supersedes".into(),
-            message: "supersedes must be a list of feature names; one spec may supersede \
-                      several, so the key is a list even when it holds a single entry"
-                .into(),
-        });
-        return;
-    };
-
-    for entry in entries {
-        let YamlValue::String(name) = entry else {
-            findings.push(FrontmatterFinding {
-                severity: "blocking".into(),
-                field: "supersedes".into(),
-                message: "supersedes entries must be strings naming a feature".into(),
-            });
-            continue;
-        };
-
-        if parse_feature_dir(name).is_none() {
-            findings.push(FrontmatterFinding {
-                severity: "blocking".into(),
-                field: "supersedes".into(),
-                message: format!("supersedes entry {name:?} is not a feature name"),
-            });
-            continue;
-        }
-
-        if own_feature == Some(name.as_str()) {
-            findings.push(FrontmatterFinding {
-                severity: "blocking".into(),
-                field: "supersedes".into(),
-                message: format!("a spec cannot supersede itself ({name:?})"),
-            });
-        }
     }
 }
 
@@ -453,87 +377,5 @@ mod tests {
         .unwrap();
         assert!(!result.clean);
         assert!(result.findings.iter().any(|f| f.field == "dependencies"));
-    }
-
-    /// Write a spec inside a real feature directory, so the self-reference
-    /// check has a feature name to compare against. `findings_for` puts
-    /// `spec.md` at the tempdir root, whose name matches no feature.
-    fn findings_for_feature(feature: &str, frontmatter: &str) -> Vec<FrontmatterFinding> {
-        let tmp = tempfile::tempdir().unwrap();
-        let dir = tmp.path().join("specs").join(feature);
-        std::fs::create_dir_all(&dir).unwrap();
-        let path = dir.join("spec.md");
-        std::fs::write(&path, format!("---\n{frontmatter}---\n\n# X\n")).unwrap();
-        run(
-            &ValidateFrontmatterArgs {
-                path: path.to_string_lossy().into(),
-            },
-            tmp.path(),
-        )
-        .unwrap()
-        .findings
-    }
-
-    #[test]
-    fn a_well_shaped_supersedes_list_is_clean() {
-        // Several entries in one declaration is the normal case, not an
-        // edge one: 043 superseded material in four specs at once.
-        let findings = findings_for_feature(
-            "052-supersession",
-            "status: draft\ndependencies: []\nsupersedes: [005-workflows, 019-config-decisions]\n",
-        );
-        assert!(findings.is_empty(), "unexpected findings: {findings:?}");
-    }
-
-    #[test]
-    fn a_superseded_spec_absent_from_the_tree_is_not_a_finding() {
-        // Shape only. Resolvability is the declaring command's to refuse,
-        // and a second copy of that check here is the drift this project
-        // spends its effort avoiding.
-        let findings = findings_for_feature(
-            "052-supersession",
-            "status: draft\ndependencies: []\nsupersedes: [404-nowhere-near-here]\n",
-        );
-        assert!(findings.is_empty(), "unexpected findings: {findings:?}");
-    }
-
-    #[test]
-    fn supersedes_must_be_a_list() {
-        // A scalar is refused rather than coerced: one spec may supersede
-        // several, so the key is a list even holding a single entry.
-        let findings = findings_for_feature(
-            "052-supersession",
-            "status: draft\ndependencies: []\nsupersedes: 005-workflows\n",
-        );
-        assert!(findings.iter().any(|f| f.field == "supersedes"));
-    }
-
-    #[test]
-    fn a_supersedes_entry_that_is_not_a_feature_name_is_blocking() {
-        let findings = findings_for_feature(
-            "052-supersession",
-            "status: draft\ndependencies: []\nsupersedes: [not a feature]\n",
-        );
-        assert!(
-            findings
-                .iter()
-                .any(|f| f.field == "supersedes" && f.severity == "blocking")
-        );
-    }
-
-    #[test]
-    fn a_spec_cannot_supersede_itself() {
-        // Nothing downstream would catch this. `derive-dependencies`
-        // records self-links on purpose so its cycle check surfaces them;
-        // there is no equivalent pass here.
-        let findings = findings_for_feature(
-            "052-supersession",
-            "status: draft\ndependencies: []\nsupersedes: [052-supersession]\n",
-        );
-        assert!(
-            findings
-                .iter()
-                .any(|f| f.field == "supersedes" && f.message.contains("cannot supersede itself"))
-        );
     }
 }
