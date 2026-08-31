@@ -95,7 +95,7 @@ That covers all three layouts, because the cleanup glob is defined per layout in
 | `antigravity` | `{project}-*/` skill dirs in `skills/` | `{config_dir}/skills/{project}-supersede/SKILL.md` |
 | `opencode` | `*.md` in `command/{project}/` | `{config_dir}/command/{project}/supersede.md` |
 
-It also already has the three properties a migration would have been written to provide: a pinned path is kept rather than deleted, a run with nothing stale present removes nothing and says nothing, and an adopter still on `govern`-era paths resolves through the same per-layout rules every other command does.
+It also already has the three properties a migration would have been written to provide: a pinned path is kept rather than deleted, a run with nothing stale present removes nothing and says nothing, and an adopter still carrying pre-rename paths resolves through the same per-layout rules every other command does.
 
 **Why the two existing migrations are not a precedent here.** `workflows-sunset` and `generator-primitives` both clean artifacts that sit *outside* the enforced set — a `workflows/` subdirectory of the commands dir plus a root `registry.json` and a `[workflows]` config section for the first, `.ductus/scripts/` for the second. Neither is reachable by a cleanup glob over top-level command files, which is why each needed a procedure of its own. Supersession installs no such artifact. Adding a registry entry here would duplicate machinery that already runs, and would hand `/{project}:audit` Family 10 a `target_paths` list to police for a removal nothing else has to do.
 
