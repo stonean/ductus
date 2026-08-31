@@ -319,12 +319,12 @@ Opened by [048](../048-govern-acquired-runtime/spec.md)'s AC10 adopter runs, whi
 
 ### 38. Family 34 — step-reference integrity
 
-- [ ] Implement the behavior described in `scenarios/family-34-step-reference-integrity.md`
-- [ ] Add `scripts/audit/step-reference-integrity.sh` deriving each command file's step set from its own `^\d+\.` plus a space Instructions headings and its reference set from prose `step N` mentions — neither hardcoded
-- [ ] Report three findings separately: a reference outside the file's step set, a step referring to its own number, and discontinuous numbering
-- [ ] Fail closed on an empty extraction from a file that has an Instructions section, matching Families 17, 18, 23, and 28
-- [ ] Scope the step set to the Instructions section so `## Markdown-only reference` sub-procedures resolve against their own list
-- [ ] Register it in `scripts/audit/run-all.sh`, `framework/commands/audit.md`, and `scripts/audit/README.md` §Scripts — the three lists Family 28 holds together
-- [ ] Prove it fails before keeping it: reintroduce one of the four stale references spec 054 fixed and confirm the family turns red
+- [x] Implement the behavior described in `scenarios/family-34-step-reference-integrity.md`
+- [x] Implement the check as the `check-step-references` runtime primitive, per the suite's primitives-first contract, with `scripts/audit/step-reference-integrity.sh` as the thin entry point
+- [x] Report three findings separately: a reference outside the file's step set, a step referring to its own number, and discontinuous numbering — and state, in the family header and both registries, that a reference renumbering shifted onto a different *existing* step is out of reach
+- [x] Fail closed on an empty extraction from a file that has an Instructions section, matching Families 17, 18, 23, and 28
+- [x] Scope the subject to the Instructions section, count out-of-subject mentions rather than resolving them, and exclude files holding several numbered lists rather than one procedure
+- [x] Register it in `scripts/audit/run-all.sh`, `framework/commands/audit.md`, and `scripts/audit/README.md` §Scripts — the three lists Family 28 holds together
+- [x] Prove it fails before keeping it: reintroduce one of the four stale references spec 054 fixed and confirm the family turns red
 
 - **Done when**: the family reports each of the three finding types, fails closed on an empty extraction, appears in all three registries Family 28 checks, and has been proven to fail on a deliberately reintroduced stale reference.

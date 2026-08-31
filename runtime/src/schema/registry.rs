@@ -24,6 +24,7 @@ pub(crate) const PRIMITIVE_REGISTRY: &[&str] = &[
     "process-waivers",
     "compute-review-scope",
     "write-review",
+    "check-step-references",
     "check-stuck",
     "validate-frontmatter",
     "resolve-anchor",

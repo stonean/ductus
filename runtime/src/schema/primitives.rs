@@ -3021,6 +3021,81 @@ pub struct CheckCorpusLinksResult {
     pub guidance: String,
 }
 
+// -- check-step-references -----------------------------------------------------
+
+/// Args for `check-step-references`. Reports `step N` prose references in a
+/// command file that name a step the file does not have. Maintainer scope: the
+/// subject is `framework/commands/` plus the two bootstrap procedures, where
+/// the drift originates, not the generated copies an adopter cannot repair.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckStepReferencesArgs {}
+
+/// One step-reference defect.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct StepReferenceFinding {
+    /// Repo-relative path of the file the finding is in.
+    pub file: String,
+    /// 1-based line the reference sits on; `0` for a whole-file finding
+    /// (`discontinuous`, `no-steps-extracted`), which names no single line.
+    pub line: usize,
+    /// `unresolved`, `self-reference`, or `discontinuous` — a closed set,
+    /// because the repairs differ.
+    pub kind: String,
+    /// The step number referenced; `0` for a whole-file finding.
+    pub reference: u32,
+    /// What is wrong, in the maintainer's terms.
+    pub message: String,
+}
+
+/// A file the check could not read, recorded so an empty `findings` is never
+/// mistaken for a verified-clean corpus.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct StepReferenceSkip {
+    /// Repo-relative path that could not be examined.
+    pub path: String,
+    /// Why it could not be.
+    pub reason: String,
+}
+
+/// Result of `check-step-references`.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct CheckStepReferencesResult {
+    /// Every defect found, in file then line order.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub findings: Vec<StepReferenceFinding>,
+    /// Files read. A file with no `## Instructions` section is examined and
+    /// contributes nothing, which is correct rather than a gap.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub examined: Vec<String>,
+    /// The subset carrying numbered Instructions steps — the files this
+    /// check can actually say something about.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub with_steps: Vec<String>,
+    /// Files whose Instructions section holds several numbered lists rather
+    /// than one procedure — `amend.md` restarts at 1 under each subsection,
+    /// `status.md` uses three separate one-item lists. Their references
+    /// cannot be resolved against a single set without inventing findings,
+    /// so they are named here rather than examined.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub not_a_procedure: Vec<String>,
+    /// Files that could not be read.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub skipped: Vec<StepReferenceSkip>,
+    /// `step N` mentions outside the Instructions section, counted but never
+    /// resolved: the markdown-only sub-procedures restart at 1 and are a
+    /// different list. Present so an empty `findings` is not read as *every
+    /// reference in the file resolves* (`QUAL-CLAIM-001`).
+    #[serde(default)]
+    pub references_out_of_subject: u32,
+    /// Set when the check could not establish a subject at all.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub guidance: String,
+}
+
 // -- check-command-flags -------------------------------------------------------
 
 /// Args for `check-command-flags`. Reports flags a command's Flags table

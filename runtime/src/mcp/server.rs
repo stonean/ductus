@@ -40,8 +40,9 @@ use crate::schema::primitives::{
     CheckArtifactsResult, CheckCommandFlagsArgs, CheckCommandFlagsResult, CheckCorpusLinksArgs,
     CheckCorpusLinksResult, CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult,
     CheckReviewAgreementArgs, CheckReviewAgreementResult, CheckReviewGateArgs,
-    CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult, CheckStuckArgs, CheckStuckResult,
-    CheckUnfoldedSpecsArgs, CheckUnfoldedSpecsResult, CheckboxToggleResult, ComputeReviewScopeArgs,
+    CheckReviewGateResult, CheckRuleIdsArgs, CheckRuleIdsResult, CheckStepReferencesArgs,
+    CheckStepReferencesResult, CheckStuckArgs, CheckStuckResult, CheckUnfoldedSpecsArgs,
+    CheckUnfoldedSpecsResult, CheckboxToggleResult, ComputeReviewScopeArgs,
     ComputeReviewScopeResult, CreateFeatureArgs, CreateFeatureResult, CreatePlanArtifactsArgs,
     CreatePlanArtifactsResult, CreateScenarioArgs, CreateScenarioResult, DashboardArgs,
     DashboardResult, DeriveBoundaryArgs, DeriveBoundaryResult, DeriveDependenciesArgs,
@@ -876,6 +877,19 @@ impl GovRuntimeServer {
         params: Parameters<CheckOrphanedReferencesArgs>,
     ) -> Result<Json<CheckOrphanedReferencesResult>, String> {
         primitives::check_orphaned_references::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "check-step-references",
+        description = "Report `step N` prose references in a command file that name a numbered step the file does not have. A command numbers its Instructions steps and refers to them in prose; the numbers are the only binding, and removing a step renumbers everything after it while the prose keeps the old numbers. Three findings, because the repairs differ: `unresolved` (names a number the file lacks), `self-reference` (a step referring to its own number \u{2014} it resolves, so an existence check passes it, and it is almost always renumbering residue), and `discontinuous` (steps not running 1..n, which makes every reference after the gap ambiguous rather than wrong). Subject is the Instructions section alone: a `## Markdown-only reference` sub-procedure restarts at 1 and is a different list, so `references-out-of-subject` counts those mentions rather than resolving them, and an empty `findings` is never read as every reference in the file resolving. A qualified reference (groom\u{2019}s step 3) names another file\u{2019}s procedure and is excluded by construction. A file with an Instructions section from which no steps are extracted is a finding, not a pass \u{2014} two empty sets compare equal."
+    )]
+    async fn check_step_references(
+        &self,
+        params: Parameters<CheckStepReferencesArgs>,
+    ) -> Result<Json<CheckStepReferencesResult>, String> {
+        primitives::check_step_references::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

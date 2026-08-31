@@ -12,17 +12,17 @@ use ductus::primitives;
 use ductus::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, CheckArtifactsArgs,
     CheckCommandFlagsArgs, CheckCorpusLinksArgs, CheckOrphanedReferencesArgs,
-    CheckReviewAgreementArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStuckArgs,
-    CheckUnfoldedSpecsArgs, ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs,
-    CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs,
-    DeriveReferencesArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs,
-    EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs,
-    InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
-    MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs, ProcessWaiversArgs,
-    PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RemoveInboxItemArgs, ResolveAnchorArgs,
-    ResolveFeatureArgs, ResolveReferencesArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
-    RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteReviewArgs,
-    WriteSessionArgs,
+    CheckReviewAgreementArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs,
+    CheckStuckArgs, CheckUnfoldedSpecsArgs, ComputeReviewScopeArgs, CreateFeatureArgs,
+    CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs,
+    DeriveDependenciesArgs, DeriveReferencesArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs,
+    DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs,
+    GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs,
+    MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs,
+    ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RemoveInboxItemArgs,
+    ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs, RetireFeatureArgs,
+    RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
+    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -144,6 +144,7 @@ enum Command {
     CheckOrphanedReferences(CheckOrphanedReferencesArgs),
     /// Report flags a command's Flags table documents but its `argument-hint` omits.
     CheckCommandFlags(CheckCommandFlagsArgs),
+    CheckStepReferences(CheckStepReferencesArgs),
     /// Report specs whose frontmatter `review:` block disagrees with their own review.md.
     CheckReviewAgreement(CheckReviewAgreementArgs),
     /// Report branch-scoped specs still in the tree, with the upstream spec each folds into.
@@ -712,6 +713,9 @@ fn main() -> ExitCode {
         }
         Command::CheckCommandFlags(args) => {
             emit_result(primitives::check_command_flags::run(&args, &repo))
+        }
+        Command::CheckStepReferences(args) => {
+            emit_result(primitives::check_step_references::run(&args, &repo))
         }
         Command::CheckReviewAgreement(args) => {
             emit_result(primitives::check_review_agreement::run(&args, &repo))

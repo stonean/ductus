@@ -60,17 +60,17 @@ use crate::schema::extensions::{self, ValidationError, WriteCodeResponse};
 use crate::schema::primitives::{
     AppendInboxArgs, AppendQuestionArgs, AppendTaskArgs, ApplyManifestArgs, CheckArtifactsArgs,
     CheckCommandFlagsArgs, CheckCorpusLinksArgs, CheckOrphanedReferencesArgs,
-    CheckReviewAgreementArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStuckArgs,
-    CheckUnfoldedSpecsArgs, ComputeReviewScopeArgs, CreateFeatureArgs, CreatePlanArtifactsArgs,
-    CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs, DeriveDependenciesArgs,
-    DeriveReferencesArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs, DiscoverRuleFilesArgs,
-    EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs, GateConfirmArgs,
-    InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs, MarkTaskArgs,
-    MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs, ProcessWaiversArgs,
-    PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RemoveInboxItemArgs, ResolveAnchorArgs,
-    ResolveFeatureArgs, ResolveReferencesArgs, RetireFeatureArgs, RewriteSpecLinksArgs,
-    RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs, ValidateFrontmatterArgs, WriteReviewArgs,
-    WriteSessionArgs,
+    CheckReviewAgreementArgs, CheckReviewGateArgs, CheckRuleIdsArgs, CheckStepReferencesArgs,
+    CheckStuckArgs, CheckUnfoldedSpecsArgs, ComputeReviewScopeArgs, CreateFeatureArgs,
+    CreatePlanArtifactsArgs, CreateScenarioArgs, DashboardArgs, DeriveBoundaryArgs,
+    DeriveDependenciesArgs, DeriveReferencesArgs, DeriveRoutingCandidatesArgs, DiffCrossSpecArgs,
+    DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs,
+    GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs,
+    MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs,
+    ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RemoveInboxItemArgs,
+    ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs, RetireFeatureArgs,
+    RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
+    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs,
 };
 use crate::schema::procedure::{Procedure, Step, StepNumber};
 use crate::schema::protocol::{ErrorLocation, ProtocolMessage};
@@ -747,6 +747,9 @@ fn dispatch_primitive(
         }
         "check-orphaned-references" => {
             call!(CheckOrphanedReferencesArgs, check_orphaned_references)
+        }
+        "check-step-references" => {
+            call!(CheckStepReferencesArgs, check_step_references)
         }
         "check-command-flags" => {
             call!(CheckCommandFlagsArgs, check_command_flags)
