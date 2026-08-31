@@ -42,19 +42,19 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 5. Constitution surgery
 
-- [ ] Remove `§supersession-annotations` whole, including its `<!-- §supersession-annotations -->` anchor comment
-- [ ] Remove the criterion-level supersession bullet from `§spec-requirements` — it carries the cross-reference that would otherwise strand the anchor
-- [ ] Remove the `supersedes` row from the spec frontmatter schema table
-- [ ] Confirm no remaining text references the removed anchor
+- [x] Remove `§supersession-annotations` whole, including its `<!-- §supersession-annotations -->` anchor comment
+- [x] Remove the criterion-level supersession bullet from `§spec-requirements` — it carries the cross-reference that would otherwise strand the anchor
+- [x] Remove the `supersedes` row from the spec frontmatter schema table
+- [x] Confirm no remaining text references the removed anchor
 
 - **Done when**: `grep -n "supersession-annotations" framework/constitution.md` returns nothing and the surrounding sections still read continuously.
 
 ## 6. Bootstrap manifest and tool manifest
 
-- [ ] Drop the `framework/commands/supersede.md` row from the slash-command manifest in `framework/bootstrap/ductus.md` and `framework/bootstrap/govern.md`
-- [ ] Correct the hardcoded "seventeen `framework/commands/*.md` rows" to sixteen in both files, in both the skills and OpenCode sections
-- [ ] Remove `read-supersession-pair` and `write-supersession-annotation` from `framework/runtime-tools.txt`
-- [ ] Add no `framework/migrations.toml` entry and no procedure file
+- [x] Drop the `framework/commands/supersede.md` row from the slash-command manifest in `framework/bootstrap/ductus.md` and `framework/bootstrap/govern.md`
+- [x] Correct the hardcoded "seventeen `framework/commands/*.md` rows" to sixteen in both files, in both the skills and OpenCode sections
+- [x] Remove `read-supersession-pair` and `write-supersession-annotation` from `framework/runtime-tools.txt`
+- [x] Add no `framework/migrations.toml` entry and no procedure file
 
 - **Done when**: the manifest lists sixteen command rows, every count in both bootstrap files agrees, and the migration registry is untouched.
 

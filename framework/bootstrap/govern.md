@@ -867,7 +867,6 @@ Fetch each command template and copy it into `{config_dir}/commands/{project}/`.
 | `framework/commands/review.md` | `{config_dir}/commands/{project}/review.md` |
 | `framework/commands/specify.md` | `{config_dir}/commands/{project}/specify.md` |
 | `framework/commands/status.md` | `{config_dir}/commands/{project}/status.md` |
-| `framework/commands/supersede.md` | `{config_dir}/commands/{project}/supersede.md` |
 | `framework/commands/target.md` | `{config_dir}/commands/{project}/target.md` |
 | `framework/commands/analyze.md` | `{config_dir}/commands/{project}/analyze.md` |
 | `framework/bootstrap/configure/{key}.md` | `{config_dir}/commands/{project}/configure.md` |
@@ -887,7 +886,7 @@ Files listed in `pinned.files` are never deleted — report them as "pinned (kep
 
 When the agent's registry `layout` is `antigravity`, the two subsections above (**Slash commands**, **Slash command cleanup**) are replaced by the skill-based equivalents below. `{config_dir}` resolves to `.agents`; Antigravity discovers dir-form skills under `{config_dir}/skills/`.
 
-**Skills (strategy: update).** For each row in the slash-command manifest above — the seventeen `framework/commands/*.md` rows plus the `framework/bootstrap/configure/{key}.md` configure row — transform the source into a dir-form skill at `{config_dir}/skills/{project}-{name}/SKILL.md` (instead of copying to `{config_dir}/commands/{project}/{name}.md`):
+**Skills (strategy: update).** For each row in the slash-command manifest above — the sixteen `framework/commands/*.md` rows plus the `framework/bootstrap/configure/{key}.md` configure row — transform the source into a dir-form skill at `{config_dir}/skills/{project}-{name}/SKILL.md` (instead of copying to `{config_dir}/commands/{project}/{name}.md`):
 
 1. Read the source markdown (frontmatter + body).
 2. Write `{config_dir}/skills/{project}-{name}/SKILL.md` with frontmatter `name: {project}-{name}` and the `description:` carried from the source frontmatter, followed by the source body.
@@ -905,7 +904,7 @@ When the agent's registry `layout` is `antigravity`, the two subsections above (
 
 When the agent's registry `layout` is `opencode`, the two subsections above (**Slash commands**, **Slash command cleanup**) are replaced by the equivalents below. `{config_dir}` resolves to `.opencode`; OpenCode discovers markdown commands under `{config_dir}/command/` (singular), namespaced by subdirectory.
 
-**Commands (strategy: update).** For each row in the slash-command manifest above — the seventeen `framework/commands/*.md` rows plus the `framework/bootstrap/configure/{key}.md` configure row — copy the source **verbatim** (frontmatter + body, no skill transform) to `{config_dir}/command/{project}/{name}.md` (instead of `{config_dir}/commands/{project}/{name}.md`). Substitute `{project}` and `{cli-config-dir}` (→ `.opencode`) in the body exactly as in the `claude-style` copy, and carry the `description` frontmatter as-is. `{name}` is the command's base name (the configure row's `{name}` is `configure`). The commands are invoked `/{project}/{name}` — OpenCode namespaces by subdirectory (verified: `command/ductus/specify.md` registers as command key `gov/specify`).
+**Commands (strategy: update).** For each row in the slash-command manifest above — the sixteen `framework/commands/*.md` rows plus the `framework/bootstrap/configure/{key}.md` configure row — copy the source **verbatim** (frontmatter + body, no skill transform) to `{config_dir}/command/{project}/{name}.md` (instead of `{config_dir}/commands/{project}/{name}.md`). Substitute `{project}` and `{cli-config-dir}` (→ `.opencode`) in the body exactly as in the `claude-style` copy, and carry the `description` frontmatter as-is. `{name}` is the command's base name (the configure row's `{name}` is `configure`). The commands are invoked `/{project}/{name}` — OpenCode namespaces by subdirectory (verified: `command/ductus/specify.md` registers as command key `gov/specify`).
 
 **Command cleanup (replaces Slash command cleanup).** List the `.md` files under `{config_dir}/command/{project}/`. Delete any whose base name is not produced by the manifest above and is not listed in `.ductus/config.toml` `pinned.files`; report removals and pinned-keeps as for the `claude-style` cleanup. Files outside the `{project}/` subdirectory are adopter/agent territory and are never touched.
 

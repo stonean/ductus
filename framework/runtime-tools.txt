@@ -17,7 +17,6 @@
 # also the `ductus <name>` subcommand identifiers.
 
 read-spec
-read-supersession-pair
 read-tasks
 mark-task
 mark-criterion
@@ -68,5 +67,4 @@ derive-references
 check-unfolded-specs
 rewrite-spec-links
 retire-feature
-write-supersession-annotation
 invalidate-review

@@ -130,40 +130,6 @@ The top-level directory name (`specs` above) is the documented default; a projec
 - Open questions must be resolved before moving to the plan phase
 - Specs describe behavior and contracts, not implementation
 - **Never hand-write an `AC{n}:` label.** Add the criterion unlabelled and let the labelling pass assign it. The label is `max(highest label in the body, next-criterion)`, and `next-criterion` is frontmatter an author is not reading while drafting prose — so a hand-written label is a guess that happens to be right until it collides with a retired one. The counter is what stops a deleted criterion's label being reissued to a different requirement. If labels have already been written by hand, leave them: stripping them renumbers from the advanced counter and opens a gap for no gain.
-- **Record a superseded acceptance criterion on the criterion itself, never in the review.** When a later spec removes something an earlier spec delivered, the earlier criterion stays ticked — it *was* delivered, and the removal belongs to the later spec — and gains an inline annotation naming the superseding spec. Cite that spec by name rather than by link, since a body link to a sibling spec is harvested into `dependencies:` and citing a remover is not depending on it. Phrase the annotation so it reads as a non-claim ("no longer exists", "is removed") rather than relying on whether its paths happen to resolve. The review artifact is the wrong home: it is regenerated wholesale on the next run, so a supersession recorded there is destroyed by the next review. This is the criterion-level case of the rule below (§supersession-annotations), which covers all three granularities.
-
-<!-- §supersession-annotations -->
-
-#### Supersession annotations
-
-A spec body is a living document describing current state, so when a later spec counters an earlier one the earlier spec is **annotated, not deleted**. Deletion strands every inbound pointer, and an unannotated spec is worse still: a reader — human or agent — has no way to tell a live decision from a countered one. The relation itself is recorded by the superseding spec's `supersedes:` frontmatter key; the annotation is the half a reader actually meets.
-
-The annotation has three granularities. Use the smallest one that covers what stopped being true:
-
-| Granularity | What it marks | Where it goes |
-| --- | --- | --- |
-| **Whole-spec sunset banner** | Everything the spec describes has been countered | Top of the body, after the H1 and lead paragraph |
-| **Section-level post-completion note** | One section's decision was countered; the rest still holds | Immediately under that section's heading |
-| **Criterion-level inline annotation** | One acceptance criterion's deliverable was removed | On the criterion itself, after its text |
-
-A whole-spec banner **scopes** any note or criterion annotation beneath it rather than replacing them: the earlier annotations record intermediate states, and deleting them destroys exactly the history the annotation exists to preserve. For the same reason a second annotation from a *different* superseding spec **accumulates**, newest first. Re-annotating for a superseding spec already named is not accumulation — it is a re-run, and it writes nothing.
-
-**How the superseding spec is cited depends on where the annotation sits.**
-
-- A banner and a section note are **blockquoted**, and from inside a blockquote they may **link** the superseding spec. The blockquote is load-bearing, not stylistic: `derive-dependencies` exempts blockquote-prefixed lines from harvesting, so the link induces no `dependencies:` edge from the annotated spec onto its own successor.
-- A criterion annotation is a plain list item and gets **no** such exemption, so it cites the superseding spec **by name** and points at the banner that carries the link. Citing a remover is not depending on it.
-
-The same rule runs the other way: the superseding spec's body carries **no markdown link** to the spec it supersedes. The pointer is frontmatter, and a body link would make the superseding spec declare a dependency on the very spec it counters — silently, on the first commit that regenerates the index.
-
-**Phrase the annotation as a non-claim** — "no longer exists", "is removed" — rather than as an assertion whose truth depends on whether its paths resolve. A banner written as a live claim falls under a path-existence check it was never meant to answer to.
-
-**The frame is generated; the substance is authored.** Placement, the blockquote wrapper, the citation, and the closing sentence recording that the spec stays the account of what shipped are all mechanical. What no longer holds is not: a generated banner can name the superseding spec and the date and nothing else, and the sentence a reader needs is the one naming what stopped being true.
-
-**Which granularities the runtime writes.** The whole-spec banner and the criterion-level annotation are both written mechanically, by one writer taking the granularity as an argument — one rule, one implementation. The **section-level** note stays hand-authored: nothing in the pipeline needs it programmatically, and a third code path serving no caller is overengineering rather than completeness. Writing one by hand is the supported path, and the form above is its whole specification.
-
-**Writing an annotation is a mechanical edit** ([§spec-lifecycle](#spec-lifecycle)). It changes no claim the annotated spec makes about what it delivered, so it takes **no back-edge**: the spec keeps whatever status it holds, at any lifecycle state, and a `done` spec stays `done` as the record of what shipped. That is what makes the annotation cheap enough to apply without an operator intervening in the annotated spec's lifecycle.
-
-**Annotate only what was delivered.** A spec that never shipped delivered nothing to counter, so marking it as enacted-then-undone records a fiction; the right answer there is usually consolidation — merging it into the spec that covers it and removing its directory — rather than supersession.
 
 <!-- §spec-lifecycle -->
 
@@ -513,7 +479,6 @@ The frontmatter schema applies to **spec files** (`spec.md`) and **scenario file
 | `status` | yes | string | `draft`, `clarified`, `planned`, `in-progress`, `done` | Spec lifecycle state |
 | `dependencies` | yes | list of strings | spec slugs (e.g., `002-events`); empty list permitted | **Generated** by the `derive-dependencies` runtime primitive from inline markdown links to sibling specs in the body. Not hand-authored. Author opt-out: links under a `## See also` heading are treated as navigational and do not produce edges (`## References` remains a dep-producing section). |
 | `references` | no | list of `{service, spec}` entries | registered service alias + target `NNN-slug`; empty or absent permitted | **Generated** by the `derive-references` runtime primitive from inline body links to a registered service's canonical repo URL. Not hand-authored, and **strictly distinct from `dependencies`** — informative cross-service navigation that never enters the blocking dependency graph (spec 030). |
-| `supersedes` | no | list of feature slugs | spec slugs (e.g., `005-workflows`); **absent** when empty, never `[]` | **Hand-authored** — the one pointer field an author writes, and deliberately unlike the generated `dependencies` and `references` indexes above. Names the specs this one supersedes. A **list**, because one spec routinely supersedes several in a single change; this is where it diverges from the scalar `folds-into`, since a staging spec has exactly one home while a superseding spec may counter several predecessors. Absent rather than empty for the same reason `dependencies: []` is present-and-empty: that key is a derived index truthfully reporting *harvested, found none*, so its presence is evidence the derivation ran, whereas an empty `supersedes` would assert a considered decision nobody made. Validated for **shape only** — resolvability is enforced by the declaring command, at the one moment both specs exist (spec 052). |
 | `next-criterion` | no | integer | ≥ 1; absent means no criterion has been labelled yet | **Maintained by the runtime's labelling pass.** The `AC{n}` label the next acceptance criterion receives. Monotonically non-decreasing — deleting a criterion never lowers it — so a retired label is never reissued to a different requirement. Not hand-authored; the audit requires it to exceed every `AC{n}` label present in the body (spec 013). |
 
 #### Scenario files

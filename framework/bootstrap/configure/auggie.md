@@ -65,7 +65,6 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
 
    <!-- generated:mcp-allow:start -->
    - `{ "toolName": "mcp:ductus:read-spec", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:ductus:read-supersession-pair", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:read-tasks", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:mark-task", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:mark-criterion", "permission": { "type": "allow" } }`
@@ -116,7 +115,6 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
    - `{ "toolName": "mcp:ductus:check-unfolded-specs", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:rewrite-spec-links", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:retire-feature", "permission": { "type": "allow" } }`
-   - `{ "toolName": "mcp:ductus:write-supersession-annotation", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:invalidate-review", "permission": { "type": "allow" } }`
    <!-- generated:mcp-allow:end -->
 

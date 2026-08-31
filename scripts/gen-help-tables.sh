@@ -107,7 +107,6 @@ refine_entries=(
   '/{project}:amend'       "$CMD_DIR/amend.md"
   '/{project}:prune'       "$CMD_DIR/prune.md"
   '/{project}:fold'        "$CMD_DIR/fold.md"
-  '/{project}:supersede'   "$CMD_DIR/supersede.md"
   '/{project}:consolidate' "$CMD_DIR/consolidate.md"
 )
 
