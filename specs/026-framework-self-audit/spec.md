@@ -3,7 +3,7 @@ status: done
 dependencies: [017-derive-dont-ask, 022-deterministic-runtime, 023-govern-refinement, 024-rule-loader, 025-rule-opt-out]
 review:
   last-run: 2026-08-31T01:15:00Z
-  reviewed-against: 8cee61ad0c6f5b3f8a6b8f6e5c2a1f7d3b9e4c60
+  reviewed-against: 8cee61afec3b5fcd0c7767a0e342ec9dff55f8fc
   must-violations: 0
   should-violations: 0
   low-confidence: 0

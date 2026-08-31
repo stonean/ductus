@@ -1,7 +1,7 @@
 ---
 spec: 026-framework-self-audit
 reviewed-at: 2026-08-31T01:15:00Z
-reviewed-against: 8cee61ad0c6f5b3f8a6b8f6e5c2a1f7d3b9e4c60
+reviewed-against: 8cee61afec3b5fcd0c7767a0e342ec9dff55f8fc
 diff-base: 2b885326a1125ebbd5515420039bb5d74152014c
 must-violations: 0
 should-violations: 0
