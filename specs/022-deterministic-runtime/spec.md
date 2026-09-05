@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [021-runtime-boundary]
 review:
   last-run: 2026-09-05T18:25:27Z
@@ -10,8 +10,8 @@ review:
   blocking: false
 next-criterion: 24
 analyze:
-  last-run: 2026-09-05T17:35:20Z
-  analyzed-against: 3dd0be577156681044edf9b153231f61400bdfde
+  last-run: 2026-09-05T18:25:59Z
+  analyzed-against: a47ca7a3996d893ae5a7b36a6998d1b1e9c7564f
   hard-fail: 0
   blocking-findings: 0
   advisory: 0
