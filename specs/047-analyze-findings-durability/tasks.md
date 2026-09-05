@@ -33,6 +33,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 Implements `scenarios/analyze-run-durability.md`. Findings outlived the session; the run did not, so the pipeline's second gate could not be enforced at all.
 
+- [x] Implement the behavior described in `scenarios/analyze-run-durability.md`
 - [x] Add the `analyze:` frontmatter block (`AnalyzeBlock`) and the `write-analysis` primitive that writes it, registered at all five sites
 - [x] Write the record on **every** run, including a clean one and an empty scope — the record's purpose is that its absence means something
 - [x] Record `unexamined` alongside the finding counts, so a clean record cannot be read as a fully-examined one

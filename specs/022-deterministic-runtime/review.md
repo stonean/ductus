@@ -1,8 +1,8 @@
 ---
 spec: 022-deterministic-runtime
-reviewed-at: 2026-09-05T16:30:04Z
-reviewed-against: 233506a9f1608426b2e7ea5e1445c21250d17e89
-diff-base: 96823ec01951e4e7f4883051f3a69dd7d1dea983
+reviewed-at: 2026-09-05T17:34:13Z
+reviewed-against: 2402ded3bed649b627c484541efac5436ac9dacd
+diff-base: 1d281af0
 must-violations: 0
 should-violations: 0
 low-confidence: 0
@@ -14,7 +14,7 @@ skipped-passes: []
 
 ## Summary
 
-apply-manifest's substitution-key contract: a placeholder-shaped or empty key is now rejected before any filesystem operation, and the replacement count the walk had been computing and discarding is reported per entry and in aggregate. Zero MUST violations, zero SHOULD, zero low-confidence. The change is itself the repair of a QUAL-CLAIM-001 instance in this primitive — a result that reported created/updated/unchanged identically whether every placeholder had been substituted or none had — and the new fields are shaped to the same rule: the per-entry count is absent rather than zero when substitution never ran, so examined-and-matched-nothing and never-examined cannot arrive as the same value. Validation is exact rather than stylistic, refusing only keys incapable of matching a placeholder, which is what lets it be a hard error rather than the warning §design-principles would reject. Verified through the release binary rather than the MCP tools per AGENTS.md: braced keys exit 1 with zero files written, bare keys substitute and report their counts. Four new unit tests, including a reproduction of the adopter call that motivated it, asserting both the error and that the destination tree is untouched.
+The runtime half of 047's analyze-record requirement: the write-analysis primitive, two new check-review-gate reasons, and the ninth check-artifacts family. Zero MUST, zero SHOULD, zero low-confidence. Two design choices carry the weight and are recorded in the scenario rather than left implicit: blocking is derived inside the primitive rather than accepted as an argument, so no call can record a clean gate over a dirty run — the same discipline write-review applies to its own blocking field, and the reason a field a caller can contradict is a field that will eventually be contradicted; and splice_review_block was generalized to splice_top_level_block with both callers routed through it, because two copies of the frontmatter region logic would agree until one met a shape the other had not, where the failure mode is a corrupted spec.md rather than a wrong answer. The parity goldens moved as expected and the pre-commit hook caught both before they landed.
 
 ## MUST violations (blocking)
 

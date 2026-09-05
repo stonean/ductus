@@ -327,6 +327,7 @@ Implements `scenarios/apply-manifest-substitution-contract.md`. Reported from an
 
 Implements `scenarios/write-analysis-and-the-second-gate.md`. The runtime half of 047's analyze-run durability requirement.
 
+- [x] Implement the behavior described in `scenarios/write-analysis-and-the-second-gate.md`
 - [x] Add `AnalyzeBlock` and `Frontmatter.analyze` (`skip_serializing_if`, so an absent record stays distinguishable from an empty one — the grandfather rule depends on it)
 - [x] Add the `write-analysis` primitive and register it at all five sites; confirm with `cargo test --test mcp` before anything else
 - [x] Derive `blocking` inside the primitive rather than accepting it, so no call can record a clean gate over a dirty run
