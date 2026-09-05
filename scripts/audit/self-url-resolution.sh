@@ -146,6 +146,14 @@ for path in (line.strip() for line in sys.stdin):
             clean = unquote(target.split("#", 1)[0].split("?", 1)[0]).rstrip(".,;:")
             if not clean:
                 continue
+            # A path that leaves the repository is nonsense in a URL naming a
+            # file *in* the repository, and probing it would answer about the
+            # filesystem instead — reporting a hit for something the URL
+            # cannot reach. Treated as unresolved, which is what it is.
+            normalized = os.path.normpath(clean)
+            if os.path.isabs(normalized) or normalized == ".." or normalized.startswith(".." + os.sep):
+                print("unresolved\t%s\t%d\t%s" % (path, number, clean))
+                continue
             if not os.path.exists(clean):
                 print("unresolved\t%s\t%d\t%s" % (path, number, clean))
             elif kind == "blob" and os.path.isdir(clean):

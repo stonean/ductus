@@ -124,6 +124,21 @@ else
           "correct the manifest row, or restore the file it ships"
         continue
       fi
+      # A destination that escapes the tree is refused rather than copied.
+      # `apply-manifest` validates the same field for the same reason
+      # (`validate_no_traversal`, BE-INPUT-004) because a manifest arrives
+      # from a fetched archive; this family reads the manifest from the
+      # worktree, so the provenance is weaker — but the check is two lines
+      # and the alternative is one reader of this table trusting a field the
+      # other refuses to.
+      case "$dst" in
+        /* | ../* | */../* | */..)
+          emit "$MANIFEST_FILE" \
+            "Shared Files manifest destination escapes the target tree: $dst" \
+            "manifest destinations are relative paths inside the adopter project; correct the row"
+          continue
+          ;;
+      esac
       mkdir -p "$synth/$(dirname "$dst")"
       cp "$src" "$synth/$dst"
       placed=$((placed + 1))
@@ -189,6 +204,21 @@ print("counts\t%d\t%d\t" % (len(data.get("examined", [])), data.get("excluded-by
               ;;
           esac
         done < "$report"
+
+        # A delegated check that examined nothing is not a clean one. Both
+        # `git init` and `git add` are silenced above, and `--scope
+        # repository` reads `git ls-files` — so a git that is absent or
+        # refuses leaves the primitive with an empty subject, which comes
+        # back as `broken: []` and `examined: []` and renders here exactly
+        # like a tree whose every link resolved. `examined` is legitimately
+        # smaller than `placed` (six entries are excluded by construction,
+        # and the hook and jsonc entries are not markdown), so the guard is
+        # zero rather than a comparison.
+        if [ "$examined_a" -eq 0 ]; then
+          emit "$SELF" \
+            "check-corpus-links examined 0 files in the synthetic adopter tree though $placed source(s) were placed — the subject was empty, not clean" \
+            "confirm git is available and that 'git init' / 'git add' succeed in a temp directory; --scope repository reads git ls-files"
+        fi
       fi
     fi
   fi
