@@ -1263,9 +1263,13 @@ pub struct ApplyManifestArgs {
     #[serde(default)]
     #[arg(skip)]
     pub pinned: Vec<String>,
-    /// `{key}` → value substitution map applied to text files. Per-entry
-    /// `keep-literals` masks specific keys for individual entries. Set via
-    /// JSON context.
+    /// Substitution map applied to text files. **Keys are bare** — `project`,
+    /// not `{project}`: the primitive wraps each key in braces itself to build
+    /// the placeholder it searches for, so a key that already carries them
+    /// yields `{{project}}` and matches nothing. A placeholder-shaped or empty
+    /// key is rejected before any file is touched. Per-entry `keep-literals`
+    /// masks specific keys for individual entries, and is keyed the same way.
+    /// Set via JSON context.
     #[serde(default)]
     #[arg(skip)]
     pub substitutions: std::collections::BTreeMap<String, String>,
@@ -1296,6 +1300,20 @@ pub struct ManifestEntryResult {
     /// One of `created` / `updated` / `unchanged` / `skipped-exists` /
     /// `skipped-pinned` / `source-missing`.
     pub action: String,
+    /// Placeholder replacements applied to this entry, or `null` when
+    /// substitution never ran for it.
+    ///
+    /// The distinction is the point, and it is `QUAL-CLAIM-001`: `0` means the
+    /// file was read, decoded as UTF-8, and matched no placeholder — which is
+    /// correct for a file that carries none and is the signature of a
+    /// malformed substitution map for a file that does. `null` means the
+    /// question was never asked, because the entry was pinned, skipped, its
+    /// source was missing, it used `skip-if-conflict` (which never
+    /// substitutes), or its bytes are not UTF-8. Collapsing the two into a
+    /// bare `0` would let "examined and found nothing" and "never examined"
+    /// arrive as the same value.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub substitutions_applied: Option<u32>,
 }
 
 /// Result for `apply-manifest`.
@@ -1316,6 +1334,25 @@ pub struct ApplyManifestResult {
     pub skipped_pinned: u32,
     /// Count of `source-missing` actions across all entries.
     pub source_missing: u32,
+    /// Total placeholder replacements applied across every entry that ran
+    /// substitution.
+    ///
+    /// Surfaced because the walk was previously silent about it: the count
+    /// was computed and discarded, so a caller who passed a malformed
+    /// substitution map got `{"created":1,"updated":25,"unchanged":11}` — a
+    /// result indistinguishable from a correct run — while every placeholder
+    /// in every copied file survived literally. A malformed *key* is now
+    /// rejected outright, but a map that is merely incomplete (a key the
+    /// caller forgot) still cannot be, so the number a caller can sanity-check
+    /// against its own expectation belongs in the result.
+    pub substitutions_applied: u32,
+    /// How many entries actually ran substitution — the denominator without
+    /// which `substitutions-applied` cannot be read.
+    ///
+    /// Zero replacements across twenty entries that were substituted is a
+    /// defect; zero across zero entries that were is a manifest of pinned and
+    /// skipped files behaving correctly. One number cannot say which.
+    pub entries_substituted: u32,
 }
 
 // -- enforce-manifest --------------------------------------------------------
@@ -4105,22 +4142,45 @@ mod tests {
         assert_eq!(round_trip(&args), args);
 
         let result = ApplyManifestResult {
-            entries: vec![ManifestEntryResult {
-                source: "framework/commands/status.md".into(),
-                dest: "framework/commands/status.md".into(),
-                action: "created".into(),
-            }],
+            entries: vec![
+                ManifestEntryResult {
+                    source: "framework/commands/status.md".into(),
+                    dest: "framework/commands/status.md".into(),
+                    action: "created".into(),
+                    substitutions_applied: Some(3),
+                },
+                ManifestEntryResult {
+                    source: "framework/templates/spec/spec.md".into(),
+                    dest: "specs/templates/spec.md".into(),
+                    action: "skipped-pinned".into(),
+                    substitutions_applied: None,
+                },
+            ],
             created: 1,
             updated: 0,
             unchanged: 0,
             skipped_exists: 0,
             skipped_pinned: 1,
             source_missing: 0,
+            substitutions_applied: 3,
+            entries_substituted: 1,
         };
         let r_value: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert_eq!(r_value["skipped-pinned"], 1);
         assert_eq!(r_value["source-missing"], 0);
         assert_eq!(r_value["entries"][0]["action"], "created");
+        assert_eq!(r_value["substitutions-applied"], 3);
+        assert_eq!(r_value["entries-substituted"], 1);
+        assert_eq!(r_value["entries"][0]["substitutions-applied"], 3);
+        // A `None` count must be absent rather than serialized as 0 — the
+        // whole point of the field is that the two do not read alike.
+        assert!(
+            r_value["entries"][1]
+                .as_object()
+                .unwrap()
+                .get("substitutions-applied")
+                .is_none()
+        );
         assert_eq!(round_trip(&result), result);
     }
 

@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [021-runtime-boundary]
 review:
   last-run: 2026-08-31T00:57:50Z
@@ -8,7 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 20
+next-criterion: 22
 ---
 
 # 022 — Deterministic Runtime
@@ -350,6 +350,8 @@ as if a smaller number would mean a smaller job.
 - [x] AC17: No slash command in `framework/commands/*.md` detects the missing runtime and prints an install nag on invocation; the markdown-only path remains a first-class path per §runtime-boundary principle 3. Delivered as written, and the no-nag half still holds; principle 3's first-class markdown-only guarantee is since retired by `048-govern-acquired-runtime`.
 - [x] AC18: `/ductus:analyze` against this spec passes with no hard-fail or blocking findings.
 - [x] AC19: `npx markdownlint-cli2` against all rewritten slash command files and new spec files passes.
+- [x] AC20: `apply-manifest` rejects a substitution key that is placeholder-shaped (`{project}`) or empty, before any filesystem operation, so a malformed map halts the walk with zero writes rather than writing a tree in which every placeholder survived literally. The rejection is exact — it refuses only keys incapable of matching a placeholder — so a legal bare key carrying spaces and punctuation still substitutes.
+- [x] AC21: `apply-manifest` reports the substitution count it previously computed and discarded: per entry as an optional value that is absent rather than zero when substitution never ran, and in aggregate alongside `entries-substituted`, so a total is never read without its denominator. The bare-key contract is stated in the primitive's module docs, the `substitutions` schema doc comment, and both bootstrap twins' §Placeholder Substitution, and both counts are surfaced in §Post-Scaffolding Output.
 
 ## Non-Goals
 

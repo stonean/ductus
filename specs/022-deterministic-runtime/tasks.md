@@ -307,3 +307,18 @@ Runtime half of [049's rename](../049-rename-govern-to-ductus/spec.md): the per-
 - [x] Add a unit test covering a `Reference:` line with a non-adjacent repeat
 
 - **Done when**: `parse_command_references` returns each anchor once regardless of position, first-occurrence order is preserved, and a unit test pins the non-adjacent-repeat case.
+
+### apply-manifest — the substitution-key contract
+
+Implements `scenarios/apply-manifest-substitution-contract.md`. Reported from an adopter run: braced substitution keys built `{{project}}`, matched nothing, and shipped 370 literal placeholders while the result read like a clean run.
+
+- [x] Reject a substitution key that is empty or contains `{` or `}` with a new `PrimitiveError::InvalidSubstitutionKey`, validated before the traversal check and before any filesystem operation so a bad map halts with zero writes
+- [x] Keep the rejection exact — only keys incapable of matching a placeholder — so a legal bare key carrying spaces and punctuation (`One-line project description.`) still passes
+- [x] Stop discarding `apply_substitutions`' count: thread it through `read_and_substitute`, the three strategy handlers, and `process_entry`
+- [x] Report `substitutions-applied` per entry as `Option<u32>`, absent rather than `0` when substitution never ran (pinned, skipped, source-missing, `skip-if-conflict`, non-UTF-8) — the `QUAL-CLAIM-001` distinction
+- [x] Report `substitutions-applied` and `entries-substituted` on the result, so the total is never read without its denominator
+- [x] State the bare-key contract where callers read it: the primitive's module docs, the `substitutions` schema doc comment, and the installer's §Placeholder Substitution in both bootstrap twins
+- [x] Surface both numbers in the installer's §Post-Scaffolding Output — a diagnostic nobody prints is one nobody reads
+- [x] Prove it fails before keeping it: a test reproducing the adopter's braced-key call, asserting both the error and that the destination tree is untouched
+
+- **Done when**: a placeholder-shaped or empty key is an error with zero writes, a legal bare key with punctuation still substitutes, every entry reports a count that distinguishes examined-and-zero from never-examined, the aggregate carries its denominator, and the contract is stated in the primitive's docs, the schema, and both installer twins.

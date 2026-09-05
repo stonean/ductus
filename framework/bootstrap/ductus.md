@@ -993,6 +993,10 @@ The Hook Installation section above still runs and may set `core.hooksPath` rega
 
 ## Placeholder Substitution
 
+**The substitution map is keyed bare.** The keys below are written here as the placeholder *tokens they match in files* — `{project}`, `{cli-config-dir}` — because that is what an author scanning a template is looking for. The map `apply-manifest` takes is keyed by the token **without its braces**: `project`, `cli-config-dir`, `project-name`, `One-line project description.`. The primitive adds the braces itself to build what it searches for, so a braced key becomes `{{project}}` and matches nothing.
+
+This is stated because the two forms genuinely disagree on the page and always did: this section writes placeholders braced, and the `keep-literals: ["project", "cli-config-dir"]` two sections above writes the same names bare — because one is naming tokens in files and the other is naming map keys. Nothing said which the map took. An adopter passed braced keys, every strategy ran, every file was written, and `apply-manifest` returned counts a correct run would return, while 370 literal placeholders shipped across the constitution, all 17 commands, 5 rule files and 2 templates — `/{project}:review` where the real command name belonged. The primitive now **rejects** a placeholder-shaped or empty key before it touches a file, and reports `substitutions-applied` (plus `entries-substituted` as its denominator) in the result, so an incomplete map is visible in the numbers even where an invalid one is impossible.
+
 In every copied file (except each selected agent's installed `ductus` file — `{config_dir}/commands/ductus.md` for `claude-style`, `{config_dir}/command/ductus.md` for `opencode`, `{config_dir}/skills/ductus/SKILL.md` for `antigravity` — whose body keeps `{project}` and `{cli-config-dir}` as literal placeholders), replace:
 
 - `{project}` with the user-provided project name (used in commands, README)
@@ -1045,6 +1049,7 @@ After writing the agent's installed `ductus` file — whether via the **Pre-flig
 After scaffolding, display:
 
 - Summary of files created, updated, unchanged, skipped, pinned, merged, and removed — grouped by agent for per-agent files, with shared files in their own group
+- Placeholder substitutions applied, as `apply-manifest` reports them: the total alongside the number of entries that ran substitution (`N substitutions across M files`). Both numbers, never just the total — zero across twenty substituted files is a malformed or incomplete map, while zero across zero is a manifest of pinned and skipped files behaving correctly, and one number cannot tell an operator which they are looking at.
 - For each scaffolded agent, the agent's `rules_file_note` from the registry
 - Hook installation status — one line: `pre-commit hook installed`, `pre-commit hook already wired up`, or `pre-commit hook skipped — existing {husky|lefthook|pre-commit-py|core.hooksPath} detected; see manual integration snippet above`. When the spec-017 → spec-018 migration ran, append the migration summary line described in §Hook Installation > Migration from spec-017 hook (or the relevant recovery-branch warning if the rename was skipped or failed).
 - Any fetch failures encountered

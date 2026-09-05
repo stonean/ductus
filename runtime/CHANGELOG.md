@@ -2,6 +2,73 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.43.0] — 2026-09-05
+
+### Changed
+
+- **BREAKING for a caller that was already broken: `apply-manifest` rejects a
+  placeholder-shaped substitution key.** Keys are bare — `project`, never
+  `{project}` — because the primitive wraps each key in braces itself to build
+  the token it searches for. A braced key therefore built `{{project}}` and
+  matched nothing.
+
+  Nothing stated the contract, and the two spellings genuinely disagree on the
+  page: the installer's §Placeholder Substitution writes placeholders braced
+  because it names tokens *in files*, while `keep-literals: ["project",
+  "cli-config-dir"]` two sections earlier writes them bare because it names
+  *map keys*. The schema's own doc comment said "`{key}` → value substitution
+  map", which reads as though keys are braced.
+
+  An adopter called it with braced keys. Every strategy ran, every file was
+  written, and the result came back `{"created":1,"updated":25,"unchanged":11}`
+  — indistinguishable from a correct run — while 370 literal placeholders
+  shipped across the constitution, all 17 commands, 5 rule files and 2
+  templates, every `/{project}:review` arriving with the placeholder intact.
+
+  An empty key, or one containing `{` or `}`, is now
+  `PrimitiveError::InvalidSubstitutionKey`. It is checked before the traversal
+  validation and before any filesystem operation, so a malformed map halts the
+  walk with **zero writes** rather than leaving a half-substituted tree. The
+  rejection is exact rather than stylistic — it refuses only keys incapable of
+  matching a placeholder — so the legal bare key `One-line project
+  description.`, with its spaces and period, still substitutes.
+
+  A host that was passing braced keys will now fail loudly at a call that
+  previously appeared to succeed. That is the point: it never worked.
+
+### Added
+
+- **`apply-manifest` reports the substitution count it had been discarding.**
+  `read_and_substitute` computed the replacement count on every entry and bound
+  it to `_count`. One number — zero replacements across thirty-seven files —
+  separated the broken run above from a correct one, and it was thrown away.
+  That is `QUAL-CLAIM-001`, the rule this project ships in
+  `framework/rules/quality-cross.md`, in the primitive that installs the file.
+
+  Three fields, shaped so no reading of them is silently wrong:
+
+  - `substitutions-applied` on each entry, `Option<u32>`. `0` means the file
+    was read, decoded as UTF-8, and matched no placeholder — correct for a file
+    carrying none. **Absent** means the question was never asked: pinned,
+    skipped-exists, source-missing, `skip-if-conflict` (which never
+    substitutes), or non-UTF-8 bytes. Serialized with `skip_serializing_if`, so
+    the two never arrive as the same value.
+  - `substitutions-applied` on the result — the total across every entry that
+    ran.
+  - `entries-substituted` on the result — the denominator. Zero replacements
+    across twenty substituted entries is a defect; zero across zero is a
+    manifest of pinned and skipped files behaving correctly, and one number
+    cannot say which.
+
+  Additive for hosts: an existing consumer sees the same JSON for every entry
+  that did not substitute, plus one key on those that did.
+
+- The bare-key contract is now **stated** where callers read it — the
+  primitive's module docs, the `substitutions` schema doc comment, and
+  §Placeholder Substitution in both bootstrap twins — and both counts are
+  surfaced in §Post-Scaffolding Output, since a diagnostic nobody prints is one
+  nobody reads.
+
 ## [0.42.0] — 2026-08-31
 
 ### Removed

@@ -261,6 +261,30 @@ pub enum PrimitiveError {
         /// Strategy string as it appeared in the manifest entry.
         strategy: String,
     },
+    /// A substitution key was given in placeholder form (`{project}`) rather
+    /// than bare (`project`), or was empty.
+    ///
+    /// `apply-manifest` builds each placeholder by wrapping the key in braces,
+    /// so a key that already carries them yields `{{project}}` and matches
+    /// nothing. That is not a near-miss the caller can be trusted to notice:
+    /// every strategy still runs, every file is still written, and the counts
+    /// come back looking like a successful run while every placeholder in
+    /// every copied file survives literally. An adopter reported exactly this
+    /// — 370 unsubstituted placeholders across the constitution, all 17
+    /// commands, 5 rule files and 2 templates, with `/{project}:review` in
+    /// place of the real command name and no error, no warning.
+    ///
+    /// A key containing a brace can never match a well-formed placeholder, so
+    /// rejecting it is exact rather than heuristic. The check runs before any
+    /// filesystem operation, so a bad map halts the walk with zero writes
+    /// rather than leaving a half-substituted tree.
+    #[error(
+        "substitution key '{key}' is malformed — keys are bare (`project`), not placeholder-shaped (`{{project}}`); the primitive adds the braces"
+    )]
+    InvalidSubstitutionKey {
+        /// The offending key, as it appeared in the substitutions map.
+        key: String,
+    },
     /// `create-scenario` refused to overwrite an existing scenario file.
     #[error("scenario already exists: {path}")]
     ScenarioConflict {

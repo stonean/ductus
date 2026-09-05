@@ -44,9 +44,13 @@
 #     state the worktree is not. Those are COUNTED and reported on stderr, not
 #     resolved and not silently dropped, because "we did not check these" and
 #     "these were fine" must not read alike.
-#   - A URL carrying a `{placeholder}` is a documented shape — the release
-#     download URLs in the installer are the standing example — and is excluded
-#     by construction.
+#   - A URL carrying a `{placeholder}`, or an ellipsis standing in for the rest
+#     of a path, is a documented shape rather than a pointer and is excluded by
+#     construction. Both markers are exact: the release download URLs in the
+#     installer are the standing `{placeholder}` example, and prose explaining
+#     this very URL form necessarily writes the ellipsis — this family's own
+#     scenario did, and the family reported it on its first run. No real path
+#     segment is `…` or `...`, so neither exclusion can hide a live link.
 #   - Generated command copies under the host config dir are not a subject:
 #     they carry whatever their source carries, and the repair is a ductus
 #     release, not an edit there. Family 26 and Family 34 draw the same line.
@@ -124,8 +128,14 @@ for path in (line.strip() for line in sys.stdin):
     examined += 1
     for number, line in enumerate(lines, 1):
         for kind, ref, target in URL.findall(line):
-            # A placeholder is a documented shape, not a pointer.
-            if "{" in target or "}" in target:
+            # A documented shape, not a pointer. Two markers, both exact:
+            # a {placeholder}, and an ellipsis standing in for the rest of a
+            # path. Prose explaining this URL form necessarily writes one, as
+            # the scenario and registry entries for this family do, and no
+            # real path segment is an ellipsis — so neither exclusion can
+            # hide a live link. (No apostrophes in this block: the whole
+            # program is a single-quoted shell string.)
+            if any(mark in target for mark in ("{", "}", "…", "...")):
                 continue
             urls += 1
             if ref != "main":

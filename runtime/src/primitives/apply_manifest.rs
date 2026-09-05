@@ -34,6 +34,25 @@
 //!   entry's source, the action is `source-missing` (not an
 //!   operational error — the host surfaces it so the operator can
 //!   diagnose the upstream archive).
+//! - **Substitution keys are bare**: `project`, never `{project}`. The
+//!   primitive wraps each key in braces itself to build the placeholder
+//!   it searches for, so a key that already carries them yields
+//!   `{{project}}` and matches nothing. A placeholder-shaped or empty
+//!   key is rejected before any filesystem operation — see
+//!   [`validate_substitution_key`]. `keep-literals` is keyed the same
+//!   way, which is what the two forms disagreeing looked like from the
+//!   outside: the installer's prose writes placeholders braced because
+//!   it is describing tokens *in files*, and writes `keep-literals`
+//!   bare because it is naming *keys*, and nothing stated which one the
+//!   map takes.
+//! - **Substitution counts are reported**: `substitutions-applied` per
+//!   entry and in aggregate, with `entries-substituted` as the
+//!   denominator. The per-entry count is `None` — not `0` — for an
+//!   entry that never ran substitution, so "examined and matched
+//!   nothing" and "never examined" cannot arrive as the same value
+//!   (`QUAL-CLAIM-001`). The walk previously computed the count and
+//!   discarded it, which is how a malformed map returned counts
+//!   indistinguishable from a correct run.
 //!
 //! Cross-platform: paths in the manifest use forward slashes; the
 //! primitive joins them with the host OS's separator at write time.
@@ -73,7 +92,15 @@ const ACTION_SOURCE_MISSING: &str = "source-missing";
 /// - [`PrimitiveError::UnknownManifestStrategy`] when an entry's
 ///   `strategy` field is not one of `update`, `create`, or
 ///   `skip-if-conflict`.
+/// - [`PrimitiveError::InvalidSubstitutionKey`] when a substitution key is
+///   placeholder-shaped (`{project}`) or empty. Checked first, before the
+///   traversal validation and before any filesystem operation, for the same
+///   reason: a bad map must halt the walk with zero writes rather than leave
+///   a half-substituted tree.
 pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult> {
+    for key in args.substitutions.keys() {
+        validate_substitution_key(key)?;
+    }
     for entry in &args.entries {
         validate_no_traversal(&entry.source)?;
         validate_no_traversal(&entry.dest)?;
@@ -87,13 +114,17 @@ pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult>
     let mut result = ApplyManifestResult::default();
 
     for entry in &args.entries {
-        let action = process_entry(
+        let (action, substitutions_applied) = process_entry(
             entry,
             &source_root,
             &target_root,
             &pinned,
             &args.substitutions,
         )?;
+        if let Some(count) = substitutions_applied {
+            result.substitutions_applied = result.substitutions_applied.saturating_add(count);
+            result.entries_substituted = result.entries_substituted.saturating_add(1);
+        }
         match action {
             ACTION_CREATED => result.created = result.created.saturating_add(1),
             ACTION_UPDATED => result.updated = result.updated.saturating_add(1),
@@ -113,6 +144,7 @@ pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult>
             source: entry.source.clone(),
             dest: entry.dest.clone(),
             action: action.to_string(),
+            substitutions_applied,
         });
     }
 
@@ -139,10 +171,10 @@ fn process_entry(
     target_root: &Path,
     pinned: &[String],
     substitutions: &BTreeMap<String, String>,
-) -> Result<&'static str> {
+) -> Result<(&'static str, Option<u32>)> {
     // 1. Pinned short-circuit: do not read, do not write.
     if pinned_match(pinned, &entry.dest) {
-        return Ok(ACTION_SKIPPED_PINNED);
+        return Ok((ACTION_SKIPPED_PINNED, None));
     }
 
     // 2. Resolve and probe the source.
@@ -154,7 +186,7 @@ fn process_entry(
             source,
         })?;
     if !source_exists {
-        return Ok(ACTION_SOURCE_MISSING);
+        return Ok((ACTION_SOURCE_MISSING, None));
     }
 
     // 3. Resolve and probe the destination.
@@ -183,8 +215,9 @@ fn apply_update(
     dest_exists: bool,
     entry: &ManifestEntry,
     substitutions: &BTreeMap<String, String>,
-) -> Result<&'static str> {
-    let new_bytes = read_and_substitute(source, entry.keep_literals.as_deref(), substitutions)?;
+) -> Result<(&'static str, Option<u32>)> {
+    let (new_bytes, applied) =
+        read_and_substitute(source, entry.keep_literals.as_deref(), substitutions)?;
 
     if dest_exists {
         let existing = fs::read(dest).map_err(|source| PrimitiveError::Io {
@@ -192,15 +225,15 @@ fn apply_update(
             source,
         })?;
         if existing == new_bytes {
-            return Ok(ACTION_UNCHANGED);
+            return Ok((ACTION_UNCHANGED, applied));
         }
         write_atomic_bytes(dest, &new_bytes)?;
         mirror_source_mode(source, dest)?;
-        Ok(ACTION_UPDATED)
+        Ok((ACTION_UPDATED, applied))
     } else {
         write_atomic_bytes(dest, &new_bytes)?;
         mirror_source_mode(source, dest)?;
-        Ok(ACTION_CREATED)
+        Ok((ACTION_CREATED, applied))
     }
 }
 
@@ -210,19 +243,27 @@ fn apply_create(
     dest_exists: bool,
     entry: &ManifestEntry,
     substitutions: &BTreeMap<String, String>,
-) -> Result<&'static str> {
+) -> Result<(&'static str, Option<u32>)> {
     if dest_exists {
-        return Ok(ACTION_SKIPPED_EXISTS);
+        return Ok((ACTION_SKIPPED_EXISTS, None));
     }
-    let new_bytes = read_and_substitute(source, entry.keep_literals.as_deref(), substitutions)?;
+    let (new_bytes, applied) =
+        read_and_substitute(source, entry.keep_literals.as_deref(), substitutions)?;
     write_atomic_bytes(dest, &new_bytes)?;
     mirror_source_mode(source, dest)?;
-    Ok(ACTION_CREATED)
+    Ok((ACTION_CREATED, applied))
 }
 
-fn apply_skip_if_conflict(source: &Path, dest: &Path, dest_exists: bool) -> Result<&'static str> {
+/// `skip-if-conflict` never substitutes — these are adopter-owned templates
+/// the framework seeds and never edits afterward — so its count is `None`
+/// rather than `Some(0)`. The file was copied, not examined for placeholders.
+fn apply_skip_if_conflict(
+    source: &Path,
+    dest: &Path,
+    dest_exists: bool,
+) -> Result<(&'static str, Option<u32>)> {
     if dest_exists {
-        return Ok(ACTION_SKIPPED_EXISTS);
+        return Ok((ACTION_SKIPPED_EXISTS, None));
     }
     let bytes = fs::read(source).map_err(|src| PrimitiveError::Io {
         path: source.into(),
@@ -230,7 +271,7 @@ fn apply_skip_if_conflict(source: &Path, dest: &Path, dest_exists: bool) -> Resu
     })?;
     write_atomic_bytes(dest, &bytes)?;
     mirror_source_mode(source, dest)?;
-    Ok(ACTION_CREATED)
+    Ok((ACTION_CREATED, None))
 }
 
 /// Mirror the source file's permission bits onto a freshly-written
@@ -266,11 +307,15 @@ pub(crate) fn mirror_source_mode(source: &Path, dest: &Path) -> Result<()> {
 /// Read `source` and, if its bytes decode as UTF-8, apply the
 /// substitution map (with `keep_literals` masking specific keys). Binary
 /// files are passed through unchanged.
+///
+/// Returns the bytes and how many replacements were applied — `None` for a
+/// file whose bytes are not UTF-8, which is never examined for placeholders
+/// and so has no count to report rather than a count of zero.
 fn read_and_substitute(
     source: &Path,
     keep_literals: Option<&[String]>,
     substitutions: &BTreeMap<String, String>,
-) -> Result<Vec<u8>> {
+) -> Result<(Vec<u8>, Option<u32>)> {
     let bytes = fs::read(source).map_err(|src| PrimitiveError::Io {
         path: source.into(),
         source: src,
@@ -278,11 +323,34 @@ fn read_and_substitute(
     match std::str::from_utf8(&bytes) {
         Ok(text) => {
             let effective = effective_substitutions(substitutions, keep_literals);
-            let (substituted, _count) = apply_substitutions(text, &effective);
-            Ok(substituted.into_bytes())
+            let (substituted, count) = apply_substitutions(text, &effective);
+            Ok((substituted.into_bytes(), Some(count)))
         }
-        Err(_) => Ok(bytes),
+        Err(_) => Ok((bytes, None)),
     }
+}
+
+/// Reject a substitution key that cannot possibly match a placeholder.
+///
+/// `apply_substitutions` builds its search token as `format!("{{{key}}}")`, so
+/// the key is the *inside* of the braces. A key carrying braces of its own
+/// produces `{{project}}`, which matches nothing; an empty key produces `{}`,
+/// which matches an unrelated literal. Neither is a near-miss worth guessing
+/// at, and neither errors on its own — the walk completes, every file is
+/// written, and the counts read like a clean run.
+///
+/// Exactness matters here: this rejects only keys that are *incapable* of
+/// matching, never keys that merely look unusual, so it can be a hard error
+/// rather than a warning. `{One-line project description.}` is a legal
+/// placeholder whose key is the brace-free `One-line project description.`,
+/// and it passes.
+fn validate_substitution_key(key: &str) -> Result<()> {
+    if key.is_empty() || key.contains('{') || key.contains('}') {
+        return Err(PrimitiveError::InvalidSubstitutionKey {
+            key: key.to_string(),
+        });
+    }
+    Ok(())
 }
 
 /// Build the per-entry substitution map by removing every key listed in
@@ -620,6 +688,131 @@ mod tests {
         assert_eq!(result.entries[0].action, "skipped-pinned");
         assert_eq!(result.skipped_pinned, 1);
         assert_eq!(result.skipped_exists, 0);
+    }
+
+    /// The adopter's bug, reproduced. Braced keys built `{{project}}`, matched
+    /// nothing, and wrote 370 literal placeholders across the constitution,
+    /// every command, the rule files and the templates — while the result read
+    /// `{"created":1,"updated":25,"unchanged":11}`, which is what a correct
+    /// run looks like.
+    ///
+    /// The assertion that matters is not just the error: it is that the
+    /// destination tree is untouched. Validation runs before any filesystem
+    /// operation, so a malformed map cannot leave a half-substituted tree
+    /// behind for the operator to reconcile.
+    #[test]
+    fn placeholder_shaped_substitution_key_is_rejected_with_zero_writes() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(tmp.path(), &[("a.md", "Run /{project}:review\n")]);
+        let dst = tmp.path().join("dst");
+
+        let args = args_for(
+            &src,
+            &dst,
+            vec![entry("a.md", "a.md", "update")],
+            vec![],
+            subs(&[("{project}", "magpie")]),
+        );
+        let err = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidSubstitutionKey { key } if key == "{project}"),
+            "expected InvalidSubstitutionKey, got {err:?}"
+        );
+        assert!(
+            !dst.join("a.md").exists(),
+            "a rejected substitution map must halt before any write"
+        );
+    }
+
+    #[test]
+    fn empty_substitution_key_is_rejected() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(tmp.path(), &[("a.md", "{} literal\n")]);
+        let dst = tmp.path().join("dst");
+
+        let args = args_for(
+            &src,
+            &dst,
+            vec![entry("a.md", "a.md", "update")],
+            vec![],
+            subs(&[("", "anything")]),
+        );
+        assert!(matches!(
+            run(&args, tmp.path()).unwrap_err(),
+            PrimitiveError::InvalidSubstitutionKey { .. }
+        ));
+    }
+
+    /// A key that merely looks unusual must still be accepted — the check is
+    /// exact, not a style rule. `{One-line project description.}` is a real
+    /// placeholder in the installer whose key carries spaces and a period.
+    #[test]
+    fn bare_keys_with_punctuation_and_spaces_are_accepted() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(
+            tmp.path(),
+            &[("a.md", "desc: {One-line project description.}\n")],
+        );
+        let dst = tmp.path().join("dst");
+
+        let args = args_for(
+            &src,
+            &dst,
+            vec![entry("a.md", "a.md", "update")],
+            vec![],
+            subs(&[("One-line project description.", "A tool.")]),
+        );
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(
+            fs::read_to_string(dst.join("a.md")).unwrap(),
+            "desc: A tool.\n"
+        );
+        assert_eq!(result.substitutions_applied, 1);
+    }
+
+    /// `QUAL-CLAIM-001`: an entry that was examined and matched nothing must
+    /// not report the same value as one that was never examined at all.
+    #[test]
+    fn substitution_counts_separate_examined_from_unexamined() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(
+            tmp.path(),
+            &[
+                ("subbed.md", "{project} and {project}\n"),
+                ("clean.md", "no placeholders here\n"),
+                ("pinned.md", "{project}\n"),
+                ("template.md", "{project}\n"),
+            ],
+        );
+        let dst = tmp.path().join("dst");
+
+        let args = args_for(
+            &src,
+            &dst,
+            vec![
+                entry("subbed.md", "subbed.md", "update"),
+                entry("clean.md", "clean.md", "update"),
+                entry("pinned.md", "pinned.md", "update"),
+                entry("template.md", "template.md", "skip-if-conflict"),
+            ],
+            vec!["pinned.md".to_string()],
+            subs(&[("project", "anvil")]),
+        );
+        let result = run(&args, tmp.path()).unwrap();
+
+        // Examined, matched twice.
+        assert_eq!(result.entries[0].substitutions_applied, Some(2));
+        // Examined, matched nothing — a real zero, and legitimately so.
+        assert_eq!(result.entries[1].substitutions_applied, Some(0));
+        // Never examined: pinned short-circuits before the read.
+        assert_eq!(result.entries[2].substitutions_applied, None);
+        // Never examined: skip-if-conflict copies without substituting.
+        assert_eq!(result.entries[3].substitutions_applied, None);
+
+        // The aggregate needs its denominator: 2 replacements over the 2
+        // entries that ran, not over the 4 in the manifest.
+        assert_eq!(result.substitutions_applied, 2);
+        assert_eq!(result.entries_substituted, 2);
     }
 
     #[test]
