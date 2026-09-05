@@ -2,6 +2,60 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.45.0] — 2026-09-05
+
+### Changed
+
+- **`resolve-anchor` classifies each `§` reference instead of treating every
+  one as a claim about the markers file.** `§` is this corpus's notation for
+  *a section*, not for *a constitution section*, so a spec writes
+  `AGENTS.md §Workflow`, `[review.md](...) §Behavior` and `per §Design above`
+  alongside genuine constitution citations. Resolving all of them against one
+  file reported **112 unresolved anchors** across the spec corpus, every one
+  surfaced by `/ductus:analyze` as an advisory finding.
+
+  The cost was not noise for its own sake. Spec 023 deleted
+  `§lightweight-track` from the constitution — its AC2 asserts the section is
+  gone and its own task said "verify the anchor is no longer referenced
+  anywhere" — and spec 010's body still cited it. This primitive had been
+  reporting that correctly the whole time, among 111 lines that were not
+  defects, and it survived four specs' worth of history until the list was
+  read by hand. A signal that is 99% noise is not a signal.
+
+  Three kinds, recorded per reference as `kind`:
+
+  - **`qualified`** — the reference's *line* names a markdown document other
+    than the markers file. Excluded by construction and counted. Line-scoped
+    rather than immediately-preceding, because the dominant real shape is a
+    table row naming the file once and citing several of its sections
+    (measured: 34/112 vs 136/311). "Other than the markers file" is
+    load-bearing — a line citing the constitution *is* the kind this
+    primitive exists to check, and an existing test caught the first draft
+    excluding it.
+  - **`intra-document`** — the anchor names a heading in the citing file,
+    resolved against that file's own headings, longest first.
+  - **`markers`** — a genuine claim about the markers file, and the only kind
+    that can come back unresolved.
+
+  Corpus effect: **112 unresolved → 34**, with the one real dangling anchor
+  still among them — asserted as a unit test rather than left as a hope. The
+  residue is prose naming a document without naming its file
+  (`spec 022 §Versioning`), which can be neither verified nor excluded;
+  reporting it is the honest answer, and widening the rule to swallow it
+  would mean guessing.
+
+### Added
+
+- `resolve-anchor`'s result carries `qualified` and `intra-document` counts.
+  136 of 311 references are excluded on this corpus, and an exclusion nobody
+  counts is indistinguishable from a scan that found nothing — so the numbers
+  ship with the verdict. `unresolved` now means "every reference that was a
+  claim about the markers file resolved", never "every `§` in this file is
+  fine", which is a claim the primitive cannot make.
+
+  `AnchorReference.kind` defaults to `markers` when deserializing a result
+  written before the field existed, which is what every such reference was.
+
 ## [0.44.0] — 2026-09-05
 
 ### Added

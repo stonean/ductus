@@ -1024,7 +1024,26 @@ pub struct AnchorReference {
     /// 1-based line of the reference.
     pub line: u32,
     /// Whether the anchor resolves to a marker.
+    ///
+    /// A `qualified` or `intra-document` reference is never `false`: the
+    /// first is not a claim about the markers file at all, and the second
+    /// resolved against the citing file. Only a `markers` reference can be
+    /// unresolved, which is what makes an unresolved one worth reading.
     pub resolved: bool,
+    /// How the reference was classified, and therefore what `resolved` means
+    /// for it: `markers` (a claim about the markers file — the only kind that
+    /// can be unresolved), `qualified` (its line names another document, so
+    /// this primitive does not hold the markers it would need), or
+    /// `intra-document` (the anchor names a heading in the citing file).
+    #[serde(default = "default_anchor_kind")]
+    pub kind: String,
+}
+
+/// Backfill for [`AnchorReference::kind`] when deserializing a result written
+/// before the field existed. Every such reference was scanned against the
+/// markers file, because that was the only behavior.
+fn default_anchor_kind() -> String {
+    "markers".to_string()
 }
 
 /// Result for `resolve-anchor`.
@@ -1034,7 +1053,23 @@ pub struct ResolveAnchorResult {
     /// All anchor references found in the file.
     pub references: Vec<AnchorReference>,
     /// Anchor names with no matching marker.
+    ///
+    /// Only `markers`-kind references contribute. An empty list therefore
+    /// means "every reference that was a claim about the markers file
+    /// resolved" — never "every `§` in this file is fine", which is a claim
+    /// this primitive cannot make and the counts below keep it from implying.
     pub unresolved: Vec<String>,
+    /// References excluded because their line names another document.
+    ///
+    /// Reported rather than silently dropped. Excluding them is what makes an
+    /// unresolved reference readable — 75 of this corpus's 112 were this kind,
+    /// and a real dangling anchor sat unnoticed among them for four specs'
+    /// worth of history. But an exclusion nobody counts is indistinguishable
+    /// from a scan that found nothing, so the number ships with the verdict.
+    pub qualified: u32,
+    /// References resolved against a heading in the citing file rather than
+    /// the markers file.
+    pub intra_document: u32,
 }
 
 // -- traverse-deps -----------------------------------------------------------
@@ -3977,13 +4012,28 @@ mod tests {
         };
         assert_eq!(round_trip(&args), args);
         let result = ResolveAnchorResult {
-            references: vec![AnchorReference {
-                anchor: "runtime-boundary".into(),
-                line: 459,
-                resolved: true,
-            }],
+            references: vec![
+                AnchorReference {
+                    anchor: "runtime-boundary".into(),
+                    line: 459,
+                    resolved: true,
+                    kind: "markers".into(),
+                },
+                AnchorReference {
+                    anchor: "Workflow".into(),
+                    line: 12,
+                    resolved: true,
+                    kind: "qualified".into(),
+                },
+            ],
             unresolved: vec![],
+            qualified: 1,
+            intra_document: 0,
         };
+        let value: serde_json::Value = serde_json::to_value(&result).unwrap();
+        assert_eq!(value["qualified"], 1);
+        assert_eq!(value["intra-document"], 0);
+        assert_eq!(value["references"][1]["kind"], "qualified");
         assert_eq!(round_trip(&result), result);
     }
 

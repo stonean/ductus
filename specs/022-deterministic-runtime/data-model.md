@@ -373,13 +373,27 @@ Result:
 ```json
 {
   "references": [
-    { "anchor": "runtime-boundary", "line": 459, "resolved": true }
+    { "anchor": "runtime-boundary", "line": 459, "resolved": true, "kind": "markers" },
+    { "anchor": "Workflow", "line": 51, "resolved": true, "kind": "qualified" },
+    { "anchor": "Design", "line": 106, "resolved": true, "kind": "intra-document" }
   ],
-  "unresolved": []
+  "unresolved": [],
+  "qualified": 136,
+  "intra-document": 6
 }
 ```
 
 Scans `path` for `§<anchor>` references and resolves each against `<!-- §anchor -->` markers. The markers come from `path` itself when `markers-path` is omitted (the constitution self-consistency check); supply `markers-path` to resolve one file's references against a *different* file's markers — `/ductus:analyze` passes the constitution as `markers-path` so a spec's `§` references resolve against the constitution's sections (a spec carries no markers of its own, so resolving against itself would flag every reference as unresolved noise).
+
+**Not every `§X` is a claim about the markers file**, and `kind` records which of three it is. `§` is the corpus-wide notation for "a section", not for "a constitution section", so a spec writes `AGENTS.md §Workflow` and `per §Design above` alongside genuine constitution citations.
+
+- **`qualified`** — the reference's line names a markdown document **other than the markers file** (a backticked path, a markdown link target, or a bare `*.md` token). It is a claim about *that* document's sections, which this primitive cannot evaluate holding one file's markers. Excluded by construction and **counted**. The match is line-scoped rather than immediately-preceding, because the dominant real shape is a table row or clause naming the file once and then citing several of its sections, where every reference after the first would otherwise slip through. "Other than the markers file" is load-bearing: a line citing the constitution *is* the kind of reference this primitive exists to check.
+- **`intra-document`** — the anchor names a heading in the citing file, resolved against that file's own headings (longest heading first, so `§Hook Installation` is not satisfied by a shorter `§Hook`).
+- **`markers`** — a genuine claim about the markers file, and the only kind that can come back unresolved.
+
+`unresolved` therefore means "every reference that was a claim about the markers file resolved" — never "every `§` in this file is fine", which is a claim this primitive cannot make. The two counts ship with the verdict so the exclusion is visible rather than silent.
+
+Prose that names another document without naming its file (`spec 022 §Versioning`, `the bootstrap's §Derived values`) can be neither verified nor excluded and stays reported — a deliberate limit, not an oversight.
 
 ### `traverse-deps` — verify spec dependencies and status compatibility
 

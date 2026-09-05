@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [021-runtime-boundary]
 review:
   last-run: 2026-09-05T17:34:13Z
@@ -8,7 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 23
+next-criterion: 24
 analyze:
   last-run: 2026-09-05T17:35:20Z
   analyzed-against: 3dd0be577156681044edf9b153231f61400bdfde
@@ -361,6 +361,7 @@ as if a smaller number would mean a smaller job.
 - [x] AC20: `apply-manifest` rejects a substitution key that is placeholder-shaped (`{project}`) or empty, before any filesystem operation, so a malformed map halts the walk with zero writes rather than writing a tree in which every placeholder survived literally. The rejection is exact — it refuses only keys incapable of matching a placeholder — so a legal bare key carrying spaces and punctuation still substitutes.
 - [x] AC21: `apply-manifest` reports the substitution count it previously computed and discarded: per entry as an optional value that is absent rather than zero when substitution never ran, and in aggregate alongside `entries-substituted`, so a total is never read without its denominator. The bare-key contract is stated in the primitive's module docs, the `substitutions` schema doc comment, and both bootstrap twins' §Placeholder Substitution, and both counts are surfaced in §Post-Scaffolding Output.
 - [x] AC22: The `write-analysis` primitive writes a spec's `analyze:` frontmatter block, splicing it without disturbing sibling keys through the same region logic `write-review` uses, deriving `blocking` itself rather than accepting it, and refusing a spec whose frontmatter does not deserialize. `check-review-gate` reports `not-analyzed` and `analyze-findings` after every `review:` check, and `check-artifacts` runs nine residual deterministic families rather than eight.
+- [x] AC23: `resolve-anchor` classifies each `§` reference as `qualified` (its line names a markdown document other than the markers file), `intra-document` (the anchor names a heading in the citing file), or `markers` (a claim about the markers file, and the only kind that can be unresolved), reporting the first two as counts so a large exclusion is never silent. The document match is line-scoped, the markers file is excluded from qualification, and local headings match longest-first.
 
 ## Non-Goals
 
