@@ -146,6 +146,7 @@ examined=0
 never_reviewed=0
 backlog=0
 backlog_specs=""
+saw_counts=0
 while IFS=$'\t' read -r kind f1 f2; do
   case "$kind" in
     backlog)
@@ -160,9 +161,27 @@ while IFS=$'\t' read -r kind f1 f2; do
     counts)
       examined="$f1"
       never_reviewed="$f2"
+      saw_counts=1
       ;;
   esac
 done <<< "$records"
+
+# The scan emits its counts record last and unconditionally, so its absence
+# means the scan did not finish — a python failure, a broken pipe. Without
+# this the failure is silent and generous: `records` comes back empty, the
+# loop matches nothing, `backlog` stays 0, and 0 is at or below every
+# baseline, so the ratchet reports clean having examined nothing. That is
+# `QUAL-CLAIM-001` in the family whose whole job is to keep a grandfathered
+# set honest, and it is the third instance of this exact shape found by
+# reviewing this session's own new code against the rule set it enforces.
+#
+# An `examined` of zero is NOT the guard: a corpus with no `done` specs is
+# legitimately empty, and its backlog of zero is a true answer.
+if [ "$saw_counts" -eq 0 ]; then
+  emit "$SELF" \
+    "the frontmatter scan produced no counts record — it did not finish, so the backlog of ${backlog} describes nothing" \
+    "run the script directly and inspect the python stage; a scan that did not complete must not be read as an empty backlog"
+fi
 
 # --- the ratchet ------------------------------------------------------------
 
