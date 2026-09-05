@@ -77,5 +77,7 @@ run_check "Family 31 — review block agreement" "scripts/audit/review-block-agr
 run_check "Family 32 — permission entry shape" "scripts/audit/permission-entry-shape.sh"
 run_check "Family 33 — README command parity" "scripts/audit/readme-command-parity.sh"
 run_check "Family 34 — step reference integrity" "scripts/audit/step-reference-integrity.sh"
+run_check "Family 35 — manifest destination links" "scripts/audit/manifest-destination-links.sh"
+run_check "Family 36 — self-URL resolution" "scripts/audit/self-url-resolution.sh"
 
 exit "$drift"

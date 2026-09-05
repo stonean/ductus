@@ -328,3 +328,29 @@ Opened by [048](../048-govern-acquired-runtime/spec.md)'s AC10 adopter runs, whi
 - [x] Prove it fails before keeping it: reintroduce one of the four stale references spec 054 fixed and confirm the family turns red
 
 - **Done when**: the family reports each of the three finding types, fails closed on an empty extraction, appears in all three registries Family 28 checks, and has been proven to fail on a deliberately reintroduced stale reference.
+
+### 39. Family 35 — manifest destination links
+
+- [x] Implement the behavior described in `scenarios/family-35-manifest-destination-links.md`
+- [x] Derive both subjects from the installer's own manifest tables rather than restating a file list — a hardcoded set would be a second copy of the fact under test
+- [x] 35a: copy each **Shared Files** entry to its literal destination in a throwaway tree and delegate to `check-corpus-links --scope repository`, per the suite's primitives-first contract, with the script as the thin entry point
+- [x] 35b: check the **Slash commands** entries lexically, and state both reasons they cannot go through 35a — placeholder destinations, and the primitive's by-construction exclusion of the host config dir
+- [x] Fail closed on an empty extraction from either table, an unreachable runtime, and an unparseable result, matching Families 17, 18, 23, 28 and 34
+- [x] Report both counts on stderr so "the shipped set resolves" cannot be read as "every link an adopter has resolves"
+- [x] Register it in `scripts/audit/run-all.sh`, `framework/commands/audit.md`, and `scripts/audit/README.md` §Scripts — the three lists Family 28 holds together
+- [x] Prove it fails before keeping it: restore the pre-fix `../../specs/017-…` link in `framework/rules/quality-cross.md` and confirm the family reproduces the adopter's failure
+
+- **Done when**: the family resolves shipped files against their manifest destinations, reports both subjects' counts, fails closed on every precondition above, appears in all three registries Family 28 checks, and has been proven to fail on the restored pre-fix link.
+
+### 40. Family 36 — self-URL resolution
+
+- [x] Implement the behavior described in `scenarios/family-36-self-url-resolution.md`
+- [x] Derive the repository slug from the installer's archive URL rather than hardcoding it — a literal would misfire in a fork rather than being merely absent
+- [x] Resolve `main` URLs against the working tree; count tag- and sha-pinned URLs separately rather than resolving or dropping them
+- [x] Report `unresolved`, `blob-names-dir` and `tree-names-file` as distinct findings, because the three repairs differ
+- [x] Exclude placeholder URLs and generated command copies by construction; strip fragments, queries and trailing punctuation, and percent-decode before the existence test
+- [x] Treat an empty markdown corpus as a finding and zero URLs as clean, with the URL count on stderr as the guard between them
+- [x] Register it in `scripts/audit/run-all.sh`, `framework/commands/audit.md`, and `scripts/audit/README.md` §Scripts — the three lists Family 28 holds together
+- [x] Prove it fails before keeping it: repoint one shipped URL at a renamed spec directory and confirm the family turns red
+
+- **Done when**: every `blob/main/<path>` URL in the corpus is resolved against the working tree, non-main refs are counted rather than resolved, the three finding kinds are distinguished, the family appears in all three registries Family 28 checks, and it has been proven to fail on a deliberately repointed URL.
