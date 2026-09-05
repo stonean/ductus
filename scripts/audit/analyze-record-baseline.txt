@@ -1,4 +1,9 @@
 # High-water mark for the analyze-record backlog (audit Family 37).
-# Lower it as done specs are re-analyzed; it must never be raised without
-# a stated reason, because the backlog cannot legitimately grow.
-54
+#
+# The count of `done` specs carrying a `review:` record and no `analyze:` one.
+# Lower it as specs are re-analyzed. It must never be raised without a stated
+# reason: the completion gate has no grandfather clause, so the backlog cannot
+# legitimately grow, and growth means the gate was bypassed.
+#
+# 54 at introduction (2026-09-05); 51 after 022, 026 and 047 were analyzed.
+51

@@ -9,6 +9,14 @@ review:
   low-confidence: 0
   blocking: false
 next-criterion: 25
+analyze:
+  last-run: 2026-09-05T17:35:20Z
+  analyzed-against: 3dd0be577156681044edf9b153231f61400bdfde
+  hard-fail: 0
+  blocking-findings: 0
+  advisory: 0
+  unexamined: 1
+  blocking: false
 ---
 
 # 026 — Framework self-audit (`/audit`)

@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [021-runtime-boundary]
 review:
   last-run: 2026-09-05T17:34:13Z
@@ -9,6 +9,14 @@ review:
   low-confidence: 0
   blocking: false
 next-criterion: 23
+analyze:
+  last-run: 2026-09-05T17:35:20Z
+  analyzed-against: 3dd0be577156681044edf9b153231f61400bdfde
+  hard-fail: 0
+  blocking-findings: 0
+  advisory: 0
+  unexamined: 0
+  blocking: false
 ---
 
 # 022 — Deterministic Runtime
