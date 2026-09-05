@@ -70,7 +70,7 @@ use crate::schema::primitives::{
     ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RemoveInboxItemArgs,
     ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs, RetireFeatureArgs,
     RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
-    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs,
+    ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
 };
 use crate::schema::procedure::{Procedure, Step, StepNumber};
 use crate::schema::protocol::{ErrorLocation, ProtocolMessage};
@@ -714,6 +714,7 @@ fn dispatch_primitive(
         "process-waivers" => call!(ProcessWaiversArgs, process_waivers),
         "compute-review-scope" => call!(ComputeReviewScopeArgs, compute_review_scope),
         "write-review" => call!(WriteReviewArgs, write_review),
+        "write-analysis" => call!(WriteAnalysisArgs, write_analysis),
         "check-stuck" => call!(CheckStuckArgs, check_stuck),
         "validate-frontmatter" => call!(ValidateFrontmatterArgs, validate_frontmatter),
         "resolve-anchor" => call!(ResolveAnchorArgs, resolve_anchor),

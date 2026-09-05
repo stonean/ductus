@@ -2,6 +2,84 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.44.0] — 2026-09-05
+
+### Added
+
+- **`write-analysis` — the durable record that `/ductus:analyze` ran.** The
+  pipeline is `implement → review → analyze → done`, and until now only half
+  of it left a trace: `check-review-gate` read the `review:` block, Family 19
+  checked its freshness, Family 31 held it against `review.md`, and analyze
+  wrote nothing at all. A spec that had passed **both** gates and a spec that
+  had passed **only the review** were byte-identical on disk. Nothing could
+  tell them apart, so nothing could enforce the second gate, so the only thing
+  holding it was whoever remembered — the diligence dependency
+  §design-principles rejects outright.
+
+  Not hypothetical: on 2026-09-05 two specs were advanced to `done` on the
+  review gate alone, and one of them was published to crates.io — where a
+  version can never be reused — before anything noticed, because there was
+  nothing to notice.
+
+  The new `analyze:` frontmatter block carries `last-run`,
+  `analyzed-against`, `hard-fail`, `blocking-findings`, `advisory`,
+  `unexamined`, and a derived `blocking`. It is deliberately **not** a copy of
+  `review:`:
+
+  - **`advisory` is recorded and never gates.** An outstanding SHOULD blocks
+    `done` at the review gate because §implement-phase says advisory is not
+    ignorable there. Analyze's advisory tier is a different contract: its
+    members are checks introduced advisory *with published promotion criteria*
+    — grounding, Applicable-Rules citations, decision drift — and gating on
+    them would promote every one at once, past the criteria each declares.
+  - **`unexamined` has no counterpart at all**, and is what makes the record
+    honest. A clean analyze is two states, and the command's own contract says
+    so: "clean with nothing skipped is verified-clean, clean with something
+    skipped is partially examined." A record carrying only finding counts
+    would collapse that into the reassuring reading, inside the artifact a
+    later gate trusts.
+
+- **`check-artifacts` gains `analyze-state-drift`** — nine residual
+  deterministic families rather than eight. A `done` spec with
+  `analyze.last-run` unset or `analyze.blocking: true` is drift.
+
+  Grandfathered for specs predating the record, and that is the honest choice
+  rather than the convenient one. 046 refused this shape of exemption and the
+  criterion-label check backfilled instead — but a criterion label is
+  *derivable from the artifact*, so that backfill computed something already
+  true. An analyze record asserts *that a run happened*, which nothing on disk
+  substantiates; backfilling it would write an unverified claim into the field
+  a later gate reads, which is the exact failure the record was added to
+  prevent. `/ductus:audit` Family 37 counts the exempt population against a
+  committed high-water mark instead, so the set is bounded and shrinking
+  rather than a silent permanent hiding place — and since the gate has no
+  grandfather clause, it cannot grow.
+
+### Changed
+
+- **BREAKING for the completion gate: `check-review-gate` now blocks on a
+  missing or failing analysis.** Two new `blocked-by` variants,
+  `not-analyzed` and `analyze-findings`, ordered after every `review:` check
+  because the pipeline runs in that order — a spec whose review is missing has
+  not reached the point where analysis is the next thing owed, and naming the
+  later gate for an earlier defect sends a contributor to the wrong command.
+
+  A host driving `/ductus:implement` against a spec with no `analyze:` block
+  will now be blocked where it previously proceeded. That is the point. There
+  is deliberately no grandfather clause **at the gate** — it runs when a spec
+  is being completed now, so the record is always writable, and an exemption
+  there would be a permanent hole rather than a bounded transitional one.
+
+- `/ductus:analyze`'s read-only contract is restated rather than broken. It
+  still never mutates an artifact it audits, and `--fix` is still the only
+  path that does; it now writes two things **about itself** — the inbox
+  capture of surviving findings, and this record. The line is between the
+  subject and the observation, and recording that an audit happened is what
+  `/ductus:review` has always done.
+
+- The spec template ships the `analyze:` block, so newly-scaffolded specs
+  carry it from the start.
+
 ## [0.43.0] — 2026-09-05
 
 ### Changed

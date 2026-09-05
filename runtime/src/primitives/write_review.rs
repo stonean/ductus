@@ -648,10 +648,20 @@ fn render_extra_field(block: &mut String, indent: &str, key: &str, value: &serde
 /// preserving surrounding top-level keys. Appends the block when no `review:`
 /// key is present.
 pub(crate) fn splice_review_block(fm_text: &str, block: &str) -> String {
+    splice_top_level_block(fm_text, "review", block)
+}
+
+/// Replace (or append) the `{key}:` block region of a frontmatter body,
+/// preserving surrounding top-level keys.
+///
+/// Generalized out of `splice_review_block` when the `analyze:` block needed
+/// exactly the same splice. Sharing it is the point rather than a tidy-up: two
+/// copies of "find the top-level key, find where it ends, swap the region"
+/// would agree until one of them met a frontmatter shape the other had not,
+/// and the failure mode is a corrupted `spec.md` rather than a wrong answer.
+pub(crate) fn splice_top_level_block(fm_text: &str, key: &str, block: &str) -> String {
     let lines: Vec<&str> = fm_text.lines().collect();
-    let start = lines
-        .iter()
-        .position(|line| top_level_key_is(line, "review"));
+    let start = lines.iter().position(|line| top_level_key_is(line, key));
     let mut out: Vec<&str> = Vec::new();
     if let Some(i) = start {
         let mut end = i + 1;

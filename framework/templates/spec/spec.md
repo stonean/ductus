@@ -8,6 +8,14 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
+analyze:
+  last-run: null
+  analyzed-against: null
+  hard-fail: 0
+  blocking-findings: 0
+  advisory: 0
+  unexamined: 0
+  blocking: false
 ---
 
 # {NNN} — {Feature Name}

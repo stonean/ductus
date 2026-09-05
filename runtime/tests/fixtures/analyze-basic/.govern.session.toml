@@ -3,4 +3,6 @@ path = "specs/003-analyze/spec.md"
 paths = ["specs/003-analyze/spec.md"]
 script = "scripts/gen-noop.sh"
 rule-files = ["framework/rules/configuration.md"]
+analyzed-at = "2026-05-11T00:00:00Z"
+analyzed-against = "abcdef0"
 set-at = "2026-05-11T00:00:00Z"

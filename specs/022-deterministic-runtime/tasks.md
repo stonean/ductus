@@ -322,3 +322,19 @@ Implements `scenarios/apply-manifest-substitution-contract.md`. Reported from an
 - [x] Prove it fails before keeping it: a test reproducing the adopter's braced-key call, asserting both the error and that the destination tree is untouched
 
 - **Done when**: a placeholder-shaped or empty key is an error with zero writes, a legal bare key with punctuation still substitutes, every entry reports a count that distinguishes examined-and-zero from never-examined, the aggregate carries its denominator, and the contract is stated in the primitive's docs, the schema, and both installer twins.
+
+### write-analysis and the second gate
+
+Implements `scenarios/write-analysis-and-the-second-gate.md`. The runtime half of 047's analyze-run durability requirement.
+
+- [x] Add `AnalyzeBlock` and `Frontmatter.analyze` (`skip_serializing_if`, so an absent record stays distinguishable from an empty one — the grandfather rule depends on it)
+- [x] Add the `write-analysis` primitive and register it at all five sites; confirm with `cargo test --test mcp` before anything else
+- [x] Derive `blocking` inside the primitive rather than accepting it, so no call can record a clean gate over a dirty run
+- [x] Generalize `splice_review_block` to `splice_top_level_block` and route both callers through it rather than copying the region logic
+- [x] Refuse to write a record into a spec whose frontmatter does not deserialize
+- [x] Flatten newlines in the two host-supplied scalars rather than rejecting them, and pin the frontmatter-injection case with a test
+- [x] Extend `check-review-gate` with `NotAnalyzed` and `AnalyzeFindings`, extracted into `analyze_gate_block` to stay under clippy's line ceiling
+- [x] Add `analyze-state-drift` to `check-artifacts`, mirroring `review-state-drift` on the gating states and deliberately not on the advisory count
+- [x] Update every existing gate fixture, which began failing correctly when the check landed, and add fixtures for both new reasons plus the both-gates-failing order case
+
+- **Done when**: `write-analysis` writes and replaces the block without disturbing siblings, `blocking` cannot be supplied by a caller, the gate reports both new reasons in pipeline order, `check-artifacts` runs nine families, and each new behavior was proven failing first.

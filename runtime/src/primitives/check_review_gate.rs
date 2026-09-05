@@ -164,6 +164,11 @@ pub(crate) fn run_with_lint(
         return Ok(stale);
     }
 
+    // Gate checks 7 and 8: the spec frontmatter `analyze:` block.
+    if let Some(blocked) = analyze_gate_block(frontmatter.analyze.as_ref(), &project) {
+        return Ok(blocked);
+    }
+
     // The gate passes. Before saying so, name what it could not examine: the
     // staleness diff above compares committed trees, so a durable contract
     // living only in the working tree is outside it. At this moment that is
@@ -180,6 +185,70 @@ pub(crate) fn run_with_lint(
         blocked_by: None,
         message: None,
         guidance: unexaminable_contracts_guidance(repo, &rel_dir),
+        violations: vec![],
+    })
+}
+
+/// Gate checks 7 and 8 — the spec's `analyze:` block: a completed analysis
+/// whose findings do not hold the spec out of `done`.
+///
+/// Ordered after every `review:` check because the pipeline is
+/// `review → analyze → done`. A spec whose review is missing or failing has
+/// not reached the point where analysis is the next thing owed, and naming the
+/// later gate for an earlier defect sends a contributor to the wrong command.
+///
+/// **No grandfather clause, and there must not be one.** The `analyze-state-drift`
+/// family exempts a `done` spec that predates the record, because it audits a
+/// corpus written before the field existed. This gate runs at the moment a
+/// spec is being completed *now*, so the record is always writable — an
+/// exemption here would be a permanent hole rather than a bounded
+/// transitional one.
+///
+/// Advisory findings never block; see `AnalyzeBlock::advisory` for why this
+/// does not mirror the review gate's treatment of an outstanding SHOULD. They
+/// ride the guidance line instead, together with the unexamined count, so a
+/// blocked gate still says what the analysis did not look at.
+fn analyze_gate_block(
+    analyze: Option<&crate::schema::primitives::AnalyzeBlock>,
+    project: &str,
+) -> Option<CheckReviewGateResult> {
+    let analyze = match analyze {
+        Some(analyze) if analyze.last_run.is_some() => analyze,
+        // Absent block or null `last-run`: the spec has never completed an
+        // analysis. This is the state every spec was in before the record
+        // existed, which is how two specs reached `done` on 2026-09-05 with
+        // only the review gate run — one of them published to crates.io
+        // before anything noticed, because nothing could.
+        _ => {
+            return Some(CheckReviewGateResult {
+                passed: false,
+                blocked_by: Some(ReviewGateBlock::NotAnalyzed),
+                message: Some(format!(
+                    "blocked: spec has not been analyzed — run /{project}:analyze before completing"
+                )),
+                guidance: None,
+                violations: vec![],
+            });
+        }
+    };
+
+    if !analyze.blocking {
+        return None;
+    }
+
+    Some(CheckReviewGateResult {
+        passed: false,
+        blocked_by: Some(ReviewGateBlock::AnalyzeFindings),
+        message: Some(format!(
+            "blocked: spec has {} hard-fail and {} blocking analyze finding(s) — \
+             run /{project}:analyze to see them",
+            analyze.hard_fail, analyze.blocking_findings
+        )),
+        guidance: Some(format!(
+            "Resolve them and re-run /{project}:analyze. Advisory findings do not block; \
+             the recorded run carries {} of them and {} unexamined target(s).",
+            analyze.advisory, analyze.unexamined
+        )),
         violations: vec![],
     })
 }
@@ -505,11 +574,25 @@ mod tests {
     use std::fs;
     use tempfile::tempdir;
 
-    const REVIEWED_CLEAN: &str = "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 0\n  should-violations: 1\n  low-confidence: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
-    const REVIEWED_BLOCKING: &str = "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 3\n  should-violations: 0\n  low-confidence: 0\n  blocking: true\n---\n\n# 007 — Gate\n";
-    const NEVER_REVIEWED: &str = "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: null\n  reviewed-against: null\n  must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
-    const NO_REVIEW_BLOCK: &str =
-        "---\nstatus: in-progress\ndependencies: []\n---\n\n# 007 — Gate\n";
+    /// Reviewed clean, but the analyze record is absent entirely — the state
+    /// every spec was in before this block existed, and the one that let two
+    /// specs reach `done` (and one of them crates.io) on a single gate.
+    const NEVER_ANALYZED: &str = "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
+
+    /// The block is present but `last-run` is null — the same "never ran"
+    /// state spelled differently, and the review gate treats its own
+    /// equivalent identically.
+    const ANALYZE_NULL_RUN: &str = "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n  blocking: false\nanalyze:\n  last-run: null\n  blocking: false\n---\n\n# 007 — Gate\n";
+
+    const ANALYZE_BLOCKING: &str = "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n  blocking: false\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 1\n  blocking-findings: 2\n  advisory: 0\n  unexamined: 0\n  blocking: true\n---\n\n# 007 — Gate\n";
+
+    /// Advisory findings and unexamined targets recorded, nothing gating.
+    const ANALYZE_ADVISORY_ONLY: &str = "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n  blocking: false\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 7\n  unexamined: 4\n  blocking: false\n---\n\n# 007 — Gate\n";
+
+    const REVIEWED_CLEAN: &str = "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 0\n  should-violations: 1\n  low-confidence: 0\n  blocking: false\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
+    const REVIEWED_BLOCKING: &str = "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 3\n  should-violations: 0\n  low-confidence: 0\n  blocking: true\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
+    const NEVER_REVIEWED: &str = "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: null\n  reviewed-against: null\n  must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n  blocking: false\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
+    const NO_REVIEW_BLOCK: &str = "---\nstatus: in-progress\ndependencies: []\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
 
     fn seed(repo: &Path, spec: &str) {
         fs::create_dir_all(repo.join("specs/007-gate")).unwrap();
@@ -537,7 +620,7 @@ mod tests {
 
     /// A branch-scoped spec: reviewed, clean, and every other check would
     /// pass — the fold is the only thing holding it short of `done`.
-    const PENDING_FOLD: &str = "---\nstatus: in-progress\ndependencies: []\nfolds-into: 050-upstream\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
+    const PENDING_FOLD: &str = "---\nstatus: in-progress\ndependencies: []\nfolds-into: 050-upstream\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n  blocking: false\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
 
     #[test]
     fn a_declared_fold_blocks_the_done_transition() {
@@ -610,6 +693,74 @@ mod tests {
         assert_ne!(result.blocked_by, Some(ReviewGateBlock::PendingFold));
     }
 
+    /// The gap this block closes. A spec with a clean review and no analyze
+    /// record used to pass the gate — which is how two specs reached `done`
+    /// on 2026-09-05 with only half the pipeline run, one of them published
+    /// irreversibly before anything noticed, because nothing could.
+    #[test]
+    fn a_reviewed_but_unanalyzed_spec_is_blocked() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), NEVER_ANALYZED);
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(!result.passed);
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::NotAnalyzed));
+        assert!(
+            result
+                .message
+                .as_deref()
+                .unwrap()
+                .contains("has not been analyzed")
+        );
+    }
+
+    #[test]
+    fn a_null_analyze_last_run_blocks_like_an_absent_block() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), ANALYZE_NULL_RUN);
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::NotAnalyzed));
+    }
+
+    #[test]
+    fn blocking_analyze_findings_block_and_name_both_tiers() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), ANALYZE_BLOCKING);
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(!result.passed);
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::AnalyzeFindings));
+        let message = result.message.as_deref().unwrap();
+        assert!(message.contains("1 hard-fail"), "{message}");
+        assert!(message.contains("2 blocking"), "{message}");
+    }
+
+    /// Advisory findings are recorded and never gate — the deliberate
+    /// asymmetry with the review gate's treatment of an outstanding SHOULD.
+    /// The unexamined count rides along in the guidance rather than being
+    /// dropped, so a passing gate still says what the analysis could not look
+    /// at.
+    #[test]
+    fn advisory_findings_and_unexamined_targets_do_not_block() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), ANALYZE_ADVISORY_ONLY);
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(result.passed);
+        assert!(result.blocked_by.is_none());
+    }
+
+    /// Gate order: a spec failing both gates is told about the review, not
+    /// the analysis. Naming the later gate for an earlier defect sends a
+    /// contributor to the wrong command.
+    #[test]
+    fn a_missing_review_is_reported_before_a_missing_analysis() {
+        let tmp = tempdir().unwrap();
+        seed(
+            tmp.path(),
+            "---\nstatus: in-progress\ndependencies: []\n---\n\n# 007 — Gate\n",
+        );
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::NotReviewed));
+    }
+
     #[test]
     fn passes_when_lint_clean_and_review_current() {
         let tmp = tempdir().unwrap();
@@ -665,7 +816,7 @@ mod tests {
             format!(
                 "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  \
                  reviewed-against: {sha}\n  must-violations: 0\n  should-violations: 0\n  \
-                 low-confidence: 0\n  blocking: false\n---\n\n# 007 — Gate\n"
+                 low-confidence: 0\n  blocking: false\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n"
             ),
         )
         .unwrap();

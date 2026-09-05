@@ -1,0 +1,4 @@
+# High-water mark for the analyze-record backlog (audit Family 37).
+# Lower it as done specs are re-analyzed; it must never be raised without
+# a stated reason, because the backlog cannot legitimately grow.
+54

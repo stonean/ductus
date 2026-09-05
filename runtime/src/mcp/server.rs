@@ -60,8 +60,8 @@ use crate::schema::primitives::{
     ResolveReferencesArgs, ResolveReferencesResult, RetireFeatureArgs, RetireFeatureResult,
     RewriteSpecLinksArgs, RewriteSpecLinksResult, RunGeneratorArgs, RunGeneratorResult,
     SetStatusArgs, SetStatusResult, TraverseDepsArgs, TraverseDepsResult, ValidateFrontmatterArgs,
-    ValidateFrontmatterResult, WriteReviewArgs, WriteReviewResult, WriteSessionArgs,
-    WriteSessionResult,
+    ValidateFrontmatterResult, WriteAnalysisArgs, WriteAnalysisResult, WriteReviewArgs,
+    WriteReviewResult, WriteSessionArgs, WriteSessionResult,
 };
 
 /// Canonical MCP tool names exposed by the server, in manifest order —
@@ -615,6 +615,19 @@ impl GovRuntimeServer {
         params: Parameters<WriteReviewArgs>,
     ) -> Result<Json<WriteReviewResult>, String> {
         primitives::write_review::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "write-analysis",
+        description = "Record that /ductus:analyze ran in the spec's `analyze:` frontmatter block — the durable counterpart to `review:`, and what `check-review-gate` reads to hold a spec out of `done` until the second gate has actually run. Takes the run's hard-fail / blocking / advisory counts plus `unexamined` (the skipped-target count, so a clean record cannot be read as a fully-examined one), sets `blocking` from the two gating tiers, and splices the block without disturbing sibling keys. Refuses a spec whose frontmatter does not parse rather than recording a clean run into it. Atomic."
+    )]
+    async fn write_analysis(
+        &self,
+        params: Parameters<WriteAnalysisArgs>,
+    ) -> Result<Json<WriteAnalysisResult>, String> {
+        primitives::write_analysis::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

@@ -51,7 +51,7 @@ Each feature lives in `specs/NNN-feature-name/` and progresses through these sta
 | `/ductus:plan` | clarified → planned | Create a technical plan and task breakdown for a clarified spec. |
 | `/ductus:implement` | planned → in-progress → done | Execute implementation tasks for the targeted feature. |
 | `/ductus:review` | blocks `done` (MUST violations) | Audit code against rules — security, reuse, quality, efficiency, simplicity. Writes review.md; blocks done on MUST violations. |
-| `/ductus:analyze` | — | Audit artifacts against each other — spec, plan, tasks, scenarios, frontmatter, dependencies, rule IDs. Read-only by default; --fix reverts a done spec drifted by review state or unresolved scenario questions. |
+| `/ductus:analyze` | — | Audit artifacts against each other — spec, plan, tasks, scenarios, frontmatter, dependencies, rule IDs. Never modifies an artifact it audits; records the run and its findings, and --fix reverts a done spec drifted by review state or unresolved scenario questions. |
 
 <!-- generated:commands-pipeline:end -->
 

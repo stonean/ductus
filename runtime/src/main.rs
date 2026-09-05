@@ -22,7 +22,7 @@ use ductus::schema::primitives::{
     ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RemoveInboxItemArgs,
     ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs, RetireFeatureArgs,
     RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
-    ValidateFrontmatterArgs, WriteReviewArgs, WriteSessionArgs,
+    ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -95,6 +95,8 @@ enum Command {
     ComputeReviewScope(ComputeReviewScopeArgs),
     /// Render specs/NNN/review.md and update the spec `review:` frontmatter block.
     WriteReview(WriteReviewArgs),
+    /// Record that analyze ran in the spec `analyze:` frontmatter block.
+    WriteAnalysis(WriteAnalysisArgs),
     /// Flip a single subtask checkbox in `tasks.md` (atomic rewrite).
     MarkTask(MarkTaskArgs),
     /// Flip a single acceptance-criterion checkbox in `spec.md`.
@@ -645,6 +647,7 @@ fn main() -> ExitCode {
             emit_result(primitives::compute_review_scope::run(&args, &repo))
         }
         Command::WriteReview(args) => emit_result(primitives::write_review::run(&args, &repo)),
+        Command::WriteAnalysis(args) => emit_result(primitives::write_analysis::run(&args, &repo)),
         Command::MarkTask(args) => emit_result(primitives::mark_task::run(&args, &repo)),
         Command::MarkCriterion(args) => emit_result(primitives::mark_criterion::run(&args, &repo)),
         Command::SetStatus(args) => emit_result(primitives::set_status::run(&args, &repo)),

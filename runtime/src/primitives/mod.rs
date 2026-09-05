@@ -64,6 +64,7 @@ pub mod set_status;
 pub(crate) mod spec_links;
 pub mod traverse_deps;
 pub mod validate_frontmatter;
+pub mod write_analysis;
 pub mod write_review;
 pub mod write_session;
 

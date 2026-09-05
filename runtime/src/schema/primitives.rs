@@ -49,6 +49,69 @@ pub struct ReviewBlock {
     pub blocking: bool,
 }
 
+/// Parsed `analyze:` frontmatter block — the durable record that
+/// `/ductus:analyze` ran, and what it found.
+///
+/// The counterpart to [`ReviewBlock`], and it exists because there was no
+/// counterpart. `check-review-gate` read the `review:` block, Family 19
+/// checked review freshness, and nothing recorded the *other* gate at all —
+/// so a spec that had passed both gates and one that had passed only the
+/// review were byte-identical on disk. The pipeline is
+/// `implement → review → analyze → done`, and half of it left no trace,
+/// which meant the only thing standing between a spec and a skipped audit
+/// was whoever remembered — the diligence dependency §design-principles
+/// rejects.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct AnalyzeBlock {
+    /// ISO-8601 UTC timestamp of the last `/ductus:analyze`, if any.
+    #[serde(default)]
+    pub last_run: Option<String>,
+    /// HEAD sha the analysis ran against.
+    #[serde(default)]
+    pub analyzed_against: Option<String>,
+    /// Hard-fail findings (malformed frontmatter, missing required fields).
+    #[serde(default)]
+    pub hard_fail: u32,
+    /// Blocking findings from the run's blocking tier.
+    ///
+    /// Named `blocking-findings` rather than `blocking` because this block
+    /// also carries the boolean gate flag its sibling `review:` block spells
+    /// `blocking`, and two fields differing only in type is the shape a
+    /// reader mis-reads.
+    #[serde(default)]
+    pub blocking_findings: u32,
+    /// Advisory findings.
+    ///
+    /// Recorded but **not** gated on, and the asymmetry with `review:` is
+    /// deliberate rather than an oversight. An outstanding SHOULD blocks
+    /// `done` because §implement-phase says advisory is not ignorable at the
+    /// review gate. Analyze's advisory tier is a different contract: its
+    /// members are checks explicitly introduced advisory *with promotion
+    /// criteria* — grounding, Applicable-Rules citations, decision drift —
+    /// where blocking before the signal is proven is the failure mode each
+    /// one names. Gating on them here would promote all of them at once,
+    /// past the criteria they each declare.
+    #[serde(default)]
+    pub advisory: u32,
+    /// Targets a family could not examine (the run's `skipped` set).
+    ///
+    /// The `QUAL-CLAIM-001` field, and the reason this block is not just a
+    /// copy of `review:`. A clean analyze is two different states — every
+    /// target examined and clean, or some target unexaminable and the rest
+    /// clean — and the command's own contract says so: "clean with nothing
+    /// skipped is verified-clean, clean with something skipped is partially
+    /// examined." A record carrying only the finding counts would collapse
+    /// exactly that distinction into the reassuring reading, in the record
+    /// a later gate trusts.
+    #[serde(default)]
+    pub unexamined: u32,
+    /// Whether the last analysis left findings that hold the spec out of
+    /// `done` — `hard-fail` or `blocking-findings` above zero.
+    #[serde(default)]
+    pub blocking: bool,
+}
+
 // -- discover-rule-files -----------------------------------------------------
 
 /// Args for `discover-rule-files`.
@@ -338,6 +401,66 @@ pub struct WriteReviewResult {
     pub exit_code: i32,
 }
 
+// -- write-analysis ----------------------------------------------------------
+
+/// Args for `write-analysis` — record that `/ductus:analyze` ran, and what it
+/// found, in the spec's `analyze:` frontmatter block.
+///
+/// The narrow, always-on write that makes analyze's own run durable. It is a
+/// deliberate change to that command's read-only contract, and the line the
+/// contract now draws is between the **subject** and the **observation**:
+/// analyze still never mutates an artifact it audits, and `--fix` remains the
+/// only path that does. Recording that the audit happened is not mutating the
+/// subject — it is the same thing `write-review` does for the other gate, and
+/// the reason that gate could be enforced while this one could not.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct WriteAnalysisArgs {
+    /// Feature directory whose `spec.md` records the analysis.
+    #[arg(long)]
+    pub feature: String,
+    /// ISO-8601 UTC timestamp recorded as `analyze.last-run`. Host-provided,
+    /// as `write-review`'s `reviewed-at` is.
+    #[arg(long)]
+    pub analyzed_at: String,
+    /// HEAD sha the analysis ran against (`analyze.analyzed-against`).
+    #[arg(long)]
+    pub analyzed_against: String,
+    /// Hard-fail findings this run produced.
+    #[serde(default)]
+    #[arg(long, default_value_t = 0)]
+    pub hard_fail: u32,
+    /// Blocking-tier findings this run produced.
+    #[serde(default)]
+    #[arg(long, default_value_t = 0)]
+    pub blocking_findings: u32,
+    /// Advisory-tier findings this run produced. Recorded, never gated on.
+    #[serde(default)]
+    #[arg(long, default_value_t = 0)]
+    pub advisory: u32,
+    /// Targets the run could not examine — the informational `skipped` set.
+    /// Required in the record so a clean result cannot be read as a fully
+    /// examined one (`QUAL-CLAIM-001`).
+    #[serde(default)]
+    #[arg(long, default_value_t = 0)]
+    pub unexamined: u32,
+}
+
+/// Result for `write-analysis`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct WriteAnalysisResult {
+    /// Repo-relative path of the spec whose `analyze:` block was written.
+    pub spec_path: String,
+    /// `true` when `hard-fail` or `blocking-findings` exceeds zero — the
+    /// value `check-review-gate` reads.
+    pub blocking: bool,
+    /// Whether an `analyze:` block already existed and was replaced, as
+    /// opposed to being inserted for the first time. Reported so a caller can
+    /// tell a re-analysis from a spec leaving the grandfathered population.
+    pub replaced: bool,
+}
+
 /// Parsed spec frontmatter.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -367,6 +490,11 @@ pub struct Frontmatter {
     /// Last-review block, when set.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub review: Option<ReviewBlock>,
+    /// Last-analysis block, when set. Absent on a spec that predates the
+    /// analyze record, which the drift family grandfathers and Family 37
+    /// counts — see [`AnalyzeBlock`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub analyze: Option<AnalyzeBlock>,
 }
 
 /// One parsed body section.
@@ -2444,6 +2572,29 @@ pub enum ReviewGateBlock {
     /// shipped three commits of unreviewed runtime change (spec 022 review,
     /// 2026-08-03).
     ReviewStale,
+    /// The spec has no completed analysis: the `analyze:` block is absent or
+    /// its `last-run` is null.
+    ///
+    /// Ordered after every `review:` check because the pipeline is
+    /// `review → analyze → done`: a spec that has not been reviewed has not
+    /// reached the point where analysis is the next thing owed, and sending
+    /// a contributor to analyze a spec whose review is missing or failing
+    /// would name the later gate for an earlier defect.
+    ///
+    /// This check exists because its absence was reached in practice: on
+    /// 2026-09-05 two specs were advanced to `done` on the review gate
+    /// alone, and one of them was released to crates.io — irreversibly —
+    /// before anything noticed, because nothing could. Analyze left no
+    /// trace, so a spec that had passed both gates and one that had passed
+    /// only the first were identical on disk.
+    NotAnalyzed,
+    /// The last analysis left findings in the hard-fail or blocking tier
+    /// (`analyze.blocking: true`).
+    ///
+    /// Advisory findings are deliberately not a gate here — see
+    /// [`AnalyzeBlock::advisory`] for why this does not mirror the review
+    /// gate's treatment of an outstanding SHOULD.
+    AnalyzeFindings,
 }
 
 /// Result for `check-review-gate`. A blocked gate is a domain outcome —
@@ -3499,17 +3650,17 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::{
-        AcceptanceCriterion, AnchorReference, CheckRuleIdsArgs, CheckRuleIdsResult, CheckStuckArgs,
-        CheckStuckResult, CheckboxToggleResult, Classification, DependencyEdge, DeriveBoundaryArgs,
-        DeriveBoundaryResult, Frontmatter, FrontmatterFinding, GateConfirmArgs, GateConfirmResult,
-        LintMarkdownArgs, LintMarkdownResult, MarkCriterionArgs, MarkTaskArgs, MarkdownViolation,
-        MigrateSessionFileArgs, MigrateSessionFileResult, OpenQuestion, PruneAction, PruneGate,
-        PruneMode, PruneSection, PruneTasksArgs, PruneTasksResult, ReadSpecArgs, ReadSpecResult,
-        ReadTasksArgs, ReadTasksResult, ResolveAnchorArgs, ResolveAnchorResult, ReviewBlock,
-        RuleCitation, RunGeneratorArgs, RunGeneratorResult, ScenarioOpenQuestion, SetStatusArgs,
-        SetStatusResult, SizeSummary, SpecSection, Subtask, Task, TraverseDepsArgs,
-        TraverseDepsResult, ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteSessionArgs,
-        WriteSessionResult,
+        AcceptanceCriterion, AnalyzeBlock, AnchorReference, CheckRuleIdsArgs, CheckRuleIdsResult,
+        CheckStuckArgs, CheckStuckResult, CheckboxToggleResult, Classification, DependencyEdge,
+        DeriveBoundaryArgs, DeriveBoundaryResult, Frontmatter, FrontmatterFinding, GateConfirmArgs,
+        GateConfirmResult, LintMarkdownArgs, LintMarkdownResult, MarkCriterionArgs, MarkTaskArgs,
+        MarkdownViolation, MigrateSessionFileArgs, MigrateSessionFileResult, OpenQuestion,
+        PruneAction, PruneGate, PruneMode, PruneSection, PruneTasksArgs, PruneTasksResult,
+        ReadSpecArgs, ReadSpecResult, ReadTasksArgs, ReadTasksResult, ResolveAnchorArgs,
+        ResolveAnchorResult, ReviewBlock, RuleCitation, RunGeneratorArgs, RunGeneratorResult,
+        ScenarioOpenQuestion, SetStatusArgs, SetStatusResult, SizeSummary, SpecSection, Subtask,
+        Task, TraverseDepsArgs, TraverseDepsResult, ValidateFrontmatterArgs,
+        ValidateFrontmatterResult, WriteSessionArgs, WriteSessionResult,
     };
 
     fn round_trip<T>(value: &T) -> T
@@ -3541,6 +3692,15 @@ mod tests {
                 tags: vec![],
                 folds_into: None,
                 review: Some(ReviewBlock::default()),
+                analyze: Some(AnalyzeBlock {
+                    last_run: Some("2026-09-05T18:00:00Z".into()),
+                    analyzed_against: Some("abc123".into()),
+                    hard_fail: 0,
+                    blocking_findings: 0,
+                    advisory: 2,
+                    unexamined: 1,
+                    blocking: false,
+                }),
             },
             sections: vec![SpecSection {
                 heading: "Motivation".into(),

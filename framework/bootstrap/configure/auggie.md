@@ -74,6 +74,7 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
    - `{ "toolName": "mcp:ductus:process-waivers", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:compute-review-scope", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:write-review", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:write-analysis", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:check-step-references", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:check-stuck", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:validate-frontmatter", "permission": { "type": "allow" } }`

@@ -1,6 +1,6 @@
 [package]
 name = "ductus"
-version = "0.43.0"
+version = "0.44.0"
 edition = "2024"
 rust-version = "1.88"
 description = "Deterministic runtime for the ductus pipeline (spec 022)."
