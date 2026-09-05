@@ -5,5 +5,5 @@
 # reason: the completion gate has no grandfather clause, so the backlog cannot
 # legitimately grow, and growth means the gate was bypassed.
 #
-# 54 at introduction (2026-09-05); 51 after 022, 026 and 047 were analyzed.
-51
+# 54 at introduction (2026-09-05); 51 after 022, 026 and 047; 50 after 050.
+50
