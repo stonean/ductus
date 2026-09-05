@@ -102,3 +102,16 @@ and are out of scope. Run against the file as it stands, not the survey's counts
 - [x] Verify no other constitution section already states a competing rule about partial reads, and that the SSOT invariants family stays clean
 
 - **Done when**: `framework/constitution.md` §grounding carries the subsection, it ships to adopters unchanged, `CLAUDE.md` points at it rather than restating it, and `/{project}:audit` reports zero findings.
+
+### A retired feature leaves no spec
+
+Implements `scenarios/a-retired-feature-leaves-no-spec.md`. The constitution stated the rule for obsolete scenarios and never for obsolete specs, so 053's correct deletion happened by one spec's acceptance criterion rather than by a standing rule.
+
+- [x] Implement the behavior described in `scenarios/a-retired-feature-leaves-no-spec.md`
+- [x] State the rule in §spec-lifecycle as a fourth operational rule, cross-referencing the scenario-level form §scenarios already carries
+- [x] Name the three cases explicitly — consolidate when content survives elsewhere, delete outright when nothing does, ordinary body edit when only part of a feature is retired
+- [x] Say why pointer-first matters: a deleted spec with live inbound references trades one durability problem for a worse one
+- [x] Add the contributor-side mirror to `AGENTS.md` as a pointer, not a second copy, recording that the summary that prompted it was wrong while the principle was right
+- [x] State plainly that nothing enforces this yet, and what a check would have to reckon with — a rule whose enforcement is "someone remembers" is a diligence dependency and must be named as one
+
+- **Done when**: §spec-lifecycle carries the rule with its three cases, `AGENTS.md` mirrors it by reference, and the scenario records both the 053 precedent and the unenforced status honestly.

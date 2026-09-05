@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: []
 review:
   last-run: 2026-08-31T18:20:00Z
@@ -8,7 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 16
+next-criterion: 17
 ---
 
 # 050 — Constitution
@@ -189,6 +189,7 @@ a fact already banked.
 - [x] AC13: §spec-lifecycle states whether an edit that changes no claim — a typo or sweep-residue repair in a `done` spec's body — is a mechanical edit, so its enumerated cases read as a rule with a stated test rather than a closed list a fourth case must be argued into. The `045` chore held in `specs/inbox.md` is resolvable against that statement without further judgment
 - [x] AC14: **Completion-claim filter.** §design-principles carries a hard filter stating that work which is not complete must never be indistinguishable from work that is, naming the three dispositions for known residue — fix it, record it where the pipeline resurfaces it with the status following that record, or record an out-of-scope decision with its reason — and requiring that residue knowable only by measurement be measured rather than caveated. §implement-phase's outstanding-SHOULD rule references the filter as its most frequent instance rather than restating it, so the rule is stated once and Family 6 stays green.
 - [x] AC15: **Findings route by scope.** §brownfield-inbox's Automatic issue capture states that scope decides a finding's destination, naming three tiers — inside the current task, fixed in the task; inside the current spec but outside the task, a new task on that spec's `tasks.md`; outside the spec, the inbox — and states the two things the rule does not license: `tasks.md` does not become a second capture queue or a durable record, and a chore with no feature home stays an inbox item however close to the current work it surfaced. The section's closing sentence names both destinations rather than only the inbox, and the `AGENTS.md` mirror points at the section without restating it.
+- [x] AC16: §spec-lifecycle states that a retired feature's spec is deleted rather than left at `done`, naming the three cases (consolidate when content survives elsewhere, delete outright when nothing does, ordinary body edit for partial retirement) and why inbound pointers are re-pointed before removal. `AGENTS.md` carries the contributor-side mirror as a pointer rather than a second copy, and the scenario records that nothing enforces the rule yet.
 
 ## Open Questions
 
