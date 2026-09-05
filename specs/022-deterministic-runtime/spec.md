@@ -2,8 +2,8 @@
 status: in-progress
 dependencies: [021-runtime-boundary]
 review:
-  last-run: 2026-09-05T17:34:13Z
-  reviewed-against: 2402ded3bed649b627c484541efac5436ac9dacd
+  last-run: 2026-09-05T18:25:27Z
+  reviewed-against: 46793ce23ee57a8cb348fe547d708c07a2d4d482
   must-violations: 0
   should-violations: 0
   low-confidence: 0
@@ -359,7 +359,7 @@ as if a smaller number would mean a smaller job.
 - [x] AC18: `/ductus:analyze` against this spec passes with no hard-fail or blocking findings.
 - [x] AC19: `npx markdownlint-cli2` against all rewritten slash command files and new spec files passes.
 - [x] AC20: `apply-manifest` rejects a substitution key that is placeholder-shaped (`{project}`) or empty, before any filesystem operation, so a malformed map halts the walk with zero writes rather than writing a tree in which every placeholder survived literally. The rejection is exact — it refuses only keys incapable of matching a placeholder — so a legal bare key carrying spaces and punctuation still substitutes.
-- [x] AC21: `apply-manifest` reports the substitution count it previously computed and discarded: per entry as an optional value that is absent rather than zero when substitution never ran, and in aggregate alongside `entries-substituted`, so a total is never read without its denominator. The bare-key contract is stated in the primitive's module docs, the `substitutions` schema doc comment, and both bootstrap twins' §Placeholder Substitution, and both counts are surfaced in §Post-Scaffolding Output.
+- [x] AC21: `apply-manifest` reports the substitution count it previously computed and discarded: per entry as an optional value that is absent rather than zero when substitution never ran, and in aggregate alongside `entries-substituted`, so a total is never read without its denominator. The bare-key contract is stated in the primitive's module docs, the `substitutions` schema doc comment, and `framework/bootstrap/ductus.md` §Placeholder Substitution (and its `govern.md` twin), and both counts are surfaced in that file's §Post-Scaffolding Output.
 - [x] AC22: The `write-analysis` primitive writes a spec's `analyze:` frontmatter block, splicing it without disturbing sibling keys through the same region logic `write-review` uses, deriving `blocking` itself rather than accepting it, and refusing a spec whose frontmatter does not deserialize. `check-review-gate` reports `not-analyzed` and `analyze-findings` after every `review:` check, and `check-artifacts` runs nine residual deterministic families rather than eight.
 - [x] AC23: `resolve-anchor` classifies each `§` reference as `qualified` (its line names a markdown document other than the markers file), `intra-document` (the anchor names a heading in the citing file), or `markers` (a claim about the markers file, and the only kind that can be unresolved), reporting the first two as counts so a large exclusion is never silent. The document match is line-scoped, the markers file is excluded from qualification, and local headings match longest-first.
 

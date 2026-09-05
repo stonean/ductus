@@ -1,8 +1,8 @@
 ---
 spec: 022-deterministic-runtime
-reviewed-at: 2026-09-05T17:34:13Z
-reviewed-against: 2402ded3bed649b627c484541efac5436ac9dacd
-diff-base: 1d281af0
+reviewed-at: 2026-09-05T18:25:27Z
+reviewed-against: 46793ce23ee57a8cb348fe547d708c07a2d4d482
+diff-base: b993a948184f61a76ccf0e945ce8feac07a529e4
 must-violations: 0
 should-violations: 0
 low-confidence: 0
@@ -14,7 +14,7 @@ skipped-passes: []
 
 ## Summary
 
-The runtime half of 047's analyze-record requirement: the write-analysis primitive, two new check-review-gate reasons, and the ninth check-artifacts family. Zero MUST, zero SHOULD, zero low-confidence. Two design choices carry the weight and are recorded in the scenario rather than left implicit: blocking is derived inside the primitive rather than accepted as an argument, so no call can record a clean gate over a dirty run — the same discipline write-review applies to its own blocking field, and the reason a field a caller can contradict is a field that will eventually be contradicted; and splice_review_block was generalized to splice_top_level_block with both callers routed through it, because two copies of the frontmatter region logic would agree until one met a shape the other had not, where the failure mode is a corrupted spec.md rather than a wrong answer. The parity goldens moved as expected and the pre-commit hook caught both before they landed.
+resolve-anchor's three reference kinds. Zero MUST, zero SHOULD, zero low-confidence. The finding that shaped this change was raised by the existing test suite rather than by the review: the first draft excluded a line citing the markers file itself, which would have dropped the one kind of reference the primitive exists to check, and a pre-existing test caught it. Correcting it surfaced three further unresolved references the coarser rule had hidden — all three historical claims in done specs, correct as written and correctly still reported. The design decision worth recording is the refusal to widen the rule until the residue is empty: matching 'the bootstrap's' or 'spec 022' means guessing which document prose meant, and a rule that fires falsely on a correct reference is worse than the silence it replaces. 34 classified findings a maintainer can read beats 112 undifferentiated ones, and beats zero bought by guessing.
 
 ## MUST violations (blocking)
 
