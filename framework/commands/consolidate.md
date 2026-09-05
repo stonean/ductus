@@ -15,7 +15,7 @@ It exists because the alternative is worse. A corpus of small overlapping specs 
 
 The question this command answers is whether the source spec still describes something true. A spec whose content was never a separate concern from a sibling, or that a later spec absorbed outright, is consolidated. A spec that still describes live behavior is not — it is edited in place instead, through the `done → in-progress` back-edge, which leaves one true description where consolidation would leave none.
 
-It is a **cleanup command**, in the family of [041 — Task pruning](../../specs/041-task-pruning/spec.md): operator-initiated, confirmed, and not a pipeline state transition.
+It is a **cleanup command**, in the family of [041 — Task pruning](https://github.com/stonean/ductus/blob/main/specs/041-task-pruning/spec.md): operator-initiated, confirmed, and not a pipeline state transition.
 
 ## Context
 

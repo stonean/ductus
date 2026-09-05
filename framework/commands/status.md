@@ -17,7 +17,7 @@ Read-only overview of every feature's progress through the pipeline. Shows which
 - This is a read-only command. Do NOT modify any files.
 - The pipeline view is acquired through the single `dashboard` primitive — one runtime call returns the structured payload plus the pre-rendered pipeline view. On the runtime path the procedure does not read individual spec files, list directories, or shell out for that view; the markdown-only fallback (below) necessarily reads the artifacts on disk, but still without shell-pipeline substitution.
 - Cross-service reference resolution is read-only and, on the runtime path, folded into that same call: the runtime resolves each spec's `references:` index internally (the same classification the resolve-references primitive exposes) to render the readout. On the markdown-only path the host reads `.ductus/config.toml` and the linked specs with host file tools (see the Resolving cross-service references section below). Both paths read only `.ductus/config.toml` and the registered local checkouts — the canonical repo URL is never fetched.
-- Reference: §text-first-artifacts (the schema is the authoritative source for which fields appear in the payload); [030 — Cross-Service References](../../specs/030-cross-service-references/spec.md) for the reference semantics surfaced here.
+- Reference: §text-first-artifacts (the schema is the authoritative source for which fields appear in the payload); [030 — Cross-Service References](https://github.com/stonean/ductus/blob/main/specs/030-cross-service-references/spec.md) for the reference semantics surfaced here.
 
 ## Instructions
 
@@ -68,7 +68,7 @@ The `rendered-markdown` field carries these four pieces pre-rendered, in this or
 
 ### Resolving cross-service references
 
-A spec's derived `references:` frontmatter index records each cross-service reference as a `{service, spec}` pair (see [030 — Cross-Service References](../../specs/030-cross-service-references/spec.md)). On the runtime path the `resolve-references` primitive classifies each entry; when the runtime is unavailable, classify each entry with the host's file tools — read `.ductus/config.toml` and the linked spec directly, with **no shell-pipeline substitution**. The repo URL is identity and navigation only and is **never fetched**; status is read from the local checkout.
+A spec's derived `references:` frontmatter index records each cross-service reference as a `{service, spec}` pair (see [030 — Cross-Service References](https://github.com/stonean/ductus/blob/main/specs/030-cross-service-references/spec.md)). On the runtime path the `resolve-references` primitive classifies each entry; when the runtime is unavailable, classify each entry with the host's file tools — read `.ductus/config.toml` and the linked spec directly, with **no shell-pipeline substitution**. The repo URL is identity and navigation only and is **never fetched**; status is read from the local checkout.
 
 For each `{service, spec}` entry, in index order, decide the outcome by what can be proven:
 

@@ -553,7 +553,7 @@ The pull is toward the script, because a script runs immediately and a primitive
 
 The repository's CI MUST include a job that exercises acquisition end-to-end on every supported platform: fetch the published asset for the target, verify its sidecar digest, install it into a temporary store, and execute the installed binary. A change that causes this job to fail — i.e. a release whose assets an adopter cannot actually acquire — is a constitution violation, not a feature.
 
-This replaces the **opt-in invariant**, which asserted a full pipeline cycle with the binary absent from `PATH`. That job tested the guarantee principle 3 used to make; the guarantee it now makes is that the binary is *obtainable*, and the job that proves it is the one that fetches it. Amended by [048](../specs/048-govern-acquired-runtime/spec.md).
+This replaces the **opt-in invariant**, which asserted a full pipeline cycle with the binary absent from `PATH`. That job tested the guarantee principle 3 used to make; the guarantee it now makes is that the binary is *obtainable*, and the job that proves it is the one that fetches it. Amended by [048](https://github.com/stonean/ductus/blob/main/specs/048-govern-acquired-runtime/spec.md).
 
 #### Versioning
 

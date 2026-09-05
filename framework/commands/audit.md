@@ -16,7 +16,7 @@ Audit `ductus`'s own framework artifacts for the kinds of drift `/ductus:analyze
 
 `/audit` fills that gap. It loads no rule files — its checks are about *framework consistency*, not spec quality. Each check family produces structured findings on stdout. Exit code is binary: `0` when no findings, `1` when any finding is present. CI uses the exit code as a release gate.
 
-See [spec 026](../../specs/026-framework-self-audit/spec.md) for the design and the [026 plan](../../specs/026-framework-self-audit/plan.md) for the check families and the check-zero precondition pass. The family set has grown since the original design — `scripts/audit/run-all.sh` runs the twenty-two families enumerated in the markdown-only reference below. Family numbers are stable identifiers: Family 3 (registry equivalence) was retired with the workflows feature (spec 043), leaving a numbering gap.
+See [spec 026](https://github.com/stonean/ductus/blob/main/specs/026-framework-self-audit/spec.md) for the design and the [026 plan](https://github.com/stonean/ductus/blob/main/specs/026-framework-self-audit/plan.md) for the check families and the check-zero precondition pass. The family set has grown since the original design — `scripts/audit/run-all.sh` runs the twenty-two families enumerated in the markdown-only reference below. Family numbers are stable identifiers: Family 3 (registry equivalence) was retired with the workflows feature (spec 043), leaving a numbering gap.
 
 ## Scope Boundaries
 

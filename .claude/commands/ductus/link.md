@@ -12,7 +12,7 @@ Register a service in `.ductus/config.toml` so cross-service references to it re
 
 ## Purpose
 
-Records a service in the `.ductus/config.toml` `[services]` registry — its canonical repository URL and its local checkout path — so a cross-service reference whose href matches that repo can surface the linked spec's status (see [030 — Cross-Service References](../../specs/030-cross-service-references/spec.md)). The registry is **required for status resolution, optional for referencing**: a reference whose repo matches no `[services]` entry stays a plain navigational link (the `unregistered` outcome). Registration is not derived — the local `path` is machine-local knowledge `ductus` cannot infer — so it is captured here rather than harvested.
+Records a service in the `.ductus/config.toml` `[services]` registry — its canonical repository URL and its local checkout path — so a cross-service reference whose href matches that repo can surface the linked spec's status (see [030 — Cross-Service References](https://github.com/stonean/ductus/blob/main/specs/030-cross-service-references/spec.md)). The registry is **required for status resolution, optional for referencing**: a reference whose repo matches no `[services]` entry stays a plain navigational link (the `unregistered` outcome). Registration is not derived — the local `path` is machine-local knowledge `ductus` cannot infer — so it is captured here rather than harvested.
 
 ## Context
 
@@ -23,7 +23,7 @@ This command does not require a session target — it edits the project-level `[
 - Read and write only the config file — the newest of `.ductus/config.toml`, `.govern/config.toml`, or the legacy root `.govern.toml` that exists (the active-file rule, specs 042 and 049). Do NOT modify any spec, plan, scenario, source file, or session state.
 - Do NOT fetch the repo URL or reach across the network. The local checkout `path` is the only state read at resolution time, and that resolution belongs to `/ductus:status` and `/ductus:analyze`, not to this command.
 - Removal and edits of an existing entry stay hand-edits to `.ductus/config.toml`.
-- Reference: §text-first-artifacts, §runtime-boundary, and [030 `data-model.md`](../../specs/030-cross-service-references/data-model.md) — the canonical source for the `[services]` schema (constitution loaded by `/ductus:target`; do not re-read).
+- Reference: §text-first-artifacts, §runtime-boundary, and [030 `data-model.md`](https://github.com/stonean/ductus/blob/main/specs/030-cross-service-references/data-model.md) — the canonical source for the `[services]` schema (constitution loaded by `/ductus:target`; do not re-read).
 
 ## Instructions
 
@@ -78,6 +78,6 @@ Per field, as entered:
 
 ### Notes
 
-- The `[services]` schema (`repo`, `path`, optional `description`) is declared canonically in [030 `data-model.md`](../../specs/030-cross-service-references/data-model.md).
+- The `[services]` schema (`repo`, `path`, optional `description`) is declared canonically in [030 `data-model.md`](https://github.com/stonean/ductus/blob/main/specs/030-cross-service-references/data-model.md).
 - A duplicate `repo` across two aliases is a registry-validation finding (ambiguous match), surfaced on resolution — this command warns at registration time but does not block it.
 - Outcome semantics (`ok`, `unregistered`, `not-checked-out`, `broken`, `status-unreadable`) belong to `/ductus:status` and `/ductus:analyze`; this command only records the registry the resolver reads.
