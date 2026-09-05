@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: []
 review:
   last-run: 2026-09-05T19:25:29Z
@@ -9,6 +9,14 @@ review:
   low-confidence: 0
   blocking: false
 next-criterion: 17
+analyze:
+  last-run: 2026-09-05T19:30:53Z
+  analyzed-against: ed134eb9f6e5be4bc0429f5597ab6e221482c6c3
+  hard-fail: 0
+  blocking-findings: 0
+  advisory: 0
+  unexamined: 0
+  blocking: false
 ---
 
 # 050 — Constitution
@@ -32,7 +40,7 @@ rather than a research task. They were walked through `/{project}:clarify` on
 2026-08-17 and are recorded under §Resolved Questions: three were operator
 decisions, and three turned out to be settled by existing sources rather than by
 preference — the version-pin question by Family 20 and the **Shared Files**
-manifest, the classification-location question by §Design Principles, and the
+manifest, the classification-location question by `AGENTS.md` §Design Principles, and the
 retire-the-mirror question by this spec's own §Promotion mechanism.
 
 One question already has a caller waiting. `specs/inbox.md` carries a one-word
@@ -88,7 +96,7 @@ only way an adopter could benefit was to independently make the same mistake.
 The file had accumulated 56 entries by 2026-08-17. A survey that day put
 roughly 12 of them as strongly universal, about 10 as borderline, and about 24
 as genuinely specific to this project. The universal group was not marginal
-material: it included both §Design Principles entries, the fact that a markdown
+material: it included both `AGENTS.md` §Design Principles entries, the fact that a markdown
 link in a spec body creates a `dependencies:` edge, that
 `git checkout -- specs/{feature}/` silently reverts uncommitted pipeline state,
 that `git add -A` sweeps untracked drafts into a commit, that an `AC{n}` label
