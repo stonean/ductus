@@ -51,6 +51,7 @@ Three of the 34 are historical claims in `done` specs — `Delete §lightweight-
 ## Edge Cases
 
 - **A `§` inside a marker comment** (`<!-- §foo -->`) is still not a reference; that exclusion predates this change and is unaffected.
+- **A `§` inside an inline code span** is notation being *described*, not cited. The constitution defines what an anchor reference looks like by writing one — `anchor reference (§anchor)` — and reporting that as a dangling reference manufactures a finding out of prose. Same class as the marker-comment exclusion, and the same rule `check-corpus-links` already applies to link targets in code spans; it reuses the shared `inline_code_spans` helper rather than a second scanner. Found by running this primitive against the constitution while reviewing 050.
 - **No `markers-path`** (the constitution self-consistency scan): the markers-identifier set is empty, so any `.md` token on a line qualifies it. Correct for that mode — the file's own markers are the subject, and a line naming another document is not about them.
 - **A spec citing the constitution by basename from a deeper directory** (`../../framework/constitution.md`): both the full path and the basename count as naming the markers file, because a scenario one tier down writes a relative path whose basename is all that reliably matches.
 - **A heading and a marker sharing a name.** `qualified` is checked first, then `intra-document`, then `markers`; the order is stated because all three can be true of one line.

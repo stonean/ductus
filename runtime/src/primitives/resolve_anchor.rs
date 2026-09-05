@@ -53,7 +53,7 @@ use std::sync::OnceLock;
 
 use regex::Regex;
 
-use crate::primitives::{Result, read_text, resolve_path};
+use crate::primitives::{Result, inline_code_spans, read_text, resolve_path};
 use crate::schema::primitives::{AnchorReference, ResolveAnchorArgs, ResolveAnchorResult};
 
 /// Execute the `resolve-anchor` primitive.
@@ -84,10 +84,19 @@ pub fn run(args: &ResolveAnchorArgs, repo: &Path) -> Result<ResolveAnchorResult>
     for (line_no, line) in content.lines().enumerate() {
         let line_no = u32::try_from(line_no + 1).unwrap_or(u32::MAX);
         let line_names_document = names_other_document(line, &markers_names);
+        let code_spans = inline_code_spans(line);
         for cap in reference_regex().captures_iter(line) {
             let whole = cap.get(0).map_or(0, |m| m.start());
             let anchor = cap[1].to_string();
             if is_within_marker_comment(line, whole) {
+                continue;
+            }
+            // A `§anchor` inside a code span is notation being *described*,
+            // not a citation — the constitution writes ``§anchor`` when
+            // defining what an anchor reference looks like. Same class as the
+            // marker-comment exclusion above, and the same rule
+            // `check-corpus-links` applies to link targets in code spans.
+            if code_spans.iter().any(|span| span.contains(&whole)) {
                 continue;
             }
             // Order matters: a line that names another document is qualified
@@ -335,6 +344,17 @@ mod tests {
         assert_eq!(r.intra_document, 0);
         assert_eq!(r.unresolved, vec!["lightweight-track".to_string()]);
         assert_eq!(r.references[0].kind, "markers");
+    }
+
+    /// Notation being described, not cited. The constitution defines what an
+    /// anchor reference looks like by writing one in a code span; reporting
+    /// that as a dangling reference is manufacturing a finding out of prose.
+    #[test]
+    fn an_anchor_inside_a_code_span_is_not_a_reference() {
+        let r = classify("An anchor reference (`§anchor`) links to a section.\n");
+        assert!(r.references.is_empty());
+        assert!(r.unresolved.is_empty());
+        assert_eq!(r.qualified, 0);
     }
 
     /// A line citing the MARKERS file is not qualified — the document it

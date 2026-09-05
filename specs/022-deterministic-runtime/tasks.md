@@ -351,6 +351,7 @@ Implements `scenarios/anchor-reference-kinds.md`. `resolve-anchor` treated every
 - [x] Match local headings longest-first so `§Hook Installation` is not satisfied by a shorter `§Hook`
 - [x] Report `qualified` and `intra-document` counts in the result — 136 of 311 excluded silently would be the whole story (`QUAL-CLAIM-001`)
 - [x] Update `data-model.md` with the new result shape and the three kinds
+- [x] Exclude a `§` inside an inline code span — notation described, not cited — reusing the shared `inline_code_spans` helper rather than a second scanner
 - [x] Prove it before keeping it: a unit test asserting 010's real dangling anchor is still reported, and one asserting a markers-file citation is not qualified
 
 - **Done when**: the three kinds are classified in the stated order, both counts ship with the verdict, a line citing the markers file resolves rather than being excluded, and the corpus reports 34 unresolved rather than 112 with the one real dangling anchor still among them.
