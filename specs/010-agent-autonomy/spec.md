@@ -130,7 +130,7 @@ Track token usage and enforce budget limits. Currently governance has no cost aw
 
 The "Cost-conscious" principle already exists in the constitution (§principles → Business). It currently has no operational guidance. Add a short cross-reference paragraph (location TBD during planning — likely in the constitution near the principle, or in the `AGENTS.md` template) that names governance's existing cost levers:
 
-- Lightweight track (§lightweight-track) — skip the plan phase for small features
+- Lightweight track — skip the plan phase for small features
 - `[simple]` tier marker on tasks (Q2 above) — route trivial work to cheaper models
 - Stuck detection (Q3 above) — catch runaway loops before they compound spend
 - Default-off autonomy (Q4 above) — human-in-the-loop gating contains blast radius

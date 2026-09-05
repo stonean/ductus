@@ -56,6 +56,13 @@ shopt -s nullglob
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
+# Was anything staged when this hook STARTED? The empty-commit guard below
+# needs the answer, and it can only be had here — every generator that runs
+# between this line and that check re-stages files, so by then the two states
+# the guard must tell apart look identical.
+staged_at_entry=0
+git diff --cached --quiet || staged_at_entry=1
+
 scripts/gen-configure-mcp.sh
 scripts/gen-claude-commands.sh > /dev/null
 scripts/gen-help-tables.sh
@@ -140,12 +147,27 @@ fi
 # gone from the index by the time the commit was finalized, even though
 # this hook's runtime-check grep had seen them staged mid-run. The root
 # cause was not conclusively identified, so guard the outcome instead:
-# if the index matches HEAD when the hook ends, the commit would be
-# empty — abort loudly rather than let silent data loss ship. Escape
-# hatch for an intentional empty commit: DUCTUS_ALLOW_EMPTY=1.
-if [[ "${DUCTUS_ALLOW_EMPTY:-0}" != "1" ]] && git diff --cached --quiet; then
-  echo "pre-commit: index matches HEAD — this commit would be empty." >&2
-  echo "  Staged changes were lost during the hook run (or nothing was staged)." >&2
+# staged changes that VANISH during the hook run are data loss — abort
+# loudly rather than let it ship.
+#
+# The guard is `staged at entry AND empty at exit`, not `empty at exit`.
+# The original form proxied the defect by its outcome, which made it fire on
+# a state that is not the defect at all: `git commit --amend` with only a
+# message change starts with an empty index legitimately, and the hook
+# refused it with "staged changes were lost during the hook run" — a
+# diagnosis that was simply false, for a commit that was correct. That was
+# met on 2026-09-05 and worked around with --no-verify, which is the wrong
+# habit for a guard against silent data loss to be teaching.
+#
+# Comparing entry to exit tests what the guard is actually about: something
+# was staged, and now it is not. An amend with nothing staged never enters
+# the window, and a genuinely empty `git commit` is refused by git itself
+# before the hook runs. DUCTUS_ALLOW_EMPTY=1 remains the escape hatch.
+if [[ "${DUCTUS_ALLOW_EMPTY:-0}" != "1" ]] \
+   && [[ "$staged_at_entry" == "1" ]] \
+   && git diff --cached --quiet; then
+  echo "pre-commit: changes were staged when this hook started and the index" >&2
+  echo "  now matches HEAD — the staged changes were lost during the hook run." >&2
   echo "  Re-stage the files and retry. For an intentional empty commit," >&2
   echo "  re-run with DUCTUS_ALLOW_EMPTY=1." >&2
   exit 1
