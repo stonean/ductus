@@ -10,8 +10,8 @@ review:
   blocking: false
 next-criterion: 12
 analyze:
-  last-run: 2026-09-05T17:35:20Z
-  analyzed-against: 3dd0be577156681044edf9b153231f61400bdfde
+  last-run: 2026-09-06T14:05:45Z
+  analyzed-against: 7963f13484536068b696e41cca2ba89ac42290d6
   hard-fail: 0
   blocking-findings: 0
   advisory: 0
