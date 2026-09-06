@@ -15,6 +15,14 @@ review:
       waived-at: 2026-08-02T00:00:00Z
       waived-by: andrew.n.stone@gmail.com
 next-criterion: 9
+analyze:
+  last-run: 2026-09-06T14:02:35Z
+  analyzed-against: 4963c8495b1349b8298341ded66fc1dcef6386a0
+  hard-fail: 0
+  blocking-findings: 0
+  advisory: 3
+  unexamined: 2
+  blocking: false
 ---
 
 # 031 — Agent MCP Wiring

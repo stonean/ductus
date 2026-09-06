@@ -9,6 +9,14 @@ review:
   low-confidence: 0
   blocking: false
 next-criterion: 14
+analyze:
+  last-run: 2026-09-06T14:02:35Z
+  analyzed-against: 4963c8495b1349b8298341ded66fc1dcef6386a0
+  hard-fail: 0
+  blocking-findings: 0
+  advisory: 2
+  unexamined: 7
+  blocking: false
 ---
 
 # 018 — Adopter-Owned Pre-Commit

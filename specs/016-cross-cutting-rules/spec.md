@@ -11,6 +11,14 @@ review:
   low-confidence: 0
   blocking: false
 next-criterion: 9
+analyze:
+  last-run: 2026-09-06T14:02:35Z
+  analyzed-against: 4963c8495b1349b8298341ded66fc1dcef6386a0
+  hard-fail: 0
+  blocking-findings: 0
+  advisory: 0
+  unexamined: 2
+  blocking: false
 ---
 
 # 016 — Cross-Cutting Rules

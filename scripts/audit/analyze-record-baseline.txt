@@ -1,9 +1,11 @@
 # High-water mark for the analyze-record backlog (audit Family 37).
 #
 # The count of `done` specs carrying a `review:` record and no `analyze:` one.
-# Lower it as specs are re-analyzed. It must never be raised without a stated
-# reason: the completion gate has no grandfather clause, so the backlog cannot
-# legitimately grow, and growth means the gate was bypassed.
+# It must never be raised without a stated reason: the completion gate has no
+# grandfather clause, so the backlog cannot legitimately grow, and growth
+# means the gate was bypassed.
 #
-# 54 at introduction (2026-09-05); 51 after 022, 026 and 047; 50 after 050.
-50
+# 54 at introduction (2026-09-05). Drained to 0 on 2026-09-06 — every done
+# spec has been analyzed and carries a record. At zero the ratchet is fully
+# closed: any spec entering this set is a defect, not a legacy.
+0
