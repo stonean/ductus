@@ -46,15 +46,14 @@ Each command advances the feature one step and leaves a durable artifact behind.
 Every feature moves through one pipeline. The status on each spec tracks where it is:
 
 ```text
-draft ──/clarify──▶ clarified ──/plan──▶ planned ──/implement──▶ in-progress ──[/review gate]──▶ done
+draft ──/clarify──▶ clarified ──/plan──▶ planned ──/implement──▶ in-progress ──[/review + /analyze gates]──▶ done
 ```
 
 - **Spec** (`/specify`, `/clarify`) — define *what* the feature does and *why*, with concrete acceptance criteria and a list of open questions. No open questions may remain before planning.
 - **Plan** (`/plan`) — turn the spec into technical decisions, affected files, and an ordered task list. Persistence-heavy features also get a data model.
-- **Implement** (`/implement`) — work the tasks; this is where code is written. Status moves to `in-progress`, then `done` once the review gate passes.
+- **Implement** (`/implement`) — work the tasks; this is where code is written. Status moves to `in-progress`, then `done` once both gates pass.
 - **Review** (`/review`) — audit the implementation against the framework's rules (security, reuse, quality, efficiency, simplicity). Blocking violations keep the feature out of `done` until they're fixed or explicitly waived. `/review` is a gate, not a state transition: it records findings, and `/implement` is what writes `done`.
-
-`/analyze` can run at any time to check a feature's artifacts against each other — it's a safety check, not a gate.
+- **Analyze** (`/analyze`) — audit the feature's own artifacts against each other. It can run at any time as a safety check, and it is also the pipeline's second gate: `/implement` will not write `done` until an analysis has run and left no blocking findings. Each run records what it found — and what it could not examine — in the spec's `analyze:` frontmatter block. See **[docs/analyze.md](docs/analyze.md)**.
 
 You don't have to start at `draft`. A brownfield feature can enter with a sparse sketch spec and gain precision as you touch the code; a `done` feature takes the back-edge to `in-progress` when `/amend` records a new scenario or a meaningful body edit lands. See [framework/constitution.md](framework/constitution.md) for the authoritative rules.
 
@@ -280,7 +279,7 @@ This repo is the source for everything `ductus` ships, plus its own dogfooded sp
   - [commands/](framework/commands/) — slash command sources
   - [bootstrap/](framework/bootstrap/) — the `ductus.md` installer and per-agent permission files
 - **[install.sh](install.sh)** — the `curl … | sh` installer that places the `/ductus` bootstrap command for your agent
-- **[docs/](docs/)** — the reference manuals: [slash-commands.md](docs/slash-commands.md), [runtime.md](docs/runtime.md), [cross-service-references.md](docs/cross-service-references.md)
+- **[docs/](docs/)** — the reference manuals: [slash-commands.md](docs/slash-commands.md), [analyze.md](docs/analyze.md), [runtime.md](docs/runtime.md), [cross-service-references.md](docs/cross-service-references.md)
 - **[runtime/](runtime/)** — the `ductus` deterministic runtime (Rust)
 - **[specs/](specs/)** — `ductus`'s own feature specs; it develops itself with its own pipeline. See [specs/README.md](specs/README.md) for cross-cutting decisions and deferred work.
 - **[scripts/](scripts/)** — maintenance and generator scripts
