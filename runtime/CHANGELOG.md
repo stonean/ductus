@@ -6,6 +6,32 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
 
 ### Changed
 
+- **`artifact-unreadable` blocks a spec at `done`.** `check-artifacts`
+  reported it as a skipped target — an unknown, never a defect. That general
+  rule is right and is unchanged for every other skip reason: it is about
+  *other* files, another spec's frontmatter or an upstream service, where the
+  defect is not this spec's and blocking it would punish the wrong artifact.
+
+  `artifact-unreadable` names the spec's **own** artifact, in its own
+  directory, that its own analysis could not read — not an unknown about
+  someone else, but the analysis unable to examine its own subject. And the
+  gap was concrete rather than theoretical: `scenario-open-questions` is
+  blocking at `done`, and an unreadable scenario contributed no questions and,
+  as a skip, no finding. A scenario carrying unresolved questions that would
+  not parse therefore passed the gate built to catch exactly that — a check
+  that could not run wearing the costume of one that passed, *inside* the gate
+  rather than beside it.
+
+  At `done` it is now a blocking finding, so it lands in `blocking-findings`
+  rather than `unexamined` and one file is never both. Below `done` it remains
+  a skipped target: the questions check is advisory there, the spec is in
+  flight, and an unreadable artifact mid-work is a state to report rather than
+  a gate to fail.
+
+  Adopters with a `done` spec carrying an unreadable artifact will see it
+  block where it previously passed. That is the point; the corpus here had
+  zero, which is why this landed now rather than behind a backlog.
+
 - **`resolve-anchor` classifies each `§` reference instead of treating every
   one as a claim about the markers file.** `§` is this corpus's notation for
   *a section*, not for *a constitution section*, so a spec writes

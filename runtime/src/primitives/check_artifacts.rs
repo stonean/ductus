@@ -35,6 +35,18 @@
 //!   `review.last-run` unset, or `review.blocking: true`, drifted. The
 //!   grandfather rule applies: a `done` spec with no `review:` block at
 //!   all predates `/ductus:review` and is exempt.
+//! - **artifact-unreadable at `done`** (blocking, across families) — an
+//!   artifact a family was meant to scan but could not read is a skipped
+//!   target below `done` and a **blocking finding at it**. The general rule
+//!   is that an unknown is never escalated into a defect, and this is the one
+//!   exception: that rule is about *other* files — another spec's
+//!   frontmatter, an upstream service — where the defect is not this spec's.
+//!   Here the subject is the spec's own artifact, in its own directory, that
+//!   its own analysis could not read. The concrete case is
+//!   `scenario-open-questions`, which blocks at `done`: an unreadable
+//!   scenario contributed no questions and, as a skip, no finding, so a
+//!   scenario carrying unresolved questions that would not parse passed the
+//!   gate built to catch exactly that. See [`record_unreadable_artifact`].
 //! - **analyze-state-drift** (blocking) — the counterpart to
 //!   review-state-drift, and it exists because there was no counterpart: a
 //!   `done` spec with `analyze.last-run` unset, or `analyze.blocking: true`,
@@ -471,6 +483,59 @@ fn pruning_evidence(tasks: &[Task]) -> bool {
     numbers.windows(2).any(|pair| pair[1] > pair[0] + 1)
 }
 
+/// Record an artifact the family was meant to scan but could not read.
+///
+/// **At `done` this is a blocking finding, not a skipped target**, and the
+/// asymmetry with every other skip reason is deliberate. The general rule —
+/// stated in `/{project}:analyze`'s Unexamined targets section and inherited
+/// from the `status-unreadable` precedent for cross-service references — is
+/// that an unknown is never escalated into a defect. That rule is about
+/// *other* files: another spec's frontmatter, an upstream service's state.
+/// Nothing about them is this spec's fault, and blocking it for their defect
+/// would punish the wrong artifact.
+///
+/// This reason is the exception because its subject is the spec's **own**
+/// artifact, in its own directory, that its own analysis could not read. That
+/// is not an unknown about someone else; it is the analysis unable to examine
+/// its own subject.
+///
+/// The concrete case, and the reason this is not merely principled:
+/// `scenario-open-questions` is **blocking at `done`** — a spec is not
+/// complete while its scenarios carry unresolved questions (spec 046). An
+/// unreadable scenario contributes no questions and, as a skip, no finding —
+/// so a scenario carrying unresolved questions that happens not to parse
+/// passed the gate built to catch exactly that. A check that could not run,
+/// wearing the costume of one that passed, *inside* the gate rather than
+/// beside it.
+///
+/// Below `done` it stays a skipped target. There the questions check is
+/// advisory anyway, the spec is still in flight, and an unreadable artifact
+/// mid-work is a state to report rather than a gate to fail.
+fn record_unreadable_artifact(
+    findings: &mut Vec<ArtifactFinding>,
+    skipped: &mut Vec<SkippedTarget>,
+    family: &str,
+    status: &str,
+    path: String,
+) {
+    if status == "done" {
+        findings.push(ArtifactFinding {
+            family: family.into(),
+            severity: "blocking".into(),
+            message: format!(
+                "unreadable artifact: {path} could not be read, so this check never examined it                  — a done spec cannot rest on an analysis that could not read its own subject"
+            ),
+            path,
+        });
+    } else {
+        skipped.push(SkippedTarget {
+            family: family.into(),
+            reason: "artifact-unreadable".into(),
+            path,
+        });
+    }
+}
+
 /// (d2) Analyze-state drift — the counterpart to review-state drift, added
 /// because there was no counterpart at all.
 ///
@@ -646,14 +711,16 @@ fn check_scenario_open_questions(
     // over a subject the family never read would be indistinguishable from a
     // fully-examined clean one (QUAL-CLAIM-001).
     for slug in &scan.unreadable {
-        skipped.push(SkippedTarget {
-            family: "scenario-open-questions".into(),
-            reason: "artifact-unreadable".into(),
-            path: rel_path(
+        record_unreadable_artifact(
+            findings,
+            skipped,
+            "scenario-open-questions",
+            status,
+            rel_path(
                 &feature_dir.join("scenarios").join(format!("{slug}.md")),
                 repo,
             ),
-        });
+        );
     }
     let questions = scan.questions;
     if questions.is_empty() {
@@ -793,7 +860,13 @@ fn check_link_adjacent_drift(
             // Dropping it silently would let a partially-scanned feature
             // report exactly what a fully-scanned clean one reports
             // (`QUAL-CLAIM-001`), so the gap is recorded instead.
-            record_skip(skipped, "artifact-unreadable", &citing);
+            record_unreadable_artifact(
+                findings,
+                skipped,
+                "link-adjacent-drift",
+                &spec_status,
+                citing.clone(),
+            );
             continue;
         };
         for block in split_blocks(&content) {
@@ -2542,6 +2615,91 @@ mod tests {
         // The honesty contract: nothing was found, and the result says the
         // subject could not be examined rather than reading as clean.
         assert!(result.clean, "no finding was produced");
+    }
+
+    /// The gate this closes. `scenario-open-questions` is blocking at `done`,
+    /// but an unreadable scenario contributed no questions and — as a skip —
+    /// no finding, so a scenario carrying unresolved questions that happens
+    /// not to parse passed the gate built to catch exactly that.
+    #[test]
+    fn an_unreadable_artifact_blocks_a_done_spec() {
+        let tmp = tempdir().unwrap();
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/spec.md"),
+            &spec_with_analyze("done", Some(CLEAN_REVIEW), Some(CLEAN_ANALYZE)),
+        );
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/plan.md"),
+            "# Plan\n\nNothing to see.\n",
+        );
+        write(tmp.path(), &format!("specs/{FEATURE}/tasks.md"), GOOD_TASKS);
+        // Creates scenarios/ so the unreadable file below has a home.
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/scenarios/retry-on-timeout.md"),
+            SCENARIO_SETTLED,
+        );
+        fs::write(
+            tmp.path()
+                .join(format!("specs/{FEATURE}/scenarios/broken.md")),
+            [0xff, 0xfe, 0xfd],
+        )
+        .unwrap();
+        let result = run(&args(), tmp.path()).unwrap();
+
+        let blocking: Vec<_> = result
+            .findings
+            .iter()
+            .filter(|f| f.severity == "blocking" && f.message.contains("unreadable artifact"))
+            .collect();
+        assert!(!blocking.is_empty(), "{:?}", result.findings);
+        assert!(
+            blocking
+                .iter()
+                .all(|f| f.path == "specs/042-demo/scenarios/broken.md")
+        );
+        // It is a defect now, not an unknown: it must not also be counted as
+        // unexamined, or one file would be both.
+        assert!(
+            !result
+                .skipped
+                .iter()
+                .any(|s| s.reason == "artifact-unreadable"),
+            "{:?}",
+            result.skipped
+        );
+    }
+
+    /// Below `done` it stays a skipped target: the questions check is advisory
+    /// there, the spec is in flight, and an unreadable artifact mid-work is a
+    /// state to report rather than a gate to fail.
+    #[test]
+    fn an_unreadable_artifact_below_done_is_still_only_skipped() {
+        let tmp = tempdir().unwrap();
+        seed_for_drift(tmp.path(), "# Plan\n\nNothing to see.\n");
+        fs::write(
+            tmp.path()
+                .join(format!("specs/{FEATURE}/scenarios/broken.md")),
+            [0xff, 0xfe, 0xfd],
+        )
+        .unwrap();
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(
+            !result
+                .findings
+                .iter()
+                .any(|f| f.message.contains("unreadable artifact")),
+            "{:?}",
+            result.findings
+        );
+        assert!(
+            result
+                .skipped
+                .iter()
+                .any(|s| s.reason == "artifact-unreadable")
+        );
     }
 
     #[test]

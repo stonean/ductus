@@ -352,6 +352,8 @@ Asked what purpose a bare `unexamined` number served, the answer was: not much. 
 - [x] Record the two classes the reason set splits into — excluded by construction vs could not be read — in `data-model.md` and the scenario, since they call for opposite responses
 - [x] Record that the subject depends on status: `criterion-path-existence` examines `done` specs only, so a record written mid-back-edge describes a smaller subject
 - [x] Prove it: tests for the sorted rendering, for a supplied total losing to its breakdown, and for the map being omitted when empty
+- [x] Promote `artifact-unreadable` to a blocking finding at `done` — the one skip reason whose subject is the spec's own artifact — while every other reason keeps the never-escalate rule, and state at both emission sites why the exception holds where the rule's reasoning does not
+- [x] Prove both sides of the boundary: a `done` spec with an unreadable scenario blocks and is not also counted as unexamined; the same spec below `done` is skipped and does not block
 
 ### resolve-anchor — three reference kinds
 

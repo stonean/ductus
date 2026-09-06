@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [021-runtime-boundary]
 review:
   last-run: 2026-09-06T14:19:42Z
@@ -8,7 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 25
+next-criterion: 26
 analyze:
   last-run: 2026-09-06T14:20:02Z
   analyzed-against: 0405f6f7699961618892800211dc0cc9840260c6
@@ -365,6 +365,7 @@ as if a smaller number would mean a smaller job.
 - [x] AC22: The `write-analysis` primitive writes a spec's `analyze:` frontmatter block, splicing it without disturbing sibling keys through the same region logic `write-review` uses, deriving `blocking` itself rather than accepting it, and refusing a spec whose frontmatter does not deserialize. `check-review-gate` reports `not-analyzed` and `analyze-findings` after every `review:` check, and `check-artifacts` runs nine residual deterministic families rather than eight.
 - [x] AC23: `resolve-anchor` classifies each `§` reference as `qualified` (its line names a markdown document other than the markers file), `intra-document` (the anchor names a heading in the citing file), or `markers` (a claim about the markers file, and the only kind that can be unresolved), reporting the first two as counts so a large exclusion is never silent. The document match is line-scoped, the markers file is excluded from qualification, and local headings match longest-first.
 - [x] AC24: `write-analysis` records `unexamined-by-reason` over the closed skip-reason set and derives `unexamined` by summing it, so the total and its parts cannot disagree. A bare total conflates an exclusion by construction with a target that could not be read — the two classes call for opposite responses — which is the conflation the field exists to prevent, one level down. The map is omitted when empty, a malformed pair is rejected rather than defaulted to zero, and the written total is returned so a caller can confirm agreement.
+- [x] AC25: `check-artifacts` reports `artifact-unreadable` as a **blocking** finding on a spec at `done` and as a skipped target below it, the single exception to the rule that an unknown is never escalated into a defect. The exception is scoped to the spec's own artifact — every other skip reason names another file, where the defect is not this spec's — and it closes a real hole: `scenario-open-questions` blocks at `done`, so an unreadable scenario carrying unresolved questions previously passed the gate built to catch it.
 
 ## Non-Goals
 

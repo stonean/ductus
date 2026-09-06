@@ -426,7 +426,10 @@ Writes the spec's `analyze:` frontmatter block — the durable record that `/{pr
 | class | reasons | response |
 | --- | --- | --- |
 | excluded by construction | `not-a-live-claim`, `ships-to-adopter`, `root-absent` | none; the exclusion is correct |
-| could not be read | `target-missing`, `target-unparseable`, `no-readable-state`, `artifact-unreadable` | a real gap in what the run saw |
+| could not be read | `target-missing`, `target-unparseable`, `no-readable-state` | a real gap in what the run saw |
+| the spec's own artifact | `artifact-unreadable` | **blocking at `done`** — see below; appears as a finding there, never as a skip |
+
+`artifact-unreadable` is the one reason that escalates. Below `done` it is a skipped target like any other; **at `done` it is a blocking finding**, so it lands in `blocking-findings` rather than `unexamined` and the gate holds the spec. The general rule that an unknown is never escalated into a defect is about *other* files — another spec's frontmatter, an upstream service — where the defect is not this spec's. This one names the spec's own artifact, in its own directory, that its own analysis could not read. The case that forced it: `scenario-open-questions` blocks at `done`, and an unreadable scenario contributed no questions and, as a skip, no finding — so a scenario carrying unresolved questions that would not parse passed the gate built to catch it.
 
 A total that conflates them repeats, one level down, the conflation the field exists to prevent: `81 + 1` and `82 + 0` are the same integer and mean very different things. The reason set is closed, so the breakdown is bounded; the map is omitted when empty, so a fully-examined run carries no map rather than a map of zeroes.
 
