@@ -1,17 +1,17 @@
 ---
-status: in-progress
+status: done
 dependencies: [021-runtime-boundary]
 review:
-  last-run: 2026-09-06T14:19:42Z
-  reviewed-against: 0405f6f7699961618892800211dc0cc9840260c6
+  last-run: 2026-09-06T14:46:11Z
+  reviewed-against: 8c4ca744bdfb9fcd758c52fe1338d436d1cd7d2b
   must-violations: 0
   should-violations: 0
   low-confidence: 0
   blocking: false
 next-criterion: 26
 analyze:
-  last-run: 2026-09-06T14:20:02Z
-  analyzed-against: 0405f6f7699961618892800211dc0cc9840260c6
+  last-run: 2026-09-06T14:46:11Z
+  analyzed-against: 8c4ca744bdfb9fcd758c52fe1338d436d1cd7d2b
   hard-fail: 0
   blocking-findings: 0
   advisory: 0

@@ -1,8 +1,8 @@
 ---
 spec: 022-deterministic-runtime
-reviewed-at: 2026-09-06T14:19:42Z
-reviewed-against: 0405f6f7699961618892800211dc0cc9840260c6
-diff-base: 683a1e03c463c62ea644a4466acc5873eba0d1a4
+reviewed-at: 2026-09-06T14:46:11Z
+reviewed-against: 8c4ca744bdfb9fcd758c52fe1338d436d1cd7d2b
+diff-base: 769f49ec48b7c5b7167219dcc4044da47c438dc8
 must-violations: 0
 should-violations: 0
 low-confidence: 0
@@ -14,7 +14,7 @@ skipped-passes: []
 
 ## Summary
 
-The unexamined breakdown. Zero MUST, zero SHOULD, zero low-confidence. The finding this change answers came from a question rather than a pass: a bare unexamined total conflates an exclusion by construction with a target that could not be read, which is the conflation the field exists to prevent, one level down — and the reason set was closed and documented the whole time, so the first implementation discarded information it already had. Same shape as apply-manifest's discarded substitution count at the start of this session. The total is now summed from the breakdown so the two cannot disagree, matching the discipline that derives blocking rather than accepting it. Also records that criterion-path-existence scopes to done specs, so a record written mid-back-edge describes a smaller subject — measured on this spec itself.
+artifact-unreadable promoted to a blocking finding at done. Zero MUST, zero SHOULD, zero low-confidence. The judgement worth recording is what was NOT changed: three of the four could-not-be-read reasons keep the never-escalate rule, and each for its own reason — no-readable-state is the check correctly declining to guess, target-missing is already gated harder by check-corpus-links at commit time, and target-unparseable is partly a deliberate symlink refusal. Only artifact-unreadable names the spec's own artifact, and only it closed a real hole: scenario-open-questions blocks at done, and an unreadable scenario contributed no questions and no finding, so a scenario with unresolved questions that would not parse passed the gate built to catch it. Both sides of the done boundary are pinned by test, and the corpus has zero instances, so the gate lands with no backlog behind it.
 
 ## MUST violations (blocking)
 
