@@ -395,6 +395,43 @@ Scans `path` for `§<anchor>` references and resolves each against `<!-- §ancho
 
 Prose that names another document without naming its file (`spec 022 §Versioning`, `the bootstrap's §Derived values`) can be neither verified nor excluded and stays reported — a deliberate limit, not an oversight.
 
+### `write-analysis` — record that analyze ran
+
+Args:
+
+```json
+{
+  "feature": "042-widget", "analyzed-at": "2026-09-06T14:00:00Z",
+  "analyzed-against": "abc123", "hard-fail": 0, "blocking-findings": 0,
+  "advisory": 8,
+  "unexamined-by-reason": { "not-a-live-claim": 79, "root-absent": 26 }
+}
+```
+
+Result:
+
+```json
+{ "spec-path": "specs/042-widget/spec.md", "blocking": false, "unexamined": 105, "replaced": true }
+```
+
+Writes the spec's `analyze:` frontmatter block — the durable record that `/{project}:analyze` ran, and what `check-review-gate` reads to hold a spec out of `done` until it has. Splices without disturbing sibling keys, and refuses a spec whose frontmatter does not parse rather than recording a clean run into it.
+
+**Two values are derived, never accepted**, for the same reason: a field a caller can contradict is a field that will eventually be contradicted.
+
+- `blocking` — from `hard-fail` and `blocking-findings`. No call can record a clean gate over a dirty run.
+- `unexamined` — summed from `unexamined-by-reason` when a breakdown is supplied, so the total and its parts cannot disagree. A caller-supplied total is used only when no breakdown is given.
+
+**`unexamined-by-reason` is what makes `unexamined` actionable.** A bare total answers *that* something was unexamined and nothing about what, and the reasons are not equivalent — they split into two classes calling for opposite responses:
+
+| class | reasons | response |
+| --- | --- | --- |
+| excluded by construction | `not-a-live-claim`, `ships-to-adopter`, `root-absent` | none; the exclusion is correct |
+| could not be read | `target-missing`, `target-unparseable`, `no-readable-state`, `artifact-unreadable` | a real gap in what the run saw |
+
+A total that conflates them repeats, one level down, the conflation the field exists to prevent: `81 + 1` and `82 + 0` are the same integer and mean very different things. The reason set is closed, so the breakdown is bounded; the map is omitted when empty, so a fully-examined run carries no map rather than a map of zeroes.
+
+**The subject depends on the spec's status when the record is written.** `criterion-path-existence` — the source of most skipped targets — examines `done` specs only, so a record written while a spec is reopened describes a smaller subject than the same spec at `done`. Write the record last, after the status is settled.
+
 ### `traverse-deps` — verify spec dependencies and status compatibility
 
 Args:

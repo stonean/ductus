@@ -10,12 +10,14 @@ review:
   blocking: false
 next-criterion: 19
 analyze:
-  last-run: 2026-09-06T14:02:35Z
-  analyzed-against: 4963c8495b1349b8298341ded66fc1dcef6386a0
+  last-run: 2026-09-06T14:12:55Z
+  analyzed-against: 683a1e03c463c62ea644a4466acc5873eba0d1a4
   hard-fail: 0
   blocking-findings: 0
   advisory: 0
   unexamined: 2
+  unexamined-by-reason:
+    not-a-live-claim: 2
   blocking: false
 ---
 

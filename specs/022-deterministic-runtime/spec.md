@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [021-runtime-boundary]
 review:
   last-run: 2026-09-05T19:30:09Z
@@ -8,14 +8,14 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 24
+next-criterion: 25
 analyze:
-  last-run: 2026-09-06T14:05:45Z
-  analyzed-against: 7963f13484536068b696e41cca2ba89ac42290d6
+  last-run: 2026-09-06T14:12:55Z
+  analyzed-against: 683a1e03c463c62ea644a4466acc5873eba0d1a4
   hard-fail: 0
   blocking-findings: 0
   advisory: 0
-  unexamined: 2
+  unexamined: 0
   blocking: false
 ---
 
@@ -362,6 +362,7 @@ as if a smaller number would mean a smaller job.
 - [x] AC21: `apply-manifest` reports the substitution count it previously computed and discarded: per entry as an optional value that is absent rather than zero when substitution never ran, and in aggregate alongside `entries-substituted`, so a total is never read without its denominator. The bare-key contract is stated in the primitive's module docs, the `substitutions` schema doc comment, and `framework/bootstrap/ductus.md` §Placeholder Substitution (and its `govern.md` twin), and both counts are surfaced in that file's §Post-Scaffolding Output.
 - [x] AC22: The `write-analysis` primitive writes a spec's `analyze:` frontmatter block, splicing it without disturbing sibling keys through the same region logic `write-review` uses, deriving `blocking` itself rather than accepting it, and refusing a spec whose frontmatter does not deserialize. `check-review-gate` reports `not-analyzed` and `analyze-findings` after every `review:` check, and `check-artifacts` runs nine residual deterministic families rather than eight.
 - [x] AC23: `resolve-anchor` classifies each `§` reference as `qualified` (its line names a markdown document other than the markers file), `intra-document` (the anchor names a heading in the citing file), or `markers` (a claim about the markers file, and the only kind that can be unresolved), reporting the first two as counts so a large exclusion is never silent. The document match is line-scoped, the markers file is excluded from qualification, and local headings match longest-first.
+- [x] AC24: `write-analysis` records `unexamined-by-reason` over the closed skip-reason set and derives `unexamined` by summing it, so the total and its parts cannot disagree. A bare total conflates an exclusion by construction with a target that could not be read — the two classes call for opposite responses — which is the conflation the field exists to prevent, one level down. The map is omitted when empty, a malformed pair is rejected rather than defaulted to zero, and the written total is returned so a caller can confirm agreement.
 
 ## Non-Goals
 

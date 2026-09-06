@@ -42,6 +42,7 @@
 //!
 //! Defined by `specs/047-analyze-findings-durability/scenarios/analyze-run-durability.md`.
 
+use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::path::Path;
 
@@ -96,7 +97,22 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
         .any(|line| !line.starts_with([' ', '\t']) && line.starts_with("analyze:"));
 
     let blocking = args.hard_fail > 0 || args.blocking_findings > 0;
-    let block = render_analyze_yaml(args, blocking);
+    // The breakdown is the authority when supplied: a total a caller can
+    // contradict is a total that will eventually be contradicted, which is
+    // the same reason `blocking` is derived rather than accepted.
+    let by_reason: BTreeMap<String, u32> =
+        args.unexamined_by_reason
+            .iter()
+            .fold(BTreeMap::new(), |mut acc, (reason, count)| {
+                *acc.entry(reason.clone()).or_default() += *count;
+                acc
+            });
+    let unexamined = if by_reason.is_empty() {
+        args.unexamined
+    } else {
+        by_reason.values().copied().sum()
+    };
+    let block = render_analyze_yaml(args, blocking, unexamined, &by_reason);
     let new_fm = splice_top_level_block(fm_text, "analyze", &block);
     let rendered = crate::primitives::with_line_ending(
         &format!("---\n{new_fm}\n---\n{body}"),
@@ -107,6 +123,7 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
     Ok(WriteAnalysisResult {
         spec_path: rel_path(&spec_path, repo),
         blocking,
+        unexamined,
         replaced,
     })
 }
@@ -119,7 +136,12 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
 /// embedded newline in `analyzed-against` would inject arbitrary frontmatter
 /// keys, which is the injection `write-review` already guards; the guard lives
 /// in [`single_line`] here for the same reason.
-fn render_analyze_yaml(args: &WriteAnalysisArgs, blocking: bool) -> String {
+fn render_analyze_yaml(
+    args: &WriteAnalysisArgs,
+    blocking: bool,
+    unexamined: u32,
+    by_reason: &BTreeMap<String, u32>,
+) -> String {
     let mut block = String::from("analyze:\n");
     let _ = writeln!(block, "  last-run: {}", single_line(&args.analyzed_at));
     let _ = writeln!(
@@ -130,7 +152,17 @@ fn render_analyze_yaml(args: &WriteAnalysisArgs, blocking: bool) -> String {
     let _ = writeln!(block, "  hard-fail: {}", args.hard_fail);
     let _ = writeln!(block, "  blocking-findings: {}", args.blocking_findings);
     let _ = writeln!(block, "  advisory: {}", args.advisory);
-    let _ = writeln!(block, "  unexamined: {}", args.unexamined);
+    let _ = writeln!(block, "  unexamined: {unexamined}");
+    // Omitted when empty, so a fully-examined run carries no map rather than
+    // a map of zeroes. Reasons are a closed set of kebab-case identifiers, so
+    // no quoting is needed; a reason outside it would be a caller defect the
+    // arg parser has already rejected as unparseable rather than reshaped.
+    if !by_reason.is_empty() {
+        let _ = writeln!(block, "  unexamined-by-reason:");
+        for (reason, count) in by_reason {
+            let _ = writeln!(block, "    {reason}: {count}");
+        }
+    }
     let _ = writeln!(block, "  blocking: {blocking}");
     block.trim_end_matches('\n').to_string()
 }
@@ -174,6 +206,7 @@ mod tests {
             blocking_findings: 0,
             advisory: 0,
             unexamined: 0,
+            unexamined_by_reason: vec![],
         }
     }
 
@@ -243,6 +276,84 @@ mod tests {
         let spec = fs::read_to_string(tmp.path().join("specs/042-demo/spec.md")).unwrap();
         assert!(spec.contains("  advisory: 9"));
         assert!(spec.contains("  blocking: false"));
+    }
+
+    /// A bare total answers *that* something was unexamined and nothing
+    /// about what — and the reasons are not equivalent. The breakdown is what
+    /// makes the number actionable.
+    #[test]
+    fn the_breakdown_is_written_and_sorted() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let result = run(
+            &WriteAnalysisArgs {
+                unexamined_by_reason: vec![
+                    ("ships-to-adopter".into(), 10),
+                    ("not-a-live-claim".into(), 81),
+                    ("artifact-unreadable".into(), 1),
+                ],
+                ..args()
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.unexamined, 92);
+        let spec = fs::read_to_string(tmp.path().join("specs/042-demo/spec.md")).unwrap();
+        assert!(spec.contains("  unexamined: 92"));
+        // BTreeMap order, so the rendering is byte-stable across runs.
+        let block = spec.split("unexamined-by-reason:").nth(1).unwrap();
+        let order: Vec<&str> = block
+            .lines()
+            .skip(1) // the remainder of the `unexamined-by-reason:` line itself
+            .take_while(|l| l.starts_with("    "))
+            .map(|l| l.trim().split(':').next().unwrap())
+            .collect();
+        assert_eq!(
+            order,
+            vec![
+                "artifact-unreadable",
+                "not-a-live-claim",
+                "ships-to-adopter"
+            ]
+        );
+    }
+
+    /// The breakdown is the authority: a total a caller can contradict is a
+    /// total that will eventually be contradicted, which is why `blocking` is
+    /// derived too.
+    #[test]
+    fn a_supplied_total_cannot_contradict_its_breakdown() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let result = run(
+            &WriteAnalysisArgs {
+                unexamined: 999,
+                unexamined_by_reason: vec![("root-absent".into(), 4)],
+                ..args()
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.unexamined, 4);
+        let spec = fs::read_to_string(tmp.path().join("specs/042-demo/spec.md")).unwrap();
+        assert!(spec.contains("  unexamined: 4"));
+        assert!(!spec.contains("999"));
+    }
+
+    /// A fully-examined run carries no map rather than a map of zeroes.
+    #[test]
+    fn an_empty_breakdown_omits_the_map_and_keeps_the_supplied_total() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let result = run(
+            &WriteAnalysisArgs {
+                unexamined: 3,
+                ..args()
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.unexamined, 3);
+        let spec = fs::read_to_string(tmp.path().join("specs/042-demo/spec.md")).unwrap();
+        assert!(spec.contains("  unexamined: 3"));
+        assert!(!spec.contains("unexamined-by-reason"));
     }
 
     /// The `QUAL-CLAIM-001` field: a clean run that could not examine

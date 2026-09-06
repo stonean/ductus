@@ -7,6 +7,8 @@
 
 #![allow(clippy::module_name_repetitions, clippy::struct_excessive_bools)]
 
+use std::collections::BTreeMap;
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -104,8 +106,34 @@ pub struct AnalyzeBlock {
     /// examined." A record carrying only the finding counts would collapse
     /// exactly that distinction into the reassuring reading, in the record
     /// a later gate trusts.
+    ///
+    /// **Read it with [`unexamined_by_reason`], never alone.** A bare total
+    /// answers *that* something was unexamined and nothing about what, and
+    /// the reasons are not equivalent: `not-a-live-claim` is a correct
+    /// exclusion with nothing owed, `artifact-unreadable` is a real failure,
+    /// and both increment this counter. A total that conflates them repeats,
+    /// one level down, the conflation the field exists to prevent.
     #[serde(default)]
     pub unexamined: u32,
+    /// The `unexamined` total broken out over the closed reason set, so the
+    /// number is actionable rather than merely present.
+    ///
+    /// Two classes live in that set and they call for opposite responses:
+    ///
+    /// - **Excluded by construction** — `not-a-live-claim` (the criterion
+    ///   asserts the path is *gone*, so its absence confirms rather than
+    ///   contradicts), `ships-to-adopter` (a Shared Files destination that
+    ///   resolves in an adopter's tree, not this one), `root-absent`
+    ///   (nothing is provable because the path's top-level segment does not
+    ///   exist here). Correct, and nothing is owed.
+    /// - **Could not be read** — `target-missing`, `target-unparseable`,
+    ///   `no-readable-state`, `artifact-unreadable`. A real gap in what the
+    ///   run could see, and the class worth acting on.
+    ///
+    /// Omitted when empty, so a fully-examined run carries no map rather
+    /// than a map of zeroes.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub unexamined_by_reason: BTreeMap<String, u32>,
     /// Whether the last analysis left findings that hold the spec out of
     /// `done` — `hard-fail` or `blocking-findings` above zero.
     #[serde(default)]
@@ -441,9 +469,48 @@ pub struct WriteAnalysisArgs {
     /// Targets the run could not examine — the informational `skipped` set.
     /// Required in the record so a clean result cannot be read as a fully
     /// examined one (`QUAL-CLAIM-001`).
+    ///
+    /// Derived from `unexamined-by-reason` when that is supplied, so the
+    /// total and its breakdown cannot disagree. Supply it directly only when
+    /// no breakdown is available.
     #[serde(default)]
     #[arg(long, default_value_t = 0)]
     pub unexamined: u32,
+    /// The `unexamined` set broken out over the closed reason set, as
+    /// `reason=count` pairs. Repeatable on the CLI
+    /// (`--unexamined-reason not-a-live-claim=81`); a map on the MCP and
+    /// interpreter paths.
+    ///
+    /// A bare total answers *that* something was unexamined and nothing
+    /// about what, and the reasons are not equivalent — an exclusion by
+    /// construction and a file that could not be read both increment it.
+    /// Supplying the breakdown is what makes the number actionable.
+    #[serde(default)]
+    #[arg(long = "unexamined-reason", value_parser = parse_reason_count)]
+    pub unexamined_by_reason: Vec<(String, u32)>,
+}
+
+/// Parse a `reason=count` pair for `--unexamined-reason`.
+///
+/// # Errors
+///
+/// Returns a message when the pair has no `=`, an empty reason, or a count
+/// that is not a non-negative integer — a malformed breakdown must not be
+/// silently dropped into a zero, which would restore the very conflation the
+/// field exists to remove.
+fn parse_reason_count(raw: &str) -> Result<(String, u32), String> {
+    let (reason, count) = raw
+        .split_once('=')
+        .ok_or_else(|| format!("expected reason=count, got '{raw}'"))?;
+    let reason = reason.trim();
+    if reason.is_empty() {
+        return Err(format!("empty reason in '{raw}'"));
+    }
+    let count: u32 = count
+        .trim()
+        .parse()
+        .map_err(|_| format!("'{count}' is not a non-negative integer in '{raw}'"))?;
+    Ok((reason.to_string(), count))
 }
 
 /// Result for `write-analysis`.
@@ -455,6 +522,10 @@ pub struct WriteAnalysisResult {
     /// `true` when `hard-fail` or `blocking-findings` exceeds zero — the
     /// value `check-review-gate` reads.
     pub blocking: bool,
+    /// The `unexamined` total actually written — derived from the breakdown
+    /// when one was supplied, so a caller can confirm the two agree.
+    #[serde(default)]
+    pub unexamined: u32,
     /// Whether an `analyze:` block already existed and was replaced, as
     /// opposed to being inserted for the first time. Reported so a caller can
     /// tell a re-analysis from a spec leaving the grandfathered population.
@@ -3685,17 +3756,17 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::{
-        AcceptanceCriterion, AnalyzeBlock, AnchorReference, CheckRuleIdsArgs, CheckRuleIdsResult,
-        CheckStuckArgs, CheckStuckResult, CheckboxToggleResult, Classification, DependencyEdge,
-        DeriveBoundaryArgs, DeriveBoundaryResult, Frontmatter, FrontmatterFinding, GateConfirmArgs,
-        GateConfirmResult, LintMarkdownArgs, LintMarkdownResult, MarkCriterionArgs, MarkTaskArgs,
-        MarkdownViolation, MigrateSessionFileArgs, MigrateSessionFileResult, OpenQuestion,
-        PruneAction, PruneGate, PruneMode, PruneSection, PruneTasksArgs, PruneTasksResult,
-        ReadSpecArgs, ReadSpecResult, ReadTasksArgs, ReadTasksResult, ResolveAnchorArgs,
-        ResolveAnchorResult, ReviewBlock, RuleCitation, RunGeneratorArgs, RunGeneratorResult,
-        ScenarioOpenQuestion, SetStatusArgs, SetStatusResult, SizeSummary, SpecSection, Subtask,
-        Task, TraverseDepsArgs, TraverseDepsResult, ValidateFrontmatterArgs,
-        ValidateFrontmatterResult, WriteSessionArgs, WriteSessionResult,
+        AcceptanceCriterion, AnalyzeBlock, AnchorReference, BTreeMap, CheckRuleIdsArgs,
+        CheckRuleIdsResult, CheckStuckArgs, CheckStuckResult, CheckboxToggleResult, Classification,
+        DependencyEdge, DeriveBoundaryArgs, DeriveBoundaryResult, Frontmatter, FrontmatterFinding,
+        GateConfirmArgs, GateConfirmResult, LintMarkdownArgs, LintMarkdownResult,
+        MarkCriterionArgs, MarkTaskArgs, MarkdownViolation, MigrateSessionFileArgs,
+        MigrateSessionFileResult, OpenQuestion, PruneAction, PruneGate, PruneMode, PruneSection,
+        PruneTasksArgs, PruneTasksResult, ReadSpecArgs, ReadSpecResult, ReadTasksArgs,
+        ReadTasksResult, ResolveAnchorArgs, ResolveAnchorResult, ReviewBlock, RuleCitation,
+        RunGeneratorArgs, RunGeneratorResult, ScenarioOpenQuestion, SetStatusArgs, SetStatusResult,
+        SizeSummary, SpecSection, Subtask, Task, TraverseDepsArgs, TraverseDepsResult,
+        ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteSessionArgs, WriteSessionResult,
     };
 
     fn round_trip<T>(value: &T) -> T
@@ -3734,6 +3805,7 @@ mod tests {
                     blocking_findings: 0,
                     advisory: 2,
                     unexamined: 1,
+                    unexamined_by_reason: BTreeMap::from([("root-absent".to_string(), 1)]),
                     blocking: false,
                 }),
             },

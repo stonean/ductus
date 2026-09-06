@@ -340,6 +340,19 @@ Implements `scenarios/write-analysis-and-the-second-gate.md`. The runtime half o
 
 - **Done when**: `write-analysis` writes and replaces the block without disturbing siblings, `blocking` cannot be supplied by a caller, the gate reports both new reasons in pipeline order, `check-artifacts` runs nine families, and each new behavior was proven failing first.
 
+### write-analysis — the unexamined breakdown
+
+Asked what purpose a bare `unexamined` number served, the answer was: not much. It distinguished clean-verified from clean-partial and nothing else, while conflating a correct exclusion with a real read failure — the conflation the field exists to prevent, one level down.
+
+- [x] Add `unexamined-by-reason` over the closed skip-reason set, so the number says what was unexamined and not merely that something was
+- [x] Derive `unexamined` by summing the breakdown when one is supplied, the same discipline that derives `blocking` — a total a caller can contradict will eventually be contradicted
+- [x] Omit the map when empty, so a fully-examined run carries no map rather than a map of zeroes
+- [x] Reject a malformed `reason=count` pair rather than defaulting it to zero, which would restore the conflation
+- [x] Return the written total in the result so a caller can confirm the total and its parts agree
+- [x] Record the two classes the reason set splits into — excluded by construction vs could not be read — in `data-model.md` and the scenario, since they call for opposite responses
+- [x] Record that the subject depends on status: `criterion-path-existence` examines `done` specs only, so a record written mid-back-edge describes a smaller subject
+- [x] Prove it: tests for the sorted rendering, for a supplied total losing to its breakdown, and for the map being omitted when empty
+
 ### resolve-anchor — three reference kinds
 
 Implements `scenarios/anchor-reference-kinds.md`. `resolve-anchor` treated every `§X` as a claim about the markers file, reporting 112 unresolved anchors corpus-wide and burying a real dangling reference among them for four specs' worth of history.
