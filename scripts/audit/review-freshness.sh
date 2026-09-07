@@ -92,6 +92,7 @@ PY
 fi
 
 python3 - "$ROOT" "$SPECS_ROOT" <<'PY'
+import hashlib
 import pathlib
 import re
 import subprocess
@@ -101,10 +102,22 @@ root = pathlib.Path(sys.argv[1])
 specs_root = sys.argv[2]
 findings = []
 
+# Coverage counters. Reported unconditionally at the end, because a family
+# that prints nothing on a clean run is indistinguishable from one that
+# aborted before it examined anything — `run_check` reads the exit code alone
+# and cannot tell them apart either. That is `QUAL-CLAIM-001`, cited in this
+# file's own header, applied to this file.
+examined_digest = 0
+examined_proxy = 0
+grandfathered = 0
+unresolvable = 0
+
 
 def emit(location, message, fix):
-    print(f"review-freshness | {location} | {message} | {fix}")
-    findings.append(location)
+    # Buffered rather than printed: the coverage line is computed by walking
+    # the corpus, so it is only known at the end, and it has to render *above*
+    # the findings it quantifies.
+    findings.append(f"review-freshness | {location} | {message} | {fix}")
 
 
 def frontmatter(text):
@@ -135,6 +148,60 @@ def is_durable_contract(rel_within_feature):
         rel_within_feature.startswith("scenarios/")
         and rel_within_feature.endswith(".md")
     ) or rel_within_feature == "data-model.md"
+
+
+def recorded_digest(fm):
+    """The `review.reviewed-digest` map, or None when the record carries none.
+
+    Three states, and the difference between the last two is the whole reason
+    the runtime types this field as an `Option`:
+      * absent      -> None. A pre-digest record; the caller falls back to the
+                       commit-diff proxy.
+      * `{}`        -> {}. Taken over a spec with no durable contracts, which
+                       reads as *current*, not as unjudgeable.
+      * a map       -> the recorded per-path sha256 set.
+    """
+    m = re.search(r"^  reviewed-digest:[ \t]*(.*)$", fm, re.M)
+    if not m:
+        return None
+    if m.group(1).strip() == "{}":
+        return {}
+    digests = {}
+    for line in fm[m.end():].split("\n"):
+        if not line.strip():
+            continue
+        entry = re.match(r"^    ([^\s:]+):[ \t]*([0-9a-f]{64})[ \t]*$", line)
+        if not entry:
+            break  # dedent or a sibling key ends the map
+        digests[entry.group(1)] = entry.group(2)
+    return digests
+
+
+def current_contract_digests(feature_dir):
+    """(path -> sha256) for the durable contracts on disk, plus unreadable ones.
+
+    The working tree, matching `check-review-gate` exactly. At release time the
+    checkout is clean so this equals HEAD; reading the tree is what makes the
+    two enforcement points answer identically rather than merely similarly.
+    """
+    digests = {}
+    unreadable = []
+    candidates = sorted(feature_dir.glob("scenarios/*.md")) + [
+        feature_dir / "data-model.md"
+    ]
+    for path in candidates:
+        if not path.is_file():
+            continue
+        rel = path.relative_to(feature_dir).as_posix()
+        if not is_durable_contract(rel):
+            continue
+        try:
+            digests[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError:
+            # Recorded, never digested as empty: an unreadable contract is not
+            # a matching one.
+            unreadable.append(rel)
+    return digests, unreadable
 
 
 TOKEN = re.compile(r"[A-Za-z0-9_.:/-]+|\s+|.")
@@ -323,16 +390,70 @@ for spec_path in sorted(specs_dir.glob("*/spec.md")):
     if scalar(fm, "status") != "done":
         continue
     if not re.search(r"^review:", fm, re.M):
+        grandfathered += 1
         continue  # grandfathered: predates /review
     base = scalar(fm, "reviewed-against", indent="  ")
-    if not base:
-        continue  # `not-reviewed` is check-review-gate's finding, not this one
+    digest = recorded_digest(fm)
 
-    probe = subprocess.run(
-        ["git", "-C", str(root), "cat-file", "-e", f"{base}^{{commit}}"],
-        capture_output=True,
-    )
-    if probe.returncode != 0:
+    # Whether the sweep exemption can run. It needs two committed trees, so it
+    # is available only when `reviewed-against` resolves — on either arm.
+    base_resolves = False
+    if base:
+        base_resolves = subprocess.run(
+            ["git", "-C", str(root), "cat-file", "-e", f"{base}^{{commit}}"],
+            capture_output=True,
+        ).returncode == 0
+
+    if digest is not None:
+        # --- digest arm: content, not commits --------------------------------
+        # The same comparison `check-review-gate` makes, over the same field,
+        # so the completion gate and this release gate cannot disagree about a
+        # record that carries one.
+        examined_digest += 1
+        current, unreadable = current_contract_digests(spec_path.parent)
+        changed = {
+            rel for rel, sha in current.items() if digest.get(rel) != sha
+        }
+        # A contract the digest covered that is now gone is a change too.
+        changed |= {rel for rel in digest if rel not in current}
+        # An unreadable contract cannot be compared, so it is reported as
+        # changed rather than passed over — the safe direction.
+        changed |= set(unreadable)
+        if base_resolves:
+            changed = {
+                rel
+                for rel in changed
+                if changed_beyond_spelling(base, f"{rel_dir}/{rel}")
+            }
+        stale = sorted(f"{rel_dir}/{rel}" for rel in changed)
+        if stale:
+            shown = ", ".join(stale[:3])
+            more = f" (+{len(stale) - 3} more)" if len(stale) > 3 else ""
+            emit(
+                rel_dir,
+                f"done spec's review is stale — {len(stale)} durable contract(s) no "
+                f"longer match reviewed-digest: {shown}{more}",
+                f"re-run review against {feature} before releasing",
+            )
+        continue
+
+    # --- proxy arm: the commit diff, for records predating the digest --------
+    # Weaker than the digest and known to be so: `write-review` stamps
+    # `reviewed-against: HEAD` while reviewing the working tree, so a contract
+    # reviewed before it was committed makes this diff fire on content the
+    # review had already read. On this arm that false positive is guarded only
+    # by the commit-then-review-then-commit convention in AGENTS.md. It is kept
+    # regardless, because the alternative for a pre-digest record is examining
+    # nothing at all, and every review migrates one more spec off this arm.
+    if not base:
+        # No digest and no sha: nothing to compare against. `not-reviewed` is
+        # check-review-gate's finding, not this one — but the spec is still
+        # *unexamined*, and the coverage line must not imply otherwise.
+        unresolvable += 1
+        continue
+
+    if not base_resolves:
+        unresolvable += 1
         emit(
             rel_dir,
             f"review names reviewed-against {base[:8]}, which is not a commit in this repo "
@@ -341,6 +462,8 @@ for spec_path in sorted(specs_dir.glob("*/spec.md")):
             "(a shallow clone cannot answer this)",
         )
         continue
+
+    examined_proxy += 1
 
     changed = subprocess.run(
         ["git", "-C", str(root), "diff", "--name-only", f"{base}..HEAD"],
@@ -375,6 +498,21 @@ for spec_path in sorted(specs_dir.glob("*/spec.md")):
             f"since reviewed-against {base[:8]}: {shown}{more}",
             f"re-run review against {feature} before releasing",
         )
+
+# The coverage claim, printed on every run — clean, findings, or an empty
+# corpus — and *above* the findings it quantifies. The digest/proxy split is
+# not decoration: the two arms do not carry the same strength of claim, and a
+# bare `examined` count would assert the stronger one over both. When the proxy
+# count reaches zero every record carries a digest, the arm above is dead code,
+# and this line is the evidence for deleting it.
+examined = examined_digest + examined_proxy
+print(
+    f"review-freshness: examined {examined} spec(s) at status: done — "
+    f"{examined_digest} by reviewed-digest, {examined_proxy} by commit-diff proxy; "
+    f"{grandfathered} grandfathered (no review: block); {unresolvable} unresolvable"
+)
+for finding in findings:
+    print(finding)
 
 sys.exit(1 if findings else 0)
 PY

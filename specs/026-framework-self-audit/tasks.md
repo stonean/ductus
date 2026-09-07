@@ -357,6 +357,6 @@ Opened by [048](../048-govern-acquired-runtime/spec.md)'s AC10 adopter runs, whi
 
 ### 41. Family 19 states its own coverage
 
-- [ ] Implement the behavior described in `scenarios/family-19-says-what-it-examined.md`
+- [x] Implement the behavior described in `scenarios/family-19-says-what-it-examined.md`
 
 - **Done when**: `review-freshness.sh` judges a record carrying `reviewed-digest` by that digest and one without it by the existing `reviewed-against`..HEAD diff, so the digest arm agrees with `check-review-gate` by construction while the proxy arm keeps the 53 pre-digest specs enforced; it closes every run with one stdout coverage line naming the examined count **split into digest and proxy** alongside the grandfathered and unresolvable exclusions, in the shape Families 27, 31 and 37 already use; the line prints on a clean run, on a findings run (above the findings), and on a corpus with zero `done` specs; a record with a digest and an unresolvable `reviewed-against` is examined rather than counted unresolvable, and `reviewed-digest: {}` reads as current on the digest arm; the line never affects the exit code, so `run_check`'s non-zero-means-findings contract and the aggregator are unchanged; `bash scripts/audit/run-all.sh` still exits 0 on a clean tree and the family's own output is no longer empty; `shellcheck -S warning` clean.
