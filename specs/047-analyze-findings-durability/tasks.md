@@ -47,3 +47,9 @@ Implements `scenarios/analyze-run-durability.md`. Findings outlived the session;
 - [x] Prove each gate reason and each drift case fails before keeping it, and verify the whole path through the built release binary rather than the MCP tools
 
 - **Done when**: a spec with no analyze record cannot reach `done`, a clean record carries its unexamined count, advisory findings never gate, the grandfathered set is counted against a baseline that cannot silently grow, and every one of those was demonstrated failing first.
+
+## 4. Surface and enforce analyze-record freshness
+
+- [x] Implement the behavior described in `scenarios/analyze-record-freshness.md`
+
+- **Done when**: `/{project}:review` renders the three-state `analyze` row from a working-tree comparison, `check-review-gate` blocks a stale record naming the changed paths, and both surfaces agree on the subject set.

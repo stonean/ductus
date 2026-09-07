@@ -427,6 +427,19 @@ pub struct WriteReviewResult {
     pub blocking: bool,
     /// Derived exit code: 1 when blocking, else 0.
     pub exit_code: i32,
+    /// The spec's analyze-record freshness, computed against the **working
+    /// tree** at the moment this review was written (spec 047 AC12).
+    ///
+    /// Reported so `/{project}:review` can render its `analyze` row without a
+    /// second staleness implementation. It never affects `blocking` or
+    /// `exit_code`: `/{project}:review` has no authority over the `done`
+    /// transition, and the row is a notice rather than a gate.
+    ///
+    /// The working tree is the right reference point *here* because this
+    /// primitive has just written `review.md` and the spec's `review:` block
+    /// while `HEAD` has not moved — a committed-tree comparison would report
+    /// `current` at the exact moment it stopped being true.
+    pub analyze_freshness: AnalyzeFreshness,
 }
 
 // -- write-analysis ----------------------------------------------------------
@@ -2701,6 +2714,88 @@ pub enum ReviewGateBlock {
     /// [`AnalyzeBlock::advisory`] for why this does not mirror the review
     /// gate's treatment of an outstanding SHOULD.
     AnalyzeFindings,
+    /// The analysis is **stale**: a `.md` artifact under the feature changed
+    /// after `analyze.analyzed-against`, so the recorded verdict describes a
+    /// corpus that no longer exists.
+    ///
+    /// Ordered last, after [`Self::NotAnalyzed`] and [`Self::AnalyzeFindings`],
+    /// for the reason [`Self::ReviewStale`] is ordered after
+    /// [`Self::MustViolations`]: it is the weakest of the three claims — the
+    /// others say the analysis is missing or failing, this one says a passing
+    /// analysis is out of date.
+    ///
+    /// It closes the hole that `review → fix → done` left open. The presence
+    /// check asks only whether `last-run` is *set*, so an operator who ran
+    /// `/{project}:analyze`, then resolved MUST violations, then completed the
+    /// spec passed the gate on an analysis from before the fixes. Spec 047's
+    /// `analyze-record-freshness` scenario records the measurement that made
+    /// the subject set safe: across this repo's 54 recorded specs the naive
+    /// rule flagged all 54, because the corpus-wide analyze run had written
+    /// its own `analyze:` block into every one of them; with that block
+    /// excluded, 1 of 54 flags and it is a true positive.
+    AnalyzeStale,
+}
+
+/// The freshness of a spec's `analyze:` record, as computed by
+/// [`crate::primitives::check_review_gate::analyze_freshness`].
+///
+/// One type serves two surfaces at two different moments, which is spec 047
+/// AC14: `check-review-gate` computes it against **committed** trees to decide
+/// whether to block, and `write-review` computes it against the **working
+/// tree** so `/{project}:review` can render its `analyze` row. A second
+/// implementation would let the notice say `current` while the gate blocked —
+/// a disagreement that reads as a bug in the tool rather than a gap in the
+/// spec.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case", tag = "state")]
+pub enum AnalyzeFreshness {
+    /// No `analyze:` block, or its `last-run` is null. The spec has never
+    /// completed an analysis.
+    NeverAnalyzed,
+    /// The record describes the compared tree: nothing in the subject set
+    /// changed since `analyzed-against`.
+    Current {
+        /// The recorded `last-run` timestamp.
+        last_run: String,
+        /// The recorded `analyzed-against` sha.
+        analyzed_against: String,
+    },
+    /// One or more subject-set artifacts changed after `analyzed-against`.
+    Stale {
+        /// The recorded `last-run` timestamp.
+        last_run: String,
+        /// The recorded `analyzed-against` sha.
+        analyzed_against: String,
+        /// Repo-relative paths that changed, sorted; at most three are
+        /// rendered by the callers, with a count for the remainder.
+        paths: Vec<String>,
+    },
+    /// Freshness could not be determined — no git repository, an
+    /// `analyzed-against` that does not resolve in this tree (a rebase or a
+    /// shallow clone), or a failed diff.
+    ///
+    /// A distinct state rather than a fold into [`Self::Current`]: reporting
+    /// "could not check" as "checked and clean" is the `QUAL-CLAIM-001`
+    /// conflation the whole record exists to prevent.
+    Undeterminable {
+        /// Why the comparison could not run, for the operator's line.
+        reason: String,
+    },
+}
+
+/// [`AnalyzeFreshness::Undeterminable`], not `Current` or `NeverAnalyzed`.
+///
+/// A defaulted value is one nobody computed, and both of the other arms are
+/// substantive claims — that a record is current, or that none exists. Either
+/// would let a result deserialized without the field assert something about a
+/// spec it never looked at, which is the conflation this enum's fourth arm
+/// exists to keep out of the record.
+impl Default for AnalyzeFreshness {
+    fn default() -> Self {
+        Self::Undeterminable {
+            reason: "not computed".to_string(),
+        }
+    }
 }
 
 /// Result for `check-review-gate`. A blocked gate is a domain outcome —

@@ -30,8 +30,8 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    CheckReviewGateArgs, CheckReviewGateResult, Frontmatter, LintMarkdownArgs, LintMarkdownResult,
-    ReviewGateBlock,
+    AnalyzeBlock, AnalyzeFreshness, CheckReviewGateArgs, CheckReviewGateResult, Frontmatter,
+    LintMarkdownArgs, LintMarkdownResult, ReviewGateBlock,
 };
 
 /// Execute the `check-review-gate` primitive against the given repo root.
@@ -164,8 +164,10 @@ pub(crate) fn run_with_lint(
         return Ok(stale);
     }
 
-    // Gate checks 7 and 8: the spec frontmatter `analyze:` block.
-    if let Some(blocked) = analyze_gate_block(frontmatter.analyze.as_ref(), &project) {
+    // Gate checks 7, 8 and 9: the spec frontmatter `analyze:` block.
+    if let Some(blocked) =
+        analyze_gate_block(repo, &rel_dir, frontmatter.analyze.as_ref(), &project)
+    {
         return Ok(blocked);
     }
 
@@ -180,17 +182,51 @@ pub(crate) fn run_with_lint(
     // being silent about its own blind spot, which is `QUAL-CLAIM-001`
     // applied to the gate itself — the same failure `stale_review_block`
     // already records against an unresolvable `reviewed-against`.
+    //
+    // The analyze record's freshness joins that notice when it could not be
+    // determined at all. `stale_analyze_block` above returns `None` for an
+    // unresolvable `analyzed-against` — it does not block on its own inability
+    // to check — but passing silently would be the same fail-open-with-no-signal
+    // this file already paid for once.
     Ok(CheckReviewGateResult {
         passed: true,
         blocked_by: None,
         message: None,
-        guidance: unexaminable_contracts_guidance(repo, &rel_dir),
+        guidance: passing_notices(repo, &rel_dir, frontmatter.analyze.as_ref()),
         violations: vec![],
     })
 }
 
-/// Gate checks 7 and 8 — the spec's `analyze:` block: a completed analysis
-/// whose findings do not hold the spec out of `done`.
+/// What a **passing** gate could not examine, as one guidance line.
+///
+/// Two independent blind spots, joined rather than ranked because an operator
+/// weighing the transition needs both: the staleness diff's committed-tree
+/// horizon (see [`unexaminable_contracts_guidance`]) and an analyze record
+/// whose freshness could not be determined at all.
+///
+/// `None` — real silence — only when both examined cleanly, which is what
+/// makes that silence mean something.
+fn passing_notices(repo: &Path, rel_dir: &str, analyze: Option<&AnalyzeBlock>) -> Option<String> {
+    let mut notices: Vec<String> = Vec::new();
+    notices.extend(unexaminable_contracts_guidance(repo, rel_dir));
+    if let AnalyzeFreshness::Undeterminable { reason } =
+        analyze_freshness(repo, rel_dir, analyze, Compare::CommittedHead)
+    {
+        notices.push(format!(
+            "Analyze-record freshness could not be determined ({reason}), so whether the \
+             recorded analysis still describes these artifacts was not examined."
+        ));
+    }
+    if notices.is_empty() {
+        None
+    } else {
+        Some(notices.join(" "))
+    }
+}
+
+/// Gate checks 7, 8 and 9 — the spec's `analyze:` block: a completed analysis,
+/// whose findings do not hold the spec out of `done`, still describing the
+/// current artifacts.
 ///
 /// Ordered after every `review:` check because the pipeline is
 /// `review → analyze → done`. A spec whose review is missing or failing has
@@ -209,7 +245,9 @@ pub(crate) fn run_with_lint(
 /// ride the guidance line instead, together with the unexamined count, so a
 /// blocked gate still says what the analysis did not look at.
 fn analyze_gate_block(
-    analyze: Option<&crate::schema::primitives::AnalyzeBlock>,
+    repo: &Path,
+    rel_dir: &str,
+    analyze: Option<&AnalyzeBlock>,
     project: &str,
 ) -> Option<CheckReviewGateResult> {
     let analyze = match analyze {
@@ -233,7 +271,11 @@ fn analyze_gate_block(
     };
 
     if !analyze.blocking {
-        return None;
+        // Check 9 last, for the reason `stale_review_block` sits behind the
+        // `review:` presence and blocking checks: it is the weakest of the
+        // three claims. The others say the analysis is missing or failing;
+        // this one says a passing analysis is out of date.
+        return stale_analyze_block(repo, rel_dir, Some(analyze), project);
     }
 
     Some(CheckReviewGateResult {
@@ -455,6 +497,332 @@ fn stale_review_block(
         )),
         violations: vec![],
     })
+}
+
+/// Which tree the analyze record is compared against.
+///
+/// The two surfaces answer at different moments, so they need different
+/// reference points from one implementation (spec 047 AC14).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Compare {
+    /// `HEAD`'s tree — what the gate uses. The gate runs before the
+    /// transition is proposed and asks a question about committed history,
+    /// which is also what makes the rename exemption available.
+    CommittedHead,
+    /// The working directory — what `/{project}:review` uses. That command
+    /// has just written `review.md` and the spec's `review:` block while
+    /// `HEAD` has not moved, so a committed comparison would report
+    /// `current` at the exact moment it stopped being true.
+    WorkingTree,
+}
+
+/// Compute a spec's analyze-record freshness against `compare`.
+///
+/// **The single implementation behind both surfaces** (spec 047 AC14): the
+/// gate below calls it with [`Compare::CommittedHead`] to decide whether to
+/// block, and `write-review` calls it with [`Compare::WorkingTree`] to fill
+/// the row `/{project}:review` renders. Two implementations would eventually
+/// disagree — the notice saying `current` while the gate blocks — and that
+/// reads as a bug in the tool rather than a gap in the spec.
+///
+/// The **subject set** is every `.md` artifact under the feature, which is
+/// wider than the review's durable contracts because analyze's subject is
+/// wider: its families read `spec.md`'s frontmatter and criteria, `tasks.md`'s
+/// numbering, the scenarios' open questions, and `review.md` itself through
+/// `review-state-drift`. Excluding `review.md` — as
+/// [`stale_review_block`] correctly does for *its* purpose — would exempt the
+/// single edit that most often invalidates an analyze record.
+///
+/// One exclusion carries the whole rule: a `spec.md` diff **confined to the
+/// spec's own `analyze:` block** is the record's own write, and counting it
+/// would make every run stale itself. That is not a tidy-up. Measured across
+/// this repo's 54 recorded specs, the naive rule flagged **all 54**, because
+/// the corpus-wide analyze run of 2026-09-06 had written its `analyze:` block
+/// into every one of them; with the block excluded, **1 of 54** flags and it
+/// is a true positive (022, whose `review.md` genuinely changed after its
+/// record). Without the measurement this would have shipped as the third
+/// instance of the blast radius this file already records twice — the
+/// Affected-Files cut that blocked 34 of 48 specs, and the un-exempted rename
+/// rule that called 19 of 46 stale.
+///
+/// Fails to [`AnalyzeFreshness::Undeterminable`], never to `Current`. An
+/// `analyzed-against` that does not resolve — a rebase, a shallow clone — is
+/// a state the operator has to know about; folding it into `Current` would
+/// report "could not check" as "checked and clean", which is the
+/// `QUAL-CLAIM-001` conflation the record exists to prevent.
+pub(crate) fn analyze_freshness(
+    repo: &Path,
+    rel_dir: &str,
+    analyze: Option<&AnalyzeBlock>,
+    compare: Compare,
+) -> AnalyzeFreshness {
+    let undeterminable = |reason: &str| AnalyzeFreshness::Undeterminable {
+        reason: reason.to_string(),
+    };
+
+    // An absent block or a null `last-run` is the never-analyzed state, which
+    // the gate's own presence check reports first; this arm exists for
+    // `write-review`, which has no earlier check to fall through from.
+    let (Some(analyze), Some(last_run)) = (analyze, analyze.and_then(|a| a.last_run.clone()))
+    else {
+        return AnalyzeFreshness::NeverAnalyzed;
+    };
+    let base = analyze
+        .analyzed_against
+        .as_deref()
+        .map(str::trim)
+        .filter(|sha| !sha.is_empty());
+    let Some(base) = base else {
+        return undeterminable("the record carries no analyzed-against sha");
+    };
+
+    let Ok(repository) = git2::Repository::discover(repo) else {
+        return undeterminable("no git repository found");
+    };
+    // `revparse_single`, not `Oid::from_str`, for the reason `stale_review_block`
+    // records: the latter zero-pads a short hex string into an id matching
+    // nothing, so an abbreviated sha would fail the check silently.
+    let Ok(base_tree) = repository
+        .revparse_single(base)
+        .and_then(|object| object.peel_to_commit())
+        .and_then(|commit| commit.tree())
+    else {
+        return undeterminable(&format!(
+            "analyzed-against {} does not resolve in this tree",
+            &base[..base.len().min(8)]
+        ));
+    };
+    let head_tree = repository
+        .head()
+        .and_then(|head| head.peel_to_commit())
+        .and_then(|commit| commit.tree())
+        .ok();
+
+    let Some(mut candidates) = changed_analyze_subjects(
+        &repository,
+        &base_tree,
+        head_tree.as_ref(),
+        rel_dir,
+        compare,
+    ) else {
+        return undeterminable("the diff could not be computed");
+    };
+
+    // The record's own write is not a change to its subject.
+    candidates.retain(|path| {
+        !path.ends_with("/spec.md")
+            || spec_changed_beyond_analyze_block(
+                &repository,
+                &base_tree,
+                head_tree.as_ref(),
+                repo,
+                path,
+                compare,
+            )
+    });
+
+    // A repo-wide rename says what it said before (§spec-lifecycle case (a)),
+    // the same exemption `stale_review_block` applies. Only available on the
+    // committed path, where both trees exist; on the working-tree path a
+    // rename-only edit reports `Stale`, and that asymmetry is the safe
+    // direction — the notice is advisory and re-running a read-only analyze
+    // costs nothing, whereas a false `Current` is the failure being closed.
+    let changed: BTreeSet<String> = match (compare, head_tree.as_ref()) {
+        (Compare::CommittedHead, Some(head_tree)) if !candidates.is_empty() => {
+            let index = crate::primitives::mechanical_sweep::SweepIndex::build(
+                &repository,
+                &base_tree,
+                head_tree,
+            );
+            candidates
+                .into_iter()
+                .filter(|path| index.changed_beyond_spelling(path))
+                .collect()
+        }
+        _ => candidates,
+    };
+
+    let analyzed_against = base.to_string();
+    if changed.is_empty() {
+        return AnalyzeFreshness::Current {
+            last_run,
+            analyzed_against,
+        };
+    }
+    AnalyzeFreshness::Stale {
+        last_run,
+        analyzed_against,
+        paths: changed.into_iter().collect(),
+    }
+}
+
+/// Every analyze subject that differs between `base_tree` and `compare`'s
+/// reference point, as repo-relative paths.
+///
+/// `None` when the diff could not be computed or walked — the caller turns
+/// that into [`AnalyzeFreshness::Undeterminable`] rather than an empty set, so
+/// an unreadable diff never reads as a clean one.
+fn changed_analyze_subjects(
+    repository: &git2::Repository,
+    base_tree: &git2::Tree<'_>,
+    head_tree: Option<&git2::Tree<'_>>,
+    rel_dir: &str,
+    compare: Compare,
+) -> Option<BTreeSet<String>> {
+    let diff = match compare {
+        Compare::CommittedHead => {
+            repository.diff_tree_to_tree(Some(base_tree), Some(head_tree?), None)
+        }
+        Compare::WorkingTree => {
+            let mut options = git2::DiffOptions::new();
+            options
+                .include_untracked(true)
+                .recurse_untracked_dirs(true)
+                .pathspec(rel_dir);
+            repository.diff_tree_to_workdir_with_index(Some(base_tree), Some(&mut options))
+        }
+    }
+    .ok()?;
+
+    let prefix = format!("{rel_dir}/");
+    let mut candidates: BTreeSet<String> = BTreeSet::new();
+    diff.foreach(
+        &mut |delta, _| {
+            if let Some(path) = delta.new_file().path().or_else(|| delta.old_file().path()) {
+                let path = path.to_string_lossy().replace('\\', "/");
+                if let Some(rest) = path.strip_prefix(&prefix)
+                    && is_analyze_subject(rest)
+                {
+                    candidates.insert(path);
+                }
+            }
+            true
+        },
+        None,
+        None,
+        None,
+    )
+    .ok()?;
+    Some(candidates)
+}
+
+/// Whether a `spec.md` change reaches past the spec's own `analyze:` block.
+///
+/// Reuses [`crate::primitives::write_review::splice_top_level_block`] with an
+/// empty replacement to excise the block from both sides, then compares what
+/// is left. Sharing that function rather than re-deriving "find the top-level
+/// key and its extent" is deliberate for the reason the splice was generalized
+/// in the first place: two implementations of the same region logic agree
+/// until one meets a frontmatter shape the other has not.
+///
+/// Anything it cannot read counts as a real change. The alternative —
+/// treating an unreadable side as "analyze-only, therefore excluded" — would
+/// silently drop a candidate the gate exists to catch.
+fn spec_changed_beyond_analyze_block(
+    repository: &git2::Repository,
+    base_tree: &git2::Tree<'_>,
+    head_tree: Option<&git2::Tree<'_>>,
+    repo: &Path,
+    path: &str,
+    compare: Compare,
+) -> bool {
+    let blob_text = |tree: &git2::Tree<'_>| -> Option<String> {
+        let entry = tree.get_path(Path::new(path)).ok()?;
+        let blob = entry.to_object(repository).ok()?.peel_to_blob().ok()?;
+        String::from_utf8(blob.content().to_vec()).ok()
+    };
+    let Some(before) = blob_text(base_tree) else {
+        return true;
+    };
+    let after = match compare {
+        Compare::CommittedHead => match head_tree.and_then(blob_text) {
+            Some(text) => text,
+            None => return true,
+        },
+        Compare::WorkingTree => match std::fs::read_to_string(repo.join(path)) {
+            Ok(text) => text,
+            Err(_) => return true,
+        },
+    };
+
+    let stripped = |text: &str| -> Option<String> {
+        let spec_path = Path::new(path);
+        let (fm_text, body) = split_frontmatter(text, spec_path).ok()?;
+        Some(format!(
+            "{}\n---\n{body}",
+            crate::primitives::write_review::splice_top_level_block(fm_text, "analyze", "")
+        ))
+    };
+    match (stripped(&before), stripped(&after)) {
+        (Some(before), Some(after)) => before != after,
+        // A side whose frontmatter does not split is not a side we can clear.
+        _ => true,
+    }
+}
+
+/// The staleness gate check over the `analyze:` record: `Some(blocked)` when
+/// the recorded analysis no longer describes the committed corpus.
+///
+/// Ordered after [`analyze_gate_block`]'s two checks, mirroring how
+/// [`stale_review_block`] sits behind the `review:` presence and blocking
+/// checks, and for the same reason: this is the weakest of the three claims.
+/// The others say the analysis is missing or failing; this one says a passing
+/// analysis is out of date.
+///
+/// [`AnalyzeFreshness::Undeterminable`] does **not** block — it rides a
+/// guidance line on the passing verdict instead. A gate that blocks on its own
+/// inability to check is one people route around, which is the disposition
+/// `stale_review_block` already settled on; the difference is that this one
+/// says so rather than failing open in silence.
+fn stale_analyze_block(
+    repo: &Path,
+    rel_dir: &str,
+    analyze: Option<&AnalyzeBlock>,
+    project: &str,
+) -> Option<CheckReviewGateResult> {
+    let AnalyzeFreshness::Stale {
+        analyzed_against,
+        paths,
+        ..
+    } = analyze_freshness(repo, rel_dir, analyze, Compare::CommittedHead)
+    else {
+        return None;
+    };
+    let shown: Vec<&str> = paths.iter().take(3).map(String::as_str).collect();
+    let more = paths.len().saturating_sub(shown.len());
+    let tail = if more > 0 {
+        format!(" (+{more} more)")
+    } else {
+        String::new()
+    };
+    Some(CheckReviewGateResult {
+        passed: false,
+        blocked_by: Some(ReviewGateBlock::AnalyzeStale),
+        message: Some(format!(
+            "blocked: analysis is stale — {} artifact(s) changed since analyzed-against {}: {}{tail}",
+            paths.len(),
+            &analyzed_against[..analyzed_against.len().min(8)],
+            shown.join(", ")
+        )),
+        guidance: Some(format!(
+            "Re-run /{project}:analyze so the recorded findings describe the current artifacts."
+        )),
+        violations: vec![],
+    })
+}
+
+/// Any `.md` artifact under the feature — the analyze record's subject set.
+///
+/// Deliberately wider than [`is_durable_contract`], and the two must not be
+/// merged: a review reads *code*, so `review.md` is its output rather than its
+/// input, while an analysis reads *artifacts*, and `review.md` plus the
+/// `review:` block are among the ones its families assert on. The narrowing
+/// that keeps this safe is the `analyze:`-block exclusion in
+/// [`analyze_freshness`], not a shorter file list.
+fn is_analyze_subject(rel_within_feature: &str) -> bool {
+    Path::new(rel_within_feature)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
 }
 
 /// A scenario or the data model — the artifacts a review actually reads.
@@ -809,14 +1177,25 @@ mod tests {
             .to_string()
     }
 
-    /// A spec whose review points at `sha`, plus a plan claiming `runtime/src/`.
+    /// A spec whose review **and** analysis both point at `sha`.
+    ///
+    /// Both, because an `analyzed-against` that does not resolve in the
+    /// fixture's repo is genuinely undeterminable and the passing gate says so
+    /// — the same fixture correction the analyze presence check needed when it
+    /// landed, for the same reason: the check working, not the check wrong.
     fn seed_reviewed_at(repo: &Path, sha: &str) {
+        seed_records_at(repo, sha, sha);
+    }
+
+    /// A spec whose review points at `review_sha` and whose analysis points at
+    /// `analyze_sha`, so a test can move one without the other.
+    fn seed_records_at(repo: &Path, review_sha: &str, analyze_sha: &str) {
         fs::write(
             repo.join("specs/007-gate/spec.md"),
             format!(
                 "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  \
-                 reviewed-against: {sha}\n  must-violations: 0\n  should-violations: 0\n  \
-                 low-confidence: 0\n  blocking: false\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n"
+                 reviewed-against: {review_sha}\n  must-violations: 0\n  should-violations: 0\n  \
+                 low-confidence: 0\n  blocking: false\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: {analyze_sha}\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n"
             ),
         )
         .unwrap();
@@ -901,8 +1280,14 @@ mod tests {
         git_commit_all(tmp.path(), "sweep: govern -> ductus");
 
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
-        assert!(
-            result.passed,
+        // Asserted on the review reason, not on `passed`: recording a review
+        // rewrites the spec's `review:` block, which is an analyze subject, so
+        // this fixture's analyze record is legitimately superseded. `passed`
+        // used to stand in for "the review is not stale" and stopped being
+        // that the moment a ninth check joined the gate.
+        assert_ne!(
+            result.blocked_by,
+            Some(ReviewGateBlock::ReviewStale),
             "a rename sweep must not stale the review: {result:?}"
         );
     }
@@ -970,7 +1355,14 @@ mod tests {
         git_commit_all(tmp.path(), "bookkeeping only");
 
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
-        assert!(result.passed, "{result:?}");
+        // `tasks.md` is not a review contract. It *is* an analyze subject, so
+        // the analyze half legitimately fires here; this test owns the review
+        // scoping only.
+        assert_ne!(
+            result.blocked_by,
+            Some(ReviewGateBlock::ReviewStale),
+            "{result:?}"
+        );
     }
 
     #[test]
@@ -986,7 +1378,13 @@ mod tests {
         git_commit_all(tmp.path(), "record the review");
 
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
-        assert!(result.passed, "{result:?}");
+        // The review half only — this same bookkeeping *does* supersede the
+        // analyze record, which is the pipeline order rather than a defect.
+        assert_ne!(
+            result.blocked_by,
+            Some(ReviewGateBlock::ReviewStale),
+            "{result:?}"
+        );
     }
 
     #[test]
@@ -1495,8 +1893,18 @@ mod tests {
         git_commit_all(tmp.path(), "commit the reviewed-at edit");
 
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
-        assert!(result.passed, "{result:?}");
-        assert!(result.guidance.is_none(), "{:?}", result.guidance);
+        // Scoped to the uncommitted-contract notice this test owns. The
+        // analyze record here points one commit back — the commit that wrote
+        // it — so its own freshness line is a separate, correct signal.
+        assert!(
+            !result
+                .guidance
+                .as_deref()
+                .unwrap_or_default()
+                .contains("could not be inspected"),
+            "{:?}",
+            result.guidance
+        );
     }
 
     #[test]
@@ -1515,9 +1923,17 @@ mod tests {
         }
 
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
-        assert!(result.passed, "{result:?}");
+        assert_ne!(
+            result.blocked_by,
+            Some(ReviewGateBlock::ReviewStale),
+            "{result:?}"
+        );
         assert!(
-            result.guidance.is_none(),
+            !result
+                .guidance
+                .as_deref()
+                .unwrap_or_default()
+                .contains("uncommitted durable contract(s):"),
             "bookkeeping churn is not a contract: {:?}",
             result.guidance
         );
@@ -1541,5 +1957,258 @@ mod tests {
             !guidance.contains("uncommitted durable contract(s):"),
             "it must not claim to have found specific files: {guidance}"
         );
+    }
+
+    // --- gate check 9: analyze staleness ------------------------------------
+
+    /// The hole this check closes: `review → fix → done` used to pass the gate
+    /// on an analysis recorded before the fixes, because the presence check
+    /// asks only whether `last-run` is set.
+    #[test]
+    fn a_stale_analyze_record_blocks_and_names_the_changed_artifacts() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        fs::create_dir_all(tmp.path().join("specs/007-gate/scenarios")).unwrap();
+        fs::write(
+            tmp.path().join("specs/007-gate/scenarios/retry.md"),
+            "# Retry\n\n## Open Questions\n\n*None.*\n",
+        )
+        .unwrap();
+        let base = git_commit_all(tmp.path(), "base");
+
+        // The review is current as of HEAD; only the analysis lags.
+        seed_records_at(tmp.path(), &base, &base);
+        let mid = git_commit_all(tmp.path(), "record both against base");
+        seed_records_at(tmp.path(), &mid, &base);
+        fs::write(
+            tmp.path().join("specs/007-gate/tasks.md"),
+            "# Tasks\n\n## 1. Work\n\n- [x] Do it\n\n- **Done when**: done.\n",
+        )
+        .unwrap();
+        git_commit_all(tmp.path(), "tick a task after the analysis");
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(!result.passed, "{result:?}");
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::AnalyzeStale));
+        let message = result.message.unwrap();
+        assert!(message.contains("analysis is stale"), "{message}");
+        assert!(message.contains("tasks.md"), "{message}");
+        assert!(
+            result.guidance.unwrap().contains("/ductus:analyze"),
+            "guidance must name the command that clears it"
+        );
+    }
+
+    /// The exclusion the whole rule rests on. Measured across this repo, the
+    /// rule without it flagged **all 54** recorded specs, because the
+    /// corpus-wide analyze run had written its own block into every one; with
+    /// it, 1 of 54 flags.
+    #[test]
+    fn the_records_own_write_does_not_stale_it() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        let c1 = git_commit_all(tmp.path(), "base");
+        seed_records_at(tmp.path(), &c1, &c1);
+        let c2 = git_commit_all(tmp.path(), "record both against c1");
+
+        // Exactly what `write-analysis` does, and nothing else: rewrite the
+        // analyze block in place. `reviewed-against` deliberately stays at c1
+        // — the `review:` block is an analyze subject too, so moving it in the
+        // same commit would make this diff genuinely reach past the block and
+        // the test would prove nothing about the exclusion.
+        let spec = tmp.path().join("specs/007-gate/spec.md");
+        let text = fs::read_to_string(&spec).unwrap();
+        fs::write(
+            &spec,
+            text.replace("advisory: 2", "advisory: 7").replace(
+                &format!("analyzed-against: {c1}"),
+                &format!("analyzed-against: {c2}"),
+            ),
+        )
+        .unwrap();
+        git_commit_all(tmp.path(), "rewrite only the analyze block");
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(result.passed, "{result:?}");
+        assert_ne!(result.blocked_by, Some(ReviewGateBlock::AnalyzeStale));
+    }
+
+    /// A `spec.md` edit reaching past the analyze block is a real change.
+    /// The exclusion is scoped to the block, not to the file.
+    #[test]
+    fn a_spec_edit_outside_the_analyze_block_is_stale() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        let c1 = git_commit_all(tmp.path(), "base");
+        seed_records_at(tmp.path(), &c1, &c1);
+        let c2 = git_commit_all(tmp.path(), "record both against c1");
+
+        let spec = tmp.path().join("specs/007-gate/spec.md");
+        let text = fs::read_to_string(&spec).unwrap();
+        fs::write(
+            &spec,
+            text.replace(
+                &format!("analyzed-against: {c1}"),
+                &format!("analyzed-against: {c2}"),
+            )
+            .replace(
+                "# 007 — Gate\n",
+                "# 007 — Gate\n\nA new acceptance criterion.\n",
+            ),
+        )
+        .unwrap();
+        git_commit_all(tmp.path(), "edit the body alongside the record");
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::AnalyzeStale));
+    }
+
+    /// `review.md` is an analyze subject though it is deliberately **not** a
+    /// review contract. Excluding it would exempt the single edit that most
+    /// often invalidates an analyze record.
+    #[test]
+    fn review_md_stales_the_analysis_though_it_never_stales_the_review() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        let base = git_commit_all(tmp.path(), "base");
+        seed_records_at(tmp.path(), &base, &base);
+        let mid = git_commit_all(tmp.path(), "record against base");
+        seed_records_at(tmp.path(), &mid, &base);
+        fs::write(
+            tmp.path().join("specs/007-gate/review.md"),
+            "# Review\n\nNo findings.\n",
+        )
+        .unwrap();
+        git_commit_all(tmp.path(), "write a review report");
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::AnalyzeStale));
+        assert!(result.message.unwrap().contains("review.md"));
+    }
+
+    /// Gate order: a stale review is the earlier defect and wins. Naming the
+    /// later gate for an earlier one sends a contributor to the wrong command.
+    #[test]
+    fn a_stale_review_is_reported_before_a_stale_analysis() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        fs::create_dir_all(tmp.path().join("specs/007-gate/scenarios")).unwrap();
+        fs::write(
+            tmp.path().join("specs/007-gate/scenarios/retry.md"),
+            "# Retry\n\n## Open Questions\n\n*None.*\n",
+        )
+        .unwrap();
+        let base = git_commit_all(tmp.path(), "base");
+        seed_records_at(tmp.path(), &base, &base);
+        git_commit_all(tmp.path(), "record both against base");
+        fs::write(
+            tmp.path().join("specs/007-gate/scenarios/retry.md"),
+            "# Retry\n\nA changed contract.\n\n## Open Questions\n\n*None.*\n",
+        )
+        .unwrap();
+        git_commit_all(tmp.path(), "change a durable contract");
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::ReviewStale));
+    }
+
+    /// An unresolvable `analyzed-against` — a rebase, a shallow clone — does
+    /// not block, and does not pass in silence either. A gate that blocked on
+    /// its own inability to check is one people route around; one that passed
+    /// quietly is the fail-open this file already paid for once.
+    #[test]
+    fn an_unresolvable_analyzed_against_passes_with_a_notice() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        let base = git_commit_all(tmp.path(), "base");
+        seed_records_at(
+            tmp.path(),
+            &base,
+            "0000000000000000000000000000000000000000",
+        );
+        git_commit_all(tmp.path(), "record against a sha that is not here");
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(result.passed, "{result:?}");
+        assert!(result.blocked_by.is_none());
+        let guidance = result.guidance.unwrap();
+        assert!(
+            guidance.contains("freshness could not be determined"),
+            "{guidance}"
+        );
+    }
+
+    /// AC12's reference point, on the shared implementation. The committed
+    /// comparison calls the record current while an uncommitted artifact
+    /// change is sitting in the tree; the working-tree comparison — the one
+    /// `/{project}:review` renders from — sees it.
+    #[test]
+    fn the_working_tree_comparison_sees_what_the_committed_one_cannot() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        let c1 = git_commit_all(tmp.path(), "base");
+        seed_records_at(tmp.path(), &c1, &c1);
+        let c2 = git_commit_all(tmp.path(), "record both against c1");
+        // Re-point the analyze record at c2 and nothing else, so the committed
+        // comparison is genuinely clean (the exclusion covers the only diff).
+        let spec_path = tmp.path().join("specs/007-gate/spec.md");
+        let text = fs::read_to_string(&spec_path).unwrap();
+        fs::write(
+            &spec_path,
+            text.replace(
+                &format!("analyzed-against: {c1}"),
+                &format!("analyzed-against: {c2}"),
+            ),
+        )
+        .unwrap();
+        git_commit_all(tmp.path(), "record the analysis against c2");
+
+        let spec = fs::read_to_string(&spec_path).unwrap();
+        let (fm_text, _) = split_frontmatter(&spec, &spec_path).unwrap();
+        let frontmatter: Frontmatter = serde_norway::from_str(fm_text).unwrap();
+        let analyze = frontmatter.analyze;
+
+        let committed = analyze_freshness(
+            tmp.path(),
+            "specs/007-gate",
+            analyze.as_ref(),
+            Compare::CommittedHead,
+        );
+        assert!(
+            matches!(committed, AnalyzeFreshness::Current { .. }),
+            "{committed:?}"
+        );
+
+        // Uncommitted, exactly as `write-review` leaves review.md — the state
+        // the gate's committed diff cannot see and the notice must.
+        fs::write(
+            tmp.path().join("specs/007-gate/review.md"),
+            "# Review\n\nWritten this session, not yet committed.\n",
+        )
+        .unwrap();
+
+        let working = analyze_freshness(
+            tmp.path(),
+            "specs/007-gate",
+            analyze.as_ref(),
+            Compare::WorkingTree,
+        );
+        let AnalyzeFreshness::Stale { paths, .. } = working else {
+            panic!("the working tree carries an uncommitted analyze subject: {working:?}");
+        };
+        assert!(paths.iter().any(|p| p.ends_with("review.md")), "{paths:?}");
+    }
+
+    /// A spec with no `analyze:` block reports never-analyzed rather than
+    /// undeterminable — the gate's own presence check reports it first, but
+    /// `write-review` has no earlier check to fall through from.
+    #[test]
+    fn an_absent_analyze_block_is_never_analyzed_not_undeterminable() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), NEVER_ANALYZED);
+        git_commit_all(tmp.path(), "base");
+        let freshness =
+            analyze_freshness(tmp.path(), "specs/007-gate", None, Compare::CommittedHead);
+        assert_eq!(freshness, AnalyzeFreshness::NeverAnalyzed);
     }
 }

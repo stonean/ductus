@@ -119,7 +119,7 @@ Run once per targeted feature (every in-progress or done spec under `--all`, oth
 6. <!-- llm:performReview --> Run the **efficiency** pass: flag N+1 queries, repeated work, and unbounded loops over user-controlled input.
 7. <!-- llm:performReview --> Run the **simplicity** pass: flag overengineering, premature abstraction, and dead branches; mark a finding auto-fixable when a simpler form is mechanically derivable. A dimension-restricting flag (`--security` / `--simplicity` / `--quality`) skips the unselected passes.
 8. Invoke `process-waivers` to classify the spec's `review.waivers` against the findings the passes just accumulated (apply / expire / retain / malformed / duplicate), emitting each notice it returns. **On a dimension-restricted run (`--security` / `--simplicity` / `--quality`), pass the skipped dimensions as `skipped-passes`** so a waiver whose rule did not fire is _retained_, not expired — the partial run cannot see the dimensions it didn't run, so it must not prune their waivers. The applied set is excluded from the blocking count; the expired set is dropped on the next write; the retained set is left in the frontmatter untouched. On an unrestricted run `skipped-passes` is empty and a waiver expires only when its file is gone or its rule genuinely no longer fires.
-9. Invoke `write-review` with the accumulated pass findings, the accumulated pass **observations**, the waiver results (`applied` / `expired`), and the scope to render `specs/NNN-feature/review.md`, update the spec `review:` frontmatter block, and capture each observation to `specs/inbox.md`. Supply the required scalars the primitives don't produce — `reviewed-at` (the current UTC timestamp) and `reviewed-against` (HEAD sha), both host-provided (as the session-write's `set-at` is); `diff-base` comes from step 1. It applies the cross-pass dedup (highest-severity-wins on rule + file + overlapping range), buckets findings into MUST / SHOULD / low-confidence / waived, prunes expired waivers (preserving any adopter-authored waiver fields on the survivors), records the skipped passes, renders the observations, and sets blocking when MUST violations remain. With `--fix`, apply the auto-fixable findings, re-run the affected passes, and invoke `write-review` a second time for the post-fix counts.
+9. Invoke `write-review` with the accumulated pass findings, the accumulated pass **observations**, the waiver results (`applied` / `expired`), and the scope to render `specs/NNN-feature/review.md`, update the spec `review:` frontmatter block, and capture each observation to `specs/inbox.md`. Supply the required scalars the primitives don't produce — `reviewed-at` (the current UTC timestamp) and `reviewed-against` (HEAD sha), both host-provided (as the session-write's `set-at` is); `diff-base` comes from step 1. It applies the cross-pass dedup (highest-severity-wins on rule + file + overlapping range), buckets findings into MUST / SHOULD / low-confidence / waived, prunes expired waivers (preserving any adopter-authored waiver fields on the survivors), records the skipped passes, renders the observations, and sets blocking when MUST violations remain. With `--fix`, apply the auto-fixable findings, re-run the affected passes, and invoke `write-review` a second time for the post-fix counts. The result also carries `analyze-freshness`, the state of the spec's `analyze:` record computed against the **working tree** at the moment of the write — render it as the `analyze` row described under [Output](#output). It never affects the exit code.
 
 ## Markdown-only reference
 
@@ -517,10 +517,14 @@ A spec MUST NOT advance from `in-progress` to `done` while its frontmatter
 records `review.blocking: true`. This is enforced as follows:
 
 1. **`/{project}:implement`** — before marking `status: done`, its `check-review-gate`
-   runs three checks in order, first failure wins. First, the feature
-   directory's markdown lint; a violation halts before the review block is
-   consulted. Then the `review:` block: a missing/null `review.last-run` (or
-   absent block) halts with
+   runs every check in a fixed order, first failure wins; the full order and
+   its message texts are canonical in the pre-done gate step of
+   `framework/commands/implement.md`, and only the two `review:` checks are
+   restated here. Ahead of them run the feature directory's markdown lint,
+   unresolved scenario open questions, and an undischarged fold — any of which
+   halts before the review block is consulted. Behind them run the review
+   staleness check and the `analyze:` checks. Then the `review:` block: a
+   missing/null `review.last-run` (or absent block) halts with
 
    ```text
    blocked: spec has not been reviewed — run /{project}:review before completing
@@ -678,13 +682,55 @@ Stdout summary (always), followed by the path to `review.md`:
   efficiency  ✓ 0 MUST   0 SHOULD
   simplicity  ✓ 0 MUST   0 SHOULD
 
+  analyze     ✗ last run 2026-09-06 against 683a1e0 — this review supersedes it
   captured    1 issue logged during work — run /{project}:groom to route
   blocking: no
   report:   specs/042-example-feature/review.md
+
+  next: /{project}:analyze, then the spec can advance to done
 ```
 
 The `captured` line is omitted when no issues were appended to the inbox in the
 review window. It is informational and never affects the exit code.
+
+### The `analyze` row
+
+`/{project}:review` is the command that most reliably _invalidates_ an analyze
+record — it rewrites `review.md` and the spec's `review:` block, `--fix`
+rewrites code, and an operator resolving MUST violations rewrites more — and it
+used to say nothing about it. The pipeline mandates
+`/{project}:review → /{project}:analyze → done` and the pre-done gate enforces
+both records, so the only thing carrying an operator from a passing review to
+the second gate was memory: the diligence dependency §design-principles rejects
+(spec 047, `analyze-record-freshness`).
+
+The row renders on **every** run, in one of four states, from the
+`analyze-freshness` field `write-review` returns:
+
+```text
+  analyze     ✗ never analyzed — run /{project}:analyze before done
+  analyze     ✗ last run 2026-09-06 against 683a1e0 — this review supersedes it
+  analyze     ✓ last run 2026-09-06 against 683a1e0 — current
+  analyze     ? freshness undeterminable — analyzed-against 683a1e0 does not resolve here
+```
+
+`current` is why this is a computed row rather than a fixed reminder: a
+`/{project}:review` that changed nothing leaves a genuinely current record, and
+reporting it superseded would be the false alarm that teaches operators to skip
+the row.
+
+The state is computed against the **working tree**, not committed trees. This
+command has just written `review.md` and the `review:` block while `HEAD` has
+not moved, so a committed comparison would report `current` at the exact moment
+it stopped being true. The pre-done gate reads committed trees instead, because
+it answers at a different moment — and both go through one implementation, so
+the row and the gate cannot disagree about whether a record is stale.
+
+**The row is a notice, not a gate.** `/{project}:review` has no authority over
+the `done` transition and does not acquire one here: `blocking`, the exit code,
+and the spec's `review.blocking` are all unchanged by it. The `next:` line
+follows for the same reason — it names the command the operator owes, it does
+not withhold anything.
 
 When MUST violations are present:
 
@@ -702,7 +748,12 @@ When MUST violations are present:
 
   spec cannot advance to done. Resolve violations and re-run /{project}:review,
   or run /{project}:review --waive <rule-id> --reason "..." for each waivable finding.
+  then /{project}:analyze, which the done gate also requires.
 ```
+
+The `analyze` row renders on the blocking path too. A blocked review does not
+make the second gate go away, and the fixes that clear the violations are
+exactly what supersedes the recorded analysis.
 
 Exit code: `0` when not blocking, `1` when blocking. Allows CI to gate on the
 exit code without parsing the report.

@@ -34,11 +34,12 @@ use std::path::Path;
 use serde::Deserialize;
 
 use crate::primitives::{
-    PrimitiveError, Result, read_text, rel_path, split_frontmatter, write_atomic,
+    PrimitiveError, Result, check_review_gate, read_text, rel_path, split_frontmatter, write_atomic,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    ReviewFinding, ReviewObservation, WriteReviewArgs, WriteReviewResult,
+    AnalyzeFreshness, Frontmatter, ReviewFinding, ReviewObservation, WriteReviewArgs,
+    WriteReviewResult,
 };
 
 /// Execute the `write-review` primitive.
@@ -144,6 +145,17 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
         write_atomic(&spec_path, &updated)?;
     }
 
+    // The analyze row `/{project}:review` renders (spec 047 AC12), computed
+    // AFTER the writes above and against the working tree — which is the whole
+    // point of the reference point. This call has just rewritten `review.md`
+    // and the spec's `review:` block, both of them analyze subjects, so the
+    // record it reports on is superseded from this moment; a committed
+    // comparison would say `current` until someone committed and would then be
+    // wrong retroactively. Reading the spec's `analyze:` block from `updated`
+    // rather than re-reading the file keeps the answer consistent with the
+    // bytes just written.
+    let analyze_freshness = analyze_freshness_of(&updated, &spec_path, &args.feature, repo);
+
     Ok(WriteReviewResult {
         path: rel_path(&review_path, repo),
         spec_path: rel_path(&spec_path, repo),
@@ -155,7 +167,43 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
         observations_captured,
         blocking,
         exit_code: i32::from(blocking),
+        analyze_freshness,
     })
+}
+
+/// The spec's analyze-record freshness against the working tree.
+///
+/// Delegates to [`crate::primitives::check_review_gate::analyze_freshness`] —
+/// the single implementation the gate also uses (spec 047 AC14) — so the row
+/// this primitive reports and the verdict the gate reaches cannot disagree
+/// about whether a record is stale. Only the reference point differs, and it
+/// differs because the two answer at different moments.
+///
+/// A spec whose frontmatter will not parse yields
+/// [`AnalyzeFreshness::Undeterminable`] rather than an error: the review
+/// itself has already been written by this point, and failing the whole call
+/// over the notice would trade a report for a row.
+fn analyze_freshness_of(
+    spec_text: &str,
+    spec_path: &Path,
+    feature: &str,
+    repo: &Path,
+) -> AnalyzeFreshness {
+    let root = paths::Paths::load(repo).specs_root;
+    let rel_dir = format!("{root}/{feature}");
+    let block = split_frontmatter(spec_text, spec_path)
+        .ok()
+        .and_then(|(fm_text, _body)| serde_norway::from_str::<Frontmatter>(fm_text).ok())
+        .and_then(|frontmatter| frontmatter.analyze);
+    match block {
+        Some(analyze) => check_review_gate::analyze_freshness(
+            repo,
+            &rel_dir,
+            Some(&analyze),
+            check_review_gate::Compare::WorkingTree,
+        ),
+        None => AnalyzeFreshness::NeverAnalyzed,
+    }
 }
 
 // -- observation capture -----------------------------------------------------
@@ -874,6 +922,70 @@ mod tests {
         fs::read_to_string(tmp.path().join("specs").join(feature).join("spec.md")).unwrap()
     }
 
+    /// AC12's reference point, at the primitive. A spec with no analyze
+    /// record reports `never-analyzed` rather than a defaulted state, so
+    /// `/{project}:review` can render the row that carries an operator to
+    /// the second gate.
+    #[test]
+    fn a_spec_with_no_analyze_record_reports_never_analyzed() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let result = run(&base_args("001-x"), tmp.path()).unwrap();
+        assert_eq!(result.analyze_freshness, AnalyzeFreshness::NeverAnalyzed);
+        // Never a gate: the row must not touch the command's verdict.
+        assert!(!result.blocking);
+        assert_eq!(result.exit_code, 0);
+    }
+
+    /// The whole point of the working-tree reference point. This primitive has
+    /// just rewritten `review.md` and the spec's `review:` block — both analyze
+    /// subjects — so the record it reports on is superseded from this moment.
+    /// A committed comparison would say `current` until someone committed, and
+    /// would then have been wrong retroactively.
+    #[test]
+    fn writing_a_review_supersedes_the_analyze_record_it_reports() {
+        let tmp = spec_repo(
+            "001-x",
+            concat!(
+                "status: in-progress\ndependencies: []\n",
+                "analyze:\n  last-run: 2026-09-06T00:00:00Z\n",
+                "  analyzed-against: PLACEHOLDER\n  hard-fail: 0\n",
+                "  blocking-findings: 0\n  advisory: 0\n  unexamined: 0\n  blocking: false",
+            ),
+        );
+        // A real repo, and a record pointing at its only commit.
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        let sha = {
+            let mut index = repository.index().unwrap();
+            index
+                .add_all(["*"], git2::IndexAddOption::DEFAULT, None)
+                .unwrap();
+            index.write().unwrap();
+            let tree = repository.find_tree(index.write_tree().unwrap()).unwrap();
+            let sig = git2::Signature::now("Test", "test@example.com").unwrap();
+            repository
+                .commit(Some("HEAD"), &sig, &sig, "base", &tree, &[])
+                .unwrap()
+                .to_string()
+        };
+        let spec = tmp.path().join("specs/001-x/spec.md");
+        let text = fs::read_to_string(&spec).unwrap();
+        fs::write(&spec, text.replace("PLACEHOLDER", &sha)).unwrap();
+
+        let result = run(&base_args("001-x"), tmp.path()).unwrap();
+        let AnalyzeFreshness::Stale { paths, .. } = &result.analyze_freshness else {
+            panic!(
+                "expected the record to be superseded: {:?}",
+                result.analyze_freshness
+            );
+        };
+        assert!(
+            paths.iter().any(|p| p.ends_with("review.md")),
+            "the report this call just wrote is an analyze subject: {paths:?}"
+        );
+        // Still not a gate.
+        assert_eq!(result.exit_code, 0);
+    }
+
     #[test]
     fn empty_scope_report_has_zero_findings_and_is_not_blocking() {
         let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
@@ -889,6 +1001,11 @@ mod tests {
         assert!(report.contains("must-violations: 0"));
         assert!(report.contains("Review scope is empty"));
         assert!(report.contains("## MUST violations (blocking)\n\n*None.*"));
+        // AC12: the row renders on an empty scope too. This path jumps
+        // straight here from step 1, so it is the one most likely to skip a
+        // field added later — and an empty scope is exactly when an operator
+        // needs telling that the second gate is still owed.
+        assert_eq!(result.analyze_freshness, AnalyzeFreshness::NeverAnalyzed);
     }
 
     #[test]
