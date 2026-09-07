@@ -101,14 +101,107 @@ review:
   blocking: false
 next-criterion: 28
 analyze:
-  last-run: 2026-09-06T14:46:11Z
-  analyzed-against: 8c4ca744bdfb9fcd758c52fe1338d436d1cd7d2b
+  last-run: 2026-09-07T19:19:53Z
+  analyzed-against: 1ca5843ed3ac349a69461c20462ad882083b7066
   hard-fail: 0
   blocking-findings: 0
   advisory: 0
-  unexamined: 2
-  unexamined-by-reason:
-    not-a-live-claim: 2
+  unexamined: 0
+  analyzed-digest:
+    data-model.md: 6adcb51af5d170099dc42819aa0da861eb2858c2db178dbf6dddc85c5a103a32
+    plan.md: 83fd97d76c64d20beb729ce68149d23f3e1e388711ec0371818aa49b4f0304bf
+    review.md: 1abd4b48095b2161d234f32557ae64708ffa92d38615ae3c1130b2cd42887dba
+    scenarios/a-done-spec-has-no-transition-to-gate.md: bad3db76667fc6620b34a2a6dfa39fb6e461523984128314df82f05717a74493
+    scenarios/adopter-corpus-link-integrity.md: a36b79e3e04489a765cfab1c3e657ac0c34ef66a289d0512866a27303eeb5358
+    scenarios/adopter-generator-promotion.md: 7a80f616c7247ba894f16efb34de307836ac317d6396224a420efce4218e7af2
+    scenarios/analyze-artifact-checks.md: 5d8f5e76161fb02ff07c23d77a358349be4a04b7afae103b0136deb955c7e880
+    scenarios/anchor-reference-kinds.md: 178e97f7cad2d6434284fa77f7c965635a6a85cee9bdeed7bd72c45c2c3fc9f2
+    scenarios/append-inbox-comment-aware-write.md: c26a16c3be1a7e1c52eca2254061d545ec62b3b7d7c865affd1fa679d6c0ab6b
+    scenarios/append-primitive-marker-normalization.md: 42f66c331c19205f62f29d4ff2ef96a3d51ffab8aa38bf9df4ed09eeef6f8990
+    scenarios/append-task-honours-slug-with-explicit-body.md: d831ac5fada945c565042a7216a7d7dd0fa7477efb635597901a5720926cf726
+    scenarios/apply-manifest-substitution-contract.md: 046f9c2ba1ee98e3ae72ab670e5955503042c8c873d1caf7474ace8ee5a284b1
+    scenarios/apply-manifest.md: 55c22d1778922e60da1392cd35a3672a27dc455ee5cfb3f8a75a5d1d1041e3ac
+    scenarios/archive-network-hardening.md: 127616981fb074c9e21ef54b4f58d74413f1fdc31af349529601b8dbc096a512
+    scenarios/ask-consolidation.md: c9034a78aad6de2a680545e155698aabfc269a41a88f5af42bf143a960275fe2
+    scenarios/block-element-scanner.md: 5a9512b307d28410b18d35199f01f7ceb1a7d250e8614cedb661d4104f7effdd
+    scenarios/check-artifacts-skipped-targets.md: 4713c3cc6ada06504d74ed9a4a29fef3db3bb0e7a12b67bad2c4793699880d39
+    scenarios/check-stuck-read-blob-reuse.md: b5112173b0a1e7fc0b17a3540bc9e84972d22240461d4351ecc0bbcff2ed3508
+    scenarios/check-stuck-tasks-md-advancement.md: af319861c05805255dc7a6084cbf8c378e667d8e7f964f32d02485c89f23fd20
+    scenarios/clarify-command-acceleration.md: 4c27a1159c752a87957c2dd7d55b131ea7000eb1b06d27c1f06a7935ff264236
+    scenarios/cli-config-dir-per-contributor.md: 3764b5f4f1b7c618c6255f6feef1c7db06f5ca43774d98095a1a01403b4bb391
+    scenarios/commands-dir-parameterization.md: 61e6896a156386a62c24253cc91db2cfb0b76dd09491a11e53fdfaef3b1f7d7c
+    scenarios/config-resolution-single-probe.md: fc602eb6f2d64f6d1956da411b809af3a53a0c91b26dd198f6b1af61e3347ab4
+    scenarios/constitution-excerpts-as-skill-resources.md: 56192a1689b5afe2bfc51928c27b7d567518816b79c8df0a50250bd3328a8e86
+    scenarios/coverage-expansion-primitives.md: e58ada54e9c5afb09d71dcffcf632cbb3127b35fc5a423d0aacfebbb1df07aad
+    scenarios/coverage-residue-cleanup.md: 04dc18f12694ed8b02821b50498c7e8ff8123993de72a27ae0d7c8722e024637
+    scenarios/criterion-adopter-scope-destinations.md: a990af1fda5f383f2a48d72f11ecef45525089f432046a714fd5fdadd7a12ba3
+    scenarios/criterion-label-assignment.md: 4a1a3acc5d5ddcd44a07582988e06a1b97b2339c71482ccd24765fefb33207a0
+    scenarios/criterion-non-assertion-phrasings.md: 9509f4ef1affca714b18825cad5870d7d8edbf6c8f8beb2f81fcb81363456e83
+    scenarios/criterion-path-existence-family.md: 668bd1d22a6557ed95fad7b6dd96b9386c67239057827403ca73368e181c0c26
+    scenarios/dashboard-primitive.md: 6ba6e4381ae54beb99453b308c7b50332b235ef0a90d19a559c63623483ac6d3
+    scenarios/derive-boundary-uncommitted-spec-dir.md: ca28aaef13416801e00bc40d9d58da09c7a513b237bb659597e1efc91a0aaef5
+    scenarios/derive-references-unstaged-drift-is-reported.md: a16e7ec25a3be056668079316b47b915bf105d0292c57ffad026a0e577a458e5
+    scenarios/derive-unparseable-frontmatter-is-reported.md: 5bb6709b881d43b5dc048ee95aebafcf207a18dbc75d5ab30dfb5689f1c077fb
+    scenarios/done-when-authoring-forms.md: 080f8717135b67c8400e072dae02f172e40cb0b6ad596c3e227d6cc5f90d0191
+    scenarios/extension-request-hygiene.md: 1b0c77335af3a2caf82e01896207d60261cd0071a8bc8da3162b9785f7c16e48
+    scenarios/fetch-archive-dns-rebinding.md: 39482bed2a531d36dce770c9c20ae3848ba254da0d02ee51d5c6feabe7967031
+    scenarios/framework-list-dedup.md: 8d8763229461b00c016da1d9705433c0846777047047515961d3537cc1447322
+    scenarios/govern-bootstrap.md: 090bdd6076d1118b15f59c806b49bfd37037fb2b60ecdd33d01580018ca7b770
+    scenarios/groom-command-acceleration.md: 59a13672e9f2936610d37d086cba0e34f3342958c513233ac252a4c83d7b85f2
+    scenarios/host-protocol-conformance.md: 13c3a2d89eedf4f79e66c9d4e8e97a9b7361e6fd1fa340a76c46730c28e4d542
+    scenarios/implement-completion-gate.md: d478a1ff6537a46cff8a001932354849862449429f99243275674004742bc144
+    scenarios/link-adjacent-drift-family.md: 235f5563d2b089d9f926dbb9c234c09a3f4bd502d89ba401db0c65d0c0c351fe
+    scenarios/lint-markdown-tool-resolution.md: 06ec661f04cfabf19e7950adfb86d3db440ba48cd4ec8095c34897e0a96d1986
+    scenarios/mark-task-backtick-headings.md: a405d3e4b08ef15de8037541c05a93f70a5553f4a72407b917aed4e50ba20507
+    scenarios/mark-task-untick-symmetry.md: 0b04c0e1f2091244701f75c435884cb0857a2be728eac41f84fbe41c8df92fb0
+    scenarios/mcp-arg-unknown-field-strictness.md: 57c17fb05d72b8f47f64140fc0d8ba6df0c0b8f757282e41d1036aa222309a1b
+    scenarios/merge-managed-block-multi-subsection-end.md: 7f2c02450d100d801dccbffb9336331a114257fd2040d36ad298d65e6edc3234
+    scenarios/merge-managed-block-renamed-subsection.md: c03abb5ae0097d3b15c8a74ef472cdf77d0946ffd2a1625c79351cae300e9a84
+    scenarios/merge-managed-block-subsection-insertion.md: 2a0a7f5f443ef78811f1550a34b419054c9d9bb29bc800b51b86033be350e2f8
+    scenarios/merge-managed-block-trailing-append.md: 6f18642416470c96b6f582a0305d62137a9ae2ec6f1ec054eccac421d8e68a4f
+    scenarios/numbered-heading-grammar-single-source.md: 359d35403e9b3f853e4a7cbcca71f3fc032ad556406bae6a584272c6bcd97862
+    scenarios/opencode-command-resolution.md: 250386554e1cab7548a5748272f75fa9d948378090cee5ae11570ce4bb76cf3a
+    scenarios/orphan-check-adopter-authored-references.md: 3da4993b02a464f5d69b7fcf780d8ce60610c81b09d3cf95947f799e8bf0cac3
+    scenarios/orphaned-reference-check.md: 146c5bb872a31b732234b1dc5cc404b858a5b71046a4b0979a8694a5543674b2
+    scenarios/orphaned-reference-historical-roots.md: 246412993db6d903a5f7d47699f5a5d9a22105157e6b862be68683a2736da195
+    scenarios/parser-nested-list-continuation.md: 60eb9129494668bb18045e94e9c6b208353a9a1195ef384cf2aeb6d2482ce139
+    scenarios/parser-walker-conventions.md: b53b0ffcadc43ec54c18f6b473b84021cddef418bf6481227b87f06a6acf08cb
+    scenarios/primitive-robustness-hardening.md: 059cab40bdaffd4ff8408255ddb4eac2a4fe8f091b7eb5bcbbcd008f2f6bb8cc
+    scenarios/project-directory-resolution-chain.md: d43223e3f037960a24f5660a9944aae0fe02df5f1da10257477926a63cfb5a82
+    scenarios/resolve-references-cli-exec-wiring.md: 3ddff8ea493af57fdacb9fab644d33ae95e766cfe7b7d5b11a27d7f083ce5c59
+    scenarios/review-base-includes-the-transition-commit.md: bead0e5e5973049144a0e5fe0dda38ef508234b9db469aee91d7c1d71ca1dfd2
+    scenarios/review-exec-wiring.md: 93a1adbbf6f81d20d99ea0bca31c59891fdbc7c21fdde6f2da0cb76b547f9b46
+    scenarios/review-gate-unexaminable-contracts.md: 325800f6bcb755514183c176b71cc31abf7e55c8ea709e63349ca029afb3858b
+    scenarios/review-observations-write-through.md: abbb178a3784b17314fe1a0f8e414a2718ea32cb8ee06191d1242ec93599c177
+    scenarios/review-runtime-acceleration.md: 8ae08dc867ff3646254e1886a73afffc206b5d7b2d894a88886794577b1d76b3
+    scenarios/review-scope-parse-fidelity.md: aacc1429dd36c837b609a1551ef4692cb071c6bbff4ee010a7cdba486e17fdb8
+    scenarios/review-scope-plan-affected-table-format.md: 33a2f84bf8d9a83375018cadd42a21ab11f2969eb8f1f311fed1530f5065c156
+    scenarios/review-scope-union.md: 36b9dd7bcd4981778fc5316172b2bbff58c4df4d2e9e1e3563e9e16c132d5392
+    scenarios/review-staleness-gate.md: 09cae1a42f0107d1a9357ae06d566a38526997012701fdd770ddd4754fea2ea7
+    scenarios/review-staleness-on-done-specs.md: b3eebafe64c56066a28b1b4de540fbd4a9cdeb139c0783587622983ca2c5103c
+    scenarios/runtime-primitive-structural-bugs.md: 7fb973b4c5ef5c0268df24996c585f9bf70465f4f7e36ad237d129894f5fd366
+    scenarios/runtime-review-019-hardening.md: 9b759c9ce4fc57702e28d764179dcae7b7df9d04dc99ac166b3c0726cf3f9449
+    scenarios/scaffolding-primitives.md: e004025fdbac0d7a85a3d802ea2ec006109ff18619982f4d4eca7d95fff32a2b
+    scenarios/scenario-open-question-signal.md: 5f600a6611ca3a6a367b7e9582c131bd4191334c092737b69713111c26228710
+    scenarios/scenario-question-parser-fix.md: bdcaf5f9bb7d0ff795d6e3a6a5045a79afc63b55d8ce4b3331f807c337bf2ada
+    scenarios/sibling-symlink-trust-boundary.md: 1137bf72ad7abafd46ce49b0a8aaea14cf8d025bfc19ae076591455d683bfc89
+    scenarios/skipscanner-inline-code-exemption.md: ab402c94a437b19b1b9bdd5a58ad3303d6bb67e9822041520522e3a066c43ab5
+    scenarios/spec-side-parser-hardening.md: c42a4c32403c47bef48849fedb76c75714048c7dcfd28b89625be702c716490e
+    scenarios/specify-routes-before-scaffolding.md: e008baae7f44f2d4ea73d45df18dd6e1f2cc435cdc5562fd8c148494a6d0c520
+    scenarios/the-committed-tree-horizon.md: 77ad933415ea4cc42016d55f524c2a90146a683e41634ba3a945db0d2c693b5c
+    scenarios/traverse-deps-cycle-check.md: 81debabcec79ccfa9b77fb5bdecf9e902ad4f3304d1b2b3d0613308ec26ad913
+    scenarios/unchecked-done-when-clause-tally.md: d4ec04b41d2ddc3b7a656313cc45fa735eab43b2333c219b79cac10d5a60c88f
+    scenarios/unreadable-scenario-is-reported.md: 569047275a9d821b190581ae2adba05492a698aa50bc19d696cccee0d38be159
+    scenarios/waiver-processing-order.md: e3237b3ad4a9f5e8b06d08256f17732c007f07c1cc30d0721729b87e8c8a5c38
+    scenarios/write-analysis-and-the-second-gate.md: 22fff1f9ef829b003fc932fd33056aa3f15cedc4f38b4d84e3f99325a4171814
+    scenarios/write-boundary-path-normalization.md: aea2703ee38d7a2ab5806444dd12f99370bfee540bafd8935c9f20d43bd86dee
+    scenarios/write-review-known-field-quoting.md: 48b65cafacab7740d365586d51ae2f8db43344308229320a2d4204b570858147
+    scenarios/write-session-primitive.md: be022a0bb9fdea196fd6ec4ea48a68fc5552ab2253a4ba91d2c1b9972e2fd936
+    scenarios/writecode-boundary-derivation.md: 9e4d5b406b4d5e25c4a4dd9e5264995a5e4bc83075ec20eae2c3eb3e36adcd81
+    scenarios/writecode-payload-bundling.md: 5c343929c3a42ac4406a02c173b6979231127b9583aabae171fee1f747d5084b
+    scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
+    spec.md: 238dd171ba1b3abc81e684f98a04049e688594403a275be7d39947e1c4eee016
+    tasks.md: 57697148cf9c40c81b0a1df0f80fae7e29c5bfe7b82497493a5797b6b70f17ef
   blocking: false
 ---
 
