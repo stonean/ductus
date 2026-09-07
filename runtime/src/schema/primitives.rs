@@ -2683,6 +2683,23 @@ pub struct CheckReviewGateArgs {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum ReviewGateBlock {
+    /// The spec is already at `status: done`, so this gate has no
+    /// `in-progress → done` transition to authorize.
+    ///
+    /// Ordered before every other check, because every other check presumes a
+    /// pending transition. It is deliberately **not** `passed: true`: a gate
+    /// reporting "passed" for a spec it did not examine is the
+    /// `QUAL-CLAIM-001` conflation the rest of this enum exists to prevent,
+    /// and a caller could read it as authorization to transition a spec that
+    /// is already transitioned.
+    ///
+    /// It closes a defect [`Self::AnalyzeStale`] introduced: the completing
+    /// `set-status` rewrites `spec.md`, one of the analyze record's subjects,
+    /// so a spec's analysis is stale the moment it reaches `done`. Without
+    /// this check, re-running the completion gate on finished work reported a
+    /// stale analysis and directed the operator to re-run it — advice that
+    /// then appeared to work, which is worse than advice that plainly fails.
+    AlreadyDone,
     /// The feature directory's markdown files failed `markdownlint-cli2`
     /// (violations, or a non-zero exit the parser could not attribute).
     MarkdownLint,

@@ -379,6 +379,6 @@ Implements `scenarios/anchor-reference-kinds.md`. `resolve-anchor` treated every
 
 ## 108. The pre-done gate recognises a spec already at done
 
-- [ ] Implement the behavior described in `scenarios/a-done-spec-has-no-transition-to-gate.md`
+- [x] Implement the behavior described in `scenarios/a-done-spec-has-no-transition-to-gate.md`
 
 - **Done when**: `check-review-gate` returns a distinct done-state outcome — not `passed: true` — ordered ahead of the markdown lint, and `/{project}:implement` halts cleanly on it rather than reporting a stale analysis for finished work.

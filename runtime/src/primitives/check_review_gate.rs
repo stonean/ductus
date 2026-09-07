@@ -68,46 +68,15 @@ pub(crate) fn run_with_lint(
     }
     let rel_dir = format!("{root}/{}", args.feature);
 
-    // Gate check 1: every markdown file in the feature directory passes
-    // markdownlint (recursive — scenarios/ included; `**` matches zero or
-    // more directories, so the feature dir's own files are covered).
-    let lint_result = lint(
-        &LintMarkdownArgs {
-            paths: vec![format!("{rel_dir}/**/*.md")],
-            fix: false,
-        },
-        repo,
-    )?;
-    if !lint_result.clean {
-        let message = if lint_result.violations.is_empty() {
-            // Non-zero exit with nothing parseable: a config or runtime
-            // error, or a violation shape the parser does not recognize.
-            format!(
-                "blocked: markdownlint-cli2 exited {} for {rel_dir} — resolve the lint failure before completing",
-                lint_result.exit_code
-            )
-        } else {
-            format!(
-                "blocked: {} markdownlint violation(s) in {rel_dir} — resolve them before completing",
-                lint_result.violations.len()
-            )
-        };
-        return Ok(CheckReviewGateResult {
-            passed: false,
-            blocked_by: Some(ReviewGateBlock::MarkdownLint),
-            message: Some(message),
-            guidance: None,
-            violations: lint_result.violations,
-        });
-    }
-
-    // Gate check 2: no scenario under this feature carries an unresolved
-    // open question (spec 046).
-    if let Some(blocked) = scenario_question_block(&feature_dir, repo, &args.feature) {
-        return Ok(blocked);
-    }
-
-    // The spec's frontmatter, read once for gate checks 3 through 5.
+    // The spec's frontmatter, read once for every check that consults it.
+    // Read **before** the lint because gate check 0 below needs the status,
+    // and the status decides whether any other check is worth running.
+    //
+    // One consequence, stated rather than left to be discovered: a spec whose
+    // frontmatter will not parse now surfaces that error ahead of any lint
+    // violation it also has. That is the more fundamental defect of the two —
+    // a spec whose frontmatter cannot be read cannot be gated at all — but the
+    // order did change.
     let spec_path = feature_dir.join("spec.md");
     let content = read_text(&spec_path)?;
     let (fm_text, _body) = split_frontmatter(&content, &spec_path)?;
@@ -117,6 +86,30 @@ pub(crate) fn run_with_lint(
             source,
         })?;
     let project = Host::load(repo).project;
+
+    // Gate check 0: the spec is not already `done`.
+    //
+    // Every check below presumes a pending transition. On a spec that has
+    // already made it, they answer a question nobody asked — and the analyze
+    // freshness check answers it *wrongly*, because the completing
+    // `set-status` rewrote `spec.md`, which is one of its subjects. Ordered
+    // ahead of the lint so a completed spec is never held against a violation
+    // introduced long after it closed.
+    if let Some(done) = already_done_block(&frontmatter.status, &project) {
+        return Ok(done);
+    }
+
+    // Gate check 1: every markdown file in the feature directory passes
+    // markdownlint.
+    if let Some(blocked) = markdown_lint_block(&rel_dir, repo, lint)? {
+        return Ok(blocked);
+    }
+
+    // Gate check 2: no scenario under this feature carries an unresolved
+    // open question (spec 046).
+    if let Some(blocked) = scenario_question_block(&feature_dir, repo, &args.feature) {
+        return Ok(blocked);
+    }
 
     // Gate check 3: the spec has no undischarged fold.
     if let Some(blocked) = pending_fold_block(frontmatter.folds_into.as_deref(), &project) {
@@ -568,6 +561,93 @@ fn is_durable_contract(rel_within_feature: &str) -> bool {
     (rel_within_feature.starts_with("scenarios/") && is_md) || rel_within_feature == "data-model.md"
 }
 
+/// Gate check 1 — every markdown file in the feature directory passes
+/// `markdownlint-cli2`.
+///
+/// The glob is recursive (`**/*.md`), so `scenarios/` is included and the
+/// feature directory's own files are covered — `**` matches zero or more
+/// directories.
+///
+/// A non-zero exit the parser could not attribute to specific violations gets
+/// its own message rather than being reported as zero violations: a lint that
+/// could not run is not a lint that found nothing.
+fn markdown_lint_block(
+    rel_dir: &str,
+    repo: &Path,
+    lint: impl FnOnce(&LintMarkdownArgs, &Path) -> Result<LintMarkdownResult>,
+) -> Result<Option<CheckReviewGateResult>> {
+    let lint_result = lint(
+        &LintMarkdownArgs {
+            paths: vec![format!("{rel_dir}/**/*.md")],
+            fix: false,
+        },
+        repo,
+    )?;
+    if lint_result.clean {
+        return Ok(None);
+    }
+    let message = if lint_result.violations.is_empty() {
+        format!(
+            "blocked: markdownlint-cli2 exited {} for {rel_dir} — resolve the lint failure before completing",
+            lint_result.exit_code
+        )
+    } else {
+        format!(
+            "blocked: {} markdownlint violation(s) in {rel_dir} — resolve them before completing",
+            lint_result.violations.len()
+        )
+    };
+    Ok(Some(CheckReviewGateResult {
+        passed: false,
+        blocked_by: Some(ReviewGateBlock::MarkdownLint),
+        message: Some(message),
+        guidance: None,
+        violations: lint_result.violations,
+    }))
+}
+
+/// Gate check 0 — the spec is already at `status: done`, so there is no
+/// `in-progress → done` transition for this gate to authorize.
+///
+/// **Not `passed: true`.** A gate that reports "passed" for a spec it did not
+/// examine is the `QUAL-CLAIM-001` conflation every other check here is built
+/// to avoid, and a caller could read it as authorization to transition a spec
+/// that is already transitioned. It is its own variant, naming the state.
+///
+/// The concrete defect this closes: the completing `set-status` rewrites
+/// `spec.md`, which is one of the analyze record's subjects, so a spec's
+/// analysis is stale the instant it reaches `done`. Verified on spec 047
+/// seconds after its own transition. Re-running `/{project}:implement` against
+/// finished work therefore reported `analysis is stale — spec.md` and told the
+/// operator to re-run the analysis; following that advice wrote a fresh record
+/// and appeared to work, which is worse than advice that plainly fails.
+///
+/// Only the exact value `done` short-circuits. `status` is a required field,
+/// so an absent one already fails deserialization before this runs; a value
+/// *outside* the lifecycle set falls through and the gate runs its checks,
+/// because `validate-frontmatter` owns reporting a bad value and inferring
+/// "probably finished" from an unrecognized status would be the same unearned
+/// conclusion in the other direction.
+fn already_done_block(status: &str, project: &str) -> Option<CheckReviewGateResult> {
+    if status != "done" {
+        return None;
+    }
+    Some(CheckReviewGateResult {
+        passed: false,
+        blocked_by: Some(ReviewGateBlock::AlreadyDone),
+        message: Some(
+            "not gated: spec is already at status done — the in-progress → done transition \
+             this gate authorizes has already happened"
+                .to_string(),
+        ),
+        guidance: Some(format!(
+            "Nothing is owed. To change the spec, reopen it first: /{project}:amend records a \
+             scenario and takes the done → in-progress back-edge."
+        )),
+        violations: vec![],
+    })
+}
+
 /// The pending-fold gate check: `Some(blocked)` when the spec declares a
 /// `folds-into` target, `None` when it declares none.
 ///
@@ -692,6 +772,8 @@ mod tests {
     /// Advisory findings and unexamined targets recorded, nothing gating.
     const ANALYZE_ADVISORY_ONLY: &str = "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n  blocking: false\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 7\n  unexamined: 4\n  blocking: false\n---\n\n# 007 — Gate\n";
 
+    /// A `done` spec, otherwise clean — the state gate check 0 short-circuits.
+    const ALREADY_DONE: &str = "---\nstatus: done\ndependencies: []\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n  blocking: false\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 0\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
     const REVIEWED_CLEAN: &str = "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 0\n  should-violations: 1\n  low-confidence: 0\n  blocking: false\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
     const REVIEWED_BLOCKING: &str = "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 3\n  should-violations: 0\n  low-confidence: 0\n  blocking: true\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
     const NEVER_REVIEWED: &str = "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: null\n  reviewed-against: null\n  must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n  blocking: false\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
@@ -1832,5 +1914,94 @@ mod tests {
             "{guidance}"
         );
         assert!(guidance.contains("no analyzed-digest"), "{guidance}");
+    }
+
+    // --- gate check 0: the spec is already done ------------------------------
+
+    /// The transition this gate authorizes has already happened, so it does
+    /// not run the checks — and does not claim to have passed them.
+    #[test]
+    fn a_done_spec_short_circuits_without_claiming_to_have_passed() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), ALREADY_DONE);
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(!result.passed, "a gate that did not examine must not pass");
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::AlreadyDone));
+        let message = result.message.unwrap();
+        assert!(message.contains("already at status done"), "{message}");
+        assert!(
+            result.guidance.unwrap().contains("/ductus:amend"),
+            "the guidance names the reopen path"
+        );
+    }
+
+    /// Ordered ahead of the lint, so a completed spec is never held against a
+    /// violation introduced long after it closed.
+    #[test]
+    fn a_done_spec_is_not_held_against_a_later_lint_violation() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), ALREADY_DONE);
+        let dirty_lint = |_: &LintMarkdownArgs, _: &Path| {
+            Ok(LintMarkdownResult {
+                violations: vec![MarkdownViolation {
+                    path: "specs/007-gate/spec.md".into(),
+                    line: 1,
+                    rule: "MD041".into(),
+                    message: "first line in a file should be a top-level heading".into(),
+                }],
+                clean: false,
+                exit_code: 1,
+            })
+        };
+        let result = run_with_lint(&args(), tmp.path(), dirty_lint).unwrap();
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::AlreadyDone));
+        assert!(
+            result.violations.is_empty(),
+            "the lint never ran, so there are no violations to report"
+        );
+    }
+
+    /// The defect this closes, as a test: a `done` spec whose `spec.md` was
+    /// rewritten by its own completing `set-status` used to report a stale
+    /// analysis and send the operator to re-run it.
+    #[test]
+    fn a_done_spec_is_not_reported_as_having_a_stale_analysis() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+        let base = git_commit_all(tmp.path(), "base");
+        seed_with_current_digest(tmp.path(), &base);
+        // The completing flip: status moves, which rewrites spec.md — one of
+        // the digest's own subjects.
+        let spec = tmp.path().join("specs/007-gate/spec.md");
+        let text = fs::read_to_string(&spec).unwrap();
+        fs::write(&spec, text.replace("status: in-progress", "status: done")).unwrap();
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(
+            result.blocked_by,
+            Some(ReviewGateBlock::AlreadyDone),
+            "a finished spec must not be told its analysis is stale: {result:?}"
+        );
+    }
+
+    #[test]
+    fn an_in_progress_spec_still_runs_every_check() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), NEVER_ANALYZED);
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::NotAnalyzed));
+    }
+
+    /// An unrecognized status falls through rather than being read as
+    /// finished. `validate-frontmatter` owns reporting the bad value.
+    #[test]
+    fn an_unrecognized_status_is_not_treated_as_done() {
+        let tmp = tempdir().unwrap();
+        seed(
+            tmp.path(),
+            "---\nstatus: finished\ndependencies: []\n---\n\n# 007 — Gate\n",
+        );
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(result.blocked_by, Some(ReviewGateBlock::NotReviewed));
     }
 }
