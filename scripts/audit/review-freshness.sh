@@ -190,7 +190,12 @@ def current_contract_digests(feature_dir):
         feature_dir / "data-model.md"
     ]
     for path in candidates:
-        if not path.is_file():
+        # A symlink is skipped, not followed — `subject_digest` walks with
+        # `follow_links(false)` and tests the entry's own type, so a symlinked
+        # scenario is invisible to the runtime. Following it here would digest
+        # a file the gate never saw and make the two arms of one rule disagree
+        # on exactly the spec this criterion promises they agree on.
+        if path.is_symlink() or not path.is_file():
             continue
         rel = path.relative_to(feature_dir).as_posix()
         if not is_durable_contract(rel):
@@ -463,7 +468,6 @@ for spec_path in sorted(specs_dir.glob("*/spec.md")):
         )
         continue
 
-    examined_proxy += 1
 
     changed = subprocess.run(
         ["git", "-C", str(root), "diff", "--name-only", f"{base}..HEAD"],
@@ -478,7 +482,14 @@ for spec_path in sorted(specs_dir.glob("*/spec.md")):
         errors="replace",
     )
     if changed.returncode != 0:
+        # The diff is the proxy arm's whole comparison, so a spec whose diff
+        # failed was not examined. Counting it before the call would let a
+        # git failure inflate the coverage line — the exact claim the line
+        # exists to make honest.
+        unresolvable += 1
         continue
+
+    examined_proxy += 1
 
     prefix = f"{rel_dir}/"
     stale = sorted(
