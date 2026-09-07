@@ -1,4 +1,5 @@
 # Inbox
+
 <!-- Rules:
      - Do not frontfill bugs that are not being actively worked on.
      - A bug or omission inside the scope of the spec currently in progress does NOT belong
@@ -17,18 +18,21 @@
        or "what to do next" note matches none of them, so it would be walked and
        re-discarded on every pass forever. Pipeline state is derived — read it from
        /status, tasks.md, and git — not narrated into the backlog.
+
      Format each item as a checkbox list entry with a brief description and any relevant
      context. Three forms are in use:
+
      1. Manual entry (via /log) — the simple form below:
         `- [ ] {Brief description of the issue and any relevant context}`
+
      2. Auto-captured finding (an agent recorded this automatically while working a task,
         per §brownfield-inbox Automatic issue capture). Lead with a category so /groom can
         route it, and include a source pointer:
         `- [ ] {category}: {summary} — {file:line or area} (captured during {NNN-feature})`
         Categories: security, leak (memory/resource), convention, bug, perf, other.
         Security issues and leaks are the highest-priority captures.
+
      3. Audit finding written by /ductus — stricter form (see
         specs/008-security-rules/spec.md): `- [ ] {Rule ID}: {artifact} does not address — {summary}`.
-     When an item is migrated, remove it from this list. -->
 
-- [ ] convention: the take(3) / "(+N more)" path-list rendering is now triplicated in one module (`unexaminable_contracts_guidance`, `stale_review_block`, `stale_analyze_block`). Maps to no loaded rule — `CFG-CONST-001` governs constants shared across modules, not duplicated rendering logic within one. — `runtime/src/primitives/check_review_gate.rs:348` (captured during review of 047-analyze-findings-durability)
+     When an item is migrated, remove it from this list. -->

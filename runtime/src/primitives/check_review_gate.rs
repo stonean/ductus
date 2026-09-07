@@ -351,19 +351,12 @@ fn unexaminable_contracts_guidance(repo: &Path, rel_dir: &str) -> Option<String>
     if dirty.is_empty() {
         return None;
     }
-    let shown: Vec<&str> = dirty.iter().take(3).map(String::as_str).collect();
-    let more = dirty.len().saturating_sub(shown.len());
-    let tail = if more > 0 {
-        format!(" (+{more} more)")
-    } else {
-        String::new()
-    };
     Some(format!(
-        "Staleness could not be determined against {} uncommitted durable contract(s): {}{tail}. \
+        "Staleness could not be determined against {} uncommitted durable contract(s): {}. \
          The check compares committed trees, so these were not examined; commit them and re-run \
          the review if the recorded verdict should describe them.",
         dirty.len(),
-        shown.join(", ")
+        render_paths(&dirty)
     ))
 }
 
@@ -482,21 +475,14 @@ fn stale_review_block(
     if stale.is_empty() {
         return None;
     }
-    let shown: Vec<&str> = stale.iter().take(3).map(String::as_str).collect();
-    let more = stale.len().saturating_sub(shown.len());
-    let tail = if more > 0 {
-        format!(" (+{more} more)")
-    } else {
-        String::new()
-    };
     Some(CheckReviewGateResult {
         passed: false,
         blocked_by: Some(ReviewGateBlock::ReviewStale),
         message: Some(format!(
-            "blocked: review is stale — {} durable contract(s) changed since reviewed-against {}: {}{tail}",
+            "blocked: review is stale — {} durable contract(s) changed since reviewed-against {}: {}",
             stale.len(),
             &base[..base.len().min(8)],
-            shown.join(", ")
+            render_paths(&stale)
         )),
         guidance: Some(format!(
             "Re-run /{project}:review so the recorded verdict describes the current code."
@@ -533,26 +519,44 @@ fn stale_analyze_block(
     let AnalyzeFreshness::Stale { paths, .. } = freshness else {
         return None;
     };
-    let shown: Vec<&str> = paths.iter().take(3).map(String::as_str).collect();
-    let more = paths.len().saturating_sub(shown.len());
-    let tail = if more > 0 {
-        format!(" (+{more} more)")
-    } else {
-        String::new()
-    };
     Some(CheckReviewGateResult {
         passed: false,
         blocked_by: Some(ReviewGateBlock::AnalyzeStale),
         message: Some(format!(
-            "blocked: analysis is stale — {} artifact(s) changed since it ran: {}{tail}",
+            "blocked: analysis is stale — {} artifact(s) changed since it ran: {}",
             paths.len(),
-            shown.join(", ")
+            render_paths(paths)
         )),
         guidance: Some(format!(
             "Re-run /{project}:analyze so the recorded findings describe the current artifacts."
         )),
         violations: vec![],
     })
+}
+
+/// Render a path list for an operator-facing message: the first three, comma
+/// separated, plus `(+N more)` when the set is larger.
+///
+/// One implementation for the three messages that name paths — the
+/// uncommitted-contracts notice, the review-staleness block, and the
+/// analyze-staleness block. They had drifted into three copies of the same six
+/// lines, which is how the cap silently becomes three in one message and five
+/// in another.
+fn render_paths<'a>(paths: impl IntoIterator<Item = &'a String>) -> String {
+    const SHOWN: usize = 3;
+    let paths: Vec<&str> = paths.into_iter().map(String::as_str).collect();
+    let more = paths.len().saturating_sub(SHOWN);
+    let head = paths
+        .iter()
+        .take(SHOWN)
+        .copied()
+        .collect::<Vec<&str>>()
+        .join(", ");
+    if more > 0 {
+        format!("{head} (+{more} more)")
+    } else {
+        head
+    }
 }
 
 /// A scenario or the data model — the artifacts a review actually reads.
