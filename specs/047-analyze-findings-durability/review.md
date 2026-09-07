@@ -1,12 +1,12 @@
 ---
 spec: 047-analyze-findings-durability
-reviewed-at: 2026-09-07T16:22:10Z
-reviewed-against: 054c888c6b6a4d4fd480e07a6abaaa50c41142aa
+reviewed-at: 2026-09-07T16:31:05Z
+reviewed-against: 72f8483eee9c38ab64100cdbd76468052f8575ed
 diff-base: 6c40644dc0a6240090403bd71867bf0b7a79e4f6
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-captured-issues: 0
+captured-issues: 3
 skipped-passes: []
 ---
 
@@ -34,12 +34,13 @@ skipped-passes: []
 
 ## Captured issues
 
-*None.*
+- [ ] convention: the take(3) / "(+N more)" path-list rendering is triplicated in `check_review_gate.rs`
+- [ ] bug: `reviewed-against` carries the same reference-point mismatch 047 fixed for `analyzed-against` — own spec
+- [ ] perf: `compute-review-scope` reports `captured-issues: []` while items sit uncommitted in the inbox
 
 ## Observations
 
-- perf: `compute-review-scope` reports `captured-issues: []` while items sit uncommitted in `specs/inbox.md` — it diffs the inbox across `diff-base..HEAD`, so issues captured this session are invisible to the report that exists to surface them. Same committed-tree horizon 047 just removed from the analyze record, in a third place. — `runtime/src/primitives/compute_review_scope.rs`
-- convention: the take(3) / "(+N more)" path-list rendering is triplicated in check_review_gate.rs (`unexaminable_contracts_guidance`, `stale_review_block`, `stale_analyze_block`). Maps to no loaded rule — CFG-CONST-001 governs constants shared across modules, not duplicated rendering within one. — `runtime/src/primitives/check_review_gate.rs:348`
+*None.*
 
 ## Skipped passes
 
