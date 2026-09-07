@@ -370,3 +370,15 @@ Implements `scenarios/anchor-reference-kinds.md`. `resolve-anchor` treated every
 - [x] Prove it before keeping it: a unit test asserting 010's real dangling anchor is still reported, and one asserting a markers-file citation is not qualified
 
 - **Done when**: the three kinds are classified in the stated order, both counts ship with the verdict, a line citing the markers file resolves rather than being excluded, and the corpus reports 34 unresolved rather than 112 with the one real dangling anchor still among them.
+
+## 107. Staleness compares what was examined, not where HEAD was
+
+- [ ] Implement the behavior described in `scenarios/the-committed-tree-horizon.md`
+
+- **Done when**: `write-review` records a digest of the review's durable contracts, `stale_review_block` compares content, `compute-review-scope` derives `captured-issues` from the working tree, `unexaminable_contracts_guidance` is removed, and a review recorded against a dirty tree does not stale when that content is committed.
+
+## 108. The pre-done gate recognises a spec already at done
+
+- [ ] Implement the behavior described in `scenarios/a-done-spec-has-no-transition-to-gate.md`
+
+- **Done when**: `check-review-gate` returns a distinct done-state outcome — not `passed: true` — ordered ahead of the markdown lint, and `/{project}:implement` halts cleanly on it rather than reporting a stale analysis for finished work.
