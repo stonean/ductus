@@ -2,6 +2,89 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.46.0] — 2026-09-07
+
+### Changed
+
+- **Record staleness compares content, not commits — for both the `review:` and
+  `analyze:` records.** This is the release's breaking change and it replaced a
+  design that produced false blocks.
+
+  `/{project}:review` and `/{project}:analyze` both read the **working tree**,
+  while `reviewed-against` and `analyzed-against` record a **commit**. Those
+  coincide only when the tree is clean, and at the moment either command runs it
+  usually is not: the review has just written `review.md` and the `review:`
+  block, and `mark-task` and `mark-criterion` rewrote `tasks.md` and `spec.md`
+  before that. Diffing the recorded sha therefore blocked records whose run had
+  genuinely read the current content, as soon as that content was committed —
+  and a gate with false positives is the one people route around.
+
+  Each record now carries a per-path sha256 of what its run actually read:
+  `reviewed-digest` over the review's durable contracts (`scenarios/*.md`,
+  `data-model.md`) and `analyzed-digest` over every `.md` under the feature,
+  `review.md` included. `spec.md` is digested with its own `analyze:` block
+  excised, since the record is written after the subjects are read and a digest
+  covering it could never match. Measured before shipping: without that
+  exclusion the rule flagged all 54 of this repo's recorded specs; with it, 1,
+  and that one was a true positive.
+
+  The two shas survive as **provenance**, read for exactly one thing — the
+  mechanical-sweep rename exemption, which genuinely needs two trees and whose
+  candidates are reported rather than dropped when they are unavailable.
+
+  **A record with no digest is `undeterminable`** — not current, not stale, and
+  not a sha-diff fallback. It does not block, so freshness stops being enforced
+  for a spec until its next run writes a digest; it is self-healing rather than
+  a hole, and the passing verdict's `guidance` names which record it could not
+  judge. `reviewed_digest` is an `Option` for a case the analyze side cannot
+  have: a spec with no scenarios and no data model records an **empty** digest,
+  which is current, and `Some({})` is the only way to distinguish that from
+  `None`.
+
+- **`compute-review-scope` derives `captured-issues` from the working tree.**
+  The section exists to surface issues captured *during* the session being
+  reviewed, and such a capture is by definition uncommitted — so a
+  `base..HEAD` diff reported none of them. It now compares inbox bullet sets
+  between the diff base and the tree.
+
+### Added
+
+- **`check-review-gate` reports a spec already at `status: done`.** Ordered
+  ahead of every other check, because every other check presumes a pending
+  transition. It is deliberately **not** `passed: true`: a gate reporting a pass
+  for a spec it did not examine is the `QUAL-CLAIM-001` conflation the rest of
+  the gate exists to prevent, and a caller could read it as authorization to
+  transition a spec that is already transitioned.
+
+  It closes a defect the freshness check above introduced. The completing
+  `set-status` rewrites `spec.md`, one of the analyze record's own subjects, so
+  a spec's analysis is stale the instant it reaches `done` — and re-running the
+  completion gate on finished work reported a stale analysis and directed the
+  operator to re-run it. Following that advice wrote a fresh record, so the
+  advice appeared to work, which is worse than advice that plainly fails. Only
+  the exact value `done` short-circuits; an unrecognized status falls through,
+  since `validate-frontmatter` owns reporting a bad value.
+
+- **`write-analysis` records the `analyze:` block, and `check-review-gate`
+  enforces it.** The pipeline is `review → analyze → done`, and until now only
+  the first half left a trace: a spec that had passed both gates and one that
+  had passed only the review were byte-identical on disk, so nothing could
+  enforce the second.
+
+- **`write-review` returns `analyze-freshness`,** so `/{project}:review` can
+  render its `analyze` row from the same comparison the gate makes. One
+  implementation, two surfaces, no reference point left for them to differ on.
+
+### Removed
+
+- **`unexaminable_contracts_guidance`.** Its entire subject was the
+  committed-tree horizon the digest eliminates — it fired when a durable
+  contract was *still* uncommitted and went quiet exactly when the false
+  positive became reachable. A check that can no longer fire is
+  indistinguishable from one that passed, so it was removed rather than kept
+  alongside; the `QUAL-CLAIM-001` obligation it discharged moves to the digest
+  comparison's own `undeterminable` arm.
+
 ## [0.45.0] — 2026-09-05
 
 ### Changed
