@@ -101,8 +101,8 @@ review:
   blocking: false
 next-criterion: 28
 analyze:
-  last-run: 2026-09-07T19:19:53Z
-  analyzed-against: 1ca5843ed3ac349a69461c20462ad882083b7066
+  last-run: 2026-09-07T19:20:55Z
+  analyzed-against: 3109343a772368cf5073e9c2dfb9974b643dc5ac
   hard-fail: 0
   blocking-findings: 0
   advisory: 0
@@ -201,7 +201,7 @@ analyze:
     scenarios/writecode-payload-bundling.md: 5c343929c3a42ac4406a02c173b6979231127b9583aabae171fee1f747d5084b
     scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
     spec.md: 238dd171ba1b3abc81e684f98a04049e688594403a275be7d39947e1c4eee016
-    tasks.md: 57697148cf9c40c81b0a1df0f80fae7e29c5bfe7b82497493a5797b6b70f17ef
+    tasks.md: 89cbb9176b09d8268f755e813e56025cd5328adad58e5578cca34dab4e540985
   blocking: false
 ---
 

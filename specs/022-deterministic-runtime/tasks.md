@@ -388,6 +388,6 @@ Implements `scenarios/anchor-reference-kinds.md`. `resolve-anchor` treated every
 - [x] Read 022's `## Acceptance Criteria` against `scenarios/the-committed-tree-horizon.md` and `scenarios/a-done-spec-has-no-transition-to-gate.md`; both behaviors shipped in `93c30c6` and `acb121d` and neither has been checked against a criterion
 - [x] Append criteria for whatever neither covers, unlabelled, then run `label-criteria` — never hand-write an `AC{n}`
 - [x] Correct any existing criterion the two scenarios falsified rather than merely extended — in particular any that enumerates `check-review-gate`'s checks or describes review staleness as a commit comparison, and untick it if the corrected text is not yet true
-- [ ] Then run `/{project}:review` with `--since=6c40644` (022's diff base predates the 0.28.0 cycle and resolves hundreds of files — see AGENTS.md; say in the review commit that the override was used and why), then `/{project}:analyze`, then `/{project}:implement`
+- [x] Then run `/{project}:review` with `--since=6c40644` (022's diff base predates the 0.28.0 cycle and resolves hundreds of files — see AGENTS.md; say in the review commit that the override was used and why), then `/{project}:analyze`, then `/{project}:implement`
 
 - **Done when**: every criterion on 022 is true of the shipped tree, the two new scenarios are each covered by at least one criterion, and the completion gate passes with both records reporting `current` rather than `undeterminable`.
