@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [017-derive-dont-ask, 022-deterministic-runtime, 023-govern-refinement, 024-rule-loader, 025-rule-opt-out]
 review:
   last-run: 2026-09-07T22:39:12Z
@@ -33,12 +33,12 @@ review:
   blocking: false
 next-criterion: 26
 analyze:
-  last-run: 2026-09-07T22:40:08Z
-  analyzed-against: 0620b10744997cfdf8cb8a51ecd7e2c7c16104f3
+  last-run: 2026-09-07T22:40:59Z
+  analyzed-against: b18debd6104589b30fa599cf7160f703f5e9c1c7
   hard-fail: 0
   blocking-findings: 0
   advisory: 0
-  unexamined: 0
+  unexamined: 1
   analyzed-digest:
     plan.md: d310b9dd28b461ba2e5494e3d36d666dc3cc4e1f8a3a3e3866037b59d19c05c7
     review.md: 437c8937b687bb6781ae6c76b7b9c2a78cb8f3a23ea4259490e0ce7cda15a036
@@ -64,8 +64,10 @@ analyze:
     scenarios/host-namespace-parity.md: d828792118d7e04ff2312c5097b1f578421e910af0dacd1468d06b16b8777ad6
     scenarios/link-check-consolidation.md: f838133a535aa090e09d7f82903facc4dff8cc822c1dec5c22f9b4d1e17a5049
     scenarios/readme-command-parity.md: 3788aa1103dba1860af8cb9950a6425ed33e4a24498f825fcd980e0c9bb7f8bc
-    spec.md: a1add3c57db6d9efff4ce3aeac2c2c769d71a51c3f4d083d6230a0c6590c9518
+    spec.md: 6a0e5c491c86a016f9d98ac47e42f30786d68718226f16daf228a0393926cf0f
     tasks.md: 7414cfe3b1d8400cbffd6fa7fd4c8295fd81d66bc325414d72c6574eca990c36
+  unexamined-by-reason:
+    not-a-live-claim: 1
   blocking: false
 ---
 
