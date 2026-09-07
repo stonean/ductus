@@ -4,6 +4,8 @@ section: "Follow-on scenarios"
 
 # Review-gate-unexaminable-contracts
 
+**Superseded 2026-09-07 by [the-committed-tree-horizon](the-committed-tree-horizon.md).** The prose-enumeration half shipped and stands. The guidance half is gone: `unexaminable_contracts_guidance` was removed rather than retained, because staleness now compares a per-path digest of what the review read against the working tree, so the uncommitted-contract state this scenario reports is answered rather than flagged — and a notice that can no longer fire is indistinguishable from one that passed. Read the Behavior section below as the history of that reasoning, not as current behavior.
+
 ## Context
 
 [review-staleness-gate](review-staleness-gate.md) gave `check-review-gate` a fourth check: a spec cannot reach `done` while a durable contract has changed since its recorded `reviewed-against`. Two defects survive it, and they compound.
