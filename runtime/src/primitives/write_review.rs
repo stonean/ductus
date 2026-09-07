@@ -38,7 +38,7 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    AnalyzeFreshness, Frontmatter, ReviewFinding, ReviewObservation, WriteReviewArgs,
+    Frontmatter, RecordFreshness, ReviewFinding, ReviewObservation, WriteReviewArgs,
     WriteReviewResult,
 };
 
@@ -123,11 +123,24 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     // malformed spec (missing frontmatter, YAML parse failure) must halt
     // before review.md exists, never between the two writes — otherwise
     // a halt leaves review.md and the spec `review:` block inconsistent.
+    // The review's durable contracts as this run read them. Taken **before**
+    // the writes below, because `write-review` does not touch `scenarios/` or
+    // `data-model.md` and must not fold its own output into the record's
+    // subject — the reason `review.md` and `spec.md` are outside the set.
+    let contracts =
+        analyze_subjects::subject_digest(&feature_dir, analyze_subjects::is_review_contract);
     let report = render_report(args, &must, &should, &low, &waived, blocking);
     let review_path = feature_dir.join("review.md");
     let spec_content = read_text(&spec_path)?;
-    let updated =
-        update_spec_review_block(&spec_content, &spec_path, args, must_n, should_n, low_n)?;
+    let updated = update_spec_review_block(
+        &spec_content,
+        &spec_path,
+        args,
+        must_n,
+        should_n,
+        low_n,
+        &contracts,
+    )?;
 
     // Both outputs computed; only now touch the filesystem.
     //
@@ -181,7 +194,7 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
 /// answers the same way before and after a commit.
 ///
 /// A spec whose frontmatter will not parse yields
-/// [`AnalyzeFreshness::Undeterminable`] rather than an error: the review
+/// [`RecordFreshness::Undeterminable`] rather than an error: the review
 /// itself has already been written by this point, and failing the whole call
 /// over the notice would trade a report for a row.
 fn analyze_freshness_of(
@@ -189,7 +202,7 @@ fn analyze_freshness_of(
     spec_path: &Path,
     feature: &str,
     repo: &Path,
-) -> AnalyzeFreshness {
+) -> RecordFreshness {
     let root = paths::Paths::load(repo).specs_root;
     let rel_dir = format!("{root}/{feature}");
     let block = split_frontmatter(spec_text, spec_path)
@@ -197,8 +210,8 @@ fn analyze_freshness_of(
         .and_then(|(fm_text, _body)| serde_norway::from_str::<Frontmatter>(fm_text).ok())
         .and_then(|frontmatter| frontmatter.analyze);
     match block {
-        Some(analyze) => analyze_subjects::freshness(repo, &rel_dir, Some(&analyze)),
-        None => AnalyzeFreshness::NeverAnalyzed,
+        Some(analyze) => analyze_subjects::analyze_freshness(repo, &rel_dir, Some(&analyze)),
+        None => RecordFreshness::NeverRun,
     }
 }
 
@@ -555,6 +568,7 @@ fn update_spec_review_block(
     must: u32,
     should: u32,
     low: u32,
+    contracts: &crate::primitives::analyze_subjects::SubjectDigest,
 ) -> Result<String> {
     let (fm_text, body) = split_frontmatter(content, spec_path)?;
     let existing: SpecReviewFm =
@@ -568,7 +582,7 @@ fn update_spec_review_block(
         .filter(|waiver| !is_expired(waiver, &args.expired_waivers))
         .collect();
 
-    let block = render_review_yaml(args, must, should, low, &surviving);
+    let block = render_review_yaml(args, must, should, low, &surviving, contracts);
     let new_fm = splice_review_block(fm_text, &block);
     // The splice joins with `\n` and the fences are literal, while `body` is
     // carried through untouched — so on a CRLF spec the two halves would
@@ -598,6 +612,7 @@ fn render_review_yaml(
     should: u32,
     low: u32,
     waivers: &[RawWaiverFull],
+    contracts: &crate::primitives::analyze_subjects::SubjectDigest,
 ) -> String {
     let mut block = String::from("review:\n");
     let _ = writeln!(block, "  last-run: {}", args.reviewed_at);
@@ -605,6 +620,28 @@ fn render_review_yaml(
     let _ = writeln!(block, "  must-violations: {must}");
     let _ = writeln!(block, "  should-violations: {should}");
     let _ = writeln!(block, "  low-confidence: {low}");
+    // The record's description of its own subject, derived here rather than
+    // accepted as an argument — the same discipline that derives `blocking`.
+    // No caller can record a digest it did not take, and this digest and the
+    // one the gate recomputes come from one function.
+    // Always written, empty map included: `reviewed-digest: {}` records that
+    // the digest was taken over a spec with no durable contracts, which the
+    // gate reads as current. Omitting it there would be indistinguishable from
+    // a pre-digest record and leave such a spec unjudgeable forever.
+    if contracts.digests.is_empty() {
+        let _ = writeln!(block, "  reviewed-digest: {{}}");
+    } else {
+        let _ = writeln!(block, "  reviewed-digest:");
+        for (path, digest) in &contracts.digests {
+            let _ = writeln!(block, "    {path}: {digest}");
+        }
+    }
+    if !contracts.unreadable.is_empty() {
+        let _ = writeln!(block, "  reviewed-unreadable:");
+        for path in &contracts.unreadable {
+            let _ = writeln!(block, "    - {path}");
+        }
+    }
     let _ = writeln!(block, "  blocking: {}", must > 0);
     render_waivers(&mut block, waivers);
     block.trim_end_matches('\n').to_string()
@@ -926,7 +963,7 @@ mod tests {
     fn a_spec_with_no_analyze_record_reports_never_analyzed() {
         let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
         let result = run(&base_args("001-x"), tmp.path()).unwrap();
-        assert_eq!(result.analyze_freshness, AnalyzeFreshness::NeverAnalyzed);
+        assert_eq!(result.analyze_freshness, RecordFreshness::NeverRun);
         // Never a gate: the row must not touch the command's verdict.
         assert!(!result.blocking);
         assert_eq!(result.exit_code, 0);
@@ -970,7 +1007,10 @@ mod tests {
         // Give the record a digest of the subjects as they are now, so it is
         // judgeable at all. Without one the honest answer is undeterminable,
         // which is what every pre-digest record reports.
-        let subjects = analyze_subjects::subject_digest(&tmp.path().join("specs/001-x"));
+        let subjects = analyze_subjects::subject_digest(
+            &tmp.path().join("specs/001-x"),
+            analyze_subjects::is_analyze_subject,
+        );
         let text = fs::read_to_string(&spec).unwrap();
         let mut block = String::from("analyze:\n  last-run: 2026-09-06T00:00:00Z\n");
         let _ = writeln!(block, "  analyzed-against: {sha}");
@@ -985,7 +1025,7 @@ mod tests {
         fs::write(&spec, format!("---\n{new_fm}\n---\n{body}")).unwrap();
 
         let result = run(&base_args("001-x"), tmp.path()).unwrap();
-        let AnalyzeFreshness::Stale { paths, .. } = &result.analyze_freshness else {
+        let RecordFreshness::Stale { paths, .. } = &result.analyze_freshness else {
             panic!(
                 "writing a review rewrites review.md and the spec's `review:` block, both \
                  analyze subjects, so the digest must no longer match: {:?}",
@@ -1019,7 +1059,7 @@ mod tests {
         // straight here from step 1, so it is the one most likely to skip a
         // field added later — and an empty scope is exactly when an operator
         // needs telling that the second gate is still owed.
-        assert_eq!(result.analyze_freshness, AnalyzeFreshness::NeverAnalyzed);
+        assert_eq!(result.analyze_freshness, RecordFreshness::NeverRun);
     }
 
     #[test]
@@ -1158,6 +1198,45 @@ mod tests {
         assert!(report.contains("captured-issues: 2"));
         assert!(report.contains("- leak in a.rs"));
         assert!(report.contains("- missing check in b.rs"));
+    }
+
+    /// The record describes its own subject. A spec with no scenarios and no
+    /// data model still records `reviewed-digest: {}` — taken and empty, which
+    /// the gate reads as current, rather than absent, which it cannot judge.
+    #[test]
+    fn a_spec_with_no_durable_contracts_records_an_empty_digest() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        run(&base_args("001-x"), tmp.path()).unwrap();
+        let spec = spec_md(&tmp, "001-x");
+        assert!(
+            spec.contains("reviewed-digest: {}"),
+            "an empty digest is written, not omitted: {spec}"
+        );
+    }
+
+    #[test]
+    fn the_review_record_digests_its_durable_contracts() {
+        let tmp = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let dir = tmp.path().join("specs/001-x");
+        fs::create_dir_all(dir.join("scenarios")).unwrap();
+        fs::write(dir.join("scenarios/retry.md"), "# Retry\n").unwrap();
+        fs::write(dir.join("data-model.md"), "# Model\n").unwrap();
+        // Not contracts: this command's own outputs and the ephemeral files.
+        fs::write(dir.join("tasks.md"), "# Tasks\n").unwrap();
+
+        run(&base_args("001-x"), tmp.path()).unwrap();
+        let spec = spec_md(&tmp, "001-x");
+        assert!(spec.contains("  reviewed-digest:"), "{spec}");
+        assert!(spec.contains("    scenarios/retry.md: "), "{spec}");
+        assert!(spec.contains("    data-model.md: "), "{spec}");
+        assert!(
+            !spec.contains("    tasks.md: "),
+            "tasks.md is not a review contract: {spec}"
+        );
+        assert!(
+            !spec.contains("    review.md: "),
+            "the report this call writes is not its own subject: {spec}"
+        );
     }
 
     #[test]

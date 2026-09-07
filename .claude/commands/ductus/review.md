@@ -503,8 +503,29 @@ review:
   must-violations: 0
   should-violations: 3
   low-confidence: 2
+  reviewed-digest:
+    scenarios/retry.md: 3f2a…
+    data-model.md: 9c1b…
   blocking: false
 ```
+
+`reviewed-digest` is the record's description of **what this review read** — a
+per-path digest of the spec's durable contracts (`scenarios/*.md`,
+`data-model.md`) taken from disk. The completion gate's staleness check
+compares it against those files as they are now, rather than diffing
+`reviewed-against` against `HEAD`: this command reviews the _working tree_
+while that field records a _commit_, so a scenario written during the session
+came back as a contract that had changed since the review when it had changed
+only since the commit the review was labelled with. `reviewed-against` stays as
+provenance, read for the mechanical-sweep rename exemption alone.
+
+`review.md` and `spec.md` are deliberately outside the digest — this command
+writes both, so counting them would stale every review the instant it was
+recorded. That is the inverse of the `analyze:` record's subject set, which
+_includes_ them, because they are this command's outputs and that command's
+inputs. A spec with no scenarios and no data model records
+`reviewed-digest: {}` — taken and empty, which reads as current, and is
+distinct from an absent digest, which cannot be judged at all.
 
 `blocking: true` when `must-violations > 0`. This is the field other commands
 read. (`write-review` writes `last-run`, `reviewed-against`, `must-violations`,
@@ -727,6 +748,10 @@ record as stale merely because content the analysis already examined has since
 been committed. Writing this review supersedes the record because `review.md`
 and the spec's `review:` block are themselves analyze subjects, not because
 `HEAD` moved.
+
+The `review:` record works the same way, over its own narrower subject set —
+one comparison, two subject sets. See `reviewed-digest` under
+[Update spec frontmatter](#6-update-spec-frontmatter).
 
 A record carrying no `analyzed-digest` — every record written before this
 existed — renders the fourth state. It is not current and not stale: nothing on

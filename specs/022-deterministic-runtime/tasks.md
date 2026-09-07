@@ -373,7 +373,7 @@ Implements `scenarios/anchor-reference-kinds.md`. `resolve-anchor` treated every
 
 ## 107. Staleness compares what was examined, not where HEAD was
 
-- [ ] Implement the behavior described in `scenarios/the-committed-tree-horizon.md`
+- [x] Implement the behavior described in `scenarios/the-committed-tree-horizon.md`
 
 - **Done when**: `write-review` records a digest of the review's durable contracts, `stale_review_block` compares content, `compute-review-scope` derives `captured-issues` from the working tree, `unexaminable_contracts_guidance` is removed, and a review recorded against a dirty tree does not stale when that content is committed.
 

@@ -11,7 +11,9 @@
 //! - **scope** — the union of the plan's `Affected Files` set and the set of
 //!   files modified since `diff-base`. Both, because either alone can omit
 //!   what the review exists to look at.
-//! - **captured-issues** — lines added to `{specs-root}/inbox.md` in the window
+//! - **captured-issues** — inbox bullets present in the **working tree** that
+//!   were not present at the diff base, so a capture made during the session
+//!   being reviewed is visible to the section that exists to surface it
 //!   (`diff-base..HEAD`), the incidental issues logged during the work.
 //!
 //! Read-only.
@@ -22,7 +24,7 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use git2::{DiffLineType, DiffOptions, Oid, Repository};
+use git2::{Oid, Repository};
 
 use crate::primitives::check_stuck::find_in_progress_commit;
 use crate::primitives::{PrimitiveError, Result, parse_affected_files};
@@ -153,45 +155,46 @@ fn diff_since(
         None,
     )?;
 
-    // Added lines in the inbox, scoped by pathspec.
-    let mut opts = DiffOptions::new();
-    opts.pathspec(inbox_rel);
-    let inbox_diff = repo.diff_tree_to_tree(Some(&base_tree), Some(&head_tree), Some(&mut opts))?;
-    let mut added: Vec<String> = Vec::new();
-    inbox_diff.foreach(
-        &mut |_, _| true,
-        None,
-        None,
-        Some(&mut |_delta, _hunk, line| {
-            if line.origin_value() == DiffLineType::Addition
-                && let Ok(text) = std::str::from_utf8(line.content())
-            {
-                added.push(text.trim_end_matches(['\n', '\r']).to_string());
-            }
-            true
-        }),
-    )?;
-
-    // Keep only the added lines that are *real inbox bullets*. The raw added
-    // set includes anything the diff touched — restoring the shipped
-    // `<!-- Rules: … -->` guidance block reported ~30 "captured issues", one
-    // per comment line. The inbox primitives already share a comment- and
-    // fence-aware bullet grammar for exactly this; the authority on what
-    // counts is the post-image file, not the diff.
-    let real: std::collections::HashSet<String> = inbox_at(repo, &head_tree, inbox_rel)
+    // Inbox bullets present **now** that were not present at the diff base.
+    //
+    // Read from the working tree, not from `HEAD`. This section exists to
+    // surface issues captured during the work being reviewed, and a capture
+    // made this session is by definition uncommitted — a `base..HEAD` diff
+    // reported none of them, which is the same committed-tree horizon spec 047
+    // removed from the analyze record. Comparing bullet *sets* rather than
+    // diff lines is also what the previous implementation converged on by
+    // filtering added lines against the post-image: restoring the shipped
+    // `<!-- Rules: … -->` guidance block once reported ~30 "captured issues",
+    // one per comment line. The set difference states that intent directly.
+    let bullets_at_base: BTreeSet<String> = inbox_at(repo, &base_tree, inbox_rel)
+        .as_deref()
+        .map(|content| super::iter_bullets(content).map(|(_, text)| text).collect())
+        .unwrap_or_default();
+    let captured: Vec<String> = inbox_in_worktree(repo, inbox_rel)
         .as_deref()
         .map(|content| {
+            let lines: Vec<&str> = content.lines().collect();
             super::iter_bullets(content)
-                .map(|(_, text)| text)
-                .collect::<std::collections::HashSet<_>>()
+                .filter(|(_, text)| !bullets_at_base.contains(text))
+                // The whole source line, as the diff-based implementation
+                // emitted, so the checkbox marker and any trailing detail
+                // survive into the report verbatim.
+                .filter_map(|(idx, _)| lines.get(idx).map(|line| (*line).to_string()))
+                .collect()
         })
         .unwrap_or_default();
-    let captured = added
-        .into_iter()
-        .filter(|line| super::bullet_text(line).is_some_and(|text| real.contains(&text)))
-        .collect();
 
     Ok((files.into_iter().collect(), captured))
+}
+
+/// The inbox file's contents in the **working tree**, or `None` when it is
+/// absent or not valid UTF-8.
+///
+/// The counterpart to [`inbox_at`], and the reason `captured-issues` can see a
+/// capture made in the session being reviewed.
+fn inbox_in_worktree(repo: &Repository, inbox_rel: &str) -> Option<String> {
+    let root = repo.workdir()?;
+    std::fs::read_to_string(root.join(inbox_rel)).ok()
 }
 
 /// The inbox file's contents at `tree`, or `None` when it is absent or not
@@ -453,6 +456,44 @@ mod tests {
             result.captured_issues,
             vec!["- captured: a real one".to_string()],
             "comment lines are not captured issues"
+        );
+    }
+
+    /// The reason this reads the working tree. A capture made during the work
+    /// being reviewed is by definition uncommitted, and a `base..HEAD` diff
+    /// reported none of them — the section whose whole purpose is to surface
+    /// mid-task captures at the gate could not see them.
+    #[test]
+    fn captured_issues_sees_an_uncommitted_capture() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let spec_path = tmp.path().join("specs/001-x/spec.md");
+        let inbox = tmp.path().join("specs/inbox.md");
+        write(&spec_path, &spec("planned"));
+        write(&inbox, "# Inbox\n\n- pre-existing item\n");
+        commit_all(&repo, "feat: plan");
+        write(&spec_path, &spec("in-progress"));
+        commit_all(&repo, "chore: begin");
+
+        // Captured this session and deliberately NOT committed.
+        write(
+            &inbox,
+            "# Inbox\n\n- pre-existing item\n- captured: found while reviewing\n",
+        );
+
+        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        assert!(
+            result
+                .captured_issues
+                .contains(&"- captured: found while reviewing".to_string()),
+            "an uncommitted capture must be visible: {:?}",
+            result.captured_issues
+        );
+        assert!(
+            !result
+                .captured_issues
+                .contains(&"- pre-existing item".to_string()),
+            "the pre-existing item predates the diff base"
         );
     }
 

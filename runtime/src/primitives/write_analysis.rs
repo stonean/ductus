@@ -123,6 +123,7 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
         &spec_path
             .parent()
             .map_or_else(|| repo.to_path_buf(), std::path::Path::to_path_buf),
+        crate::primitives::analyze_subjects::is_analyze_subject,
     );
     let block = render_analyze_yaml(args, blocking, unexamined, &by_reason, &subjects);
     let new_fm = splice_top_level_block(fm_text, "analyze", &block);

@@ -33,7 +33,7 @@ use std::path::Path;
 use sha2::{Digest, Sha256};
 
 use crate::primitives::{read_text, split_frontmatter, write_review};
-use crate::schema::primitives::{AnalyzeBlock, AnalyzeFreshness};
+use crate::schema::primitives::{AnalyzeBlock, RecordFreshness};
 
 /// Any `.md` artifact under the feature — the analyze record's subject set.
 ///
@@ -47,6 +47,24 @@ pub(crate) fn is_analyze_subject(rel_within_feature: &str) -> bool {
     Path::new(rel_within_feature)
         .extension()
         .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+}
+
+/// A scenario or the data model — the artifacts a **review** reads, and the
+/// subject set of the `review:` record.
+///
+/// Deliberately narrower than [`is_analyze_subject`], and the two must not be
+/// merged. A review reads *code*, so `review.md` and `spec.md` are its outputs
+/// rather than its inputs — `write-review` touches both, and counting them
+/// would stale every review the instant it was recorded. An analysis reads
+/// *artifacts*, so those same files are among its subjects. Same mechanism,
+/// different claims.
+///
+/// Mirrors `scripts/audit/review-freshness.sh`'s rule exactly.
+pub(crate) fn is_review_contract(rel_within_feature: &str) -> bool {
+    let is_md = Path::new(rel_within_feature)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"));
+    (rel_within_feature.starts_with("scenarios/") && is_md) || rel_within_feature == "data-model.md"
 }
 
 /// The subject set's digest, plus the subjects that could not be read.
@@ -76,7 +94,7 @@ pub(crate) struct SubjectDigest {
 /// in `unreadable`. Only reporting the second would let an unreachable
 /// subdirectory shrink the subject set silently, so a digest taken after it
 /// became unreadable would compare clean against one taken before.
-pub(crate) fn subject_digest(feature_dir: &Path) -> SubjectDigest {
+pub(crate) fn subject_digest(feature_dir: &Path, is_subject: fn(&str) -> bool) -> SubjectDigest {
     let mut out = SubjectDigest::default();
     for entry in walkdir::WalkDir::new(feature_dir).follow_links(false) {
         let entry = match entry {
@@ -107,7 +125,7 @@ pub(crate) fn subject_digest(feature_dir: &Path) -> SubjectDigest {
             continue;
         };
         let rel = rel.to_string_lossy().replace('\\', "/");
-        if !is_analyze_subject(&rel) {
+        if !is_subject(&rel) {
             continue;
         }
         match read_text(entry.path()) {
@@ -164,31 +182,35 @@ fn hex(bytes: &[u8]) -> String {
 /// reference point left for them to differ on.
 ///
 /// Ordering of the arms matters. A record with no digest is
-/// [`AnalyzeFreshness::Undeterminable`], never `Current`: nothing on disk says
+/// [`RecordFreshness::Undeterminable`], never `Current`: nothing on disk says
 /// what those runs examined, and every record written before this change is in
 /// that state. It does not block, so the gate stops *enforcing* freshness for
 /// a spec until its next analyze writes a digest — self-healing, and
 /// deliberately not a grandfather clause. The record is not exempt, it is
 /// unreadable, and the result says which.
-pub(crate) fn freshness(
+pub(crate) fn freshness_of(
     repo: &Path,
     rel_dir: &str,
-    analyze: Option<&AnalyzeBlock>,
-) -> AnalyzeFreshness {
-    let (Some(analyze), Some(last_run)) = (analyze, analyze.and_then(|a| a.last_run.clone()))
-    else {
-        return AnalyzeFreshness::NeverAnalyzed;
+    last_run: Option<&str>,
+    recorded_against: Option<&str>,
+    recorded: Option<&BTreeMap<String, String>>,
+    is_subject: fn(&str) -> bool,
+    digest_field: &str,
+) -> RecordFreshness {
+    let Some(last_run) = last_run.map(str::to_string) else {
+        return RecordFreshness::NeverRun;
     };
-    let analyzed_against = analyze.analyzed_against.clone().unwrap_or_default();
-    let recorded = &analyze.analyzed_digest;
-    if recorded.is_empty() {
-        return AnalyzeFreshness::Undeterminable {
-            reason: "the record carries no analyzed-digest, so what it examined is unknown"
-                .to_string(),
+    let analyzed_against = recorded_against.unwrap_or_default().to_string();
+    // `None` is a record that never took a digest. An empty map is a digest
+    // that was taken over a subject set with nothing in it — a spec with no
+    // scenarios and no data model — which is current, not unjudgeable.
+    let Some(recorded) = recorded else {
+        return RecordFreshness::Undeterminable {
+            reason: format!("the record carries no {digest_field}, so what it examined is unknown"),
         };
-    }
+    };
 
-    let current = subject_digest(&repo.join(rel_dir));
+    let current = subject_digest(&repo.join(rel_dir), is_subject);
     let mut changed: BTreeSet<String> = BTreeSet::new();
     for (path, digest) in &current.digests {
         if recorded.get(path) != Some(digest) {
@@ -211,12 +233,12 @@ pub(crate) fn freshness(
 
     let changed = exempt_renames(repo, &analyzed_against, changed);
     if changed.is_empty() {
-        return AnalyzeFreshness::Current {
+        return RecordFreshness::Current {
             last_run,
             analyzed_against,
         };
     }
-    AnalyzeFreshness::Stale {
+    RecordFreshness::Stale {
         last_run,
         analyzed_against,
         paths: changed.into_iter().collect(),
@@ -267,6 +289,56 @@ fn exempt_renames(
         .collect()
 }
 
+/// The freshness of a spec's `analyze:` record.
+pub(crate) fn analyze_freshness(
+    repo: &Path,
+    rel_dir: &str,
+    analyze: Option<&AnalyzeBlock>,
+) -> RecordFreshness {
+    let Some(analyze) = analyze else {
+        return RecordFreshness::NeverRun;
+    };
+    freshness_of(
+        repo,
+        rel_dir,
+        analyze.last_run.as_deref(),
+        analyze.analyzed_against.as_deref(),
+        // Empty is treated as absent here: `spec.md` is always a subject, so
+        // an empty analyze digest can only mean the record predates the field.
+        Some(&analyze.analyzed_digest).filter(|d| !d.is_empty()),
+        is_analyze_subject,
+        "analyzed-digest",
+    )
+}
+
+/// The freshness of a spec's `review:` record.
+///
+/// The same call as [`analyze_freshness`] over a narrower subject set, which is
+/// the whole of the difference between the two records' freshness. It replaced
+/// a commit-range diff for the reason that one is documented at the top of this
+/// module: `/{project}:review` reads the working tree and recorded a *commit*,
+/// so a scenario written in-session came back as a durable contract that had
+/// changed since the review, when it had changed only since the commit the
+/// review was labelled with.
+pub(crate) fn review_freshness(
+    repo: &Path,
+    rel_dir: &str,
+    review: Option<&crate::schema::primitives::ReviewBlock>,
+) -> RecordFreshness {
+    let Some(review) = review else {
+        return RecordFreshness::NeverRun;
+    };
+    freshness_of(
+        repo,
+        rel_dir,
+        review.last_run.as_deref(),
+        review.reviewed_against.as_deref(),
+        review.reviewed_digest.as_ref(),
+        is_review_contract,
+        "reviewed-digest",
+    )
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -291,7 +363,7 @@ mod tests {
     fn only_markdown_under_the_feature_is_a_subject() {
         let tmp = tempdir().unwrap();
         seed(tmp.path(), "");
-        let digest = subject_digest(tmp.path());
+        let digest = subject_digest(tmp.path(), is_analyze_subject);
         let paths: Vec<&str> = digest.digests.keys().map(String::as_str).collect();
         assert_eq!(paths, vec!["scenarios/a.md", "spec.md", "tasks.md"]);
     }
@@ -303,11 +375,11 @@ mod tests {
     fn the_analyze_block_does_not_change_the_spec_digest() {
         let tmp = tempdir().unwrap();
         seed(tmp.path(), "");
-        let before = subject_digest(tmp.path());
+        let before = subject_digest(tmp.path(), is_analyze_subject);
 
         let block = "analyze:\n  last-run: 2026-09-07T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 0\n  unexamined: 0\n  blocking: false\n";
         seed(tmp.path(), block);
-        let after = subject_digest(tmp.path());
+        let after = subject_digest(tmp.path(), is_analyze_subject);
 
         assert_eq!(before.digests["spec.md"], after.digests["spec.md"]);
     }
@@ -316,13 +388,13 @@ mod tests {
     fn a_body_edit_does_change_the_spec_digest() {
         let tmp = tempdir().unwrap();
         seed(tmp.path(), "");
-        let before = subject_digest(tmp.path());
+        let before = subject_digest(tmp.path(), is_analyze_subject);
         fs::write(
             tmp.path().join("spec.md"),
             "---\nstatus: in-progress\ndependencies: []\n---\n\n# Spec\n\nNew scope.\n",
         )
         .unwrap();
-        let after = subject_digest(tmp.path());
+        let after = subject_digest(tmp.path(), is_analyze_subject);
         assert_ne!(before.digests["spec.md"], after.digests["spec.md"]);
     }
 
@@ -343,15 +415,15 @@ mod tests {
         let tmp = tempdir().unwrap();
         let dir = tmp.path().join("specs/001-x");
         seed(&dir, "");
-        let recorded = subject_digest(&dir);
+        let recorded = subject_digest(&dir, is_analyze_subject);
         let analyze = AnalyzeBlock {
             last_run: Some("2026-09-07T00:00:00Z".into()),
             analyzed_digest: recorded.digests,
             ..AnalyzeBlock::default()
         };
-        let result = freshness(tmp.path(), "specs/001-x", Some(&analyze));
+        let result = analyze_freshness(tmp.path(), "specs/001-x", Some(&analyze));
         assert!(
-            matches!(result, AnalyzeFreshness::Current { .. }),
+            matches!(result, RecordFreshness::Current { .. }),
             "{result:?}"
         );
     }
@@ -361,7 +433,7 @@ mod tests {
         let tmp = tempdir().unwrap();
         let dir = tmp.path().join("specs/001-x");
         seed(&dir, "");
-        let recorded = subject_digest(&dir);
+        let recorded = subject_digest(&dir, is_analyze_subject);
         let analyze = AnalyzeBlock {
             last_run: Some("2026-09-07T00:00:00Z".into()),
             analyzed_digest: recorded.digests,
@@ -369,8 +441,8 @@ mod tests {
         };
         fs::write(dir.join("tasks.md"), "# Tasks\n\n- [x] work\n").unwrap();
 
-        let AnalyzeFreshness::Stale { paths, .. } =
-            freshness(tmp.path(), "specs/001-x", Some(&analyze))
+        let RecordFreshness::Stale { paths, .. } =
+            analyze_freshness(tmp.path(), "specs/001-x", Some(&analyze))
         else {
             panic!("a changed subject must be stale");
         };
@@ -384,7 +456,7 @@ mod tests {
         let tmp = tempdir().unwrap();
         let dir = tmp.path().join("specs/001-x");
         seed(&dir, "");
-        let recorded = subject_digest(&dir);
+        let recorded = subject_digest(&dir, is_analyze_subject);
         let analyze = AnalyzeBlock {
             last_run: Some("2026-09-07T00:00:00Z".into()),
             analyzed_digest: recorded.digests,
@@ -392,8 +464,8 @@ mod tests {
         };
         fs::remove_file(dir.join("scenarios/a.md")).unwrap();
 
-        let AnalyzeFreshness::Stale { paths, .. } =
-            freshness(tmp.path(), "specs/001-x", Some(&analyze))
+        let RecordFreshness::Stale { paths, .. } =
+            analyze_freshness(tmp.path(), "specs/001-x", Some(&analyze))
         else {
             panic!("a deleted subject must be stale");
         };
@@ -415,8 +487,8 @@ mod tests {
             analyzed_against: Some("abc123".into()),
             ..AnalyzeBlock::default()
         };
-        let result = freshness(tmp.path(), "specs/001-x", Some(&analyze));
-        let AnalyzeFreshness::Undeterminable { reason } = result else {
+        let result = analyze_freshness(tmp.path(), "specs/001-x", Some(&analyze));
+        let RecordFreshness::Undeterminable { reason } = result else {
             panic!("a digest-less record cannot be judged: {result:?}");
         };
         assert!(reason.contains("no analyzed-digest"), "{reason}");
@@ -426,8 +498,8 @@ mod tests {
     fn an_absent_block_is_never_analyzed() {
         let tmp = tempdir().unwrap();
         assert_eq!(
-            freshness(tmp.path(), "specs/001-x", None),
-            AnalyzeFreshness::NeverAnalyzed
+            analyze_freshness(tmp.path(), "specs/001-x", None),
+            RecordFreshness::NeverRun
         );
         let no_run = block_with(&[("spec.md", "deadbeef")]);
         let no_run = AnalyzeBlock {
@@ -435,8 +507,8 @@ mod tests {
             ..no_run
         };
         assert_eq!(
-            freshness(tmp.path(), "specs/001-x", Some(&no_run)),
-            AnalyzeFreshness::NeverAnalyzed
+            analyze_freshness(tmp.path(), "specs/001-x", Some(&no_run)),
+            RecordFreshness::NeverRun
         );
     }
 
@@ -454,7 +526,7 @@ mod tests {
         // The analysis reads the tree — including an uncommitted edit — and
         // records exactly that.
         fs::write(dir.join("tasks.md"), "# Tasks\n\n- [x] work\n").unwrap();
-        let recorded = subject_digest(&dir);
+        let recorded = subject_digest(&dir, is_analyze_subject);
 
         // Now commit it. Under the sha diff this became `analyze-stale`.
         let mut index = repository.index().unwrap();
@@ -482,9 +554,9 @@ mod tests {
             analyzed_digest: recorded.digests,
             ..AnalyzeBlock::default()
         };
-        let result = freshness(tmp.path(), "specs/001-x", Some(&analyze));
+        let result = analyze_freshness(tmp.path(), "specs/001-x", Some(&analyze));
         assert!(
-            matches!(result, AnalyzeFreshness::Current { .. }),
+            matches!(result, RecordFreshness::Current { .. }),
             "committing what the analysis read must not stale it: {result:?}"
         );
     }
@@ -497,7 +569,7 @@ mod tests {
         let dir = tmp.path().join("specs/001-x");
         seed(&dir, "");
         git2::Repository::init(tmp.path()).unwrap();
-        let recorded = subject_digest(&dir);
+        let recorded = subject_digest(&dir, is_analyze_subject);
         let analyze = AnalyzeBlock {
             last_run: Some("2026-09-07T00:00:00Z".into()),
             analyzed_digest: recorded.digests,
@@ -506,7 +578,7 @@ mod tests {
 
         // Uncommitted change: stale.
         fs::write(dir.join("scenarios/a.md"), "# A\n\nChanged.\n").unwrap();
-        let before = freshness(tmp.path(), "specs/001-x", Some(&analyze));
+        let before = analyze_freshness(tmp.path(), "specs/001-x", Some(&analyze));
 
         // Commit it: still stale, and the same paths.
         let repository = git2::Repository::open(tmp.path()).unwrap();
@@ -520,7 +592,7 @@ mod tests {
         repository
             .commit(Some("HEAD"), &sig, &sig, "commit the change", &tree, &[])
             .unwrap();
-        let after = freshness(tmp.path(), "specs/001-x", Some(&analyze));
+        let after = analyze_freshness(tmp.path(), "specs/001-x", Some(&analyze));
 
         assert_eq!(
             before, after,
@@ -542,7 +614,7 @@ mod tests {
             use std::os::unix::fs::PermissionsExt as _;
             let scenarios = dir.join("scenarios");
             fs::set_permissions(&scenarios, fs::Permissions::from_mode(0o000)).unwrap();
-            let digest = subject_digest(&dir);
+            let digest = subject_digest(&dir, is_analyze_subject);
             // Restore before asserting, so a failure cannot leave the tempdir
             // undeletable.
             fs::set_permissions(&scenarios, fs::Permissions::from_mode(0o755)).unwrap();
@@ -557,12 +629,122 @@ mod tests {
         }
     }
 
+    // --- the review's narrower subject set ----------------------------------
+
+    #[test]
+    fn the_review_contract_set_is_scenarios_and_the_data_model() {
+        assert!(is_review_contract("scenarios/a.md"));
+        assert!(is_review_contract("data-model.md"));
+        // A review's own outputs are not its inputs: counting them would stale
+        // every review the instant it was recorded.
+        assert!(!is_review_contract("review.md"));
+        assert!(!is_review_contract("spec.md"));
+        // Ephemeral by construction, and churning — the scoping that keeps
+        // this gate off the path people route around.
+        assert!(!is_review_contract("tasks.md"));
+        assert!(!is_review_contract("plan.md"));
+        // All four of those *are* analyze subjects. Same mechanism, different
+        // claims.
+        for path in ["review.md", "spec.md", "tasks.md", "plan.md"] {
+            assert!(is_analyze_subject(path), "{path}");
+        }
+    }
+
+    fn review_block(digest: Option<&SubjectDigest>) -> crate::schema::primitives::ReviewBlock {
+        crate::schema::primitives::ReviewBlock {
+            last_run: Some("2026-09-07T00:00:00Z".into()),
+            reviewed_digest: digest.map(|d| d.digests.clone()),
+            ..crate::schema::primitives::ReviewBlock::default()
+        }
+    }
+
+    #[test]
+    fn a_matching_contract_digest_is_current() {
+        let tmp = tempdir().unwrap();
+        let dir = tmp.path().join("specs/001-x");
+        seed(&dir, "");
+        let recorded = subject_digest(&dir, is_review_contract);
+        let result = review_freshness(
+            tmp.path(),
+            "specs/001-x",
+            Some(&review_block(Some(&recorded))),
+        );
+        assert!(
+            matches!(result, RecordFreshness::Current { .. }),
+            "{result:?}"
+        );
+    }
+
+    /// Editing `review.md` or `spec.md` stales the *analyze* record and not
+    /// the review's — the asymmetry stated as a test, since it is the one
+    /// thing a reader is most likely to take for an omission.
+    #[test]
+    fn a_review_output_stales_the_analysis_and_not_the_review() {
+        let tmp = tempdir().unwrap();
+        let dir = tmp.path().join("specs/001-x");
+        seed(&dir, "");
+        let contracts = subject_digest(&dir, is_review_contract);
+        let subjects = subject_digest(&dir, is_analyze_subject);
+        fs::write(dir.join("review.md"), "# Review\n\nNo findings.\n").unwrap();
+
+        let review = review_freshness(
+            tmp.path(),
+            "specs/001-x",
+            Some(&review_block(Some(&contracts))),
+        );
+        assert!(
+            matches!(review, RecordFreshness::Current { .. }),
+            "{review:?}"
+        );
+
+        let analyze = AnalyzeBlock {
+            last_run: Some("2026-09-07T00:00:00Z".into()),
+            analyzed_digest: subjects.digests,
+            ..AnalyzeBlock::default()
+        };
+        let analyze = analyze_freshness(tmp.path(), "specs/001-x", Some(&analyze));
+        assert!(
+            matches!(analyze, RecordFreshness::Stale { .. }),
+            "{analyze:?}"
+        );
+    }
+
+    /// A spec with no scenarios and no data model records an **empty** digest,
+    /// which is current. Absent is unjudgeable; empty is examined-and-clean,
+    /// and a bare map cannot tell them apart.
+    #[test]
+    fn an_empty_contract_digest_is_current_but_an_absent_one_is_not() {
+        let tmp = tempdir().unwrap();
+        let dir = tmp.path().join("specs/001-x");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join("spec.md"),
+            "---\nstatus: in-progress\ndependencies: []\n---\n\n# S\n",
+        )
+        .unwrap();
+
+        let empty = subject_digest(&dir, is_review_contract);
+        assert!(empty.digests.is_empty());
+        let current =
+            review_freshness(tmp.path(), "specs/001-x", Some(&review_block(Some(&empty))));
+        assert!(
+            matches!(current, RecordFreshness::Current { .. }),
+            "{current:?}"
+        );
+
+        let absent = review_freshness(tmp.path(), "specs/001-x", Some(&review_block(None)));
+        let RecordFreshness::Undeterminable { reason } = absent else {
+            panic!("a record that took no digest cannot be judged: {absent:?}");
+        };
+        assert!(reason.contains("no reviewed-digest"), "{reason}");
+    }
+
     #[test]
     fn an_unreadable_subject_is_reported_not_matched() {
         let tmp = tempdir().unwrap();
         let dir = tmp.path().join("specs/001-x");
         seed(&dir, "");
-        let recorded = subject_digest(&dir);
+        let recorded = subject_digest(&dir, is_analyze_subject);
         let analyze = AnalyzeBlock {
             last_run: Some("2026-09-07T00:00:00Z".into()),
             analyzed_digest: recorded.digests,
@@ -571,8 +753,8 @@ mod tests {
         // Invalid UTF-8 makes the subject unreadable rather than absent.
         fs::write(dir.join("scenarios/a.md"), [0xff, 0xfe, 0x00]).unwrap();
 
-        let result = freshness(tmp.path(), "specs/001-x", Some(&analyze));
-        let AnalyzeFreshness::Stale { paths, .. } = result else {
+        let result = analyze_freshness(tmp.path(), "specs/001-x", Some(&analyze));
+        let RecordFreshness::Stale { paths, .. } = result else {
             panic!("an unreadable subject is not a matching one: {result:?}");
         };
         assert!(

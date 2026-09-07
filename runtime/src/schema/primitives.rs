@@ -34,9 +34,43 @@ pub struct ReviewBlock {
     /// ISO-8601 UTC timestamp of the last `/ductus:review`, if any.
     #[serde(default)]
     pub last_run: Option<String>,
-    /// Constitution sha the review was run against.
+    /// HEAD sha at the time of the run — **provenance, not the staleness
+    /// basis**, exactly as [`AnalyzeBlock::analyzed_against`] is. Read for one
+    /// thing: the mechanical-sweep rename exemption, which needs two trees.
     #[serde(default)]
     pub reviewed_against: Option<String>,
+    /// Per-path sha256 of the review's **durable contracts** — `scenarios/*.md`
+    /// and `data-model.md` — as the run read them from disk.
+    ///
+    /// The record's description of its own subject. `reviewed_against` cannot
+    /// serve that purpose: `/{project}:review` reads the working tree while
+    /// that field records a *commit*, so comparing it reported a contract as
+    /// changed when the review had read exactly that content and only the
+    /// commit had moved.
+    ///
+    /// `review.md` and `spec.md` are deliberately outside the set —
+    /// `write-review` touches both, so counting them would stale every review
+    /// the instant it was recorded. That is the opposite of the analyze
+    /// record's set, and correctly so: they are this command's *outputs*.
+    ///
+    /// Empty means the record predates the field, which is
+    /// [`RecordFreshness::Undeterminable`] rather than a match. It clears on
+    /// the next review.
+    /// `None` means no digest was recorded — a pre-digest review, which is
+    /// [`RecordFreshness::Undeterminable`]. `Some` of an **empty** map means
+    /// the digest was taken and the spec has no durable contracts to digest,
+    /// which is genuinely *current*. A bare map cannot tell those apart, and
+    /// conflating them would report a spec with no scenarios as unjudgeable
+    /// forever.
+    ///
+    /// The `analyze:` block needs no such wrapper: `spec.md` is always one of
+    /// its subjects and must exist for this gate to run at all, so an empty
+    /// analyze digest cannot occur.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reviewed_digest: Option<std::collections::BTreeMap<String, String>>,
+    /// Contracts that exist but could not be read when the digest was taken.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reviewed_unreadable: Vec<String>,
     /// MUST violations from the last review.
     #[serde(default)]
     pub must_violations: u32,
@@ -91,7 +125,7 @@ pub struct AnalyzeBlock {
     /// covering it could never match.
     ///
     /// Empty means the record predates the field, which is
-    /// [`AnalyzeFreshness::Undeterminable`] rather than a match: nothing on
+    /// [`RecordFreshness::Undeterminable`] rather than a match: nothing on
     /// disk says what those runs examined. It clears on the next analyze.
     #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub analyzed_digest: std::collections::BTreeMap<String, String>,
@@ -468,7 +502,7 @@ pub struct WriteReviewResult {
     /// primitive has just written `review.md` and the spec's `review:` block
     /// while `HEAD` has not moved — a committed-tree comparison would report
     /// `current` at the exact moment it stopped being true.
-    pub analyze_freshness: AnalyzeFreshness,
+    pub analyze_freshness: RecordFreshness,
 }
 
 // -- write-analysis ----------------------------------------------------------
@@ -2782,22 +2816,24 @@ pub enum ReviewGateBlock {
     AnalyzeStale,
 }
 
-/// The freshness of a spec's `analyze:` record, as computed by
-/// [`crate::primitives::check_review_gate::analyze_freshness`].
+/// The freshness of a durable record — `review:` or `analyze:` — against the
+/// artifacts it says it examined, computed by
+/// [`crate::primitives::analyze_subjects::freshness_of`].
 ///
-/// One type serves two surfaces at two different moments, which is spec 047
-/// AC14: `check-review-gate` computes it against **committed** trees to decide
-/// whether to block, and `write-review` computes it against the **working
-/// tree** so `/{project}:review` can render its `analyze` row. A second
-/// implementation would let the notice say `current` while the gate blocked —
-/// a disagreement that reads as a bug in the tool rather than a gap in the
-/// spec.
+/// One type and one computation for both records, differing only in which
+/// files are the subject: a review's are its durable contracts
+/// (`scenarios/*.md`, `data-model.md`), an analysis's are every `.md` under
+/// the feature. Both compare **content** — the digest the run recorded of what
+/// it read — rather than a commit range, so the answer does not depend on what
+/// happens to be committed when the question is asked. That is what lets
+/// `/{project}:review`'s row and the completion gate agree: they are the same
+/// call.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case", tag = "state")]
-pub enum AnalyzeFreshness {
-    /// No `analyze:` block, or its `last-run` is null. The spec has never
-    /// completed an analysis.
-    NeverAnalyzed,
+pub enum RecordFreshness {
+    /// No block, or its `last-run` is null: the spec has never completed a
+    /// run of the command that owns this record.
+    NeverRun,
     /// The record describes the compared tree: nothing in the subject set
     /// changed since `analyzed-against`.
     Current {
@@ -2829,14 +2865,14 @@ pub enum AnalyzeFreshness {
     },
 }
 
-/// [`AnalyzeFreshness::Undeterminable`], not `Current` or `NeverAnalyzed`.
+/// [`RecordFreshness::Undeterminable`], not `Current` or `NeverRun`.
 ///
 /// A defaulted value is one nobody computed, and both of the other arms are
 /// substantive claims — that a record is current, or that none exists. Either
 /// would let a result deserialized without the field assert something about a
 /// spec it never looked at, which is the conflation this enum's fourth arm
 /// exists to keep out of the record.
-impl Default for AnalyzeFreshness {
+impl Default for RecordFreshness {
     fn default() -> Self {
         Self::Undeterminable {
             reason: "not computed".to_string(),

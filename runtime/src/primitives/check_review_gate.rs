@@ -15,12 +15,11 @@
 //! A blocked gate is a domain outcome the host acts on (halt, do not
 //! propose the transition), never an operational error.
 //!
-//! A **passing** gate can still carry `guidance`: the staleness check
-//! compares committed trees, so it names any durable contract that was
-//! uncommitted and therefore outside what it examined. That notice never
-//! changes `passed` — see [`unexaminable_contracts_guidance`].
+//! A **passing** gate can still carry `guidance`: either record may be
+//! *undeterminable* — carrying no digest, so nothing on disk says what its run
+//! examined — and saying so is not the same as saying it is current. That
+//! notice never changes `passed`; see [`passing_notices`].
 
-use std::collections::BTreeSet;
 use std::path::Path;
 
 use crate::host::Host;
@@ -30,8 +29,8 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    AnalyzeBlock, AnalyzeFreshness, CheckReviewGateArgs, CheckReviewGateResult, Frontmatter,
-    LintMarkdownArgs, LintMarkdownResult, ReviewGateBlock,
+    AnalyzeBlock, CheckReviewGateArgs, CheckReviewGateResult, Frontmatter, LintMarkdownArgs,
+    LintMarkdownResult, RecordFreshness, ReviewGateBlock,
 };
 
 /// Execute the `check-review-gate` primitive against the given repo root.
@@ -151,9 +150,12 @@ pub(crate) fn run_with_lint(
     }
 
     // Gate check 6: the recorded review still describes the current code.
-    if let Some(stale) =
-        stale_review_block(repo, &rel_dir, review.reviewed_against.as_deref(), &project)
-    {
+    // Computed once and reused by the passing verdict's notice below, for the
+    // reason the analyze half is: the comparison reads and hashes files, so
+    // doing it twice is real work for one answer.
+    let review_freshness =
+        crate::primitives::analyze_subjects::review_freshness(repo, &rel_dir, Some(&review));
+    if let Some(stale) = stale_review_block(&review_freshness, &project) {
         return Ok(stale);
     }
 
@@ -188,24 +190,29 @@ pub(crate) fn run_with_lint(
         passed: true,
         blocked_by: None,
         message: None,
-        guidance: passing_notices(repo, &rel_dir, &freshness),
+        guidance: passing_notices(&review_freshness, &freshness),
         violations: vec![],
     })
 }
 
 /// What a **passing** gate could not examine, as one guidance line.
 ///
-/// Two independent blind spots, joined rather than ranked because an operator
-/// weighing the transition needs both: the staleness diff's committed-tree
-/// horizon (see [`unexaminable_contracts_guidance`]) and an analyze record
-/// whose freshness could not be determined at all.
+/// Joined rather than ranked because an operator weighing the transition needs
+/// both: the two durable
+/// records — `review:` and `analyze:` — whose freshness could not be
+/// determined at all, because it carries no digest of what its run read.
 ///
 /// `None` — real silence — only when both examined cleanly, which is what
 /// makes that silence mean something.
-fn passing_notices(repo: &Path, rel_dir: &str, freshness: &AnalyzeFreshness) -> Option<String> {
+fn passing_notices(review: &RecordFreshness, analyze: &RecordFreshness) -> Option<String> {
     let mut notices: Vec<String> = Vec::new();
-    notices.extend(unexaminable_contracts_guidance(repo, rel_dir));
-    if let AnalyzeFreshness::Undeterminable { reason } = freshness {
+    if let RecordFreshness::Undeterminable { reason } = review {
+        notices.push(format!(
+            "Review-record freshness could not be determined ({reason}), so whether the \
+             recorded review still describes these contracts was not examined."
+        ));
+    }
+    if let RecordFreshness::Undeterminable { reason } = analyze {
         notices.push(format!(
             "Analyze-record freshness could not be determined ({reason}), so whether the \
              recorded analysis still describes these artifacts was not examined."
@@ -243,7 +250,7 @@ fn analyze_gate_block(
     rel_dir: &str,
     analyze: Option<&AnalyzeBlock>,
     project: &str,
-) -> std::result::Result<AnalyzeFreshness, CheckReviewGateResult> {
+) -> std::result::Result<RecordFreshness, CheckReviewGateResult> {
     let analyze = match analyze {
         Some(analyze) if analyze.last_run.is_some() => analyze,
         // Absent block or null `last-run`: the spec has never completed an
@@ -270,7 +277,7 @@ fn analyze_gate_block(
         // three claims. The others say the analysis is missing or failing;
         // this one says a passing analysis is out of date.
         let freshness =
-            crate::primitives::analyze_subjects::freshness(repo, rel_dir, Some(analyze));
+            crate::primitives::analyze_subjects::analyze_freshness(repo, rel_dir, Some(analyze));
         return match stale_analyze_block(&freshness, project) {
             Some(blocked) => Err(blocked),
             None => Ok(freshness),
@@ -294,247 +301,13 @@ fn analyze_gate_block(
     })
 }
 
-/// Durable contracts under `rel_dir` with uncommitted changes — modified,
-/// staged, or untracked. `None` when every one of them is committed, so the
-/// common case stays quiet and its silence genuinely means "examined".
-///
-/// Scoped to the same durable contracts the staleness check uses, and for the
-/// same reason: widening it to every dirty file under the feature would fire
-/// on nearly every run (`tasks.md` is rewritten by `mark-task` on each task)
-/// and be learned-ignored, which is worse than not reporting at all.
-///
-/// A git failure returns guidance rather than `None`. Returning `None` there
-/// would emit the same value for "every contract is committed" and "the
-/// working tree could not be inspected", which is the `QUAL-CLAIM-001`
-/// conflation this whole function exists to remove one level up — a
-/// self-inflicted instance of it, caught by this scenario's own review.
-fn unexaminable_contracts_guidance(repo: &Path, rel_dir: &str) -> Option<String> {
-    let cannot_inspect = |reason: &str| {
-        Some(format!(
-            "Staleness could not be determined: the working tree could not be inspected ({reason}), \
-             so uncommitted durable contracts — if any — were not examined."
-        ))
-    };
-
-    let Ok(repository) = git2::Repository::discover(repo) else {
-        return cannot_inspect("no git repository found");
-    };
-    let mut options = git2::StatusOptions::new();
-    options
-        .include_untracked(true)
-        .recurse_untracked_dirs(true)
-        .include_ignored(false)
-        // Bound the walk to the feature tree. Without a pathspec this is a
-        // full worktree status on every completion attempt, to answer a
-        // question only about this spec's durable contracts.
-        .pathspec(rel_dir);
-    let Ok(statuses) = repository.statuses(Some(&mut options)) else {
-        return cannot_inspect("git status failed");
-    };
-
-    let prefix = format!("{rel_dir}/");
-    // `path()` errors on a non-UTF-8 path, which cannot be a durable contract
-    // under the validated slug grammar anyway.
-    let dirty: BTreeSet<String> = statuses
-        .iter()
-        .filter_map(|entry| entry.path().ok().map(|p| p.replace('\\', "/")))
-        .filter(|path| path.strip_prefix(&prefix).is_some_and(is_durable_contract))
-        .collect();
-
-    if dirty.is_empty() {
-        return None;
-    }
-    Some(format!(
-        "Staleness could not be determined against {} uncommitted durable contract(s): {}. \
-         The check compares committed trees, so these were not examined; commit them and re-run \
-         the review if the recorded verdict should describe them.",
-        dirty.len(),
-        render_paths(&dirty)
-    ))
-}
-
-/// The staleness gate check: `Some(blocked)` when one of the spec's
-/// **durable contracts** — a `scenarios/*.md` file or `data-model.md` —
-/// changed after `reviewed-against`.
-///
-/// The other four checks ask whether a review exists and whether it passed.
-/// None of them asks whether it still *applies*. A review recorded against
-/// one commit and never re-run reads as a pass forever, so hand-editing a
-/// `review.md` to mark findings resolved produces a record that satisfies
-/// every automated check while describing a diff that is gone. That is not
-/// hypothetical: `gvrn-v0.26.2` shipped with 022's review pointing three
-/// commits behind the tag, and nothing noticed.
-///
-/// Scoped to the durable contracts, and that scoping was corrected under
-/// measurement rather than reasoned about. The first cut used the plan's
-/// **Affected Files**; run across this repo it blocked **34 of 48** specs,
-/// because old specs list shared surfaces (`AGENTS.md`, `README.md`,
-/// `framework/bootstrap/ductus.md`) that every later spec also touches — so
-/// completing spec 004 was blocked by spec 042 having edited `AGENTS.md`.
-/// A gate that blocks seven specs in eight is one people route around.
-/// `tasks.md` and `plan.md` are excluded for the same reason: the first is
-/// ephemeral by construction (§tasks-phase), the second churns as Affected
-/// Files are revised. This is now the identical rule `/{project}:audit`
-/// Family 19 applies at release time, which is the point — two enforcement
-/// moments, one definition of stale.
-///
-/// `review.md` and `spec.md` are not contracts for this purpose:
-/// `write-review` touches both, so counting them would make every review
-/// stale the instant it was recorded.
-///
-/// A candidate that changed only by a repo-wide rename is **not** stale, per
-/// [`crate::primitives::mechanical_sweep`]. This was missing until 2026-08-16
-/// and the omission was expensive: measured across this repo, the un-exempted
-/// rule called **19 of 46 `done` specs** stale, every one of them a
-/// consequence of 049's `govern → ductus` sweep and none a real contract
-/// change. `/{project}:audit` Family 19 had applied the exemption all along,
-/// so the two enforcement moments disagreed on 19 specs while the whole point
-/// of scoping them identically was that they would not. The incident that
-/// exposed it — `017-derive-dont-ask` blocking on three contracts — was itself
-/// a false positive: all three changed in the rename commit.
-///
-/// Fails **open** on anything it cannot determine — no git repo, an
-/// unparseable `reviewed-against`. A gate that blocks on its own inability
-/// to check would be a gate people route around; the honest checks above
-/// still run.
-fn stale_review_block(
-    repo: &Path,
-    rel_dir: &str,
-    reviewed_against: Option<&str>,
-    project: &str,
-) -> Option<CheckReviewGateResult> {
-    let base = reviewed_against?.trim();
-    if base.is_empty() {
-        return None;
-    }
-    let repository = git2::Repository::discover(repo).ok()?;
-    // `revparse_single`, not `Oid::from_str`: the latter zero-pads a short hex
-    // string into a 40-char id that matches nothing, so an abbreviated
-    // `reviewed-against` — `012-multi-agent-govern` records `d904430` — made
-    // the whole check fail open with no signal, while Family 19's
-    // `git cat-file -e` resolved it and checked. A check that silently cannot
-    // run is the failure mode this repo pays for most.
-    let base_tree = repository
-        .revparse_single(base)
-        .ok()?
-        .peel_to_commit()
-        .ok()?
-        .tree()
-        .ok()?;
-    let head_tree = repository.head().ok()?.peel_to_commit().ok()?.tree().ok()?;
-    let diff = repository
-        .diff_tree_to_tree(Some(&base_tree), Some(&head_tree), None)
-        .ok()?;
-
-    let prefix = format!("{rel_dir}/");
-    let mut candidates: BTreeSet<String> = BTreeSet::new();
-    diff.foreach(
-        &mut |delta, _| {
-            if let Some(path) = delta.new_file().path().or_else(|| delta.old_file().path()) {
-                let path = path.to_string_lossy().replace('\\', "/");
-                if let Some(rest) = path.strip_prefix(&prefix)
-                    && is_durable_contract(rest)
-                {
-                    candidates.insert(path);
-                }
-            }
-            true
-        },
-        None,
-        None,
-        None,
-    )
-    .ok()?;
-
-    // A contract that changed only in spelling states what it stated before,
-    // so a repo-wide rename must not stale the review — the same §spec-lifecycle
-    // case (a) rule that keeps the sweep from reopening the spec. Building the
-    // index is the expensive step, so it is skipped entirely when nothing is a
-    // candidate, which is the common case.
-    let stale: BTreeSet<String> = if candidates.is_empty() {
-        candidates
-    } else {
-        let index = crate::primitives::mechanical_sweep::SweepIndex::build(
-            &repository,
-            &base_tree,
-            &head_tree,
-        );
-        candidates
-            .into_iter()
-            .filter(|path| index.changed_beyond_spelling(path))
-            .collect()
-    };
-
-    if stale.is_empty() {
-        return None;
-    }
-    Some(CheckReviewGateResult {
-        passed: false,
-        blocked_by: Some(ReviewGateBlock::ReviewStale),
-        message: Some(format!(
-            "blocked: review is stale — {} durable contract(s) changed since reviewed-against {}: {}",
-            stale.len(),
-            &base[..base.len().min(8)],
-            render_paths(&stale)
-        )),
-        guidance: Some(format!(
-            "Re-run /{project}:review so the recorded verdict describes the current code."
-        )),
-        violations: vec![],
-    })
-}
-
-/// The staleness gate check over the `analyze:` record: `Some(blocked)` when
-/// the recorded analysis no longer describes the spec's artifacts.
-///
-/// Ordered after [`analyze_gate_block`]'s two checks, mirroring how
-/// [`stale_review_block`] sits behind the `review:` presence and blocking
-/// checks, and for the same reason: this is the weakest of the three claims.
-/// The others say the analysis is missing or failing; this one says a passing
-/// analysis is out of date.
-///
-/// The comparison itself lives in [`crate::primitives::analyze_subjects`],
-/// which `/{project}:review`'s row also calls. It compares **content**, not
-/// commits — the record carries a digest of what the analysis read — so this
-/// gate and that row cannot return different answers, and neither blocks on
-/// content an analysis genuinely examined merely because it has since been
-/// committed.
-///
-/// [`AnalyzeFreshness::Undeterminable`] does **not** block — it rides a
-/// guidance line on the passing verdict instead. A gate that blocks on its own
-/// inability to check is one people route around, which is the disposition
-/// `stale_review_block` already settled on; the difference is that this one
-/// says so rather than failing open in silence.
-fn stale_analyze_block(
-    freshness: &AnalyzeFreshness,
-    project: &str,
-) -> Option<CheckReviewGateResult> {
-    let AnalyzeFreshness::Stale { paths, .. } = freshness else {
-        return None;
-    };
-    Some(CheckReviewGateResult {
-        passed: false,
-        blocked_by: Some(ReviewGateBlock::AnalyzeStale),
-        message: Some(format!(
-            "blocked: analysis is stale — {} artifact(s) changed since it ran: {}",
-            paths.len(),
-            render_paths(paths)
-        )),
-        guidance: Some(format!(
-            "Re-run /{project}:analyze so the recorded findings describe the current artifacts."
-        )),
-        violations: vec![],
-    })
-}
-
 /// Render a path list for an operator-facing message: the first three, comma
 /// separated, plus `(+N more)` when the set is larger.
 ///
-/// One implementation for the three messages that name paths — the
-/// uncommitted-contracts notice, the review-staleness block, and the
-/// analyze-staleness block. They had drifted into three copies of the same six
-/// lines, which is how the cap silently becomes three in one message and five
-/// in another.
+/// One implementation for the two messages that name paths — the
+/// review-staleness block and the analyze-staleness block. They had drifted
+/// into copies of the same six lines, which is how the cap silently becomes
+/// three in one message and five in another.
 fn render_paths<'a>(paths: impl IntoIterator<Item = &'a String>) -> String {
     const SHOWN: usize = 3;
     let paths: Vec<&str> = paths.into_iter().map(String::as_str).collect();
@@ -552,13 +325,91 @@ fn render_paths<'a>(paths: impl IntoIterator<Item = &'a String>) -> String {
     }
 }
 
-/// A scenario or the data model — the artifacts a review actually reads.
-/// Mirrors `scripts/audit/review-freshness.sh`'s rule exactly.
-fn is_durable_contract(rel_within_feature: &str) -> bool {
-    let is_md = Path::new(rel_within_feature)
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"));
-    (rel_within_feature.starts_with("scenarios/") && is_md) || rel_within_feature == "data-model.md"
+/// The staleness gate check over the `analyze:` record: `Some(blocked)` when
+/// the recorded analysis no longer describes the spec's artifacts.
+///
+/// Ordered after [`analyze_gate_block`]'s two checks, mirroring how
+/// [`stale_review_block`] sits behind the `review:` presence and blocking
+/// checks, and for the same reason: this is the weakest of the three claims.
+/// The others say the analysis is missing or failing; this one says a passing
+/// analysis is out of date.
+///
+/// The comparison lives in [`crate::primitives::analyze_subjects`], which
+/// `/{project}:review`'s row also calls. It compares **content**, not commits,
+/// so this gate and that row cannot return different answers, and neither
+/// blocks on content an analysis genuinely examined merely because it has
+/// since been committed.
+///
+/// [`RecordFreshness::Undeterminable`] does **not** block — it rides a guidance
+/// line on the passing verdict instead. A gate that blocks on its own inability
+/// to check is one people route around; the difference from failing open is
+/// that this one says so.
+fn stale_analyze_block(
+    freshness: &RecordFreshness,
+    project: &str,
+) -> Option<CheckReviewGateResult> {
+    let RecordFreshness::Stale { paths, .. } = freshness else {
+        return None;
+    };
+    Some(CheckReviewGateResult {
+        passed: false,
+        blocked_by: Some(ReviewGateBlock::AnalyzeStale),
+        message: Some(format!(
+            "blocked: analysis is stale — {} artifact(s) changed since it ran: {}",
+            paths.len(),
+            render_paths(paths)
+        )),
+        guidance: Some(format!(
+            "Re-run /{project}:analyze so the recorded findings describe the current artifacts."
+        )),
+        violations: vec![],
+    })
+}
+
+/// The staleness gate check over the `review:` record: `Some(blocked)` when the
+/// recorded review no longer describes the spec's durable contracts.
+///
+/// **Content, not commits.** The record carries `reviewed-digest`, a per-path
+/// digest of `scenarios/*.md` and `data-model.md` as the review read them from
+/// disk. `reviewed-against` is provenance and is read for one thing, the
+/// mechanical-sweep rename exemption inside
+/// [`crate::primitives::analyze_subjects`].
+///
+/// That replaced a commit-range diff, and the reason is the same one the
+/// analyze half already paid: `/{project}:review`'s scope is the working tree,
+/// so recording a *commit* meant a scenario written during the session came
+/// back as a contract that had changed since the review. It had changed only
+/// since the commit the review was labelled with. Observed on 2026-09-07 while
+/// completing spec 047, on 047's own review.
+///
+/// The scoping to durable contracts is unchanged and was measured, not
+/// reasoned about. The first cut used the plan's **Affected Files**; run across
+/// this repo it blocked **34 of 48** specs, because old specs list shared
+/// surfaces every later spec also touches. `tasks.md` and `plan.md` stay out
+/// for the same reason — the first is ephemeral by construction
+/// (§tasks-phase), the second churns as Affected Files are revised — and
+/// `review.md` and `spec.md` because `write-review` touches both, so counting
+/// them would stale every review the instant it was recorded.
+///
+/// A record carrying no digest is **undeterminable**, not stale and not
+/// current, and does not block. It clears on the next review.
+fn stale_review_block(freshness: &RecordFreshness, project: &str) -> Option<CheckReviewGateResult> {
+    let RecordFreshness::Stale { paths, .. } = freshness else {
+        return None;
+    };
+    Some(CheckReviewGateResult {
+        passed: false,
+        blocked_by: Some(ReviewGateBlock::ReviewStale),
+        message: Some(format!(
+            "blocked: review is stale — {} durable contract(s) changed since it ran: {}",
+            paths.len(),
+            render_paths(paths)
+        )),
+        guidance: Some(format!(
+            "Re-run /{project}:review so the recorded verdict describes the current code."
+        )),
+        violations: vec![],
+    })
 }
 
 /// Gate check 1 — every markdown file in the feature directory passes
@@ -961,12 +812,13 @@ mod tests {
         // conflation this scenario removes: silence has to mean "examined and
         // clean", and it cannot mean that here. The genuinely-clean case is
         // `a_clean_tree_emits_no_unexaminable_guidance`, which commits first.
-        assert!(
-            result
-                .guidance
-                .is_some_and(|g| g.contains("could not be inspected")),
-            "a non-repo fixture must not read as an examined-clean tree"
-        );
+        // This fixture's records carry no digest, so neither freshness is
+        // judgeable — and the gate says which rather than passing in silence.
+        let guidance = result
+            .guidance
+            .expect("an unjudgeable record must not read as a current one");
+        assert!(guidance.contains("Review-record freshness"), "{guidance}");
+        assert!(guidance.contains("Analyze-record freshness"), "{guidance}");
     }
 
     // --- gate check 5: review staleness -------------------------------------
@@ -1032,7 +884,7 @@ mod tests {
         .unwrap();
         let base = git_commit_all(tmp.path(), "base");
 
-        seed_reviewed_at(tmp.path(), &base);
+        seed_with_current_digest(tmp.path(), &base);
         fs::write(
             tmp.path().join("specs/007-gate/scenarios/retry.md"),
             "# Retry\n\nNew contract text.\n\n## Open Questions\n\n*None.*\n",
@@ -1080,7 +932,7 @@ mod tests {
         }
         let base = git_commit_all(tmp.path(), "base");
 
-        seed_reviewed_at(tmp.path(), &base);
+        seed_with_current_digest(tmp.path(), &base);
         for (path, body) in [
             (
                 "specs/007-gate/scenarios/retry.md",
@@ -1130,7 +982,7 @@ mod tests {
         }
         let base = git_commit_all(tmp.path(), "base");
 
-        seed_reviewed_at(tmp.path(), &base);
+        seed_with_current_digest(tmp.path(), &base);
         fs::write(
             tmp.path().join("specs/007-gate/scenarios/retry.md"),
             "# Retry\n\nRun `/ductus`. Timeout is 60s.\n",
@@ -1568,39 +1420,21 @@ mod tests {
         }
     }
 
-    // --- unexaminable contracts: what the gate could not look at -------------
+    // --- uncommitted contracts: now a comparison, not a notice --------------
+    //
+    // These replace the `unexaminable_contracts_guidance` tests. That notice
+    // existed because the staleness check compared committed trees and so
+    // could not see a contract living only in the working tree. The digest
+    // comparison reads the tree directly, so the state the notice described is
+    // now *answered* rather than reported — and a notice that can no longer
+    // fire is indistinguishable from one that passed, which is why it went
+    // rather than staying alongside.
 
+    /// A scenario written this session and not yet committed used to be
+    /// invisible to the check and merely mentioned in guidance. It is now a
+    /// contract that differs from the recorded digest.
     #[test]
-    fn an_untracked_scenario_is_reported_as_unexaminable() {
-        // The observed 2026-08-27 shape. `create-scenario` wrote the file this
-        // session, so it exists on disk and in no tree the staleness diff
-        // consults; `reviewed-against` is HEAD, the diff is empty, and without
-        // this the gate reports a bare clean verdict.
-        let tmp = tempdir().unwrap();
-        seed(tmp.path(), REVIEWED_CLEAN);
-        let base = git_commit_all(tmp.path(), "base");
-        seed_reviewed_at(tmp.path(), &base);
-
-        fs::create_dir_all(tmp.path().join("specs/007-gate/scenarios")).unwrap();
-        fs::write(
-            tmp.path().join("specs/007-gate/scenarios/fresh.md"),
-            "# Fresh\n\n## Open Questions\n\n*None.*\n",
-        )
-        .unwrap();
-
-        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
-        assert!(result.passed, "the notice must not block: {result:?}");
-        assert!(result.blocked_by.is_none());
-        assert!(result.message.is_none());
-        let guidance = result
-            .guidance
-            .expect("clean verdict must name its blind spot");
-        assert!(guidance.contains("could not be determined"), "{guidance}");
-        assert!(guidance.contains("scenarios/fresh.md"), "{guidance}");
-    }
-
-    #[test]
-    fn a_modified_committed_contract_is_reported_as_unexaminable() {
+    fn an_uncommitted_contract_change_is_stale_not_merely_unexaminable() {
         let tmp = tempdir().unwrap();
         seed(tmp.path(), REVIEWED_CLEAN);
         fs::create_dir_all(tmp.path().join("specs/007-gate/scenarios")).unwrap();
@@ -1610,93 +1444,28 @@ mod tests {
         )
         .unwrap();
         let base = git_commit_all(tmp.path(), "base");
-        seed_reviewed_at(tmp.path(), &base);
+        seed_with_current_digest(tmp.path(), &base);
 
-        // Edited but not committed: invisible to a tree-to-tree diff.
+        // Uncommitted — the case the old notice could only talk about.
         fs::write(
             tmp.path().join("specs/007-gate/scenarios/retry.md"),
-            "# Retry\n\nUncommitted contract change.\n\n## Open Questions\n\n*None.*\n",
+            "# Retry\n\nA changed contract.\n\n## Open Questions\n\n*None.*\n",
         )
         .unwrap();
 
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
-        assert!(result.passed, "{result:?}");
-        let guidance = result.guidance.expect("dirty contract must be named");
-        assert!(guidance.contains("scenarios/retry.md"), "{guidance}");
-    }
-
-    #[test]
-    fn a_staged_only_change_is_reported_as_unexaminable() {
-        // Staged is still not committed, so the diff cannot see it either.
-        let tmp = tempdir().unwrap();
-        seed(tmp.path(), REVIEWED_CLEAN);
-        fs::create_dir_all(tmp.path().join("specs/007-gate/scenarios")).unwrap();
-        fs::write(
-            tmp.path().join("specs/007-gate/scenarios/retry.md"),
-            "# Retry\n\n## Open Questions\n\n*None.*\n",
-        )
-        .unwrap();
-        let base = git_commit_all(tmp.path(), "base");
-        seed_reviewed_at(tmp.path(), &base);
-
-        fs::write(
-            tmp.path().join("specs/007-gate/scenarios/retry.md"),
-            "# Retry\n\nStaged change.\n\n## Open Questions\n\n*None.*\n",
-        )
-        .unwrap();
-        let repository = git2::Repository::open(tmp.path()).unwrap();
-        let mut index = repository.index().unwrap();
-        index
-            .add_path(Path::new("specs/007-gate/scenarios/retry.md"))
-            .unwrap();
-        index.write().unwrap();
-
-        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
-        assert!(result.passed, "{result:?}");
-        assert!(
-            result.guidance.unwrap().contains("scenarios/retry.md"),
-            "a staged-only change is still uncommitted"
-        );
-    }
-
-    #[test]
-    fn a_genuine_stale_block_wins_over_the_unexaminable_notice() {
-        // Both conditions at once. The notice is not a softer substitute for a
-        // check that actually fired, so the block must survive.
-        let tmp = tempdir().unwrap();
-        seed(tmp.path(), REVIEWED_CLEAN);
-        fs::create_dir_all(tmp.path().join("specs/007-gate/scenarios")).unwrap();
-        fs::write(
-            tmp.path().join("specs/007-gate/scenarios/retry.md"),
-            "# Retry\n\n## Open Questions\n\n*None.*\n",
-        )
-        .unwrap();
-        let base = git_commit_all(tmp.path(), "base");
-        seed_reviewed_at(tmp.path(), &base);
-
-        // Committed change -> genuinely stale.
-        fs::write(
-            tmp.path().join("specs/007-gate/scenarios/retry.md"),
-            "# Retry\n\nCommitted contract change.\n\n## Open Questions\n\n*None.*\n",
-        )
-        .unwrap();
-        git_commit_all(tmp.path(), "stale it");
-        // Plus an uncommitted one.
-        fs::write(
-            tmp.path().join("specs/007-gate/scenarios/other.md"),
-            "# Other\n\n## Open Questions\n\n*None.*\n",
-        )
-        .unwrap();
-
-        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
-        assert!(!result.passed, "{result:?}");
         assert_eq!(result.blocked_by, Some(ReviewGateBlock::ReviewStale));
-        assert!(result.message.unwrap().contains("review is stale"));
+        assert!(
+            result.message.unwrap().contains("scenarios/retry.md"),
+            "the changed contract is named"
+        );
     }
 
+    /// The false positive the commit-range diff had, on the review half. A
+    /// review that read a dirty tree and recorded what it read must not stale
+    /// when that same content is committed.
     #[test]
-    fn a_clean_tree_emits_no_unexaminable_guidance() {
-        // The common case stays quiet, so its silence means "examined".
+    fn committing_a_contract_the_review_already_read_is_not_stale() {
         let tmp = tempdir().unwrap();
         seed(tmp.path(), REVIEWED_CLEAN);
         fs::create_dir_all(tmp.path().join("specs/007-gate/scenarios")).unwrap();
@@ -1706,36 +1475,38 @@ mod tests {
         )
         .unwrap();
         let base = git_commit_all(tmp.path(), "base");
-        seed_reviewed_at(tmp.path(), &base);
-        git_commit_all(tmp.path(), "commit the reviewed-at edit");
+
+        // The review reads the tree — including an uncommitted scenario edit —
+        // and records exactly that.
+        fs::write(
+            tmp.path().join("specs/007-gate/scenarios/retry.md"),
+            "# Retry\n\nWritten during the session.\n\n## Open Questions\n\n*None.*\n",
+        )
+        .unwrap();
+        seed_with_current_digest(tmp.path(), &base);
+
+        // Now commit it. Under the sha diff this became `review-stale`.
+        git_commit_all(tmp.path(), "commit the reviewed content");
 
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
-        // Scoped to the uncommitted-contract notice this test owns. The
-        // analyze record here points one commit back — the commit that wrote
-        // it — so its own freshness line is a separate, correct signal.
-        assert!(
-            !result
-                .guidance
-                .as_deref()
-                .unwrap_or_default()
-                .contains("could not be inspected"),
-            "{:?}",
-            result.guidance
+        assert_ne!(
+            result.blocked_by,
+            Some(ReviewGateBlock::ReviewStale),
+            "committing what the review read must not stale it: {result:?}"
         );
     }
 
+    /// `tasks.md` and `plan.md` are not review contracts, so churn in them
+    /// never stales the review — the scoping that keeps this gate off the
+    /// path people route around.
     #[test]
-    fn dirty_bookkeeping_files_are_not_reported_as_unexaminable() {
-        // `tasks.md` is rewritten by `mark-task` on every task, so widening the
-        // scope past durable contracts would fire on nearly every run and be
-        // learned-ignored. Same scoping as the staleness check itself.
+    fn bookkeeping_churn_is_not_a_review_contract() {
         let tmp = tempdir().unwrap();
         seed(tmp.path(), REVIEWED_CLEAN);
         let base = git_commit_all(tmp.path(), "base");
-        seed_reviewed_at(tmp.path(), &base);
-        git_commit_all(tmp.path(), "commit the reviewed-at edit");
+        seed_with_current_digest(tmp.path(), &base);
 
-        for name in ["tasks.md", "plan.md", "review.md"] {
+        for name in ["tasks.md", "plan.md"] {
             fs::write(tmp.path().join("specs/007-gate").join(name), "# churn\n").unwrap();
         }
 
@@ -1745,35 +1516,23 @@ mod tests {
             Some(ReviewGateBlock::ReviewStale),
             "{result:?}"
         );
-        assert!(
-            !result
-                .guidance
-                .as_deref()
-                .unwrap_or_default()
-                .contains("uncommitted durable contract(s):"),
-            "bookkeeping churn is not a contract: {:?}",
-            result.guidance
-        );
     }
 
+    /// A pre-digest `review:` block reports undeterminable on the passing
+    /// verdict — not stale, and not silence.
     #[test]
-    fn a_working_tree_that_cannot_be_inspected_is_not_reported_as_clean() {
-        // The QUAL-CLAIM-001 finding this scenario's own review raised against
-        // it: `None` for "could not look" is the same value as `None` for
-        // "nothing dirty", so a caller reads a bare pass as assurance. Not a
-        // git repository at all is the reachable form — `stale_review_block`
-        // returns before touching git when `reviewed-against` is empty, so the
-        // discovery here can be the first one attempted.
+    fn a_review_record_with_no_digest_is_reported_as_undeterminable() {
         let tmp = tempdir().unwrap();
         seed(tmp.path(), REVIEWED_CLEAN);
+        let base = git_commit_all(tmp.path(), "base");
+        seed_records_at(tmp.path(), &base, &base);
+        git_commit_all(tmp.path(), "a pre-digest record");
 
-        let guidance = unexaminable_contracts_guidance(tmp.path(), "specs/007-gate");
-        let guidance = guidance.expect("an uninspectable tree must not read as clean");
-        assert!(guidance.contains("could not be inspected"), "{guidance}");
-        assert!(
-            !guidance.contains("uncommitted durable contract(s):"),
-            "it must not claim to have found specific files: {guidance}"
-        );
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(result.passed, "{result:?}");
+        let guidance = result.guidance.unwrap();
+        assert!(guidance.contains("Review-record freshness"), "{guidance}");
+        assert!(guidance.contains("no reviewed-digest"), "{guidance}");
     }
 
     // --- gate check 9: analyze staleness ------------------------------------
@@ -1789,29 +1548,59 @@ mod tests {
     /// record carries a digest of the feature's subjects **as they are now**.
     fn seed_with_current_digest(repo: &Path, review_sha: &str) {
         let dir = repo.join("specs/007-gate");
-        // Write the record without a digest first, so the digest is taken over
-        // the same bytes a real run would see (the `analyze:` block is excised
-        // from the spec's own digest either way).
         seed_records_at(repo, review_sha, review_sha);
-        let subjects = crate::primitives::analyze_subjects::subject_digest(&dir);
-        let mut block = String::from("analyze:\n  last-run: 2026-07-10T00:00:00Z\n");
-        let _ = writeln!(block, "  analyzed-against: {review_sha}");
-        block.push_str("  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 0\n");
-        block.push_str("  analyzed-digest:\n");
-        for (path, digest) in &subjects.digests {
-            let _ = writeln!(block, "    {path}: {digest}");
-        }
-        block.push_str("  blocking: false\n");
-
         let spec = dir.join("spec.md");
-        let text = fs::read_to_string(&spec).unwrap();
-        let (fm_text, body) = split_frontmatter(&text, &spec).unwrap();
-        let new_fm = crate::primitives::write_review::splice_top_level_block(
+
+        // In pipeline order: the review's digest, then its block, and only
+        // then the analysis — which digests the `spec.md` the review just
+        // rewrote. Taking the analyze digest first would leave the fixture
+        // permanently stale, because the `review:` block is one of its
+        // subjects. That is the real ordering constraint, not an artefact of
+        // the fixture.
+        let contracts = crate::primitives::analyze_subjects::subject_digest(
+            &dir,
+            crate::primitives::analyze_subjects::is_review_contract,
+        );
+        let mut review = String::from("review:\n  last-run: 2026-07-10T00:00:00Z\n");
+        let _ = writeln!(review, "  reviewed-against: {review_sha}");
+        review.push_str("  must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n");
+        if contracts.digests.is_empty() {
+            review.push_str("  reviewed-digest: {}\n");
+        } else {
+            review.push_str("  reviewed-digest:\n");
+            for (path, digest) in &contracts.digests {
+                let _ = writeln!(review, "    {path}: {digest}");
+            }
+        }
+        review.push_str("  blocking: false\n");
+        splice_block_into(&spec, "review", &review);
+
+        let subjects = crate::primitives::analyze_subjects::subject_digest(
+            &dir,
+            crate::primitives::analyze_subjects::is_analyze_subject,
+        );
+        let mut analyze = String::from("analyze:\n  last-run: 2026-07-10T00:00:00Z\n");
+        let _ = writeln!(analyze, "  analyzed-against: {review_sha}");
+        analyze
+            .push_str("  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 0\n");
+        analyze.push_str("  analyzed-digest:\n");
+        for (path, digest) in &subjects.digests {
+            let _ = writeln!(analyze, "    {path}: {digest}");
+        }
+        analyze.push_str("  blocking: false\n");
+        splice_block_into(&spec, "analyze", &analyze);
+    }
+
+    /// Replace one top-level frontmatter block in the spec at `spec`.
+    fn splice_block_into(spec: &Path, key: &str, block: &str) {
+        let text = fs::read_to_string(spec).unwrap();
+        let (fm_text, body) = split_frontmatter(&text, spec).unwrap();
+        let fm = crate::primitives::write_review::splice_top_level_block(
             fm_text,
-            "analyze",
+            key,
             block.trim_end_matches('\n'),
         );
-        fs::write(&spec, format!("---\n{new_fm}\n---\n{body}")).unwrap();
+        fs::write(spec, format!("---\n{fm}\n---\n{body}")).unwrap();
     }
 
     /// The hole this check closes: `review → fix → done` used to pass the gate
