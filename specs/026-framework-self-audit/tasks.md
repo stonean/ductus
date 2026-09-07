@@ -354,3 +354,9 @@ Opened by [048](../048-govern-acquired-runtime/spec.md)'s AC10 adopter runs, whi
 - [x] Prove it fails before keeping it: repoint one shipped URL at a renamed spec directory and confirm the family turns red
 
 - **Done when**: every `blob/main/<path>` URL in the corpus is resolved against the working tree, non-main refs are counted rather than resolved, the three finding kinds are distinguished, the family appears in all three registries Family 28 checks, and it has been proven to fail on a deliberately repointed URL.
+
+### 41. Family 19 states its own coverage
+
+- [ ] Implement the behavior described in `scenarios/family-19-says-what-it-examined.md`
+
+- **Done when**: `review-freshness.sh` closes every run with one stdout coverage line naming the examined count plus the grandfathered and unresolvable exclusions separately, in the shape Families 27, 31 and 37 already use; the line prints on a clean run, on a findings run (above the findings), and on a corpus with zero `done` specs; it never affects the exit code, so `run_check`'s non-zero-means-findings contract and the aggregator are unchanged; `bash scripts/audit/run-all.sh` still exits 0 on a clean tree and the family's own output is no longer empty; `shellcheck -S warning` clean.

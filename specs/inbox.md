@@ -36,6 +36,3 @@
         specs/008-security-rules/spec.md): `- [ ] {Rule ID}: {artifact} does not address — {summary}`.
 
      When an item is migrated, remove it from this list. -->
-
-- [ ] other: /audit Family 19 (review-freshness.sh) emits no coverage claim — Families 27, 31 and 37 each print an examined count, so their silence is distinguishable from an abort; Family 19's is not, and confirming it had actually enumerated 54 specs required instrumenting a copy. QUAL-CLAIM-001 in the audit family itself — `scripts/audit/review-freshness.sh` (captured during /ductus:implement of 022)
-- [ ] other: the two enforcement points of review freshness now use different mechanisms — `check-review-gate` compares `reviewed-digest` against the working tree (022 tasks 107/108) while /audit Family 19 still diffs `reviewed-against`..HEAD. Defensible, since Family 19 runs at release time when everything is committed, but the family's own header calls them "two enforcement points for one rule" and that is no longer literally true — decide whether Family 19 should read the digest — `scripts/audit/review-freshness.sh` (captured during /ductus:implement of 022)
