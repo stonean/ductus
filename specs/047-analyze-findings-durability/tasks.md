@@ -53,3 +53,14 @@ Implements `scenarios/analyze-run-durability.md`. Findings outlived the session;
 - [x] Implement the behavior described in `scenarios/analyze-record-freshness.md`
 
 - **Done when**: `/{project}:review` renders the three-state `analyze` row from a working-tree comparison, `check-review-gate` blocks a stale record naming the changed paths, and both surfaces agree on the subject set.
+
+## 5. Make the analyze record say what it examined
+
+- [x] Add `analyzed-digest` to `AnalyzeBlock` and `write-analysis`: a per-path digest of the subject set as read from disk, excluding the spec's own `analyze:` block, with unreadable subjects recorded as unreadable rather than digested as empty
+- [x] Replace the sha-diff staleness basis with a digest comparison, retiring `Compare`'s two modes and the working-tree/committed split
+- [x] Keep `analyzed-against` as provenance and read it only for the mechanical-sweep rename exemption, reporting candidates when its trees are unavailable
+- [x] Report a digest-less record as undeterminable — not current, not stale, and not a sha-diff fallback
+- [x] Prove the false-positive path is gone: a record written against a dirty tree must not stale when that same content is committed
+- [ ] Re-run `/{project}:review` so the retired `QUAL-CLAIM-001` finding leaves the report by being fixed rather than dispositioned
+
+- **Done when**: staleness is a digest comparison, the row and the gate return the same answer before and after a commit, a record predating the digest reads undeterminable, and committing content an analysis already read does not block.

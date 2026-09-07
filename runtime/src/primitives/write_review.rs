@@ -34,7 +34,7 @@ use std::path::Path;
 use serde::Deserialize;
 
 use crate::primitives::{
-    PrimitiveError, Result, check_review_gate, read_text, rel_path, split_frontmatter, write_atomic,
+    PrimitiveError, Result, analyze_subjects, read_text, rel_path, split_frontmatter, write_atomic,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -171,13 +171,14 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     })
 }
 
-/// The spec's analyze-record freshness against the working tree.
+/// The spec's analyze-record freshness.
 ///
-/// Delegates to [`crate::primitives::check_review_gate::analyze_freshness`] —
-/// the single implementation the gate also uses (spec 047 AC14) — so the row
-/// this primitive reports and the verdict the gate reaches cannot disagree
-/// about whether a record is stale. Only the reference point differs, and it
-/// differs because the two answer at different moments.
+/// Delegates to [`crate::primitives::analyze_subjects::freshness`] — the single
+/// implementation the completion gate also uses (spec 047 AC14) — so the row
+/// this primitive reports and the verdict that gate reaches cannot disagree.
+/// There is no reference point left to differ on: the comparison is of the
+/// subject set's content against the digest the analysis recorded, which
+/// answers the same way before and after a commit.
 ///
 /// A spec whose frontmatter will not parse yields
 /// [`AnalyzeFreshness::Undeterminable`] rather than an error: the review
@@ -196,12 +197,7 @@ fn analyze_freshness_of(
         .and_then(|(fm_text, _body)| serde_norway::from_str::<Frontmatter>(fm_text).ok())
         .and_then(|frontmatter| frontmatter.analyze);
     match block {
-        Some(analyze) => check_review_gate::analyze_freshness(
-            repo,
-            &rel_dir,
-            Some(&analyze),
-            check_review_gate::Compare::WorkingTree,
-        ),
+        Some(analyze) => analyze_subjects::freshness(repo, &rel_dir, Some(&analyze)),
         None => AnalyzeFreshness::NeverAnalyzed,
     }
 }
@@ -971,10 +967,28 @@ mod tests {
         let text = fs::read_to_string(&spec).unwrap();
         fs::write(&spec, text.replace("PLACEHOLDER", &sha)).unwrap();
 
+        // Give the record a digest of the subjects as they are now, so it is
+        // judgeable at all. Without one the honest answer is undeterminable,
+        // which is what every pre-digest record reports.
+        let subjects = analyze_subjects::subject_digest(&tmp.path().join("specs/001-x"));
+        let text = fs::read_to_string(&spec).unwrap();
+        let mut block = String::from("analyze:\n  last-run: 2026-09-06T00:00:00Z\n");
+        let _ = writeln!(block, "  analyzed-against: {sha}");
+        block.push_str("  hard-fail: 0\n  blocking-findings: 0\n  advisory: 0\n  unexamined: 0\n");
+        block.push_str("  analyzed-digest:\n");
+        for (path, digest) in &subjects.digests {
+            let _ = writeln!(block, "    {path}: {digest}");
+        }
+        block.push_str("  blocking: false");
+        let (fm_text, body) = split_frontmatter(&text, &spec).unwrap();
+        let new_fm = splice_top_level_block(fm_text, "analyze", &block);
+        fs::write(&spec, format!("---\n{new_fm}\n---\n{body}")).unwrap();
+
         let result = run(&base_args("001-x"), tmp.path()).unwrap();
         let AnalyzeFreshness::Stale { paths, .. } = &result.analyze_freshness else {
             panic!(
-                "expected the record to be superseded: {:?}",
+                "writing a review rewrites review.md and the spec's `review:` block, both \
+                 analyze subjects, so the digest must no longer match: {:?}",
                 result.analyze_freshness
             );
         };

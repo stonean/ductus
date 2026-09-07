@@ -11,6 +11,9 @@ use std::borrow::Cow;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+/// The analyze record's subject set and freshness comparison, shared by the
+/// completion gate, `write-review`'s row, and `write-analysis`.
+pub(crate) mod analyze_subjects;
 pub mod append_inbox;
 pub mod append_question;
 pub mod append_task;

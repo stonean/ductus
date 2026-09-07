@@ -112,7 +112,19 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
     } else {
         by_reason.values().copied().sum()
     };
-    let block = render_analyze_yaml(args, blocking, unexamined, &by_reason);
+    // The digest of what this run examined, taken here rather than accepted
+    // as an argument. `/{project}:analyze` is read-only, so the subjects are
+    // byte-identical to the ones its passes read moments ago — and deriving it
+    // means no caller can record a digest it did not take, the same discipline
+    // that derives `blocking` and sums `unexamined` from its breakdown. It
+    // also guarantees this digest and the one the gate recomputes come from
+    // one function, which is what makes the two surfaces agree.
+    let subjects = crate::primitives::analyze_subjects::subject_digest(
+        &spec_path
+            .parent()
+            .map_or_else(|| repo.to_path_buf(), std::path::Path::to_path_buf),
+    );
+    let block = render_analyze_yaml(args, blocking, unexamined, &by_reason, &subjects);
     let new_fm = splice_top_level_block(fm_text, "analyze", &block);
     let rendered = crate::primitives::with_line_ending(
         &format!("---\n{new_fm}\n---\n{body}"),
@@ -141,6 +153,7 @@ fn render_analyze_yaml(
     blocking: bool,
     unexamined: u32,
     by_reason: &BTreeMap<String, u32>,
+    subjects: &crate::primitives::analyze_subjects::SubjectDigest,
 ) -> String {
     let mut block = String::from("analyze:\n");
     let _ = writeln!(block, "  last-run: {}", single_line(&args.analyzed_at));
@@ -153,6 +166,21 @@ fn render_analyze_yaml(
     let _ = writeln!(block, "  blocking-findings: {}", args.blocking_findings);
     let _ = writeln!(block, "  advisory: {}", args.advisory);
     let _ = writeln!(block, "  unexamined: {unexamined}");
+    // The record's description of its own subject. Paths are feature-relative
+    // and the digests are hex, so neither needs quoting; both are derived from
+    // the filesystem rather than supplied, so neither can carry a newline.
+    if !subjects.digests.is_empty() {
+        let _ = writeln!(block, "  analyzed-digest:");
+        for (path, digest) in &subjects.digests {
+            let _ = writeln!(block, "    {path}: {digest}");
+        }
+    }
+    if !subjects.unreadable.is_empty() {
+        let _ = writeln!(block, "  analyzed-unreadable:");
+        for path in &subjects.unreadable {
+            let _ = writeln!(block, "    - {path}");
+        }
+    }
     // Omitted when empty, so a fully-examined run carries no map rather than
     // a map of zeroes. Reasons are a closed set of kebab-case identifiers, so
     // no quoting is needed; a reason outside it would be a caller defect the
@@ -335,7 +363,9 @@ mod tests {
         assert_eq!(result.unexamined, 4);
         let spec = fs::read_to_string(tmp.path().join("specs/042-demo/spec.md")).unwrap();
         assert!(spec.contains("  unexamined: 4"));
-        assert!(!spec.contains("999"));
+        // Anchored to the field, not to the bare digits: the block now also
+        // carries hex digests, and a bare `999` match can land inside one.
+        assert!(!spec.contains("unexamined: 999"));
     }
 
     /// A fully-examined run carries no map rather than a map of zeroes.

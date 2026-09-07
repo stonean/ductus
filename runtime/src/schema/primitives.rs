@@ -69,9 +69,38 @@ pub struct AnalyzeBlock {
     /// ISO-8601 UTC timestamp of the last `/ductus:analyze`, if any.
     #[serde(default)]
     pub last_run: Option<String>,
-    /// HEAD sha the analysis ran against.
+    /// HEAD sha at the time of the run — **provenance, not the staleness
+    /// basis**. Read for exactly one thing: the mechanical-sweep rename
+    /// exemption, which genuinely needs two trees. Staleness itself is
+    /// [`Self::analyzed_digest`].
     #[serde(default)]
     pub analyzed_against: Option<String>,
+    /// Per-path sha256 of the subject set **as this run read it from disk**,
+    /// keyed by path within the feature directory.
+    ///
+    /// The record's description of its own subject, and the basis of the
+    /// staleness comparison. `analyzed_against` cannot serve that purpose:
+    /// `/{project}:analyze` reads the working tree while that field records a
+    /// *commit*, so using it made the gate block records whose analysis had
+    /// genuinely read the current content — see
+    /// [`crate::primitives::analyze_subjects`] for the failure and the
+    /// measurement.
+    ///
+    /// `spec.md` is digested with its own `analyze:` block excised, because
+    /// this record is written after the subjects are read and a digest
+    /// covering it could never match.
+    ///
+    /// Empty means the record predates the field, which is
+    /// [`AnalyzeFreshness::Undeterminable`] rather than a match: nothing on
+    /// disk says what those runs examined. It clears on the next analyze.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub analyzed_digest: std::collections::BTreeMap<String, String>,
+    /// Subjects that exist but could not be read when the digest was taken.
+    ///
+    /// Recorded rather than digested as empty, so a record cannot claim to
+    /// have covered a file it could not open.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub analyzed_unreadable: Vec<String>,
     /// Hard-fail findings (malformed frontmatter, missing required fields).
     #[serde(default)]
     pub hard_fail: u32,
@@ -3902,6 +3931,8 @@ mod tests {
                     unexamined: 1,
                     unexamined_by_reason: BTreeMap::from([("root-absent".to_string(), 1)]),
                     blocking: false,
+                    analyzed_digest: std::collections::BTreeMap::new(),
+                    analyzed_unreadable: vec![],
                 }),
             },
             sections: vec![SpecSection {

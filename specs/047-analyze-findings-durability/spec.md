@@ -2,13 +2,13 @@
 status: in-progress
 dependencies: []
 review:
-  last-run: 2026-09-05T17:34:03Z
-  reviewed-against: 2402ded3bed649b627c484541efac5436ac9dacd
+  last-run: 2026-09-07T16:22:10Z
+  reviewed-against: 054c888c6b6a4d4fd480e07a6abaaa50c41142aa
   must-violations: 0
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 15
+next-criterion: 16
 analyze:
   last-run: 2026-09-06T14:12:55Z
   analyzed-against: 683a1e03c463c62ea644a4466acc5873eba0d1a4
@@ -127,9 +127,10 @@ are unchanged in substance.
 - [x] AC9: `/{project}:analyze` records every run in the spec's `analyze:` frontmatter block — `last-run`, `analyzed-against`, the three tier counts, `unexamined`, and a derived `blocking` — including on a clean run and an empty scope, so the record's absence is itself information. A spec whose frontmatter does not parse receives no record.
 - [x] AC10: `/{project}:implement`'s pre-done gate blocks a spec whose `analyze:` block is absent, carries a null `last-run`, reports `blocking: true`, or carries a record gone stale (AC13), ordered after every `review:` check and with no grandfather clause. Advisory findings and unexamined targets are reported in the gate's guidance and never block.
 - [x] AC11: The exempt population — `done` specs predating the record — is counted by `/{project}:audit` Family 37 against a committed high-water mark, which fails when the backlog grows (the gate has no grandfather clause, so growth means it was bypassed) and reports a baseline that has gone slack. Backfilling the record was rejected: it would assert a run that nothing on disk substantiates.
-- [x] AC12: `/{project}:review` renders exactly one `analyze` row in every run's stdout summary — never-analyzed, superseded, current, or freshness-undeterminable — computed against the **working tree** rather than committed trees, so a review that has just written `review.md` reports superseded rather than current. The row is advisory: the command's exit code and the spec's `review.blocking` are unchanged by it. It renders on an empty scope, on a dimension-restricted run, and once per feature under `--all`.
-- [x] AC13: `check-review-gate` blocks a spec whose analyze record is stale, ordered after `not-analyzed` and `analyze-findings`, with the blocked message naming the changed paths and directing the operator to re-run `/{project}:analyze`. An `analyzed-against` that does not resolve in the tree is reported as undeterminable rather than passed silently.
-- [x] AC14: Both surfaces derive staleness from one subject set — every `.md` under `specs/{feature}/`, `review.md` included — excluding a diff confined to the spec's own `analyze:` frontmatter block and excluding a uniform §spec-lifecycle rename. A single implementation backs both, so the notice and the gate cannot disagree about whether a record is stale.
+- [x] AC12: `/{project}:review` renders exactly one `analyze` row in every run's stdout summary — never-analyzed, superseded, current, or freshness-undeterminable — from the same subject-set digest comparison the gate uses, so a review that has just written `review.md` reports superseded rather than current. The row is advisory: the command's exit code and the spec's `review.blocking` are unchanged by it. It renders on an empty scope, on a dimension-restricted run, and once per feature under `--all`.
+- [x] AC13: `check-review-gate` blocks a spec whose analyze record is stale, ordered after `not-analyzed` and `analyze-findings`, with the blocked message naming the changed paths and directing the operator to re-run `/{project}:analyze`. A record carrying no `analyzed-digest` is reported as undeterminable rather than passed silently or diffed by sha.
+- [x] AC14: Both surfaces derive staleness from one subject set — every `.md` under `specs/{feature}/`, `review.md` included — excluding the spec's own `analyze:` frontmatter block and excluding a uniform §spec-lifecycle rename. One implementation and **one reference point** back both: the recorded digest of what the run read, compared to the same subject set now. The notice and the gate therefore return the same answer wherever they are asked, rather than sharing code across two reference points that could differ.
+- [x] AC15: `/{project}:analyze` records `analyzed-digest` — a per-path digest of the subject set as the run read it from disk, excluding the spec's own `analyze:` block — and `analyzed-against` is recorded as provenance only, never as the staleness basis. A subject that could not be read is recorded as unreadable rather than digested as empty.
 
 ## Open Questions
 

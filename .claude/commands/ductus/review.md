@@ -119,7 +119,7 @@ Run once per targeted feature (every in-progress or done spec under `--all`, oth
 6. <!-- llm:performReview --> Run the **efficiency** pass: flag N+1 queries, repeated work, and unbounded loops over user-controlled input.
 7. <!-- llm:performReview --> Run the **simplicity** pass: flag overengineering, premature abstraction, and dead branches; mark a finding auto-fixable when a simpler form is mechanically derivable. A dimension-restricting flag (`--security` / `--simplicity` / `--quality`) skips the unselected passes.
 8. Invoke `process-waivers` to classify the spec's `review.waivers` against the findings the passes just accumulated (apply / expire / retain / malformed / duplicate), emitting each notice it returns. **On a dimension-restricted run (`--security` / `--simplicity` / `--quality`), pass the skipped dimensions as `skipped-passes`** so a waiver whose rule did not fire is _retained_, not expired — the partial run cannot see the dimensions it didn't run, so it must not prune their waivers. The applied set is excluded from the blocking count; the expired set is dropped on the next write; the retained set is left in the frontmatter untouched. On an unrestricted run `skipped-passes` is empty and a waiver expires only when its file is gone or its rule genuinely no longer fires.
-9. Invoke `write-review` with the accumulated pass findings, the accumulated pass **observations**, the waiver results (`applied` / `expired`), and the scope to render `specs/NNN-feature/review.md`, update the spec `review:` frontmatter block, and capture each observation to `specs/inbox.md`. Supply the required scalars the primitives don't produce — `reviewed-at` (the current UTC timestamp) and `reviewed-against` (HEAD sha), both host-provided (as the session-write's `set-at` is); `diff-base` comes from step 1. It applies the cross-pass dedup (highest-severity-wins on rule + file + overlapping range), buckets findings into MUST / SHOULD / low-confidence / waived, prunes expired waivers (preserving any adopter-authored waiver fields on the survivors), records the skipped passes, renders the observations, and sets blocking when MUST violations remain. With `--fix`, apply the auto-fixable findings, re-run the affected passes, and invoke `write-review` a second time for the post-fix counts. The result also carries `analyze-freshness`, the state of the spec's `analyze:` record computed against the **working tree** at the moment of the write — render it as the `analyze` row described under [Output](#output). It never affects the exit code.
+9. Invoke `write-review` with the accumulated pass findings, the accumulated pass **observations**, the waiver results (`applied` / `expired`), and the scope to render `specs/NNN-feature/review.md`, update the spec `review:` frontmatter block, and capture each observation to `specs/inbox.md`. Supply the required scalars the primitives don't produce — `reviewed-at` (the current UTC timestamp) and `reviewed-against` (HEAD sha), both host-provided (as the session-write's `set-at` is); `diff-base` comes from step 1. It applies the cross-pass dedup (highest-severity-wins on rule + file + overlapping range), buckets findings into MUST / SHOULD / low-confidence / waived, prunes expired waivers (preserving any adopter-authored waiver fields on the survivors), records the skipped passes, renders the observations, and sets blocking when MUST violations remain. With `--fix`, apply the auto-fixable findings, re-run the affected passes, and invoke `write-review` a second time for the post-fix counts. The result also carries `analyze-freshness`, the state of the spec's `analyze:` record — its recorded digest compared against the spec's analyze subjects as they are now — which you render as the `analyze` row described under [Output](#output). It never affects the exit code.
 
 ## Markdown-only reference
 
@@ -711,7 +711,7 @@ The row renders on **every** run, in one of four states, from the
   analyze     ✗ never analyzed — run /ductus:analyze before done
   analyze     ✗ last run 2026-09-06 against 683a1e0 — this review supersedes it
   analyze     ✓ last run 2026-09-06 against 683a1e0 — current
-  analyze     ? freshness undeterminable — analyzed-against 683a1e0 does not resolve here
+  analyze     ? freshness undeterminable — the record carries no analyzed-digest
 ```
 
 `current` is why this is a computed row rather than a fixed reminder: a
@@ -719,12 +719,18 @@ The row renders on **every** run, in one of four states, from the
 reporting it superseded would be the false alarm that teaches operators to skip
 the row.
 
-The state is computed against the **working tree**, not committed trees. This
-command has just written `review.md` and the `review:` block while `HEAD` has
-not moved, so a committed comparison would report `current` at the exact moment
-it stopped being true. The pre-done gate reads committed trees instead, because
-it answers at a different moment — and both go through one implementation, so
-the row and the gate cannot disagree about whether a record is stale.
+The state is a **content** comparison: the digest the analysis recorded of what
+it read, against the spec's analyze subjects as they are now. It is not a
+commit comparison, which is why this row and the pre-done gate cannot disagree
+— there is no reference point left for them to differ on, and neither reports a
+record as stale merely because content the analysis already examined has since
+been committed. Writing this review supersedes the record because `review.md`
+and the spec's `review:` block are themselves analyze subjects, not because
+`HEAD` moved.
+
+A record carrying no `analyzed-digest` — every record written before this
+existed — renders the fourth state. It is not current and not stale: nothing on
+disk says what that run examined.
 
 **The row is a notice, not a gate.** `/ductus:review` has no authority over
 the `done` transition and does not acquire one here: `blocking`, the exit code,
