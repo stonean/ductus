@@ -61,6 +61,6 @@ Implements `scenarios/analyze-run-durability.md`. Findings outlived the session;
 - [x] Keep `analyzed-against` as provenance and read it only for the mechanical-sweep rename exemption, reporting candidates when its trees are unavailable
 - [x] Report a digest-less record as undeterminable — not current, not stale, and not a sha-diff fallback
 - [x] Prove the false-positive path is gone: a record written against a dirty tree must not stale when that same content is committed
-- [ ] Re-run `/{project}:review` so the retired `QUAL-CLAIM-001` finding leaves the report by being fixed rather than dispositioned
+- [x] Re-run `/{project}:review` so the retired `QUAL-CLAIM-001` finding leaves the report by being fixed rather than dispositioned
 
 - **Done when**: staleness is a digest comparison, the row and the gate return the same answer before and after a commit, a record predating the digest reads undeterminable, and committing content an analysis already read does not block.
