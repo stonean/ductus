@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [021-runtime-boundary]
 review:
   last-run: 2026-09-07T19:18:25Z
@@ -101,12 +101,12 @@ review:
   blocking: false
 next-criterion: 28
 analyze:
-  last-run: 2026-09-07T19:20:55Z
-  analyzed-against: 3109343a772368cf5073e9c2dfb9974b643dc5ac
+  last-run: 2026-09-07T19:22:31Z
+  analyzed-against: 0a6670b3688e2caf3fe85cbf843bd0a58942890c
   hard-fail: 0
   blocking-findings: 0
   advisory: 0
-  unexamined: 0
+  unexamined: 2
   analyzed-digest:
     data-model.md: 6adcb51af5d170099dc42819aa0da861eb2858c2db178dbf6dddc85c5a103a32
     plan.md: 83fd97d76c64d20beb729ce68149d23f3e1e388711ec0371818aa49b4f0304bf
@@ -200,8 +200,10 @@ analyze:
     scenarios/writecode-boundary-derivation.md: 9e4d5b406b4d5e25c4a4dd9e5264995a5e4bc83075ec20eae2c3eb3e36adcd81
     scenarios/writecode-payload-bundling.md: 5c343929c3a42ac4406a02c173b6979231127b9583aabae171fee1f747d5084b
     scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
-    spec.md: 238dd171ba1b3abc81e684f98a04049e688594403a275be7d39947e1c4eee016
+    spec.md: 1c42889fd98cd9defd51f03907a5227121ef41bf2c6b94f3f3bf305c0a88428e
     tasks.md: 89cbb9176b09d8268f755e813e56025cd5328adad58e5578cca34dab4e540985
+  unexamined-by-reason:
+    not-a-live-claim: 2
   blocking: false
 ---
 
