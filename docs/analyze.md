@@ -61,6 +61,11 @@ analyze:
   blocking-findings: 0
   advisory: 3
   unexamined: 4
+  analyzed-digest:
+    data-model.md: 9c1b…
+    scenarios/retry-on-timeout.md: 3f2a…
+    spec.md: 71d4…
+    tasks.md: b085…
   unexamined-by-reason:
     root-absent: 4
   blocking: false
@@ -69,12 +74,14 @@ analyze:
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `last-run` | ISO-8601 UTC timestamp, or `null` | When the analysis ran. `null` (the template's initial value) or an absent block means **never analyzed** |
-| `analyzed-against` | Commit sha, or `null` | The HEAD sha the run examined — what the counts below describe |
+| `analyzed-against` | Commit sha, or `null` | The HEAD sha at the time of the run — **provenance**, not the staleness basis |
 | `hard-fail` | Integer | Hard-fail findings: malformed frontmatter and missing required fields |
 | `blocking-findings` | Integer | Blocking-tier findings |
 | `advisory` | Integer | Advisory-tier findings. Recorded, **never** gated on |
 | `unexamined` | Integer | Targets the run could not examine — the size of the informational skipped set |
 | `unexamined-by-reason` | Map of `reason: count` | The `unexamined` total broken out over a closed reason set. Omitted entirely when empty |
+| `analyzed-digest` | Map of `path: sha256` | Per-path digest of every `.md` under the feature **as this run read it**, keyed within the feature directory. The staleness basis. Omitted when empty, which only a pre-digest record can be |
+| `analyzed-unreadable` | List of paths | Subjects that exist but could not be read when the digest was taken, recorded rather than digested as empty. Omitted when empty |
 | `blocking` | Boolean | **Derived**, never supplied: `true` when `hard-fail` or `blocking-findings` exceeds zero |
 
 The block is spliced in place, so every sibling frontmatter key — `status`, `dependencies`, `review:` — survives untouched. A spec whose frontmatter does not parse gets **no** record: that spec is one the analysis would have hard-failed on, and writing a clean record into it would invert the whole mechanism.
@@ -83,9 +90,15 @@ The block is spliced in place, so every sibling frontmatter key — `status`, `d
 
 The field the completion gate reads first. Its *absence* is the signal: a spec with no `analyze:` block, or with `last-run: null`, has never completed an analysis, and the gate blocks `done` on exactly that. Before the record existed, a spec that had passed both pipeline gates and one that had passed only the review were byte-identical on disk — which is why the record is written on every run, clean ones included. A run that declines to write one is indistinguishable from a run that never happened.
 
-### `analyzed-against`
+### `analyzed-against` and `analyzed-digest`
 
-The HEAD sha at the time of the run, so the counts are attributable to a known tree. **Nothing gates on its freshness** — deliberately, and unlike `review.reviewed-against`, which the review gate does check. Analyze's subject includes `tasks.md`, rewritten on every completed task, so a naive staleness check would fire on nearly every run and be learned-ignored. The consequence is real and worth knowing: a record written before a further edit to the spec stays honest about *what it examined* while no longer describing the current body. The operational rule is to **write the record last**, after every edit to the spec is in — which is what the command's own step ordering does (capture → record → render).
+`analyzed-against` is the HEAD sha at the time of the run, so the counts are attributable to a known tree. It is **provenance, not the staleness basis**, and is read for exactly one thing: the mechanical-sweep rename exemption, which genuinely needs two trees.
+
+`analyzed-digest` is what freshness compares. Staleness was a commit comparison in the first cut of this check and that design produced false blocks: `/{project}:analyze` reads the **working tree**, while `analyzed-against` records a *commit*, and the two coincide only when the tree is clean — which at the moment analyze runs it usually is not, since `/{project}:review` has just written `review.md` and the `review:` block and `mark-task` rewrote `tasks.md` before that. Diffing the sha therefore blocked records whose run had genuinely read the current content, as soon as that content was committed. The digest states what the run actually read, so committing content the analysis already examined does not stale it. `spec.md` is digested with its own `analyze:` block excised — the record is written after the subjects are read, so a digest covering it could never match; without that exclusion the rule flagged all 54 of this repo's recorded specs, and with it, 1.
+
+The operational rule is still to **write the record last**, after every edit to the spec is in — which is what the command's own step ordering does (capture → record → render). What changed is the consequence of getting it wrong: a record written before a further edit is now reported as stale by the completion gate rather than standing as a quietly-outdated claim. A record carrying **no** digest — every one written before the field existed — reads `undeterminable`: not current, not stale, and not a sha-diff fallback. It does not block, and it clears on the next run.
+
+The `review:` record works identically over its own narrower subject set (`scenarios/*.md` and `data-model.md`) through `reviewed-digest`. One comparison, two subject sets.
 
 ### `hard-fail` and `blocking-findings`
 

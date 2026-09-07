@@ -53,9 +53,6 @@ pub struct ReviewBlock {
     /// the instant it was recorded. That is the opposite of the analyze
     /// record's set, and correctly so: they are this command's *outputs*.
     ///
-    /// Empty means the record predates the field, which is
-    /// [`RecordFreshness::Undeterminable`] rather than a match. It clears on
-    /// the next review.
     /// `None` means no digest was recorded — a pre-digest review, which is
     /// [`RecordFreshness::Undeterminable`]. `Some` of an **empty** map means
     /// the digest was taken and the spec has no durable contracts to digest,
@@ -2794,9 +2791,11 @@ pub enum ReviewGateBlock {
     /// [`AnalyzeBlock::advisory`] for why this does not mirror the review
     /// gate's treatment of an outstanding SHOULD.
     AnalyzeFindings,
-    /// The analysis is **stale**: a `.md` artifact under the feature changed
-    /// after `analyze.analyzed-against`, so the recorded verdict describes a
-    /// corpus that no longer exists.
+    /// The analysis is **stale**: a `.md` artifact under the feature no longer
+    /// matches the digest [`AnalyzeBlock::analyzed_digest`] recorded of it, so
+    /// the verdict describes a corpus that no longer exists. The comparison is
+    /// of content, not commits — `analyzed_against` is provenance and moving
+    /// `HEAD` over content the analysis already read does not stale it.
     ///
     /// Ordered last, after [`Self::NotAnalyzed`] and [`Self::AnalyzeFindings`],
     /// for the reason [`Self::ReviewStale`] is ordered after

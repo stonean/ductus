@@ -186,7 +186,7 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
 
 /// The spec's analyze-record freshness.
 ///
-/// Delegates to [`crate::primitives::analyze_subjects::freshness`] — the single
+/// Delegates to [`crate::primitives::analyze_subjects::analyze_freshness`] — the single
 /// implementation the completion gate also uses (spec 047 AC14) — so the row
 /// this primitive reports and the verdict that gate reaches cannot disagree.
 /// There is no reference point left to differ on: the comparison is of the

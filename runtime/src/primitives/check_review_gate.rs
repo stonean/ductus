@@ -169,23 +169,19 @@ pub(crate) fn run_with_lint(
         Ok(freshness) => freshness,
     };
 
-    // The gate passes. Before saying so, name what it could not examine: the
-    // staleness diff above compares committed trees, so a durable contract
-    // living only in the working tree is outside it. At this moment that is
-    // the normal state rather than an edge case — a scenario written during
-    // the session is uncommitted, `reviewed-against` is HEAD, the diff is
-    // empty, and a bare `passed: true` reads as "examined and current" when
-    // nothing was examined. Reporting it does not block: committing before
-    // reviewing is a workflow choice. It only stops the clean verdict from
-    // being silent about its own blind spot, which is `QUAL-CLAIM-001`
-    // applied to the gate itself — the same failure `stale_review_block`
-    // already records against an unresolvable `reviewed-against`.
+    // The gate passes. Before saying so, name what it could not examine.
     //
-    // The analyze record's freshness joins that notice when it could not be
-    // determined at all. `stale_analyze_block` above returns `None` for an
-    // unresolvable `analyzed-against` — it does not block on its own inability
-    // to check — but passing silently would be the same fail-open-with-no-signal
-    // this file already paid for once.
+    // Both staleness checks above read the working tree, so an uncommitted
+    // contract is no longer a blind spot — that horizon is gone, and with it
+    // the notice that used to report it. What remains unexaminable is a record
+    // that never wrote down what its run read: a `review:` or `analyze:` block
+    // with no digest cannot be compared against anything, so the check does not
+    // fire at all. Neither arm blocks — an undeterminable record clears on the
+    // record's next run — but a bare `passed: true` over one of them would read
+    // as "examined and current" when nothing was compared, which is
+    // `QUAL-CLAIM-001` applied to the gate itself. Naming it is what keeps the
+    // silence of a clean verdict meaningful, and it is the operator's to weigh
+    // at the transition rather than the walker's to drop.
     Ok(CheckReviewGateResult {
         passed: true,
         blocked_by: None,
@@ -198,9 +194,9 @@ pub(crate) fn run_with_lint(
 /// What a **passing** gate could not examine, as one guidance line.
 ///
 /// Joined rather than ranked because an operator weighing the transition needs
-/// both: the two durable
-/// records — `review:` and `analyze:` — whose freshness could not be
-/// determined at all, because it carries no digest of what its run read.
+/// both. Each arm fires for one of the two durable records — `review:` and
+/// `analyze:` — whose freshness could not be determined at all, because that
+/// record carries no digest of what its run read.
 ///
 /// `None` — real silence — only when both examined cleanly, which is what
 /// makes that silence mean something.
