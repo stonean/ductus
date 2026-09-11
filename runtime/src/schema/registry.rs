@@ -5,10 +5,13 @@
 //! from [`PRIMITIVE_REGISTRY`]; `framework/runtime-tools.txt` (the shipped
 //! manifest) is asserted set-equal in `runtime/tests/mcp.rs`, and the
 //! interpreter's `dispatch_primitive` is asserted to handle every registry
-//! name in `interpreter::tests`. The two remaining hand-written surfaces —
-//! the rmcp `#[tool]` methods and the clap subcommand enum in `main.rs` —
-//! cannot consume a const slice, so the tests above pin them instead of a
-//! macro.
+//! name in `interpreter::tests`. Two hand-written surfaces cannot consume a
+//! const slice: the rmcp `#[tool]` methods, which `tests/mcp.rs` does pin by
+//! listing served tools against `TOOL_NAMES` — and the clap subcommand enum
+//! in `main.rs`, which **nothing pins**. Deleting a variant and its dispatch
+//! arm leaves the entire suite green (verified 2026-09-11), so a primitive
+//! can be absent from the `ductus <name>` CLI with no test reporting it.
+//! Check that surface by hand when adding a primitive.
 
 /// Every primitive name exposed by the runtime, in manifest order. Names
 /// are bare `<verb>-<noun>` strings; server-level namespacing (`ductus`) is

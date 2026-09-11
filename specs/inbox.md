@@ -36,3 +36,5 @@
         specs/008-security-rules/spec.md): `- [ ] {Rule ID}: {artifact} does not address — {summary}`.
 
      When an item is migrated, remove it from this list. -->
+
+- [ ] bug: the clap subcommand enum in `runtime/src/main.rs` is the one primitive-wiring surface nothing pins — deleting a `Command` variant and its dispatch arm leaves the full suite green, so a primitive can be missing from the `ductus <name>` CLI undetected. Every other site is pinned (registry set-equality in tests/mcp.rs, the `#[tool]` listing, `dispatch_handles_every_registry_primitive`, and `PRIMITIVE_NAMES` being a direct alias). A test iterating `PRIMITIVE_REGISTRY` against the clap command list would close it. (found 2026-09-11 during 055)
