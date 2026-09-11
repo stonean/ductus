@@ -73,3 +73,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] `cargo test --release --locked`
 
 - **Done when**: all four are green, and `.claude/commands/ductus/` matches the sources under `framework/commands/`.
+
+## 9. Document the feature for adopters
+
+- [x] Write `docs/shared-constitution.md` — the deep reference: registering, what travels, how it loads, resolution outcomes, and what the feature deliberately does not do
+- [x] Add a brief `## Shared constitutions` section to `README.md` linking it, matching the shape of the existing Cross-service references section
+- [x] Add a `[constitutions]` bullet to the README's `## Configuration` list and the new file to the `docs/` line under `## Repository layout`
+
+- **Done when**: `docs/shared-constitution.md` exists and is linked from README's new section, its Configuration list, and its Repository layout; markdownlint is clean and no link is broken.

@@ -223,6 +223,7 @@ The runtime is **required**: acquisition failure halts the run rather than degra
 - **`[runtime]`** — `path` to a binary you supply, instead of the one `/ductus` downloads (see [docs/runtime.md](docs/runtime.md#supplying-your-own-binary)).
 - **`[[review.disabled-rule-files]]`** — stand a rule file down with a mandatory `reason` (see [Which rules load](#which-rules-load)).
 - **`[services]`** — register sibling services so cross-service reference links resolve to the linked spec's lifecycle status. Add entries with `/link`, not by hand.
+- **`[constitutions]`** — register a governance document your organization owns, so one house rule reaches every project instead of being retyped into each (see [Shared constitutions](#shared-constitutions)). Hand-edited; `repo` is never fetched, the local `path` is what is read.
 
 ```toml
 [pinned]
@@ -244,6 +245,24 @@ When a project spans multiple services — each its own repo with its own `ductu
 References are informative, never dependencies: they do not enter `dependencies:`, do not gate completion, and never block a pipeline gate. They are harvested into a derived `references:` frontmatter index — distinct from `dependencies:` — by the `derive-references` runtime primitive; you never hand-author it. `/status` shows each reference's resolution outcome and, where it resolves, the linked lifecycle status; `/analyze` reports a provably broken one as an Advisory finding.
 
 Single-service adopters see none of this. For the authoring rules, what the generator keys on, the registry schema, and the five resolution outcomes, see **[docs/cross-service-references.md](docs/cross-service-references.md)**.
+
+## Shared constitutions
+
+`ductus` ships one constitution to every adopter, covering rules true for any project running the pipeline. A **shared constitution** covers the other kind: rules true for *your organization's* projects and nobody else's — a house code style, a deployment gate, a review convention. Register one and it reaches every project, instead of being retyped into each repo's `AGENTS.md` and drifting from there.
+
+Register it in `.ductus/config.toml` by hand. As with `[services]`, the `repo` URL is identity only and is **never fetched** — the local `path` is a checkout you clone and update, so there is no transport, no auth story, and offline is the normal case:
+
+```toml
+[constitutions.acme]
+repo = "https://github.com/acme/governance"
+path = "../governance"
+```
+
+`ductus` reads one file from it, `constitution.md`, and `/target` loads it alongside the shipped constitution once per session — so every command inherits it with no per-command step. More than one may be registered. The shipped `.ductus/constitution.md` keeps receiving framework updates; you never pin it to add a house rule. The framework constitution stays a floor: a shared source may add rules and tighten them, never loosen them.
+
+If a registered checkout is missing, `ductus` warns and continues rather than blocking a teammate who has not cloned it — and `/review` and `/analyze` then report that source as **unexamined** rather than letting the run read as clean. Projects that register nothing see none of this.
+
+For the registry schema, the loading order, the resolution outcomes, and what the feature deliberately does not do, see **[docs/shared-constitution.md](docs/shared-constitution.md)**.
 
 ## Updating an adopted project
 
@@ -279,7 +298,7 @@ This repo is the source for everything `ductus` ships, plus its own dogfooded sp
   - [commands/](framework/commands/) — slash command sources
   - [bootstrap/](framework/bootstrap/) — the `ductus.md` installer and per-agent permission files
 - **[install.sh](install.sh)** — the `curl … | sh` installer that places the `/ductus` bootstrap command for your agent
-- **[docs/](docs/)** — the reference manuals: [slash-commands.md](docs/slash-commands.md), [analyze.md](docs/analyze.md), [runtime.md](docs/runtime.md), [cross-service-references.md](docs/cross-service-references.md)
+- **[docs/](docs/)** — the reference manuals: [slash-commands.md](docs/slash-commands.md), [analyze.md](docs/analyze.md), [runtime.md](docs/runtime.md), [cross-service-references.md](docs/cross-service-references.md), [shared-constitution.md](docs/shared-constitution.md)
 - **[runtime/](runtime/)** — the `ductus` deterministic runtime (Rust)
 - **[specs/](specs/)** — `ductus`'s own feature specs; it develops itself with its own pipeline. See [specs/README.md](specs/README.md) for cross-cutting decisions and deferred work.
 - **[scripts/](scripts/)** — maintenance and generator scripts
