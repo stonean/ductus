@@ -38,8 +38,8 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    ConstitutionOutcome, Frontmatter, RecordFreshness, ResolveConstitutionsResult, ReviewFinding,
-    ReviewObservation, WriteReviewArgs, WriteReviewResult,
+    ConstitutionOutcome, Frontmatter, RecordFreshness, ReviewFinding, ReviewObservation,
+    WriteReviewArgs, WriteReviewResult,
 };
 
 /// Execute the `write-review` primitive.
@@ -133,11 +133,22 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     // passed in: a caller that had to supply it could omit it, and the whole
     // point of the section is that a report cannot quietly claim clean over
     // rules it never loaded (spec 055, AC8).
-    let governance = crate::primitives::resolve_constitutions::run(
-        &crate::schema::primitives::ResolveConstitutionsArgs {},
-        repo,
-    )?;
-    let report = render_report(args, &must, &should, &low, &waived, blocking, &governance);
+    //
+    // Deliberately NOT `?`. A registry that will not parse is itself an
+    // unexamined-governance state — it is the strongest form of one — so it
+    // is rendered, not propagated. Propagating it would mean an unrelated
+    // typo in the project config produced no `review.md` at all, losing the
+    // findings this run just computed.
+    let governance_section = render_unexamined_governance(repo);
+    let report = render_report(
+        args,
+        &must,
+        &should,
+        &low,
+        &waived,
+        blocking,
+        &governance_section,
+    );
     let review_path = feature_dir.join("review.md");
     let spec_content = read_text(&spec_path)?;
     let updated = update_spec_review_block(
@@ -363,7 +374,7 @@ fn render_report(
     low: &[&ReviewFinding],
     waived: &[&ReviewFinding],
     blocking: bool,
-    governance: &ResolveConstitutionsResult,
+    governance_section: &str,
 ) -> String {
     let feature = &args.feature;
 
@@ -431,10 +442,7 @@ fn render_report(
             "## Skipped passes\n\n{}",
             render_skipped(&args.skipped_passes)
         ),
-        format!(
-            "## Unexamined governance\n\n{}",
-            render_unexamined_governance(governance)
-        ),
+        format!("## Unexamined governance\n\n{governance_section}"),
     ];
 
     format!("{fm}\n\n{}\n", sections.join("\n\n"))
@@ -569,7 +577,25 @@ fn render_observations(observations: &[ReviewObservation]) -> String {
 /// `*None.*` covers both "none registered" and "all registered sources read" —
 /// those are the same claim from the report's side, because in both cases nothing
 /// went unexamined. The distinction that matters here is unexamined vs not.
-fn render_unexamined_governance(governance: &ResolveConstitutionsResult) -> String {
+fn render_unexamined_governance(repo: &Path) -> String {
+    let governance = match crate::primitives::resolve_constitutions::run(
+        &crate::schema::primitives::ResolveConstitutionsArgs {},
+        repo,
+    ) {
+        Ok(result) => result,
+        // The registry itself is unreadable, so *nothing* registered was
+        // loaded and the run cannot even say how many sources it missed.
+        // That is the most severe form of this section's subject, so it is
+        // reported here rather than raised — `write-review`'s job is to record
+        // the run, and a config typo must not cost the operator the findings.
+        Err(err) => {
+            return format!(
+                "- the `[constitutions]` registry could not be read ({err}) — **no** shared \
+                 constitution was loaded for this review, and the count of what was missed \
+                 is itself unknown"
+            );
+        }
+    };
     if governance.skipped.is_empty() {
         return "*None.*".to_string();
     }
@@ -1828,6 +1854,35 @@ mod tests {
         assert!(
             report.contains("## Unexamined governance\n\n*None.*"),
             "a source that was read is not unexamined: {report}"
+        );
+    }
+
+    #[test]
+    fn a_malformed_config_still_produces_a_report() {
+        // Regression: the registry read was `?`-propagated, so an unrelated
+        // typo in the project config produced no review.md at all and the
+        // findings this run computed were lost. An unreadable registry is a
+        // governance state to report, not a reason to drop the report.
+        let tmp = spec_repo("055-x", "status: in-progress");
+        let cfg = tmp.path().join(".ductus");
+        fs::create_dir_all(&cfg).unwrap();
+        fs::write(cfg.join("config.toml"), "[constitutions.acme]\nrepo = \n").unwrap();
+
+        let result = run(&base_args("055-x"), tmp.path());
+        assert!(
+            result.is_ok(),
+            "a config typo must not cost the operator the report"
+        );
+
+        let report = review_md(&tmp, "055-x");
+        assert!(report.contains("## Unexamined governance"), "{report}");
+        assert!(
+            report.contains("registry could not be read"),
+            "the report must say the registry was unreadable: {report}"
+        );
+        assert!(
+            !report.contains("## Unexamined governance\n\n*None.*"),
+            "an unreadable registry must never render as None: {report}"
         );
     }
 }

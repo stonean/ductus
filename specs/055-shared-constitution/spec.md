@@ -2,11 +2,13 @@
 status: in-progress
 dependencies: [030-cross-service-references, 040-configurable-specs-dir, 050-constitution]
 review:
-  last-run: null
-  reviewed-against: null
+  last-run: 2026-09-11T16:00:31Z
+  reviewed-against: 51c2b2c444593cb62b4f43726558921eac9f7187
   must-violations: 0
   should-violations: 0
   low-confidence: 0
+  reviewed-digest:
+    data-model.md: 5c429d0d761de4d5bd5dd49802e582d2ed47ca617843d725e68c9f040e085938
   blocking: false
 analyze:
   last-run: null

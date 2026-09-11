@@ -115,15 +115,28 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
     // could omit it, and `QUAL-CLAIM-001` exists precisely to stop a clean result
     // standing in for an unexamined one (spec 055, AC8).
     let mut by_reason = by_reason;
-    let governance = crate::primitives::resolve_constitutions::run(
+    // Deliberately NOT `?`. This primitive's contract is that it writes a
+    // record on every run, because the record's *absence* is what a later
+    // gate reads as "never analyzed" — so a config that will not parse must
+    // not be able to suppress it. An unreadable registry is recorded as its
+    // own reason instead, which is the honest answer: nothing registered was
+    // loaded, and the run cannot say how many sources that was.
+    match crate::primitives::resolve_constitutions::run(
         &crate::schema::primitives::ResolveConstitutionsArgs {},
         repo,
-    )?;
-    if !governance.skipped.is_empty() {
-        let count = u32::try_from(governance.skipped.len()).unwrap_or(u32::MAX);
-        *by_reason
-            .entry("constitution-unresolved".to_string())
-            .or_default() += count;
+    ) {
+        Ok(governance) if !governance.skipped.is_empty() => {
+            let count = u32::try_from(governance.skipped.len()).unwrap_or(u32::MAX);
+            *by_reason
+                .entry("constitution-unresolved".to_string())
+                .or_default() += count;
+        }
+        Ok(_) => {}
+        Err(_) => {
+            *by_reason
+                .entry("constitution-registry-unreadable".to_string())
+                .or_default() += 1;
+        }
     }
     let by_reason = by_reason;
 
@@ -522,5 +535,27 @@ mod tests {
             !spec.contains("constitution-unresolved"),
             "a project with none registered reads exactly as before: {spec}"
         );
+    }
+
+    #[test]
+    fn a_malformed_config_still_records_the_run() {
+        // Regression: the registry read was `?`-propagated, so an unrelated
+        // config typo suppressed the analyze record entirely -- and an absent
+        // record is exactly what the pre-done gate reads as "never analyzed".
+        // This primitive writes a record on every run, by contract.
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let cfg = tmp.path().join(".ductus");
+        fs::create_dir_all(&cfg).unwrap();
+        fs::write(cfg.join("config.toml"), "[constitutions.acme]\nrepo = \n").unwrap();
+
+        let result = run(&args(), tmp.path());
+        assert!(result.is_ok(), "a config typo must not suppress the record");
+
+        let spec = fs::read_to_string(tmp.path().join("specs/042-demo/spec.md")).unwrap();
+        assert!(
+            spec.contains("constitution-registry-unreadable: 1"),
+            "{spec}"
+        );
+        assert!(spec.contains("  unexamined: 1"), "{spec}");
     }
 }
