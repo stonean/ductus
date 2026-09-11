@@ -100,8 +100,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 12. Retire the §State at hand-off section before the `done` transition
 
-- [ ] Rewrite or remove `## State at hand-off (2026-09-11)` in `spec.md` — all three of its claims are now false: `review.md` was regenerated with its `## Unexamined governance` section (`3d47ab5`), `/ductus:analyze` has run, and the `/ductus:review → /ductus:analyze → /ductus:implement` sequence it prescribes is complete
-- [ ] Keep the one thing in it that outlives the hand-off — the cross-spec impact owed to `050-constitution` — wherever a later reader will actually meet it
-- [ ] Confirm `check-artifacts`' link-adjacent decision-drift family still reports clean afterwards
+- [x] Rewrite or remove `## State at hand-off (2026-09-11)` in `spec.md` — all three of its claims are now false: `review.md` was regenerated with its `## Unexamined governance` section (`3d47ab5`), `/ductus:analyze` has run, and the `/ductus:review → /ductus:analyze → /ductus:implement` sequence it prescribes is complete
+- [x] Keep the one thing in it that outlives the hand-off — the cross-spec impact owed to `050-constitution` — wherever a later reader will actually meet it
+- [x] Confirm `check-artifacts`' link-adjacent decision-drift family still reports clean afterwards
 
 - **Done when**: `spec.md` describes the feature rather than the state of a session that has ended, so no sibling artifact is left asserting a prior state (§drift-prevention, *Decision resolution*). Found by `/ductus:analyze`'s grounding step on 2026-09-11: the mechanical drift family cannot catch it, because the section's prose ("is incomplete", "has never run") contains none of the six closed tells. Must land **before** the `in-progress → done` transition — afterwards the same edit is a meaningful body edit that takes the back-edge.
