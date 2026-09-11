@@ -565,7 +565,6 @@ fn render_observations(observations: &[ReviewObservation]) -> String {
         .join("\n")
 }
 
-/// Render skipped passes as a list, or `*None.*` when empty.
 /// Shared constitutions the project registered that this run could not read.
 ///
 /// A registered-but-unreadable source means the review ran under fewer rules than
@@ -617,6 +616,7 @@ fn render_unexamined_governance(repo: &Path) -> String {
         .join("\n")
 }
 
+/// Render skipped passes as a list, or `*None.*` when empty.
 fn render_skipped(skipped: &[String]) -> String {
     if skipped.is_empty() {
         return "*None.*".to_string();

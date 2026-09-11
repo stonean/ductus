@@ -89,3 +89,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] State the committed-`path` constraint: `.ductus/config.toml` is team-shared, so a relative sibling path is required and an absolute one resolves on one machine only
 
 - **Done when**: the manual tells a reader both what to write in a shared constitution and how to put it into use across projects, including why the checkout path must be relative; markdownlint clean.
+
+## 11. Reattach the doc comment task 5 orphaned in `write_review.rs`
+
+- [x] Move `/// Render skipped passes as a list, or`*None.*`when empty.` back above `render_skipped` — task 5 inserted `render_unexamined_governance` between that line and the function it documents, so the new function's rustdoc summary describes a different function and `render_skipped` carries none
+- [x] Re-read the doc comment on every other function the task-5 diff touched, per `AGENTS.md` §Workflow's prose-claim sweep entry
+- [x] `cargo test --release --locked` and `cargo clippy --release --all-targets --locked -- -D warnings`
+
+- **Done when**: `render_skipped` carries its own doc comment again, `render_unexamined_governance`'s summary line describes what it does, and the runtime suite plus clippy are green. Found by `/ductus:review` on 2026-09-11; routed here rather than to `specs/inbox.md` because it is a defect in what this in-progress spec built (constitution §brownfield-inbox).
