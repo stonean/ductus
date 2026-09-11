@@ -2,8 +2,8 @@
 status: in-progress
 dependencies: [030-cross-service-references, 040-configurable-specs-dir, 050-constitution]
 review:
-  last-run: 2026-09-11T16:00:31Z
-  reviewed-against: 51c2b2c444593cb62b4f43726558921eac9f7187
+  last-run: 2026-09-11T16:12:09Z
+  reviewed-against: bc216c85218a30650828175a80063a7ddd83359a
   must-violations: 0
   should-violations: 0
   low-confidence: 0
