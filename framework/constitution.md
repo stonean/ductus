@@ -66,6 +66,16 @@ Grounding is the working-discipline counterpart to the **Verified** principle: *
 2. **Live, reachable state** — a connected dev or read-only database, a running dev server, logs, a REPL, `--help` output, an actual test run. When such a source is on hand, query it rather than infer schema, data shape, or behavior.
 3. **Inference** — permitted only for what no reachable source can answer, and then stated as an assumption, never asserted as fact.
 
+<!-- §governance-precedence -->
+
+### Governance sources, and which governs
+
+The ranking above orders **evidence**. It does not order **governance documents**, and the two questions are different: one asks what is true, the other asks what binds. A project may load more than one governing document — the constitution `ductus` ships, and any shared constitution its `.ductus/config.toml` registers under `[constitutions.*]` (spec 055) — and where they disagree, this is the order:
+
+**The framework constitution is a floor.** A shared or project source may add rules and tighten existing ones; it may not loosen them. Where the framework is silent, the more specific source wins: **project > shared > framework**. The framework constitution is what every command reads to know how to behave, so a source able to disable one of its gates would make the pipeline's own invariants negotiable per repository.
+
+**Nothing enforces this.** No check compares two governing documents for contradiction, and none is planned — prose contradiction is not mechanically detectable. This is the rule for whoever resolves a disagreement, and stating it as anything more would be the defect [§grounding](#grounding) names one paragraph down: a rule that implied enforcement it does not have.
+
 ### A partial read is not a read
 
 Grounding governs *whether* a source was consulted. It governs the **completeness** of that consultation too, because a read that returned part of its subject satisfies "read the file" while delivering something else.

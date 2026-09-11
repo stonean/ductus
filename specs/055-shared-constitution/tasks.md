@@ -50,8 +50,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 6. State the precedence order once
 
-- [ ] Add the framework-as-floor statement (project > shared > framework where the framework is silent) to the config-schema documentation, together with the explicit fact that nothing enforces it
-- [ ] Add the corresponding constitution line and its pointer
+- [x] Add the framework-as-floor statement (project > shared > framework where the framework is silent) to the constitution as §governance-precedence, together with the explicit fact that nothing enforces it
+- [x] Point the config schema and `/ductus:target` step 4 at it rather than restating it
 
 - **Done when**: the precedence order appears exactly once as a normative statement, carries its own unenforced caveat, and no second copy exists (AC10).
 
