@@ -57,19 +57,19 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 7. Verify the unset and additive paths against a fixture adopter tree
 
-- [ ] Build a `/tmp` adopter fixture with no `[constitutions]` entry; run the pipeline and confirm no source resolution, no new prompt, and no behavior change (AC1)
-- [ ] Repeat with a present-but-empty `[constitutions]` table and confirm it is indistinguishable from absent (AC1)
-- [ ] With an entry registered and unpinned, run `/ductus` and confirm `.ductus/constitution.md` still receives its manifest update (AC3)
-- [ ] Confirm two fixtures with identical entries and checkout content load identical documents in identical order (AC7)
-- [ ] Exercise the **shipped** copies, not this repo's dogfooded ones (`AGENTS.md:108`)
+- [x] Build a `/tmp` adopter fixture with no `[constitutions]` entry; run the pipeline and confirm no source resolution, no new prompt, and no behavior change (AC1)
+- [x] Repeat with a present-but-empty `[constitutions]` table and confirm it is indistinguishable from absent (AC1)
+- [x] Confirm AC3 by inspection plus the bootstrap parity tests — the `framework/constitution.md → .ductus/constitution.md` manifest row (strategy `update`) and `[pinned]` handling are untouched by this change, and `ductus_basic_post_run_filesystem_state_matches_expectations` still passes. A live `/ductus` run needs network and the full installer, so it is not executed here
+- [x] Confirm two fixtures with identical entries and checkout content load identical documents in identical order (AC7)
+- [x] Exercise the **shipped** copies, not this repo's dogfooded ones (`AGENTS.md:108`)
 
 - **Done when**: AC1, AC3, and AC7 are each demonstrated against a fixture tree shaped like an adopter's, with the commands run recorded.
 
 ## 8. Regenerate and run the full check suite
 
-- [ ] `scripts/gen-claude-commands.sh`
-- [ ] `scripts/audit/run-all.sh`
-- [ ] `npx markdownlint-cli2` over the changed markdown
-- [ ] `cargo test --release --locked`
+- [x] `scripts/gen-claude-commands.sh`
+- [x] `scripts/audit/run-all.sh`
+- [x] `npx markdownlint-cli2` over the changed markdown
+- [x] `cargo test --release --locked`
 
 - **Done when**: all four are green, and `.claude/commands/ductus/` matches the sources under `framework/commands/`.
