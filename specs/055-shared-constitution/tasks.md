@@ -24,10 +24,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 3. Extend `/ductus:target` to load registered constitutions
 
-- [ ] Edit `framework/commands/target.md` step 4 to invoke `resolve-constitutions` and load every `loaded` document alongside `.ductus/constitution.md`
-- [ ] Report the sources loaded, and any in `skipped` with its reason (AC4, AC5)
-- [ ] Update the command's Scope Boundaries to cover reading the resolved documents
-- [ ] Run `cargo test --release --locked --test parity`; if `implement-basic` fails, re-bless and confirm the diff is shas only (`AGENTS.md:116`)
+- [x] Edit `framework/commands/target.md` step 4 to invoke `resolve-constitutions` and load every `loaded` document alongside `.ductus/constitution.md`
+- [x] Report the sources loaded, and any in `skipped` with its reason (AC4, AC5)
+- [x] Update the command's Scope Boundaries to cover reading the resolved documents
+- [x] Run `cargo test --release --locked --test parity`; if `implement-basic` fails, re-bless and confirm the diff is shas only (`AGENTS.md:116`)
 
 - **Done when**: a session targeted in a project with a registered constitution has that document's rules in effect for subsequent commands with no per-command opt-in (AC2), multiple entries all load (AC11), and the parity suite is green.
 
