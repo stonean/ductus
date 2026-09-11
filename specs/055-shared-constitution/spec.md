@@ -11,12 +11,18 @@ review:
     data-model.md: 5c429d0d761de4d5bd5dd49802e582d2ed47ca617843d725e68c9f040e085938
   blocking: false
 analyze:
-  last-run: null
-  analyzed-against: null
+  last-run: 2026-09-11T16:13:36Z
+  analyzed-against: 3d47ab5b6956c4a5f11a65192897b03233f4f915
   hard-fail: 0
   blocking-findings: 0
-  advisory: 0
+  advisory: 2
   unexamined: 0
+  analyzed-digest:
+    data-model.md: 5c429d0d761de4d5bd5dd49802e582d2ed47ca617843d725e68c9f040e085938
+    plan.md: 9f0c139487d77b5df04038ab22ac8eabe5ad41e5fbf84e565975bef59e9b086b
+    review.md: 0931c1367356d781171984b647be27a7ac5df5bd3066e1aeea39e432850fce87
+    spec.md: 85d3deb04648fb351d8340e380bd684259664284c3c360ddf3b44554c5185911
+    tasks.md: aab533d21d2c9c4ab37d78ee9711071d5770b645e47d5ad6e8d3f37757367800
   blocking: false
 next-criterion: 12
 ---
