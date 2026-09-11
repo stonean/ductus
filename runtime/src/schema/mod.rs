@@ -10,6 +10,8 @@
 //! - [`extensions`] — the three initial-release extension-point payloads.
 //! - [`services`] — the `[services]` registry shape from `.govern.toml`
 //!   (spec 030 cross-service references).
+//! - [`constitutions`] — the `[constitutions]` registry shape from the
+//!   project config (spec 055 shared constitutions).
 //! - [`paths`] — the `[paths]` block shape from `.govern.toml`, resolving the
 //!   configurable spec-root directory name (spec 040).
 //!
@@ -17,6 +19,7 @@
 //! source of truth for their respective closed sets: `registry` (primitive
 //! names) and `status` (spec lifecycle statuses).
 
+pub mod constitutions;
 pub mod extensions;
 pub mod paths;
 pub mod primitives;

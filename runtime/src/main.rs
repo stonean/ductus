@@ -20,8 +20,8 @@ use ductus::schema::primitives::{
     GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs,
     MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs,
     ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RemoveInboxItemArgs,
-    ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs, RetireFeatureArgs,
-    RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
+    ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs,
+    RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
     ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
 };
 
@@ -77,6 +77,8 @@ enum Command {
     ResolveFeature(ResolveFeatureArgs),
     /// Resolve a consumer feature's `references:` index against the `[services]` registry.
     ResolveReferences(ResolveReferencesArgs),
+    /// Resolve registered shared constitutions to documents on local disk.
+    ResolveConstitutions(ResolveConstitutionsArgs),
     /// Traverse spec dependencies and check status compatibility.
     TraverseDeps(TraverseDepsArgs),
     /// Verify cited rule IDs exist in rule files and aren't deprecated.
@@ -629,6 +631,9 @@ fn main() -> ExitCode {
         }
         Command::ResolveReferences(args) => {
             emit_result(primitives::resolve_references::run(&args, &repo))
+        }
+        Command::ResolveConstitutions(args) => {
+            emit_result(primitives::resolve_constitutions::run(&args, &repo))
         }
         Command::TraverseDeps(args) => emit_result(primitives::traverse_deps::run(&args, &repo)),
         Command::CheckRuleIds(args) => emit_result(primitives::check_rule_ids::run(&args, &repo)),

@@ -44,9 +44,10 @@ and empty `skipped` — indistinguishable by design (AC1).
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `loaded` | array | Entries that resolved, in deterministic order (config order, then alias) |
+| `loaded` | array | Entries that resolved, in alias order |
 | `skipped` | array | Entries that did not, each with its `reason` |
 | `examined` | integer | Total entries considered — the denominator for `loaded` |
+| `duplicate-paths` | array | Aliases sharing a checkout `path`, if any — `{path, aliases}` groups |
 
 The `loaded` / `skipped` split is the `QUAL-CLAIM-001` shape: a caller cannot report a
 clean result over a source in `skipped` without dropping a field it was handed. Empty
@@ -56,9 +57,10 @@ never collapsed.
 
 ## Notes
 
-- Ordering is explicit, not incidental. AC7 requires two projects with the same entries
-  over the same checkout content to load the same documents in the same order on any
-  machine, so iteration cannot depend on hash-map traversal order.
+- Ordering is **alias order**, from the registry's `BTreeMap`. AC7 requires two projects
+  with the same entries over the same checkout content to load the same documents in the
+  same order on any machine. Alias order delivers that; config order would not, because
+  it does not survive a TOML reformat — and hash-map traversal order would not either.
 - Two entries naming the same `path` are warned and allowed; the document loads once.
   This matches `/ductus:link`'s duplicate-`repo` posture (warn, do not block).
 - No `ref`, `version`, or revision field exists. The checkout's own git state is the

@@ -2462,6 +2462,84 @@ pub struct ResolveReferencesResult {
     pub path: String,
 }
 
+// -- resolve-constitutions ----------------------------------------------------
+
+/// Args for `resolve-constitutions`. Takes nothing: the registry is read from
+/// the project config at the repo root, which the runtime supplies. There is
+/// no per-call selection because a run either loads what the project declared
+/// or loads nothing — a caller choosing a subset would be choosing which rules
+/// bind it.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct ResolveConstitutionsArgs {}
+
+/// Closed outcome enum for one registered shared constitution (spec 055).
+/// The two failure outcomes are distinct because the spec requires distinct
+/// messages: an operator who cloned the wrong repository must not read the
+/// same thing as one who cloned nothing.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum ConstitutionOutcome {
+    /// `path` resolves to a directory holding `constitution.md`. The document
+    /// is the caller's to read.
+    Loaded,
+    /// `path` does not resolve to a directory. The operator has not cloned the
+    /// governance repository, or cloned it elsewhere. Never an error — ductus
+    /// does not fetch, so an absent checkout is a state, not a failure.
+    NotCheckedOut,
+    /// `path` resolves, but holds no `constitution.md`. Distinct from the
+    /// above: the checkout exists and is the wrong one, or the document moved.
+    NoConstitutionDocument,
+}
+
+/// One registered constitution and how it resolved.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ConstitutionRecord {
+    /// Registry alias — the `[constitutions.<alias>]` key.
+    pub alias: String,
+    /// Canonical repository URL as recorded. Identity only; never fetched.
+    pub repo: String,
+    /// Local checkout location exactly as written in the config.
+    pub path: String,
+    /// Repo-relative path to the document; non-null only when `outcome` is
+    /// `loaded`.
+    pub document: Option<String>,
+    /// Classified outcome.
+    pub outcome: ConstitutionOutcome,
+}
+
+/// Two or more aliases naming the same checkout. Warned and allowed — the
+/// document is read once.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct DuplicateConstitutionPath {
+    /// The shared `path` value.
+    pub path: String,
+    /// Aliases naming it, sorted.
+    pub aliases: Vec<String>,
+}
+
+/// Result for `resolve-constitutions`: the registered shared constitutions
+/// split into those that resolved and those that did not, in alias order.
+///
+/// The split is the `QUAL-CLAIM-001` shape. Empty `loaded` **and** empty
+/// `skipped` means "none registered"; empty `loaded` with a non-empty
+/// `skipped` means "registered and could not be read". A caller cannot
+/// collapse those into one answer without dropping a field it was handed.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ResolveConstitutionsResult {
+    /// Entries that resolved to a readable document, in alias order.
+    pub loaded: Vec<ConstitutionRecord>,
+    /// Entries that did not, each carrying the outcome that says why.
+    pub skipped: Vec<ConstitutionRecord>,
+    /// Total entries considered — the denominator for `loaded`.
+    pub examined: usize,
+    /// Aliases sharing a checkout path, if any.
+    pub duplicate_paths: Vec<DuplicateConstitutionPath>,
+}
+
 // -- resolve-feature ----------------------------------------------------------
 
 /// Args for `resolve-feature`. Scans the configured spec root and resolves

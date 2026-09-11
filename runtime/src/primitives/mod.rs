@@ -58,6 +58,7 @@ pub mod read_spec;
 pub mod read_tasks;
 pub mod remove_inbox_item;
 pub mod resolve_anchor;
+pub mod resolve_constitutions;
 pub mod resolve_feature;
 pub mod resolve_references;
 pub mod retire_feature;

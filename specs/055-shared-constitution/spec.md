@@ -1,5 +1,5 @@
 ---
-status: clarified
+status: in-progress
 dependencies: [030-cross-service-references, 040-configurable-specs-dir, 050-constitution]
 review:
   last-run: null

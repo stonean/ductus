@@ -42,17 +42,23 @@ That examined/skipped split is the shape `derive-routing-candidates` and
 a discipline: a caller cannot report a clean result over a source the primitive
 placed in `skipped` without dropping a field.
 
-Ordering is config order, then alias order for stability — AC7 requires two projects
-with the same entries to load the same documents in the same order on any machine,
-so the iteration order cannot come from a hash map's traversal.
+Ordering is alias order, from the registry's `BTreeMap`. AC7 requires two projects with
+the same entries to load the same documents in the same order on any machine — alias
+order delivers that, while config order would not survive a TOML reformat and hash-map
+traversal order is not stable at all.
 
-**Wiring is seven sites, not two** (`AGENTS.md:99`): `runtime/src/schema/primitives.rs`
-(Args/Result), `runtime/src/primitives/resolve_constitutions.rs` plus the `pub mod`
-in `primitives/mod.rs`, `runtime/src/mcp/server.rs` (`TOOL_NAMES` + a `#[tool]`
-method), `runtime/src/parser/mod.rs` (`PRIMITIVE_NAMES`), `runtime/src/interpreter/mod.rs`
-(`dispatch_primitive` arm), `runtime/src/main.rs` (`Command` variant + dispatch), and
-`framework/runtime-tools.txt`. All seven are required because a slash command will
-name the primitive in a backticked step.
+**Wiring spans eight sites, not two** (`AGENTS.md:99`). `AGENTS.md` names
+`parser/mod.rs` for `PRIMITIVE_NAMES`, but that constant is *defined from*
+`PRIMITIVE_REGISTRY` (`runtime/src/schema/registry.rs:16`), which is the single
+source feeding both it and the server's `TOOL_NAMES` — so the registry is the site
+and the parser needs no edit. The set: `runtime/src/schema/constitutions.rs` (new,
+modelled on `services.rs`) plus its `pub mod` in `schema/mod.rs`;
+`runtime/src/schema/primitives.rs` (Args/Result);
+`runtime/src/primitives/resolve_constitutions.rs` plus its `pub mod`;
+`runtime/src/schema/registry.rs`; `runtime/src/mcp/server.rs` (the hand-written
+`#[tool]` method); `runtime/src/interpreter/mod.rs` (`dispatch_primitive` arm);
+`runtime/src/main.rs` (`Command` variant + dispatch); and
+`framework/runtime-tools.txt`.
 
 ### `/ductus:target` is the load mechanism; the managed block is navigation
 
@@ -120,11 +126,13 @@ config-schema documentation and says plainly that nothing enforces it.
 
 | File | Action | Purpose |
 | --- | --- | --- |
+| `runtime/src/schema/constitutions.rs` | Create | `[constitutions]` registry shape + parser |
+| `runtime/src/schema/mod.rs` | Modify | `pub mod constitutions` |
 | `runtime/src/schema/primitives.rs` | Modify | `ResolveConstitutionsArgs` / `Result` types |
 | `runtime/src/primitives/resolve_constitutions.rs` | Create | Registry read, path resolution, loaded/skipped split |
 | `runtime/src/primitives/mod.rs` | Modify | `pub mod resolve_constitutions` |
 | `runtime/src/mcp/server.rs` | Modify | `TOOL_NAMES` entry + `#[tool]` method |
-| `runtime/src/parser/mod.rs` | Modify | `PRIMITIVE_NAMES` entry |
+| `runtime/src/schema/registry.rs` | Modify | `PRIMITIVE_REGISTRY` entry (feeds `PRIMITIVE_NAMES` + `TOOL_NAMES`) |
 | `runtime/src/interpreter/mod.rs` | Modify | `dispatch_primitive` match arm |
 | `runtime/src/main.rs` | Modify | `Command` variant + CLI dispatch |
 | `framework/runtime-tools.txt` | Modify | `lint-tool-coverage` coverage |

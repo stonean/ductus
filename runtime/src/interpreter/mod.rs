@@ -68,8 +68,8 @@ use crate::schema::primitives::{
     GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs,
     MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs,
     ProcessWaiversArgs, PruneTasksArgs, ReadSpecArgs, ReadTasksArgs, RemoveInboxItemArgs,
-    ResolveAnchorArgs, ResolveFeatureArgs, ResolveReferencesArgs, RetireFeatureArgs,
-    RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
+    ResolveAnchorArgs, ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs,
+    RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs, TraverseDepsArgs,
     ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs, WriteSessionArgs,
 };
 use crate::schema::procedure::{Procedure, Step, StepNumber};
@@ -720,6 +720,7 @@ fn dispatch_primitive(
         "resolve-anchor" => call!(ResolveAnchorArgs, resolve_anchor),
         "resolve-feature" => call!(ResolveFeatureArgs, resolve_feature),
         "resolve-references" => call!(ResolveReferencesArgs, resolve_references),
+        "resolve-constitutions" => call!(ResolveConstitutionsArgs, resolve_constitutions),
         "traverse-deps" => call!(TraverseDepsArgs, traverse_deps),
         "check-rule-ids" => call!(CheckRuleIdsArgs, check_rule_ids),
         "run-generator" => call!(RunGeneratorArgs, run_generator),

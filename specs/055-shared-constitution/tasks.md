@@ -4,12 +4,12 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 1. Add the `resolve-constitutions` primitive and wire every site
 
-- [ ] Add `ResolveConstitutionsArgs` / `ResolveConstitutionsResult` to `runtime/src/schema/primitives.rs`
-- [ ] Write `runtime/src/primitives/resolve_constitutions.rs`, modelling the registry read on `load_services` (`resolve_references.rs:94`) and the checkout resolution on `classify` (`:107`)
-- [ ] Distinguish `not-checked-out` from `no-constitution-document` in the skip reason
-- [ ] Order `loaded` deterministically — config order, then alias — never hash-map traversal
-- [ ] Unit tests: absent table, empty table, resolved entry, missing checkout, checkout without `constitution.md`, two entries sharing a path, multiple entries
-- [ ] Wire all seven sites in this same change: `primitives/mod.rs`, `mcp/server.rs` (`TOOL_NAMES` + `#[tool]`), `parser/mod.rs` (`PRIMITIVE_NAMES`), `interpreter/mod.rs` (`dispatch_primitive`), `main.rs` (`Command` + dispatch), `framework/runtime-tools.txt`
+- [x] Add `ResolveConstitutionsArgs` / `ResolveConstitutionsResult` to `runtime/src/schema/primitives.rs`
+- [x] Write `runtime/src/primitives/resolve_constitutions.rs`, modelling the registry read on `load_services` (`resolve_references.rs:94`) and the checkout resolution on `classify` (`:107`)
+- [x] Distinguish `not-checked-out` from `no-constitution-document` in the skip reason
+- [x] Order `loaded` deterministically by alias (`BTreeMap`) — config order does not survive a TOML reformat, so it cannot satisfy AC7
+- [x] Unit tests: absent table, empty table, resolved entry, missing checkout, checkout without `constitution.md`, two entries sharing a path, multiple entries
+- [x] Wire every site in this same change: `schema/constitutions.rs` + `schema/mod.rs`, `primitives/mod.rs`, `schema/registry.rs` (`PRIMITIVE_REGISTRY`, which defines both `PRIMITIVE_NAMES` and `TOOL_NAMES`), `mcp/server.rs` (`#[tool]`), `interpreter/mod.rs` (`dispatch_primitive`), `main.rs` (`Command` + dispatch), `framework/runtime-tools.txt`
 
 - **Done when**: `cargo test --release --locked` passes, `ductus resolve-constitutions` runs from the CLI, and `lint-tool-coverage` reports the new name covered.
 

@@ -89,6 +89,7 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    - `mcp__ductus__validate-frontmatter`
    - `mcp__ductus__resolve-anchor`
    - `mcp__ductus__resolve-references`
+   - `mcp__ductus__resolve-constitutions`
    - `mcp__ductus__traverse-deps`
    - `mcp__ductus__check-rule-ids`
    - `mcp__ductus__run-generator`

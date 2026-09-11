@@ -56,12 +56,12 @@ use crate::schema::primitives::{
     MergePermissionsArgs, MergePermissionsResult, MigrateSessionFileArgs, MigrateSessionFileResult,
     ProcessWaiversArgs, ProcessWaiversResult, PruneTasksArgs, PruneTasksResult, ReadSpecArgs,
     ReadSpecResult, ReadTasksArgs, ReadTasksResult, RemoveInboxItemArgs, RemoveInboxItemResult,
-    ResolveAnchorArgs, ResolveAnchorResult, ResolveFeatureArgs, ResolveFeatureResult,
-    ResolveReferencesArgs, ResolveReferencesResult, RetireFeatureArgs, RetireFeatureResult,
-    RewriteSpecLinksArgs, RewriteSpecLinksResult, RunGeneratorArgs, RunGeneratorResult,
-    SetStatusArgs, SetStatusResult, TraverseDepsArgs, TraverseDepsResult, ValidateFrontmatterArgs,
-    ValidateFrontmatterResult, WriteAnalysisArgs, WriteAnalysisResult, WriteReviewArgs,
-    WriteReviewResult, WriteSessionArgs, WriteSessionResult,
+    ResolveAnchorArgs, ResolveAnchorResult, ResolveConstitutionsArgs, ResolveConstitutionsResult,
+    ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs, ResolveReferencesResult,
+    RetireFeatureArgs, RetireFeatureResult, RewriteSpecLinksArgs, RewriteSpecLinksResult,
+    RunGeneratorArgs, RunGeneratorResult, SetStatusArgs, SetStatusResult, TraverseDepsArgs,
+    TraverseDepsResult, ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteAnalysisArgs,
+    WriteAnalysisResult, WriteReviewArgs, WriteReviewResult, WriteSessionArgs, WriteSessionResult,
 };
 
 /// Canonical MCP tool names exposed by the server, in manifest order —
@@ -693,6 +693,19 @@ impl GovRuntimeServer {
         params: Parameters<ResolveReferencesArgs>,
     ) -> Result<Json<ResolveReferencesResult>, String> {
         primitives::resolve_references::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "resolve-constitutions",
+        description = "Resolve the project config's [constitutions] registry (spec 055) to shared-constitution documents on local disk. For each registered alias, resolve its local `path` and look for `constitution.md` inside it; the `repo` URL is identity only and is never fetched, so there is no transport and no network failure mode. Returns `loaded` and `skipped` separately — a missing checkout is `not-checked-out` and a checkout holding no document is `no-constitution-document`, two distinct operator mistakes with distinct messages. Empty `loaded` with empty `skipped` means none registered; empty `loaded` with a non-empty `skipped` means registered and unreadable, and the caller must not collapse them. Aliases sharing a path are reported in `duplicate-paths` (warn and allow; the document is read once)."
+    )]
+    async fn resolve_constitutions(
+        &self,
+        params: Parameters<ResolveConstitutionsArgs>,
+    ) -> Result<Json<ResolveConstitutionsResult>, String> {
+        primitives::resolve_constitutions::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

@@ -48,6 +48,7 @@ pub(crate) const PRIMITIVE_REGISTRY: &[&str] = &[
     "dashboard",
     "write-session",
     "resolve-references",
+    "resolve-constitutions",
     "resolve-feature",
     "create-feature",
     "create-plan-artifacts",
