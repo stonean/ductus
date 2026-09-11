@@ -38,8 +38,8 @@ use crate::primitives::{
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    Frontmatter, RecordFreshness, ReviewFinding, ReviewObservation, WriteReviewArgs,
-    WriteReviewResult,
+    ConstitutionOutcome, Frontmatter, RecordFreshness, ResolveConstitutionsResult, ReviewFinding,
+    ReviewObservation, WriteReviewArgs, WriteReviewResult,
 };
 
 /// Execute the `write-review` primitive.
@@ -129,7 +129,15 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     // subject — the reason `review.md` and `spec.md` are outside the set.
     let contracts =
         analyze_subjects::subject_digest(&feature_dir, analyze_subjects::is_review_contract);
-    let report = render_report(args, &must, &should, &low, &waived, blocking);
+    // What governance did this run actually have? Resolved here rather than
+    // passed in: a caller that had to supply it could omit it, and the whole
+    // point of the section is that a report cannot quietly claim clean over
+    // rules it never loaded (spec 055, AC8).
+    let governance = crate::primitives::resolve_constitutions::run(
+        &crate::schema::primitives::ResolveConstitutionsArgs {},
+        repo,
+    )?;
+    let report = render_report(args, &must, &should, &low, &waived, blocking, &governance);
     let review_path = feature_dir.join("review.md");
     let spec_content = read_text(&spec_path)?;
     let updated = update_spec_review_block(
@@ -355,6 +363,7 @@ fn render_report(
     low: &[&ReviewFinding],
     waived: &[&ReviewFinding],
     blocking: bool,
+    governance: &ResolveConstitutionsResult,
 ) -> String {
     let feature = &args.feature;
 
@@ -421,6 +430,10 @@ fn render_report(
         format!(
             "## Skipped passes\n\n{}",
             render_skipped(&args.skipped_passes)
+        ),
+        format!(
+            "## Unexamined governance\n\n{}",
+            render_unexamined_governance(governance)
         ),
     ];
 
@@ -545,6 +558,39 @@ fn render_observations(observations: &[ReviewObservation]) -> String {
 }
 
 /// Render skipped passes as a list, or `*None.*` when empty.
+/// Shared constitutions the project registered that this run could not read.
+///
+/// A registered-but-unreadable source means the review ran under fewer rules than
+/// the project's config declares, and `QUAL-CLAIM-001` is explicit that a result
+/// must distinguish *examined and found nothing* from *could not examine*. So the
+/// section names each one with its reason rather than letting the finding counts
+/// stand alone.
+///
+/// `*None.*` covers both "none registered" and "all registered sources read" —
+/// those are the same claim from the report's side, because in both cases nothing
+/// went unexamined. The distinction that matters here is unexamined vs not.
+fn render_unexamined_governance(governance: &ResolveConstitutionsResult) -> String {
+    if governance.skipped.is_empty() {
+        return "*None.*".to_string();
+    }
+    governance
+        .skipped
+        .iter()
+        .map(|record| {
+            let reason = match record.outcome {
+                ConstitutionOutcome::NotCheckedOut => "not checked out",
+                ConstitutionOutcome::NoConstitutionDocument => "no constitution.md in checkout",
+                ConstitutionOutcome::Loaded => "loaded",
+            };
+            format!(
+                "- `{}` ({}) — {} — its rules were NOT loaded for this review",
+                record.alias, record.path, reason
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 fn render_skipped(skipped: &[String]) -> String {
     if skipped.is_empty() {
         return "*None.*".to_string();
@@ -1707,5 +1753,81 @@ mod tests {
         assert_eq!(yaml_string("true"), "\"true\"");
         assert_eq!(yaml_string("1234"), "\"1234\"");
         assert_eq!(yaml_string("null"), "\"null\"");
+    }
+
+    /// Register one `[constitutions.*]` entry pointing at `path` in a spec repo.
+    fn with_constitution(tmp: &TempDir, alias: &str, path: &str) {
+        let cfg = tmp.path().join(".ductus");
+        fs::create_dir_all(&cfg).unwrap();
+        fs::write(
+            cfg.join("config.toml"),
+            format!(
+                "[constitutions.{alias}]\nrepo = \"https://example.test/g\"\npath = \"{path}\"\n"
+            ),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn unexamined_governance_is_none_when_no_constitution_is_registered() {
+        let tmp = spec_repo("055-x", "status: in-progress");
+        run(&base_args("055-x"), tmp.path()).unwrap();
+        let report = review_md(&tmp, "055-x");
+        assert!(
+            report.contains("## Unexamined governance\n\n*None.*"),
+            "{report}"
+        );
+    }
+
+    #[test]
+    fn unexamined_governance_names_a_source_that_could_not_be_read() {
+        // AC8: a review produced without a registered constitution says so in the
+        // report itself, instead of letting the finding counts read as clean.
+        let tmp = spec_repo("055-x", "status: in-progress");
+        with_constitution(&tmp, "acme", "nowhere");
+
+        run(&base_args("055-x"), tmp.path()).unwrap();
+        let report = review_md(&tmp, "055-x");
+        assert!(report.contains("## Unexamined governance"), "{report}");
+        assert!(report.contains("`acme`"), "{report}");
+        assert!(report.contains("not checked out"), "{report}");
+        assert!(
+            report.contains("its rules were NOT loaded for this review"),
+            "{report}"
+        );
+        assert!(
+            !report.contains("## Unexamined governance\n\n*None.*"),
+            "an unreadable source must not render as None: {report}"
+        );
+    }
+
+    #[test]
+    fn a_checkout_without_a_document_reads_differently_than_a_missing_one() {
+        let tmp = spec_repo("055-x", "status: in-progress");
+        with_constitution(&tmp, "acme", "gov");
+        fs::create_dir_all(tmp.path().join("gov")).unwrap();
+
+        run(&base_args("055-x"), tmp.path()).unwrap();
+        let report = review_md(&tmp, "055-x");
+        assert!(
+            report.contains("no constitution.md in checkout"),
+            "cloning the wrong repo must not read like cloning nothing: {report}"
+        );
+    }
+
+    #[test]
+    fn a_resolved_constitution_does_not_appear_as_unexamined() {
+        let tmp = spec_repo("055-x", "status: in-progress");
+        with_constitution(&tmp, "acme", "gov");
+        let gov = tmp.path().join("gov");
+        fs::create_dir_all(&gov).unwrap();
+        fs::write(gov.join("constitution.md"), "# House rules\n").unwrap();
+
+        run(&base_args("055-x"), tmp.path()).unwrap();
+        let report = review_md(&tmp, "055-x");
+        assert!(
+            report.contains("## Unexamined governance\n\n*None.*"),
+            "a source that was read is not unexamined: {report}"
+        );
     }
 }

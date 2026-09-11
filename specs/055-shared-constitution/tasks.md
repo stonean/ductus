@@ -42,9 +42,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 5. Report unresolved sources as unexamined in the findings commands
 
-- [ ] Edit `framework/commands/review.md` so a run with a `skipped` source records it as unexamined and never folds it into a clean count
-- [ ] Edit `framework/commands/analyze.md` the same way
-- [ ] Ensure the report text names the source and the reason (AC5)
+- [x] Edit `framework/commands/review.md` so a run with a `skipped` source records it as unexamined and never folds it into a clean count
+- [x] Edit `framework/commands/analyze.md` the same way
+- [x] Ensure the report text names the source and the reason (AC5)
 
 - **Done when**: a `/ductus:review` run in a project whose registered checkout is missing says so in the report rather than reporting clean (AC8).
 

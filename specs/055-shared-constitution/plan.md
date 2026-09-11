@@ -114,6 +114,21 @@ shas and the `implement-basic` golden records them. After the `target.md` edit, 
 `cargo test --release --locked --test parity`, re-bless if it fails, and verify the
 diff is shas only before committing.
 
+### AC8 is a runtime change, not a markdown edit
+
+Discovered during implementation, and recorded because the plan said otherwise.
+`write_review.rs` renders the report's sections in Rust — review.md states that the
+primitive emits them so both paths produce byte-identical reports — so adding an
+**Unexamined governance** section is a runtime change. Editing prose alone could
+only have produced a report-contract sentence nothing enforces, which is the
+diligence dependency AC8 exists to prevent.
+
+Both primitives **resolve the registry themselves** rather than taking it as an
+argument. That is what keeps the guarantee mechanical: a caller that had to supply
+the skipped set could omit it. It also avoided a new dispatch step in review.md and
+analyze.md, and therefore avoided renumbering their steps and staling every prose
+cross-reference to those numbers.
+
 ### Precedence is documented, never enforced
 
 AC10 is a documentation commitment on purpose. Prose precedence between governance
@@ -137,8 +152,10 @@ config-schema documentation and says plainly that nothing enforces it.
 | `runtime/src/main.rs` | Modify | `Command` variant + CLI dispatch |
 | `framework/runtime-tools.txt` | Modify | `lint-tool-coverage` coverage |
 | `framework/commands/target.md` | Modify | Step 4 loads registered constitutions |
-| `framework/commands/review.md` | Modify | Report unresolved sources as unexamined (AC8) |
-| `framework/commands/analyze.md` | Modify | Report unresolved sources as unexamined (AC8) |
+| `runtime/src/primitives/write_review.rs` | Modify | Render `## Unexamined governance` (AC8) |
+| `runtime/src/primitives/write_analysis.rs` | Modify | Record `constitution-unresolved` (AC8) |
+| `framework/commands/review.md` | Modify | Document the new report section (AC8) |
+| `framework/commands/analyze.md` | Modify | Document the informational tier entry (AC8) |
 | `framework/bootstrap/ductus.md` | Modify | Config schema, validation, managed-block step |
 | `framework/bootstrap/govern.md` | Modify | Byte-identical copy of the above (Family 21) |
 | `framework/constitution.md` | Modify | Precedence statement + schema pointer (AC10) |

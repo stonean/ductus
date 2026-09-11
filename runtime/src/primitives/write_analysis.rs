@@ -107,6 +107,26 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
                 *acc.entry(reason.clone()).or_default() += *count;
                 acc
             });
+    // A registered shared constitution this run could not read is an unexamined
+    // *input* to the analysis, not an unexamined target, but it lands in the same
+    // breakdown because it makes the same claim false: that everything bearing on
+    // the verdict was looked at. Derived here rather than accepted as an argument,
+    // for the reason the comment above gives — a caller that had to supply it
+    // could omit it, and `QUAL-CLAIM-001` exists precisely to stop a clean result
+    // standing in for an unexamined one (spec 055, AC8).
+    let mut by_reason = by_reason;
+    let governance = crate::primitives::resolve_constitutions::run(
+        &crate::schema::primitives::ResolveConstitutionsArgs {},
+        repo,
+    )?;
+    if !governance.skipped.is_empty() {
+        let count = u32::try_from(governance.skipped.len()).unwrap_or(u32::MAX);
+        *by_reason
+            .entry("constitution-unresolved".to_string())
+            .or_default() += count;
+    }
+    let by_reason = by_reason;
+
     let unexamined = if by_reason.is_empty() {
         args.unexamined
     } else {
@@ -447,5 +467,60 @@ mod tests {
             .unwrap_err(),
             PrimitiveError::FeatureNotFound { .. }
         ));
+    }
+
+    /// Register one `[constitutions.*]` entry pointing at `path`.
+    fn with_constitution(tmp: &TempDir, alias: &str, path: &str) {
+        let cfg = tmp.path().join(".ductus");
+        fs::create_dir_all(&cfg).unwrap();
+        fs::write(
+            cfg.join("config.toml"),
+            format!(
+                "[constitutions.{alias}]\nrepo = \"https://example.test/g\"\npath = \"{path}\"\n"
+            ),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn an_unresolved_constitution_is_recorded_as_unexamined() {
+        // AC8: an analysis that ran without a registered source must not record a
+        // clean, fully-examined run. The reason lands in the breakdown the record
+        // already carries, so the pre-done gate and any reader see it.
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_constitution(&tmp, "acme", "nowhere");
+
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(result.unexamined, 1);
+        let spec = fs::read_to_string(tmp.path().join("specs/042-demo/spec.md")).unwrap();
+        assert!(spec.contains("  unexamined: 1"), "{spec}");
+        assert!(spec.contains("constitution-unresolved: 1"), "{spec}");
+    }
+
+    #[test]
+    fn a_resolved_constitution_records_nothing_unexamined() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        with_constitution(&tmp, "acme", "gov");
+        let gov = tmp.path().join("gov");
+        fs::create_dir_all(&gov).unwrap();
+        fs::write(gov.join("constitution.md"), "# House rules\n").unwrap();
+
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(
+            result.unexamined, 0,
+            "a source that was read is not unexamined"
+        );
+    }
+
+    #[test]
+    fn no_registered_constitution_leaves_the_count_untouched() {
+        let tmp = spec_repo("status: in-progress\ndependencies: []");
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(result.unexamined, 0);
+        let spec = fs::read_to_string(tmp.path().join("specs/042-demo/spec.md")).unwrap();
+        assert!(
+            !spec.contains("constitution-unresolved"),
+            "a project with none registered reads exactly as before: {spec}"
+        );
     }
 }

@@ -214,6 +214,12 @@ The exception holds where the rule's reasoning does not. That rule is about *oth
 
 They are not silent either. On the runtime path the `check-artifacts` result carries a `skipped` list of `{family, reason, path}` records over the closed reason set `target-missing` / `target-unparseable` / `no-readable-state` / `root-absent` / `ships-to-adopter` / `artifact-unreadable` / `not-a-live-claim`; on the markdown-only path, note the same targets as you walk them. Render them in the **Informational** tier. The reason is `QUAL-CLAIM-001`: without the list, a family that examined every target and found nothing returns exactly what a family that could examine nothing returns, and a reader acts on the reassuring one. `clean` keeps its narrow meaning — no findings — so the assurance lives in the pair: clean with nothing skipped is verified-clean, clean with something skipped is partially examined.
 
+### Unresolved shared constitutions (informational)
+
+A `[constitutions.*]` entry (spec 055) the run could not read is recorded in the `analyze:` record's `unexamined-by-reason` breakdown under `constitution-unresolved`, and counts toward `unexamined`. It is an unexamined **input** rather than an unexamined target — the analysis is not missing a file it meant to inspect, it is running under fewer rules than the project declares — but it lands in the same breakdown because it falsifies the same claim: that everything bearing on the verdict was looked at.
+
+`write-analysis` derives this from the registry itself rather than accepting it as an argument, for the reason it derives `blocking` and sums `unexamined` from the breakdown: a caller that had to supply it could omit it, and the record is exactly where a later gate will trust it. A project with no entries registered records nothing and reads exactly as it did before.
+
 ### Promotion criterion for both decision-drift checks (shared)
 
 **Severity:** advisory at introduction, matching the grounding and Applicable-Rules checks. **Promotion criterion:** promote to blocking when a single `/ductus:analyze --all` run reports 5 or more findings across the repo on two consecutive runs, **and** every finding in those runs is confirmed a true positive.

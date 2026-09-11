@@ -386,7 +386,13 @@ skipped-passes: []
 ## Skipped passes
 
 <`*None.*` when none>
+
+## Unexamined governance
+
+<one bullet per registered shared constitution this run could not read; `*None.*` when none>
 ```
+
+**Unexamined governance** names any `[constitutions.*]` entry (spec 055) the run could not read, with its reason — `not checked out`, or `no constitution.md in checkout`. `write-review` resolves the registry itself rather than taking it as an argument, so a report cannot omit the section: a review that ran under fewer rules than the project's config declares says so, instead of letting the finding counts stand in for a clean result. That is `QUAL-CLAIM-001` applied to the review's own inputs. `*None.*` covers both "none registered" and "all registered sources read" — from the report's side those are the same claim, because in neither case did anything go unexamined.
 
 Every empty section renders the literal `*None.*` line — the `write-review` primitive emits it, and the markdown-only path writes the same so the two paths produce byte-identical reports. The **Captured issues** and **Observations** headings carry no suffix.
 
