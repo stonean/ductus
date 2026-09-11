@@ -15,10 +15,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 2. Document and validate the `[constitutions.*]` schema in `/ductus`
 
-- [ ] Add the schema to `framework/bootstrap/ductus.md` §Project Configuration, pointing at `specs/055-shared-constitution/data-model.md` as canonical rather than restating it
-- [ ] Validate each entry at configuration time: alias is a bare TOML key, `repo` is URL-shaped, `path` is non-empty (AC6)
-- [ ] Warn — never reject — on a `path` that does not resolve, matching `link.md:65`
-- [ ] `cp framework/bootstrap/ductus.md framework/bootstrap/govern.md`
+- [x] Add the schema to `framework/bootstrap/ductus.md` §Project Configuration, pointing at `specs/055-shared-constitution/data-model.md` as canonical rather than restating it
+- [x] Validate each entry at configuration time: alias is a bare TOML key, `repo` is URL-shaped, `path` is non-empty (AC6)
+- [x] Warn — never reject — on a `path` that does not resolve, matching `link.md:65`
+- [x] `cp framework/bootstrap/ductus.md framework/bootstrap/govern.md`
 
 - **Done when**: a malformed entry is rejected with a clear message, a non-resolving `path` only warns, and `scripts/audit/run-all.sh` Family 21 reports the two bootstrap files byte-identical.
 

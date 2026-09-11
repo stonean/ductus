@@ -577,6 +577,17 @@ last_applied = "rule-files-relocate"
 # [[review.disabled-rule-files]]
 # file = "api-backend.md"
 # reason = "Pre-OpenAPI; revisit after schema lands (PROJ-1234)"
+
+# Shared constitutions (spec 055) — governance documents an organization owns,
+# so a rule is stated once and every one of its projects receives it. Alias-keyed,
+# and more than one may be registered. `repo` is identity and navigation only and
+# is NEVER fetched; the local `path` is the only state read. Listed here for
+# schema reference; uncomment and edit to use.
+#
+# [constitutions.acme]
+# repo = "https://github.com/acme/governance"
+# path = "../governance"
+# description = "Acme engineering house rules"
 ```
 
 `host.project` — the project's slash-command namespace, written by `/ductus` into a managed block (`# ductus (host)` line-prefix marker) in committed `.ductus/config.toml` on every run (idempotent — re-runs update rather than append). The per-contributor `cli-config-dir` (the agent's config-dir name) is **not** committed: teammates on one project may each use a different agent, so `/ductus` writes it to the gitignored `.ductus/session.toml` instead (§Instructions step 7). The runtime reads `project` from `.ductus/config.toml` and `cli-config-dir` from the session file at `ductus exec` time to resolve `{cli-config-dir}/commands/{project}/<name>.md`; both fall back to `.claude` / the repo directory basename when absent. Adopters whose layout matches the defaults (this repo, anyone on Claude Code with the conventional `.claude/commands/<project>/`) never observe the difference; Auggie / OpenCode adopters and anyone with a non-standard layout do.
@@ -590,6 +601,10 @@ last_applied = "rule-files-relocate"
 `migrations.last_applied` — slug of the newest pre-run migration applied to this project, written by `/ductus` after each successful migration in §Pre-run Migrations. Absent section means "no migrations applied"; bootstrap runs every active entry on the next run. Adopters should not edit this field by hand — the registry in `framework/migrations.toml` and the per-entry procedure files in `framework/migrations/{id}.md` are the authoritative sources.
 
 `review.disabled-rule-files` — array-of-tables consumed by `/ductus:review` at rule-file selection time (see its §Inputs and §Behavior step 5). `/ductus` does not read this key; it is documented here so adopters see the full `.ductus/config.toml` schema in one place.
+
+`constitutions.<alias>` — the shared-constitution registry (spec 055). Each `[constitutions.<alias>]` table names a `repo` (the canonical repository URL, recorded verbatim as identity and navigation only — **never fetched**) and a local `path` (the checkout, relative to the repo root or absolute; `..` is permitted because a sibling checkout is the normal case), plus an optional informational `description`. The document read from a resolved checkout is `{path}/constitution.md`; nothing else in the checkout is read, and a registered checkout's own config is never read, so registration is not transitive. More than one entry may be registered, and every registered entry is loaded, in alias order. The full schema is declared in [`specs/055-shared-constitution/data-model.md`](https://github.com/stonean/ductus/blob/main/specs/055-shared-constitution/data-model.md).
+
+**Validating the registry.** `/ductus` validates each entry when it reads the config, and the two failure modes are deliberately different severities. A **malformed entry halts** the run per `CFG-ENV-003`, naming the offending alias and field: an alias that is not a bare TOML key (letters, digits, hyphens, underscores — no whitespace, dots, or quotes), a `repo` that is not URL-shaped (a scheme and a host), or an empty `path`. A **`path` that does not resolve only warns** — `/ductus` emits a one-line notice naming the alias and continues, exactly as `/{project}:link` treats a missing service checkout ("a missing checkout is the valid `not-checked-out` state, surfaced at resolution time, not a config error"). The asymmetry is the point: a malformed entry is a mistake in the project's own committed config and is always wrong, while an unresolved checkout is a machine-local state that is correct for any contributor who has not cloned the governance repository yet, and blocking on it would make the pipeline a hard dependency on someone else's repo state. Registration itself is a hand-edit — there is no `/{project}:link`-style command for it, matching that command's own rule that edits to an existing entry stay hand-edits.
 
 The full schema (allowed values, case-insensitive matching, empty-section behavior, future-section guidance) is declared in [`specs/019-config-decisions/data-model.md`](https://github.com/stonean/ductus/blob/main/specs/019-config-decisions/data-model.md).
 
