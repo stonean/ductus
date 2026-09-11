@@ -258,7 +258,7 @@ repo = "https://github.com/acme/governance"
 path = "../governance"
 ```
 
-`ductus` reads one file from it, `constitution.md`, and `/target` loads it alongside the shipped constitution once per session — so every command inherits it with no per-command step. More than one may be registered. The shipped `.ductus/constitution.md` keeps receiving framework updates; you never pin it to add a house rule. The framework constitution stays a floor: a shared source may add rules and tighten them, never loosen them.
+`ductus` reads one file from it, `constitution.md`, and `/target` loads it alongside the shipped constitution once per session — so every command inherits it with no per-command step. More than one may be registered. The shipped `.ductus/constitution.md` keeps receiving framework updates; you never pin it to add a house rule. The framework constitution stays a floor: a shared source may add rules and tighten them, never loosen them — [§governance-precedence](framework/constitution.md#governance-sources-and-which-governs) is where that order is stated, and where the fact that nothing enforces it is stated too.
 
 If a registered checkout is missing, `ductus` warns and continues rather than blocking a teammate who has not cloned it — and `/review` and `/analyze` then report that source as **unexamined** rather than letting the run read as clean. Projects that register nothing see none of this.
 
