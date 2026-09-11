@@ -8,6 +8,13 @@
 
 See [constitution.md](.ductus/constitution.md) — guiding principles, development pipeline, spec lifecycle, and quality standards that govern this project.
 
+<!-- ductus:constitutions -->
+<!-- /ductus maintains this region. Registered shared constitutions
+     (.ductus/config.toml [constitutions.*]) are listed here, one line each.
+     Empty when none are registered. Edits inside are overwritten; the rest of
+     this file is preserved byte-for-byte. -->
+<!-- /ductus:constitutions -->
+
 ## Tech Stack
 
 <!-- Define your project's tech stack here. Example:

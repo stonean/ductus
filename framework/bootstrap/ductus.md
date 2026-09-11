@@ -798,6 +798,18 @@ These files are scaffolded **once per `/ductus` invocation**, regardless of how 
 4. **Dedup pass (canonical-block wins).** After the managed block is in place, scan the rest of the file (everything outside `# ductus` through the canonical block's end) and remove any non-blank, non-comment line that string-equals a non-blank, non-comment line inside the canonical block. Adopter-area blank lines and comment lines are preserved untouched even when they happen to share text with a canonical pattern. This collapses duplicates that an adopter (or another command) pasted above or below the marker; the canonical copy inside `# ductus` is the surviving one.
 5. For each primary language provided by the user, fetch from `https://raw.githubusercontent.com/github/gitignore/main/{Language}.gitignore` and append below a `# {Language}` comment header. If the file is being re-merged on a subsequent run and a `# {Language}` section is already present, leave it alone — language sections, once written, are adopter territory.
 
+**Shared constitution imports** (strategy: merge, layout-derived) — install or update a framework-managed block in each selected layout's **native rules file**, listing the shared constitutions registered in `[constitutions.*]` (§Project Configuration, spec 055).
+
+1. Invoke `resolve-constitutions` to get the registered entries split into `loaded` and `skipped`.
+2. Determine the target file from the Agent Registry's derived **Native rules file** value — `CLAUDE.md` for `claude-style`, `AGENTS.md` for the `antigravity` and `opencode` layouts. When both kinds of agent are selected, both files get a block. The file itself is strategy `skip` and is never overwritten; only the managed region is rewritten.
+3. Invoke `merge-managed-block` against that file with `marker-style: "html-comment"` and `marker: "ductus:constitutions"`, supplying one line per entry in `loaded`, in the order returned:
+   - **`claude-style`** → `@import {document-path}`, matching the `@import` lines the template already carries.
+   - **`antigravity` / `opencode`** → `- See [{alias}]({document-path})`, a plain link. These layouts read `AGENTS.md` and have **no import directive**, so a link is the whole of what the file can express there.
+4. When `loaded` is empty the block is written **empty** — present but carrying no lines — rather than omitted. An empty managed region and an absent one differ: the first says `/ductus` looked and found nothing registered, the second says nothing ran.
+5. Report each `skipped` entry by alias and reason (`not-checked-out`, `no-constitution-document`). A skipped source is **not** written into the block: the block lists what an agent can actually read, and listing an unreadable path would put a broken import in an adopter's rules file.
+
+**The block is navigation, not the loading mechanism.** `/{project}:target` step 4 is what puts a shared constitution's rules in effect, for every agent and every layout, by reading the documents `resolve-constitutions` resolves. The block exists so the documents are also reachable from the file a contributor opens — and so `claude-style` agents pick them up ambiently. An adopter whose rules file has no block still gets the rules, because the command loads them.
+
 ## Security Audit (brownfield)
 
 Run a one-time security audit when the project newly receives a security rule file alongside existing feature specs. This is the brownfield-adoption hook described in `specs/008-security-rules/spec.md` — it routes findings through `specs/inbox.md` so the adopter can triage them via `/{project}:groom` at their own pace, rather than having every legacy spec immediately fail validate.
