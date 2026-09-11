@@ -2,6 +2,73 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.47.0] — 2026-09-11
+
+### Added
+
+- **`resolve-constitutions` — a project can register a governance document its
+  organization owns, and every command inherits it.** `.ductus/config.toml`
+  gains a `[constitutions.<alias>]` table naming a `repo` and a local `path`.
+  The primitive resolves each entry against local disk and returns `loaded` and
+  `skipped` separately. `/{project}:target` reads the resolved documents once
+  per session alongside `.ductus/constitution.md`, so the rules bind every
+  subsequent command with no per-command opt-in step.
+
+  `repo` is identity and navigation only and is **never fetched**. There is no
+  transport, no auth story, and no network failure mode — the local checkout is
+  the only state read, which is why "unreachable" collapses to `not-checked-out`
+  rather than being an error class. Registration is not transitive: a registered
+  checkout's own config is never read, so there is no recursion to bound and no
+  cycle to detect.
+
+  Iteration is alias order from a `BTreeMap`, not config order, so a TOML
+  reformat cannot change which documents load or in what sequence. The document
+  filename is the fixed `constitution.md` rather than a per-entry field — a
+  configurable name would let two projects registering the same source load
+  different documents from it.
+
+  A project with no entries registered behaves exactly as before: an absent
+  table and a present-but-empty one both parse to an empty registry, so nothing
+  downstream can distinguish them.
+
+### Changed
+
+- **`write-review` renders `## Unexamined governance`; `write-analysis` records
+  `constitution-unresolved`.** A registered source the run could not read means
+  the command ran under fewer rules than the project's config declares, and
+  `QUAL-CLAIM-001` is explicit that a result must distinguish *examined and
+  found nothing* from *could not examine*. Both primitives resolve the registry
+  **themselves** rather than accepting it as an argument — a caller that had to
+  supply it could omit it, and these records are exactly where a later gate
+  trusts them. The two skip reasons stay distinct in the render: cloning the
+  wrong repository and cloning nothing are different operator mistakes.
+
+  Neither read is `?`-propagated, deliberately. An unreadable `[constitutions]`
+  table is itself the strongest form of unexamined governance, so it is
+  *rendered* rather than raised: propagating it would mean an unrelated typo in
+  the project config cost the operator the whole `review.md`, and — worse —
+  suppressed the `analyze:` record, whose **absence** is what the pre-`done`
+  gate reads as "never analyzed". Each primitive carries a regression test for
+  that path.
+
+  `*None.*` covers both "none registered" and "all registered sources read":
+  from the report's side those are the same claim, because in neither case did
+  anything go unexamined.
+
+### Note
+
+- `schema/registry.rs` now records which primitive-wiring surfaces are pinned by
+  tests and which are not. Verified by deleting each wiring in turn: the shipped
+  manifest is asserted set-equal to `TOOL_NAMES`, the `#[tool]` methods are
+  pinned by `tests/mcp.rs`, `dispatch_primitive` by
+  `dispatch_handles_every_registry_primitive`, and `PRIMITIVE_NAMES` cannot
+  drift at all since it aliases `PRIMITIVE_REGISTRY`. **The clap subcommand enum
+  in `main.rs` is pinned by nothing** — deleting a variant and its dispatch arm
+  leaves the whole suite green. Check it by hand with
+  `cargo run -- <name> --help` until something pins it.
+
+See [055 — Shared constitution](../specs/055-shared-constitution/spec.md).
+
 ## [0.46.0] — 2026-09-07
 
 ### Changed
