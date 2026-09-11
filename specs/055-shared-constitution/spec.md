@@ -71,17 +71,17 @@ Presence of the entry enables the feature; absence is today's behavior exactly. 
 
 ## Acceptance Criteria
 
-- [ ] AC1: With no `[constitutions.*]` entry in `.ductus/config.toml` — the key absent, or the table present and empty — no source resolution is attempted, no new prompt fires, and every command and the runtime behave exactly as they do today.
-- [ ] AC2: With the entry present, the rules the shared source establishes are in effect for every command that reads the constitution, in the same run and with no per-command opt-in step.
-- [ ] AC3: Declaring a shared constitution does not require pinning `.ductus/constitution.md`; such a project still receives framework constitution updates on the next `/ductus` run.
-- [ ] AC4: A run that loads a shared constitution reports the sources it loaded, and any rule in effect is attributable to the source that established it.
-- [ ] AC5: A shared source that cannot be resolved is reported by name and reason, and is never silently treated as "no shared constitution declared".
-- [ ] AC6: A malformed entry value is rejected with a clear message at configuration time rather than silently accepted.
-- [ ] AC7: Which constitution documents a project loads is determined solely by its `[constitutions.*]` entries and the content of the checkouts they name — two projects with the same entries over the same checkout content load the same documents, in the same order, on any machine.
-- [ ] AC8: A run that could not load a registered source records it as unexamined and never folds it into a clean result; a `/ductus:review` or `/ductus:analyze` report produced without a registered constitution says so in the report itself.
-- [ ] AC9: The import of a registered constitution is maintained by `/ductus` inside a managed block; the rest of the adopter-owned file it lives in is preserved byte-for-byte, and `.ductus/constitution.md` is never rewritten.
-- [ ] AC10: The precedence order — framework as floor, and project > shared > framework where the framework is silent — is stated once in **the constitution**, together with the fact that nothing enforces it; every other mention points at it rather than restating it.
-- [ ] AC11: More than one `[constitutions.*]` entry may be registered, and every registered entry is loaded.
+- [x] AC1: With no `[constitutions.*]` entry in `.ductus/config.toml` — the key absent, or the table present and empty — no source resolution is attempted, no new prompt fires, and every command and the runtime behave exactly as they do today.
+- [x] AC2: With the entry present, the rules the shared source establishes are in effect for every command that reads the constitution, in the same run and with no per-command opt-in step.
+- [x] AC3: Declaring a shared constitution does not require pinning `.ductus/constitution.md`; such a project still receives framework constitution updates on the next `/ductus` run.
+- [x] AC4: A run that loads a shared constitution reports the sources it loaded, and any rule in effect is attributable to the source that established it.
+- [x] AC5: A shared source that cannot be resolved is reported by name and reason, and is never silently treated as "no shared constitution declared".
+- [x] AC6: A malformed entry value is rejected with a clear message at configuration time rather than silently accepted.
+- [x] AC7: Which constitution documents a project loads is determined solely by its `[constitutions.*]` entries and the content of the checkouts they name — two projects with the same entries over the same checkout content load the same documents, in the same order, on any machine.
+- [x] AC8: A run that could not load a registered source records it as unexamined and never folds it into a clean result; a `/ductus:review` or `/ductus:analyze` report produced without a registered constitution says so in the report itself.
+- [x] AC9: The import of a registered constitution is maintained by `/ductus` inside a managed block; the rest of the adopter-owned file it lives in is preserved byte-for-byte, and `.ductus/constitution.md` is never rewritten.
+- [x] AC10: The precedence order — framework as floor, and project > shared > framework where the framework is silent — is stated once in **the constitution**, together with the fact that nothing enforces it; every other mention points at it rather than restating it.
+- [x] AC11: More than one `[constitutions.*]` entry may be registered, and every registered entry is loaded.
 
 ## Open Questions
 
