@@ -81,3 +81,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Add a `[constitutions]` bullet to the README's `## Configuration` list and the new file to the `docs/` line under `## Repository layout`
 
 - **Done when**: `docs/shared-constitution.md` exists and is linked from README's new section, its Configuration list, and its Repository layout; markdownlint is clean and no link is broken.
+
+## 10. Add authoring guidelines and a setup walkthrough to the manual
+
+- [x] Add a **What belongs in a shared constitution** section — the tier test against `AGENTS.md` below and the framework above, the reword test, and what cannot work (loosening a framework rule, rule-file-shaped content)
+- [x] Add a **Setting one up** section — create the governance repo, agree a checkout layout, register in each project, run `/ductus`, verify
+- [x] State the committed-`path` constraint: `.ductus/config.toml` is team-shared, so a relative sibling path is required and an absolute one resolves on one machine only
+
+- **Done when**: the manual tells a reader both what to write in a shared constitution and how to put it into use across projects, including why the checkout path must be relative; markdownlint clean.
