@@ -59,6 +59,20 @@ Presence of the entry enables the feature; absence is today's behavior exactly. 
   constitution cannot pull in further constitutions. There is no recursion to bound, no cycle to detect, and the set
   of documents in effect is exactly what the project's own config names.
 
+## State at hand-off (2026-09-11)
+
+**All ten tasks are complete and committed; all eleven acceptance criteria are verified and ticked.** What remains is gate work, not implementation. Three things a resuming session cannot derive from the artifacts:
+
+**1. `review.md` on disk is incomplete and must be regenerated.** `/ductus:review` ran clean (0 MUST / 0 SHOULD / 0 low-confidence, `blocking: false`, three observations captured to the inbox), but the report is **missing its `## Unexamined governance` section** — the section this very spec added. The MCP server runs the binary it was spawned with, and that session's server predated task 5, so `write-review` rendered its pre-feature output (`AGENTS.md` §Gotchas, the stale-write entry). Nothing in the report is *wrong*: this repository registers no `[constitutions.*]` entries, so the section would read `*None.*`. But the artifact does not match the contract in `framework/commands/review.md`. **Re-run `/ductus:review` in a session started after the runtime was built**; it regenerates the report wholesale.
+
+**2. `/ductus:analyze` has never run** (`analyze.last-run` is null) and the pre-`done` gate blocks on it. Run it only from a freshly started session, for the same reason — the `constitution-unresolved` and `constitution-registry-unreadable` reasons task 5 added to `write-analysis` are not in a pre-feature binary, so an analysis recorded by one would silently omit them.
+
+**3. A cross-spec impact is owed to [050-constitution](../050-constitution/spec.md).** This spec makes an adopter's governance multi-source, and 050 owns "which rules adopters should receive". Under §cross-spec-impact that belongs in 050 as a criterion or scenario with a back-link here. 050 is `done`, so it takes the `done → in-progress` back-edge via `/ductus:amend`. Not blocking this spec.
+
+The sequence from a fresh session is therefore: `/ductus:review` → `/ductus:analyze` → `/ductus:implement` (which walks the completion gate and takes the `in-progress → done` transition).
+
+`specs/inbox.md` carries four items for `/ductus:groom`, three of them this review's observations; none blocks this spec.
+
 ## Non-Goals
 
 - **Shared rule files.** The rule tier has its own distribution gap (see Motivation), and closing it is not this
