@@ -612,6 +612,104 @@ async fn compute_review_scope_returns_structured_scope_via_mcp() {
     assert!(obj["captured-issues"].is_array());
 }
 
+/// The three fields 0.48.0 added to primitive **results** cross the MCP wire.
+///
+/// They were verified through the CLI and through unit tests, both of which
+/// share the serde path this exercises — so this is not a second
+/// serialization. What it pins is the MCP surface specifically: a result type
+/// that fails to serve (a `JsonSchema` derive that will not generate, a field
+/// the wrapper drops) would be invisible to every other test, and the
+/// markdown-only and MCP paths are supposed to reach the same result.
+///
+/// `check-review-gate`'s `cross-spec-impact` and `diff-cross-spec`'s
+/// `inbox-standing` had no wire test at all; `write-review`'s `inbox-standing`
+/// crossed the wire in the test below without being asserted on.
+#[tokio::test]
+async fn the_cross_spec_impact_gate_reports_per_entry_via_mcp() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("specs/001-x");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("spec.md"),
+        "---\nstatus: in-progress\ndependencies: []\ncross-spec-impact: [002-y]\n\
+         review:\n  last-run: 2026-09-12T00:00:00Z\n  reviewed-against: abc123\n  \
+         must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n  \
+         blocking: false\n---\n\n# x\n",
+    )
+    .unwrap();
+    let sibling = tmp.path().join("specs/002-y");
+    fs::create_dir_all(&sibling).unwrap();
+    fs::write(
+        sibling.join("spec.md"),
+        "---\nstatus: done\ndependencies: []\n---\n\n# y\n",
+    )
+    .unwrap();
+
+    let client = start_pair(tmp.path().to_path_buf()).await;
+    let result = call_tool(&client, "check-review-gate", json!({ "feature": "001-x" })).await;
+    let obj = structured_object(&result);
+
+    assert_eq!(obj["passed"], false);
+    assert_eq!(obj["blocked-by"], "undischarged-cross-spec-impact");
+    let entries = obj["cross-spec-impact"].as_array().expect("per-entry list");
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0]["spec"], "002-y");
+    assert_eq!(entries[0]["state"], "undischarged");
+}
+
+#[tokio::test]
+async fn diff_cross_spec_reports_the_standing_inbox_via_mcp() {
+    // `diff-cross-spec` discovers a repository, so the fixture needs one.
+    let tmp = init_git_fixture();
+    fs::write(
+        tmp.path().join("specs/inbox.md"),
+        "# Inbox\n\n- one outstanding item\n- and another\n",
+    )
+    .unwrap();
+
+    let client = start_pair(tmp.path().to_path_buf()).await;
+    let result = call_tool(
+        &client,
+        "diff-cross-spec",
+        json!({ "feature": "001-basic" }),
+    )
+    .await;
+    let standing = &structured_object(&result)["inbox-standing"];
+
+    assert_eq!(standing["state"], "outstanding");
+    assert_eq!(standing["outstanding"], 2);
+    assert_eq!(standing["path"], "specs/inbox.md");
+    // The inbox was written after the fixture's only commit, so blame can say
+    // nothing about it: the age is absent rather than defaulted to today,
+    // which is the distinction the row exists to preserve.
+    assert!(standing.get("oldest").is_none(), "{standing:?}");
+}
+
+/// A registered source's `description` reaches the record it is reported from,
+/// including on a **skipped** entry — the case where the document is missing
+/// and the description is the only thing naming what was lost.
+#[tokio::test]
+async fn resolve_constitutions_carries_the_description_via_mcp() {
+    let tmp = tempfile::tempdir().unwrap();
+    fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+    fs::write(
+        tmp.path().join(".ductus/config.toml"),
+        "[constitutions.acme]\nrepo = \"https://example.test/g\"\npath = \"nowhere\"\n\
+         description = \"Acme platform engineering rules\"\n",
+    )
+    .unwrap();
+
+    let client = start_pair(tmp.path().to_path_buf()).await;
+    let result = call_tool(&client, "resolve-constitutions", json!({})).await;
+    let obj = structured_object(&result);
+
+    let skipped = obj["skipped"].as_array().expect("skipped list");
+    assert_eq!(skipped.len(), 1);
+    assert_eq!(skipped[0]["alias"], "acme");
+    assert_eq!(skipped[0]["description"], "Acme platform engineering rules");
+    assert_eq!(skipped[0]["outcome"], "not-checked-out");
+}
+
 #[tokio::test]
 async fn write_review_renders_report_via_mcp() {
     let tmp = tempfile::tempdir().unwrap();
