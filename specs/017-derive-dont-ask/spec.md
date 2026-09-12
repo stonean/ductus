@@ -2,11 +2,17 @@
 status: in-progress
 dependencies: []
 review:
-  last-run: 2026-08-27T22:44:49Z
-  reviewed-against: bb96fef3d83dec618fbadbccc7e021a73720ce5d
+  last-run: 2026-09-12T23:43:13Z
+  reviewed-against: de5ccb4ffa26d341f570a45526102b2aec169a21
   must-violations: 0
   should-violations: 0
   low-confidence: 0
+  reviewed-digest:
+    data-model.md: cac4b3778a82ad737dbaa2ca782e22277e2515fb6f82984cbfd9b75a633f3fc1
+    scenarios/detect-dependency-cycles.md: f7b0ac55bdeb0d2084d59779cd67015635ca2616daf423324713c9217c3d36e8
+    scenarios/generator-sync-claim-honesty.md: e03a245d2efd00b267fd7eeb0690af4fd3877a685c7ab121e9b5dc0ffe598481
+    scenarios/skip-prose-cross-references.md: e57301025e73da4c077a5be9fc7ae821653c37a9ad12ee0d4c10a31798f60380
+    scenarios/tracked-specs-not-worktree.md: 985aeeaa62ab386742d54ffd4b671f6109f53c156431391b5c42d7eb7718287c
   blocking: false
 next-criterion: 27
 analyze:
