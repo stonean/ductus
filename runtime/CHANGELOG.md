@@ -2,6 +2,72 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.48.0] — 2026-09-12
+
+### Added
+
+- **The pre-`done` gate blocks on an undischarged cross-spec impact.** A spec
+  declares the specs it owes a change to in a `cross-spec-impact:` frontmatter
+  list, and `check-review-gate` refuses `in-progress → done` while any entry is
+  undischarged. **Discharge is the reciprocal link, not the key's removal** —
+  an entry clears when the named spec's body, or a scenario under it, links
+  back — because a key an author deletes to unblock themselves enforces
+  nothing. The result reports per entry (`discharged` / `undischarged` /
+  `target-missing` / `self-reference`) on a pass as well as a block, since
+  partial discharge is the normal state of a multi-entry declaration. Ordered
+  beside the `folds-into` check and sharing its reasoning — a spec carrying an
+  obligation nobody has discharged is not a candidate for `done` — and sharing
+  no code with it. `validate-frontmatter` checks the key's shape. The rule half
+  is §cross-spec-impact, which now separates the enforceable half from the
+  judgment half and says plainly that nothing detects an impact never declared.
+- **`write-review` and `diff-cross-spec` report `inbox-standing`.** Every inbox
+  surface before this was window-scoped, so an item older than the feature in
+  hand was invisible by construction. The standing row renders on every run —
+  `clean`, `outstanding` with the oldest item's `git blame` date,
+  `age undeterminable` when blame cannot run, and `no-file` as its own state —
+  and is never omitted, because examined-and-empty and not-computed must not be
+  the same output. A notice, never a gate: §brownfield-inbox's design rests on
+  capture being free.
+- **`resolve-constitutions` carries each entry's `description` through to
+  `ConstitutionRecord`**, so `/{project}:target`'s reports and `write-review`'s
+  `## Unexamined governance` bullets can say what a source governs rather than
+  only naming an alias. It renders on **skipped** entries too, where it helps
+  most: the value comes from the config, not from the checkout that is missing.
+  Whitespace is collapsed in the primitive so a TOML multi-line value cannot
+  break a single-line report; absent stays absent.
+
+### Fixed
+
+- **The clap subcommand enum is pinned.** It was the one primitive-wiring
+  surface nothing checked — a `Command` variant and its dispatch arm could both
+  be deleted with the entire suite green, leaving `ductus <name>` missing from
+  the CLI with nothing reporting it, on exactly the surface the markdown-only
+  path depends on. A set-equality test now holds it to `PRIMITIVE_REGISTRY`, so
+  a missing variant and a phantom verb both fail with the divergence named.
+  **This supersedes the 0.47.0 note below**, which recorded the enum as pinned
+  by nothing and told contributors to check it by hand; that note stands as the
+  record of what was true then, and the manual step it prescribed is
+  discharged.
+- **A `cross-spec-impact` entry is screened before it becomes a path.** Found
+  reviewing the new check: an entry was joined to the spec root unscreened, so
+  `["../../elsewhere"]` read a `spec.md` outside the corpus and a back-link
+  there *discharged* the obligation. Entries are slugs, not paths, and are now
+  screened through `parse_feature_dir`.
+
+### Changed
+
+- `validate_no_traversal` carries the canonical statement of the
+  **config-sourced path boundary** — when a primitive reading a path out of
+  committed config may skip the check, and what moves that path into the
+  validated tier. `resolve-constitutions` and `resolve-references` cite it
+  rather than each restating the reasoning. Nothing enforces it, and it says so.
+- One `collapse_whitespace` helper replaces three copies of the same
+  `split_whitespace` chain.
+
+See [022 — Deterministic runtime](../specs/022-deterministic-runtime/spec.md),
+[050 — Constitution](../specs/050-constitution/spec.md), and
+[055 — Shared constitution](../specs/055-shared-constitution/spec.md).
+
 ## [0.47.0] — 2026-09-11
 
 ### Added

@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [030-cross-service-references, 040-configurable-specs-dir, 050-constitution]
 review:
   last-run: 2026-09-12T23:03:16Z
