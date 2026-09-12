@@ -183,7 +183,7 @@ You don't need to clone `ductus` or rewrite history to adopt it. Install the com
 - Let those specs gain precision incrementally through bug fixes, enhancements, and `/clarify`.
 - Drop raw items into `specs/inbox.md` with `/log` without breaking flow, and route them later with `/groom`.
 
-Adoption spreads by feature area, not in a big bang. The goal is for `inbox.md` to eventually disappear.
+Adoption spreads by feature area, not in a big bang. The *brownfield backlog* in `inbox.md` drains toward empty as that happens — but the file itself stays: capturing incidental findings is an ongoing role, not a migration phase ([§brownfield-inbox](framework/constitution.md#brownfield-inbox)).
 
 ### Bugs are unwritten scenarios
 

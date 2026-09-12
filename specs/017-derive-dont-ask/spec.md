@@ -113,7 +113,7 @@ Existing `ductus` repo dogfood specs (000–016) and any adopter projects alread
 
 - Existing `done` specs: no migration. Stale fields remain; the open-schema rule (constitution §text-first-artifacts) ignores unknown fields. Validate stops checking them, so they cause no findings.
 - New specs created after this lands: no longer have the deleted fields.
-- Adopter projects: receive the new templates on next `/ductus`. Existing specs in adopter projects are also frozen archaeology.
+- Adopter projects: receive the new templates on next `/ductus`. Existing specs in adopter projects are left alone for the same reason — a bulk rewrite would reopen each one through the back-edge.
 - Active in-flight specs in this repo (none at the moment beyond this spec): the author can strip the deleted fields opportunistically; it is not enforced.
 
 This spec's own frontmatter contains `title:` and `tags:` because they are still required by the current templates at spec-creation time. They will be stripped from this spec's frontmatter as part of the implementation tasks (the spec edits its own frontmatter as a final task).
@@ -122,25 +122,25 @@ This spec's own frontmatter contains `title:` and `tags:` because they are still
 
 Per Q2 (twin constitutions collapsed) and Q7 (spec-deps derivation), three new generators land alongside the existing `gen-claude-commands.sh`:
 
-1. `scripts/gen-readme-table.sh` — rebuilds the Feature Specs table in the root `README.md` between marker comments from `specs/*/spec*.md` frontmatter.
-2. `scripts/gen-help-tables.sh` — rebuilds the command tables in `framework/commands/help.md` from each command file's frontmatter `description:`.
-3. `.ductus/scripts/gen-spec-deps.sh` — scans every `specs/*/spec*.md` body for inline markdown links to sibling specs (excluding code fences, blockquote-prefixed lines, and `## See also` opt-out sections) and rewrites the frontmatter `dependencies` list to match. `## References` is *not* an opt-out (it is the canonical body-authored dep section per task 29's migration); only `## See also` suppresses edges. After the rewrite, the script runs an SCC-based cycle check across the full derived graph; any cycle (including self-cycles) is reported on stderr as `cycle: a -> b -> ... -> a` and exits the script non-zero, which the pre-commit hooks propagate to block the commit.
+1. `scripts/gen-readme-table.sh` — rebuilt the Feature Specs table in the root `README.md` between marker comments from `specs/*/spec*.md` frontmatter. **Since retired** along with the generated table (see AC10).
+2. `scripts/gen-help-tables.sh` — rebuilds the command tables in `framework/commands/help.md` from each command file's frontmatter `description:`. Still shipped and still run by the hook.
+3. `.ductus/scripts/gen-spec-deps.sh` — scanned every `specs/*/spec*.md` body for inline markdown links to sibling specs (excluding code fences, blockquote-prefixed lines, and `## See also` opt-out sections) and rewrote the frontmatter `dependencies` list to match. `## References` is *not* an opt-out (it is the canonical body-authored dep section per task 29's migration); only `## See also` suppresses edges. After the rewrite it ran an SCC-based cycle check across the full derived graph, reporting any cycle on stderr and exiting non-zero to block the commit. **Since promoted to a runtime primitive** — `derive-dependencies`, joined by `derive-references` — by `022-deterministic-runtime`'s `adopter-generator-promotion`, so `.ductus/scripts/` no longer exists (see AC23). The derivation rules and the cycle check carried across unchanged.
 
 (The fourth proposed generator, `gen-root-constitution.sh`, is *not* needed — Q2 collapsed the twin constitutions to a single canonical file at `framework/constitution.md`, removing the divergence the generator would have managed.)
 
 ### ductus repo's pre-commit hook
 
-`.githooks/pre-commit` orchestrates all four generators (`gen-claude-commands`, `gen-readme-table`, `gen-help-tables`, `gen-spec-deps`). Installed via `git config core.hooksPath .githooks`, run by `scripts/install-hooks.sh`. Runs all generators unconditionally on every commit and stages any changes — trades a fraction of a second per commit for a one-line implementation that can't get the gate logic wrong.
+`.githooks/pre-commit` orchestrates the generators. Installed via `git config core.hooksPath .githooks`, run by `scripts/install-hooks.sh`. Runs them unconditionally on every commit and stages any changes — trades a fraction of a second per commit for a one-line implementation that can't get the gate logic wrong. As delivered here it ran four shell generators; it now runs three (`gen-configure-mcp`, `gen-claude-commands`, `gen-help-tables`) plus the two frontmatter derivations as runtime primitives, and halts when the runtime is unreachable rather than skipping them.
 
 ### Adopter projects' pre-commit hook
 
-`framework/bootstrap/hooks/pre-commit` ships with the framework. Runs only adopter-relevant generators — initially `gen-spec-deps.sh`. The slot is extensible for future adopter-relevant generators.
+`framework/bootstrap/hooks/pre-commit` ships with the framework as an adopter-owned outer stub that calls the ductus-owned inner hook — see the post-018 signpost at the top of this spec. As delivered here it ran `gen-spec-deps.sh` from `.ductus/scripts/`; since the promotion in AC23 the derivations arrive with the acquired runtime instead, so there is nothing to scaffold, refresh, or pin.
 
-`/ductus` manages the adopter hook (see Q7 resolution for the install/update/skip behavior). `.ductus/scripts/gen-spec-deps.sh` ships to adopters with `update` strategy so every `/ductus` run refreshes it from upstream and adopters pick up generator fixes automatically; adopters who have customized the script can list it in `.govern.toml` `pinned.files` to opt out of overwrites.
+`/ductus` manages the adopter hook (see Q7 resolution for the install/update/skip behavior). Pinning is `.ductus/config.toml` `[pinned] files` — `.govern.toml` was the pre-049 name and no longer exists.
 
 ### CI safety net
 
-Both repos run all generators in dry-run mode in CI; non-empty diff fails the build. Catches contributors who never installed the hook locally and adopters whose hook was skipped due to existing-hook detection.
+Both repos run the generators in CI and fail the build on a non-empty diff. Catches contributors who never installed the hook locally and adopters whose hook was skipped due to existing-hook detection. As delivered here the CI step ran them in dry-run mode; it now runs them for real and compares the tree afterwards, which additionally catches a generator that creates a *new* output rather than modifying a tracked one.
 
 ## Acceptance Criteria
 

@@ -59,8 +59,18 @@ jobs:
 
       - name: Fail if any generator produced a diff
         run: |
-          if ! git diff --exit-code; then
+          # `git diff --exit-code` compares tracked files only, so a generator
+          # that creates a *new* output left this step reporting "in sync" over
+          # a tree that was not: adding a command source under
+          # framework/commands/ makes gen-claude-commands.sh write a new
+          # .claude/commands/ductus/ copy, and an untracked file is invisible to
+          # `git diff`. `git status --porcelain` covers untracked paths too, so
+          # the clean result means what it says (QUAL-CLAIM-001).
+          dirty="$(git status --porcelain)"
+          if [ -n "$dirty" ]; then
             echo "::error::Generator outputs are out of date. Run scripts/install-hooks.sh and re-commit."
+            printf '%s\n' "$dirty"
+            git diff
             exit 1
           fi
 

@@ -115,7 +115,7 @@ This is what removes the asymmetry the home-level agents used to carry. Their co
 Every live artifact that names `ductus` as an **executable** is updated to the ductus-owned path — the pointer for project-committed surfaces, the absolute store path for home-level ones. The set of surfaces:
 
 - `framework/bootstrap/ductus.md` — the §MCP wiring JSON shapes, the §Permission Setup probe seed, the §Detection mechanism probe, the §ductus runtime detection state definitions, the §Post-Scaffolding tip, and the matching §Edge Cases rows.
-- `README.md` — the "Install the runtime" and "Registering the runtime" sections, which currently document a manual `sudo install -m 0755 ductus /usr/local/bin/ductus`.
+- `README.md` — the "Install the runtime" and "Registering the runtime" sections, which at the time documented a manual `sudo install -m 0755 ductus /usr/local/bin/ductus`. Both are gone: README now states the runtime is acquired rather than installed, and registration moved to [docs/runtime.md](../../docs/runtime.md#registering-the-runtime).
 - This repository's own `.mcp.json`, subject to the framework-repo question below.
 
 References to `ductus` as a *name* — the crate, the MCP server key, the `ductus-v*` release tag scheme, the `mcp__ductus__*` tool prefix — are unaffected. Prose describing runtime behavior (`ductus exec` resolution, primitive contracts) is likewise unaffected: those name the runtime, not a path to invoke.

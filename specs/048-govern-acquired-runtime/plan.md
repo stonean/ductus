@@ -75,7 +75,7 @@ The `version` file, the publish gate, and the Windows `.tar.gz` asset touch only
 | `framework/bootstrap/ductus.md` | Modify | Acquisition procedure, MCP shapes, detection states, permission seeds, gitignore block, Shared Files note |
 | `framework/commands/*.md` | Modify | Remove the 26 per-step markdown-only fallback instructions |
 | `framework/migrations.toml` | Modify | Adopter migration entry rewriting the MCP command |
-| `framework/migrations/runtime-path-rewrite.md` | Create | That entry's procedure body |
+| `framework/migrations/runtime-store-path.md` | Create | That entry's procedure body (planned as `runtime-path-rewrite.md`; shipped under the registry id `runtime-store-path`) |
 | `scripts/audit/version-agreement.sh` | Create | Self-audit family asserting the four version artifacts agree |
 | `scripts/audit/run-all.sh` | Modify | Register the new family |
 | `README.md` | Modify | Drop the `PATH` install; correct the Windows cross-compilation claim |

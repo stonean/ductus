@@ -4,8 +4,9 @@
 # to enforce that ductus's invariants stay intact on every PR. Two classes of
 # check run:
 #
-#   1. Generator sync — generated frontmatter (currently spec `dependencies:`,
-#      via `ductus derive-dependencies`) must match its sources. Safety net for
+#   1. Generator sync — generated frontmatter (spec `dependencies:` and
+#      `references:`, via `ductus derive-dependencies` and
+#      `ductus derive-references`) must match its sources. Safety net for
 #      contributors who never installed the local pre-commit hook
 #      (.githooks/pre-commit, set up by /ductus).
 #
@@ -40,13 +41,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Derive spec dependencies
-        run: .ductus/bin/ductus derive-dependencies --write
-
-      - name: Fail if any generator produced a diff
+      - name: Derive generated frontmatter
+        id: derive
         run: |
-          if ! git diff --exit-code; then
-            echo "::error::Spec dependencies are out of sync with body links. Run /ductus to install the pre-commit hook, or run 'ductus derive-dependencies --write' locally and re-commit."
+          set -euo pipefail
+          # Both derivations, not only `dependencies:`. `references:` drifts
+          # without anyone editing a spec — renaming a service in the registry
+          # restates every spec pointing at it — so deriving one and reporting
+          # "generators are in sync" asserts a property never checked
+          # (QUAL-CLAIM-001, whose own record is an adopter carrying dead
+          # references for nine commits behind exactly this gap).
+          out="$(.ductus/bin/ductus derive-dependencies --write)"
+          .ductus/bin/ductus derive-references --write
+          # The derivation reports the configured spec root ([paths] specs-root,
+          # spec 040); the gate below reads it from here. It used to hardcode
+          # `find specs`, which on a renamed root enumerated nothing, left the
+          # failure counter at zero, and exited 0 — a gate that could not run
+          # was indistinguishable from one that passed.
+          root="$(printf '%s' "$out" \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin)["specs-root"])')"
+          if [ -z "$root" ] || [ ! -d "$root" ]; then
+            echo "::error::Could not resolve the spec root (got '$root'). Failing rather than reporting a clean gate over nothing."
+            exit 1
+          fi
+          printf 'specs-root=%s\n' "$root" >> "$GITHUB_OUTPUT"
+
+      - name: Fail if any derivation produced a diff
+        run: |
+          # `git status --porcelain`, not `git diff --exit-code`: the latter
+          # ignores untracked files, so a derivation that creates a new output
+          # reports in sync over a stale tree.
+          dirty="$(git status --porcelain)"
+          if [ -n "$dirty" ]; then
+            echo "::error::Generated frontmatter is out of sync with body links. Run /ductus to install the pre-commit hook, or run 'ductus derive-dependencies --write' and 'ductus derive-references --write' locally and re-commit."
+            printf '%s\n' "$dirty"
+            git diff
             exit 1
           fi
 
@@ -59,10 +88,17 @@ jobs:
         # review by running /ductus:review against the spec, which adds the
         # block. Catches the bypass case where someone edits frontmatter
         # directly to set `done` without running /ductus:review.
+        env:
+          # Passed as an env var rather than interpolated into the script body,
+          # so the value is never spliced into shell source.
+          SPECS_ROOT: ${{ steps.derive.outputs.specs-root }}
         run: |
-          set -e
+          set -euo pipefail
+          root="$SPECS_ROOT"
           fail=0
+          examined=0
           while IFS= read -r f; do
+            examined=$((examined + 1))
             fm=$(awk 'NR==1 && /^---$/{f=1; next} f && /^---$/{exit} f' "$f")
             status=$(printf '%s\n' "$fm" | sed -n 's/^status: *//p' | head -n1 | tr -d '"')
             if [ "$status" != "done" ]; then
@@ -82,5 +118,13 @@ jobs:
               echo "::error file=$f::Review-blocking gate: review.blocking=true — see $(dirname "$f")/review.md"
               fail=1
             fi
-          done < <(find specs -maxdepth 2 -name spec.md -type f)
+          done < <(find "$root" -maxdepth 2 -name spec.md -type f)
+          # Say what was examined. A gate that enumerated nothing and a gate
+          # that examined the corpus and found it clean both used to exit 0,
+          # which is the conflation QUAL-CLAIM-001 names.
+          echo "Review-blocking gate examined $examined spec(s) under '$root'."
+          if [ "$examined" -eq 0 ]; then
+            echo "::error::No spec.md found under '$root' — the gate examined nothing, which is not the same as passing."
+            exit 1
+          fi
           exit $fail
