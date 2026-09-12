@@ -105,3 +105,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Confirm `check-artifacts`' link-adjacent decision-drift family still reports clean afterwards
 
 - **Done when**: `spec.md` describes the feature rather than the state of a session that has ended, so no sibling artifact is left asserting a prior state (§drift-prevention, *Decision resolution*). Found by `/ductus:analyze`'s grounding step on 2026-09-11: the mechanical drift family cannot catch it, because the section's prose ("is incomplete", "has never run") contains none of the six closed tells. Must land **before** the `in-progress → done` transition — afterwards the same edit is a meaningful body edit that takes the back-edge.
+
+## 13. Carry `description` through to the surfaces that name a source
+
+- [ ] Implement the behavior described in `scenarios/a-registered-source-is-named-with-its-description.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.

@@ -391,3 +391,15 @@ Implements `scenarios/anchor-reference-kinds.md`. `resolve-anchor` treated every
 - [x] Then run `/{project}:review` with `--since=6c40644` (022's diff base predates the 0.28.0 cycle and resolves hundreds of files — see AGENTS.md; say in the review commit that the override was used and why), then `/{project}:analyze`, then `/{project}:implement`
 
 - **Done when**: every criterion on 022 is true of the shipped tree, the two new scenarios are each covered by at least one criterion, and the completion gate passes with both records reporting `current` rather than `undeterminable`.
+
+## 110. Pin the clap subcommand enum against `PRIMITIVE_REGISTRY`
+
+- [ ] Implement the behavior described in `scenarios/the-cli-surface-nothing-pins.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 111. State the config-sourced path trust boundary where the code can be read against it
+
+- [ ] Implement the behavior described in `scenarios/config-sourced-paths-and-the-traversal-boundary.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
