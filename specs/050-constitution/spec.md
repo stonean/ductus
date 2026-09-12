@@ -203,9 +203,11 @@ rule that cites `scripts/audit/` cannot be promoted as written, because that
 directory is this repository's own and never ships. The same test, applied to a
 narrower population, is what separates **shared** from **project-only**.
 
-This repository registers no `[constitutions.*]` entry, so naming the tier adds
-a destination without reclassifying anything: every `AGENTS.md` entry keeps the
-classification it already carries, and no project-only entry is touched.
+This repository registers no `[constitutions.*]` entry — `.ductus/config.toml`
+carries `[host]`, `[review]` and `[runtime]` and no constitutions table, and
+`resolve-constitutions` reports `examined: 0` against it — so naming the tier
+adds a destination without reclassifying anything: every `AGENTS.md` entry keeps
+the classification it already carries, and no project-only entry is touched.
 
 ## Criterion verification
 
