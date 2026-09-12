@@ -17,8 +17,8 @@ review:
   blocking: false
 next-criterion: 19
 analyze:
-  last-run: 2026-09-12T23:04:34Z
-  analyzed-against: 61cf7aef9f3ed4c0d1b850a0947feafc67b2628d
+  last-run: 2026-09-12T23:06:40Z
+  analyzed-against: fbcd503ee79e74ae34599de2f3ef6a0a1bdfdfdc
   hard-fail: 0
   blocking-findings: 0
   advisory: 0
@@ -32,7 +32,7 @@ analyze:
     scenarios/completion-claims-carry-no-caveats.md: 2b2e43f4cea73ba9c81dc21848b5c668e1db5bf6a5e3becd7467ce025c4179c4
     scenarios/findings-route-by-scope.md: f18d999fbe4045c1bd2a894e108e243bf3f578a220a1ebc0bcafb78e1e486bb7
     scenarios/governance-is-multi-source.md: ae59aca7a049317806297839a73cf335eeb3764db97999a7ddc0b12103e6ffeb
-    spec.md: 0888632e13276c67d5e767a3c45330451f9e68f4c579b876c8da18be86436c09
+    spec.md: 207fc6231abbc067220a098fe78ef24552a9ab41219b53679e3025dac338901c
     tasks.md: b00827c39400a81dc269f10da971439f4037bbbfc14d657a65d458ee15514d04
   blocking: false
 ---

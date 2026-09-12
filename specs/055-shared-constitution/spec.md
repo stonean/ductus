@@ -12,8 +12,8 @@ review:
     scenarios/a-registered-source-is-named-with-its-description.md: 0150662e0bebc24665b91b0894dce653054754490b00fca6fb5628ff5c730205
   blocking: false
 analyze:
-  last-run: 2026-09-12T23:04:34Z
-  analyzed-against: 61cf7aef9f3ed4c0d1b850a0947feafc67b2628d
+  last-run: 2026-09-12T23:06:40Z
+  analyzed-against: fbcd503ee79e74ae34599de2f3ef6a0a1bdfdfdc
   hard-fail: 0
   blocking-findings: 0
   advisory: 0

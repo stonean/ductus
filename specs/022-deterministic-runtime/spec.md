@@ -105,8 +105,8 @@ review:
   blocking: false
 next-criterion: 32
 analyze:
-  last-run: 2026-09-12T23:04:34Z
-  analyzed-against: 61cf7aef9f3ed4c0d1b850a0947feafc67b2628d
+  last-run: 2026-09-12T23:06:40Z
+  analyzed-against: fbcd503ee79e74ae34599de2f3ef6a0a1bdfdfdc
   hard-fail: 0
   blocking-findings: 0
   advisory: 0
@@ -208,7 +208,7 @@ analyze:
     scenarios/writecode-boundary-derivation.md: 9e4d5b406b4d5e25c4a4dd9e5264995a5e4bc83075ec20eae2c3eb3e36adcd81
     scenarios/writecode-payload-bundling.md: 5c343929c3a42ac4406a02c173b6979231127b9583aabae171fee1f747d5084b
     scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
-    spec.md: fbeee2c874b0952fc098c92533e4e324c1192db0e475be4540c96e815943bddd
+    spec.md: 95d030989b4e09a268ff1c84b1891949084f315b43de9712dde1235c83600780
     tasks.md: c7df4a9a605aa28c1a668f43306d36feac88b3dc67bba6a54826e2c81b43f1ef
   blocking: false
 ---
