@@ -409,3 +409,9 @@ Implements `scenarios/anchor-reference-kinds.md`. `resolve-anchor` treated every
 - [ ] Implement the behavior described in `scenarios/the-cross-spec-impact-gate.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 113. Render the standing inbox as a computed row, and widen §brownfield-inbox to require it
+
+- [ ] Implement the behavior described in `scenarios/the-inbox-row.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
