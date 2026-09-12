@@ -105,16 +105,16 @@ review:
   blocking: false
 next-criterion: 32
 analyze:
-  last-run: 2026-09-07T19:22:31Z
-  analyzed-against: 0a6670b3688e2caf3fe85cbf843bd0a58942890c
+  last-run: 2026-09-12T23:04:34Z
+  analyzed-against: 61cf7aef9f3ed4c0d1b850a0947feafc67b2628d
   hard-fail: 0
   blocking-findings: 0
   advisory: 0
-  unexamined: 2
+  unexamined: 0
   analyzed-digest:
-    data-model.md: 6adcb51af5d170099dc42819aa0da861eb2858c2db178dbf6dddc85c5a103a32
+    data-model.md: 349916882855843a51c1568cd34bcfaebbdd109282ec28e93eca211e87799211
     plan.md: 83fd97d76c64d20beb729ce68149d23f3e1e388711ec0371818aa49b4f0304bf
-    review.md: 1abd4b48095b2161d234f32557ae64708ffa92d38615ae3c1130b2cd42887dba
+    review.md: fa765f529b1a5717718ba0d5094c42676d0c431a62a4f211829e5384a5b69dfd
     scenarios/a-done-spec-has-no-transition-to-gate.md: bad3db76667fc6620b34a2a6dfa39fb6e461523984128314df82f05717a74493
     scenarios/adopter-corpus-link-integrity.md: a36b79e3e04489a765cfab1c3e657ac0c34ef66a289d0512866a27303eeb5358
     scenarios/adopter-generator-promotion.md: 7a80f616c7247ba894f16efb34de307836ac317d6396224a420efce4218e7af2
@@ -135,6 +135,7 @@ analyze:
     scenarios/cli-config-dir-per-contributor.md: 3764b5f4f1b7c618c6255f6feef1c7db06f5ca43774d98095a1a01403b4bb391
     scenarios/commands-dir-parameterization.md: 61e6896a156386a62c24253cc91db2cfb0b76dd09491a11e53fdfaef3b1f7d7c
     scenarios/config-resolution-single-probe.md: fc602eb6f2d64f6d1956da411b809af3a53a0c91b26dd198f6b1af61e3347ab4
+    scenarios/config-sourced-paths-and-the-traversal-boundary.md: 5ce4f8c45bdfd56606b9a977431e06683f4f38904742f96c358e6b6c5828b30e
     scenarios/constitution-excerpts-as-skill-resources.md: 56192a1689b5afe2bfc51928c27b7d567518816b79c8df0a50250bd3328a8e86
     scenarios/coverage-expansion-primitives.md: e58ada54e9c5afb09d71dcffcf632cbb3127b35fc5a423d0aacfebbb1df07aad
     scenarios/coverage-residue-cleanup.md: 04dc18f12694ed8b02821b50498c7e8ff8123993de72a27ae0d7c8722e024637
@@ -192,7 +193,10 @@ analyze:
     scenarios/skipscanner-inline-code-exemption.md: ab402c94a437b19b1b9bdd5a58ad3303d6bb67e9822041520522e3a066c43ab5
     scenarios/spec-side-parser-hardening.md: c42a4c32403c47bef48849fedb76c75714048c7dcfd28b89625be702c716490e
     scenarios/specify-routes-before-scaffolding.md: e008baae7f44f2d4ea73d45df18dd6e1f2cc435cdc5562fd8c148494a6d0c520
+    scenarios/the-cli-surface-nothing-pins.md: f63de14533aeb6b2c77f33421af289633e0fded63e795f219b82bfa30f071c8c
     scenarios/the-committed-tree-horizon.md: 77ad933415ea4cc42016d55f524c2a90146a683e41634ba3a945db0d2c693b5c
+    scenarios/the-cross-spec-impact-gate.md: 636a894e1d481799d2a89ab6df5638030676b1d8bb784e8531e3bf339d4fce87
+    scenarios/the-inbox-row.md: 58d356dddec37f5a770fc51e85668351999b9f701aa6d43631a0aecf411d1edd
     scenarios/traverse-deps-cycle-check.md: 81debabcec79ccfa9b77fb5bdecf9e902ad4f3304d1b2b3d0613308ec26ad913
     scenarios/unchecked-done-when-clause-tally.md: d4ec04b41d2ddc3b7a656313cc45fa735eab43b2333c219b79cac10d5a60c88f
     scenarios/unreadable-scenario-is-reported.md: 569047275a9d821b190581ae2adba05492a698aa50bc19d696cccee0d38be159
@@ -204,10 +208,8 @@ analyze:
     scenarios/writecode-boundary-derivation.md: 9e4d5b406b4d5e25c4a4dd9e5264995a5e4bc83075ec20eae2c3eb3e36adcd81
     scenarios/writecode-payload-bundling.md: 5c343929c3a42ac4406a02c173b6979231127b9583aabae171fee1f747d5084b
     scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
-    spec.md: 1c42889fd98cd9defd51f03907a5227121ef41bf2c6b94f3f3bf305c0a88428e
-    tasks.md: 89cbb9176b09d8268f755e813e56025cd5328adad58e5578cca34dab4e540985
-  unexamined-by-reason:
-    not-a-live-claim: 2
+    spec.md: fbeee2c874b0952fc098c92533e4e324c1192db0e475be4540c96e815943bddd
+    tasks.md: c7df4a9a605aa28c1a668f43306d36feac88b3dc67bba6a54826e2c81b43f1ef
   blocking: false
 ---
 

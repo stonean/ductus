@@ -12,18 +12,19 @@ review:
     scenarios/a-registered-source-is-named-with-its-description.md: 0150662e0bebc24665b91b0894dce653054754490b00fca6fb5628ff5c730205
   blocking: false
 analyze:
-  last-run: 2026-09-11T16:14:35Z
-  analyzed-against: a482fe4fe91857c710cecb085504e11f5b9aa7d5
+  last-run: 2026-09-12T23:04:34Z
+  analyzed-against: 61cf7aef9f3ed4c0d1b850a0947feafc67b2628d
   hard-fail: 0
   blocking-findings: 0
-  advisory: 1
+  advisory: 0
   unexamined: 0
   analyzed-digest:
-    data-model.md: 5c429d0d761de4d5bd5dd49802e582d2ed47ca617843d725e68c9f040e085938
+    data-model.md: 7d54e3ee75399840c7e55932462ed7580b0e3c1f7c29c0ade4c0d1f00641e158
     plan.md: 9f0c139487d77b5df04038ab22ac8eabe5ad41e5fbf84e565975bef59e9b086b
-    review.md: 0931c1367356d781171984b647be27a7ac5df5bd3066e1aeea39e432850fce87
-    spec.md: 7a91b500e05939b7673dfb47454b09c18b40f7c7c219a31ce95f9eecbf8d1277
-    tasks.md: 327eac576a24f5881d2b2484fe04fccc971671c9de7b6dacdc01afff1d06004e
+    review.md: d3c12ff28e26f75d29452774bec33cec0fb94ee292547c1a0406572b894ce668
+    scenarios/a-registered-source-is-named-with-its-description.md: 0150662e0bebc24665b91b0894dce653054754490b00fca6fb5628ff5c730205
+    spec.md: 0764c9ba160c1e64ea80958d9b7a0e4298c4b9648f72912445fbd3e5043fadd8
+    tasks.md: 7e51b4cedac42fd50984a655e935ef4ecc371c836aefe231ad76030c73411a83
   blocking: false
 next-criterion: 13
 ---
