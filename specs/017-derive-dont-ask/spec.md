@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: []
 review:
   last-run: 2026-08-27T22:44:49Z
@@ -38,50 +38,6 @@ Apply the **Design Principles** rule added to `AGENTS.md` on 2026-05-06 ("Never 
 The principle, restated: any framework input that requires an author to *remember* to fill it in, set a flag, update a doc alongside code, or otherwise be careful will fail in practice — silently, and exactly in the cases where it mattered most. The remedy is to derive the input from existing artifacts, frontmatter, git history, or code analysis; or, if no derivation is viable, to delete the input.
 
 This spec is a discipline-cleanup pass. It does not introduce new framework capabilities — every change either removes an input or replaces a manual input with a generator/hook/derivation.
-
-## State at hand-off (2026-08-16)
-
-**Closed and returned to `done`.** Both criteria this spec was reopened for
-shipped in `ductus-v0.29.0` (assets on five platforms, `ductus 0.29.0` on
-crates.io, acquisition invariant green on all five targets). There is nothing
-outstanding here.
-
-Reopened `done → in-progress` on 2026-08-16 to carry two new criteria, **AC25**
-and **AC26**. Both are instances of this spec's own principle found in the
-framework's own machinery, routed here because this spec is where that principle
-lives:
-
-- **AC25** — capturing a review finding that maps to no loaded rule depends on
-  the reviewer remembering a separate `append-inbox` call, and nothing detects
-  an uncaptured one. Surfaced when an observation was recorded only in a review
-  Summary (regenerated wholesale on the next run) and a commit message; it
-  survived only because the operator asked where it had been written down.
-- **AC26** — the routing rules deciding new-spec versus scenario-on-existing
-  bind only for work arriving through the inbox, where `/{project}:groom`'s
-  decision tree runs. `/{project}:specify` has no equivalent, and the rules live
-  in `AGENTS.md` §Workflow, which no command loads as normative criteria.
-
-**Neither is implemented here.** Per §cross-spec-impact and the runtime-work
-routing rule, this spec keeps the requirement and the criteria while
-`022-deterministic-runtime` carries the implementation as
-scenarios: **task 90** (`review-observations-write-through`) closed AC25 and
-**task 91** (`specify-routes-before-scaffolding`) closed AC26. Both landed
-2026-08-16 and shipped in `ductus-v0.29.0`; this spec's only work was ticking
-the criteria once they did.
-
-What shipped, for a reader arriving at this spec rather than at 022:
-
-- **AC25** — `write-review` takes an `observations` array. Each entry renders in
-  a new `## Observations` report section *and* is appended to the inbox in the
-  same call, dedup-guarded, with the inbox write ordered **first** so a failed
-  capture leaves no report rather than a report that lies about it. There is no
-  path that records an observation without capturing it.
-- **AC26** — a new `derive-routing-candidates` primitive plus a routing gate on
-  `/{project}:specify` that runs before `create-feature` writes anything.
-  Candidates are derived from the rule-file directory, the spec corpus, and a
-  runtime-work signal whose home is read off the corpus rather than named in
-  code. The decision reuses `/{project}:groom`'s tree at the extension point
-  rather than growing a second one.
 
 ## Violation Inventory
 
