@@ -115,3 +115,9 @@ Implements `scenarios/a-retired-feature-leaves-no-spec.md`. The constitution sta
 - [x] State plainly that nothing enforces this yet, and what a check would have to reckon with — a rule whose enforcement is "someone remembers" is a diligence dependency and must be named as one
 
 - **Done when**: §spec-lifecycle carries the rule with its three cases, `AGENTS.md` mirrors it by reference, and the scenario records both the 053 precedent and the unenforced status honestly.
+
+## 13. Name the shared tier in §Classification
+
+- [ ] Implement the behavior described in `scenarios/governance-is-multi-source.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
