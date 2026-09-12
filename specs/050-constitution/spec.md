@@ -43,45 +43,6 @@ The constitution is the one artifact every adopter receives and every command
 reads, and until now no spec owned it. This spec is its home: what belongs in
 it, how it is structured, and what reaches adopters through it.
 
-## State at hand-off (2026-08-17)
-
-**Clarified 2026-08-17, after being parked at the operator's judgment.** Created
-2026-08-17 by `/{project}:groom`, which routed two inbox items here: the survey
-of `AGENTS.md` entries that are true for any ductus project but ship to nobody,
-and a criterion-verification rule that belongs in the constitution for the same
-reason. Both are recorded below; the inbox items were removed as migrated.
-
-The six Open Questions were real rather than scaffolding, and none was answered
-by an agent acting alone — every answer ships to every adopter, and the last of
-them asked what else belonged in this spec's scope, which is a scoping decision
-rather than a research task. They were walked through `/{project}:clarify` on
-2026-08-17 and are recorded under §Resolved Questions: three were operator
-decisions, and three turned out to be settled by existing sources rather than by
-preference — the version-pin question by Family 20 and the **Shared Files**
-manifest, the classification-location question by `AGENTS.md` §Design Principles, and the
-retire-the-mirror question by this spec's own §Promotion mechanism.
-
-One question already has a caller waiting. `specs/inbox.md` carries a one-word
-sweep artifact in `045`'s **spec body** that is held here on purpose: repairing
-it would trigger the `done → in-progress` back-edge to fix a word that changes
-no claim, states no requirement, and alters no behaviour. §spec-lifecycle
-enumerates three mechanical-edit cases and a pure typo repair is none of them,
-so read strictly it reopens a done spec. Whether an edit that changes no claim
-counts as mechanical is a constitution question, and settling it here also
-settles that chore. The matching instance in `045`'s `plan.md` was already
-repaired, since a design record is not a durable contract.
-
-No implementation work has started. With the questions resolved, the spec is
-ready for `/{project}:plan`.
-
-**The survey is stale, and the classification pass must not inherit its count.**
-It was taken on 2026-08-17 against 56 entries. The rule-bearing sections now
-hold 54 — `Workflow` 34, `Gotchas` 16, `Boundaries` 2, `Design Principles` 2 —
-and two of those postdate the survey entirely, both learned from the same
-adopter runs that produced this spec's neighbours. AC1 asks that *every* entry
-carry a classification, so the pass is run against the file as it stands when
-the work happens, not against the survey's numbers.
-
 ## Ownership
 
 The constitution had no owning spec. Specs amended it constantly — `021` set

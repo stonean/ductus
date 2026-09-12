@@ -33,8 +33,7 @@ Scope is the four rule-bearing sections — `Workflow`, `Gotchas`, `Boundaries`,
 `Design Principles`. `Project Structure` and `Tech Stack` are descriptive prose
 about this repository, not rules, and are out of scope. As of this plan those
 sections hold 34, 16, 2 and 2 entries respectively; the pass runs against the
-file as it stands at implementation time, not against those numbers (spec
-§State at hand-off).
+file as it stands at implementation time, not against those numbers.
 
 ### The reword test is applied, and its output recorded
 
