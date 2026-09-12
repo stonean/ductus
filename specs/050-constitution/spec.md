@@ -247,7 +247,7 @@ a fact already banked.
 
 ## Acceptance Criteria
 
-- [x] AC1: Every entry in `AGENTS.md` carries exactly one classification — universal, borderline, or project-only — and the reason it was assigned, so the classification is auditable rather than asserted
+- [x] AC1: Every entry in `AGENTS.md` **as the 2026-08-17 survey found it** carries exactly one classification — universal, borderline, or project-only — and the reason it was assigned, so the promotion pass is auditable rather than asserted. The scope is that corpus, which is what `plan.md` §Classification records (54 entries, cited by section and position *as of this pass*). It is deliberately **not** a standing requirement that every later entry be classified: the classification existed to decide what to promote, that migration is complete, and a rule requiring a human pass on every future entry with nothing to enforce it is the diligence dependency §design-principles rejects — `AGENTS.md` has since grown to 89 entries, which is what a standing reading of this criterion would already have made false. Where a *new* learning belongs is settled by §drift-prevention's **Shared knowledge stays in git** and the §Classification tiers above, at the moment it is written
 - [x] AC2: Each entry classified universal has its canonical normative text in `framework/constitution.md` under a named section with a stable anchor
 - [x] AC3: Each promoted entry's `AGENTS.md` line points at its constitution section and states no normative content of its own, so grepping a promoted rule's distinctive phrasing finds one statement and one pointer
 - [x] AC4: No entry classified project-only is altered by this spec
