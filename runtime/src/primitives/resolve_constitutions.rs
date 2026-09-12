@@ -57,6 +57,7 @@ pub fn run(_args: &ResolveConstitutionsArgs, repo: &Path) -> Result<ResolveConst
             repo: entry.repo.clone(),
             path: entry.path.clone(),
             document,
+            description: normalize_description(entry.description.as_deref()),
             outcome,
         };
         if outcome == ConstitutionOutcome::Loaded {
@@ -98,13 +99,40 @@ fn load_constitutions(repo: &Path) -> Result<Constitutions> {
     })
 }
 
+/// Collapse a registered source's `description` to the single-line form every
+/// consumer renders, or `None` when there is nothing to say.
+///
+/// Collapsed **here** rather than at each renderer so the surfaces cannot
+/// disagree, and because the hazard is in the data rather than in the display:
+/// TOML multi-line strings make an embedded newline reachable, and one newline
+/// in a description would break a single-line report into two. The same
+/// posture the disabled-rule-file notice takes with its `reason`.
+///
+/// Whitespace-only is `None`, not `Some("")`: an empty description says
+/// nothing, and rendering an empty parenthetical would be worse than rendering
+/// none — absent is absent.
+pub(crate) fn normalize_description(description: Option<&str>) -> Option<String> {
+    let collapsed = description?
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    (!collapsed.is_empty()).then_some(collapsed)
+}
+
 /// Classify one entry's `path` against the local filesystem.
 ///
 /// `..` is permitted and absolute paths are accepted — a sibling checkout
 /// (`path = "../governance"`) is the normal case, and this value comes from
-/// machine-local committed config, not from the host or an LLM. That is the
-/// same judgment `resolve-references` records for `[services]`; primitives
-/// that take caller-supplied paths call `validate_no_traversal` instead.
+/// committed config, not from the host or an LLM. The reasoning is stated
+/// once, under **The config-sourced path boundary** on
+/// [`super::validate_no_traversal`], and cited here rather than restated;
+/// `resolve-references` cites the same statement for `[services]`.
+///
+/// What that statement obliges of *this* table: `[constitutions.*]` is
+/// registered by hand today (`framework/bootstrap/ductus.md`), so the
+/// operator is the origin of every path here. A future command that
+/// originates the value instead ships the `validate_no_traversal` call with
+/// itself.
 fn classify(repo: &Path, path_value: &str) -> (ConstitutionOutcome, Option<String>) {
     let checkout = resolve_path(repo, path_value);
     if !checkout.is_dir() {
@@ -139,6 +167,78 @@ mod tests {
 
     fn run_in(dir: &TempDir) -> ResolveConstitutionsResult {
         run(&ResolveConstitutionsArgs {}, dir.path()).unwrap()
+    }
+
+    /// The description reaches the record rather than stopping at the parser —
+    /// it is the field that answers what a source governs, and an alias does
+    /// not.
+    #[test]
+    fn a_description_is_carried_through_to_the_record() {
+        let dir = repo_with_config(Some(
+            "[constitutions.acme]\nrepo = \"https://example.test/g\"\npath = \"gov\"\n\
+             description = \"Acme platform engineering rules\"\n",
+        ));
+        fs::create_dir_all(dir.path().join("gov")).unwrap();
+        fs::write(dir.path().join("gov/constitution.md"), "# Rules\n").unwrap();
+
+        let result = run_in(&dir);
+        assert_eq!(result.loaded.len(), 1);
+        assert_eq!(
+            result.loaded[0].description.as_deref(),
+            Some("Acme platform engineering rules")
+        );
+    }
+
+    /// The description comes from the config, not the checkout, so it is
+    /// available precisely when the document is not — which is the case where
+    /// it helps most.
+    #[test]
+    fn a_skipped_entry_still_carries_its_description() {
+        let dir = repo_with_config(Some(
+            "[constitutions.acme]\nrepo = \"https://example.test/g\"\npath = \"nowhere\"\n\
+             description = \"Acme platform engineering rules\"\n",
+        ));
+
+        let result = run_in(&dir);
+        assert_eq!(result.skipped.len(), 1);
+        assert_eq!(
+            result.skipped[0].description.as_deref(),
+            Some("Acme platform engineering rules")
+        );
+    }
+
+    /// Absent is absent: a project that never writes one sees no change.
+    #[test]
+    fn an_entry_without_a_description_carries_none() {
+        let dir = repo_with_config(Some(
+            "[constitutions.acme]\nrepo = \"https://example.test/g\"\npath = \"nowhere\"\n",
+        ));
+        assert_eq!(run_in(&dir).skipped[0].description, None);
+    }
+
+    /// A TOML multi-line string makes an embedded newline reachable, and one
+    /// newline would break a single-line report into two.
+    #[test]
+    fn an_embedded_newline_is_collapsed_before_it_reaches_a_report() {
+        let dir = repo_with_config(Some(
+            "[constitutions.acme]\nrepo = \"https://example.test/g\"\npath = \"nowhere\"\n\
+             description = \"\"\"\nplatform rules,\n  including security\n\"\"\"\n",
+        ));
+        assert_eq!(
+            run_in(&dir).skipped[0].description.as_deref(),
+            Some("platform rules, including security")
+        );
+    }
+
+    /// Whitespace-only says nothing, and an empty parenthetical would render
+    /// worse than none at all.
+    #[test]
+    fn a_whitespace_only_description_is_none_not_empty() {
+        let dir = repo_with_config(Some(
+            "[constitutions.acme]\nrepo = \"https://example.test/g\"\npath = \"nowhere\"\n\
+             description = \"   \"\n",
+        ));
+        assert_eq!(run_in(&dir).skipped[0].description, None);
     }
 
     #[test]

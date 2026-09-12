@@ -487,6 +487,19 @@ pub struct WriteReviewResult {
     pub blocking: bool,
     /// Derived exit code: 1 when blocking, else 0.
     pub exit_code: i32,
+    /// The project's standing inbox backlog at the moment this review was
+    /// written.
+    ///
+    /// Reported for the same reason `analyze_freshness` is: so
+    /// `/{project}:review` renders its `inbox` row from the primitive rather
+    /// than from a second implementation. It never affects `blocking` or
+    /// `exit_code` — the row is a notice, not a gate.
+    ///
+    /// **Distinct from the report's Captured issues section**, which lists
+    /// this review window's additions. Two numbers answering two questions;
+    /// neither stands in for the other, and the standing one is the half that
+    /// was previously invisible for any item older than the feature in hand.
+    pub inbox_standing: InboxStanding,
     /// The spec's analyze-record freshness, computed against the **working
     /// tree** at the moment this review was written (spec 047 AC12).
     ///
@@ -631,6 +644,21 @@ pub struct Frontmatter {
     /// state before a merge, never a defect.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub folds_into: Option<String>,
+    /// The specs this one owes a change to under §cross-spec-impact
+    /// (spec 050's `a-declared-cross-spec-impact-gates-done`).
+    ///
+    /// Hand-authored, like `folds_into` and unlike `dependencies`: whether
+    /// work here implies a change there is semantic judgment, and no
+    /// generator can make it. Nothing detects an impact that was never
+    /// declared, and the constitution says so rather than implying a
+    /// mechanism it does not have.
+    ///
+    /// Each entry is an obligation that blocks `in-progress → done` until
+    /// the named spec links back to this one. Absent and empty are the same
+    /// state — most specs affect no other spec, so absence is never a
+    /// finding.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cross_spec_impact: Vec<String>,
     /// Last-review block, when set.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub review: Option<ReviewBlock>,
@@ -2505,6 +2533,26 @@ pub struct ConstitutionRecord {
     /// Repo-relative path to the document; non-null only when `outcome` is
     /// `loaded`.
     pub document: Option<String>,
+    /// The entry's optional `description` — what the source governs.
+    ///
+    /// Carried through to every surface that names a source, because an alias
+    /// alone does not answer the question attributability asks: it is a config
+    /// key someone chose, often a bare org name. It is reported on a
+    /// **skipped** entry too — the description comes from the config, not from
+    /// the checkout, so it is available precisely when the document is not,
+    /// which is the case where it helps most (spec 055, scenario
+    /// `a-registered-source-is-named-with-its-description`).
+    ///
+    /// Normalized here, not at each renderer: internal whitespace is collapsed
+    /// to single spaces, since TOML multi-line strings make an embedded newline
+    /// reachable and every consumer is a single-line report. Truncation stays
+    /// with the renderer, whose line budget it is.
+    ///
+    /// **Absent is absent, not empty.** An entry with no description — or one
+    /// that is only whitespace — renders exactly as it does today, so a project
+    /// that never writes one sees no change.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
     /// Classified outcome.
     pub outcome: ConstitutionOutcome,
 }
@@ -2829,6 +2877,24 @@ pub enum ReviewGateBlock {
     /// form has no `done` state at all — it is retired by fold-back, not
     /// completed.
     PendingFold,
+    /// The spec declares `cross-spec-impact` entries that are not yet
+    /// discharged — the affected spec does not link back to this one — or
+    /// that name no feature directory, or that name the declaring spec
+    /// itself (spec 050).
+    ///
+    /// The same category as [`Self::PendingFold`] and ordered beside it for
+    /// the same reason: both say the spec carries an obligation nobody has
+    /// discharged, which makes asking whether its review is fresh beside
+    /// the point.
+    ///
+    /// It shares that reasoning and nothing else. A fold has one target,
+    /// discharges by the key's absence, and deliberately never reads the
+    /// target; a cross-spec impact has a list, discharges by the target's
+    /// reciprocal link, and necessarily reads it. Partial state does not
+    /// exist for a fold and is the normal case here. The two are a shared
+    /// category in this enum, not shared code — see
+    /// `check_review_gate::cross_spec_impact_block`.
+    UndischargedCrossSpecImpact,
     /// The spec has no completed review: the `review:` block is absent or
     /// its `last-run` is null.
     NotReviewed,
@@ -2981,6 +3047,58 @@ pub struct CheckReviewGateResult {
     /// Markdown-lint violations backing a `markdown-lint` block; empty
     /// otherwise.
     pub violations: Vec<MarkdownViolation>,
+    /// Per-entry state of the spec's `cross-spec-impact:` declarations.
+    ///
+    /// A list rather than a boolean because partially discharged is the
+    /// normal state of a multi-entry declaration, and rounding it to
+    /// blocked-or-clear would hide which half is outstanding.
+    ///
+    /// Empty when the key is absent or empty — absence is never a finding —
+    /// **and** when an earlier gate check blocked first, since this
+    /// primitive stops at the first failing check and never evaluates the
+    /// rest. An empty list is therefore "not examined here", not "no
+    /// declarations"; `blocked_by` says which of the two.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cross_spec_impact: Vec<CrossSpecImpactEntry>,
+}
+
+/// State of one `cross-spec-impact:` declaration at the pre-`done` gate.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum CrossSpecImpactState {
+    /// The named spec links back to the declaring spec, from its own body
+    /// or from a scenario under it. The obligation is met.
+    ///
+    /// Discharge keys on the reciprocal link rather than on the declaration
+    /// being removed: a key an author deletes to unblock themselves
+    /// enforces nothing.
+    Discharged,
+    /// The named spec exists and carries no link back. The obligation
+    /// stands.
+    Undischarged,
+    /// The entry names no feature directory under the spec root.
+    ///
+    /// A finding rather than a silent pass: a declaration pointing nowhere
+    /// is a typo the operator wants named, and treating it as discharged
+    /// would let one letter disable the gate.
+    TargetMissing,
+    /// The entry names the declaring spec itself.
+    ///
+    /// Reported rather than trivially discharged — a spec cannot discharge
+    /// an obligation to itself, and a self-entry is a typo. Kept distinct
+    /// from [`Self::Undischarged`], whose remedy ("add the back-link") is
+    /// the wrong advice here.
+    SelfReference,
+}
+
+/// One `cross-spec-impact:` entry paired with the state the gate found it in.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct CrossSpecImpactEntry {
+    /// The declared feature slug, verbatim as the frontmatter carries it.
+    pub spec: String,
+    /// What the gate found when it looked.
+    pub state: CrossSpecImpactState,
 }
 
 // -- append-question ---------------------------------------------------------
@@ -3074,6 +3192,15 @@ pub struct DiffCrossSpecResult {
     /// additions (the heading, blanks when the whole file is new) never
     /// report as captured items.
     pub inbox_additions: Vec<String>,
+    /// The project's standing inbox backlog — what is outstanding now, as
+    /// opposed to `inbox_additions`, which is what this feature's window
+    /// added.
+    ///
+    /// Both are reported because they answer different questions and the
+    /// window one cannot cover for the other: an item older than the feature
+    /// in hand is absent from `inbox_additions` by construction, which is how
+    /// six items stood in the inbox while `ductus-v0.47.0` was cut.
+    pub inbox_standing: InboxStanding,
     /// Next-step guidance, present only when no commit touches the spec
     /// dir. Without it the empty lists above would read as *"no cross-spec
     /// impact"* — a positive claim — when the truth is that there is no
@@ -3082,6 +3209,60 @@ pub struct DiffCrossSpecResult {
     /// (scenario derive-boundary-uncommitted-spec-dir).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub guidance: Option<String>,
+}
+
+/// Whether the project's inbox has a standing backlog, and whether it could
+/// be examined at all.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum InboxState {
+    /// The inbox exists and holds no items.
+    Clean,
+    /// The inbox exists and holds one or more items.
+    Outstanding,
+    /// There is no readable inbox at `{specs-root}/inbox.md`.
+    ///
+    /// Deliberately not folded into [`Self::Clean`]: a project with no inbox
+    /// has not been examined-and-found-empty, and rendering the two alike is
+    /// the conflation the row exists to remove from the report's surface.
+    ///
+    /// The `Default`, for that same reason: a value nobody computed must read
+    /// as *not examined*, never as clean.
+    #[default]
+    NoFile,
+}
+
+/// The **standing** inbox backlog — what is outstanding, as opposed to what
+/// was captured in the current work window.
+///
+/// Reported by `write-review` and `diff-cross-spec` so `/{project}:review` and
+/// `/{project}:implement`'s completion summary can render the `inbox` row
+/// without a second implementation, the way the `analyze` row is derived from
+/// `analyze-freshness`. **It is a notice, never a gate** — gating on inbox
+/// depth would make capture expensive, and §brownfield-inbox's design rests on
+/// capture being free (spec 022, scenario `the-inbox-row`).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct InboxStanding {
+    /// Which of the three states the inbox is in.
+    pub state: InboxState,
+    /// Items outstanding now; `0` for both `clean` and `no-file`, which
+    /// `state` is what distinguishes.
+    pub outstanding: u32,
+    /// `YYYY-MM-DD` (UTC) of the oldest surviving item, from `git blame` over
+    /// the inbox — content-based, so the atomic whole-file rewrites
+    /// `append-inbox` and `remove-inbox-item` perform do not reset a surviving
+    /// line's date.
+    ///
+    /// Absent when it could not be determined: a shallow clone, a file not yet
+    /// committed, or any other blame failure. **Undeterminable, not today** —
+    /// the count still renders, and a caller reports the age as unknown rather
+    /// than dropping it or defaulting it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub oldest: Option<String>,
+    /// Repo-relative path the state describes, so a `no-file` row can name
+    /// what it looked for.
+    pub path: String,
 }
 
 // -- append-inbox --------------------------------------------------------------
@@ -4013,14 +4194,15 @@ mod tests {
         AcceptanceCriterion, AnalyzeBlock, AnchorReference, BTreeMap, CheckRuleIdsArgs,
         CheckRuleIdsResult, CheckStuckArgs, CheckStuckResult, CheckboxToggleResult, Classification,
         DependencyEdge, DeriveBoundaryArgs, DeriveBoundaryResult, Frontmatter, FrontmatterFinding,
-        GateConfirmArgs, GateConfirmResult, LintMarkdownArgs, LintMarkdownResult,
-        MarkCriterionArgs, MarkTaskArgs, MarkdownViolation, MigrateSessionFileArgs,
-        MigrateSessionFileResult, OpenQuestion, PruneAction, PruneGate, PruneMode, PruneSection,
-        PruneTasksArgs, PruneTasksResult, ReadSpecArgs, ReadSpecResult, ReadTasksArgs,
-        ReadTasksResult, ResolveAnchorArgs, ResolveAnchorResult, ReviewBlock, RuleCitation,
-        RunGeneratorArgs, RunGeneratorResult, ScenarioOpenQuestion, SetStatusArgs, SetStatusResult,
-        SizeSummary, SpecSection, Subtask, Task, TraverseDepsArgs, TraverseDepsResult,
-        ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteSessionArgs, WriteSessionResult,
+        GateConfirmArgs, GateConfirmResult, InboxStanding, InboxState, LintMarkdownArgs,
+        LintMarkdownResult, MarkCriterionArgs, MarkTaskArgs, MarkdownViolation,
+        MigrateSessionFileArgs, MigrateSessionFileResult, OpenQuestion, PruneAction, PruneGate,
+        PruneMode, PruneSection, PruneTasksArgs, PruneTasksResult, ReadSpecArgs, ReadSpecResult,
+        ReadTasksArgs, ReadTasksResult, ResolveAnchorArgs, ResolveAnchorResult, ReviewBlock,
+        RuleCitation, RunGeneratorArgs, RunGeneratorResult, ScenarioOpenQuestion, SetStatusArgs,
+        SetStatusResult, SizeSummary, SpecSection, Subtask, Task, TraverseDepsArgs,
+        TraverseDepsResult, ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteSessionArgs,
+        WriteSessionResult,
     };
 
     fn round_trip<T>(value: &T) -> T
@@ -4051,6 +4233,7 @@ mod tests {
                 dependencies: vec!["021-runtime-boundary".into()],
                 tags: vec![],
                 folds_into: None,
+                cross_spec_impact: vec![],
                 review: Some(ReviewBlock::default()),
                 analyze: Some(AnalyzeBlock {
                     last_run: Some("2026-09-05T18:00:00Z".into()),
@@ -5054,6 +5237,7 @@ mod tests {
             message: None,
             guidance: None,
             violations: vec![],
+            cross_spec_impact: vec![],
         };
         let pv: serde_json::Value = serde_json::to_value(&passed).unwrap();
         // Options are absent from the JSON on pass, not null.
@@ -5061,6 +5245,9 @@ mod tests {
         assert!(!obj.contains_key("blocked-by"));
         assert!(!obj.contains_key("message"));
         assert!(!obj.contains_key("guidance"));
+        // An undeclared obligation is absent from the payload, not an empty
+        // array: absence is never a finding, so it renders as nothing at all.
+        assert!(!obj.contains_key("cross-spec-impact"));
         assert_eq!(round_trip(&passed), passed);
 
         let blocked = CheckReviewGateResult {
@@ -5071,6 +5258,7 @@ mod tests {
             ),
             guidance: Some("Resolve the violations and re-run /ductus:review".into()),
             violations: vec![],
+            cross_spec_impact: vec![],
         };
         let bv: serde_json::Value = serde_json::to_value(&blocked).unwrap();
         assert_eq!(bv["blocked-by"], "must-violations");
@@ -5148,10 +5336,31 @@ mod tests {
             current_head: "def456".into(),
             cross_spec_paths: vec!["specs/007-sibling/spec.md".into()],
             inbox_additions: vec!["- security: token logged in plaintext".into()],
+            inbox_standing: InboxStanding {
+                state: InboxState::Outstanding,
+                outstanding: 6,
+                oldest: Some("2026-05-19".into()),
+                path: "specs/inbox.md".into(),
+            },
             guidance: None,
         };
         let rv: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert_eq!(rv["cross-spec-paths"][0], "specs/007-sibling/spec.md");
+        // The standing row and the window list are separate keys answering
+        // separate questions; neither is derivable from the other.
+        assert_eq!(rv["inbox-standing"]["state"], "outstanding");
+        assert_eq!(rv["inbox-standing"]["outstanding"], 6);
+        assert_eq!(rv["inbox-standing"]["oldest"], "2026-05-19");
+        // An undeterminable age is absent, never a stand-in date.
+        let unknown_age = InboxStanding {
+            state: InboxState::Outstanding,
+            outstanding: 1,
+            oldest: None,
+            path: "specs/inbox.md".into(),
+        };
+        let uv: serde_json::Value = serde_json::to_value(&unknown_age).unwrap();
+        assert!(uv.as_object().unwrap().get("oldest").is_none());
+        assert_eq!(round_trip(&unknown_age), unknown_age);
         // Absent on an ordinary window, so no existing consumer sees a new key.
         assert!(rv.get("guidance").is_none());
         assert_eq!(

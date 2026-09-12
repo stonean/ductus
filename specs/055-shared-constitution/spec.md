@@ -24,7 +24,7 @@ analyze:
     spec.md: 7a91b500e05939b7673dfb47454b09c18b40f7c7c219a31ce95f9eecbf8d1277
     tasks.md: 327eac576a24f5881d2b2484fe04fccc971671c9de7b6dacdc01afff1d06004e
   blocking: false
-next-criterion: 12
+next-criterion: 13
 ---
 
 # 055 — Shared constitution
@@ -90,6 +90,7 @@ Presence of the entry enables the feature; absence is today's behavior exactly. 
 - [x] AC9: The import of a registered constitution is maintained by `/ductus` inside a managed block; the rest of the adopter-owned file it lives in is preserved byte-for-byte, and `.ductus/constitution.md` is never rewritten.
 - [x] AC10: The precedence order — framework as floor, and project > shared > framework where the framework is silent — is stated once in **the constitution**, together with the fact that nothing enforces it; every other mention points at it rather than restating it.
 - [x] AC11: More than one `[constitutions.*]` entry may be registered, and every registered entry is loaded.
+- [x] AC12: `resolve-constitutions` carries each entry's `description` onto its `ConstitutionRecord`, so it reaches the surfaces that name a source — `/{project}:target`'s loaded, skipped and duplicate-path reports, and `write-review`'s `## Unexamined governance` bullets — including on a **skipped** entry, where the value comes from the config rather than the checkout and is available precisely when the document is not. Internal whitespace is collapsed by the primitive and an over-long value is truncated by the renderer, so a multi-line description cannot break a single-line report. Absent stays absent: an entry without one renders exactly as it did before.
 
 ## Open Questions
 

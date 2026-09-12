@@ -2,21 +2,32 @@
 //!
 //! Single source of truth for the runtime's primitive names. The parser's
 //! `PRIMITIVE_NAMES` and the MCP server's `TOOL_NAMES` are both defined
-//! from [`PRIMITIVE_REGISTRY`]; `framework/runtime-tools.txt` (the shipped
-//! manifest) is asserted set-equal in `runtime/tests/mcp.rs`, and the
-//! interpreter's `dispatch_primitive` is asserted to handle every registry
-//! name in `interpreter::tests`. Two hand-written surfaces cannot consume a
-//! const slice: the rmcp `#[tool]` methods, which `tests/mcp.rs` does pin by
-//! listing served tools against `TOOL_NAMES` — and the clap subcommand enum
-//! in `main.rs`, which **nothing pins**. Deleting a variant and its dispatch
-//! arm leaves the entire suite green (verified 2026-09-11), so a primitive
-//! can be absent from the `ductus <name>` CLI with no test reporting it.
-//! Check that surface by hand when adding a primitive.
+//! from [`PRIMITIVE_REGISTRY`], so neither can drift; `framework/runtime-tools.txt`
+//! (the shipped manifest) is asserted set-equal in `runtime/tests/mcp.rs`, and
+//! the interpreter's `dispatch_primitive` is asserted to handle every registry
+//! name in `interpreter::tests`.
+//!
+//! Two hand-written surfaces cannot consume a const slice — the rmcp
+//! `#[tool]` methods and the clap subcommand enum in `main.rs` — and each is
+//! held to this slice by a **set-equality** test instead: `tests/mcp.rs` lists
+//! the served tools against `TOOL_NAMES`, and
+//! `main::tests::every_registry_primitive_has_a_clap_subcommand` compares the
+//! subcommand names clap exposes against this registry. Both directions fail:
+//! a registry name with no surface is unreachable, and a surface with no
+//! registry entry offers a verb the canonical set does not define.
+//!
+//! Every registration surface is therefore covered by a test. Until 2026-09-12
+//! the clap enum was the exception — deleting a variant and its dispatch arm
+//! left the whole suite green, so a primitive could be absent from the
+//! `ductus <name>` CLI with nothing reporting it, on exactly the surface the
+//! markdown-only path depends on. That is why [`PRIMITIVE_REGISTRY`] is `pub`
+//! rather than `pub(crate)`: `main.rs` is a separate crate from the library
+//! and has to be able to name the canonical set to be tested against it.
 
 /// Every primitive name exposed by the runtime, in manifest order. Names
 /// are bare `<verb>-<noun>` strings; server-level namespacing (`ductus`) is
 /// supplied by the host's MCP registration.
-pub(crate) const PRIMITIVE_REGISTRY: &[&str] = &[
+pub const PRIMITIVE_REGISTRY: &[&str] = &[
     "read-spec",
     "read-tasks",
     "mark-task",

@@ -106,7 +106,7 @@ description = "Acme engineering house rules"
 | `<alias>` | yes | A bare TOML key — letters, digits, hyphens, underscores. How the source is named in every report. |
 | `repo` | yes | Canonical repository URL. **Identity and navigation only — never fetched.** |
 | `path` | yes | Local checkout, relative to the repo root or absolute. `..` is fine; a sibling checkout is the normal case. **The only thing read.** |
-| `description` | no | Free text. Informational; no behavior depends on it. |
+| `description` | no | Free text: what this source governs. It changes nothing about which documents load, and it is shown wherever `ductus` names the source — when `/{project}:target` reports the sources it loaded, when it reports one it could **not** load, and in a review's **Unexamined governance** section. Write one: an alias alone does not tell a contributor what a document governs, and it is the missing-checkout message where the note helps most. |
 
 **More than one may be registered**, so an organization-level and a team-level source can layer. They load in alias order — stable across machines, and unaffected by how the TOML happens to be written.
 

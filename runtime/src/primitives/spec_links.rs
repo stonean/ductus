@@ -75,15 +75,55 @@ pub(crate) struct HarvestLine<'a> {
     pub line: usize,
 }
 
-/// Scan `content` and return the body lines eligible to carry an
-/// edge-inducing link.
+/// Which body region a scan covers.
 ///
-/// Excludes, in order: the leading frontmatter block, fenced code blocks,
-/// blockquote-prefixed lines, and `## See also` regions. A file with no
-/// frontmatter is scanned in full — the absence of frontmatter is a
-/// validation concern that `validate-frontmatter` owns, and refusing to
-/// harvest here would silently drop every link in the file.
+/// The four exclusions differ in *why* they exist, and the difference only
+/// becomes visible once a second question is asked of the same text. Removing
+/// frontmatter and fenced code is about what is prose at all; removing
+/// blockquotes and `## See also` is a policy about which prose links induce an
+/// **edge**. A caller asking whether a reader meets a pointer wants the first
+/// pair applied and the second pair not.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum LinkScope {
+    /// Lines eligible to carry an edge-inducing link: frontmatter, fenced
+    /// code, blockquote-prefixed lines, and `## See also` regions all
+    /// excluded. What `derive-dependencies` and `derive-references` harvest.
+    Edges,
+    /// Every line a reader meets a pointer on: frontmatter and fenced code
+    /// excluded, blockquotes and `## See also` **kept**.
+    ///
+    /// The pre-`done` gate's cross-spec-impact check reads this scope. A
+    /// signpost on a `done` spec is written as a blockquote in this corpus
+    /// (`> **Signpost:** …`), which is exactly the artifact
+    /// §cross-spec-impact prescribes for recording a cross-spec change — so
+    /// harvesting blockquotes out would make the canonical discharge
+    /// artifact invisible to the gate built to require it. The edge policy
+    /// is right for its own question and wrong for this one, which is why
+    /// this is a scope rather than a change to the exclusions.
+    Pointers,
+}
+
+/// Scan `content` and return the body lines eligible to carry an
+/// edge-inducing link. [`LinkScope::Edges`]; see [`scan_body`].
 pub(crate) fn harvestable_lines(content: &str) -> Vec<HarvestLine<'_>> {
+    scan_body(content, LinkScope::Edges)
+}
+
+/// Scan `content` and return every body line a reader meets a pointer on.
+/// [`LinkScope::Pointers`]; see [`scan_body`].
+pub(crate) fn pointer_lines(content: &str) -> Vec<HarvestLine<'_>> {
+    scan_body(content, LinkScope::Pointers)
+}
+
+/// Scan `content` and return the body lines inside `scope`.
+///
+/// Excludes, in order: the leading frontmatter block, fenced code blocks, and
+/// — under [`LinkScope::Edges`] only — blockquote-prefixed lines and
+/// `## See also` regions. A file with no frontmatter is scanned in full — the
+/// absence of frontmatter is a validation concern that `validate-frontmatter`
+/// owns, and refusing to harvest here would silently drop every link in the
+/// file.
+fn scan_body(content: &str, scope: LinkScope) -> Vec<HarvestLine<'_>> {
     let mut out = Vec::new();
     let mut fm_seen = false;
     let mut in_fm = false;
@@ -122,20 +162,24 @@ pub(crate) fn harvestable_lines(content: &str) -> Vec<HarvestLine<'_>> {
         }
 
         // Blockquote-prefixed lines. Signposts on done specs use blockquotes,
-        // and their forward-pointer links are navigation, not dependencies.
-        if trimmed.starts_with('>') {
+        // and their forward-pointer links are navigation, not dependencies —
+        // which is why `Pointers` keeps them: navigation is precisely what
+        // that scope is asking about.
+        if scope == LinkScope::Edges && trimmed.starts_with('>') {
             continue;
         }
 
         // `## See also` region toggling, evaluated before the region skip so
-        // the heading that *closes* the region is itself outside it.
+        // the heading that *closes* the region is itself outside it. Tracked
+        // under both scopes and acted on under `Edges` only, so the region
+        // state cannot depend on which caller asked.
         if let Some((level, text)) = heading_parts(line)
             && level <= 2
         {
             in_see_also = text.eq_ignore_ascii_case("see also");
             continue;
         }
-        if in_see_also {
+        if scope == LinkScope::Edges && in_see_also {
             continue;
         }
 

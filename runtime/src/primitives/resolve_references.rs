@@ -106,6 +106,20 @@ pub(crate) fn load_services(repo: &Path) -> Result<Services> {
 }
 
 /// Classify one reference against the registry and the local checkout.
+///
+/// The `[services]` `path` is read without `validate_no_traversal`; the
+/// reasoning is stated once, under **The config-sourced path boundary** on
+/// [`super::validate_no_traversal`], and cited here rather than restated.
+/// `resolve-constitutions` cites the same statement for `[constitutions.*]`.
+///
+/// What that statement obliges of *this* table: `/{project}:link` already
+/// writes `[services]`, so the converse obligation is live here rather than
+/// latent. It is satisfied because that command *transcribes* — it prompts
+/// for the local checkout path, records what the operator typed verbatim,
+/// and warns without blocking when it does not resolve — so the operator is
+/// still the origin of the value. A change that had `/{project}:link`
+/// derive the path from anything else would move this read into the
+/// validated tier.
 fn classify(
     repo: &Path,
     services: &Services,
@@ -122,9 +136,10 @@ fn classify(
 
     // Resolve the local checkout (relative to the repo root, or absolute).
     // `..` is permitted — a sibling checkout is the normal case
-    // (`path = "../api"`), and this is machine-local config, not an
-    // LLM-supplied path. A missing/unusable path can prove nothing, so it
-    // is `not-checked-out`, never `broken`.
+    // (`path = "../api"`), and this is committed config, not an LLM-supplied
+    // path; see the boundary statement cited on this function. A
+    // missing/unusable path can prove nothing, so it is `not-checked-out`,
+    // never `broken`.
     let checkout = resolve_path(repo, &service.path);
     if !checkout.is_dir() {
         return (ReferenceOutcome::NotCheckedOut, None);

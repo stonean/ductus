@@ -134,7 +134,7 @@ pub fn run(args: &DeriveDependenciesArgs, repo: &Path) -> Result<DeriveDependenc
 fn harvest(content: &str, specs_root: &str) -> BTreeSet<String> {
     let mut slugs = BTreeSet::new();
     for line in harvestable_lines(content) {
-        scan_line(line.text, specs_root, &mut slugs);
+        scan_line(line.text, specs_root, 1, &mut slugs);
     }
     slugs
 }
@@ -147,14 +147,30 @@ fn harvest(content: &str, specs_root: &str) -> BTreeSet<String> {
 /// fallible on a value this function cannot validate — and the only honest
 /// responses to that are an `unwrap` or an error path for a case that cannot
 /// happen. Matching directly has neither, and the grammar is three tokens.
-fn scan_line(line: &str, specs_root: &str, out: &mut BTreeSet<String>) {
+///
+/// `depth` is how many directory levels below the spec root the *citing* file
+/// sits, which is how many `../` segments its relative links carry: 1 for a
+/// `spec.md`, 2 for a `scenarios/{slug}.md`. The repo-root-relative form
+/// (`](<specs-root>/NNN-slug`) is depth-independent and always matches.
+///
+/// `pub(crate)` with that parameter so the pre-`done` gate's cross-spec-impact
+/// check reads back-links with this matcher rather than growing a second one
+/// (spec 050, `a-declared-cross-spec-impact-gates-done`).
+pub(crate) fn scan_line(line: &str, specs_root: &str, depth: usize, out: &mut BTreeSet<String>) {
     let mut cursor = 0;
     while let Some(pos) = line[cursor..].find("](") {
         // Always advance past the delimiter, so a non-matching link cannot
         // spin the loop.
         cursor += pos + 2;
         let rest = &line[cursor..];
-        let after_prefix = if let Some(tail) = rest.strip_prefix("../") {
+        let relative = {
+            let mut tail = Some(rest);
+            for _ in 0..depth {
+                tail = tail.and_then(|t| t.strip_prefix("../"));
+            }
+            tail
+        };
+        let after_prefix = if let Some(tail) = relative {
             tail
         } else if let Some(tail) = rest
             .strip_prefix(specs_root)

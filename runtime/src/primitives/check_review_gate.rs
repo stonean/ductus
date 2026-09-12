@@ -20,17 +20,20 @@
 //! examined — and saying so is not the same as saying it is current. That
 //! notice never changes `passed`; see [`passing_notices`].
 
+use std::collections::BTreeSet;
 use std::path::Path;
 
 use crate::host::Host;
+use crate::primitives::spec_links;
 use crate::primitives::{
     PrimitiveError, Result, lint_markdown, read_spec, read_text, split_frontmatter,
     validate_no_traversal,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
-    AnalyzeBlock, CheckReviewGateArgs, CheckReviewGateResult, Frontmatter, LintMarkdownArgs,
-    LintMarkdownResult, RecordFreshness, ReviewGateBlock,
+    AnalyzeBlock, CheckReviewGateArgs, CheckReviewGateResult, CrossSpecImpactEntry,
+    CrossSpecImpactState, Frontmatter, LintMarkdownArgs, LintMarkdownResult, RecordFreshness,
+    ReviewGateBlock,
 };
 
 /// Execute the `check-review-gate` primitive against the given repo root.
@@ -115,7 +118,19 @@ pub(crate) fn run_with_lint(
         return Ok(blocked);
     }
 
-    // Gate checks 4 and 5: the spec frontmatter `review:` block.
+    // Gate check 4: every declared `cross-spec-impact` entry is discharged.
+    //
+    // Beside the fold check, and ahead of the `review:` block, for the reason
+    // the fold check states: a spec carrying an obligation nobody has
+    // discharged is not a candidate for `done`, so whether its review is
+    // fresh does not yet matter.
+    let cross_spec =
+        cross_spec_impact_states(&frontmatter.cross_spec_impact, &args.feature, repo, &root);
+    if let Some(blocked) = cross_spec_impact_block(&cross_spec, &args.feature, &project) {
+        return Ok(blocked);
+    }
+
+    // Gate checks 5 and 6: the spec frontmatter `review:` block.
     let review = match frontmatter.review {
         Some(review) if review.last_run.is_some() => review,
         // Absent block or null `last-run`: the spec has never completed a
@@ -129,6 +144,7 @@ pub(crate) fn run_with_lint(
                 )),
                 guidance: None,
                 violations: vec![],
+                cross_spec_impact: vec![],
             });
         }
     };
@@ -146,10 +162,11 @@ pub(crate) fn run_with_lint(
                  /{project}:review --waive <rule-id> --reason \"...\" for each waivable finding."
             )),
             violations: vec![],
+            cross_spec_impact: vec![],
         });
     }
 
-    // Gate check 6: the recorded review still describes the current code.
+    // Gate check 7: the recorded review still describes the current code.
     // Computed once and reused by the passing verdict's notice below, for the
     // reason the analyze half is: the comparison reads and hashes files, so
     // doing it twice is real work for one answer.
@@ -159,7 +176,7 @@ pub(crate) fn run_with_lint(
         return Ok(stale);
     }
 
-    // Gate checks 7, 8 and 9: the spec frontmatter `analyze:` block. The
+    // Gate checks 8, 9 and 10: the spec frontmatter `analyze:` block. The
     // freshness it computes is handed back rather than recomputed for the
     // passing verdict's notice below — the comparison reads and hashes every
     // `.md` under the feature, so doing it twice is real work for one answer.
@@ -188,6 +205,11 @@ pub(crate) fn run_with_lint(
         message: None,
         guidance: passing_notices(&review_freshness, &freshness),
         violations: vec![],
+        // Carried onto the pass, not just onto a block: a discharged
+        // obligation is something this gate *examined*, and reporting it only
+        // when it fails would leave "declared and proven" and "never declared"
+        // rendering identically.
+        cross_spec_impact: cross_spec,
     })
 }
 
@@ -221,7 +243,7 @@ fn passing_notices(review: &RecordFreshness, analyze: &RecordFreshness) -> Optio
     }
 }
 
-/// Gate checks 7, 8 and 9 — the spec's `analyze:` block: a completed analysis,
+/// Gate checks 8, 9 and 10 — the spec's `analyze:` block: a completed analysis,
 /// whose findings do not hold the spec out of `done`, still describing the
 /// current artifacts.
 ///
@@ -263,6 +285,7 @@ fn analyze_gate_block(
                 )),
                 guidance: None,
                 violations: vec![],
+                cross_spec_impact: vec![],
             });
         }
     };
@@ -294,6 +317,7 @@ fn analyze_gate_block(
             analyze.advisory, analyze.unexamined
         )),
         violations: vec![],
+        cross_spec_impact: vec![],
     })
 }
 
@@ -359,6 +383,7 @@ fn stale_analyze_block(
             "Re-run /{project}:analyze so the recorded findings describe the current artifacts."
         )),
         violations: vec![],
+        cross_spec_impact: vec![],
     })
 }
 
@@ -405,6 +430,7 @@ fn stale_review_block(freshness: &RecordFreshness, project: &str) -> Option<Chec
             "Re-run /{project}:review so the recorded verdict describes the current code."
         )),
         violations: vec![],
+        cross_spec_impact: vec![],
     })
 }
 
@@ -450,6 +476,7 @@ fn markdown_lint_block(
         message: Some(message),
         guidance: None,
         violations: lint_result.violations,
+        cross_spec_impact: vec![],
     }))
 }
 
@@ -492,6 +519,7 @@ fn already_done_block(status: &str, project: &str) -> Option<CheckReviewGateResu
              scenario and takes the done → in-progress back-edge."
         )),
         violations: vec![],
+        cross_spec_impact: vec![],
     })
 }
 
@@ -532,6 +560,196 @@ fn pending_fold_block(folds_into: Option<&str>, project: &str) -> Option<CheckRe
              NNN- form with its folds-into key removed."
         )),
         violations: vec![],
+        cross_spec_impact: vec![],
+    })
+}
+
+/// Classify every `cross-spec-impact:` entry the declaring spec carries.
+///
+/// An entry is **discharged** when the named spec links back to `feature` —
+/// from its own `spec.md` body or from any scenario under it. The reciprocal
+/// link is the signpost §cross-spec-impact already requires, so the check
+/// proves the obligation was met rather than trusting that a key was removed
+/// honestly: a declaration an author deletes to unblock themselves enforces
+/// nothing, while a link they have to add lands the change where the affected
+/// spec's reader meets it.
+///
+/// A scenario counts because a reader of the affected spec reads its
+/// scenarios; that is the whole test the signpost has to pass.
+///
+/// Link reading is `derive-dependencies`' matcher
+/// ([`super::derive_dependencies::scan_line`]) rather than a second parser,
+/// over [`spec_links::LinkScope::Pointers`] rather than the edge scope that matcher is
+/// normally paired with. The scope is the difference that matters and it is
+/// deliberate: the edge scope drops blockquote-prefixed lines, and a signpost
+/// on a `done` spec is written as a blockquote in this corpus, so reusing it
+/// whole would make the canonical discharge artifact invisible here.
+///
+/// An entry naming a **branch-scoped** directory (`{id}.{n}-slug`, spec 051)
+/// resolves as `target-missing` when no such directory exists and otherwise
+/// reports `undischarged` however the target links back, because the shared
+/// matcher recognizes the sequential `NNN-slug` link form only. That bound is
+/// inherited rather than introduced, and it is outside what a declaration is
+/// for: a branch-scoped spec is retired by fold-back rather than completed, so
+/// an impact on one is declared against the upstream spec it folds into.
+fn cross_spec_impact_states(
+    declared: &[String],
+    feature: &str,
+    repo: &Path,
+    specs_root: &str,
+) -> Vec<CrossSpecImpactEntry> {
+    declared
+        .iter()
+        .map(|target| CrossSpecImpactEntry {
+            spec: target.clone(),
+            state: classify_cross_spec_entry(target, feature, repo, specs_root),
+        })
+        .collect()
+}
+
+/// Classify one declared entry. Split out so the ordering of the three
+/// disqualifying cases is readable: self-reference and a missing directory are
+/// both decided without reading anything, and only a real other spec is
+/// searched for the back-link.
+fn classify_cross_spec_entry(
+    target: &str,
+    feature: &str,
+    repo: &Path,
+    specs_root: &str,
+) -> CrossSpecImpactState {
+    if target == feature {
+        return CrossSpecImpactState::SelfReference;
+    }
+    let target_dir = repo.join(specs_root).join(target);
+    if !target_dir.is_dir() {
+        return CrossSpecImpactState::TargetMissing;
+    }
+    if links_back(&target_dir.join("spec.md"), specs_root, feature, 1) {
+        return CrossSpecImpactState::Discharged;
+    }
+    let scenarios = target_dir.join("scenarios");
+    let Ok(entries) = std::fs::read_dir(&scenarios) else {
+        // No scenarios directory, or one that cannot be read. Neither proves
+        // a back-link is absent from a file, so this is not a discharge — it
+        // is the same `undischarged` the operator resolves by adding one.
+        return CrossSpecImpactState::Undischarged;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+            && links_back(&path, specs_root, feature, 2)
+        {
+            return CrossSpecImpactState::Discharged;
+        }
+    }
+    CrossSpecImpactState::Undischarged
+}
+
+/// Whether the markdown file at `path` carries a pointer to `feature`.
+///
+/// `depth` is how many levels below the spec root the file sits, which decides
+/// how many `../` segments its relative links carry — 1 for a `spec.md`, 2 for
+/// a scenario. An unreadable file yields `false`: nothing can be proven about a
+/// file that will not open, and the honest reading of "no proof of discharge"
+/// is that the obligation still stands.
+fn links_back(path: &Path, specs_root: &str, feature: &str, depth: usize) -> bool {
+    let Ok(content) = std::fs::read_to_string(path) else {
+        return false;
+    };
+    let mut slugs = BTreeSet::new();
+    for line in spec_links::pointer_lines(&content) {
+        super::derive_dependencies::scan_line(line.text, specs_root, depth, &mut slugs);
+    }
+    slugs.contains(feature)
+}
+
+/// The cross-spec-impact gate check: `Some(blocked)` when any declared entry
+/// is not discharged, `None` when every entry is (including the empty case).
+///
+/// Ordered beside [`pending_fold_block`] and ahead of the `review:` block for
+/// the reason that check states: a spec carrying an obligation nobody has
+/// discharged is not a candidate for `done`.
+///
+/// **It shares that reasoning and nothing else.** Extracting a helper common
+/// to both was evaluated and rejected. They diverge on every axis the code
+/// turns on — one target against a list, discharge by the key's absence
+/// against discharge by the target's reciprocal link, never reading the target
+/// against necessarily reading it, and no partial state against partial state
+/// as the normal case. `pending_fold_block` is four lines over an
+/// `Option<&str>`; a helper generalising it over a list-valued key whose
+/// discharge requires reading another spec from disk would be longer than both
+/// call sites and would have to carry the deliberate never-read-the-target
+/// rule as a parameter — a rule that is load-bearing, since a fold target
+/// normally lives on the upstream branch before the merge. Carrying this on
+/// `folds-into` instead is rejected more strongly still: the two obligations
+/// point in opposite directions, and folding them together would give the
+/// branch-scoped form the `done` state it must not have.
+///
+/// There is no `--fix`. Which section of the affected spec should carry the
+/// signpost is the routing judgment `/{project}:amend` puts to the operator,
+/// and a wrong auto-write into another spec is worse than a precise refusal.
+fn cross_spec_impact_block(
+    entries: &[CrossSpecImpactEntry],
+    feature: &str,
+    project: &str,
+) -> Option<CheckReviewGateResult> {
+    let name = |wanted: CrossSpecImpactState| -> Vec<&str> {
+        entries
+            .iter()
+            .filter(|e| e.state == wanted)
+            .map(|e| e.spec.as_str())
+            .collect()
+    };
+    let undischarged = name(CrossSpecImpactState::Undischarged);
+    let missing = name(CrossSpecImpactState::TargetMissing);
+    let self_ref = name(CrossSpecImpactState::SelfReference);
+    if undischarged.is_empty() && missing.is_empty() && self_ref.is_empty() {
+        return None;
+    }
+
+    let mut parts = Vec::new();
+    if !undischarged.is_empty() {
+        parts.push(format!("{} does not link back", undischarged.join(", ")));
+    }
+    if !missing.is_empty() {
+        parts.push(format!("{} names no spec directory", missing.join(", ")));
+    }
+    if !self_ref.is_empty() {
+        parts.push(format!("{} is this spec itself", self_ref.join(", ")));
+    }
+
+    let mut guidance = Vec::new();
+    if !undischarged.is_empty() {
+        guidance.push(format!(
+            "Record the change in each affected spec with a signpost linking back to {feature},              then re-run this gate — discharge is the reciprocal link, not the key's removal.              Run /{project}:amend against a spec that is already done to take the back-edge."
+        ));
+    }
+    if !missing.is_empty() {
+        guidance.push(
+            "An entry naming no spec directory is a typo — correct the slug, or remove the              entry if the impact turned out not to exist."
+                .to_string(),
+        );
+    }
+    if !self_ref.is_empty() {
+        guidance.push(
+            "A spec cannot owe itself a cross-spec change; remove the self-entry.".to_string(),
+        );
+    }
+
+    Some(CheckReviewGateResult {
+        passed: false,
+        blocked_by: Some(ReviewGateBlock::UndischargedCrossSpecImpact),
+        message: Some(format!(
+            "blocked: undischarged cross-spec impact — {}",
+            parts.join("; ")
+        )),
+        guidance: Some(guidance.join(" ")),
+        violations: vec![],
+        // The full per-entry list, discharged rows included: the operator
+        // needs to see which half of a partial declaration is already met.
+        cross_spec_impact: entries.to_vec(),
     })
 }
 
@@ -591,6 +809,7 @@ fn scenario_question_block(
              scenario's Resolved Questions with its trigger recorded."
         )),
         violations: vec![],
+        cross_spec_impact: vec![],
     })
 }
 
@@ -653,6 +872,273 @@ mod tests {
     /// A branch-scoped spec: reviewed, clean, and every other check would
     /// pass — the fold is the only thing holding it short of `done`.
     const PENDING_FOLD: &str = "---\nstatus: in-progress\ndependencies: []\nfolds-into: 050-upstream\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n  blocking: false\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
+
+    /// Reviewed clean and analyzed clean, declaring one cross-spec impact —
+    /// the declaration is the only thing holding it short of `done`.
+    const DECLARES_IMPACT: &str = "---\nstatus: in-progress\ndependencies: []\ncross-spec-impact: [050-upstream]\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n  blocking: false\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 0\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
+
+    /// Write `specs/050-upstream/spec.md` with `body` after its frontmatter.
+    fn seed_target(repo: &Path, body: &str) {
+        fs::create_dir_all(repo.join("specs/050-upstream")).unwrap();
+        fs::write(
+            repo.join("specs/050-upstream/spec.md"),
+            format!("---\nstatus: done\ndependencies: []\n---\n\n# 050 — Upstream\n\n{body}\n"),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn a_declared_impact_blocks_while_the_target_does_not_link_back() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), DECLARES_IMPACT);
+        seed_target(tmp.path(), "Body text that names nothing.");
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+
+        assert!(!result.passed);
+        assert_eq!(
+            result.blocked_by,
+            Some(ReviewGateBlock::UndischargedCrossSpecImpact)
+        );
+        let message = result.message.expect("the block carries a message");
+        assert!(
+            message.contains("050-upstream does not link back"),
+            "{message}"
+        );
+        assert_eq!(
+            result.cross_spec_impact,
+            vec![CrossSpecImpactEntry {
+                spec: "050-upstream".into(),
+                state: CrossSpecImpactState::Undischarged,
+            }]
+        );
+        let guidance = result.guidance.expect("the block carries guidance");
+        assert!(guidance.contains("signpost linking back"), "{guidance}");
+        assert!(guidance.contains("/ductus:amend"), "{guidance}");
+    }
+
+    #[test]
+    fn a_reciprocal_link_in_the_target_body_discharges_the_obligation() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), DECLARES_IMPACT);
+        seed_target(
+            tmp.path(),
+            "Recorded for [007](../007-gate/spec.md), which required it.",
+        );
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+
+        assert!(result.passed, "{:?}", result.message);
+        assert_eq!(
+            result.cross_spec_impact,
+            vec![CrossSpecImpactEntry {
+                spec: "050-upstream".into(),
+                state: CrossSpecImpactState::Discharged,
+            }],
+            "a passing gate still reports what it examined"
+        );
+    }
+
+    /// The canonical discharge artifact in this corpus is a blockquoted
+    /// signpost, and the dependency harvest drops blockquote-prefixed lines by
+    /// policy. Reusing that scope whole would make the gate blind to exactly
+    /// the artifact §cross-spec-impact prescribes — this is the test that
+    /// holds `LinkScope::Pointers` in place.
+    #[test]
+    fn a_blockquoted_signpost_discharges_the_obligation() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), DECLARES_IMPACT);
+        seed_target(
+            tmp.path(),
+            "> **Signpost:** required by [007](../007-gate/spec.md).",
+        );
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+
+        assert!(result.passed, "{:?}", result.message);
+    }
+
+    #[test]
+    fn a_link_from_a_scenario_under_the_target_discharges_the_obligation() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), DECLARES_IMPACT);
+        seed_target(tmp.path(), "Body text that names nothing.");
+        fs::create_dir_all(tmp.path().join("specs/050-upstream/scenarios")).unwrap();
+        fs::write(
+            tmp.path().join("specs/050-upstream/scenarios/a-case.md"),
+            "---\nsection: \"Body\"\n---\n\n# A-case\n\nRequired by [007](../../007-gate/spec.md).\n",
+        )
+        .unwrap();
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+
+        assert!(result.passed, "{:?}", result.message);
+    }
+
+    /// A scenario's links carry two `../` segments rather than one. Reading
+    /// them at the spec-body depth finds nothing, so the depth parameter is
+    /// what makes the case above work — assert the wrong depth really is
+    /// wrong, or the test above would pass for the wrong reason.
+    #[test]
+    fn a_scenario_link_read_at_spec_depth_resolves_to_nothing() {
+        let line = "Required by [007](../../007-gate/spec.md).";
+        let mut at_spec_depth = BTreeSet::new();
+        super::super::derive_dependencies::scan_line(line, "specs", 1, &mut at_spec_depth);
+        assert!(at_spec_depth.is_empty());
+
+        let mut at_scenario_depth = BTreeSet::new();
+        super::super::derive_dependencies::scan_line(line, "specs", 2, &mut at_scenario_depth);
+        assert_eq!(
+            at_scenario_depth
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+            vec!["007-gate"]
+        );
+    }
+
+    #[test]
+    fn an_entry_naming_no_spec_directory_is_a_finding_not_a_pass() {
+        let tmp = tempdir().unwrap();
+        seed(
+            tmp.path(),
+            &DECLARES_IMPACT.replace("050-upstream", "050-upstreem"),
+        );
+        seed_target(tmp.path(), "Required by [007](../007-gate/spec.md).");
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+
+        assert!(!result.passed, "one letter must not disable the gate");
+        assert_eq!(
+            result.blocked_by,
+            Some(ReviewGateBlock::UndischargedCrossSpecImpact)
+        );
+        assert_eq!(
+            result.cross_spec_impact,
+            vec![CrossSpecImpactEntry {
+                spec: "050-upstreem".into(),
+                state: CrossSpecImpactState::TargetMissing,
+            }]
+        );
+        let guidance = result.guidance.expect("the block carries guidance");
+        assert!(guidance.contains("typo"), "{guidance}");
+    }
+
+    #[test]
+    fn an_entry_naming_the_declaring_spec_is_reported_not_discharged() {
+        let tmp = tempdir().unwrap();
+        seed(
+            tmp.path(),
+            &DECLARES_IMPACT.replace("050-upstream", "007-gate"),
+        );
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+
+        assert!(!result.passed);
+        assert_eq!(
+            result.cross_spec_impact,
+            vec![CrossSpecImpactEntry {
+                spec: "007-gate".into(),
+                state: CrossSpecImpactState::SelfReference,
+            }]
+        );
+        let guidance = result.guidance.expect("the block carries guidance");
+        assert!(guidance.contains("cannot owe itself"), "{guidance}");
+    }
+
+    /// Partial discharge is the normal state of a multi-entry declaration, so
+    /// the result reports per entry rather than rounding to blocked-or-clear.
+    #[test]
+    fn a_partially_discharged_declaration_reports_both_halves() {
+        let tmp = tempdir().unwrap();
+        seed(
+            tmp.path(),
+            &DECLARES_IMPACT.replace(
+                "cross-spec-impact: [050-upstream]",
+                "cross-spec-impact: [050-upstream, 051-other]",
+            ),
+        );
+        seed_target(tmp.path(), "Required by [007](../007-gate/spec.md).");
+        fs::create_dir_all(tmp.path().join("specs/051-other")).unwrap();
+        fs::write(
+            tmp.path().join("specs/051-other/spec.md"),
+            "---\nstatus: done\ndependencies: []\n---\n\n# 051 — Other\n",
+        )
+        .unwrap();
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+
+        assert!(!result.passed);
+        assert_eq!(
+            result.cross_spec_impact,
+            vec![
+                CrossSpecImpactEntry {
+                    spec: "050-upstream".into(),
+                    state: CrossSpecImpactState::Discharged,
+                },
+                CrossSpecImpactEntry {
+                    spec: "051-other".into(),
+                    state: CrossSpecImpactState::Undischarged,
+                },
+            ]
+        );
+        let message = result.message.expect("the block carries a message");
+        assert!(
+            message.contains("051-other does not link back"),
+            "{message}"
+        );
+        assert!(!message.contains("050-upstream"), "{message}");
+    }
+
+    #[test]
+    fn an_absent_declaration_reports_nothing_and_blocks_nothing() {
+        let tmp = tempdir().unwrap();
+        seed(tmp.path(), REVIEWED_CLEAN);
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+
+        assert!(result.passed);
+        assert!(result.cross_spec_impact.is_empty());
+    }
+
+    /// An empty list is the same state as an absent key — the posture
+    /// `dependencies: []` already takes.
+    #[test]
+    fn an_empty_declaration_is_indistinguishable_from_an_absent_one() {
+        let tmp = tempdir().unwrap();
+        seed(
+            tmp.path(),
+            &DECLARES_IMPACT.replace("cross-spec-impact: [050-upstream]", "cross-spec-impact: []"),
+        );
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+
+        assert!(result.passed);
+        assert!(result.cross_spec_impact.is_empty());
+    }
+
+    /// The check sits ahead of the `review:` block, so an undischarged
+    /// obligation is reported even on a spec that has never been reviewed —
+    /// whether the review is fresh does not yet matter.
+    #[test]
+    fn an_undischarged_impact_outranks_a_missing_review() {
+        let tmp = tempdir().unwrap();
+        seed(
+            tmp.path(),
+            &DECLARES_IMPACT.replace(
+                "  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123",
+                "  last-run: null\n  reviewed-against: null",
+            ),
+        );
+        seed_target(tmp.path(), "Body text that names nothing.");
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+
+        assert_eq!(
+            result.blocked_by,
+            Some(ReviewGateBlock::UndischargedCrossSpecImpact)
+        );
+    }
 
     #[test]
     fn a_declared_fold_blocks_the_done_transition() {

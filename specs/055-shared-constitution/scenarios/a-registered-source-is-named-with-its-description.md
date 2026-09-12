@@ -19,7 +19,8 @@ That asymmetry matters more here than it would for services, because of what thi
 Where a source is named, the description is rendered with it when present:
 
 - `/{project}:target` step 4 reports loaded sources by alias, and reports each `skipped` entry by alias with its reason. Both gain the description when the entry has one, so a contributor reading the session's opening lines can tell what a source governs without opening `.ductus/config.toml`.
-- `write-review`'s `## Unexamined governance` section and `write-analysis`'s unexamined record already name a source that could not be read. A description makes those lines actionable — it is the difference between an operator recognising which checkout they are missing and having to go look the alias up.
+- `write-review`'s `## Unexamined governance` section already names each source that could not be read, one bullet per entry. Those bullets gain the description, which is the difference between an operator recognising which checkout they are missing and having to go look the alias up.
+- `write-analysis` is **not** changed, and the reason is worth recording because it looked like a symmetric case. Its record is a reason-keyed **count** (`constitution-unresolved: N` inside `unexamined-by-reason`) — it names no source, so there is no line for a description to make actionable. Giving that record per-source names is a change to the record's shape, with its own consumers and its own audit families, and it is a separate subject from this one.
 
 Absent is absent, not empty: an entry with no description renders exactly as it does today, so a project that never writes one sees no change. That keeps AC1's unset-is-unchanged posture intact one level down.
 

@@ -394,24 +394,24 @@ Implements `scenarios/anchor-reference-kinds.md`. `resolve-anchor` treated every
 
 ## 110. Pin the clap subcommand enum against `PRIMITIVE_REGISTRY`
 
-- [ ] Implement the behavior described in `scenarios/the-cli-surface-nothing-pins.md`
+- [x] Implement the behavior described in `scenarios/the-cli-surface-nothing-pins.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
 
 ## 111. State the config-sourced path trust boundary where the code can be read against it
 
-- [ ] Implement the behavior described in `scenarios/config-sourced-paths-and-the-traversal-boundary.md`
+- [x] Implement the behavior described in `scenarios/config-sourced-paths-and-the-traversal-boundary.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
 
 ## 112. Add the `cross-spec-impact:` field and its pre-done gate check
 
-- [ ] Implement the behavior described in `scenarios/the-cross-spec-impact-gate.md`
+- [x] Implement the behavior described in `scenarios/the-cross-spec-impact-gate.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
 
 ## 113. Render the standing inbox as a computed row, and widen §brownfield-inbox to require it
 
-- [ ] Implement the behavior described in `scenarios/the-inbox-row.md`
+- [x] Implement the behavior described in `scenarios/the-inbox-row.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.

@@ -157,7 +157,6 @@ enum Command {
     RewriteSpecLinks(RewriteSpecLinksArgs),
     /// Remove a folded branch-scoped feature directory, guarded on its fold target existing.
     RetireFeature(RetireFeatureArgs),
-    /// Record on a superseded spec that a later spec countered it.
     /// Reset a spec's review block to the un-reviewed state, so the pre-done gate demands a fresh review.
     InvalidateReview(InvalidateReviewArgs),
     /// Regenerate every spec's frontmatter `dependencies:` from its body links; report cycles.
@@ -776,5 +775,72 @@ fn main() -> ExitCode {
             };
             emit_result(result)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+
+    use clap::CommandFactory;
+    use ductus::schema::registry::PRIMITIVE_REGISTRY;
+
+    use super::Cli;
+
+    /// Subcommands that are deliberately not registry primitives, each
+    /// excluded by name with its reason rather than by loosening the
+    /// assertion below to containment.
+    ///
+    /// `mcp` and `exec` are the runtime's two *surfaces*
+    /// (§runtime-boundary), not capabilities it exposes; `parse` is the
+    /// parseability check `scripts/lint-procedure-parseability.sh` and CI
+    /// drive, plus the `--emit-schema` debug surface. None of the three is
+    /// a primitive, so none appears in [`PRIMITIVE_REGISTRY`]. `help` is
+    /// synthesised by clap rather than declared here at all.
+    ///
+    /// A future primitive that genuinely should have no CLI surface is added
+    /// here with its own reason. Nothing may be excluded silently: the point
+    /// of the set-equality is that *not* being a subcommand has to be a
+    /// stated decision.
+    const NON_PRIMITIVE_SUBCOMMANDS: &[&str] = &["mcp", "exec", "parse", "help"];
+
+    /// The clap subcommand enum is the fifth primitive-registration surface,
+    /// and it was the one nothing pinned: with a `Command` variant and its
+    /// dispatch arm deleted the entire suite still passed, so a primitive
+    /// could be missing from `ductus <name>` with no test reporting it. That
+    /// absence bites hardest on the markdown-only path, which has no MCP
+    /// server to fall back to — [§design-principles]' first rule turned on
+    /// the runtime's own registration, where four surfaces prove themselves
+    /// on every run and the fifth was indistinguishable from them.
+    ///
+    /// The assertion is set-**equality**, matching what `tests/mcp.rs`
+    /// already does for the shipped manifest: a subcommand with no registry
+    /// entry is as much a defect as a registry entry with no subcommand,
+    /// because it means the CLI offers a verb the canonical set does not
+    /// define.
+    ///
+    /// The comparison reads the names clap itself exposes rather than
+    /// transforming the variant identifiers — a second transformation of
+    /// `ReadSpec` into `read-spec` would be a second thing to drift.
+    ///
+    /// [§design-principles]: ../../framework/constitution.md#design-principles
+    #[test]
+    fn every_registry_primitive_has_a_clap_subcommand() {
+        let command = Cli::command();
+        let exposed: BTreeSet<&str> = command
+            .get_subcommands()
+            .map(clap::Command::get_name)
+            .filter(|name| !NON_PRIMITIVE_SUBCOMMANDS.contains(name))
+            .collect();
+        let registry: BTreeSet<&str> = PRIMITIVE_REGISTRY.iter().copied().collect();
+
+        let missing: Vec<&&str> = registry.difference(&exposed).collect();
+        let phantom: Vec<&&str> = exposed.difference(&registry).collect();
+        assert!(
+            missing.is_empty() && phantom.is_empty(),
+            "the clap subcommand enum in main.rs diverged from PRIMITIVE_REGISTRY.\n  \
+             in the registry, missing a `Command` variant + dispatch arm: {missing:?}\n  \
+             on the CLI, missing a registry entry: {phantom:?}"
+        );
     }
 }

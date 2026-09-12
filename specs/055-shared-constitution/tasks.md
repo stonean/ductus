@@ -108,6 +108,6 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 13. Carry `description` through to the surfaces that name a source
 
-- [ ] Implement the behavior described in `scenarios/a-registered-source-is-named-with-its-description.md`
+- [x] Implement the behavior described in `scenarios/a-registered-source-is-named-with-its-description.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.

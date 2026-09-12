@@ -118,6 +118,10 @@ pub fn run(args: &ValidateFrontmatterArgs, repo: &Path) -> Result<ValidateFrontm
         validate_folds_into(folds_into, &mut findings);
     }
 
+    if let Some(impact) = map.get("cross-spec-impact") {
+        validate_cross_spec_impact(impact, &mut findings);
+    }
+
     if let Some(review) = map.get("review") {
         validate_review_block(review, &mut findings);
     }
@@ -166,6 +170,42 @@ fn validate_folds_into(folds_into: &YamlValue, findings: &mut Vec<FrontmatterFin
                  branch-scoped spec folds into a permanent spec, not another staged one"
             ),
         });
+    }
+}
+
+/// Check the optional `cross-spec-impact` key: the specs this one owes a
+/// change to under §cross-spec-impact (spec 050).
+///
+/// **Shape only.** Whether the named spec exists, and whether the obligation
+/// has been discharged, are the pre-`done` gate's questions
+/// (`check-review-gate`), answered against the corpus at the moment of the
+/// transition. Answering them here would duplicate that gate in a command
+/// that runs on artifacts rather than on a transition, and the two would
+/// drift.
+///
+/// It is checked here at all because a malformed value would otherwise reach
+/// the gate as a deserialization error rather than as a named finding, and
+/// naming the field is this command's job.
+///
+/// Absence is never a finding, and neither is an empty list: most specs
+/// affect no other spec, so the two are the same state.
+fn validate_cross_spec_impact(impact: &YamlValue, findings: &mut Vec<FrontmatterFinding>) {
+    let YamlValue::Sequence(entries) = impact else {
+        findings.push(FrontmatterFinding {
+            severity: "blocking".into(),
+            field: "cross-spec-impact".into(),
+            message: "cross-spec-impact must be a list of feature names".into(),
+        });
+        return;
+    };
+    for entry in entries {
+        if !matches!(entry, YamlValue::String(_)) {
+            findings.push(FrontmatterFinding {
+                severity: "blocking".into(),
+                field: "cross-spec-impact".into(),
+                message: "cross-spec-impact entry must be a string feature name".into(),
+            });
+        }
     }
 }
 
@@ -226,6 +266,43 @@ mod tests {
     }
 
     /// Run the validator over a frontmatter block, returning the findings.
+    #[test]
+    fn a_well_formed_cross_spec_impact_list_is_clean() {
+        let findings = findings_for(
+            "status: draft\ndependencies: []\ncross-spec-impact: [050-constitution]\n",
+        );
+        assert!(findings.is_empty(), "{findings:?}");
+    }
+
+    /// Absent and empty are the same state: most specs affect no other spec,
+    /// so neither is a finding.
+    #[test]
+    fn an_empty_or_absent_cross_spec_impact_is_never_a_finding() {
+        assert!(findings_for("status: draft\ndependencies: []\n").is_empty());
+        assert!(
+            findings_for("status: draft\ndependencies: []\ncross-spec-impact: []\n").is_empty()
+        );
+    }
+
+    /// A bare string is the natural typo for a one-entry list, and without
+    /// this it would surface at the pre-`done` gate as a YAML deserialization
+    /// error rather than as a named field finding.
+    #[test]
+    fn a_scalar_cross_spec_impact_is_blocking() {
+        let findings =
+            findings_for("status: draft\ndependencies: []\ncross-spec-impact: 050-constitution\n");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].field, "cross-spec-impact");
+        assert_eq!(findings[0].severity, "blocking");
+    }
+
+    #[test]
+    fn a_non_string_cross_spec_impact_entry_is_blocking() {
+        let findings = findings_for("status: draft\ndependencies: []\ncross-spec-impact: [50]\n");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].field, "cross-spec-impact");
+    }
+
     fn findings_for(frontmatter: &str) -> Vec<FrontmatterFinding> {
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join("spec.md");

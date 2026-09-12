@@ -189,6 +189,7 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     let analyze_freshness = analyze_freshness_of(&updated, &spec_path, &args.feature, repo);
 
     Ok(WriteReviewResult {
+        inbox_standing: super::inbox_standing::standing(repo),
         path: rel_path(&review_path, repo),
         spec_path: rel_path(&spec_path, repo),
         must_violations: must_n,
@@ -565,6 +566,24 @@ fn render_observations(observations: &[ReviewObservation]) -> String {
         .join("\n")
 }
 
+/// Characters of a registered source's `description` a single-line report
+/// carries before truncating. A budget rather than a wrap, because the line is
+/// single-line by contract and a wrapped one would break the list item.
+const DESCRIPTION_BUDGET: usize = 100;
+
+/// Truncate `text` to `budget` characters, appending `…` when it was cut.
+///
+/// Counts **characters**, not bytes, so a multi-byte description cannot be
+/// sliced mid-codepoint. A value already inside the budget is returned as-is,
+/// so the common case carries no ellipsis.
+fn truncate(text: &str, budget: usize) -> String {
+    if text.chars().count() <= budget {
+        return text.to_string();
+    }
+    let kept: String = text.chars().take(budget).collect();
+    format!("{}…", kept.trim_end())
+}
+
 /// Shared constitutions the project registered that this run could not read.
 ///
 /// A registered-but-unreadable source means the review ran under fewer rules than
@@ -607,9 +626,19 @@ fn render_unexamined_governance(repo: &Path) -> String {
                 ConstitutionOutcome::NoConstitutionDocument => "no constitution.md in checkout",
                 ConstitutionOutcome::Loaded => "loaded",
             };
+            // The description, when the entry carries one. An alias is a
+            // config key someone chose — often a bare org name — so it is the
+            // description that tells an operator *which* checkout they are
+            // missing without going to look the alias up. Truncated rather
+            // than wrapped: the line is single-line by contract.
+            let purpose = record
+                .description
+                .as_deref()
+                .map(|text| format!(" — {}", truncate(text, DESCRIPTION_BUDGET)))
+                .unwrap_or_default();
             format!(
-                "- `{}` ({}) — {} — its rules were NOT loaded for this review",
-                record.alias, record.path, reason
+                "- `{}` ({}){} — {} — its rules were NOT loaded for this review",
+                record.alias, record.path, purpose, reason
             )
         })
         .collect::<Vec<_>>()
@@ -1792,6 +1821,77 @@ mod tests {
             ),
         )
         .unwrap();
+    }
+
+    /// Register one `[constitutions.*]` entry carrying a description.
+    fn with_described_constitution(tmp: &TempDir, alias: &str, path: &str, description: &str) {
+        let cfg = tmp.path().join(".ductus");
+        fs::create_dir_all(&cfg).unwrap();
+        fs::write(
+            cfg.join("config.toml"),
+            format!(
+                "[constitutions.{alias}]\nrepo = \"https://example.test/g\"\npath = \"{path}\"\n\
+                 description = \"{description}\"\n"
+            ),
+        )
+        .unwrap();
+    }
+
+    /// An alias is a config key someone chose; the description is what tells
+    /// the operator which checkout they are missing.
+    #[test]
+    fn an_unexamined_source_is_named_with_its_description() {
+        let tmp = spec_repo("055-x", "status: in-progress");
+        with_described_constitution(&tmp, "acme", "nowhere", "Acme platform engineering rules");
+        run(&base_args("055-x"), tmp.path()).unwrap();
+        let report = review_md(&tmp, "055-x");
+        assert!(
+            report
+                .contains("- `acme` (nowhere) — Acme platform engineering rules — not checked out"),
+            "{report}"
+        );
+    }
+
+    /// Absent is absent: an entry with no description renders exactly as it
+    /// did before this field reached the report.
+    #[test]
+    fn an_unexamined_source_without_a_description_renders_unchanged() {
+        let tmp = spec_repo("055-x", "status: in-progress");
+        with_constitution(&tmp, "acme", "nowhere");
+        run(&base_args("055-x"), tmp.path()).unwrap();
+        let report = review_md(&tmp, "055-x");
+        assert!(
+            report.contains("- `acme` (nowhere) — not checked out"),
+            "{report}"
+        );
+    }
+
+    /// The line is single-line by contract, so an over-long description is
+    /// truncated rather than wrapped.
+    #[test]
+    fn an_over_long_description_is_truncated_not_wrapped() {
+        let tmp = spec_repo("055-x", "status: in-progress");
+        let long = "x".repeat(DESCRIPTION_BUDGET + 40);
+        with_described_constitution(&tmp, "acme", "nowhere", &long);
+        run(&base_args("055-x"), tmp.path()).unwrap();
+        let report = review_md(&tmp, "055-x");
+        let line = report
+            .lines()
+            .find(|l| l.starts_with("- `acme`"))
+            .expect("the skipped source is named");
+        assert!(
+            line.contains(&format!("{}…", "x".repeat(DESCRIPTION_BUDGET))),
+            "{line}"
+        );
+        assert!(!line.contains(&long), "{line}");
+    }
+
+    #[test]
+    fn truncate_counts_characters_not_bytes() {
+        // Slicing this by bytes would panic mid-codepoint.
+        let text = "é".repeat(10);
+        assert_eq!(truncate(&text, 4), "éééé…");
+        assert_eq!(truncate(&text, 10), text);
     }
 
     #[test]

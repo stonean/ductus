@@ -8,7 +8,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 17
+next-criterion: 19
 analyze:
   last-run: 2026-09-06T14:12:55Z
   analyzed-against: 683a1e03c463c62ea644a4466acc5873eba0d1a4
@@ -140,6 +140,13 @@ silently moved out of it reads as a rule that was dropped.
 Each entry is classified exactly once, with the reason recorded:
 
 - **universal** — true for any project running the ductus pipeline. Promoted.
+- **shared** — true across one organization's projects and no one else's. Its
+  canonical text lives in a constitution document that organization owns and
+  registers under `.ductus/config.toml` `[constitutions.*]`
+  (`055-shared-constitution`), which `/{project}:target` loads alongside the
+  shipped `.ductus/constitution.md`. Not promoted to
+  `framework/constitution.md`, and not left as a per-repository `AGENTS.md`
+  entry.
 - **project-only** — true because of something particular to this repository:
   its trunk-based flow, the retired project name, the `runtime/` release loop,
   the agent registry, the cargo and rustup gotchas, the primitive wiring sites.
@@ -150,10 +157,48 @@ Each entry is classified exactly once, with the reason recorded:
   repo-only machinery and without losing what makes it actionable. See
   §Resolved Questions.
 
-Adopter-neutral wording is what separates the first group from the third. A
+The first three are one question about the rule's **population**, which is what
+the original two were testing without having to say so:
+
+| True for | Tier | Canonical home |
+| --- | --- | --- |
+| every ductus project | universal | `framework/constitution.md` |
+| more than one project, but not all | shared | that organization's registered constitution |
+| exactly this repository | project-only | `AGENTS.md` |
+
+The shared tier was not in the original partition, which was exhaustive only
+while a project could receive exactly one governing document.
+`055-shared-constitution` ended that condition. A rule true across one
+organization's repositories then fits neither original tier: it is not
+universal — promoting it pushes one organization's convention onto every
+adopter — and it is not project-only either, since a rule retyped once per
+repository is the drift §drift-prevention exists to prevent, one tier above the
+one this spec addressed.
+
+§Promotion mechanism carries over unchanged, and is what makes the tier worth
+having: one normative statement, in the shared constitution, with `AGENTS.md`
+keeping a line that points at it and states nothing of its own. Without that a
+shared rule is a copy per repository, which is the state the tier exists to end.
+
+The reword test carries over too, with its scope narrowed to match the tier. A
+universal rule must be statable without naming machinery only this repository
+has; a shared rule must be statable without naming machinery only *one project
+in the organization* has, or it is project-only wearing a shared label.
+
+One bound belongs with the rule rather than being discovered later: a shared
+rule may add to the framework's rules and tighten them, never loosen them. The
+framework constitution is a floor, and §governance-precedence is where that
+order is stated — together with the fact that nothing enforces it.
+
+Adopter-neutral wording is what separates **universal** from **borderline**. A
 rule may cite a runtime primitive, because every adopter has the runtime. A
 rule that cites `scripts/audit/` cannot be promoted as written, because that
-directory is this repository's own and never ships.
+directory is this repository's own and never ships. The same test, applied to a
+narrower population, is what separates **shared** from **project-only**.
+
+This repository registers no `[constitutions.*]` entry, so naming the tier adds
+a destination without reclassifying anything: every `AGENTS.md` entry keeps the
+classification it already carries, and no project-only entry is touched.
 
 ## Criterion verification
 
@@ -200,6 +245,8 @@ a fact already banked.
 - [x] AC14: **Completion-claim filter.** §design-principles carries a hard filter stating that work which is not complete must never be indistinguishable from work that is, naming the three dispositions for known residue — fix it, record it where the pipeline resurfaces it with the status following that record, or record an out-of-scope decision with its reason — and requiring that residue knowable only by measurement be measured rather than caveated. §implement-phase's outstanding-SHOULD rule references the filter as its most frequent instance rather than restating it, so the rule is stated once and Family 6 stays green.
 - [x] AC15: **Findings route by scope.** §brownfield-inbox's Automatic issue capture states that scope decides a finding's destination, naming three tiers — inside the current task, fixed in the task; inside the current spec but outside the task, a new task on that spec's `tasks.md`; outside the spec, the inbox — and states the two things the rule does not license: `tasks.md` does not become a second capture queue or a durable record, and a chore with no feature home stays an inbox item however close to the current work it surfaced. The section's closing sentence names both destinations rather than only the inbox, and the `AGENTS.md` mirror points at the section without restating it.
 - [x] AC16: §spec-lifecycle states that a retired feature's spec is deleted rather than left at `done`, naming the three cases (consolidate when content survives elsewhere, delete outright when nothing does, ordinary body edit for partial retirement) and why inbound pointers are re-pointed before removal. `AGENTS.md` carries the contributor-side mirror as a pointer rather than a second copy, and the scenario records that nothing enforces the rule yet.
+- [x] AC17: §Classification names a third destination, **shared** — true across one organization's projects and no one else's, with its canonical text in a constitution that organization registers under `[constitutions.*]` — and states the three tiers as one question about the rule's population. §Promotion mechanism and the reword test carry over with the test's scope narrowed to match the tier, the framework-as-floor bound is stated with a pointer to §governance-precedence rather than a second copy, and no existing `AGENTS.md` entry is reclassified.
+- [x] AC18: §cross-spec-impact separates what the framework enforces from what it cannot: a **declared** impact is recorded in `cross-spec-impact:` frontmatter and gates `done`, discharge is the affected spec's reciprocal back-link rather than the key's removal, and nothing detects an **undeclared** impact — stated as the author's and reviewer's judgment rather than implied to be covered. The acceptance-criterion sentence that previously stood as the enforcement story is replaced rather than kept alongside, and the frontmatter schema in §text-first-artifacts carries the new key.
 
 ## Open Questions
 

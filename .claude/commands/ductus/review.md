@@ -394,6 +394,8 @@ skipped-passes: []
 
 **Unexamined governance** names any `[constitutions.*]` entry (spec 055) the run could not read, with its reason — `not checked out`, or `no constitution.md in checkout`. `write-review` resolves the registry itself rather than taking it as an argument, so a report cannot omit the section: a review that ran under fewer rules than the project's config declares says so, instead of letting the finding counts stand in for a clean result. That is `QUAL-CLAIM-001` applied to the review's own inputs. `*None.*` covers both "none registered" and "all registered sources read" — from the report's side those are the same claim, because in neither case did anything go unexamined.
 
+Each bullet carries the entry's `description` when it has one, between the path and the reason: `` - `acme` (../governance) — Acme platform engineering rules — not checked out — its rules were NOT loaded for this review ``. An alias alone is a config key someone chose, so the description is what tells an operator _which_ checkout they are missing rather than sending them to look the alias up. It renders here precisely because the document could not be read — the value comes from the config, not the checkout, so it is available when the document is not. An entry with no description renders exactly as it did before. The line is single-line by contract, so an over-long description is truncated with `…` rather than wrapped, and internal whitespace is collapsed before it arrives (a TOML multi-line string makes an embedded newline reachable).
+
 Every empty section renders the literal `*None.*` line — the `write-review` primitive emits it, and the markdown-only path writes the same so the two paths produce byte-identical reports. The **Captured issues** and **Observations** headings carry no suffix.
 
 The **Captured issues** section surfaces issues the agent recorded to
@@ -711,6 +713,7 @@ Stdout summary (always), followed by the path to `review.md`:
 
   analyze     ✗ last run 2026-09-06 against 683a1e0 — this review supersedes it
   captured    1 issue logged during work — run /ductus:groom to route
+  inbox       6 items outstanding, oldest 2026-05-19 — run /ductus:groom to route
   blocking: no
   report:   specs/042-example-feature/review.md
 
@@ -719,6 +722,51 @@ Stdout summary (always), followed by the path to `review.md`:
 
 The `captured` line is omitted when no issues were appended to the inbox in the
 review window. It is informational and never affects the exit code.
+
+### The `inbox` row
+
+`captured` answers _"what was logged while this feature was open"_. It cannot
+answer _"what is outstanding"_, and neither could anything else: `dashboard`
+does not read the inbox, `/ductus:status` does not mention it,
+`check-review-gate` does not consult it, and no audit family touches it. The two
+surfaces that showed it at all were both window-scoped — this `captured` line
+and `/ductus:implement`'s `inbox-additions` — so an item older than the
+feature in hand was invisible by construction. Six once stood in a project's inbox when a
+release was cut over them, and they appeared in that feature's reports only
+because all six happened to land inside its window (§brownfield-inbox
+**Surface at completion**, which now requires both figures).
+
+The row renders on **every** run, in one of four states, from the
+`inbox-standing` field `write-review` returns:
+
+```text
+  inbox       6 items outstanding, oldest 2026-05-19 — run /ductus:groom to route
+  inbox       6 items outstanding, age undeterminable — run /ductus:groom to route
+  inbox       ✓ clean
+  inbox       ? no specs/inbox.md — nothing examined
+```
+
+**Never omitted.** A clean inbox renders a clean row, because
+examined-and-empty and not-computed must not be the same output — every other
+section of the report already follows that rule, and the `captured` line was the
+exception. An absent `inbox.md` is its own state for the same reason: a project
+with no inbox has not been examined and found clean.
+
+**The age is `git blame` over the surviving items**, so the atomic whole-file
+rewrites `append-inbox` and `remove-inbox-item` perform do not reset a
+surviving line's date. It reports as undeterminable — never as today — when
+blame cannot run: a shallow clone, or an inbox not yet committed. **This reads
+git history**, so a CI job running it needs a full-depth checkout
+(§design-principles).
+
+**It is a notice, not a gate**, for the same reason the `analyze` row is.
+Gating `done` or a release on inbox depth would make capture expensive, and
+§brownfield-inbox's design rests on capture being free. A bare count in
+`/ductus:status` was considered and rejected: it is a number the operator
+must choose to go and look at, which is the diligence dependency
+§design-principles rejects wearing a different hat, and it flattens the
+distinction that matters — six fresh items and six where one has sat since May
+read identically.
 
 ### The `analyze` row
 

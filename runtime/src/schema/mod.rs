@@ -15,9 +15,11 @@
 //! - [`paths`] — the `[paths]` block shape from `.govern.toml`, resolving the
 //!   configurable spec-root directory name (spec 040).
 //!
-//! Two crate-internal constant registries also live here as the single
-//! source of truth for their respective closed sets: `registry` (primitive
-//! names) and `status` (spec lifecycle statuses).
+//! Two constant registries also live here as the single source of truth for
+//! their respective closed sets: [`registry`] (primitive names) and `status`
+//! (spec lifecycle statuses). `status` is crate-internal; `registry` is public
+//! because `main.rs` is a separate crate and its CLI-parity test has to name
+//! the canonical set — see that module's docs.
 
 pub mod constitutions;
 pub mod extensions;
@@ -25,6 +27,6 @@ pub mod paths;
 pub mod primitives;
 pub mod procedure;
 pub mod protocol;
-pub(crate) mod registry;
+pub mod registry;
 pub mod services;
 pub(crate) mod status;

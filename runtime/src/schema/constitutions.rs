@@ -25,8 +25,16 @@ pub struct ConstitutionEntry {
     /// only state read. `..` is permitted — a sibling checkout is the normal
     /// case, and this is machine-local config, not LLM-supplied input.
     pub path: String,
-    /// Optional human/agent-facing note on the source's purpose.
-    /// Informational only — no runtime behavior depends on it.
+    /// Optional human/agent-facing note on what the source governs.
+    ///
+    /// No *resolution* behavior depends on it — it never changes which
+    /// documents load, which checkout is read, or how an entry is classified.
+    /// It is **not** unread, though: `resolve-constitutions` carries it onto
+    /// every [`crate::schema::primitives::ConstitutionRecord`], so it reaches
+    /// the surfaces that name a source (`/{project}:target`'s loaded and
+    /// skipped reports, `write-review`'s `## Unexamined governance` section).
+    /// An alias is a config key someone chose and does not say what a document
+    /// governs; this is the field that does.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 }

@@ -43,6 +43,7 @@ pub mod enforce_manifest;
 pub mod extract_archive;
 pub mod fetch_archive;
 pub mod gate_confirm;
+pub(crate) mod inbox_standing;
 pub mod invalidate_review;
 pub mod label_criteria;
 pub mod lint_markdown;
@@ -892,6 +893,39 @@ pub(crate) fn resolve_path(repo: &Path, path_arg: &str) -> PathBuf {
 /// Primitives that accept paths from the host or LLM call this before any
 /// filesystem operation to guarantee the resolved path stays inside the
 /// repo root.
+///
+/// # The config-sourced path boundary
+///
+/// This is the canonical statement of the converse, cited rather than
+/// restated by the primitives that rely on it (`resolve-constitutions`
+/// for `[constitutions.*]`, `resolve-references` for `[services]`).
+///
+/// A primitive that reads a path out of the project's **committed config**
+/// may skip this check, and `..` is the normal case there: a sibling
+/// checkout (`path = "../governance"`) is the layout the manual prescribes.
+/// The trust does not come from anything the primitive can see in the
+/// value — it comes from **how the value got there**. So it holds only
+/// while every writer of that table records a path a human chose, into a
+/// file a human reviews:
+///
+/// - A **hand-edit** is the origin for `[constitutions.*]` today.
+/// - A command that *transcribes an operator's answer* does not break it.
+///   `/{project}:link` writes `[services]` this way — it prompts for the
+///   local checkout path and records what was typed verbatim — so the
+///   framework performs the write while the operator remains the source.
+/// - A writer that **originates** the value breaks it: a path derived from
+///   a network response, an archive's contents, an LLM's output, or any
+///   other input the operator never reviewed. Adding one moves that
+///   table's paths into the validated tier, and the reading primitive
+///   starts calling this function on them — in the same change as the
+///   writer, never after it.
+///
+/// **Nothing enforces this.** No test fails when such a writer appears and
+/// no check detects one; a value written by the wrong kind of writer is
+/// indistinguishable, at read time, from a hand-edited one. This is a rule
+/// for whoever adds the writer, and saying otherwise would imply
+/// enforcement it does not have
+/// (§grounding in `framework/constitution.md`).
 pub(crate) fn validate_no_traversal(path: &str) -> Result<()> {
     if path.is_empty() {
         return Err(PrimitiveError::InvalidPath {

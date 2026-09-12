@@ -64,6 +64,11 @@ pub fn run(args: &DiffCrossSpecArgs, repo: &Path) -> Result<DiffCrossSpecResult>
             current_head: String::new(),
             cross_spec_paths: Vec::new(),
             inbox_additions: Vec::new(),
+            // Standing depth is readable even with no window to diff: it is a
+            // property of the file now, not of a commit range. A row that
+            // vanished here would make "no window" and "nothing outstanding"
+            // the same output.
+            inbox_standing: super::inbox_standing::standing(repo),
             // Empty lists alone would read as "no cross-spec impact". They
             // carry guidance instead, so the caller reports "unknowable"
             // rather than a clean bill this primitive cannot vouch for.
@@ -148,6 +153,7 @@ pub fn run(args: &DiffCrossSpecArgs, repo: &Path) -> Result<DiffCrossSpecResult>
         current_head: head_oid.to_string(),
         cross_spec_paths: cross_spec.into_iter().collect(),
         inbox_additions,
+        inbox_standing: super::inbox_standing::standing(repo),
         guidance: None,
     })
 }

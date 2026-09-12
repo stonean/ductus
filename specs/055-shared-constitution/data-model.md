@@ -18,7 +18,7 @@ description = "Acme engineering house rules"
 | `<alias>` | yes | A bare TOML key — letters, digits, hyphens, underscores; no whitespace, dots, or quotes. Unique within `[constitutions]`. Duplicate aliases are a TOML error, not a ductus one. |
 | `repo` | yes | URL-shaped (a scheme and a host). Recorded verbatim. **Identity and navigation only — never fetched.** |
 | `path` | yes | Local checkout location, relative to the repo root or absolute. `..` is permitted; a sibling checkout is the normal case. Recorded exactly as written. |
-| `description` | no | Free text, informational. No behavior depends on it. |
+| `description` | no | Free text: what the source governs. No *resolution* behavior depends on it — it never changes which documents load — but it is carried through to every surface that names a source (`/{project}:target`'s loaded and skipped reports, `write-review`'s `## Unexamined governance` section), because an alias is a config key someone chose and does not answer the question attributability asks. Absent is absent: an entry without one renders as it did before. Internal whitespace is collapsed by `resolve-constitutions` so a multi-line value cannot break a single-line report. |
 
 The document read from a resolved checkout is `{path}/constitution.md`. Nothing else in
 the checkout is read — not its `rules/`, not its own `.ductus/config.toml` (see the

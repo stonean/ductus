@@ -654,12 +654,36 @@ The deterministic surface behind `/ductus:implement`'s completion gate, which th
 1. **`markdown-lint`** — the feature directory's markdown lint (recursive `{root}/{feature}/**/*.md` glob through the `lint-markdown` machinery — the raw `npx markdownlint-cli2` invocation the step used to name). Violations are echoed in `violations`, or a non-zero exit the parser could not attribute.
 2. **`scenario-open-questions`** — one or more of the feature's scenarios carry unresolved open questions. The message names the count and the scenarios; `guidance` points at scenario-targeted `/{project}:clarify`, the only command that can resolve them. Ordered ahead of the `review:` checks because an unresolved design question is the more upstream defect — reviewing a design that is about to change wastes the review. The list comes from `read-spec`'s collector, so the gate blocks on exactly the questions the reader reports; a second independent reader could disagree with the count the user was shown ([046 — Scenario open-question visibility](../046-scenario-open-question-visibility/spec.md)).
 3. **`pending-fold`** — the spec declares `folds-into`, an obligation nobody has discharged. Presence only; the target's existence is enforced at fold-back by `retire-feature`, since before the merge the target normally lives on the upstream branch ([051](../051-branch-scoped-spec-numbering/spec.md)).
-4. **`not-reviewed`** (`review:` absent or `last-run` null) and 5. **`must-violations`** (`review.blocking: true`) — the spec frontmatter `review:` block.
-6. **`review-stale`** — the recorded review no longer describes the spec's **durable contracts**. See **Record freshness** below.
-7. **`not-analyzed`** (`analyze:` absent or `last-run` null) and 8. **`analyze-findings`** (`analyze.blocking: true`) — the spec frontmatter `analyze:` block. Ordered after every `review:` check because the pipeline is `review → analyze → done`: a spec whose review is missing or failing has not reached the point where analysis is the next thing owed, and naming the later gate for an earlier defect sends a contributor to the wrong command. An **advisory** analyze finding never blocks — that tier is made of checks introduced advisory with their own published promotion criteria, and gating here would promote all of them at once (spec 047; scenario `write-analysis-and-the-second-gate`).
-9. **`analyze-stale`** — the recorded analysis no longer describes the spec's **analyze subjects**. See **Record freshness** below.
+4. **`undischarged-cross-spec-impact`** — the spec declares `cross-spec-impact` entries that are not discharged. See **Cross-spec impact** below.
+5. **`not-reviewed`** (`review:` absent or `last-run` null) and 6. **`must-violations`** (`review.blocking: true`) — the spec frontmatter `review:` block.
+7. **`review-stale`** — the recorded review no longer describes the spec's **durable contracts**. See **Record freshness** below.
+8. **`not-analyzed`** (`analyze:` absent or `last-run` null) and 9. **`analyze-findings`** (`analyze.blocking: true`) — the spec frontmatter `analyze:` block. Ordered after every `review:` check because the pipeline is `review → analyze → done`: a spec whose review is missing or failing has not reached the point where analysis is the next thing owed, and naming the later gate for an earlier defect sends a contributor to the wrong command. An **advisory** analyze finding never blocks — that tier is made of checks introduced advisory with their own published promotion criteria, and gating here would promote all of them at once (spec 047; scenario `write-analysis-and-the-second-gate`).
+10. **`analyze-stale`** — the recorded analysis no longer describes the spec's **analyze subjects**. See **Record freshness** below.
 
 Each staleness check is ordered last within its half, because it is the weakest claim of its group: the others say a record is missing or failing, these say a passing record is out of date.
+
+#### Cross-spec impact
+
+`cross-spec-impact:` is a hand-authored list of feature slugs a spec owes a change to under §cross-spec-impact ([050](../050-constitution/spec.md), scenario `a-declared-cross-spec-impact-gates-done`). Checks 3 and 4 sit beside each other and ahead of the `review:` block for one shared reason, which check 3 already states: a spec carrying an obligation nobody has discharged is not a candidate for `done`, so whether its review is fresh does not yet matter.
+
+`cross-spec-impact` in the result is a per-entry list, not a boolean — partially discharged is the normal state of a multi-entry declaration:
+
+| state | meaning |
+| --- | --- |
+| `discharged` | the named spec links back to the declaring spec, from its own body or from a scenario under it |
+| `undischarged` | the named spec exists and carries no such link |
+| `target-missing` | the entry names no feature directory — a typo, reported rather than treated as discharged, since otherwise one letter disables the gate |
+| `self-reference` | the entry names the declaring spec, which cannot owe itself a change |
+
+**Discharge is the reciprocal link, not the key's removal.** A key an author deletes to unblock themselves enforces nothing; a link they have to add lands the change where the affected spec's reader meets it — which is the signpost §cross-spec-impact already requires. A link from a scenario under the target counts, because a reader of that spec reads its scenarios.
+
+Link reading reuses `derive-dependencies`' matcher rather than introducing a second parser, over the **pointer** scope rather than the edge scope that matcher is normally paired with. The edge scope drops blockquote-prefixed lines by policy, and a signpost on a `done` spec is written as a blockquote in this corpus — reusing that scope whole would make the canonical discharge artifact invisible to the gate built to require it.
+
+**The list is empty in two different situations**, and `blocked-by` distinguishes them: the key is absent or empty (absence is never a finding — most specs affect no other spec), or an earlier check blocked first and this one never ran. An empty array is "not examined here", never "no declarations". On a **pass** the list is populated, so a declared-and-proven obligation does not render identically to one that was never declared.
+
+There is no `--fix`. Which section of the affected spec should carry the signpost is the routing judgment `/{project}:amend` puts to the operator, and a wrong auto-write into another spec is worse than a precise refusal.
+
+**It shares its ordering rationale with `pending-fold` and nothing else.** A fold has one target, discharges by the key's absence, and deliberately never reads the target — a branch-scoped spec's fold target normally lives on the upstream branch. A cross-spec impact has a list, discharges by the target's reciprocal link, and necessarily reads it; partial state does not exist for the first and is the normal case for the second. They are a shared category in `ReviewGateBlock`, not shared code (scenario `the-cross-spec-impact-gate`).
 
 #### Record freshness
 
@@ -720,11 +744,14 @@ Result:
   "first-commit": "b39f2727dc6939ad145ede1830205e0d122075d3",
   "current-head": "550c8ddc33e6895da0ce6c81fa6f6e2c42049e9f",
   "cross-spec-paths": ["specs/007-sibling/spec.md"],
-  "inbox-additions": ["- security: token logged in plaintext — src/auth.rs (captured during 042)"]
+  "inbox-additions": ["- security: token logged in plaintext — src/auth.rs (captured during 042)"],
+  "inbox-standing": { "state": "outstanding", "outstanding": 6, "oldest": "2026-05-19", "path": "specs/inbox.md" }
 }
 ```
 
 The deterministic filter `/ductus:implement` steps 7 and 12 previously re-derived by hand per task (step 12's prose self-declared "no primitive owns this filter yet"). Diffs the feature's first spec-dir commit — the same base `derive-boundary` computes, through the shared revwalk helper — against the **working tree** (index and untracked files included), scoped to the spec root: `cross-spec-paths` lists changed paths outside the feature's own directory (sorted; `{specs-root}/inbox.md` excluded), and `inbox-additions` lists the bullet lines added to the inbox in the window (shared bullet grammar, so structural additions — heading, blanks on a brand-new file — never report as captured items). The working-tree diff is why the per-task summary (step 7, which fires before the task's commit) sees the run's uncommitted captures and sibling edits; on a clean tree the result equals the documented `git diff <first-commit>..HEAD -- {specs-root}/` form (step 12). Read-only; both lists empty is the no-impact domain outcome.
+
+`inbox-standing` is the **standing** backlog — what is outstanding now — and is a different question from `inbox-additions`, which is this feature's window. See **The inbox row** below; both are reported because the window one cannot cover for the other.
 
 Resolved fork (scenario open question): a separate primitive rather than a mode on `derive-boundary` — the two results share only the diff base (boundary globs versus sibling-paths + inbox lines), so they share the `first_commit_for_prefix` walk as a `pub(crate)` helper instead of a result-shape union. `/ductus:review`'s captured-issues section stays on `compute-review-scope`, whose window starts at the in-progress transition — review wants the current work window, not the feature's whole history. Those additions are derived from the **working tree**, as the bullets present now that were absent at the diff base: a capture made during the work being reviewed is by definition uncommitted, and the earlier `base..HEAD` line diff reported none of them, so the section whose purpose is to surface mid-task captures at the gate could not see them (scenario `the-committed-tree-horizon`). Comparing bullet *sets* rather than diff lines is also what the line-diff implementation converged on by filtering additions against the post-image — restoring the shipped `<!-- Rules: … -->` guidance block once reported ~30 "captured issues", one per comment line. The base is the transition commit's **parent**: `base..HEAD` excludes the base's own changes, and the reopen flow commits `/ductus:amend`'s back-edge flip together with the work it authorises, so a base *at* the transition excluded the whole subject (scenario `review-base-includes-the-transition-commit`).
 
@@ -854,6 +881,24 @@ An **observation** is something the reviewer judged real that maps to no loaded 
 **Recording is capture.** The same call appends one bullet per observation to `{specs-root}/inbox.md` in the form ``- [ ] {text} — `{path}` (captured during review of {feature})`` (the path clause dropped when absent), via the `append-inbox` primitive rather than a second append implementation, dedup-guarded on that whole rendered line so a re-run over an unchanged repo appends nothing. `observations` counts what the report rendered; `observations-captured` counts what was newly appended, so a caller can tell *nothing to capture* from *capture ran and everything was already there*. The inbox write happens **before** `review.md` is written and an I/O failure fails the whole call: a report whose section claims a capture that did not happen is the defect this write-through removes (QUAL-CLAIM-001), and the reverse order would reintroduce it one level down. Observation `text` and `path` carry `append-inbox`'s single-line rule, screened up front so a rejection touches no artifact.
 
 `performReview`'s response carries a matching optional `observations` array, accumulated across passes exactly as `findings` is and filtered out of later passes' request payloads by the same rule; without that leg the section would render `*None.*` on every run whether or not the reviewer had any. Defined by `scenarios/review-observations-write-through.md`; requiring spec [017 — Derive, Don't Ask](../017-derive-dont-ask/spec.md) AC25.
+
+### The inbox row — `inbox-standing` on `write-review` and `diff-cross-spec` (addendum)
+
+Result (the standing half only; identical on both primitives):
+
+```json
+{ "inbox-standing": { "state": "outstanding", "outstanding": 6, "oldest": "2026-05-19", "path": "specs/inbox.md" } }
+```
+
+Every surface that showed the inbox before this was **window-scoped** — `/{project}:review`'s Captured issues section and `/{project}:implement`'s `inbox-additions` both answer *"what was captured while this feature was open"* — so an item older than the feature in hand was invisible by construction. Nothing else reported inbox depth at all: not `dashboard`, not `/{project}:status`, not `check-review-gate`, not one audit family. §brownfield-inbox **Surface at completion** now requires both figures, and this field is the standing half ([050](../050-constitution/spec.md); scenario `the-inbox-row`).
+
+`state` is the three-way answer, and the third value is the point: `clean` (examined, empty), `outstanding`, and `no-file` (there is no readable `{specs-root}/inbox.md`). A project with no inbox has not been examined-and-found-clean, so the two never render alike — and the row renders on **every** run, never omitted, which is the rule every other report section already followed and the old `captured` line was the exception to.
+
+`oldest` is `YYYY-MM-DD` from `git blame` over the surviving bullets, so the atomic whole-file rewrites `append-inbox` and `remove-inbox-item` perform do not reset a surviving line's date. It is **absent, not defaulted**, when blame cannot run — a shallow clone, an uncommitted inbox — and a caller reports that as *age undeterminable* rather than as today. Being a history read, a CI job running it needs `fetch-depth: 0` (§design-principles).
+
+Counting uses the shared comment- and fence-aware bullet grammar the append/remove primitives use, not a second parser: the inbox template embeds list markers inside its `<!-- Rules: … -->` block.
+
+**A notice, never a gate.** Nothing blocks on inbox depth, because §brownfield-inbox's design rests on capture being free — *"the honest choice between a growing backlog and a silent one would push toward silence."* A bare count in `/{project}:status` was considered and rejected: it is a number the operator must choose to go and look at, which is the diligence dependency §design-principles rejects wearing a different hat.
 
 ### `remove-inbox-item` — remove one bullet from the inbox
 
