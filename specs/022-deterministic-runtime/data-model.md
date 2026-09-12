@@ -15,7 +15,7 @@ struct Procedure {
 enum Step {
     Primitive {
         number: StepNumber,    // "1", "1.1", "2", etc.
-        name: String,          // matches a primitive name from §The primitive library
+        name: String,          // matches a name from spec.md's Primitive library
         prose: String,         // surrounding prose for the markdown-only/MCP path
         location: SourceRange,
     },
