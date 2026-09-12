@@ -17,14 +17,14 @@ review:
   blocking: false
 next-criterion: 19
 analyze:
-  last-run: 2026-09-12T23:06:40Z
-  analyzed-against: fbcd503ee79e74ae34599de2f3ef6a0a1bdfdfdc
+  last-run: 2026-09-12T23:07:55Z
+  analyzed-against: c6d53d752c9a01928837a4556c1ff7a330bd7eb9
   hard-fail: 0
   blocking-findings: 0
   advisory: 0
   unexamined: 0
   analyzed-digest:
-    plan.md: 3432c0c5837536d9aca6fe9c2d684358863d0bd0b4c95a4275f0eb08c0d82271
+    plan.md: cc73c3c7af6784205158b9b957264e5fbfaafa5ac4708d0a9ba097fcb52028af
     review.md: ceb15927330098d72fca82ccb56ffb44eaba9ed1da846e5565ed99db8f61cc81
     scenarios/a-declared-cross-spec-impact-gates-done.md: 17265775c8d619c2cad70f6ce7785c9734aaa3d08cf287785a6a91fde68ac981
     scenarios/a-partial-read-is-not-a-read.md: 21a78c9fe7d1b8d76f6f6f35097fce17e1ca1fe1ae3723bcb7ec007b7c9aeb56
@@ -32,7 +32,7 @@ analyze:
     scenarios/completion-claims-carry-no-caveats.md: 2b2e43f4cea73ba9c81dc21848b5c668e1db5bf6a5e3becd7467ce025c4179c4
     scenarios/findings-route-by-scope.md: f18d999fbe4045c1bd2a894e108e243bf3f578a220a1ebc0bcafb78e1e486bb7
     scenarios/governance-is-multi-source.md: ae59aca7a049317806297839a73cf335eeb3764db97999a7ddc0b12103e6ffeb
-    spec.md: 207fc6231abbc067220a098fe78ef24552a9ab41219b53679e3025dac338901c
+    spec.md: 1856cd934cd06e2493df46979016d0aa0305763bf0e7522c53464415f51defd7
     tasks.md: b00827c39400a81dc269f10da971439f4037bbbfc14d657a65d458ee15514d04
   blocking: false
 ---
