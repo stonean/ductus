@@ -121,3 +121,9 @@ Implements `scenarios/a-retired-feature-leaves-no-spec.md`. The constitution sta
 - [ ] Implement the behavior described in `scenarios/governance-is-multi-source.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 14. Amend §cross-spec-impact to separate the enforceable half from the judgment half
+
+- [ ] Implement the behavior described in `scenarios/a-declared-cross-spec-impact-gates-done.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.

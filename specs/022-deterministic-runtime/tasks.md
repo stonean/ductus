@@ -403,3 +403,9 @@ Implements `scenarios/anchor-reference-kinds.md`. `resolve-anchor` treated every
 - [ ] Implement the behavior described in `scenarios/config-sourced-paths-and-the-traversal-boundary.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 112. Add the `cross-spec-impact:` field and its pre-done gate check
+
+- [ ] Implement the behavior described in `scenarios/the-cross-spec-impact-gate.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
