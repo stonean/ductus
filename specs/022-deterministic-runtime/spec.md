@@ -2,13 +2,13 @@
 status: in-progress
 dependencies: [021-runtime-boundary]
 review:
-  last-run: 2026-09-07T19:18:25Z
-  reviewed-against: c929cfce114c1abe511dd653478e1221022d8599
+  last-run: 2026-09-12T23:02:51Z
+  reviewed-against: 263a3644be0d26872006a55f063a61e430cba067
   must-violations: 0
   should-violations: 0
   low-confidence: 0
   reviewed-digest:
-    data-model.md: 6adcb51af5d170099dc42819aa0da861eb2858c2db178dbf6dddc85c5a103a32
+    data-model.md: 349916882855843a51c1568cd34bcfaebbdd109282ec28e93eca211e87799211
     scenarios/a-done-spec-has-no-transition-to-gate.md: bad3db76667fc6620b34a2a6dfa39fb6e461523984128314df82f05717a74493
     scenarios/adopter-corpus-link-integrity.md: a36b79e3e04489a765cfab1c3e657ac0c34ef66a289d0512866a27303eeb5358
     scenarios/adopter-generator-promotion.md: 7a80f616c7247ba894f16efb34de307836ac317d6396224a420efce4218e7af2
@@ -29,6 +29,7 @@ review:
     scenarios/cli-config-dir-per-contributor.md: 3764b5f4f1b7c618c6255f6feef1c7db06f5ca43774d98095a1a01403b4bb391
     scenarios/commands-dir-parameterization.md: 61e6896a156386a62c24253cc91db2cfb0b76dd09491a11e53fdfaef3b1f7d7c
     scenarios/config-resolution-single-probe.md: fc602eb6f2d64f6d1956da411b809af3a53a0c91b26dd198f6b1af61e3347ab4
+    scenarios/config-sourced-paths-and-the-traversal-boundary.md: 5ce4f8c45bdfd56606b9a977431e06683f4f38904742f96c358e6b6c5828b30e
     scenarios/constitution-excerpts-as-skill-resources.md: 56192a1689b5afe2bfc51928c27b7d567518816b79c8df0a50250bd3328a8e86
     scenarios/coverage-expansion-primitives.md: e58ada54e9c5afb09d71dcffcf632cbb3127b35fc5a423d0aacfebbb1df07aad
     scenarios/coverage-residue-cleanup.md: 04dc18f12694ed8b02821b50498c7e8ff8123993de72a27ae0d7c8722e024637
@@ -86,7 +87,10 @@ review:
     scenarios/skipscanner-inline-code-exemption.md: ab402c94a437b19b1b9bdd5a58ad3303d6bb67e9822041520522e3a066c43ab5
     scenarios/spec-side-parser-hardening.md: c42a4c32403c47bef48849fedb76c75714048c7dcfd28b89625be702c716490e
     scenarios/specify-routes-before-scaffolding.md: e008baae7f44f2d4ea73d45df18dd6e1f2cc435cdc5562fd8c148494a6d0c520
+    scenarios/the-cli-surface-nothing-pins.md: f63de14533aeb6b2c77f33421af289633e0fded63e795f219b82bfa30f071c8c
     scenarios/the-committed-tree-horizon.md: 77ad933415ea4cc42016d55f524c2a90146a683e41634ba3a945db0d2c693b5c
+    scenarios/the-cross-spec-impact-gate.md: 636a894e1d481799d2a89ab6df5638030676b1d8bb784e8531e3bf339d4fce87
+    scenarios/the-inbox-row.md: 58d356dddec37f5a770fc51e85668351999b9f701aa6d43631a0aecf411d1edd
     scenarios/traverse-deps-cycle-check.md: 81debabcec79ccfa9b77fb5bdecf9e902ad4f3304d1b2b3d0613308ec26ad913
     scenarios/unchecked-done-when-clause-tally.md: d4ec04b41d2ddc3b7a656313cc45fa735eab43b2333c219b79cac10d5a60c88f
     scenarios/unreadable-scenario-is-reported.md: 569047275a9d821b190581ae2adba05492a698aa50bc19d696cccee0d38be159

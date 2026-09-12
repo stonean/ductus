@@ -2,13 +2,14 @@
 status: in-progress
 dependencies: [030-cross-service-references, 040-configurable-specs-dir, 050-constitution]
 review:
-  last-run: 2026-09-11T16:12:09Z
-  reviewed-against: bc216c85218a30650828175a80063a7ddd83359a
+  last-run: 2026-09-12T23:03:16Z
+  reviewed-against: 263a3644be0d26872006a55f063a61e430cba067
   must-violations: 0
   should-violations: 0
   low-confidence: 0
   reviewed-digest:
-    data-model.md: 5c429d0d761de4d5bd5dd49802e582d2ed47ca617843d725e68c9f040e085938
+    data-model.md: 7d54e3ee75399840c7e55932462ed7580b0e3c1f7c29c0ade4c0d1f00641e158
+    scenarios/a-registered-source-is-named-with-its-description.md: 0150662e0bebc24665b91b0894dce653054754490b00fca6fb5628ff5c730205
   blocking: false
 analyze:
   last-run: 2026-09-11T16:14:35Z
