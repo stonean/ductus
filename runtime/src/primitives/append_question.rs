@@ -156,10 +156,7 @@ pub fn run(args: &AppendQuestionArgs, repo: &Path) -> Result<AppendQuestionResul
 /// to a single space, leading/trailing whitespace trims away, and the
 /// comparison is case-insensitive.
 fn normalize(text: &str) -> String {
-    text.split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
-        .to_lowercase()
+    super::collapse_whitespace(text).to_lowercase()
 }
 
 /// Insert `- {question}` into the `## Open Questions` section of

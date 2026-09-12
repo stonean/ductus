@@ -607,10 +607,22 @@ fn cross_spec_impact_states(
         .collect()
 }
 
-/// Classify one declared entry. Split out so the ordering of the three
-/// disqualifying cases is readable: self-reference and a missing directory are
-/// both decided without reading anything, and only a real other spec is
-/// searched for the back-link.
+/// Classify one declared entry. Split out so the ordering of the
+/// disqualifying cases is readable: self-reference, a name that is not a
+/// feature directory, and a directory that is not there are all decided
+/// **before** anything is read, and only a real other spec is searched for the
+/// back-link.
+///
+/// The name is screened through [`super::parse_feature_dir`] — the single
+/// place either directory form is recognized — rather than by joining it to a
+/// path and asking the filesystem. That ordering is load-bearing, not tidiness:
+/// an entry is a *slug*, and joining an unscreened one would let
+/// `cross-spec-impact: ["../../elsewhere"]` walk out of the spec root and read
+/// a file there. Unlike the `[constitutions]` and `[services]` paths described
+/// under **The config-sourced path boundary** on
+/// [`super::validate_no_traversal`], nothing about this key's design needs
+/// `..`: a slug that is not a feature directory name can name no feature
+/// directory, which is exactly `target-missing`.
 fn classify_cross_spec_entry(
     target: &str,
     feature: &str,
@@ -619,6 +631,9 @@ fn classify_cross_spec_entry(
 ) -> CrossSpecImpactState {
     if target == feature {
         return CrossSpecImpactState::SelfReference;
+    }
+    if super::parse_feature_dir(target).is_none() {
+        return CrossSpecImpactState::TargetMissing;
     }
     let target_dir = repo.join(specs_root).join(target);
     if !target_dir.is_dir() {
@@ -1022,6 +1037,39 @@ mod tests {
         );
         let guidance = result.guidance.expect("the block carries guidance");
         assert!(guidance.contains("typo"), "{guidance}");
+    }
+
+    /// An entry is a slug, not a path. Joining an unscreened one to the spec
+    /// root would read a file outside it; the membership screen runs first.
+    #[test]
+    fn a_traversing_entry_is_target_missing_and_reads_nothing() {
+        let tmp = tempdir().unwrap();
+        seed(
+            tmp.path(),
+            &DECLARES_IMPACT.replace("050-upstream", "../../elsewhere"),
+        );
+        // A real directory at the traversal target, holding a back-link that
+        // *would* discharge if the path were followed.
+        let outside = tmp.path().parent().unwrap().join("elsewhere");
+        fs::create_dir_all(&outside).unwrap();
+        fs::write(
+            outside.join("spec.md"),
+            "---\nstatus: done\ndependencies: []\n---\n\n# X\n\n[007](../007-gate/spec.md)\n",
+        )
+        .unwrap();
+
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+
+        assert!(!result.passed);
+        assert_eq!(
+            result.cross_spec_impact,
+            vec![CrossSpecImpactEntry {
+                spec: "../../elsewhere".into(),
+                state: CrossSpecImpactState::TargetMissing,
+            }],
+            "a traversing entry must never resolve, discharged or otherwise"
+        );
+        fs::remove_dir_all(&outside).ok();
     }
 
     #[test]

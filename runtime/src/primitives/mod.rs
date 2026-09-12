@@ -1027,6 +1027,21 @@ pub(crate) fn iter_bullets(content: &str) -> impl Iterator<Item = (usize, String
     })
 }
 
+/// Collapse every run of whitespace in `text` to a single space, trimming the
+/// ends — the normalization a single-line report needs before rendering
+/// operator-authored free text.
+///
+/// The hazard is in the data rather than the display: TOML multi-line strings
+/// and YAML block scalars both make an embedded newline reachable, and one
+/// newline turns a single-line notice into two. Shared by the
+/// disabled-rule-file notice, the shared-constitution `description`, and
+/// `append-question`'s comparison key, which builds its case-folding on top of
+/// this rather than beside it — three copies of one `split_whitespace` chain
+/// had accumulated before they were collapsed here.
+pub(crate) fn collapse_whitespace(text: &str) -> String {
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
 /// Count the real (comment/fence-aware) inbox/list bullets in `content`.
 pub(crate) fn count_inbox_bullets(content: &str) -> u32 {
     u32::try_from(iter_bullets(content).count()).unwrap_or(u32::MAX)

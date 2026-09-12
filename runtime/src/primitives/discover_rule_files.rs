@@ -283,7 +283,7 @@ fn apply_disabled_filter(
             selected.remove(pos);
             notices.push(format!(
                 "disabled-rule-file: {file} — {} ({config_name})",
-                collapse_whitespace(reason)
+                super::collapse_whitespace(reason)
             ));
         } else if all.iter().any(|s| s == file) {
             notices.push(format!(
@@ -336,12 +336,6 @@ fn validate_disabled_entry<'a>(
             }
         }
     }
-}
-
-/// Collapse internal whitespace (including TOML multi-line-string newlines) to
-/// single spaces — the disabled-rule-file notice is single-line by contract.
-fn collapse_whitespace(reason: &str) -> String {
-    reason.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 /// Parse the resolved config file, returning defaults when it is absent, plus

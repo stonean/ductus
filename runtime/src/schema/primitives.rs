@@ -499,6 +499,10 @@ pub struct WriteReviewResult {
     /// this review window's additions. Two numbers answering two questions;
     /// neither stands in for the other, and the standing one is the half that
     /// was previously invisible for any item older than the feature in hand.
+    ///
+    /// Taken **after** this run's own observation captures, so a freshly
+    /// recorded observation is counted. That is the honest reading of
+    /// "outstanding now": the bullet is in the file and nothing has routed it.
     pub inbox_standing: InboxStanding,
     /// The spec's analyze-record freshness, computed against the **working
     /// tree** at the moment this review was written (spec 047 AC12).

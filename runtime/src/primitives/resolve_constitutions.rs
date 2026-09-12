@@ -112,10 +112,7 @@ fn load_constitutions(repo: &Path) -> Result<Constitutions> {
 /// nothing, and rendering an empty parenthetical would be worse than rendering
 /// none — absent is absent.
 pub(crate) fn normalize_description(description: Option<&str>) -> Option<String> {
-    let collapsed = description?
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ");
+    let collapsed = super::collapse_whitespace(description?);
     (!collapsed.is_empty()).then_some(collapsed)
 }
 
