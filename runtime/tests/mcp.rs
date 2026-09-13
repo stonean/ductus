@@ -710,6 +710,57 @@ async fn resolve_constitutions_carries_the_description_via_mcp() {
     assert_eq!(skipped[0]["outcome"], "not-checked-out");
 }
 
+/// `examined` and `scope` cross the MCP wire, and an unstated claim stays
+/// **absent** rather than arriving as a zero.
+///
+/// Pinned here for the reason the 0.48.0 fields were: the review parity golden
+/// captures only a progress line for `write-review`, never its result, so a
+/// field the wrapper dropped would be invisible to every other test. The
+/// distinction this asserts is the whole point of the field — a record that
+/// never made the claim and one that made it and it was empty are different
+/// facts, and `check-review-agreement` reports them differently.
+#[tokio::test]
+async fn write_review_reports_examined_against_a_derived_scope_via_mcp() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("specs/001-x");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("spec.md"),
+        "---\nstatus: in-progress\ndependencies: []\n---\n\n# x\n",
+    )
+    .unwrap();
+
+    let client = start_pair(tmp.path().to_path_buf()).await;
+    let base = json!({
+        "feature": "001-x",
+        "reviewed-at": "2026-09-13T00:00:00Z",
+        "reviewed-against": "abc1234",
+        "diff-base": "def5678",
+    });
+
+    // Unstated: absent on the wire and absent from the record.
+    let result = call_tool(&client, "write-review", base.clone()).await;
+    let obj = structured_object(&result);
+    assert!(obj["examined"].is_null(), "{obj:?}");
+    assert!(
+        obj["scope"].is_number(),
+        "scope is always computed: {obj:?}"
+    );
+    let report = fs::read_to_string(tmp.path().join("specs/001-x/review.md")).unwrap();
+    assert!(!report.contains("examined:"), "{report}");
+
+    // Stated: echoed on the wire and written to both records.
+    let mut stated = base;
+    stated["examined"] = json!(4);
+    let result = call_tool(&client, "write-review", stated).await;
+    let obj = structured_object(&result);
+    assert_eq!(obj["examined"], 4);
+    let report = fs::read_to_string(tmp.path().join("specs/001-x/review.md")).unwrap();
+    assert!(report.contains("examined: 4"), "{report}");
+    let spec = fs::read_to_string(tmp.path().join("specs/001-x/spec.md")).unwrap();
+    assert!(spec.contains("  examined: 4"), "{spec}");
+}
+
 #[tokio::test]
 async fn write_review_renders_report_via_mcp() {
     let tmp = tempfile::tempdir().unwrap();

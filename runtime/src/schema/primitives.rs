@@ -80,6 +80,16 @@ pub struct ReviewBlock {
     /// Whether the last review left blocking findings.
     #[serde(default)]
     pub blocking: bool,
+    /// In-scope files the recorded review reported it read. `None` on every
+    /// record written before this field existed, and on any run that stated
+    /// nothing — which `check-review-agreement` reports rather than reading as
+    /// zero.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub examined: Option<u32>,
+    /// The scope size `write-review` resolved when the record was written —
+    /// what `examined` is a claim against.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<u32>,
 }
 
 /// Parsed `analyze:` frontmatter block — the durable record that
@@ -459,6 +469,29 @@ pub struct WriteReviewArgs {
     #[serde(default)]
     #[arg(skip)]
     pub observations: Vec<ReviewObservation>,
+    /// How many of this run's in-scope files the five passes actually read.
+    ///
+    /// The **numerator** of a claim whose denominator the primitive derives
+    /// itself (the `scope` field on the result). `write-analysis`'s
+    /// `unexamined` exists for the same reason, and it was never carried over:
+    /// a record holding only finding counts cannot distinguish *examined the
+    /// scope and found nothing* from *examined nothing*, and the second is
+    /// what a review that skipped its passes records. Both write `0/0/0`, the
+    /// same `reviewed-digest`, and `blocking: false`, so no gate, audit family
+    /// or reader can tell them apart.
+    ///
+    /// `None` is recorded as **absent**, never as zero. An unstated claim and
+    /// a stated zero are different — the same distinction §grounding draws
+    /// between *could not examine* and *examined and found nothing* — and the
+    /// record says which.
+    ///
+    /// Nothing here proves the passes ran: a caller can overstate this as
+    /// easily as omit it, exactly as it can with `unexamined`. What it buys is
+    /// that the claim is explicit and checkable (`check-review-agreement`
+    /// reads it) rather than invisible.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[arg(long)]
+    pub examined: Option<u32>,
 }
 
 /// Result for `write-review`.
@@ -487,6 +520,18 @@ pub struct WriteReviewResult {
     pub blocking: bool,
     /// Derived exit code: 1 when blocking, else 0.
     pub exit_code: i32,
+    /// In-scope files the caller reported its passes read, echoed from
+    /// [`WriteReviewArgs::examined`]. `None` means the run stated nothing.
+    pub examined: Option<u32>,
+    /// The review scope size this primitive resolved **itself** — the
+    /// denominator `examined` is a claim against.
+    ///
+    /// Derived rather than accepted for the reason `blocking`,
+    /// `reviewed-digest` and the Unexamined-governance section are: a caller
+    /// that supplied it could shrink it to match whatever it read. A caller
+    /// can still overstate the numerator, but it cannot hide how large the
+    /// subject was.
+    pub scope: u32,
     /// The project's standing inbox backlog at the moment this review was
     /// written.
     ///

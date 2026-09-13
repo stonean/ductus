@@ -1,6 +1,6 @@
 ---
 spec: 020-code-review
-status: done
+status: in-progress
 dependencies: []
 review:
   last-run: 2026-08-28T00:11:31Z
@@ -9,7 +9,7 @@ review:
   should-violations: 0
   low-confidence: 0
   blocking: false
-next-criterion: 15
+next-criterion: 16
 analyze:
   last-run: 2026-09-06T14:12:55Z
   analyzed-against: 683a1e03c463c62ea644a4466acc5873eba0d1a4
@@ -65,6 +65,7 @@ tools — a discipline dependency the framework should remove.
 - [x] AC12: **Empty scope**: a target with an empty resolved scope (no implementation files) produces a `review.md` recording 0 findings across all five passes, `blocking: false`, and exits `0`.
 - [x] AC13: **Cross-pass dedupe**: when the same finding (matching rule ID, file, and overlapping line range) is produced by more than one pass, only the highest-severity instance is retained in `must-violations` and `should-violations`; lower-severity duplicates are dropped from the counts and report.
 - [x] AC14: **Flag parsing is specified and surfaced**: the command body documents how `$ARGUMENTS` is parsed for every flag in the Flags table, and `argument-hint` names each of them, so no flag is documented without being surfaced. A `--since` with no value and an unrecognized flag are each reported to the operator rather than silently absorbed. `/audit` holds `argument-hint` and the Flags table in agreement, so a flag added later cannot reopen the gap without a finding.
+- [x] AC15: **A clean review states what it read**: `review.md` and the spec's `review:` block both record `examined` — how many in-scope files the passes read — against a `scope` the primitive derives itself, so a review that examined its scope and found nothing is distinguishable from one whose passes never ran. The two are byte-identical without it: same counts, same digest, same `blocking: false`. An unstated `examined` is recorded as absent rather than as zero, and `/{project}:audit` Family 31 reports `examined: 0` over a non-empty scope and an absent `examined` on a record carrying a scope, as distinct findings. This cannot prove the passes ran — an overstated numerator is as available as an omitted one — and it is not claimed to; it makes the claim explicit and checkable, which is the bar `QUAL-CLAIM-001` sets and the one `write-analysis`'s `unexamined` already cleared.
 
 ## Non-goals
 

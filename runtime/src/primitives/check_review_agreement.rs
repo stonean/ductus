@@ -76,15 +76,21 @@ use crate::schema::primitives::{
     ReviewAgreementSkip,
 };
 
-/// The five fields both files record, as `(spec-side key, report-side key)`.
+/// The fields both files record, as `(spec-side key, report-side key)`.
 /// Keyed by meaning: the timestamp is spelled differently on each side, and
 /// pairing by name would silently drop it from the comparison.
-const PAIRS: [(&str, &str); 5] = [
+///
+/// `examined` and `scope` join the set for the same reason the counts are in
+/// it — they are written to both files by one call, so a disagreement means
+/// one side was hand-edited.
+const PAIRS: [(&str, &str); 7] = [
     ("last-run", "reviewed-at"),
     ("reviewed-against", "reviewed-against"),
     ("must-violations", "must-violations"),
     ("should-violations", "should-violations"),
     ("low-confidence", "low-confidence"),
+    ("examined", "examined"),
+    ("scope", "scope"),
 ];
 
 /// Spec frontmatter, narrowed to the `review:` block.
@@ -241,6 +247,8 @@ fn compare_records(
         });
     }
 
+    check_examined_claim(feature, rel_spec, block, findings);
+
     // Every waived finding has a waiver entry. Matched on rule id alone:
     // the report renders a file with a line range while the waiver anchors
     // a bare path, and a spurious finding here would send a maintainer
@@ -381,6 +389,76 @@ fn load_records(dir: &Path, rel_spec: &str, rel_report: &str) -> Load {
 }
 
 /// An `unparseable` finding with the feature left for the caller to fill in.
+/// The review's own denominator check — `examined` against the derived `scope`.
+///
+/// Split out of [`compare_records`] because it is a different question from
+/// the paired-field comparison: that asks whether two records of one review
+/// agree, this asks whether the review examined anything at all.
+fn check_examined_claim(
+    feature: &str,
+    rel_spec: &str,
+    block: &SpecReviewBlock,
+    findings: &mut Vec<ReviewAgreementFinding>,
+) {
+    // The review states what it read, against what it was asked to read.
+    //
+    // This is the half of `QUAL-CLAIM-001` the review record was missing. A
+    // review that ran its five passes over the scope and found nothing, and a
+    // review whose passes never ran, both write `0/0/0`, the same
+    // `reviewed-digest` and `blocking: false` — byte-identical records for
+    // opposite facts. `write-analysis` has required `unexamined` since spec
+    // 047 precisely so a clean analyze cannot be recorded without saying what
+    // it could not reach; nothing asked the same of a clean review, and on
+    // 2026-09-12 two were recorded over scopes nothing had read.
+    //
+    // Neither branch can prove the passes ran — an overstated `examined` is
+    // still possible, exactly as an understated `unexamined` is. What they do
+    // is make the claim explicit and checkable rather than absent.
+    let scope = block
+        .fields
+        .get("scope")
+        .and_then(serde_norway::Value::as_u64);
+    let examined = block
+        .fields
+        .get("examined")
+        .and_then(serde_norway::Value::as_u64);
+    match (examined, scope) {
+        // Stated zero over a non-empty scope: the record says outright that
+        // the passes read nothing, so the counts describe nothing.
+        (Some(0), Some(total)) if total > 0 => findings.push(ReviewAgreementFinding {
+            feature: feature.to_string(),
+            kind: "examined-nothing".into(),
+            field: "examined".into(),
+            spec_value: format!("examined=0 scope={total}"),
+            report_value: String::new(),
+            location: rel_spec.to_string(),
+            message: format!(
+                "review.examined is 0 over a scope of {total} file(s) — the counts                  describe a scope nothing read, so a clean result here is not evidence                  the code is clean"
+            ),
+            fix: "run /ductus:review's five passes over the resolved scope and record                   what they read; a review is the passes, not the write-review call"
+                .into(),
+        }),
+        // Unstated over a non-empty scope. Distinct from a stated zero, and
+        // reported distinctly: this record predates the field or the run
+        // declined to make the claim, and either way nothing on disk says what
+        // it examined.
+        (None, Some(total)) if total > 0 => findings.push(ReviewAgreementFinding {
+            feature: feature.to_string(),
+            kind: "examined-unstated".into(),
+            field: "examined".into(),
+            spec_value: format!("examined=<absent> scope={total}"),
+            report_value: String::new(),
+            location: rel_spec.to_string(),
+            message: format!(
+                "review.examined is absent over a scope of {total} file(s) — the record                  does not say what the review read, so its counts cannot be read as                  assurance about that scope"
+            ),
+            fix: "re-run /ductus:review; records written before `examined` existed                   clear on their next run"
+                .into(),
+        }),
+        _ => {}
+    }
+}
+
 fn unparseable_finding(rel_report: &str, message: String, fix: &str) -> ReviewAgreementFinding {
     ReviewAgreementFinding {
         feature: String::new(),
@@ -495,6 +573,108 @@ mod tests {
 
     fn run_in(dir: &TempDir) -> CheckReviewAgreementResult {
         run(&CheckReviewAgreementArgs {}, dir.path()).unwrap()
+    }
+
+    /// The gate this family gained: a record stating it read nothing over a
+    /// non-empty scope. Proven to fire before it is trusted to pass
+    /// (§design-principles).
+    #[test]
+    fn examined_zero_over_a_non_empty_scope_is_reported() {
+        let dir = repo();
+        let block = CLEAN_BLOCK.replace(
+            "low-confidence: 0",
+            "low-confidence: 0\n  examined: 0\n  scope: 46",
+        );
+        let report = CLEAN_REPORT.replace(
+            "low-confidence: 0",
+            "low-confidence: 0\nexamined: 0\nscope: 46",
+        );
+        seed(dir.path(), "001-x", &block, Some(&report));
+        let out = run_in(&dir);
+        let kinds: Vec<&str> = out.findings.iter().map(|f| f.kind.as_str()).collect();
+        assert!(kinds.contains(&"examined-nothing"), "{:?}", out.findings);
+        let finding = out
+            .findings
+            .iter()
+            .find(|f| f.kind == "examined-nothing")
+            .unwrap();
+        assert!(
+            finding.message.contains("scope of 46"),
+            "{}",
+            finding.message
+        );
+    }
+
+    /// An unstated claim is reported **distinctly** from a stated zero: one
+    /// record never made the claim, the other made it and it was empty.
+    #[test]
+    fn examined_absent_over_a_non_empty_scope_is_its_own_finding() {
+        let dir = repo();
+        let block = CLEAN_BLOCK.replace("low-confidence: 0", "low-confidence: 0\n  scope: 12");
+        let report = CLEAN_REPORT.replace("low-confidence: 0", "low-confidence: 0\nscope: 12");
+        seed(dir.path(), "001-x", &block, Some(&report));
+        let out = run_in(&dir);
+        let kinds: Vec<&str> = out.findings.iter().map(|f| f.kind.as_str()).collect();
+        assert!(kinds.contains(&"examined-unstated"), "{:?}", out.findings);
+        assert!(!kinds.contains(&"examined-nothing"), "{:?}", out.findings);
+    }
+
+    /// A genuine review: it read its scope, so the counts mean something.
+    #[test]
+    fn examined_matching_the_scope_is_clean() {
+        let dir = repo();
+        let block = CLEAN_BLOCK.replace(
+            "low-confidence: 0",
+            "low-confidence: 0\n  examined: 46\n  scope: 46",
+        );
+        let report = CLEAN_REPORT.replace(
+            "low-confidence: 0",
+            "low-confidence: 0\nexamined: 46\nscope: 46",
+        );
+        seed(dir.path(), "001-x", &block, Some(&report));
+        let out = run_in(&dir);
+        assert!(out.findings.is_empty(), "{:?}", out.findings);
+    }
+
+    /// An empty scope is the legitimate zero — nothing to read, nothing read.
+    #[test]
+    fn examined_zero_over_an_empty_scope_is_clean() {
+        let dir = repo();
+        let block = CLEAN_BLOCK.replace(
+            "low-confidence: 0",
+            "low-confidence: 0\n  examined: 0\n  scope: 0",
+        );
+        let report = CLEAN_REPORT.replace(
+            "low-confidence: 0",
+            "low-confidence: 0\nexamined: 0\nscope: 0",
+        );
+        seed(dir.path(), "001-x", &block, Some(&report));
+        let out = run_in(&dir);
+        assert!(out.findings.is_empty(), "{:?}", out.findings);
+    }
+
+    /// The two records must agree on the new fields too — a hand-edit to one
+    /// side is the drift this family exists for.
+    #[test]
+    fn examined_divergence_between_the_two_records_is_reported() {
+        let dir = repo();
+        let block = CLEAN_BLOCK.replace(
+            "low-confidence: 0",
+            "low-confidence: 0\n  examined: 46\n  scope: 46",
+        );
+        let report = CLEAN_REPORT.replace(
+            "low-confidence: 0",
+            "low-confidence: 0\nexamined: 3\nscope: 46",
+        );
+        seed(dir.path(), "001-x", &block, Some(&report));
+        let out = run_in(&dir);
+        let mismatch = out
+            .findings
+            .iter()
+            .find(|f| f.kind == "field-mismatch" && f.field == "examined")
+            .expect("examined mismatch");
+        assert_eq!(mismatch.spec_value, "46");
+        assert_eq!(mismatch.report_value, "3");
     }
 
     #[test]

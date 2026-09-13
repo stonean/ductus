@@ -41,16 +41,15 @@ use crate::schema::primitives::{
     ConstitutionOutcome, Frontmatter, RecordFreshness, ReviewFinding, ReviewObservation,
     WriteReviewArgs, WriteReviewResult,
 };
-
-/// Execute the `write-review` primitive.
+/// Reject any scalar field that would inject document structure.
 ///
-/// # Errors
-///
-/// Returns [`PrimitiveError::FeatureNotFound`] when the feature has no
-/// `spec.md`, [`PrimitiveError::MissingFrontmatter`] when that file has no
-/// frontmatter block, [`PrimitiveError::Yaml`] when the frontmatter fails to
-/// parse, or [`PrimitiveError::Io`] on read/write failure.
-pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
+/// Scalars are spliced verbatim into `review.md` frontmatter and the spec's
+/// `review:` block, so an embedded newline would add a top-level key (a
+/// spoofed `status:`, say) and corrupt pipeline state. Multi-line prose fields
+/// — summary, finding bodies, captured issues — are markdown body content and
+/// are deliberately not screened; waiver fields are separately quoted through
+/// `yaml_string`.
+fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
     super::validate_no_traversal(&args.feature)?;
     // Scalar fields spliced verbatim into review.md frontmatter and the
     // spec.md `review:` block must be single-line: an embedded newline would
@@ -85,6 +84,19 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
         single_line(&format!("observations[{idx}].text"), &observation.text)?;
         single_line(&format!("observations[{idx}].path"), &observation.path)?;
     }
+    Ok(())
+}
+
+/// Execute the `write-review` primitive.
+///
+/// # Errors
+///
+/// Returns [`PrimitiveError::FeatureNotFound`] when the feature has no
+/// `spec.md`, [`PrimitiveError::MissingFrontmatter`] when that file has no
+/// frontmatter block, [`PrimitiveError::Yaml`] when the frontmatter fails to
+/// parse, or [`PrimitiveError::Io`] on read/write failure.
+pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
+    validate_scalar_fields(args)?;
     let root = paths::Paths::load(repo).specs_root;
     let feature_dir = repo.join(&root).join(&args.feature);
     let spec_path = feature_dir.join("spec.md");
@@ -140,26 +152,29 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
     // typo in the project config produced no `review.md` at all, losing the
     // findings this run just computed.
     let governance_section = render_unexamined_governance(repo);
+    // The denominator `examined` is a claim against — see `resolve_scope_size`.
+    let scope = resolve_scope_size(args, repo);
     let report = render_report(
         args,
-        &must,
-        &should,
-        &low,
-        &waived,
+        &Buckets {
+            must: &must,
+            should: &should,
+            low: &low,
+            waived: &waived,
+        },
         blocking,
         &governance_section,
+        scope,
     );
     let review_path = feature_dir.join("review.md");
     let spec_content = read_text(&spec_path)?;
-    let updated = update_spec_review_block(
-        &spec_content,
-        &spec_path,
-        args,
-        must_n,
-        should_n,
-        low_n,
-        &contracts,
-    )?;
+    let counts = RecordedCounts {
+        must: must_n,
+        should: should_n,
+        low: low_n,
+        scope,
+    };
+    let updated = update_spec_review_block(&spec_content, &spec_path, args, counts, &contracts)?;
 
     // Both outputs computed; only now touch the filesystem.
     //
@@ -201,6 +216,35 @@ pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
         blocking,
         exit_code: i32::from(blocking),
         analyze_freshness,
+        examined: args.examined,
+        scope,
+    })
+}
+
+/// How many files this review's scope covers — the denominator.
+///
+/// Derived here rather than accepted as an argument, the same discipline that
+/// derives `blocking`, `reviewed-digest` and the governance section: a caller
+/// supplying it could shrink the subject to match whatever it happened to
+/// read. It can still overstate the numerator, but it cannot hide how large
+/// the scope was.
+///
+/// Resolved through `compute-review-scope` against the run's own `diff-base`,
+/// so it is the scope the review was told to cover rather than whatever that
+/// base resolves to at some later moment. An unresolvable window (a spec dir
+/// with no commit yet) yields zero rather than an error: the findings this run
+/// computed still have to land, and a zero scope beside a zero `examined` is
+/// the coherent empty-scope state rather than a false claim.
+fn resolve_scope_size(args: &WriteReviewArgs, repo: &Path) -> u32 {
+    if args.empty_scope {
+        return 0;
+    }
+    let scope_args = crate::schema::primitives::ComputeReviewScopeArgs {
+        feature: args.feature.clone(),
+        since: Some(args.diff_base.clone()),
+    };
+    crate::primitives::compute_review_scope::run(&scope_args, repo).map_or(0, |result| {
+        u32::try_from(result.scope.len()).unwrap_or(u32::MAX)
     })
 }
 
@@ -368,15 +412,23 @@ fn waiver_reason<'a>(
 // -- report rendering --------------------------------------------------------
 
 /// Render the full `review.md` document (frontmatter + fixed skeleton).
+/// The four buckets a run's findings fall into, passed as one value so the
+/// renderer's signature states a shape rather than four positional slices.
+struct Buckets<'a> {
+    must: &'a [&'a ReviewFinding],
+    should: &'a [&'a ReviewFinding],
+    low: &'a [&'a ReviewFinding],
+    waived: &'a [&'a ReviewFinding],
+}
+
 fn render_report(
     args: &WriteReviewArgs,
-    must: &[&ReviewFinding],
-    should: &[&ReviewFinding],
-    low: &[&ReviewFinding],
-    waived: &[&ReviewFinding],
+    buckets: &Buckets<'_>,
     blocking: bool,
     governance_section: &str,
+    scope: u32,
 ) -> String {
+    let (must, should, low, waived) = (buckets.must, buckets.should, buckets.low, buckets.waived);
     let feature = &args.feature;
 
     let mut fm = String::from("---\n");
@@ -391,6 +443,13 @@ fn render_report(
     let _ = writeln!(fm, "should-violations: {}", should.len());
     let _ = writeln!(fm, "low-confidence: {}", low.len());
     let _ = writeln!(fm, "captured-issues: {}", args.captured_issues.len());
+    // The claim and its denominator. `examined` is omitted when the run stated
+    // nothing, so an unstated claim reads as absent rather than as a computed
+    // zero; `scope` is always written, because it was always computed.
+    if let Some(examined) = args.examined {
+        let _ = writeln!(fm, "examined: {examined}");
+    }
+    let _ = writeln!(fm, "scope: {scope}");
     let _ = writeln!(fm, "skipped-passes: [{}]", args.skipped_passes.join(", "));
     fm.push_str("---");
 
@@ -662,13 +721,21 @@ fn render_skipped(skipped: &[String]) -> String {
 /// Rewrite the spec's `review:` frontmatter block with the fresh scalar fields,
 /// preserving every other top-level key verbatim and pruning expired waivers
 /// from `review.waivers`. Inserts the block when absent.
+/// The numbers a review records about itself: its three finding counts and
+/// the derived scope its `examined` claim is measured against.
+#[derive(Clone, Copy)]
+struct RecordedCounts {
+    must: u32,
+    should: u32,
+    low: u32,
+    scope: u32,
+}
+
 fn update_spec_review_block(
     content: &str,
     spec_path: &Path,
     args: &WriteReviewArgs,
-    must: u32,
-    should: u32,
-    low: u32,
+    counts: RecordedCounts,
     contracts: &crate::primitives::analyze_subjects::SubjectDigest,
 ) -> Result<String> {
     let (fm_text, body) = split_frontmatter(content, spec_path)?;
@@ -683,7 +750,7 @@ fn update_spec_review_block(
         .filter(|waiver| !is_expired(waiver, &args.expired_waivers))
         .collect();
 
-    let block = render_review_yaml(args, must, should, low, &surviving, contracts);
+    let block = render_review_yaml(args, counts, &surviving, contracts);
     let new_fm = splice_review_block(fm_text, &block);
     // The splice joins with `\n` and the fences are literal, while `body` is
     // carried through untouched — so on a CRLF spec the two halves would
@@ -709,18 +776,30 @@ fn is_expired(waiver: &RawWaiverFull, expired: &[crate::schema::primitives::Waiv
 /// Render the `review:` YAML block (no trailing newline).
 fn render_review_yaml(
     args: &WriteReviewArgs,
-    must: u32,
-    should: u32,
-    low: u32,
+    counts: RecordedCounts,
     waivers: &[RawWaiverFull],
     contracts: &crate::primitives::analyze_subjects::SubjectDigest,
 ) -> String {
+    let RecordedCounts {
+        must,
+        should,
+        low,
+        scope,
+    } = counts;
     let mut block = String::from("review:\n");
     let _ = writeln!(block, "  last-run: {}", args.reviewed_at);
     let _ = writeln!(block, "  reviewed-against: {}", args.reviewed_against);
     let _ = writeln!(block, "  must-violations: {must}");
     let _ = writeln!(block, "  should-violations: {should}");
     let _ = writeln!(block, "  low-confidence: {low}");
+    // What the passes read, and what they were asked to read. Omitted when the
+    // run stated nothing, so a record that never made the claim is absent
+    // rather than reading as a computed zero — the distinction the `examined`
+    // doc comment draws and `check-review-agreement` reports on.
+    if let Some(examined) = args.examined {
+        let _ = writeln!(block, "  examined: {examined}");
+    }
+    let _ = writeln!(block, "  scope: {scope}");
     // The record's description of its own subject, derived here rather than
     // accepted as an argument — the same discipline that derives `blocking`.
     // No caller can record a digest it did not take, and this digest and the
@@ -1005,6 +1084,44 @@ mod tests {
         }
     }
 
+    /// The claim and its denominator land in **both** records, so
+    /// `check-review-agreement` has two sides to compare.
+    #[test]
+    fn examined_and_scope_are_written_to_both_records() {
+        let dir = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let mut args = base_args("001-x");
+        args.examined = Some(7);
+        let out = run(&args, dir.path()).unwrap();
+        assert_eq!(out.examined, Some(7));
+
+        let report = review_md(&dir, "001-x");
+        assert!(report.contains("examined: 7"), "{report}");
+        assert!(
+            report.contains(&format!("scope: {}", out.scope)),
+            "{report}"
+        );
+
+        let spec = fs::read_to_string(dir.path().join("specs/001-x/spec.md")).unwrap();
+        assert!(spec.contains("  examined: 7"), "{spec}");
+        assert!(spec.contains(&format!("  scope: {}", out.scope)), "{spec}");
+    }
+
+    /// An unstated claim is **absent**, never rendered as a computed zero —
+    /// the distinction the field exists to preserve.
+    #[test]
+    fn unstated_examined_is_absent_rather_than_zero() {
+        let dir = spec_repo("001-x", "status: in-progress\ndependencies: []");
+        let out = run(&base_args("001-x"), dir.path()).unwrap();
+        assert_eq!(out.examined, None);
+
+        let report = review_md(&dir, "001-x");
+        assert!(!report.contains("examined:"), "{report}");
+        let spec = fs::read_to_string(dir.path().join("specs/001-x/spec.md")).unwrap();
+        assert!(!spec.contains("examined:"), "{spec}");
+        // The denominator is always written: it was always computed.
+        assert!(report.contains("scope: "), "{report}");
+    }
+
     fn base_args(feature: &str) -> WriteReviewArgs {
         WriteReviewArgs {
             feature: feature.into(),
@@ -1020,6 +1137,7 @@ mod tests {
             expired_waivers: Vec::new(),
             captured_issues: Vec::new(),
             observations: Vec::new(),
+            examined: None,
         }
     }
 

@@ -900,6 +900,26 @@ Counting uses the shared comment- and fence-aware bullet grammar the append/remo
 
 **A notice, never a gate.** Nothing blocks on inbox depth, because §brownfield-inbox's design rests on capture being free — *"the honest choice between a growing backlog and a silent one would push toward silence."* A bare count in `/{project}:status` was considered and rejected: it is a number the operator must choose to go and look at, which is the diligence dependency §design-principles rejects wearing a different hat.
 
+### `examined` / `scope` on `write-review` — the review's own denominator (addendum)
+
+Arg (caller-supplied numerator) and result (both halves):
+
+```json
+{ "examined": 38, "scope": 46 }
+```
+
+`write-review` recorded no denominator, so a review whose five passes read the whole scope and found nothing and a review whose passes never ran produced **byte-identical** records — same `0/0/0`, same `reviewed-digest`, same `blocking: false`. `check-review-gate`, Family 19, Family 31 and a reader were all equally unable to separate them. `write-analysis` has required `unexamined` since [047](../047-analyze-findings-durability/spec.md) for exactly this reason; the reasoning was written for the analyze half and never carried across (scenario `a-review-states-what-it-read`).
+
+The asymmetry between the two fields is the design. **`scope` is derived by the primitive**, resolving `compute-review-scope` against the run's own `diff-base` — the same discipline that already derives `blocking`, `reviewed-digest`, `inbox-standing` and the Unexamined-governance section, and for the same reason: a caller that supplied it could shrink the subject to match whatever it read. **`examined` is the caller's claim**, because how many files the passes actually read is the one thing only the host knows.
+
+Both are written to `review.md` frontmatter **and** the spec's `review:` block, which is what gives Family 31 two sides to compare. An **unstated** `examined` is recorded as absent, never as a computed zero: a claim never made and a claim that came back empty are different facts, the same distinction §grounding draws between *could not examine* and *examined and found nothing*.
+
+`check-review-agreement` reads them and reports two kinds, because the repairs differ — `examined-nothing` (`examined: 0` over a non-empty `scope`; the record says the passes read nothing) and `examined-unstated` (no `examined` on a record carrying a `scope`). Both fields also join the paired-field set, so a hand-edit to one of the two records is caught like any other divergence.
+
+**What it does not do.** It cannot prove the passes ran — an overstated `examined` is as available as an omitted one, exactly as an understated `unexamined` is. It makes the claim explicit and checkable rather than invisible, which is the bar `QUAL-CLAIM-001` sets and the bar the analyze half already cleared. Stating that plainly is the same discipline §cross-spec-impact uses for the impact nothing detects.
+
+A record predating the field carries neither key, so there is no denominator to judge and the family stays silent. That exemption is bounded and self-correcting — the next review of that spec writes a `scope` — rather than a per-spec grandfather date.
+
 ### `remove-inbox-item` — remove one bullet from the inbox
 
 Args:

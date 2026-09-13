@@ -415,3 +415,9 @@ Implements `scenarios/anchor-reference-kinds.md`. `resolve-anchor` treated every
 - [x] Implement the behavior described in `scenarios/the-inbox-row.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 114. A review states what it read
+
+- [x] Implement the behavior described in `scenarios/a-review-states-what-it-read.md`
+
+- **Done when**: `write-review` derives `scope` itself and records it beside the caller-supplied `examined` in both `review.md` and the spec's `review:` block, an unstated `examined` is absent rather than zero, and `check-review-agreement` reports `examined-nothing` and `examined-unstated` as distinct findings — each proven to fire before being trusted to pass.
