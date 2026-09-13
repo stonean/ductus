@@ -149,3 +149,12 @@ Implements `scenarios/a-retired-feature-leaves-no-spec.md`. The constitution sta
 - [ ] `check-corpus-links` cannot catch this class — a prose reference to a section title is not a link — so note whether the corpus carries more of them before closing
 
 - **Done when**: 016's spec body no longer points at a README section that does not exist, the correction is taken through the back-edge rather than folded into the exempt sweep, and the run says whether other prose section-title pointers were checked.
+
+## 17. Apply the retired-filename rule to the three sibling names
+
+- [ ] Task 15 was scoped to `.govern.toml` alone, but the rule it states governs every retired filename a compatibility path still reads. Measured 2026-09-13, three siblings carry comparable residue: `.govern.session.toml` (167 occurrences, 92 under `specs/`), `.govern/` (171, 40 under `specs/`), `.governance.toml` (36, 27 under `specs/`)
+- [ ] Judge them by the same test — the resolution ladder's legacy tiers, the migration procedures that must name both sides, and the decision records stay; present-tense prose naming them as current is residue and takes the current name (`.ductus/session.toml`, `.ductus/`, and — for `.governance.toml` — whichever tier the ladder actually resolves)
+- [ ] `.governance.toml` needs care: `framework/migrations/governance-config-rename.md` renames it **to** `.govern.toml`, so both sides of that procedure are retired today and both must survive
+- [ ] Keep the prose substitutions free of any reworded line so the sweep exemption holds, exactly as task 15's mechanical half did — the annotations are what reopen a spec
+
+- **Done when**: Every `.govern.session.toml`, `.govern/` and `.governance.toml` occurrence under `specs/` has been judged individually against §drift-prevention's retired-filename rule, the compatibility-path and decision-record occurrences are named as deliberate survivors with a count, and nothing outside `specs/` moved.
