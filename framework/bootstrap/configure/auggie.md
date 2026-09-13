@@ -29,11 +29,8 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
 
    **Shell commands — read-only operations:**
    - `{ "toolName": "launch-process", "shellInputRegex": "^ls ", "permission": { "type": "allow" } }`
-   - `{ "toolName": "launch-process", "shellInputRegex": "^head ", "permission": { "type": "allow" } }`
-   - `{ "toolName": "launch-process", "shellInputRegex": "^cat ", "permission": { "type": "allow" } }`
-   - `{ "toolName": "launch-process", "shellInputRegex": "^awk ", "permission": { "type": "allow" } }`
-   - `{ "toolName": "launch-process", "shellInputRegex": "^grep ", "permission": { "type": "allow" } }`
-   - `{ "toolName": "launch-process", "shellInputRegex": "^for ", "permission": { "type": "allow" } }`
+
+   File-content parsers (`awk`, `grep`, `cat`, `head`, `for` loops over files) are intentionally **not** in the canonical set, matching `configure/claude.md`. The runtime primitives and Auggie's own `view` / `grep-search` / `codebase-retrieval` tools cover those reads on the deterministic and markdown-only paths respectively; shell pipelines are not a sanctioned third path. See `framework/constitution.md` §runtime-boundary. The five that once sat here are retired in step 4.
 
    **Shell commands — git:**
    - `{ "toolName": "launch-process", "shellInputRegex": "^git add ", "permission": { "type": "allow" } }`
@@ -140,4 +137,19 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
 
 3. **Ordering:** deny entries must appear before allow entries in the `toolPermissions` array so that destructive commands are blocked even if a broader allow rule would match. When adding entries, insert deny entries at the top and allow entries after them.
 
-4. Write the updated file and confirm what was added.
+4. **Retired `toolPermissions` entries** — remove every one of these that is present, matched on `toolName` + `shellInputRegex` and ignoring the `permission` value, so an entry a contributor flipped to `deny` or `ask` is still recognized as the retired one rather than left behind.
+
+   **File-content parsers** (dropped from the canonical set in the same edit that added this list; the runtime primitives and Auggie's own read tools cover these reads, and §runtime-boundary principle 3 names shell pipelines as **not** a sanctioned substitute for either). `configure/claude.md` had excluded them for that reason while this file still granted them — the constitution's rule was enforced for one agent and not the other, which is the per-layout gap `AGENTS.md` §Workflow records as unaudited:
+   - `{ "toolName": "launch-process", "shellInputRegex": "^head " }`
+   - `{ "toolName": "launch-process", "shellInputRegex": "^cat " }`
+   - `{ "toolName": "launch-process", "shellInputRegex": "^awk " }`
+   - `{ "toolName": "launch-process", "shellInputRegex": "^grep " }`
+   - `{ "toolName": "launch-process", "shellInputRegex": "^for " }`
+
+   Retirement is confined to this explicit list — entries this framework itself once shipped — so an entry an adopter authored is never touched, however closely it resembles one.
+
+   **Why this list lives here and not in a `/ductus` migration**, and **why it is append-only and must stay disjoint from step 2**: both reasons are stated once in `configure/claude.md` step 4 and hold verbatim here — the migration registry's `last_applied` marker lives in the committed config file while this one is per-contributor and gitignored, so the first teammate to run `/ductus` would mark it applied for everyone; and an entry appearing in both the canonical set and this list would be removed and re-added on every run. Deny-side entries are never retired: an over-broad denial refuses more rather than approving more.
+
+   `merge-permissions` does not serve Auggie's `toolPermissions` shape yet (see the note above step 1), so this removal is a host-side splice, the same way step 2's canonical-presence and dedup passes are.
+
+5. Write the updated file, confirm what was added, and report what was retired — name each removed entry, so the contributor sees the change to their permission file rather than finding it by diff.
