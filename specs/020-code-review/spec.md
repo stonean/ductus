@@ -61,7 +61,7 @@ tools — a discipline dependency the framework should remove.
 - [x] AC8: Waivers require explicit `--waive <rule-id> --reason "..."`, are recorded in spec frontmatter, and expire automatically when the file location or rule ID they were attached to changes.
 - [x] AC9: Exit code is `0` when not blocking, `1` when blocking — for CI use.
 - [x] AC10: The README slash commands table lists `/ductus:review` under **Pipeline (advance state)** with a one-line purpose.
-- [x] AC11: **Tech-stack alignment gate**: before running review passes, `/ductus:review` confirms the project's `AGENTS.md` `Tech Stack` section exists and appears consistent with the implementation in scope. Misalignment or a missing/empty section is a blocking error, not a warning. Adopters can persist a successful check by setting `.govern.toml [review] tech-stack-verified = true`, after which subsequent runs skip the check until the operator manually clears the key.
+- [x] AC11: **Tech-stack alignment gate**: before running review passes, `/ductus:review` confirms the project's `AGENTS.md` `Tech Stack` section exists and appears consistent with the implementation in scope. Misalignment or a missing/empty section is a blocking error, not a warning. Adopters can persist a successful check by setting `.ductus/config.toml [review] tech-stack-verified = true`, after which subsequent runs skip the check until the operator manually clears the key.
 - [x] AC12: **Empty scope**: a target with an empty resolved scope (no implementation files) produces a `review.md` recording 0 findings across all five passes, `blocking: false`, and exits `0`.
 - [x] AC13: **Cross-pass dedupe**: when the same finding (matching rule ID, file, and overlapping line range) is produced by more than one pass, only the highest-severity instance is retained in `must-violations` and `should-violations`; lower-severity duplicates are dropped from the counts and report.
 - [x] AC14: **Flag parsing is specified and surfaced**: the command body documents how `$ARGUMENTS` is parsed for every flag in the Flags table, and `argument-hint` names each of them, so no flag is documented without being surfaced. A `--since` with no value and an unrecognized flag are each reported to the operator rather than silently absorbed. `/audit` holds `argument-hint` and the Flags table in agreement, so a flag added later cannot reopen the gap without a finding.
@@ -145,12 +145,12 @@ tools — a discipline dependency the framework should remove.
   for tech-stack metadata — there is no separate surface to point at. No
   change to the draft.
 - **Quality-pass confidence threshold** — fixed at 80; not exposed via
-  `.govern.toml`. The threshold is an opinion about LLM calibration, not
+  `.ductus/config.toml`. The threshold is an opinion about LLM calibration, not
   about project domain — adopters have no meaningful information to tune it,
   only an incentive to raise it when reviews are inconvenient. Per
   §pipeline-boundaries ("never depend on human diligence"), making the gate
   tunable would let teams effectively waive it by setting the threshold to
-  100. `.govern.toml` is reserved for genuine project-level decisions
+  100. `.ductus/config.toml` is reserved for genuine project-level decisions
   (pinned files, paths, agent identity per specs 017 and 019); a
   framework-wide quality opinion doesn't qualify. If model calibration
   shifts, the framework updates the value uniformly for all adopters.
@@ -220,7 +220,7 @@ blocked: tech-stack alignment failed — AGENTS.md Tech Stack {missing | inconsi
 
 reconcile AGENTS.md Tech Stack with the implementation, then re-run /ductus:review.
 to skip this check on future runs after manual reconciliation, add
-[review] tech-stack-verified = true to .govern.toml.
+[review] tech-stack-verified = true to .ductus/config.toml.
 ```
 
 ---
@@ -261,7 +261,7 @@ advances to `done`.
   file the change actually touched, so [022](../022-deterministic-runtime/spec.md)'s
   `review-scope-union` scenario made it a union. Lightweight-track features use
   the `Affected Files` section of `spec-and-plan.md`.
-- **Config** — `.govern.toml` `[review] tech-stack-verified` (boolean,
+- **Config** — `.ductus/config.toml` `[review] tech-stack-verified` (boolean,
   default `false`): when `true`, the tech-stack alignment check (see
   Behavior step 1) is skipped on every run until the operator clears the
   key. Set automatically (with operator confirmation) on the first
@@ -307,7 +307,7 @@ For each targeted feature, in order:
    findings across all five passes, `blocking: false`, and exit `0` — there
    is nothing to review yet. Skip steps 4–5 and the rest of this run.
 4. **Tech-stack alignment check.**
-   - Read `.govern.toml`. If `[review] tech-stack-verified = true`, skip to
+   - Read `.ductus/config.toml`. If `[review] tech-stack-verified = true`, skip to
      step 5.
    - Otherwise, read `AGENTS.md`'s `Tech Stack` section and inspect the file
      scope (extensions, imports, runtime/manifest markers). Confirm the
@@ -318,7 +318,7 @@ For each targeted feature, in order:
    - On a successful check, prompt the operator once: _"Tech-stack
      alignment confirmed. Persist this so future runs skip the check?
      (Y/n)"_. On `Y`, write `[review] tech-stack-verified = true` to
-     `.govern.toml`. On `n` or skip, the check runs again on the next
+     `.ductus/config.toml`. On `n` or skip, the check runs again on the next
      invocation. To re-run the check after a stack change, the operator
      removes the line manually — `/ductus:review` does not auto-reset.
 5. Select rule files per the (now-verified) tech stack: load
@@ -510,7 +510,7 @@ blocked: tech-stack alignment failed — AGENTS.md Tech Stack {missing | inconsi
 
 reconcile AGENTS.md Tech Stack with the implementation, then re-run /ductus:review.
 to skip this check on future runs after manual reconciliation, add
-[review] tech-stack-verified = true to .govern.toml.
+[review] tech-stack-verified = true to .ductus/config.toml.
 ```
 
 ## Waivers
@@ -650,7 +650,7 @@ never of session state.
 ## Notes for adopters
 
 - Projects that customize `framework/rules/security-{backend,frontend}.md`
-  pin them in `.govern.toml` `[pinned] files` to prevent `/ductus` from
+  pin them in `.ductus/config.toml` `[pinned] files` to prevent `/ductus` from
   overwriting their additions. `/ductus:review` reads whatever is on disk —
   pinned or not.
 - Projects on a stack not covered by the shipped rule files should add

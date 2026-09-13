@@ -128,9 +128,9 @@ Findings under **Waived findings** include an additional `**Waived**: <reason fr
 
 For a given `(code-in-scope, loaded-rules, spec-acceptance-criteria, scenarios, waivers)` input set, the body of `review.md` is byte-identical across runs. Only `reviewed-at` and `reviewed-against` in the frontmatter are permitted to differ. This is the basis of acceptance criterion 6.
 
-## `.govern.toml [review]` section
+## `.ductus/config.toml [review]` section
 
-New TOML section in the project's `.govern.toml`. Added by `/ductus:review` (with operator confirmation) on the first successful tech-stack alignment check. `.govern.toml` is shared adopter-side state per AGENTS.md (Workflow); this spec documents the section it adds rather than touching spec 019.
+New TOML section in the project's `.ductus/config.toml`. Added by `/ductus:review` (with operator confirmation) on the first successful tech-stack alignment check. `.ductus/config.toml` is shared adopter-side state per AGENTS.md (Workflow); this spec documents the section it adds rather than touching spec 019.
 
 ```toml
 [review]
