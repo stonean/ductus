@@ -90,7 +90,7 @@ The runtime is acquired **once per machine** into a ductus-owned store, and reac
 
 ## MCP registration
 
-The registered server command becomes a ductus-owned path instead of the bare name, and — for the first time — **the same shape works for every agent in the registry**. The shapes in `/ductus`'s §MCP wiring change accordingly:
+The registered server command becomes a ductus-owned path instead of the bare name, and — for the first time — **the same shape works for every agent in the registry**. The shapes in `framework/bootstrap/ductus.md` §MCP wiring change accordingly:
 
 - **Claude** — `.mcp.json` at the repo root: `{"mcpServers": {"ductus": {"command": ".ductus/bin/ductus", "args": ["mcp"]}}}`.
 - **OpenCode** — the committed root `opencode.json` `mcp` block: `{"ductus": {"type": "local", "command": [".ductus/bin/ductus", "mcp"], "enabled": true}}`.
@@ -105,10 +105,10 @@ This is what removes the asymmetry the home-level agents used to carry. Their co
 
 [029-bootstrap-runtime-autowire](../029-bootstrap-runtime-autowire/spec.md) defined three pre-flight states: **A** (runtime live this session), **B** (binary present on `PATH`, not wired), **C** (binary absent — markdown path plus a tip suggesting the adopter install it). Making acquisition `/ductus`'s job collapses the distinction that produced State C: a missing binary is no longer a terminal condition to report, it is work to perform.
 
-- The **binary probe** changes from a `PATH` lookup (`command -v ductus` / `which ductus`) to a filesystem check for the store, plus the pointer for this project. Its permission-seed entry in §Permission Setup changes with it.
+- The **binary probe** changes from a `PATH` lookup (`command -v ductus` / `which ductus`) to a filesystem check for the store, plus the pointer for this project. Its permission-seed entry in `framework/bootstrap/ductus.md` §Permission Setup changes with it.
 - **State A** (a `ductus`-namespaced MCP tool is in the session's inventory) is unchanged, including its binding execution contract.
 - The former **State C** path acquires the binary, then wires and permissions it exactly as State B does, joining the same **pending-restart set** and the same single combined **Pre-flight abort**. An adopter with no runtime at all reaches the deterministic path after one `/ductus` run and one restart, with no manual install step in between.
-- The **State C tip** in §Post-Scaffolding Output ("installing `ductus` cuts token use") loses its audience on the happy path and is reserved for the degraded case — acquisition was attempted and failed.
+- The **State C tip** in `framework/bootstrap/ductus.md` §Post-Scaffolding Output ("installing `ductus` cuts token use") loses its audience on the happy path and is reserved for the degraded case — acquisition was attempted and failed.
 
 ## Reference migration
 
@@ -130,7 +130,7 @@ Existing adopters have an MCP entry naming the bare `ductus` command and, usuall
 
 - **The store holds a binary that will not execute** — a truncated download, a wrong-architecture asset, a missing system library. The version probe reports nothing, which reads as *no usable runtime* rather than *version unknown*, and `/ductus` re-acquires. This is why the probe executes the binary rather than reading a recorded marker.
 - **The pointer is missing or dangling** — a fresh clone (it is gitignored, so it never arrives with the checkout), or a store cleared by hand. `/ductus` recreates it. A dangling pointer is not an error state to report; it is the expected state of any project nobody has bootstrapped on this machine yet.
-- **Two `/ductus` runs write the store concurrently**, on one machine in two projects. The store write is atomic (tempfile + rename), matching every other ductus write, so a reader sees the old binary or the new one and never a partial file. The last writer wins, which is the same resolution §Version currency already describes for the sequential case.
+- **Two `/ductus` runs write the store concurrently**, on one machine in two projects. The store write is atomic (tempfile + rename), matching every other ductus write, so a reader sees the old binary or the new one and never a partial file. The last writer wins, which is the same resolution the **Version currency** section above already describes for the sequential case.
 - **A session is open while the store is replaced.** An MCP server spawned from the old binary keeps running it — the process holds its own image. The next session picks up the new one. No attempt is made to signal or restart a live server.
 - **The archive carries no `version` file, or an unparseable one.** A framework revision predating this spec has no pin to read. `/ductus` halts naming the file, rather than guessing a version or falling through to "latest" — a wrong pin silently installs a runtime the framework was never tested against.
 - **`[runtime]` names a path that does not exist or will not execute.** Halt naming the configured path. A project that has deliberately claimed responsibility for supplying its binary gets an error about *that* choice, never a silent fallback to downloading, which would discard the choice without saying so.
@@ -151,7 +151,7 @@ Existing adopters have an MCP entry naming the bare `ductus` command and, usuall
 - [x] AC14: On a `surface-instruction` agent, the surfaced registration instruction names the absolute store path — not the repo-relative pointer, which their home-level config cannot resolve
 - [x] AC15: A repo-root `version` file carries one SemVer line, and it matches `runtime/Cargo.toml`, the newest `runtime/CHANGELOG.md` heading, and the newest `ductus-v*` tag; a self-audit family asserts that agreement
 - [x] AC8: An adopter whose MCP config names the bare `ductus` command has it rewritten to the ductus-owned path by the registered migration, and re-running the migration is a no-op
-- [x] AC9: The pre-flight binary probe checks the ductus-owned store rather than `PATH`, and the §Permission Setup seed grants exactly what that probe needs
+- [x] AC9: The pre-flight binary probe checks the ductus-owned store rather than `PATH`, and the `framework/bootstrap/ductus.md` §Permission Setup seed grants exactly what that probe needs
 - [x] AC10: An adopter with no runtime reaches the deterministic path in one `/ductus` run plus one restart — acquisition, MCP wiring, and tool permissions all land in the same pre-flight pass, the run then completes its remaining work through the CLI in that same session, and the single closing restart hands over to the MCP tool surface
 - [x] AC11: `.github/workflows/markdown-only-pipeline.yml` — the job asserting the retired opt-in invariant — is replaced by one that exercises acquisition end-to-end on each supported platform and fails when the runtime cannot be obtained. That path no longer exists: the file is renamed to `.github/workflows/framework-checks.yml`, and the acquisition invariant is asserted by the `acquire` job in `.github/workflows/runtime-release.yml` plus the hand-dispatchable `.github/workflows/runtime-acquisition.yml`.
 - [x] AC16: The constitution is amended in the same change: §runtime-boundary principle 3 and the Opt-in invariant are replaced by the requirement, §text-first-artifacts' "usable standalone" is narrowed to the artifacts, and no live artifact still describes the runtime as optional
