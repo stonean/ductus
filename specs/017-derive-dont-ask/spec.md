@@ -16,15 +16,24 @@ review:
   blocking: false
 next-criterion: 27
 analyze:
-  last-run: 2026-09-06T14:12:55Z
-  analyzed-against: 683a1e03c463c62ea644a4466acc5873eba0d1a4
+  last-run: 2026-09-13T00:18:37Z
+  analyzed-against: caae5ad17950993ee8f8d9fcd220e87fe08e0aeb
   hard-fail: 0
   blocking-findings: 0
   advisory: 0
-  unexamined: 9
+  unexamined: 1
+  analyzed-digest:
+    data-model.md: 6e24f25156055a0c7a636c72294fdfbc6e0de44556f95d40513028d0410fee4f
+    plan.md: 5347baac2a0c626466c7e8784959968d98058252ed8aafb5dc1c533d3096a0d9
+    review.md: c5c7aa5bd73ec9160d7693d1681013923c9ca5ea84688e6bff8660c716ac17cd
+    scenarios/detect-dependency-cycles.md: f7b0ac55bdeb0d2084d59779cd67015635ca2616daf423324713c9217c3d36e8
+    scenarios/generator-sync-claim-honesty.md: e03a245d2efd00b267fd7eeb0690af4fd3877a685c7ab121e9b5dc0ffe598481
+    scenarios/skip-prose-cross-references.md: e57301025e73da4c077a5be9fc7ae821653c37a9ad12ee0d4c10a31798f60380
+    scenarios/tracked-specs-not-worktree.md: 985aeeaa62ab386742d54ffd4b671f6109f53c156431391b5c42d7eb7718287c
+    spec.md: 8adeb7c4c74ad808740785630021b824d6a819c4305799b96e91fee992de0d66
+    tasks.md: 5c3477a2fc9b4c27b3f54c78159d45c6c9ae9584ca5d5d4fd6458d022e2630c7
   unexamined-by-reason:
     no-readable-state: 1
-    not-a-live-claim: 8
   blocking: false
 ---
 
