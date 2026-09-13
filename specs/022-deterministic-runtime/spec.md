@@ -2,14 +2,17 @@
 status: in-progress
 dependencies: [021-runtime-boundary]
 review:
-  last-run: 2026-09-12T23:02:51Z
-  reviewed-against: 263a3644be0d26872006a55f063a61e430cba067
+  last-run: 2026-09-13T00:43:52Z
+  reviewed-against: 317d6782e18eea6a3bbf7c68e2c7f4ceb42ce766
   must-violations: 0
   should-violations: 0
   low-confidence: 0
+  examined: 19
+  scope: 43
   reviewed-digest:
-    data-model.md: 349916882855843a51c1568cd34bcfaebbdd109282ec28e93eca211e87799211
+    data-model.md: 4c2d7895323972f4a8e5480174c3f8ce605acc28a0f7c1c6b3572ff07fd8252a
     scenarios/a-done-spec-has-no-transition-to-gate.md: bad3db76667fc6620b34a2a6dfa39fb6e461523984128314df82f05717a74493
+    scenarios/a-review-states-what-it-read.md: a9d8ffdd823dfec6ea56f7c57d84e375e39adfbaf83dc61e9a16099d1828bf1b
     scenarios/adopter-corpus-link-integrity.md: a36b79e3e04489a765cfab1c3e657ac0c34ef66a289d0512866a27303eeb5358
     scenarios/adopter-generator-promotion.md: 7a80f616c7247ba894f16efb34de307836ac317d6396224a420efce4218e7af2
     scenarios/analyze-artifact-checks.md: 5d8f5e76161fb02ff07c23d77a358349be4a04b7afae103b0136deb955c7e880
