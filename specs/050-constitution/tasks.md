@@ -131,7 +131,7 @@ Implements `scenarios/a-retired-feature-leaves-no-spec.md`. The constitution sta
 ## 15. State the retired-filename rule in §drift-prevention and clear the `.govern.toml` residue
 
 - [ ] Implement the behavior described in `scenarios/a-retired-filename-leaves-a-decision-record.md`
-- [ ] Resolve the scenario's open question first — whether the corpus rewrite is a §spec-lifecycle case (a) mechanical edit or takes the back-edge on each spec it touches; the answer sets the cost and must not be decided during the pass
+- [x] Resolve the scenario's open question first — whether the corpus rewrite is a §spec-lifecycle case (a) mechanical edit or takes the back-edge on each spec it touches; the answer sets the cost and must not be decided during the pass
 - [ ] Amend §drift-prevention to distinguish a retired identifier from a retired filename a compatibility path still reads, naming the exempt sites as a category (resolution ladder / fallback tier, migration procedure, the prose and shell spelling either) rather than as this repository's paths
 - [ ] State the corpus end state: the current name wherever a spec states current behavior, the retired name only in the few references recording the decision to change it
 - [ ] State that a ticked acceptance criterion is annotated rather than rewritten, citing 017 and 027 as the existing practice
