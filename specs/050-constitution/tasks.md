@@ -137,7 +137,7 @@ Implements `scenarios/a-retired-feature-leaves-no-spec.md`. The constitution sta
 - [x] State that a ticked acceptance criterion is annotated rather than rewritten, citing 017 and 027 as the existing practice
 - [x] Repoint the `AGENTS.md` §Gotchas entry on `.govern.toml` at the new constitution text so it states no normative content of its own, per AC3's promoted-entry pattern
 - [ ] Audit the 317 `.govern.toml` occurrences under `specs/` per-hit: correct present-tense prose to `.ductus/config.toml`, annotate ticked criteria, and leave compatibility-path and decision-record occurrences as written
-- [ ] Leave the 131 occurrences outside `specs/` untouched — 69 in `runtime/src/` are the resolution ladder, 11 in `framework/migrations/` name the file each migration migrates, and the rest spell the same ladder
+- [x] Leave every occurrence outside `specs/` untouched — 144 occurrences at the 2026-09-13 baseline (the earlier "131" counted matching *lines*, not occurrences): the `runtime/src/` resolution ladder, the `framework/migrations/` procedures that must name the file each migration migrates, and the `framework/commands|bootstrap`, `scripts/` and generated `.claude/` copies spelling the same ladder. `AGENTS.md` is the one deliberate exception, rewritten by the subtask above
 
 - **Done when**: §drift-prevention carries the retired-filename rule with its exempt-site categories and the annotate-not-rewrite disposition; `AGENTS.md` mirrors it by reference; every `.govern.toml` occurrence under `specs/` has been judged individually, with the survivors limited to the compatibility-path and decision-record cases; and the 131 occurrences outside `specs/` are unchanged.
 
