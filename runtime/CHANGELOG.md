@@ -2,6 +2,54 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.49.0] — 2026-09-13
+
+### Added
+
+- **A clean review states what it read.** `write-review` recorded no
+  denominator, so a review whose five passes read the whole scope and found
+  nothing and a review whose passes never ran produced **byte-identical**
+  records: the same `0/0/0`, the same `reviewed-digest`, the same
+  `blocking: false`. `check-review-gate`, audit Family 19, audit Family 31 and
+  a human reader were all equally unable to separate them. `write-analysis` has
+  required `unexamined` since 0.47.0 for exactly this reason; the reasoning was
+  written for the analyze half and never carried across to the review half.
+  It now is. The asymmetry between the two new fields is the design: **`scope`
+  is derived by the primitive** — resolving `compute-review-scope` against the
+  run's own `diff-base`, the same discipline that already derives `blocking`,
+  `reviewed-digest`, `inbox-standing` and the Unexamined-governance section —
+  so a caller cannot shrink the subject to match what it read, while
+  **`examined` is the caller's claim**, because how many files the passes read
+  is the one thing only the host knows. Both land in `review.md` frontmatter
+  and the spec's `review:` block. An **unstated** `examined` is recorded as
+  absent, never as a computed zero: a claim never made and a claim that came
+  back empty are different facts, the distinction §grounding draws between
+  *could not examine* and *examined and found nothing*.
+- **`check-review-agreement` reads the claim.** Two new finding kinds, separate
+  because the repairs differ: `examined-nothing` (`examined: 0` over a
+  non-empty `scope` — the record states outright that the passes read nothing)
+  and `examined-unstated` (no `examined` on a record that carries a `scope`).
+  Both fields also join the paired-field set, so a hand-edit to one of the two
+  records is caught like any other divergence. A record predating the fields
+  carries no `scope`, so there is no denominator to judge and the family stays
+  silent — an exemption that is bounded and self-correcting (the spec's next
+  review writes a `scope`) rather than a per-spec grandfather date.
+
+### Notes
+
+- **This cannot prove the passes ran, and does not claim to.** An overstated
+  `examined` is as available as an omitted one, exactly as an understated
+  `unexamined` is. What it buys is that the claim is explicit and checkable
+  instead of invisible, which is the bar `QUAL-CLAIM-001` sets and the bar the
+  analyze half already cleared — no higher. Saying so here rather than implying
+  enforcement the mechanism does not have is the same discipline
+  §cross-spec-impact uses for the impact nothing detects.
+- Specs [020](../specs/020-code-review/spec.md) (AC15, the requirement) and
+  [022](../specs/022-deterministic-runtime/scenarios/a-review-states-what-it-read.md)
+  (the runtime scenario). Both reviews for this release are the first to carry
+  the new fields, and both record honest partials — 16 of 20 and 19 of 43 —
+  which is the field working rather than a shortfall hidden.
+
 ## [0.48.0] — 2026-09-12
 
 ### Added
