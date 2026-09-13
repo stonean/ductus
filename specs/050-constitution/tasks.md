@@ -140,3 +140,12 @@ Implements `scenarios/a-retired-feature-leaves-no-spec.md`. The constitution sta
 - [ ] Leave the 131 occurrences outside `specs/` untouched — 69 in `runtime/src/` are the resolution ladder, 11 in `framework/migrations/` name the file each migration migrates, and the rest spell the same ladder
 
 - **Done when**: §drift-prevention carries the retired-filename rule with its exempt-site categories and the annotate-not-rewrite disposition; `AGENTS.md` mirrors it by reference; every `.govern.toml` occurrence under `specs/` has been judged individually, with the survivors limited to the compatibility-path and decision-record cases; and the 131 occurrences outside `specs/` are unchanged.
+
+## 16. Correct 016's dead README section pointer
+
+- [ ] `specs/016-cross-cutting-rules/spec.md:73` cites *the README's "Pinning files with …" section*; the README was restructured and has no such section under any name, so the pointer was already dead before the filename pass renamed the file it mentions
+- [ ] Repoint it at what the README actually documents — `[pinned]` under §Configuration — or drop the parenthetical and name the key directly
+- [ ] This is a **factual correction**, not a substitution: it rewords the line, so §spec-lifecycle's back-edge applies and 016 reopens `done → in-progress` for it. Do not bundle it with the filename sweep, which is exempt precisely because it rewords nothing
+- [ ] `check-corpus-links` cannot catch this class — a prose reference to a section title is not a link — so note whether the corpus carries more of them before closing
+
+- **Done when**: 016's spec body no longer points at a README section that does not exist, the correction is taken through the back-edge rather than folded into the exempt sweep, and the run says whether other prose section-title pointers were checked.
