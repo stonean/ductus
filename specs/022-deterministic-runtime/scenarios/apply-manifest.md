@@ -14,7 +14,7 @@ After the `ductus-bootstrap` scenario landed, `/ductus` successfully uses `fetch
 
 Plus three orthogonal concerns the current primitives don't address:
 
-- **Pinned-file exemption**: `.govern.toml`'s `[pinned] files` block lists adopter customizations the bootstrap must never touch, regardless of strategy.
+- **Pinned-file exemption**: `.ductus/config.toml`'s `[pinned] files` block lists adopter customizations the bootstrap must never touch, regardless of strategy.
 - **Manifest enforcement**: as the framework evolves, files get renamed or dropped; the bootstrap must remove no-longer-shipped files from the adopter's directories so they don't accumulate (legacy `skills/`, legacy workflow filenames, dropped slash commands).
 - **Template-literal preservation**: when installing `ductus.md` itself, the bootstrap MUST keep `{project}` and `{cli-config-dir}` placeholders literal so the next `/ductus` run substitutes them per the next adopter — not per this one.
 

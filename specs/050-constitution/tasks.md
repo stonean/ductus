@@ -132,10 +132,10 @@ Implements `scenarios/a-retired-feature-leaves-no-spec.md`. The constitution sta
 
 - [ ] Implement the behavior described in `scenarios/a-retired-filename-leaves-a-decision-record.md`
 - [x] Resolve the scenario's open question first — whether the corpus rewrite is a §spec-lifecycle case (a) mechanical edit or takes the back-edge on each spec it touches; the answer sets the cost and must not be decided during the pass
-- [ ] Amend §drift-prevention to distinguish a retired identifier from a retired filename a compatibility path still reads, naming the exempt sites as a category (resolution ladder / fallback tier, migration procedure, the prose and shell spelling either) rather than as this repository's paths
-- [ ] State the corpus end state: the current name wherever a spec states current behavior, the retired name only in the few references recording the decision to change it
-- [ ] State that a ticked acceptance criterion is annotated rather than rewritten, citing 017 and 027 as the existing practice
-- [ ] Repoint the `AGENTS.md` §Gotchas entry on `.govern.toml` at the new constitution text so it states no normative content of its own, per AC3's promoted-entry pattern
+- [x] Amend §drift-prevention to distinguish a retired identifier from a retired filename a compatibility path still reads, naming the exempt sites as a category (resolution ladder / fallback tier, migration procedure, the prose and shell spelling either) rather than as this repository's paths
+- [x] State the corpus end state: the current name wherever a spec states current behavior, the retired name only in the few references recording the decision to change it
+- [x] State that a ticked acceptance criterion is annotated rather than rewritten, citing 017 and 027 as the existing practice
+- [x] Repoint the `AGENTS.md` §Gotchas entry on `.govern.toml` at the new constitution text so it states no normative content of its own, per AC3's promoted-entry pattern
 - [ ] Audit the 317 `.govern.toml` occurrences under `specs/` per-hit: correct present-tense prose to `.ductus/config.toml`, annotate ticked criteria, and leave compatibility-path and decision-record occurrences as written
 - [ ] Leave the 131 occurrences outside `specs/` untouched — 69 in `runtime/src/` are the resolution ladder, 11 in `framework/migrations/` name the file each migration migrates, and the rest spell the same ladder
 

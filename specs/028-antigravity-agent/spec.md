@@ -179,7 +179,7 @@ carries over. No plugin build, no `agy plugin install`, no chicken-and-egg.
 
 `/ductus` re-runs re-scaffold the `.agents/` files (live-on-main), exactly like
 the other file-scaffold agents — no install/registration step. Pinning via
-`.govern.toml` and the manifest `update`/`create`/`skip` strategies apply
+`.ductus/config.toml` and the manifest `update`/`create`/`skip` strategies apply
 unchanged.
 
 ## Out of Scope

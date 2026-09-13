@@ -145,7 +145,7 @@ commands to take effect.
 
 `/ductus` re-runs re-scaffold the `.opencode/` files and re-merge `opencode.json`
 (live-on-main), like the other file-scaffold agents — no install/registration
-step. Pinning via `.govern.toml` and the manifest strategies apply unchanged.
+step. Pinning via `.ductus/config.toml` and the manifest strategies apply unchanged.
 
 ## Out of Scope
 

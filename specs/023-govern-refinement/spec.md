@@ -101,7 +101,7 @@ The parallel "Audit artifacts" / "Audit code" opening is the disambiguation surf
 
 Adopters running pipeline commands are repeatedly prompted to confirm writes to files `ductus` itself owns — most visibly `.govern.session.toml`, which `/target`, `/specify`, and `/amend`'s scenario branch all mutate as routine session-tracking steps. Asking the user to authorize a write to a file the framework owns is exactly the confirmation theater this refinement spec aims to remove.
 
-`/configure` extends its canonical allow set with explicit per-path write entries for `ductus`-owned state. Initial scope: the session file. The principle generalizes — any future `ductus`-owned state file (e.g., additional sections of `.govern.toml`) gets the same explicit allow treatment as it's introduced.
+`/configure` extends its canonical allow set with explicit per-path write entries for `ductus`-owned state. Initial scope: the session file. The principle generalizes — any future `ductus`-owned state file (e.g., additional sections of `.ductus/config.toml`) gets the same explicit allow treatment as it's introduced.
 
 - **Claude**: `Edit(.govern.session.toml)` and `Write(.govern.session.toml)` added alongside the existing bare `Edit` and `Write` entries. The explicit path entries make intent clear and disambiguate from any agent-host heuristic that otherwise prompts on the session-file path. (The pre-0.10.0 form used `{cli-config-dir}/{project}-session.json`; consolidated onto the repo-root `.govern.session.toml` in spec 022 task 40.)
 - **Auggie**: the existing bare `save-file` and `str-replace-editor` allows already cover writes to any path including the session file. No Auggie-side change required; the verification step confirms no permission gap remains.
