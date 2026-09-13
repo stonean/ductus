@@ -36,3 +36,5 @@
         specs/008-security-rules/spec.md): `- [ ] {Rule ID}: {artifact} does not address — {summary}`.
 
      When an item is migrated, remove it from this list. -->
+
+- [ ] convention: audit the spec corpus for stale `.govern.toml` references and rewrite only the live ones — measured 2026-09-13 at 413 hits / 105 files, of which the 69 in `runtime/src/` (the legacy-fallback resolution ladder), 14 in `framework/migrations/` (a migration must name the file it migrates), and 7 each in `framework/commands|bootstrap` and `scripts/audit/` are all **correct** and must not be swept; the question is the 316 hits / 72 files under `specs/`, where a living `spec.md` or scenario stating present-tense adopter guidance is drift (020's AC11 told adopters to configure a file 049 renamed — fixed in 317d678) while a `plan.md`, `review.md` or `tasks.md` recording what was decided when `.govern.toml` was current is history and stays. A blanket find-and-replace breaks the migration procedures and the runtime ladder, so this is per-hit judgment, not a rename sweep (captured during review of 020-code-review)
