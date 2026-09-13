@@ -17,12 +17,20 @@ review:
   blocking: false
 next-criterion: 16
 analyze:
-  last-run: 2026-09-06T14:12:55Z
-  analyzed-against: 683a1e03c463c62ea644a4466acc5873eba0d1a4
+  last-run: 2026-09-13T00:44:24Z
+  analyzed-against: dda0c8691455aa6ade83949b3ca2d5f819303172
   hard-fail: 0
   blocking-findings: 0
   advisory: 0
   unexamined: 0
+  analyzed-digest:
+    data-model.md: 44c01454d9ccde029033c2011dabff8249dc55dc82ed9ded3179de0ef50c1fd5
+    plan.md: f769f248afc56bec113d55e2a8e765c6ffea75d5bfd61aaea378504bef9dce8c
+    review.md: 4508f0a62bbebc0908dde0db8ccaa90457b427f93b449e43692a2462e0e5a7b4
+    scenarios/review-flag-parsing-is-specified.md: 9f1a3dd82bab2b9622808c31dd2bb00f0c6f403effeb8bb496bb4b329496e9c7
+    scenarios/waiver-expiry.md: 6b7309dd2c803a6fd1ecf5a6a92f8895011d787b334452ce5fb7f73274c77068
+    spec.md: 71d400b6592e7dd20f356acf608e4ff7764cc1700ba52f3500f2e8496e4200b6
+    tasks.md: 9d5c2bda283c5501dc998abf081ec5171c60100fe4b0b2639dec41916cf533f3
   blocking: false
 ---
 

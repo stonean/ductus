@@ -108,17 +108,18 @@ review:
   blocking: false
 next-criterion: 32
 analyze:
-  last-run: 2026-09-12T23:07:55Z
-  analyzed-against: c6d53d752c9a01928837a4556c1ff7a330bd7eb9
+  last-run: 2026-09-13T00:44:24Z
+  analyzed-against: dda0c8691455aa6ade83949b3ca2d5f819303172
   hard-fail: 0
   blocking-findings: 0
   advisory: 0
   unexamined: 0
   analyzed-digest:
-    data-model.md: 349916882855843a51c1568cd34bcfaebbdd109282ec28e93eca211e87799211
+    data-model.md: 4c2d7895323972f4a8e5480174c3f8ce605acc28a0f7c1c6b3572ff07fd8252a
     plan.md: 83fd97d76c64d20beb729ce68149d23f3e1e388711ec0371818aa49b4f0304bf
-    review.md: fa765f529b1a5717718ba0d5094c42676d0c431a62a4f211829e5384a5b69dfd
+    review.md: c1683c7dba7bfef1b211a9f6e569db6226d7963fe5284b1b1c934681456a978b
     scenarios/a-done-spec-has-no-transition-to-gate.md: bad3db76667fc6620b34a2a6dfa39fb6e461523984128314df82f05717a74493
+    scenarios/a-review-states-what-it-read.md: a9d8ffdd823dfec6ea56f7c57d84e375e39adfbaf83dc61e9a16099d1828bf1b
     scenarios/adopter-corpus-link-integrity.md: a36b79e3e04489a765cfab1c3e657ac0c34ef66a289d0512866a27303eeb5358
     scenarios/adopter-generator-promotion.md: 7a80f616c7247ba894f16efb34de307836ac317d6396224a420efce4218e7af2
     scenarios/analyze-artifact-checks.md: 5d8f5e76161fb02ff07c23d77a358349be4a04b7afae103b0136deb955c7e880
@@ -211,8 +212,8 @@ analyze:
     scenarios/writecode-boundary-derivation.md: 9e4d5b406b4d5e25c4a4dd9e5264995a5e4bc83075ec20eae2c3eb3e36adcd81
     scenarios/writecode-payload-bundling.md: 5c343929c3a42ac4406a02c173b6979231127b9583aabae171fee1f747d5084b
     scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
-    spec.md: 4c66eeb9be05e9b5e540618ec50bb10a36dccf700ad2be8bf0ca66e4ff757352
-    tasks.md: c7df4a9a605aa28c1a668f43306d36feac88b3dc67bba6a54826e2c81b43f1ef
+    spec.md: 1c6978b96828831a11cb56d440d4095b3bec8e86aab57f1472ee00b700189d3e
+    tasks.md: 71a1a978ce0501ca1a046e6413888e3a85e4cc06a8a8e85c374ec8c5beaf064d
   blocking: false
 ---
 
