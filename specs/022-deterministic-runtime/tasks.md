@@ -1,7 +1,6 @@
 # 022 — Deterministic Runtime Tasks
 
 Tasks derived from the [plan](plan.md). Complete in order. Each task is small enough to complete and verify in a single session; later tasks depend on earlier ones.
-<<<<<<< HEAD
 
 ## 129. The pi command candidate
 
@@ -30,5 +29,3 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] Implement the behavior described in `scenarios/a-multi-number-renumber-is-one-rewrite.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
-=======
->>>>>>> 7a5da6ee112275a12643e6a045c97709f221aca5
