@@ -197,14 +197,28 @@ impl SweepIndex {
     /// those are consequences of the repo-wide rewrite, not separate edits. A
     /// changed table cell (`30s` → `60s`) is derivable from no repo-wide
     /// rewrite, which is what keeps it a finding.
+    ///
+    /// The rewrites apply simultaneously, in one left-to-right pass: a
+    /// renumber that shifts `063` → `064` and `064` → `065` in the same sweep
+    /// must not chain `063` through to `065`.
     fn explained_by(&self, pair: &Pair) -> bool {
         let (old, new) = pair;
-        let mut rewritten = old.clone();
         // Longest first, so a shorter rewrite cannot pre-empt a longer one.
         let mut ordered: Vec<&Pair> = self.repo_wide.iter().collect();
         ordered.sort_by_key(|(o, _)| std::cmp::Reverse(o.len()));
-        for (from, to) in ordered {
-            rewritten = rewritten.replace(from.as_str(), to);
+        let mut rewritten = String::with_capacity(old.len());
+        let mut rest = old.as_str();
+        while let Some(ch) = rest.chars().next() {
+            if let Some((from, to)) = ordered
+                .iter()
+                .find(|(from, _)| !from.is_empty() && rest.starts_with(from.as_str()))
+            {
+                rewritten.push_str(to);
+                rest = &rest[from.len()..];
+            } else {
+                rewritten.push(ch);
+                rest = &rest[ch.len_utf8()..];
+            }
         }
         &rewritten == new
     }
@@ -520,5 +534,20 @@ mod tests {
             &[("gvrn_root", "ductus_root"), ("gvrn", "x")],
         );
         assert!(!idx.changed_beyond_spelling("a.md"));
+    }
+
+    #[test]
+    fn a_renumber_that_shifts_two_numbers_does_not_chain() {
+        // PR #5 renumbered 064 -> 065 and 063 -> 064 in one sweep. Applied in
+        // turn, `../063-x/spec.md` became `../064-x/…` and then `../065-x/…`,
+        // and a spelling-only link change read as a contract change.
+        let idx = index(
+            &[(
+                "specs/022/data-model.md",
+                Some(&[("../063-x/spec.md", "../064-x/spec.md")]),
+            )],
+            &[("063", "064"), ("064", "065")],
+        );
+        assert!(!idx.changed_beyond_spelling("specs/022/data-model.md"));
     }
 }

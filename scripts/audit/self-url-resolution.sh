@@ -82,9 +82,9 @@ SELF="scripts/audit/self-url-resolution.sh"
 # `codeload.github.com/<owner>/<repo>/tar.gz/{archive-ref}` is the archive every
 # `/ductus` run fetches, whichever source it resolved, so the slug in it is the
 # one authority this repository has for its own identity.
-repo_slug="$(grep -oE 'https://codeload\.github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/tar\.gz/' "$MANIFEST_FILE" 2> /dev/null \
-  | head -1 \
-  | sed -E 's#https://codeload\.github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/tar\.gz/#\1#')"
+# The `owner/repo` may sit inside a `\${DUCTUS_REPO:-…}` default (spec 065);
+# the sed unwraps it so the default is the slug either way.
+repo_slug="$(sed -nE 's#.*codeload\.github\.com/(\$\{DUCTUS_REPO:-)?([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)\}?/tar\.gz/.*#\2#p' "$MANIFEST_FILE" 2> /dev/null | head -1)"
 
 if [ -z "$repo_slug" ]; then
   emit "$MANIFEST_FILE" \

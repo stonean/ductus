@@ -8,6 +8,15 @@
 # removing a tool in runtime-tools.txt flows through to every file on
 # the next commit via the pre-commit hook.
 #
+# Pi (064) is excluded by name from this generator: Pi has no
+# MCP-permission shape — its tools arrive through the
+# `.pi/extensions/ductus.ts` extension bridge (which owns the
+# `ductus__<name>` naming), and Pi has no permission-gating settings at
+# all, so there is no permission block to generate and no canonical entry
+# to keep in parity. The pi exclusion is stated here rather than silently
+# omitted: a future agent with a true MCP-permission shape belongs in the
+# `{claude,auggie,antigravity,opencode}` set above and in this header.
+#
 # Marker pair (all four files):
 #   <!-- generated:mcp-allow:start -->
 #   <!-- generated:mcp-allow:end -->

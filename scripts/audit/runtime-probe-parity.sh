@@ -34,6 +34,9 @@
 #   opencode     "command -v *": "allow"  (the bash permission-map entry)
 #
 # Adding another agent that wires the probe is one extra check_agent line below.
+# Adding an agent that does **not** wire it (Pi — no permission-gating settings,
+# spec 064) is a named skip on stderr, never silence: the bound is visible in
+# this family and in its README description.
 # macOS bash 3.2: no associative arrays, no mapfile.
 
 set -uo pipefail
@@ -88,5 +91,13 @@ check_agent "claude"      "framework/bootstrap/configure/claude.md"      "Bash(c
 check_agent "auggie"      "framework/bootstrap/configure/auggie.md"      "^command -v "
 check_agent "antigravity" "framework/bootstrap/configure/antigravity.md" "command(which)"
 check_agent "opencode"    "framework/bootstrap/configure/opencode.md"    '"command -v *": "allow"'
+# Pi is skipped by name: Pi has no permission-gating settings (spec 064
+# §Verified Pi Layout), so there is no settings_template seed and no configure
+# permission set for a probe to live in — the probe concept doesn't apply, and
+# asserting its absence from two files that don't exist would be the
+# check-that-cannot-run failure. Stated here so the bound is visible: if Pi
+# ever gains a permission surface, this skip becomes the check_agent line the
+# generator-wiring entry promises.
+echo "runtime-probe-parity: skipped pi (no permission-gating settings — no seed and no configure set to probe)" >&2
 
 exit "$drift"

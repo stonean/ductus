@@ -1,17 +1,18 @@
 ---
 spec: 022-deterministic-runtime
-last-run: 2026-10-01T22:08:36Z
-analyzed-against: 7f1688a2cbbe12b68d8e541b6f5fe3f029c6e214
+last-run: 2026-10-06T14:41:08Z
+analyzed-against: aeeabaa4233297e1a4f5c4ce4c8ba221838fd83d
 hard-fail: 0
 blocking-findings: 0
-advisory: 9
-unexamined: 2
+advisory: 11
+unexamined: 0
 analyzed-digest:
-  data-model.md: 897814e43c7183efa578f6d819ccfc8ddcd71a108564a3a65039c33c787aecda
+  data-model.md: ea60d8b2d99fd38c8bc5bfe6a2b61edd0e34c1d9a42d0700f30586a5a1404694
   plan.md: 549a28e4de11de67d4a5fd75dd244f393987d9ef2d417bd86351fa948f07dfa9
-  review.md: 0fa57218626cebfbd12412141fea12e489b96eb073c6cd97936d99aa2c0c4559
+  review.md: 9b5e0b38cb283e8958f8c90a3e4a43c0d559573dbe7ad20147101e46b05e56ff
   scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md: d092f9d4f59c67c575cc59039a6e0fdf162546969de2820e747b609d7a3d43c7
   scenarios/a-done-spec-has-no-transition-to-gate.md: 2041c659a2dbee3e17a05a702a11c9b1f59d30ce68acc19f616889696b66da2b
+  scenarios/a-multi-number-renumber-is-one-rewrite.md: 04723ad01613f62b14008250c9890e20ac338de82c32bd2f0797580e30ae7be2
   scenarios/a-review-states-what-it-read.md: dd3d5e366e77ef782a9bcb90388b5bcfb5d4eb45176663d8138b18d41f5ff400
   scenarios/adopter-corpus-link-integrity.md: a36b79e3e04489a765cfab1c3e657ac0c34ef66a289d0512866a27303eeb5358
   scenarios/adopter-generator-promotion.md: 80ec329393c3b78c0926ef45f61792502c311b1bccaa0dba6526234bac53e161
@@ -24,6 +25,7 @@ analyzed-digest:
   scenarios/apply-manifest-substitution-contract.md: dfb59f607b4ac27dec233dca8c71742dbc2f139c98794829fad2cdfb8598d733
   scenarios/apply-manifest.md: e3f792134cfab148287877137d76f68879583d969b03e9dadcf7eb26df6dba20
   scenarios/archive-network-hardening.md: 127616981fb074c9e21ef54b4f58d74413f1fdc31af349529601b8dbc096a512
+  scenarios/argument-hint-needs-a-token.md: 2723dd354fa6c9d98403a199daf3a150f866d1ec4a4ebb702dd9df00a7d2b4cb
   scenarios/ask-consolidation.md: 5e79770b6fed76e68f42c52a0aaeeb88d2c64bc9bbd7d4b6fa13aece937b298b
   scenarios/block-element-scanner.md: 5a9512b307d28410b18d35199f01f7ceb1a7d250e8614cedb661d4104f7effdd
   scenarios/check-artifacts-skipped-targets.md: 4713c3cc6ada06504d74ed9a4a29fef3db3bb0e7a12b67bad2c4793699880d39
@@ -47,6 +49,7 @@ analyzed-digest:
   scenarios/derive-references-unstaged-drift-is-reported.md: 358d0b1eb96d338a4dee7ee026382bd9011599407d408d5921e564ec4862d846
   scenarios/derive-unparseable-frontmatter-is-reported.md: 5bb6709b881d43b5dc048ee95aebafcf207a18dbc75d5ab30dfb5689f1c077fb
   scenarios/done-when-authoring-forms.md: 080f8717135b67c8400e072dae02f172e40cb0b6ad596c3e227d6cc5f90d0191
+  scenarios/every-agents-generated-copies-are-excluded.md: 18c01a1d6ef37930d97e82e562add917622b290bd37895118b38dca23715d0f0
   scenarios/exec-analyze-derives-its-list-seeds.md: 9fda65d4cd7a5ec0fab7e07ba9d5d25e794944c967cd09e7b3547f8e1d560726
   scenarios/exec-clarify-asks-each-open-question.md: 4851dc543c6dd80603aa86c776543017b9ab1a7adac469e1b49ec311a9877cab
   scenarios/extension-request-hygiene.md: 1b0c77335af3a2caf82e01896207d60261cd0071a8bc8da3162b9785f7c16e48
@@ -105,6 +108,7 @@ analyzed-digest:
   scenarios/the-constitutions-registry-validates-its-values.md: 91d822062ae0e0d10a9796c7072a7cd03186283ba2aa7657b12a696f705bd2c2
   scenarios/the-cross-spec-impact-gate.md: 874fd2fbefdc6d39f38b8d136f921efc20a99968841d837ad2c91db7c7aa3799
   scenarios/the-inbox-row.md: f29a57dc733dfbaa62b54a94ca7486cb7fbc2c93d4a4e6ded07ab8714483ae04
+  scenarios/the-pi-command-candidate.md: 38e81f6ca1732254fee5cce65eb829a0026c30bdb846ff0c3a80b7a308ba94bb
   scenarios/the-promotion-coverage-line.md: 151e741fad3c4f953d85e14d3183fed27ef08bcce0cbd9b42ed7bc89e22fba29
   scenarios/traverse-deps-cycle-check.md: 76e9cb231afc1af9b9c4827a220efe8e33889028d16430a43e9e46d2d07be022
   scenarios/unchecked-done-when-clause-tally.md: d4ec04b41d2ddc3b7a656313cc45fa735eab43b2333c219b79cac10d5a60c88f
@@ -118,14 +122,12 @@ analyzed-digest:
   scenarios/writecode-payload-bundling.md: 5c343929c3a42ac4406a02c173b6979231127b9583aabae171fee1f747d5084b
   scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
   spec.md: ea12fb92d001ec16fd2b816f33a4b890fc1d660c36e436ac5eee39f9f41645e0
-  tasks.md: f45931ccc4ef82b32c5ef09a0c379b9b02947a85fd1a2a8736610f46c958ea06
-unexamined-by-reason:
-  not-a-live-claim: 2
+  tasks.md: 4582e85f47dfee044e44a7e9e6d0ee4e790c172a1f674e0300a86a2f2062eb83
 blocking: false
 dispositions:
   fixed: 0
   routed: 0
-  discarded: 9
+  discarded: 11
   undispositioned: 0
 decisions:
   - key: "rule-assessment — BE-METRIC-001: the MCP tool handlers commit to no rate, error or duration metrics"
@@ -173,13 +175,23 @@ decisions:
     reason: a duplicated name changes no meaning, and editing 022's data model stales its review digest for no gain
     decided-at: 2026-10-01T18:58:23Z
     decided-by: andy@stone.dev
+  - key: artifact-size — `specs/022-deterministic-runtime/spec.md` is 58291 bytes, 2 read pages at the 50000-byte read size
+    outcome: discarded
+    reason: "predates PR #5, which added two short scenarios; splitting or trimming the runtime's umbrella spec is its own work, not Pi support"
+    decided-at: 2026-10-06T14:41:08Z
+    decided-by: andy@stone.dev
+  - key: artifact-size — `specs/022-deterministic-runtime/data-model.md` is 121211 bytes, 3 read pages at the 50000-byte read size
+    outcome: discarded
+    reason: "predates PR #5, which added two short scenarios; splitting or trimming the runtime's umbrella spec is its own work, not Pi support"
+    decided-at: 2026-10-06T14:41:08Z
+    decided-by: andy@stone.dev
 ---
 
 # Analysis — 022-deterministic-runtime
 
 ## Summary
 
-0 hard-fail, 0 blocking, 9 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 routed, 9 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 11 advisory; not blocking. 0 unexamined target(s). Dispositions: 0 fixed, 0 routed, 11 discarded, 0 undispositioned.
 
 ## Hard failures
 
@@ -191,7 +203,7 @@ decisions:
 
 ## Advisory findings
 
-- rule-assessment — BE-METRIC-001: the MCP tool handlers commit to no rate, error or duration metrics — `specs/022-deterministic-runtime/plan.md` — **discarded**: the runtime is a per-agent stdio process with no metrics pipeline, and no primitive emits metrics; adding the first belongs to a spec about the runtime's observability (as discarded in 062's analysis)
+- rule-assessment — BE-METRIC-001: the MCP tool handlers commit to no rate, error or duration metrics — `specs/022-deterministic-runtime/spec.md` — **discarded**: the runtime is a per-agent stdio process with no metrics pipeline, and no primitive emits metrics; adding the first belongs to a spec about the runtime's observability (as discarded in 062's analysis)
 - grounding — spec.md says a single-feature /ductus:analyze takes 2-4 minutes of LLM wall-clock time today — `specs/022-deterministic-runtime/spec.md` — **discarded**: a motivation measured when the spec was written, describing the problem the runtime was built to solve rather than current behavior
 - grounding — spec.md says 11 of 13 analyze check sections are mechanical — `specs/022-deterministic-runtime/spec.md` — **discarded**: a motivation measured when the spec was written; analyze's sections have since been restructured, and the claim records the case for the runtime, not current behavior
 - grounding — spec.md and plan.md call rmcp the reference MCP SDK — `specs/022-deterministic-runtime/spec.md` — **discarded**: the rationale for a 2026-05 dependency choice, recorded in a Resolved Question and the plan's dependency list
@@ -200,10 +212,12 @@ decisions:
 - grounding — plan.md says POSIX rename is atomic and Windows rename is weaker — `specs/022-deterministic-runtime/plan.md` — **discarded**: a property of the platforms the atomic-write design rests on, stated as rationale; the CI matrix exercises the write on all three
 - grounding — plan.md says certain markdown extensions are off by default in pulldown-cmark — `specs/022-deterministic-runtime/plan.md` — **discarded**: rationale for a rejected alternative in Trade-offs; no current behavior rests on it
 - data-model — data-model.md names check-orphaned-references twice in one list — `specs/022-deterministic-runtime/data-model.md` — **discarded**: a duplicated name changes no meaning, and editing 022's data model stales its review digest for no gain
+- artifact-size — `specs/022-deterministic-runtime/spec.md` is 58291 bytes, 2 read pages at the 50000-byte read size — `specs/022-deterministic-runtime/spec.md` — **discarded**: predates PR #5, which added two short scenarios; splitting or trimming the runtime's umbrella spec is its own work, not Pi support
+- artifact-size — `specs/022-deterministic-runtime/data-model.md` is 121211 bytes, 3 read pages at the 50000-byte read size — `specs/022-deterministic-runtime/data-model.md` — **discarded**: predates PR #5, which added two short scenarios; splitting or trimming the runtime's umbrella spec is its own work, not Pi support
 
 ## Unexamined targets
 
-- not-a-live-claim: 2
+*None — every target was examined.*
 
 ## Fixed in this run
 

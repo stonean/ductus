@@ -9,7 +9,8 @@
 # directory basename when the key is absent. Every runtime-rendered
 # next-action string ("Run /{project}:target …") is built from that value.
 # The slash commands themselves live in `{cli-config-dir}/commands/<ns>/`
-# (or `command/<ns>/` for opencode's singular layout).
+# (or `command/<ns>/` for opencode's singular layout, or the flat
+# `{config_dir}/prompts/{project}-*.md` prompt templates for pi, spec 064).
 #
 # Nothing compared the two. A repo whose `[host]` block is missing — or
 # whose `project` disagrees with the installed directory — renders
@@ -27,7 +28,8 @@
 #       the repo directory basename.
 #   17b Collect the installed namespace directories under every agent
 #       config dir present in the repo, trying both the plural
-#       `commands/` and singular `command/` layouts.
+#       `commands/` and singular `command/` layouts, plus the pi
+#       `{project}-*.md` flat prompt-template prefix shape.
 #   17c Emit a finding for each agent config dir that has installed
 #       namespaces but none matching the effective one.
 #
@@ -160,6 +162,14 @@ assert_contract "$ROOT/runtime/src/schema/paths.rs" '.ductus/config.toml' \
 
 # --- 17b/17c: compare against the installed namespaces ----------------------
 
+# The command names a pi prompt template can end in: every command source
+# plus the per-agent configure command.
+COMMAND_NAMES=(configure)
+for src in "$ROOT"/framework/commands/*.md; do
+  COMMAND_NAMES+=("$(basename "$src" .md)")
+done
+
+
 for cli_dir in "${CLI_DIRS[@]}"; do
   [ -d "$cli_dir" ] || continue
 
@@ -175,6 +185,21 @@ for cli_dir in "${CLI_DIRS[@]}"; do
     for ns_path in "$cli_dir/$subdir"/*/; do
       [ -d "$ns_path" ] || continue
       installed+=("$(basename "$ns_path")")
+    done
+  done
+  # Third layout: pi's flat prompt templates, `{config_dir}/prompts/{ns}-{name}.md`
+  # (spec 064). There is no namespace directory, and a namespace may itself
+  # contain hyphens, so the namespace is whatever precedes `-{name}` for a
+  # known command name — whether or not it matches, since a mismatch is what
+  # this family reports. The `ductus.md` self-install and an adopter's own
+  # templates end in no command name and name no namespace.
+  for prompt_file in "$cli_dir/prompts/"*.md; do
+    [ -f "$prompt_file" ] || continue
+    base="$(basename "$prompt_file" .md)"
+    for name in "${COMMAND_NAMES[@]}"; do
+      case "$base" in
+        *-"$name") installed+=("${base%-"$name"}"); break ;;
+      esac
     done
   done
 

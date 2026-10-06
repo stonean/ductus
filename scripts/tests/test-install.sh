@@ -27,6 +27,10 @@
 #   P. an unknown --ref value halts before any network call
 #   Q. a repeated --ref halts naming every value
 #   R. an unknown flag halts
+#   S. DUCTUS_REPO names the fork every fetch goes to, is announced, and the
+#      next step says to export it to the agent
+#   T. an empty DUCTUS_REPO is the canonical origin, unannounced
+#   U. the pi agent installs .pi/prompts/ductus.md and writes no settings file
 #
 # Each assertion was shown to fail against an installer with its check
 # removed before it was trusted (spec 061, task 5).
@@ -303,6 +307,40 @@ if [ "$rc" -ne 0 ] && wrote_nothing r-flag && out r-flag | grep -qF "unknown fla
   pass "R: an unknown flag halts"
 else
   fail "R: unknown flag (rc=$rc): $(out r-flag)"
+fi
+
+# S. DUCTUS_REPO names the fork both fetches go to, and the installer says so:
+# a variable left set in a shell profile must not silently change the origin.
+STUB_LOCATION="https://github.com/fork/ductus/releases/tag/ductus-v99.0.0" \
+  DUCTUS_REPO=fork/ductus run s-fork
+if [ "$rc" -eq 0 ] && fetched s-fork "https://github.com/fork/ductus/releases/latest" \
+  && fetched s-fork "https://raw.githubusercontent.com/fork/ductus/ductus-v99.0.0/framework/bootstrap/ductus.md" \
+  && ! fetched s-fork "stonean/ductus" \
+  && out s-fork | grep -qF "source repository is fork/ductus (from DUCTUS_REPO)" \
+  && out s-fork | grep -qF "start your agent with DUCTUS_REPO=fork/ductus exported"; then
+  pass "S: DUCTUS_REPO sends every fetch to the fork, announces it, and says to export it"
+else
+  fail "S: DUCTUS_REPO fork (rc=$rc): $(out s-fork)"
+fi
+
+# T. an empty DUCTUS_REPO is the canonical origin, and nothing is announced.
+STUB_LOCATION="$TAG_URL/ductus-v99.0.0" DUCTUS_REPO="" run t-empty
+if [ "$rc" -eq 0 ] && fetched t-empty "$LATEST" \
+  && ! out t-empty | grep -qF "source repository is" \
+  && ! out t-empty | grep -qF "DUCTUS_REPO="; then
+  pass "T: an empty DUCTUS_REPO is the canonical origin, unannounced"
+else
+  fail "T: empty DUCTUS_REPO (rc=$rc): $(out t-empty)"
+fi
+
+# U. pi installs the bootstrap as a prompt template and seeds no settings:
+# Pi has no permission-gating settings to pre-authorize.
+run u-pi --ref=main pi
+if [ "$rc" -eq 0 ] && [ -f "$WORK/u-pi/.pi/prompts/ductus.md" ] \
+  && [ "$(cd "$WORK/u-pi" && find . -path ./.git -prune -o -type f -print)" = "./.pi/prompts/ductus.md" ]; then
+  pass "U: pi installs .pi/prompts/ductus.md and nothing else"
+else
+  fail "U: pi agent (rc=$rc): $(out u-pi)"
 fi
 
 echo

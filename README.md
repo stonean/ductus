@@ -2,7 +2,7 @@
 
 **Spec-driven development for AI coding agents.** Describe a feature in plain English; your agent turns it into a spec, a plan, tasks, and reviewed code — and every feature lands with a written record of *why* it was built the way it is.
 
-`ductus` is tech-stack agnostic and its artifacts are plain markdown, so nothing is added to your project's dependency manifest and there is nothing to compile. You install a single command, and `/ductus` acquires everything else — including the deterministic runtime the pipeline executes on. It works with Claude Code, Auggie, Antigravity, and OpenCode.
+`ductus` is tech-stack agnostic and its artifacts are plain markdown, so nothing is added to your project's dependency manifest and there is nothing to compile. You install a single command, and `/ductus` acquires everything else — including the deterministic runtime the pipeline executes on. It works with Claude Code, Auggie, Antigravity, OpenCode, and Pi.
 
 ## Why ductus
 
@@ -61,7 +61,7 @@ You don't have to start at `draft`. A brownfield feature can enter with a sparse
 
 Adoption installs a full set of verb-named, session-aware commands. Use `/target` to switch the working feature; `/specify` creates one and targets it automatically.
 
-Command names below are written bare for readability. As installed they carry your project's namespace — `/my-project:specify` on Claude Code and Auggie; `/my-project-specify` on Antigravity, which discovers flat-named skills rather than a namespaced command directory; `/my-project/specify` on OpenCode, which namespaces by subdirectory.
+Command names below are written bare for readability. As installed they carry your project's namespace — `/my-project:specify` on Claude Code and Auggie; `/my-project-specify` on Antigravity, which discovers flat-named skills rather than a namespaced command directory; `/my-project-specify` on Pi, which discovers flat-named prompt templates the same way; `/my-project/specify` on OpenCode, which namespaces by subdirectory.
 
 Each entry below says what the command **does**; the section it links to says when you would reach for it and why it exists.
 
@@ -172,12 +172,13 @@ curl --proto '=https' --tlsv1.2 -sSfL https://github.com/stonean/ductus/releases
 | Auggie | `auggie` | `.augment/commands/ductus.md` | Reads `CLAUDE.md` natively. Needs a one-time manual MCP registration — see [Registering the runtime](docs/runtime.md#registering-the-runtime). |
 | Antigravity | `antigravity` (or `agy`) | `.agents/skills/ductus/SKILL.md` | Wrapped as a skill, since Antigravity discovers dir-form skills rather than verbatim command files. Reads `AGENTS.md`. Needs a one-time manual MCP registration. |
 | OpenCode | `opencode` | `.opencode/command/ductus.md` | Reads `AGENTS.md` natively — no `CLAUDE.md`. `/ductus` writes the project's root `opencode.json`; because OpenCode loads config once at startup, restart it after the first wiring. |
+| Pi | `pi` | `.pi/prompts/ductus.md` | Installed as a prompt template, which Pi expands natively (arguments, `description`/`argument-hint` frontmatter). Reads `AGENTS.md`. `/ductus` writes the `.pi/extensions/ductus.ts` bridge that exposes the runtime tools (Pi has no built-in MCP); accept the project-trust prompt once, then restart pi after wiring. |
 
 Then run `/ductus {project-name}` in your agent. The installer creates the right directory for your agent and drops the bootstrap command in place; it's safe to re-run.
 
 To start from another source, add `--ref` beside the agent argument — `sh -s -- claude --ref=main` for the tip of `main`, or `--ref=ductus-v0.55.0` for a named release — then run `/ductus --ref=<the same value> {project-name}`. The installer writes no project configuration, so that first `/ductus` run is what records the choice; a plain `/ductus` would use the latest release (see [Updating an adopted project](#updating-an-adopted-project)).
 
-The same bootstrap supports every agent, so re-run `/ductus --add-agent` from any adopted agent later to add others. `/ductus` acquires the runtime and wires it in the same run — automatically for Claude and OpenCode (both keep MCP config in a committed repo file), or by surfacing a one-time registration step for Auggie and Antigravity (see [Registering the runtime](docs/runtime.md#registering-the-runtime)).
+The same bootstrap supports every agent, so re-run `/ductus --add-agent` from any adopted agent later to add others. `/ductus` acquires the runtime and wires it in the same run — automatically for Claude, OpenCode, and Pi (the first two keep MCP config in a committed repo file, and Pi's bridge is a project-local extension file), or by surfacing a one-time registration step for Auggie and Antigravity (see [Registering the runtime](docs/runtime.md#registering-the-runtime)).
 
 ## Brownfield adoption
 

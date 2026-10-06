@@ -27,7 +27,7 @@
 
 use std::path::{Component, Path, PathBuf};
 
-use crate::host::Host;
+use crate::host::AGENT_CONFIG_DIRS;
 use crate::primitives::spec_links::is_frontmatter_fence;
 use crate::primitives::{Result, inline_code_spans, rel_path};
 use crate::schema::paths;
@@ -54,13 +54,6 @@ pub fn run(args: &CheckCorpusLinksArgs, repo: &Path) -> Result<CheckCorpusLinksR
         scope: args.scope,
         ..CheckCorpusLinksResult::default()
     };
-
-    // The generated command copies live under the *host's* config dir, which
-    // varies by agent (`.claude`, `.augment`, `.agents`, `.opencode`).
-    // Resolved rather than hardcoded: a literal `.claude/` here would examine
-    // every other host's generated copies and report their links — which are
-    // broken by construction — as defects an adopter cannot fix.
-    let commands_dir = format!("{}/", Host::load(repo).cli_config_dir);
 
     let mut files = Vec::new();
     let mut walk_skips = Vec::new();
@@ -97,7 +90,7 @@ pub fn run(args: &CheckCorpusLinksArgs, repo: &Path) -> Result<CheckCorpusLinksR
         let relative = rel_path(&path, repo);
         // Excluded **by construction**, because a link that does not resolve
         // here is the correct state. Counted, never silently dropped.
-        if is_excluded(&relative, &specs_root, &commands_dir, args.scope) {
+        if is_excluded(&relative, &specs_root, args.scope) {
             result.excluded_by_construction += 1;
             continue;
         }
@@ -154,7 +147,7 @@ fn collect_tracked_markdown(repo: &Path, out: &mut Vec<PathBuf>) -> bool {
 /// Each entry is a path whose links are *correct* to not resolve from where
 /// they sit, and each is counted rather than dropped so the verdict's scope
 /// stays legible.
-fn is_excluded(relative: &str, specs_root: &str, commands_dir: &str, scope: LinkScope) -> bool {
+fn is_excluded(relative: &str, specs_root: &str, scope: LinkScope) -> bool {
     // Adopter-facing templates, on both scopes: their links resolve in a
     // scaffolded feature directory, not in the template's own.
     if relative.starts_with(&format!("{specs_root}/templates/")) {
@@ -166,9 +159,13 @@ fn is_excluded(relative: &str, specs_root: &str, commands_dir: &str, scope: Link
             // Generated command copies: the generator rewrites no relative
             // links when it changes the file's depth, so the copies' links
             // are broken by construction while the sources' are correct.
-            // Auditing them would report the generator on every run. The
-            // directory is the host's, resolved by the caller.
-            relative.starts_with(commands_dir)
+            // Auditing them would report the generator on every run. Every
+            // registry agent's config dir, not only the session's: a
+            // repository can commit more than one agent's copies, and a
+            // session of one agent must not report another's.
+            AGENT_CONFIG_DIRS
+                .iter()
+                .any(|dir| relative.strip_prefix(dir).is_some_and(|rest| rest.starts_with('/')))
                 // Project templates, whose links resolve in the adopter's
                 // repo root after scaffolding rather than here.
                 || relative.starts_with("framework/templates/project/")
@@ -928,6 +925,48 @@ mod tests {
         // Counted, never silently dropped — the count is what makes the
         // verdict's scope legible.
         assert_eq!(result.excluded_by_construction, 3);
+    }
+
+    #[test]
+    fn every_agents_generated_copies_are_excluded_whatever_the_sessions_agent() {
+        // This repository commits Claude's and Pi's copies; a session of
+        // either agent reported the other's links, broken by construction.
+        let copies = [
+            GENERATED_COPY,
+            ".pi/prompts/ductus-x.md",
+            ".opencode/command/ductus/x.md",
+            ".agents/skills/ductus-x/SKILL.md",
+            ".augment/commands/ductus/x.md",
+        ];
+        for session_dir in AGENT_CONFIG_DIRS {
+            let tmp = tempdir().unwrap();
+            let repo = git2::Repository::init(tmp.path()).unwrap();
+            write(
+                tmp.path(),
+                ".ductus/session.toml",
+                &format!("cli-config-dir = \"{session_dir}\"\n"),
+            );
+            let mut index = repo.index().unwrap();
+            for rel in copies {
+                write(tmp.path(), rel, "# X\n\n[gone](../nowhere.md)\n");
+                index.add_path(Path::new(rel)).unwrap();
+            }
+            // A dot-directory no agent owns is not a generated copy.
+            write(tmp.path(), ".github/x.md", "# X\n\n[gone](../nowhere.md)\n");
+            index.add_path(Path::new(".github/x.md")).unwrap();
+            index.write().unwrap();
+
+            let result = run(
+                &CheckCorpusLinksArgs {
+                    scope: LinkScope::Repository,
+                },
+                tmp.path(),
+            )
+            .unwrap();
+            let broken: Vec<&str> = result.broken.iter().map(|b| b.path.as_str()).collect();
+            assert_eq!(broken, [".github/x.md"], "session {session_dir}");
+            assert_eq!(result.excluded_by_construction, 5, "session {session_dir}");
+        }
     }
 
     #[test]

@@ -1,5 +1,9 @@
-//! `check-command-flags` — every flag a command's Flags table documents also
-//! appears in that command's `argument-hint:` frontmatter.
+//! `check-command-flags` — a command's declared interface agrees with the
+//! body a host substitutes into. Two directions, checked in one pass: every
+//! flag a `Flags` table documents appears in the `argument-hint:` frontmatter
+//! (direction 1), and a command that declares an `argument-hint` carries a
+//! substitution token in its body (direction 3) — without one the host drops
+//! the argument and the declared interface is unreachable.
 //!
 //! `argument-hint` is the surface a host renders when it offers the command,
 //! so a flag absent from it is a flag the operator is never shown. An adopter
@@ -11,6 +15,15 @@
 //! Measured against that state: 6 findings — `--security`, `--simplicity`,
 //! `--quality`, `--since`, `--waive`, and `--reason`, the last because the
 //! waiver row names both halves of the pair. 0 once the hint was corrected.
+//!
+//! Direction 3 is the converse defect, and it is silent in the other
+//! direction: a host injects the invocation's arguments through substitution
+//! alone (Pi's `substituteArgs` has no fallback that appends an unreferenced
+//! argument), so a command whose declared hint outruns its body reads its
+//! no-argument branch however the operator invokes it. `target`, `link`, and
+//! `prune` each carried a hint and no token. The subject is every examined
+//! command that declares a hint, whether or not it has a `Flags` table;
+//! [`with_argument_hint`] is that direction's denominator.
 //!
 //! ## Why the subject is `framework/commands/`
 //!
@@ -37,6 +50,7 @@
 //!
 //! [`examined`]: crate::schema::primitives::CheckCommandFlagsResult::examined
 //! [`with_flags_table`]: crate::schema::primitives::CheckCommandFlagsResult::with_flags_table
+//! [`with_argument_hint`]: crate::schema::primitives::CheckCommandFlagsResult::with_argument_hint
 //!
 //! Section membership comes from [`super::section_line_indices`], the shared
 //! fence- and comment-aware scanner, rather than a second heading walk here:
@@ -66,6 +80,7 @@ pub fn run(_args: &CheckCommandFlagsArgs, repo: &Path) -> Result<CheckCommandFla
 
     let mut examined = Vec::new();
     let mut with_flags_table = Vec::new();
+    let mut with_argument_hint = Vec::new();
     let mut skipped = Vec::new();
     let mut findings = Vec::new();
 
@@ -87,6 +102,7 @@ pub fn run(_args: &CheckCommandFlagsArgs, repo: &Path) -> Result<CheckCommandFla
                 findings,
                 examined,
                 with_flags_table,
+                with_argument_hint,
                 skipped,
                 commands_dir: COMMANDS_DIR.to_string(),
                 guidance: String::new(),
@@ -108,35 +124,14 @@ pub fn run(_args: &CheckCommandFlagsArgs, repo: &Path) -> Result<CheckCommandFla
             }
         };
         examined.push(rel.clone());
-
-        let flags = tabled_flags(&content);
-        if flags.is_empty() {
-            continue;
-        }
-        with_flags_table.push(rel.clone());
-
-        let Some(hint) = argument_hint(&content, path) else {
-            findings.push(CommandFlagFinding {
-                command: rel,
-                flag: String::new(),
-                reason:
-                    "documents a Flags table but declares no argument-hint, so no flag is surfaced"
-                        .to_string(),
-            });
-            continue;
-        };
-
-        for flag in flags {
-            if !hint_names(&hint, &flag) {
-                findings.push(CommandFlagFinding {
-                    command: rel.clone(),
-                    reason: format!(
-                        "Flags table documents {flag} but argument-hint omits it, so it is never surfaced"
-                    ),
-                    flag,
-                });
-            }
-        }
+        check_one(
+            &rel,
+            &content,
+            path,
+            &mut findings,
+            &mut with_flags_table,
+            &mut with_argument_hint,
+        );
     }
 
     // An empty derivation over a non-empty subject means the extraction broke,
@@ -155,28 +150,97 @@ pub fn run(_args: &CheckCommandFlagsArgs, repo: &Path) -> Result<CheckCommandFla
         findings,
         examined,
         with_flags_table,
+        with_argument_hint,
         skipped,
         commands_dir: COMMANDS_DIR.to_string(),
         guidance,
     })
 }
 
+/// The two directions for one command file, appending each result to the
+/// run's accumulators.
+///
+/// Split out of [`run`] so the loop stays a loop. The two directions are
+/// genuinely separate checks that happen to share a file, and extracting them
+/// is the right answer where a `#[allow(clippy::too_many_lines)]` would have
+/// hidden a body that had outgrown one screen.
+fn check_one(
+    rel: &str,
+    content: &str,
+    path: &Path,
+    findings: &mut Vec<CommandFlagFinding>,
+    with_flags_table: &mut Vec<String>,
+    with_argument_hint: &mut Vec<String>,
+) {
+    let declared = hint_and_body(content, path);
+    let hint = declared.as_ref().map(|(hint, _)| hint.clone());
+
+    // Direction 3: a declared interface the host cannot reach. The argument
+    // arrives through substitution alone, so a hint with no token in the body
+    // is an interface that silently discards its argument. The subject is any
+    // command declaring a hint, table or not, so this runs before the
+    // Flags-table narrowing below.
+    if let Some((_, body)) = declared.as_ref() {
+        with_argument_hint.push(rel.to_string());
+        if !has_substitution_token(body) {
+            findings.push(CommandFlagFinding {
+                command: rel.to_string(),
+                direction: "hint-unreachable".to_string(),
+                flag: String::new(),
+                reason: "declares an argument-hint but its body carries no substitution token ($ARGUMENTS, $@, $1, ${N:-\u{2026}}, ${@:-\u{2026}}, ${@:N}, ${@:N:L}), so the host silently discards the argument".to_string(),
+            });
+        }
+    }
+
+    // Direction 1: a tabled flag the hint omits.
+    let flags = tabled_flags(content);
+    if flags.is_empty() {
+        return;
+    }
+    with_flags_table.push(rel.to_string());
+
+    let Some(hint) = hint else {
+        findings.push(CommandFlagFinding {
+            command: rel.to_string(),
+            direction: "flag-unsurfaced".to_string(),
+            flag: String::new(),
+            reason: "documents a Flags table but declares no argument-hint, so no flag is surfaced"
+                .to_string(),
+        });
+        return;
+    };
+
+    for flag in flags {
+        if !hint_names(&hint, &flag) {
+            findings.push(CommandFlagFinding {
+                command: rel.to_string(),
+                direction: "flag-unsurfaced".to_string(),
+                reason: format!(
+                    "Flags table documents {flag} but argument-hint omits it, so it is never surfaced"
+                ),
+                flag,
+            });
+        }
+    }
+}
+
 /// The `argument-hint:` value from the leading frontmatter block, with
-/// surrounding quotes stripped.
+/// surrounding quotes stripped, and the body after that block — the text a
+/// host substitutes into, and so the subject of the token direction.
 ///
 /// Where the frontmatter block ends is [`super::split_frontmatter`]'s
 /// question, not this function's — it already handles the CRLF opener and the
 /// empty-block (`---\n---\n`) case, and a second definition here would be a
 /// second place for that boundary to drift. A file with no frontmatter is
 /// `None` rather than an error, which is why the result is discarded with
-/// `.ok()`: an absent block is a legitimate state for a command file, not a
-/// failure to report.
+/// `.ok()`: a command file that declares no hint is not a subject for either
+/// direction, rather than a failure to report.
 ///
 /// Scans the frontmatter only. An `argument-hint:` line in the body is prose
 /// about the field — several command files discuss it — and is not the
 /// declaration a host reads.
-fn argument_hint(content: &str, path: &Path) -> Option<String> {
-    let (frontmatter, _body) = super::split_frontmatter(content, path).ok()?;
+fn hint_and_body(content: &str, path: &Path) -> Option<(String, String)> {
+    let (frontmatter, body) = super::split_frontmatter(content, path).ok()?;
     for raw in frontmatter.lines() {
         let line = raw.strip_suffix('\r').unwrap_or(raw);
         if let Some(value) = line.strip_prefix("argument-hint:") {
@@ -190,10 +254,44 @@ fn argument_hint(content: &str, path: &Path) -> Option<String> {
                         .and_then(|v| v.strip_suffix('\''))
                 })
                 .unwrap_or(trimmed);
-            return Some(unquoted.to_string());
+            return Some((unquoted.to_string(), body.to_string()));
         }
     }
     None
+}
+
+/// Whether `text` carries a prompt-template substitution token a host
+/// expands — `$ARGUMENTS`, `$@`, `$<digit>`, or a `${…}` whose first
+/// character is `@` or a digit (`${1:-default}`, `${@:2}`, `${@:2:3}`).
+///
+/// Deliberately permissive about the braced form's tail, because the token
+/// set is the union of what the supported hosts expand and the check must not
+/// report a command that legitimately uses `$1` or `${@:N}`. A token the
+/// scanner misses makes the check silent, never falsely loud — the safe
+/// direction for a gate, and the reason the scan is a character walk rather
+/// than a list of complete spellings.
+fn has_substitution_token(text: &str) -> bool {
+    if text.contains("$ARGUMENTS") {
+        return true;
+    }
+    let bytes = text.as_bytes();
+    let mut i = 0;
+    while i + 1 < bytes.len() {
+        if bytes[i] == b'$' {
+            let next = bytes[i + 1];
+            if next == b'@' || next.is_ascii_digit() {
+                return true;
+            }
+            if next == b'{' && i + 2 < bytes.len() {
+                let first = bytes[i + 2];
+                if first == b'@' || first.is_ascii_digit() {
+                    return true;
+                }
+            }
+        }
+        i += 1;
+    }
+    false
 }
 
 /// Every distinct `--flag` named in the first cell of a table row inside a
@@ -291,24 +389,19 @@ mod tests {
         format!("---\ndescription: x\n{hint_line}---\n\n{body}\n")
     }
 
+    fn hint(content: &str, path: &str) -> Option<String> {
+        hint_and_body(content, Path::new(path)).map(|(hint, _)| hint)
+    }
+
     #[test]
     fn reads_the_hint_from_frontmatter_only() {
         let content = command(Some("[--all] [feature]"), "argument-hint: not frontmatter");
-        assert_eq!(
-            argument_hint(&content, Path::new("review.md")).unwrap(),
-            "[--all] [feature]"
-        );
+        assert_eq!(hint(&content, "review.md").unwrap(), "[--all] [feature]");
     }
 
     #[test]
     fn a_file_without_frontmatter_has_no_hint() {
-        assert!(
-            argument_hint(
-                "# Title\n\nargument-hint: \"[--x]\"\n",
-                Path::new("review.md")
-            )
-            .is_none()
-        );
+        assert!(hint("# Title\n\nargument-hint: \"[--x]\"\n", "review.md").is_none());
     }
 
     #[test]
@@ -316,16 +409,43 @@ mod tests {
         // `---\n---\n` is the case a hand-rolled scan gets wrong: the closing
         // fence is the very next line. split_frontmatter handles it, so this
         // is None (no hint declared), not a swallowed error.
-        assert!(argument_hint("---\n---\n\n# Title\n", Path::new("x.md")).is_none());
+        assert!(hint("---\n---\n\n# Title\n", "x.md").is_none());
     }
 
     #[test]
     fn a_crlf_frontmatter_opener_is_read() {
         let content = "---\r\ndescription: x\r\nargument-hint: \"[--all]\"\r\n---\r\n\r\nbody\r\n";
-        assert_eq!(
-            argument_hint(content, Path::new("x.md")).unwrap(),
-            "[--all]"
-        );
+        assert_eq!(hint(content, "x.md").unwrap(), "[--all]");
+    }
+
+    #[test]
+    fn the_token_scanner_accepts_the_whole_set() {
+        for token in [
+            "$ARGUMENTS",
+            "$@",
+            "$1",
+            "${1:-x}",
+            "${@:-x}",
+            "${@:2}",
+            "${@:2:3}",
+        ] {
+            assert!(has_substitution_token(token), "{token} must be accepted");
+        }
+    }
+
+    #[test]
+    fn a_tokenless_body_is_the_direction_three_defect() {
+        // `target.md`'s shape before the fix: a declared hint, prose that
+        // names the argument, and no token the host can substitute into.
+        assert!(!has_substitution_token(
+            "# Target\n\nSet the feature when the invocation has an argument.\n"
+        ));
+        assert!(has_substitution_token(
+            "# Target\n\nInvocation arguments: `$ARGUMENTS` (empty when none).\n"
+        ));
+        // A bare `$` before a word is prose, not a token. Reporting it as one
+        // would make the check miss a genuinely tokenless command.
+        assert!(!has_substitution_token("costs $x and $foo"));
     }
 
     #[test]

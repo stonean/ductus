@@ -2,6 +2,14 @@
 .claude/*
 !.claude/commands/
 
+# Pi local scaffolding (keep the prompt templates and the bridge tracked for
+# project-wide access, mirroring the .claude/ convention). Everything else
+# under .pi/ — settings, themes, session state — is per-contributor and
+# re-scaffolded by /ductus.
+.pi/*
+!.pi/prompts/
+!.pi/extensions/
+
 # ductus session state — per-user, ephemeral; managed by /ductus:target.
 # Anchored to the repo root (leading `/`) so the fixtures' session files
 # at `runtime/tests/fixtures/*/` (legacy root `.govern.session.toml` and

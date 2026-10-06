@@ -27,6 +27,15 @@
 # surfaced", never "every documented flag is surfaced"; the counts go to
 # stderr so the two do not read alike.
 #
+# TWO DIRECTIONS. Direction 1 is the above: a tabled flag absent from the hint.
+# Direction 3 is the converse — a command that declares an `argument-hint` but
+# carries no substitution token in its body. A host injects arguments through
+# substitution alone (Pi's `substituteArgs` has no append fallback), so such a
+# command reads its no-argument branch however it is invoked and the argument
+# is silently dropped. `target`, `link`, and `prune` each shipped that way.
+# `with-argument-hint` is direction 3's denominator, and both counts go to
+# stderr.
+#
 # MEASURED. 6 findings at the commit before `review.md`'s hint was corrected
 # (`--security`, `--simplicity`, `--quality`, `--since`, `--waive`, and
 # `--reason` — the waiver row names both halves of the pair); 0 after.
@@ -85,13 +94,19 @@ for skip in data.get("skipped", []):
 
 for f in data.get("findings", []):
     flag = f.get("flag", "")
-    fix = ("add %s to the argument-hint: frontmatter field" % flag) if flag \
-        else "add an argument-hint: frontmatter field naming each flag in the table"
+    if f.get("direction", "") == "hint-unreachable":
+        fix = "add a substitution token ($ARGUMENTS) to the command body so the host can inject the argument"
+    elif flag:
+        fix = "add %s to the argument-hint: frontmatter field" % flag
+    else:
+        fix = "add an argument-hint: frontmatter field naming each flag in the table"
     print("\t".join([f["command"], f["reason"], fix]))
 
-counts = (len(data.get("examined", [])), len(data.get("with-flags-table", [])))
+counts = (len(data.get("examined", [])), len(data.get("with-flags-table", [])),
+          len(data.get("with-argument-hint", [])))
 sys.stderr.write(
-    "command-flag-hint: examined %d command file(s); %d with a flags table\n" % counts)
+    "command-flag-hint: examined %d command file(s); %d with a flags table; "
+    "%d with an argument-hint\n" % counts)
 '
 )" || {
   emit "(precondition)" \

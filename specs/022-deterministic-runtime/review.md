@@ -1,18 +1,19 @@
 ---
 spec: 022-deterministic-runtime
-last-run: 2026-10-01T22:06:13Z
-reviewed-against: c9ccf64c1bc3b511392c36ec597ce746bdc8fd1b
-diff-base: 38112a1d4f001640858dbc4488900733a62ff7b2
+last-run: 2026-10-06T14:36:20Z
+reviewed-against: b185258d7b01a2303562289f0664943048b1bb4e
+diff-base: 1dd102d552e11cdb855ae564f99b9ec6cc183ae0
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 4
-scope: 69
+examined: 7
+scope: 120
 skipped-passes: []
 reviewed-digest:
-  data-model.md: 897814e43c7183efa578f6d819ccfc8ddcd71a108564a3a65039c33c787aecda
+  data-model.md: ea60d8b2d99fd38c8bc5bfe6a2b61edd0e34c1d9a42d0700f30586a5a1404694
   scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md: d092f9d4f59c67c575cc59039a6e0fdf162546969de2820e747b609d7a3d43c7
   scenarios/a-done-spec-has-no-transition-to-gate.md: 2041c659a2dbee3e17a05a702a11c9b1f59d30ce68acc19f616889696b66da2b
+  scenarios/a-multi-number-renumber-is-one-rewrite.md: 04723ad01613f62b14008250c9890e20ac338de82c32bd2f0797580e30ae7be2
   scenarios/a-review-states-what-it-read.md: dd3d5e366e77ef782a9bcb90388b5bcfb5d4eb45176663d8138b18d41f5ff400
   scenarios/adopter-corpus-link-integrity.md: a36b79e3e04489a765cfab1c3e657ac0c34ef66a289d0512866a27303eeb5358
   scenarios/adopter-generator-promotion.md: 80ec329393c3b78c0926ef45f61792502c311b1bccaa0dba6526234bac53e161
@@ -25,6 +26,7 @@ reviewed-digest:
   scenarios/apply-manifest-substitution-contract.md: dfb59f607b4ac27dec233dca8c71742dbc2f139c98794829fad2cdfb8598d733
   scenarios/apply-manifest.md: e3f792134cfab148287877137d76f68879583d969b03e9dadcf7eb26df6dba20
   scenarios/archive-network-hardening.md: 127616981fb074c9e21ef54b4f58d74413f1fdc31af349529601b8dbc096a512
+  scenarios/argument-hint-needs-a-token.md: 2723dd354fa6c9d98403a199daf3a150f866d1ec4a4ebb702dd9df00a7d2b4cb
   scenarios/ask-consolidation.md: 5e79770b6fed76e68f42c52a0aaeeb88d2c64bc9bbd7d4b6fa13aece937b298b
   scenarios/block-element-scanner.md: 5a9512b307d28410b18d35199f01f7ceb1a7d250e8614cedb661d4104f7effdd
   scenarios/check-artifacts-skipped-targets.md: 4713c3cc6ada06504d74ed9a4a29fef3db3bb0e7a12b67bad2c4793699880d39
@@ -48,6 +50,7 @@ reviewed-digest:
   scenarios/derive-references-unstaged-drift-is-reported.md: 358d0b1eb96d338a4dee7ee026382bd9011599407d408d5921e564ec4862d846
   scenarios/derive-unparseable-frontmatter-is-reported.md: 5bb6709b881d43b5dc048ee95aebafcf207a18dbc75d5ab30dfb5689f1c077fb
   scenarios/done-when-authoring-forms.md: 080f8717135b67c8400e072dae02f172e40cb0b6ad596c3e227d6cc5f90d0191
+  scenarios/every-agents-generated-copies-are-excluded.md: 18c01a1d6ef37930d97e82e562add917622b290bd37895118b38dca23715d0f0
   scenarios/exec-analyze-derives-its-list-seeds.md: 9fda65d4cd7a5ec0fab7e07ba9d5d25e794944c967cd09e7b3547f8e1d560726
   scenarios/exec-clarify-asks-each-open-question.md: 4851dc543c6dd80603aa86c776543017b9ab1a7adac469e1b49ec311a9877cab
   scenarios/extension-request-hygiene.md: 1b0c77335af3a2caf82e01896207d60261cd0071a8bc8da3162b9785f7c16e48
@@ -106,6 +109,7 @@ reviewed-digest:
   scenarios/the-constitutions-registry-validates-its-values.md: 91d822062ae0e0d10a9796c7072a7cd03186283ba2aa7657b12a696f705bd2c2
   scenarios/the-cross-spec-impact-gate.md: 874fd2fbefdc6d39f38b8d136f921efc20a99968841d837ad2c91db7c7aa3799
   scenarios/the-inbox-row.md: f29a57dc733dfbaa62b54a94ca7486cb7fbc2c93d4a4e6ded07ab8714483ae04
+  scenarios/the-pi-command-candidate.md: 38e81f6ca1732254fee5cce65eb829a0026c30bdb846ff0c3a80b7a308ba94bb
   scenarios/the-promotion-coverage-line.md: 151e741fad3c4f953d85e14d3183fed27ef08bcce0cbd9b42ed7bc89e22fba29
   scenarios/traverse-deps-cycle-check.md: 76e9cb231afc1af9b9c4827a220efe8e33889028d16430a43e9e46d2d07be022
   scenarios/unchecked-done-when-clause-tally.md: d4ec04b41d2ddc3b7a656313cc45fa735eab43b2333c219b79cac10d5a60c88f
@@ -120,23 +124,17 @@ reviewed-digest:
   scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
 blocking: false
 dispositions:
-  fixed: 3
+  fixed: 0
   routed: 0
   discarded: 0
   undispositioned: 0
-decisions:
-  - key: "convention: 051's plan said /ductus:fold re-targets \"the session\"; since 062 it re-points every session that named the folded spec — `specs/051-branch-scoped-spec-numbering/plan.md`"
-    outcome: routed
-    target: specs/051-branch-scoped-spec-numbering/plan.md
-    decided-at: 2026-10-01T21:03:13Z
-    decided-by: andy@stone.dev
 ---
 
 # Review — 022-deterministic-runtime
 
 ## Summary
 
-Not blocking. A deliberate partial review of 022-deterministic-runtime's reopen (022's reopen d3d73fb2 follows the two commits it reviews, so the base is 38112a1d, where the previous review left 022 (a --since override, used verbatim)), in the shape the operator approved on 2026-10-01: the change this reopen carries, not a full pass. The five passes read the complete diff since 38112a1d — every changed hunk of every changed file, with context, including 3e323778's exec-gate fix and the review chores in dc703836, 3e323778 and c9ccf64c — and these 4 of 69 scope entries in full: `specs/022-deterministic-runtime/scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md`; `specs/041-task-pruning/scenarios/plan-records-the-design-as-it-stands.md`; `specs/041-task-pruning/scenarios/prune-reduces-the-spec-directory.md`; `specs/047-analyze-findings-durability/scenarios/analyze-run-durability.md`. No rule finding. The exec /prune QUAL-STUB-001 MUST that the review run beside 0.56.0's found is fixed in 3e323778 (022 scenario a-confirmed-gate-authorizes-the-writes-after-it); its walker test fails with the binding removed. 3 observation(s), each fixed in c9ccf64c. Not read in full, named individually: `.claude/commands/ductus/analyze.md`; `.claude/commands/ductus/consolidate.md`; `.claude/commands/ductus/fold.md`; `.claude/commands/ductus/implement.md`; `.claude/commands/ductus/prune.md`; `.github/workflows/markdown-only-pipeline.yml`; `.github/workflows/runtime-release.yml`; `.github/workflows/runtime.yml`; `AGENTS.md`; `README.md`; `docs/analyze.md`; `framework/bootstrap/ductus.md`; `framework/commands/analyze.md`; `framework/commands/consolidate.md`; `framework/commands/fold.md`; `framework/commands/implement.md`; `framework/commands/plan.md`; `framework/commands/prune.md`; `framework/commands/specify.md`; `framework/commands/status.md`; `framework/commands/target.md`; `framework/constitution.md`; `framework/runtime-tools.txt`; `runtime/.gitignore`; `runtime/CHANGELOG.md`; `runtime/Cargo.lock`; `runtime/Cargo.toml`; `runtime/legacy-prose-commands.txt`; `runtime/src/interpreter/`; `runtime/src/interpreter/mod.rs`; `runtime/src/io.rs`; `runtime/src/lib.rs`; `runtime/src/main.rs`; `runtime/src/mcp/`; `runtime/src/parser/`; `runtime/src/primitives/`; `runtime/src/primitives/analyze_subjects.rs`; `runtime/src/primitives/check_stuck.rs`; `runtime/src/primitives/fetch_archive.rs`; `runtime/src/primitives/mod.rs`; `runtime/src/primitives/prune_plan.rs`; `runtime/src/primitives/prune_tasks.rs`; `runtime/src/primitives/write_analysis.rs`; `runtime/src/schema/`; `runtime/src/schema/primitives.rs`; `runtime/tests/`; `runtime/tests/crlf_preservation.rs`; `runtime/tests/fixtures/`; `runtime/tests/golden/`; `runtime/tests/golden/implement-basic.jsonl`; `runtime/tests/mcp.rs`; `runtime/tests/parity/`; `runtime/tests/walker.rs`; `scripts/lint-procedure-parseability.sh`; `specs/022-deterministic-runtime/data-model.md`; `specs/022-deterministic-runtime/plan.md`; `specs/022-deterministic-runtime/spec.md`; `specs/022-deterministic-runtime/tasks.md`; `specs/041-task-pruning/plan.md`; `specs/041-task-pruning/spec.md`; `specs/041-task-pruning/tasks.md`; `specs/047-analyze-findings-durability/spec.md`; `specs/047-analyze-findings-durability/tasks.md`; `specs/062-concurrent-session-targets/spec.md`; `specs/062-concurrent-session-targets/tasks.md` — changed files among them were read at their changed hunks only, directory entries were not walked, and unchanged files were not re-read. This is not a full five-pass review of every path in scope.
+Reviewed 022 over 1dd102d5..b185258d, a --since override: 022 was reopened (62f36162) after the two runtime changes it records landed (ad0dd002, 8fea949f), so the default window — from the reopen's parent — held none of the code; 1dd102d5 is the previous review's reviewed-against. 0 MUST, 0 SHOULD, 0 low-confidence; not blocking. examined 7 of 120: runtime/src/host.rs (AGENT_CONFIG_DIRS and its registry test), runtime/src/primitives/check_corpus_links.rs (the exclusion and its test), runtime/src/primitives/mechanical_sweep.rs (explained_by and its test), scripts/audit/review-freshness.sh (explained_by), the scenarios every-agents-generated-copies-are-excluded and a-multi-number-renumber-is-one-rewrite, and tasks.md — each read as the diff since 1dd102d5 plus the whole of every changed function. The two changed functions were mutation-checked: each new test fails with the change reverted. Not read: the rest of the window is main's 0.58.0 work merged in (spec 063's check-artifact-size, the analyze and plan step renumber and their goldens, the release), reviewed under 063 upstream; this branch's 064 and 065 files, reviewed under those specs; the generated .claude and .pi copies; and renamed-away paths (specs/063-pi-host-support, specs/064-configurable-source-repository) that no longer exist. data-model.md's only change in the window is the 063 -> 064 renumber, a mechanical sweep.
 
 ## MUST violations (blocking)
 
@@ -156,9 +154,7 @@ Not blocking. A deliberate partial review of 022-deterministic-runtime's reopen 
 
 ## Observations
 
-- doc: hex sat inside line_ending_of's doc comment, leaving line_ending_of undocumented — `runtime/src/primitives/mod.rs:892` — **fixed**
-- convention: the reflowed split_blocks doc left a line past 100 characters — `runtime/src/primitives/mod.rs` — **fixed**
-- claim: the CHANGELOG's exec-gate entry said the binding covers the steps after the gate, where it binds primitive arguments — `runtime/CHANGELOG.md` — **fixed**
+*None.*
 
 ## Skipped passes
 

@@ -368,7 +368,7 @@ Omit the tip in **State A** (the runtime is already live) and in a successful **
 
 ### Pinned `ductus.md` advisory
 
-If the **Pre-flight Phase** recorded any selected agent as `pinned-divergent` (the installed `ductus` file — the §Derived values **`ductus` install path** row: `{config_dir}/commands/ductus.md` for `claude-style`, `{config_dir}/command/ductus.md` for `opencode`, `{config_dir}/skills/ductus/SKILL.md` for `antigravity` — is listed in `.ductus/config.toml` `pinned.files` and differs from upstream), append one advisory line per divergent agent after the file summary and before next steps:
+If the **Pre-flight Phase** recorded any selected agent as `pinned-divergent` (the installed `ductus` file — the §Derived values **`ductus` install path** row: `{config_dir}/commands/ductus.md` for `claude-style`, `{config_dir}/command/ductus.md` for `opencode`, `{config_dir}/skills/ductus/SKILL.md` for `antigravity`, `{config_dir}/prompts/ductus.md` for `pi` — is listed in `.ductus/config.toml` `pinned.files` and differs from upstream), append one advisory line per divergent agent after the file summary and before next steps:
 
 > {agent}: ductus.md pinned, upstream has changed.
 
@@ -400,7 +400,7 @@ This summary hands off to `/{project}:analyze`, which dispositions each gap in t
 
 Adopted agents: {comma-separated `name` of selected agents}.
 
-Next steps (render each command in **the adopted agent's own invocation form** — the §Derived values **Invocation** row: `/{project}:<name>` for `claude-style`, `/{project}-<name>` for `antigravity`, `/{project}/<name>` for `opencode`. The colon form below is the `claude-style` default; printing it to an Antigravity or OpenCode adopter names six commands that do not exist on their agent. When several agents were adopted, render the list once per agent under its name):
+Next steps (render each command in **the adopted agent's own invocation form** — the §Derived values **Invocation** row: `/{project}:<name>` for `claude-style`, `/{project}-<name>` for `antigravity`, `/{project}/<name>` for `opencode`, `/{project}-<name>` for `pi`. The colon form below is the `claude-style` default; printing it to an Antigravity, Pi, or OpenCode adopter names six commands that do not exist on their agent. When several agents were adopted, render the list once per agent under its name):
 
 1. Run `/{project}:configure` in each adopted agent to apply the full permission set.
 2. Fill in `AGENTS.md` — tech stack, project structure, code style, testing conventions, gotchas.
@@ -438,6 +438,6 @@ Re-runs are additive across agents — adopting a new agent leaves existing agen
 
 ## Directory Creation
 
-Create intermediate directories as needed (e.g., `specs/`, `specs/templates/`, and — by layout — `{config_dir}/commands/{project}/` for `claude-style`, `{config_dir}/command/{project}/` for `opencode`, or `{config_dir}/skills/` and `{config_dir}/rules/` for `antigravity`).
+Create intermediate directories as needed (e.g., `specs/`, `specs/templates/`, and — by layout — `{config_dir}/commands/{project}/` for `claude-style`, `{config_dir}/command/{project}/` for `opencode`, `{config_dir}/skills/` and `{config_dir}/rules/` for `antigravity`, or `{config_dir}/prompts/` and `{config_dir}/extensions/` for `pi`).
 
 Throughout this command, every `specs/…` destination — the §Shared Files manifest rows (`specs/system.md`, `specs/inbox.md`, `specs/rules/…`, …), the directories created here, and the spec-root named in the §Post-Scaffolding Output — is written under the configured `[paths] specs-root` (default `specs`, resolved in §Collect Project Inputs). The literal `specs/` paths in the manifest tables and prose are the documented default; substitute the configured name when the operator has set one. This keeps the manifest readable while honoring the override (spec 040).

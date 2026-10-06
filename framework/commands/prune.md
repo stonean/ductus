@@ -5,6 +5,8 @@ argument-hint: "[--all] [--reset] [--force]"
 
 # Prune
 
+Invocation arguments: `$ARGUMENTS` (empty when none were supplied)
+
 Reduce the session target's spec directory — or, with `--all`, every spec's — so each working artifact says only what it should — dropping spent task sections from `tasks.md` (or resetting it to template state), and removing the `plan.md` sections outside the design record once their durable pieces have moved home.
 
 ## Purpose

@@ -92,6 +92,7 @@ fi
 # Stage any generator-produced changes to their known output paths.
 git add framework/bootstrap/configure/claude.md framework/bootstrap/configure/auggie.md
 git add .claude/commands/ductus/ 2>/dev/null || true
+git add .pi/prompts/ .pi/extensions/ 2>/dev/null || true
 git add framework/commands/help.md
 # Re-stage only spec files already part of this commit, so the derived
 # `dependencies:` / `references:` rewrites are captured without sweeping in

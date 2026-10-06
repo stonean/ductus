@@ -137,6 +137,16 @@ The two files the runtime reads out of the per-project directory resolve through
 
 Older tiers are never removed by a primitive — the bootstrap migration is the sole cutover. See the [`project-directory-resolution-chain`](scenarios/project-directory-resolution-chain.md) scenario.
 
+### Command-file candidates — `Host::command_file_candidates`
+
+`Host::command_file_candidates` (runtime/src/host.rs) is the single place the runtime derives the repo-relative paths where an installed slash-command file may live, in resolution order, at `ductus exec` time and in the `writeCode` payload. It covers the three flat-namespaced layouts:
+
+1. `{cli-config-dir}/commands/{project}/{command_name}.md` — `claude-style` (Claude Code, Auggie), tried first;
+2. `{cli-config-dir}/command/{project}/{command_name}.md` — `opencode` (singular `command/`);
+3. `{cli-config-dir}/prompts/{project}-{command_name}.md` — `pi` (flat project-hyphenated prompt templates, [064](../064-pi-host-support/spec.md)), **appended last**.
+
+Each adopter installs into exactly one layout, selected by the agent's registry `layout`; the `cli-config-dir` recorded in the gitignored session file is the real selector, and the candidate order is belt-and-braces — walking all three lets the runtime resolve any supported layout without knowing which agent wrote the file. The two pre-existing candidates keep their relative order exactly, so every pre-pi adopter resolves identically. Both resolution callsites (`main::run_exec`, `interpreter::payload::locate_command_file`) consume the candidate list unchanged. See the [`the-pi-command-candidate`](scenarios/the-pi-command-candidate.md) scenario.
+
 ## Primitive request/response schemas
 
 Each primitive has a typed args struct (the CLI subcommand's `clap` derive shape) and a typed result struct. Below is the canonical JSON shape for each; the CLI surface translates command-line flags into the args; the MCP surface uses the same JSON via `rmcp` tool calls.
@@ -1124,7 +1134,7 @@ Result:
 
 The complement of `append-inbox` and the deterministic surface behind `/ductus:groom`'s per-item removal (step 8). Removes the first bullet from `{specs-root}/inbox.md` whose text — after the `-` bullet marker and an optional `[ ]`/`[x]` checkbox are stripped via the shared bullet grammar — equals the trimmed `item`, writing atomically. Bullet scanning is comment/fence-aware (shared with `append-inbox`), so a `-` line inside an HTML comment is neither counted nor removable. A double blank left at the removal seam is collapsed and the file ends in a single newline. A no-match, or a missing inbox file, is a clean domain outcome (`removed: false`), never an operational error; `remaining-count` reports the bullets left after the operation. Embedded newlines in `item` are rejected (single-line rule).
 
-### `check-command-flags` — flags a command documents but never surfaces
+### `check-command-flags` — a declared interface vs. the body a host substitutes
 
 Args: none.
 
@@ -1135,23 +1145,27 @@ Result:
   "findings": [
     {
       "command": "framework/commands/review.md",
+      "direction": "flag-unsurfaced",
       "flag": "--since",
       "reason": "Flags table documents --since but argument-hint omits it, so it is never surfaced"
     }
   ],
   "examined": ["framework/commands/amend.md", "framework/commands/review.md"],
   "with-flags-table": ["framework/commands/review.md"],
+  "with-argument-hint": ["framework/commands/review.md"],
   "skipped": [],
   "commands-dir": "framework/commands",
   "guidance": ""
 }
 ```
 
-The runtime half of [020](../020-code-review/spec.md)'s `review-flag-parsing-is-specified`, invoked from `/audit` Family 30 (`scripts/audit/command-flag-hint-parity.sh`). `argument-hint` is the surface a host renders when it offers a command, so a flag absent from it is a flag the operator is never shown — the defect an adopter reported as `--since` "doesn't show as an option" while `review.md`'s Flags table listed eight entries and its hint named three. Measured against that state: 6 findings (`--security`, `--simplicity`, `--quality`, `--since`, `--waive`, `--reason`); 0 once the hint was corrected.
+The runtime half of [020](../020-code-review/spec.md)'s `review-flag-parsing-is-specified`, invoked from `/audit` Family 30 (`scripts/audit/command-flag-hint-parity.sh`). It checks two directions of one contract — a declared `argument-hint` and the body a host substitutes into must agree. **Direction 1:** `argument-hint` is the surface a host renders when it offers a command, so a flag absent from it is a flag the operator is never shown — the defect an adopter reported as `--since` "doesn't show as an option" while `review.md`'s Flags table listed eight entries and its hint named three. Measured against that state: 6 findings (`--security`, `--simplicity`, `--quality`, `--since`, `--waive`, `--reason`); 0 once the hint was corrected. **Direction 3:** a host injects the invocation's arguments through substitution alone, so a command that declares a hint and carries no token in its body has an unreachable interface — `target`, `link`, and `prune` each shipped that way, reading their no-argument branch however invoked. Recorded in [this spec's `argument-hint-needs-a-token`](scenarios/argument-hint-needs-a-token.md).
 
 - **The subject is `framework/commands/*.md`, the sources.** Not the generated copies under a host's commands directory: a copy carries whatever its source carries, so checking both reports every finding twice and neither copy is the one to fix. It also settles where the check belongs — an adopter told their installed `review.md` disagrees with itself cannot act on it, because the file is regenerated from ductus and the repair is a ductus release. That is why this is `/audit` (maintainer, at the source) rather than `/{project}:analyze`, whose command-frontmatter family is deliberately frontmatter-only and reads the installed copies.
 - **Only a `Flags` section's table rows count, and only each row's first cell.** The behavior column routinely cross-references other flags (`Composes with all other flags`), and harvesting it would manufacture a finding against whichever row mentioned one. A single row may still name two flags — `--waive <rule-id> --reason "<text>"` is one row and both halves of a pair — so the cell is scanned rather than matched once.
 - **A command documenting flags in prose is examined and contributes nothing.** `implement.md` describes `--auto` under a `### Flags` heading with no table, and its hint names it — correct, and invisible to a table-shaped check. This is why `with-flags-table` exists alongside `examined`: an empty `findings` means *every tabled flag is surfaced*, never *every documented flag is surfaced*, and a caller quantifying a clean verdict states which one it means (`QUAL-CLAIM-001`).
+- **Direction 3: a declared `argument-hint` with no substitution token in the body is an unreachable interface.** A host injects the invocation's arguments through substitution alone — Pi's `substituteArgs` has no fallback that appends an unreferenced argument — so a command whose declared hint outruns its body reads no-argument however it is invoked. The accepted token set is `$ARGUMENTS`, `$@`, `$1`, `${N:-…}`, `${@:-…}`, `${@:N}`, `${@:N:L}`, and the subject is every examined command that declares a hint, whether or not it has a `Flags` table. `with-argument-hint` is that direction's denominator, separate from `with-flags-table` so the two claims do not read alike, and a finding carries `direction: "hint-unreachable"` (against the direction-1 value `"flag-unsurfaced"`) so a consumer renders the right fix without reading prose.
+- **Not covered: direction 2 — a body documenting an argument the `argument-hint` omits.** The mirror of direction 1, and deliberately out of this check: the body documents an argument in prose, so deciding whether the hint should name it needs semantic reading of what the prose promises, not a table-shaped scan. Direction 2 is the direction a `Flags` table's first cell approximates for flags; a *positional* argument has no table to scan. Recorded so it is not mistaken for coverage the check has — the same reason §design-principles gives for stating a bound rather than implying one.
 - **`guidance` is set when the run examined command files and found no Flags table at all.** Two empty sets compare equal, so without it an extraction failure returns the payload of a clean run — the same reasoning `derive-boundary` records for an underivable git window. Empty otherwise, so its silence means "examined and current".
 - **Section membership comes from the shared fence- and comment-aware scanner** (`section_line_indices`), not a second heading walk. These command bodies embed example output and artifact fragments; a table row inside a fence is an illustration, not the command's contract. Reusing the scanner is also what keeps the check out of the `awk`/`sed` markdown-parsing shape [§runtime-boundary](../../framework/constitution.md#runtime-boundary) principle 3 names — Family 30's script is a shell entry point over this primitive, not a shell reimplementation of it.
 

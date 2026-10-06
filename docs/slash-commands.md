@@ -127,4 +127,4 @@ It walks the list one item at a time and routes each: a rule for a cross-cutting
 
 ### `/configure` — agent permissions for the `ductus` commands
 
-**Reach for it when your agent keeps asking permission for the same `ductus` operations.** Configures the permission set so the pipeline stops prompting on every step.
+**Reach for it when your agent keeps asking permission for the same `ductus` operations.** Configures the permission set so the pipeline stops prompting on every step. On Pi — which has no permission-gating settings — it verifies and repairs the `.pi/extensions/ductus.ts` bridge instead (spec 064).

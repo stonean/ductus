@@ -367,12 +367,26 @@ def explained_by(pair, repo_wide):
     to its old token reproduces its new token, and rejected otherwise. A
     changed table cell (`30s` → `60s`) is not derivable from any repo-wide
     rewrite, which is what keeps it a finding.
+
+    The rewrites apply simultaneously, in one left-to-right pass: a renumber
+    that shifts `063` -> `064` and `064` -> `065` in the same sweep must not
+    chain `063` through to `065`. Longest first, so a shorter rewrite cannot
+    pre-empt a longer one, and ties in the Rust half's order (`from`, then
+    `to`) so the two halves agree on every input.
     """
     old, new = pair
-    # Longest first, so a shorter rewrite cannot pre-empt a longer one.
-    for x, y in sorted(repo_wide, key=lambda p: -len(p[0])):
-        old = old.replace(x, y)
-    return old == new
+    ordered = sorted(repo_wide, key=lambda p: (-len(p[0]), p[0], p[1]))
+    out, i = [], 0
+    while i < len(old):
+        for x, y in ordered:
+            if x and old.startswith(x, i):
+                out.append(y)
+                i += len(x)
+                break
+        else:
+            out.append(old[i])
+            i += 1
+    return "".join(out) == new
 
 
 def changed_beyond_spelling(base, path):

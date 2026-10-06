@@ -8,6 +8,8 @@ parity:
 
 # Link
 
+Invocation arguments: `$ARGUMENTS` (empty when none were supplied)
+
 Register a service in `.ductus/config.toml` so cross-service references to it resolve to the linked spec's lifecycle status.
 
 ## Purpose

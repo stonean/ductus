@@ -8,6 +8,8 @@ parity:
 
 # Target
 
+Invocation arguments: `$ARGUMENTS` (empty when none were supplied)
+
 Set the working feature (and optionally scenario) for this session.
 
 ## Purpose

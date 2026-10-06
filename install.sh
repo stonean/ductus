@@ -9,6 +9,7 @@
 #   ... | sh -s -- auggie
 #   ... | sh -s -- antigravity   # 'agy' (the Antigravity CLI name) also works
 #   ... | sh -s -- opencode
+#   ... | sh -s -- pi
 #
 # Pick the source (default: the latest release), in any position beside the agent:
 #   ... | sh -s -- claude --ref=main             # main, ahead of any release
@@ -24,10 +25,24 @@
 # the choice; a plain /ductus uses the latest release. Spec 061 is the contract.
 #
 # The script is idempotent — re-run it any time to refresh the bootstrap file.
+#
+# Source repository (spec 065): the raw bootstrap URL's owner/repo. When
+# DUCTUS_REPO is unset or empty, the canonical stonean/ductus is fetched, byte
+# for byte as before. Set it to another owner/repo to adopt or test ductus from
+# a fork (e.g. DUCTUS_REPO=myfork/ductus); /ductus itself honors the same
+# variable for its subsequent fetches (version pin, archive, runtime release,
+# self-update), so the whole adoption stays on one origin. Any other origin is
+# announced on stderr, so a variable left set in a shell profile cannot
+# silently change where the runtime binary comes from.
 set -eu
 
-REPO_RAW="https://raw.githubusercontent.com/stonean/ductus"
-LATEST_URL="https://github.com/stonean/ductus/releases/latest"
+CANONICAL_REPO="stonean/ductus"
+repo="${DUCTUS_REPO:-$CANONICAL_REPO}"
+REPO_RAW="https://raw.githubusercontent.com/$repo"
+LATEST_URL="https://github.com/$repo/releases/latest"
+if [ "$repo" != "$CANONICAL_REPO" ]; then
+  echo "ductus: source repository is $repo (from DUCTUS_REPO), not the canonical $CANONICAL_REPO" >&2
+fi
 
 # The first release whose bootstrap honors --ref. Every earlier release's
 # bootstrap fetches from main whatever ref it is given, so a tag below this
@@ -458,8 +473,19 @@ JSON
 JSON
     fi
     ;;
+  pi)
+    dest=".pi/prompts/ductus.md"
+    mkdir -p .pi/prompts
+    cp "$tmp" "$dest"
+    # No settings seed: Pi has no permission-gating settings (verified, spec 064
+    # §Verified Pi Layout — the model runs tool calls without a host permission
+    # prompt), so there is nothing to pre-authorize for the first /ductus run.
+    # The one Pi prerequisite is project trust — prompt templates under .pi/
+    # load only after the project is trusted, which pi itself prompts for on the
+    # first interactive start (or --approve on a non-interactive run).
+    ;;
   *)
-    echo "ductus: unknown agent '$agent' (expected: claude, auggie, antigravity, agy, or opencode)" >&2
+    echo "ductus: unknown agent '$agent' (expected: claude, auggie, antigravity, agy, opencode, or pi)" >&2
     exit 1
     ;;
 esac
@@ -469,4 +495,10 @@ if [ "$ref_count" -eq 1 ]; then
   echo "ductus: now run '/ductus --ref=$ref <project-name>' in your agent to scaffold the project; that run records the source (a plain '/ductus' uses the latest release)."
 else
   echo "ductus: now run '/ductus <project-name>' in your agent to scaffold the project."
+fi
+# /ductus reads DUCTUS_REPO from the agent's own environment, which a variable
+# set inline for this script alone never reaches — and the fork's bootstrap
+# would then fetch everything after it from the canonical repository.
+if [ "$repo" != "$CANONICAL_REPO" ]; then
+  echo "ductus: start your agent with DUCTUS_REPO=$repo exported, or /ductus fetches the rest of the adoption from $CANONICAL_REPO"
 fi

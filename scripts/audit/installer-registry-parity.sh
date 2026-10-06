@@ -62,6 +62,7 @@ derive_path() {
     claude-style) printf '%s/commands/ductus.md\n' "$1" ;;
     antigravity)  printf '%s/skills/ductus/SKILL.md\n' "$1" ;;
     opencode)     printf '%s/command/ductus.md\n' "$1" ;;
+    pi)           printf '%s/prompts/ductus.md\n' "$1" ;;
     *)            printf '\n' ;;  # unknown layout — signalled by empty result
   esac
 }
@@ -238,6 +239,39 @@ if [ -n "$seed_drift" ]; then
     emit "$loc" "$msg" "$fix"
   done <<< "$seed_drift"
 fi
+
+# Direction 3b: Pi's parity is the *absence* of a seed. Pi has no
+# permission-gating settings (spec 064 §Verified Pi Layout), so the
+# install.sh pi arm must write no settings file, and the registry row's
+# settings_template must stay the empty object. Asserted directly rather
+# than through the python seed-compare above — an empty `{}` would compare
+# equal to every non-empty `{}`-drift seed, which is the failure mode this
+# family exists to catch — and stated here so the check's bound is visible
+# in the family, per the check-that-cannot-run rule.
+pi_seed_findings=0
+if grep -nE "^[[:space:]]*pi\)" "$INSTALLER" >/dev/null; then
+  # The pi arm — from `pi)` to its `;;` — must not contain a `cat > … <<'JSON'`
+  # settings write.
+  if awk '
+    /^[[:space:]]*pi\)/ { inpi = 1 }
+    inpi && /cat > .*settings/ { print; exit }
+    inpi && /;;/ { exit }
+  ' "$INSTALLER" | grep -q .; then
+    emit "$INSTALLER (pi arm)" "pi arm seeds a settings file, but Pi has no permission-gating settings to seed" \
+      "remove the heredoc from the pi arm of $INSTALLER"
+    pi_seed_findings=1
+  fi
+else
+  emit "$INSTALLER" "no install.sh pi arm" "add a 'pi)' arm to install.sh"
+  pi_seed_findings=1
+fi
+# The registry row's settings_template for pi must be the empty object.
+if ! grep -qE '^\| `pi` .*\| `\{\}` \|' "$DUCTUS"; then
+  emit "$DUCTUS (agent pi)" "pi settings_template is not the empty object — Pi has no permission-gating settings to seed" \
+    "set the pi settings_template cell in §Agent Registry to {} (with backticks)"
+  pi_seed_findings=1
+fi
+[ "$pi_seed_findings" -eq 0 ] || drift=1
 
 # Direction 4: the release floor. Both entry points refuse a tag older than
 # the first release whose bootstrap honors --ref (spec 061), and each carries

@@ -2,6 +2,29 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [Unreleased]
+
+### Added
+
+- **Pi host (spec 064): `Host::command_file_candidates` gains the pi prompt-template shape `.pi/prompts/{project}-{name}.md`, appended last.** The runtime now resolves installed slash-command files for Pi — the fifth supported agent — whose commands are flat project-hyphenated prompt templates rather than the two directory-shaped layouts (`commands/{project}/` for claude-style, `command/{project}/` for opencode). The two pre-existing candidates keep their relative order, so every pre-pi adopter resolves identically; the `cli-config-dir` in the gitignored session file remains the real selector. The pi layout's tool surface is a zero-dependency extension bridge (`.pi/extensions/ductus.ts`) wrapping this runtime's MCP server over stdio; the MCP server itself is byte-identical — no new primitive, no schema change.
+- **`DUCTUS_REPO` adopts or tests ductus from a fork (spec 065).** `install.sh` and `/ductus` take the source repository's `owner/repo` from it, default `stonean/ductus`, for every fetch: the bootstrap, the version pin, the framework archive and the runtime binary. Any other value is announced before the first fetch, and the installer's next step says to export it to the agent too, because a value set for the installer alone would leave every later fetch on `stonean/ductus`. It is listed in the environment-variable inventory in `docs/runtime.md`.
+
+### Fixed
+
+- **A renumber that shifts several numbers in one sweep no longer stales
+  the reviews it touches.** The mechanical-sweep exemption applied its
+  repo-wide rewrites one after another, so a sweep carrying `063` → `064`
+  and `064` → `065` rewrote `063` through to `065`, and a spelling-only
+  link change read as a contract change. Both halves — the transition
+  gate's `changed_beyond_spelling` and audit Family 19 — now apply the
+  rewrites in one simultaneous pass. Spec 022.
+- **`check-corpus-links --scope repository` skips every agent's generated
+  command copies, not only the session agent's.** A repository can commit
+  more than one agent's copies — this one commits Claude's and Pi's — and a
+  session of one agent reported the other's links, which are broken by
+  construction, as defects. The exclusion is now every `config_dir` in the
+  bootstrap's Agent Registry, held to the registry by a test. Spec 022.
+
 ## [0.58.0] — 2026-10-04
 
 The pipeline now warns when a spec artifact is larger than an agent may read

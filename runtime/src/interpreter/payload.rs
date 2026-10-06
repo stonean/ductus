@@ -1150,8 +1150,9 @@ fn load_constitution_excerpts(command_name: &str, repo: &Path) -> ConstitutionEx
 fn locate_command_file(command_name: &str, repo: &Path) -> Option<PathBuf> {
     let host = Host::load(repo);
     let mut rels = vec![format!("framework/commands/{command_name}.md")];
-    // Installed command file — `commands/` (claude-style) or singular
-    // `command/` (opencode); see `Host::command_file_candidates`.
+    // Installed command file — `commands/` (claude-style), singular
+    // `command/` (opencode), or flat `prompts/{project}-{name}.md` (pi);
+    // see `Host::command_file_candidates`.
     rels.extend(host.command_file_candidates(command_name));
     rels.push(format!("framework/bootstrap/{command_name}.md"));
     for rel in rels {
