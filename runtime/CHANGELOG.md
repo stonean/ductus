@@ -2,7 +2,13 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
-## [Unreleased]
+## [0.59.0] — 2026-10-06
+
+Pi becomes the fifth agent ductus scaffolds into (spec 064), with a
+dependency-free extension bridge as its tool surface, and a fork can now be
+adopted or tested by naming it in `DUCTUS_REPO` (spec 065). A new agent and a
+new configuration variable — hence a minor bump. The fixes below sharpen the
+mechanical-sweep exemption and `/analyze`'s checks around the new agent.
 
 ### Added
 
