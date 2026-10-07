@@ -107,7 +107,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 ## 12. Reviews and analysis: 022 first, then 064
 
 - [x] 022: `/{project}:review` (five passes over its changed-since window; the standing truthful-`examined` disposition if the window is too large) and `/{project}:analyze`; all task blocks checked; `done` transition
-- [ ] 064: every AC verified against the tree (AC14 via §D9's record), `/{project}:review` and `/{project}:analyze`; `done` transition
+- [x] 064: every AC verified against the tree (AC14 via §D9's record), `/{project}:review` and `/{project}:analyze`; `done` transition
 
 - **Done when**: both specs are `done` with current, non-blocking reviews and current analyses, and `check-review-gate` passes for both.
 
