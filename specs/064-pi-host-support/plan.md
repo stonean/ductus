@@ -50,10 +50,12 @@ byte-identical to `.pi/extensions/ductus.ts`) is a Pi extension that:
 
 - spawns `.ductus/bin/ductus mcp` (resolved relative to the working tree; the
   pointer `/ductus` already materializes) when it loads, keeps it alive, and
-  respawns it on the first call after it exits;
-- speaks MCP-over-stdio as newline-delimited JSON-RPC 2.0: `initialize` (protocol
-  handshake, `clientInfo`) and the `notifications/initialized` notification once per
-  child, then `tools/list` and `tools/call` — no npm dependency;
+  respawns it on the first call after it exits — or after a request times out,
+  which retires a runtime that stopped answering;
+- speaks MCP-over-stdio as newline-delimited JSON-RPC 2.0, the child's stdout
+  decoded as a UTF-8 stream: `initialize` (protocol handshake, `clientInfo`) and the
+  `notifications/initialized` notification once per child, then `tools/list` and
+  `tools/call` — no npm dependency;
 - registers every tool the server lists via `pi.registerTool` under `ductus__<name>`
   with the server's own `inputSchema` passed through;
 - when the runtime cannot start at load, registers no tools and shows a

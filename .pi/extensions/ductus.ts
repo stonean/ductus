@@ -21,8 +21,10 @@
  * to /ductus, which must instead acquire it — and session start shows a notice
  * naming the pointer and pointing at `/ductus`. When the runtime dies or goes
  * missing mid-session, the call returns an error envelope saying the same, and
- * the next call respawns it. No markdown-only fallback — a wired host that lost
- * its binary must stop, not degrade (§runtime-boundary).
+ * the next call respawns it. When it stops answering, the call times out and the
+ * runtime is retired, so the next call respawns it rather than waiting out the
+ * timeout again. No markdown-only fallback — a wired host that lost its binary
+ * must stop, not degrade (§runtime-boundary).
  *
  * spec 064 (pi host support). See framework/bootstrap/ductus.md §MCP
  * registration.
@@ -118,7 +120,11 @@ class DuctusServer {
     const proc = spawn(this.pointerPath, ["mcp"], { stdio: ["pipe", "pipe", "ignore"] });
     this.child = proc;
     this.lineBuffer = "";
-    proc.stdout?.on("data", (chunk: Buffer) => this.onData(chunk));
+    /* Decoded as a UTF-8 stream, not chunk by chunk: a multi-byte character a
+     * pipe chunk splits would otherwise become two replacement characters, and
+     * a large result — a long spec read back — spans several chunks. */
+    proc.stdout?.setEncoding("utf8");
+    proc.stdout?.on("data", (chunk: string) => this.onData(chunk));
     /* A missing or non-executable pointer arrives as an `error` event, not a
      * throw from spawn, and an unlistened `error` is an uncaught exception in
      * pi's own process. Only the current child may reset the state. */
@@ -134,8 +140,8 @@ class DuctusServer {
     return proc;
   }
 
-  private onData(chunk: Buffer) {
-    this.lineBuffer += chunk.toString();
+  private onData(chunk: string) {
+    this.lineBuffer += chunk;
     let nl: number;
     while ((nl = this.lineBuffer.indexOf("\n")) >= 0) {
       const line = this.lineBuffer.slice(0, nl).trim();
@@ -161,10 +167,17 @@ class DuctusServer {
     const id = this.nextId++;
     return new Promise((settle) => {
       /* Cap every request so a wedged child cannot freeze the session; the
-       * deterministic server answers well under this. */
+       * deterministic server answers well under this. A child that let a
+       * request time out is wedged, so it is retired: the requests still
+       * waiting on it fail now, and the next call respawns rather than queueing
+       * behind it for another full timeout. */
       const timer = setTimeout(() => {
         if (this.pending.delete(id)) {
           settle({ jsonrpc: "2.0", id, error: { code: -32001, message: "ductus call timed out" } });
+          if (this.child === proc) {
+            this.drop("the ductus runtime stopped answering");
+            proc.kill();
+          }
         }
       }, REQUEST_TIMEOUT_MS);
       this.pending.set(id, (response) => {
