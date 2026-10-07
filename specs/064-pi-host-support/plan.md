@@ -51,7 +51,9 @@ byte-identical to `.pi/extensions/ductus.ts`) is a Pi extension that:
 - spawns `.ductus/bin/ductus mcp` (resolved relative to the working tree; the
   pointer `/ductus` already materializes) when it loads, keeps it alive, and
   respawns it on the first call after it exits — or after a request times out,
-  which retires a runtime that stopped answering;
+  which retires a runtime that stopped answering. Every request to the runtime is
+  bounded by the named constant `REQUEST_TIMEOUT_MS` (120 s), well above what the
+  deterministic server takes to answer (BE-TIMEOUT-001);
 - speaks MCP-over-stdio as newline-delimited JSON-RPC 2.0, the child's stdout
   decoded as a UTF-8 stream: `initialize` (protocol handshake, `clientInfo`) and the
   `notifications/initialized` notification once per child, then `tools/list` and
