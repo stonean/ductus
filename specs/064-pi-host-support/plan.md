@@ -15,8 +15,8 @@ generator gains a pi output pass (dogfooded and committed in this repo); and
 `Host::command_file_candidates` gains the third candidate shape — the one runtime
 change, recorded under [022-deterministic-runtime](../022-deterministic-runtime/spec.md)
 as its scenario with the `data-model.md` sync, on 022's `done → in-progress` back-edge.
-A minor release (`0.53.0`, tag `ductus-v0.53.0`) ships in the same sitting as the
-`done` transition, per the release entry.
+A minor release (`0.59.0`, tag `ductus-v0.59.0`) ships in the same sitting, after
+the `done` transition, per the release entry.
 
 ## Technical Decisions
 
@@ -189,11 +189,12 @@ blocks; pi has none) — stated, not silent, per the check-that-cannot-run rule.
 `data-model.md` records the third candidate shape; a matching task lands in 022's
 `tasks.md`. 022's review/analyze refresh follows its standing disposition
 (`compute-review-scope` decides the window; a truthful small-`examined` record with
-every unread path named when the window is too large). Release: all three version
-sites to `0.53.0` + CHANGELOG entry, one `cargo build --release --offline` lock
-refresh, commit, review at that HEAD, commit the review, post-commit
-`scripts/audit/run-all.sh`, `git tag ductus-v0.53.0`, push, then read every
+every unread path named when the window is too large). Release, once 064 is `done`
+and in the same sitting: all three version sites to `0.59.0` + CHANGELOG heading,
+one `cargo build --release --offline` lock refresh, commit, post-commit
+`scripts/audit/run-all.sh`, `git tag ductus-v0.59.0`, push, then read every
 workflow's run for the sha (`in_progress` + `release not found` is wait, not outage).
+The fork's own `0.53.0` bump and tag were never this repository's release.
 
 ### D9 — In-repo smoke test (verification record, AC14)
 
@@ -219,6 +220,13 @@ round-trips against `runtime/target/release/ductus`, and `ductus exec` resolves 
 > implementation fix fell out of the probe: the bridge's repo-root resolution must walk
 > up from the working directory to the `.ductus/` marker rather than trust `__dirname`
 > under jiti (pi's loader), which resolved the root one level short in the first attempt.
+>
+> **After `991956e2` (2026-10-07, task 11):** not re-run in this repository. The
+> rewritten lifecycle — spawn at load, handshake per child, respawn, failure notice —
+> is accepted on the contributor's testing of it against pi, by operator decision.
+> `scripts/tests/pi-bridge-harness.mjs` covers the transport under node; nothing here
+> exercised pi's own loader on the rewritten bridge. An attempt with pi 1.0.4 stopped
+> at the model request, refused by the account's usage limit, before any tool call.
 
 ## Affected Files
 
@@ -245,7 +253,7 @@ round-trips against `runtime/target/release/ductus`, and `ductus exec` resolves 
 | `.pi/prompts/ductus-*.md`, `.pi/extensions/ductus.ts` | Create (generated) | Dogfooded pi surface, committed |
 | `specs/022-deterministic-runtime/scenarios/the-pi-command-candidate.md` | Create | 022 scenario, back-linking 064 |
 | `specs/022-deterministic-runtime/{spec.md, data-model.md, tasks.md}` | Modify | Back-edge, candidate recording, matching task |
-| `version`, `runtime/Cargo.toml`, `runtime/CHANGELOG.md` | Modify | `0.53.0` release |
+| `version`, `runtime/Cargo.toml`, `runtime/CHANGELOG.md` | Modify | `0.59.0` release, after `done` |
 
 ## Trade-offs
 

@@ -100,7 +100,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 - [x] With the task-9 surface committed: run `pi` non-interactively in this repo (`--approve`), invoking a `/{project}-…` prompt-template command and observing: the command resolves from `.pi/prompts/`, the `ductus__*` tools are registered from `.pi/extensions/ductus.ts`, a live tool call round-trips (e.g., a read-only primitive), and `ductus exec <command>` resolves the `.pi/prompts/` candidate through the session's `cli-config-dir = .pi`
 - [x] Record the result in plan §D9 (the smoke-test-record placeholder), deviations included with their resolution
-- [ ] Re-run the smoke test after `991956e2`, which rewrote the bridge's lifecycle (spawn at load, handshake per child, respawn, failure notice), and record it in plan §D9 beside the first run — `scripts/tests/pi-bridge-harness.mjs` covers the transport, not pi's own loader
+- [x] Re-run the smoke test after `991956e2`, which rewrote the bridge's lifecycle (spawn at load, handshake per child, respawn, failure notice), and record it in plan §D9 beside the first run — `scripts/tests/pi-bridge-harness.mjs` covers the transport, not pi's own loader. Not re-run here: accepted on the contributor's testing by operator decision (2026-10-07), recorded in §D9
 
 - **Done when**: plan §D9 carries the recorded result with no unresolved deviation — AC14's evidence.
 
@@ -115,13 +115,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 Reopened 2026-10-05: the `0.53.0` bump and the `ductus-v0.53.0` tag these items recorded were made on the contributor's fork (greghaygood/ductus) only. This repository's `0.53.0` is a different, earlier release, and the pi change has not been released here.
 
-- [ ] Bump all three version sites to the next minor (root `version`, `runtime/Cargo.toml`, `runtime/CHANGELOG.md`, moving the `[Unreleased]` pi entries under the new heading)
-- [ ] One `cargo build --release --offline` to refresh `Cargo.lock`, then confirm `--locked` succeeds
-- [ ] Commit the version bump; `/{project}:review` 064 at that HEAD (the review covers the release commit); commit the review
-- [ ] `scripts/audit/run-all.sh` **after** the commit; on green, `git tag ductus-v<minor>` at the release commit and push the tag
-- [ ] Watch the run: `gh run list --json workflowName,status,conclusion,headSha`; `in_progress` + `release not found` is wait, not outage; a `failure` conclusion is the outage (read the failed job, never delete-and-re-tag an in-flight run)
+Moved out of the completion gate 2026-10-07 by operator decision (spec §Resolved Questions, AC16 retired): `AGENTS.md`'s release entry cuts a release from completed work, so the release follows this spec's `done` transition in the same sitting — `ductus-v0.59.0`, per plan D8 — rather than being a task that holds `done`.
 
-- **Done when**: `ductus-v<minor>` is a published release (assets + crates.io), the three version sites agree, and every workflow row for the sha is read and green.
+- [x] Record that the release follows `done` — AC16 retired, plan D8 and §Resolved Questions carrying the same-sitting `0.59.0` commitment
+
+- **Done when**: the spec, plan and this block agree that the release follows `done` in the same sitting.
 
 ## 14. Implement scenario: pi-layout-is-dispatched
 
