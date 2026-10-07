@@ -264,6 +264,16 @@ def pair_run(old_run, new_run):
     return pairs
 
 
+# Rename detection, stated rather than inherited — the same values as
+# `RENAME_THRESHOLD` and `RENAME_LIMIT` in runtime/src/primitives/mechanical_sweep.rs,
+# which `mechanical_sweep_parity` holds the two halves to (spec 022 scenario
+# a-renamed-file-contributes-its-rewrites). Left to `git diff`, both come from
+# whoever runs it: `diff.renames=false` turned detection off and the verdict
+# with it, so a contributor's local run and CI's could disagree.
+RENAME_THRESHOLD = 50
+RENAME_LIMIT = 10000
+
+
 def diff_substitutions(base):
     """Per-file token rewrites across `base`..HEAD, from one diff.
 
@@ -271,9 +281,22 @@ def diff_substitutions(base):
     a pure substitution. One `git diff` per base rather than two blob reads
     per changed file: this family runs as a hard release gate, and the
     blob-per-file shape took a minute on this repo's history.
+
+    Renames are detected, so a renamed file's substitutions count toward the
+    repo-wide pairs, keyed by its new path. A window with more changed paths
+    than `RENAME_LIMIT`, counted before renames pair them up, is unreadable —
+    the Rust half's guard, applied to the same count. Every other flag here
+    pins output this parser reads against configuration that would reshape
+    it: colour, an external diff driver, textconv, and diff prefixes.
     """
     proc = subprocess.run(
-        ["git", "-C", str(root), "diff", "--unified=0", f"{base}..HEAD", "--", "*.md"],
+        [
+            "git", "-C", str(root), "diff", "--unified=0",
+            f"--find-renames={RENAME_THRESHOLD}%", f"-l{RENAME_LIMIT}",
+            "--no-color", "--no-ext-diff", "--no-textconv",
+            "--src-prefix=a/", "--dst-prefix=b/",
+            f"{base}..HEAD", "--", "*.md",
+        ],
         capture_output=True,
         text=True,
         # Explicit, not the locale default: on Windows that is cp1252, which
@@ -286,6 +309,14 @@ def diff_substitutions(base):
     )
     result = {}
     if proc.returncode != 0:
+        return result
+    lines = proc.stdout.split("\n")
+    # A paired rename is one header standing for two paths, each named once
+    # on its `rename from` line, so the sum is the count before pairing.
+    unpaired = sum(1 for line in lines if line.startswith("diff --git ")) + sum(
+        1 for line in lines if line.startswith("rename from ")
+    )
+    if unpaired > RENAME_LIMIT:
         return result
 
     path = None
@@ -303,7 +334,7 @@ def diff_substitutions(base):
         old_run.clear()
         new_run.clear()
 
-    for line in proc.stdout.split("\n"):
+    for line in lines:
         if line.startswith("diff --git "):
             # Reset between files: a deleted file's header is `+++ /dev/null`,
             # which names no path. Without this its removed lines would keep
@@ -393,7 +424,9 @@ def changed_beyond_spelling(base, path):
     """Whether `path` differs from `base` by more than a repo-wide rename."""
     per_file, repo_wide = substitution_index(base)
     if path not in per_file:
-        return True  # renamed, added, or deleted — a real contract change
+        # No hunk to read — deleted, or renamed or re-moded with its content
+        # unchanged — so nothing shows it was merely respelled.
+        return True
     pairs = per_file[path]
     if pairs is None:
         return True
@@ -496,8 +529,17 @@ for spec_path in sorted(specs_dir.glob("*/spec.md")):
         continue
 
 
+    # Both sides of a move, whatever `diff.renames` says. A contract renamed
+    # within the spec is listed under its old path as well as its new one, and
+    # the old path — absent from the substitution index — reads as changed:
+    # the digest arm's verdict on the same move, whose old key has vanished.
+    # Left to config, a contributor with renames on saw only the new path,
+    # which the sweep exemption could clear, and CI could disagree.
     changed = subprocess.run(
-        ["git", "-C", str(root), "diff", "--name-only", f"{base}..HEAD"],
+        [
+            "git", "-C", str(root), "diff", "--name-only", "--no-renames",
+            f"{base}..HEAD",
+        ],
         capture_output=True,
         text=True,
         # Explicit, not the locale default: on Windows that is cp1252, which

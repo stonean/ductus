@@ -116,7 +116,7 @@ use crate::primitives::label_criteria::StoredCounter;
 use crate::primitives::{
     MarkdownBlock, PrimitiveError, ProjectRepository, Result, inline_code_spans, label_criteria,
     list_scenario_files, read_spec, read_tasks, read_text, rel_path, scenario_name_cmp,
-    split_blocks,
+    section_line_indices, split_blocks,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -1370,9 +1370,11 @@ const NON_ASSERTION_MARKERS: [&str; 14] = [
 ];
 
 /// Repo-relative destinations this repo declares it scaffolds into an
-/// adopter's checkout, derived from the **Shared Files** manifest tables in
-/// `framework/bootstrap/ductus.md` — the canonical registry of what lands
-/// where, per the constitution's canonical-sources map.
+/// adopter's checkout, derived from `framework/bootstrap/ductus.md` — the
+/// canonical registry of what lands where, per the constitution's
+/// canonical-sources map. Two arms, read independently: the **Shared Files**
+/// manifest tables ([`manifest_destinations`]) and each registered agent's
+/// scaffold paths ([`agent_scaffold_destinations`]).
 ///
 /// Empty when that file is absent, which is the discriminator: an adopter
 /// checkout has no `framework/bootstrap/` (it receives the installed command,
@@ -1385,10 +1387,18 @@ const NON_ASSERTION_MARKERS: [&str; 14] = [
 /// Family 18 of `/{project}:audit` guards the inverse direction for the marker
 /// list; here the safe default is built into the return value.
 pub(crate) fn adopter_destinations(repo: &Path) -> BTreeSet<String> {
-    let mut out = BTreeSet::new();
     let Ok(text) = std::fs::read_to_string(repo.join("framework/bootstrap/ductus.md")) else {
-        return out;
+        return BTreeSet::new();
     };
+    let mut out = manifest_destinations(&text);
+    out.extend(agent_scaffold_destinations(&text));
+    out
+}
+
+/// The **Shared Files** arm of [`adopter_destinations`]: the destination
+/// column of every table row whose cell is exactly one backticked span.
+fn manifest_destinations(text: &str) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
     for line in text.lines() {
         if !line.starts_with('|') {
             continue;
@@ -1408,6 +1418,149 @@ pub(crate) fn adopter_destinations(repo: &Path) -> BTreeSet<String> {
         }
     }
     out
+}
+
+/// The §Derived values rows whose per-layout formula names a file `/ductus`
+/// scaffolds into an agent's config directory, compared with the row label's
+/// backticks dropped and case folded.
+const SCAFFOLD_ROWS: [&str; 2] = ["ductus install path", "settings file"];
+
+/// §MCP registration scopes whose target lands inside the adopter's checkout.
+/// A `user-global` or `home-level` target lives outside any checkout, so no
+/// criterion naming one is a repo-relative path claim.
+const PROJECT_SCOPES: [&str; 2] = ["project-committed", "project-local"];
+
+/// The **registry** arm of [`adopter_destinations`] (spec 022 scenario
+/// `per-agent-scaffold-paths-ship-to-adopter`). A per-agent scaffold path is
+/// not a Shared Files row: it is the agent's `config_dir` substituted into a
+/// layout-derived formula, which the manifest carries only as an inert
+/// placeholder. So for every `## Agent Registry` row this substitutes the
+/// row's `config_dir` into the §Derived values `ductus` install path and
+/// Settings file formulas for its `layout`, and takes its §MCP registration
+/// target when that target is project-scoped.
+///
+/// Every registered agent contributes, not only the ones dogfooded here — the
+/// set describes what this repo ships, not what it happens to materialize. A
+/// cell is read for its first backticked span, so a trailing note beside the
+/// path (`opencode.json` (repo root; …)) does not drop the row. A result still
+/// carrying a placeholder, or a home-relative one, is left out. Each table is
+/// read on its own: one that is missing contributes nothing, which fails
+/// toward reporting and never empties the Shared Files arm.
+fn agent_scaffold_destinations(text: &str) -> BTreeSet<String> {
+    let mut formulas: HashMap<&str, Vec<&str>> = HashMap::new();
+    for table in tables_under(text, "Derived values") {
+        let Some((header, rows)) = table.split_first() else {
+            continue;
+        };
+        for row in rows {
+            let label = row.first().map(|cell| cell.replace('`', "").to_lowercase());
+            if !label.is_some_and(|l| SCAFFOLD_ROWS.contains(&l.trim())) {
+                continue;
+            }
+            for (layout, cell) in header.iter().zip(row).skip(1) {
+                if let (Some(layout), Some(formula)) = (first_span(layout), first_span(cell)) {
+                    formulas.entry(layout).or_default().push(formula);
+                }
+            }
+        }
+    }
+
+    let mut mcp_targets: HashMap<&str, &str> = HashMap::new();
+    for table in tables_under(text, "MCP registration (per-agent)") {
+        let Some((header, rows)) = table.split_first() else {
+            continue;
+        };
+        let (Some(k), Some(t), Some(s)) = (
+            column(header, "key"),
+            column(header, "mcp target"),
+            column(header, "scope"),
+        ) else {
+            continue;
+        };
+        for row in rows {
+            let span = |i: usize| row.get(i).and_then(|cell| first_span(cell));
+            if let (Some(key), Some(target), Some(scope)) = (span(k), span(t), span(s))
+                && PROJECT_SCOPES.contains(&scope)
+            {
+                mcp_targets.insert(key, target);
+            }
+        }
+    }
+
+    let mut out = BTreeSet::new();
+    for table in tables_under(text, "Agent Registry") {
+        let Some((header, rows)) = table.split_first() else {
+            continue;
+        };
+        let (Some(k), Some(c), Some(l)) = (
+            column(header, "key"),
+            column(header, "config_dir"),
+            column(header, "layout"),
+        ) else {
+            continue;
+        };
+        for row in rows {
+            let span = |i: usize| row.get(i).and_then(|cell| first_span(cell));
+            let (Some(key), Some(config_dir), Some(layout)) = (span(k), span(c), span(l)) else {
+                continue;
+            };
+            let derived = formulas.get(layout).into_iter().flatten().copied();
+            for formula in derived.chain(mcp_targets.get(key).copied()) {
+                let path = formula.replace("{config_dir}", config_dir);
+                if !path.contains(['{', '}', '<', '>']) && !path.starts_with('~') {
+                    out.insert(path);
+                }
+            }
+        }
+    }
+    out
+}
+
+/// The tables in the section `heading` names, each as rows of cells, header
+/// first, separator rows dropped. The section is located by the shared
+/// [`section_line_indices`], so it spans its subsections and a table quoted
+/// inside a fenced block or an HTML comment is never read as the registry.
+/// A table ends at the first line that is not one of its rows. A heading that
+/// does not occur yields none.
+fn tables_under<'a>(text: &'a str, heading: &str) -> Vec<Vec<Vec<&'a str>>> {
+    let lines: Vec<&'a str> = text.lines().collect();
+    let mut tables: Vec<Vec<Vec<&'a str>>> = Vec::new();
+    let mut last_row: Option<usize> = None;
+    for idx in section_line_indices(&lines, heading) {
+        let line = lines[idx].trim();
+        if !line.starts_with('|') {
+            continue;
+        }
+        let continues = last_row.is_some_and(|prev| prev + 1 == idx);
+        last_row = Some(idx);
+        let cells: Vec<&str> = line.trim_matches('|').split('|').collect();
+        if cells
+            .iter()
+            .all(|cell| cell.trim().chars().all(|ch| matches!(ch, '-' | ':')))
+        {
+            continue;
+        }
+        if !continues {
+            tables.push(Vec::new());
+        }
+        if let Some(table) = tables.last_mut() {
+            table.push(cells);
+        }
+    }
+    tables
+}
+
+/// The index of the header cell naming `name`, backticks dropped, case folded.
+fn column(header: &[&str], name: &str) -> Option<usize> {
+    header
+        .iter()
+        .position(|cell| cell.replace('`', "").trim().eq_ignore_ascii_case(name))
+}
+
+/// The content of the first inline-code span in `cell`, when it has one.
+fn first_span(cell: &str) -> Option<&str> {
+    let range = inline_code_spans(cell).into_iter().next()?;
+    Some(cell[range].trim()).filter(|span| !span.is_empty())
 }
 
 /// `true` when `candidate` is one of the adopter destinations, or is a
@@ -3079,6 +3232,223 @@ mod tests {
                 result.skipped
             );
         }
+    }
+
+    /// The three registry tables `agent_scaffold_destinations` reads, in the
+    /// real file's shapes: a dogfooded agent (`pi`), one that is not
+    /// (`opencode`), cells carrying a trailing note, a formula still holding
+    /// a placeholder after substitution, and a user-global MCP target.
+    const REGISTRY: &str = "## Agent Registry\n\n\
+        | `key` | `name` | `config_dir` | `layout` |\n\
+        | --- | --- | --- | --- |\n\
+        | `opencode` | OpenCode | `.opencode` | `opencode` |\n\
+        | `auggie` | Auggie | `.augment` | `claude-style` |\n\
+        | `pi` | Pi | `.pi` | `pi` |\n\n\
+        ### Derived values\n\n\
+        | Derived value | Formula |\n\
+        | --- | --- |\n\
+        | Configure source path | `framework/bootstrap/configure/{key}.md` |\n\n\
+        | Derived value | `claude-style` | `opencode` | `pi` |\n\
+        | --- | --- | --- | --- |\n\
+        | Command/skill path | `{config_dir}/commands/{project}/<name>.md` | `{config_dir}/command/{project}/<name>.md` | `{config_dir}/prompts/{project}-<name>.md` |\n\
+        | `ductus` install path | `{config_dir}/commands/ductus.md` | `{config_dir}/command/ductus.md` | `{config_dir}/prompts/ductus.md` |\n\
+        | Settings file | `{config_dir}/settings.local.json` | `opencode.json` (repo root; same file as MCP wiring) | `{config_dir}/settings.json` (no permission-gating surface) |\n\
+        | Native rules file | `CLAUDE.md` | `AGENTS.md` | `AGENTS.md` |\n\n\
+        ### MCP registration (per-agent)\n\n\
+        | `key` | MCP target | scope | mechanism |\n\
+        | --- | --- | --- | --- |\n\
+        | `auggie` | `~/.augment/settings.json` | `user-global` | `surface-instruction` |\n\
+        | `opencode` | `opencode.json` (repo root) `mcp` block | `project-committed` | `write-file` |\n\
+        | `pi` | `.pi/extensions/ductus.ts` (the bridge) | `project-local` (gitignored) | `write-file` |\n\n\
+        ## Shared Files\n";
+
+    #[test]
+    fn the_registry_arm_derives_each_agents_scaffold_paths() {
+        // Scenario per-agent-scaffold-paths-ship-to-adopter. Exactly these:
+        // the install path and settings file per registered agent, plus the
+        // project-scoped MCP targets. Not the command path (`{project}` and
+        // `<name>` survive substitution), not the rules file (a row this
+        // arm does not read), not Auggie's home-relative MCP target.
+        let got = agent_scaffold_destinations(REGISTRY);
+        let want: BTreeSet<String> = [
+            ".augment/commands/ductus.md",
+            ".augment/settings.local.json",
+            ".opencode/command/ductus.md",
+            ".pi/extensions/ductus.ts",
+            ".pi/prompts/ductus.md",
+            ".pi/settings.json",
+            "opencode.json",
+        ]
+        .into_iter()
+        .map(str::to_string)
+        .collect();
+        assert_eq!(got, want);
+    }
+
+    #[test]
+    fn a_table_quoted_in_a_fence_or_comment_is_not_the_registry() {
+        // The section is read through the shared fence- and comment-aware
+        // walker: an example registry row inside a code fence or an HTML
+        // comment under the heading describes a shape, and must not ship an
+        // agent that is not registered.
+        let quoted = REGISTRY.replace(
+            "| `pi` | Pi | `.pi` | `pi` |\n",
+            "| `pi` | Pi | `.pi` | `pi` |\n\n\
+             ```text\n\
+             | `key` | `name` | `config_dir` | `layout` |\n\
+             | --- | --- | --- | --- |\n\
+             | `fenced` | Fenced | `.fenced` | `pi` |\n\
+             ```\n\n\
+             <!--\n\
+             | `key` | `name` | `config_dir` | `layout` |\n\
+             | --- | --- | --- | --- |\n\
+             | `commented` | Commented | `.commented` | `pi` |\n\
+             -->\n",
+        );
+        let got = agent_scaffold_destinations(&quoted);
+        assert!(
+            got.iter()
+                .all(|p| !p.starts_with(".fenced/") && !p.starts_with(".commented/")),
+            "a quoted row was read as a registered agent: {got:?}"
+        );
+        assert!(got.contains(".pi/prompts/ductus.md"), "{got:?}");
+    }
+
+    #[test]
+    fn a_missing_registry_table_contributes_nothing_from_its_arm() {
+        // Each table is read on its own. Without the registry there is no
+        // agent to substitute into the formulas, so the arm is empty; the
+        // Derived values and MCP tables alone name no concrete path.
+        let without_registry = REGISTRY.replace("## Agent Registry", "## Something Else");
+        assert!(agent_scaffold_destinations(&without_registry).is_empty());
+        // Without Derived values only the project-scoped MCP targets remain.
+        let without_derived = REGISTRY.replace("### Derived values", "### Not The Table");
+        assert_eq!(
+            agent_scaffold_destinations(&without_derived),
+            ["opencode.json", ".pi/extensions/ductus.ts"]
+                .into_iter()
+                .map(str::to_string)
+                .collect::<BTreeSet<_>>()
+        );
+    }
+
+    #[test]
+    fn the_real_registry_yields_every_agents_scaffold_paths() {
+        // The guard against the subject silently narrowing: a change to the
+        // bootstrap's table shapes that broke the parse would empty the arm,
+        // and the family would go back to flagging 064's install criteria.
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+        let text = fs::read_to_string(root.join("framework/bootstrap/ductus.md")).unwrap();
+        let got = agent_scaffold_destinations(&text);
+        for path in [
+            // 064 AC1/AC3 — the case that surfaced this.
+            ".pi/prompts/ductus.md",
+            ".pi/settings.json",
+            ".pi/extensions/ductus.ts",
+            // Agents not dogfooded here contribute all the same.
+            ".opencode/command/ductus.md",
+            ".agents/skills/ductus/SKILL.md",
+            ".claude/commands/ductus.md",
+            ".claude/settings.local.json",
+            ".mcp.json",
+        ] {
+            assert!(got.contains(path), "missing {path}: {got:?}");
+        }
+        assert!(
+            got.iter()
+                .all(|p| !p.contains(['{', '<']) && !p.starts_with('~')),
+            "a placeholder or home-relative path leaked: {got:?}"
+        );
+    }
+
+    #[test]
+    fn a_registered_agents_scaffold_path_is_skipped_not_flagged() {
+        // The dogfooded agent's paths (`.pi` exists here, so root-absent does
+        // not fire) and an agent this tree does not dogfood but whose segment
+        // exists all the same.
+        for (criterion, subject) in [
+            (
+                "- [x] The self-install lands at `.pi/prompts/ductus.md`.\n",
+                ".pi/prompts/ductus.md",
+            ),
+            (
+                "- [x] Pi's settings seed is `.pi/settings.json`.\n",
+                ".pi/settings.json",
+            ),
+            (
+                "- [x] The installer lands at `.opencode/command/ductus.md`.\n",
+                ".opencode/command/ductus.md",
+            ),
+        ] {
+            let tmp = tempdir().unwrap();
+            seed_with_criteria(tmp.path(), "done", criterion);
+            write(tmp.path(), "framework/bootstrap/ductus.md", REGISTRY);
+            fs::create_dir_all(tmp.path().join(".pi/prompts")).unwrap();
+            fs::create_dir_all(tmp.path().join(".opencode")).unwrap();
+            let result = run(&args(), tmp.path()).unwrap();
+            assert!(
+                path_findings(&result).is_empty(),
+                "ships to an adopter, must not flag: {criterion} -> {:?}",
+                result.findings
+            );
+            assert!(
+                result
+                    .skipped
+                    .iter()
+                    .any(|s| s.reason == "ships-to-adopter" && s.path == subject),
+                "the skip must be recorded, not silent: {criterion} -> {:?}",
+                result.skipped
+            );
+        }
+    }
+
+    #[test]
+    fn a_config_dir_path_no_registry_row_derives_still_flags() {
+        // The suppression is scoped to derived destinations, not a blanket
+        // `{config_dir}/` exemption.
+        let tmp = tempdir().unwrap();
+        seed_with_criteria(
+            tmp.path(),
+            "done",
+            "- [x] The prompt lives at `.pi/prompts/stale-prompt.md`.\n",
+        );
+        write(tmp.path(), "framework/bootstrap/ductus.md", REGISTRY);
+        fs::create_dir_all(tmp.path().join(".pi/prompts")).unwrap();
+        let result = run(&args(), tmp.path()).unwrap();
+        assert_eq!(path_findings(&result).len(), 1, "{:?}", result.findings);
+    }
+
+    #[test]
+    fn the_shared_files_arm_survives_a_missing_registry() {
+        // The two arms fail independently: a manifest with Shared Files and
+        // no registry still suppresses its rows, while a registry path then
+        // flags — reported rather than swallowed.
+        let tmp = tempdir().unwrap();
+        seed_with_criteria(
+            tmp.path(),
+            "done",
+            "- [x] Adopted at `.ductus/constitution.md`; installer at `.pi/prompts/ductus.md`.\n",
+        );
+        seed_manifest(tmp.path());
+        fs::create_dir_all(tmp.path().join(".ductus")).unwrap();
+        fs::create_dir_all(tmp.path().join(".pi/prompts")).unwrap();
+        let result = run(&args(), tmp.path()).unwrap();
+        let found = path_findings(&result);
+        assert_eq!(found.len(), 1, "{:?}", result.findings);
+        assert!(
+            found[0]
+                .message
+                .starts_with("acceptance criterion names `.pi/prompts/ductus.md`"),
+            "{found:?}"
+        );
+        assert!(
+            result
+                .skipped
+                .iter()
+                .any(|s| s.reason == "ships-to-adopter" && s.path == ".ductus/constitution.md"),
+            "{:?}",
+            result.skipped
+        );
     }
 
     #[test]

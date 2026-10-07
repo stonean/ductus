@@ -24,6 +24,30 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   session of one agent reported the other's links, which are broken by
   construction, as defects. The exclusion is now every `config_dir` in the
   bootstrap's Agent Registry, held to the registry by a test. Spec 022.
+- **A renamed file now contributes its rewrites to the mechanical-sweep
+  exemption, and both halves agree on it.** The transition gate's
+  `SweepIndex::build` diffed without rename detection, so a renamed contract
+  was a delete plus an add and contributed nothing, while audit Family 19's
+  `git diff` detected renames — the halves built different repo-wide sets.
+  Both now detect renames at a stated 50% threshold and 10,000-path limit
+  instead of inheriting git's, libgit2's or a contributor's config; a window
+  over the limit grants no exemption in either, and a rename with its content
+  unchanged reads alike in both. Family 19's diffs also pin colour, external
+  diff drivers, textconv and prefixes, and its pre-digest arm lists both sides
+  of a move. `mechanical_sweep_parity` holds the halves to it with a renumbered
+  directory fixture. Spec 022.
+- **`criterion-path-existence` no longer flags a registered agent's scaffold
+  paths in the framework repo.** The ships-to-adopter set was derived from the
+  Shared Files tables alone, so 064's criteria naming `.pi/prompts/ductus.md`
+  and `.pi/settings.json` read as stale here. It now also derives each Agent
+  Registry row's `ductus` install path, settings file and project-scoped MCP
+  target, for every registered agent, dogfooded or not. Spec 022.
+- **`/analyze`'s command-frontmatter checks read every layout's installed
+  command set.** They spelled the `claude-style` path, so for OpenCode,
+  Antigravity and Pi adopters they read a directory that does not exist and
+  passed. They now name the §Derived values rows, scope membership by the
+  layout's cleanup glob, check `argument-hint:` only where the layout copies
+  the source frontmatter, and report an absent path as unexamined. Spec 000.
 
 ## [0.58.0] — 2026-10-04
 

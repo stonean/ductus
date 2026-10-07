@@ -69,6 +69,7 @@ The validate command runs `npx markdownlint-cli2` on all `.md` files in the feat
 | `commands/implement.md` | Create | Execute tasks, advance to done |
 | `commands/analyze.md` | Create | Audit artifacts for consistency |
 | `commands/next.md` | Create | Auto-advance to next pipeline phase |
+| `framework/commands/analyze.md` | Edit | Project-level consistency reads the installed command set by its layout-derived rows (scenario `analyze-reads-the-layout-derived-command-set`); its generated copies follow through `scripts/gen-claude-commands.sh` |
 
 ## Trade-offs
 

@@ -42,13 +42,41 @@
 //! `mechanical_sweep_parity` integration test pins the two to agree over the
 //! real corpus, so a divergence fails a test rather than going unnoticed.
 //!
+//! Both halves detect renames, with [`RENAME_THRESHOLD`] and [`RENAME_LIMIT`]
+//! stated in each rather than inherited. One residue the constants cannot
+//! close: libgit2 and git score similarity with different algorithms, so a
+//! file near the threshold can be a rename in one half and a delete plus an
+//! add in the other. The renamed files a sweep produces sit far above it — a
+//! renumber rewrites a few link lines of a file — and where the halves
+//! disagree one gate is the stricter, so nothing passes both unexamined.
+//!
 //! Defined by
 //! `specs/022-deterministic-runtime/scenarios/review-staleness-on-done-specs.md`.
 
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 
-use git2::{Delta, DiffOptions, Repository, Tree};
+use git2::{Delta, DiffFindOptions, DiffOptions, Repository, Tree};
+
+/// Rename-detection similarity threshold, in percent. Family 19 passes the
+/// same value to `git diff` as `--find-renames`, and the
+/// `mechanical_sweep_parity` test holds the two to it — stated here rather
+/// than inherited, because libgit2 and git each fall back to their own
+/// default and git's is overridable from a contributor's config (spec 022
+/// scenario `a-renamed-file-contributes-its-rewrites`).
+pub const RENAME_THRESHOLD: u16 = 50;
+
+/// The most changed markdown paths, counted before renames are paired, a
+/// window may carry and still be read. Above it the index is
+/// [`unreadable`](SweepIndex::unreadable) in both halves alike.
+///
+/// The guard rather than the libraries' own limits is what keeps the halves
+/// agreeing: git skips inexact detection once sources × destinations exceeds
+/// the limit squared, while libgit2 caps the sources it tries per file, so the
+/// two degrade differently past their limits. Under this count neither can
+/// bind, and the value sits far above this corpus's size, so no window here
+/// reaches it.
+pub const RENAME_LIMIT: usize = 10_000;
 
 /// One token rewrite: the token as it read before, and as it reads now.
 type Pair = (String, String);
@@ -85,18 +113,50 @@ impl SweepIndex {
         }
     }
 
-    /// Build the index from one `git diff --unified=0 base..HEAD -- '*.md'`.
+    /// Build the index from one `git diff --unified=0 base..HEAD -- '*.md'`,
+    /// with renames detected.
     ///
     /// One diff per base rather than two blob reads per changed file: this
     /// runs inside a release gate, and the blob-per-file shape took a minute
     /// on this repo's history.
+    ///
+    /// A renamed file is diffed against its old path, so its substitutions
+    /// count toward the repo-wide pairs like any other file's. In a renumber
+    /// the renamed directory's own links are where the sweep's rewrite lands;
+    /// read as a delete plus an add, they contributed nothing, and Family 19 —
+    /// whose `git diff` detects renames — built a different repo-wide set.
     #[must_use]
     pub fn build(repo: &Repository, base: &Tree<'_>, head: &Tree<'_>) -> Self {
+        Self::build_with_rename_limit(repo, base, head, RENAME_LIMIT)
+    }
+
+    /// [`build`](SweepIndex::build) with the window guard at `limit` rather
+    /// than [`RENAME_LIMIT`] — the seam `mechanical_sweep_parity` drives to
+    /// show both halves refuse an over-limit window alike, without building a
+    /// ten-thousand-file fixture.
+    #[must_use]
+    pub fn build_with_rename_limit(
+        repo: &Repository,
+        base: &Tree<'_>,
+        head: &Tree<'_>,
+        limit: usize,
+    ) -> Self {
         let mut opts = DiffOptions::new();
         opts.context_lines(0).pathspec("*.md");
-        let Ok(diff) = repo.diff_tree_to_tree(Some(base), Some(head), Some(&mut opts)) else {
+        let Ok(mut diff) = repo.diff_tree_to_tree(Some(base), Some(head), Some(&mut opts)) else {
             return Self::unreadable();
         };
+        if diff.deltas().len() > limit {
+            return Self::unreadable();
+        }
+        let mut find = DiffFindOptions::new();
+        find.renames(true)
+            .copies(false)
+            .rename_threshold(RENAME_THRESHOLD)
+            .rename_limit(limit);
+        if diff.find_similar(Some(&mut find)).is_err() {
+            return Self::unreadable();
+        }
 
         // git2 delivers file / hunk / line callbacks as separate closures, so
         // the shared state they all drive lives in one cell rather than being
@@ -170,10 +230,12 @@ impl SweepIndex {
 
     /// Whether `path` differs from the base by more than a repo-wide rename.
     ///
-    /// A path absent from the index was renamed, added, or deleted — a real
-    /// contract change. A path whose diff is not a pure substitution is a real
-    /// change. A path with no rewrites at all changed only in ways the diff
-    /// does not show as token edits, and is exempt.
+    /// A path absent from the index has no hunk to read — deleted, or renamed
+    /// or re-moded with its content unchanged — and counts as a real contract
+    /// change, since nothing on the diff shows it was merely respelled. A path
+    /// whose diff is not a pure substitution (an added file among them) is a
+    /// real change. A path with no rewrites at all changed only in ways the
+    /// diff does not show as token edits, and is exempt.
     #[must_use]
     pub fn changed_beyond_spelling(&self, path: &str) -> bool {
         let Some(entry) = self.per_file.get(path) else {
@@ -244,13 +306,21 @@ fn fold_events(events: &[Event]) -> BTreeMap<String, Option<BTreeSet<Pair>>> {
             Event::File(next) => {
                 flush(&mut per_file, path.as_deref(), &mut old_run, &mut new_run);
                 path.clone_from(next);
+            }
+            // The entry is opened by the file's first hunk, not its header —
+            // the moment Family 19 opens it, on the `+++ b/` line that only a
+            // file with hunks carries. A delta with none (a rename with its
+            // content unchanged, a mode change) stays absent in both halves;
+            // opened at the header it was an empty, exempt entry here and an
+            // absent, changed one there.
+            Event::Hunk => {
+                flush(&mut per_file, path.as_deref(), &mut old_run, &mut new_run);
                 if let Some(p) = &path {
                     per_file
                         .entry(p.clone())
                         .or_insert_with(|| Some(BTreeSet::new()));
                 }
             }
-            Event::Hunk => flush(&mut per_file, path.as_deref(), &mut old_run, &mut new_run),
             Event::Del(text) => {
                 // A new run started, so the previous pairing is closed.
                 if !new_run.is_empty() {

@@ -310,6 +310,7 @@ Considered and rejected:
 | `framework/commands/plan.md` | Edit | Rewrite Instructions to parseable conventions; add `writeSpecBody` extension point marker |
 | `framework/commands/specify.md` | Edit | Rewrite Instructions to parseable conventions; add `writeSpecBody` extension point marker |
 | `scripts/lint-procedure-parseability.sh` | Create | Bash wrapper that builds runtime and invokes `runtime parse --check` |
+| `scripts/audit/review-freshness.sh` | Edit | Family 19, the release-gate half of the staleness rule `mechanical_sweep` implements; `mechanical_sweep_parity` holds the two to one rule (scenarios `review-staleness-on-done-specs`, `a-renamed-file-contributes-its-rewrites`) |
 | `.github/workflows/markdown-only-pipeline.yml` | Edit | Add step (f) parseability check; preserve existing checks (a)–(e) |
 | `.github/workflows/runtime.yml` | Create | Per-PR build + test + clippy + fmt + `cargo audit` dependency scan |
 | `.github/workflows/runtime-release.yml` | Create | Tag-triggered cross-compile + release upload + CycloneDX SBOM |

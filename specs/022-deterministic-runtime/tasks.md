@@ -29,3 +29,15 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] Implement the behavior described in `scenarios/a-multi-number-renumber-is-one-rewrite.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 133. Implement scenario: [per-agent-scaffold-paths-ship-to-adopter](scenarios/per-agent-scaffold-paths-ship-to-adopter.md)
+
+- [x] Implement the behavior described in `scenarios/per-agent-scaffold-paths-ship-to-adopter.md`
+
+- **Done when**: `criterion-path-existence` records a `ships-to-adopter` skip, not a finding, for a criterion naming any registered agent's `ductus` install path, settings file, or project-scoped MCP target — pinned by tests that include an agent not dogfooded here and a cell carrying a trailing note — while a path no registry row derives still flags, and an unreadable registry leaves the Shared Files contribution intact.
+
+## 134. Implement scenario: [a-renamed-file-contributes-its-rewrites](scenarios/a-renamed-file-contributes-its-rewrites.md)
+
+- [x] Implement the behavior described in `scenarios/a-renamed-file-contributes-its-rewrites.md`
+
+- **Done when**: `SweepIndex::build` and Family 19 both detect renames with the same explicitly stated threshold and rename limit, neither inheriting git or libgit2 defaults nor `diff.renames`; `mechanical_sweep_parity` carries a renamed-directory fixture asserting both halves derive the same pairs including the renamed files' pairs, and fails when either half falls back to delete-plus-add.

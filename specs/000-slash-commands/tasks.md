@@ -132,3 +132,9 @@ Done when: the scenario's described behavior is correctly implemented; every gov
 - [x] Implement the behavior described in `scenarios/criterion-route-after-draft.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested; a spec past `draft` gains an acceptance criterion through a command route rather than a hand edit, the criterion lands unchecked for the completion gate to verify, and the `done`-spec case behaves as the resolved open question specifies.
+
+## 19. Implement scenario: [analyze-reads-the-layout-derived-command-set](scenarios/analyze-reads-the-layout-derived-command-set.md)
+
+- [x] Implement the behavior described in `scenarios/analyze-reads-the-layout-derived-command-set.md`
+
+- **Done when**: `framework/commands/analyze.md` names the installed command set and the bootstrap installer by the §Derived values Command/skill path and `ductus` install path rows — no `claude-style` path spelled at line 34 or in §Project-level consistency — scopes membership by the layout's cleanup glob, checks `argument-hint:` only where the layout carries source frontmatter, reports an absent derived path as unexamined, and the generated copies are regenerated.

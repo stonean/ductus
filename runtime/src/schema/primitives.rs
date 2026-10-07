@@ -316,8 +316,9 @@ pub struct AnalyzeBlock {
     ///
     /// - **Excluded by construction** — `not-a-live-claim` (the criterion
     ///   asserts the path is *gone*, so its absence confirms rather than
-    ///   contradicts), `ships-to-adopter` (a Shared Files destination that
-    ///   resolves in an adopter's tree, not this one), `root-absent`
+    ///   contradicts), `ships-to-adopter` (a Shared Files destination or a
+    ///   registered agent's scaffold path, which resolves in an adopter's
+    ///   tree, not this one), `root-absent`
     ///   (nothing is provable because the path's top-level segment does not
     ///   exist here). Correct, and nothing is owed.
     /// - **Could not be read** — `target-missing`, `target-unparseable`,
