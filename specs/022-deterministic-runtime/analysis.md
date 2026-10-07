@@ -1,18 +1,19 @@
 ---
 spec: 022-deterministic-runtime
-last-run: 2026-10-06T14:41:08Z
-analyzed-against: aeeabaa4233297e1a4f5c4ce4c8ba221838fd83d
+last-run: 2026-10-07T00:44:32Z
+analyzed-against: 0dad730b4317a0847df9e6a1eaa79389c755a540
 hard-fail: 0
 blocking-findings: 0
 advisory: 11
-unexamined: 0
+unexamined: 2
 analyzed-digest:
   data-model.md: ea60d8b2d99fd38c8bc5bfe6a2b61edd0e34c1d9a42d0700f30586a5a1404694
-  plan.md: 549a28e4de11de67d4a5fd75dd244f393987d9ef2d417bd86351fa948f07dfa9
-  review.md: 9b5e0b38cb283e8958f8c90a3e4a43c0d559573dbe7ad20147101e46b05e56ff
+  plan.md: 98efa75845901d5215f59942c02daa4ac1f1614f5b522881853d1988904671a6
+  review.md: dcc48db666e247c814f6fffc0fc6022bfcc888207bbd638c64d3272795f28304
   scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md: d092f9d4f59c67c575cc59039a6e0fdf162546969de2820e747b609d7a3d43c7
   scenarios/a-done-spec-has-no-transition-to-gate.md: 2041c659a2dbee3e17a05a702a11c9b1f59d30ce68acc19f616889696b66da2b
   scenarios/a-multi-number-renumber-is-one-rewrite.md: 04723ad01613f62b14008250c9890e20ac338de82c32bd2f0797580e30ae7be2
+  scenarios/a-renamed-file-contributes-its-rewrites.md: 1409380ceb64bfd694570684a22a43cedead123d97b87213539999fcf28e914d
   scenarios/a-review-states-what-it-read.md: dd3d5e366e77ef782a9bcb90388b5bcfb5d4eb45176663d8138b18d41f5ff400
   scenarios/adopter-corpus-link-integrity.md: a36b79e3e04489a765cfab1c3e657ac0c34ef66a289d0512866a27303eeb5358
   scenarios/adopter-generator-promotion.md: 80ec329393c3b78c0926ef45f61792502c311b1bccaa0dba6526234bac53e161
@@ -28,7 +29,7 @@ analyzed-digest:
   scenarios/argument-hint-needs-a-token.md: 2723dd354fa6c9d98403a199daf3a150f866d1ec4a4ebb702dd9df00a7d2b4cb
   scenarios/ask-consolidation.md: 5e79770b6fed76e68f42c52a0aaeeb88d2c64bc9bbd7d4b6fa13aece937b298b
   scenarios/block-element-scanner.md: 5a9512b307d28410b18d35199f01f7ceb1a7d250e8614cedb661d4104f7effdd
-  scenarios/check-artifacts-skipped-targets.md: 4713c3cc6ada06504d74ed9a4a29fef3db3bb0e7a12b67bad2c4793699880d39
+  scenarios/check-artifacts-skipped-targets.md: af58f2a1af4017647572cd9ffaf8a2d50a83311385d7edfa4ca0797cdb48e52a
   scenarios/check-stuck-read-blob-reuse.md: b5112173b0a1e7fc0b17a3540bc9e84972d22240461d4351ecc0bbcff2ed3508
   scenarios/check-stuck-tasks-md-advancement.md: 79c2ce08ab177bfb3120fe753082b51bd21e4ee366b9aa1d8dc31e9dc110f28a
   scenarios/clarify-command-acceleration.md: 4c27a1159c752a87957c2dd7d55b131ea7000eb1b06d27c1f06a7935ff264236
@@ -77,6 +78,7 @@ analyzed-digest:
   scenarios/orphaned-reference-historical-roots.md: 246412993db6d903a5f7d47699f5a5d9a22105157e6b862be68683a2736da195
   scenarios/parser-nested-list-continuation.md: 60eb9129494668bb18045e94e9c6b208353a9a1195ef384cf2aeb6d2482ce139
   scenarios/parser-walker-conventions.md: b53b0ffcadc43ec54c18f6b473b84021cddef418bf6481227b87f06a6acf08cb
+  scenarios/per-agent-scaffold-paths-ship-to-adopter.md: 0d4b2497176ad1e81f45f8f7bb8a8c8f4bebd2a29f3b834907fa38a8927fec98
   scenarios/primitive-robustness-hardening.md: 6b432610caf59aa9089ad50f19996bbd4d5809137f1fc58aafdcde2df2fc0f90
   scenarios/process-waivers-file-lists.md: eb63107d20a53069e6f1e784314a21daabf0c4c8570bbed740eb2eee433e90ed
   scenarios/project-directory-resolution-chain.md: d43223e3f037960a24f5660a9944aae0fe02df5f1da10257477926a63cfb5a82
@@ -121,11 +123,13 @@ analyzed-digest:
   scenarios/writecode-boundary-derivation.md: 9e4d5b406b4d5e25c4a4dd9e5264995a5e4bc83075ec20eae2c3eb3e36adcd81
   scenarios/writecode-payload-bundling.md: 5c343929c3a42ac4406a02c173b6979231127b9583aabae171fee1f747d5084b
   scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
-  spec.md: ea12fb92d001ec16fd2b816f33a4b890fc1d660c36e436ac5eee39f9f41645e0
-  tasks.md: 4582e85f47dfee044e44a7e9e6d0ee4e790c172a1f674e0300a86a2f2062eb83
+  spec.md: 57b5ada292ecdaceacaafd833859f111df510cafd8af7dc22e1ad16cd791138a
+  tasks.md: f41593a6106a222580518a55db2648b9773df4e4ec3286e0ed2355667a070301
+unexamined-by-reason:
+  not-a-live-claim: 2
 blocking: false
 dispositions:
-  fixed: 0
+  fixed: 2
   routed: 0
   discarded: 11
   undispositioned: 0
@@ -191,7 +195,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 11 advisory; not blocking. 0 unexamined target(s). Dispositions: 0 fixed, 0 routed, 11 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 11 advisory; not blocking. 2 unexamined target(s). Dispositions: 2 fixed, 0 routed, 11 discarded, 0 undispositioned.
 
 ## Hard failures
 
@@ -212,13 +216,14 @@ decisions:
 - grounding — plan.md says POSIX rename is atomic and Windows rename is weaker — `specs/022-deterministic-runtime/plan.md` — **discarded**: a property of the platforms the atomic-write design rests on, stated as rationale; the CI matrix exercises the write on all three
 - grounding — plan.md says certain markdown extensions are off by default in pulldown-cmark — `specs/022-deterministic-runtime/plan.md` — **discarded**: rationale for a rejected alternative in Trade-offs; no current behavior rests on it
 - data-model — data-model.md names check-orphaned-references twice in one list — `specs/022-deterministic-runtime/data-model.md` — **discarded**: a duplicated name changes no meaning, and editing 022's data model stales its review digest for no gain
-- artifact-size — `specs/022-deterministic-runtime/spec.md` is 58291 bytes, 2 read pages at the 50000-byte read size — `specs/022-deterministic-runtime/spec.md` — **discarded**: predates PR #5, which added two short scenarios; splitting or trimming the runtime's umbrella spec is its own work, not Pi support
+- artifact-size — `specs/022-deterministic-runtime/spec.md` is 58284 bytes, 2 read pages at the 50000-byte read size — `specs/022-deterministic-runtime/spec.md` — **discarded**: predates PR #5, which added two short scenarios; splitting or trimming the runtime's umbrella spec is its own work, not Pi support
 - artifact-size — `specs/022-deterministic-runtime/data-model.md` is 121211 bytes, 3 read pages at the 50000-byte read size — `specs/022-deterministic-runtime/data-model.md` — **discarded**: predates PR #5, which added two short scenarios; splitting or trimming the runtime's umbrella spec is its own work, not Pi support
 
 ## Unexamined targets
 
-*None — every target was examined.*
+- not-a-live-claim: 2
 
 ## Fixed in this run
 
-*None.*
+- scenario-context — per-agent-scaffold-paths-ship-to-adopter's Context states the pre-fix derivation in the present tense, which the implementation has since falsified — `specs/022-deterministic-runtime/scenarios/per-agent-scaffold-paths-ship-to-adopter.md` — **fixed**
+- scenario-context — a-renamed-file-contributes-its-rewrites's Context states the halves' pre-fix diff behavior in the present tense, which the implementation has since falsified — `specs/022-deterministic-runtime/scenarios/a-renamed-file-contributes-its-rewrites.md` — **fixed**
