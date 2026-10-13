@@ -225,18 +225,13 @@ fn managed_paths_in(line: &str, roots: &[String]) -> BTreeSet<String> {
         while let Some(rel) = line[from..].find(root.as_str()) {
             let start = from + rel;
             // A prefix must start a token: `x.ductus/y` is not a reference to
-            // `.ductus/y`, and matching inside one would invent paths. A glued
-            // `:` ends the token too, because `<rev>:specs/x.md` and
-            // `:specs/x.md` are git's names for a path at a revision and in the
-            // index. Both resolve through the object store, so no migration can
-            // orphan them, and the working tree is not what they name.
-            let preceded_by_path_char = start > 0
-                && line[..start]
-                    .chars()
-                    .next_back()
-                    .is_some_and(|c| is_path_char(c) || c == '@' || c == ':');
+            // `.ductus/y`, and matching inside one would invent paths. A git
+            // object name is not one either — see `names_a_git_object`.
+            let previous = line[..start].chars().next_back();
+            let not_a_reference = previous.is_some_and(|c| is_path_char(c) || c == '@')
+                || (previous == Some(':') && names_a_git_object(&line[..start - 1]));
             from = start + root.len();
-            if preceded_by_path_char {
+            if not_a_reference {
                 continue;
             }
             let end = start
@@ -253,6 +248,34 @@ fn managed_paths_in(line: &str, roots: &[String]) -> BTreeSet<String> {
         }
     }
     found
+}
+
+/// Whether the colon that ends `before` joins a git revision to the path after
+/// it, making `<rev>:<path>` (or `:<path>`, the index) an object name rather
+/// than a working-tree reference.
+///
+/// An object name resolves through git's object store, where no migration can
+/// move it, so reporting its path as missing from the working tree is a false
+/// finding. A colon alone does not decide it: a colon-joined path list —
+/// `PATH="$PATH:.ductus/bin"` in a hook — names a working-tree directory, and
+/// skipping it would hide exactly the orphan this check exists to report. So
+/// the token before the colon decides. Empty is the index form. A `$` or `%`
+/// marks a variable, and a leading `/` or `.` marks a path, since a refname
+/// cannot start with either; those are lists, and their entries are checked.
+/// Anything else is read as a revision — `abc1234`, `HEAD~2`, `origin/main`,
+/// `v0.58.0`. A list entry after a bare word (`bin:.ductus/x`) is therefore
+/// skipped, because a branch may be named `bin` and nothing on the line says
+/// otherwise.
+fn names_a_git_object(before: &str) -> bool {
+    let token_start = before
+        .char_indices()
+        .rev()
+        .find(|(_, c)| {
+            c.is_whitespace() || matches!(c, '`' | '\'' | '"' | '=' | '(' | '[' | ',' | ';')
+        })
+        .map_or(0, |(i, c)| i + c.len_utf8());
+    let token = &before[token_start..];
+    token.is_empty() || !(token.contains(['$', '%']) || token.starts_with(['/', '.']))
 }
 
 /// Characters that continue a path token. `*` is included so a glob is
@@ -752,7 +775,8 @@ mod tests {
             &tmp.path().join("README.md"),
             "Recover it with `git show abc1234:specs/002-auth/spec.md`.\n\
              The index copy: `git show :specs/002-auth/plan.md`.\n\
-             At a ref: `git show HEAD~2:.ductus/gone.md`.\n\
+             At a ref: `git show HEAD~2:.ductus/gone.md`, or \
+             origin/main:specs/002-auth/tasks.md, or v0.58.0:specs/002-auth/data-model.md.\n\
              See: specs/002-auth/spec.md\n",
         );
         let result = run(&args(), tmp.path()).unwrap();
@@ -765,6 +789,35 @@ mod tests {
             found,
             vec![("specs/002-auth/spec.md", 4)],
             "only the bare reference after `: ` is a working-tree claim"
+        );
+    }
+
+    #[test]
+    fn a_colon_joined_path_list_is_still_checked() {
+        // The shape a bare-colon rule would hide: a hook extending PATH with a
+        // managed directory. Each entry is a working-tree reference, and
+        // skipping it would turn a moved directory back into a silent orphan.
+        // Every line's token before the colon is one a revision cannot be.
+        let tmp = adopter();
+        write(
+            &tmp.path().join(".githooks/pre-commit"),
+            "#!/usr/bin/env bash\n\
+             PATH=\"$PATH:.ductus/gone-a\"\n\
+             PATH=${PATH}:.ductus/gone-b\n\
+             PATH=/usr/local/bin:.ductus/gone-c\n\
+             PATH=./bin:.ductus/gone-d\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        let found: Vec<&str> = result.findings.iter().map(|f| f.target.as_str()).collect();
+        assert_eq!(
+            found,
+            vec![
+                ".ductus/gone-a",
+                ".ductus/gone-b",
+                ".ductus/gone-c",
+                ".ductus/gone-d"
+            ],
+            "a variable or a path before the colon makes it a list entry"
         );
     }
 

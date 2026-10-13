@@ -10,9 +10,10 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   path as a missing file.** A referrer citing `git show abc1234:specs/x/spec.md`
   — a retired spec's text at the commit that last held it — was matched on its
   `specs/` root, read as a working-tree path, and reported orphaned. A path
-  glued to a preceding `:` (`<rev>:<path>`, or `:<path>` for the index) now
-  ends the token the way a path character or `@` already did, so it is not a
-  candidate; the same path written bare is still checked. Spec 022.
+  after a colon is now skipped when the token before the colon is empty (the
+  index) or shaped like a revision; a variable or a path before the colon
+  marks a colon-joined list such as `PATH="$PATH:.ductus/bin"`, whose entries
+  are still checked, as is the same path written bare. Spec 022.
 
 ## [0.59.0] — 2026-10-06
 

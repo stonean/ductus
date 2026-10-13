@@ -14,15 +14,19 @@ None of the three is an orphan. The path resolves through git's object store at 
 
 ## Behavior
 
-**A candidate immediately preceded by `:` is not a working-tree reference.** The colon joins the token-boundary set beside the path characters and `@`: a managed-root prefix glued to a preceding `:` does not start a token, so neither the `<rev>:<path>` form nor the `:<path>` form is a candidate. They are excluded the way `x.ductus/y` is — not reported under `skipped`, since nothing recognized them as working-tree references — and `matched-prefixes` is unchanged.
+**A git object name is not a working-tree reference.** A managed-root prefix glued to a preceding `:` is not a candidate when the token before the colon is empty — the `:<path>` index form — or shaped like a revision: `abc1234`, `HEAD~2`, `origin/main`, `v0.58.0`. The token runs back from the colon to whitespace or one of `` ` ``, `'`, `"`, `=`, `(`, `[`, `,`, `;`. Such a name is excluded the way `x.ductus/y` is — not reported under `skipped`, since nothing recognized it as a working-tree reference — and `matched-prefixes` is unchanged.
 
-**The exclusion is the colon, not the revision.** The check neither parses nor verifies the revision: no `git cat-file`, no git dependency. Whether the object exists at that revision is a claim about history, outside this check's subject either way, and verifying it would make the result depend on clone depth, which a shallow CI checkout answers differently from a developer's.
+**A colon alone does not decide it.** A colon-joined path list names working-tree directories: `PATH="$PATH:.ductus/bin"` in a hook is a reference a migration can orphan, and excluding every glued colon would hide it, which is the failure this check exists to prevent. So when the token before the colon contains `$` or `%` (a variable) or starts with `/` or `.` (a path; a refname cannot start with either), the entry after it is checked like any other reference.
+
+**The revision is read by shape, never verified.** No `git cat-file`, no git dependency. Whether the object exists at that revision is a claim about history, outside this check's subject either way, and verifying it would make the result depend on clone depth, which a shallow CI checkout answers differently from a developer's.
 
 **The same path written bare is still checked.** A file citing `abc1234:specs/x/spec.md` on one line and `specs/x/spec.md` on another yields exactly one finding — the bare one — when `specs/x/spec.md` does not exist.
 
 ## Edge Cases
 
-- **A colon followed by a space** — `See: specs/x/spec.md` — leaves the prefix at a token start, and the reference is checked as before. Only a glued colon excludes.
+- **A colon followed by a space** — `See: specs/x/spec.md` — leaves the prefix at a token start, and the reference is checked as before. Only a glued colon can exclude.
+- **A list entry after a bare word** — `PATH=bin:.ductus/x` — is excluded. `bin` is a valid branch name and nothing on the line says otherwise, so the shape cannot tell the two apart; the reading that skips is chosen because the revision form is the one observed in adopter prose.
+- **Prose with no space after the colon** — `see:specs/x/spec.md` — reads `see` as a revision and is excluded. It was a finding before; it is now the same silent skip as the bare-word list entry, and for the same reason.
 - **A URL** — `https://host/owner/repo/blob/main/specs/x.md` — was already excluded: the prefix follows `/`, a path character.
 - **A revision-qualified path under another managed root** — `abc1234:.ductus/constitution.md` — is excluded the same way; the boundary is tested per prefix, not per root.
 
