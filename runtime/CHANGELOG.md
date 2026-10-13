@@ -11,9 +11,10 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   — a retired spec's text at the commit that last held it — was matched on its
   `specs/` root, read as a working-tree path, and reported orphaned. A path
   after a colon is now skipped when the token before the colon is empty (the
-  index) or shaped like a revision; a variable or a path before the colon
-  marks a colon-joined list such as `PATH="$PATH:.ductus/bin"`, whose entries
-  are still checked, as is the same path written bare. Spec 022.
+  index) or shaped like a revision. A variable or a path before the colon
+  marks a colon-joined list such as `PATH="$PATH:.ductus/bin"`, and a `]`
+  marks a markdown link label; their paths are still checked, as is the same
+  path written bare. Spec 022.
 
 ## [0.59.0] — 2026-10-06
 

@@ -262,10 +262,12 @@ fn managed_paths_in(line: &str, roots: &[String]) -> BTreeSet<String> {
 /// the token before the colon decides. Empty is the index form. A `$` or `%`
 /// marks a variable, and a leading `/` or `.` marks a path, since a refname
 /// cannot start with either; those are lists, and their entries are checked.
-/// Anything else is read as a revision — `abc1234`, `HEAD~2`, `origin/main`,
-/// `v0.58.0`. A list entry after a bare word (`bin:.ductus/x`) is therefore
-/// skipped, because a branch may be named `bin` and nothing on the line says
-/// otherwise.
+/// A trailing `]` is a markdown link label — the `CommonMark` spec lets a
+/// reference definition omit the space, `[old]:specs/x.md` — and a label's
+/// target is a working-tree path, so it is checked too. Anything else is read
+/// as a revision — `abc1234`, `HEAD~2`, `origin/main`, `v0.58.0`. A list entry
+/// after a bare word (`bin:.ductus/x`) is therefore skipped, because a branch
+/// may be named `bin` and nothing on the line says otherwise.
 fn names_a_git_object(before: &str) -> bool {
     let token_start = before
         .char_indices()
@@ -275,7 +277,8 @@ fn names_a_git_object(before: &str) -> bool {
         })
         .map_or(0, |(i, c)| i + c.len_utf8());
     let token = &before[token_start..];
-    token.is_empty() || !(token.contains(['$', '%']) || token.starts_with(['/', '.']))
+    token.is_empty()
+        || !(token.contains(['$', '%']) || token.starts_with(['/', '.']) || token.ends_with(']'))
 }
 
 /// Characters that continue a path token. `*` is included so a glob is
@@ -793,7 +796,7 @@ mod tests {
     }
 
     #[test]
-    fn a_colon_joined_path_list_is_still_checked() {
+    fn a_path_after_a_non_revision_colon_is_still_checked() {
         // The shape a bare-colon rule would hide: a hook extending PATH with a
         // managed directory. Each entry is a working-tree reference, and
         // skipping it would turn a moved directory back into a silent orphan.
@@ -807,17 +810,24 @@ mod tests {
              PATH=/usr/local/bin:.ductus/gone-c\n\
              PATH=./bin:.ductus/gone-d\n",
         );
+        // A link reference definition with no space after its colon is the
+        // same claim in markdown: its target is a working-tree path.
+        write(
+            &tmp.path().join("README.md"),
+            "[old]:specs/gone-e/spec.md\n",
+        );
         let result = run(&args(), tmp.path()).unwrap();
         let found: Vec<&str> = result.findings.iter().map(|f| f.target.as_str()).collect();
         assert_eq!(
             found,
             vec![
+                "specs/gone-e/spec.md",
                 ".ductus/gone-a",
                 ".ductus/gone-b",
                 ".ductus/gone-c",
                 ".ductus/gone-d"
             ],
-            "a variable or a path before the colon makes it a list entry"
+            "a variable, a path or a link label before the colon is not a revision"
         );
     }
 
