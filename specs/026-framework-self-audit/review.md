@@ -1,13 +1,14 @@
 ---
 spec: 026-framework-self-audit
-last-run: 2026-09-28T13:21:20Z
-reviewed-against: f3d9fb69aa765f6d446803b221a7315b6566ebff
-diff-base: e4c2d1cb4518dce7ebde2bfddb470e35b982103e
+scenario: family-39-shipped-anchor-resolution
+last-run: 2026-10-13T15:58:06Z
+reviewed-against: 1bc3ad6446b18b75dd363e397cbaab9126649d9e
+diff-base: bd14fefe7d05788877b7cde6ed7a850be1b7fb74
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 2
-scope: 16
+examined: 7
+scope: 21
 skipped-passes: []
 reviewed-digest:
   scenarios/audit-ci-hard-gate.md: a7bad7a167532019112d79a746696ad32d963171598d2283072af0e9f3234be7
@@ -28,6 +29,7 @@ reviewed-digest:
   scenarios/family-34-step-reference-integrity.md: 4d24ed6a08c54ae98f135ad108d3b8a7b85f782f5af7edf26c67d92aa509f067
   scenarios/family-35-manifest-destination-links.md: 8e94dce4172e2b326612da806327af31777d99b8c6ce89642c9d10a98dc148b3
   scenarios/family-36-self-url-resolution.md: 23716b0f5c3810890bab089c65258008842869e35616a71b86b663ed231bde18
+  scenarios/family-39-shipped-anchor-resolution.md: 989bc2bab609358c00183fd3711d0530f0ebb29a51e4c92f92d37192bce9b355
   scenarios/host-namespace-parity.md: 05714fe6b728391f699ed7328e1aea252a48259ae489fa9c06e0d0609dc1d376
   scenarios/link-check-consolidation.md: f838133a535aa090e09d7f82903facc4dff8cc822c1dec5c22f9b4d1e17a5049
   scenarios/readme-command-parity.md: 3788aa1103dba1860af8cb9950a6425ed33e4a24498f825fcd980e0c9bb7f8bc
@@ -43,7 +45,7 @@ dispositions:
 
 ## Summary
 
-Reopen for 061 (Family 36's main-URL rationale and slug source). Default diff base: the parent of this reopen's done -> in-progress commit, so the window is the reopen itself; compute-review-scope reports scope 16 from the plan's Affected Files, of which spec.md (the status flip) and scenarios/family-36-self-url-resolution.md (the restatement and signpost) were modified since the base. Five passes (security, reuse, quality, efficiency, simplicity) against all 11 rule files discover-rule-files selected, each read in full, plus AGENTS.md read in full. 0 MUST, 0 SHOULD, 0 low-confidence, 0 observations. examined: 2 of 16 -- spec.md and the scenario, both read in full; the scenario's two restated bullets were checked against scripts/audit/self-url-resolution.sh as committed at a654662a (read in full, outside this scope), whose slug grep now keys on the codeload tar.gz URL and whose report was byte-identical before and after that change. The only durable contract changed is this one scenario; the other twenty are unchanged in the window. NOT read against this reopen, named rather than counted, all unchanged in this window: .claude/commands/ductus/audit.md (generated), .github/workflows/runtime-release.yml, framework/commands/audit.md, runtime/legacy-prose-commands.txt, scripts/audit/{adopter-shell-behavior,check-zero,cross-doc-consistency,introducing-drift,manifest-parity,placeholder-roundtrip,sibling-coupling,ssot-invariants,template-alignment}.sh (runtime-release.yml and audit.md were edited by 061 tasks 6-7 before this window). ABSENT but in scope because the plan lists it: .github/workflows/markdown-only-pipeline.yml, removed by 048.
+Five passes over bd14fefe..1bc3ad64: scenario `family-39-shipped-anchor-resolution` (task 42, AC26), the new `scripts/audit/shipped-anchor-resolution.sh`, and its registration in `run-all.sh`, `framework/commands/audit.md` and `scripts/audit/README.md`. Rule files: the eleven `discover-rule-files` selects; `quality-cross.md` governs a check script and was applied in full. QUAL-CLAIM-001 is met by the stderr coverage line (files examined, references by kind, qualified named as excluded by construction) and by the three cannot-examine states each being a finding. QUAL-TEST-001 is met by mutation: reverting `ductus.md:901` to a short heading turned the family red at that line, and an empty enumeration, no reachable runtime and a runtime exiting non-zero each produced a finding and exit 1 in throwaway trees, beside a control that exited 0. The security pass found a list-form subprocess over git-enumerated paths and no new input source; reuse, efficiency and simplicity found nothing (it reuses `ductus_bin` and the README's documented python convention, and makes 64 short subprocess calls). A prose-claim sweep for stale family counts found none. No MUST or SHOULD finding and no observation. **Examined 7 of 21.** The 7 are the window's modified files: the new script and the scenario read in full, the other five read as their diffs over the diff base. Two modified files were not read and are not counted: the generated `.claude/commands/ductus/audit.md` and `.pi/prompts/ductus-audit.md`, which `scripts/gen-claude-commands.sh` reports in sync with their source. The other 12 scope entries are plan-affected paths the window does not touch (the other family scripts, two workflows, `legacy-prose-commands.txt`); they were not read.
 
 ## MUST violations (blocking)
 
