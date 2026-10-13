@@ -377,11 +377,11 @@ Extends task 29 rather than opening a second task on the same scenario, per 023'
 
 ### 42. Family 39 — shipped anchor resolution
 
-- [ ] Implement the behavior described in `scenarios/family-39-shipped-anchor-resolution.md`
-- [ ] Add `scripts/audit/shipped-anchor-resolution.sh` in the Family 35 shape: `lib.sh`, `audit_family`, `ductus_bin`, python3 computing tab-separated records the shell feeds to `emit`, Bash 3.2 compatible
-- [ ] Enumerate `git ls-files 'framework/*.md'`, run `resolve-anchor --markers-path framework/constitution.md` on each, and report each unresolved reference at `file:line` with its anchor and the three repairs
-- [ ] Report an unreachable runtime, an empty enumeration, and an unreadable or unparseable result as findings; print the coverage counts to stderr
-- [ ] Register it in `scripts/audit/run-all.sh`, `framework/commands/audit.md`, and `scripts/audit/README.md` §Scripts, the three lists Family 28 holds together
-- [ ] Prove it fails before keeping it: break one `§` in a shipped file and confirm the family turns red, then restore
+- [x] Implement the behavior described in `scenarios/family-39-shipped-anchor-resolution.md`
+- [x] Add `scripts/audit/shipped-anchor-resolution.sh` in the Family 35 shape: `lib.sh`, `audit_family`, `ductus_bin`, python3 computing tab-separated records the shell feeds to `emit`, Bash 3.2 compatible
+- [x] Enumerate `git ls-files 'framework/*.md'`, run `resolve-anchor --markers-path framework/constitution.md` on each, and report each unresolved reference at `file:line` with its anchor and the three repairs
+- [x] Report an unreachable runtime, an empty enumeration, and an unreadable or unparseable result as findings; print the coverage counts to stderr
+- [x] Register it in `scripts/audit/run-all.sh`, `framework/commands/audit.md`, and `scripts/audit/README.md` §Scripts, the three lists Family 28 holds together
+- [x] Prove it fails before keeping it: break one `§` in a shipped file and confirm the family turns red, then restore
 
 - **Done when**: every tracked `framework/**/*.md` is resolved against the constitution by the primitive, each unresolved reference is reported at `file:line`, the three cannot-examine states are findings, the coverage line prints on stderr, the family appears in all three registries Family 28 checks, `shellcheck -S warning` is clean, and it has been proven to fail on a deliberately broken reference.
