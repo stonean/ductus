@@ -2,7 +2,11 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
-## [Unreleased]
+## [0.59.1] — 2026-10-13
+
+Two false findings an adopter reported against 0.58.0, both reproducible on
+0.59.0, and a lockfile security bump. A patch release: no primitive gains an
+argument or a result field.
 
 ### Fixed
 
@@ -15,6 +19,26 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   marks a colon-joined list such as `PATH="$PATH:.ductus/bin"`, and a `]`
   marks a markdown link label; their paths are still checked, as is the same
   path written bare. Spec 022.
+- **Every `§` reference the installer ships resolves under `resolve-anchor`.**
+  An adopter running `resolve-anchor` over its installed `ductus.md` against
+  `.ductus/constitution.md` got unresolved anchors it could not fix: headings
+  cited short (`§MCP registration` for *MCP registration (per-agent)*),
+  archive-half sections no installed copy holds, a bold paragraph cited as a
+  section, a heading split across two TOML comment lines, and other documents'
+  sections cited without naming the document. Archive-half sections are now
+  named in bold, `§` is kept for a local heading or a constitution marker, and
+  a section of another document names that document on the same line. The
+  archive half, the migration bodies and `/analyze`'s command source carried
+  the same shapes and are fixed with it. Framework only.
+
+### Security
+
+- **`quinn-proto` advanced 0.11.16 → 0.11.18 for RUSTSEC-2026-0338,
+  RUSTSEC-2026-0339, RUSTSEC-2026-0340, RUSTSEC-2026-0341 and
+  RUSTSEC-2026-0342.** Lockfile only: `quinn-proto` is compiled into no target
+  (`cargo tree -e all --target all -i quinn-proto` prints nothing), so no
+  shipped binary changes. The advisories reached the database after 0.59.0's
+  run went green; `cargo audit` gates both the push workflow and the release.
 
 ## [0.59.0] — 2026-10-06
 
