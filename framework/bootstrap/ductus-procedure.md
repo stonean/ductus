@@ -7,7 +7,7 @@ description: The /ductus sections that run after the framework archive is extrac
 The half of the `/ductus` procedure that cannot run before the framework archive
 exists. It ships **in** that archive and is read from the extracted tree at
 `{framework-root}/framework/bootstrap/ductus-procedure.md`, where
-`{framework-root}` is the framework root §Archive fetch and extract derives
+`{framework-root}` is the framework root **Archive fetch and extract** derives
 from the extraction.
 
 Three things follow, and each is the point of the split:
@@ -25,15 +25,17 @@ Three things follow, and each is the point of the split:
   reaches these sections.
 
 A run that halts in the pre-flight phase never reads this file — which is exactly
-the set of sections §Pre-flight abort already skips.
+the set of sections **Pre-flight abort** already skips.
 
 **Where a named section lives.** The reverse of the rule the installed half
-states: a **bolded section name** or `§name` below that has no heading in *this*
-file is in `framework/bootstrap/ductus.md`, the half the adopter has installed —
-§Pre-flight Phase, §Derived values, §Shared Files, §Per-Agent Scaffolding,
-§Project Configuration, §Collect Project Inputs, §Archive fetch and extract and
-§Pre-flight abort among them. That file is already loaded whenever this one is
-read, because reaching this file means the run got past the archive fetch.
+states: a **bolded section name** below that has no heading in *this* file is in
+`framework/bootstrap/ductus.md`, the half the adopter has installed —
+**Pre-flight Phase**, **Derived values**, **Shared Files**, **Per-Agent
+Scaffolding**, **Project Configuration**, **Collect Project Inputs**, **Archive
+fetch and extract** and **Pre-flight abort** among them. That file is already
+loaded whenever this one is read, because reaching this file means the run got
+past the archive fetch. A `§name` is kept, as it is there, for a heading in this
+file or a constitution marker, so `resolve-anchor` can check every one.
 
 ## Pre-run Migrations
 
@@ -42,7 +44,7 @@ Adopter-side cleanup for conventions that have been removed or renamed since the
 ### Procedure
 
 1. Read `framework/migrations.toml` from the fetched archive. If the file is missing or malformed (TOML parse error), abort with `Failed to read framework/migrations.toml; cannot run pre-run migrations.` and do not continue.
-2. Resolve the **active config file** once for this run (write policy: §Project Configuration) and read its `[migrations].last_applied` (treat an absent `[migrations]` section as null). Every marker write-back in step 7 targets this same resolved file, so the read and the write-backs agree even though the config file is itself a migration target; the one step that changes the resolution mid-run is the `govern-dir-consolidate` procedure, whose config move makes `.ductus/config.toml` the active file for every later step (its procedure file says so).
+2. Resolve the **active config file** once for this run (write policy: **Project Configuration**) and read its `[migrations].last_applied` (treat an absent `[migrations]` section as null). Every marker write-back in step 7 targets this same resolved file, so the read and the write-backs agree even though the config file is itself a migration target; the one step that changes the resolution mid-run is the `govern-dir-consolidate` procedure, whose config move makes `.ductus/config.toml` the active file for every later step (its procedure file says so).
 3. Filter the registry to entries where both:
 
    - `introduced_in` is greater than `last_applied`'s `introduced_in` (SemVer comparison, lex tie-break on `id`); when `last_applied` is null, every entry qualifies.
@@ -314,7 +316,7 @@ The Hook Installation section above still runs and may set `core.hooksPath` rega
 
 - **Unknown agent key in `--agents=`** — stop before scaffolding; report the unknown key with the list of valid keys.
 - **All supported agents already adopted with `--add-agent`** — show the prompt with all agents pre-selected; if the user confirms with no additions, treat it as a routine update and continue silently.
-- **The agent's settings file already has entries beyond the bootstrap** (§Permission Setup resolves it per layout — `settings.local.json`, `settings.json`, or the repo-root `opencode.json`) — only add the curl/ls bootstrap entries if missing. Do not overwrite, deduplicate, or reorder entries added by `/{project}:configure` or by the user.
+- **The agent's settings file already has entries beyond the bootstrap** (**Permission Setup** resolves it per layout — `settings.local.json`, `settings.json`, or the repo-root `opencode.json`) — only add the curl/ls bootstrap entries if missing. Do not overwrite, deduplicate, or reorder entries added by `/{project}:configure` or by the user.
 - **`ductus.md` content already matches the version on disk** — when the manifest's `update` strategy compares fetched content to the installed file, identical content reports as "unchanged" and avoids a redundant write. Same rule applies to per-project `configure.md` and other update-strategy files.
 - **Pinned `ductus.md` in `.ductus/config.toml`** — the manifest's `update` strategy still skips the file (no overwrite), and the **Pre-flight Phase**'s self-update check never writes pinned files even on the stale-detect path. The check byte-compares anyway: matching upstream → recorded as `current`, no output; divergent from upstream → recorded as `pinned-divergent`, the run continues, and a single advisory line is printed in the post-scaffolding output. A pinned `ductus.md` will not pick up upstream changes until the pin is removed, but the user is told once when the pin is currently suppressing real divergence.
 - **Self-update check sees a stale `ductus` in an unselected adopted agent** — the check is scoped to selected agents only. The unselected agent's stale copy is not diffed, not written, and does not trigger the abort; it will be detected the next time the user runs `/ductus` against it.
@@ -376,7 +378,7 @@ The advisory is omitted when no agent is `pinned-divergent` — adopters whose p
 
 ### Security audit summary
 
-If the **Security Audit (brownfield)** section ran and produced one or more findings, append this block to the file summary — rendering each command in **the adopted agent's own invocation form**, per the §Derived values **Invocation** row, exactly as the next-steps list below does. The colon form here is the `claude-style` default; printing it to an Antigravity or OpenCode adopter names a command that does not exist on their agent:
+If the **Security Audit (brownfield)** section ran and produced one or more findings, append this block to the file summary — rendering each command in **the adopted agent's own invocation form**, per the **Invocation** row of **Derived values**, exactly as the next-steps list below does. The colon form here is the `claude-style` default; printing it to an Antigravity or OpenCode adopter names a command that does not exist on their agent:
 
 ```text
 Security audit: {N} gap(s) in {M} existing spec(s) — nothing was written.
@@ -400,7 +402,7 @@ This summary hands off to `/{project}:analyze`, which dispositions each gap in t
 
 Adopted agents: {comma-separated `name` of selected agents}.
 
-Next steps (render each command in **the adopted agent's own invocation form** — the §Derived values **Invocation** row: `/{project}:<name>` for `claude-style`, `/{project}-<name>` for `antigravity`, `/{project}/<name>` for `opencode`, `/{project}-<name>` for `pi`. The colon form below is the `claude-style` default; printing it to an Antigravity, Pi, or OpenCode adopter names six commands that do not exist on their agent. When several agents were adopted, render the list once per agent under its name):
+Next steps (render each command in **the adopted agent's own invocation form** — the **Invocation** row of **Derived values**: `/{project}:<name>` for `claude-style`, `/{project}-<name>` for `antigravity`, `/{project}/<name>` for `opencode`, `/{project}-<name>` for `pi`. The colon form below is the `claude-style` default; printing it to an Antigravity, Pi, or OpenCode adopter names six commands that do not exist on their agent. When several agents were adopted, render the list once per agent under its name):
 
 1. Run `/{project}:configure` in each adopted agent to apply the full permission set.
 2. Fill in `AGENTS.md` — tech stack, project structure, code style, testing conventions, gotchas.

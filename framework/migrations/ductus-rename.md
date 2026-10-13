@@ -13,7 +13,7 @@ The runtime reads `.ductus/` first and falls back to `.govern/` and then the pre
 
 ## Procedure
 
-This migration has no runtime primitive; it is file moves and in-place rewrites the host performs directly. It runs under the batch migration consent (the §Pre-run Migrations "apply N migrations?" prompt) — there is **no** additional per-file prompt.
+This migration has no runtime primitive; it is file moves and in-place rewrites the host performs directly. It runs under the batch migration consent (the "apply N migrations?" prompt in `ductus-procedure.md` §Pre-run Migrations) — there is **no** additional per-file prompt.
 
 Registry ordering by `introduced_in` places it after `govern-dir-consolidate` (0.22.0) and `constitution-relocate` (0.24.0), both of which land their files under `.govern/`. Those migrations are the historical record of where things went at the time; this one completes the second hop. An adopter arriving from any prior layout therefore converges in a single run: pre-042 root files move to `.govern/` and then to `.ductus/`, a 042-era project moves once, and an already-converged project matches no step below.
 

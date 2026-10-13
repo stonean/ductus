@@ -13,7 +13,7 @@ Composes with `ductus-rename` (same release, and ordered after it by the lexicog
 
 ## Procedure
 
-This migration has no runtime primitive; it is an in-place config rewrite the host performs directly. It runs under the batch migration consent (the §Pre-run Migrations "apply N migrations?" prompt) — there is **no** additional per-file prompt.
+This migration has no runtime primitive; it is an in-place config rewrite the host performs directly. It runs under the batch migration consent (the "apply N migrations?" prompt in `ductus-procedure.md` §Pre-run Migrations) — there is **no** additional per-file prompt.
 
 1. **Idempotency check.** For each of the project-committed MCP targets that exists — `.mcp.json` (Claude) and the root `opencode.json` / `opencode.jsonc` (OpenCode) — read the registered `ductus` server entry. If no target file exists, or no file registers a `ductus` server, or every registration already names a path rather than the bare command, exit silently.
 
