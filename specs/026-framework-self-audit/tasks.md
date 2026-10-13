@@ -374,3 +374,14 @@ Extends task 29 rather than opening a second task on the same scenario, per 023'
 - [x] Implement the behavior described in `scenarios/family-19-says-what-it-examined.md`
 
 - **Done when**: `review-freshness.sh` judges a record carrying `reviewed-digest` by that digest and one without it by the existing `reviewed-against`..HEAD diff, so the digest arm agrees with `check-review-gate` by construction while the proxy arm keeps the 53 pre-digest specs enforced; it closes every run with one stdout coverage line naming the examined count **split into digest and proxy** alongside the grandfathered and unresolvable exclusions, in the shape Families 27, 31 and 37 already use; the line prints on a clean run, on a findings run (above the findings), and on a corpus with zero `done` specs; a record with a digest and an unresolvable `reviewed-against` is examined rather than counted unresolvable, and `reviewed-digest: {}` reads as current on the digest arm; the line never affects the exit code, so `run_check`'s non-zero-means-findings contract and the aggregator are unchanged; `bash scripts/audit/run-all.sh` still exits 0 on a clean tree and the family's own output is no longer empty; `shellcheck -S warning` clean.
+
+### 42. Family 39 — shipped anchor resolution
+
+- [ ] Implement the behavior described in `scenarios/family-39-shipped-anchor-resolution.md`
+- [ ] Add `scripts/audit/shipped-anchor-resolution.sh` in the Family 35 shape: `lib.sh`, `audit_family`, `ductus_bin`, python3 computing tab-separated records the shell feeds to `emit`, Bash 3.2 compatible
+- [ ] Enumerate `git ls-files 'framework/*.md'`, run `resolve-anchor --markers-path framework/constitution.md` on each, and report each unresolved reference at `file:line` with its anchor and the three repairs
+- [ ] Report an unreachable runtime, an empty enumeration, and an unreadable or unparseable result as findings; print the coverage counts to stderr
+- [ ] Register it in `scripts/audit/run-all.sh`, `framework/commands/audit.md`, and `scripts/audit/README.md` §Scripts, the three lists Family 28 holds together
+- [ ] Prove it fails before keeping it: break one `§` in a shipped file and confirm the family turns red, then restore
+
+- **Done when**: every tracked `framework/**/*.md` is resolved against the constitution by the primitive, each unresolved reference is reported at `file:line`, the three cannot-examine states are findings, the coverage line prints on stderr, the family appears in all three registries Family 28 checks, `shellcheck -S warning` is clean, and it has been proven to fail on a deliberately broken reference.
