@@ -1,17 +1,17 @@
 ---
 spec: 022-deterministic-runtime
 scenario: a-revision-qualified-path-is-not-a-working-tree-reference
-last-run: 2026-10-13T02:07:19Z
-reviewed-against: 97fa577964fd1eae90ca3b5ffae1893b0ca828e3
+last-run: 2026-10-13T02:09:59Z
+reviewed-against: 3f7a9694c2fede244d041f3773ee6df2826e7656
 diff-base: f638a808db87575915d11f36735a8ecdf0b7c817
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 12
-scope: 45
+examined: 13
+scope: 46
 skipped-passes: []
 reviewed-digest:
-  data-model.md: ea60d8b2d99fd38c8bc5bfe6a2b61edd0e34c1d9a42d0700f30586a5a1404694
+  data-model.md: 28ba99f6140fe5c0f9b101180cd450db522b577d5b508a71869353b7eb4983f4
   scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md: d092f9d4f59c67c575cc59039a6e0fdf162546969de2820e747b609d7a3d43c7
   scenarios/a-done-spec-has-no-transition-to-gate.md: 2041c659a2dbee3e17a05a702a11c9b1f59d30ce68acc19f616889696b66da2b
   scenarios/a-multi-number-renumber-is-one-rewrite.md: 04723ad01613f62b14008250c9890e20ac338de82c32bd2f0797580e30ae7be2
@@ -128,7 +128,7 @@ reviewed-digest:
   scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
 blocking: false
 dispositions:
-  fixed: 3
+  fixed: 4
   routed: 0
   discarded: 0
   undispositioned: 0
@@ -138,7 +138,7 @@ dispositions:
 
 ## Summary
 
-Five passes over the window f638a808..97fa5779, which holds scenario `a-revision-qualified-path-is-not-a-working-tree-reference` (task 135), its fix in `check_orphaned_references.rs`, and a framework prose fix making every `§` the installer ships resolvable by `resolve-anchor`. Rule files loaded: all eleven `framework/rules/*.md` selected by `discover-rule-files`; `quality-cross.md` was read in full and governs the change (QUAL-TEST-001 was checked by mutating each new branch: the revision test fails with the colon branch removed, the list test fails when every token reads as a revision or the `]` case is dropped). The security, API, reliability and frontend files were checked by rule heading against a change that adds no I/O, no input source, no shell-out and no endpoint, and none applies. No MUST or SHOULD finding. Three observations, all fixed in the run: the first fix's bare-colon rule would have hidden colon-joined path list entries (51d79cbc) and markdown link labels written without a space (97fa5779), and the installer's config-schema prose used the `/ductus:` namespace for adopter commands (543f2d24). **Examined 12 of 45.** The 12 are the window's modified files read as their diffs over the diff base, with the runtime file's changed functions and tests and the new scenario read in full. Three modified files were not read and are not counted: `framework/bootstrap/govern.md`, held byte-identical to `ductus.md` by `cmp` and Family `transitional-bootstrap-parity`, and the generated `.claude/commands/ductus/analyze.md` and `.pi/prompts/ductus-analyze.md`, which `scripts/gen-claude-commands.sh` reports in sync with their source. The other 30 scope entries are plan-affected paths the window does not touch, most of them whole directories (`runtime/src/primitives/`, `runtime/tests/`); they were not read.
+Re-recorded at 3f7a9694 because that commit edited `data-model.md`, a durable contract; the passes and their result are otherwise those of the record at 97fa5779. The window f638a808..3f7a9694 holds scenario `a-revision-qualified-path-is-not-a-working-tree-reference` (task 135), its fix in `check_orphaned_references.rs`, a framework prose fix making every `§` the installer ships resolvable by `resolve-anchor`, and the data-model corrections. Rule files loaded: all eleven `framework/rules/*.md` selected by `discover-rule-files`; `quality-cross.md` was read in full and governs the change (QUAL-TEST-001 was checked by mutating each new branch: the revision test fails with the colon branch removed, the list test fails when every token reads as a revision or the `]` case is dropped). The security, API, reliability and frontend files were checked by rule heading against a change that adds no I/O, no input source, no shell-out and no endpoint, and none applies. No MUST or SHOULD finding. Four observations, all fixed in the run: the first fix's bare-colon rule would have hidden colon-joined path list entries (51d79cbc) and markdown link labels written without a space (97fa5779); the installer's config-schema prose used the `/ductus:` namespace for adopter commands (543f2d24); and the data model carried sweep residue in this primitive's entry and its neighbour's (3f7a9694). **Examined 13 of 46.** The 13 are the window's modified files read as their diffs over the diff base, with the runtime file's changed functions and tests, the new scenario, and the data model's `check-orphaned-references` and `check-promotion-coverage` entries read in full. Four modified files were not read and are not counted: `framework/bootstrap/govern.md`, held byte-identical to `ductus.md` by `cmp` and Family `transitional-bootstrap-parity`; the generated `.claude/commands/ductus/analyze.md` and `.pi/prompts/ductus-analyze.md`, which `scripts/gen-claude-commands.sh` reports in sync with their source; and `review.md`, this command's own prior output. The other 29 scope entries are plan-affected paths the window does not touch, most of them whole directories (`runtime/src/primitives/`, `runtime/tests/`); they were not read.
 
 ## MUST violations (blocking)
 
@@ -161,6 +161,7 @@ Five passes over the window f638a808..97fa5779, which holds scenario `a-revision
 - bug: a bare glued colon excluded every colon-joined path list entry, so `PATH="$PATH:.ductus/bin"` in a hook would hide a real orphan — `runtime/src/primitives/check_orphaned_references.rs` — **fixed**
 - bug: a CommonMark link reference definition with no space after its colon read its label as a revision and went unchecked — `runtime/src/primitives/check_orphaned_references.rs` — **fixed**
 - convention: the installer's config-schema prose named /ductus:review, :clarify, :plan and :analyze where an adopter's commands carry its own namespace — `framework/bootstrap/ductus.md` — **fixed**
+- convention: the data model's check-orphaned-references entry named `.ductus/` as its historical root where the code has `.govern/`, and the check-promotion-coverage entry named check-orphaned-references twice — `specs/022-deterministic-runtime/data-model.md` — **fixed**
 
 ## Skipped passes
 
