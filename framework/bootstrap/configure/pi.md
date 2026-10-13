@@ -15,7 +15,7 @@ Verify and, when drifted, repair the Pi extension bridge that exposes the `ductu
 
 ## Instructions
 
-> Pi has **no built-in MCP client** and **no permission-gating settings** (verified against the shipped pi install, spec 064 §Verified Pi Layout). The runtime's tools reach the model through the project's `.pi/extensions/ductus.ts` extension bridge, which wraps the runtime's own MCP server over stdio; tool calls run without any host permission prompt, and project trust is the only gate. There is therefore nothing to merge into a permissions file — the canonical "merge permissions" step of the other agents' configure commands is a **documented no-op** here, and this command's whole job is the bridge check below plus the facts report.
+> Pi has **no built-in MCP client** and **no permission-gating settings** (verified against the shipped pi install, [spec 064](https://github.com/stonean/ductus/blob/main/specs/064-pi-host-support/spec.md) §Verified Pi Layout). The runtime's tools reach the model through the project's `.pi/extensions/ductus.ts` extension bridge, which wraps the runtime's own MCP server over stdio; tool calls run without any host permission prompt, and project trust is the only gate. There is therefore nothing to merge into a permissions file — the canonical "merge permissions" step of the other agents' configure commands is a **documented no-op** here, and this command's whole job is the bridge check below plus the facts report.
 
 ## Verify-and-repair
 

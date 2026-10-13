@@ -74,7 +74,7 @@ Projects without a programmatic API can pin this file in `.ductus/config.toml` t
 
 **Verification:** Any spec or plan that introduces an HTTP API endpoint MUST commit to the project's error envelope shape and reference its definition in `specs/system.md`. `/{project}:analyze` flags endpoint specs that describe ad-hoc error formats (per-endpoint shapes, mixed error types, naked strings) without naming the project envelope.
 
-**Source:** RFC 9457 (Problem Details for HTTP APIs, obsoletes RFC 7807), Google Cloud API Design Guide §error-model
+**Source:** RFC 9457 (Problem Details for HTTP APIs, obsoletes RFC 7807), Google Cloud API Design Guide, *Error model*
 
 ### BE-ERRENV-002
 
@@ -172,4 +172,4 @@ Projects without a programmatic API can pin this file in `.ductus/config.toml` t
 
 **Verification:** Any spec or plan that modifies an existing API endpoint MUST classify the change as additive (compatible) or breaking (requires major version). `/{project}:analyze` runs schema-diff against the committed schema and flags subtractive or narrowing changes within a major version; flags plans that propose breaking changes without a major-version commitment.
 
-**Source:** Semantic Versioning for APIs, Google Cloud API Design Guide §compatibility
+**Source:** Semantic Versioning for APIs, Google Cloud API Design Guide, *Compatibility*
