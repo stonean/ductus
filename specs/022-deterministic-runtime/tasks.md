@@ -41,3 +41,9 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] Implement the behavior described in `scenarios/a-renamed-file-contributes-its-rewrites.md`
 
 - **Done when**: `SweepIndex::build` and Family 19 both detect renames with the same explicitly stated threshold and rename limit, neither inheriting git or libgit2 defaults nor `diff.renames`; `mechanical_sweep_parity` carries a renamed-directory fixture asserting both halves derive the same pairs including the renamed files' pairs, and fails when either half falls back to delete-plus-add.
+
+## 135. Implement scenario: [a-revision-qualified-path-is-not-a-working-tree-reference](scenarios/a-revision-qualified-path-is-not-a-working-tree-reference.md)
+
+- [ ] Implement the behavior described in `scenarios/a-revision-qualified-path-is-not-a-working-tree-reference.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
