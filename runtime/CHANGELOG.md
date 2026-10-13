@@ -2,6 +2,18 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [Unreleased]
+
+### Fixed
+
+- **`check-orphaned-references` no longer reports a revision-qualified git
+  path as a missing file.** A referrer citing `git show abc1234:specs/x/spec.md`
+  — a retired spec's text at the commit that last held it — was matched on its
+  `specs/` root, read as a working-tree path, and reported orphaned. A path
+  glued to a preceding `:` (`<rev>:<path>`, or `:<path>` for the index) now
+  ends the token the way a path character or `@` already did, so it is not a
+  candidate; the same path written bare is still checked. Spec 022.
+
 ## [0.59.0] — 2026-10-06
 
 Pi becomes the fifth agent ductus scaffolds into (spec 064), with a

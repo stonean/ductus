@@ -44,6 +44,6 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 
 ## 135. Implement scenario: [a-revision-qualified-path-is-not-a-working-tree-reference](scenarios/a-revision-qualified-path-is-not-a-working-tree-reference.md)
 
-- [ ] Implement the behavior described in `scenarios/a-revision-qualified-path-is-not-a-working-tree-reference.md`
+- [x] Implement the behavior described in `scenarios/a-revision-qualified-path-is-not-a-working-tree-reference.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.

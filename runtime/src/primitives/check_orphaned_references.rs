@@ -225,12 +225,16 @@ fn managed_paths_in(line: &str, roots: &[String]) -> BTreeSet<String> {
         while let Some(rel) = line[from..].find(root.as_str()) {
             let start = from + rel;
             // A prefix must start a token: `x.ductus/y` is not a reference to
-            // `.ductus/y`, and matching inside one would invent paths.
+            // `.ductus/y`, and matching inside one would invent paths. A glued
+            // `:` ends the token too, because `<rev>:specs/x.md` and
+            // `:specs/x.md` are git's names for a path at a revision and in the
+            // index. Both resolve through the object store, so no migration can
+            // orphan them, and the working tree is not what they name.
             let preceded_by_path_char = start > 0
                 && line[..start]
                     .chars()
                     .next_back()
-                    .is_some_and(|c| is_path_char(c) || c == '@');
+                    .is_some_and(|c| is_path_char(c) || c == '@' || c == ':');
             from = start + root.len();
             if preceded_by_path_char {
                 continue;
@@ -735,6 +739,33 @@ mod tests {
         );
         let result = run(&args(), tmp.path()).unwrap();
         assert!(result.findings.is_empty(), "{:?}", result.findings);
+    }
+
+    #[test]
+    fn a_revision_qualified_path_is_not_a_working_tree_reference() {
+        // The real shape: a retired spec cited at the commit that last held
+        // it. The bare spelling of the same missing path, on its own line,
+        // is the control — it must still report, so the exclusion is the
+        // glued colon and not the path.
+        let tmp = adopter();
+        write(
+            &tmp.path().join("README.md"),
+            "Recover it with `git show abc1234:specs/002-auth/spec.md`.\n\
+             The index copy: `git show :specs/002-auth/plan.md`.\n\
+             At a ref: `git show HEAD~2:.ductus/gone.md`.\n\
+             See: specs/002-auth/spec.md\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        let found: Vec<(&str, u32)> = result
+            .findings
+            .iter()
+            .map(|f| (f.target.as_str(), f.line))
+            .collect();
+        assert_eq!(
+            found,
+            vec![("specs/002-auth/spec.md", 4)],
+            "only the bare reference after `: ` is a working-tree claim"
+        );
     }
 
     #[test]
