@@ -547,7 +547,7 @@ The **active config file** (write policy: §Project Configuration) is the persis
 1. **Project name** — from `$ARGUMENTS` (a single non-flag word, per §Inputs), else `[project] name` in the config file (else `[host] project` for configs predating the `[project]` table), else prompt. Used for `{project}` substitution and command directory naming.
 2. **Project description** — from `[project] description` in the config file, else prompt. Used for AGENTS.md.
 3. **Primary language(s)** — from `[project] languages` in the config file, else prompt. Used for .gitignore language patterns.
-4. **Rule surfaces** — from `[rules] surfaces` in the config file, else prompt ("Which rule surfaces does this project need? backend / frontend / both"). Recorded as a list with members in `{backend, frontend}` ("both" records both). Selects which rule files `/ductus` installs (§Shared Files) and which `/ductus:review` enforces (`review.md` §Behavior step 5). When the recorded surfaces exclude a surface that `[project] languages` implies (e.g., a frontend language is listed but `surfaces` omits `frontend`), emit one advisory line and honor the explicit value. **Validate a present value before using it** (degenerate configs fail fast per `CFG-ENV-003`, never silently ignored): the **empty list** (`surfaces = []`) is valid and means cross-only — install only `*-cross.md`, no surface-suffixed files — and is distinct from the key being unset (which derives/installs all); an **unrecognized member** outside `{backend, frontend}` (a typo, or `"cross"` — cross-cutting files are not a selectable surface) halts with `/ductus: invalid [rules] surfaces member "<value>" — accepted members are "backend" and "frontend" (use [] for cross-only; -cross.md files always apply)`, and a list mixing valid and invalid members fails on the invalid one; a **non-list value** (a bare string) halts with `/ductus: [rules] surfaces must be a list of strings, got <type>`.
+4. **Rule surfaces** — from `[rules] surfaces` in the config file, else prompt ("Which rule surfaces does this project need? backend / frontend / both"). Recorded as a list with members in `{backend, frontend}` ("both" records both). Selects which rule files `/ductus` installs (§Shared Files) and which `/{project}:review` enforces (`review.md` §Behavior step 5). When the recorded surfaces exclude a surface that `[project] languages` implies (e.g., a frontend language is listed but `surfaces` omits `frontend`), emit one advisory line and honor the explicit value. **Validate a present value before using it** (degenerate configs fail fast per `CFG-ENV-003`, never silently ignored): the **empty list** (`surfaces = []`) is valid and means cross-only — install only `*-cross.md`, no surface-suffixed files — and is distinct from the key being unset (which derives/installs all); an **unrecognized member** outside `{backend, frontend}` (a typo, or `"cross"` — cross-cutting files are not a selectable surface) halts with `/ductus: invalid [rules] surfaces member "<value>" — accepted members are "backend" and "frontend" (use [] for cross-only; -cross.md files always apply)`, and a list mixing valid and invalid members fails on the invalid one; a **non-list value** (a bare string) halts with `/ductus: [rules] surfaces must be a list of strings, got <type>`.
 5. **Spec-root directory** — from `[paths] specs-root` in the config file, else prompt ("What should the spec-root directory be named?") **defaulting to `specs`**. Names the top-level directory that holds every ductus artifact (feature dirs, `inbox.md`, `rules/`, shared docs). The prompt lives **only** in `/ductus` — no other command asks for it — and when the key stays unset every command and the runtime default to `specs`, so an adopter who never sets it sees unchanged behavior (spec [040](https://github.com/stonean/ductus/blob/main/specs/040-configurable-specs-dir/spec.md)). **Validate a present or entered value before using it** (fail fast — a value that breaks path resolution is never silently accepted): a name that is empty or contains any character outside `[A-Za-z0-9_-]` (a path separator, `.`/`..`, or other punctuation) halts with `/ductus: invalid [paths] specs-root "<value>" — must be a single directory name using only letters, digits, '-', and '_'`. Two **non-blocking** notices after a valid value is chosen: when the chosen directory **already exists on disk and is not a ductus spec root** (no `inbox.md`, no numbered `NNN-*` subdirs), emit one line naming it and proceed — it may be a sibling framework's directory (e.g. RSpec's `spec/`), and the operator's choice is honored after the warning; when the configured `specs-root` is **absent on disk but a different ductus-shaped directory exists**, emit a one-line half-finished-rename notice rather than silently scaffolding a new empty tree.
 
 On a routine re-run (update mode) the config file already carries all five, so this step prompts for nothing. On a first scaffold it prompts for whatever is missing, then **persists the three project inputs into the active config file's `[project]` table** (`name`, `description`, `languages`), **the rule surfaces into the `[rules]` table** (`surfaces`), **and the spec-root into the `[paths]` table** (`specs-root`; see §Project Configuration), preserving every other section, so the next run — and the session after any State B / stale-`ductus.md` restart — reads them back instead of re-asking. `host.project` continues to be written from `project.name` as the runtime's slash-command namespace.
@@ -595,14 +595,14 @@ description = "A new microservice"
 languages = ["Go", "Python"]
 
 [rules]
-# Which rule surfaces /ductus:review enforces and /ductus installs. A list with
-# members in {"backend", "frontend"}; full-stack lists both. "cross" is not a
-# member — cross-cutting (-cross.md) rule files always apply. The empty list
-# ([]) is valid and means cross-only (only -cross.md), distinct from the key
-# being unset. Unset means "derive": /ductus:review falls back to stack detection
-# and /ductus installs every rule file (pre-033 behavior). An unrecognized
-# member or a non-list value fails fast. Collected by /ductus
-# (§Collect Project Inputs); read by /ductus:review
+# Which rule surfaces /{project}:review enforces and /ductus installs. A list
+# with members in {"backend", "frontend"}; full-stack lists both. "cross" is
+# not a member — cross-cutting (-cross.md) rule files always apply. The empty
+# list ([]) is valid and means cross-only (only -cross.md), distinct from the
+# key being unset. Unset means "derive": /{project}:review falls back to stack
+# detection and /ductus installs every rule file (pre-033 behavior). An
+# unrecognized member or a non-list value fails fast. Collected by /ductus
+# (§Collect Project Inputs); read by /{project}:review
 # (review.md §Behavior step 5).
 surfaces = ["backend"]
 
@@ -631,24 +631,24 @@ files = [
 # Maintained by /ductus; do not edit by hand.
 last_applied = "rule-files-relocate"
 
-# Consumed by /ductus:clarify, /ductus:plan and /ductus:analyze (spec 063),
-# through the check-artifact-size primitive. The size, in bytes, above which a
-# spec artifact (spec.md, plan.md, tasks.md, data-model.md, each scenario) may
-# not be read in one call by an agent's file reader; each command warns on
-# every artifact over it and names the fixes. A whole number of bytes, at
-# least 1; unset means 50000. Raise it for a host with a larger read cap, lower
-# it for a smaller one or for token-dense artifacts. Any other value is
-# reported and the default used. There is no value that switches the warning
-# off. Listed here for schema reference; uncomment and edit to use.
+# Consumed by /{project}:clarify, /{project}:plan and /{project}:analyze (spec
+# 063), through the check-artifact-size primitive. The size, in bytes, above
+# which a spec artifact (spec.md, plan.md, tasks.md, data-model.md, each
+# scenario) may not be read in one call by an agent's file reader; each
+# command warns on every artifact over it and names the fixes. A whole number
+# of bytes, at least 1; unset means 50000. Raise it for a host with a larger
+# read cap, lower it for a smaller one or for token-dense artifacts. Any other
+# value is reported and the default used. There is no value that switches the
+# warning off. Listed here for schema reference; uncomment and edit to use.
 #
 # [artifacts]
 # read-size-bytes = 50000
 
-# Consumed by /ductus:review (not /ductus itself). Excludes rule files from
-# /ductus:review's selection regardless of stack detection. The `reason` field
-# is mandatory (trimmed length ≥ 16 Unicode codepoints) and is the audit
-# trail for the override. Listed here for schema reference; uncomment and
-# edit to use.
+# Consumed by /{project}:review (not /ductus itself). Excludes rule files from
+# /{project}:review's selection regardless of stack detection. The `reason`
+# field is mandatory (trimmed length ≥ 16 Unicode codepoints) and is the audit
+# trail for the override. Listed here for schema reference; uncomment and edit
+# to use.
 #
 # [[review.disabled-rule-files]]
 # file = "accessibility-frontend.md"
@@ -676,13 +676,13 @@ last_applied = "rule-files-relocate"
 
 `project.name`, `project.description`, and `project.languages` — the project inputs collected at §Collect Project Inputs (name; one-line description for AGENTS.md; primary languages for .gitignore patterns), written into the `[project]` table additively (preserving every other section) and read back on every subsequent run so the inputs are asked at most once. `[project]` is the source of truth for the answers; `host.project` is written from `project.name` as the runtime's slash-command namespace (the derived runtime view of the same value), so the two cannot diverge. Editing a `[project]` value re-runs the corresponding scaffold step with the new value on the next `/ductus` — the documented way to rename a project or change its languages. The table is host-side state (the host gathers inputs before the runtime walks per §Instructions step 1), so it is written on every adoption path without a runtime primitive.
 
-`rules.surfaces` — the rule surfaces the project enforces and installs (§Collect Project Inputs, item 4). A list with members in `{backend, frontend}`; `-cross.md` rule files are unconditional and not selectable members. When unset, `/ductus` installs every rule file and `/ductus:review` derives the surface from stack detection (pre-033 behavior). When set, the **Shared Files** manifest pass installs only the rule files whose suffix matches a listed surface plus every `*-cross.md`, and `/ductus:review` enforces only those (`review.md` §Behavior step 5). The **empty list** (`surfaces = []`) is a valid set value meaning **cross-only** — only `*-cross.md` is installed/enforced — and is distinct from the key being unset (the empty list declares "no surface rules"; unset means "derive"). A **degenerate value** fails fast per `CFG-ENV-003` rather than being silently ignored: an unrecognized member outside `{backend, frontend}` (a typo, or `"cross"`) and a non-list value both halt the command that reads the setting (`/ductus` here, `/ductus:review` in `review.md` §Behavior step 5), naming the offending value or type. Editing `surfaces` takes effect on the next `/ductus`: newly-listed surfaces are installed, and rule files for a removed surface are **left in place** (not deleted — they are not in `enforce-directories`), they simply stop receiving updates.
+`rules.surfaces` — the rule surfaces the project enforces and installs (§Collect Project Inputs, item 4). A list with members in `{backend, frontend}`; `-cross.md` rule files are unconditional and not selectable members. When unset, `/ductus` installs every rule file and `/{project}:review` derives the surface from stack detection (pre-033 behavior). When set, the **Shared Files** manifest pass installs only the rule files whose suffix matches a listed surface plus every `*-cross.md`, and `/{project}:review` enforces only those (`review.md` §Behavior step 5). The **empty list** (`surfaces = []`) is a valid set value meaning **cross-only** — only `*-cross.md` is installed/enforced — and is distinct from the key being unset (the empty list declares "no surface rules"; unset means "derive"). A **degenerate value** fails fast per `CFG-ENV-003` rather than being silently ignored: an unrecognized member outside `{backend, frontend}` (a typo, or `"cross"`) and a non-list value both halt the command that reads the setting (`/ductus` here, `/{project}:review` in `review.md` §Behavior step 5), naming the offending value or type. Editing `surfaces` takes effect on the next `/ductus`: newly-listed surfaces are installed, and rule files for a removed surface are **left in place** (not deleted — they are not in `enforce-directories`), they simply stop receiving updates.
 
 `pinned.files` — any file listed that would normally use `update` strategy is treated as `skip` instead. Report pinned files in the post-scaffolding summary.
 
 `migrations.last_applied` — slug of the newest pre-run migration applied to this project, written by `/ductus` after each successful migration in §Pre-run Migrations. Absent section means "no migrations applied"; bootstrap runs every active entry on the next run. Adopters should not edit this field by hand — the registry in `framework/migrations.toml` and the per-entry procedure files in `framework/migrations/{id}.md` are the authoritative sources.
 
-`review.disabled-rule-files` — array-of-tables consumed by `/ductus:review` at rule-file selection time (see `review.md` §Inputs and §Behavior step 5). `/ductus` does not read this key; it is documented here so adopters see the full `.ductus/config.toml` schema in one place.
+`review.disabled-rule-files` — array-of-tables consumed by `/{project}:review` at rule-file selection time (see `review.md` §Inputs and §Behavior step 5). `/ductus` does not read this key; it is documented here so adopters see the full `.ductus/config.toml` schema in one place.
 
 `constitutions.<alias>` — the shared-constitution registry (spec 055). Each `[constitutions.<alias>]` table names a `repo` (the canonical repository URL, recorded verbatim as identity and navigation only — **never fetched**) and a local `path` (the checkout, relative to the repo root or absolute; `..` is permitted because a sibling checkout is the normal case), plus an optional `description` saying what the source governs — no resolution behavior depends on it, and it is rendered wherever `ductus` names the source (`/{project}:target`'s loaded and skipped reports, a review's **Unexamined governance** section), so an alias is never the only thing an operator has to go on. The document read from a resolved checkout is `{path}/constitution.md`; nothing else in the checkout is read, and a registered checkout's own config is never read, so registration is not transitive. More than one entry may be registered, and every registered entry is loaded, in alias order. Where a registered constitution and the shipped one disagree, the constitution's §governance-precedence says which governs — and that nothing enforces it. The full schema is declared in [`specs/055-shared-constitution/data-model.md`](https://github.com/stonean/ductus/blob/main/specs/055-shared-constitution/data-model.md).
 
