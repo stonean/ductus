@@ -520,7 +520,7 @@ Result:
 ### `check-promotion-coverage` — how much of a rules file is routed to its canonical source
 
 Project-scoped: no feature argument, like `check-orphaned-references` and
-`check-orphaned-references`.
+`check-unfolded-specs`.
 
 Args:
 
@@ -950,7 +950,7 @@ Result:
   "matched-prefixes": [
     ".ductus/",
     ".githooks/",
-    ".ductus/",
+    ".govern/",
     "scripts/gen-",
     "scripts/lib/",
     "specs/"
@@ -964,11 +964,12 @@ The runtime half of [027](../027-bootstrap-migration-registry/spec.md)'s `migrat
 
 - **Referrers** are the `create`-strategy files the manifest never overwrites and no migration re-points: `CLAUDE.md`, `AGENTS.md`, `README.md`, `.githooks/pre-commit`, and the spec root's `system.md`. They are enumerated in code rather than derived from the **Shared Files** manifest because that manifest lives in `framework/bootstrap/ductus.md`, a this-repo artifact that is fetched into staging and never installed — so a manifest-derived list would be empty in the adopter checkout where the check does its work. The first four are spelled literally; `system.md` is resolved against `[paths] specs-root`, because a hardcoded `specs/system.md` would examine nothing on a project that renamed its root and report clean for the wrong reason.
 - **`system.md` is examined but never repaired, and the asymmetry is deliberate.** `ductus-rename` step 3 re-points the constitution reference in `CLAUDE.md`, `AGENTS.md`, and `README.md` — the references the framework itself wrote. An adopter's `system.md` reference is theirs, so the framework reports it and leaves it alone. It was absent from this list until a live adopter bootstrap found a `system.md` pointing at a directory that no longer existed while the run completed clean: no migration step named the file and no check looked at it, so an adopter-authored reference to a framework path was invisible to both halves. Reporting is the whole of the fix — it is what stops a run looking clean over a reference already known to be broken.
-- **Managed roots** are `.ductus/`, `.githooks/`, the configured spec root (read from config, not assumed), and the **historical** roots `.ductus/`, `scripts/gen-`, and `scripts/lib/`. A broken link into the adopter's own `docs/` is their business; scoping the check is what keeps it from being noise.
+- **Managed roots** are `.ductus/`, `.githooks/`, the configured spec root (read from config, not assumed), and the **historical** roots `.govern/`, `scripts/gen-`, and `scripts/lib/`. A broken link into the adopter's own `docs/` is their business; scoping the check is what keeps it from being noise.
 - **The historical roots are the point, not completeness for its own sake.** The orphan a migration chain leaves is a reference to the path *before* the move, so it carries the *old* root — a current-roots-only list is blind to exactly the class this check exists to catch. Measured on the 048 AC10 adopter run: after the generators moved root `scripts/` → `.govern/scripts/` → `.ductus/scripts/`, the adopter's `AGENTS.md` still named `scripts/gen-spec-deps.sh`, the check reported clean, and the operator found it by reading the file. The pre-042 entries are prefixes (`scripts/gen-`, `scripts/lib/`) rather than the `scripts/` directory because the framework owned those and never the whole directory; a `scripts/` root would flag an adopter's own `scripts/build.sh`.
 - **`matched-prefixes` bounds the claim by scope, as `examined` bounds it by subject.** A reference carrying none of the listed prefixes is not reported under `skipped`, because nothing recognized it as a reference at all — so without this field a clean result reads as *no orphans* when it means *no orphans among paths carrying one of these prefixes*. That gap is what let a real orphan sit under a clean verdict, and it is `QUAL-CLAIM-001` about the boundary of a claim rather than its subject.
 - **`attribution` is the field that keeps the result honest.** `registry` means `framework/migrations.toml` was readable — the bootstrap call site — and a finding's `migration` names the entry whose `target_paths` covers the missing path, latest hop winning since that is the one that left the reference dangling. `watermark` means no registry was available — an adopter checkout — so `migration` is empty for an entirely different reason and `last-applied` is the only migration context there is. An empty `migration` under `registry` means *asked and no entry claims it*; under `watermark` it means *nothing to ask*. Rendering the two alike would assert an attribution nobody computed, which is `QUAL-CLAIM-001` inside a check written to enforce it.
 - **A pattern is not a reference.** A candidate containing `*` or `NNN` is documentation naming a shape (`specs/NNN-*/spec.md`), and a path the project declares it *ships* to adopters is not local breakage — both exemptions were earned by running the primitive against ductus's own repo, where they produced thirteen findings and zero real defects.
+- **A git object name is not a reference.** A path glued to a preceding `:` whose token is empty or revision-shaped — `git show abc1234:specs/x/spec.md` — names a blob in git's object store, which no migration can move. A variable, a path or a markdown link label before the colon marks a working-tree reference instead, and it is still checked. See [`a-revision-qualified-path-is-not-a-working-tree-reference`](scenarios/a-revision-qualified-path-is-not-a-working-tree-reference.md).
 - `examined` names the files the result describes and `skipped` names the ones it could not read, so empty `findings` reads as clean only when `skipped` is empty.
 
 ### `derive-routing-candidates` — the homes proposed work could already have
