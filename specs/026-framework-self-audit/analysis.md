@@ -1,14 +1,14 @@
 ---
 spec: 026-framework-self-audit
-last-run: 2026-09-28T13:21:46Z
-analyzed-against: 7ecda8808ac94f47353fccd26198d3c7aabbe915
+last-run: 2026-10-13T15:58:48Z
+analyzed-against: 3c16411eafed8f635ad144e5e8988b29fad9bfc1
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
-unexamined: 14
+unexamined: 0
 analyzed-digest:
   plan.md: 9c4dc8504682605f915315025b7fa65a6dc7418bdd53dcf969871e1e35b045b3
-  review.md: 0c1c28b289c125ae954456ed6b6c6b2b886b8bbbe961d75a965b0aace8692915
+  review.md: 60164fb6e8f6c588eecfc2deaedc66c8b1eb8b72558be961b879ba860d6c9a53
   scenarios/audit-ci-hard-gate.md: a7bad7a167532019112d79a746696ad32d963171598d2283072af0e9f3234be7
   scenarios/audit-script-refactors.md: 035bb7ef52c236135d791f35c3ec407d7908c8d51a169483bce40bc26c7a46c8
   scenarios/family-10-migration-coverage.md: 8684e643e4ea938cbeeed6d1342aef27efc84a7bf7559b111b6a12cacacfa02b
@@ -27,13 +27,12 @@ analyzed-digest:
   scenarios/family-34-step-reference-integrity.md: 4d24ed6a08c54ae98f135ad108d3b8a7b85f782f5af7edf26c67d92aa509f067
   scenarios/family-35-manifest-destination-links.md: 8e94dce4172e2b326612da806327af31777d99b8c6ce89642c9d10a98dc148b3
   scenarios/family-36-self-url-resolution.md: 23716b0f5c3810890bab089c65258008842869e35616a71b86b663ed231bde18
+  scenarios/family-39-shipped-anchor-resolution.md: 989bc2bab609358c00183fd3711d0530f0ebb29a51e4c92f92d37192bce9b355
   scenarios/host-namespace-parity.md: 05714fe6b728391f699ed7328e1aea252a48259ae489fa9c06e0d0609dc1d376
   scenarios/link-check-consolidation.md: f838133a535aa090e09d7f82903facc4dff8cc822c1dec5c22f9b4d1e17a5049
   scenarios/readme-command-parity.md: 3788aa1103dba1860af8cb9950a6425ed33e4a24498f825fcd980e0c9bb7f8bc
-  spec.md: 0ec33d54bbe8255e3d26ed49639d87a80052250c5c83962a1dc18fb12fcdec50
-  tasks.md: 3b9b37e455b2e6ec40b3d6f991f1d491f5c061e1ffcf42d21f152098157c9a15
-unexamined-by-reason:
-  not-a-live-claim: 14
+  spec.md: dd532ed518169639a741de62998dc77853b6bc5b9e6f892ae5e20e312819627f
+  tasks.md: a72347d714ce03ed0a1b2f312e70d3a8ccb65d5f2362465c34e47fa77e851f15
 blocking: false
 dispositions:
   fixed: 0
@@ -46,7 +45,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 14 unexamined target(s). Dispositions: 0 fixed, 0 routed, 0 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 0 unexamined target(s). Dispositions: 0 fixed, 0 routed, 0 discarded, 0 undispositioned.
 
 ## Hard failures
 
@@ -62,7 +61,7 @@ dispositions:
 
 ## Unexamined targets
 
-- not-a-live-claim: 14
+*None — every target was examined.*
 
 ## Fixed in this run
 
