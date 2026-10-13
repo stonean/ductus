@@ -1,13 +1,14 @@
 ---
 spec: 022-deterministic-runtime
-last-run: 2026-10-07T00:43:43Z
-reviewed-against: 974794278dbfaa8ceef9dbbbc8041268d90c5fb1
-diff-base: 19918a2b01ae805faf800d882346ce98b56003f4
+scenario: a-revision-qualified-path-is-not-a-working-tree-reference
+last-run: 2026-10-13T02:07:19Z
+reviewed-against: 97fa577964fd1eae90ca3b5ffae1893b0ca828e3
+diff-base: f638a808db87575915d11f36735a8ecdf0b7c817
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 18
-scope: 64
+examined: 12
+scope: 45
 skipped-passes: []
 reviewed-digest:
   data-model.md: ea60d8b2d99fd38c8bc5bfe6a2b61edd0e34c1d9a42d0700f30586a5a1404694
@@ -16,6 +17,7 @@ reviewed-digest:
   scenarios/a-multi-number-renumber-is-one-rewrite.md: 04723ad01613f62b14008250c9890e20ac338de82c32bd2f0797580e30ae7be2
   scenarios/a-renamed-file-contributes-its-rewrites.md: 1409380ceb64bfd694570684a22a43cedead123d97b87213539999fcf28e914d
   scenarios/a-review-states-what-it-read.md: dd3d5e366e77ef782a9bcb90388b5bcfb5d4eb45176663d8138b18d41f5ff400
+  scenarios/a-revision-qualified-path-is-not-a-working-tree-reference.md: c23b36f0f385593e7e739d84a508f191a4f9f2005436ebe9dcad298555253033
   scenarios/adopter-corpus-link-integrity.md: a36b79e3e04489a765cfab1c3e657ac0c34ef66a289d0512866a27303eeb5358
   scenarios/adopter-generator-promotion.md: 80ec329393c3b78c0926ef45f61792502c311b1bccaa0dba6526234bac53e161
   scenarios/an-empty-scope-flag-does-not-decide-the-denominator.md: 13366f629fea7637c497bbb44d7e1ed798500ff3c445e03eb560bb021032117b
@@ -126,7 +128,7 @@ reviewed-digest:
   scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
 blocking: false
 dispositions:
-  fixed: 2
+  fixed: 3
   routed: 0
   discarded: 0
   undispositioned: 0
@@ -136,7 +138,7 @@ dispositions:
 
 ## Summary
 
-All five passes ran over tasks 133 and 134 and the window's other committed changes, now stamped against 97479427, the commit that carries the work. 0 MUST, 0 SHOULD, 0 low-confidence; not blocking. Read: `framework/commands/analyze.md`; `runtime/src/primitives/` through its changed files (`check_artifacts.rs`, `mechanical_sweep.rs`); `runtime/src/schema/` through `primitives.rs`; `runtime/tests/` through `mechanical_sweep_parity.rs`; `scripts/audit/review-freshness.sh`; `runtime/CHANGELOG.md`; the in-window diffs of `AGENTS.md`, `docs/runtime.md`, `framework/templates/project/gitignore`, `install.sh` and `scripts/tests/test-install.sh` (064/065 fixes, each reviewed under its own spec); and 022's `tasks.md`, `plan.md` and scenarios `a-multi-number-renumber-is-one-rewrite`, `per-agent-scaffold-paths-ship-to-adopter`, `a-renamed-file-contributes-its-rewrites` and `check-artifacts-skipped-targets`, plus `specs/inbox.md`. Not counted though in scope: the generated copies `.claude/commands/ductus/analyze.md` and `.pi/prompts/ductus-analyze.md`, held identical to their source by `scripts/gen-claude-commands.sh --check`; 000's artifacts, reviewed under 000; the plan-listed paths this window did not change; and 064's and 065's spec artifacts. Two observations, both fixed with operator confirmation: `tables_under` now delegates to `section_line_indices` (a fenced or commented table can no longer register an agent, pinned by a test shown to fail against the fence-blind parser); and Family 19's proxy-arm diff pins `--no-renames` (proposed as a colour pin too, but `--name-only` output is never coloured, which was checked). Both pinned by tests shown to fail with the fix reverted.
+Five passes over the window f638a808..97fa5779, which holds scenario `a-revision-qualified-path-is-not-a-working-tree-reference` (task 135), its fix in `check_orphaned_references.rs`, and a framework prose fix making every `§` the installer ships resolvable by `resolve-anchor`. Rule files loaded: all eleven `framework/rules/*.md` selected by `discover-rule-files`; `quality-cross.md` was read in full and governs the change (QUAL-TEST-001 was checked by mutating each new branch: the revision test fails with the colon branch removed, the list test fails when every token reads as a revision or the `]` case is dropped). The security, API, reliability and frontend files were checked by rule heading against a change that adds no I/O, no input source, no shell-out and no endpoint, and none applies. No MUST or SHOULD finding. Three observations, all fixed in the run: the first fix's bare-colon rule would have hidden colon-joined path list entries (51d79cbc) and markdown link labels written without a space (97fa5779), and the installer's config-schema prose used the `/ductus:` namespace for adopter commands (543f2d24). **Examined 12 of 45.** The 12 are the window's modified files read as their diffs over the diff base, with the runtime file's changed functions and tests and the new scenario read in full. Three modified files were not read and are not counted: `framework/bootstrap/govern.md`, held byte-identical to `ductus.md` by `cmp` and Family `transitional-bootstrap-parity`, and the generated `.claude/commands/ductus/analyze.md` and `.pi/prompts/ductus-analyze.md`, which `scripts/gen-claude-commands.sh` reports in sync with their source. The other 30 scope entries are plan-affected paths the window does not touch, most of them whole directories (`runtime/src/primitives/`, `runtime/tests/`); they were not read.
 
 ## MUST violations (blocking)
 
@@ -156,8 +158,9 @@ All five passes ran over tasks 133 and 134 and the window's other committed chan
 
 ## Observations
 
-- reuse: `tables_under` hand-rolled section finding that the shared fence- and comment-aware `section_line_indices` already provides — `runtime/src/primitives/check_artifacts.rs` — **fixed**
-- bug: Family 19's proxy-arm `git diff --name-only` took its rename setting from git config, so a contract moved within a pre-digest spec read stale or clean depending on who ran it — `scripts/audit/review-freshness.sh` — **fixed**
+- bug: a bare glued colon excluded every colon-joined path list entry, so `PATH="$PATH:.ductus/bin"` in a hook would hide a real orphan — `runtime/src/primitives/check_orphaned_references.rs` — **fixed**
+- bug: a CommonMark link reference definition with no space after its colon read its label as a revision and went unchecked — `runtime/src/primitives/check_orphaned_references.rs` — **fixed**
+- convention: the installer's config-schema prose named /ductus:review, :clarify, :plan and :analyze where an adopter's commands carry its own namespace — `framework/bootstrap/ductus.md` — **fixed**
 
 ## Skipped passes
 
