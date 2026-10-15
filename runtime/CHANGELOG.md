@@ -2,6 +2,39 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.59.6] — 2026-10-15
+
+`fetch-archive` names its timeout, and two constitution rules are promoted
+from this repository's notes. The runtime behaves as before: the timeout
+keeps the value it already had. A patch release: no primitive gains an argument or a
+result field, and the MSRV stays 1.89.
+
+### Changed
+
+- **`fetch-archive` names its timeout.** Its request ran under `reqwest`'s
+  blocking-client default of 30 seconds, which the runtime never stated, so
+  a `reqwest` upgrade could have moved the bound silently. `FETCH_TIMEOUT`
+  (30 s) now sits beside `MAX_FETCH_BYTES` and `MAX_FETCH_REDIRECTS` and is
+  set on the client. It bounds the wait for the response and each read of
+  the body, not the whole download, whose size the 256 MiB cap bounds. A
+  test drives the client with a short timeout against a proxy that never
+  answers. Spec 022, scenario `fetch-archive-names-its-timeout`.
+- **§implement-phase: a fix committed before its reopen is outside the
+  review window.** The review-window bullet already warned against
+  narrowing a wide window. It now covers the converse: when a fix is
+  committed before the reopen that records it, the window holds only the
+  amendment. Record the reopen before making the fix, or set the base to
+  the commit before the fix and say so in the Summary.
+- **§concurrent-features: list what a push carries before making it.**
+  Sessions sharing a working tree share its commits, so a push publishes
+  another session's work and the checks that run on it report that work
+  under the push. When the range holds commits that are not yours, confirm
+  that their session has finished and that publishing them is intended, and
+  name them when you report the push.
+
+Spec 050 records both promotions in a fourth classification round, which
+leaves no rule-bearing `AGENTS.md` entry unclassified.
+
 ## [0.59.5] — 2026-10-15
 
 A constitution change from spec 050: a review may run before its work is
