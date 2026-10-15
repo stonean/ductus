@@ -47,3 +47,9 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] Implement the behavior described in `scenarios/a-revision-qualified-path-is-not-a-working-tree-reference.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 136. Implement scenario: [review-scope-includes-uncommitted-work](scenarios/review-scope-includes-uncommitted-work.md)
+
+- [ ] Implement the behavior described in `scenarios/review-scope-includes-uncommitted-work.md`
+
+- **Done when**: `compute-review-scope` diffs from the diff base to the working tree (index and untracked included, ignored excluded), and resolves the base to `HEAD` when `spec.md` on disk reads `in-progress` and the spec at `HEAD` does not. Tests cover an uncommitted edit, a staged edit, an untracked file, an ignored file, `--since=HEAD`, an uncommitted `done → in-progress` reopen, an uncommitted `planned → in-progress` start, and an uncommitted `in-progress → done` flip; each test of changed behavior fails against the old code.
