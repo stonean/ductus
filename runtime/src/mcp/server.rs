@@ -1061,6 +1061,10 @@ impl GovRuntimeServer {
     }
 }
 
+// The `async` handlers that `#[tool_handler]` expands to are rmcp's, not
+// ours, and some resolve without an `.await`; clippy 1.99's
+// `unused_async_trait_impl` fires on that generated code.
+#[allow(clippy::unused_async_trait_impl)]
 #[tool_handler(router = self.tool_router)]
 impl ServerHandler for GovRuntimeServer {
     fn get_info(&self) -> ServerConfig {

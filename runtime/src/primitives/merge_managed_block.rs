@@ -281,7 +281,7 @@ fn find_line_prefix_block<'a>(
     let mut offset = 0;
     while offset < text.len() {
         let rest = &text[offset..];
-        let line_end = rest.find('\n').map_or(rest.len(), |i| i);
+        let line_end = rest.find('\n').unwrap_or(rest.len());
         let raw_line = &rest[..line_end];
         let line = raw_line.trim_end_matches('\r');
         if line == header {
@@ -366,7 +366,7 @@ fn read_group(text: &str, start: usize) -> (Group<'_>, usize, usize) {
     let mut content_end = start;
     while scan < text.len() {
         let rest = &text[scan..];
-        let line_end = rest.find('\n').map_or(rest.len(), |i| i);
+        let line_end = rest.find('\n').unwrap_or(rest.len());
         let line = rest[..line_end].trim_end_matches('\r');
         let next = scan + line_end + usize::from(line_end < rest.len());
         if line.is_empty() {
@@ -640,7 +640,7 @@ fn dedup_outside_block(
     let mut offset = 0;
     while offset < content.len() {
         let rest = &content[offset..];
-        let line_end = rest.find('\n').map_or(rest.len(), |i| i);
+        let line_end = rest.find('\n').unwrap_or(rest.len());
         let raw_line = &rest[..line_end];
         let line = raw_line.trim_end_matches('\r');
         let has_newline = line_end < rest.len();

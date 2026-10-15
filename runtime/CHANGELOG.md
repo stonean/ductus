@@ -28,6 +28,11 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   `initialize` now answers 2025-11-25. The code change is the tool-call
   wrapper that rejects unknown fields, whose call now returns rmcp 3's
   `CallToolResponse`, and `ServerInfo` renamed to `ServerConfig`.
+- **Built with Rust 1.99.0, up from 1.97.0.** The pinned toolchain and every
+  workflow that builds the runtime move together. Clippy 1.99's new lints
+  are met rather than silenced, except one: `unused_async_trait_impl` fires
+  on the handlers rmcp's `#[tool_handler]` macro generates, so it is allowed
+  on that impl alone. The MSRV stays 1.89.
 
 ## [0.59.2] — 2026-10-14
 

@@ -6,5 +6,5 @@
 # To upgrade: bump `channel` here AND the `dtolnay/rust-toolchain@<version>`
 # refs in .github/workflows/runtime.yml and runtime-release.yml (kept in sync).
 [toolchain]
-channel = "1.97.0"
+channel = "1.99.0"
 components = ["clippy", "rustfmt"]
