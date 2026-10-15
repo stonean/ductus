@@ -308,7 +308,7 @@ Result:
 
 `assigned` lists only the criteria this run labelled, each with the 0-based index it occupies in body order at the time of the run; an already-labelled criterion is left byte-identical and never appears. `next-criterion` is the counter as written back to the frontmatter — always greater than every label in the body. `changed` reports whether the file was written, so a no-op run says so rather than reporting a clean write it did not perform.
 
-Assignment takes **`max(highest label in body, next-criterion)`**, incremented per assignment in body order — never `max(body) + 1`. That distinction is the entire retirement mechanism: deleting the highest-numbered criterion is the only case where the body maximum falls, and without the stored counter the next assignment would hand a retired label to a different requirement. The counter is monotonically non-decreasing, so it cannot.
+Assignment takes **`max(highest label in body, next-criterion)`**, incremented per assignment in body order — never `max(body) + 1` — so deleting the highest-numbered criterion never lets its label be reissued to a different requirement; the counter never decreases (scenario `criterion-label-assignment`).
 
 Three refusals, each preferring a legible failure to a partial or silent one:
 
@@ -422,15 +422,13 @@ Result:
 
 Scans `path` for `§<anchor>` references and resolves each against `<!-- §anchor -->` markers. The markers come from `path` itself when `markers-path` is omitted (the constitution self-consistency check); supply `markers-path` to resolve one file's references against a *different* file's markers — `/ductus:analyze` passes the constitution as `markers-path` so a spec's `§` references resolve against the constitution's sections (a spec carries no markers of its own, so resolving against itself would flag every reference as unresolved noise).
 
-**Not every `§X` is a claim about the markers file**, and `kind` records which of three it is. `§` is the corpus-wide notation for "a section", not for "a constitution section", so a spec writes `AGENTS.md §Workflow` and `per §Design above` alongside genuine constitution citations.
+**Not every `§X` is a claim about the markers file**, because `§` is the corpus-wide notation for any section, and `kind` records which of three it is (scenario [`anchor-reference-kinds`](scenarios/anchor-reference-kinds.md)):
 
-- **`qualified`** — the reference's line names a markdown document **other than the markers file** (a backticked path, a markdown link target, or a bare `*.md` token). It is a claim about *that* document's sections, which this primitive cannot evaluate holding one file's markers. Excluded by construction and **counted**. The match is line-scoped rather than immediately-preceding, because the dominant real shape is a table row or clause naming the file once and then citing several of its sections, where every reference after the first would otherwise slip through. "Other than the markers file" is load-bearing: a line citing the constitution *is* the kind of reference this primitive exists to check.
-- **`intra-document`** — the anchor names a heading in the citing file, resolved against that file's own headings (longest heading first, so `§Hook Installation` is not satisfied by a shorter `§Hook`).
-- **`markers`** — a genuine claim about the markers file, and the only kind that can come back unresolved.
+- **`qualified`** — the reference's line names a markdown document **other than the markers file** (a backticked path, a markdown link target, or a bare `*.md` token). It is a claim about that document's sections, which this primitive cannot evaluate, so it is excluded by construction and **counted**. The match is line-scoped, so a row naming a file once and citing several of its sections excludes them all.
+- **`intra-document`** — the anchor names a heading in the citing file, resolved against that file's own headings, longest first (`§Hook Installation` is not satisfied by `§Hook`).
+- **`markers`** — a claim about the markers file, and the only kind that can come back unresolved.
 
-`unresolved` therefore means "every reference that was a claim about the markers file resolved" — never "every `§` in this file is fine", which is a claim this primitive cannot make. The two counts ship with the verdict so the exclusion is visible rather than silent.
-
-Prose that names another document without naming its file (`spec 022 §Versioning`, `the bootstrap's §Derived values`) can be neither verified nor excluded and stays reported — a deliberate limit, not an oversight.
+An empty `unresolved` therefore means every claim about the markers file resolved, never that every `§` in the file is fine; the two counts ship with the verdict so the exclusion is visible. Prose naming another document without naming its file (`spec 022 §Versioning`) can be neither verified nor excluded and stays reported.
 
 ### `write-analysis` — record that analyze ran
 
@@ -472,7 +470,7 @@ Writes `specs/{feature}/analysis.md` — the run's record in that file's frontma
 
 - `blocking` — from `hard-fail` and `blocking-findings`. No call can record a clean gate over a dirty run.
 - `unexamined` — summed from `unexamined-by-reason` when a breakdown is supplied, so the total and its parts cannot disagree. A caller-supplied total is used only when no breakdown is given.
-- `analyzed-digest` / `analyzed-unreadable` — taken by the primitive from the feature directory, never passed in. `/{project}:analyze` is read-only, so the subjects are byte-identical to the ones its passes read moments earlier, and deriving the digest means no caller can record one it did not take. It also guarantees this digest and the one `check-review-gate` recomputes come from a single function, which is what makes the row `/{project}:review` renders and the gate's verdict agree. A subject that exists but could not be read — or could not be *reached*, which are separate failures one line apart in the walk — is recorded in `analyzed-unreadable` rather than digested as empty.
+- `analyzed-digest` / `analyzed-unreadable` — taken by the primitive from the feature directory, never passed in, so no caller can record a digest it did not take, and this digest and the one `check-review-gate` recomputes come from one function — which is what makes the row `/{project}:review` renders agree with the gate. A subject that exists but could not be read or reached is recorded in `analyzed-unreadable` rather than digested as empty.
 
 `write-review` derives `reviewed-digest` / `reviewed-unreadable` the same way over the narrower contract set.
 
@@ -551,48 +549,25 @@ Result:
 ```
 
 Computes `unclassified = rule-bearing − (table-keyed ∪ pointer-citing)` over
-committed markdown, so it needs no authored input — which is what keeps it
-clear of the per-entry marker [§design-principles](../../framework/constitution.md#design-principles)
-rejects.
+committed markdown, so it needs no authored input — no per-entry marker, which
+[§design-principles](../../framework/constitution.md#design-principles)
+rejects. **All four terms are reported, not just the difference**, because
+disagreements over this figure turn on its terms — how the pointer side is
+counted, whether a key's trailing parenthetical is stripped — rather than on
+decay.
 
-**All four terms are reported, not just the difference**, because disagreements
-over this figure turn on its terms — how the pointer side is counted, whether a
-key's trailing parenthetical is stripped — rather than on decay, and the
-difference alone would hide them.
-
-`sections` is required and has no default: which sections carry rules is a
-property of the project's own file, so a default would make the denominator a
-claim the primitive is not entitled to make. The sections are a **set** — naming
-one twice does not double its bullets — and one that does not occur is reported
-in `missing-sections` rather than contributing zero, because a denominator that
-quietly shrinks when a section is renamed moves coverage in the flattering
-direction.
-
-`unmatched-keys` is load-bearing rather than diagnostic: it is how a **reworded**
-entry surfaces. A lead-phrase key degrades loudly to not matching at all, where
-a positional identifier would degrade silently to matching whichever entry later
-occupied its slot. Keys match an entry's **lead phrase** — the bolded span
-opening the bullet — by prefix in either direction, after inline markup is
-normalized away and one trailing parenthetical is stripped.
-
-`table-state` distinguishes `read` from `no-table`. A project keeping no
-classification table has not been examined-and-found-fully-routed, so the two
-must not render alike; a `table-file` that was *supplied* and cannot be read is
-an **error** rather than the absent state, since treating it as absent would
-report full coverage over a file nobody read.
-
-Bullet counting reuses the shared comment- and fence-aware grammar the inbox
-primitives use, so a list-marker line inside a guidance comment is not an entry. The
-**top-level** constraint is kept local rather than delegated: that shared helper
-trims leading whitespace, because it was written for inbox bullets where nesting
-does not occur, and delegating wholesale would widen this count to nested list
-items (`QUAL-DELEG-001`).
-
-Consumed by `/{project}:audit` Family 38, which renders the coverage line to
-stderr where it never affects the exit code — **a notice, never a gate**, for the
-reason [§brownfield-inbox](../../framework/constitution.md#brownfield-inbox)
-gives for capture. See the scenario
-[`the-promotion-coverage-line`](scenarios/the-promotion-coverage-line.md).
+The scenario [`the-promotion-coverage-line`](scenarios/the-promotion-coverage-line.md)
+states the rest of the contract: `sections` is required, has no default and is a
+set; a named section that does not occur is reported in `missing-sections`;
+`unmatched-keys` is how a reworded entry surfaces, keys matching an entry's
+bolded lead phrase by prefix in either direction after markup is normalized and
+one trailing parenthetical stripped; `table-state` separates `read` from
+`no-table`, and a supplied `table-file` that cannot be read is an error; only
+top-level bullets outside fences and comments count; and `/{project}:audit`
+Family 38 renders the line to stderr as a notice that never affects the exit
+code. Counting reuses the shared comment- and fence-aware bullet grammar, with
+the top-level constraint kept local rather than delegated, since that helper
+trims leading whitespace (`QUAL-DELEG-001`).
 
 ### `check-rule-ids` — verify cited rule IDs exist and aren't deprecated
 
@@ -681,7 +656,7 @@ The scenario-open-question-signal scenario adds two per-spec fields (spec 046):
 { "scenario-open-question-count": 3, "scenarios-with-questions": ["audit-ci-hard-gate", "family-10-migration-coverage"] }
 ```
 
-`scenario-open-question-count` is the total unresolved questions across the spec's scenarios, and `scenarios-with-questions` names the scenarios carrying them in shared scenario order. Both are distinct from `open-question-count`, which stays spec-body-only; the two signals are never summed. They drive three rendering changes: the existing Scenarios column gains a `{count} ({n} open)` suffix when non-zero (unchanged otherwise, so the glance table grows no ninth column), the Next Action cell overrides to `clarify (scenario)`, and a callout below the table names every affected spec with its carrying scenarios — no cap, since a truncated list reads as "these are the ones needing attention" while hiding others. When a spec is in recovery state *and* carries scenario questions, `clarify (recovery)` wins the cell — it is the more upstream defect — but **both** callouts render, because the scenario questions still need resolving after the recovery walk.
+`scenario-open-question-count` is the total unresolved questions across the spec's scenarios, and `scenarios-with-questions` names the scenarios carrying them in shared scenario order. Both are distinct from `open-question-count`, which stays spec-body-only, and the two are never summed. How they render — the Scenarios column's `({n} open)` suffix, the `clarify (scenario)` Next Action and its precedence under `clarify (recovery)`, and the uncapped callout — is `/ductus:status`'s Rendering reference.
 
 `inbox-standing` reports the standing inbox backlog, and `rendered-markdown` renders it as an `Inbox:` line, the last line of the counts-and-callouts block:
 
@@ -799,7 +774,7 @@ The deterministic surface behind `/ductus:implement`'s completion gate. Evaluate
 
 0. **`already-done`** — the spec is at `status: done`, so the transition this gate authorizes has already happened. Deliberately **not** `passed: true`: a pass for a spec the gate did not examine is the `QUAL-CLAIM-001` conflation, and could read as authorization to transition it again. Ordered first, so a completed spec is never held against a lint violation introduced after it closed, and because the freshness checks would answer wrongly: the completing `set-status` rewrites `spec.md`, an analyze subject. Only the exact value `done` short-circuits; an unrecognized status falls through to the checks, since `validate-frontmatter` owns reporting it (scenario `a-done-spec-has-no-transition-to-gate`).
 1. **`markdown-lint`** — the feature directory's markdown lint (recursive `{root}/{feature}/**/*.md` glob through the `lint-markdown` machinery). Violations are echoed in `violations`, or a non-zero exit the parser could not attribute.
-2. **`scenario-open-questions`** — one or more of the feature's scenarios carry unresolved open questions. The message names the count and the scenarios; `guidance` points at scenario-targeted `/{project}:clarify`, the only command that can resolve them. Ordered ahead of the review-record checks because an unresolved design question is the more upstream defect — reviewing a design that is about to change wastes the review. The list comes from `read-spec`'s collector, so the gate blocks on exactly the questions the reader reports; a second independent reader could disagree with the count the user was shown ([046 — Scenario open-question visibility](../046-scenario-open-question-visibility/spec.md)).
+2. **`scenario-open-questions`** — one or more of the feature's scenarios carry unresolved open questions. The message names the count and the scenarios; `guidance` points at scenario-targeted `/{project}:clarify`, the only command that can resolve them. Ordered ahead of the review-record checks because an unresolved design question is the more upstream defect — reviewing a design that is about to change wastes the review. The list comes from `read-spec`'s collector, so the gate blocks on exactly the questions the reader reports ([046 — Scenario open-question visibility](../046-scenario-open-question-visibility/spec.md)).
 3. **`undischarged-cross-spec-impact`** — the spec declares `cross-spec-impact` entries that are not discharged. See **Cross-spec impact** below.
 4. **`not-reviewed`** (`review.md` absent, or its `last-run` missing or null) and 5. **`must-violations`** (`blocking: true`) — the review record, read from `review.md`. A `review.md` that exists but carries no parseable record is a third state, **undeterminable**, reported as such rather than as never-reviewed.
 6. **`review-stale`** — the recorded review no longer describes the spec's **durable contracts**. See **Record freshness** below.
@@ -950,15 +925,14 @@ Result:
 
 The runtime half of [027](../027-bootstrap-migration-registry/spec.md)'s `migration-chain-reference-integrity`, invoked from **two** call sites so one rule has one implementation: `/{project}:analyze` §Project-level consistency (the durable adopter-facing surface) and `/{project}`'s Pre-run Migrations at batch end. Read-only, and it reports rather than repairs — the adopter may have hand-edited the reference, and a rewrite that guessed wrong is worse than a report that is precise.
 
-- **Referrers** are the `create`-strategy files the manifest never overwrites and no migration re-points: `CLAUDE.md`, `AGENTS.md`, `README.md`, `.githooks/pre-commit`, and the spec root's `system.md`. They are enumerated in code rather than derived from the **Shared Files** manifest because that manifest lives in `framework/bootstrap/ductus.md`, a this-repo artifact that is fetched into staging and never installed — so a manifest-derived list would be empty in the adopter checkout where the check does its work. The first four are spelled literally; `system.md` is resolved against `[paths] specs-root`, because a hardcoded `specs/system.md` would examine nothing on a project that renamed its root and report clean for the wrong reason.
-- **`system.md` is examined but never repaired, and the asymmetry is deliberate.** `ductus-rename` step 3 re-points the constitution reference in `CLAUDE.md`, `AGENTS.md`, and `README.md` — the references the framework itself wrote. An adopter's `system.md` reference is theirs, so the framework reports it and leaves it alone. Reporting is the whole obligation: it stops a run looking clean over a reference known to be broken (scenario `orphan-check-adopter-authored-references`).
-- **Managed roots** are `.ductus/`, `.githooks/`, the configured spec root (read from config, not assumed), and the **historical** roots `.govern/`, `scripts/gen-`, and `scripts/lib/`. A broken link into the adopter's own `docs/` is their business; scoping the check is what keeps it from being noise.
-- **The historical roots are the point, not completeness for its own sake.** The orphan a migration chain leaves is a reference to the path *before* the move, so it carries the *old* root — a current-roots-only list is blind to exactly the class this check exists to catch. The pre-042 entries are prefixes (`scripts/gen-`, `scripts/lib/`) rather than the `scripts/` directory because the framework owned those and never the whole directory; a `scripts/` root would flag an adopter's own `scripts/build.sh` (scenario `orphaned-reference-historical-roots`).
-- **`matched-prefixes` bounds the claim by scope, as `examined` bounds it by subject.** A reference carrying none of the listed prefixes is not reported under `skipped`, because nothing recognized it as a reference at all — so without this field a clean result reads as *no orphans* when it means *no orphans among paths carrying one of these prefixes*. It is `QUAL-CLAIM-001` about the boundary of a claim rather than its subject.
-- **`attribution` is the field that keeps the result honest.** `registry` means `framework/migrations.toml` was readable — the bootstrap call site — and a finding's `migration` names the entry whose `target_paths` covers the missing path, latest hop winning since that is the one that left the reference dangling. `watermark` means no registry was available — an adopter checkout — so `migration` is empty for an entirely different reason and `last-applied` is the only migration context there is. An empty `migration` under `registry` means *asked and no entry claims it*; under `watermark` it means *nothing to ask*. Rendering the two alike would assert an attribution nobody computed, which is `QUAL-CLAIM-001` inside a check written to enforce it.
-- **A pattern is not a reference.** A candidate containing `*` or `NNN` is documentation naming a shape (`specs/NNN-*/spec.md`), and a path the project declares it *ships* to adopters is not local breakage.
-- **A git object name is not a reference.** A path glued to a preceding `:` whose token is empty or revision-shaped — `git show abc1234:specs/x/spec.md` — names a blob in git's object store, which no migration can move. A variable, a path or a markdown link label before the colon marks a working-tree reference instead, and it is still checked. See [`a-revision-qualified-path-is-not-a-working-tree-reference`](scenarios/a-revision-qualified-path-is-not-a-working-tree-reference.md).
-- `examined` names the files the result describes and `skipped` names the ones it could not read, so empty `findings` reads as clean only when `skipped` is empty.
+- **Referrers** are the `create`-strategy files the manifest never overwrites and no migration re-points: `CLAUDE.md`, `AGENTS.md`, `README.md`, `.githooks/pre-commit`, and the spec root's `system.md`, resolved against `[paths] specs-root`. They are enumerated in code because the **Shared Files** manifest is never installed, so a list derived from it would be empty in the adopter checkout where the check runs.
+- **`system.md` is examined but never repaired.** `ductus-rename` re-points only the references the framework wrote; an adopter's `system.md` reference is theirs, so it is reported and left alone (scenario `orphan-check-adopter-authored-references`).
+- **Managed roots** are `.ductus/`, `.githooks/`, the configured spec root, and the **historical** roots `.govern/`, `scripts/gen-` and `scripts/lib/`. The orphan a migration leaves carries the root *before* the move, so a current-roots-only list is blind to it; the pre-042 roots are prefixes because the framework never owned all of `scripts/` (scenario `orphaned-reference-historical-roots`). A broken link into an adopter's own directories is out of scope.
+- **`matched-prefixes` bounds the claim by scope, as `examined` bounds it by subject**: a clean result means no orphans among paths carrying one of these prefixes (`QUAL-CLAIM-001`).
+- **`attribution` says what the empty `migration` means.** Under `registry` (`framework/migrations.toml` readable, the bootstrap call site) a finding's `migration` names the entry whose `target_paths` covers the missing path, latest hop winning, and an empty one means *no entry claims it*. Under `watermark` (an adopter checkout) there was nothing to ask, so `migration` is empty and `last-applied` is the only migration context (scenario `orphaned-reference-check`).
+- **A pattern is not a reference.** A candidate containing `*` or `NNN` names a shape (`specs/NNN-*/spec.md`), and a path the project declares it *ships* to adopters is not local breakage.
+- **A git object name is not a reference.** A path glued to a preceding `:` whose token is empty or revision-shaped — `git show abc1234:specs/x/spec.md` — names a blob no migration can move; a variable, a path or a link label before the colon marks a working-tree reference, which is still checked ([`a-revision-qualified-path-is-not-a-working-tree-reference`](scenarios/a-revision-qualified-path-is-not-a-working-tree-reference.md)).
+- `examined` names the files the result describes and `skipped` the ones it could not read, so empty `findings` reads as clean only when `skipped` is empty.
 
 ### `derive-routing-candidates` — the homes proposed work could already have
 
@@ -991,7 +965,7 @@ Result:
 }
 ```
 
-The deterministic half of `/{project}:specify`'s routing gate, which runs **before** `create-feature` writes anything — creating a spec is the action the two routing rules in `AGENTS.md` §Workflow exist to prevent, so a check after the scaffold is not a check. Three sources, in result precedence order:
+The deterministic half of `/{project}:specify`'s routing gate, which runs **before** `create-feature` writes anything, because a routing check after the scaffold is not a check. Three sources, in result precedence order:
 
 - **`runtime-work`** — the description names a primitive (matched against the parser's `PRIMITIVE_NAMES`, so the signal tracks the shipped runtime rather than a hand-kept keyword list) or a path under `runtime/`. The home is the feature whose `plan.md` lists a `runtime/` path under `## Affected Files`, read through the same `compute_review_scope::read_plan_affected` the review scope uses. **Derived from the corpus, never a slug named in code**: an adopter's runtime-owning spec is not this repo's `022`, and a project with none yields no candidate rather than a wrong one.
 - **`rule-surface`** — a rule file whose category stem the description shares, with the `-backend` / `-frontend` / `-cross` surface suffix set aside so `security-backend.md` matches on `security` and not on every backend file. Directory resolution and listing are `discover-rule-files`' (`{specs-root}/rules/`, else `framework/rules/`).
@@ -1112,13 +1086,13 @@ Result:
 
 The runtime half of [020](../020-code-review/spec.md)'s `review-flag-parsing-is-specified`, invoked from `/audit` Family 30 (`scripts/audit/command-flag-hint-parity.sh`). It checks two directions of one contract — a declared `argument-hint` and the body a host substitutes into must agree. **Direction 1:** `argument-hint` is the surface a host renders when it offers a command, so a flag absent from it is a flag the operator is never shown. **Direction 3**, below, is a declared hint the body never substitutes ([this spec's `argument-hint-needs-a-token`](scenarios/argument-hint-needs-a-token.md)).
 
-- **The subject is `framework/commands/*.md`, the sources.** Not the generated copies under a host's commands directory: a copy carries whatever its source carries, so checking both reports every finding twice and neither copy is the one to fix. It also settles where the check belongs — an adopter told their installed `review.md` disagrees with itself cannot act on it, because the file is regenerated from ductus and the repair is a ductus release. That is why this is `/audit` (maintainer, at the source) rather than `/{project}:analyze`, whose command-frontmatter family is deliberately frontmatter-only and reads the installed copies.
-- **Only a `Flags` section's table rows count, and only each row's first cell.** The behavior column routinely cross-references other flags (`Composes with all other flags`), and harvesting it would manufacture a finding against whichever row mentioned one. A single row may still name two flags — `--waive <rule-id> --reason "<text>"` is one row and both halves of a pair — so the cell is scanned rather than matched once.
-- **A command documenting flags in prose is examined and contributes nothing.** `implement.md` describes `--auto` under a `### Flags` heading with no table, and its hint names it — correct, and invisible to a table-shaped check. This is why `with-flags-table` exists alongside `examined`: an empty `findings` means *every tabled flag is surfaced*, never *every documented flag is surfaced*, and a caller quantifying a clean verdict states which one it means (`QUAL-CLAIM-001`).
-- **Direction 3: a declared `argument-hint` with no substitution token in the body is an unreachable interface.** A host injects the invocation's arguments through substitution alone — Pi's `substituteArgs` has no fallback that appends an unreferenced argument — so a command whose declared hint outruns its body reads no-argument however it is invoked. The accepted token set is `$ARGUMENTS`, `$@`, `$1`, `${N:-…}`, `${@:-…}`, `${@:N}`, `${@:N:L}`, and the subject is every examined command that declares a hint, whether or not it has a `Flags` table. `with-argument-hint` is that direction's denominator, separate from `with-flags-table` so the two claims do not read alike, and a finding carries `direction: "hint-unreachable"` (against the direction-1 value `"flag-unsurfaced"`) so a consumer renders the right fix without reading prose.
-- **Not covered: direction 2 — a body documenting an argument the `argument-hint` omits.** The mirror of direction 1, and deliberately out of this check: the body documents an argument in prose, so deciding whether the hint should name it needs semantic reading of what the prose promises, not a table-shaped scan. Direction 2 is the direction a `Flags` table's first cell approximates for flags; a *positional* argument has no table to scan. Recorded so it is not mistaken for coverage the check has — the same reason §design-principles gives for stating a bound rather than implying one.
-- **`guidance` is set when the run examined command files and found no Flags table at all.** Two empty sets compare equal, so without it an extraction failure returns the payload of a clean run — the same reasoning `derive-boundary` records for an underivable git window. Empty otherwise, so its silence means "examined and current".
-- **Section membership comes from the shared fence- and comment-aware scanner** (`section_line_indices`), not a second heading walk. These command bodies embed example output and artifact fragments; a table row inside a fence is an illustration, not the command's contract. Reusing the scanner is also what keeps the check out of the `awk`/`sed` markdown-parsing shape [§runtime-boundary](../../framework/constitution.md#runtime-boundary) principle 3 names — Family 30's script is a shell entry point over this primitive, not a shell reimplementation of it.
+- **The subject is `framework/commands/*.md`, the sources**, never a host's generated copies: a copy carries whatever its source carries, and an adopter cannot repair one, so the check lives in `/audit` at the source rather than in `/{project}:analyze`.
+- **Only a `Flags` section's table rows count, and only each row's first cell**, since the behavior column cross-references other flags. A cell may name two flags (`--waive <rule-id> --reason "<text>"`), so it is scanned rather than matched once.
+- **A command documenting flags in prose is examined and contributes nothing**, so `with-flags-table` sits beside `examined`: an empty `findings` means *every tabled flag is surfaced*, never *every documented flag* (`QUAL-CLAIM-001`).
+- **Direction 3** follows the scenario: the accepted token set, and every examined command declaring a hint as its subject. `with-argument-hint` is its denominator, kept separate from `with-flags-table`, and its findings carry `direction: "hint-unreachable"` against direction 1's `"flag-unsurfaced"`, so a consumer renders the right fix without reading prose.
+- **Not covered: direction 2**, a body documenting an argument the hint omits. Deciding whether the hint should name it needs a semantic reading of the prose, and a positional argument has no table to scan; it is stated so it is not mistaken for coverage.
+- **`guidance` is set when the run examined command files and found no Flags table at all**, so an extraction failure does not return a clean run's payload; empty otherwise.
+- **Section membership comes from the shared fence- and comment-aware scanner** (`section_line_indices`), so a table inside a fenced example is not the command's contract, and Family 30's script stays a shell entry point over this primitive rather than a markdown parser of its own ([§runtime-boundary](../../framework/constitution.md#runtime-boundary) principle 3).
 
 ### `check-artifacts` — deterministic artifact-check families for one feature
 
@@ -1158,11 +1132,11 @@ Nine families, mirroring `/ductus:analyze`'s markdown-only reference exactly (se
 
 `scenario-consistency`'s **referencing-task rule is canonical for every surface that asks "does a task reference this scenario?"** A task references a scenario when the scenario's **slug** appears in the task's heading, in any subtask's text, or in its `Done when` clause. The match is on the slug, not on the `scenarios/{slug}.md` path: the path form is what `append-task`'s default body emits, and the wider slug match is what tolerates a hand-written task naming the scenario without it. A second surface applying a narrower rule disagrees asymmetrically — `/{project}:amend`'s reconcile pass would offer a task for a scenario this family already considers mapped, producing the duplicate its dedup exists to prevent — so a surface restating the rule (as the markdown-only path must, per §runtime-host-integration) states *this* rule. `mapped_scenario_produces_no_finding` and `bare_slug_reference_satisfies_the_mapping` cover both authoring forms, so a narrowing on the runtime side fails a test rather than shipping.
 
-`scenario-open-questions` reports when any `scenarios/*.md` carries an unresolved question, naming the count and the scenarios. At `done` that state contradicts the completion rule outright, so the finding is blocking and `/{project}:analyze --fix` reverts the spec `done → in-progress` with a non-silent notice, exactly as it does for review-state drift; before `done` the questions are real remaining work but not yet a defect, so the finding is advisory and `--fix` leaves the status alone. Unlike `review-state-drift` there is **no grandfather rule** — an absent `review.md` genuinely marks a spec as predating that feature, but an unresolved scenario question is a present-tense defect whenever it arrived, and exempting it would preserve the state the check exists to surface. The question list comes from `read-spec`'s collector, so this finding, the `check-review-gate` block, and the count surfaced to the user can never disagree ([046 — Scenario open-question visibility](../046-scenario-open-question-visibility/spec.md)).
+`scenario-open-questions` reports when any `scenarios/*.md` carries an unresolved question, naming the count and the scenarios. At `done` that contradicts the completion rule, so the finding is blocking and `/{project}:analyze --fix` reverts the spec `done → in-progress` with a non-silent notice, as it does for review-state drift; before `done` it is advisory and `--fix` leaves the status alone. There is **no grandfather rule**: an unresolved scenario question is a present-tense defect whenever it arrived. The question list comes from `read-spec`'s collector, so this finding, the `check-review-gate` block and the count the user sees cannot disagree ([046 — Scenario open-question visibility](../046-scenario-open-question-visibility/spec.md)).
 
 `criterion-labels` is the **enforcement half** of the labelling pass above ([013](../013-text-first-artifacts/scenarios/criterion-identifiers.md)): assignment is `label-criteria`'s, enforcement has to be separate because a criterion typed by hand in an editor never touches a primitive. Its three invariants are checkable from the artifact alone with no git-history read — a duplicate label is ambiguous rather than resolvable by picking the first match; a counter at or below the body maximum means the next assignment would reissue a label a live criterion already carries; and an unlabelled criterion is a defect **only once the spec carries `next-criterion` at all**. That last gate is the field's presence, deliberately not a per-spec grandfather date: 013 defines an absent counter as "no labels assigned yet", and the corpus backfill is what makes the check universal rather than an exemption list. The family runs at every status — a label is an identifier, not a contract about the delivered system, so a `draft` is as wrong to duplicate one in as a `done` spec — and it contributes nothing to `skipped`, since its whole subject is the spec's own frontmatter and criteria list.
 
-`skipped` records each target a family could not examine, as `{family, reason, path}` over the closed reason set `target-missing` / `target-unparseable` / `no-readable-state` / `root-absent` / `ships-to-adopter` / `artifact-unreadable` / `not-a-live-claim`. It exists because two families read *targets* — a link's destination, a criterion's path — and [045 — Decision-state drift detection](../045-decision-state-drift-detection/spec.md) forbids escalating an unreadable one into a finding. Without the list, a family that examined every target and found nothing would return exactly what a family that could examine nothing returns, which is the shape `QUAL-CLAIM-001` forbids. `clean` is unchanged and still means `findings.is_empty()`, so the assurance lives in the pair: `clean: true` with an empty `skipped` is verified-clean, `clean: true` with a non-empty `skipped` is partially examined. The other families always return it empty — their subjects are fully examinable by construction — and hosts render its entries in the Informational tier, where the cross-service reference unknowns already sit. `target-unparseable` has a second producer beyond an unreadable file: a sibling whose path traverses a symlink at or below the feature directory is reported unexaminable rather than followed, which is how `link-adjacent-drift` closes the half of its trust boundary lexical resolution cannot see without giving up repeat-run determinism ([sibling-symlink-trust-boundary](scenarios/sibling-symlink-trust-boundary.md)).
+`skipped` records each target a family could not examine, as `{family, reason, path}` over the closed reason set `target-missing` / `target-unparseable` / `no-readable-state` / `root-absent` / `ships-to-adopter` / `artifact-unreadable` / `not-a-live-claim`, because a family that read *targets* — a link's destination, a criterion's path — must not escalate an unreadable one into a finding ([045 — Decision-state drift detection](../045-decision-state-drift-detection/spec.md)). `clean` still means `findings.is_empty()`, so the assurance lives in the pair: `clean: true` with an empty `skipped` is verified-clean, and with a non-empty one partially examined. Hosts render the entries in the Informational tier (scenario [`check-artifacts-skipped-targets`](scenarios/check-artifacts-skipped-targets.md)). A sibling whose path traverses a symlink at or below the feature directory is reported `target-unparseable` rather than followed ([sibling-symlink-trust-boundary](scenarios/sibling-symlink-trust-boundary.md)).
 
 ### `derive-dependencies` / `derive-references` — the frontmatter index derivations
 
@@ -1296,7 +1270,7 @@ Request payload:
 }
 ```
 
-`constitution-excerpts-unexaminable` carries one entry per cause the excerpt load could not examine — `command-file-missing: {name}`, `command-file-unreadable: {path}`, `constitution-unreadable: {path}`, or `anchor-unresolved: §{anchor}` for an anchor the command's `Reference:` line declares that the constitution does not define. The constitution resolves as `.ductus/constitution.md`, then `framework/constitution.md`, and `constitution-unreadable` names both when neither exists. It is **omitted from the wire when empty** (`skip_serializing_if`), so a payload whose anchors all resolved is byte-identical to one built before the field existed, and it sits inside the stable cache prefix (it does not vary between tasks in one walk). Without it, five states collapsed into the same empty or short `constitution-excerpts` array and a host could not tell "no constitutional context applies" from "the context could not be loaded" — `QUAL-CLAIM-001`, the same shape `read-spec`'s `scenario-files-unreadable` answers for scenarios.
+`constitution-excerpts-unexaminable` carries one entry per cause the excerpt load could not examine — `command-file-missing: {name}`, `command-file-unreadable: {path}`, `constitution-unreadable: {path}`, or `anchor-unresolved: §{anchor}` for an anchor the command's `Reference:` line declares that the constitution does not define. The constitution resolves as `.ductus/constitution.md`, then `framework/constitution.md`, and `constitution-unreadable` names both when neither exists. It is **omitted from the wire when empty** (`skip_serializing_if`), so a payload whose anchors all resolved is byte-identical to one built before the field existed, and it sits inside the stable cache prefix (it does not vary between tasks in one walk). Without it, a host could not tell "no constitutional context applies" from "the context could not be loaded" (`QUAL-CLAIM-001`).
 
 Response payload:
 
@@ -1373,7 +1347,7 @@ Request payload:
 
 `question.section` is optional and omitted when the walker cannot attribute the question to a section. The question comes from an explicit `question` walker-context value when present, else the first entry of `read-spec`'s merged `open-questions` result.
 
-**Exec-path scope note** (scenario [coverage-residue-cleanup](scenarios/coverage-residue-cleanup.md)): clarify steps 7–8 — edge-case enumeration and acceptance-criterion verification — carry no extension marker, so `ductus exec clarify` no-ops them by design. They do not fold into this point's one-question-per-round-trip ABI: they are spec-wide passes that must run even on the zero-questions short-circuit, when this loop performs no round trips at all. The markdown-only path and a host walking the command file directly perform them in full; a host driving exec performs them itself before accepting the status-advance gate. The reduction is documented in the command (`clarify.md`, Instructions preamble), keeping the two-paths guarantee honest rather than silently narrower; a dedicated spec-review extension point remains future work if exec-driven clarify becomes hot.
+**Exec-path scope note** (scenario [coverage-residue-cleanup](scenarios/coverage-residue-cleanup.md)): clarify steps 7–8 — edge-case enumeration and acceptance-criterion verification — carry no extension marker, so `ductus exec clarify` no-ops them by design. They do not fold into this point's one-question-per-round-trip ABI: they are spec-wide passes that must run even on the zero-questions short-circuit, when this loop performs no round trips at all. The markdown-only path and a host walking the command file directly perform them in full; a host driving exec performs them itself before accepting the status-advance gate. The reduction is documented in the command (`clarify.md`, Instructions preamble), keeping the two-paths guarantee honest rather than silently narrower.
 
 Response payload:
 
