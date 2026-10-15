@@ -13,6 +13,29 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   version>"}` through `initialize` and through rmcp 3's discovery path
   alike. The tools a host is served, their schemas and their results are
   unchanged. Latent since the server was written; a new test holds it.
+- **`compute-review-scope` now scopes the review to the working tree, not the
+  last commit.** `/ductus:review` reads the working tree, but the files
+  modified since the diff base came from a commit-to-`HEAD` diff, and the
+  default base came from committed history alone. In the pipeline's natural
+  order, `/ductus:amend` → `/ductus:implement` → `/ductus:review` with one
+  commit at the end, the review ran before anything was committed. Its scope
+  then left out every file the change touched, while the record still read as
+  a complete examination. An adopter reported it on 0.58.0. They had reopened a
+  `done` spec and changed two files without committing, and got a 475-file
+  window that contained neither file; `--since=HEAD` gave zero files. Two
+  fixes:
+  - **Uncommitted files are included.** Modified-since is now one diff from the
+    base to the working tree: committed, staged, unstaged and untracked files,
+    with ignored files left out. `--since=HEAD` now yields exactly the
+    uncommitted work.
+  - **An uncommitted transition sets the base to `HEAD`.** This applies when
+    `spec.md` on disk reads `in-progress` and the copy at `HEAD` does not. It
+    covers both an `/ductus:amend` reopen and `/ductus:implement` starting a
+    `planned` spec. An uncommitted `in-progress → done` flip leaves the base
+    alone.
+
+  `write-review` recomputes the scope the same way, so the recorded `scope`
+  count matches. Spec 022, scenario `review-scope-includes-uncommitted-work`.
 
 ## [0.59.3] — 2026-10-15
 

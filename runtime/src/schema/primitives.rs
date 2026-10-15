@@ -560,8 +560,9 @@ pub struct ComputeReviewScopeArgs {
     /// Feature directory name whose review scope is computed.
     #[arg(long)]
     pub feature: String,
-    /// Optional diff-base override (a git ref or sha). When omitted, the
-    /// commit the spec advanced to `in-progress` at is used.
+    /// Optional diff-base override (a git ref or sha), used verbatim. When
+    /// omitted, the base is the parent of the commit the spec advanced to
+    /// `in-progress` at, or `HEAD` when that transition is not committed yet.
     #[serde(default)]
     #[arg(long)]
     pub since: Option<String>,
@@ -571,13 +572,15 @@ pub struct ComputeReviewScopeArgs {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ComputeReviewScopeResult {
-    /// Resolved diff-base sha (empty when the spec never reached `in-progress`
-    /// and no `--since` was given).
+    /// Resolved diff-base sha: `HEAD`'s when the spec's move into
+    /// `in-progress` is uncommitted, and empty when the spec never reached
+    /// `in-progress` and no `--since` was given.
     pub diff_base: String,
     /// The review scope: the union of `plan-affected` and `modified-since`.
     pub scope: Vec<String>,
-    /// Files changed between `diff-base` and HEAD inside the project
-    /// directory, named from the project root, sorted.
+    /// Files changed between `diff-base` and the working tree inside the
+    /// project directory — committed, staged, unstaged, and untracked but not
+    /// ignored — named from the project root, sorted.
     pub modified_since: Vec<String>,
     /// Files listed under the plan's `## Affected Files` section.
     pub plan_affected: Vec<String>,

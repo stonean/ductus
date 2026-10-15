@@ -4,13 +4,21 @@
 //!
 //! - **diff-base** — the **parent** of the commit the spec advanced to
 //!   `in-progress` at (the transition itself is found by the lookup shared with
-//!   `check-stuck`), or a caller-supplied `--since` override used verbatim. The
-//!   parent, because `base..HEAD` excludes the base's own changes and the
+//!   `check-stuck`), `HEAD` when that transition is not committed yet, or a
+//!   caller-supplied `--since` override used verbatim. The parent, because the
 //!   reopen flow commits the back-edge flip together with the work it
 //!   authorises — see `scenarios/review-base-includes-the-transition-commit.md`.
 //! - **scope** — the union of the plan's `Affected Files` set and the set of
-//!   files modified since `diff-base`. Both, because either alone can omit
-//!   what the review exists to look at.
+//!   files modified since `diff-base`, in the working tree as well as in
+//!   commits. Both, because either alone can omit what the review exists to
+//!   look at.
+//!
+//! The review reads the working tree, so the files modified since the base
+//! are the diff from the base to the working tree, and an uncommitted
+//! transition starts the window at `HEAD`. Answered from commits alone, a
+//! review run before its work was committed — the pipeline's natural order —
+//! was scoped away from every file the work touched
+//! (`scenarios/review-scope-includes-uncommitted-work.md`).
 //!
 //! The project need not sit at its git repository's root: history is read by
 //! each path from the work tree, and the files modified since the base are
@@ -28,10 +36,12 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use git2::{Oid, Repository};
+use git2::{DiffOptions, Oid, Repository};
 
 use crate::primitives::check_stuck::find_in_progress_commit;
-use crate::primitives::{PrimitiveError, ProjectRepository, Result, parse_affected_files};
+use crate::primitives::{
+    PrimitiveError, ProjectRepository, Result, frontmatter_status, parse_affected_files,
+};
 use crate::schema::paths;
 use crate::schema::primitives::{ComputeReviewScopeArgs, ComputeReviewScopeResult};
 
@@ -82,6 +92,18 @@ pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewSc
         // 0 SHOULD over an empty subject that way on 2026-08-27 before the
         // operator caught it (scenario
         // `review-base-includes-the-transition-commit`).
+        None if transition_is_uncommitted(
+            &project,
+            &layout.specs_root,
+            &args.feature,
+            &feature_dir,
+        )? =>
+        {
+            // The transition that opened this window is not in history yet, so
+            // the window starts at `HEAD`. History's newest transition is an
+            // earlier window's — on a reopened spec, its first, months back.
+            repository.head()?.peel_to_commit()?.id().to_string()
+        }
         None => match find_in_progress_commit(repository, &spec_rel)? {
             Some(sha) => transition_parent(repository, &sha)?,
             None => String::new(),
@@ -118,6 +140,42 @@ pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewSc
     })
 }
 
+/// Whether the spec's move into `in-progress` is still uncommitted: `spec.md`
+/// on disk reads `in-progress` and the spec at `HEAD` does not — `done`,
+/// `planned`, any other status, or no spec at all.
+///
+/// Keyed on the on-disk status being `in-progress`, not on the two statuses
+/// differing: an uncommitted `in-progress -> done` flip also differs, and
+/// moving that review's base to `HEAD` would drop the committed work from its
+/// window. An on-disk spec whose status cannot be read is no evidence of an
+/// uncommitted transition, so the base resolves from history; the diff to the
+/// working tree keeps the change in scope either way, so the cost is a wider
+/// window, never a missed change.
+///
+/// # Errors
+///
+/// [`PrimitiveError::Git`] when `HEAD`'s copy of the spec cannot be read —
+/// an unborn `HEAD` among them.
+fn transition_is_uncommitted(
+    project: &ProjectRepository,
+    specs_root: &str,
+    feature: &str,
+    feature_dir: &Path,
+) -> Result<bool> {
+    let on_disk = feature_dir.join("spec.md");
+    let disk_status = std::fs::read_to_string(&on_disk)
+        .ok()
+        .and_then(|content| frontmatter_status(&content, &on_disk));
+    if disk_status.as_deref() != Some("in-progress") {
+        return Ok(false);
+    }
+    let rel = format!("{specs_root}/{feature}/spec.md");
+    let head_status = project
+        .read_at_head(&rel)?
+        .and_then(|content| frontmatter_status(&content, Path::new(&rel)));
+    Ok(head_status.as_deref() != Some("in-progress"))
+}
+
 /// The first parent of the status-transition commit `sha`, or `sha` itself
 /// when it has no parent.
 ///
@@ -138,16 +196,33 @@ fn transition_parent(repository: &Repository, sha: &str) -> Result<String> {
     })
 }
 
-/// Diff `base_sha..HEAD`: the sorted set of changed file paths inside the
-/// project, named from the project root as the plan names them. A change
-/// outside the project directory is another project's work and is left out.
+/// Diff `base_sha` to the working tree: the sorted set of changed file paths
+/// inside the project, named from the project root as the plan names them.
+/// Committed, staged and unstaged changes and untracked files all count, and
+/// ignored files do not. A change outside the project directory is another
+/// project's work and is left out.
+///
+/// The working tree, because that is what the review reads. A `..HEAD` diff
+/// left out every uncommitted change, which in the pipeline's natural order —
+/// review before the one commit at the end — is the whole change.
 fn diff_since(project: &ProjectRepository, base_sha: &str) -> Result<Vec<String>> {
     let repo = &project.repository;
     let base_tree = repo.find_commit(Oid::from_str(base_sha)?)?.tree()?;
-    let head_tree = repo.head()?.peel_to_commit()?.tree()?;
 
-    // Every changed file path (added / modified / deleted / renamed).
-    let diff = repo.diff_tree_to_tree(Some(&base_tree), Some(&head_tree), None)?;
+    // One diff, base tree → index → working tree, so committed, staged and
+    // unstaged changes arrive together; untracked files surface too, as
+    // `diff-cross-spec` takes them. Bounded to the project directory, so a
+    // project in a subdirectory does not walk its neighbours' untracked
+    // trees. Literal, because that path may hold `*`, `?` or `[`, which as a
+    // glob would match no file and report no change (QUAL-CLAIM-001).
+    let mut opts = DiffOptions::new();
+    opts.include_untracked(true).recurse_untracked_dirs(true);
+    let project_dir = project.to_git("");
+    let project_dir = project_dir.trim_end_matches('/');
+    if !project_dir.is_empty() {
+        opts.pathspec(project_dir).disable_pathspec_match(true);
+    }
+    let diff = repo.diff_tree_to_workdir_with_index(Some(&base_tree), Some(&mut opts))?;
     let mut files: BTreeSet<String> = BTreeSet::new();
     diff.foreach(
         &mut |delta, _| {
@@ -439,6 +514,179 @@ mod tests {
         assert_eq!(
             result.modified_since,
             vec!["specs/001-x/spec.md".to_string(), "src/a.rs".to_string()]
+        );
+    }
+
+    /// A repo where 001-x went planned → in-progress with `src/old.rs`
+    /// committed before the transition, so nothing has touched it since the
+    /// base. Returns (tempdir, repository, the transition's parent).
+    fn repo_in_progress_with_an_untouched_file() -> (tempfile::TempDir, Repository, String) {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let spec_path = tmp.path().join("specs/001-x/spec.md");
+        write(&spec_path, &spec("planned"));
+        write(&tmp.path().join("src/old.rs"), "fn old() {}\n");
+        write(&tmp.path().join(".gitignore"), "target/\n");
+        let parent = commit_all(&repo, "feat: plan");
+        write(&spec_path, &spec("in-progress"));
+        commit_all(&repo, "chore: begin");
+        (tmp, repo, parent)
+    }
+
+    fn head_sha(repo: &Repository) -> String {
+        repo.head()
+            .unwrap()
+            .peel_to_commit()
+            .unwrap()
+            .id()
+            .to_string()
+    }
+
+    /// The review reads the working tree, so an edit nobody has committed is
+    /// part of what it must read. A `..HEAD` diff left it out.
+    #[test]
+    fn an_unstaged_edit_is_in_scope() {
+        let (tmp, _repo, parent) = repo_in_progress_with_an_untouched_file();
+        write(&tmp.path().join("src/old.rs"), "fn old() { edited(); }\n");
+        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        assert_eq!(result.diff_base, parent);
+        assert!(
+            result.scope.contains(&"src/old.rs".to_string()),
+            "{:?}",
+            result.scope
+        );
+    }
+
+    #[test]
+    fn a_staged_edit_is_in_scope() {
+        let (tmp, repo, _) = repo_in_progress_with_an_untouched_file();
+        write(&tmp.path().join("src/old.rs"), "fn old() { staged(); }\n");
+        let mut index = repo.index().unwrap();
+        index.add_path(Path::new("src/old.rs")).unwrap();
+        index.write().unwrap();
+        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        assert!(
+            result.modified_since.contains(&"src/old.rs".to_string()),
+            "{:?}",
+            result.modified_since
+        );
+    }
+
+    #[test]
+    fn an_untracked_file_is_in_scope_and_an_ignored_one_is_not() {
+        let (tmp, _repo, _) = repo_in_progress_with_an_untouched_file();
+        write(&tmp.path().join("tests/new_test.rs"), "#[test] fn t() {}\n");
+        write(&tmp.path().join("target/debug/out.o"), "build output\n");
+        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        assert!(
+            result
+                .modified_since
+                .contains(&"tests/new_test.rs".to_string()),
+            "{:?}",
+            result.modified_since
+        );
+        assert!(
+            !result.scope.iter().any(|f| f.starts_with("target/")),
+            "an ignored file entered the scope: {:?}",
+            result.scope
+        );
+    }
+
+    /// `--since=HEAD` used to name an empty window however much work sat
+    /// uncommitted on top of it.
+    #[test]
+    fn since_head_yields_exactly_the_uncommitted_work() {
+        let (tmp, repo, _) = repo_in_progress_with_an_untouched_file();
+        write(&tmp.path().join("src/old.rs"), "fn old() { edited(); }\n");
+        write(&tmp.path().join("src/new.rs"), "fn new() {}\n");
+        let result = run(&args("001-x", Some("HEAD")), tmp.path()).unwrap();
+        assert_eq!(result.diff_base, head_sha(&repo));
+        assert_eq!(result.modified_since, vec!["src/new.rs", "src/old.rs"]);
+    }
+
+    /// The reported shape: a `done` spec reopened by `/ductus:amend` and
+    /// worked on, nothing committed. History's newest transition is the
+    /// spec's first, so the base reached back to it and the window spanned
+    /// every file since; the uncommitted transition starts the window at
+    /// `HEAD` instead.
+    #[test]
+    fn an_uncommitted_reopen_puts_the_base_at_head() {
+        let (tmp, repo, _) = repo_in_progress_with_an_untouched_file();
+        write(&tmp.path().join("src/first_window.rs"), "fn w() {}\n");
+        commit_all(&repo, "feat: implement");
+        let spec_path = tmp.path().join("specs/001-x/spec.md");
+        write(&spec_path, &spec("done"));
+        commit_all(&repo, "chore: done");
+
+        write(&spec_path, &spec("in-progress"));
+        write(&tmp.path().join("src/old.rs"), "fn old() { fixed(); }\n");
+        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        assert_eq!(result.diff_base, head_sha(&repo));
+        assert_eq!(
+            result.modified_since,
+            vec!["specs/001-x/spec.md", "src/old.rs"],
+            "the window is the reopen's work, not every file since the first transition"
+        );
+    }
+
+    /// `/ductus:implement` starting a `planned` spec, nothing committed yet.
+    /// History holds no transition, so the base was empty and the scope the
+    /// plan's alone.
+    #[test]
+    fn an_uncommitted_start_puts_the_base_at_head() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let spec_path = tmp.path().join("specs/001-x/spec.md");
+        write(&spec_path, &spec("planned"));
+        commit_all(&repo, "feat: plan");
+
+        write(&spec_path, &spec("in-progress"));
+        write(&tmp.path().join("src/a.rs"), "fn a() {}\n");
+        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        assert_eq!(result.diff_base, head_sha(&repo));
+        assert_eq!(
+            result.modified_since,
+            vec!["specs/001-x/spec.md", "src/a.rs"]
+        );
+    }
+
+    /// An uncommitted `in-progress → done` flip differs from `HEAD` too, but
+    /// it opens no window: the base stays the committed transition's parent,
+    /// so the committed work stays in the window.
+    #[test]
+    fn an_uncommitted_completion_leaves_the_base_alone() {
+        let (tmp, repo, parent) = repo_in_progress_with_an_untouched_file();
+        write(&tmp.path().join("src/a.rs"), "fn a() {}\n");
+        commit_all(&repo, "feat: implement");
+        write(&tmp.path().join("specs/001-x/spec.md"), &spec("done"));
+        let result = run(&args("001-x", None), tmp.path()).unwrap();
+        assert_eq!(result.diff_base, parent);
+        assert!(
+            result.modified_since.contains(&"src/a.rs".to_string()),
+            "{:?}",
+            result.modified_since
+        );
+    }
+
+    /// The working-tree diff is bounded to the project: an untracked file
+    /// beside it is another project's work.
+    #[test]
+    fn untracked_files_outside_a_subdirectory_project_are_left_out() {
+        use crate::primitives::git_fixture;
+        let tmp = tempfile::tempdir().unwrap();
+        let (repo, project) = git_fixture::subdirectory_project(tmp.path());
+        let spec_path = project.join("specs/001-x/spec.md");
+        write(&spec_path, &spec("planned"));
+        git_fixture::commit_all(&repo, "feat: plan");
+        write(&spec_path, &spec("in-progress"));
+        git_fixture::commit_all(&repo, "chore: begin");
+
+        write(&project.join("src/inside.rs"), "fn i() {}\n");
+        write(&tmp.path().join("other/outside.rs"), "fn o() {}\n");
+        let result = run(&args("001-x", None), &project).unwrap();
+        assert_eq!(
+            result.modified_since,
+            vec!["specs/001-x/spec.md", "src/inside.rs"]
         );
     }
 
