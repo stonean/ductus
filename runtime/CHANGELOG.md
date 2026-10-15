@@ -2,6 +2,67 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.59.2] — 2026-10-14
+
+A new §grounding rule from spec 050, the three `§` references 0.59.1 left
+unresolved, a `rustls` security update, and every dependency moved to its
+latest compatible version. The runtime's own code is unchanged; its binary
+changes through its dependencies. A patch release: no primitive gains an
+argument or a result field.
+
+### Added
+
+- **§grounding: run the project's own command, never a hand-rolled equivalent
+  of one.** When a project declares how to build, test, lint, migrate or
+  package something — a `package.json` script, a Makefile or justfile target,
+  a compose file, a CI workflow step, a `Commands` section in its `AGENTS.md`
+  — that declaration is the command. A substitute that succeeds proves only
+  that the substitute works, and leaves the project's own command, with the
+  flags, environment and build arguments it carries, unexercised. A narrower
+  invocation while iterating is fine, but the result reported at the end is
+  earned by the project's command. A failing project command is a finding
+  that takes one of §design-principles' three dispositions, never something
+  to route around. A deviation names the command it bypassed and why; a
+  repeatable operation with no declared command is proposed for the project's
+  own command runner as a task; and a declared command is not an
+  authorization to run a deploy, a publish or a destructive migration unasked.
+  The bullet states that nothing enforces it, since the substitute runs in a
+  shell and never reaches a diff. Spec 050.
+
+### Fixed
+
+- **The last three `§` references the installer ships now resolve.** 0.59.1
+  said every `§` reference the installer ships resolves under
+  `resolve-anchor`; three did not. `configure/pi.md` cited a section of spec
+  064 without naming the document, and `api-backend.md`'s two Sources cited
+  sections of the Google Cloud API Design Guide, which is not a markdown
+  document, as `§` anchors. The first now links spec 064, and the second
+  names its sections in prose. This repository's self-audit now holds the
+  whole shipped set at zero (spec 026). Framework only.
+
+### Changed
+
+- **Every dependency is at its latest version compatible with the declared
+  requirements and `rust-version` 1.89.** The lockfile had drifted 121
+  packages behind. `cargo update` locks 125 (121 updated, 4 added, 2
+  removed, none downgraded), thirteen of them direct dependencies, and none
+  was held back by the MSRV. `rmcp` and `zip` stay one major version behind
+  (3.5.1 and 9.0.3 are available), because moving them is a code change and
+  gets its own release.
+
+### Security
+
+- **`rustls` advanced 0.23.45 → 0.23.46 for RUSTSEC-2026-0346,
+  RUSTSEC-2026-0347, RUSTSEC-2026-0348 and RUSTSEC-2026-0349.** Unlike
+  0.59.1's `quinn-proto` bump, this one reaches the binary: `rustls` is a
+  direct dependency and the TLS stack under `reqwest`, which `fetch-archive`
+  uses. The advisories cover `Debug` impls that expose client session
+  secrets, application data sent to the outer server after an ECH rejection,
+  brotli certificate decompression that can allocate up to 1 GiB before
+  authentication, and an unauthenticated ServerHello that can downgrade later
+  connections to classical key exchange. They were published on 2026-10-14,
+  and `cargo audit` gates both the push workflow and the release.
+
 ## [0.59.1] — 2026-10-13
 
 Two false findings an adopter reported against 0.58.0, both reproducible on
