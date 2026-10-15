@@ -2,7 +2,7 @@
 
 Schema declaration for the `.ductus/config.toml` file. This file is the canonical reference for the framework; the README documents the same schema for adopters.
 
-> **Note (post-completion):** paths in the live schema below reflect [042-consolidate-govern-per-project-files-under-govern-directory](../042-consolidate-govern-per-project-files-under-govern-directory/spec.md) (`.ductus/config.toml` → `.ductus/config.toml`) and [044-relocate-constitution-under-govern-directory](../044-relocate-constitution-under-govern-directory/spec.md) (the pinned example's constitution path). The `[workflows]` section below is historical — removed by [043-workflows-sunset](../043-workflows-sunset/spec.md); see the post-completion note in [spec.md](spec.md). Its prose (including the `.ductus/config.toml` literals inside it) is left as the decision-time record.
+> **Note (post-completion):** paths in the live schema below reflect [042-consolidate-govern-per-project-files-under-govern-directory](../042-consolidate-govern-per-project-files-under-govern-directory/spec.md) (`.govern.toml` → `.ductus/config.toml`) and [044-relocate-constitution-under-govern-directory](../044-relocate-constitution-under-govern-directory/spec.md) (the pinned example's constitution path). The `[workflows]` section below is historical — removed by [043-workflows-sunset](../043-workflows-sunset/spec.md); see the post-completion note in [spec.md](spec.md). Its prose (including the `.ductus/config.toml` literals inside it) is left as the decision-time record.
 
 ## File location and lifecycle
 

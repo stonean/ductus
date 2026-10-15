@@ -22,12 +22,12 @@ ambiguous."* That choice was made to fix
 where consuming an unmatched group deleted adopter content outright.
 
 Observed 2026-08-16, on the real adopter bootstrap spec 048's AC10 called for.
-049 renamed `.ductus/session.toml` to `/.ductus/session.toml`, and that
+049 renamed `.govern.session.toml` to `/.ductus/session.toml`, and that
 subsection carries **no other pattern** — so it matched nothing, the walk stopped
 at it, and the entire tail of the old block was stranded below the newly written
 one. The cross-boundary dedup pass then removed the stranded *pattern* lines
 (they duplicate canonical ones) and left their *comment headers* behind. The
-adopter's `.gitignore` ended up carrying a dead `.ductus/session.toml` plus
+adopter's `.gitignore` ended up carrying a dead `.govern.session.toml` plus
 headerless `# IDE` and `# OS` comments — every run, growing no worse but never
 converging.
 

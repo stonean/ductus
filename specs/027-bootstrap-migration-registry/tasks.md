@@ -14,7 +14,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 For each of the six back-filled migrations, create `framework/migrations/{id}.md` following the plan §Procedure file shape convention. Each procedure file lifts its body content from the corresponding existing prose in `framework/bootstrap/ductus.md`.
 
-- [x] `framework/migrations/governance-config-rename.md` (lifted from `framework/bootstrap/ductus.md` `### .ductus/config.toml → .ductus/config.toml`).
+- [x] `framework/migrations/governance-config-rename.md` (lifted from `framework/bootstrap/ductus.md` `### .governance.toml → .govern.toml`).
 - [x] `framework/migrations/gitignore-marker-rename.md` (lifted from `### # Governance gitignore marker → # ductus`).
 - [x] `framework/migrations/spec-and-plan-sunset.md` (lifted from `### spec-and-plan.md → spec.md (lightweight-track sunset)`).
 - [x] `framework/migrations/rule-files-relocate.md` (lifted from `### Rule files: relocate to specs/rules/`, subsuming `configuration.md` rename).

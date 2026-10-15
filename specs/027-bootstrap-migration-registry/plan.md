@@ -4,7 +4,7 @@ Implements [027 — Bootstrap Migration Registry](spec.md).
 
 ## Overview
 
-The implementation consolidates two scattered sets of adopter-cleanup prose in `framework/bootstrap/ductus.md` — the `## Pre-run Migrations` section (`.ductus/config.toml`, gitignore marker, `spec-and-plan.md`, rule-file relocation) and the `## Workflow recommendation` legacy-cleanup sub-sections (`skills/` directory, workflow filename rename) — into one registry-driven loop. Six bespoke prose blocks become six TOML entries plus six small markdown procedure files plus one consolidated bootstrap step. Sunset is delivered via a `CHANGELOG.md` at the repo root and a Family 10 audit that enforces registry/state consistency.
+The implementation consolidates two scattered sets of adopter-cleanup prose in `framework/bootstrap/ductus.md` — the `## Pre-run Migrations` section (`.governance.toml`, gitignore marker, `spec-and-plan.md`, rule-file relocation) and the `## Workflow recommendation` legacy-cleanup sub-sections (`skills/` directory, workflow filename rename) — into one registry-driven loop. Six bespoke prose blocks become six TOML entries plus six small markdown procedure files plus one consolidated bootstrap step. Sunset is delivered via a `CHANGELOG.md` at the repo root and a Family 10 audit that enforces registry/state consistency.
 
 No new runtime primitive at v1 (Q11). Per-entry idempotency is preserved as an invariant: every procedure file's first action is a target-presence check that exits silently when nothing to do.
 
@@ -204,7 +204,7 @@ Future maintainers append archived migrations under `## Archived migrations` as 
 | `framework/migrations/skills-to-workflows.md` | Create | Procedure for `skills/` directory removal |
 | `framework/migrations/workflow-filename-rename.md` | Create | Procedure for post-005 workflow filename cleanup |
 | `framework/migrations/rule-files-relocate.md` | Create | Procedure for rule-file relocation (subsumes `configuration.md` rename) |
-| `framework/migrations/governance-config-rename.md` | Create | Procedure for `.ductus/config.toml` → `.ductus/config.toml` |
+| `framework/migrations/governance-config-rename.md` | Create | Procedure for `.governance.toml` → `.govern.toml` |
 | `framework/migrations/gitignore-marker-rename.md` | Create | Procedure for `# Governance` → `# ductus` gitignore marker |
 | `framework/bootstrap/ductus.md` | Modify | Replace `## Pre-run Migrations` section; delete two legacy-cleanup sub-sections inside `## Workflow recommendation`; add `.ductus/config.toml` `[migrations]` section to the §Project Configuration schema |
 | `scripts/audit/migration-coverage.sh` | Create | Family 10 — three static checks |

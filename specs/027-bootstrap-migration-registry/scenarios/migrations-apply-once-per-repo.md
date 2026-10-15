@@ -12,7 +12,7 @@ A migration applies **once per repository**, not once per contributor, and the c
 
 For per-contributor state it means the migration reaches exactly one person. Two active entries already touch such state and both are fine, which is why the limit went unnoticed:
 
-- `session-file-consolidate` targets `{config_dir}/{project}-session.json`, and `ductus-rename` moves `.ductus/` (which held the gitignored session file). A teammate who skips either keeps a stale session file — and their next `/{project}:target` writes to the active path anyway, under the newest-tier rule. The procedure also exits silently when the legacy file is absent, so a contributor who never used `/target` has nothing to do.
+- `session-file-consolidate` targets `{config_dir}/{project}-session.json`, and `ductus-rename` moves `.govern/` (which held the gitignored session file). A teammate who skips either keeps a stale session file — and their next `/{project}:target` writes to the active path anyway, under the newest-tier rule. The procedure also exits silently when the legacy file is absent, so a contributor who never used `/target` has nothing to do.
 
 Both **self-heal**: the skipped work is redone by ordinary use, or was never needed. The registry is safe for them.
 

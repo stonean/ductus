@@ -102,7 +102,7 @@ This family is the gate that makes the registry load-bearing: a maintainer who r
 ### Registry shape
 
 - [x] AC1: `framework/migrations.toml` exists with one `[[migrations]]` array-of-tables entry per active convention removal. Each entry carries the fields: `id` (slug), `introduced_in` (SemVer string), `sunset_after` (SemVer string or omitted), `summary` (one-line string), `target_paths` (array of strings), `procedure_file` (path string).
-- [x] AC2: Six back-filled entries cover every convention removal currently encoded in `framework/bootstrap/ductus.md` Pre-run Migrations: `.ductus/config.toml` rename, `# Governance` gitignore marker, `spec-and-plan.md` sunset, rule-file relocation (subsuming `configuration.md` → `configuration-cross.md`), legacy `skills/` directory, post-005 workflow filename rename.
+- [x] AC2: Six back-filled entries cover every convention removal currently encoded in `framework/bootstrap/ductus.md` Pre-run Migrations: `.governance.toml` rename, `# Governance` gitignore marker, `spec-and-plan.md` sunset, rule-file relocation (subsuming `configuration.md` → `configuration-cross.md`), legacy `skills/` directory, post-005 workflow filename rename.
 - [x] AC3: Each back-filled entry's `introduced_in` matches the ductus version (or framework commit) where the removal actually shipped, derived from `git log` at registry-introduction time.
 - [x] AC4: Each back-filled entry's `sunset_after` is set to `registry_introduction_version + 2 minor versions` (uniform).
 - [x] AC5: Each back-filled entry has a corresponding `framework/migrations/{id}.md` procedure file containing the migration's prose logic (skip conditions, prompts, summary reporting). No declarative-step DSL is introduced.
