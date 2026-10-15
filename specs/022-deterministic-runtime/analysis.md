@@ -1,15 +1,15 @@
 ---
 spec: 022-deterministic-runtime
-last-run: 2026-10-15T16:54:50Z
-analyzed-against: e4f577565114549b4c7e2b5989299ba1a252d798
+last-run: 2026-10-15T21:22:43Z
+analyzed-against: 438924d44c958870c32428956d06449bcd3fc091
 hard-fail: 0
 blocking-findings: 0
 advisory: 16
 unexamined: 0
 analyzed-digest:
   data-model.md: 28ba99f6140fe5c0f9b101180cd450db522b577d5b508a71869353b7eb4983f4
-  plan.md: 65a223f9bb82e7549517d938ddb36f23e4626fa99905ee85bf126790332253eb
-  review.md: 6f2a5c84a9e93d019961f997865ebdd5b61d75b8f4ef3ba35f67af33620a900d
+  plan.md: 7fad46f150f25571ff0e0fc12f43d077642ae0dd080be3538575acadbbca701d
+  review.md: a615256da9ba0dcf41a71b747caaf361d7e8bf3eae61ac193e7f9e2bf90e015b
   scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md: d092f9d4f59c67c575cc59039a6e0fdf162546969de2820e747b609d7a3d43c7
   scenarios/a-done-spec-has-no-transition-to-gate.md: 2041c659a2dbee3e17a05a702a11c9b1f59d30ce68acc19f616889696b66da2b
   scenarios/a-multi-number-renumber-is-one-rewrite.md: 04723ad01613f62b14008250c9890e20ac338de82c32bd2f0797580e30ae7be2
@@ -56,6 +56,7 @@ analyzed-digest:
   scenarios/exec-clarify-asks-each-open-question.md: 4851dc543c6dd80603aa86c776543017b9ab1a7adac469e1b49ec311a9877cab
   scenarios/extension-request-hygiene.md: 1b0c77335af3a2caf82e01896207d60261cd0071a8bc8da3162b9785f7c16e48
   scenarios/fetch-archive-dns-rebinding.md: 39482bed2a531d36dce770c9c20ae3848ba254da0d02ee51d5c6feabe7967031
+  scenarios/fetch-archive-names-its-timeout.md: e714dd3679dc72aa9bc27a933ba4e32505a9c4290f09b9b0eb48812f7459317a
   scenarios/framework-list-dedup.md: 9aef03cab7d2494a662058d1091a65e38e26637b10ba338d94eedbd15f9f7f4b
   scenarios/frontmatter-severity-tiers-on-both-sides.md: c8b6d454ddb4476f57de9c4f8c5f53ad11d948ea5a4e3a7ac4b2bbe0d3d2a5e3
   scenarios/govern-bootstrap.md: 090bdd6076d1118b15f59c806b49bfd37037fb2b60ecdd33d01580018ca7b770
@@ -126,10 +127,10 @@ analyzed-digest:
   scenarios/writecode-payload-bundling.md: 5c343929c3a42ac4406a02c173b6979231127b9583aabae171fee1f747d5084b
   scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
   spec.md: ea12fb92d001ec16fd2b816f33a4b890fc1d660c36e436ac5eee39f9f41645e0
-  tasks.md: 0f575c460aef0ea59a6f2e99565d3053a1136380e38d67781b9e1142bd852260
+  tasks.md: 709483b2ee14a77e23dddd3c188951657e2bab6f2c32f0f22b310353ca1cb64e
 blocking: false
 dispositions:
-  fixed: 9
+  fixed: 0
   routed: 0
   discarded: 16
   undispositioned: 0
@@ -220,7 +221,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 16 advisory; not blocking. 0 unexamined target(s). Dispositions: 9 fixed, 0 routed, 16 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 16 advisory; not blocking. 0 unexamined target(s). Dispositions: 0 fixed, 0 routed, 16 discarded, 0 undispositioned.
 
 ## Hard failures
 
@@ -255,12 +256,4 @@ decisions:
 
 ## Fixed in this run
 
-- rule-assessment — BE-INPUT-008: plan.md names YAML frontmatter parsing without naming a safe-loading mode — `specs/022-deterministic-runtime/plan.md` — **fixed**
-- rule-assessment — BE-LOG-002: plan.md introduces stderr logging without a redaction commitment — `specs/022-deterministic-runtime/plan.md` — **fixed**
-- rule-assessment — BE-DATA-001: plan.md introduces fetch-archive's HTTPS download without committing to TLS 1.2 or later — `specs/022-deterministic-runtime/plan.md` — **fixed**
-- rule-assessment — BE-DATA-011: plan.md introduces outbound TLS without committing to certificate and hostname validation — `specs/022-deterministic-runtime/plan.md` — **fixed**
-- rule-assessment — BE-DEPS-004: plan.md pulls crates from crates.io without a provenance check or a documented exception — `specs/022-deterministic-runtime/plan.md` — **fixed**
-- rule-assessment — BE-DEPS-002: plan.md pins the lockfile but documents no dependency-upgrade process — `specs/022-deterministic-runtime/plan.md` — **fixed**
-- rule-assessment — BE-TIMEOUT-001: plan.md introduces fetch-archive's HTTP call without naming the timeout that bounds it — `specs/022-deterministic-runtime/plan.md` — **fixed**
-- rule-assessment — BE-INPUT-003: plan.md introduces run-generator's bash invocation without describing its safe-invocation mechanism — `specs/022-deterministic-runtime/plan.md` — **fixed**
-- rule-assessment — BE-PAYLOAD-001: primitives return variable-size bodies with no committed size bound, and the new scenario widens compute-review-scope's list — `specs/022-deterministic-runtime/plan.md` — **fixed**
+*None.*
