@@ -77,10 +77,10 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 
 ## 140. Trim data-model.md in place
 
-- [ ] Remove history narration git already records (which spec or task added a field, what a shape used to be, the incident that forced a rule), keeping each contract it accompanies
-- [ ] Where a section restates a 022 scenario, keep the shape and the contract's one-line statement and point at the scenario for the reasoning; prefer 022's own scenarios, which review staleness also covers
-- [ ] Remove sections that only say a shape moved elsewhere, leaving a one-line pointer
-- [ ] Keep every Args/Result block, and the `scenario-consistency` referencing-task rule the constitution's canonical-sources map points at
-- [ ] Measure before and after with `check-artifact-size`, and check every link with `check-corpus-links`
+- [x] Remove history narration git already records (which spec or task added a field, what a shape used to be, the incident that forced a rule), keeping each contract it accompanies
+- [x] Where a section restates a 022 scenario, keep the shape and the contract's one-line statement and point at the scenario for the reasoning; prefer 022's own scenarios, which review staleness also covers
+- [x] Remove sections that only say a shape moved elsewhere, leaving a one-line pointer
+- [x] Keep every Args/Result block, and the `scenario-consistency` referencing-task rule the constitution's canonical-sources map points at
+- [x] Measure before and after with `check-artifact-size`, and check every link with `check-corpus-links`
 
 - **Done when**: data-model.md is measurably smaller, every primitive's Args/Result shape and every contract statement survives either in place or behind a pointer to a 022 scenario that states it, and every link resolves.

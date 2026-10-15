@@ -1,17 +1,16 @@
 ---
 spec: 022-deterministic-runtime
-scenario: fetch-archive-names-its-timeout
-last-run: 2026-10-15T21:21:42Z
-reviewed-against: 9f0352264db52068839c5f20920d2c14a267f836
-diff-base: e631e3ea8302521485f2b301d41f2aeae74cf657
+last-run: 2026-10-15T22:28:30Z
+reviewed-against: 1edce742c0cf6e6c1047cc2deb96927c391b7a84
+diff-base: cb5bc06d481098318565e1f11d0294142fb92b4b
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 5
-scope: 40
+examined: 3
+scope: 35
 skipped-passes: []
 reviewed-digest:
-  data-model.md: 28ba99f6140fe5c0f9b101180cd450db522b577d5b508a71869353b7eb4983f4
+  data-model.md: d6c21dfb4f3bf76255b8d4c142daba7bdd5cc9dc9d002abb45a26d78610af628
   scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md: d092f9d4f59c67c575cc59039a6e0fdf162546969de2820e747b609d7a3d43c7
   scenarios/a-done-spec-has-no-transition-to-gate.md: 2041c659a2dbee3e17a05a702a11c9b1f59d30ce68acc19f616889696b66da2b
   scenarios/a-multi-number-renumber-is-one-rewrite.md: 04723ad01613f62b14008250c9890e20ac338de82c32bd2f0797580e30ae7be2
@@ -130,7 +129,7 @@ reviewed-digest:
   scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
 blocking: false
 dispositions:
-  fixed: 0
+  fixed: 2
   routed: 0
   discarded: 0
   undispositioned: 0
@@ -140,7 +139,7 @@ dispositions:
 
 ## Summary
 
-Review of tasks 137 and 138 at 9f035226, on a clean tree. The window is e631e3ea, the parent of the amend that reopened 022 for scenario fetch-archive-names-its-timeout, to the working tree, so the fix landed after its reopen and no --since override was needed. Examined 5 of the scope: fetch_archive.rs, plan.md, tasks.md, spec.md and the new scenario, each read in full where it changed. fetch_archive.rs declares FETCH_TIMEOUT (30 s) beside MAX_FETCH_BYTES and MAX_FETCH_REDIRECTS, sets it on the client through fetch_bytes_with's new timeout parameter, and adds a_stalled_fetch_fails_within_the_timeout_it_is_given. plan.md names the constant, states the bound as reqwest 0.13.5 applies it (the wait for the response and each body read, per blocking/client.rs and blocking/response.rs, both read for this review), and names both YAML deserialization targets. Not examined here: AGENTS.md and 050's review.md and analysis.md, which are in the window because 050's review and analysis commits landed after e631e3ea, and are 050's work under 050's own record; and the plan-affected directories and files this change does not touch. Rule files: all eleven framework/rules/*.md. BE-TIMEOUT-001 and CFG-CONST-003 govern the change and are met: the outbound call runs under a named bound in its own module. quality-cross.md applies to the test: QUAL-TEST-001 was checked by mutation, and with the .timeout() call removed the test fails after 30.01 s on its 10-second bound, which also confirms reqwest's 30-second default. Security: no new input, endpoint or shell-out; the SSRF screen, redirect policy and pinning are unchanged. No MUST or SHOULD finding and no observation. The bound limits one stall, not a whole download; a whole-download deadline would change behavior and is outside this scenario, as its Edge Cases state.
+Review of tasks 139 and 140, a documentation-only reopen, at 1edce742 with two fixes in the working tree. The window is cb5bc06d (the parent of the reopen) to the working tree; modified-since is data-model.md, spec.md and tasks.md, and no code changed. Examined 3 of 35: those three, each read in full in its final form — data-model.md across its two read pages, having first read the whole pre-trim file (1,552 lines) before any cut. The other 32 are plan-affected runtime, workflow and command paths this reopen does not touch. Also opened, to confirm each pointer target states the rule it is pointed at for: the-promotion-coverage-line, argument-hint-needs-a-token, orphaned-reference-check, orphaned-reference-historical-roots, orphan-check-adopter-authored-references, anchor-reference-kinds, check-artifacts-skipped-targets, criterion-label-assignment, severity-is-a-closed-set-not-a-string, and status.md's Rendering reference; review-staleness-gate does not state the undeterminable rule, so that contract stays in the data model. Results: spec.md 58,284 -> 47,190 bytes, data-model.md 121,695 -> 99,953 (3 read pages -> 2). Every JSON schema block survives except the removed Inbox-row example, whose shape is dashboard's example now (89 -> 88); the only heading removed is that section. Corrections against code: resolution tier 2 restored to .govern/ (paths.rs:45,69), read-spec's example lost the review block, run-generator's example names a script that exists, write-analysis's unexamined-by-reason is pairs (primitives.rs:935), writeCode's example is in serialization order (extensions.rs:125-146), the digest note no longer calls spec.md a review output; spec.md's AC2 and naming question state bare tool names (mcp/server.rs:271) and its distribution question names crates.io. Shapes were not otherwise re-verified against live output. Rule files: all eleven framework/rules/*.md; the change is spec prose, so quality-cross.md (QUAL-CLAIM-001) applies and the code-surface rules have nothing to fire on. Two observations, both fixed in the run. Links: 0 broken; lint clean.
 
 ## MUST violations (blocking)
 
@@ -160,7 +159,8 @@ Review of tasks 137 and 138 at 9f035226, on a clean tree. The window is e631e3ea
 
 ## Observations
 
-*None.*
+- convention — a stray period split "undeterminable" from its scenario parenthetical in Record freshness — `specs/022-deterministic-runtime/data-model.md` — **fixed**
+- convention — the dashboard paragraph describing the pre-rendered pipeline view no longer named its subject once the inbox-standing contract was placed before it — `specs/022-deterministic-runtime/data-model.md` — **fixed**
 
 ## Skipped passes
 
