@@ -2,6 +2,18 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [Unreleased]
+
+### Fixed
+
+- **The MCP server names itself.** Its handshake reported
+  `{"name":"rmcp","version":"3.5.1"}`, the SDK's name and version, because
+  `get_info` never set `serverInfo` and rmcp fills it from its own build
+  environment. A host now sees `{"name":"ductus","version":"<runtime
+  version>"}` through `initialize` and through rmcp 3's discovery path
+  alike. The tools a host is served, their schemas and their results are
+  unchanged. Latent since the server was written; a new test holds it.
+
 ## [0.59.3] — 2026-10-15
 
 The runtime's two dependencies a major version behind, `zip` and `rmcp`, move

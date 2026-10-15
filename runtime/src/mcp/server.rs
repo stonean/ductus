@@ -28,7 +28,7 @@ use rmcp::ErrorData;
 use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::handler::server::tool::ToolCallContext;
 use rmcp::handler::server::wrapper::{Json, Parameters};
-use rmcp::model::{CallToolResponse, JsonObject, ServerCapabilities, ServerConfig};
+use rmcp::model::{CallToolResponse, Implementation, JsonObject, ServerCapabilities, ServerConfig};
 use rmcp::{ServerHandler, tool, tool_handler, tool_router};
 use serde_json::Value;
 
@@ -1068,9 +1068,17 @@ impl GovRuntimeServer {
 #[tool_handler(router = self.tool_router)]
 impl ServerHandler for GovRuntimeServer {
     fn get_info(&self) -> ServerConfig {
-        ServerConfig::new(ServerCapabilities::builder().enable_tools().build()).with_instructions(
-            "Deterministic runtime for the ductus pipeline. Exposes per-primitive tools; \
+        ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
+            // `ServerConfig::new` fills `serverInfo` from rmcp's own build
+            // environment, so without this a host is told it is talking to
+            // `rmcp` at the SDK's version rather than to this runtime.
+            .with_server_info(Implementation::new(
+                env!("CARGO_PKG_NAME"),
+                env!("CARGO_PKG_VERSION"),
+            ))
+            .with_instructions(
+                "Deterministic runtime for the ductus pipeline. Exposes per-primitive tools; \
                  see specs/022-deterministic-runtime/ for the protocol contract.",
-        )
+            )
     }
 }

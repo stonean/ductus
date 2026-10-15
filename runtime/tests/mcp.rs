@@ -142,6 +142,23 @@ async fn lists_every_manifest_tool_and_canonical_set() {
     );
 }
 
+/// The handshake names this runtime, not the SDK it is built on. rmcp fills
+/// `serverInfo` from its own build environment unless the server sets it, so
+/// a host was told it was talking to `rmcp` at the SDK's version.
+#[tokio::test]
+async fn handshake_names_the_runtime_and_its_version() {
+    let client = start_pair(fixture_repo()).await;
+    let info = client
+        .peer_info()
+        .expect("the handshake recorded the server's info");
+    let server = info
+        .server_info
+        .as_ref()
+        .expect("the server reported its implementation");
+    assert_eq!(server.name, "ductus");
+    assert_eq!(server.version, env!("CARGO_PKG_VERSION"));
+}
+
 /// `schemars` stamps OpenAPI-style numeric `format` hints (`uint32`,
 /// `uint64`, `uint8`, …) onto Rust integer/float fields. JSON Schema
 /// defines no `format` for numeric types, so strict MCP clients (opencode)
