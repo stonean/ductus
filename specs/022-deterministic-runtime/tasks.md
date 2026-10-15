@@ -84,3 +84,52 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] Measure before and after with `check-artifact-size`, and check every link with `check-corpus-links`
 
 - **Done when**: data-model.md is measurably smaller, every primitive's Args/Result shape and every contract statement survives either in place or behind a pointer to a 022 scenario that states it, and every link resolves.
+
+## 141. Place every scenario, section and criterion before anything moves
+
+- [ ] Read all 116 scenarios in full and place each by the test: a scenario moves with the primitive whose contract its Behavior changes; one about a command's rewiring, the exec walker or an extension point stays in 022 even when it names a gate or a record (`implement-completion-gate`, `review-exec-wiring`, `review-runtime-acceleration`, `exec-analyze-derives-its-list-seeds` stay)
+- [ ] 066 — review and analyze records and the completion gate: `write-review` (observations, examined/scope), `write-analysis`, `process-decisions`, `process-waivers`, `compute-review-scope`, `check-review-gate` (with its Cross-spec impact and Record freshness subsections), `diff-cross-spec`
+- [ ] 067 — analyze and audit checks: `check-artifacts` and all its families, `validate-frontmatter`, `traverse-deps`, `resolve-anchor`, `check-rule-ids`, `check-promotion-coverage`, `check-orphaned-references`, `check-command-flags`, `derive-dependencies`/`derive-references`, `check-corpus-links`
+- [ ] 022 keeps the rest, including Severity tiers (all three specs consume them), the extension points, the spec-artifact, inbox, routing, dashboard and bootstrap primitives, and AC1-21, AC28, AC29 and AC31 (AC31's live claim is `dashboard`)
+- [ ] Criteria: AC24, AC26, AC27, AC30 and AC22's write-analysis/gate half go to 066; AC23, AC25, AC32 and AC22's check-artifacts half go to 067; restate each in present tense without its history annotations
+- [ ] Write the manifest (section, scenario and criterion to destination, plus every reference outside the moving file) as task 142's checklist before task 142 starts
+
+- **Done when**: every data-model section, scenario and acceptance criterion of 022 has one destination (022, 066, 067, or retired), and every reference to a moving or retiring file outside it is listed.
+
+## 142. Retire superseded text and remove restatement
+
+- [ ] Retire, pointer-first, the three wholly superseded scenarios (`review-observations-write-through`, `the-inbox-row`, `the-analyze-record-states-what-it-captured`): repoint every inbound reference to where the content lives now (058's spec and data model, `dashboard`), then delete the files
+- [ ] For the four partly superseded scenarios (`the-cross-spec-impact-gate`, `merge-managed-block-multi-subsection-end`, `review-staleness-on-done-specs`, `commands-dir-parameterization`) delete the passage restating the replaced design; a one-line pointer to the replacing spec is the decision record
+- [ ] Data model: keep shapes and field meanings; delete what a 022 scenario or a command source already states (measured 2026-10-15: 6.3 KB of the 78 KB of prose is at least half verbatim elsewhere), and reduce each pointer paragraph to one sentence
+
+- **Done when**: no superseded scenario or passage remains, no file references a deleted one, and no data-model paragraph restates a scenario or command source.
+
+## 143. Create 066 and 067 and move their content
+
+- [ ] Create each through `/ductus:specify`'s procedure (`create-feature` from `framework/templates/spec/`); its routing gate offers 022 — decline, recording in the new spec's Resolved Questions that 022's data model exceeded one read and this slice has one subject
+- [ ] Dependency direction is 067 -> 066 -> 022: 066 never links 067, and 022 names both by backticked slug only; any spec 066 or 067 would link that also links them is named, not linked (run `derive-dependencies` and expect no cycles)
+- [ ] Move each placed data-model section, scenario (`git mv`, so the rename is visible) and criterion; 066's data model also gains the shapes `compute-review-scope` and `process-waivers` never had (from `runtime/src/schema/primitives.rs`, kebab-case: compute-review-scope args feature, since; result diff-base, scope, modified-since, plan-affected; process-waivers args feature, fired [{rule, file}], skipped-passes; result applied, expired, retained, notices)
+- [ ] Each new spec's plan.md lists the `runtime/` files of its primitives under Affected Files, so `derive-routing-candidates` offers it
+- [ ] Walk each new spec to done: clarify, plan, implement (the moves are its tasks), review (both new data models read in full), analyze, completion gate
+- [ ] Measure: 022, 066 and 067 data models each at or under 50,000 bytes
+
+- **Done when**: 066 and 067 are done, each data model is at or under 50,000 bytes, and 022 keeps nothing that moved.
+
+## 144. Sweep every reference, routing rule and canonical row the split moves
+
+- [ ] Repoint every reference to a moved scenario or section: runtime doc comments (`runtime/src/schema/primitives.rs` alone had 39 references to 022), other specs, `AGENTS.md`, `runtime/CHANGELOG.md`, `framework/` and scripts, as its own commit
+- [ ] `scripts/audit/marker-list-parity.sh` reads `criterion-path-existence-family.md` by its 022 path (lines 75 and 268): change it in the same commit as that scenario's move
+- [ ] `framework/constitution.md`'s canonical-sources row for the scenario-to-task referencing rule names 022's data model: point it at 067's (this ships to adopters, so the round ends in release 0.59.7)
+- [ ] Reword `AGENTS.md`'s *Route shared runtime work to spec 022* entry to name three homes (022 core and shared surfaces, 066 records and gate, 067 checks) and re-key 050 plan.md's W23 classification row in the same commit, so promotion-coverage reports 0 unmatched keys
+- [ ] Verify: `check-corpus-links` 0 broken, a grep for every moved and retired slug across `runtime/`, `scripts/`, `framework/`, `AGENTS.md` and the changelog finds only live paths, then `scripts/audit/review-freshness.sh` on the committed tree, with a scoped `--since` re-review of any done spec it flags
+
+- **Done when**: no reference anywhere in the repository resolves to a moved or retired location, the routing rule names three homes, and the self-audit passes.
+
+## 145. Prune 022's spent tasks, close it, and release 0.59.7
+
+- [ ] Prune 022's spent task sections with `/ductus:prune` (tasks.md is ephemeral; git keeps them)
+- [ ] Review and analyze 022, read its data model in full, and run the completion gate
+- [ ] Ask the operator once to approve 066, 067 and 022 to done and release 0.59.7, saying it became two new specs because one would have left both data models within a few KB of the limit
+- [ ] Cut 0.59.7 per the AGENTS.md release entries: bump version, runtime/Cargo.toml and the changelog heading; one build without --locked; full local gate and `scripts/audit/run-all.sh` after committing; tag; `git push --atomic origin main ductus-v0.59.7`; `git ls-remote`; read every workflow run including verify-published and verify-installer; expect 13 assets
+
+- **Done when**: 022, 066 and 067 are done, 022's tasks.md holds no spent sections, and ductus-v0.59.7 is published with every workflow run green.
