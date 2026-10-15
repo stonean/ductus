@@ -17,6 +17,17 @@ All notable changes to the `ductus` deterministic runtime are recorded here. The
   past its end record. Its symlink and permission fixes are in zip's own
   extraction, which `extract-archive` does not use. On macOS and the BSDs,
   zip 9 adds `nix` to the dependency graph.
+- **`rmcp`, the MCP SDK, advanced 2.2.0 → 3.5.1, one major version.** A host
+  sees the same server. Driven over stdio against 0.59.1 with each client
+  protocol version from 2024-11-05 through 2025-11-25, it negotiates the
+  same version and serves the same 61 tools, with the same tool-list digest,
+  the same `read-spec` result and the same unknown-field rejection. The one
+  difference is a correction: a client asking for 2026-07-28 used to have
+  that version echoed back through `initialize`, which the server did not
+  implement. rmcp 3 serves 2026-07-28 through its discovery path instead, so
+  `initialize` now answers 2025-11-25. The code change is the tool-call
+  wrapper that rejects unknown fields, whose call now returns rmcp 3's
+  `CallToolResponse`, and `ServerInfo` renamed to `ServerConfig`.
 
 ## [0.59.2] — 2026-10-14
 

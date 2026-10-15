@@ -28,7 +28,7 @@ use rmcp::ErrorData;
 use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::handler::server::tool::ToolCallContext;
 use rmcp::handler::server::wrapper::{Json, Parameters};
-use rmcp::model::{CallToolResult, JsonObject, ServerCapabilities, ServerInfo};
+use rmcp::model::{CallToolResponse, JsonObject, ServerCapabilities, ServerConfig};
 use rmcp::{ServerHandler, tool, tool_handler, tool_router};
 use serde_json::Value;
 
@@ -156,7 +156,7 @@ fn reject_unknown_fields(router: &mut ToolRouter<GovRuntimeServer>) {
         let inner = Arc::clone(&route.call);
         route.call = Arc::new(
             move |ctx: ToolCallContext<'_, GovRuntimeServer>| -> Pin<
-                Box<dyn Future<Output = Result<CallToolResult, ErrorData>> + Send + '_>,
+                Box<dyn Future<Output = Result<CallToolResponse, ErrorData>> + Send + '_>,
             > {
                 if let Some(arguments) = ctx.arguments.as_ref()
                     && let Some(unknown) =
@@ -1063,8 +1063,8 @@ impl GovRuntimeServer {
 
 #[tool_handler(router = self.tool_router)]
 impl ServerHandler for GovRuntimeServer {
-    fn get_info(&self) -> ServerInfo {
-        ServerInfo::new(ServerCapabilities::builder().enable_tools().build()).with_instructions(
+    fn get_info(&self) -> ServerConfig {
+        ServerConfig::new(ServerCapabilities::builder().enable_tools().build()).with_instructions(
             "Deterministic runtime for the ductus pipeline. Exposes per-primitive tools; \
                  see specs/022-deterministic-runtime/ for the protocol contract.",
         )
