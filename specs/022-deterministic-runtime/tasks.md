@@ -65,3 +65,22 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] plan.md's `serde_norway` bullet says YAML is deserialized only into typed structures; four modules also parse into `serde_norway::Value` in production code (`write_analysis.rs` does so only in its tests) — state both, and why a generic value is still safe loading
 
 - **Done when**: the bullet names both deserialization targets, and its safe-loading claim rests on what `serde_norway` does with a tagged node rather than on the typed-only premise.
+
+## 139. Bring spec.md under the read size
+
+- [x] Collapse each resolved question that a later decision reversed, superseded or dropped to one line naming the decision and what replaced it; git keeps the full text
+- [x] Correct the resolved questions current code contradicts: MCP tools register bare names such as `read-spec` (`runtime/src/mcp/server.rs`), and every release publishes to crates.io
+- [x] Remove history narration elsewhere in the body where git already records it, keeping every requirement and criterion
+- [x] Measure with `check-artifact-size`: spec.md at or under 50,000 bytes
+
+- **Done when**: spec.md is at or under 50,000 bytes, no resolved question states a decision current code contradicts, and every acceptance criterion's requirement is unchanged.
+
+## 140. Trim data-model.md in place
+
+- [ ] Remove history narration git already records (which spec or task added a field, what a shape used to be, the incident that forced a rule), keeping each contract it accompanies
+- [ ] Where a section restates a 022 scenario, keep the shape and the contract's one-line statement and point at the scenario for the reasoning; prefer 022's own scenarios, which review staleness also covers
+- [ ] Remove sections that only say a shape moved elsewhere, leaving a one-line pointer
+- [ ] Keep every Args/Result block, and the `scenario-consistency` referencing-task rule the constitution's canonical-sources map points at
+- [ ] Measure before and after with `check-artifact-size`, and check every link with `check-corpus-links`
+
+- **Done when**: data-model.md is measurably smaller, every primitive's Args/Result shape and every contract statement survives either in place or behind a pointer to a 022 scenario that states it, and every link resolves.
