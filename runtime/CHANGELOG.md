@@ -2,7 +2,14 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
-## [Unreleased]
+## [0.59.4] — 2026-10-15
+
+Two fixes. The MCP server's handshake now names ductus and the runtime's
+version rather than the SDK's. `compute-review-scope` now scopes
+`/ductus:review` to the working tree rather than the last commit, so a review
+run before its work is committed reads the files that work changed. A patch
+release: no primitive gains an argument or a result field, and the MSRV stays
+1.89.
 
 ### Fixed
 
