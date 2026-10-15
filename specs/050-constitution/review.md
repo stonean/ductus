@@ -1,19 +1,21 @@
 ---
 spec: 050-constitution
-last-run: 2026-10-01T21:07:06Z
-reviewed-against: c38a6a496964ae20ed028f2479b7ab6a2425f0c9
-diff-base: 2ccf71a5236c903b633e0d8b5dd0fb22bab5ed33
+scenario: a-project-command-is-run-not-reproduced
+last-run: 2026-10-15T00:21:57Z
+reviewed-against: 8ad033b87a3f2c862c9615a01d6b00e8189d6d8c
+diff-base: 9f7c5a792bd0c27660a66296244b9375997ef68a
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 31
-scope: 38
+examined: 4
+scope: 8
 skipped-passes: []
 reviewed-digest:
   scenarios/a-canonical-source-is-pointed-at-not-copied.md: 6936b866607a842ece8ebfd749223d4f7d98637200e8db87d85772702589e98a
   scenarios/a-declared-cross-spec-impact-gates-done.md: b84dfb3cd3652dc116fbdd7dee60199185ae661a3f0aefb7ad14bc64a2c1d4cc
   scenarios/a-measurement-states-its-method-and-units.md: 4c250a480c11e9788058f1012b647daa14aba2036d4a3baa9d0c1ba3c5965b2a
   scenarios/a-partial-read-is-not-a-read.md: 8d6851e20f8a2e9f083434a37cbf39ab3bca533ec819a8a258197e4afb797b07
+  scenarios/a-project-command-is-run-not-reproduced.md: aedb9dd7e77284422f8650a7a43c0a3f660b1eafc13f9f78408444532592ecfc
   scenarios/a-retired-feature-leaves-no-spec.md: eadf56734b7018bdf20fc4c6b03d274f46c36bba6ba65ec43975a099eaaa98bb
   scenarios/a-retired-filename-leaves-a-decision-record.md: f84a3177744eb03a859d82a4017495c24bcf24466448b7c49ad1a253147ab581
   scenarios/a-status-commit-holds-only-the-transition.md: 0d3fb1a701bc4b3112cfc2e54bb488df060c75fceeb0dc6c6b39205eb01d4438
@@ -34,7 +36,7 @@ dispositions:
 
 ## Summary
 
-050's reopen for 051's scenario a-pending-fold-never-holds-done, over the window since 050 re-entered in-progress (diff-base 2ccf71a5): 0 MUST, 0 SHOULD, 0 low-confidence, no observations; not blocking. Examined 31 in scope: every hunk the window carries outside the four .claude/commands/ductus mirrors, which gen-claude-commands regenerates from the framework sources read here and reported in sync. 050's own change is one scenario, a-declared-cross-spec-impact-gates-done, which no longer cites the gate's fold check as present-tense precedent and links back to 051, discharging 051's cross-spec-impact on this spec. The constitution text it restates, §cross-spec-impact, changed in the same window and now grounds the impact gate on its own reason. The runtime change is the one 051's review (697ec1b6) examined under mutation; 022's reopen records and its AC30 correction (6dca3302) were read here too. The one observation 022's review raised in this window, 051's plan wording about session re-targeting, was routed and corrected in 5fd2c3a5 and does not recur.
+050's reopen for scenario a-project-command-is-run-not-reproduced, over the window since 050 re-entered in-progress (diff-base 9f7c5a79, one commit, 8ad033b8): 0 MUST, 0 SHOULD, 0 low-confidence, no observations; not blocking. Examined 4 of 8 in scope: the four files the window changes, framework/constitution.md's one added §grounding bullet with its neighbours, the new scenario in full, and spec.md's and tasks.md's hunks (the status reopen and task 29). The other four are plan-affected files the window does not touch: AGENTS.md and plan.md were searched for an entry or table row that would now duplicate the rule (none; the nearest, AGENTS.md's local-gate entry, names the same npx markdownlint-cli2 invocation framework-checks.yml runs, so it is a declared command rather than a substitute), and 045's spec.md and specs/inbox.md were not read. The selected rule files govern code, and the window carries none, so the five passes applied no rule; what they checked was the prose. The bullet sits after the connected-database bullet as a bullet, so AC10's anchor set is unchanged, and its disposition clause matches §design-principles' three dispositions. Each factual claim in the scenario resolves to its source: §grounding source 2's "an actual test run" (constitution.md:67), the constitution's update strategy and .ductus/ destination (ductus.md:771), config.toml's managed host block (ductus.md:673), the gitignored bin/ pointer (ductus.md:426), and 055's never-fetch, not-checked-out degradation (055 spec.md:36, :83, :88).
 
 ## MUST violations (blocking)
 
