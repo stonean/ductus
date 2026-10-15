@@ -1313,8 +1313,8 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         std::fs::create_dir_all(tmp.path().join("specs")).unwrap();
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
-        assert!(result.specs.is_empty());
-        assert!(result.tags_union.is_empty());
+        assert_eq!(result.specs, [] as [DashboardSpec; 0]);
+        assert_eq!(result.tags_union, [] as [String; 0]);
         assert!(!result.config.present);
         assert!(result.session_target.is_none());
     }
@@ -1323,7 +1323,7 @@ mod tests {
     fn missing_specs_dir_returns_empty_list() {
         let tmp = TempDir::new().unwrap();
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
-        assert!(result.specs.is_empty());
+        assert_eq!(result.specs, [] as [DashboardSpec; 0]);
     }
 
     #[test]
@@ -1357,14 +1357,14 @@ mod tests {
 
         let alpha = &result.specs[0];
         assert_eq!(alpha.status, "done");
-        assert!(alpha.dependencies.is_empty());
+        assert_eq!(alpha.dependencies, [] as [String; 0]);
         assert_eq!(alpha.tags, vec!["format", "pipeline"]);
         assert_eq!(alpha.open_question_count, 0);
         assert!(!alpha.has_plan);
         assert!(!alpha.has_tasks);
         assert!(!alpha.has_data_model);
         assert_eq!(alpha.scenarios_count, 0);
-        assert!(alpha.blocked_by.is_empty());
+        assert_eq!(alpha.blocked_by, [] as [String; 0]);
 
         let beta = &result.specs[1];
         assert_eq!(beta.status, "planned");
@@ -1375,7 +1375,7 @@ mod tests {
         assert!(beta.has_tasks);
         assert!(!beta.has_data_model);
         assert_eq!(beta.scenarios_count, 2);
-        assert!(beta.blocked_by.is_empty());
+        assert_eq!(beta.blocked_by, [] as [String; 0]);
 
         assert_eq!(result.tags_union, vec!["format", "pipeline"]);
     }
@@ -1444,8 +1444,8 @@ mod tests {
         );
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
         let by_slug: HashMap<_, _> = result.specs.iter().map(|s| (s.slug.as_str(), s)).collect();
-        assert!(by_slug["001-draft"].blocked_by.is_empty());
-        assert!(by_slug["002-ready"].blocked_by.is_empty());
+        assert_eq!(by_slug["001-draft"].blocked_by, [] as [String; 0]);
+        assert_eq!(by_slug["002-ready"].blocked_by, [] as [String; 0]);
         assert_eq!(by_slug["003-dep"].blocked_by, vec!["001-draft"]);
         assert_eq!(by_slug["004-ghost"].blocked_by, vec!["999-missing"]);
     }
@@ -1455,7 +1455,7 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
         assert!(!result.config.present);
-        assert!(result.config.disabled_rule_files.is_empty());
+        assert_eq!(result.config.disabled_rule_files, [] as [String; 0]);
     }
 
     #[test]
@@ -1464,7 +1464,7 @@ mod tests {
         std::fs::write(tmp.path().join(".govern.toml"), "# empty\n").unwrap();
         let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
         assert!(result.config.present);
-        assert!(result.config.disabled_rule_files.is_empty());
+        assert_eq!(result.config.disabled_rule_files, [] as [String; 0]);
     }
 
     #[test]

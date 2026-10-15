@@ -295,7 +295,7 @@ mod tests {
             "| `framework/commands/review.md` | edit — §Behavior step 5 and §Load and §Notes |\n",
         );
         assert_eq!(r.qualified, 3);
-        assert!(r.unresolved.is_empty());
+        assert_eq!(r.unresolved, [] as [String; 0]);
         assert!(r.references.iter().all(|x| x.kind == "qualified"));
         assert!(r.references.iter().all(|x| x.resolved));
     }
@@ -304,14 +304,14 @@ mod tests {
     fn a_markdown_link_to_a_document_qualifies_its_line() {
         let r = classify("See [017](../017-derive-dont-ask/spec.md) §Generators for the rule.\n");
         assert_eq!(r.qualified, 1);
-        assert!(r.unresolved.is_empty());
+        assert_eq!(r.unresolved, [] as [String; 0]);
     }
 
     #[test]
     fn a_bare_md_filename_qualifies_its_line() {
         let r = classify("The rule is in AGENTS.md §Workflow.\n");
         assert_eq!(r.qualified, 1);
-        assert!(r.unresolved.is_empty());
+        assert_eq!(r.unresolved, [] as [String; 0]);
     }
 
     #[test]
@@ -319,7 +319,7 @@ mod tests {
         let r = classify("## Design\n\nRewrite the ladder per §Design above.\n");
         assert_eq!(r.intra_document, 1);
         assert_eq!(r.qualified, 0);
-        assert!(r.unresolved.is_empty());
+        assert_eq!(r.unresolved, [] as [String; 0]);
         assert_eq!(r.references[0].kind, "intra-document");
     }
 
@@ -330,7 +330,7 @@ mod tests {
     fn the_longest_matching_heading_wins() {
         let r = classify("## Hook\n\n## Hook Installation\n\nSee §Hook Installation below.\n");
         assert_eq!(r.intra_document, 1);
-        assert!(r.unresolved.is_empty());
+        assert_eq!(r.unresolved, [] as [String; 0]);
     }
 
     /// THE CONTROL. `010`'s real dangling reference — an anchor deleted from
@@ -352,8 +352,8 @@ mod tests {
     #[test]
     fn an_anchor_inside_a_code_span_is_not_a_reference() {
         let r = classify("An anchor reference (`§anchor`) links to a section.\n");
-        assert!(r.references.is_empty());
-        assert!(r.unresolved.is_empty());
+        assert_eq!(r.references, [] as [AnchorReference; 0]);
+        assert_eq!(r.unresolved, [] as [String; 0]);
         assert_eq!(r.qualified, 0);
     }
 
@@ -418,8 +418,8 @@ mod tests {
             tmp.path(),
         )
         .unwrap();
-        assert!(result.references.is_empty());
-        assert!(result.unresolved.is_empty());
+        assert_eq!(result.references, [] as [AnchorReference; 0]);
+        assert_eq!(result.unresolved, [] as [String; 0]);
     }
 
     #[test]

@@ -131,7 +131,7 @@ mod tests {
         assert!(!result.drift);
         assert_eq!(result.exit_code, 0);
         assert!(result.stdout.contains("clean"));
-        assert!(result.stderr.is_empty());
+        assert_eq!(result.stderr, "");
     }
 
     #[test]

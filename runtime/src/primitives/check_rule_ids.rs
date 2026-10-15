@@ -165,7 +165,7 @@ mod tests {
             "unexpected missing: {:?}",
             result.missing
         );
-        assert!(result.deprecated.is_empty());
+        assert_eq!(result.deprecated, [] as [String; 0]);
     }
 
     /// `missing` is only meaningful against a denominator. With no
@@ -205,7 +205,7 @@ mod tests {
             tmp.path(),
         )
         .unwrap();
-        assert!(seeing.missing.is_empty());
+        assert_eq!(seeing.missing, [] as [String; 0]);
         assert_eq!(seeing.examined, 1);
 
         // The point: without `examined` these two runs are distinguishable
@@ -266,7 +266,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result.deprecated, vec!["BE-OLD-001".to_string()]);
-        assert!(result.missing.is_empty());
+        assert_eq!(result.missing, [] as [String; 0]);
     }
 
     #[test]
@@ -383,8 +383,8 @@ mod tests {
             tmp.path(),
         )
         .unwrap();
-        assert!(result.missing.is_empty());
-        assert!(result.deprecated.is_empty());
+        assert_eq!(result.missing, [] as [String; 0]);
+        assert_eq!(result.deprecated, [] as [String; 0]);
         assert!(
             result
                 .citations

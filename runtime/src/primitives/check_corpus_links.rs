@@ -462,7 +462,7 @@ mod tests {
         assert_eq!(result.broken[0].path, "specs/042-demo/spec.md");
         assert_eq!(result.broken[0].line, 3);
         assert_eq!(result.broken[0].target, "../041-gone/spec.md");
-        assert!(result.guidance.is_empty());
+        assert_eq!(result.guidance, "");
     }
 
     #[test]
@@ -476,7 +476,7 @@ mod tests {
         );
         let result = run_at(tmp.path());
         assert!(result.broken.is_empty(), "{:?}", result.broken);
-        assert!(result.skipped.is_empty());
+        assert_eq!(result.skipped, [] as [CorpusLinkSkip; 0]);
         assert_eq!(result.examined.len(), 2);
     }
 
@@ -526,7 +526,7 @@ mod tests {
             "specs/042-demo/spec.md",
             "# Demo\n\n```text\n[gone](../041-gone/spec.md)\n```\n",
         );
-        assert!(run_at(tmp.path()).broken.is_empty());
+        assert_eq!(run_at(tmp.path()).broken, [] as [BrokenCorpusLink; 0]);
     }
 
     #[test]
@@ -564,8 +564,8 @@ mod tests {
         // indistinguishable from one that passed.
         let tmp = tempdir().unwrap();
         let result = run_at(tmp.path());
-        assert!(result.broken.is_empty());
-        assert!(result.examined.is_empty());
+        assert_eq!(result.broken, [] as [BrokenCorpusLink; 0]);
+        assert_eq!(result.examined, [] as [String; 0]);
         assert!(
             result.guidance.contains("could not be listed"),
             "{}",
@@ -578,7 +578,7 @@ mod tests {
         let tmp = tempdir().unwrap();
         fs::create_dir_all(tmp.path().join("specs")).unwrap();
         let result = run_at(tmp.path());
-        assert!(result.broken.is_empty());
+        assert_eq!(result.broken, [] as [BrokenCorpusLink; 0]);
         assert!(
             result.guidance.contains("looked at nothing"),
             "{}",
@@ -638,11 +638,11 @@ mod tests {
             "# {NNN}\n\n[plan](plan.md)\n",
         );
         let result = run_at(tmp.path());
-        assert!(result.broken.is_empty());
+        assert_eq!(result.broken, [] as [BrokenCorpusLink; 0]);
         assert_eq!(result.excluded_by_construction, 1);
-        assert!(result.examined.is_empty());
+        assert_eq!(result.examined, [] as [String; 0]);
         // Zero examined is not a clean corpus, and the result says so.
-        assert!(!result.guidance.is_empty());
+        assert_ne!(result.guidance, "");
     }
 
     #[test]
@@ -889,7 +889,7 @@ mod tests {
             tmp.path(),
         )
         .unwrap();
-        assert!(result.examined.is_empty());
+        assert_eq!(result.examined, [] as [String; 0]);
         assert!(result.guidance.contains("git index"), "{}", result.guidance);
     }
 
@@ -977,6 +977,6 @@ mod tests {
             "specs/042-demo/spec.md",
             "# Demo\n\n[unterminated](../041-gone/spec.md\n",
         );
-        assert!(run_at(tmp.path()).broken.is_empty());
+        assert_eq!(run_at(tmp.path()).broken, [] as [BrokenCorpusLink; 0]);
     }
 }

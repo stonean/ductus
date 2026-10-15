@@ -290,7 +290,7 @@ mod tests {
         // overall result) reports incompatible.
         assert!(!edge.compatible);
         assert!(!result.compatible);
-        assert!(result.cycles.is_empty());
+        assert_eq!(result.cycles, [] as [Vec<String>; 0]);
     }
 
     #[test]
@@ -308,7 +308,7 @@ mod tests {
         assert!(result.compatible);
         assert_eq!(result.dependencies.len(), 1);
         assert!(result.dependencies[0].compatible);
-        assert!(result.cycles.is_empty());
+        assert_eq!(result.cycles, [] as [Vec<String>; 0]);
     }
 
     #[test]
@@ -327,9 +327,9 @@ mod tests {
         let edge = &result.dependencies[0];
         assert_eq!(edge.feature, "999-nope");
         assert!(!edge.exists);
-        assert!(edge.status.is_empty());
+        assert_eq!(edge.status, "");
         assert!(!edge.compatible);
-        assert!(result.cycles.is_empty());
+        assert_eq!(result.cycles, [] as [Vec<String>; 0]);
     }
 
     #[test]
@@ -343,8 +343,8 @@ mod tests {
         )
         .unwrap();
         assert!(result.compatible);
-        assert!(result.dependencies.is_empty());
-        assert!(result.cycles.is_empty());
+        assert_eq!(result.dependencies, [] as [DependencyEdge; 0]);
+        assert_eq!(result.cycles, [] as [Vec<String>; 0]);
     }
 
     // -- Cycle-detection coverage (scenario: traverse-deps-cycle-check) ----

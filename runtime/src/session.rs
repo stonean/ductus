@@ -1540,7 +1540,10 @@ mod tests {
         let tmp = tempdir().unwrap();
         set(tmp.path(), None, "055-a", t0());
         assert!(tmp.path().join(paths::SESSIONS_LOCK).is_file());
-        assert!(session_files(tmp.path()).unwrap().is_empty());
+        assert_eq!(
+            session_files(tmp.path()).unwrap(),
+            [] as [(Identity, PathBuf); 0]
+        );
     }
 
     /// With the lock held elsewhere, an unidentified write waits for it
@@ -1975,7 +1978,10 @@ mod tests {
                 .is_empty(),
             "delivered once"
         );
-        assert!(set(tmp.path(), Some(&x), "056-b", at(4)).notices.is_empty());
+        assert_eq!(
+            set(tmp.path(), Some(&x), "056-b", at(4)).notices,
+            [] as [SessionNotice; 0]
+        );
     }
 
     /// AC22: a write over an own record that does not parse names it, as
@@ -1990,7 +1996,7 @@ mod tests {
 
         let out = set(tmp.path(), Some(&x), "056-b", at(1));
         assert_eq!(out.unreadable, vec![own]);
-        assert!(out.notices.is_empty());
+        assert_eq!(out.notices, [] as [SessionNotice; 0]);
         let resolved = resolve(tmp.path(), Some(&x), at(2)).unwrap();
         assert_eq!(
             feature_of(&resolved),
@@ -2086,11 +2092,9 @@ mod tests {
         assert_eq!(first.notices.len(), 1);
         assert_eq!(first.notices[0].kind, SessionNoticeKind::Folded);
         assert!(first.notices[0].message.contains("1234.1-b"));
-        assert!(
-            resolve(tmp.path(), Some(&x), at(2))
-                .unwrap()
-                .notices
-                .is_empty()
+        assert_eq!(
+            resolve(tmp.path(), Some(&x), at(2)).unwrap().notices,
+            [] as [SessionNotice; 0]
         );
     }
 
@@ -2210,7 +2214,7 @@ mod tests {
         .unwrap();
         // The default first, then per-process files in key order.
         assert_eq!(out.retargeted, ["default", "actor", "other"]);
-        assert!(out.cleared.is_empty());
+        assert_eq!(out.cleared, [] as [String; 0]);
         assert!(default_text(tmp.path()).contains("feature = \"055-a\""));
         assert_eq!(
             std::fs::read_to_string(own_path(tmp.path(), &bystander)).unwrap(),

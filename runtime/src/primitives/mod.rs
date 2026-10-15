@@ -3191,7 +3191,7 @@ mod tests {
         );
         let empty: Vec<String> =
             read_recorded_list(dir.path(), ANALYSIS_RECORD_FILE, "absent").unwrap();
-        assert!(empty.is_empty());
+        assert_eq!(empty, [] as [String; 0]);
     }
 
     // --- numbered task headings ----------------------------------------------
@@ -3702,7 +3702,10 @@ mod tests {
             vec!["alpha.md".to_string(), "BETA.MD".to_string()]
         );
         // Absent directory degrades to empty.
-        assert!(list_scenario_files(&tmp.path().join("missing")).is_empty());
+        assert_eq!(
+            list_scenario_files(&tmp.path().join("missing")),
+            [] as [String; 0]
+        );
     }
 
     #[test]
@@ -3874,7 +3877,7 @@ mod tests {
     #[test]
     fn section_lines_yields_nothing_for_absent_heading() {
         let body = "## Other\n\nx\n";
-        assert!(section_lines(body, "Missing").is_empty());
+        assert_eq!(section_lines(body, "Missing"), [] as [&str; 0]);
     }
 
     #[test]
@@ -4068,7 +4071,7 @@ mod tests {
     fn parse_affected_files_handles_missing_section() {
         let plan = "# Plan\n\n## Trade-offs\n\nNo affected files.\n";
         let paths = parse_affected_files(plan);
-        assert!(paths.is_empty());
+        assert_eq!(paths, [] as [String; 0]);
     }
 
     #[test]
@@ -4242,7 +4245,7 @@ mod tests {
             vec![(1, "real prose  more prose".to_string())]
         );
         // A line that is nothing but a comment leaves no block at all.
-        assert!(blocks("<!-- still open -->\n").is_empty());
+        assert_eq!(blocks("<!-- still open -->\n"), [] as [(usize, String); 0]);
         // A delimiter inside a code span is inert, so nothing is stripped.
         assert_eq!(
             blocks("prose about `<!--` markers\n"),
@@ -4302,8 +4305,11 @@ mod tests {
 
     #[test]
     fn a_document_with_no_block_content_yields_nothing() {
-        assert!(blocks("# Only\n\n## Headings\n").is_empty());
-        assert!(blocks("").is_empty());
+        assert_eq!(
+            blocks("# Only\n\n## Headings\n"),
+            [] as [(usize, String); 0]
+        );
+        assert_eq!(blocks(""), [] as [(usize, String); 0]);
     }
 
     #[test]

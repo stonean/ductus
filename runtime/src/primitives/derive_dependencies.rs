@@ -700,7 +700,7 @@ mod tests {
         ]
         .into_iter()
         .collect();
-        assert!(find_cycles(&graph).is_empty());
+        assert_eq!(find_cycles(&graph), [] as [Vec<String>; 0]);
     }
 
     #[test]
@@ -711,7 +711,7 @@ mod tests {
             [("001-a".to_string(), vec!["999-missing".to_string()])]
                 .into_iter()
                 .collect();
-        assert!(find_cycles(&graph).is_empty());
+        assert_eq!(find_cycles(&graph), [] as [Vec<String>; 0]);
     }
 
     #[test]
@@ -745,6 +745,6 @@ mod tests {
             graph.insert(node, vec![next]);
         }
         graph.insert("05000-n".to_string(), vec![]);
-        assert!(find_cycles(&graph).is_empty());
+        assert_eq!(find_cycles(&graph), [] as [Vec<String>; 0]);
     }
 }

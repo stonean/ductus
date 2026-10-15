@@ -488,7 +488,7 @@ mod tests {
             Some("[--auto] [feature]"),
             "### Flags\n\n`$ARGUMENTS` may include the `--auto` flag in any position.\n",
         );
-        assert!(tabled_flags(&content).is_empty());
+        assert_eq!(tabled_flags(&content), [] as [String; 0]);
     }
 
     #[test]
@@ -497,7 +497,7 @@ mod tests {
             Some("[--all]"),
             "## Inputs\n\n| Field | Note |\n| --- | --- |\n| `--nope` | not a flag table |\n",
         );
-        assert!(tabled_flags(&content).is_empty());
+        assert_eq!(tabled_flags(&content), [] as [String; 0]);
     }
 
     #[test]
@@ -533,7 +533,7 @@ mod tests {
     #[test]
     fn the_separator_row_contributes_no_flag() {
         // `| --- | --- |` is three hyphens, not a `--f` flag.
-        assert!(flags_in(" --- ").is_empty());
+        assert_eq!(flags_in(" --- "), [] as [String; 0]);
     }
 
     #[test]

@@ -319,7 +319,7 @@ mod tests {
         )
         .unwrap();
         assert!(result.clean, "expected clean, got {:?}", result.findings);
-        assert!(result.findings.is_empty());
+        assert_eq!(result.findings, [] as [FrontmatterFinding; 0]);
     }
 
     /// Run the validator over a frontmatter block, returning the findings.
@@ -335,9 +335,13 @@ mod tests {
     /// so neither is a finding.
     #[test]
     fn an_empty_or_absent_cross_spec_impact_is_never_a_finding() {
-        assert!(findings_for("status: draft\ndependencies: []\n").is_empty());
-        assert!(
-            findings_for("status: draft\ndependencies: []\ncross-spec-impact: []\n").is_empty()
+        assert_eq!(
+            findings_for("status: draft\ndependencies: []\n"),
+            [] as [FrontmatterFinding; 0]
+        );
+        assert_eq!(
+            findings_for("status: draft\ndependencies: []\ncross-spec-impact: []\n"),
+            [] as [FrontmatterFinding; 0]
         );
     }
 

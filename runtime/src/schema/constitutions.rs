@@ -294,7 +294,7 @@ path = "../platform-governance"
         let toml = "[review]\ntech-stack-verified = true\n";
         let registry = Constitutions::from_toml_str(toml).unwrap();
         assert!(registry.is_empty());
-        assert!(registry.duplicate_paths().is_empty());
+        assert_eq!(registry.duplicate_paths(), [] as [(String, Vec<String>); 0]);
     }
 
     #[test]
@@ -367,7 +367,7 @@ repo = "https://github.com/acme/platform-governance"
 path = "../platform-governance"
 "#;
         let registry = Constitutions::from_toml_str(toml).unwrap();
-        assert!(registry.duplicate_paths().is_empty());
+        assert_eq!(registry.duplicate_paths(), [] as [(String, Vec<String>); 0]);
     }
 
     #[test]

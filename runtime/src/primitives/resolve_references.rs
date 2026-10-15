@@ -452,7 +452,7 @@ mod tests {
         seed_consumer(repo, API_TOML, "");
 
         let result = run_consumer(repo);
-        assert!(result.references.is_empty());
+        assert_eq!(result.references, [] as [ResolutionRecord; 0]);
     }
 
     #[test]

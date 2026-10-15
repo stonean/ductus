@@ -1450,7 +1450,7 @@ mod tests {
     #[test]
     fn parse_command_references_empty_when_absent() {
         let cmd = "## Scope Boundaries\n\nNo reference line here.\n";
-        assert!(parse_command_references(cmd).is_empty());
+        assert_eq!(parse_command_references(cmd), [] as [String; 0]);
     }
 
     #[test]
@@ -1555,7 +1555,7 @@ mod tests {
         // No constitution written at all.
 
         let scan = load_constitution_excerpts("implement", tmp.path());
-        assert!(scan.excerpts.is_empty());
+        assert_eq!(scan.excerpts, [] as [String; 0]);
         assert_eq!(scan.unexaminable.len(), 1);
         assert_eq!(
             scan.unexaminable,
@@ -1591,7 +1591,7 @@ mod tests {
     fn excerpt_scan_reports_a_missing_command_file() {
         let tmp = tempdir().unwrap();
         let scan = load_constitution_excerpts("nonesuch", tmp.path());
-        assert!(scan.excerpts.is_empty());
+        assert_eq!(scan.excerpts, [] as [String; 0]);
         assert_eq!(
             scan.unexaminable,
             vec!["command-file-missing: nonesuch".to_string()]
@@ -2500,7 +2500,7 @@ mod tests {
         let mut ctx = Map::new();
         ctx.insert("rule-files".into(), serde_json::json!(["r.md"]));
         let loaded = load_rules(&ctx, tmp.path());
-        assert!(loaded.assessable.is_empty());
+        assert_eq!(loaded.assessable, [] as [AssessSpecQualityRule; 0]);
         assert!(!loaded.is_empty());
     }
 
@@ -2554,8 +2554,14 @@ mod tests {
         ctx.insert("pass".into(), Value::String("reuse".into()));
         let value = build_perform_review_request(&ctx, tmp.path());
         assert_eq!(value["pass"], "reuse");
-        assert!(value["scope-files"].as_array().unwrap().is_empty());
-        assert!(value["rule-files"].as_array().unwrap().is_empty());
+        assert_eq!(
+            value["scope-files"].as_array().unwrap().as_slice(),
+            [] as [Value; 0]
+        );
+        assert_eq!(
+            value["rule-files"].as_array().unwrap().as_slice(),
+            [] as [Value; 0]
+        );
     }
 
     #[test]
@@ -3040,7 +3046,10 @@ mod tests {
         assert_eq!(keys, vec!["spec-path", "spec-content", "criteria"]);
         assert_eq!(value["spec-path"], "");
         assert_eq!(value["spec-content"], "");
-        assert!(value["criteria"].as_array().unwrap().is_empty());
+        assert_eq!(
+            value["criteria"].as_array().unwrap().as_slice(),
+            [] as [Value; 0]
+        );
     }
 
     #[test]

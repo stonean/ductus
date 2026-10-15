@@ -379,7 +379,7 @@ mod tests {
         let tmp = seed(rules, Some(table));
         let r = run(&args(true), tmp.path()).unwrap();
         assert_eq!(r.table_keyed, 1);
-        assert!(r.unmatched_keys.is_empty());
+        assert_eq!(r.unmatched_keys, [] as [String; 0]);
     }
 
     /// The narrowed direction: a key matching nothing is reported, because

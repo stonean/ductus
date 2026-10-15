@@ -330,7 +330,7 @@ mod tests {
             .id()
             .to_string();
         assert_eq!(result.diff_base, head);
-        assert!(result.modified_since.is_empty());
+        assert_eq!(result.modified_since, [] as [String; 0]);
     }
 
     #[test]
@@ -403,9 +403,9 @@ mod tests {
         write(&tmp.path().join("specs/001-x/spec.md"), &spec("planned"));
         commit_all(&repo, "feat: plan");
         let result = run(&args("001-x", None), tmp.path()).unwrap();
-        assert!(result.diff_base.is_empty());
-        assert!(result.scope.is_empty());
-        assert!(result.modified_since.is_empty());
+        assert_eq!(result.diff_base, "");
+        assert_eq!(result.scope, [] as [String; 0]);
+        assert_eq!(result.modified_since, [] as [String; 0]);
     }
 
     /// A project need not sit at its repository's root. History names its
@@ -455,8 +455,8 @@ mod tests {
         let (tmp, _sha) = repo_with_progress();
         // No plan.md written → plan_affected empty → scope = modified_since.
         let result = run(&args("001-x", None), tmp.path()).unwrap();
-        assert!(result.plan_affected.is_empty());
+        assert_eq!(result.plan_affected, [] as [String; 0]);
         assert_eq!(result.scope, result.modified_since);
-        assert!(!result.scope.is_empty());
+        assert_ne!(result.scope, [] as [String; 0]);
     }
 }

@@ -280,8 +280,8 @@ mod tests {
             tmp.path(),
         )
         .unwrap();
-        assert!(!result.first_commit.is_empty());
-        assert!(!result.current_head.is_empty());
+        assert_ne!(result.first_commit, "");
+        assert_ne!(result.current_head, "");
         let boundary: std::collections::HashSet<&str> =
             result.boundary.iter().map(String::as_str).collect();
         assert!(boundary.contains("specs/020-demo/**"));
@@ -462,6 +462,6 @@ mod tests {
         )
         .unwrap();
         assert!(result.guidance.is_none());
-        assert!(!result.first_commit.is_empty());
+        assert_ne!(result.first_commit, "");
     }
 }

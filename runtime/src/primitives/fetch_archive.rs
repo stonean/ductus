@@ -964,7 +964,7 @@ mod tests {
                 (ProxyScheme::All, "http://all:1")
             ]
         );
-        assert!(ProxyEnv::NONE.proxies().is_empty());
+        assert_eq!(ProxyEnv::NONE.proxies(), [] as [(ProxyScheme, &str); 0]);
     }
 
     #[test]

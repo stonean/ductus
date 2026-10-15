@@ -149,7 +149,7 @@ path = "../frontend"
         let toml = "[review]\ntech-stack-verified = true\n";
         let services = Services::from_toml_str(toml).unwrap();
         assert!(services.is_empty());
-        assert!(services.duplicate_repos().is_empty());
+        assert_eq!(services.duplicate_repos(), [] as [(String, Vec<String>); 0]);
     }
 
     #[test]
@@ -238,7 +238,7 @@ repo = "https://github.com/acme/frontend"
 path = "../frontend"
 "#;
         let services = Services::from_toml_str(toml).unwrap();
-        assert!(services.duplicate_repos().is_empty());
+        assert_eq!(services.duplicate_repos(), [] as [(String, Vec<String>); 0]);
     }
 
     #[test]

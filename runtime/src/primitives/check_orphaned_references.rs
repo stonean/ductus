@@ -543,7 +543,7 @@ mod tests {
         let tmp = adopter();
         write(&tmp.path().join("AGENTS.md"), "Nothing managed here.\n");
         let result = run(&args(), tmp.path()).unwrap();
-        assert!(result.findings.is_empty());
+        assert_eq!(result.findings, [] as [OrphanedReference; 0]);
         for expected in [
             ".ductus/",
             ".githooks/",
@@ -607,7 +607,7 @@ mod tests {
         );
         let result = run(&args(), tmp.path()).unwrap();
         assert!(result.findings.is_empty(), "{:?}", result.findings);
-        assert!(result.skipped.is_empty());
+        assert_eq!(result.skipped, [] as [OrphanedReferenceSkip; 0]);
         assert_eq!(result.examined, vec!["AGENTS.md".to_string()]);
     }
 
@@ -629,9 +629,9 @@ mod tests {
         // as something unexamined.
         let tmp = adopter();
         let result = run(&args(), tmp.path()).unwrap();
-        assert!(result.findings.is_empty());
-        assert!(result.skipped.is_empty());
-        assert!(result.examined.is_empty());
+        assert_eq!(result.findings, [] as [OrphanedReference; 0]);
+        assert_eq!(result.skipped, [] as [OrphanedReferenceSkip; 0]);
+        assert_eq!(result.examined, [] as [String; 0]);
     }
 
     #[test]
@@ -896,7 +896,7 @@ mod tests {
         write(&tmp.path().join("AGENTS.md"), "Nothing managed here.\n");
         let result = run(&args(), tmp.path()).unwrap();
         assert!(result.findings.is_empty(), "{:?}", result.findings);
-        assert!(result.skipped.is_empty());
+        assert_eq!(result.skipped, [] as [OrphanedReferenceSkip; 0]);
         assert!(!result.examined.contains(&"specs/system.md".to_string()));
     }
 

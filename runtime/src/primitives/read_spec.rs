@@ -498,7 +498,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(result.frontmatter.status, "clarified");
-        assert!(result.frontmatter.dependencies.is_empty());
+        assert_eq!(result.frontmatter.dependencies, [] as [String; 0]);
         assert_eq!(result.path, "specs/001-basic/spec.md");
 
         let section_headings: Vec<&str> =
@@ -703,7 +703,10 @@ mod tests {
      When a question is resolved, move it to a \"Resolved Questions\" section.
 -->
 ";
-        assert!(parse_open_questions(body, "Open Questions").is_empty());
+        assert_eq!(
+            parse_open_questions(body, "Open Questions"),
+            [] as [OpenQuestion; 0]
+        );
     }
 
     #[test]
@@ -961,8 +964,11 @@ dependencies: []
             )],
         );
         let result = probe(&tmp);
-        assert!(result.scenario_open_questions.is_empty());
-        assert!(result.scenario_files_unreadable.is_empty());
+        assert_eq!(
+            result.scenario_open_questions,
+            [] as [ScenarioOpenQuestion; 0]
+        );
+        assert_eq!(result.scenario_files_unreadable, [] as [String; 0]);
     }
 
     #[test]
@@ -1012,7 +1018,7 @@ dependencies: []
             scenario_names(&[q("alpha"), q("alpha"), q("beta"), q("beta"), q("beta")]),
             vec!["alpha", "beta"]
         );
-        assert!(scenario_names(&[]).is_empty());
+        assert_eq!(scenario_names(&[]), [] as [&str; 0]);
         // Ungrouped input is not silently repaired — the precondition is
         // the collector's to hold, and this documents the consequence.
         assert_eq!(
@@ -1024,7 +1030,10 @@ dependencies: []
     #[test]
     fn feature_without_scenarios_reports_no_scenario_questions() {
         let tmp = seed_feature(SPEC_NO_QUESTIONS, &[]);
-        assert!(probe(&tmp).scenario_open_questions.is_empty());
+        assert_eq!(
+            probe(&tmp).scenario_open_questions,
+            [] as [ScenarioOpenQuestion; 0]
+        );
     }
 
     #[test]
@@ -1038,7 +1047,10 @@ dependencies: []
                 "---\nsection: Behavior\n---\n\n# Fresh\n\n## Open Questions\n\n*None — captured during scenario authoring.*\n\n## Resolved Questions\n\n*None yet.*\n",
             )],
         );
-        assert!(probe(&tmp).scenario_open_questions.is_empty());
+        assert_eq!(
+            probe(&tmp).scenario_open_questions,
+            [] as [ScenarioOpenQuestion; 0]
+        );
     }
 
     #[test]
@@ -1076,7 +1088,10 @@ dependencies: []
                 "---\nsection: Behavior\n---\n\n# Plain\n\n## Behavior\n\nNo questions section at all.\n",
             )],
         );
-        assert!(probe(&tmp).scenario_open_questions.is_empty());
+        assert_eq!(
+            probe(&tmp).scenario_open_questions,
+            [] as [ScenarioOpenQuestion; 0]
+        );
     }
 
     #[test]

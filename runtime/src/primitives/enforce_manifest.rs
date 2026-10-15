@@ -293,7 +293,7 @@ mod tests {
                 .iter()
                 .collect::<std::collections::BTreeSet<_>>()
         );
-        assert!(result.pinned_kept.is_empty());
+        assert_eq!(result.pinned_kept, [] as [String; 0]);
         assert!(!dir.join("legacy-workflow.md").exists());
         assert!(dir.join("status.md").exists());
     }
@@ -321,9 +321,9 @@ mod tests {
         let dir = tmp.path().join("never-existed");
         let args = args_for(&dir, &["x.md"], &[], false, None);
         let result = run(&args, tmp.path()).unwrap();
-        assert!(result.removed.is_empty());
-        assert!(result.kept.is_empty());
-        assert!(result.pinned_kept.is_empty());
+        assert_eq!(result.removed, [] as [String; 0]);
+        assert_eq!(result.kept, [] as [String; 0]);
+        assert_eq!(result.pinned_kept, [] as [String; 0]);
         // Crucially: the primitive does NOT create the directory.
         assert!(!dir.exists(), "enforce-manifest must not create the dir");
     }
@@ -335,9 +335,9 @@ mod tests {
         fs::create_dir_all(&dir).unwrap();
         let args = args_for(&dir, &["x.md"], &[], false, None);
         let result = run(&args, tmp.path()).unwrap();
-        assert!(result.removed.is_empty());
-        assert!(result.kept.is_empty());
-        assert!(result.pinned_kept.is_empty());
+        assert_eq!(result.removed, [] as [String; 0]);
+        assert_eq!(result.kept, [] as [String; 0]);
+        assert_eq!(result.pinned_kept, [] as [String; 0]);
     }
 
     #[test]
@@ -468,7 +468,7 @@ mod tests {
         assert_eq!(first.removed, vec!["stale.md"]);
 
         let second = run(&args, tmp.path()).unwrap();
-        assert!(second.removed.is_empty());
+        assert_eq!(second.removed, [] as [String; 0]);
         assert_eq!(second.kept, vec!["status.md"]);
     }
 

@@ -567,7 +567,7 @@ mod tests {
         let previewed = run(&preview(), tmp.path()).unwrap();
         let result = run(&apply(&[&previewed.sections[0]]), tmp.path()).unwrap();
         assert!(result.applied);
-        assert!(result.stale_sections.is_empty());
+        assert_eq!(result.stale_sections, [] as [String; 0]);
         let written = plan_text(tmp.path());
         assert!(!written.contains("Implementation notes"));
         assert!(!written.contains("A journal entry."));
@@ -707,7 +707,7 @@ mod tests {
         let result = run(&preview(), tmp.path()).unwrap();
         assert!(result.missing);
         assert_eq!(result.sections_examined, 0);
-        assert!(result.sections.is_empty());
+        assert_eq!(result.sections, [] as [PlanSection; 0]);
         assert!(!feature_dir(tmp.path()).join("plan.md").exists());
     }
 

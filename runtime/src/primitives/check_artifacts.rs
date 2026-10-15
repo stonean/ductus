@@ -2014,7 +2014,10 @@ mod tests {
             CLEAN_REVIEW,
             &format!("{CLEAN_ANALYZE}\n{OWED}"),
         );
-        assert!(disposition_families(&run(&args(), tmp.path()).unwrap()).is_empty());
+        assert_eq!(
+            disposition_families(&run(&args(), tmp.path()).unwrap()),
+            [] as [String; 0]
+        );
     }
 
     #[test]
@@ -2026,7 +2029,10 @@ mod tests {
             &format!("{CLEAN_REVIEW}\n{OWED}"),
             &format!("{CLEAN_ANALYZE}\n{OWED}"),
         );
-        assert!(disposition_families(&run(&args(), tmp.path()).unwrap()).is_empty());
+        assert_eq!(
+            disposition_families(&run(&args(), tmp.path()).unwrap()),
+            [] as [String; 0]
+        );
 
         let tmp = tempdir().unwrap();
         seed_done_with(tmp.path(), "done", CLEAN_REVIEW, CLEAN_ANALYZE);

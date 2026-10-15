@@ -195,8 +195,8 @@ mod tests {
             wire.get("inbox-additions").is_none() && wire.get("inbox-standing").is_none(),
             "no inbox field is reported any more: {wire}"
         );
-        assert!(!result.first_commit.is_empty());
-        assert!(!result.current_head.is_empty());
+        assert_ne!(result.first_commit, "");
+        assert_ne!(result.current_head, "");
     }
 
     /// A project in a subdirectory of its repository, beside another project
@@ -292,7 +292,7 @@ mod tests {
         );
         commit_all(&repo, "feat(020): plan");
         let result = run(&args("020-demo"), tmp.path()).unwrap();
-        assert!(result.cross_spec_paths.is_empty());
+        assert_eq!(result.cross_spec_paths, [] as [String; 0]);
     }
 
     #[test]
@@ -370,7 +370,7 @@ mod tests {
         let result = run(&args("030-orphan"), tmp.path()).unwrap();
         assert_eq!(result.first_commit, "");
         assert_eq!(result.current_head, "");
-        assert!(result.cross_spec_paths.is_empty());
+        assert_eq!(result.cross_spec_paths, [] as [String; 0]);
 
         // The empty lists must not read as a clean bill of health: guidance
         // is what separates "no impact" from "impact unknowable".
@@ -398,7 +398,7 @@ mod tests {
 
         let result = run(&args("020-demo"), tmp.path()).unwrap();
         assert!(result.guidance.is_none());
-        assert!(!result.first_commit.is_empty());
+        assert_ne!(result.first_commit, "");
     }
 
     #[test]

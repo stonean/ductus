@@ -400,16 +400,14 @@ mod tests {
     #[test]
     fn an_absent_file_or_key_is_an_empty_list() {
         let dir = tempfile::tempdir().unwrap();
-        assert!(
-            read_decisions(dir.path(), "analysis.md")
-                .unwrap()
-                .is_empty()
+        assert_eq!(
+            read_decisions(dir.path(), "analysis.md").unwrap(),
+            [] as [RawDecision; 0]
         );
         write(dir.path(), "analysis.md", "hard-fail: 0\n");
-        assert!(
-            read_decisions(dir.path(), "analysis.md")
-                .unwrap()
-                .is_empty()
+        assert_eq!(
+            read_decisions(dir.path(), "analysis.md").unwrap(),
+            [] as [RawDecision; 0]
         );
     }
 

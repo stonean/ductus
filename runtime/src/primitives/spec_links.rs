@@ -279,7 +279,7 @@ before
     #[test]
     fn see_also_matches_case_insensitively_and_at_level_one() {
         let content = "---\nx: 1\n---\n# SEE ALSO\n- ](../001-a/spec.md)\n";
-        assert!(texts(content).is_empty());
+        assert_eq!(texts(content), [] as [&str; 0]);
     }
 
     #[test]
@@ -346,6 +346,6 @@ x: 1
     #[test]
     fn crlf_lines_are_normalized_before_matching() {
         let content = "---\r\nx: 1\r\n---\r\n## See also\r\n- ](../001-a/spec.md)\r\n";
-        assert!(texts(content).is_empty());
+        assert_eq!(texts(content), [] as [&str; 0]);
     }
 }

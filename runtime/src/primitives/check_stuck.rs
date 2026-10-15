@@ -413,7 +413,7 @@ mod tests {
         assert_eq!(result.threshold, 3);
         assert_eq!(result.commit_count, 3);
         assert!(result.stuck);
-        assert!(!result.since_sha.is_empty());
+        assert_ne!(result.since_sha, "");
     }
 
     /// The same history as [`counts_commits_since_in_progress`], with the
@@ -476,7 +476,7 @@ mod tests {
         .unwrap();
         assert_eq!(result.commit_count, 0);
         assert!(!result.stuck);
-        assert!(result.since_sha.is_empty());
+        assert_eq!(result.since_sha, "");
     }
 
     /// Reopen regression test: a spec that went
@@ -541,7 +541,7 @@ mod tests {
             result.commit_count
         );
         assert!(!result.stuck);
-        assert!(!result.since_sha.is_empty());
+        assert_ne!(result.since_sha, "");
 
         // Sanity: walking by the captured since_sha should land at the
         // reopen commit, not the original begin commit.

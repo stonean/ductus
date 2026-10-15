@@ -589,7 +589,10 @@ mod tests {
             vec![(Some("api".to_string()), "003-user".to_string())]
         );
         let wrong_root = spec("[x](https://h/o/api/specs/003-user/spec.md)");
-        assert!(harvest(&wrong_root, &reg).is_empty());
+        assert_eq!(
+            harvest(&wrong_root, &reg),
+            [] as [(Option<String>, String); 0]
+        );
     }
 
     #[test]
@@ -609,14 +612,14 @@ mod tests {
     fn a_backticked_link_is_an_example_not_a_reference() {
         let reg = registry(&[]);
         let content = spec("Use `[x](https://h/o/other/specs/003-user/spec.md)` in your body.");
-        assert!(harvest(&content, &reg).is_empty());
+        assert_eq!(harvest(&content, &reg), [] as [(Option<String>, String); 0]);
     }
 
     #[test]
     fn relative_sibling_links_are_never_references() {
         let reg = registry(&[]);
         let content = spec("[b](../002-b/spec.md) and [c](specs/003-c/spec.md)");
-        assert!(harvest(&content, &reg).is_empty());
+        assert_eq!(harvest(&content, &reg), [] as [(Option<String>, String); 0]);
     }
 
     #[test]
@@ -624,7 +627,7 @@ mod tests {
         // The `/spec.md` anchor is what prevents this.
         let reg = registry(&[]);
         let content = spec("[x](https://h/o/123-thing/README.md)");
-        assert!(harvest(&content, &reg).is_empty());
+        assert_eq!(harvest(&content, &reg), [] as [(Option<String>, String); 0]);
     }
 
     #[test]
@@ -729,6 +732,6 @@ mod tests {
              > [quoted](https://h/o/other/specs/004-b/spec.md)\n\n\
              ## See also\n\n[nav](https://h/o/other/specs/005-c/spec.md)\n",
         );
-        assert!(harvest(&content, &reg).is_empty());
+        assert_eq!(harvest(&content, &reg), [] as [(Option<String>, String); 0]);
     }
 }

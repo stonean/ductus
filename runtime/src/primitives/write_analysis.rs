@@ -918,10 +918,9 @@ mod tests {
             reason: Some("future endpoint".into()),
         }];
         run(&next, tmp.path()).unwrap();
-        assert!(
-            decisions::read_decisions(&dir, "analysis.md")
-                .unwrap()
-                .is_empty()
+        assert_eq!(
+            decisions::read_decisions(&dir, "analysis.md").unwrap(),
+            [] as [crate::primitives::decisions::RawDecision; 0]
         );
     }
 
@@ -1391,7 +1390,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(classified.matched.len(), 2);
-        assert!(classified.expired.is_empty());
+        assert_eq!(classified.expired, [] as [DecisionRef; 0]);
     }
 
     /// A `decision-key` the host matched to a decision that is not stored — a

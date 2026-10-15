@@ -116,7 +116,10 @@ mod tests {
 
         let result = run(&CheckUnfoldedSpecsArgs {}, tmp.path()).unwrap();
 
-        assert!(result.unfolded.is_empty());
+        assert_eq!(
+            result.unfolded,
+            [] as [crate::schema::primitives::UnfoldedSpec; 0]
+        );
         // The distinction the count exists for: examined-and-clean, not
         // nothing-was-looked-at.
         assert_eq!(result.examined, 2);
@@ -129,7 +132,10 @@ mod tests {
 
         let result = run(&CheckUnfoldedSpecsArgs {}, tmp.path()).unwrap();
 
-        assert!(result.unfolded.is_empty());
+        assert_eq!(
+            result.unfolded,
+            [] as [crate::schema::primitives::UnfoldedSpec; 0]
+        );
         assert_eq!(result.examined, 0);
     }
 

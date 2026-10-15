@@ -670,7 +670,7 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let result = run(&args(&[]), tmp.path()).unwrap();
         assert_eq!(result.rules_dir, "");
-        assert!(result.selected.is_empty());
+        assert_eq!(result.selected, [] as [String; 0]);
         assert_eq!(result.notices, vec!["loading rule files: "]);
     }
 

@@ -274,8 +274,8 @@ mod tests {
         assert_eq!(result.applied.len(), 1);
         assert_eq!(result.applied[0].rule, "SEC-BE-014");
         assert_eq!(result.applied[0].file, "src/api/internal.ts");
-        assert!(result.expired.is_empty());
-        assert!(result.notices.is_empty());
+        assert_eq!(result.expired, [] as [WaiverRef; 0]);
+        assert_eq!(result.notices, [] as [String; 0]);
     }
 
     #[test]
@@ -287,7 +287,7 @@ mod tests {
             tmp.path(),
         )
         .unwrap();
-        assert!(result.applied.is_empty());
+        assert_eq!(result.applied, [] as [WaiverRef; 0]);
         assert_eq!(result.expired.len(), 1);
         assert_eq!(
             result.notices,
@@ -302,7 +302,7 @@ mod tests {
         // File exists but the rule is not in the fired set.
         let tmp = setup("001-x", ONE_WAIVER, &["src/api/internal.ts"]);
         let result = run(&args("001-x", &[]), tmp.path()).unwrap();
-        assert!(result.applied.is_empty());
+        assert_eq!(result.applied, [] as [WaiverRef; 0]);
         assert_eq!(result.expired.len(), 1);
         assert!(result.notices[0].starts_with("waiver expired: rule SEC-BE-014"));
     }
@@ -318,7 +318,7 @@ mod tests {
             tmp.path(),
         )
         .unwrap();
-        assert!(result.applied.is_empty());
+        assert_eq!(result.applied, [] as [WaiverRef; 0]);
         assert!(result.expired.is_empty(), "restricted runs never expire");
         assert_eq!(result.retained.len(), 1);
         assert!(result.notices[0].starts_with("waiver retained: rule SEC-BE-014"));
@@ -339,8 +339,8 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result.applied.len(), 1);
-        assert!(result.expired.is_empty());
-        assert!(result.retained.is_empty());
+        assert_eq!(result.expired, [] as [WaiverRef; 0]);
+        assert_eq!(result.retained, [] as [WaiverRef; 0]);
     }
 
     #[test]
@@ -358,7 +358,7 @@ mod tests {
         .unwrap();
         // The waiver anchors (SEC-BE-014, internal.ts), which does not fire →
         // it expires; other.ts is a separate finding, not covered here.
-        assert!(result.applied.is_empty());
+        assert_eq!(result.applied, [] as [WaiverRef; 0]);
         assert_eq!(result.expired.len(), 1);
     }
 
@@ -384,8 +384,8 @@ mod tests {
             tmp.path(),
         )
         .unwrap();
-        assert!(result.applied.is_empty());
-        assert!(result.expired.is_empty());
+        assert_eq!(result.applied, [] as [WaiverRef; 0]);
+        assert_eq!(result.expired, [] as [WaiverRef; 0]);
         assert_eq!(
             result.notices,
             vec!["malformed waiver at review.waivers[0]: missing 'reason'"]
@@ -432,9 +432,9 @@ mod tests {
         )
         .unwrap();
         let result = run(&args("001-x", &[]), tmp.path()).unwrap();
-        assert!(result.applied.is_empty());
-        assert!(result.expired.is_empty());
-        assert!(result.notices.is_empty());
+        assert_eq!(result.applied, [] as [WaiverRef; 0]);
+        assert_eq!(result.expired, [] as [WaiverRef; 0]);
+        assert_eq!(result.notices, [] as [String; 0]);
     }
 
     #[test]
@@ -510,7 +510,7 @@ mod tests {
         .unwrap();
         assert_eq!(anchors(&result.applied), vec![("SEC-BE-014", "src/a.ts")]);
         assert_eq!(anchors(&result.retained), vec![("SEC-BE-014", "src/b.ts")]);
-        assert!(result.expired.is_empty());
+        assert_eq!(result.expired, [] as [WaiverRef; 0]);
     }
 
     #[test]

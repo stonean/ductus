@@ -325,7 +325,7 @@ mod tests {
         let result = run(&args(), tmp.path()).unwrap();
         assert!(result.changed);
         assert_eq!(result.relocated.len(), 2);
-        assert!(result.disagreements.is_empty());
+        assert_eq!(result.disagreements, [] as [String; 0]);
 
         let dir = tmp.path().join("specs/001-x");
         let review = fs::read_to_string(dir.join("review.md")).unwrap();
@@ -366,7 +366,7 @@ mod tests {
 
         let second = run(&args(), tmp.path()).unwrap();
         assert!(!second.changed);
-        assert!(second.relocated.is_empty());
+        assert_eq!(second.relocated, [] as [String; 0]);
         assert_eq!(fs::read_to_string(dir.join("spec.md")).unwrap(), spec_first);
         assert_eq!(
             fs::read_to_string(dir.join("review.md")).unwrap(),
@@ -381,7 +381,7 @@ mod tests {
         let tmp = repo("---\nstatus: draft\ndependencies: []\n---\n\n# 001 — X\n");
         let result = run(&args(), tmp.path()).unwrap();
         assert!(!result.changed);
-        assert!(result.relocated.is_empty());
+        assert_eq!(result.relocated, [] as [String; 0]);
         let dir = tmp.path().join("specs/001-x");
         assert!(!dir.join("review.md").exists());
         assert!(!dir.join("analysis.md").exists());

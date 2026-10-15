@@ -187,7 +187,7 @@ mod tests {
         );
         assert_eq!(result.matched[1].outcome, DecisionOutcome::Discarded);
         assert!(result.expired.is_empty() && result.retained.is_empty());
-        assert!(result.notices.is_empty());
+        assert_eq!(result.notices, [] as [String; 0]);
     }
 
     #[test]
@@ -367,6 +367,6 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result.matched.len(), 1);
-        assert!(result.expired.is_empty());
+        assert_eq!(result.expired, [] as [DecisionRef; 0]);
     }
 }

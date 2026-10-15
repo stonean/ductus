@@ -532,7 +532,7 @@ mod tests {
         assert_eq!(result.threshold.bytes, 50_000);
         assert_eq!(result.threshold.source, ThresholdSource::Default);
         assert!(result.threshold.rejected.is_none());
-        assert!(result.notices.is_empty());
+        assert_eq!(result.notices, [] as [String; 0]);
         assert_eq!(result.status, "draft");
     }
 
@@ -546,7 +546,7 @@ mod tests {
                 "{config}"
             );
             assert_eq!(result.threshold.bytes, 50_000);
-            assert!(result.notices.is_empty());
+            assert_eq!(result.notices, [] as [String; 0]);
         }
     }
 
@@ -555,7 +555,7 @@ mod tests {
         let result = check(&repo(Some("[artifacts]\nread-size-bytes = 120000\n"))).unwrap();
         assert_eq!(result.threshold.bytes, 120_000);
         assert_eq!(result.threshold.source, ThresholdSource::Config);
-        assert!(result.notices.is_empty());
+        assert_eq!(result.notices, [] as [String; 0]);
         // Lowering it is as valid as raising it.
         let result = check(&repo(Some("[artifacts]\nread-size-bytes = 1\n"))).unwrap();
         assert_eq!(result.threshold.bytes, 1);
@@ -645,7 +645,7 @@ mod tests {
         );
         let result = check(&tmp).unwrap();
         assert!(result.oversized.is_empty(), "{:?}", paths_of(&result));
-        assert!(result.skipped.is_empty());
+        assert_eq!(result.skipped, [] as [SkippedTarget; 0]);
         // Only spec.md exists among the subjects.
         assert_eq!(result.examined, 1);
     }
@@ -655,7 +655,7 @@ mod tests {
         let tmp = sized("draft", &[("tasks.md", 50)]);
         let result = check(&tmp).unwrap();
         assert_eq!(result.examined, 2, "spec.md and tasks.md");
-        assert!(result.oversized.is_empty());
+        assert_eq!(result.oversized, [] as [OversizedArtifact; 0]);
         assert!(result.skipped.is_empty(), "{:?}", result.skipped);
     }
 
@@ -695,7 +695,7 @@ mod tests {
                 ),
             ]
         );
-        assert!(result.oversized.is_empty());
+        assert_eq!(result.oversized, [] as [OversizedArtifact; 0]);
         assert_eq!(result.examined, 2, "spec.md and scenarios/a.md");
     }
 
@@ -715,7 +715,7 @@ mod tests {
         let result = result.unwrap();
         assert_eq!(result.skipped.len(), 1);
         assert_eq!(result.skipped[0].path, "specs/001-a/scenarios");
-        assert!(result.oversized.is_empty());
+        assert_eq!(result.oversized, [] as [OversizedArtifact; 0]);
     }
 
     #[test]
@@ -797,7 +797,7 @@ mod tests {
     #[test]
     fn a_file_at_the_threshold_is_not_reported_and_one_byte_over_is() {
         let at = check(&sized("draft", &[("plan.md", 100)])).unwrap();
-        assert!(at.oversized.is_empty());
+        assert_eq!(at.oversized, [] as [OversizedArtifact; 0]);
         let over = check(&sized("draft", &[("plan.md", 101)])).unwrap();
         assert_eq!(over.oversized.len(), 1);
         assert_eq!(over.oversized[0].pages, 2);

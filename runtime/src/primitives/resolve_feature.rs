@@ -279,7 +279,7 @@ mod tests {
             Some("specs/022-deterministic-runtime")
         );
         assert_eq!(result.status.as_deref(), Some("in-progress"));
-        assert!(result.candidates.is_empty());
+        assert_eq!(result.candidates, [] as [String; 0]);
         assert!(result.scenario.is_none());
     }
 
@@ -438,7 +438,7 @@ mod tests {
         seed(tmp.path());
         let result = run(&args("no-such-feature", None), tmp.path()).unwrap();
         assert_eq!(result.outcome, ResolveFeatureOutcome::NotFound);
-        assert!(result.candidates.is_empty());
+        assert_eq!(result.candidates, [] as [String; 0]);
 
         let by_number = run(&args("404", None), tmp.path()).unwrap();
         assert_eq!(by_number.outcome, ResolveFeatureOutcome::NotFound);

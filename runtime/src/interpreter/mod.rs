@@ -1221,7 +1221,10 @@ mod tests {
             ]
         );
         let waivers = serde_json::json!({ "notices": ["waiver expired: x"] });
-        assert!(session_report_lines("process-waivers", &waivers).is_empty());
+        assert_eq!(
+            session_report_lines("process-waivers", &waivers),
+            [] as [String; 0]
+        );
     }
 
     fn loc() -> SourceRange {
@@ -1893,11 +1896,9 @@ mod tests {
         );
         for request in requests(&envelopes) {
             assert_eq!(request["request"]["spec-path"], "specs/001-x/spec.md");
-            assert!(
-                !request["request"]["rule"]["verification"]
-                    .as_str()
-                    .unwrap()
-                    .is_empty()
+            assert_ne!(
+                request["request"]["rule"]["verification"].as_str().unwrap(),
+                ""
             );
         }
         let analysis =

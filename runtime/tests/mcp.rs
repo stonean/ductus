@@ -607,7 +607,10 @@ async fn process_waivers_applies_via_mcp() {
     let applied = obj["applied"].as_array().unwrap();
     assert_eq!(applied.len(), 1);
     assert_eq!(applied[0]["rule"], "SEC-BE-014");
-    assert!(obj["expired"].as_array().unwrap().is_empty());
+    assert_eq!(
+        obj["expired"].as_array().unwrap().as_slice(),
+        [] as [Value; 0]
+    );
 }
 
 /// `process-decisions` answers over MCP with the kebab-case wire names the
@@ -658,8 +661,14 @@ async fn process_decisions_classifies_via_mcp() {
     assert_eq!(expired.len(), 1);
     assert_eq!(expired[0]["outcome"], "discarded");
     assert_eq!(expired[0]["reason"], "cited for a future endpoint");
-    assert!(obj["retained"].as_array().unwrap().is_empty());
-    assert!(!obj["notices"].as_array().unwrap().is_empty());
+    assert_eq!(
+        obj["retained"].as_array().unwrap().as_slice(),
+        [] as [Value; 0]
+    );
+    assert_ne!(
+        obj["notices"].as_array().unwrap().as_slice(),
+        [] as [Value; 0]
+    );
 }
 
 #[tokio::test]

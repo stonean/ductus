@@ -435,7 +435,7 @@ mod tests {
         assert_eq!(runtime[0].route, "scenario");
         assert!(runtime[0].reason.contains("check-artifacts"));
         assert!(!runtime[0].reopens, "022 is in-progress, no back-edge");
-        assert!(result.skipped.is_empty());
+        assert_eq!(result.skipped, [] as [RoutingSkip; 0]);
         assert!(result.gate_required);
     }
 
@@ -570,7 +570,7 @@ mod tests {
         );
         let result = run(&args("webhook delivery retries"), tmp.path()).unwrap();
         assert!(result.candidates.is_empty(), "{:?}", result.candidates);
-        assert!(result.skipped.is_empty());
+        assert_eq!(result.skipped, [] as [RoutingSkip; 0]);
         assert!(!result.derivation_incomplete);
         assert_eq!(
             result.sources_examined,
@@ -584,7 +584,7 @@ mod tests {
     fn unreadable_spec_root_is_skipped_rather_than_read_as_no_candidates() {
         let tmp = tempdir().unwrap();
         let result = run(&args("webhook delivery retries"), tmp.path()).unwrap();
-        assert!(result.candidates.is_empty());
+        assert_eq!(result.candidates, [] as [RoutingCandidate; 0]);
         assert!(result.derivation_incomplete);
         assert!(result.skipped.iter().any(|s| s.source == "spec-corpus"));
         assert!(
@@ -638,7 +638,7 @@ mod tests {
         a.routed_by = Some("   ".into());
         let result = run(&a, tmp.path()).unwrap();
         assert!(result.gate_required);
-        assert!(!result.candidates.is_empty());
+        assert_ne!(result.candidates, [] as [RoutingCandidate; 0]);
     }
 
     #[test]

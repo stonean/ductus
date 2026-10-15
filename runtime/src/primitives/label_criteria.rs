@@ -344,7 +344,7 @@ mod tests {
 
         let result = run(&args(), tmp.path()).unwrap();
         assert!(!result.changed, "idempotent: {:?}", result.assigned);
-        assert!(result.assigned.is_empty());
+        assert_eq!(result.assigned, [] as [LabelAssignment; 0]);
         assert_eq!(spec_text(tmp.path()), after_first);
     }
 
@@ -411,7 +411,7 @@ mod tests {
         let result = run(&args(), tmp.path()).unwrap();
 
         assert!(!result.changed);
-        assert!(result.assigned.is_empty());
+        assert_eq!(result.assigned, [] as [LabelAssignment; 0]);
         assert_eq!(spec_text(tmp.path()), before, "no counter is created");
     }
 

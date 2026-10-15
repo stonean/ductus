@@ -274,7 +274,7 @@ mod tests {
         let dir = repo_with_config(None);
         let result = run_in(&dir);
         assert_eq!(result.examined, 0);
-        assert!(result.loaded.is_empty());
+        assert_eq!(result.loaded, [] as [ConstitutionRecord; 0]);
         assert!(
             result.skipped.is_empty(),
             "nothing registered is not the same as something unreadable"
@@ -304,7 +304,7 @@ mod tests {
         let result = run_in(&dir);
         assert_eq!(result.examined, 1);
         assert_eq!(result.loaded.len(), 1);
-        assert!(result.skipped.is_empty());
+        assert_eq!(result.skipped, [] as [ConstitutionRecord; 0]);
 
         let record = &result.loaded[0];
         assert_eq!(record.alias, "acme");
@@ -322,7 +322,7 @@ mod tests {
         ));
         let result = run_in(&dir);
         assert_eq!(result.examined, 1);
-        assert!(result.loaded.is_empty());
+        assert_eq!(result.loaded, [] as [ConstitutionRecord; 0]);
         assert_eq!(result.skipped.len(), 1);
         assert_eq!(
             result.skipped[0].outcome,

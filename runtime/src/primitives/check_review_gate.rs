@@ -1360,7 +1360,7 @@ mod tests {
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
 
         assert!(result.passed);
-        assert!(result.cross_spec_impact.is_empty());
+        assert_eq!(result.cross_spec_impact, [] as [CrossSpecImpactEntry; 0]);
     }
 
     /// An empty list is the same state as an absent key — the posture
@@ -1376,7 +1376,7 @@ mod tests {
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
 
         assert!(result.passed);
-        assert!(result.cross_spec_impact.is_empty());
+        assert_eq!(result.cross_spec_impact, [] as [CrossSpecImpactEntry; 0]);
     }
 
     /// The check sits ahead of the `review:` block, so an undischarged
@@ -1523,7 +1523,7 @@ mod tests {
         assert!(result.passed);
         assert!(result.blocked_by.is_none());
         assert!(result.message.is_none());
-        assert!(result.violations.is_empty());
+        assert_eq!(result.violations, [] as [MarkdownViolation; 0]);
         // This fixture is a bare tempdir with no git repository, so the gate
         // genuinely cannot inspect the working tree and says so. The
         // assertion used to read `guidance.is_none()`, which is precisely the
@@ -1850,7 +1850,7 @@ mod tests {
                 "blocked: markdownlint-cli2 exited 2 for specs/007-gate — resolve the lint failure before completing"
             )
         );
-        assert!(result.violations.is_empty());
+        assert_eq!(result.violations, [] as [MarkdownViolation; 0]);
     }
 
     #[test]

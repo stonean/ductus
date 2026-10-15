@@ -89,7 +89,10 @@ mod tests {
             target.scenario_path.as_deref(),
             Some("specs/055-a/scenarios/s.md")
         );
-        assert!(result.notices.is_empty());
+        assert_eq!(
+            result.notices,
+            [] as [crate::schema::primitives::SessionNotice; 0]
+        );
     }
 
     #[test]

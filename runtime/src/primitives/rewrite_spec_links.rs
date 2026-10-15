@@ -595,7 +595,10 @@ mod tests {
 
         let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
 
-        assert!(result.rewritten.is_empty());
+        assert_eq!(
+            result.rewritten,
+            [] as [crate::schema::primitives::RewrittenFile; 0]
+        );
         // The distinction the count exists for.
         assert_eq!(result.examined, 2);
         assert!(read(tmp.path(), "050-alpha/spec.md").contains("No pointers here."));
@@ -615,7 +618,10 @@ mod tests {
 
         let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
 
-        assert!(result.rewritten.is_empty());
+        assert_eq!(
+            result.rewritten,
+            [] as [crate::schema::primitives::RewrittenFile; 0]
+        );
         assert!(read(tmp.path(), "050-alpha/spec.md").contains("../1234.1-staged-cache/spec.md"));
     }
 
@@ -633,7 +639,10 @@ mod tests {
 
         let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
 
-        assert!(result.rewritten.is_empty());
+        assert_eq!(
+            result.rewritten,
+            [] as [crate::schema::primitives::RewrittenFile; 0]
+        );
         assert!(
             read(tmp.path(), "050-alpha/spec.md")
                 .contains("acme/api/blob/main/specs/1234.1-staged")
