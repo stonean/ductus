@@ -2,7 +2,15 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
-## [Unreleased]
+## [0.59.3] — 2026-10-15
+
+The runtime's two dependencies a major version behind, `zip` and `rmcp`, move
+to their latest releases, and it is built with Rust 1.99.0. A patch release:
+no primitive gains an argument or a result field, and the MSRV stays 1.89.
+Unlike 0.59.2, the runtime's own code changes, in three source files, to meet
+the new APIs and clippy 1.99. This repository also gains a weekly check that
+the runtime stays current (`scripts/check-runtime-currency.sh`, run by
+`runtime-currency.yml`), which reaches no adopter.
 
 ### Changed
 
