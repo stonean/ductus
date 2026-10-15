@@ -2,6 +2,22 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [Unreleased]
+
+### Changed
+
+- **`zip` advanced 8.6.0 → 9.0.3, one major version.** `extract-archive`'s
+  zip path behaves as before. An entry whose path escapes the destination is
+  still rejected as an unsafe path and named in the error, and a new test now
+  holds that, since nothing did before. zip 9 decodes an entry's name on
+  demand, so the error reads the name through that decode, which cannot fail
+  in practice. Upstream's read-side hardening comes with it: a read that runs
+  past an entry's declared size fails, a ZIP64 size that overflows is
+  rejected, and so is an empty archive whose central directory offset lies
+  past its end record. Its symlink and permission fixes are in zip's own
+  extraction, which `extract-archive` does not use. On macOS and the BSDs,
+  zip 9 adds `nix` to the dependency graph.
+
 ## [0.59.2] — 2026-10-14
 
 A new §grounding rule from spec 050, the three `§` references 0.59.1 left

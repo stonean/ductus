@@ -213,7 +213,13 @@ fn extract_zip_capped(
         let raw_path = entry
             .enclosed_name()
             .ok_or_else(|| PrimitiveError::UnsafeArchivePath {
-                entry: entry.name().to_string(),
+                // `name()` decodes on demand since zip 9 and cannot fail in
+                // practice: bytes that are not UTF-8 fall back to cp437,
+                // which maps every byte. The raw-bytes arm satisfies the type.
+                entry: entry.name().map_or_else(
+                    |_| String::from_utf8_lossy(entry.name_raw()).into_owned(),
+                    std::borrow::Cow::into_owned,
+                ),
             })?;
         let safe = safe_join(dest, &raw_path)?;
         // Zip has no first-class symlink entry type — a symlink is a
@@ -443,6 +449,23 @@ mod tests {
         assert!(result.files.contains(&"dir/b.txt".to_string()));
         assert_eq!(fs::read(dest.join("a.txt")).unwrap(), b"alpha");
         assert_eq!(fs::read(dest.join("dir/b.txt")).unwrap(), b"beta");
+    }
+
+    #[test]
+    fn zip_entry_escaping_dest_is_rejected_by_name() {
+        let tmp = tempfile::tempdir().unwrap();
+        let archive = tmp.path().join("escape.zip");
+        make_zip(&archive, &[("../escaped.txt", b"outside")]);
+
+        let dest = tmp.path().join("out");
+        fs::create_dir_all(&dest).unwrap();
+        let err = extract_zip(&archive, &dest).unwrap_err();
+
+        assert!(
+            matches!(&err, PrimitiveError::UnsafeArchivePath { entry } if entry == "../escaped.txt"),
+            "got: {err:?}"
+        );
+        assert!(!tmp.path().join("escaped.txt").exists());
     }
 
     #[test]
