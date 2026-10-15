@@ -130,7 +130,7 @@ The two files the runtime reads out of the per-project directory resolve through
 | Tier | Config | Session | Introduced by |
 | --- | --- | --- | --- |
 | 1 | `.ductus/config.toml` | `.ductus/session.toml` | [049](../049-rename-govern-to-ductus/spec.md) |
-| 2 | `.ductus/config.toml` | `.ductus/session.toml` | [042](../042-consolidate-govern-per-project-files-under-govern-directory/spec.md) |
+| 2 | `.govern/config.toml` | `.govern/session.toml` | [042](../042-consolidate-govern-per-project-files-under-govern-directory/spec.md) |
 | 3 | `.govern.toml` | `.govern.session.toml` | pre-042 |
 
 **Reads** return the newest tier that exists, falling back to the **oldest** when none does (a missing file the caller treats as "config absent" → defaults). **Writes** return the newest tier that exists, falling back to the **newest** when none does (a fresh project cuts over immediately; a pre-migration write stays on the file already holding the other sections). That empty-chain difference is the only place the two disagree.
@@ -189,8 +189,7 @@ Result:
 {
   "frontmatter": {
     "status": "clarified",
-    "dependencies": ["021-runtime-boundary"],
-    "review": { }
+    "dependencies": ["021-runtime-boundary"]
   },
   "sections": [
     { "heading": "Motivation", "level": 2, "body": "..." },
@@ -442,7 +441,7 @@ Args:
   "feature": "042-widget", "analyzed-at": "2026-09-06T14:00:00Z",
   "analyzed-against": "abc123", "hard-fail": 0, "blocking-findings": 0,
   "advisory": 8,
-  "unexamined-by-reason": { "not-a-live-claim": 79, "root-absent": 26 },
+  "unexamined-by-reason": [["not-a-live-claim", 79], ["root-absent", 26]],
   "findings": [{ "tier": "advisory", "family": "link-adjacent-drift",
     "message": "...", "path": "specs/042-widget/spec.md",
     "disposition": { "outcome": "discarded", "reason": "..." } }],
@@ -632,7 +631,7 @@ to check against* are the same result: `known` is built by iterating
 Args:
 
 ```json
-{ "script": "scripts/gen-spec-deps.sh" }
+{ "script": "scripts/gen-help-tables.sh" }
 ```
 
 Result:
@@ -850,7 +849,7 @@ Both staleness checks are one computation — `analyze_subjects::freshness_of`, 
 | `review.md` | `scenarios/*.md`, `data-model.md` | `reviewed-digest` |
 | `analysis.md` | every `.md` under the feature — `review.md` and `spec.md` included, `analysis.md` itself **excluded** | `analyzed-digest` |
 
-That inversion is deliberate. `review.md` and `spec.md` are `/{project}:review`'s **outputs**, so counting them would stale every review the instant it was recorded; they are `/{project}:analyze`'s **inputs**, and `review-state-drift` asserts on `review.md`'s record directly, so excluding them there would exempt the edit that most often invalidates an analyze record. (`spec.md`'s exclusion from the review set rested on `write-review` touching it, which spec 057 stopped; the set is deliberately left unchanged rather than widened, since adding it would stale every review on any spec-body edit.) `tasks.md` and `plan.md` are outside the review's set for a separate reason — the first is ephemeral by construction (§tasks-phase), the second churns as Affected Files are revised.
+That inversion is deliberate. `review.md` is `/{project}:review`'s **output**, so counting it would stale every review the instant it was recorded, and `spec.md` stays outside the review set because counting it would stale every review on any spec-body edit. Both are `/{project}:analyze`'s **inputs**, and `review-state-drift` asserts on `review.md`'s record directly, so excluding them there would exempt the edit that most often invalidates an analyze record. `tasks.md` and `plan.md` are outside the review's set for a separate reason — the first is ephemeral by construction (§tasks-phase), the second churns as Affected Files are revised.
 
 **The comparison is of content, not commits, and that replaced a design that produced false blocks.** Both commands read the **working tree**; `reviewed-against` and `analyzed-against` record a **commit**. Those coincide only when the tree is clean, and at the moment either command runs it usually is not — `/{project}:review` has just written `review.md` (and, before spec 057 gave that record one home, the spec's `review:` block with it), and `mark-task` and `mark-criterion` rewrote `tasks.md` and `spec.md` before that. Diffing the recorded sha therefore blocked records whose run had genuinely read the current content, as soon as that content was committed, and a gate with false positives is the one people route around. Each record now carries a per-path sha256 of what its run read, with the analyze record's own artifact **excluded from the subject set** — the record is written after the subjects are read, so a digest covering it could never match. That exclusion was block surgery on `spec.md`'s `analyze:` block until spec 057 moved the record; `spec.md` is digested **whole** now, and `analysis.md` is not a subject. Excising only its frontmatter was tried and was insufficient: `write-analysis` rewrites the report body in the same call, so a run whose findings changed staled itself and converged only on a second identical run. The two shas survive as **provenance**, read for exactly one thing: the mechanical-sweep rename exemption, which genuinely needs two trees and whose candidates are reported rather than dropped when they are unavailable.
 
@@ -1332,11 +1331,8 @@ Request payload:
 
 ```json
 {
-  "task": {
-    "number": "3",
-    "heading": "Implement read-spec primitive",
-    "subtasks": ["..."]
-  },
+  "constitution-excerpts": ["..."],
+  "constitution-excerpts-unexaminable": ["anchor-unresolved: §spec-phase"],
   "plan-relevant-files": [
     { "path": "runtime/src/primitives/read_spec.rs", "content": "..." },
     { "path": "runtime/src/schema/spec.rs", "content": "..." }
@@ -1345,8 +1341,11 @@ Request payload:
     "runtime/**",
     "specs/022-deterministic-runtime/**"
   ],
-  "constitution-excerpts": ["..."],
-  "constitution-excerpts-unexaminable": ["anchor-unresolved: §spec-phase"]
+  "task": {
+    "number": "3",
+    "heading": "Implement read-spec primitive",
+    "subtasks": ["..."]
+  }
 }
 ```
 
