@@ -50,11 +50,19 @@ Each pick has a one-line rationale; cargo-version pins go into `Cargo.toml`.
 - `thiserror` — typed error definitions per primitive and interpreter surface.
 - `anyhow` — `main()` error bubbling only; not used in primitive APIs.
 - `regex` — limited use in lints (e.g., anchor reference matching). The bulk of "matching" is structural via `pulldown-cmark` events.
-- `serde_norway` — frontmatter parsing in `read-spec` and `validate-frontmatter`. Chosen over hand-rolled because frontmatter is real YAML; it replaced `serde_yaml` in 0.11.1 (`5e82f339`).
+- `serde_norway` — frontmatter parsing in `read-spec` and `validate-frontmatter`. Chosen over hand-rolled because frontmatter is real YAML; it replaced `serde_yaml` in 0.11.1 (`5e82f339`). It is also the safe-loading mode `BE-INPUT-008` asks a spec to name: YAML is deserialized only into the typed Rust structures the caller names (`frontmatter_status` in `runtime/src/primitives/mod.rs` reads a `Frontmatter`), so a document cannot choose what is constructed, and parsing runs no code. TOML configuration goes through `toml` and protocol messages through `serde_json` on the same terms.
 - `walkdir` — `derive-boundary` and lint primitives need recursive directory walks.
 - `git2` — `derive-boundary` and `check-stuck` need access to git history. Rust bindings to the C library libgit2, which the `vendored-libgit2` feature (`runtime/Cargo.toml`) compiles from bundled source and links statically, so no system libgit2 is needed; no shell-out to `git`, which would couple the runtime to system git on PATH.
 
 No `tracing`, no `log`, no async logging crates. Human-readable stderr output uses `eprintln!`; structured `progress` JSON messages over stdout are emitted by the interpreter directly. Observability is a single function in `src/io.rs` that writes one JSON object per line. Keeping the dependency surface tight matters because every new crate is supply-chain surface for a tool that runs in every adopter's environment.
+
+Nothing secret reaches stderr (`BE-LOG-002`). Its lines are diagnostics: paths, parse errors, and guidance. The one value the runtime holds that can carry a credential is a proxy URL, and `ProxyEnv` in `runtime/src/primitives/fetch_archive.rs` deliberately implements no `Debug`, so it is never formatted. The one raw echo, an unparseable stdin line under `runtime exec` (`runtime/src/io.rs`), returns the host's own input to the host's own stderr.
+
+### Dependency pinning, provenance, and upgrades
+
+- **Pinned** (`BE-DEPS-002`). `runtime/Cargo.lock` is committed, and every CI build and test and every release build runs `--locked` (`.github/workflows/runtime.yml`, `.github/workflows/runtime-release.yml`), so the lockfile alone decides what ships.
+- **Upgraded on a schedule** (`BE-DEPS-002`). `.github/workflows/runtime-currency.yml` runs `scripts/check-runtime-currency.sh` every Monday: the lockfile, the direct dependencies' major versions, the pinned toolchain, and the advisories. A red run is fixed by a lockfile refresh, a major bump, a toolchain bump, or a dependency update, each committed on its own and shipped through the ordinary gate and release. `cargo audit` also runs on every push that touches the runtime (`runtime.yml`) and as a release-gate job (`runtime-release.yml`).
+- **Provenance: a documented exception** (`BE-DEPS-004`). The runtime's build verifies no publisher signature or provenance attestation for its crates. Its workflows run no such step, and this plan assumes cargo offers none for crates.io packages beyond checking each downloaded crate against the sha256 `checksum` its `runtime/Cargo.lock` entry carries, so the crates cannot meet the rule as written. That checksum and the audits above stand in for it. Remediation: adopt signature or attestation verification for crates.io dependencies once cargo supports it. `markdownlint-cli2`, which `lint-markdown` runs through the project's own `npx`, is the project's npm dependency rather than the runtime's, and npm resolves it.
 
 ### Parser strategy: pulldown-cmark events + hand-walked structural recognizer
 
@@ -82,6 +90,8 @@ The interpreter `panic`s if it reads a malformed JSON line on stdin — that is 
 ### MCP surface: one tool per primitive, no orchestration tools
 
 `runtime mcp` starts an `rmcp` server exposing one tool per primitive in `spec.md` §The primitive library, with tool names following the `gov-rt:<verb>-<noun>` convention from the resolved-questions section. Tool input schemas are derived from each primitive's args struct via `schemars`. No orchestration tools (`run-procedure`, `walk-tasks`, etc.) are exposed via MCP — orchestration is the subprocess interpreter's job, not the MCP server's. This keeps the MCP surface flat and stable.
+
+A tool result is bounded by the project it describes rather than paginated (`BE-PAYLOAD-001`). A list grows with the project's own tree. `compute-review-scope`'s `scope` grows with the plan's Affected Files and the files modified since its base, with ignored files left out ([review-scope-includes-uncommitted-work](scenarios/review-scope-includes-uncommitted-work.md)), and a body is one artifact's, as with `read-spec` and `read-tasks`, whose subjects `check-artifact-size` warns about past the configured read size. Pagination is not provided, because the subject is the project's own working tree and spec corpus. A result over a host's tool-output cap is re-run through the runtime binary with its output redirected to a file, as `framework/commands/review.md` step 1 directs for `compute-review-scope`.
 
 ### Atomic writes: tempfile in same directory, then `std::fs::rename`
 
@@ -258,6 +268,15 @@ Already resolved in the spec; concrete mapping:
   - `64-78` — `sysexits.h` ranges for I/O, permission, OS errors.
 - Exit codes `128+` — signal-killed (no terminal message). Host fallback applies.
 
+### `fetch-archive` transport
+
+`fetch-archive` is the runtime's one outbound HTTP path (the `reqwest` entry under Trade-offs). Code holds its transport commitments, not configuration:
+
+- **HTTPS by default** (`BE-DATA-001`). `validate_fetch_url` in `runtime/src/primitives/fetch_archive.rs` refuses every scheme but `https` before a connection is made (test `validate_fetch_url_rejects_non_https_scheme`). The one exception is opt-in: a host the operator names in `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS`, which is empty by default, is exempt from the https-only and internal-address screens. It exists for an internal mirror or local testing ([runtime-review-019-hardening](scenarios/runtime-review-019-hardening.md)). The variable is optional, is read once at startup, and is listed in the environment-variable inventory, `docs/runtime.md` §Environment variables (`CFG-ENV-001`, `CFG-ENV-002`).
+- **TLS 1.2 or later.** `reqwest` is built with its `rustls` backend and default features off (`runtime/Cargo.toml`). rustls 0.23 implements only TLS 1.3 and 1.2 (`ALL_VERSIONS` in its `versions.rs`), so an older protocol cannot be negotiated.
+- **Full certificate and hostname validation** (`BE-DATA-011`). rustls verifies the chain and hostname against the system trust store (`runtime/src/primitives/fetch_archive.rs` module docs). On Linux and other non-Apple Unix the roots are loaded once per process, as 048's `fetch-archive-reads-its-proxy-once` scenario requires. Nothing in the runtime disables verification: there is no `danger_accept_invalid_certs` and no custom verifier, and an allowlisted host's `https` URL is verified like any other.
+- **A bounded wait** (`BE-TIMEOUT-001`). The request runs under `reqwest`'s blocking-client default, a 30-second total timeout (`Timeout::default` in reqwest 0.13.5's `blocking/client.rs`), which `fetch-archive` does not override. It is a library default rather than a named constant of the runtime's own, so a `reqwest` upgrade that changed it would change this bound silently.
+
 ### Trade-offs
 
 Considered and rejected:
@@ -271,7 +290,7 @@ Considered and rejected:
 - **In-process LLM client** — explicit non-goal (`Determinism only` principle).
 - **Build the runtime as part of the markdown-only-pipeline workflow PR-by-PR** — rejected as default; only the parseability check builds it locally. The markdown-only assertion remains intact.
 - **Cross-platform parity testing in CI** — out of scope for this spec. The release workflow builds cross-platform artifacts; parity testing is Linux-only in `runtime.yml`. macOS/Windows binary correctness is covered by the release workflow's smoke test (each platform's binary runs `runtime --version` after build).
-- **Embedding a markdown linter natively** — explicit non-goal in spec; runtime wraps `npx markdownlint-cli2` via the `lint-markdown` primitive. Wrapping a tool means waiting on a child process, so `lint-markdown` and `run-generator` each run theirs under a bounded timeout (`BE-TIMEOUT-001`) — named constants in their modules, `LINT_MARKDOWN_TIMEOUT` and `GENERATOR_TIMEOUT`, five minutes each — and a child that outlives it is killed and the call errors naming the timeout.
+- **Embedding a markdown linter natively** — explicit non-goal in spec; runtime wraps `npx markdownlint-cli2` via the `lint-markdown` primitive. Wrapping a tool means waiting on a child process, so `lint-markdown` and `run-generator` each run theirs under a bounded timeout (`BE-TIMEOUT-001`) — named constants in their modules, `LINT_MARKDOWN_TIMEOUT` and `GENERATOR_TIMEOUT`, five minutes each — and a child that outlives it is killed and the call errors naming the timeout. Both spawn their child with an argument vector, never a shell string (`BE-INPUT-003`). `run-generator` passes the script path and `--dry-run` as arguments to `bash` (`runtime/src/primitives/run_generator.rs`). `lint-markdown` resolves `npx` without a login shell ([lint-markdown-tool-resolution](scenarios/lint-markdown-tool-resolution.md)).
 
 ### Known limitations
 
