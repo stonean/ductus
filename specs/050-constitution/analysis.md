@@ -1,7 +1,7 @@
 ---
 spec: 050-constitution
-last-run: 2026-10-15T21:21:06Z
-analyzed-against: bd1c7567e7c846c2aba1b7140c007b96fed7139e
+last-run: 2026-10-15T21:23:42Z
+analyzed-against: eb63695ad0d8339fa39f0002e01d551effae12bf
 hard-fail: 0
 blocking-findings: 0
 advisory: 1
@@ -24,7 +24,7 @@ analyzed-digest:
   scenarios/knowledge-routes-by-population-not-by-kind.md: 0e934ea65cbaf2bf31acc4f45c461bfb868be45deb5aa9fa6601c59b8c003c5c
   scenarios/report-outcomes-not-edits.md: caf13342d7fe0a5af4108024cf424ab921030c896f0743307cf5111be2e163ab
   spec.md: 79c6b9b0c83748023101d6246dd941fe2bffa6a191fbbcdb645a77fae3b0de68
-  tasks.md: 098e48131a2b1b45ce5e7da0d084cb0622fb469da71e6d153629362776514e4c
+  tasks.md: d238786bcb795bfdabbde58b13e22a574c64d476e6f489150abff506b204d59c
 blocking: false
 dispositions:
   fixed: 0
