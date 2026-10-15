@@ -1,13 +1,14 @@
 ---
 spec: 022-deterministic-runtime
-last-run: 2026-10-15T22:28:30Z
-reviewed-against: 1edce742c0cf6e6c1047cc2deb96927c391b7a84
-diff-base: cb5bc06d481098318565e1f11d0294142fb92b4b
+scenario: merge-managed-block-renamed-subsection
+last-run: 2026-10-15T22:47:52Z
+reviewed-against: af60cd47e482b6f41af6925a2e255f687895b55a
+diff-base: b8eedc430f12e398efe15d2ea82e4c7b498af241
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 3
-scope: 35
+examined: 1
+scope: 40
 skipped-passes: []
 reviewed-digest:
   data-model.md: d6c21dfb4f3bf76255b8d4c142daba7bdd5cc9dc9d002abb45a26d78610af628
@@ -70,7 +71,7 @@ reviewed-digest:
   scenarios/mark-task-untick-symmetry.md: 0b04c0e1f2091244701f75c435884cb0857a2be728eac41f84fbe41c8df92fb0
   scenarios/mcp-arg-unknown-field-strictness.md: 57c17fb05d72b8f47f64140fc0d8ba6df0c0b8f757282e41d1036aa222309a1b
   scenarios/merge-managed-block-multi-subsection-end.md: 7f2c02450d100d801dccbffb9336331a114257fd2040d36ad298d65e6edc3234
-  scenarios/merge-managed-block-renamed-subsection.md: 61340856803e5d6891c0e27a841d6fd894be838c1568ed11d9e9c09ae195297f
+  scenarios/merge-managed-block-renamed-subsection.md: c03abb5ae0097d3b15c8a74ef472cdf77d0946ffd2a1625c79351cae300e9a84
   scenarios/merge-managed-block-subsection-insertion.md: 2a0a7f5f443ef78811f1550a34b419054c9d9bb29bc800b51b86033be350e2f8
   scenarios/merge-managed-block-trailing-append.md: 6f18642416470c96b6f582a0305d62137a9ae2ec6f1ec054eccac421d8e68a4f
   scenarios/numbered-heading-grammar-single-source.md: 359d35403e9b3f853e4a7cbcca71f3fc032ad556406bae6a584272c6bcd97862
@@ -129,7 +130,7 @@ reviewed-digest:
   scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
 blocking: false
 dispositions:
-  fixed: 2
+  fixed: 0
   routed: 0
   discarded: 0
   undispositioned: 0
@@ -139,7 +140,7 @@ dispositions:
 
 ## Summary
 
-Review of tasks 139 and 140, a documentation-only reopen, at 1edce742 with two fixes in the working tree. The window is cb5bc06d (the parent of the reopen) to the working tree; modified-since is data-model.md, spec.md and tasks.md, and no code changed. Examined 3 of 35: those three, each read in full in its final form — data-model.md across its two read pages, having first read the whole pre-trim file (1,552 lines) before any cut. The other 32 are plan-affected runtime, workflow and command paths this reopen does not touch. Also opened, to confirm each pointer target states the rule it is pointed at for: the-promotion-coverage-line, argument-hint-needs-a-token, orphaned-reference-check, orphaned-reference-historical-roots, orphan-check-adopter-authored-references, anchor-reference-kinds, check-artifacts-skipped-targets, criterion-label-assignment, severity-is-a-closed-set-not-a-string, and status.md's Rendering reference; review-staleness-gate does not state the undeterminable rule, so that contract stays in the data model. Results: spec.md 58,284 -> 47,190 bytes, data-model.md 121,695 -> 99,953 (3 read pages -> 2). Every JSON schema block survives except the removed Inbox-row example, whose shape is dashboard's example now (89 -> 88); the only heading removed is that section. Corrections against code: resolution tier 2 restored to .govern/ (paths.rs:45,69), read-spec's example lost the review block, run-generator's example names a script that exists, write-analysis's unexamined-by-reason is pairs (primitives.rs:935), writeCode's example is in serialization order (extensions.rs:125-146), the digest note no longer calls spec.md a review output; spec.md's AC2 and naming question state bare tool names (mcp/server.rs:271) and its distribution question names crates.io. Shapes were not otherwise re-verified against live output. Rule files: all eleven framework/rules/*.md; the change is spec prose, so quality-cross.md (QUAL-CLAIM-001) applies and the code-surface rules have nothing to fire on. Two observations, both fixed in the run. Links: 0 broken; lint clean.
+Scoped re-review at af60cd47 of one mechanical repair to a done spec. Base overridden with --since=b8eedc43, the commit before the repair: the default base is the parent of 022's last move into in-progress, which would re-review the whole size trim already reviewed at 1edce742, while the change being re-reviewed is two tokens in one scenario. The repair restores scenario merge-managed-block-renamed-subsection's incident narrative to its pre-510eb25c text: "049 renamed `.govern.session.toml` to `/.ductus/session.toml`" and "a dead `.govern.session.toml`", which 050's retired-filename sweep had rewritten into a self-contradiction (the old name on both sides of the rename, and a dead line naming the live file). The file is byte-identical to its pre-sweep version. Sweep residue is mechanical under §spec-lifecycle, so 022 is not reopened. Examined 1 of the scope: that scenario, read in full; the window's other modified files belong to 019 and 027 and are reviewed in 027's record (019's change is exempt as a uniform substitution, confirmed by Family 19). Rule files: all eleven framework/rules/*.md; the change is spec prose, so quality-cross.md (QUAL-CLAIM-001) applies and nothing else fires. No finding, no observation. The size-trim review this replaces (1edce742) recorded 0/0 with two observations fixed; git keeps it.
 
 ## MUST violations (blocking)
 
@@ -159,8 +160,7 @@ Review of tasks 139 and 140, a documentation-only reopen, at 1edce742 with two f
 
 ## Observations
 
-- convention — a stray period split "undeterminable" from its scenario parenthetical in Record freshness — `specs/022-deterministic-runtime/data-model.md` — **fixed**
-- convention — the dashboard paragraph describing the pre-rendered pipeline view no longer named its subject once the inbox-standing contract was placed before it — `specs/022-deterministic-runtime/data-model.md` — **fixed**
+*None.*
 
 ## Skipped passes
 

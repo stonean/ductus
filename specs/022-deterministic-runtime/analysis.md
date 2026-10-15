@@ -1,15 +1,15 @@
 ---
 spec: 022-deterministic-runtime
-last-run: 2026-10-15T22:29:50Z
-analyzed-against: fd8e44a6777605bb76b0358be7f09ad7b0ab94ec
+last-run: 2026-10-15T22:47:52Z
+analyzed-against: af60cd47e482b6f41af6925a2e255f687895b55a
 hard-fail: 0
 blocking-findings: 0
 advisory: 12
-unexamined: 0
+unexamined: 2
 analyzed-digest:
   data-model.md: d6c21dfb4f3bf76255b8d4c142daba7bdd5cc9dc9d002abb45a26d78610af628
   plan.md: 7fad46f150f25571ff0e0fc12f43d077642ae0dd080be3538575acadbbca701d
-  review.md: f783515b89541723b7d540f781aed595119abc4bcc51f41542c64305f41f6104
+  review.md: 318c7f3fd4341bea65ee721b0fc0a494b753d71dcab983ed5c6a87187e2f29c7
   scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md: d092f9d4f59c67c575cc59039a6e0fdf162546969de2820e747b609d7a3d43c7
   scenarios/a-done-spec-has-no-transition-to-gate.md: 2041c659a2dbee3e17a05a702a11c9b1f59d30ce68acc19f616889696b66da2b
   scenarios/a-multi-number-renumber-is-one-rewrite.md: 04723ad01613f62b14008250c9890e20ac338de82c32bd2f0797580e30ae7be2
@@ -69,7 +69,7 @@ analyzed-digest:
   scenarios/mark-task-untick-symmetry.md: 0b04c0e1f2091244701f75c435884cb0857a2be728eac41f84fbe41c8df92fb0
   scenarios/mcp-arg-unknown-field-strictness.md: 57c17fb05d72b8f47f64140fc0d8ba6df0c0b8f757282e41d1036aa222309a1b
   scenarios/merge-managed-block-multi-subsection-end.md: 7f2c02450d100d801dccbffb9336331a114257fd2040d36ad298d65e6edc3234
-  scenarios/merge-managed-block-renamed-subsection.md: 61340856803e5d6891c0e27a841d6fd894be838c1568ed11d9e9c09ae195297f
+  scenarios/merge-managed-block-renamed-subsection.md: c03abb5ae0097d3b15c8a74ef472cdf77d0946ffd2a1625c79351cae300e9a84
   scenarios/merge-managed-block-subsection-insertion.md: 2a0a7f5f443ef78811f1550a34b419054c9d9bb29bc800b51b86033be350e2f8
   scenarios/merge-managed-block-trailing-append.md: 6f18642416470c96b6f582a0305d62137a9ae2ec6f1ec054eccac421d8e68a4f
   scenarios/numbered-heading-grammar-single-source.md: 359d35403e9b3f853e4a7cbcca71f3fc032ad556406bae6a584272c6bcd97862
@@ -126,11 +126,13 @@ analyzed-digest:
   scenarios/writecode-boundary-derivation.md: 9e4d5b406b4d5e25c4a4dd9e5264995a5e4bc83075ec20eae2c3eb3e36adcd81
   scenarios/writecode-payload-bundling.md: 5c343929c3a42ac4406a02c173b6979231127b9583aabae171fee1f747d5084b
   scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
-  spec.md: 5c94166aa5e13a08757527a506f353ad2b9cb0dd8915b21565cbe8379a20b309
+  spec.md: 527fd7b6974ce3d4c4855d2ab4ec615d960d7c3d659d6845d2416512f68a3ed1
   tasks.md: 26017c13e16d09b0cc975a5192d2c55e25499f0f26272c4cb05c6a39c6336837
+unexamined-by-reason:
+  not-a-live-claim: 2
 blocking: false
 dispositions:
-  fixed: 1
+  fixed: 0
   routed: 0
   discarded: 12
   undispositioned: 0
@@ -201,7 +203,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 12 advisory; not blocking. 0 unexamined target(s). Dispositions: 1 fixed, 0 routed, 12 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 12 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 routed, 12 discarded, 0 undispositioned.
 
 ## Hard failures
 
@@ -228,8 +230,8 @@ decisions:
 
 ## Unexamined targets
 
-*None — every target was examined.*
+- not-a-live-claim: 2
 
 ## Fixed in this run
 
-- grounding — spec.md says every release ships five targets and publishes the ductus crate to crates.io without citing the release workflow — `specs/022-deterministic-runtime/spec.md` — **fixed**
+*None.*
