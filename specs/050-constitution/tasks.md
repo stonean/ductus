@@ -265,6 +265,6 @@ Implements `scenarios/a-retired-feature-leaves-no-spec.md`. The constitution sta
 
 ## 30. A review may precede its commit
 
-- [ ] Implement the behavior described in `scenarios/a-review-may-precede-its-commit.md`
+- [x] Implement the behavior described in `scenarios/a-review-may-precede-its-commit.md`
 
 - **Done when**: §implement-phase no longer carries the commit-first review bullet and no remaining constitution text requires a review to follow its commit; the AGENTS.md mirror drops the commit-first instruction and points its audit-after-commit corollary at §grounding's Rules list; plan.md's W7 classification row notes the retirement; markdownlint and the framework self-audit pass.
