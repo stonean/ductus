@@ -2,6 +2,29 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.59.5] — 2026-10-15
+
+A constitution change from spec 050: a review may run before its work is
+committed. The runtime's code and dependencies are unchanged. A patch
+release: no primitive gains an argument or a result field, and the MSRV stays
+1.89.
+
+### Changed
+
+- **§implement-phase: a review may precede its commit.** The constitution no
+  longer requires recording a review against a commit that already contains
+  what it reviewed. That rule rested on review staleness comparing commits,
+  and staleness is now judged by a digest of the spec artifacts the review
+  read, with `reviewed-against` kept as provenance. The natural order (edit,
+  review, analyze, then commit) is supported, and so is committing first.
+  Two sentences that assumed the old order now read correctly. §grounding's
+  rule on verifying a commit's contents names claims that a commit holds a
+  change, such as a completion report or a release, rather than review and
+  analysis records. §implement-phase's review-window bullet states the base
+  0.59.4 introduced: `HEAD` while a reopen is uncommitted. A check that reads
+  git history still runs after committing, as §grounding's Rules list already
+  required. Spec 050, scenario `a-review-may-precede-its-commit`.
+
 ## [0.59.4] — 2026-10-15
 
 Two fixes. The MCP server's handshake now names ductus and the runtime's
