@@ -690,6 +690,31 @@ mod tests {
         );
     }
 
+    /// A project whose path from the work tree holds a glob character. As a
+    /// glob the diff's pathspec matches no file, so the window would read as
+    /// empty with the work on disk (QUAL-CLAIM-001); it is literal. The test
+    /// above cannot tell the two apart, because `proj` matches either way.
+    #[test]
+    fn a_project_path_with_a_glob_character_is_matched_literally() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = Repository::init(tmp.path()).unwrap();
+        let project = tmp.path().join("app[v2]");
+        let spec_path = project.join("specs/001-x/spec.md");
+        write(&spec_path, &spec("planned"));
+        write(&project.join("src/old.rs"), "fn old() {}\n");
+        commit_all(&repo, "feat: plan");
+        write(&spec_path, &spec("in-progress"));
+        commit_all(&repo, "chore: begin");
+
+        write(&project.join("src/old.rs"), "fn old() { edited(); }\n");
+        write(&project.join("src/new.rs"), "fn new() {}\n");
+        let result = run(&args("001-x", None), &project).unwrap();
+        assert_eq!(
+            result.modified_since,
+            vec!["specs/001-x/spec.md", "src/new.rs", "src/old.rs"]
+        );
+    }
+
     #[test]
     fn missing_feature_is_operational_error() {
         let tmp = tempfile::tempdir().unwrap();
