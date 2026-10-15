@@ -284,6 +284,33 @@ The 9 entries the promotion-coverage notice reported unclassified on 2026-09-28,
 | The project root is not the git work tree's root, and every path that crosses between them must be converted | Runtime and command-source authoring; an adopter receives the behavior, not the rule |
 | An `assessSpecQuality` step's prose chooses the tier of rules the exec walker asks about, so a `-tier` word added to that prose can change what the step covers | Concerns authoring this framework's command sources |
 
+### Fourth round — classified 2026-10-15
+
+The 11 entries the promotion-coverage notice reported unclassified on 2026-10-15, judged by the same reword test and recorded the same way (AC1): **2 to promote, 9 project-only.** The verdicts are the operator's, confirmed 2026-10-15. Like the rounds before it, this is a deliberate round rather than a standing requirement, and AC1 is unchanged.
+
+**Promoted the same day by task 31.** Neither promotion needed a section of its own, because each extends a bullet or paragraph that already owns its subject. The review-window entry is the converse of §implement-phase's bullet on the review window: that bullet warns against narrowing a wide window by an override, and this entry covers a window too narrow to hold the fix. The push entry is a consequence of what §concurrent-features' *What stays shared* paragraph says sessions share, which is the branch's commits. Each entry's `AGENTS.md` line is now a pointer, and its lead phrase is byte-identical, so both keys still resolve. The anchor set is unchanged.
+
+#### Fourth round — promote
+
+| Entry | Reason |
+| --- | --- |
+| When a scenario is recorded after the fix it describes has landed, review it with `--since` | **R** — stated as *a fix committed before the reopen that records it lies outside the review window*; the window is the pipeline's, so every adopter that fixes before amending meets the same empty review |
+| Read what a push carries before pushing | **R** — stated without this repository's command; sessions sharing a working tree share its commits (§concurrent-features), so one push publishes another session's work in any adopter's checkout |
+
+#### Fourth round — project-only
+
+| Entry | Reason |
+| --- | --- |
+| Review an external pull request for correctness and simplicity before resolving its conflicts or merging it | This trunk-based repository takes outside work only as pull requests; what an adopter needs of it, re-verifying ticked criteria against the tree and picking checks by blast radius, already ships in §implement-phase and §grounding |
+| The runtime stays current | Adopters have no `runtime/` to keep current, as with the release entries |
+| Stop your own background tasks before writing a handoff | Concerns the agent's own background tasks and handoff notes, which the pipeline has no step for, like *use repo-relative paths in tool calls* |
+| A CI verdict comes from pushing `main` | This repository's trunk-based flow and release-tag distribution, as W1 and W3 |
+| Pi has no MCP client | Concerns maintaining this framework's Pi bridge |
+| The pre-commit hook regenerates the command mirrors from the working tree and stages them on every commit | This repository's hook and generated mirrors — a framework build step, as G2–G4 |
+| A primitive whose result has two shapes returns one struct with two flattened `Option` halves | Runtime authoring |
+| Since spec 062 the runtime reads a session identity from its own process environment | Runtime and test authoring; an adopter receives the behavior, not the rule |
+| A rule that assumes a deployed service does not fire against the runtime | Applies the rule set's triggers to this repository's runtime; an adopter's own system has its own shape |
+
 Two entries were reclassified after checking the constitution rather than the
 survey: **W14 and W15 are already promoted.** They are cases (b) and (c) of
 §spec-lifecycle's mechanical-edit rule, and both `AGENTS.md` entries already

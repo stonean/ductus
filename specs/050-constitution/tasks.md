@@ -268,3 +268,12 @@ Implements `scenarios/a-retired-feature-leaves-no-spec.md`. The constitution sta
 - [x] Implement the behavior described in `scenarios/a-review-may-precede-its-commit.md`
 
 - **Done when**: §implement-phase no longer carries the commit-first review bullet and no remaining constitution text requires a review to follow its commit; the AGENTS.md mirror drops the commit-first instruction and points its audit-after-commit corollary at §grounding's Rules list; plan.md's W7 classification row notes the retirement; markdownlint and the framework self-audit pass.
+
+## 31. Fourth classification round — the 11 entries the promotion-coverage notice reports unclassified
+
+- [x] `plan.md` §Classification: add *Fourth round — classified 2026-10-15* with the 11 rows keyed by lead phrase — 9 project-only, and promoted *a scenario recorded after its fix is reviewed with `--since`* and *read what a push carries before pushing* — each with its reason (operator decision, 2026-10-15)
+- [x] `framework/constitution.md`: promote the `--since` entry into §implement-phase's review-window bullet and the push entry into §concurrent-features' *What stays shared* paragraph, each reworded by the reword test; the anchor set stays byte-identical
+- [x] `AGENTS.md`: both promoted entries become pointers, each keeping its story and its lead phrase byte-identical so the table keys still resolve
+- [ ] Verify: the promotion-coverage family reports 0 unclassified and 0 unmatched keys; each promoted rule's distinctive phrasing finds one normative statement and pointers only (AC3); lint, generators, audit and `cargo test`
+
+- **Done when**: the promotion-coverage notice reports 0 unclassified, the promoted text has one canonical home, and the local gate passes
