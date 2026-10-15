@@ -1,14 +1,14 @@
 ---
 spec: 022-deterministic-runtime
 scenario: review-scope-includes-uncommitted-work
-last-run: 2026-10-15T15:56:08Z
-reviewed-against: a0c575797068bf2657efbdfe716de24fcd8d2dec
+last-run: 2026-10-15T16:06:08Z
+reviewed-against: 7d90678a55b38fb49fff706beca76eead6e306f6
 diff-base: 2e54f44d3a30e9fcfb345575b99ce7205de84df4
 must-violations: 0
-should-violations: 1
+should-violations: 0
 low-confidence: 0
 examined: 10
-scope: 42
+scope: 43
 skipped-passes: []
 reviewed-digest:
   data-model.md: 28ba99f6140fe5c0f9b101180cd450db522b577d5b508a71869353b7eb4983f4
@@ -139,7 +139,7 @@ dispositions:
 
 ## Summary
 
-The window is 2e54f44d to the working tree, which was clean at a0c57579. It holds the reopen of 022 for scenario `review-scope-includes-uncommitted-work` (task 136) and its fix in `compute_review_scope.rs`: `modified-since` now diffs from the base to the working tree, and an uncommitted transition into `in-progress` puts the base at `HEAD`. Beside it are the matching schema doc comments, `review.md`'s scope wording and its two generated copies, the changelog entry, and the acceleration scenario's pointer. Rule files loaded: all eleven `framework/rules/*.md` selected by `discover-rule-files`. `quality-cross.md` was read in full and governs the change; the security, API, concurrency, observability, performance, reliability and frontend files were checked by rule heading against a change that adds no network I/O, no new input source, no shell-out and no endpoint, and none applies. One SHOULD, QUAL-TEST-001: with the literal-pathspec flag removed, all 19 `compute_review_scope` tests still pass (mutation run during this review). The shipped behavior is correct: the built binary, run in a throwaway repository whose project directory is `pro[j]`, reported an uncommitted deletion, an unstaged edit and an untracked file. Checked and not recorded: an unborn `HEAD` errors as it did before, through `find_in_progress_commit`'s `push_head`; `write-review` sizes its scope before it writes `review.md`, so a first record's own file is not in its denominator; an unparseable `HEAD` copy of `spec.md` beside an `in-progress` one on disk puts the base at `HEAD`, which is where the history lookup puts it once that fix is committed, so the window is the same across the commit; and the data model carries no `modified-since` contract to drift. For the other seven new tests, the fix commit records how each was shown to fail (seven with the working-tree diff reverted, two with the `HEAD` base reverted, the completion test under the broader status-differs rule), which is QUAL-TEST-001's compliant form. **Examined 10 of 42.** The 10 are the window's modified files: the runtime file's non-test code read in full and its tests as their diff, the new scenario in full, the rest as their diffs over the base, and the two generated `review.md` copies compared line by line against the source's diff. Parts of plan-affected files were read for context and are not counted: `write_review.rs`'s scope sizing, `check_stuck.rs`'s transition lookup, `mod.rs`'s `ProjectRepository` and its literal-pathspec siblings, `diff_cross_spec.rs`'s working-tree diff and glob test, and the data model's `compute-review-scope` paragraph. The other 32 scope entries are plan-affected paths the window does not touch, most of them whole directories, and were not read.
+Re-run at 7d90678a after the fix for the one SHOULD the record at 15fc0386 carried, so the count states what is outstanding. The window is 2e54f44d to the working tree, which was clean at 7d90678a. It holds the reopen of 022 for scenario `review-scope-includes-uncommitted-work` (task 136) and its fix in `compute_review_scope.rs`: `modified-since` now diffs from the base to the working tree, and an uncommitted transition into `in-progress` puts the base at `HEAD`. Beside it are the matching schema doc comments, `review.md`'s scope wording and its two generated copies, the changelog entry, the acceleration scenario's pointer, and, since the first pass, the prior record and the new test. Rule files loaded: all eleven `framework/rules/*.md` selected by `discover-rule-files`. `quality-cross.md` was read in full and governs the change; the security, API, concurrency, observability, performance, reliability and frontend files were checked by rule heading against a change that adds no network I/O, no new input source, no shell-out and no endpoint, and none applies. No MUST or SHOULD finding. The first pass's QUAL-TEST-001 SHOULD (no test failed with `.disable_pathspec_match(true)` removed, because the only test through that pathspec names its project `proj`, which glob and literal matching treat alike) is closed by 7d90678a: `a_project_path_with_a_glob_character_is_matched_literally` puts the project at `app[v2]`, and with the flag removed it fails with an empty `modified-since` beside an uncommitted edit and an untracked file, which is the QUAL-CLAIM-001 shape the code comment names. Restored, all 20 `compute_review_scope` tests pass, and the commit's pre-commit hook ran 1923. The built binary, run in a throwaway repository whose project directory is `pro[j]`, also reported an uncommitted deletion, an unstaged edit and an untracked file. Checked and not recorded: an unborn `HEAD` errors as it did before, through `find_in_progress_commit`'s `push_head`; `write-review` sizes its scope before it writes `review.md`; an unparseable `HEAD` copy of `spec.md` beside an `in-progress` one on disk puts the base at `HEAD`, which is where the history lookup puts it once that fix is committed, so the window is the same across the commit; and the data model carries no `modified-since` contract to drift. For the other seven tests the task added, the fix commit records how each was shown to fail, which is QUAL-TEST-001's compliant form. **Examined 10 of 43.** The 10 are the window's modified files other than `review.md`: the runtime file's non-test code read in full and its tests as their diff, including the new test, the new scenario in full, the rest as their diffs over the base, and the two generated `review.md` copies compared line by line against the source's diff. `review.md` is this command's own prior output and is not counted. Parts of plan-affected files were read for context and are not counted: `write_review.rs`'s scope sizing, `check_stuck.rs`'s transition lookup, `mod.rs`'s `ProjectRepository` and its literal-pathspec siblings, `diff_cross_spec.rs`'s working-tree diff and glob test, and the data model's `compute-review-scope` paragraph. The other 32 scope entries are plan-affected paths the window does not touch, most of them whole directories, and were not read.
 
 ## MUST violations (blocking)
 
@@ -147,13 +147,7 @@ The window is 2e54f44d to the working tree, which was clean at a0c57579. It hold
 
 ## SHOULD violations (advisory)
 
-### SHOULD: QUAL-TEST-001 — no test fails when the diff's literal-pathspec flag is removed
-
-- **File**: `runtime/src/primitives/compute_review_scope.rs:671-691`
-- **Rule**: A test SHOULD fail when the behavior it names is removed or broken. A test that passes whether or not the code under test behaves as named SHOULD NOT be added or counted as coverage. That includes a test that exercises a path without asserting its result, one that pins only a value incidental to the behavior, and one whose assertion a fallback or default path satisfies as well as the primary path does.
-- **Finding**: `untracked_files_outside_a_subdirectory_project_are_left_out` is the only test through `diff_since`'s project pathspec, and its project directory is `proj`, a name glob and literal matching treat alike; its outside-file assertion is also held by the pre-existing `to_project` filter. With `.disable_pathspec_match(true)` removed, all 19 `compute_review_scope` tests still pass (mutation run during this review), though the code comment justifies the flag by QUAL-CLAIM-001: a project path holding `*`, `?` or `[` would match no file as a glob and report an empty window.
-- **Auto-fixable**: no
-- **Suggested fix**: Add a test whose subdirectory project's name holds a glob character (for example `app[v2]`, as `diff_cross_spec.rs`'s `a_project_path_with_a_glob_character_is_matched_literally` does), with an uncommitted edit and an untracked file inside it, asserting both are in `modified-since`. Show it fails with `.disable_pathspec_match(true)` removed and record that.
+*None.*
 
 ## Low-confidence findings
 
