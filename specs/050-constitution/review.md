@@ -1,14 +1,13 @@
 ---
 spec: 050-constitution
-scenario: a-review-may-precede-its-commit
-last-run: 2026-10-15T19:26:21Z
-reviewed-against: 37fe8e117aaf3c3b0859788dcf011a1545d15e6b
-diff-base: f0c26020b7cd87af3adce037880dd11fbba24d9c
+last-run: 2026-10-15T21:19:49Z
+reviewed-against: 9f3ffc8402b0909086a9d5c40a7e76a8c17a7053
+diff-base: 6ebe6c3978f8d6b1dcc4683de04180b1c5cd1b7c
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 6
-scope: 8
+examined: 5
+scope: 12
 skipped-passes: []
 reviewed-digest:
   scenarios/a-canonical-source-is-pointed-at-not-copied.md: 6936b866607a842ece8ebfd749223d4f7d98637200e8db87d85772702589e98a
@@ -27,7 +26,7 @@ reviewed-digest:
   scenarios/report-outcomes-not-edits.md: caf13342d7fe0a5af4108024cf424ab921030c896f0743307cf5111be2e163ab
 blocking: false
 dispositions:
-  fixed: 2
+  fixed: 1
   routed: 0
   discarded: 0
   undispositioned: 0
@@ -37,7 +36,7 @@ dispositions:
 
 ## Summary
 
-Recorded before the work was committed, in the order this change makes legitimate. reviewed-against 37fe8e11 is the amend commit, and the reviewed change is in the working tree over it. The window is f0c26020 (the parent of the reopen, 37fe8e11) to the working tree. compute-review-scope, served by a runtime that includes 0.59.4's fix, listed all six changed files in modified-since, including the three uncommitted ones (framework/constitution.md, AGENTS.md, plan.md). The change retires §implement-phase's commit-first review bullet (scenario a-review-may-precede-its-commit, task 30). It also narrows two sentences that assumed that order: §grounding's commit-verification rule, and §implement-phase's review-window bullet, which predated 0.59.4's HEAD base for an uncommitted reopen. AGENTS.md's mirror is rewritten as a pointer to §grounding's history-reading rule, and the W7 classification row is re-keyed to the new lead with the retirement noted. Rule files loaded: all eleven selected by discover-rule-files. The change is prose in the constitution, AGENTS.md and 050's own artifacts, with no code, configuration or endpoint, so no rule in any of them applies; quality-cross.md's rules are code patterns by its own declaration. No MUST or SHOULD finding. Two observations, both fixed in the run after confirmation, with the passes re-run over the fixed text. The new sentences said a review's digest holds what it read, while reviewed-digest covers only the durable contracts; the five sites now say a digest of the spec artifacts it read. The scenario's Context stated the retired bullet in the present tense. Checked: no remaining constitution text requires a review to follow its commit; the promotion-coverage family keys all 107 table rows, with the re-keyed W7 row matched and 0 unmatched; shipped anchors resolve; markdownlint is clean; scripts/audit/run-all.sh exited 0 before the commit. That audit run is recorded as pre-commit evidence only, because the history-reading families must be re-run after the commit. **Examined 6 of 8.** The 6 are the changed files: the three constitution bullets read in full before and after, the AGENTS.md entry and the W7 row in full, the scenario in full, and spec.md's status line and tasks.md's task 30 as their diff. The other two scope entries, specs/inbox.md and 045's spec.md, are plan-affected paths this change does not touch, and were not read.
+Review of task 31, the fourth classification round, run at 9f3ffc84 with one fix in the working tree. The window is 6ebe6c39 (the parent of the reopen) to the working tree. Its 050 work: plan.md §Classification gains 11 rows (9 project-only, 2 promote); framework/constitution.md extends §implement-phase's review-window bullet with the converse case (a fix committed before the reopen that records it lies outside the window) and §concurrent-features' What-stays-shared paragraph with what a push carries; AGENTS.md turns both promoted entries into pointers with byte-identical leads; tasks.md and spec.md carry task 31 and the reopen. Examined 5 of the 12 in scope: those five files, read in full where they changed and around each edit. Not examined here: the five 022 files in the window (fetch_archive.rs, 022's plan, spec, tasks and new scenario), which landed after this reopen under 022's own reopen and are reviewed in 022's record; and specs/inbox.md and 045's spec.md, plan-affected but unchanged since the base. AGENTS.md's own commit 6ebe6c39 (the rule-scope entry and the run-all.sh trim) is the base itself, so it sits outside the window; its lines were read as part of AGENTS.md, which is in scope, and the new entry is one of the 11 rows classified here. Rule files: all eleven framework/rules/*.md; the change is prose in the constitution and this repository's notes, so quality-cross.md (QUAL-CLAIM-001 in particular) was applied, and the code-surface rules have nothing to fire on. Verified: promotion-coverage reports 140 rule-bearing, 140 classified, 0 unclassified, 0 unmatched keys; each promoted rule's distinctive phrasing appears once as a normative statement, with pointers only elsewhere (AC3); the anchor set is unchanged. One observation, fixed in the run: the --since pointer's how-to now reads as a way to name a base the fix comes after, not a second rule.
 
 ## MUST violations (blocking)
 
@@ -57,8 +56,7 @@ Recorded before the work was committed, in the order this change makes legitimat
 
 ## Observations
 
-- bug: the new §grounding sentence, and the scenario, AGENTS.md and plan.md sentences that echo it, said a review's digest holds what the review read, where reviewed-digest covers only the spec's durable contracts — `framework/constitution.md` — **fixed**
-- convention: the new scenario's Context stated the retired bullet's presence in the present tense, which is false once the change lands — `specs/050-constitution/scenarios/a-review-may-precede-its-commit.md` — **fixed**
+- convention — AGENTS.md's --since pointer called the previous review's reviewed-against "usually the right base" while §implement-phase now names the commit before the fix, so the two read as different rules — `AGENTS.md:50` — **fixed**
 
 ## Skipped passes
 
