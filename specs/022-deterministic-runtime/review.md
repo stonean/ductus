@@ -1,14 +1,14 @@
 ---
 spec: 022-deterministic-runtime
-scenario: a-revision-qualified-path-is-not-a-working-tree-reference
-last-run: 2026-10-13T02:09:59Z
-reviewed-against: 3f7a9694c2fede244d041f3773ee6df2826e7656
-diff-base: f638a808db87575915d11f36735a8ecdf0b7c817
+scenario: review-scope-includes-uncommitted-work
+last-run: 2026-10-15T15:56:08Z
+reviewed-against: a0c575797068bf2657efbdfe716de24fcd8d2dec
+diff-base: 2e54f44d3a30e9fcfb345575b99ce7205de84df4
 must-violations: 0
-should-violations: 0
+should-violations: 1
 low-confidence: 0
-examined: 13
-scope: 46
+examined: 10
+scope: 42
 skipped-passes: []
 reviewed-digest:
   data-model.md: 28ba99f6140fe5c0f9b101180cd450db522b577d5b508a71869353b7eb4983f4
@@ -90,7 +90,8 @@ reviewed-digest:
   scenarios/review-exec-wiring.md: 93a1adbbf6f81d20d99ea0bca31c59891fdbc7c21fdde6f2da0cb76b547f9b46
   scenarios/review-gate-unexaminable-contracts.md: 47e4e856922bdb730d9d265d2b611ca100438f8eb385b51e05f4e57b6c1e30b1
   scenarios/review-observations-write-through.md: bee4a7433fc65faa54d9f9e2449bc7642d11ffc2125f8873bef6212ac516ee9d
-  scenarios/review-runtime-acceleration.md: 0b80c97eccff6e7b04db0e2dcb13889750bec79def6fe2d842aebec4838b2d12
+  scenarios/review-runtime-acceleration.md: b50712723a69367737a6c8b6785ac172e0e8f00fc527f9dd0365186fb02651fb
+  scenarios/review-scope-includes-uncommitted-work.md: 125f4c2259fd301578005b9e2980100f3c4ce56bdfce033acf64288c9654a6cc
   scenarios/review-scope-parse-fidelity.md: a4f5f0c2bb499777c644cfa7400a39d29e3aa63eaab7be4ff2025c06d8acafb8
   scenarios/review-scope-plan-affected-table-format.md: 33a2f84bf8d9a83375018cadd42a21ab11f2969eb8f1f311fed1530f5065c156
   scenarios/review-scope-union.md: 36b9dd7bcd4981778fc5316172b2bbff58c4df4d2e9e1e3563e9e16c132d5392
@@ -128,7 +129,7 @@ reviewed-digest:
   scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
 blocking: false
 dispositions:
-  fixed: 4
+  fixed: 0
   routed: 0
   discarded: 0
   undispositioned: 0
@@ -138,7 +139,7 @@ dispositions:
 
 ## Summary
 
-Re-recorded at 3f7a9694 because that commit edited `data-model.md`, a durable contract; the passes and their result are otherwise those of the record at 97fa5779. The window f638a808..3f7a9694 holds scenario `a-revision-qualified-path-is-not-a-working-tree-reference` (task 135), its fix in `check_orphaned_references.rs`, a framework prose fix making every `§` the installer ships resolvable by `resolve-anchor`, and the data-model corrections. Rule files loaded: all eleven `framework/rules/*.md` selected by `discover-rule-files`; `quality-cross.md` was read in full and governs the change (QUAL-TEST-001 was checked by mutating each new branch: the revision test fails with the colon branch removed, the list test fails when every token reads as a revision or the `]` case is dropped). The security, API, reliability and frontend files were checked by rule heading against a change that adds no I/O, no input source, no shell-out and no endpoint, and none applies. No MUST or SHOULD finding. Four observations, all fixed in the run: the first fix's bare-colon rule would have hidden colon-joined path list entries (51d79cbc) and markdown link labels written without a space (97fa5779); the installer's config-schema prose used the `/ductus:` namespace for adopter commands (543f2d24); and the data model carried sweep residue in this primitive's entry and its neighbour's (3f7a9694). **Examined 13 of 46.** The 13 are the window's modified files read as their diffs over the diff base, with the runtime file's changed functions and tests, the new scenario, and the data model's `check-orphaned-references` and `check-promotion-coverage` entries read in full. Four modified files were not read and are not counted: `framework/bootstrap/govern.md`, held byte-identical to `ductus.md` by `cmp` and Family `transitional-bootstrap-parity`; the generated `.claude/commands/ductus/analyze.md` and `.pi/prompts/ductus-analyze.md`, which `scripts/gen-claude-commands.sh` reports in sync with their source; and `review.md`, this command's own prior output. The other 29 scope entries are plan-affected paths the window does not touch, most of them whole directories (`runtime/src/primitives/`, `runtime/tests/`); they were not read.
+The window is 2e54f44d to the working tree, which was clean at a0c57579. It holds the reopen of 022 for scenario `review-scope-includes-uncommitted-work` (task 136) and its fix in `compute_review_scope.rs`: `modified-since` now diffs from the base to the working tree, and an uncommitted transition into `in-progress` puts the base at `HEAD`. Beside it are the matching schema doc comments, `review.md`'s scope wording and its two generated copies, the changelog entry, and the acceleration scenario's pointer. Rule files loaded: all eleven `framework/rules/*.md` selected by `discover-rule-files`. `quality-cross.md` was read in full and governs the change; the security, API, concurrency, observability, performance, reliability and frontend files were checked by rule heading against a change that adds no network I/O, no new input source, no shell-out and no endpoint, and none applies. One SHOULD, QUAL-TEST-001: with the literal-pathspec flag removed, all 19 `compute_review_scope` tests still pass (mutation run during this review). The shipped behavior is correct: the built binary, run in a throwaway repository whose project directory is `pro[j]`, reported an uncommitted deletion, an unstaged edit and an untracked file. Checked and not recorded: an unborn `HEAD` errors as it did before, through `find_in_progress_commit`'s `push_head`; `write-review` sizes its scope before it writes `review.md`, so a first record's own file is not in its denominator; an unparseable `HEAD` copy of `spec.md` beside an `in-progress` one on disk puts the base at `HEAD`, which is where the history lookup puts it once that fix is committed, so the window is the same across the commit; and the data model carries no `modified-since` contract to drift. For the other seven new tests, the fix commit records how each was shown to fail (seven with the working-tree diff reverted, two with the `HEAD` base reverted, the completion test under the broader status-differs rule), which is QUAL-TEST-001's compliant form. **Examined 10 of 42.** The 10 are the window's modified files: the runtime file's non-test code read in full and its tests as their diff, the new scenario in full, the rest as their diffs over the base, and the two generated `review.md` copies compared line by line against the source's diff. Parts of plan-affected files were read for context and are not counted: `write_review.rs`'s scope sizing, `check_stuck.rs`'s transition lookup, `mod.rs`'s `ProjectRepository` and its literal-pathspec siblings, `diff_cross_spec.rs`'s working-tree diff and glob test, and the data model's `compute-review-scope` paragraph. The other 32 scope entries are plan-affected paths the window does not touch, most of them whole directories, and were not read.
 
 ## MUST violations (blocking)
 
@@ -146,7 +147,13 @@ Re-recorded at 3f7a9694 because that commit edited `data-model.md`, a durable co
 
 ## SHOULD violations (advisory)
 
-*None.*
+### SHOULD: QUAL-TEST-001 — no test fails when the diff's literal-pathspec flag is removed
+
+- **File**: `runtime/src/primitives/compute_review_scope.rs:671-691`
+- **Rule**: A test SHOULD fail when the behavior it names is removed or broken. A test that passes whether or not the code under test behaves as named SHOULD NOT be added or counted as coverage. That includes a test that exercises a path without asserting its result, one that pins only a value incidental to the behavior, and one whose assertion a fallback or default path satisfies as well as the primary path does.
+- **Finding**: `untracked_files_outside_a_subdirectory_project_are_left_out` is the only test through `diff_since`'s project pathspec, and its project directory is `proj`, a name glob and literal matching treat alike; its outside-file assertion is also held by the pre-existing `to_project` filter. With `.disable_pathspec_match(true)` removed, all 19 `compute_review_scope` tests still pass (mutation run during this review), though the code comment justifies the flag by QUAL-CLAIM-001: a project path holding `*`, `?` or `[` would match no file as a glob and report an empty window.
+- **Auto-fixable**: no
+- **Suggested fix**: Add a test whose subdirectory project's name holds a glob character (for example `app[v2]`, as `diff_cross_spec.rs`'s `a_project_path_with_a_glob_character_is_matched_literally` does), with an uncommitted edit and an untracked file inside it, asserting both are in `modified-since`. Show it fails with `.disable_pathspec_match(true)` removed and record that.
 
 ## Low-confidence findings
 
@@ -158,10 +165,7 @@ Re-recorded at 3f7a9694 because that commit edited `data-model.md`, a durable co
 
 ## Observations
 
-- bug: a bare glued colon excluded every colon-joined path list entry, so `PATH="$PATH:.ductus/bin"` in a hook would hide a real orphan — `runtime/src/primitives/check_orphaned_references.rs` — **fixed**
-- bug: a CommonMark link reference definition with no space after its colon read its label as a revision and went unchecked — `runtime/src/primitives/check_orphaned_references.rs` — **fixed**
-- convention: the installer's config-schema prose named /ductus:review, :clarify, :plan and :analyze where an adopter's commands carry its own namespace — `framework/bootstrap/ductus.md` — **fixed**
-- convention: the data model's check-orphaned-references entry named `.ductus/` as its historical root where the code has `.govern/`, and the check-promotion-coverage entry named check-orphaned-references twice — `specs/022-deterministic-runtime/data-model.md` — **fixed**
+*None.*
 
 ## Skipped passes
 
