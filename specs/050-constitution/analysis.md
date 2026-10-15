@@ -1,18 +1,19 @@
 ---
 spec: 050-constitution
-last-run: 2026-10-01T21:11:05Z
-analyzed-against: d8baffd05bf6d35b3504877cc042c126dce984f6
+last-run: 2026-10-15T00:23:35Z
+analyzed-against: 06ce68f70d5a3a6bb5260c41b572fe4c52fb7695
 hard-fail: 0
 blocking-findings: 0
 advisory: 1
 unexamined: 0
 analyzed-digest:
   plan.md: 2cb780ceb2822ab6f7d4ec5c2bfae5b7621ece503b62cde670581bf0559b6ef8
-  review.md: 6f036f180b086fb87f68ad24be9c0435a870495fd347e471337860bd827301ca
+  review.md: 5910d57dbfd5460b290f8780bfffb9a387f6f6aa3840ca8787933c9501fe47e4
   scenarios/a-canonical-source-is-pointed-at-not-copied.md: 6936b866607a842ece8ebfd749223d4f7d98637200e8db87d85772702589e98a
   scenarios/a-declared-cross-spec-impact-gates-done.md: b84dfb3cd3652dc116fbdd7dee60199185ae661a3f0aefb7ad14bc64a2c1d4cc
   scenarios/a-measurement-states-its-method-and-units.md: 4c250a480c11e9788058f1012b647daa14aba2036d4a3baa9d0c1ba3c5965b2a
   scenarios/a-partial-read-is-not-a-read.md: 8d6851e20f8a2e9f083434a37cbf39ab3bca533ec819a8a258197e4afb797b07
+  scenarios/a-project-command-is-run-not-reproduced.md: aedb9dd7e77284422f8650a7a43c0a3f660b1eafc13f9f78408444532592ecfc
   scenarios/a-retired-feature-leaves-no-spec.md: eadf56734b7018bdf20fc4c6b03d274f46c36bba6ba65ec43975a099eaaa98bb
   scenarios/a-retired-filename-leaves-a-decision-record.md: f84a3177744eb03a859d82a4017495c24bcf24466448b7c49ad1a253147ab581
   scenarios/a-status-commit-holds-only-the-transition.md: 0d3fb1a701bc4b3112cfc2e54bb488df060c75fceeb0dc6c6b39205eb01d4438
@@ -22,7 +23,7 @@ analyzed-digest:
   scenarios/knowledge-routes-by-population-not-by-kind.md: 0e934ea65cbaf2bf31acc4f45c461bfb868be45deb5aa9fa6601c59b8c003c5c
   scenarios/report-outcomes-not-edits.md: caf13342d7fe0a5af4108024cf424ab921030c896f0743307cf5111be2e163ab
   spec.md: 79c6b9b0c83748023101d6246dd941fe2bffa6a191fbbcdb645a77fae3b0de68
-  tasks.md: 60ef8aa3c350036e3191740c593718641751685d11249d15f536e844fae15993
+  tasks.md: 9d42d1e8f0e8510ae825932bf7e9e653d01a4d976198a9e55b0ac64d3c191d23
 blocking: false
 dispositions:
   fixed: 0
