@@ -1,14 +1,14 @@
 ---
 spec: 022-deterministic-runtime
-scenario: review-scope-includes-uncommitted-work
-last-run: 2026-10-15T16:06:08Z
-reviewed-against: 7d90678a55b38fb49fff706beca76eead6e306f6
-diff-base: 2e54f44d3a30e9fcfb345575b99ce7205de84df4
+scenario: fetch-archive-names-its-timeout
+last-run: 2026-10-15T21:21:42Z
+reviewed-against: 9f0352264db52068839c5f20920d2c14a267f836
+diff-base: e631e3ea8302521485f2b301d41f2aeae74cf657
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 10
-scope: 43
+examined: 5
+scope: 40
 skipped-passes: []
 reviewed-digest:
   data-model.md: 28ba99f6140fe5c0f9b101180cd450db522b577d5b508a71869353b7eb4983f4
@@ -58,6 +58,7 @@ reviewed-digest:
   scenarios/exec-clarify-asks-each-open-question.md: 4851dc543c6dd80603aa86c776543017b9ab1a7adac469e1b49ec311a9877cab
   scenarios/extension-request-hygiene.md: 1b0c77335af3a2caf82e01896207d60261cd0071a8bc8da3162b9785f7c16e48
   scenarios/fetch-archive-dns-rebinding.md: 39482bed2a531d36dce770c9c20ae3848ba254da0d02ee51d5c6feabe7967031
+  scenarios/fetch-archive-names-its-timeout.md: e714dd3679dc72aa9bc27a933ba4e32505a9c4290f09b9b0eb48812f7459317a
   scenarios/framework-list-dedup.md: 9aef03cab7d2494a662058d1091a65e38e26637b10ba338d94eedbd15f9f7f4b
   scenarios/frontmatter-severity-tiers-on-both-sides.md: c8b6d454ddb4476f57de9c4f8c5f53ad11d948ea5a4e3a7ac4b2bbe0d3d2a5e3
   scenarios/govern-bootstrap.md: 090bdd6076d1118b15f59c806b49bfd37037fb2b60ecdd33d01580018ca7b770
@@ -139,7 +140,7 @@ dispositions:
 
 ## Summary
 
-Re-run at 7d90678a after the fix for the one SHOULD the record at 15fc0386 carried, so the count states what is outstanding. The window is 2e54f44d to the working tree, which was clean at 7d90678a. It holds the reopen of 022 for scenario `review-scope-includes-uncommitted-work` (task 136) and its fix in `compute_review_scope.rs`: `modified-since` now diffs from the base to the working tree, and an uncommitted transition into `in-progress` puts the base at `HEAD`. Beside it are the matching schema doc comments, `review.md`'s scope wording and its two generated copies, the changelog entry, the acceleration scenario's pointer, and, since the first pass, the prior record and the new test. Rule files loaded: all eleven `framework/rules/*.md` selected by `discover-rule-files`. `quality-cross.md` was read in full and governs the change; the security, API, concurrency, observability, performance, reliability and frontend files were checked by rule heading against a change that adds no network I/O, no new input source, no shell-out and no endpoint, and none applies. No MUST or SHOULD finding. The first pass's QUAL-TEST-001 SHOULD (no test failed with `.disable_pathspec_match(true)` removed, because the only test through that pathspec names its project `proj`, which glob and literal matching treat alike) is closed by 7d90678a: `a_project_path_with_a_glob_character_is_matched_literally` puts the project at `app[v2]`, and with the flag removed it fails with an empty `modified-since` beside an uncommitted edit and an untracked file, which is the QUAL-CLAIM-001 shape the code comment names. Restored, all 20 `compute_review_scope` tests pass, and the commit's pre-commit hook ran 1923. The built binary, run in a throwaway repository whose project directory is `pro[j]`, also reported an uncommitted deletion, an unstaged edit and an untracked file. Checked and not recorded: an unborn `HEAD` errors as it did before, through `find_in_progress_commit`'s `push_head`; `write-review` sizes its scope before it writes `review.md`; an unparseable `HEAD` copy of `spec.md` beside an `in-progress` one on disk puts the base at `HEAD`, which is where the history lookup puts it once that fix is committed, so the window is the same across the commit; and the data model carries no `modified-since` contract to drift. For the other seven tests the task added, the fix commit records how each was shown to fail, which is QUAL-TEST-001's compliant form. **Examined 10 of 43.** The 10 are the window's modified files other than `review.md`: the runtime file's non-test code read in full and its tests as their diff, including the new test, the new scenario in full, the rest as their diffs over the base, and the two generated `review.md` copies compared line by line against the source's diff. `review.md` is this command's own prior output and is not counted. Parts of plan-affected files were read for context and are not counted: `write_review.rs`'s scope sizing, `check_stuck.rs`'s transition lookup, `mod.rs`'s `ProjectRepository` and its literal-pathspec siblings, `diff_cross_spec.rs`'s working-tree diff and glob test, and the data model's `compute-review-scope` paragraph. The other 32 scope entries are plan-affected paths the window does not touch, most of them whole directories, and were not read.
+Review of tasks 137 and 138 at 9f035226, on a clean tree. The window is e631e3ea, the parent of the amend that reopened 022 for scenario fetch-archive-names-its-timeout, to the working tree, so the fix landed after its reopen and no --since override was needed. Examined 5 of the scope: fetch_archive.rs, plan.md, tasks.md, spec.md and the new scenario, each read in full where it changed. fetch_archive.rs declares FETCH_TIMEOUT (30 s) beside MAX_FETCH_BYTES and MAX_FETCH_REDIRECTS, sets it on the client through fetch_bytes_with's new timeout parameter, and adds a_stalled_fetch_fails_within_the_timeout_it_is_given. plan.md names the constant, states the bound as reqwest 0.13.5 applies it (the wait for the response and each body read, per blocking/client.rs and blocking/response.rs, both read for this review), and names both YAML deserialization targets. Not examined here: AGENTS.md and 050's review.md and analysis.md, which are in the window because 050's review and analysis commits landed after e631e3ea, and are 050's work under 050's own record; and the plan-affected directories and files this change does not touch. Rule files: all eleven framework/rules/*.md. BE-TIMEOUT-001 and CFG-CONST-003 govern the change and are met: the outbound call runs under a named bound in its own module. quality-cross.md applies to the test: QUAL-TEST-001 was checked by mutation, and with the .timeout() call removed the test fails after 30.01 s on its 10-second bound, which also confirms reqwest's 30-second default. Security: no new input, endpoint or shell-out; the SSRF screen, redirect policy and pinning are unchanged. No MUST or SHOULD finding and no observation. The bound limits one stall, not a whole download; a whole-download deadline would change behavior and is outside this scenario, as its Edge Cases state.
 
 ## MUST violations (blocking)
 
