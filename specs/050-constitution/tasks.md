@@ -256,3 +256,9 @@ Implements `scenarios/a-retired-feature-leaves-no-spec.md`. The constitution sta
 - [x] Verify: the promotion-coverage family reports 0 unclassified and 0 unmatched keys; the new rule's distinctive phrasing finds one normative statement and pointers only (AC3); lint, generators, audit and `cargo test`
 
 - **Done when**: the promotion-coverage notice reports 0 unclassified, the promoted text has one canonical home, and the local gate passes
+
+## 29. A project command is run, not reproduced
+
+- [x] Implement the behavior described in `scenarios/a-project-command-is-run-not-reproduced.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
