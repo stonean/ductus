@@ -70,6 +70,7 @@ use std::io::Read;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs};
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
+use std::time::Duration;
 
 use sha2::{Digest, Sha256};
 
@@ -127,13 +128,18 @@ pub fn run(args: &FetchArchiveArgs, repo: &Path) -> Result<FetchArchiveResult> {
 }
 
 fn fetch_bytes(url: &str) -> Result<Vec<u8>> {
-    fetch_bytes_with(url, PROXY_ENV.get().unwrap_or(&ProxyEnv::NONE))
+    fetch_bytes_with(
+        url,
+        PROXY_ENV.get().unwrap_or(&ProxyEnv::NONE),
+        FETCH_TIMEOUT,
+    )
 }
 
-/// [`fetch_bytes`] through the proxy configuration `proxies` — the seam a
-/// test drives with a configuration of its own, since the startup capture
-/// cannot be set from inside a test process.
-fn fetch_bytes_with(url: &str, proxies: &ProxyEnv) -> Result<Vec<u8>> {
+/// [`fetch_bytes`] through the proxy configuration `proxies`, waiting at most
+/// `timeout` at a time — the seam a test drives with values of its own, since
+/// the startup capture cannot be set from inside a test process and a test
+/// cannot wait out [`FETCH_TIMEOUT`].
+fn fetch_bytes_with(url: &str, proxies: &ProxyEnv, timeout: Duration) -> Result<Vec<u8>> {
     let screen = validate_fetch_url(url)?;
     // The default reqwest client follows up to 10 redirects with no
     // re-validation, so a `302 Location:` pointing at `http://` or an
@@ -142,8 +148,9 @@ fn fetch_bytes_with(url: &str, proxies: &ProxyEnv) -> Result<Vec<u8>> {
     // (and re-caps the redirect count the custom policy would otherwise
     // uncap). Redirects are still followed — GitHub release assets redirect
     // to codeload/S3 — but only to targets that pass the same screen.
-    let mut builder =
-        reqwest::blocking::Client::builder().redirect(reqwest::redirect::Policy::custom(
+    let mut builder = reqwest::blocking::Client::builder()
+        .timeout(timeout)
+        .redirect(reqwest::redirect::Policy::custom(
             |attempt| match redirect_verdict(attempt.url().as_str(), attempt.previous().len()) {
                 RedirectVerdict::Follow => attempt.follow(),
                 RedirectVerdict::Refuse(reason) => attempt.error(reason),
@@ -670,6 +677,12 @@ const MAX_FETCH_BYTES: u64 = 256 * 1024 * 1024;
 /// so the cap is re-declared here alongside the per-hop SSRF re-validation.
 const MAX_FETCH_REDIRECTS: usize = 10;
 
+/// How long [`fetch_bytes`] waits for a response, and again for each read of
+/// its body: a bound on any one stall, not on the whole download, whose size
+/// [`MAX_FETCH_BYTES`] bounds instead. It is the value reqwest's blocking
+/// client defaults to, declared here so that a reqwest upgrade cannot move it.
+const FETCH_TIMEOUT: Duration = Duration::from_secs(30);
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -678,9 +691,10 @@ mod tests {
     use std::net::IpAddr;
 
     use super::{
-        FetchScreen, MAX_FETCH_REDIRECTS, ProxyEnv, ProxyScheme, RedirectVerdict, fetch_bytes_with,
-        host_is_insecure_allowed, is_internal_ip, is_sha256_hex, load_once, parse_sidecar_hex,
-        read_capped, redirect_verdict, roots_from, sha256_hex, validate_fetch_url,
+        FETCH_TIMEOUT, FetchScreen, MAX_FETCH_REDIRECTS, PrimitiveError, ProxyEnv, ProxyScheme,
+        RedirectVerdict, fetch_bytes_with, host_is_insecure_allowed, is_internal_ip, is_sha256_hex,
+        load_once, parse_sidecar_hex, read_capped, redirect_verdict, roots_from, sha256_hex,
+        validate_fetch_url,
     };
 
     fn ip(s: &str) -> IpAddr {
@@ -1001,7 +1015,7 @@ mod tests {
         });
 
         let env = ProxyEnv::capture(lookup(&[("HTTPS_PROXY", proxy.as_str())]), false);
-        let result = fetch_bytes_with("https://192.0.2.1/main.tar.gz", &env);
+        let result = fetch_bytes_with("https://192.0.2.1/main.tar.gz", &env, FETCH_TIMEOUT);
         assert!(result.is_err(), "the proxy refused the tunnel");
         let request_line = rx
             .recv_timeout(std::time::Duration::from_secs(5))
@@ -1009,6 +1023,42 @@ mod tests {
         assert!(
             request_line.starts_with("CONNECT 192.0.2.1:443 "),
             "{request_line:?}"
+        );
+    }
+
+    /// The client waits no longer than the timeout it is given. A proxy that
+    /// accepts the connection and never answers the `CONNECT` stands in for a
+    /// stalled host. Without the timeout, reqwest's own default of 30 seconds
+    /// would hold the call that long and fail the bound below.
+    #[test]
+    fn a_stalled_fetch_fails_within_the_timeout_it_is_given() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let proxy = format!("http://{}", listener.local_addr().unwrap());
+        let (release, held) = std::sync::mpsc::channel::<()>();
+        std::thread::spawn(move || {
+            let (_stream, _) = listener.accept().unwrap();
+            // Hold the connection open, unanswered, until the test is done.
+            let _ = held.recv();
+        });
+
+        let env = ProxyEnv::capture(lookup(&[("HTTPS_PROXY", proxy.as_str())]), false);
+        let started = std::time::Instant::now();
+        let result = fetch_bytes_with(
+            "https://192.0.2.1/main.tar.gz",
+            &env,
+            std::time::Duration::from_millis(200),
+        );
+        let waited = started.elapsed();
+        drop(release);
+        match result {
+            Err(PrimitiveError::Http { source, .. }) => {
+                assert!(source.is_timeout(), "not a timeout: {source}");
+            }
+            other => panic!("expected a timeout, got {other:?}"),
+        }
+        assert!(
+            waited < std::time::Duration::from_secs(10),
+            "the fetch waited {waited:?}"
         );
     }
 

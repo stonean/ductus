@@ -56,12 +56,12 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 
 ## 137. Implement scenario: [fetch-archive-names-its-timeout](scenarios/fetch-archive-names-its-timeout.md)
 
-- [ ] Implement the behavior described in `scenarios/fetch-archive-names-its-timeout.md`
+- [x] Implement the behavior described in `scenarios/fetch-archive-names-its-timeout.md`
 
 - **Done when**: `fetch_archive.rs` declares `FETCH_TIMEOUT` (30 s) beside the module's other bounds and sets it on the client it builds; a test drives the client with a short timeout against a proxy that never answers and fails when the client ignores the timeout it is given; plan.md's transport section names the constant and states the bound as the wait for the response and each body read.
 
 ## 138. Correct plan.md's YAML safe-loading sentence
 
-- [ ] plan.md's `serde_norway` bullet says YAML is deserialized only into typed structures; five modules also parse into `serde_norway::Value` — state both, and why a generic value is still safe loading
+- [x] plan.md's `serde_norway` bullet says YAML is deserialized only into typed structures; four modules also parse into `serde_norway::Value` in production code (`write_analysis.rs` does so only in its tests) — state both, and why a generic value is still safe loading
 
 - **Done when**: the bullet names both deserialization targets, and its safe-loading claim rests on what `serde_norway` does with a tagged node rather than on the typed-only premise.
