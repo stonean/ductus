@@ -1,15 +1,15 @@
 ---
 spec: 022-deterministic-runtime
-last-run: 2026-10-13T02:10:53Z
-analyzed-against: de5b394922ecdbbaf3d8b9ad1328104ada32b88f
+last-run: 2026-10-15T16:54:50Z
+analyzed-against: e4f577565114549b4c7e2b5989299ba1a252d798
 hard-fail: 0
 blocking-findings: 0
-advisory: 10
+advisory: 16
 unexamined: 0
 analyzed-digest:
   data-model.md: 28ba99f6140fe5c0f9b101180cd450db522b577d5b508a71869353b7eb4983f4
-  plan.md: 98efa75845901d5215f59942c02daa4ac1f1614f5b522881853d1988904671a6
-  review.md: 8f4b98f634306aeec228873bb7f1d803ffc598c47f018054188017bcac536acf
+  plan.md: 65a223f9bb82e7549517d938ddb36f23e4626fa99905ee85bf126790332253eb
+  review.md: 6f2a5c84a9e93d019961f997865ebdd5b61d75b8f4ef3ba35f67af33620a900d
   scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md: d092f9d4f59c67c575cc59039a6e0fdf162546969de2820e747b609d7a3d43c7
   scenarios/a-done-spec-has-no-transition-to-gate.md: 2041c659a2dbee3e17a05a702a11c9b1f59d30ce68acc19f616889696b66da2b
   scenarios/a-multi-number-renumber-is-one-rewrite.md: 04723ad01613f62b14008250c9890e20ac338de82c32bd2f0797580e30ae7be2
@@ -88,7 +88,8 @@ analyzed-digest:
   scenarios/review-exec-wiring.md: 93a1adbbf6f81d20d99ea0bca31c59891fdbc7c21fdde6f2da0cb76b547f9b46
   scenarios/review-gate-unexaminable-contracts.md: 47e4e856922bdb730d9d265d2b611ca100438f8eb385b51e05f4e57b6c1e30b1
   scenarios/review-observations-write-through.md: bee4a7433fc65faa54d9f9e2449bc7642d11ffc2125f8873bef6212ac516ee9d
-  scenarios/review-runtime-acceleration.md: 0b80c97eccff6e7b04db0e2dcb13889750bec79def6fe2d842aebec4838b2d12
+  scenarios/review-runtime-acceleration.md: b50712723a69367737a6c8b6785ac172e0e8f00fc527f9dd0365186fb02651fb
+  scenarios/review-scope-includes-uncommitted-work.md: 125f4c2259fd301578005b9e2980100f3c4ce56bdfce033acf64288c9654a6cc
   scenarios/review-scope-parse-fidelity.md: a4f5f0c2bb499777c644cfa7400a39d29e3aa63eaab7be4ff2025c06d8acafb8
   scenarios/review-scope-plan-affected-table-format.md: 33a2f84bf8d9a83375018cadd42a21ab11f2969eb8f1f311fed1530f5065c156
   scenarios/review-scope-union.md: 36b9dd7bcd4981778fc5316172b2bbff58c4df4d2e9e1e3563e9e16c132d5392
@@ -125,12 +126,12 @@ analyzed-digest:
   scenarios/writecode-payload-bundling.md: 5c343929c3a42ac4406a02c173b6979231127b9583aabae171fee1f747d5084b
   scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
   spec.md: ea12fb92d001ec16fd2b816f33a4b890fc1d660c36e436ac5eee39f9f41645e0
-  tasks.md: b77be8fe1a8cc620b0c38c9056e6058cdd202787b64bf3b3f73a64a4a6fc98ec
+  tasks.md: 0f575c460aef0ea59a6f2e99565d3053a1136380e38d67781b9e1142bd852260
 blocking: false
 dispositions:
-  fixed: 0
+  fixed: 9
   routed: 0
-  discarded: 10
+  discarded: 16
   undispositioned: 0
 decisions:
   - key: "rule-assessment — BE-METRIC-001: the MCP tool handlers commit to no rate, error or duration metrics"
@@ -183,13 +184,43 @@ decisions:
     reason: "predates PR #5, which added two short scenarios; splitting or trimming the runtime's umbrella spec is its own work, not Pi support"
     decided-at: 2026-10-06T14:41:08Z
     decided-by: andy@stone.dev
+  - key: grounding — plan.md says no primitive but fetch-archive makes an HTTP request of its own
+    outcome: discarded
+    reason: a scope statement in the Trade-offs entry recording the reqwest dependency's adoption; runtime/Cargo.toml is cited, and the plan's fetch-archive transport section names the path
+    decided-at: 2026-10-15T16:54:50Z
+    decided-by: andy@stone.dev
+  - key: grounding — plan.md says tokio is required by rmcp
+    outcome: discarded
+    reason: rationale for a dependency choice, the same class as the stored rmcp discard
+    decided-at: 2026-10-15T16:54:50Z
+    decided-by: andy@stone.dev
+  - key: grounding — plan.md says pulldown-cmark provides byte offsets
+    outcome: discarded
+    reason: rationale for the parser choice, the same class as the stored pulldown-cmark discard
+    decided-at: 2026-10-15T16:54:50Z
+    decided-by: andy@stone.dev
+  - key: grounding — spec.md says the cycle check caught a derivation cycle when its bullet was first written
+    outcome: discarded
+    reason: a past-event account in the Bash script relationships section; the commit history is its record
+    decided-at: 2026-10-15T16:54:50Z
+    decided-by: andy@stone.dev
+  - key: grounding — spec.md and plan.md say analyze runs gen-help-tables through run-generator and the pre-commit hook calls the generators directly
+    outcome: discarded
+    reason: describes the wiring the Bash script relationships section exists to record, naming the command and the hook it describes
+    decided-at: 2026-10-15T16:54:50Z
+    decided-by: andy@stone.dev
+  - key: grounding — spec.md says every recorded disagreement about the promotion-coverage figure resolved to a difference of method
+    outcome: discarded
+    reason: a past-event account in AC32's rationale, recording why the criterion reports all four terms
+    decided-at: 2026-10-15T16:54:50Z
+    decided-by: andy@stone.dev
 ---
 
 # Analysis — 022-deterministic-runtime
 
 ## Summary
 
-0 hard-fail, 0 blocking, 10 advisory; not blocking. 0 unexamined target(s). Dispositions: 0 fixed, 0 routed, 10 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 16 advisory; not blocking. 0 unexamined target(s). Dispositions: 9 fixed, 0 routed, 16 discarded, 0 undispositioned.
 
 ## Hard failures
 
@@ -211,6 +242,12 @@ decisions:
 - grounding — plan.md says certain markdown extensions are off by default in pulldown-cmark — `specs/022-deterministic-runtime/plan.md` — **discarded**: rationale for a rejected alternative in Trade-offs; no current behavior rests on it
 - artifact-size — `specs/022-deterministic-runtime/spec.md` is 58291 bytes, 2 read pages at the 50000-byte read size — `specs/022-deterministic-runtime/spec.md` — **discarded**: predates PR #5, which added two short scenarios; splitting or trimming the runtime's umbrella spec is its own work, not Pi support
 - artifact-size — `specs/022-deterministic-runtime/data-model.md` is 121695 bytes, 3 read pages at the 50000-byte read size — `specs/022-deterministic-runtime/data-model.md` — **discarded**: predates PR #5, which added two short scenarios; splitting or trimming the runtime's umbrella spec is its own work, not Pi support
+- grounding — plan.md says no primitive but fetch-archive makes an HTTP request of its own — `specs/022-deterministic-runtime/plan.md` — **discarded**: a scope statement in the Trade-offs entry recording the reqwest dependency's adoption; runtime/Cargo.toml is cited, and the plan's fetch-archive transport section names the path
+- grounding — plan.md says tokio is required by rmcp — `specs/022-deterministic-runtime/plan.md` — **discarded**: rationale for a dependency choice, the same class as the stored rmcp discard
+- grounding — plan.md says pulldown-cmark provides byte offsets — `specs/022-deterministic-runtime/plan.md` — **discarded**: rationale for the parser choice, the same class as the stored pulldown-cmark discard
+- grounding — spec.md says the cycle check caught a derivation cycle when its bullet was first written — `specs/022-deterministic-runtime/spec.md` — **discarded**: a past-event account in the Bash script relationships section; the commit history is its record
+- grounding — spec.md and plan.md say analyze runs gen-help-tables through run-generator and the pre-commit hook calls the generators directly — `specs/022-deterministic-runtime/spec.md` — **discarded**: describes the wiring the Bash script relationships section exists to record, naming the command and the hook it describes
+- grounding — spec.md says every recorded disagreement about the promotion-coverage figure resolved to a difference of method — `specs/022-deterministic-runtime/spec.md` — **discarded**: a past-event account in AC32's rationale, recording why the criterion reports all four terms
 
 ## Unexamined targets
 
@@ -218,4 +255,12 @@ decisions:
 
 ## Fixed in this run
 
-*None.*
+- rule-assessment — BE-INPUT-008: plan.md names YAML frontmatter parsing without naming a safe-loading mode — `specs/022-deterministic-runtime/plan.md` — **fixed**
+- rule-assessment — BE-LOG-002: plan.md introduces stderr logging without a redaction commitment — `specs/022-deterministic-runtime/plan.md` — **fixed**
+- rule-assessment — BE-DATA-001: plan.md introduces fetch-archive's HTTPS download without committing to TLS 1.2 or later — `specs/022-deterministic-runtime/plan.md` — **fixed**
+- rule-assessment — BE-DATA-011: plan.md introduces outbound TLS without committing to certificate and hostname validation — `specs/022-deterministic-runtime/plan.md` — **fixed**
+- rule-assessment — BE-DEPS-004: plan.md pulls crates from crates.io without a provenance check or a documented exception — `specs/022-deterministic-runtime/plan.md` — **fixed**
+- rule-assessment — BE-DEPS-002: plan.md pins the lockfile but documents no dependency-upgrade process — `specs/022-deterministic-runtime/plan.md` — **fixed**
+- rule-assessment — BE-TIMEOUT-001: plan.md introduces fetch-archive's HTTP call without naming the timeout that bounds it — `specs/022-deterministic-runtime/plan.md` — **fixed**
+- rule-assessment — BE-INPUT-003: plan.md introduces run-generator's bash invocation without describing its safe-invocation mechanism — `specs/022-deterministic-runtime/plan.md` — **fixed**
+- rule-assessment — BE-PAYLOAD-001: primitives return variable-size bodies with no committed size bound, and the new scenario widens compute-review-scope's list — `specs/022-deterministic-runtime/plan.md` — **fixed**
