@@ -1,0 +1,44 @@
+name: runtime-currency
+
+# Weekly check that the runtime is current: its lockfile, its direct
+# dependencies' major versions, its pinned toolchain, and its advisories. The
+# logic lives in scripts/check-runtime-currency.sh, the project's own command
+# for it, so a contributor runs exactly what this job runs.
+#
+# Scheduled rather than on push, because what it reports changes when
+# upstream publishes, not when this repository commits. The four rustls
+# advisories 0.59.2 shipped a fix for were published after the last push that
+# touched runtime/, so runtime.yml's cargo audit would have stayed silent
+# until the next such push happened to come along.
+# A red run is the signal: the fix is a lockfile refresh, a major bump, a
+# toolchain bump, or a dependency update, each committed on its own.
+on:
+  schedule:
+    # Mondays 06:17 UTC — off the hour, where scheduled runs queue.
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  currency:
+    name: runtime currency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Pinned — keep in sync with runtime/rust-toolchain.toml. The check
+      # compares that pin with the latest stable; it does not build with the
+      # latest itself.
+      - uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          components: clippy, rustfmt
+
+      # Prebuilt binary, as runtime.yml's audit job installs it.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
+      - name: scripts/check-runtime-currency.sh
+        run: ./scripts/check-runtime-currency.sh
