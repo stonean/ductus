@@ -1,15 +1,15 @@
 ---
 spec: 022-deterministic-runtime
-last-run: 2026-10-15T21:22:43Z
-analyzed-against: 438924d44c958870c32428956d06449bcd3fc091
+last-run: 2026-10-15T22:29:50Z
+analyzed-against: fd8e44a6777605bb76b0358be7f09ad7b0ab94ec
 hard-fail: 0
 blocking-findings: 0
-advisory: 16
+advisory: 12
 unexamined: 0
 analyzed-digest:
-  data-model.md: 28ba99f6140fe5c0f9b101180cd450db522b577d5b508a71869353b7eb4983f4
+  data-model.md: d6c21dfb4f3bf76255b8d4c142daba7bdd5cc9dc9d002abb45a26d78610af628
   plan.md: 7fad46f150f25571ff0e0fc12f43d077642ae0dd080be3538575acadbbca701d
-  review.md: a615256da9ba0dcf41a71b747caaf361d7e8bf3eae61ac193e7f9e2bf90e015b
+  review.md: f783515b89541723b7d540f781aed595119abc4bcc51f41542c64305f41f6104
   scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md: d092f9d4f59c67c575cc59039a6e0fdf162546969de2820e747b609d7a3d43c7
   scenarios/a-done-spec-has-no-transition-to-gate.md: 2041c659a2dbee3e17a05a702a11c9b1f59d30ce68acc19f616889696b66da2b
   scenarios/a-multi-number-renumber-is-one-rewrite.md: 04723ad01613f62b14008250c9890e20ac338de82c32bd2f0797580e30ae7be2
@@ -126,13 +126,13 @@ analyzed-digest:
   scenarios/writecode-boundary-derivation.md: 9e4d5b406b4d5e25c4a4dd9e5264995a5e4bc83075ec20eae2c3eb3e36adcd81
   scenarios/writecode-payload-bundling.md: 5c343929c3a42ac4406a02c173b6979231127b9583aabae171fee1f747d5084b
   scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
-  spec.md: ea12fb92d001ec16fd2b816f33a4b890fc1d660c36e436ac5eee39f9f41645e0
-  tasks.md: 709483b2ee14a77e23dddd3c188951657e2bab6f2c32f0f22b310353ca1cb64e
+  spec.md: 5c94166aa5e13a08757527a506f353ad2b9cb0dd8915b21565cbe8379a20b309
+  tasks.md: 26017c13e16d09b0cc975a5192d2c55e25499f0f26272c4cb05c6a39c6336837
 blocking: false
 dispositions:
-  fixed: 0
+  fixed: 1
   routed: 0
-  discarded: 16
+  discarded: 12
   undispositioned: 0
 decisions:
   - key: "rule-assessment — BE-METRIC-001: the MCP tool handlers commit to no rate, error or duration metrics"
@@ -155,16 +155,6 @@ decisions:
     reason: the rationale for a 2026-05 dependency choice, recorded in a Resolved Question and the plan's dependency list
     decided-at: 2026-10-01T18:58:23Z
     decided-by: andy@stone.dev
-  - key: grounding — spec.md says homebrew-core has popularity gates
-    outcome: discarded
-    reason: the rationale for a distribution choice recorded in a Resolved Question; no current behavior rests on it
-    decided-at: 2026-10-01T18:58:23Z
-    decided-by: andy@stone.dev
-  - key: grounding — spec.md says a hardcoded .claude/gov-session.json broke adopters
-    outcome: discarded
-    reason: a past-incident account in a Resolved Question; the commit history is its record
-    decided-at: 2026-10-01T18:58:23Z
-    decided-by: andy@stone.dev
   - key: grounding — plan.md says POSIX rename is atomic and Windows rename is weaker
     outcome: discarded
     reason: a property of the platforms the atomic-write design rests on, stated as rationale; the CI matrix exercises the write on all three
@@ -174,16 +164,6 @@ decisions:
     outcome: discarded
     reason: rationale for a rejected alternative in Trade-offs; no current behavior rests on it
     decided-at: 2026-10-01T18:58:23Z
-    decided-by: andy@stone.dev
-  - key: artifact-size — `specs/022-deterministic-runtime/spec.md` is 58291 bytes, 2 read pages at the 50000-byte read size
-    outcome: discarded
-    reason: "predates PR #5, which added two short scenarios; splitting or trimming the runtime's umbrella spec is its own work, not Pi support"
-    decided-at: 2026-10-06T14:41:08Z
-    decided-by: andy@stone.dev
-  - key: artifact-size — `specs/022-deterministic-runtime/data-model.md` is 121211 bytes, 3 read pages at the 50000-byte read size
-    outcome: discarded
-    reason: "predates PR #5, which added two short scenarios; splitting or trimming the runtime's umbrella spec is its own work, not Pi support"
-    decided-at: 2026-10-06T14:41:08Z
     decided-by: andy@stone.dev
   - key: grounding — plan.md says no primitive but fetch-archive makes an HTTP request of its own
     outcome: discarded
@@ -200,11 +180,6 @@ decisions:
     reason: rationale for the parser choice, the same class as the stored pulldown-cmark discard
     decided-at: 2026-10-15T16:54:50Z
     decided-by: andy@stone.dev
-  - key: grounding — spec.md says the cycle check caught a derivation cycle when its bullet was first written
-    outcome: discarded
-    reason: a past-event account in the Bash script relationships section; the commit history is its record
-    decided-at: 2026-10-15T16:54:50Z
-    decided-by: andy@stone.dev
   - key: grounding — spec.md and plan.md say analyze runs gen-help-tables through run-generator and the pre-commit hook calls the generators directly
     outcome: discarded
     reason: describes the wiring the Bash script relationships section exists to record, naming the command and the hook it describes
@@ -215,13 +190,18 @@ decisions:
     reason: a past-event account in AC32's rationale, recording why the criterion reports all four terms
     decided-at: 2026-10-15T16:54:50Z
     decided-by: andy@stone.dev
+  - key: artifact-size — `specs/022-deterministic-runtime/data-model.md` is 99953 bytes, 2 read pages at the 50000-byte read size
+    outcome: discarded
+    reason: trimmed in place 2026-10-15 from 121,695 to 99,953 bytes (3 read pages to 2) by tasks 139-140; under the 50,000-byte read size needs a split of 022, which the operator decided to settle separately after the trim
+    decided-at: 2026-10-15T22:29:50Z
+    decided-by: andy@stone.dev
 ---
 
 # Analysis — 022-deterministic-runtime
 
 ## Summary
 
-0 hard-fail, 0 blocking, 16 advisory; not blocking. 0 unexamined target(s). Dispositions: 0 fixed, 0 routed, 16 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 12 advisory; not blocking. 0 unexamined target(s). Dispositions: 1 fixed, 0 routed, 12 discarded, 0 undispositioned.
 
 ## Hard failures
 
@@ -237,18 +217,14 @@ decisions:
 - grounding — spec.md says a single-feature /ductus:analyze takes 2-4 minutes of LLM wall-clock time today — `specs/022-deterministic-runtime/spec.md` — **discarded**: a motivation measured when the spec was written, describing the problem the runtime was built to solve rather than current behavior
 - grounding — spec.md says 11 of 13 analyze check sections are mechanical — `specs/022-deterministic-runtime/spec.md` — **discarded**: a motivation measured when the spec was written; analyze's sections have since been restructured, and the claim records the case for the runtime, not current behavior
 - grounding — spec.md and plan.md call rmcp the reference MCP SDK — `specs/022-deterministic-runtime/spec.md` — **discarded**: the rationale for a 2026-05 dependency choice, recorded in a Resolved Question and the plan's dependency list
-- grounding — spec.md says homebrew-core has popularity gates — `specs/022-deterministic-runtime/spec.md` — **discarded**: the rationale for a distribution choice recorded in a Resolved Question; no current behavior rests on it
-- grounding — spec.md says a hardcoded .claude/gov-session.json broke adopters — `specs/022-deterministic-runtime/spec.md` — **discarded**: a past-incident account in a Resolved Question; the commit history is its record
 - grounding — plan.md says POSIX rename is atomic and Windows rename is weaker — `specs/022-deterministic-runtime/plan.md` — **discarded**: a property of the platforms the atomic-write design rests on, stated as rationale; the CI matrix exercises the write on all three
 - grounding — plan.md says certain markdown extensions are off by default in pulldown-cmark — `specs/022-deterministic-runtime/plan.md` — **discarded**: rationale for a rejected alternative in Trade-offs; no current behavior rests on it
-- artifact-size — `specs/022-deterministic-runtime/spec.md` is 58291 bytes, 2 read pages at the 50000-byte read size — `specs/022-deterministic-runtime/spec.md` — **discarded**: predates PR #5, which added two short scenarios; splitting or trimming the runtime's umbrella spec is its own work, not Pi support
-- artifact-size — `specs/022-deterministic-runtime/data-model.md` is 121695 bytes, 3 read pages at the 50000-byte read size — `specs/022-deterministic-runtime/data-model.md` — **discarded**: predates PR #5, which added two short scenarios; splitting or trimming the runtime's umbrella spec is its own work, not Pi support
 - grounding — plan.md says no primitive but fetch-archive makes an HTTP request of its own — `specs/022-deterministic-runtime/plan.md` — **discarded**: a scope statement in the Trade-offs entry recording the reqwest dependency's adoption; runtime/Cargo.toml is cited, and the plan's fetch-archive transport section names the path
 - grounding — plan.md says tokio is required by rmcp — `specs/022-deterministic-runtime/plan.md` — **discarded**: rationale for a dependency choice, the same class as the stored rmcp discard
 - grounding — plan.md says pulldown-cmark provides byte offsets — `specs/022-deterministic-runtime/plan.md` — **discarded**: rationale for the parser choice, the same class as the stored pulldown-cmark discard
-- grounding — spec.md says the cycle check caught a derivation cycle when its bullet was first written — `specs/022-deterministic-runtime/spec.md` — **discarded**: a past-event account in the Bash script relationships section; the commit history is its record
 - grounding — spec.md and plan.md say analyze runs gen-help-tables through run-generator and the pre-commit hook calls the generators directly — `specs/022-deterministic-runtime/spec.md` — **discarded**: describes the wiring the Bash script relationships section exists to record, naming the command and the hook it describes
 - grounding — spec.md says every recorded disagreement about the promotion-coverage figure resolved to a difference of method — `specs/022-deterministic-runtime/spec.md` — **discarded**: a past-event account in AC32's rationale, recording why the criterion reports all four terms
+- artifact-size — `specs/022-deterministic-runtime/data-model.md` is 99953 bytes, 2 read pages at the 50000-byte read size — `specs/022-deterministic-runtime/data-model.md` — **discarded**: trimmed in place 2026-10-15 from 121,695 to 99,953 bytes (3 read pages to 2) by tasks 139-140; under the 50,000-byte read size needs a split of 022, which the operator decided to settle separately after the trim
 
 ## Unexamined targets
 
@@ -256,4 +232,4 @@ decisions:
 
 ## Fixed in this run
 
-*None.*
+- grounding — spec.md says every release ships five targets and publishes the ductus crate to crates.io without citing the release workflow — `specs/022-deterministic-runtime/spec.md` — **fixed**
