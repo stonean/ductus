@@ -6,12 +6,11 @@
 //! each showed a **window** — the bullets captured while the feature in hand
 //! was open — and a window cannot show an item older than that feature: six
 //! stood in the inbox when `ductus-v0.47.0` was cut, and they appeared in that
-//! feature's reports only because all six happened to land inside its window
-//! (spec 022, scenario `the-inbox-row`). Spec 058 retired the windows along
-//! with the capture that fed them — no finding a run produces reaches the
-//! inbox now — and moved this row to `dashboard`, because a count of the
-//! todos a person has logged has no bearing on the spec a review or
-//! implementation run is working on.
+//! feature's reports only because all six happened to land inside its window.
+//! Spec 058 retired the windows along with the capture that fed them — no
+//! finding a run produces reaches the inbox now — and moved this row to
+//! `dashboard`, because a count of the todos a person has logged has no
+//! bearing on the spec a review or implementation run is working on.
 //!
 //! **A notice, never a gate.** §brownfield-inbox keeps capture free — *"the
 //! honest choice between a growing backlog and a silent one would otherwise
