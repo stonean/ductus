@@ -62,7 +62,7 @@ use git2::{Delta, DiffFindOptions, DiffOptions, Repository, Tree};
 /// same value to `git diff` as `--find-renames`, and the
 /// `mechanical_sweep_parity` test holds the two to it — stated here rather
 /// than inherited, because libgit2 and git each fall back to their own
-/// default and git's is overridable from a contributor's config (spec 022
+/// default and git's is overridable from a contributor's config (spec 066
 /// scenario `a-renamed-file-contributes-its-rewrites`).
 pub const RENAME_THRESHOLD: u16 = 50;
 

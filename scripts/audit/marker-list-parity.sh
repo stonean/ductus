@@ -20,7 +20,7 @@
 #   * `specs/067-analyze-and-audit-checks/scenarios/criterion-path-existence-family.md`
 #     — carries the count and the group names, not the phrases.
 #
-# Nothing compared them. Adding three phrases (022 scenario
+# Nothing compared them. Adding three phrases (067 scenario
 # `criterion-non-assertion-phrasings`) meant hand-editing all four, and a
 # missed one would have left a canonical source lying about shipped
 # behaviour — the exact drift §drift-prevention exists to catch, in the

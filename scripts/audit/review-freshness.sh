@@ -266,7 +266,7 @@ def pair_run(old_run, new_run):
 
 # Rename detection, stated rather than inherited — the same values as
 # `RENAME_THRESHOLD` and `RENAME_LIMIT` in runtime/src/primitives/mechanical_sweep.rs,
-# which `mechanical_sweep_parity` holds the two halves to (spec 022 scenario
+# which `mechanical_sweep_parity` holds the two halves to (spec 066 scenario
 # a-renamed-file-contributes-its-rewrites). Left to `git diff`, both come from
 # whoever runs it: `diff.renames=false` turned detection off and the verdict
 # with it, so a contributor's local run and CI's could disagree.

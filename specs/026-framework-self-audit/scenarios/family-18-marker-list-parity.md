@@ -22,7 +22,7 @@ rather than incidental:
 - `specs/067-analyze-and-audit-checks/scenarios/criterion-path-existence-family.md`
   — carries the count and the group names, not the phrases.
 
-Nothing compared them. Adding three phrases under 022's
+Nothing compared them. Adding three phrases under 067's
 `criterion-non-assertion-phrasings` meant hand-editing all four, and a missed
 one would have left a canonical source asserting behavior the runtime does not
 have — the drift [§drift-prevention](../../../framework/constitution.md#drift-prevention)

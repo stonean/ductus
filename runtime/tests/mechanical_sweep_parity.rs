@@ -443,7 +443,7 @@ fn rust_and_family_19_agree_on_a_built_sweep() {
 /// A throwaway repository whose `base..HEAD` window **renumbers** a spec
 /// directory — `063-fixture` → `064-fixture` — and rewrites the references to
 /// it inside the three contracts it carries, with a structural edit added to
-/// whichever contracts `structural` names (spec 022 scenario
+/// whichever contracts `structural` names (spec 066 scenario
 /// `a-renamed-file-contributes-its-rewrites`).
 ///
 /// Every rewrite lands in a renamed file, so the pairs are repo-wide only if a

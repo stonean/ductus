@@ -30,7 +30,7 @@ Each reference is classified into one of three kinds, and the classification is 
 
   *Line-scoped, not immediately-preceding.* The dominant real shape is a table row or clause that names the file once and then cites several of its sections — `` | `review.md` | edit — §Behavior step 5 and §Load | `` — where an immediately-preceding rule catches the first reference and misses the rest. Measured: immediately-preceding covered 34 of 112; line-scoped covers 136 of 311 references.
 
-  *"Other than the markers file" is load-bearing*, and it was not in the first draft. A line citing the constitution itself — `[§known](../../022-deterministic-runtime/scenarios/constitution.md#known)`, or `` `framework/constitution.md` §grounding `` — names a document, but the document it names is precisely the one whose markers are in hand. Excluding it would drop the single kind of reference this primitive exists to check. An existing test caught that on the first draft, which is the argument for having had one.
+  *"Other than the markers file" is load-bearing*, and it was not in the first draft. A line citing the constitution itself — `[§known](constitution.md#known)`, or `` `framework/constitution.md` §grounding `` — names a document, but the document it names is precisely the one whose markers are in hand. Excluding it would drop the single kind of reference this primitive exists to check. An existing test caught that on the first draft, which is the argument for having had one.
 
 - **`intra-document`** — the anchor names a heading in the citing file. Resolved against that file's own headings, longest first, so `§Hook Installation` is not satisfied by a shorter `§Hook` elsewhere in the file.
 

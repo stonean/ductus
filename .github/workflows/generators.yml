@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # The two frontmatter derivations are runtime primitives since spec 022's
+      # The two frontmatter derivations are runtime primitives since spec 067's
       # adopter-generator-promotion, so this workflow now needs the binary.
       - uses: dtolnay/rust-toolchain@1.99.0
         with:
