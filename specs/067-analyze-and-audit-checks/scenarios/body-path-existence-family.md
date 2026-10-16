@@ -22,8 +22,8 @@ Measured over the done specs with a prototype of this design: about 610 raw cand
 - **An unresolved candidate is examined in order.** A missing top-level segment is recorded `root-absent`; an adopter destination `ships-to-adopter`; a line carrying a criterion marker, a body marker, or a negated-creation clause `not-a-live-claim`. The rest are checked against history.
 - **History decides.** One walk from HEAD per call, every remaining candidate batched, stopping once each is found. A candidate no revision ever held is recorded `never-existed`, a new reason in the excluded-by-construction class. One a revision held is a finding that quotes the line, so the fix is in front of the reader.
 - **A history that cannot be consulted flags nothing.** No repository, a shallow clone or an unreadable revision records each remaining candidate as `no-readable-state`.
-- **The seven body markers are body-only.** Listed canonically in [data-model.md](../data-model.md) §Body transition markers, they are added to the criterion family's fourteen, not merged into them, so the criterion family's list is unchanged.
-- **Markers match the whole logical line.** A logical line is a paragraph, a list item, a blockquote paragraph or a table row with its hard wraps joined, so a `| path | Delete |` row exempts itself without a table parser, a wrapped sentence keeps a marker that lands on its first physical line, and a double-backtick span quoting an example is read whole.
+- **The seven body markers are body-only.** Listed canonically in [data-model.md](../data-model.md) §Body transition markers, they are added to the criterion family's list, not merged into it, so that list is unchanged.
+- **Markers match the whole logical line.** A logical line is a paragraph, a list item, a blockquote paragraph, a table row or a heading with its hard wraps joined, so a `| path | Delete |` row exempts itself without a table parser, a wrapped sentence keeps a marker that lands on its first physical line, and a double-backtick span quoting an example is read whole.
 
 ## Edge Cases
 

@@ -1756,9 +1756,9 @@ struct BodyCandidate {
 ///   [`BODY_TRANSITION_MARKERS`] entry or a negated-creation clause describes
 ///   a transition, and its paths are recorded `not-a-live-claim`. Lines are
 ///   logical ([`logical_lines`]): a paragraph, a list item, a blockquote
-///   paragraph or a table row, its hard wraps joined, so an Affected Files
-///   row with a `Delete` action exempts itself and a wrapped sentence keeps
-///   its marker.
+///   paragraph, a table row or a heading, its hard wraps joined, so an
+///   Affected Files row with a `Delete` action exempts itself and a wrapped
+///   sentence keeps its marker.
 ///
 /// The acceptance criteria are skipped (the criterion family owns them), as are
 /// fenced blocks and HTML comments. Candidates follow the criterion grammar,
