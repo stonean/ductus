@@ -127,7 +127,7 @@ Writes `specs/{feature}/analysis.md` — the run's record in its frontmatter and
 
 | class | reasons | response |
 | --- | --- | --- |
-| excluded by construction | `not-a-live-claim`, `ships-to-adopter`, `root-absent` | none; the exclusion is correct |
+| excluded by construction | `not-a-live-claim`, `ships-to-adopter`, `root-absent`, `never-existed` | none; the exclusion is correct |
 | could not be read | `target-missing`, `target-unparseable`, `no-readable-state`, `referrer-unreadable`, `rule-citations-not-checked`, `rule-assessments-not-checked`, `rule-file-unreadable`, `references-not-checked`, `applicable-rules-not-checked`, `grounding-not-checked` | a real gap in what the run saw |
 | the spec's own artifact | `artifact-unreadable` | **blocking at `done`**, where it is a finding, never a skip |
 
