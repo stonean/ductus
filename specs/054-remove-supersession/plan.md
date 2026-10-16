@@ -16,7 +16,7 @@ The 053 → 052 consolidation runs before any command source is edited. `/{proje
 
 **`/{project}:consolidate` migrates no content**, which is what makes this cheap. It re-points every inbound body link and removes the directory; it does not copy 053's prose into 052. So "053 is consolidated into 052" means 053 stops existing and its pointers land on 052 — not that 052 absorbs text this change would immediately delete. `consolidate.md`'s own scope note is explicit that the command does not verify the target covers what the source said, and deliberately does not try.
 
-One consequence worth naming: this spec's body links to `../053-supersession-reconciliation/spec.md`, so `rewrite-spec-links` re-points it to 052 as part of the consolidation. That is the intended outcome and the reason 052 was chosen as the target over 054 — consolidating into 054 would have rewritten that link into a self-link, and `derive-dependencies` records self-links rather than stripping them, specifically so the cycle check surfaces them.
+One consequence worth naming: this spec's body linked to `../053-supersession-reconciliation/spec.md`, so `rewrite-spec-links` re-pointed it to 052 when the consolidation removed 053. That is the intended outcome and the reason 052 was chosen as the target over 054 — consolidating into 054 would have rewritten that link into a self-link, and `derive-dependencies` records self-links rather than stripping them, specifically so the cycle check surfaces them.
 
 ### 052 is edited down, not annotated
 
