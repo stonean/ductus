@@ -11,7 +11,7 @@ section: "Artifact checks"
 Two discriminators make a body-wide check possible without flagging true history:
 
 - **A dead reference is a path that existed in this repository and no longer does.** An example (`runtime/src/primitives/new_thing.rs`), a hypothetical, or a rejected alternative that was never built (`scripts/normalize-permissions.sh`) never existed. It is a name, not a file, and nothing about it can go stale.
-- **A line that describes a transition is not a claim the path is present.** The criterion family's fourteen markers already say so for deletions, renames, migration subjects, adopter scope and hedges. Body prose also states transitions in imperative and tabular forms criteria do not use — `Delete`, `Remove`, a `` `old` → `new` `` rename — so the body family adds those.
+- **A line that describes a transition is not a claim the path is present.** The criterion family's fifteen markers already say so for deletions, renames, migration subjects, adopter scope and hedges. Body prose also states transitions in imperative and tabular forms criteria do not use — `Delete`, `Remove`, a `` `old` → `new` `` rename — so the body family adds those.
 
 Measured over the done specs with a prototype of this design: about 610 raw candidates; 224 after the criterion family's grammar, `root-absent` and `ships-to-adopter`; 134 after the history gate; 70 in 17 specs after the earned markers. Each extra marker was measured alone and kept only when what it exempted was a transition statement.
 

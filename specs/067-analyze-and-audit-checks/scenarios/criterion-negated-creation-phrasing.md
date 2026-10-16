@@ -10,7 +10,8 @@ section: "Artifact checks"
 this repo, because a path that fails to resolve *confirms* such a criterion
 rather than contradicting it. The mechanism has been `NON_ASSERTION_MARKERS` —
 a closed phrase list, widened to fourteen by
-[criterion-non-assertion-phrasings](criterion-non-assertion-phrasings.md).
+[criterion-non-assertion-phrasings](criterion-non-assertion-phrasings.md) and to
+fifteen by [body-path-existence-family](body-path-existence-family.md).
 
 An adopter running `ductus-v0.52.0` reported a false positive of a shape the
 list cannot reach. A `done` spec's criterion read:
@@ -26,7 +27,7 @@ criterion asserts — the finding is exactly backwards, the failure mode
 [045's data-model](../../045-decision-state-drift-detection/data-model.md)
 records as the whole reason the exemption exists.
 
-Every one of the fourteen phrases describes a path that **existed and was
+Every one of the fifteen phrases describes a path that **existed and was
 removed**. A path asserted to have **never been created** is a different
 construction, and no member of the list matches it.
 
@@ -95,7 +96,7 @@ restatement only, the canonical section renamed) plus the restored baseline.
   stays a finding. This is the one place the family deliberately inverts its
   own error direction, because the failure mode guarded against here is a
   blinded check rather than a noisy one.
-- **The phrase count is still fourteen.** This group adds no phrase, so
+- **The phrase list is unchanged by this group.** It adds no phrase, so
   `NON_ASSERTION_MARKERS` and all three spelled-out counts — 045's data-model,
   `analyze.md`, and
   [criterion-path-existence-family](criterion-path-existence-family.md) — are
@@ -145,7 +146,7 @@ restatement only, the canonical section renamed) plus the restored baseline.
   [§runtime-boundary](../../../framework/constitution.md#runtime-boundary)
   places at an extension point rather than in a deterministic family. Here it
   decides only whether one further exemption applies, and the exemption stays
-  whole-criterion. The fourteen phrases are still matched across the whole
+  whole-criterion. The phrases are still matched across the whole
   criterion, so an appended annotation suppresses exactly what it suppressed
   before. That decision is unchanged by this scenario.
 - **This is a precision fix, not a recall one.** No criterion that was silently

@@ -70,3 +70,12 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] The word rule's statements name the identifier case: the predicate's doc and 067's negated-creation scenario
 
 - **Done when**: a line whose only negator-then-verb pair runs through an `_`-joined identifier is a live claim, the test fails when `_` splits words, and the corpus delta is the one 043 line
+
+## 10. Two marker widenings the body corpus earned
+
+- [x] `no longer exists` widens to `no longer exist`, which subsumes it and catches the plural (021's pointer: AC7's workflow and two generators "no longer exist")
+- [x] `target_paths` joins `target paths`: the TOML key's own spelling, naming a migration manifest's data (042's and 043's lines describing `target_paths`)
+- [x] A predicate-level test for both, failing with either reverted
+- [x] The list's statements agree: 045's canonical table and its count, analyze.md's restatement and count, 067's criterion scenario's count
+
+- **Done when**: the corpus delta is the eight true lines and nothing else, the test fails with either widening reverted, and Family 18 passes

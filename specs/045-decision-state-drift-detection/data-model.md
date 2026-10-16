@@ -109,17 +109,17 @@ A candidate resolves when the repo-root-relative path exists as either a file or
 
 ### The criterion must be a live claim
 
-A path is only checked when its criterion actually claims the path is **present**. A criterion carrying any of these fourteen phrases is exempted whole, and each of its paths is recorded as `not-a-live-claim`:
+A path is only checked when its criterion actually claims the path is **present**. A criterion carrying any of these fifteen phrases is exempted whole, and each of its paths is recorded as `not-a-live-claim`:
 
 | Group | Phrases | Why the finding would be backwards |
 | --- | --- | --- |
-| deletion / retirement | `deleted`, `does not exist`, `no longer exists`, `is removed`, `are removed`, `since retired` | The criterion is *satisfied* by the path being gone |
+| deletion / retirement | `deleted`, `does not exist`, `no longer exist`, `is removed`, `are removed`, `since retired` | The criterion is *satisfied* by the path being gone |
 | rename | `is renamed to`, `are renamed to`, `renamed from`, `(was` + space | The old path is named deliberately |
-| migration subject | `target paths` | Manifest data naming what to remove, not a delivery claim |
+| migration subject | `target paths`, `target_paths` | Manifest data naming what to remove, not a delivery claim |
 | adopter scope | `in the project` | Describes a scaffolded checkout, not this one |
 | hedge / example | `if it exists`, `e.g.` | Claims nothing at all |
 
-Three of these arrived after the first measurement, under 067's [criterion-non-assertion-phrasings](../067-analyze-and-audit-checks/scenarios/criterion-non-assertion-phrasings.md) scenario: `deleted` subsumes the original `is deleted` / `are deleted` pair so the past-tense-agent form (``after `531e3ea` and `3ff65445` deleted them`` — this spec's own AC18) is caught; `(was` + space covers the parenthetical rename history; and `target paths` is a fifth group for a path named as the subject of a migration record. They cleared the four **residual** false positives in the triage below, taking the repo-wide sweep from 25 findings to 21.
+Three of these arrived after the first measurement, under 067's [criterion-non-assertion-phrasings](../067-analyze-and-audit-checks/scenarios/criterion-non-assertion-phrasings.md) scenario: `deleted` subsumes the original `is deleted` / `are deleted` pair so the past-tense-agent form (``after `531e3ea` and `3ff65445` deleted them`` — this spec's own AC18) is caught; `(was` + space covers the parenthetical rename history; and `target paths` is a fifth group for a path named as the subject of a migration record. They cleared the four **residual** false positives in the triage below, taking the repo-wide sweep from 25 findings to 21. Two more came from the corpus run of 067's [body-path-existence-family](../067-analyze-and-audit-checks/scenarios/body-path-existence-family.md), which shares this list: `no longer exists` widened to `no longer exist`, which subsumes it and catches the plural, and `target_paths` joined `target paths` as the TOML key's own spelling.
 
 This is the open-state tell list's co-occurrence design **inverted**. There, a phrase asserting an open state is contradicted by a target that is closed. Here, a phrase asserting *absence* is **confirmed** by a path that does not resolve. Same closed-list, framework-fixed discipline, for the same reason: a per-project list would make the promotion threshold measure configuration rather than drift.
 

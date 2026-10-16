@@ -1308,7 +1308,7 @@ fn check_criterion_path_existence(
 /// phrase that would (`was created`) exempts positive delivery claims too.
 /// [`asserts_negated_creation`] carries it as a clause-scoped predicate
 /// instead — same inversion, one tense earlier.
-const NON_ASSERTION_MARKERS: [&str; 14] = [
+const NON_ASSERTION_MARKERS: [&str; 15] = [
     // `deleted` subsumes the former `is deleted` / `are deleted` pair. The
     // narrower forms missed the past-tense-agent phrasing a criterion reaches
     // for when it names the commit that did the deleting — 045's own AC18,
@@ -1317,7 +1317,10 @@ const NON_ASSERTION_MARKERS: [&str; 14] = [
     // the group's whole premise.
     "deleted",
     "does not exist",
-    "no longer exists",
+    // Subsumes `no longer exists` and catches the plural — 021's pointer,
+    // `AC7's CI workflow … and two of the three generators it named … no
+    // longer exist`, is the case that earned the widening.
+    "no longer exist",
     "is removed",
     "are removed",
     "since retired",
@@ -1333,6 +1336,9 @@ const NON_ASSERTION_MARKERS: [&str; 14] = [
     // paths cover … `framework/workflows/`` — is data inside a manifest
     // describing what to remove, not a claim that the path is delivered.
     "target paths",
+    // The same subject in the TOML key's own spelling: a plan describing a
+    // migration entry names its `target_paths` (042's and 043's plans).
+    "target_paths",
     "in the project",
     "if it exists",
     "e.g.",
@@ -4365,6 +4371,18 @@ mod tests {
                 "a live claim must still flag: {criterion} -> {:?}",
                 result.findings
             );
+        }
+    }
+
+    #[test]
+    fn the_plural_and_the_toml_key_are_non_assertion_markers() {
+        // Both earned on the body corpus: each line is a true statement naming
+        // a path that is gone, and each was flagged before its widening.
+        for line in [
+            "AC7's CI workflow (`.github/workflows/old.yml`) and its generators no longer exist.",
+            "adopter-relative `target_paths` = `scripts/gen-spec-deps.sh`, `scripts/lib/specs-root.sh`",
+        ] {
+            assert!(!is_live_assertion(line), "must not be a live claim: {line}");
         }
     }
 
