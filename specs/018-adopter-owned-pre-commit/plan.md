@@ -4,7 +4,7 @@ Implements [018 — Adopter-Owned Pre-Commit](spec.md).
 
 ## Overview
 
-Three on-disk changes to `framework/bootstrap/hooks/`, one substantive rewrite of `framework/bootstrap/ductus.md` §Hook Installation + §Shared Files, and a signpost block on spec 017. The work is plumbing — no new behavior the framework didn't already do, just a different ownership model for the hook file. Risk surface is the migration code path (one-time, recovery is documented in §Edge Cases). No data model, no event contracts, no error codes.
+Three on-disk changes to `framework/bootstrap/hooks/`, one substantive rewrite of `framework/bootstrap/ductus-procedure.md` §Hook Installation plus `framework/bootstrap/ductus.md` §Shared Files, and a signpost block on spec 017. The work is plumbing — no new behavior the framework didn't already do, just a different ownership model for the hook file. Risk surface is the migration code path (one-time, recovery is documented in §Edge Cases). No data model, no event contracts, no error codes.
 
 ## Technical Decisions
 
@@ -16,19 +16,19 @@ Three on-disk changes to `framework/bootstrap/hooks/`, one substantive rewrite o
 
 The new `framework/bootstrap/hooks/pre-commit` is written from scratch as the adopter-owned outer stub. Content per `spec.md` §Design > Outer file. This file replaces the renamed one at the same source path; from git's perspective, it's a delete+add (because content differs significantly from the renamed file). Acceptable — the file is fundamentally a different artifact under the new model, and adopter projects don't have history on it anyway.
 
-### ductus.md §Hook Installation rewrite
+### §Hook Installation rewrite
 
 Three substantive edits to the section, each motivated by the spec:
 
 1. **Detection ladder collapses from 7 items to 4.** Items 2–5 (third-party hook systems) merge into a single "any third-party hook system detected" branch with the same skip-and-warn behavior. The old item 6 (sentinel-detected ductus-installed file) is removed entirely — under the new model, `.githooks/pre-commit` is never ductus-managed, so detecting it as such is meaningless. The old items 1 and 7 collapse to the new items 1 and 4 (already-wired vs. fresh-install).
 
-2. **Migration subsection added.** New subsection in `framework/bootstrap/ductus.md`, between §Hook Installation's detection ladder and §Manual integration snippet. Specifies the line-2 sentinel check on `.githooks/pre-commit`, the conditional `git mv` (tracked vs. untracked file), the post-rename manifest behavior, and the post-scaffolding summary line. Edge cases from `spec.md` §Edge Cases (pre-existing inner, `git mv` failure) get explicit handling steps.
+2. **Migration subsection added.** New subsection in `framework/bootstrap/ductus-procedure.md`, between §Hook Installation's detection ladder and §Manual integration snippet. Specifies the line-2 sentinel check on `.githooks/pre-commit`, the conditional `git mv` (tracked vs. untracked file), the post-rename manifest behavior, and the post-scaffolding summary line. Edge cases from `spec.md` §Edge Cases (pre-existing inner, `git mv` failure) get explicit handling steps.
 
-3. **Inline `core.hooksPath` + `chmod +x`.** The actions previously delegated to `framework/bootstrap/hooks/install.sh` move into `framework/bootstrap/ductus.md`'s §Hook Installation section's fresh-install path: `git config core.hooksPath .githooks` and `chmod +x .githooks/pre-commit .githooks/ductus-pre-commit`. Both are idempotent on re-runs.
+3. **Inline `core.hooksPath` + `chmod +x`.** `framework/bootstrap/hooks/install.sh` is deleted; its two actions move into `framework/bootstrap/ductus-procedure.md`'s §Hook Installation section's fresh-install path: `git config core.hooksPath .githooks` and `chmod +x .githooks/pre-commit .githooks/ductus-pre-commit`. Both are idempotent on re-runs.
 
 ### Manual integration snippet path change
 
-The snippet (printed when the detection ladder hits a third-party hook system or non-`.githooks` `core.hooksPath`) changes from `./.githooks/pre-commit` to `./.githooks/ductus-pre-commit`. Two callsites: the prose snippet in `framework/bootstrap/ductus.md` §Hook Installation > Manual integration snippet, and the post-scaffolding output's per-condition skip message. Both update.
+The snippet (printed when the detection ladder hits a third-party hook system or non-`.githooks` `core.hooksPath`) changes from `./.githooks/pre-commit` to `./.githooks/ductus-pre-commit`. Two callsites: the prose snippet in `framework/bootstrap/ductus-procedure.md` §Hook Installation > Manual integration snippet, and the post-scaffolding output's per-condition skip message. Both update.
 
 ### Spec 017 signpost
 
@@ -41,7 +41,7 @@ Inserted as a top-of-file block-quote, after the H1 and before the lead paragrap
 > adopter-owned outer stub written via `create` strategy, not a ductus-owned
 > hook updated via `update` strategy. The ductus-owned generator orchestration
 > moved to `framework/bootstrap/hooks/ductus-pre-commit`. `install.sh` is
-> deleted; install actions inline in `ductus.md` §Hook Installation. AC21–AC23
+> deleted; install actions inline in `ductus-procedure.md` §Hook Installation. AC21–AC23
 > reflect the pre-018 design.
 ```
 
@@ -59,7 +59,7 @@ The end-to-end ACs (AC8, AC9, AC11) require a real `/ductus` run against a sandb
 | `framework/bootstrap/hooks/ductus-pre-commit` | Create (via rename) | Ductus-owned generator orchestration; sentinel on line 2 preserved |
 | `framework/bootstrap/hooks/install.sh` | Delete | Replaced by inlined actions in §Hook Installation |
 | `framework/bootstrap/ductus.md` | Modify | §Shared Files manifest (split 1 row → 2) |
-| `framework/bootstrap/ductus-procedure.md` | Modify | §Hook Installation (rewrite ladder, add Migration subsection, inline `core.hooksPath` + `chmod`); update Manual integration snippet path. Written in `framework/bootstrap/ductus.md`; spec 056's archive-boundary split moved the section here |
+| `framework/bootstrap/ductus-procedure.md` | Modify | §Hook Installation (rewrite ladder, add Migration subsection, inline `core.hooksPath` + `chmod`); update Manual integration snippet path |
 | `specs/017-derive-dont-ask/spec.md` | Modify (signpost only) | Insert block-quote signpost after the H1; do not touch body, ACs, or resolved questions |
 | `specs/018-adopter-owned-pre-commit/plan.md` | Create | This file |
 | `specs/018-adopter-owned-pre-commit/tasks.md` | Create | Task breakdown |
