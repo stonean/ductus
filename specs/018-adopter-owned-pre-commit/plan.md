@@ -10,7 +10,7 @@ Three on-disk changes to `framework/bootstrap/hooks/`, one substantive rewrite o
 
 ### Rename, don't recreate, the inner file
 
-The existing `framework/bootstrap/hooks/pre-commit` already contains exactly the body the new `ductus-pre-commit` needs (sentinel on line 2, `gen-spec-deps.sh` invocation, `git add` staging). The implementation does `git mv framework/bootstrap/hooks/pre-commit framework/bootstrap/hooks/ductus-pre-commit` rather than a copy + delete. This preserves git blame on the file and keeps the diff small (rename detection in `git log --follow`).
+`framework/bootstrap/hooks/ductus-pre-commit` is the former `framework/bootstrap/hooks/pre-commit`, moved with `git mv` rather than copied and deleted, so git blame and `git log --follow` carry across. It keeps the sentinel on line 2, runs the frontmatter derivations (`ductus derive-dependencies` and `derive-references`), and stages their output.
 
 ### Outer stub is a fresh file
 
