@@ -1,6 +1,6 @@
 ---
 title: "011-brownfield-process — spec"
-status: done
+status: in-progress
 dependencies: [007-govern-workflow, 023-govern-refinement]
 tags: [brownfield, process]
 next-criterion: 20
