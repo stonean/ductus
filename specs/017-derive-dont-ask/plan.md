@@ -4,7 +4,7 @@ Implements [017 — Derive, Don't Ask](spec.md).
 
 ## Overview
 
-Discipline-cleanup pass across templates, commands, constitution, validate, and the bootstrap installer. Adds three new generators (`gen-readme-table.sh`, `gen-help-tables.sh`, `gen-spec-deps.sh`), one new pre-commit hook (`.githooks/pre-commit`), one new install script (`scripts/install-hooks.sh`), one new rule file (`framework/rules/configuration-cross.md`), and one new adopter hook surface under `framework/bootstrap/hooks/`. Migrates existing dogfood specs only insofar as adding inline links to spec bodies for any frontmatter dependency not already linked (so the new `gen-spec-deps.sh` generator does not strip them on first run). Frontmatter field deletions are not retroactively migrated — under the constitution's frozen-archaeology rule, in force when this plan was written, done specs were not edited. (023's `living-specs` scenario removed that rule; the fields were left in place regardless, and the open-schema rule ignores them.) Collapses the twin constitutions to a single canonical file at `framework/constitution.md` and deletes root `constitution.md`.
+Discipline-cleanup pass across templates, commands, constitution, validate, and the bootstrap installer. Adds a help-table generator (`gen-help-tables.sh`), frontmatter `dependencies` derived from body links (today the runtime's `derive-dependencies` primitive), one new pre-commit hook (`.githooks/pre-commit`), one new install script (`scripts/install-hooks.sh`), one new rule file (`framework/rules/configuration-cross.md`), and one new adopter hook surface under `framework/bootstrap/hooks/`. Migrates existing dogfood specs only insofar as adding inline links to spec bodies for any frontmatter dependency not already linked, so the derivation does not strip them. Frontmatter field deletions are not retroactively migrated; the open-schema rule ignores the stale fields. Collapses the twin constitutions to a single canonical file at `framework/constitution.md` and deletes root `constitution.md`.
 
 The work is intentionally additive in mechanism (add generators and hooks) and subtractive in surface (remove fields, sections, and `--fix` mode). No new agent-facing concepts are introduced.
 
@@ -22,23 +22,22 @@ Per spec Q1: checkboxes are flipped only by `/implement` (which marks parents an
 
 ### Body inline links are authoritative for `dependencies`
 
-Per spec Q7: frontmatter `dependencies` is fully derived from inline markdown links to sibling specs in the spec body, excluding code fences. The new generator `scripts/gen-spec-deps.sh` walks every `specs/*/spec*.md`, computes the union, and rewrites the frontmatter list. The author maintains links in the body — no place to author the frontmatter list directly.
+Per spec Q7: frontmatter `dependencies` is fully derived from inline markdown links to sibling specs in the spec body, excluding code fences. The runtime's `derive-dependencies` primitive walks every `specs/*/spec.md`, computes the union, and rewrites the frontmatter list. The author maintains links in the body — no place to author the frontmatter list directly.
 
 Sync runs in two places:
 
-1. **Pre-commit hook** — primary sync. Runs `gen-spec-deps.sh` on every commit and stages the result.
-2. **Command-entry recompute** — `/clarify`, `/plan`, `/implement`, `/elaborate`, `/amend`, and `/target` recompute on entry as an idempotent safety net for uncommitted body edits.
+1. **Pre-commit hook** — primary sync. Runs `ductus derive-dependencies --write` on every commit and stages the result.
+2. **Command-entry recompute** — `/clarify`, `/plan`, `/implement`, `/amend`, and `/target` recompute on entry as an idempotent safety net for uncommitted body edits.
 
 Removal mechanism: remove the inline link, or move it inside a code fence (the scanner ignores fenced-code links). To mention a spec without depending on it, use a bare slug per Q4.
 
 ### Pre-commit hook architecture
 
-ductus repo's `.githooks/pre-commit` orchestrates all four generators:
+ductus repo's `.githooks/pre-commit` orchestrates the generators and derivations, among them:
 
-1. `scripts/gen-claude-commands.sh` (existing)
-2. `scripts/gen-readme-table.sh` (new, this spec)
-3. `scripts/gen-help-tables.sh` (new, this spec)
-4. `scripts/gen-spec-deps.sh` (new, this spec)
+1. `scripts/gen-claude-commands.sh`
+2. `scripts/gen-help-tables.sh` (new, this spec)
+3. `ductus derive-dependencies` (the derivation this spec introduced)
 
 Hook installation via `scripts/install-hooks.sh` (sets `git config core.hooksPath .githooks`). Idempotent — safe to run repeatedly.
 
@@ -46,7 +45,7 @@ Generators run unconditionally on every commit (no file-change gating). Trades a
 
 ### Adopter hook surface and `/ductus` integration
 
-Per spec Q7 expansion: `framework/bootstrap/hooks/pre-commit` and `framework/bootstrap/hooks/install.sh` ship with the framework. The shipped hook calls only adopter-relevant generators — initially just `gen-spec-deps.sh`. Slot is extensible.
+Per spec Q7 expansion: `framework/bootstrap/hooks/pre-commit`, an adopter-owned stub, and `framework/bootstrap/hooks/ductus-pre-commit`, which the stub calls, ship with the framework. The shipped hook runs only adopter-relevant derivations — `ductus derive-dependencies` and `derive-references`. Slot is extensible.
 
 `/ductus` adds a new "Hook installation" section between **Per-Agent Scaffolding** and **Post-Scaffolding Output**. On every run it detects state and acts:
 
@@ -58,21 +57,19 @@ Per spec Q7 expansion: `framework/bootstrap/hooks/pre-commit` and `framework/boo
 
 The sentinel comment is a single line near the top of the shipped hook (e.g., `# managed-by: ductus`) that the detection logic looks for to distinguish a ductus-installed hook from a hand-rolled one. The same sentinel survives `/ductus` updates because it's part of the shipped file.
 
-`scripts/gen-spec-deps.sh` ships to adopters with `update` strategy — every `/ductus` run refreshes it from upstream so adopters pick up generator fixes automatically. Adopters who have customized the script can list it in `.ductus/config.toml` `pinned.files` to opt out of overwrites. The shipped pre-commit hook references it via the project-relative path (`scripts/gen-spec-deps.sh`).
-
 ### Generated artifacts use marker comments
 
-The two generated content blocks (`README.md` Feature Specs table, `framework/commands/help.md` command tables) are bounded by HTML marker comments:
+The generated content blocks — `framework/commands/help.md`'s command tables — are bounded by HTML marker comments:
 
 ```markdown
-<!-- generated:feature-specs:start -->
-| Spec | Status | Dependencies | Description |
-| --- | --- | --- | --- |
+<!-- generated:commands-pipeline:start -->
+| Command | Pipeline Gate | Description |
+| --- | --- | --- |
 | ... |
-<!-- generated:feature-specs:end -->
+<!-- generated:commands-pipeline:end -->
 ```
 
-The generator scripts find the markers, splice the regenerated content between them, and leave everything outside the markers untouched. This lets `README.md` retain hand-authored prose around the generated table.
+The generator finds the markers, splices the regenerated content between them, and leaves everything outside the markers untouched. This lets `help.md` retain hand-authored prose around the generated tables.
 
 For `framework/commands/help.md`, each of the five command tables (Pipeline, Elaborate, Brownfield, Orient, Bootstrap) gets its own marker pair. The generator emits one block per table from the appropriate command-source frontmatter.
 
@@ -80,7 +77,7 @@ For `framework/commands/help.md`, each of the five command tables (Pipeline, Ela
 
 The frontmatter schema in `framework/constitution.md` §text-first-artifacts is updated to:
 
-- **Spec files** (`spec.md`, `spec-and-plan.md`): required = `status`, `dependencies`. Removed = `tags` (deleted), `track` (deleted from `spec-and-plan.md`).
+- **Spec files** (`spec.md`): required = `status`, `dependencies`. Removed = `tags` (deleted).
 - **Scenario files** (`scenarios/{slug}.md`): required = `section`. Replaced from `spec-ref`. Removed = `tags`.
 - **Other artifacts** (`plan.md`, `tasks.md`, `data-model.md`, `research.md`): no required frontmatter. The `title` field is deleted from all templates.
 
@@ -111,15 +108,15 @@ Adopter shipping: added to `framework/bootstrap/ductus.md`'s Shared Files manife
 
 ### Migration of existing dogfood specs
 
-Done specs were not migrated, per the frozen-archaeology rule the constitution carried at the time — stale `title:`, `tags:`, `spec-ref:`, and `track:` fields remain. `/validate` stops checking them, so they cause no findings.
+Done specs were not migrated for the deleted fields — stale `title:`, `tags:`, `spec-ref:`, and `track:` fields remain. `/validate` stops checking them, so they cause no findings.
 
-The one exception that needs active migration: **inline links for dependencies**. Each existing spec's frontmatter `dependencies` list must be reflected in the spec body via inline markdown links — otherwise the first run of `gen-spec-deps.sh` strips them. Migration task: for each existing spec, scan the body for inline links to declared deps; add a "References" list at the bottom of the spec body for any declared dep not already inline-linked.
+The one exception that needs active migration: **inline links for dependencies**. Each existing spec's frontmatter `dependencies` list must be reflected in the spec body via inline markdown links — otherwise the first derivation strips them. Migration task: for each existing spec, scan the body for inline links to declared deps; add a "References" list at the bottom of the spec body for any declared dep not already inline-linked.
 
 ### CI safety net
 
-A GitHub Actions workflow (`.github/workflows/generators.yml`) runs all four generators in dry-run mode on PR. Non-empty diff fails the build. Catches contributors who never ran `scripts/install-hooks.sh`.
+A GitHub Actions workflow (`.github/workflows/generators.yml`) runs the generators and derivations on PR and fails on any diff. Catches contributors who never ran `scripts/install-hooks.sh`.
 
-A second workflow file (`.github/workflows/adopter-generators.yml`) ships as a template referenced from the adopter README — not auto-installed. Adopters who want CI enforcement copy it into their own `.github/workflows/`. Auto-shipping CI files via `/ductus` would require platform detection (GitHub Actions vs. GitLab CI vs. Buildkite) that's out of scope for this spec.
+A second workflow file (`framework/templates/ci/adopter-generators.yml`) ships as a template referenced from the adopter README — not auto-installed. Adopters who want CI enforcement copy it into their own `.github/workflows/`. Auto-shipping CI files via `/ductus` would require platform detection (GitHub Actions vs. GitLab CI vs. Buildkite) that's out of scope for this spec.
 
 ## Affected Files
 
@@ -128,7 +125,6 @@ A second workflow file (`.github/workflows/adopter-generators.yml`) ships as a t
 | File | Action | Purpose |
 | --- | --- | --- |
 | `framework/templates/spec/spec.md` | Modify | Remove `title:` from frontmatter |
-| `framework/templates/spec/spec-and-plan.md` | Modify | Remove `title:` and `track:` from frontmatter; remove track-related comment |
 | `framework/templates/spec/plan.md` | Modify | Remove `title:` from frontmatter; remove "Open Questions Resolved" section |
 | `framework/templates/spec/tasks.md` | Modify | Remove `title:` from frontmatter; remove `[simple]` marker documentation |
 | `framework/templates/spec/data-model.md` | Modify | Remove `title:` from frontmatter |
@@ -140,11 +136,9 @@ A second workflow file (`.github/workflows/adopter-generators.yml`) ships as a t
 | File | Action | Purpose |
 | --- | --- | --- |
 | `framework/commands/specify.md` | Modify | Remove tag prompt step; remove title fill-in; remove tags-related instructions |
-| `framework/commands/capture.md` | Modify | Remove title placeholder; remove tags reference |
 | `framework/commands/clarify.md` | Modify | Remove title check; remove tags advisory; add cross-spec scan step; add deps recompute on entry |
 | `framework/commands/plan.md` | Modify | Remove title fill-in; remove "Open Questions Resolved" reference; remove `[simple]` marker proposal step; reframe Affected Files as planning aid; add cross-spec scan; add deps recompute on entry |
 | `framework/commands/implement.md` | Modify | Remove `[simple]` marker reading; replace Affected Files boundary with `git diff` derivation; add cross-spec scan; add deps recompute on entry |
-| `framework/commands/elaborate.md` | Modify | Remove title placeholder; change `spec-ref` to `section`; add deps recompute on entry |
 | `framework/commands/groom.md` | Modify | Remove `[promote-to-rule]` prefix instruction; specify "always re-walk every item not migrated on next pass" |
 | `framework/commands/analyze.md` | Modify | Remove Fix Mode section; remove PKM title check; remove tags advisory; rename `spec-ref` check to `section`; change help-equivalence to dry-run-of-generator check; add body-link-vs-deps advisory; add configuration rule file to rule-file list |
 | `framework/commands/amend.md` | Modify | Add deps recompute on entry |
@@ -165,25 +159,22 @@ A second workflow file (`.github/workflows/adopter-generators.yml`) ships as a t
 | File | Action | Purpose |
 | --- | --- | --- |
 | `CLAUDE.md` (root) | Modify | Update `@import constitution.md` → `@import framework/constitution.md` |
-| `README.md` (root) | Modify | Update `constitution.md` link to `framework/constitution.md`; add HTML marker comments around Feature Specs table |
+| `README.md` (root) | Modify | Update `constitution.md` link to `framework/constitution.md` |
 | `AGENTS.md` (root) | Modify | Remove "mirror constitutions" instruction; remove "run gen-claude-commands.sh" instruction |
 
 ### Generators (new)
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `scripts/gen-readme-table.sh` | Create | Rebuild the README Feature Specs table from spec frontmatter |
 | `scripts/gen-help-tables.sh` | Create | Rebuild the help.md command tables from each command's frontmatter |
-| `scripts/gen-spec-deps.sh` | Create | Scan spec bodies for sibling-spec inline links; rewrite frontmatter `dependencies` |
 | `scripts/install-hooks.sh` | Create | One-time `git config core.hooksPath .githooks`; idempotent |
 
 ### Hooks (new)
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `.githooks/pre-commit` | Create | ductus repo's hook — orchestrates all four generators, stages outputs |
-| `framework/bootstrap/hooks/pre-commit` | Create | Adopter-shipped hook — calls only adopter-relevant generators (initially `gen-spec-deps.sh`); contains `# managed-by: ductus` sentinel |
-| `framework/bootstrap/hooks/install.sh` | Create | Adopter-side install script invoked by `/ductus` |
+| `.githooks/pre-commit` | Create | ductus repo's hook — runs the generators and derivations, stages outputs |
+| `framework/bootstrap/hooks/pre-commit` | Create | Adopter-shipped hook stub; calls `framework/bootstrap/hooks/ductus-pre-commit`, which runs the derivations and carries the `# managed-by: ductus` sentinel |
 
 ### New rule file
 
@@ -195,7 +186,7 @@ A second workflow file (`.github/workflows/adopter-generators.yml`) ships as a t
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `framework/bootstrap/ductus.md` | Modify | Add Hook Installation section; add `framework/rules/configuration-cross.md` to Shared Files (update strategy); add `framework/bootstrap/hooks/pre-commit` to Shared Files (create strategy) and `scripts/gen-spec-deps.sh` to Shared Files (update strategy, pinnable via `.ductus/config.toml`); add `framework/bootstrap/hooks/install.sh` to per-agent scaffolding logic |
+| `framework/bootstrap/ductus.md` | Modify | Add Hook Installation section; add `framework/rules/configuration-cross.md` to Shared Files (update strategy); add `framework/bootstrap/hooks/pre-commit` to Shared Files (create strategy) |
 | `framework/bootstrap/configure/claude.md` | Modify | Add Bash permissions for hook install/run paths (`Bash(git config *)`, `Bash(.githooks/*)`, `Bash(scripts/gen-*)`) |
 | `framework/bootstrap/configure/auggie.md` | Modify | Same permission additions in Auggie's format |
 
@@ -203,14 +194,14 @@ A second workflow file (`.github/workflows/adopter-generators.yml`) ships as a t
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `.github/workflows/generators.yml` | Create | ductus repo CI: dry-run all four generators; fail on diff |
+| `.github/workflows/generators.yml` | Create | ductus repo CI: run the generators and derivations; fail on diff |
 | `framework/templates/ci/adopter-generators.yml` | Create | Shipped template adopters can copy into their own `.github/workflows/` |
 
 ### Existing dogfood spec migration
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `specs/000-016/spec.md` (and one `spec-and-plan.md` if any) | Modify | Add inline links in body for any declared frontmatter dependency not already linked (so first `gen-spec-deps.sh` run does not strip them) |
+| `specs/000-016/spec.md` | Modify | Add inline links in body for any declared frontmatter dependency not already linked (so the first derivation does not strip them) |
 
 (No frontmatter migration on done specs — see the trade-off below.)
 
@@ -232,7 +223,7 @@ See `data-model.md` for the configuration rule file structure, ID format, catego
 - **Symmetric hooks across ductus and adopters.** Considered: command-entry recompute only, no adopter hook. Rejected because drift between commits is a real failure mode (a teammate pulls an out-of-date branch and reads stale deps without running a ductus command). The user explicitly pushed for symmetry — if hooks are right for ductus, they're right for adopters.
 - **Adopter hook installs only when no existing hook system is detected.** Considered: always install (clobbering existing hooks). Rejected because adopter projects already use husky/lefthook/pre-commit-py and clobbering their setup is a pipeline-violating action. Skip-and-warn-with-snippet keeps the adopter in control.
 - **No `gen-root-constitution.sh` generator.** Q2 collapsed the twin constitutions; the divergence the generator would have managed is gone.
-- **Existing dogfood specs not migrated for deleted fields.** `framework/constitution.md` carved done specs out as *frozen archaeology* when this plan was written; 023's `living-specs` scenario deleted that carve-out, and the anchor it was cited by no longer exists. Stale `title:`, `tags:`, `spec-ref:`, `track:` fields remain; the open-schema rule ignores them. The cost is one-time visual noise in old specs; the benefit is no rewrite of merged history.
+- **Existing dogfood specs not migrated for deleted fields.** Stale `title:`, `tags:`, `spec-ref:`, `track:` fields remain in done specs; the open-schema rule ignores them. The cost is visual noise in old specs; the benefit is no rewrite of merged history.
 - **CI templates ship but aren't auto-installed for adopters.** Auto-installing requires CI-platform detection (GHA vs. GitLab vs. Buildkite) that's out of scope. Adopters with CI enforcement opt in by copying the template.
 - **The pre-commit hook runs all generators unconditionally** rather than gating on which files changed. Trades sub-second hook execution time for a hook script that can't have wrong gate logic.
 - **`--fix` mode deletion is irreversible.** A user who relied on `/validate --fix` for hand-implementation flows loses that workflow. The framework's position becomes "use `/implement`," and the trade-off is documented in the spec's Q1 resolution. Rolling back requires another spec.
