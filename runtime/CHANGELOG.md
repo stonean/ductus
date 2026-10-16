@@ -2,6 +2,55 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.59.7] — 2026-10-16
+
+Spec 022 is split into three, the constitution corrects what the dependency
+derivation reads, and the crate's readme describes the runtime that ships.
+The runtime behaves as before: this release changes doc comments, the
+readme, an audit-script label and one dependency patch. A patch release: no
+primitive gains an argument or a result field, and the MSRV stays 1.89.
+
+### Changed
+
+- **022 is split into three specs.** Its data model had outgrown one read:
+  121,695 bytes at 0.59.6 and 99,953 after a trim in place, against the
+  50,000-byte read size. The audit-record and completion-gate primitives —
+  `compute-review-scope`, `process-waivers`, `process-decisions`,
+  `write-review`, `write-analysis`, `check-review-gate` and
+  `diff-cross-spec` — are now specified in
+  `066-audit-records-and-the-completion-gate`, and the analyze and audit
+  checks — `check-artifacts` and its families, `validate-frontmatter`,
+  `traverse-deps`, `resolve-anchor`, `check-rule-ids`,
+  `derive-dependencies`, `derive-references`, `check-corpus-links`,
+  `check-orphaned-references`, `check-command-flags` and
+  `check-promotion-coverage` — in `067-analyze-and-audit-checks`, each with
+  its scenarios, data-model sections and criteria. The three data models
+  measure 44,823, 19,775 and 20,201 bytes. Five superseded scenarios are
+  retired. `schema/primitives.rs`, the primitives' doc comments, the
+  bootstrap procedure and the `generator-primitives` migration name the spec
+  that now owns each contract.
+- **The constitution's canonical-sources row for the scenario-to-task
+  referencing rule names 067's data model**, where `scenario-consistency` is
+  now specified.
+- **§text-first-artifacts' scenario-link bullet says what the dependency
+  derivation reads.** It said the derivation harvests sibling links from
+  scenario files, so a correct link in a scenario creates a `dependencies:`
+  edge that can close a cycle, and advised citing a sibling spec from a
+  scenario by backticked slug. `derive-dependencies` reads spec bodies only
+  and never read a scenario. The bullet keeps the one-level-short path the
+  corpus link check reports, and puts the cycle warning on spec-body links.
+- **`pointer-citing`, the term `check-promotion-coverage` reports, replaces
+  `constitution-citing`** in `scripts/audit/promotion-coverage.sh` and in the
+  doc comment on the primitive's result.
+- **The crate's readme describes the `ductus` runtime.** `runtime/README.md`,
+  which crates.io publishes, still described the govern-era optional `gvrn`
+  binary: the old repository, tags and asset names, a first-class
+  markdown-only path, and a `parse --check` that exits 0 on the legacy
+  allowlist, where the binary exits 2 for legacy prose and the allowlist is
+  the CI lint's. It now describes the required runtime `/ductus` acquires
+  and points at the README's runtime section and `docs/runtime.md`.
+- **`combine` 4.6.8 → 4.6.9** in `Cargo.lock`.
+
 ## [0.59.6] — 2026-10-15
 
 `fetch-archive` names its timeout, and two constitution rules are promoted
