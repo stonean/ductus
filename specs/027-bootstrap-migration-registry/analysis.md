@@ -1,27 +1,76 @@
 ---
 spec: 027-bootstrap-migration-registry
-last-run: 2026-09-15T14:32:49Z
-analyzed-against: c08c0eb6c2cb3b3bc11753624a08c5a2352756c1
+last-run: 2026-10-16T02:24:44Z
+analyzed-against: 69bf42f018a1b7b38ea3177d51efa9e59240bf5d
 hard-fail: 0
 blocking-findings: 0
-advisory: 0
+advisory: 4
 unexamined: 3
-captured-issues: 0
 analyzed-digest:
-  plan.md: ed8893c568e09243c87354c3b4c9445d03ac590a081dcde5e26c080af339725c
-  review.md: c6c3e03556dfe3adf6efc1b2d181bedffbc7b307d810f3cea08d415458b43f6b
+  plan.md: 075daf5f81e8f3ca2a32bba4b4e190cdd768e49e69d4787b3180bfecf6decbf0
+  review.md: 29bbdaa1535b07a7dc3731ba10e21eba42cf423243d90d11f7254e69f86b4a43
   scenarios/migration-chain-reference-integrity.md: b187024e6ed8fee90fe31be0f2bbcd4786782f8e4395a89c09142f20218f914d
-  scenarios/migrations-apply-once-per-repo.md: 29829288f42c8641dcbad3c58d4431904122d5c429f6ec6e1b7951c205fbeaed
-  spec.md: 7394fefe91fe30bf50b048e13100b87dbc3bf512641848ce6177bd9527fe14db
-  tasks.md: 736ed98e8de26110011d411f8143b98953b56f3f2ecc9c6ee8bb53c356913c40
+  scenarios/migrations-apply-once-per-repo.md: ef57af25a1eb071076c60b005ffdbf9f3a1b2afad889ba939b230679b9d4f9b4
+  spec.md: 3fe4431bb921ebc3e651bc5c81c68af50b80206eb75801da915e332215172690
+  tasks.md: ff144324ac4ec523c5ef57afaf0922196affd4889c659017111d8d1683aaf360
 unexamined-by-reason:
   not-a-live-claim: 2
   root-absent: 1
 blocking: false
+dispositions:
+  fixed: 0
+  routed: 0
+  discarded: 4
+  undispositioned: 0
+decisions:
+  - key: plan-record — plan.md §Known Limitations is outside the design record
+    outcome: discarded
+    reason: "deliberately part of this plan's design: it records the v1 limits the registry shipped with (uniform back-fill sunsets, discipline-only removal coverage and CHANGELOG append, a loosely specified procedure-file shape), the case analyze's Plan record section names as a discard (operator decision, 2026-10-16)"
+    decided-at: 2026-10-16T02:24:44Z
+    decided-by: andy@stone.dev
+  - key: grounding — spec.md and plan.md say TOML parsers don't guarantee array-of-tables order preservation across rewrites
+    outcome: discarded
+    reason: rationale for the resolved Registry-order decision in the design record; the order rule it supports (introduced_in by SemVer, lexicographic tie-break on id) does not depend on it (operator decision, 2026-10-16)
+    decided-at: 2026-10-16T02:24:44Z
+    decided-by: andy@stone.dev
+  - key: grounding — plan.md says BSD and GNU sort both support -V
+    outcome: discarded
+    reason: rationale for a SemVer-compare option the plan offered; the shipped loop compares in the bootstrap prose and no script depends on sort -V (operator decision, 2026-10-16)
+    decided-at: 2026-10-16T02:24:44Z
+    decided-by: andy@stone.dev
+  - key: grounding — plan.md says /audit invokes the audit orchestrator via run-generator
+    outcome: discarded
+    reason: describes the wiring the plan designed against, in the design record; it holds, per framework/commands/audit.md step 1 (operator decision, 2026-10-16)
+    decided-at: 2026-10-16T02:24:44Z
+    decided-by: andy@stone.dev
 ---
 
 # Analysis — 027-bootstrap-migration-registry
 
 ## Summary
 
-Relocated from the spec's frontmatter by the record-relocation migration. The counts above are the recorded run's; this report body begins at the next run.
+0 hard-fail, 0 blocking, 4 advisory; not blocking. 3 unexamined target(s). Dispositions: 0 fixed, 0 routed, 4 discarded, 0 undispositioned.
+
+## Hard failures
+
+*None.*
+
+## Blocking findings
+
+*None.*
+
+## Advisory findings
+
+- plan-record — plan.md §Known Limitations is outside the design record — `specs/027-bootstrap-migration-registry/plan.md` — **discarded**: deliberately part of this plan's design: it records the v1 limits the registry shipped with (uniform back-fill sunsets, discipline-only removal coverage and CHANGELOG append, a loosely specified procedure-file shape), the case analyze's Plan record section names as a discard (operator decision, 2026-10-16)
+- grounding — spec.md and plan.md say TOML parsers don't guarantee array-of-tables order preservation across rewrites — `specs/027-bootstrap-migration-registry/spec.md` — **discarded**: rationale for the resolved Registry-order decision in the design record; the order rule it supports (introduced_in by SemVer, lexicographic tie-break on id) does not depend on it (operator decision, 2026-10-16)
+- grounding — plan.md says BSD and GNU sort both support -V — `specs/027-bootstrap-migration-registry/plan.md` — **discarded**: rationale for a SemVer-compare option the plan offered; the shipped loop compares in the bootstrap prose and no script depends on sort -V (operator decision, 2026-10-16)
+- grounding — plan.md says /audit invokes the audit orchestrator via run-generator — `specs/027-bootstrap-migration-registry/plan.md` — **discarded**: describes the wiring the plan designed against, in the design record; it holds, per framework/commands/audit.md step 1 (operator decision, 2026-10-16)
+
+## Unexamined targets
+
+- not-a-live-claim: 2
+- root-absent: 1
+
+## Fixed in this run
+
+*None.*
