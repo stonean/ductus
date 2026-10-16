@@ -17,7 +17,7 @@ The tasks.md-side walkers received parsing hardening over time — `SkipScanner`
 
 The spec-side parsers match the hardening standard the tasks-side parsers already meet:
 
-- `validate-frontmatter` reports a blocking finding when `status` or `dependencies` is absent from spec frontmatter (field presence, not just value validity, per constitution §text-first-artifacts).
+- `validate-frontmatter` reports a hard-fail finding when `status` or `dependencies` is absent from spec frontmatter (field presence, not just value validity, per constitution §text-first-artifacts).
 - `read-spec`'s acceptance-criteria walk and `mark-criterion`'s checkbox addressing skip content inside HTML comments and fenced code blocks (`SkipScanner` semantics), so a template-state spec reports zero acceptance criteria on both paths and comment-embedded checkboxes are never flipped.
 - `set-status` derives the frontmatter start offset from the actual opener the splitter matched, so CRLF spec files splice at the correct byte.
 - `check-rule-ids`' deprecation scan only slices on `char` boundaries and cannot panic on multibyte content.

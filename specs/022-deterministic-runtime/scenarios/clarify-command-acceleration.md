@@ -10,7 +10,7 @@ This is the spec's first-scheduled follow-on scenario, deferred at the initial r
 
 ## Behavior
 
-`/ductus:clarify`'s Instructions are rewritten to the parseable conventions: numbered steps invoking `read-spec` (gate branch), `traverse-deps` (dependency readiness), `run-generator` (gen-spec-deps dry-run safety net), the `askClarifyQuestion` extension marker for the per-question loop (one round trip per open question; the host shows the question, returns the user's answer; the LLM applies the resolution to the spec body), `lint-markdown` plus a zero-open-question check for the validation gate, and `set-status` (draft → clarified) behind the user-approval gate. The file parses cleanly, leaves `legacy-prose-commands.txt`, and the markdown-only reference walks the same contract with host file tools.
+`/ductus:clarify`'s Instructions are rewritten to the parseable conventions: numbered steps invoking `read-spec` (gate branch), `traverse-deps` (dependency readiness), `derive-dependencies` (report-only dependency safety net, never `--write`), the `askClarifyQuestion` extension marker for the per-question loop (one round trip per open question; the host shows the question, returns the user's answer; the LLM applies the resolution to the spec body), `lint-markdown` plus a zero-open-question check for the validation gate, and `set-status` (draft → clarified) behind the user-approval gate. The file parses cleanly, leaves `legacy-prose-commands.txt`, and the markdown-only reference walks the same contract with host file tools.
 
 ## Edge Cases
 

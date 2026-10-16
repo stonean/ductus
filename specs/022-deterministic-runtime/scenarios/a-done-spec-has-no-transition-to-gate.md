@@ -34,5 +34,5 @@ The outcome is **not** `passed: true`. A gate that says "passed" for a spec it d
 
 ## Resolved Questions
 
-- **Why not simply exclude `status:` from the analyze digest, so the flip stops mattering?** Because the families condition on status — `criterion-path-existence` examines `done` specs only, `scenario-consistency` is skipped on them — so a digest blind to status would miss a change that genuinely alters what an analysis finds. The digest is right; the gate is asking at the wrong time.
+- **Why not simply exclude `status:` from the analyze digest, so the flip stops mattering?** Because the families condition on status — `criterion-path-existence` examines `done` specs only, `scenario-consistency` flags a scenario on them only when no revision of `tasks.md` ever named it — so a digest blind to status would miss a change that genuinely alters what an analysis finds. The digest is right; the gate is asking at the wrong time.
 - **Why not have `/{project}:implement` re-record the analysis after the flip?** Because that writes a record no run substantiates. 047's AC11 rejected backfilling for exactly this reason: a record asserting an analysis that did not happen inverts the mechanism the record exists to provide.

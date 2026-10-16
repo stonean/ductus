@@ -18,12 +18,12 @@ Spec 022 establishes the command-specific-primitive pattern (`check-stuck` for `
 
 New primitive: `dashboard`. MCP tool name `dashboard`; CLI subcommand `runtime dashboard`.
 
-Inputs: none beyond the standard repo-root context every primitive operates on. The primitive reads `.ductus/config.toml` (committed config) and `.ductus/session.toml` (gitignored session state) at the repo root; both paths are constants, neither is caller-supplied.
+Inputs: none beyond the standard repo-root context every primitive operates on. The primitive reads the committed project config, resolved through `CONFIG_CHAIN` (`.ductus/config.toml` first), and peeks the session target through `crate::session` (062): an identified process sees its own target under `.ductus/sessions/` (or the shared default it would adopt), an unidentified one the shared default `.ductus/session.toml`. Neither path is caller-supplied, and the peek writes nothing.
 
 Returns one structured payload:
 
-- `session-target` — `{feature: string, scenario: string|null, scenario-detail: {section, context-summary, open-question-count}|null}` when `<repo-root>/.ductus/session.toml` exists, otherwise `null`. The `scenario-detail` field is populated when `scenario` is non-null, giving callers everything they need to render the scenario header line without a separate read. Lets MCP callers skip a separate session-file read; the subprocess-interpreter surface continues to seed walker context from the same file.
-- `specs` — array, one entry per `NNN-feature` directory under `specs/`, in directory-name order:
+- `session-target` — `{feature: string, scenario: string|null, scenario-detail: {section, context-summary, open-question-count}|null}` when the session peek resolves a target, otherwise `null`. The `scenario-detail` field is populated when `scenario` is non-null, giving callers everything they need to render the scenario header line without a separate read. Lets MCP callers skip a separate session-file read; the `ductus exec` seed resolves its walker context through the same peek.
+- `specs` — array, one entry per feature directory under the configured spec root (040), in either form — sequential `NNN-slug` or branch-scoped `{identifier}.{n}-{slug}` (051) — sequential first by number, then branch-scoped grouped by identifier and ordered by counter:
   - `slug` — the directory basename
   - `status` — frontmatter status (`draft` | `clarified` | `planned` | `in-progress` | `done`)
   - `dependencies` — frontmatter `dependencies` array (empty when absent)
@@ -36,10 +36,11 @@ Returns one structured payload:
 - `config` — object describing `.ductus/config.toml` review state:
   - `present` — boolean; `true` when `.ductus/config.toml` exists at repo root, `false` otherwise
   - `disabled-rule-files` — array of basenames from `[[review.disabled-rule-files]]`; empty when the section is absent or the array is empty
+- Fields added since: `rendered-markdown`, `inbox-standing`, and each spec's `scenario-open-question-count` and `scenarios-with-questions` (022's data model, the `dashboard` addendum); each spec's `folds-into` and `fold-target-missing` (spec 051); and the session peek's `session-identity`, `session-source`, `session-notices` and `session-unreadable` (spec 062).
 
 Reasons (the human-readable `reason` field on each disabled-rule-files entry) are not surfaced — the dashboard is a glance, not a pretty-printer; `.ductus/config.toml` remains the source of truth for full context, matching the existing prose rule.
 
-The status command collapses to a single path that always invokes `dashboard` once and renders the preamble + table + counts + callouts from the returned payload. The prior "short-circuit when target is non-`done`" branch is removed — a glance at the full pipeline with the target row marked is more useful than a target-only view, and the preamble line preserves the immediate "what next" signal. Step 5 (table render), step 6's callout formatting, and step 7 (non-done spec prompt) stay in the prose — they are presentation, not data acquisition.
+The status command collapses to a single path that always invokes `dashboard` once and renders the preamble + table + counts + callouts from the returned payload. The prior "short-circuit when target is non-`done`" branch is removed — a glance at the full pipeline with the target row marked is more useful than a target-only view, and the preamble line preserves the immediate "what next" signal. The preamble, table, counts and callouts are pre-rendered by the primitive as `rendered-markdown` (`coverage-expansion-primitives`); only the non-done spec prompt stays in the prose.
 
 The `framework/commands/status.md` §Instructions preamble's shell-utility ban gains a positive target: when `dashboard` is available via MCP, that IS the deterministic path; when the host's MCP schema is loaded lazily (Claude Code's deferred-tool reminder), the existing `ToolSearch` instruction applies — fetch the schema and call the tool, do not bail to shell.
 
@@ -48,15 +49,15 @@ The primitive is read-only and pure with respect to filesystem state (no atomic-
 ## Edge Cases
 
 - **Empty `specs/` directory.** Returns `specs: []`, `config` populated normally. No error — a fresh project with no specs yet is a valid state.
-- **`NNN-feature` directory missing `spec.md`.** Treat as an operational error (the directory naming convention promises a spec); halt with structured `error` naming the offending directory. Matches `read-spec`'s behavior on missing files and avoids silently hiding broken state from a diagnostic command.
-- **Spec directory whose name doesn't match the `NNN-feature` pattern.** Skip silently (not part of the dashboard inventory). `specs/inbox.md`, `specs/templates/`, ad-hoc notes, etc., are out of scope.
+- **Feature directory missing `spec.md`.** Treat as an operational error (the directory naming convention promises a spec); halt with structured `error` naming the offending directory. Matches `read-spec`'s behavior on missing files and avoids silently hiding broken state from a diagnostic command.
+- **Spec directory whose name is not a feature directory in either form.** Skip silently (not part of the dashboard inventory). `specs/inbox.md`, `specs/templates/`, ad-hoc notes, etc., are out of scope.
 - **`.ductus/config.toml` absent.** Returns `config: {present: false, disabled-rule-files: []}`. The caller distinguishes "no config" from "config with empty array" via the `present` flag to drive the markdown's callout-suppression rule.
 - **`.ductus/config.toml` present but `[[review.disabled-rule-files]]` section absent or its array empty.** Returns `config: {present: true, disabled-rule-files: []}`. Caller suppresses the callout per the existing prose rule.
 - **`.ductus/config.toml` parse failure.** Operational error, halts the call. Consistent with other primitives' handling of malformed-input files at the repo root.
 - **`scenarios/` exists but contains non-markdown files.** `scenarios-count` reflects only `*.md` files, matching the existing prose ("count the markdown files in its scenarios subdirectory").
-- **`.ductus/session.toml` absent.** `session-target: null`. No error — a fresh project with no `/{project}:target` invocation yet is a valid state.
-- **`.ductus/session.toml` present but malformed.** Operational error (`PrimitiveError::Toml`), halts the call. Consistent with `.ductus/config.toml` parse failures.
-- **Legacy `.claude/{project}-session.json` on disk.** Ignored — `dashboard` reads `.ductus/session.toml` only. Adopters who haven't yet run the post-0.10.0 `/ductus` bootstrap migration see "no target" until they re-`/{project}:target` or the migration translates the legacy file.
+- **`.ductus/session.toml` absent and no per-process target.** `session-target: null`. No error — a fresh project with no `/{project}:target` invocation yet is a valid state.
+- **A session file the peek reads is malformed** — the shared default, or the process's own file. Operational error (`PrimitiveError::Toml`), halts the call. Consistent with `.ductus/config.toml` parse failures. Another session's file that does not parse is named in `session-unreadable` instead (062).
+- **Legacy `.claude/{project}-session.json` on disk.** Ignored — `dashboard` reads session state only through `crate::session`, which never reads the legacy JSON. Adopters who haven't yet run the post-0.10.0 `/ductus` bootstrap migration see "no target" until they re-`/{project}:target` or the migration translates the legacy file.
 - **Session file present but its `feature` field names a directory that doesn't exist.** Return the session-target field as-recorded; do not validate against the `specs` array. The caller already handles this — `/{project}:target` is the corrective action, not `/{project}:status`.
 
 ## Open Questions

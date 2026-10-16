@@ -20,16 +20,12 @@ Why it survived this long: it bites less often than the analyze half did. Only `
 
 ## Behavior
 
-> **The `captured-issues` half was removed by [058 — Findings route at discovery](../../058-findings-route-at-discovery/spec.md).** No run writes
-> to the inbox, so `compute-review-scope` computes no inbox window. The
-> `compute-review-scope` bullet and the no-inbox edge case below describe what
-> was removed; the digest half stands.
+The `captured-issues` half of this scenario was removed by 058: `compute-review-scope` computes no inbox window.
 
-**Both checks compare what was examined, not where `HEAD` was.** The record carries a digest of the content the command actually read, and the check is a digest comparison. `reviewed-against` and `diff-base` stay in their records as provenance.
+**The check compares what was examined, not where `HEAD` was.** The record carries a digest of the content the command actually read, and the check is a digest comparison. `reviewed-against` and `diff-base` stay in their records as provenance.
 
-- **`write-review`** records a digest of the review's **durable contracts** — the `scenarios/*.md` and `data-model.md` files `stale_review_block` compares — taken from disk as the review read them. The subject set is unchanged; only the reference point moves. `review.md` and `spec.md` stay outside it for the reason they always have: `write-review` touches both, so counting them would stale every review the instant it was recorded. **Spec 057 stopped it touching `spec.md`**, so that half of the reason has lapsed; the exclusion is kept anyway, because widening it would stale every review on any spec-body edit.
-- **`stale_review_block`** compares that digest against the same files now. `reviewed-against` is read for one thing, the mechanical-sweep rename exemption, which genuinely needs two trees — and its candidates are reported rather than dropped when those trees are unavailable.
-- **`compute-review-scope`** derives `captured-issues` from the working tree: the inbox lines present now that were not present at `diff-base`. An uncommitted capture is exactly the case the section exists for.
+- **`write-review`** records a digest of the review's **durable contracts** — the `scenarios/*.md` and `data-model.md` files the staleness check compares — taken from disk as the review read them. The subject set is unchanged; only the reference point moves. `review.md` stays outside it because `write-review` writes the record there, so counting it would stale every review the instant it was recorded; `spec.md`, which `write-review` no longer touches (spec 057), stays outside because adding it would stale every review on any spec-body edit.
+- **`check-review-gate`** compares that digest against the same files now, through `analyze_subjects::freshness_of`. `reviewed-against` is read for one thing, the mechanical-sweep rename exemption, which genuinely needs two trees — and its candidates are reported rather than dropped when those trees are unavailable.
 
 **`unexaminable_contracts_guidance` is removed, not retained alongside.** Its entire subject is the horizon this change eliminates; keeping it would leave a notice that can only ever fire on a state the check now handles, which is worse than no notice because a reader would take its silence as meaning something. The `QUAL-CLAIM-001` obligation it discharged moves to the digest comparison itself, whose undeterminable arm reports a record it cannot judge.
 
@@ -41,7 +37,6 @@ Why it survived this long: it bites less often than the analyze half did. Only `
 - **A contract that cannot be read** when the digest is taken, or when it is compared. Recorded as unreadable rather than digested as empty; an unreadable contract is not a matching one.
 - **`reviewed-against` unresolvable** (rebase, shallow clone). Staleness still answers — it needs no commit. Only the rename exemption is lost, and its candidates are reported.
 - **An empty review scope.** `write-review` still records a digest; a spec with no durable contracts records an empty one, which is distinct from an absent one and reads as current rather than undeterminable.
-- **`compute-review-scope` on a repo with no inbox.** No additions and no error, as today — absence of the file is not an unreadable subject.
 
 ## Open Questions
 

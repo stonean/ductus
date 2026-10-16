@@ -39,8 +39,8 @@ The manifest task 141 produced. Slugs: `066-audit-records-and-the-completion-gat
 
 - [x] Retire, pointer-first, the three wholly superseded scenarios (`review-observations-write-through`, `the-inbox-row`, `the-analyze-record-states-what-it-captured`): repoint every inbound reference to where the content lives now (058's spec and data model, `dashboard`), then delete the files
 - [x] Retire `review-gate-unexaminable-contracts` and `check-stuck-read-blob-reuse` the same way
-- [ ] For the four partly superseded scenarios (`the-cross-spec-impact-gate`, `merge-managed-block-multi-subsection-end`, `review-staleness-on-done-specs`, `commands-dir-parameterization`) delete the passage restating the replaced design; a one-line pointer to the replacing spec is the decision record
-- [ ] In every other scenario, edit each Behavior, Edge Case or Resolved Question that states a replaced requirement or names machinery that no longer exists to what is true now, or delete it with a one-line pointer; collapse an inline "Changed by NNN" pair to the current statement; leave Context, which records the situation that prompted the scenario
+- [x] For the four partly superseded scenarios (`the-cross-spec-impact-gate`, `merge-managed-block-multi-subsection-end`, `review-staleness-on-done-specs`, `commands-dir-parameterization`) delete the passage restating the replaced design; a one-line pointer to the replacing spec is the decision record
+- [x] In every other scenario, edit each Behavior, Edge Case or Resolved Question that states a replaced requirement or names machinery that no longer exists to what is true now, or delete it with a one-line pointer; collapse an inline "Changed by NNN" pair to the current statement; leave Context, which records the situation that prompted the scenario
 - [ ] Data model: keep shapes and field meanings; delete what a 022 scenario or a command source already states, and reduce each pointer paragraph to one sentence
 
 - **Done when**: no superseded scenario or passage remains, no file references a deleted one, and no data-model paragraph restates a scenario or command source.

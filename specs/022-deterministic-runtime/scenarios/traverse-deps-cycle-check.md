@@ -31,7 +31,7 @@ The upstream fix lives in spec 017's [detect-dependency-cycles](../../017-derive
 - **Self-cycle in `dependencies`** (a spec listing itself): reported as a 1-cycle.
 - **Multiple disjoint cycles**: each SCC is reported as its own finding; the analyze report lists all of them in one pass.
 - **Graph with a missing dependency that would close a cycle if present**: the missing-dependency finding fires; the cycle finding does not (the closing edge is absent in the actual graph the primitive walks).
-- **Cycle introduced via stale frontmatter** (frontmatter `dependencies` lists an edge no longer in the body): `traverse-deps` walks frontmatter, so it sees and reports the cycle. The author resolves by re-running `gen-spec-deps.sh` (which removes the stale edge and either clears the cycle or surfaces a real one).
+- **Cycle introduced via stale frontmatter** (frontmatter `dependencies` lists an edge no longer in the body): `traverse-deps` walks frontmatter, so it sees and reports the cycle. The author resolves by running `derive-dependencies --write`, which removes the stale edge; its result's `cycles` then either comes back empty or names a real cycle.
 
 ## Open Questions
 

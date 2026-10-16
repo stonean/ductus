@@ -65,11 +65,8 @@ verified by diffing findings on `(spec, path)` keys before and after.
   criteria. Only the parenthetical `(was` + space form qualifies.
 - **`target paths` is phrase-shaped, not word-shaped** — bare `target` would
   exempt unrelated criteria, the same trap `adopter` was rejected for.
-- **The 19 adopter-scope findings persist by design** — a re-run of this repo's
-  sweep still reports them. They are the honest output of running a
-  framework-authoring check against the framework's own source; the promotion
-  verdict 045 recorded (do not promote; re-measure in an adopter repo) is
-  unchanged by this scenario.
+- **The 19 adopter-scope findings are not a marker's to suppress** — they are
+  now skipped as `ships-to-adopter`; see `criterion-adopter-scope-destinations`.
 - **Marker matching remains case-insensitive and code-span-inclusive** — a
   marker is prose, and a criterion carrying one anywhere is describing a
   transition throughout. Unchanged.

@@ -10,11 +10,11 @@ section: "Follow-on scenarios"
 
 ## Behavior
 
-The completion gate becomes numbered, parseable steps in `/ductus:implement`'s Instructions: `read-tasks` tallies task completion; the spec's criteria are read via `read-spec`; each criterion's verification stays semantic (the LLM judges whether it is met, marked as an extension seam in the prose) but each passing criterion is flipped with `mark-criterion`; the review gate reads the record's `last-run` / `blocking` and halts with the documented messages when unset/blocking — from the spec's `review:` frontmatter block as delivered here, from `review.md` since spec 057; the final transition invokes `set-status` (in-progress → done) only after the user-approval gate. The markdown-only reference describes the same order with the same primitives named as fallback prose. `mark-criterion` gains its first real consumer.
+The completion gate becomes numbered, parseable steps in `/ductus:implement`'s Instructions: `read-tasks` tallies task completion; the spec's criteria are read via `read-spec`; each criterion's verification stays semantic — the typed `verifyCriteria` extension point (`<!-- llm:verifyCriteria -->`, step 11), where the LLM judges whether each criterion is met — but each passing criterion is flipped with `mark-criterion`; the review gate is the `check-review-gate` primitive (step 14; `coverage-expansion-primitives`), which reads the review record from `review.md` and halts with its canonical blocked message when the spec is unreviewed or blocking; the final transition invokes `set-status` (in-progress → done) only after the user-approval gate. The markdown-only reference describes the same order with the same primitives named as fallback prose. `mark-criterion` gains its first real consumer.
 
 ## Edge Cases
 
-- The cross-spec `git diff --stat` filter stays prose within its numbered step (no primitive owns it yet; it degrades to host judgment on both paths).
+- The cross-spec `git diff` filter is owned by the `diff-cross-spec` primitive (`coverage-expansion-primitives`), invoked at steps 7 and 13; the markdown-only path applies the same filter by hand.
 - A criterion that fails verification is left unchecked and reported — never batch-marked, matching the existing prose rule.
 - When `tasks.md` still has unchecked tasks, the gate stops before criteria verification, exactly as the prose does today.
 

@@ -10,13 +10,13 @@ The spec's third deferred follow-on, never shipped: `/ductus:groom` remains lega
 
 ## Behavior
 
-`/ductus:groom`'s Instructions are rewritten to the parseable conventions: the inbox walk reads `specs/inbox.md`, each item's routing decision is the `routeInboxItem` extension seam (spec / scenario / rule / chore-stays / discard, per the decision tree; the chore route has since become *chore*, done in the pass and then removed), and the mechanical consequences invoke the same primitives amend uses — `create-scenario` + `append-task` for a scenario route, `set-status` for a done-spec reopen, `write-session` where the target changes — plus the item's removal from the inbox and the completion-count summary. The file parses cleanly, leaves `legacy-prose-commands.txt`, and the markdown-only reference names the same operations as fallback prose (one contract, two paths).
+`/ductus:groom`'s Instructions are rewritten to the parseable conventions: the inbox walk reads `specs/inbox.md`, each item's routing decision is the `routeInboxItem` extension seam (spec / scenario / rule / chore / discard, per the decision tree; a chore is done in the pass and then removed), and the mechanical consequences invoke the same primitives amend uses — `create-scenario` + `append-task` for a scenario route, `set-status` for a done-spec reopen, `write-session` where the target changes — plus the item's removal from the inbox and the completion-count summary. The file parses cleanly, leaves `legacy-prose-commands.txt`, and the markdown-only reference names the same operations as fallback prose (one contract, two paths).
 
 ## Edge Cases
 
-- A chore item is left in place (no write, no route) exactly as the constitution's inbox rules require. **Superseded since**: the constitution's inbox rules now say to fix a chore rather than park it, so groom does a chore in the pass and removes it, and leaves it in place only when the fix is blocked or turns out not to be mechanical.
+- A chore item is done in the pass and then removed, as the constitution's inbox rules require; it is left in place only when the fix is blocked or turns out not to be mechanical, and groom says which.
 - An item routing to a spec that does not exist directs the user to `/ductus:specify` and moves on, as today.
-- Inbox item removal remains a host edit (`Edit` on `specs/inbox.md`) until the scaffolding-primitives scenario's `append-inbox`/inbox tooling covers removal — prose stays the owner of that line-level edit on both paths. **Superseded since**: `remove-inbox-item` shipped with [coverage-expansion-primitives](coverage-expansion-primitives.md), and groom step 8 invokes it.
+- Inbox item removal is the `remove-inbox-item` primitive (`coverage-expansion-primitives`), which groom step 8 invokes; on the markdown-only path the host removes the line with `Edit`.
 
 ## Open Questions
 

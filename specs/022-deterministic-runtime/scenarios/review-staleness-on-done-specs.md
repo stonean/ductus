@@ -16,23 +16,18 @@ The `0.28.0` cycle swept the whole corpus, so 017 is unlikely to be alone. This 
 
 ## Behavior
 
-**`check-artifacts`' `review-state-drift` family gains a staleness arm.** On a `done` spec it already reports an unset `review.last-run` and a `review.blocking: true`; it additionally reports a recorded `reviewed-against` against which durable contracts have since changed, naming the count and the first few paths exactly as `check-review-gate`'s block message does.
+The `check-artifacts` staleness arm this scenario first specified was not built; the fourth Resolved Question records why. What it delivered is in `check-review-gate`'s review-record freshness.
 
-**The staleness computation is shared, not reimplemented.** The family calls the same code path `check-review-gate` uses — a second implementation is the drift this repo has already been bitten by, and two answers to "is this review stale?" would be worse than none. That path is `stale_review_block` plus `is_durable_contract` (a `scenarios/*.md` file or `data-model.md`), **not** `compute_review_scope::read_plan_affected`; see the first Resolved Question for why this paragraph originally named the wrong one and what following it would have cost.
+**A rename sweep does not stale a review.** The freshness computation — `analyze_subjects::freshness_of` over `is_review_contract` (a `scenarios/*.md` file or `data-model.md`), from whose result `stale_review_block` builds the block — drops a changed contract whose change since `reviewed-against` was a uniform repo-wide rename, through the `primitives::mechanical_sweep` exemption `review-freshness.sh` has always carried. When the two trees it needs are unavailable, the exemption does not run and every candidate is reported.
 
-**The finding is advisory, not blocking.** The existing `review-state-drift` arms are blocking because they describe a spec that never had a usable review; a stale review *was* usable and has aged, which is a different claim. Advisory also keeps the change from mass-reopening the corpus: `/{project}:analyze --fix` reverts `done → in-progress` on blocking findings, and a blocking staleness arm would sweep every spec the `0.28.0` cycle touched into `in-progress` in one run. The operator decides which stale verdicts are worth re-earning.
+**An abbreviated `reviewed-against` resolves.** The recorded sha is resolved with `revparse_single`, so a short sha names its commit rather than a zero-padded id that matches nothing.
 
-**The grandfather rule carries over unchanged.** A `done` spec with no review record at all predates `/{project}:review` and is exempt, exactly as it is for the existing arms — keyed on the absence of `review.md` since spec 057, and that re-keying was not cosmetic: keyed on the block's absence, as it was written here, the relocation made the predicate true of every spec and the family would have exempted the whole corpus while exiting green. A spec with a record but no resolvable `reviewed-against` (a rebased or pruned sha) is reported as *unresolvable* rather than as clean or stale — the distinction this scenario exists to preserve.
-
-**Fail-open matches the gate.** Where `check-review-gate` fails open — no git repository, an unresolvable `reviewed-against`, a plan with no Affected Files table — the family reports the target under `skipped` with its reason rather than emitting a clean result, so a family that could not examine a spec is never indistinguishable from one that examined it and found nothing.
+**The existing `review-state-drift` arms keep their grandfather rule.** A `done` spec with no review record at all predates `/{project}:review` and is exempt — keyed on the absence of `review.md` since spec 057, and that re-keying was not cosmetic: keyed on the block's absence, the relocation made the predicate true of every spec and the family would have exempted the whole corpus while exiting green.
 
 ## Edge Cases
 
-- A `done` spec whose contracts have not moved since `reviewed-against`: no finding, and it is counted as examined rather than skipped.
-- A spec at any status other than `done`: out of scope — `check-review-gate` already covers the transition, and a pre-`done` spec's review is expected to be provisional.
 - A mechanical sweep (a rename, a criterion-label backfill) that touches a durable contract without changing its meaning: a uniform substitution must not report every `done` spec stale. `review-freshness.sh` has always carried this exemption; the shared Rust path did **not** inherit it, which is the defect the measurement found and the second Resolved Question records. It does now, via `primitives::mechanical_sweep`.
-- `reviewed-against` names a commit absent from a shallow clone: the CI checkout that runs this needs `fetch-depth: 0`, the same requirement Family 19 already carries and was already bitten by.
-- The `--fix` interaction: advisory findings do not revert status, so `--fix` leaves a stale-but-done spec alone and says so.
+- `reviewed-against` names a commit absent from a shallow clone: the rename exemption cannot run, so its candidates are reported rather than dropped. A CI checkout needs `fetch-depth: 0`, the same requirement Family 19 already carries and was already bitten by.
 
 ## Open Questions
 
@@ -41,7 +36,8 @@ The `0.28.0` cycle swept the whole corpus, so 017 is unlikely to be alone. This 
 ## Resolved Questions
 
 - **Which code path does `check-review-gate` actually share?**
-  `stale_review_block` and `is_durable_contract`, not
+  `analyze_subjects::freshness_of` with `is_review_contract` — from whose
+  result `stale_review_block` only builds the block — not
   `compute_review_scope::read_plan_affected`. Resolved 2026-08-16: this scenario's Behavior section and 022 task 88 both
   named `read_plan_affected`, and `check_review_gate.rs` references it nowhere.
   Following the letter would have been actively harmful — that function's own
@@ -65,7 +61,7 @@ The `0.28.0` cycle swept the whole corpus, so 017 is unlikely to be alone. This 
   Family 19 had the exemption and reported **0**; the Rust gate had none and
   would have reported 19. Two implementations of one rule, disagreeing on 19
   specs, with nothing comparing them — the drift this scenario's own Behavior
-  section says would be "worse than none", already present.
+  section said would be "worse than none", already present.
 
   The founding observation was itself an instance: `017-derive-dont-ask`'s
   three "stale" contracts all changed in exactly one commit, `9da4a7a
@@ -73,7 +69,8 @@ The `0.28.0` cycle swept the whole corpus, so 017 is unlikely to be alone. This 
   fired on a rename.
 
 - **What was done about it?** The exemption was ported to Rust as
-  `primitives::mechanical_sweep` and wired into `stale_review_block`, so the
+  `primitives::mechanical_sweep` and wired into the gate's freshness
+  computation (now `analyze_subjects::freshness_of`), so the
   transition gate stops firing on sweeps. A third divergence surfaced while
   testing it: `git2::Oid::from_str` zero-pads an abbreviated sha into an id
   that matches nothing, so the gate failed **open** on
@@ -89,35 +86,4 @@ The `0.28.0` cycle swept the whole corpus, so 017 is unlikely to be alone. This 
   divergent and asserts it compared something, so a vacuous pass is itself a
   failure.
 
-- **Does the `check-artifacts` staleness arm still need building?** No, not as
-  this scenario scopes it. Resolved 2026-08-16 after checking the claim in the
-  Context section rather than accepting it.
-
-  That claim is: *"Once a spec is `done`, nothing re-evaluates its verdict, so
-  contracts can move underneath it indefinitely."* It is false.
-  `.github/workflows/framework-checks.yml` runs the full self-audit — Family 19
-  included — on **every push to `main`**; its `push:` trigger carries a branch
-  filter and no `paths:` filter at all. Family 19 walks every `done` spec and
-  applies exactly this rule. A durable contract is by definition a file under
-  `{specs-root}/`, so the push that moves one is itself the push that
-  re-evaluates every recorded verdict. There is no window in which contracts
-  move unwatched.
-
-  The two-week silence the Context describes was Family 19 being **correctly
-  quiet**: 017's drift was entirely 049's rename, which the exemption exempts.
-  What read as an undetected state was an over-firing gate measured against a
-  correctly-silent family — the defect fixed in `0.29.1`, not a gap this arm
-  would have filled.
-
-  What remains is real but much smaller, and is a different feature:
-  `check-artifacts` backs `/{project}:analyze`, so a maintainer can learn a
-  `done` spec's review has aged only from CI, never from a local on-demand run.
-  That is a **visibility** gap, not a detection one. If it is worth closing, the
-  shape is *surface Family 19's existing verdict in `/{project}:analyze`* — one
-  more reader of the answer — rather than the advisory arm described above,
-  which would be a third implementation of a rule that already has one too many
-  (see the previous question on why the two that exist cannot be merged).
-
-  The Behavior section above is left as authored rather than rewritten: it
-  records what was believed, and these questions record what was measured. A
-  future reader should treat the Behavior as superseded by this entry.
+- **Does the `check-artifacts` staleness arm still need building?** No — resolved 2026-08-16: `framework-checks.yml` runs Family 19 over every `done` spec on every push to `main`, so contracts never move unwatched, and the two-week silence the Context describes was the rename exemption correctly holding; what remains is a visibility gap, better closed by surfacing Family 19's verdict in `/{project}:analyze` than by a third implementation of the rule.

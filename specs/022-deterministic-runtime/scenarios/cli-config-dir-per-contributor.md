@@ -12,7 +12,7 @@ The fix relocates `cli-config-dir` to the gitignored, per-contributor `.ductus/s
 
 ## Behavior
 
-- `crate::host::Host::load` MUST resolve `cli_config_dir` in priority order: the per-contributor `.ductus/session.toml`, then the legacy `.govern.toml` `[host]` value (for adopters predating the relocation), then the default `.claude`. `project` continues to load from `.ductus/config.toml` `[host]` (then the repo-directory-basename default). A malformed `.ductus/session.toml` is treated as absent so resolution falls through.
+- `crate::host::Host::load` MUST resolve `cli_config_dir` in priority order: the per-contributor session file (the newest existing tier of `SESSION_CHAIN` — `.ductus/session.toml`, `.govern/session.toml`, `.govern.session.toml`), then the `[host]` value of the resolved config file (the newest existing tier of `CONFIG_CHAIN` — `.ductus/config.toml`, `.govern/config.toml`, `.govern.toml`) for adopters predating the relocation, then the default `.claude`. `project` continues to load from that resolved config file's `[host]` block (then the repo-directory-basename default). A malformed `.ductus/session.toml` is treated as absent so resolution falls through.
 - `write-session` becomes a **merge-writer** over `.ductus/session.toml`, with all on-disk keys optional:
   - A *target write* (`feature`+`path` supplied, optional `scenario`) sets the target block and a fresh `set-at`, and **preserves** any existing `cli-config-dir` unless one is supplied in the same call.
   - A *host-config write* (`cli-config-dir` supplied, no `feature`) sets `cli-config-dir` and **preserves** the existing target block verbatim. Against a fresh repo it writes a file containing only `cli-config-dir`.

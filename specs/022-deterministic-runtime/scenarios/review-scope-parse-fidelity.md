@@ -18,30 +18,17 @@ That would be cosmetic if the scope rule ignored it, but the rule is *whichever 
 
 ## Behavior
 
-> **The captured-issues half was removed by [058 — Findings route at discovery](../../058-findings-route-at-discovery/spec.md).** Neither
-> `compute-review-scope` nor `diff-cross-spec` computes an inbox window any
-> longer, because no run writes to the inbox. The paragraphs and edge cases
-> below about captured issues and `inbox-additions` describe what was removed.
-> The `iter_bullets` / `bullet_text` grammar they reused still backs
-> `append-inbox`, `remove-inbox-item`, and the standing inbox count. The
-> affected-files half stands.
+The captured-issues half of this scenario was removed by 058: neither `compute-review-scope` nor `diff-cross-spec` computes an inbox window any longer.
 
 **A table ends at a non-table line.** `parse_affected_files` resets its header state when it leaves a table, so a section holding several tables parses each one correctly and no header row is ever emitted as a path.
 
 **A qualified cell yields its backticked path.** When a first cell contains a backticked span, that span is the path; the surrounding prose is dropped. A cell with no backticks falls back to its trimmed text, unchanged.
 
-**Captured issues are real inbox bullets — in both primitives.** The added lines are intersected with the bullets the shared comment- and fence-aware grammar finds in the post-image inbox — the same `iter_bullets` / `bullet_text` pair `append-inbox` and `remove-inbox-item` already agree on. The authority for what counts as an item is the file, not the diff.
-
-`diff-cross-spec` carries the same correction. It already filtered with `bullet_text`, which drops a heading or a blank line — but that test is line-local and accepts a bullet line sitting inside an HTML comment, so its `inbox-additions` (what `/{project}:implement` reports per task) had the weaker form of the same defect. Both primitives now intersect against the post-image file's real bullets.
-
 ## Edge Cases
 
 - A section with exactly one table is unaffected — the reset only fires where a table has already ended.
 - A cell holding several backticked spans yields the first, which is the path; later spans are qualifiers by position.
-- An inbox absent from the post-image tree, or not valid UTF-8 there, yields no captured issues rather than an error — nothing can be proven about a file that cannot be read.
-- A bullet added and then removed within the same window does not appear: it is absent from the post-image file, which is what the intersection tests against.
-- An item whose text was reworded in the window appears once, under its new text — the added line and the post-image bullet agree, which is the intended pairing.
-- The "larger set wins" scope rule is left as-is. It was the *inflated* set that made it harmful, and with the parse corrected the rule selects on real content again; whether an accurate small set should beat a large one is a separate question this scenario does not settle.
+- The scope is the union of the plan-affected set and the modified-since set, so an accurate small set is never dropped for a larger one (`review-scope-union`).
 
 ## Open Questions
 

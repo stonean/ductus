@@ -21,8 +21,8 @@ The 2026-07-11 runtime review surfaced eight SHOULD-tier robustness gaps across 
 
 - Every primitive accepting a repo path from the host or LLM applies `validate_no_traversal` (or an equivalent containment check) before filesystem operations: `enforce-manifest` rejects directories outside the repo root, `apply-manifest` validates each manifest entry's `source` and `dest`, `merge-managed-block` and `merge-permissions` validate their `path`.
 - `check-stuck` reads history in a branch-shape-tolerant way: the transition commit is found even when it lands via a merge, phantom transitions are not reported across topologically adjacent commits from different branches, and frontmatter splitting reuses the shared CRLF-aware helper.
-- `write-review` reads and validates all inputs (including spec frontmatter) before its first write, so a halt never leaves `review.md` and the spec `review:` block inconsistent. The ordering outlived the pair: spec 057 left one write, and `write-review` still reads and validates `spec.md` before touching `review.md`, so a malformed spec halts with no report on disk rather than with a report and no record.
-- `substitute-templates` mirrors each source file's permissions onto the written output, matching `apply-manifest`/`extract-archive`.
+- `write-review` reads and validates all inputs (including `spec.md`'s frontmatter) before its single write to `review.md` (spec 057), so a malformed spec halts with no report on disk.
+- Source-mode mirroring lives in `apply-manifest` (`mirror_source_mode`), which absorbed `substitute-templates` when `coverage-residue-cleanup` retired it.
 - `create-scenario` emits valid YAML for any `section` string; `append-task` rejects or flattens embedded newlines in `title`, `done-when`, and `body` items.
 - `dashboard` degrades to a detail-less target on a malformed targeted scenario (parse failure behaves like the missing-file case) and its doc matches the counting behavior.
 - `check-rule-ids` scopes the deprecation scan to the rule's own section (heading to next heading).

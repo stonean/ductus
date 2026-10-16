@@ -32,23 +32,22 @@ This scenario is the place to choose the source-of-truth shape during implementa
 
 ```toml
 [host]
-cli-config-dir = ".claude"
-project = "gov"
+project = "ductus"
 ```
 
-`/ductus`'s bootstrap writes these values at install time (it already knows both — it substitutes them into every generated file). The runtime reads them at exec time via a small loader. Adopters who hand-roll their `.ductus/config.toml` get a clear, version-controlled config surface. Missing values fall back to `.claude` / the directory name of the repo, preserving today's behavior in the source-of-truth repo.
+`/ductus`'s bootstrap writes the value at install time (it already knows it — it substitutes it into every generated file). The runtime reads it at exec time via a small loader. Adopters who hand-roll their `.ductus/config.toml` get a clear, version-controlled config surface. A missing value falls back to the directory name of the repo, preserving today's behavior in the source-of-truth repo. `cli-config-dir` is per-contributor and is not committed here — see `cli-config-dir-per-contributor`.
 
-**Option 2 — environment variables.** `GVRN_CLI_CONFIG_DIR` and `GVRN_PROJECT`, honored by both callsites. Adopters set them in their shell profile or CI env. Lightest-touch implementation but invisible at the repo level — onboarding a new contributor requires knowing to set them, which violates "everything the runtime needs is in the repo."
+**Option 2 — environment variables.** `DUCTUS_CLI_CONFIG_DIR` and `DUCTUS_PROJECT`, honored by both callsites. Adopters set them in their shell profile or CI env. Lightest-touch implementation but invisible at the repo level — onboarding a new contributor requires knowing to set them, which violates "everything the runtime needs is in the repo."
 
 **Option 3 — CLI flag (`ductus --cli-config-dir=.augment --project=acme exec ...`).** Maximally explicit but forces every caller (including `/ductus:*` slash command bodies) to pass both flags on every invocation. Heaviest ergonomic cost; rejected.
 
 ### Implementation shape (assuming Option 1)
 
 1. Add `Host { cli_config_dir: String, project: String }` to the runtime's config loader. Default values: `cli_config_dir = ".claude"`, `project` = the repo's directory basename.
-2. Load `.ductus/config.toml` once at process start (the loader already reads pins from the same file). Surface the `Host` struct through whatever context object both callsites have access to — likely a new field on `Walker` or a parallel argument threaded into `run_exec` and `locate_command_file`.
-3. Replace the hardcoded path strings in both callsites with `repo.join(format!("{}/commands/{}/{}.md", host.cli_config_dir, host.project, command_name))`. The interior segment becomes `{cli_config_dir}/commands/{project}/`.
-4. `/ductus`'s bootstrap (`framework/bootstrap/ductus.md`) writes the `[host]` block into the adopter's `.ductus/config.toml` during the install. The block is idempotent — re-runs update existing values rather than appending duplicate sections. Existing `.ductus/config.toml` files in adopter projects (created before this scenario lands) gain the block on their next `/ductus` run.
-5. Fixtures under `runtime/tests/fixtures/` that exercise `ductus exec` and anchor resolution gain a `.ductus/config.toml` with explicit `[host]` values so the parity tests cover both Claude (`.claude`/`gov`) and Auggie (`.augment`/`acme`) shapes. The Auggie fixture is the regression test for this scenario.
+2. Both callsites call `Host::load`, which reads `project` from the resolved config file's `[host]` block; `cli_config_dir` comes from the per-contributor session file instead — see `cli-config-dir-per-contributor`.
+3. Replace the hardcoded path strings in both callsites with `Host::command_file_candidates`, which tries three layouts in order: `{cli_config_dir}/commands/{project}/{name}.md` (claude-style), `{cli_config_dir}/command/{project}/{name}.md` (opencode), and `{cli_config_dir}/prompts/{project}-{name}.md` (pi).
+4. `/ductus`'s bootstrap (`framework/bootstrap/ductus.md`) writes a `[host]` block carrying only `project` into the adopter's active config file during the install, as a managed block — re-runs update it in place rather than appending duplicate sections. `cli-config-dir` goes to the session file — see `cli-config-dir-per-contributor`.
+5. Fixtures under `runtime/tests/fixtures/` exercise `ductus exec` against non-Claude layouts: `exec-auggie` (`.augment`, `project = "acme"`, with `cli-config-dir` in its legacy `[host]` block) is the regression test for this scenario, and `exec-opencode` resolves the singular `command/` directory with `cli-config-dir` in its session file.
 
 ### Markdown-only path
 
@@ -56,11 +55,11 @@ The runtime's parity contract requires the markdown-only fallback to keep workin
 
 ## Edge Cases
 
-- **`.ductus/config.toml` missing or `[host]` block absent.** Loader returns defaults (`.claude` for the config dir, repo directory basename for the project). This preserves today's behavior in the framework's own repo where neither value has ever been set.
+- **`.ductus/config.toml` missing or `[host]` block absent.** `project` defaults to the repo directory basename, and `cli_config_dir`, named neither in the session file nor in `[host]`, defaults to `.claude`.
 - **`[host]` values disagree with the actual on-disk layout.** The lookup misses and the existing "command file not found" error fires, listing every candidate path tried (so the user can see the mismatch). No silent fallback to legacy hardcoded paths — fail loud.
-- **An adopter migrates from one host to another (Claude → Auggie or vice versa).** They edit `.ductus/config.toml`'s `[host]` block; both callsites pick up the new values on next exec. No re-bootstrap required for the runtime to follow the change. The slash command files themselves still need to be re-emitted by `/ductus` for the new host's config dir, but that's an existing concern handled by `/ductus` re-runs.
+- **An adopter migrates from one host to another (Claude → Auggie or vice versa).** `cli-config-dir` is per-contributor and lives in the gitignored session file — see `cli-config-dir-per-contributor`.
 - **Project name contains characters that aren't filesystem-safe.** Out of scope here — `{project}` is already constrained by the bootstrap to lowercase ASCII per the existing template-substitution contract. The runtime can trust it.
-- **The framework's source repo (`stonean/ductus`) has no `[host]` block.** Defaults pin `cli_config_dir = ".claude"` and `project = "ductus"` (the repo directory name). The first candidate (`framework/commands/<name>.md`) keeps winning every lookup, so the default-fallback behavior never gets exercised here in practice — but the path stays correct for any code reading `.claude/commands/ductus/` if that ever happens to be the on-disk shape.
+- **The framework's source repo.** Its `.ductus/config.toml` sets `[host] project = "ductus"`, and the first candidate (`framework/commands/<name>.md`) wins every lookup there, so the installed candidates are exercised by the fixtures rather than by this repository.
 
 ## Open Questions
 
@@ -68,6 +67,4 @@ The runtime's parity contract requires the markdown-only fallback to keep workin
 
 ## Resolved Questions
 
-**Source-of-truth shape — `.ductus/config.toml` `[host]` block (Option 1).** Resolved 2026-05-24 during task 41 implementation. The runtime loads `Host { cli_config_dir, project }` from a `[host]` block in `.ductus/config.toml`, defaulting to `.claude` / the repo directory basename when the block is missing. `/ductus`'s bootstrap writes the block idempotently. Option 2 (env vars) was rejected as invisible at the repo level; Option 3 (per-invocation CLI flags) was rejected for ergonomic cost.
-
-> **Superseded in part for `cli-config-dir`.** `project` still loads from `.ductus/config.toml` `[host]` as above, but `cli_config_dir` is per-contributor (teammates may use different agents) and was relocated to the gitignored `.govern.session.toml` — read with a legacy `.ductus/config.toml` `[host]` fallback. See [cli-config-dir-per-contributor](cli-config-dir-per-contributor.md).
+**Source-of-truth shape — `.ductus/config.toml` `[host]` block (Option 1).** Resolved 2026-05-24 during task 41 implementation. The runtime loads `project` from a `[host]` block in `.ductus/config.toml`, defaulting to the repo directory basename when the block is missing. `/ductus`'s bootstrap writes the block idempotently. `cli_config_dir` comes from the per-contributor session file instead — see `cli-config-dir-per-contributor`. Option 2 (env vars) was rejected as invisible at the repo level; Option 3 (per-invocation CLI flags) was rejected for ergonomic cost.

@@ -61,8 +61,10 @@ surprise.
 there is nothing earlier to diff from; the base stays as it resolves today
 rather than erroring, since an unusual history is not a defect to halt on.
 
-**No transition commit found is unchanged** — the base is empty and the scope
-comes from the plan's `Affected Files` alone, exactly as now.
+**No transition commit found** — when the spec's move into `in-progress` is
+uncommitted, the base is `HEAD` (`review-scope-includes-uncommitted-work`);
+when the spec never reached `in-progress` and no `--since` was given, the base
+is empty and the scope comes from the plan's `Affected Files` alone.
 
 ## Edge Cases
 

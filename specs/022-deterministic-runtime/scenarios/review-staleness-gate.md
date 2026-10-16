@@ -23,14 +23,18 @@ whether the reviews had been run.
 
 ## Behavior
 
-A fifth gate check, ordered last because it is the weakest claim: the other
-four say a review is missing or failing, this one says a passing review is out
-of date.
+A gate check ordered last among the review checks because it is the weakest
+claim: the others say a review is missing or failing, this one says a passing
+review is out of date.
 
 `ReviewGateBlock::ReviewStale` fires when one of the spec's **durable
-contracts** — a `scenarios/*.md` file or `data-model.md` — changed between
-`review.reviewed-against` and `HEAD`. The message names the count, the short
-sha, and up to three paths; the guidance names the command that clears it.
+contracts** — a `scenarios/*.md` file or `data-model.md` — no longer matches
+the record's `reviewed-digest`, the per-path sha256 of each contract as the
+review read it from disk, compared against the working tree
+(`analyze_subjects::freshness_of`; the digest replaced the
+`reviewed-against`-to-`HEAD` diff in `the-committed-tree-horizon`). A contract
+deleted or unreadable since the review counts as changed. The message names
+the count and up to three paths; the guidance names the command that clears it.
 
 **The scope was wrong on the first cut and measurement caught it.** The
 initial version used the plan's **Affected Files**, reasoning that Family 19
@@ -45,27 +49,31 @@ failure this scenario's own prose warned about. The durable-contract rule
 blocks **0 of 48** once reviews are current.
 
 So the two enforcement points now apply the *identical* rule rather than
-deliberately different ones — `is_durable_contract` here mirrors
-`scripts/audit/review-freshness.sh` exactly. `tasks.md` and `plan.md` are
+deliberately different ones — `analyze_subjects::is_review_contract` here
+mirrors `scripts/audit/review-freshness.sh`'s `is_durable_contract` exactly.
+`tasks.md` and `plan.md` are
 excluded because the first is ephemeral by construction
 ([§tasks-phase](../../../framework/constitution.md#tasks-phase)) and the second
-churns as Affected Files are revised; `review.md` and `spec.md` because
-`write-review` touches both, so counting them would make every review stale the
-instant it was recorded. **Spec 057 stopped `write-review` touching `spec.md`**,
-so that half of the reason has lapsed; the exclusion is kept anyway rather than
-re-argued here, because widening it would stale every review on any spec-body
-edit — a behaviour change rather than a relocation.
+churns as Affected Files are revised; `review.md` because `write-review` writes
+the record there, so counting it would make every review stale the instant it
+was recorded; and `spec.md`, which `write-review` no longer touches (spec 057),
+because adding it would stale every review on any spec-body edit — a behaviour
+change to argue on its own rather than a relocation.
 
 ## Edge Cases
 
-- **Fails open on anything it cannot determine** — no git repository, a
-  `reviewed-against` that will not parse or does not resolve, a plan with no
-  **Affected Files** table. A gate that blocked on its own inability to check
-  is one people disable; the four honest checks still run. This is the opposite
+- **Fails open only where it cannot judge, and says so.** A record with no
+  `reviewed-digest` is `undeterminable` — neither current nor stale — and does
+  not block; the passing verdict carries a notice that freshness was not
+  examined. No git repository, or a `reviewed-against` that does not resolve,
+  costs only the mechanical-sweep rename exemption: the digest comparison needs
+  no commit, and the exemption's candidates are reported as changed rather than
+  dropped. A gate that blocked on its own inability to check
+  is one people disable; the honest checks still run. This is the opposite
   posture from Family 17's derivation, and deliberately so: there an empty
   result meant *checking nothing*, here it means *blocking nothing*.
-- **Never-reviewed specs are unaffected.** A null `reviewed-against` is
-  `NotReviewed`'s finding, raised earlier; this check returns without an
+- **Never-reviewed specs are unaffected.** An absent `review.md` or a null
+  `last-run` is `NotReviewed`'s finding, raised earlier; this check returns without an
   opinion.
 - **Ordering is load-bearing.** Staleness is evaluated after `blocking`, so a
   spec with MUST violations reports those rather than a staleness message that

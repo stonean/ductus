@@ -40,12 +40,12 @@ Three new primitives. Each is thin enough that the bootstrap procedure shrinks t
    - Result: `removed: Vec<String>`, `kept: Vec<String>`, `pinned-kept: Vec<String>`.
    - One primitive call replaces the bootstrap's three cleanup loops (slash-command manifest enforcement, legacy `skills/` directory removal, legacy workflow filename removal).
 
-3. **`merge-managed-block`** — generalize `merge-claude-md` to arbitrary file types with configurable marker shape.
+3. **`merge-managed-block`** — merge a framework-managed block into an adopter file of any type, with a configurable marker shape.
    - Args: `path: String`, `block: String`, `marker: Option<String>` (default `ductus-managed`), `marker-style: Option<"html-comment" | "line-prefix">` (default `html-comment`).
-   - `html-comment` style: `<!-- BEGIN {marker} -->` / `<!-- END {marker} -->` (current `merge-claude-md` behavior, unchanged).
-   - `line-prefix` style: a single line `# {marker}` marker followed by the block, terminated by a blank line or EOF (matches `.gitignore` and `.gitattributes` conventions; the bootstrap's `.gitignore` merge currently uses a `# ductus` line marker that the host hand-greps for).
-   - Same four actions as `merge-claude-md`: `created` / `inserted` / `updated` / `unchanged`. mtime preserved on the unchanged path.
-   - `merge-claude-md` becomes a thin compat wrapper that delegates to `merge-managed-block` with `marker-style: html-comment` and `marker: ductus-managed`; the existing fixture and procedure callers keep working unchanged. Drop the alias on the next major version.
+   - `html-comment` style: `<!-- BEGIN {marker} -->` / `<!-- END {marker} -->` (the `CLAUDE.md` shape).
+   - `line-prefix` style: a single line `# {marker}` marker followed by the block (matches `.gitignore` and `.gitattributes` conventions). The block ends where its blank-separated groups stop aligning with the supplied block, so a multi-subsection block is bounded past its interior blank lines (`merge-managed-block-multi-subsection-end`, `merge-managed-block-subsection-insertion`).
+   - Four actions: `created` / `inserted` / `updated` / `unchanged`. mtime preserved on the unchanged path.
+   - `merge-claude-md` is retired rather than kept as a wrapper — see `coverage-residue-cleanup`.
 
 The bootstrap procedure (`framework/bootstrap/ductus.md`) rewrites its Instructions section to invoke these three primitives instead of relying on a host-generated walker:
 
@@ -80,7 +80,7 @@ Six primitive calls plus two prose steps. The host's remaining job: gather input
 
 ## Resolved Questions
 
-- **Should we instead add per-file strategy support to the existing `substitute-templates` primitive?** No. `substitute-templates`'s contract is "overwrite the destination from a source tree with substitutions applied" — a single-strategy bulk copy that's useful in narrower contexts than the bootstrap (e.g., scaffolding a new sub-tree from a template directory). Conflating it with the bootstrap's three-strategy manifest would muddy the abstraction. `apply-manifest` is the more specific primitive that names what it's for; `substitute-templates` stays as-is for the simpler use case.
+- **Should we instead add per-file strategy support to the existing `substitute-templates` primitive?** No. `substitute-templates`'s contract is "overwrite the destination from a source tree with substitutions applied" — a single-strategy bulk copy that's useful in narrower contexts than the bootstrap (e.g., scaffolding a new sub-tree from a template directory). Conflating it with the bootstrap's three-strategy manifest would muddy the abstraction. `apply-manifest` is the more specific primitive that names what it's for. `substitute-templates` was later retired, its tree-copy subsumed by `apply-manifest` (`coverage-residue-cleanup`).
 - **Why not just keep generating bash walker scripts?** That's the current state; the scenario exists because the host writing bash defeats the runtime's value proposition. Bash also has known pitfalls (sed quoting hazards for user-provided substitution values — the observed walker reaches for `python3 -c '...'` to dodge them) that a native Rust primitive avoids by construction. Substitution determinism, idempotency, and atomicity all want to live below the host, not above it.
-- **Should `merge-managed-block` and the `merge-claude-md` alias both ship in the same release?** Yes. The alias is a zero-effort compat shim; deprecating it later is cheaper than breaking the existing `merge-claude-md` callers (the bootstrap fixture, the parity goldens, future host scripts). Drop the alias on the next major release of `ductus`.
+- **What became of the `merge-claude-md` alias?** Retired once no command invoked it — see `coverage-residue-cleanup`.
 - **Why ship `enforce-manifest` separately from `apply-manifest` rather than folding "remove not-in-manifest" into the latter?** Single responsibility. `apply-manifest` is "write the things you said to write" — it knows the expected files but doesn't own the existing files. `enforce-manifest` is "delete the things not on the list" — it operates against directory state, not against manifest input. Splitting them keeps each primitive's failure modes narrow and lets callers compose them (apply-then-enforce for first-run; just-apply for incremental scaffolding).

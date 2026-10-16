@@ -145,7 +145,7 @@ Older tiers are never removed by a primitive — the bootstrap migration is the 
 2. `{cli-config-dir}/command/{project}/{command_name}.md` — `opencode` (singular `command/`);
 3. `{cli-config-dir}/prompts/{project}-{command_name}.md` — `pi` (flat project-hyphenated prompt templates, [064](../064-pi-host-support/spec.md)), **appended last**.
 
-Each adopter installs into exactly one layout, selected by the agent's registry `layout`; the `cli-config-dir` recorded in the gitignored session file is the real selector, and the candidate order is belt-and-braces — walking all three lets the runtime resolve any supported layout without knowing which agent wrote the file. The two pre-existing candidates keep their relative order exactly, so every pre-pi adopter resolves identically. Both resolution callsites (`main::run_exec`, `interpreter::payload::locate_command_file`) consume the candidate list unchanged. See the [`the-pi-command-candidate`](scenarios/the-pi-command-candidate.md) scenario.
+Each adopter installs into one layout; walking all three resolves any of them without knowing which agent wrote the file, and both resolution callsites (`main::run_exec`, `interpreter::payload::locate_command_file`) consume the list unchanged (scenario [`the-pi-command-candidate`](scenarios/the-pi-command-candidate.md)).
 
 ## Primitive request/response schemas
 
@@ -163,17 +163,7 @@ The field is spelled `severity` on five shapes, and the sets behind it are **thr
 
 Which condition earns which **analyze** tier is the constitution's to state, not this document's — see §text-first-artifacts (Validation Severity), and `framework/commands/analyze.md` step 2 for the host's per-finding rendering rule. This table registers the *sets*, not the assignment.
 
-They are three types deliberately. A single merged enum would make the cross-vocabulary error — an analyze tier emitted into a review finding — representable in the type introduced to forbid it.
-
-**An unrecognized value is rejected, never defaulted.** `severity` arrives from the `performReview` extension point, written freehand by an LLM, and a defaulted value would file an unrecognized MUST as a SHOULD and let the spec pass `check-review-gate`'s MUST check. The bucketing is a `match` over the closed set with no catch-all arm, so adding a tier is a compile error rather than a silent demotion.
-
-Rejection names the extension point, the vocabulary, the offending value and the legal set:
-
-```text
-schema-mismatch in `performReview`: unrecognized review severity "mandatory" — expected one of: must, should
-```
-
-**Matching is case-insensitive and serialization is canonical lower-case**, so `MUST`, the spelling the rule files use, is accepted: strictness targets unrecognized values, not capitalization (scenario `severity-is-a-closed-set-not-a-string`).
+They are three types so that an analyze tier emitted into a review finding is unrepresentable. **An unrecognized value is rejected, never defaulted**, with a `schema-mismatch` naming the extension point, the vocabulary, the value and the legal set; the bucketing is a `match` with no catch-all arm. Matching is case-insensitive and serialization canonical lower-case (scenario `severity-is-a-closed-set-not-a-string`).
 
 ### `read-spec` — parse spec frontmatter and body sections
 
@@ -209,13 +199,13 @@ Result:
 
 `open-questions` comes from the **spec body only**; feature-targeted `/{project}:clarify` branches on exactly this list.
 
-`scenario-open-questions` is a **sibling** signal, never merged into it: the unresolved questions carried by `scenarios/*.md`, each tagged with its source scenario slug, in the shared scenario order. The two stay separate because they answer different questions — the body's count is what `clarified` asserts and what the `draft → clarified` edge turns on, while these are remaining work that gates `done`, so merging them would make a spec's status contradict its own body. Completion is where they join: a spec does not reach `done` while this list is non-empty ([046 — Scenario open-question visibility](../046-scenario-open-question-visibility/spec.md)).
+`scenario-open-questions` is a **sibling** signal, never merged into it: the unresolved questions carried by `scenarios/*.md`, each tagged with its slug, in the shared scenario order. They gate `done`, not `clarified` ([046 — Scenario open-question visibility](../046-scenario-open-question-visibility/spec.md); scenario `scenario-open-question-signal`).
 
-`scenario-files-unreadable` lists the slugs of scenario files that could not be read while collecting the above, and is **omitted from the payload when empty**. It exists so an empty `scenario-open-questions` is not two states wearing one value: *every scenario was examined and none carries a question* versus *a scenario could not be examined*. An unreadable scenario is never escalated into a `done`-blocking finding — nothing can be proven about a file that will not parse — but dropping it silently would have every consumer report clean over a subject it never read, which is `QUAL-CLAIM-001`. The collector is shared, so `check-review-gate`, `check-artifacts` and the dashboard all see the same unread set; `check-artifacts` records each as a `skipped` target with reason `artifact-unreadable`.
+`scenario-files-unreadable` lists the slugs of scenario files the shared collector could not read, **omitted when empty**, so an empty `scenario-open-questions` means every scenario was read (scenario `unreadable-scenario-is-reported`).
 
-`label` carries the criterion's stable `AC{n}` identifier, or `null` for a criterion the labelling pass has not reached ([013 — Text-First Artifacts](../013-text-first-artifacts/scenarios/criterion-identifiers.md)). `text` keeps the `AC{n}:` prefix as authored — stripping it here would make the reported text differ from the file, and a host citing a criterion wants the line it can paste. The label is parsed by `label-criteria`'s `parse_label`, deliberately the same function `mark-criterion` resolves a `label` argument through, so every surface answering "what label does this criterion carry?" answers identically. Callers holding a reference across edits should prefer `label` to the positional index, which an insertion above the target silently redirects.
+`label` is the criterion's stable `AC{n}` identifier, or `null` before the labelling pass reaches it ([013 — Text-First Artifacts](../013-text-first-artifacts/scenarios/criterion-identifiers.md)); `text` keeps the `AC{n}:` prefix as authored. The label is parsed by `label-criteria`'s `parse_label`, the function `mark-criterion` resolves a `label` through, so the two cannot disagree.
 
-Both lists come from the same parser, which is comment- and fence-aware: questions inside an HTML comment or a fenced block are not entries, so a spec scaffolded from the shipped template reports zero rather than its commented-out examples. Scenario enumeration and ordering use the shared scenario-file listing, so the set and order match `check-artifacts` and `dashboard`. An absent `scenarios/` directory, an unreadable scenario, or one with no questions section each contribute nothing — an unknown is never escalated into a `done`-blocking finding.
+Both lists come from one comment- and fence-aware parser (scenario `scenario-question-parser-fix`), and scenarios are enumerated through the shared listing `check-artifacts` and `dashboard` use. An absent `scenarios/` directory, an unreadable scenario, or one with no questions section contributes nothing.
 
 ### `read-tasks` — parse tasks.md into structured task list
 
@@ -280,9 +270,7 @@ Result:
 { "previous": false, "current": true, "path": "specs/.../spec.md" }
 ```
 
-`criterion-index` is 0-based over the criteria in body order and remains supported: it is the positional fallback for a criterion the labelling pass has not reached. `label` is preferred wherever one exists, because an index is only valid against the list as it stood when the index was computed — inserting a criterion above the target silently redirects it, while a label survives insertion, reordering, and removal (spec 013).
-
-Supplying both, or neither, is refused rather than resolved by precedence: a caller that passes both is holding two references it believes name one criterion, and picking a winner would silently discard the disagreement the refusal surfaces. A `label` no criterion carries is an error naming the label, never a no-op — an unresolvable label means the caller's reference is stale, which is exactly the condition labels exist to make visible.
+`criterion-index` (0-based, body order) is the fallback for a criterion the labelling pass has not reached; `label` is preferred because it survives insertion and reordering. Supplying both, or neither, is refused, and a `label` no criterion carries is an error naming it (scenario `criterion-label-assignment`).
 
 ### `label-criteria` — assign stable `AC{n}` labels to acceptance criteria
 
@@ -306,17 +294,7 @@ Result:
 }
 ```
 
-`assigned` lists only the criteria this run labelled, each with the 0-based index it occupies in body order at the time of the run; an already-labelled criterion is left byte-identical and never appears. `next-criterion` is the counter as written back to the frontmatter — always greater than every label in the body. `changed` reports whether the file was written, so a no-op run says so rather than reporting a clean write it did not perform.
-
-Assignment takes **`max(highest label in body, next-criterion)`**, incremented per assignment in body order — never `max(body) + 1` — so deleting the highest-numbered criterion never lets its label be reissued to a different requirement; the counter never decreases (scenario `criterion-label-assignment`).
-
-Three refusals, each preferring a legible failure to a partial or silent one:
-
-- A spec with **no frontmatter fence** is refused — there is nowhere to record the counter, and a labelling that cannot be recorded is worse than none.
-- A **`next-criterion` that is not a positive integer** is refused rather than repaired in place: a corrupted counter may mean a label was already reissued, and a silent repair would hide that. The `criterion-labels` check family reports the same state as a finding — assignment refuses, enforcement reports.
-- A spec with **no Acceptance Criteria section, or an empty one**, is a no-op that creates no counter. An absent `next-criterion` means "no labels assigned yet", which is a truthful state rather than a defect to pre-empt.
-
-The write is atomic (tempfile + rename) like every other primitive write. The pass is idempotent: a second run finds nothing unlabelled and a counter that already exceeds the body, so it writes nothing.
+`assigned` lists only the criteria this run labelled, with each one's 0-based index in body order; `next-criterion` is the counter as written back, always above every label in the body; `changed` says whether the file was written. Assignment takes **`max(highest label in body, next-criterion)`**, never `max(body) + 1`, so a deleted criterion's label is never reissued. A spec with no frontmatter fence, or a `next-criterion` that is not a positive integer, is refused rather than repaired; an absent or empty Acceptance Criteria section is a no-op that creates no counter. The write is atomic and the pass idempotent (scenario `criterion-label-assignment`).
 
 ### `set-status` — update spec frontmatter status field
 
@@ -360,7 +338,7 @@ Result:
 }
 ```
 
-The boundary is derived from `git diff --name-only <first-commit-on-spec-dir>..HEAD` plus the spec dir itself, emitted as **directory-zone globs** (scenario [writecode-boundary-derivation](scenarios/writecode-boundary-derivation.md)): each changed path contributes its parent directory as `{dir}/**`, because the writeCode validator enforcing this boundary must admit *new* files, which can never exact-match a previously-changed path. A root-level changed file stays an exact path — its zone would be `**`, permitting everything. On the exec path the walker merges the result into the `write-boundary` enforcement key as a **union** with any session-seeded value: a seed is a deliberate host/user grant the derivation never revokes, and on a fresh feature (derivation = spec glob only) the seed is what admits the first out-of-spec edit. With neither seed nor non-spec history, enforcement stays fail-closed — the first out-of-spec writeCode edit halts with `out-of-boundary-edit`.
+The boundary is `git diff --name-only <first-commit-on-spec-dir>..HEAD` plus the spec dir, emitted as **directory-zone globs**: each changed path contributes `{dir}/**`, so a new file in a touched directory is admitted, and a root-level file stays an exact path. The exec walker merges it into `write-boundary` as a **union** with any session-seeded value; with neither, the first out-of-spec writeCode edit halts with `out-of-boundary-edit` (scenario [writecode-boundary-derivation](scenarios/writecode-boundary-derivation.md)).
 
 ### `check-stuck` — count tasks.md commits since `in-progress`
 
@@ -666,7 +644,7 @@ The scenario-open-question-signal scenario adds two per-spec fields (spec 046):
 
 `state` is `clean` (examined, empty), `outstanding`, or `no-file` (no readable `{specs-root}/inbox.md`), so a project with no inbox never renders as examined-and-clean. `oldest` is `YYYY-MM-DD` from `git blame` over the surviving bullets, so the whole-file rewrites `append-inbox` and `remove-inbox-item` perform do not reset a surviving line's date. It is **absent, not defaulted**, when the oldest item's date cannot be read — an inbox not yet committed, a surviving item behind a shallow clone's cut, or any other blame failure — and a caller reports that as *age undeterminable* rather than as today; an uncommitted item alone never makes it absent, being newer than every committed one. Being a history read, a CI job running it needs `fetch-depth: 0`. Counting uses the shared comment- and fence-aware bullet grammar the append and remove primitives use. It is **a notice, never a gate**: nothing blocks on inbox depth, because §brownfield-inbox's design rests on capture being free.
 
-`rendered-markdown` is the full pipeline view pre-rendered as one markdown fragment, in `/ductus:status`'s documented order: preamble, dashboard table, counts and callouts, and the cross-service references readout (blocks separated by blank lines; the readout omitted when no spec declares references). The runtime resolves each spec's `references:` index internally for the readout — the same classification `resolve-references` exposes, with the matched service's `description` appended from the `[services]` registry — so one `dashboard` call covers the whole view on the runtime path. `/{project}:…` next actions and callout texts substitute the adopter's `[host] project` namespace. Returned data the host may restyle, never stdout printing (§runtime-boundary: no user-facing rendering owned by the runtime); the structured fields stay authoritative for hosts that render their own view. The canonical piece-by-piece formats live in `/ductus:status`'s Rendering reference, which is also the markdown-only path.
+`rendered-markdown` is the full pipeline view as one markdown fragment, in `/ductus:status`'s documented order — preamble, table, counts and callouts, and the cross-service references readout, resolved the way `resolve-references` resolves them — with `/{project}:…` texts in the adopter's `[host] project` namespace. It is data the host may restyle, never printed; the structured fields stay authoritative, and `/ductus:status`'s Rendering reference holds the piece-by-piece formats.
 
 ### `resolve-feature` — resolve an identifier to a feature directory
 
@@ -965,19 +943,13 @@ Result:
 }
 ```
 
-The deterministic half of `/{project}:specify`'s routing gate, which runs **before** `create-feature` writes anything, because a routing check after the scaffold is not a check. Three sources, in result precedence order:
+The deterministic half of `/{project}:specify`'s routing gate, run **before** `create-feature` writes anything (scenario `specify-routes-before-scaffolding`; requiring spec [017 — Derive, Don't Ask](../017-derive-dont-ask/spec.md) AC26). Three sources, in result precedence order:
 
-- **`runtime-work`** — the description names a primitive (matched against the parser's `PRIMITIVE_NAMES`, so the signal tracks the shipped runtime rather than a hand-kept keyword list) or a path under `runtime/`. The home is the feature whose `plan.md` lists a `runtime/` path under `## Affected Files`, read through the same `compute_review_scope::read_plan_affected` the review scope uses. **Derived from the corpus, never a slug named in code**: an adopter's runtime-owning spec is not this repo's `022`, and a project with none yields no candidate rather than a wrong one.
-- **`rule-surface`** — a rule file whose category stem the description shares, with the `-backend` / `-frontend` / `-cross` surface suffix set aside so `security-backend.md` matches on `security` and not on every backend file. Directory resolution and listing are `discover-rule-files`' (`{specs-root}/rules/`, else `framework/rules/`).
-- **`spec-corpus`** — a spec whose slug shares vocabulary with the description. A spec already offered by `runtime-work` is not offered twice; the more specific claim wins.
+- **`runtime-work`** — the description names a primitive (from the parser's `PRIMITIVE_NAMES`) or a path under `runtime/`. The candidate is the lowest-numbered feature whose `plan.md` lists a `runtime/` path under `## Affected Files`, read through `compute_review_scope::read_plan_affected` — derived from the corpus, never a slug named in code.
+- **`rule-surface`** — a rule file whose category stem the description shares, the `-backend` / `-frontend` / `-cross` suffix set aside; directories resolve as `discover-rule-files` resolves them.
+- **`spec-corpus`** — a spec whose slug shares vocabulary with the description, unless `runtime-work` already offered it.
 
-Matching is lexical (lowercased alphanumeric tokens of four or more characters, minus a short stopword list) and the result is **advisory**. The semantic decision stays at the `routeInboxItem` extension point — groom's tree, reused rather than copied — and the choice stays with the operator: a new spec remains creatable over any candidate, and the gate's denial branch is how the operator takes one instead. `reopens` is true when accepting a candidate implies the `done → in-progress` back-edge, so the confirmation names the reopen before it happens exactly as `/{project}:groom`'s does. `route` is drawn from the `routeInboxItem` vocabulary; `spec` (create a new one) is the *absence* of candidates and never appears as one.
-
-**Every source lands in `sources-examined` or in `skipped`, never both and never neither.** That invariant is what makes the two zero-candidate answers distinguishable: empty `candidates` with empty `skipped` is *examined and matched nothing* — a new spec is right, and a fresh adopter with no rule directory and a single-spec corpus is exactly this case; empty `candidates` with a non-empty `skipped` is *could not derive candidates*, a different answer that must not be reported as the first (`QUAL-CLAIM-001`). The runtime-work signal firing with no derivable home is a skip, not silence: that is precisely when the operator most needs to know the check could not answer. Only an empty `description` is an operational error — every other failure is reported as a skipped source, because raising would collapse "could not check" into "no gate".
-
-`routed-by` names a command whose routing tree already ran (`/{project}:groom` recommending `/{project}:specify` is the case); it returns `gate-required: false` with no candidates and no skips, and the caller skips the decision and its confirmation rather than asking twice. `description` carries a `title` alias so the exec walker binds it and `create-feature` from one context value, and is echoed in the result so the routing extension reads one key whichever name the caller supplied.
-
-Defined by `scenarios/specify-routes-before-scaffolding.md`; requiring spec [017 — Derive, Don't Ask](../017-derive-dont-ask/spec.md) AC26.
+Matching is lexical (lowercased alphanumeric tokens of four or more characters, minus a short stopword list) and **advisory**: the decision stays at the `routeInboxItem` extension point and with the operator. `reopens` is true when accepting a candidate implies the `done → in-progress` back-edge; `route` is drawn from the `routeInboxItem` vocabulary, and `spec` never appears as a candidate. **Every source lands in `sources-examined` or in `skipped`, never both and never neither**, so empty `candidates` with empty `skipped` (*matched nothing*) and with a non-empty one (*could not derive*) stay distinct; the runtime-work signal with no derivable home is a skip. Only an empty `description` is an operational error. `routed-by` returns `gate-required: false` with nothing else, so a tree that already ran is not asked twice; `description` carries a `title` alias and is echoed in the result.
 
 ### `routeInboxItem` — `candidates` request field (addendum)
 
@@ -1347,7 +1319,7 @@ Request payload:
 
 `question.section` is optional and omitted when the walker cannot attribute the question to a section. The question comes from an explicit `question` walker-context value when present, else the first entry of `read-spec`'s merged `open-questions` result.
 
-**Exec-path scope note** (scenario [coverage-residue-cleanup](scenarios/coverage-residue-cleanup.md)): clarify steps 7–8 — edge-case enumeration and acceptance-criterion verification — carry no extension marker, so `ductus exec clarify` no-ops them by design. They do not fold into this point's one-question-per-round-trip ABI: they are spec-wide passes that must run even on the zero-questions short-circuit, when this loop performs no round trips at all. The markdown-only path and a host walking the command file directly perform them in full; a host driving exec performs them itself before accepting the status-advance gate. The reduction is documented in the command (`clarify.md`, Instructions preamble), keeping the two-paths guarantee honest rather than silently narrower.
+**Exec-path scope** (scenario [coverage-residue-cleanup](scenarios/coverage-residue-cleanup.md)): `ductus exec clarify` no-ops clarify steps 7–8, spec-wide passes with no extension marker that must run even when this loop makes no round trip; a host driving exec performs them itself, as `clarify.md`'s Instructions preamble states.
 
 Response payload:
 

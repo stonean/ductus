@@ -17,7 +17,7 @@ Falling back to host-side `Edit` calls for these two operations was considered a
 
 ## Behavior
 
-Two new primitives. Each is independently testable, atomic via tempfile + rename, and exposed on both surfaces (CLI subcommand and MCP tool under the `gov-rt:` namespace).
+Two new primitives. Each is independently testable, atomic via tempfile + rename, and exposed on both surfaces (CLI subcommand and MCP tool, registered under its bare name on the `ductus` MCP server).
 
 1. **`create-scenario`** — write a scenario file from the scenario template with frontmatter and body content populated.
    - Args: `feature-path: String` (e.g., `specs/042-foo`), `slug: String` (the scenario slug, no extension), `section: String` (the `section:` frontmatter value), `context: String` (Context section body), `behavior: String` (Behavior section body), `edge-cases: Option<String>` (when present, populates the Edge Cases section; when absent, the section is omitted).
@@ -25,11 +25,11 @@ Two new primitives. Each is independently testable, atomic via tempfile + rename
    - Result: `{ "created": "{feature-path}/scenarios/{slug}.md" }` on success; operational error on slug conflict or write failure.
 
 2. **`append-task`** — append a new numbered task block to `tasks.md`.
-   - Args: `feature-path: String`, `title: String` (the task title, e.g., "Implement scenario: ask-consolidation"), `done-when: String` (the "Done when" condition body), `body: Option<Vec<String>>` (optional list of checkbox sub-items; when absent, the primitive emits a single default `- [ ] Implement the behavior described in scenarios/{slug}.md` line — but the caller controls the body shape).
+   - Args: `feature-path: String`, `title: String` (the task title, e.g., "Implement scenario: ask-consolidation"), `done-when: String` (the "Done when" condition body), `body: Option<Vec<String>>` (optional list of checkbox sub-items; when absent, the primitive emits a single default `- [ ] Implement the behavior described in scenarios/{slug}.md` line from `slug`, which is then required; when `body` is supplied, a supplied `slug` still prepends that line above the caller's items — `append-task-honours-slug-with-explicit-body`).
    - Behavior: read `{feature-path}/tasks.md`, count existing `## NNN.` headings to compute the next task number, append a new section block. If `tasks.md` does not exist, create it with the heading `# {NNN} — {Feature Name} Tasks` derived from the feature's spec title (or a minimal heading when the title can't be read). Atomic via tempfile-in-parent + `persist` rename.
    - Result: `{ "appended": { "task-number": N, "path": "{feature-path}/tasks.md" } }`. Operational error on write failure or unparseable existing tasks file.
 
-Both primitives compose with existing primitives at the procedure level — `/amend`'s scenario branch in 023's `framework/commands/amend.md` rewrite will call `create-scenario` then `append-task` then (on a `done` spec) `set-status` to reopen, then `write-session` rewrites `.ductus/session.toml` to point at the new scenario.
+Both primitives compose with existing primitives at the procedure level — `/amend`'s scenario branch in 023's `framework/commands/amend.md` rewrite will call `create-scenario` then `append-task` then (on a `done` spec) `set-status` to reopen, then `write-session` targets the new scenario — in the process's own file under `.ductus/sessions/` when it has a session identity, and in the shared default `.ductus/session.toml` on every target write (062).
 
 The CLI surfaces follow the same shape as existing write primitives:
 
@@ -44,7 +44,7 @@ ductus append-task --feature specs/042-foo \
   --done-when "the scenario's described behavior is correctly implemented and tested."
 ```
 
-Both register under the canonical `gov-rt:` namespace (`gov-rt:create-scenario`, `gov-rt:append-task`) and join the existing tool list in `framework/runtime-tools.txt`. The pre-commit hook's MCP allow-list generator (added in spec 023 task 1) flows the new tool names through to both `framework/bootstrap/configure/claude.md` and `framework/bootstrap/configure/auggie.md` automatically on the same commit that updates `runtime-tools.txt`.
+Both register under their bare names (`create-scenario`, `append-task`) on the `ductus` MCP server — each host adds its own prefix (§runtime-host-integration) — and join the existing tool list in `framework/runtime-tools.txt`. The pre-commit hook's MCP allow-list generator (added in spec 023 task 1) flows the new tool names through to both `framework/bootstrap/configure/claude.md` and `framework/bootstrap/configure/auggie.md` automatically on the same commit that updates `runtime-tools.txt`.
 
 ## Edge Cases
 
@@ -63,6 +63,6 @@ Both register under the canonical `gov-rt:` namespace (`gov-rt:create-scenario`,
 ## Resolved Questions
 
 - **Why two primitives and not one combined `create-scenario-with-task`?** Single responsibility. `create-scenario` writes a scenario file; `append-task` extends a tasks file. They compose at the procedure level for the `/amend` scenario branch, and each is independently useful (a future `/groom` integration, for example, may want `append-task` without creating a scenario). Combining them would couple two failure modes that callers want to handle separately.
-- **Why not extend `substitute-templates` to also handle single-file writes?** Rejected — `substitute-templates`'s contract is "overwrite the destination tree from a source tree with substitutions applied," a single-strategy bulk copy. Conflating it with single-file scenario creation muddies the abstraction. `create-scenario` is the more specific primitive that names what it's for; `substitute-templates` stays as-is.
+- **Why not extend `substitute-templates` to also handle single-file writes?** Rejected — `substitute-templates`'s contract is "overwrite the destination tree from a source tree with substitutions applied," a single-strategy bulk copy. Conflating it with single-file scenario creation muddies the abstraction. `create-scenario` is the more specific primitive that names what it's for. `substitute-templates` was later retired (`coverage-residue-cleanup`).
 - **Should the new primitives bump `ductus` to a major version?** No — they are additive (no existing primitive contract changes), so a minor bump is appropriate (same pattern as 0.2 → 0.3 when the apply-manifest scenario shipped). The next `ductus` release that ships these primitives moves `ductus` to 0.4.0.
 - **Should the primitives know about `/amend`'s classifier heuristic?** No. The classifier lives in `framework/commands/amend.md` as prose the LLM applies (per spec 023's resolved question on classification mechanism). The primitives operate one layer below — they perform the writes whichever route the classifier selects.

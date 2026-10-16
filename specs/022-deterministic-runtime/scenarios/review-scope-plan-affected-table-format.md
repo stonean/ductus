@@ -30,8 +30,8 @@ and recorded as a low-confidence `QUAL-STUB-001` finding in the 022 review.
   shared `pub(crate)` helper and call it from `read_plan_affected` in place of
   the bullet parser, so `compute-review-scope` and the writeCode plan reader
   agree on one canonical format. For a real table-format plan, `plan_affected`
-  is non-empty and the "larger set wins" branch is reachable in production
-  again.
+  is non-empty and contributes to the scope, which is the union of
+  `plan_affected` and `modified-since` (`review-scope-union`).
 - **Fixture realignment.** The `review-basic` exec fixture's `plan.md` switches
   from the bullet list back to the canonical table (dropping the interim
   bullet-form workaround note added in 46b). The fixture's parity golden is
@@ -47,15 +47,15 @@ and recorded as a low-confidence `QUAL-STUB-001` finding in the 022 review.
 - **Absent / empty section.** A plan with no `## Affected Files` section, or an
   empty one, still yields an empty `plan_affected` (unchanged) and scope falls
   back to `modified-since`.
-- **Tie-break unchanged.** On equal set sizes, `modified-since` still wins
-  (git-authoritative for what the work actually touched).
+- **No tie-break.** The scope is the union of the two sets, so neither wins
+  over the other (`review-scope-union`).
 
 ## Tests
 
 - Add a table-format case to `compute_review_scope::tests` asserting
   `plan_affected` parses a `| File | Action | Purpose |` table (mirroring
-  `plan_affected_wins_when_it_is_the_larger_set` in table form).
-- Switch the `plan_affected_wins_when_it_is_the_larger_set` fixture and the
+  `scope_unions_plan_affected_with_modified_since` in table form).
+- Switch the `scope_unions_plan_affected_with_modified_since` fixture and the
   `review-basic` fixture `plan.md` to the table form; confirm the `review-basic`
   parity golden needs no re-bless.
 
