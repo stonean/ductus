@@ -54,6 +54,8 @@ The manifest task 141 produced. Slugs: `066-audit-records-and-the-completion-gat
 - [ ] Walk each new spec to done: clarify, plan, implement (the moves are its tasks), review (both new data models read in full), analyze, completion gate
 - [x] Measure: 022, 066 and 067 data models each at or under 50,000 bytes
 
+066 and 067 are `in-progress` (the transition is `1054b8bd`), with their tasks 1–3 and every acceptance criterion ticked after verification against `runtime/src/primitives/`. What is left for each is `/ductus:review`, `/ductus:analyze` and the completion gate. The natural review base is `08f0b199`, the parent of the transition, so the window holds the move (`d852b627`) and the sweep (`13acc295`); the scope also carries each plan's runtime files, which the split did not change. Read the moved scenarios' diffs and both data models in full, and name each unread runtime file in the Summary rather than counting it. Before writing an analyze record, flip the spec to `done`, run `check-artifacts`, and flip it back, as §implement-phase prescribes.
+
 - **Done when**: 066 and 067 are done, each data model is at or under 50,000 bytes, and 022 keeps nothing that moved.
 
 ## 144. Sweep every reference, routing rule and canonical row the split moves
@@ -64,9 +66,13 @@ The manifest task 141 produced. Slugs: `066-audit-records-and-the-completion-gat
 - [x] Reword `AGENTS.md`'s *Route shared runtime work to spec 022* entry to name three homes (022 core and shared surfaces, 066 records and gate, 067 checks) and re-key 050 plan.md's W23 classification row in the same commit, so promotion-coverage reports 0 unmatched keys
 - [ ] Verify: `check-corpus-links` 0 broken, a grep for every moved and retired slug across `runtime/`, `scripts/`, `framework/`, `AGENTS.md` and the changelog finds only live paths, then `scripts/audit/review-freshness.sh` on the committed tree, with a scoped `--since` re-review of any done spec it flags
 
+`check-corpus-links` reported 0 broken over 571 files before the move commit. Left as written on purpose: 058's `spec.md:383-384` (058's record of the obligation it discharged on the retired scenarios), spent `tasks.md` entries, `review.md` bodies, `runtime/CHANGELOG.md` release-note text (its one link into a moved scenario is repointed; the backticked path at about line 2660 stays as published), 045 `plan.md`'s narrative of where its scenarios landed (its Affected Files rows are repointed), 046's AC28 and plan (historical), and `AGENTS.md:60` and `:153` (past-tense accounts). Runtime test strings naming `specs/022-deterministic-runtime/scenarios/...` are fixture data, not references. Still to do: the slug grep, then `scripts/audit/review-freshness.sh` after the push. The done specs whose durable contracts the move edited are 017, 020, 023, 026, 030, 041, 045, 047, 050, 051 and 058; re-review each one it flags with `--since=1054b8bd` (the commit before the move, which holds every spec-corpus repoint), reading the changed files, and record in its Summary that the edits are the 022 split's reference sweep.
+
 - **Done when**: no reference anywhere in the repository resolves to a moved or retired location, the routing rule names three homes, and the self-audit passes.
 
 ## 145. Prune 022's spent tasks, close it, and release 0.59.7
+
+Spent sections 129–140 were pruned in `17ce0667`; 141, 142 and 146 are spent now, and 143 and 144 will be once 066 and 067 close and the freshness probe is done. 022's review base is `426e9f7d`, the parent of its reopen `e71a0343`, so its window holds the retirement (`379ffa31`), the cleanup (`6683bfd9`), the move and the sweep; its data model is 44,823 bytes and must be read in full. No runtime behavior changed in this round — only doc comments and two script/schema labels — so the 0.59.7 changelog section records the split, the constitution's canonical-sources row now naming 067's data model, the corrected scenario-link bullet, and the doc-comment corrections.
 
 - [ ] Prune 022's spent task sections with `/ductus:prune` (tasks.md is ephemeral; git keeps them)
 - [ ] Review and analyze 022, read its data model in full, and run the completion gate
