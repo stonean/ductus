@@ -24,15 +24,13 @@
 //!   plan" item is a semantic-link judgment and stays in the
 //!   markdown-only reference. Runs only when `tasks.md` exists.
 //! - **scenario-consistency** (advisory) — reference §"Scenario
-//!   consistency (advisory)": every
-//!   `scenarios/*.md` has a referencing task in `tasks.md` *only while
-//!   that task is still pending*. Under a `done` spec a scenario with no
-//!   task in the current file is flagged only when no revision of
-//!   `tasks.md` ever named it, since a done feature's tasks may have been
-//!   pruned (000's `scenario-without-task-visibility`); a history that cannot
-//!   be consulted flags nothing. It never requires a pruned spent task to
-//!   persist (constitution §tasks-phase — `tasks.md` is ephemeral; see
-//!   [`pruning_evidence`] for the documented heuristic).
+//!   consistency (advisory)": a `scenarios/*.md` that no task in
+//!   `tasks.md` references is flagged, at every status, only when no
+//!   revision of `tasks.md` ever named it, since a spent task may have been
+//!   pruned or the file reset (067's `scenario-consistency-reads-tasks-history`);
+//!   a history that cannot be consulted flags nothing. It never requires a
+//!   pruned spent task to persist (constitution §tasks-phase — `tasks.md` is
+//!   ephemeral).
 //! - **review-state-drift** (blocking) — reference §"Review state drift
 //!   (blocking)": a `done` spec whose `review.md` record has `last-run`
 //!   unset, `blocking: true`, or a non-zero `should-violations`,
@@ -299,29 +297,20 @@ fn check_task_consistency(findings: &mut Vec<ArtifactFinding>, tasks: &[Task], t
 }
 
 /// (c) Scenario→task mapping — reference §"Scenario consistency
-/// (advisory)". Skip rules, in order:
+/// (advisory)".
 ///
-/// - Spec at `done` → an unmapped scenario is a finding **only when no task
-///   for it ever existed**, proven from `tasks.md` history rather than
-///   inferred from the file. `tasks.md` is not a durable index
-///   (§tasks-phase), so its *current* silence proves nothing: a spent task
-///   may have been pruned or the file reset. Its *history* does — a
-///   scenario that was implemented had a task at some point, and one that
-///   was hand-added and never implemented never did. The family used to
-///   skip `done` wholesale, which left a committed, question-free,
-///   never-tasked scenario invisible to every check while its spec stayed
-///   `done` (spec 000 scenario `scenario-without-task-visibility`).
-///   Measured over this repo's 46 `done` specs before the rule shipped:
-///   one unmapped scenario, which *was* tasked historically — so the
-///   probe fires zero times here, and the file-shape alternative would
-///   have produced exactly one false positive, the direction §tasks-phase
-///   forbids.
-/// - No `tasks.md` → not evaluable; the completeness family already owns
-///   the missing-file signal at `planned`+, and a pre-plan spec's
-///   scenarios have no tasks yet by design.
-/// - `tasks.md` shows [`pruning_evidence`] → the mapping is satisfied for
-///   every unmapped scenario (§tasks-phase: a pruned spent task never
-///   produces a finding).
+/// An unmapped scenario is a finding, at every status, **only when no task
+/// for it ever existed**, proven from `tasks.md` history rather than
+/// inferred from the file. `tasks.md` is not a durable index (§tasks-phase),
+/// so its *current* silence proves nothing: a spent task may have been
+/// pruned or the file reset, and after a reset `append-task` numbers from 1
+/// again, so the file's shape cannot say which. Its *history* can — a
+/// scenario that was implemented had a task at some point, and one that was
+/// hand-added and never implemented never did (000's
+/// `scenario-without-task-visibility`, extended below `done` by 067's
+/// `scenario-consistency-reads-tasks-history`). No `tasks.md` is not
+/// evaluable: the completeness family owns the missing-file signal at
+/// `planned`+, and a pre-plan spec's scenarios have no tasks yet by design.
 ///
 /// A scenario is *mapped* when its slug appears in any task's heading,
 /// subtask text, or `Done when` clause — this matches `append-task`'s
@@ -339,33 +328,24 @@ fn check_scenario_consistency(
     let Some(tasks) = tasks else {
         return;
     };
-    let slugs = scenario_slugs(feature_dir);
-    if slugs.is_empty() {
-        return;
-    }
-    if pruning_evidence(tasks) {
-        return;
-    }
-    let done = status == "done";
-    let unmapped: Vec<String> = slugs
+    let unmapped: Vec<String> = scenario_slugs(feature_dir)
         .into_iter()
         .filter(|slug| !scenario_mapped(tasks, slug))
         .collect();
-    // One history walk for every unmapped slug, and only when a `done` spec
-    // actually has one — the common case does no git work at all.
-    let ever = if done && !unmapped.is_empty() {
-        ever_tasked_slugs(repo, root, feature, &unmapped)
-    } else {
-        None
+    if unmapped.is_empty() {
+        return;
+    }
+    // One history walk for every unmapped slug, and only when there is one —
+    // the common case does no git work at all. An unconsultable history
+    // (`None`) suppresses every finding.
+    let Some(ever) = ever_tasked_slugs(repo, root, feature, &unmapped) else {
+        return;
     };
-    for slug in unmapped {
-        // On a `done` spec the mapping is not a durable index, so absence in
-        // the current file is not evidence of anything. Only a scenario that
-        // never had a task in any revision is a finding; an unconsultable
-        // history (`None`) suppresses every one.
-        if done && ever.as_ref().is_none_or(|seen| seen.contains(&slug)) {
-            continue;
-        }
+    let done = status == "done";
+    for slug in unmapped.into_iter().filter(|slug| !ever.contains(slug)) {
+        // A `done` spec's finding says what history cannot establish; below
+        // `done` the spec is still being built, and the scenario's task is
+        // simply owed.
         let message = if done {
             format!(
                 "scenario {slug}.md has no task in tasks.md and never had one in its history, \
@@ -375,8 +355,8 @@ fn check_scenario_consistency(
             )
         } else {
             format!(
-                "scenario {slug}.md has no corresponding task in tasks.md and the file \
-                 shows no pruning evidence"
+                "scenario {slug}.md has no task in tasks.md and never had one in its history; \
+                 append the task that implements it"
             )
         };
         findings.push(ArtifactFinding {
@@ -482,40 +462,6 @@ fn scenario_mapped(tasks: &[Task], slug: &str) -> bool {
             || task.subtasks.iter().any(|s| s.text.contains(slug))
             || task.done_when.as_deref().is_some_and(|d| d.contains(slug))
     })
-}
-
-/// Pruning-evidence heuristic (§tasks-phase). `prune-tasks` reduces a
-/// `tasks.md` in two shapes, and each leaves a deterministic fingerprint:
-///
-/// - **reset** rewrites the file to template state → the file parses to
-///   **zero task sections**;
-/// - **keep-pending** drops spent sections verbatim without renumbering
-///   the survivors → the surviving numbers are **non-contiguous** (the
-///   first number exceeds 1, or a gap appears between consecutive
-///   numbers).
-///
-/// Either fingerprint counts as evidence. The heuristic is deliberately
-/// coarse: evidence anywhere in the file vouches for *every* unmapped
-/// scenario, because the primitive cannot know which pruned section
-/// referenced which scenario — and §tasks-phase forbids requiring a spent
-/// task to persist, so the mandated direction of error is the missed
-/// finding, never the false one. (A fresh template-state `tasks.md` on a
-/// pre-implementation spec also matches the zero-sections fingerprint and
-/// is likewise not flagged — same direction of error.)
-fn pruning_evidence(tasks: &[Task]) -> bool {
-    if tasks.is_empty() {
-        return true;
-    }
-    let numbers: Vec<u32> = tasks
-        .iter()
-        .filter_map(|t| t.number.parse::<u32>().ok())
-        .collect();
-    if let Some(first) = numbers.first()
-        && *first > 1
-    {
-        return true;
-    }
-    numbers.windows(2).any(|pair| pair[1] > pair[0] + 1)
 }
 
 /// Record an artifact the family was meant to scan but could not read.
@@ -2191,25 +2137,59 @@ mod tests {
 
     // --- scenario consistency ------------------------------------------------------
 
-    #[test]
-    fn unmapped_scenario_yields_advisory_finding() {
+    /// `alpha`'s task, as `append-task`'s default body renders it.
+    const ALPHA_TASKED: &str = "# T\n\n## 1. Alpha\n\n\
+        - [x] Implement `scenarios/alpha.md`\n\n\
+        - **Done when**: alpha.\n";
+
+    /// A `tasks.md` reset to template state: no task sections.
+    const RESET_TASKS: &str = "# T\n\nTasks derived from the [plan](plan.md). Complete in order.\n";
+
+    /// A git-backed spec at `status` with one scenario per slug, whose
+    /// `tasks.md` is committed as each of `revisions` in turn, the last one
+    /// left as the working file. Returns the scenario-consistency findings.
+    fn history_findings(status: &str, slugs: &[&str], revisions: &[&str]) -> Vec<ArtifactFinding> {
+        use crate::primitives::git_fixture;
         let tmp = tempdir().unwrap();
-        write(tmp.path(), "specs/042-demo/spec.md", &spec("in-progress"));
-        write(tmp.path(), "specs/042-demo/plan.md", "# Plan\n");
-        write(tmp.path(), "specs/042-demo/tasks.md", GOOD_TASKS);
+        let repository = git2::Repository::init(tmp.path()).unwrap();
         write(
             tmp.path(),
-            "specs/042-demo/scenarios/unmapped-scenario.md",
-            "---\nsection: \"X\"\n---\n\n# Unmapped\n",
+            &format!("specs/{FEATURE}/spec.md"),
+            &spec(status),
         );
-        let result = run(&args(), tmp.path()).unwrap();
+        write(tmp.path(), &format!("specs/{FEATURE}/plan.md"), "# Plan\n");
+        for slug in slugs {
+            write(
+                tmp.path(),
+                &format!("specs/{FEATURE}/scenarios/{slug}.md"),
+                "---\nsection: \"X\"\n---\n\n# X\n",
+            );
+        }
+        for (n, body) in revisions.iter().enumerate() {
+            write(tmp.path(), &format!("specs/{FEATURE}/tasks.md"), body);
+            git_fixture::commit_all(&repository, &format!("tasks revision {n}"));
+        }
+        run(&args(), tmp.path())
+            .unwrap()
+            .findings
+            .into_iter()
+            .filter(|f| f.family == "scenario-consistency")
+            .collect()
+    }
+
+    #[test]
+    fn a_scenario_never_tasked_below_done_is_reported() {
+        let findings = history_findings("in-progress", &["unmapped-scenario"], &[GOOD_TASKS]);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].severity.as_str(), "advisory");
         assert_eq!(
-            families(&result),
-            vec![("scenario-consistency", "advisory")]
-        );
-        assert_eq!(
-            result.findings[0].path,
+            findings[0].path,
             "specs/042-demo/scenarios/unmapped-scenario.md"
+        );
+        assert_eq!(
+            findings[0].message,
+            "scenario unmapped-scenario.md has no task in tasks.md and never had one in its \
+             history; append the task that implements it"
         );
     }
 
@@ -2266,48 +2246,64 @@ mod tests {
         );
     }
 
+    /// A keep-pending prune dropped `alpha`'s spent task; history still
+    /// names it (§tasks-phase: a pruned spent task never produces a finding).
     #[test]
-    fn pruned_gap_numbering_satisfies_the_mapping() {
-        // Scenario edge case: a scenario whose task was pruned after
-        // completion produces no finding. keep-pending pruning leaves
-        // non-contiguous numbers (task 1 was dropped; 2 survives).
-        let tmp = tempdir().unwrap();
-        write(tmp.path(), "specs/042-demo/spec.md", &spec("in-progress"));
-        write(tmp.path(), "specs/042-demo/plan.md", "# Plan\n");
-        let pruned = "# T\n\n## 2. Wire CLI\n\n- [ ] sub\n\n- **Done when**: CLI works.\n";
-        write(tmp.path(), "specs/042-demo/tasks.md", pruned);
-        write(
-            tmp.path(),
-            "specs/042-demo/scenarios/pruned-away.md",
-            "---\nsection: \"X\"\n---\n\n# Pruned\n",
+    fn a_task_pruned_by_keep_pending_satisfies_the_mapping() {
+        let pending = "## 2. Wire CLI\n\n- [ ] sub\n\n- **Done when**: CLI works.\n";
+        let findings = history_findings(
+            "in-progress",
+            &["alpha"],
+            &[
+                &format!("{ALPHA_TASKED}\n{pending}"),
+                &format!("# T\n\n{pending}"),
+            ],
         );
-        let result = run(&args(), tmp.path()).unwrap();
-        assert!(
-            result.clean,
-            "pruning evidence must satisfy the mapping: {:?}",
-            result.findings
-        );
+        assert!(findings.is_empty(), "{findings:?}");
     }
 
     #[test]
-    fn reset_template_tasks_satisfy_the_mapping() {
-        // Reset-to-template parses as zero tasks — the other pruning
-        // fingerprint (§tasks-phase).
-        let tmp = tempdir().unwrap();
-        write(tmp.path(), "specs/042-demo/spec.md", &spec("in-progress"));
-        write(tmp.path(), "specs/042-demo/plan.md", "# Plan\n");
-        write(
-            tmp.path(),
-            "specs/042-demo/tasks.md",
-            "# T\n\nTasks derived from the [plan](plan.md). Complete in order.\n",
+    fn a_task_removed_by_a_reset_satisfies_the_mapping() {
+        let findings = history_findings("in-progress", &["alpha"], &[ALPHA_TASKED, RESET_TASKS]);
+        assert!(findings.is_empty(), "{findings:?}");
+    }
+
+    /// After a reset `append-task` numbers the next task 1, so the file looks
+    /// unpruned. Read from its shape, it flagged every implemented scenario of
+    /// a reopened spec — all 68 of 022's (067's
+    /// `scenario-consistency-reads-tasks-history`).
+    #[test]
+    fn a_restart_at_one_after_a_reset_flags_no_implemented_scenario() {
+        let restarted = "# T\n\n## 1. New work\n\n- [ ] new\n\n- **Done when**: new.\n";
+        let findings = history_findings(
+            "in-progress",
+            &["alpha"],
+            &[ALPHA_TASKED, RESET_TASKS, restarted],
         );
-        write(
-            tmp.path(),
-            "specs/042-demo/scenarios/reset-away.md",
-            "---\nsection: \"X\"\n---\n\n# Reset\n",
+        assert!(findings.is_empty(), "{findings:?}");
+    }
+
+    /// A reset `tasks.md` is the shape a pruned `done` spec is in. Read from
+    /// its shape, it vouched for every scenario before history was asked, so
+    /// `beta`, which no revision ever named, went unreported. The message is
+    /// pinned: a stored decision is keyed on it.
+    #[test]
+    fn a_done_spec_with_reset_tasks_reports_a_never_tasked_scenario() {
+        let findings = history_findings("done", &["alpha", "beta"], &[ALPHA_TASKED, RESET_TASKS]);
+        let flagged: Vec<(&str, &str)> = findings
+            .iter()
+            .map(|f| (f.path.as_str(), f.message.as_str()))
+            .collect();
+        assert_eq!(
+            flagged,
+            vec![(
+                "specs/042-demo/scenarios/beta.md",
+                "scenario beta.md has no task in tasks.md and never had one in its history, \
+                 so it may describe behavior that was never implemented — or it may document \
+                 already-shipped behavior written after the fact, which this check cannot \
+                 distinguish. The operator decides; nothing is reopened automatically"
+            )]
         );
-        let result = run(&args(), tmp.path()).unwrap();
-        assert!(result.clean, "{:?}", result.findings);
     }
 
     /// A `done` spec in a subdirectory of its repository: `alpha`'s task was
@@ -2336,8 +2332,8 @@ mod tests {
             "# T\n\n## 1. Alpha\n\n- [x] Implement `scenarios/alpha.md`\n\n- **Done when**: alpha.\n",
         );
         git_fixture::commit_all(&repository, "feat: alpha");
-        // Reset to a file with no pruning evidence, so only history can
-        // answer whether `alpha` was ever tasked.
+        // Replace `alpha`'s task, so only history can answer whether it was
+        // ever tasked.
         write(
             &project,
             &tasks,
@@ -2357,8 +2353,8 @@ mod tests {
 
     /// A `done` spec whose history cannot be read in full flags nothing, as
     /// 000's `scenario-without-task-visibility` requires. Builds the repository
-    /// the history walk reads: `alpha`'s task, then a reset `tasks.md` with no
-    /// pruning evidence, and a `beta` scenario that never had a task.
+    /// the history walk reads: `alpha`'s task, then a `tasks.md` that no
+    /// longer names it.
     fn history_fixture(first_tasks: &[u8]) -> (tempfile::TempDir, git2::Repository) {
         use crate::primitives::git_fixture;
         let tmp = tempdir().unwrap();
@@ -2416,22 +2412,24 @@ mod tests {
         assert_eq!(scenario_findings(tmp.path()), Vec::<String>::new());
     }
 
-    /// With no repository to consult, the history walk fails safe (000's
-    /// `scenario-without-task-visibility`), so an unmapped scenario under a
-    /// `done` spec flags nothing.
+    /// With no repository to consult, the history walk fails safe at every
+    /// status (000's `scenario-without-task-visibility`), so an unmapped
+    /// scenario flags nothing.
     #[test]
-    fn a_done_spec_outside_a_repository_flags_no_scenario() {
-        let tmp = tempdir().unwrap();
-        write(tmp.path(), "specs/042-demo/spec.md", &spec("done"));
-        write(tmp.path(), "specs/042-demo/plan.md", "# Plan\n");
-        write(tmp.path(), "specs/042-demo/tasks.md", GOOD_TASKS);
-        write(
-            tmp.path(),
-            "specs/042-demo/scenarios/unmapped-under-done.md",
-            "---\nsection: \"X\"\n---\n\n# X\n",
-        );
-        let result = run(&args(), tmp.path()).unwrap();
-        assert!(result.clean, "{:?}", result.findings);
+    fn a_spec_outside_a_repository_flags_no_scenario() {
+        for status in ["in-progress", "done"] {
+            let tmp = tempdir().unwrap();
+            write(tmp.path(), "specs/042-demo/spec.md", &spec(status));
+            write(tmp.path(), "specs/042-demo/plan.md", "# Plan\n");
+            write(tmp.path(), "specs/042-demo/tasks.md", GOOD_TASKS);
+            write(
+                tmp.path(),
+                "specs/042-demo/scenarios/unmapped.md",
+                "---\nsection: \"X\"\n---\n\n# X\n",
+            );
+            let result = run(&args(), tmp.path()).unwrap();
+            assert!(result.clean, "{status}: {:?}", result.findings);
+        }
     }
 
     // --- review state drift ---------------------------------------------------------
