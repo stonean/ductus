@@ -87,7 +87,7 @@ AC9 forbids escalating an unknown to a defect: a link whose target state cannot 
 
 AC16 requires reading inside inline code spans. This narrows further: extraction considers **only** span contents. The candidate grammar is tabulated in [data-model.md](data-model.md), which `framework/constitution.md` §drift-prevention's Canonical sources table names as its owner — restating it here would be a second copy to keep in sync.
 
-The exclusion set is what makes the check usable in this repo rather than a noise generator. `:` alone rejects `https://…`, `path:line` citations, and every `/{project}:analyze` slash-command reference; `{`/`}` rejects placeholders; `*`/`?`/`[`/`]` reject globs; a leading `-` rejects flags. Requiring the separator to be *internal* rejects a bare directory name used conceptually. Resolution is repo-root-relative and satisfied by a file **or** a directory, so `framework/workflows/` resolves correctly, with a trailing `/` stripped before the test.
+The exclusion set is what makes the check usable in this repo rather than a noise generator. `:` alone rejects `https://…`, `path:line` citations, and every `/{project}:analyze` slash-command reference; `{`/`}` rejects placeholders; `*`/`?`/`[`/`]` reject globs; a leading `-` rejects flags. Requiring the separator to be *internal* rejects a bare directory name used conceptually. Resolution is repo-root-relative and satisfied by a file **or** a directory, so `framework/commands/` resolves correctly, with a trailing `/` stripped before the test.
 
 The Behavior section reads "including paths inside inline code spans"; this plan implements "code spans only", the narrower reading AC16 states literally. Rationale in Trade-offs.
 
