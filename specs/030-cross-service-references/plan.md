@@ -7,14 +7,12 @@ Implements [030 — Cross-Service References](spec.md).
 Cross-service references are informative links from a spec to a spec in another service, surfaced with the linked spec's lifecycle status. Implementation spans five surfaces, all landing inside this feature:
 
 1. **Registry** — a `.ductus/config.toml [services]` table mapping a service alias to its canonical repo and local checkout path.
-2. **Harvest** — a generator that extracts cross-service URL links from a spec body into a derived `references:` frontmatter index, kept strictly distinct from `dependencies:`.
-3. **Runtime** — a new `ductus` primitive that resolves each reference through the registry, reads the linked spec's `status` from the local checkout, and classifies the outcome. The markdown-only path performs the same work with host file tools; the primitive is the fast path, never a prerequisite.
+2. **Harvest** — the runtime's `derive-references` primitive extracts cross-service URL links from a spec body into a derived `references:` frontmatter index, kept strictly distinct from `dependencies:`.
+3. **Runtime** — a new `ductus` primitive that resolves each reference through the registry, reads the linked spec's `status` from the local checkout, and classifies the outcome. The markdown-only path performs the same work with host file tools.
 4. **Commands** — `/{project}:status` surfaces the resolved status; `/{project}:analyze` reports a provably-broken reference as a finding.
 5. **Constitution** — a §spec-lifecycle carve-out so reference edits don't reopen a `done` spec, plus a `references:` row in the §text-first-artifacts frontmatter schema.
 
-Comprehensive tests are a first-class deliverable (per the planning decision): Rust unit tests per outcome, generator tests, markdown-only↔runtime parity with golden output, and the no-runtime CI job exercising the fallback.
-
-> Two premises above were later reversed, and the text is left as planned rather than rewritten. `048-govern-acquired-runtime` made the runtime **required, and acquired by the pipeline**, so "never a prerequisite" (D3 and item 3) no longer holds and the no-runtime CI job (`.github/workflows/markdown-only-pipeline.yml`) was deleted with the opt-in invariant it asserted; `.github/workflows/runtime-acquisition.yml` carries the acquisition invariant that replaced it. `022-deterministic-runtime` promoted the harvest generator of item 2 and D2 to the `derive-references` primitive, so `scripts/gen-cross-service-refs.sh` and its CI and hook wiring in **Affected Files** no longer exist. The markdown-only path itself is unaffected and still ships (§runtime-host-integration). See `spec.md` AC10.
+Comprehensive tests are a first-class deliverable (per the planning decision): Rust unit tests per outcome, harvest tests, and markdown-only↔runtime parity with golden output.
 
 ## Technical Decisions
 
@@ -26,9 +24,9 @@ A `[services.<alias>]` table with two string fields: `repo` (canonical URL, the 
 
 ### D2 — Reference syntax and harvesting
 
-A reference is a standard markdown link whose href is the linked spec's canonical repo URL (settled in the spec). A **new** generator, `scripts/gen-cross-service-refs.sh`, harvests body links whose host+repo matches a registered `[services]` entry into a derived `references:` frontmatter field, keyed `{service, spec-slug}`, ignoring the URL's branch ref. It honors the same exclusions as `gen-spec-deps.sh` (fenced blocks, blockquotes, `## See also`).
+A reference is a standard markdown link whose href is the linked spec's canonical repo URL (settled in the spec). The `derive-references` primitive harvests body links whose host+repo matches a registered `[services]` entry into a derived `references:` frontmatter field, keyed `{service, spec-slug}`, ignoring the URL's branch ref. It honors the same exclusions as `derive-dependencies` (fenced blocks, blockquotes, `## See also`), from the one scanner both use.
 
-A **separate** generator (not an extension of `gen-spec-deps.sh`) keeps informative references cleanly partitioned from the blocking sibling-dependency graph — they must never share an index or enter the cycle check. Each generator edits only its own frontmatter field; neither clobbers the other.
+A **separate** primitive (not an extension of `derive-dependencies`) keeps informative references cleanly partitioned from the blocking sibling-dependency graph — they must never share an index or enter the cycle check. Each edits only its own frontmatter field; neither clobbers the other.
 
 The index lives as a **committed, derived `references:` frontmatter field**, parallel to `dependencies:`. It is reconstructable from body links (so it satisfies §runtime-boundary principle 1 — the runtime owns no state the markdown can't rebuild) and stays glanceable on GitHub. An on-demand harvest with no persisted field was considered and rejected: the spec commits to an *index*, and a persisted field keeps `/{project}:status` fast and mirrors the `dependencies:` precedent.
 
@@ -79,7 +77,6 @@ The command adds surface: a source under `framework/commands/`, wiring through t
 | File | Action | Purpose |
 | --- | --- | --- |
 | `specs/030-cross-service-references/data-model.md` | Create | Registry, reference, index, and outcome-enum schema |
-| `scripts/gen-cross-service-refs.sh` | Create | Harvest cross-service URL links → `references:` frontmatter |
 | `runtime/src/primitives/resolve_references.rs` | Create | `resolve-references` primitive |
 | `runtime/src/primitives/mod.rs` | Modify | Register the primitive |
 | `runtime/src/mcp/server.rs` | Modify | Expose the MCP tool |
@@ -91,9 +88,8 @@ The command adds surface: a source under `framework/commands/`, wiring through t
 | `framework/bootstrap/configure/*.md` | Modify | Per-agent permission entries for `/{project}:link` |
 | `framework/constitution.md` | Modify | §text-first-artifacts schema row, §spec-lifecycle carve-out, §drift-prevention canonical-source row |
 | `framework/runtime-tools.txt` | Modify | Register the new tool name for the opt-in check |
-| `.github/workflows/markdown-only-pipeline.yml` | Modify | Run the new generator `--dry-run`; exercise the fallback |
-| `.github/workflows/generators.yml` | Modify | Run the new generator |
-| `scripts/install-hooks.sh` | Modify | Wire the new generator into the pre-commit hook |
+| `.github/workflows/generators.yml` | Modify | Run the `references:` derivation |
+| `.githooks/pre-commit` | Modify | Run the `references:` derivation on every commit |
 | `runtime/tests/fixtures/cross-service-*` | Create | Consumer spec + fake registered checkouts per outcome |
 | `runtime/tests/parity/cross-service/*` | Create | Markdown-only↔runtime parity |
 | `runtime/tests/golden/cross-service-*.jsonl` | Create | Golden resolution records |
@@ -102,7 +98,7 @@ The command adds surface: a source under `framework/commands/`, wiring through t
 
 ## Trade-offs
 
-- **Separate generator vs. extending `gen-spec-deps.sh`** — chose separate, so informative references can never leak into the blocking dependency/cycle graph. Cost: a second generator to wire into the hook and CI.
+- **Separate harvest vs. extending the dependency derivation** — chose separate, so informative references can never leak into the blocking dependency/cycle graph. Cost: a second derivation to wire into the hook and CI.
 - **Committed `references:` frontmatter vs. gitignored cache** — chose committed frontmatter for glanceability and GitHub visibility, consistent with `dependencies:`. Cost: a little frontmatter noise; benefit: reviewable and reconstructable.
 - **Broken-reference severity: Advisory vs. Blocking** — chose Advisory. References are informative and non-gating, so a broken one is surfaced every run but never blocks pipeline advancement. Limitation: a broken reference can linger; mitigated by repeated surfacing.
 - **Local-checkout-only (no fetch)** — a reference to an unchecked-out service shows `not-checked-out` rather than resolving. Accepted per the spec's Non-Goals; keeps resolution deterministic and CI simple.
