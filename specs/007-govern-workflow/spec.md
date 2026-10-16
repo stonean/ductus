@@ -1,6 +1,6 @@
 ---
 title: "007-govern-workflow — spec"
-status: done
+status: in-progress
 dependencies: [003-bootstrap-automation]
 tags: [bootstrap, commands]
 next-criterion: 15
@@ -186,7 +186,7 @@ None — all resolved.
 - ~~Should there be a `--dry-run` mode?~~ No — the command is idempotent with create/skip/merge strategies, making dry-run unnecessary.
 - ~~How should the file manifest be maintained?~~ Hardcoded in each ductus variant. Updated when the framework templates change.
 - ~~CLI-specific command variants or path variable?~~ Path variable (`{cli-config-dir}`) resolved at ductus time. One set of command templates, N ductus variants do the substitution.
-- ~~How should `/ductus:setup` work for Auggie?~~ Skipped for now — Auggie permissions are global. Deferred to future considerations in `specs/spec.md`.
+- ~~How should `/ductus:setup` work for Auggie?~~ Skipped here — Auggie permissions are global. Auggie later got a setup source of its own, which spec `012-multi-agent-govern` lists (named, not linked: 012 depends on this spec, so a link would close a cycle).
 
 ## References
 
