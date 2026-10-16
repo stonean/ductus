@@ -48,7 +48,7 @@ the block's presence a safe thing to remove — and what made keying any check o
 its *absence* unsafe, which is the defect 057 found in the CI template, in audit
 Family 19 and in `mechanical_sweep_parity`.
 
-The block is added to both `framework/templates/spec/spec.md` and `framework/templates/spec/spec-and-plan.md` so every newly-created spec ships with the field shapes pre-populated to safe defaults (`last-run: null`, `must-violations: 0`, `blocking: false`). Existing specs in adopter projects will not have the block until `/ductus:review` runs on them; this is intentional — the field is created lazily on first review, and `/ductus:analyze`'s drift check tolerates `review.last-run: null` until the spec reaches `status: done`.
+The block is added to `framework/templates/spec/spec.md` so every newly-created spec ships with the field shapes pre-populated to safe defaults (`last-run: null`, `must-violations: 0`, `blocking: false`). Existing specs in adopter projects will not have the block until `/ductus:review` runs on them; this is intentional — the field is created lazily on first review, and `/ductus:analyze`'s drift check tolerates `review.last-run: null` until the spec reaches `status: done`.
 
 ### Idempotency invariant is a property of inputs, not state
 
@@ -77,7 +77,6 @@ Of the 13 acceptance criteria, AC 8's waiver auto-expiry has the subtlest behavi
 | `framework/commands/implement.md` | Edit | Pre-`done` review gate (halts when `review.blocking: true` or `review.last-run` missing) |
 | `framework/commands/analyze.md` | Edit | Add review-drift check on `done` specs; integrate `--fix` to revert to `in-progress` with notice |
 | `framework/templates/spec/spec.md` | Edit | Add `review:` block to frontmatter schema (removed again by 057) |
-| `framework/templates/spec/spec-and-plan.md` | Edit | Add `review:` block to frontmatter schema (the file was deleted by 023's lightweight-track sunset) |
 | `framework/templates/ci/adopter-generators.yml` | Edit | Add a step that fails when any `done` spec has `review.blocking: true` or missing `review.last-run` (predicate replaced by 057 — see the CI-template decision above) |
 | `framework/constitution.md` | Edit | Reference the review gate in the pipeline section between `/ductus:implement` and `done` |
 | `README.md` | Edit | Add `/ductus:review` row to Pipeline (advance state) table; add Waivers subsection; update pipeline diagrams |
