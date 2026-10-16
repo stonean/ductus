@@ -1969,9 +1969,10 @@ pub(crate) fn split_blocks(content: &str) -> Vec<MarkdownBlock> {
 /// name one too.
 #[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct BlockReading {
-    /// A blockquote paragraph is a block: its `>` lines, and any plain line
-    /// that lazily continues them, until a blank or empty `>` line; a list
-    /// item inside the quote starts a new one.
+    /// A blockquote paragraph is a block: its `>` lines, until a blank or
+    /// empty `>` line; a list item inside the quote starts a new one. A plain
+    /// line after a quote resumes as a new paragraph under either reading
+    /// (scenario `block-element-scanner`).
     pub(crate) quotes: bool,
     /// A heading is a block by itself rather than only a boundary.
     pub(crate) headings: bool,
@@ -2046,11 +2047,15 @@ pub(crate) fn split_blocks_reading(content: &str, reading: BlockReading) -> Vec<
             open = Some((idx + 1, vec![content_line.into_owned()], false));
             continue;
         }
-        match &mut open {
-            // A non-marker line continues whatever is open — the indented
-            // and lazy continuation forms are the same claim either way.
-            Some((_, lines, _)) => lines.push(content_line.into_owned()),
-            None => open = Some((idx + 1, vec![content_line.into_owned()], false)),
+        // A non-marker line continues an open paragraph or list item — the
+        // indented and lazy continuation forms are the same claim either way.
+        // After a quote it resumes as a new paragraph, as it does when the
+        // default reading drops the quote.
+        if let Some((_, lines, false)) = &mut open {
+            lines.push(content_line.into_owned());
+        } else {
+            close_block(&mut blocks, open.take());
+            open = Some((idx + 1, vec![content_line.into_owned()], false));
         }
     }
     close_block(&mut blocks, open.take());
@@ -4280,18 +4285,19 @@ mod tests {
     }
 
     /// The reading the body family takes: a heading is its own block, and a
-    /// blockquote paragraph is one — wrapped `>` lines and a lazy continuation
-    /// joined, an empty `>` line ending it, a list item inside it starting a
-    /// new one. `split_blocks` itself still drops both.
+    /// blockquote paragraph is one — wrapped `>` lines joined, an empty `>`
+    /// line ending it, a list item inside it starting a new one. A plain line
+    /// after a quote resumes as a paragraph, as under the default reading,
+    /// which drops the quote and the heading.
     #[test]
     fn a_reading_split_keeps_quotes_and_headings() {
         let doc = "## Notes\n\
                    \n\
                    > **Note:** a later spec retired\n\
                    > the hook,\n\
-                   lazily continued.\n\
                    > - **AC7** named it\n\
                    >   on two lines.\n\
+                   after the quote.\n\
                    >\n\
                    > A second paragraph.\n";
         let reading = BlockReading {
@@ -4308,15 +4314,14 @@ mod tests {
                 (1, "## Notes".to_string()),
                 (
                     3,
-                    "> **Note:** a later spec retired\n> the hook,\nlazily continued.".to_string()
+                    "> **Note:** a later spec retired\n> the hook,".to_string()
                 ),
-                (6, "> - **AC7** named it\n>   on two lines.".to_string()),
+                (5, "> - **AC7** named it\n>   on two lines.".to_string()),
+                (7, "after the quote.".to_string()),
                 (9, "> A second paragraph.".to_string()),
             ]
         );
-        // The default drops the quote lines and the heading; the lazy line,
-        // with no quote left to continue, reads as a paragraph of its own.
-        assert_eq!(blocks(doc), vec![(5, "lazily continued.".to_string())]);
+        assert_eq!(blocks(doc), vec![(7, "after the quote.".to_string())]);
         assert_eq!(unquote(">   on two lines."), "on two lines.");
         assert_eq!(unquote("> > nested"), "nested");
     }
