@@ -1,16 +1,16 @@
 ---
 spec: 045-decision-state-drift-detection
-last-run: 2026-10-16T00:58:29Z
-reviewed-against: c4b14ac5f8bc92a2510a4a9d25f7c9ea00900953
-diff-base: 1054b8bd2e2c51c8629b4e6a9d3193103739aa57
+last-run: 2026-10-16T19:36:00Z
+reviewed-against: ec72c234476d97f7057f68d83c6e92f9e88eb94b
+diff-base: 2936adcaf536efae848b60eb784bc44d3f3aa4f0
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 1
-scope: 173
+examined: 2
+scope: 67
 skipped-passes: []
 reviewed-digest:
-  data-model.md: 25197063692e7c9856db37047dc780b2e35d64afa4e205f9d2ca594b7c452c40
+  data-model.md: d649e14cc23a5a2b7ed881962c878afd00a9050637618e0896bdea61306d2e61
 blocking: false
 dispositions:
   fixed: 0
@@ -23,7 +23,7 @@ dispositions:
 
 ## Summary
 
-Scoped re-review of the 022 split's reference sweep: criterion-non-assertion-phrasings is cited at its new home in 067. examined: 1, read in full: data-model.md. plan.md (19,452 bytes) was read only as its diff, four Affected Files paths repointed to 067's scenarios, and is not counted; its narrative of where its scenarios landed is a decision record and stays as written. Base --since=1054b8bd, the commit before the 022 split's move (d852b627): the edits predate any reopen of this spec, which stays done because each is a uniform pointer substitution. The five passes ran over the files counted as examined, against all eleven rule files and AGENTS.md, and found no finding and no observation; each repointed link or name resolves to the scenario, data model or criterion it names in its new home. Not read and not counted: every other scope entry. Those are the plan's Affected Files, unchanged in this window and covered by the previous review, and the files the split changed elsewhere in the repository (git diff --name-only 1054b8bd plus the working tree), which are the subject of 022's, 066's and 067's own reviews.
+Scoped re-review of the body-path round's edits (cba81b63's reopen, e896adfe, 4ae8f4b9). examined: 2: data-model.md in full and spec.md as its window diff. The data model's marker table, count and identifier rule were checked against check_artifacts.rs and scripts/audit/marker-list-parity.sh (Family 18 passes); its SkippedTarget reason table against the closed set in runtime/src/schema/primitives.rs. 067's code in this window is the subject of 067's review (7756775c). The five passes ran over the files counted as examined, against all eleven rule files and AGENTS.md, and found no finding and no observation. Not read and not counted: every other scope entry - the plan's Affected Files, unchanged in this window, and the files other specs' amendments and 067's tasks 10-11 changed after the base (including runtime/src/primitives/derive_dependencies.rs unless named above), which are the subject of their own reviews.
 
 ## MUST violations (blocking)
 

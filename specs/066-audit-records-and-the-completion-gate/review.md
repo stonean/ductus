@@ -1,16 +1,16 @@
 ---
 spec: 066-audit-records-and-the-completion-gate
-last-run: 2026-10-16T01:06:47Z
-reviewed-against: 40d0eb2a733f90e97e4228cc8d212fc89eedf4cb
-diff-base: 08f0b1993e00eb4d6bad3fa645de8516985ed9f3
+last-run: 2026-10-16T19:36:00Z
+reviewed-against: ec72c234476d97f7057f68d83c6e92f9e88eb94b
+diff-base: 17eb597e725ce92ec88607f173bd5960f78b0a30
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 20
-scope: 178
+examined: 2
+scope: 23
 skipped-passes: []
 reviewed-digest:
-  data-model.md: dce941a2ae3dc6ed63f404c707d78e6e8d069a1a452332177e0a15a66fc76ac1
+  data-model.md: 0792044af6c1a393717f2b7f764e9ccadfcbad51af41b47c846fc4ba0c5b1fd8
   scenarios/a-done-spec-has-no-transition-to-gate.md: d4a9f47277ddcd5e8735be7d13ee7f57606827a5f36db608da3fd70a05aaa39a
   scenarios/a-multi-number-renumber-is-one-rewrite.md: 0b0c25fc2e8446f403bff82cff5b0d64c86cfbc45d98bc492fd5fa824c9fdd5a
   scenarios/a-renamed-file-contributes-its-rewrites.md: 52907e92b668e9d100ab339e0d36953cd6d025104b3650174bf7b806b3631490
@@ -25,7 +25,7 @@ reviewed-digest:
   scenarios/review-staleness-on-done-specs.md: 18484a327c18ea44c3cfbe24fc22d1b727c5033cf619aa3760c3652fdc1b66f5
   scenarios/the-committed-tree-horizon.md: cac65fb842defe0ce0326a76274794d1402d96c10aa02a2f977fd6d326ab3772
   scenarios/the-cross-spec-impact-gate.md: b85c2d557733a29beb8084823a9156e13b283090a283203aa14dcaa85afed3c1
-  scenarios/write-analysis-and-the-second-gate.md: bad7ba195dc5eb98112c7821cc6ff0873977711d63736462a655897b64eaaebf
+  scenarios/write-analysis-and-the-second-gate.md: afaaa2f6957547d1f9dce559426353e58a00da287b1066f7eb0af05d51330397
   scenarios/write-review-known-field-quoting.md: 914954823ee3da52dccbb25749851013d5dd3be442dcc85b09661c27c7bea2a9
 blocking: false
 dispositions:
@@ -39,7 +39,7 @@ dispositions:
 
 ## Summary
 
-First review of 066, which the 022 split created. Base 08f0b199, the parent of the planned-to-in-progress transition 1054b8bd, so the window holds the move (d852b627), the sweep (13acc295, bd4da459, c4b14ac5) and this spec's own fixes. examined: 20, each read in full: spec.md, plan.md, tasks.md, data-model.md and all sixteen scenarios. The five passes ran over them against all eleven rule files and AGENTS.md: no finding. Reading them against write_analysis.rs and check_review_gate.rs surfaced three defects, each fixed before this record as this spec's own work rather than as observations: the data model did not name the two reasons write-analysis adds to unexamined-by-reason itself (task 4), write-analysis-and-the-second-gate still said 022 owns the runtime it documents, and review-staleness-gate's incident read as this spec's review when it was 022's. Not read in full, and not counted: the plan's runtime files compute_review_scope.rs, process_waivers.rs, process_decisions.rs, decisions.rs, write_review.rs, write_analysis.rs (lines 140-205 read), check_review_gate.rs (searched, not read), analyze_subjects.rs, mechanical_sweep.rs, diff_cross_spec.rs, scripts/audit/review-freshness.sh and runtime/tests/mechanical_sweep_parity.rs. Their window diffs were read in full and are doc-comment repoints only; no runtime behavior changed in this window, and the code is 022's earlier reviews' subject. Also not counted: every other scope entry, the files the split changed elsewhere in the repository (git diff --name-only 08f0b199 plus the working tree), which are the subject of 022's, 067's and the done specs' own reviews.
+Scoped re-review, reopened for a cross-spec impact 067 task 7 owed and missed (e8ba124e, ec72c234): the excluded-by-construction class gains never-existed in the canonical table and the write-analysis scenario, and both name body-path-existence beside criterion-path-existence as a done-only source of skipped targets. examined: 2: data-model.md and write-analysis-and-the-second-gate.md in full. The class table was checked against framework/commands/analyze.md's Unexamined targets section and the SkippedTarget reason set in runtime/src/schema/primitives.rs. The five passes ran over the files counted as examined, against all eleven rule files and AGENTS.md, and found no finding and no observation. Not read and not counted: every other scope entry - the plan's Affected Files, unchanged in this window, and the files other specs' amendments and 067's tasks 10-11 changed after the base (including runtime/src/primitives/derive_dependencies.rs unless named above), which are the subject of their own reviews.
 
 ## MUST violations (blocking)
 

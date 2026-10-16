@@ -1,17 +1,17 @@
 ---
 spec: 030-cross-service-references
-last-run: 2026-10-16T15:27:43Z
-reviewed-against: 03db9d946586491b70fd2fa39c753a4184a1d50d
-diff-base: 5e5ff85f9048197b86f3d01a41451357356a2b04
+last-run: 2026-10-16T19:36:00Z
+reviewed-against: ec72c234476d97f7057f68d83c6e92f9e88eb94b
+diff-base: 6bbc7fb1d9ccd226e5ea77036d8c3471c0008aa9
 must-violations: 0
 should-violations: 0
 low-confidence: 0
 examined: 3
-scope: 49
+scope: 54
 skipped-passes: []
 reviewed-digest:
-  data-model.md: 018a7e688c692950b1fae52b16b3ab4e0510838d757e28a9bfc248d838eac7ae
-  scenarios/referenced-service-spec-root.md: d1d11cae97133c8eaa5db364ff73c2f60632c4cf0f7af7dd3071d87c8fecd22d
+  data-model.md: e1b1a7edfa47be545f6f6acfb2de765f32392a32c4b67d7ab58130d4ed3fe325
+  scenarios/referenced-service-spec-root.md: eb2dd76dce8f7f1d319535d29235b12024fa43dee6de9bcf2d8e7c5a1dfe1fff
 blocking: false
 dispositions:
   fixed: 0
@@ -24,7 +24,7 @@ dispositions:
 
 ## Summary
 
-0 MUST, 0 SHOULD at 03db9d94, against all eleven rule files. The window is the dead-reference sweep: this spec's analysis.md, plan.md, spec.md were read in full -- the plan's path and claim corrections, the status line, the analysis record -- and no code changed, so no rule applies. The other 27 modified files belong to sibling specs reopened in the same sweep and are reviewed under their own specs; the plan's unchanged Affected Files were not read.
+Scoped re-review of the body-path round's rewrite to current (26664d5d). examined: 3: data-model.md and the scenario referenced-service-spec-root.md in full, and spec.md as its window diff. The scenario's new pointer was checked against runtime/src/primitives/derive_references.rs, whose module doc carries the Root-aware matching heading it names. The five passes ran over the files counted as examined, against all eleven rule files and AGENTS.md, and found no finding and no observation. Not read and not counted: every other scope entry - the plan's Affected Files, unchanged in this window, and the files other specs' amendments and 067's tasks 10-11 changed after the base (including runtime/src/primitives/derive_dependencies.rs unless named above), which are the subject of their own reviews.
 
 ## MUST violations (blocking)
 

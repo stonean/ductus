@@ -1,13 +1,13 @@
 ---
 spec: 026-framework-self-audit
-last-run: 2026-10-16T01:28:01Z
-reviewed-against: 3be5cda9f869af21fbc6e75f1758a76a66ce5331
-diff-base: 1054b8bd2e2c51c8629b4e6a9d3193103739aa57
+last-run: 2026-10-16T19:36:00Z
+reviewed-against: ec72c234476d97f7057f68d83c6e92f9e88eb94b
+diff-base: 1437cfab4b16c9c4647ff5c138b6d956f5965443
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 4
-scope: 189
+examined: 3
+scope: 51
 skipped-passes: []
 reviewed-digest:
   scenarios/audit-ci-hard-gate.md: a7bad7a167532019112d79a746696ad32d963171598d2283072af0e9f3234be7
@@ -18,8 +18,8 @@ reviewed-digest:
   scenarios/family-19-mechanical-sweep-exemption.md: 1aed9678cb90da55fb314f9f8bd26addb3baebdbad04bda48fb11deeb95c4089
   scenarios/family-19-review-freshness.md: 2347d993d37163036d9cf592c2e3a28bf14498cf262c5eac5d86ca6b9bd569d6
   scenarios/family-19-says-what-it-examined.md: 2ee343d1295dfc755ea19ae453e5edd61dfb7cdb3d1eecdd46865d54be48621d
-  scenarios/family-22-adopter-shell-behavior.md: 2eac3b7db9587dd354168941be8a1816d11a9e6f7fb27ecd8b8f9c9f8f719754
-  scenarios/family-23-sweep-target-manifest-parity.md: 9dfa1299cdeb27ad691c66d6e9adeb68187c7c60039576cafd6ba55f29274b38
+  scenarios/family-22-adopter-shell-behavior.md: 6bd397e6feefd0c18f567c74760d2f5e08d674742f772a2d75391c3c1204aaec
+  scenarios/family-23-sweep-target-manifest-parity.md: fabc89386b8c36156f41c09b5ae28e5f0cd3130c08abc284fa90dcd37507ebb1
   scenarios/family-24-rename-sweep-residue.md: 41d6c829f0851a3caab11650d24b7100992667969ee3f21454141b482819e132
   scenarios/family-25-unbalanced-inline-markup.md: bddc8f9f37f21e3404f24bf77f732d2adc591faa76038983b3b44a41e640e1c6
   scenarios/family-26-broken-relative-links.md: 60627b24354610f3e0f819abe7d0603faa9644c27e8cee5163a452804bb94b6c
@@ -36,7 +36,7 @@ blocking: false
 dispositions:
   fixed: 0
   routed: 0
-  discarded: 1
+  discarded: 0
   undispositioned: 0
 decisions:
   - key: "convention: family-19-review-freshness's Behavior still describes a `review:` block in spec.md and a commit-diff staleness check, which spec 057's relocation to review.md and the digest arm replaced — `specs/026-framework-self-audit/scenarios/family-19-review-freshness.md`"
@@ -50,7 +50,7 @@ decisions:
 
 ## Summary
 
-Scoped re-review of the 022 split's reference sweep: 026's family-18-marker-list-parity, family-19-review-freshness, family-39-shipped-anchor-resolution and link-check-consolidation scenarios name the moved scenarios (criterion-path-existence-family, criterion-negated-creation-phrasing, criterion-non-assertion-phrasings and adopter-corpus-link-integrity in 067, review-staleness-gate in 066) and 022's former AC23, now 067's AC2, at their new homes. examined: 4, each read in full: those four scenarios. spec.md (45,053 bytes) was read only as its two-token diff and is not counted. Base --since=1054b8bd, the commit before the 022 split's move (d852b627): the edits predate any reopen of this spec, which stays done because each is a pointer repoint. The five passes ran over the four files against all eleven rule files and AGENTS.md: no finding. One observation, discarded by the operator: family-19-review-freshness still describes the pre-057 review: block and commit-diff check, which is relocation residue outside this window, and its sibling family-19-says-what-it-examined states the digest arm. Not read and not counted: every other scope entry. Those are the plan's Affected Files, unchanged in this window and covered by the previous review, and the files the split changed elsewhere in the repository (git diff --name-only 1054b8bd plus the working tree), which are the subject of 022's, 066's and 067's own reviews.
+Scoped re-review of the body-path round's rewrite to current (6bbc7fb1). examined: 3: the scenarios family-22-adopter-shell-behavior.md and family-23-sweep-target-manifest-parity.md in full, and spec.md as its window diff. Family 22's rewritten Behavior was checked against scripts/audit/adopter-shell-behavior.sh's case 1 and case 2 assertions and against framework/bootstrap/hooks/ductus-pre-commit's shape-based spec-root match. The stored decision is retained. The five passes ran over the files counted as examined, against all eleven rule files and AGENTS.md, and found no finding and no observation. Not read and not counted: every other scope entry - the plan's Affected Files, unchanged in this window, and the files other specs' amendments and 067's tasks 10-11 changed after the base (including runtime/src/primitives/derive_dependencies.rs unless named above), which are the subject of their own reviews.
 
 ## MUST violations (blocking)
 
@@ -70,7 +70,7 @@ Scoped re-review of the 022 split's reference sweep: 026's family-18-marker-list
 
 ## Observations
 
-- convention: family-19-review-freshness's Behavior still describes a `review:` block in spec.md and a commit-diff staleness check, which spec 057's relocation to review.md and the digest arm replaced — `specs/026-framework-self-audit/scenarios/family-19-review-freshness.md` — **discarded**: relocation residue from spec 057, outside the 022 split's window this re-review covers; the sibling family-19-says-what-it-examined states the digest arm, so a reader of 026 meets the current rule (operator decision, 2026-10-16)
+*None.*
 
 ## Skipped passes
 

@@ -1,13 +1,13 @@
 ---
 spec: 058-findings-route-at-discovery
-last-run: 2026-10-04T16:30:15Z
-reviewed-against: ffee669957a375422531995eb10ecde3e8d20c7b
-diff-base: 4ec75a72efd4650e4cf4af9f7fbfa2d37b4e19e8
+last-run: 2026-10-16T19:36:00Z
+reviewed-against: ec72c234476d97f7057f68d83c6e92f9e88eb94b
+diff-base: e8ba124ecaba41a153b486a8a68137a461c4805d
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 10
-scope: 153
+examined: 1
+scope: 37
 skipped-passes: []
 reviewed-digest:
   data-model.md: eb5f2099c81634ab8f9dc5c7ff3073d2f6323dccf95c39a1cf1ec410d3b9b237
@@ -15,12 +15,12 @@ reviewed-digest:
   scenarios/analyze-findings-match-decisions-by-host-judgment.md: d14bea60a4dfdba81edc5180b77367629154699b6808fda0739ab8a902776660
   scenarios/analyze-state-drift-judges-the-record-it-writes.md: e975a37075b739bcd087c8683f166b6955ce9bcc42c28f64e79bf9f49003f803
   scenarios/auto-records-disposition-tasks-without-pausing.md: 411e98d379ee2cb76ec7bef380e566ead077d5fa73bb1ecda34cb945ccda652e
-  scenarios/only-unreadable-targets-retain-decisions.md: b7c36ffbdf47b5c998439e0fa391ba9ebac2f8e1c530d41fd967a220a014171e
+  scenarios/only-unreadable-targets-retain-decisions.md: 76a12d565f6e1056f780906fed41de7d27e4a23c314232eddca0563026bcc3e1
 blocking: false
 dispositions:
   fixed: 0
   routed: 0
-  discarded: 9
+  discarded: 0
   undispositioned: 0
 decisions:
   - key: "perf: validate-frontmatter reads each record file twice — `runtime/src/primitives/validate_frontmatter.rs`"
@@ -74,7 +74,7 @@ decisions:
 
 ## Summary
 
-Re-review of a done spec, run because 063's /analyze renumber rewrote the step references in this spec's scenario `only-unreadable-targets-retain-decisions` (step 17 → 18) and plan (step 20 → 21), which Family 19 reads as a contract change. The diff base is the previous review's commit, and the passes read the changes since it to 058's planned files — write-analysis's quoting and reason keying, the shared finding key, the gate's disposition checks (renumbered 10 and 11 by 051's fold removal), the analyze tally's new artifact-size arm, and the doc and schema corrections — plus the synced scenario and plan. No MUST or SHOULD violation. The nine stored observations still hold and keep their discards; nothing new was observed.
+Scoped re-review, reopened for a cross-spec impact 067 task 7 owed and missed (50c6f693): the retention scenario's two lists of the excluded-by-construction class gain never-existed. examined: 1: only-unreadable-targets-retain-decisions.md in full. It also clears the release gate's Family 19 finding on this spec: the 022 split's pointer rewrite in the same scenario (d852b627) had not been reviewed, and it reads correctly, since 066's data model is where the class table now lives. The nine stored discards are retained. The five passes ran over the files counted as examined, against all eleven rule files and AGENTS.md, and found no finding and no observation. Not read and not counted: every other scope entry - the plan's Affected Files, unchanged in this window, and the files other specs' amendments and 067's tasks 10-11 changed after the base (including runtime/src/primitives/derive_dependencies.rs unless named above), which are the subject of their own reviews.
 
 ## MUST violations (blocking)
 
@@ -94,15 +94,7 @@ Re-review of a done spec, run because 063's /analyze renumber rewrote the step r
 
 ## Observations
 
-- perf: validate-frontmatter reads each record file twice — `runtime/src/primitives/validate_frontmatter.rs` — **discarded**: bounded to two small files per spec; the decisions list is read apart from the record by design
-- convention: a duplicate-key decision is pruned when its key expires or is decided again — `runtime/src/primitives/decisions.rs` — **discarded**: mirrors the waiver list's expiry, and process-decisions still reports each duplicate before it goes
-- convention: an all-empty decision entry is dropped on re-render — `runtime/src/primitives/decisions.rs` — **discarded**: an entry with no fields carries no decision to lose; render_waivers_at behaves the same
-- reuse: write_analysis::plain re-implements the shared bullet-marker stripping — `runtime/src/primitives/write_analysis.rs` — **discarded**: predates 058: moved from render_captured_plain, not introduced by it
-- simplicity: render_list_entry takes a base indent every caller passes empty — `runtime/src/primitives/write_review.rs` — **discarded**: predates 058 on render_waivers_at; no behavior depends on it
-- simplicity: describe and disposition_suffix fall back on a companion already validated — `runtime/src/primitives/process_decisions.rs` — **discarded**: DecisionRef is a wire type; carrying the companion inside the outcome variant would change its schema
-- perf: check-artifacts' history revwalk runs on the async worker, contrary to server.rs's module doc (predates 058) — `runtime/src/mcp/server.rs` — **discarded**: predates 058 (ccdd3ac6), not introduced by it
-- reuse: append_task.rs parses a task heading two ways; the slug guard's grammar predates 058 — `runtime/src/primitives/append_task.rs` — **discarded**: predates 058, not introduced by it
-- convention: check-review-gate, check-unfolded-specs, dashboard, and prune-tasks return MissingFrontmatter and UnclosedFrontmatter without naming either under # Errors (predates 058) — `runtime/src/primitives/check_review_gate.rs` — **discarded**: predates 058; a doc-only omission, and each variant's own message names the file and the defect
+*None.*
 
 ## Skipped passes
 

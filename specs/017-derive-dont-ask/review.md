@@ -1,19 +1,19 @@
 ---
 spec: 017-derive-dont-ask
-last-run: 2026-10-16T00:58:28Z
-reviewed-against: c4b14ac5f8bc92a2510a4a9d25f7c9ea00900953
-diff-base: 1054b8bd2e2c51c8629b4e6a9d3193103739aa57
+last-run: 2026-10-16T19:36:00Z
+reviewed-against: ec72c234476d97f7057f68d83c6e92f9e88eb94b
+diff-base: 34b137d57993ed10a995c6510ea7f3d0956de037
 must-violations: 0
 should-violations: 0
 low-confidence: 0
 examined: 5
-scope: 201
+scope: 60
 skipped-passes: []
 reviewed-digest:
   data-model.md: 6fa23783db77c3e735bd98e99bd6f919cdecd87d5fdb850bc63ee86797b19b14
-  scenarios/detect-dependency-cycles.md: d16520a341eb42d0f5ed8d93c4d49593b291270f2a919258757c8e2f43cedf8d
-  scenarios/generator-sync-claim-honesty.md: 11effb857afa9e90731671c70535c8c22554895ebc01302faf46543225762ee1
-  scenarios/skip-prose-cross-references.md: ff66ff69fb884f8880a4db9d157b9c8ff35981b57fadfd4ba0299157b7a1639f
+  scenarios/detect-dependency-cycles.md: 799b70962ea172c7d17b580e8b90ba0f9b19ed89139dac4353fb8afd8c2c91a8
+  scenarios/generator-sync-claim-honesty.md: 1bd156f5abd11ebb6c854241092e5c428cec4d3601f2a9fb4c4545c997aa1fc9
+  scenarios/skip-prose-cross-references.md: 7b080b9a2cfad2635b704f7418143cae520a151601b6d2a66368b0811e4a3c43
   scenarios/tracked-specs-not-worktree.md: e3808ab1ae9a4d6b1b2103c85537c6236e99898b7569536eb9ac2bfcdde684bf
 blocking: false
 dispositions:
@@ -43,7 +43,7 @@ decisions:
 
 ## Summary
 
-Scoped re-review of the 022 split's reference sweep: six pointers moved from 022-deterministic-runtime to 067-analyze-and-audit-checks, where adopter-generator-promotion and derive-references-unstaged-drift-is-reported now live. examined: 5, each read in full: data-model.md and the scenarios detect-dependency-cycles.md, generator-sync-claim-honesty.md, skip-prose-cross-references.md and tracked-specs-not-worktree.md. The four Superseded mechanism (022) signposts stay as written, since they name the spec that did the superseding and no moved scenario. spec.md (31,024 bytes) was read only as its one-token diff at line 111 and is not counted. The three stored routed decisions are retained: this run did not re-read spec.md, the source of one of them. Base --since=1054b8bd, the commit before the 022 split's move (d852b627): the edits predate any reopen of this spec, which stays done because each is a uniform pointer substitution. The five passes ran over the files counted as examined, against all eleven rule files and AGENTS.md, and found no finding and no observation; each repointed link or name resolves to the scenario, data model or criterion it names in its new home. Not read and not counted: every other scope entry. Those are the plan's Affected Files, unchanged in this window and covered by the previous review, and the files the split changed elsewhere in the repository (git diff --name-only 1054b8bd plus the working tree), which are the subject of 022's, 066's and 067's own reviews.
+Scoped re-review of the body-path round's rewrite to current (58c1942e). examined: 5: the scenarios detect-dependency-cycles.md, generator-sync-claim-honesty.md and skip-prose-cross-references.md in full, spec.md as its window diff, and runtime/src/primitives/derive_dependencies.rs as its window diff - one test, a_cycle_beside_an_acyclic_subgraph_reports_only_the_cycle, shown to fail when acyclic components are reported. Each rewritten claim was checked against the code it now names: derive_dependencies.rs (the cycle check over every tracked spec; the result fields examined, untracked-skipped and unwritten and the tests asserting them), main.rs (a cycle exits non-zero with cycle: lines on stderr), spec_links.rs (the See-also rule at level 1 or 2), ductus-procedure.md Hook Installation, and both pre-commit hooks. The three stored routed decisions are retained: they are settled, and two concern data-model.md, which this run did not re-read. The five passes ran over the files counted as examined, against all eleven rule files and AGENTS.md, and found no finding and no observation. Not read and not counted: every other scope entry - the plan's Affected Files, unchanged in this window, and the files other specs' amendments and 067's tasks 10-11 changed after the base (including runtime/src/primitives/derive_dependencies.rs unless named above), which are the subject of their own reviews.
 
 ## MUST violations (blocking)
 
