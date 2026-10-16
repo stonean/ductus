@@ -6,7 +6,7 @@ title: "010-agent-autonomy — plan"
 
 ## Overview
 
-Land six small, independent `ductus` changes plus one cross-spec rename:
+Land six small, independent `ductus` changes:
 
 1. `[simple]` task tier marker (template + plan command)
 2. Stuck detection in `/ductus:implement` (no new artifact — reads `git log` and `tasks.md`)
@@ -14,9 +14,8 @@ Land six small, independent `ductus` changes plus one cross-spec rename:
 4. "Skills" index section in the `AGENTS.md` project template
 5. Cost-conscious cross-reference paragraph in the constitution
 6. Concurrent-features note (single-target sessions; point at `git worktree` and platform isolation)
-7. Cross-spec rename: 005's "skills" → "workflows" (reopens 005 per §cross-spec-impact)
 
-The work is almost entirely prompt and prose — no application code, no new schemas, no events, no error codes, no data model. The risk is in two places: the cross-spec rename (broad blast radius across paths and prose) and getting the command-file parity right so `framework/commands/*.md` and `.claude/commands/ductus/*.md` stay in sync via `scripts/gen-claude-commands.sh`.
+The work is almost entirely prompt and prose — no application code, no new schemas, no events, no error codes, no data model. The risk is in getting the command-file parity right so `framework/commands/*.md` and `.claude/commands/ductus/*.md` stay in sync via `scripts/gen-claude-commands.sh`.
 
 ## Technical Decisions
 
@@ -127,39 +126,9 @@ Insert a new optional `## Skills` section after `## Project Structure` and befor
 
 Empty-by-default ensures backwards-compatibility for projects that don't decompose. The HTML comment teaches the pattern in place without bloating the rendered template.
 
-### Cross-spec rename of 005's "skills" → "workflows"
-
-Per §cross-spec-impact, 005 is reopened from `done` to `in-progress` because 010's adoption of "skills" terminology conflicts with 005's existing use. 010 owns the implementation; 005 records the new acceptance criterion as a signpost.
-
-Term chosen: **workflows**. The .md files literally are workflow definitions (lint, test, format, migrate) and 005's existing template-naming convention is `{workflow}-{language}-{tool}.md` — so "workflow" is the unit the artifacts already describe themselves with. "Workflows" reads cleanly alongside the other one-word framework directories (`commands/`, `templates/`, `rules/`, `bootstrap/`) and avoids the redundant `templates/templates/` nesting that "command templates" would have produced. Initial plan-time term was "command templates" (per 010's spec); the term was revisited mid-implement and the spec updated to "workflows" once the redundant-nesting drawback became apparent.
-
-Scope of the rename:
-
-- **Directory rename and flatten:** `framework/skills/` → `framework/workflows/` (directory move) **and flattened** — `registry.json` and the nine workflow `.md` files now sit at the same level under `framework/workflows/`, no inner `templates/` directory. Flattening is included in this pass because the new top-level name "workflows" makes the inner `templates/` redundantly named ("workflows/templates" reads worse than "command-templates/templates").
-- **Project-side path rename:** in `framework/bootstrap/ductus.md` manifest and recommendation step, `skills/registry.json` (project-side) → `workflows/registry.json`. Adopters who already ran `/ductus` will have a `skills/` directory in their project — ductus's update strategy will replace it on the next run; we do not write a migration tool. A one-line note is added to the rename task documenting that adopted projects should manually delete the old `skills/` directory after re-running `/ductus` (low cost — adopters with active workflow files will see them re-created under `workflows/`).
-- **Scaffold destination rename:** `{config_dir}/commands/{project}/skills/` → `{config_dir}/commands/{project}/workflows/`. Affects `init.md` and `ductus.md` instructions and the slash-command cleanup walk.
-- **Prose:** update "skill" / "skills" terminology to "workflow" / "workflows" wherever it refers to 005's concept (NOT where it refers to 010's new concept of context-loaded instruction packs, e.g., in the new `AGENTS.md` Skills index section, the constitution Cost levers paragraph, or anywhere we describe Anthropic/Claude Code's skills feature). Files with prose to update:
-  - `specs/005-workflows/spec.md` (title, body, acceptance criteria, resolved questions)
-  - `specs/005-workflows/plan.md` (title, body, affected files table, trade-offs)
-  - `specs/005-workflows/tasks.md` (title, body)
-  - `specs/005-workflows/data-model.md` (terminology in schema description)
-  - `framework/bootstrap/ductus.md` (manifest row, recommendation step, all prose)
-  - `.claude/commands/ductus/init.md` (recommendation step, all prose — hand-maintained, generator skips)
-  - `framework/bootstrap/configure/claude.md` ("Bash commands used by skills" comment label)
-  - `specs/013-text-first-artifacts/plan.md` (one-row migration entry references the old spec dir)
-  - `README.md` (any references)
-- **Spec directory renamed.** `specs/005-skills-and-plugins/` → `specs/005-workflows/`. Initial plan-time decision was to leave the slug as a historical artifact, but a quick blast-radius check during implementation found only seven files reference the old slug, six of which are already on the touch list for prose updates — the seventh is a single-row mention in `specs/013-text-first-artifacts/plan.md`. Adopter projects do not reference 005's spec directory (they only consume the template files via ductus), so the rename is internal-only. Number `005` stays; only the slug changes. Git detects the rename automatically when contents are unchanged on the move.
-- **005's reopen path:**
-  1. Add a new acceptance criterion to 005's spec: "Rename internal terminology from 'skills' to 'workflows' to free the term 'skills' for Anthropic-style context-loaded instruction packs (signpost: driven by 010-agent-autonomy)."
-  2. Set 005's frontmatter `status` from `done` to `in-progress`.
-  3. Add a task to `specs/005-workflows/tasks.md` for the rename, marked as carried out by 010's implementation.
-  4. After 010's implementation completes, the user runs `/ductus:implement` against 005 separately to verify the new AC and advance 005 back to `done`. 010 does not auto-advance 005's status — that follows the normal pipeline.
-
 ### Command file parity
 
 Two of 010's deliverables touch `framework/commands/*.md`: `plan.md` (proposes `[simple]` markers) and `implement.md` (stuck detection + `--auto`). Per `CLAUDE.md`, never edit `.claude/commands/ductus/*.md` directly — always edit the source under `framework/commands/` and run `./scripts/gen-claude-commands.sh`. The implementation runs the generator after editing the sources; tasks.md includes the generator step explicitly.
-
-`init.md` is hand-maintained per `CLAUDE.md`; it is edited directly for the rename. The generator skips it.
 
 `framework/bootstrap/configure/claude.md` is the source for `.claude/commands/ductus/configure.md`; the generator writes the configure file from the bootstrap source. It is edited at the source location and the generator picks it up.
 
@@ -171,7 +140,6 @@ Explicit non-goals to keep the scope tight:
 - No platform-specific shipping (no Claude Code skills directory, no Cursor rules directory). `ductus` documents the pattern only.
 - No execution log, no per-task token tracking, no budget files, no `[complex]` tier — all explicitly declined in the spec.
 - No multi-target session, no `--feature` flag on commands, no worktree management — declined in the spec.
-- No platform-specific install of the new workflow files (`ductus` ships the registry + workflow definitions; init/ductus scaffold them per agent).
 
 ## Affected Files
 
@@ -182,24 +150,8 @@ Explicit non-goals to keep the scope tight:
 | `framework/commands/implement.md` | Modify | Add stuck-detection step; accept `--auto` flag with documented gates |
 | `framework/templates/project/agents.md` | Modify | Insert optional `## Skills` index section (empty by default) |
 | `framework/constitution.md` | Modify | Add `### Cost levers` subsection and `### Concurrent Features` subsection |
-| `framework/skills/` → `framework/workflows/` | Rename + flatten | Directory move and flatten — registry and nine workflow files sit at the same level (no inner `templates/`) |
-| `framework/skills/registry.json` → `framework/workflows/registry.json` | Rename | (carried by directory rename) |
-| `framework/skills/templates/*.md` → `framework/workflows/*.md` | Rename + move-up | Nine workflow files moved out of inner `templates/` directory |
-| `framework/bootstrap/ductus.md` | Modify | Update manifest path, recommendation-step paths, and all prose to "workflows" |
-| `framework/bootstrap/configure/claude.md` | Modify | Replace "Bash commands used by skills" comment label with "workflows" |
-| `.claude/commands/ductus/init.md` | Modify | Hand-edit (generator skips): update recommendation step paths and prose |
-| `specs/005-skills-and-plugins/` → `specs/005-workflows/` | Rename | Spec directory rename |
-| `specs/005-workflows/spec.md` | Modify | Reopen to `in-progress`; add new AC + signpost; rename prose; update title |
-| `specs/005-workflows/plan.md` | Modify | Update title, prose, affected-files table, trade-offs |
-| `specs/005-workflows/tasks.md` | Modify | Update title, prose; add new task for the cross-spec rename |
-| `specs/005-workflows/data-model.md` | Modify | Update terminology in schema description |
-| `specs/013-text-first-artifacts/plan.md` | Modify | Update one-row migration entry that references the old spec directory |
-| `README.md` | Modify | Update references to "skills" feature where they refer to 005's concept |
 | `.claude/commands/ductus/plan.md` | Regenerate | Output of `gen-claude-commands.sh` after editing source |
 | `.claude/commands/ductus/implement.md` | Regenerate | Output of `gen-claude-commands.sh` after editing source |
-| `.claude/commands/ductus/configure.md` | Regenerate | Output of `gen-claude-commands.sh` after editing source |
-
-The directory rename is recorded as a single conceptual change but executes as `git mv` for the directory plus per-file follow-ups for any path strings inside the templates that reference the old path (none expected — templates use `{project}` and `{cli-config-dir}` placeholders, not absolute framework paths).
 
 ## Trade-offs
 
@@ -215,14 +167,6 @@ Affected-files commit history is noisier and forces the implementation to parse 
 
 Push is hard-to-reverse and externally visible. Keeping it gated preserves the spirit of `--auto` (skip per-task confirmation) without granting the agent silent publishing rights. Adopters who want full auto-publish can wrap `/ductus:implement --auto` in a script that pushes after each session — they're opting into more risk explicitly.
 
-### Cross-spec rename has broad blast radius
-
-The 005 rename touches both 005's spec directory and three `ductus`-owned files (`ductus.md`, `init.md`, `configure.md`) plus templates. We accept the churn because:
-
-- Leaving 005's "skills" term in place would create permanent terminology ambiguity ("skills" meaning two different things depending on which spec you're reading).
-- The spec **number** stays, so `dependencies:` entries and `NNN-` pointers continue to resolve. (This bullet read *"the spec directory name stays"* until 2026-09-13. That was the plan-time decision, and implementation reversed it — see the "Scope of the rename" list under `### Cross-spec rename of 005's "skills" → "workflows"` above, where a blast-radius check found only seven files referencing the old slug — so `specs/005-skills-and-plugins/` became `specs/005-workflows/` and AC14 records the rename as delivered. The bullet was arguing from the option that lost.)
-- The rename happens once and is one PR.
-
 ### Skills index empty by default
 
 An empty section with an HTML-comment guide adds slight visual weight to AGENTS.md compared to omitting the section entirely. Acceptable because the section teaches the pattern in place — adopters who don't decompose see exactly what skills would look like and can add them when ready, without re-reading `ductus` docs.
@@ -235,4 +179,4 @@ Pipe-and-pull on this one: AGENTS.md is the adopter's customizable doc, but sing
 
 All open questions were resolved during clarification. See `spec.md` "Resolved Questions" section.
 
-The plan-time decisions made above (locations for the cost-conscious paragraph and concurrent-features note; stuck-detection threshold of 3; auto-mode commit-but-don't-push; `[simple]` marker on task headers; spec directory name unchanged) are not new open questions — they are implementation-detail choices that the spec deliberately left to planning.
+The plan-time decisions made above (locations for the cost-conscious paragraph and concurrent-features note; stuck-detection threshold of 3; auto-mode commit-but-don't-push; `[simple]` marker on task headers) are not new open questions — they are implementation-detail choices that the spec deliberately left to planning.
