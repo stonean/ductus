@@ -691,6 +691,24 @@ mod tests {
         assert_eq!(find_cycles(&graph), vec![vec!["001-a".to_string()]]);
     }
 
+    /// 017 scenario detect-dependency-cycles, case (c): an acyclic subgraph
+    /// beside a cycle contributes nothing to the report.
+    #[test]
+    fn a_cycle_beside_an_acyclic_subgraph_reports_only_the_cycle() {
+        let graph: BTreeMap<String, Vec<String>> = [
+            ("001-a".to_string(), vec!["002-b".to_string()]),
+            ("002-b".to_string(), vec!["001-a".to_string()]),
+            ("003-c".to_string(), vec!["004-d".to_string()]),
+            ("004-d".to_string(), vec!["001-a".to_string()]),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(
+            find_cycles(&graph),
+            vec![vec!["001-a".to_string(), "002-b".to_string()]]
+        );
+    }
+
     #[test]
     fn an_acyclic_graph_reports_nothing() {
         let graph: BTreeMap<String, Vec<String>> = [
