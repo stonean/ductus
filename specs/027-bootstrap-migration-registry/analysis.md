@@ -1,17 +1,17 @@
 ---
 spec: 027-bootstrap-migration-registry
-last-run: 2026-10-16T02:24:44Z
-analyzed-against: 69bf42f018a1b7b38ea3177d51efa9e59240bf5d
+last-run: 2026-10-16T15:25:26Z
+analyzed-against: 8191e6959179f5c4c9f9eefe1d9a91436fa2f341
 hard-fail: 0
 blocking-findings: 0
 advisory: 4
 unexamined: 3
 analyzed-digest:
-  plan.md: 075daf5f81e8f3ca2a32bba4b4e190cdd768e49e69d4787b3180bfecf6decbf0
+  plan.md: e610f371a63d9a3109b0faebcf707aa7768c8048bce5b69e8a74834057b6241d
   review.md: 29bbdaa1535b07a7dc3731ba10e21eba42cf423243d90d11f7254e69f86b4a43
   scenarios/migration-chain-reference-integrity.md: b187024e6ed8fee90fe31be0f2bbcd4786782f8e4395a89c09142f20218f914d
   scenarios/migrations-apply-once-per-repo.md: ef57af25a1eb071076c60b005ffdbf9f3a1b2afad889ba939b230679b9d4f9b4
-  spec.md: 3fe4431bb921ebc3e651bc5c81c68af50b80206eb75801da915e332215172690
+  spec.md: 2fa1dadc5dd424f512a9da9344aac2f28d5b0c249db44fb808db1ee83de9b827
   tasks.md: ff144324ac4ec523c5ef57afaf0922196affd4889c659017111d8d1683aaf360
 unexamined-by-reason:
   not-a-live-claim: 2

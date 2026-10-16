@@ -1,24 +1,48 @@
 ---
 spec: 043-workflows-sunset
-last-run: 2026-09-15T13:00:34Z
-analyzed-against: 880e59a0906dbdbb273784d28079446d6f01d856
+last-run: 2026-10-16T15:25:20Z
+analyzed-against: 8191e6959179f5c4c9f9eefe1d9a91436fa2f341
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 5
-captured-issues: 0
 analyzed-digest:
-  plan.md: b35f9a62efbe87f2b5ba3772dbb4ebeb6ec4bb34a4cd8c940e300269091c99a7
-  review.md: 8649805a789f2999a2537e22838f02a53ec94b4cf2bbf88c9631816bb0dbc033
-  spec.md: 87aae1c0fc35e5f9a7ebc772301febc8c22843b1b89a76d2be5766219157d6ef
+  plan.md: 758a9a04ed6e9745532aa9c0f278b4295a3753f731dcd8086447f556007f2d7b
+  review.md: 14fdd9aff78020c98f44909875bcfbffb30ad8fabb6c0620b3a4550484028670
+  spec.md: aa6c73d643f524427e8201968233410199d9c877c4c8480b1b9c5d8588bcd4b1
   tasks.md: 36badbc9407ecd8b544527a3f6803cad63e340098617816c1f43aa7a0afaa04f
 unexamined-by-reason:
   not-a-live-claim: 5
 blocking: false
+dispositions:
+  fixed: 0
+  routed: 0
+  discarded: 0
+  undispositioned: 0
 ---
 
 # Analysis — 043-workflows-sunset
 
 ## Summary
 
-Relocated from the spec's frontmatter by the record-relocation migration. The counts above are the recorded run's; this report body begins at the next run.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 5 unexamined target(s). Dispositions: 0 fixed, 0 routed, 0 discarded, 0 undispositioned.
+
+## Hard failures
+
+*None.*
+
+## Blocking findings
+
+*None.*
+
+## Advisory findings
+
+*None.*
+
+## Unexamined targets
+
+- not-a-live-claim: 5
+
+## Fixed in this run
+
+*None.*

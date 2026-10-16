@@ -1,13 +1,13 @@
 ---
 spec: 007-govern-workflow
-last-run: 2026-09-28T13:13:36Z
-analyzed-against: 0bfa189ab9feba5940370b128f91f5e4c445482f
+last-run: 2026-10-16T15:25:20Z
+analyzed-against: 8191e6959179f5c4c9f9eefe1d9a91436fa2f341
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 1
 analyzed-digest:
-  plan.md: d383cef38ca2ef5c83b750c524398cec691b0e856f365732cb2f96cf853feffe
+  plan.md: 47630cde679033368f690e689493e0c6bcd6c3818c7d9588247bad63a5a2a8e0
   review.md: e39a580596a06c3748054fca28b266105243583713cfd698ecaee475d083ecb2
   scenarios/ductus-self-update-precheck.md: 1ad54d483e9606fb73440abaec7df167f22f13cd35ca2c251df1e6c3d2c46686
   spec.md: 273bf86eabd8f2f099b520461076894fc1a81446d1afacdb1d03769f6acbab7d

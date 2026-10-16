@@ -1,22 +1,49 @@
 ---
 spec: 019-config-decisions
-last-run: 2026-09-13T20:37:07Z
-analyzed-against: b52e57018a3e3a8d2e47562699b4cf32816744b9
+last-run: 2026-10-16T15:25:20Z
+analyzed-against: 8191e6959179f5c4c9f9eefe1d9a91436fa2f341
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
-unexamined: 0
+unexamined: 1
 analyzed-digest:
-  data-model.md: 5dfef4053828f509aeb168d0be6948dfbe6c2cad1d6ac865a3b58822497d23a9
-  plan.md: 8911597bbe88a0ce581763a840b44231fc5d769a92a4016f4184ecbb330f4f55
-  review.md: c1a4d51831a638c7e0dd74e9c6465e534d078d4f416f068e196c2facf9da78e4
-  spec.md: 1bb2b4ca1ba787239d102e6a146fa907058299c5bae403e7910551bd3d47fae5
+  data-model.md: 37d4df6deca1fa8f3764c625844c879d86326afc5c0318ef2095f1dd7ae48428
+  plan.md: 114aedafaa1f069f3b03569ebb7193ef3e638278100b007d95a90ba936868daa
+  review.md: b9d53a8e5cba9f1cbfc343a14a7092db9b675580d76fadbab442b2c7ddc1ece4
+  spec.md: 6857af4840741e8e293c355187d13942ea41054fe7b8825f079f0e882568531c
   tasks.md: 98fec9c7a4badedc984d985d00024c84d75e48cee837c28902f81f7b5736678f
+unexamined-by-reason:
+  not-a-live-claim: 1
 blocking: false
+dispositions:
+  fixed: 0
+  routed: 0
+  discarded: 0
+  undispositioned: 0
 ---
 
 # Analysis — 019-config-decisions
 
 ## Summary
 
-Relocated from the spec's frontmatter by the record-relocation migration. The counts above are the recorded run's; this report body begins at the next run.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 1 unexamined target(s). Dispositions: 0 fixed, 0 routed, 0 discarded, 0 undispositioned.
+
+## Hard failures
+
+*None.*
+
+## Blocking findings
+
+*None.*
+
+## Advisory findings
+
+*None.*
+
+## Unexamined targets
+
+- not-a-live-claim: 1
+
+## Fixed in this run
+
+*None.*

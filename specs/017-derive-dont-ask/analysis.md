@@ -1,20 +1,20 @@
 ---
 spec: 017-derive-dont-ask
-last-run: 2026-09-28T00:18:50Z
-analyzed-against: f73801f522563792e0fc7dafae38a3232ee78222
+last-run: 2026-10-16T15:25:20Z
+analyzed-against: 8191e6959179f5c4c9f9eefe1d9a91436fa2f341
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 11
 analyzed-digest:
-  data-model.md: bc0dbdffb2f2dc1409cbae6c53d9acc9b30c77bb7671ac1909ebbe1071adc01b
-  plan.md: 371921636aa901292a365fd571854ce16a585733c5d0da8fe72a00bf235814ec
-  review.md: 5977fea2707e9a246e3ee2b6ea7c114680e6c0d123e915f4d8c952272c4718c6
-  scenarios/detect-dependency-cycles.md: 2c426d44ce0a3a3cf5e91160fdf84ac054795737b25979152f70e89fe86005ab
-  scenarios/generator-sync-claim-honesty.md: 0ee16bda3f0a5c0658100fee3d28ddae8214bc0eca9d57261811077aae314264
-  scenarios/skip-prose-cross-references.md: 1b5c4bd36e2ca760437d63b948706e5b575ecd450b0779d1d10440cc77d0e086
-  scenarios/tracked-specs-not-worktree.md: ba42aee5fbee0dfed38fce985200b0ba5775ecd03113a81aa792b25a18383829
-  spec.md: 2a48f808ed19fd01533b7c182d11b5f2cfeb8c17e7030856991a5f82fd793124
+  data-model.md: 6fa23783db77c3e735bd98e99bd6f919cdecd87d5fdb850bc63ee86797b19b14
+  plan.md: 03acda202adca79c7b38d530eb87fe0a061b2a81bc319d3bb3d59e9b6eefe3b7
+  review.md: 48453fb6d019d91e10817e928b70f4b84013f894ef2eef395d9b714c1f4d32d0
+  scenarios/detect-dependency-cycles.md: d16520a341eb42d0f5ed8d93c4d49593b291270f2a919258757c8e2f43cedf8d
+  scenarios/generator-sync-claim-honesty.md: 11effb857afa9e90731671c70535c8c22554895ebc01302faf46543225762ee1
+  scenarios/skip-prose-cross-references.md: ff66ff69fb884f8880a4db9d157b9c8ff35981b57fadfd4ba0299157b7a1639f
+  scenarios/tracked-specs-not-worktree.md: e3808ab1ae9a4d6b1b2103c85537c6236e99898b7569536eb9ac2bfcdde684bf
+  spec.md: 957699bd1670b704e2811f684f1b7a043e6030d0379a59cb99ce6ea2deae8632
   tasks.md: 375377a3d6f43f25b3f0565d366a534d5841744f5db3653b31993ad0b57b37a7
 unexamined-by-reason:
   no-readable-state: 1

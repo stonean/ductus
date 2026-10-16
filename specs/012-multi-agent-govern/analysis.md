@@ -1,23 +1,52 @@
 ---
 spec: 012-multi-agent-govern
-last-run: 2026-09-13T20:26:23Z
-analyzed-against: a99af184342956ee690d8e5a334c8a49e0e86504
+last-run: 2026-10-16T15:25:20Z
+analyzed-against: 8191e6959179f5c4c9f9eefe1d9a91436fa2f341
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
-unexamined: 0
+unexamined: 7
 analyzed-digest:
   data-model.md: 8ae49e75034c7ccd56250528e2dddb06f0fd2e3f3cb14857a2572531137e74e6
-  plan.md: e7869c39b6b1da83d077551af12b7954f0d796bf7ad361a1f50af1f5ecc2a33d
-  review.md: a92a8c8b02a06b3e67f0e7fd4ec53f98ba178b62ef26b3298458169791d16409
+  plan.md: 780d382c9125c0e6f93cba28c950ab911eef3b12413b85e2ea5d24d932bc27b2
+  review.md: 8c6ad747596b45c5141ac73d89cbb77f1955787819adfebbc4d5136092a53202
   scenarios/settings-template-bash-allowlist.md: 86737c4f1200bcc492dbc8c48f01f2fbe5d76ea7db30b504c7d2fc0199e7de36
-  spec.md: 1fa726673d5e5f7a26e80ab797bce71e04a959b772455a6068276877e66e2c9d
+  spec.md: 7b46f9a810aba730701479045611c800853d23fa750183026891fc7968647bd3
   tasks.md: 117283799049a5299dc29b121ec59e81af2cc060dac965b0a4e91645d69ab079
+unexamined-by-reason:
+  not-a-live-claim: 5
+  root-absent: 2
 blocking: false
+dispositions:
+  fixed: 0
+  routed: 0
+  discarded: 0
+  undispositioned: 0
 ---
 
 # Analysis — 012-multi-agent-govern
 
 ## Summary
 
-Relocated from the spec's frontmatter by the record-relocation migration. The counts above are the recorded run's; this report body begins at the next run.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 7 unexamined target(s). Dispositions: 0 fixed, 0 routed, 0 discarded, 0 undispositioned.
+
+## Hard failures
+
+*None.*
+
+## Blocking findings
+
+*None.*
+
+## Advisory findings
+
+*None.*
+
+## Unexamined targets
+
+- not-a-live-claim: 5
+- root-absent: 2
+
+## Fixed in this run
+
+*None.*
