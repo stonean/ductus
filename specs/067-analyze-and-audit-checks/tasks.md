@@ -55,3 +55,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Measure check-artifacts on 067 and across every spec with the release build
 
 - **Done when**: a done spec naming a path that existed and was deleted, on a line with no marker, yields one advisory finding quoting the line; a never-existed path, a marker line, an adopter path and an unreadable history each yield the matching skip and no finding; and every list of families and reasons names the new ones
+
+## 8. Join a blockquote's hard-wrapped lines into one logical line
+
+- [x] `logical_lines` joins consecutive `>` lines of one blockquote paragraph, so a note's marker on its first line covers a path on its next (021's and 030's post-completion notes were read line by line)
+- [x] A test proving the join, failing with it disabled
+
+- **Done when**: a hard-wrapped blockquote note whose marker and path sit on different physical lines records the path `not-a-live-claim`, and the test fails when blockquote lines are read singly

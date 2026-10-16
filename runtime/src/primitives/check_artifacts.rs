@@ -1748,8 +1748,8 @@ struct BodyCandidate {
 /// - **Line-scoped markers.** A line carrying a criterion marker, a
 ///   [`BODY_TRANSITION_MARKERS`] entry or a negated-creation clause describes
 ///   a transition, and its paths are recorded `not-a-live-claim`. Lines are
-///   logical ([`logical_lines`]): a paragraph, a list item or a table row, its
-///   hard wraps joined, so an Affected Files row with a `Delete` action
+///   logical ([`logical_lines`]): a paragraph, a list item, a blockquote
+///   paragraph or a table row, its hard wraps joined, so an Affected Files row with a `Delete` action
 ///   exempts itself and a wrapped sentence keeps its marker.
 ///
 /// The acceptance criteria are skipped (the criterion family owns them), as are
@@ -1853,9 +1853,9 @@ fn check_body_path_existence(
 }
 
 /// `text` as markdown's logical lines — each paragraph, list item, table row,
-/// blockquote line and heading, with the hard wraps that continue a paragraph
-/// or list item joined by a space — and fenced blocks and multi-line HTML
-/// comments dropped.
+/// blockquote paragraph and heading, with the hard wraps that continue a
+/// paragraph, list item or blockquote joined by a space and a blockquote's `>`
+/// markers stripped — and fenced blocks and multi-line HTML comments dropped.
 ///
 /// The body family's markers and code spans are read per logical line, not per
 /// physical one. A hard-wrapped sentence puts its marker on one physical line
@@ -1863,6 +1863,17 @@ fn check_body_path_existence(
 /// open on one line and close on the next; read physically, the first escapes
 /// its exemption and the second is misparsed into a candidate.
 fn logical_lines(text: &str) -> Vec<String> {
+    /// What the logical line being built is, which decides whether the next
+    /// physical line continues it.
+    #[derive(PartialEq)]
+    enum Kind {
+        /// A paragraph or list item: plain continuation lines join it.
+        Text,
+        /// A blockquote paragraph: further `>` lines join it.
+        Quote,
+        /// A heading or table row: never continued.
+        Single,
+    }
     fn is_list_item(trimmed: &str) -> bool {
         let digits = trimmed.chars().take_while(char::is_ascii_digit).count();
         ["- ", "* ", "+ "].iter().any(|m| trimmed.starts_with(m))
@@ -1871,35 +1882,40 @@ fn logical_lines(text: &str) -> Vec<String> {
     }
     let mut out: Vec<String> = Vec::new();
     let mut current = String::new();
-    // A heading, table row or blockquote line never takes a continuation.
-    let mut closed = false;
+    let mut kind = Kind::Single;
     let mut skip = SkipScanner::default();
     for line in text.lines() {
-        if skip.skip(line) {
-            if !current.is_empty() {
-                out.push(std::mem::take(&mut current));
-            }
-            continue;
-        }
         let trimmed = line.trim();
-        if trimmed.is_empty() {
+        if skip.skip(line) || trimmed.is_empty() {
             if !current.is_empty() {
                 out.push(std::mem::take(&mut current));
             }
             continue;
         }
-        let single =
-            trimmed.starts_with('#') || trimmed.starts_with('|') || trimmed.starts_with('>');
-        if current.is_empty() || closed || single || is_list_item(trimmed) {
+        let (content, this) = if let Some(quoted) = trimmed.strip_prefix('>') {
+            (quoted.trim_start_matches('>').trim(), Kind::Quote)
+        } else if trimmed.starts_with('#') || trimmed.starts_with('|') {
+            (trimmed, Kind::Single)
+        } else {
+            (trimmed, Kind::Text)
+        };
+        // An empty `>` line ends a blockquote paragraph, as a blank line ends
+        // any other.
+        if content.is_empty() {
             if !current.is_empty() {
                 out.push(std::mem::take(&mut current));
             }
-            current.push_str(trimmed);
-            closed = single;
-        } else {
-            current.push(' ');
-            current.push_str(trimmed);
+            continue;
         }
+        let continues =
+            !current.is_empty() && this == kind && this != Kind::Single && !is_list_item(content);
+        if continues {
+            current.push(' ');
+        } else if !current.is_empty() {
+            out.push(std::mem::take(&mut current));
+        }
+        current.push_str(content);
+        kind = this;
     }
     if !current.is_empty() {
         out.push(current);
@@ -2993,6 +3009,24 @@ mod tests {
             &["scripts/old.sh"],
         );
         assert_eq!(body_outcome(tmp.path()), (Vec::new(), Vec::new()));
+    }
+
+    /// A post-completion note is a hard-wrapped blockquote: the marker on its
+    /// first `>` line covers the path on its second.
+    #[test]
+    fn a_wrapped_blockquote_keeps_its_marker() {
+        let tmp = body_fixture(
+            "done",
+            "# Plan\n\n> **Note:** a later spec retired the hook\n> (`scripts/old.sh`) and its CI job.\n",
+            &["scripts/old.sh"],
+        );
+        assert_eq!(
+            body_outcome(tmp.path()),
+            (
+                Vec::new(),
+                vec![("not-a-live-claim".to_string(), "scripts/old.sh".to_string())]
+            )
+        );
     }
 
     #[test]
