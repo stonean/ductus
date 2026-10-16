@@ -14,7 +14,7 @@ So a review recorded against one commit and never re-run reads as a pass
 forever. Hand-editing a `review.md` to mark findings resolved produces a record
 that satisfies every automated check while describing a diff that is gone.
 
-That shipped. `gvrn-v0.26.2` was tagged at `334907f` while this spec's review
+That shipped. `gvrn-v0.26.2` was tagged at `334907f` while 022's review
 read `reviewed-against: 1f7ee722` — three commits back, covering none of the
 adopter-scope suppression it released. `check-review-gate` passed. So did
 `/ductus:analyze`'s `review-state-drift` family, which tests the same two fields.

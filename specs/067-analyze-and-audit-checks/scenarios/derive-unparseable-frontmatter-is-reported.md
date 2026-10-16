@@ -87,7 +87,7 @@ that an unknown is never escalated into a defect holds here too.
   that assert the ordinary payload stay byte-identical when it is empty —
   which is what keeps this from being a breaking change to the wire contract.
 - **`data-model.md` records it**, because that file is the canonical registry
-  of primitive result shapes and a field that exists only in code is one a
+  of these primitives' result shapes and a field that exists only in code is one a
   markdown-only host cannot know to read.
 
 ## Open Questions

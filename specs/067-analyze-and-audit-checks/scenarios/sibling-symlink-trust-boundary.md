@@ -10,7 +10,7 @@ section: "Artifact checks"
 lexically: `..` is consumed by `PathBuf::pop` and the result must
 `starts_with(feature_dir)`. Canonicalization was rejected deliberately — it
 fails on a legitimately-missing target and makes the answer depend on where a
-link points, which would break the repeat-run determinism AC8 requires.
+link points, which would break the repeat-run determinism 045's AC8 requires.
 
 Lexical resolution performs the containment half of `BE-INPUT-004` correctly: a
 link *target* like `../../../etc/passwd` is refused. What it cannot see is a

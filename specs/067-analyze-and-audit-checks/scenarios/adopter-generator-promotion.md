@@ -6,7 +6,7 @@ section: "Derived frontmatter indexes"
 
 ## Context
 
-`spec.md` §Bash script relationships states the rule this scenario overturns:
+022's `spec.md` §Bash script relationships stated the rule this scenario overturns:
 
 > **`gen-*.sh`** (called by the pre-commit hook) — stay bash. The runtime never replaces them: pre-commit has no LLM in the loop, so they fail the eligibility rule from §runtime-boundary principle 3.
 
@@ -45,7 +45,7 @@ Each is wired at the six Rust sites plus `framework/runtime-tools.txt` per AGENT
 
 Retired alongside the scripts: `scripts/tests/test-gen-spec-deps.sh` (786 lines) and `scripts/tests/test-gen-cross-service-refs.sh` (568), replaced by Rust tests that run on every platform the runtime builds for — including Windows, where the bash suites never ran.
 
-Consequent updates: the Shared Files manifest and the four `framework/bootstrap/configure/*.md` permission blocks drop their `gen-*.sh` entries; `framework/migrations.toml` gains an entry retiring the scripts from adopter trees; and §Bash script relationships' first bullet is rewritten to record the promotion and why the old rule lapsed.
+Consequent updates: the Shared Files manifest and the four `framework/bootstrap/configure/*.md` permission blocks drop their `gen-*.sh` entries; `framework/migrations.toml` gains an entry retiring the scripts from adopter trees; and 022's §Bash script relationships' first bullet is rewritten to record the promotion and why the old rule lapsed.
 
 ## Edge Cases
 
@@ -53,7 +53,7 @@ Consequent updates: the Shared Files manifest and the four `framework/bootstrap/
 - **A binary predating the subcommands.** The same shape as the `label-criteria` case the hook already documents — an older store binary exits non-zero on an unknown subcommand. Governed by the runtime-absent policy under Resolved Questions: it halts the commit, and `/ductus`'s version compare-and-re-acquire is what clears it.
 - **Empty is not one shape.** The two indexes differ at zero and a port that unifies them rewrites committed frontmatter across every spec in the corpus: a spec with no sibling links gets `dependencies: []` (the field is present and empty), while a spec with no cross-service links carries **no** `references:` field at all — absent-when-empty, with a stale block removed when its last link goes. Each primitive preserves its own rule.
 - **A spec with no frontmatter, or frontmatter that will not parse.** The generators walk every tracked spec, so one malformed file must not abort the pass or silently drop the rest. The primitive reports it and continues, matching how the scenario-file readers already decline to prove anything about a file they could not read.
-- **Concurrent commits and mid-write crashes.** The primitives rewrite frontmatter in place across many files, so both use the tempfile + rename contract AC13 already requires of the state-modifying primitives — a crash mid-pass leaves every spec coherent, never half-rewritten.
+- **Concurrent commits and mid-write crashes.** The primitives rewrite frontmatter in place across many files, so both use the tempfile + rename contract 022's AC13 already requires of the state-modifying primitives — a crash mid-pass leaves every spec coherent, never half-rewritten.
 - **`--no-verify` is a real path, and the backstop is CI.** The escape hatch means derived frontmatter can be committed stale on purpose. That is acceptable precisely because it is not the only gate: `framework-checks.yml` runs both primitives in dry-run mode, so a bypassed hook surfaces as a failed check rather than as silently wrong data on `main`.
 - **`run-generator` is retained.** It stays the sanctioned way to invoke *adopter-owned* generators from a procedure; what changes is that ductus's own two stop being among them.
 - **CI.** `framework-checks.yml` invokes both generators with `--dry-run` and `generators.yml` runs them for real alongside their bash tests; both move to the primitives. The `/audit` families are deliberately untouched — the release gate runs them with no Rust toolchain by design, so migrating them would make the gate depend on compiling the artifact it gates. That constraint is separate from this one and still live.

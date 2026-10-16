@@ -22,3 +22,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Verify AC1–AC4 against `runtime/src/primitives/` and tick each that holds
 
 - **Done when**: every acceptance criterion is ticked, each verified against the code that implements it.
+
+## 4. Correct analyze-artifact-checks' claim that check-artifacts takes --all
+
+- [x] `scenarios/analyze-artifact-checks.md` says the primitive runs "given a feature (or `--all`)"; `check-artifacts` takes `--feature` alone and the data model leaves `--all` iteration with the caller, so the Behavior names the one argument it takes
+
+- **Done when**: the scenario's Behavior agrees with `ductus check-artifacts --help` and with the data model
