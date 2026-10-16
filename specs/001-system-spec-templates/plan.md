@@ -51,7 +51,7 @@ Rejected. The existing `templates/` directory is flat with one file per template
 
 ### Considered: including a `spec-and-plan.md` combined template for lightweight track
 
-Deferred. The lightweight track template is referenced in spec 000 (slash commands) and will be needed when the `specify` command creates lightweight track features. It should be added alongside the slash command implementation, not here, since it's a variant of the existing `spec.md` and `plan.md` templates rather than a system spec.
+Not included. It would be a variant of the existing `spec.md` and `plan.md` templates rather than a system spec, so it does not belong here; and the framework has no lightweight track, so no combined template exists.
 
 ## Open Questions Resolved
 
