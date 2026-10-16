@@ -27,3 +27,5 @@
         `- [ ] {Brief description of the issue and any relevant context}`
 
      When an item is migrated, remove it from this list. -->
+
+- [ ] Dead file references remain in specs/ outside the plans the 2026-10-16 sweep fixed. That sweep corrected every plan.md Affected Files row naming a missing file (75 rows, 20 plans) and the prose in those plans naming the same files. Not yet done: (1) a backticked-path scan of spec bodies, scenarios and data models found ~610 unresolved candidates across 50 specs, unclassified -- many are adopter-side paths (.augment/, .agents/), examples or abbreviations, so the genuine count is unknown; (2) plans outside the 20 still name the retired generators (018 and 042 mention gen-spec-deps.sh and friends); (3) 019's plan still designs the [workflows] config section 043 removed. Proposed check, 067-owned: a twin of criterion-path-existence over plan.md Affected Files and backticked repo paths in done specs, excluding adopter destinations the way ships-to-adopter does -- it would turn the ~610 into an exact list and stop recurrence, since no check reads these paths today.
