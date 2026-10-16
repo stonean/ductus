@@ -26,7 +26,8 @@ measured this class and named it "a dogfooding artifact, not a check defect",
 deferring it on the reasoning that it does not generalize to the projects the
 check ships to. That reasoning was right about generality and wrong about cost:
 19 of 21 findings were noise, so the two true positives (005's
-`framework/workflows/`, 025's `scripts/lint-ductus-toml.sh`) sat invisible
+`framework/workflows/`, since deleted by 043, and 025's
+`scripts/lint-ductus-toml.sh`) sat invisible
 inside a wall of false ones. A check whose signal is 10% is not consulted, and
 one that is not consulted catches nothing.
 

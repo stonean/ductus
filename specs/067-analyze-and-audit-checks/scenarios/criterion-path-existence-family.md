@@ -30,7 +30,7 @@ A sixth group is carried by a clause-scoped **predicate** rather than a phrase, 
 
 ## Edge Cases
 
-- A criterion naming a path that resolves to a **directory** is satisfied; `framework/workflows/` is a directory reference, not a malformed file path.
+- A criterion naming a path that resolves to a **directory** is satisfied; `framework/commands/` is a directory reference, not a malformed file path.
 - A criterion naming no paths at all — the common case — contributes nothing.
 - A spec below `done` is not scanned. Its criteria describe work in flight, so a path that does not exist yet is expected rather than drifted.
 - An unbackticked path in a criterion is missed. Accepted: outside code font a `/`-bearing token is more often a slash command, a placeholder, or an `and/or` than a path, and the originating case and every path in this repo's criteria are backticked.

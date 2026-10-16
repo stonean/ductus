@@ -24,7 +24,7 @@ as the correction to an earlier mis-triage — splits them three ways:
   here** — suppressing them would mean shipping ductus-repo-only machinery, and
   it would key off a manifest an adopter does not have, so it would never
   engage where the check actually runs.
-- **2 true positives.** 005's `framework/workflows/` (sunset by 043) and 025's
+- **2 true positives.** 005's `framework/workflows/` (deleted by 043) and 025's
   `scripts/lint-ductus-toml.sh` (never built). These are what the family exists
   to surface; they are spec-level drift, not check defects.
 - **4 residual false positives.** Three phrasings the marker list missed. Those

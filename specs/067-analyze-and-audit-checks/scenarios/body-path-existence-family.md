@@ -6,7 +6,7 @@ section: "Artifact checks"
 
 ## Context
 
-`criterion-path-existence` checks paths only in a `done` spec's acceptance criteria, and it is scoped that way on purpose: body prose may name a dead path correctly while describing history, and a check over whole bodies would flag those true statements (045's Resolved Questions; [criterion-path-existence-family](criterion-path-existence-family.md)). So nothing checks the rest of a spec, and dead references accumulated there. A sweep on 2026-10-16 found 75 stale Affected Files rows across 20 plans, and a backticked-path scan of done specs' bodies, scenarios and data models still turned up about 610 unresolved candidates.
+`criterion-path-existence` checks paths only in a `done` spec's acceptance criteria, and it is scoped that way on purpose: body prose may name a dead path correctly while describing history, and a check over whole bodies would flag those true statements (045's Resolved Questions; [criterion-path-existence-family](criterion-path-existence-family.md)). So nothing checks the rest of a spec, and dead references accumulated there. A sweep on 2026-10-16 found 75 stale Affected Files rows across 20 plans, and a backticked-path scan of done specs' bodies, scenarios and data models still turned up about 610 candidates that did not resolve.
 
 Two discriminators make a body-wide check possible without flagging true history:
 
@@ -29,7 +29,7 @@ Measured over the done specs with a prototype of this design: about 610 raw cand
 
 - **A transition stated without a marker.** "The generators under `.ductus/scripts/` are executed by adopters" names a deleted path as present. It is a finding: the line is stale, and living documents are edited to say what is true.
 - **A marker on an unrelated clause of the line.** `remove` in "to remove a dep, remove the inline link" exempts a stale path named elsewhere on the same line. The family errs toward silence, as the criterion family does; a one-time sweep reads the exempted lines by eye.
-- **An example relative link that resolves to a real past path.** `../spec.md` cited from a plan resolves to `specs/spec.md`, which existed before it became `specs/README.md`. The history gate cannot tell an example from a reference there; the finding is advisory, and a stored discard settles it.
+- **An example relative link that resolves to a real past path**, e.g. `../spec.md` cited from a plan, which resolves to `specs/spec.md` — a file that existed before it became `specs/README.md`. The history gate cannot tell an example from a reference there; the finding is advisory, and a stored discard settles it.
 - **A spec below `done`.** Not scanned: a spec in flight may name files it is about to create.
 
 ## Open Questions

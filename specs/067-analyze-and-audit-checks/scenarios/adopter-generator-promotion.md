@@ -10,15 +10,15 @@ section: "Derived frontmatter indexes"
 
 > **`gen-*.sh`** (called by the pre-commit hook) — stay bash. The runtime never replaces them: pre-commit has no LLM in the loop, so they fail the eligibility rule from §runtime-boundary principle 3.
 
-Both halves of that have lapsed. "No LLM in the loop" is not a disqualifier — §runtime-boundary's eligibility criteria require *determinism*, and criterion 2(b) names "a bash script the framework invokes (pre-commit hooks, generators, CI)" as **currently mechanical**, which is the eligible case rather than the excluded one. The reason that actually held was principle 3 as it then read — "Opt-in for adopters — the runtime MUST NOT be a prerequisite for any pipeline gate" — and a pre-commit hook is a pipeline gate. [048](../../048-govern-acquired-runtime/spec.md) retired that principle and the Opt-in invariant with it. The constraint is gone; the shell it protected remains, defended by a citation that now argues the other way.
+Both halves of that have lapsed. "No LLM in the loop" is not a disqualifier — §runtime-boundary's eligibility criteria require *determinism*, and criterion 2(b) names "a bash script the framework invokes (pre-commit hooks, generators, CI)" as **currently mechanical**, which is the eligible case rather than the excluded one. The reason that actually held was principle 3 as it then read — "Opt-in for adopters — the runtime MUST NOT be a prerequisite for any pipeline gate" — and a pre-commit hook is a pipeline gate. [048](../../048-govern-acquired-runtime/spec.md) retired that principle and the Opt-in invariant with it. The constraint was gone; the shell it protected remained, defended by a citation that by then argued the other way.
 
-What remains in bash runs on every adopter's machine on every commit:
+What remained in bash ran on every adopter's machine on every commit, until this scenario replaced it:
 
-- `.ductus/scripts/gen-spec-deps.sh` (323 lines) — harvests sibling-spec links into `dependencies:`, plus the SCC cycle check
-- `.ductus/scripts/gen-cross-service-refs.sh` (336) — harvests cross-service URLs into `references:`, resolved against `[services]`
-- `.ductus/scripts/lib/specs-root.sh` (142) — the `[paths] specs-root` resolution shared by both
+- `.ductus/scripts/gen-spec-deps.sh` (323 lines, deleted) — harvested sibling-spec links into `dependencies:`, plus the SCC cycle check
+- `.ductus/scripts/gen-cross-service-refs.sh` (336, deleted) — harvested cross-service URLs into `references:`, resolved against `[services]`
+- `.ductus/scripts/lib/specs-root.sh` (142, deleted) — the `[paths] specs-root` resolution both shared
 
-All three parse YAML frontmatter and markdown structure in bash: inline-link extraction outside fenced code blocks, outside blockquote-prefixed lines, and outside `## See also`, followed by a frontmatter rewrite. Principle 3's surviving clause names that shape directly — shell pipelines that parse frontmatter or markdown structure are "**not** a sanctioned substitute for the runtime primitives or the host's file tools."
+All three parsed YAML frontmatter and markdown structure in bash: inline-link extraction outside fenced code blocks, outside blockquote-prefixed lines, and outside `## See also`, followed by a frontmatter rewrite. Principle 3's surviving clause names that shape directly — shell pipelines that parse frontmatter or markdown structure are "**not** a sanctioned substitute for the runtime primitives or the host's file tools."
 
 The cost is measured, not projected. Three defects reached adopters through this shell on 2026-08-17, every one silent and exit 0, recorded in `scripts/audit/adopter-shell-behavior.sh`:
 
