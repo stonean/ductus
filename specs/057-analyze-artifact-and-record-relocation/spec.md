@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [020-code-review, 027-bootstrap-migration-registry, 047-analyze-findings-durability]
 next-criterion: 27
 cross-spec-impact:
@@ -50,9 +50,9 @@ seventh, the run instant, under two names (`last-run` in `spec.md`,
 prevent.
 
 **They drifted, and the framework grew a primitive to cope.**
-`runtime/src/primitives/check_review_agreement.rs` exists for no other purpose
-than holding the two copies against each other, and its header records what it
-was built after: specs 031 and 041 carried `should-violations: 1` in `spec.md`
+`runtime/src/primitives/check_review_agreement.rs`, which this spec deleted,
+existed for no other purpose than holding the two copies against each other,
+and its header recorded what it was built after: specs 031 and 041 carried `should-violations: 1` in `spec.md`
 while their reports recorded `0`, and the disagreement stood for weeks. It was
 invisible because **every gate reads exactly one of the two files** —
 `check-review-gate` and `/{project}:analyze`'s drift check read the block, while
