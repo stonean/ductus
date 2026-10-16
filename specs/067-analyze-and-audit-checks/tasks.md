@@ -45,3 +45,13 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Say so in the scenario, `check-artifacts-skipped-targets`' claim that the pre-045 families never skip, the `skipped` field's doc, the data model, and `analyze.md`'s Scenario consistency section
 
 - **Done when**: an unconsultable history leaves every unmapped scenario in `skipped` as `no-readable-state`, never as a finding and never silently, and no text says scenario-consistency cannot skip
+
+## 7. Implement scenario: body-path-existence-family
+
+- [ ] Implement the behavior described in `scenarios/body-path-existence-family.md`
+- [ ] Add `check_body_path_existence` to `check-artifacts`: spec body outside Acceptance Criteria, plan, data model and scenarios of a done spec; criterion grammar with the fragment stripped; relative candidates resolved from the citing file; root-absent, ships-to-adopter and line-scoped markers (the criterion list plus the body-only list); one batched history walk deciding finding vs `never-existed`; `no-readable-state` when history cannot be read
+- [ ] Git-backed tests for each rule, each proven to fail with the rule disabled
+- [ ] Add `never-existed` to the closed reason set everywhere it is listed, update every count of the families (`nine` to `ten`), 067 AC1, the data model, analyze.md step 8 and its reference, the tool description, the result's order doc and the criterion family's scope note
+- [ ] Measure check-artifacts on 067 and across every spec with the release build
+
+- **Done when**: a done spec naming a path that existed and was deleted, on a line with no marker, yields one advisory finding quoting the line; a never-existed path, a marker line, an adopter path and an unreadable history each yield the matching skip and no finding; and every list of families and reasons names the new ones
