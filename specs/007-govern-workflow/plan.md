@@ -4,73 +4,58 @@ title: "007-govern-workflow — plan"
 
 # 007 — Ductus Command Plan
 
-> **Note:** this plan was written against the original layout and the two-file distribution model. The ductus installer now lives at a single `framework/bootstrap/ductus.md` (the two-file model was superseded by [012-multi-agent-govern](../012-multi-agent-govern/spec.md)); command sources moved to `framework/commands/`; project-scaffolding templates to `framework/templates/project/`. Several command names were later renamed (`about → help`, `setup → configure`, `scenario → elaborate`, `triage → groom`, `next` retired). See `spec.md` for the full history.
-
 ## Overview
 
-Create one ductus command file per supported CLI (`ductus/ductus.md` for Claude Code, `ductus/ductus-auggie.md` for Auggie) in the `ductus/` directory. Each file is a self-contained prompt that instructs the AI agent to fetch templates from GitHub, scaffold `ductus` files, resolve placeholders, and display next steps. The command templates in `commands/` gain a `{cli-config-dir}` placeholder so a single template set serves all CLIs.
+The `/ductus` command, `framework/bootstrap/ductus.md`, is a self-contained prompt that instructs the AI agent to fetch templates from GitHub, scaffold `ductus` files, resolve placeholders, and display next steps. One file serves every supported CLI. The command templates in `framework/commands/` carry a `{cli-config-dir}` placeholder so a single template set serves all CLIs.
 
 ## Technical Decisions
 
-### One ductus file per CLI, not a single file with CLI detection
+### One ductus file for every CLI
 
-Each CLI variant is a separate markdown file in the `ductus/` directory. The CLI-specific values (config directory, session file path, setup behavior) are hardcoded in each variant. This avoids runtime CLI detection logic in a prompt — the user's choice of which file to curl determines the target.
+`framework/bootstrap/ductus.md` carries an Agent Registry, one row per supported CLI, and selects the agent at runtime (`012-multi-agent-govern`). The CLI-specific values (config directory, command path, settings file) are registry columns, not separate files.
 
-Adding a new CLI means creating a new ductus variant. The framework core (constitution, templates, command templates) does not change.
+Adding a new CLI means adding a registry row. The framework core (constitution, templates, command templates) does not change.
 
 ### Command templates use `{cli-config-dir}` placeholder
 
-The existing command templates in `commands/` reference `.claude/` paths for session state and settings. To support multiple CLIs, these references change to `{cli-config-dir}` — a placeholder resolved during adoption alongside `{project}`.
+The command templates in `framework/commands/` reference `.claude/` paths for session state and settings. To support multiple CLIs, these references change to `{cli-config-dir}` — a placeholder resolved during adoption alongside `{project}`.
 
 For this repository's own commands in `.claude/commands/ductus/`, the placeholder is already resolved to `.claude`. Adopting projects get it resolved to whichever CLI they chose.
 
 Affected references in command templates:
 
-- `.claude/{project}-session.json` → `{cli-config-dir}/{project}-session.json`
 - `.claude/settings.local.json` → `{cli-config-dir}/settings.local.json`
 - `.claude/commands/{project}/` → `{cli-config-dir}/commands/{project}/`
 
-### Setup command skipped for Auggie
+### The ductus file lives in `framework/bootstrap/`, not in templates/
 
-The Auggie ductus variant omits the `/{project}:setup` step from post-scaffolding output. Auggie uses global permissions (`~/.augment/settings.json`) rather than per-project settings. This is documented as a future consideration in `specs/spec.md`.
-
-The setup command template itself is still copied — it just won't work correctly for Auggie until per-project permissions are supported. The ductus variant's next-steps output skips mentioning it.
-
-### Ductus files live in `ductus/`, not in templates/
-
-The ductus files are the distribution entry point — users curl them directly. Placing them in the `ductus/` directory keeps them organized while maintaining a clean URL: `https://raw.githubusercontent.com/stonean/ductus/main/ductus/ductus.md`. They are not templates to be copied into projects; they are one-time bootstrap commands. The directory also accommodates future CLI variants without cluttering the repo root.
+The ductus file is the distribution entry point: `install.sh` places it as the agent's `/ductus` command. It is not a template copied into projects; it is a bootstrap command, kept beside the other installer sources in `framework/bootstrap/`.
 
 ### File manifest is a markdown table in the ductus file
 
-Each ductus variant contains a hardcoded manifest table mapping source paths to destination paths with conflict strategies. This is readable, self-documenting, and easy to update. The agent reads the table and executes the fetches.
+The ductus file contains manifest tables (**Shared Files**, **Per-Agent Scaffolding**) mapping source paths to destination paths with conflict strategies. This is readable, self-documenting, and easy to update. The agent reads the tables and executes the fetches.
 
 ### Gitignore language patterns fetched from GitHub
 
-Same approach as the init command: fetch from `https://raw.githubusercontent.com/github/gitignore/main/{Language}.gitignore` and append below a comment header. Failures are reported but don't abort.
+For each primary language, fetch from `https://raw.githubusercontent.com/github/gitignore/main/{Language}.gitignore` and append below a comment header. Failures are reported but don't abort.
 
 ## Affected Files
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `ductus/ductus.md` | Create | Claude Code ductus command |
-| `ductus/ductus-auggie.md` | Create | Auggie ductus command |
-| `commands/about.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
-| `commands/specify.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
-| `commands/clarify.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
-| `commands/plan.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
-| `commands/implement.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
-| `commands/status.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
-| `commands/next.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
-| `commands/target.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
-| `commands/setup.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
-| `commands/analyze.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
-| `commands/scenario.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
-| `commands/triage.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
-| `commands/commit-push.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` (if it references CLI paths) |
+| `framework/bootstrap/ductus.md` | Create | The ductus command, one file for every CLI; its self-update pre-check runs File Fetching before Frontmatter Migration (scenario `ductus-self-update-precheck`) |
+| `framework/commands/help.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
+| `framework/commands/specify.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
+| `framework/commands/clarify.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
+| `framework/commands/plan.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
+| `framework/commands/implement.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
+| `framework/commands/status.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
+| `framework/commands/target.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
+| `framework/bootstrap/configure/claude.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
+| `framework/commands/analyze.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
+| `framework/commands/groom.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
 | `.claude/commands/ductus/*.md` | Modify | Re-derive from updated templates with `{cli-config-dir}` → `.claude` |
-| `.claude/commands/ductus/init.md` | Modify | Update to resolve `{cli-config-dir}` during scaffolding |
 | `specs/007-govern-workflow/spec.md` | Modify | Update status to `done` |
-| `framework/bootstrap/ductus.md` | Modify | Add self-update pre-check; reorder so File Fetching runs before Frontmatter Migration (added during scenario `ductus-self-update-precheck` — the unified ductus installer per 012 replaced the original per-CLI `ductus/ductus.md` and `ductus/ductus-auggie.md` listed above). |
 
 ## Trade-offs
 
@@ -86,7 +71,7 @@ The ductus command could do `.claude/` → `.augment/` replacement at copy time 
 
 ### Considered: separate command template directories per CLI
 
-Maintaining `commands/` for Claude Code and `commands-auggie/` for Auggie. Rejected — the commands are identical except for path prefixes. Duplicating them would create drift. The placeholder approach keeps one source of truth.
+Maintaining one command template directory for Claude Code and a second for Auggie. Rejected — the commands are identical except for path prefixes. Duplicating them would create drift. The placeholder approach keeps one source of truth.
 
 ## Open Questions Resolved
 
