@@ -35,7 +35,6 @@ The four seed-template references listed above (claude-md.md:3, agents.md:9,53, 
 - `AGENTS.md:9` links `[constitution.md](constitution.md)` — a **dead link today**: ductus's repo carries no root `constitution.md` (verified by `ls`; its `CLAUDE.md` imports `framework/constitution.md` directly). Fix it to `framework/constitution.md` as part of this sweep.
 - `AGENTS.md:15`'s "sync target of root `constitution.md`" wording is stale for the same reason; reword to name `.ductus/constitution.md` as the adopter-side destination of the shipped source.
 - `README.md:210,217,284` use `constitution.md` as the pinned-file and `update`-strategy examples; update to `.ductus/constitution.md`.
-- `docs/introduction.md` references only the framework source — no change (verified by grep).
 
 ### Runtime: no code change; 0.24.0 anchors the migration
 
