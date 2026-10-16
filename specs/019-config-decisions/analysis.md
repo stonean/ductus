@@ -1,17 +1,17 @@
 ---
 spec: 019-config-decisions
-last-run: 2026-10-16T15:28:46Z
-analyzed-against: 18c1de7ddb5573a4b782842c5506819ef0d56117
+last-run: 2026-10-16T15:49:16Z
+analyzed-against: 4895fec244dc43f6d99d5c2f133b12da5d99608a
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 1
 analyzed-digest:
-  data-model.md: 37d4df6deca1fa8f3764c625844c879d86326afc5c0318ef2095f1dd7ae48428
-  plan.md: 114aedafaa1f069f3b03569ebb7193ef3e638278100b007d95a90ba936868daa
-  review.md: 7b173f3ad313e619b22dc39fee819f63cbef34ff09d8b1ce8146df395ebe0552
+  data-model.md: ab67d796bd8475b960e5349b97aee3ade63146d8bc9a5f85d62e4c7c876c690c
+  plan.md: abcdcd2a7e26b700ba9678ac577c9f9c83d486c72e887d5260e4b90c0aecae84
+  review.md: 042dfd279916adbc5303f48fbeac01d8931798e112d015498e1c4e5b0b7d147b
   spec.md: 6857af4840741e8e293c355187d13942ea41054fe7b8825f079f0e882568531c
-  tasks.md: 98fec9c7a4badedc984d985d00024c84d75e48cee837c28902f81f7b5736678f
+  tasks.md: 47a25933bbe24151dab3ce2ee8aacb14bad33fd798c9c79092b448118eb494be
 unexamined-by-reason:
   not-a-live-claim: 1
 blocking: false

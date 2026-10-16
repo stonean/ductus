@@ -1,26 +1,52 @@
 ---
 spec: 042-consolidate-govern-per-project-files-under-govern-directory
-last-run: 2026-09-13T19:38:10Z
-analyzed-against: aaff7a3ac4ce05537056c59d56e8f659a89fff38
+last-run: 2026-10-16T15:49:16Z
+analyzed-against: 4895fec244dc43f6d99d5c2f133b12da5d99608a
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 4
 analyzed-digest:
-  plan.md: 1b4f0f2d3d8c37f8467e646eca126268a05ac271ceac9769c0da383ad8bde523
-  review.md: 9254525332b035c4c728902c50d2db63abb6da6d4b3f4d07d9565d2cc6084381
+  plan.md: 530a197f35bbcb1a17c9e3ecba3dcc0d7e3eb482ecc49ed1b6595e2b056f87f8
+  review.md: ac318e38db23a64b1662b32549ebafb0d723e55fb6d81aed748c69975d0b8f49
   scenarios/provenance-tags-name-resolved-config-path.md: aef26b78a9e3eab0f62f3947d24b08214c94809f3f77c480c9fb5049fba22296
   scenarios/runtime-doc-strings-name-active-paths.md: 5799c0f7c23e431c48a83c8d2a4696beded3861629e767b5fc1fa8e67e06c527
-  spec.md: 841ff633810c37cc4e3ed1b9889df4ed15a5ee57db932108d7cf790d8c871007
+  spec.md: e2edfb56404f173c886fbed45684317acd6456345cfb49b19ef2ac842c1f2b29
   tasks.md: 8b58469a1cb0d1b2d05b4a84b55f91eebc304ba96b1510a9e3224f885a391531
 unexamined-by-reason:
   not-a-live-claim: 3
   root-absent: 1
 blocking: false
+dispositions:
+  fixed: 0
+  routed: 0
+  discarded: 0
+  undispositioned: 0
 ---
 
 # Analysis — 042-consolidate-govern-per-project-files-under-govern-directory
 
 ## Summary
 
-Relocated from the spec's frontmatter by the record-relocation migration. The counts above are the recorded run's; this report body begins at the next run.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 4 unexamined target(s). Dispositions: 0 fixed, 0 routed, 0 discarded, 0 undispositioned.
+
+## Hard failures
+
+*None.*
+
+## Blocking findings
+
+*None.*
+
+## Advisory findings
+
+*None.*
+
+## Unexamined targets
+
+- not-a-live-claim: 3
+- root-absent: 1
+
+## Fixed in this run
+
+*None.*

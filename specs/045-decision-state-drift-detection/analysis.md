@@ -1,28 +1,32 @@
 ---
 spec: 045-decision-state-drift-detection
-last-run: 2026-09-18T00:20:54Z
-analyzed-against: 9167ce7bf81d3175af0d04b514b8dca6c1a267db
+last-run: 2026-10-16T15:49:16Z
+analyzed-against: 4895fec244dc43f6d99d5c2f133b12da5d99608a
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 2
-captured-issues: 0
 analyzed-digest:
-  data-model.md: c2d0f42b02c5bbd6f6d35932f68cc0a41534defd0ea3484aa7e3c073564564bc
-  plan.md: 56070003e45b56df0445724231de46056edc782ccdfc3132f81576e955251d4d
-  review.md: 375df9002c6ca69a9f3206193b992a6f7aa4aef00c653986b0513c03eefab23f
-  spec.md: 76b5e81a657455e57104ff644195bc39b85a19385b265f2c30489ab1d00dca8a
+  data-model.md: 25197063692e7c9856db37047dc780b2e35d64afa4e205f9d2ca594b7c452c40
+  plan.md: c73224f28a1afa2006f4ae3f91683e929af5eb156a35a94d45593b3884bbca3e
+  review.md: e03e3fd5ab2ee717b87e4c8ef5f7d9e4cd2c4c56ca2d5d8aff73937c1b0ee0a2
+  spec.md: 3bdbc5bce8a972742ce0bdc5f59f74df2bcab637a0610ffead8a235a28ac5ea5
   tasks.md: 8b46078bdad8d7f1d9d0823451246d232c0be79926c3411bc6b9223d3ce8d8bf
 unexamined-by-reason:
   not-a-live-claim: 2
 blocking: false
+dispositions:
+  fixed: 0
+  routed: 0
+  discarded: 0
+  undispositioned: 0
 ---
 
 # Analysis — 045-decision-state-drift-detection
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 2 unexamined target(s). Findings route to the inbox — this report records them, `/{project}:groom` routes them.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 routed, 0 discarded, 0 undispositioned.
 
 ## Hard failures
 
@@ -40,6 +44,6 @@ blocking: false
 
 - not-a-live-claim: 2
 
-## Captured issues
+## Fixed in this run
 
 *None.*
