@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [026-framework-self-audit]
 next-criterion: 31
 ---
@@ -87,15 +87,13 @@ Entries past their `sunset_after` version are excluded from this loop entirely �
 
 ## Sunset and Adopter Changelog
 
-When an entry's `sunset_after` version is older than the current ductus release, the entry is removed from `framework/migrations.toml` and its text is appended to an adopter-facing changelog (location open — `CHANGELOG-FRAMEWORK.md` at the repo root, or `framework/migrations-archive.md`). Adopters who are far enough behind to need an expired migration must apply it manually using the archive entry as a recipe.
+When an entry's `sunset_after` version is older than the current ductus release, the entry is removed from `framework/migrations.toml` and its text is appended to the adopter-facing changelog, `CHANGELOG.md` at the repo root. Adopters who are far enough behind to need an expired migration must apply it manually using the archive entry as a recipe.
 
 The sunset window is per-entry, not global. High-impact removals (like a directory rename) can stay active longer than low-impact ones (like a gitignore-marker rename). The sunset value is chosen when the entry is written.
 
 ## Audit Family
 
-A new `/audit` family extends [spec 026](../026-framework-self-audit/spec.md) (`scripts/audit/migration-coverage.sh` or similar). It cross-references conventions known to have been removed against the active registry plus the archive, and fails when a removal exists without a corresponding entry. The detection mechanism is an open question — git archaeology of `framework/templates/` and `framework/commands/` deletions vs. registry id list, or a curated invariant list, or a hybrid.
-
-This family is the gate that makes the registry load-bearing: a maintainer who removes a template without writing a migration entry breaks `/audit` and cannot ship.
+Family 10 extends [spec 026](../026-framework-self-audit/spec.md)'s `/audit` as `scripts/audit/migration-coverage.sh`. It runs three static current-state checks: no orphan procedure file (every `framework/migrations/{id}.md` has a registry entry), no stale target path (every `framework/`-prefixed `target_paths` entry in the active registry names something absent from current `framework/`; the others are adopter-relative and unverifiable here), and no broken procedure reference (every `procedure_file` exists). Whether a removal shipped with its migration is a property of a diff, not of the current state, so it is not this family's to check — see the detection-mechanism resolution below.
 
 ## Acceptance Criteria
 
