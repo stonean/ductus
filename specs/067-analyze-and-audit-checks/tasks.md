@@ -79,3 +79,12 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] The list's statements agree: 045's canonical table and its count, analyze.md's restatement and count, 067's criterion scenario's count
 
 - **Done when**: the corpus delta is the eight true lines and nothing else, the test fails with either widening reverted, and Family 18 passes
+
+## 11. One block splitter: logical lines read through split_blocks
+
+- [x] `split_blocks_reading` takes a `BlockReading` policy — keep blockquote paragraphs (`>` lines joined, a list item inside starting a new block) and keep headings as blocks; `split_blocks` is the default reading and is unchanged
+- [x] `logical_lines` is that split with both kept, each block's lines unquoted and joined by a space — so it inherits one-line HTML-comment stripping, ATX heading parsing and the shared list-item test it duplicated imperfectly (found reviewing tasks 7–10)
+- [x] Tests: the reading split keeps quotes and headings; a path inside a one-line comment is not read; each fails with its behavior disabled
+- [x] The body family's doc comment rewrapped (task 8 left a line overlong)
+
+- **Done when**: `logical_lines` holds no splitting logic of its own, `split_blocks`' results are unchanged for its caller, the new tests fail with their behavior disabled, and the corpus delta is explained line by line

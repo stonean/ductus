@@ -1954,10 +1954,37 @@ pub(crate) struct MarkdownBlock {
 /// context, but they are an *intra-line* concern — see [`inline_code_spans`]
 /// — so a consumer applies them to a block's text rather than the splitter
 /// dropping lines.)
+///
+/// This is the default [`BlockReading`]; [`split_blocks_reading`] keeps
+/// blockquotes and headings as blocks instead of dropping them.
 pub(crate) fn split_blocks(content: &str) -> Vec<MarkdownBlock> {
+    split_blocks_reading(content, BlockReading::default())
+}
+
+/// What a split keeps beyond paragraphs, list items and table rows.
+///
+/// [`split_blocks`] keeps neither: the link-adjacent family exempts quoted
+/// text and has no use for headings. The body path family reads both — a
+/// post-completion note is a blockquote that names paths, and a heading can
+/// name one too.
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct BlockReading {
+    /// A blockquote paragraph is a block: its `>` lines, and any plain line
+    /// that lazily continues them, until a blank or empty `>` line; a list
+    /// item inside the quote starts a new one.
+    pub(crate) quotes: bool,
+    /// A heading is a block by itself rather than only a boundary.
+    pub(crate) headings: bool,
+}
+
+/// [`split_blocks`] under `reading`. A blockquote block's lines keep their
+/// `>` markers, as every block's lines appear as written; [`unquote`] removes
+/// them.
+pub(crate) fn split_blocks_reading(content: &str, reading: BlockReading) -> Vec<MarkdownBlock> {
     let mut skip = SkipScanner::default();
     let mut blocks: Vec<MarkdownBlock> = Vec::new();
-    let mut open: Option<(usize, Vec<String>)> = None;
+    // The open block: its first line, its lines, and whether it is a quote.
+    let mut open: Option<(usize, Vec<String>, bool)> = None;
 
     for (idx, line) in content.lines().enumerate() {
         // `skip` runs first and unconditionally so the scanner advances over
@@ -1973,12 +2000,37 @@ pub(crate) fn split_blocks(content: &str) -> Vec<MarkdownBlock> {
             strip_inline_comments(line)
         };
         let trimmed = content_line.trim_start();
-        if skipped
-            || trimmed.is_empty()
-            || trimmed.starts_with('>')
-            || parse_atx_heading(&content_line).is_some()
-        {
+        if skipped || trimmed.is_empty() {
             close_block(&mut blocks, open.take());
+            continue;
+        }
+        if trimmed.starts_with('>') {
+            let inner = unquote(trimmed);
+            // An empty `>` line ends a quote paragraph, as a blank line ends
+            // any other.
+            if !reading.quotes || inner.is_empty() {
+                close_block(&mut blocks, open.take());
+                continue;
+            }
+            match &mut open {
+                Some((_, lines, true)) if !opens_list_item(inner) => {
+                    lines.push(content_line.into_owned());
+                }
+                _ => {
+                    close_block(&mut blocks, open.take());
+                    open = Some((idx + 1, vec![content_line.into_owned()], true));
+                }
+            }
+            continue;
+        }
+        if parse_atx_heading(&content_line).is_some() {
+            close_block(&mut blocks, open.take());
+            if reading.headings {
+                blocks.push(MarkdownBlock {
+                    line: idx + 1,
+                    text: content_line.into_owned(),
+                });
+            }
             continue;
         }
         if trimmed.starts_with('|') {
@@ -1991,23 +2043,33 @@ pub(crate) fn split_blocks(content: &str) -> Vec<MarkdownBlock> {
         }
         if opens_list_item(trimmed) {
             close_block(&mut blocks, open.take());
-            open = Some((idx + 1, vec![content_line.into_owned()]));
+            open = Some((idx + 1, vec![content_line.into_owned()], false));
             continue;
         }
         match &mut open {
             // A non-marker line continues whatever is open — the indented
             // and lazy continuation forms are the same claim either way.
-            Some((_, lines)) => lines.push(content_line.into_owned()),
-            None => open = Some((idx + 1, vec![content_line.into_owned()])),
+            Some((_, lines, _)) => lines.push(content_line.into_owned()),
+            None => open = Some((idx + 1, vec![content_line.into_owned()], false)),
         }
     }
     close_block(&mut blocks, open.take());
     blocks
 }
 
+/// A blockquote line's content: every leading `>` marker, and the spaces
+/// after each, removed. Any other line comes back trimmed.
+pub(crate) fn unquote(line: &str) -> &str {
+    let mut rest = line.trim();
+    while let Some(inner) = rest.strip_prefix('>') {
+        rest = inner.trim_start();
+    }
+    rest
+}
+
 /// Push the currently-open block, if any, onto `blocks`.
-fn close_block(blocks: &mut Vec<MarkdownBlock>, open: Option<(usize, Vec<String>)>) {
-    if let Some((line, lines)) = open {
+fn close_block(blocks: &mut Vec<MarkdownBlock>, open: Option<(usize, Vec<String>, bool)>) {
+    if let Some((line, lines, _)) = open {
         blocks.push(MarkdownBlock {
             line,
             text: lines.join("\n"),
@@ -4215,6 +4277,48 @@ mod tests {
             ],
             "headings are structure, not claims, and never yield a block"
         );
+    }
+
+    /// The reading the body family takes: a heading is its own block, and a
+    /// blockquote paragraph is one — wrapped `>` lines and a lazy continuation
+    /// joined, an empty `>` line ending it, a list item inside it starting a
+    /// new one. `split_blocks` itself still drops both.
+    #[test]
+    fn a_reading_split_keeps_quotes_and_headings() {
+        let doc = "## Notes\n\
+                   \n\
+                   > **Note:** a later spec retired\n\
+                   > the hook,\n\
+                   lazily continued.\n\
+                   > - **AC7** named it\n\
+                   >   on two lines.\n\
+                   >\n\
+                   > A second paragraph.\n";
+        let reading = BlockReading {
+            quotes: true,
+            headings: true,
+        };
+        let read: Vec<(usize, String)> = split_blocks_reading(doc, reading)
+            .into_iter()
+            .map(|b| (b.line, b.text))
+            .collect();
+        assert_eq!(
+            read,
+            vec![
+                (1, "## Notes".to_string()),
+                (
+                    3,
+                    "> **Note:** a later spec retired\n> the hook,\nlazily continued.".to_string()
+                ),
+                (6, "> - **AC7** named it\n>   on two lines.".to_string()),
+                (9, "> A second paragraph.".to_string()),
+            ]
+        );
+        // The default drops the quote lines and the heading; the lazy line,
+        // with no quote left to continue, reads as a paragraph of its own.
+        assert_eq!(blocks(doc), vec![(5, "lazily continued.".to_string())]);
+        assert_eq!(unquote(">   on two lines."), "on two lines.");
+        assert_eq!(unquote("> > nested"), "nested");
     }
 
     #[test]

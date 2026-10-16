@@ -120,9 +120,9 @@ use std::path::{Component, Path, PathBuf};
 
 use crate::primitives::label_criteria::StoredCounter;
 use crate::primitives::{
-    MarkdownBlock, PrimitiveError, ProjectRepository, Result, SkipScanner, inline_code_spans,
+    BlockReading, MarkdownBlock, PrimitiveError, ProjectRepository, Result, inline_code_spans,
     label_criteria, list_scenario_files, parse_atx_heading, read_spec, read_tasks, read_text,
-    rel_path, scenario_name_cmp, section_line_indices, split_blocks,
+    rel_path, scenario_name_cmp, section_line_indices, split_blocks, split_blocks_reading, unquote,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -1756,8 +1756,9 @@ struct BodyCandidate {
 ///   [`BODY_TRANSITION_MARKERS`] entry or a negated-creation clause describes
 ///   a transition, and its paths are recorded `not-a-live-claim`. Lines are
 ///   logical ([`logical_lines`]): a paragraph, a list item, a blockquote
-///   paragraph or a table row, its hard wraps joined, so an Affected Files row with a `Delete` action
-///   exempts itself and a wrapped sentence keeps its marker.
+///   paragraph or a table row, its hard wraps joined, so an Affected Files
+///   row with a `Delete` action exempts itself and a wrapped sentence keeps
+///   its marker.
 ///
 /// The acceptance criteria are skipped (the criterion family owns them), as are
 /// fenced blocks and HTML comments. Candidates follow the criterion grammar,
@@ -1859,10 +1860,10 @@ fn check_body_path_existence(
     }
 }
 
-/// `text` as markdown's logical lines — each paragraph, list item, table row,
-/// blockquote paragraph and heading, with the hard wraps that continue a
-/// paragraph, list item or blockquote joined by a space and a blockquote's `>`
-/// markers stripped — and fenced blocks and multi-line HTML comments dropped.
+/// `text` as the body family reads it: one logical line per markdown block —
+/// paragraph, list item, table row, blockquote paragraph or heading, the split
+/// [`split_blocks_reading`] makes with quotes and headings kept — its hard
+/// wraps joined by a space and a quote's `>` markers removed.
 ///
 /// The body family's markers and code spans are read per logical line, not per
 /// physical one. A hard-wrapped sentence puts its marker on one physical line
@@ -1870,64 +1871,22 @@ fn check_body_path_existence(
 /// open on one line and close on the next; read physically, the first escapes
 /// its exemption and the second is misparsed into a candidate.
 fn logical_lines(text: &str) -> Vec<String> {
-    /// What the logical line being built is, which decides whether the next
-    /// physical line continues it.
-    #[derive(PartialEq)]
-    enum Kind {
-        /// A paragraph or list item: plain continuation lines join it.
-        Text,
-        /// A blockquote paragraph: further `>` lines join it.
-        Quote,
-        /// A heading or table row: never continued.
-        Single,
-    }
-    fn is_list_item(trimmed: &str) -> bool {
-        let digits = trimmed.chars().take_while(char::is_ascii_digit).count();
-        ["- ", "* ", "+ "].iter().any(|m| trimmed.starts_with(m))
-            || (digits > 0
-                && (trimmed[digits..].starts_with(". ") || trimmed[digits..].starts_with(") ")))
-    }
-    let mut out: Vec<String> = Vec::new();
-    let mut current = String::new();
-    let mut kind = Kind::Single;
-    let mut skip = SkipScanner::default();
-    for line in text.lines() {
-        let trimmed = line.trim();
-        if skip.skip(line) || trimmed.is_empty() {
-            if !current.is_empty() {
-                out.push(std::mem::take(&mut current));
-            }
-            continue;
-        }
-        let (content, this) = if let Some(quoted) = trimmed.strip_prefix('>') {
-            (quoted.trim_start_matches('>').trim(), Kind::Quote)
-        } else if trimmed.starts_with('#') || trimmed.starts_with('|') {
-            (trimmed, Kind::Single)
-        } else {
-            (trimmed, Kind::Text)
-        };
-        // An empty `>` line ends a blockquote paragraph, as a blank line ends
-        // any other.
-        if content.is_empty() {
-            if !current.is_empty() {
-                out.push(std::mem::take(&mut current));
-            }
-            continue;
-        }
-        let continues =
-            !current.is_empty() && this == kind && this != Kind::Single && !is_list_item(content);
-        if continues {
-            current.push(' ');
-        } else if !current.is_empty() {
-            out.push(std::mem::take(&mut current));
-        }
-        current.push_str(content);
-        kind = this;
-    }
-    if !current.is_empty() {
-        out.push(current);
-    }
-    out
+    let reading = BlockReading {
+        quotes: true,
+        headings: true,
+    };
+    split_blocks_reading(text, reading)
+        .into_iter()
+        .map(|block| {
+            block
+                .text
+                .lines()
+                .map(unquote)
+                .filter(|line| !line.is_empty())
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .collect()
 }
 
 /// The artifacts [`check_body_path_existence`] reads, in a fixed order:
@@ -3013,6 +2972,18 @@ mod tests {
         let tmp = body_fixture(
             "done",
             "# Plan\n\nAn example criterion reads ``the hook runs\n`scripts/old.sh` on every commit`` here.\n",
+            &["scripts/old.sh"],
+        );
+        assert_eq!(body_outcome(tmp.path()), (Vec::new(), Vec::new()));
+    }
+
+    /// A one-line HTML comment is not prose: a path inside it is not read,
+    /// though the text around it is.
+    #[test]
+    fn a_path_inside_a_one_line_comment_is_not_read() {
+        let tmp = body_fixture(
+            "done",
+            "# Plan\n\nThe hook runs. <!-- was `scripts/old.sh` --> It is fast.\n",
             &["scripts/old.sh"],
         );
         assert_eq!(body_outcome(tmp.path()), (Vec::new(), Vec::new()));
