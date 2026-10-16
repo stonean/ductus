@@ -1,19 +1,19 @@
 ---
 spec: 020-code-review
-last-run: 2026-09-26T21:27:59Z
-reviewed-against: ca5f411b84daf339a6436e0493e70fe3fdcec3b1
-diff-base: a620733b5fc28009c0421e679e4fa22e183ae60a
+last-run: 2026-10-16T00:58:28Z
+reviewed-against: c4b14ac5f8bc92a2510a4a9d25f7c9ea00900953
+diff-base: 1054b8bd2e2c51c8629b4e6a9d3193103739aa57
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 17
-scope: 23
+examined: 2
+scope: 176
 skipped-passes: []
 reviewed-digest:
   data-model.md: 24df9460a0c5becb220b5080cee546c8de5dd5813692ec87ced034bc75b7984b
-  scenarios/review-flag-parsing-is-specified.md: 9f1a3dd82bab2b9622808c31dd2bb00f0c6f403effeb8bb496bb4b329496e9c7
+  scenarios/review-flag-parsing-is-specified.md: a19fe0f4f50c954363f7cca4d913a81d96374535d31a986792243be5263631c1
   scenarios/waiver-expiry.md: 80d0aeadc5ccb97f70086c283053f465acf754ed5246007035a252da30e87189
-  scenarios/waiver-file-lists.md: c945a3592874c7e2f651d4c00aa682daa6b7862be262dfdf868d82664f0a1f42
+  scenarios/waiver-file-lists.md: 8b4180d64e4e43ac6a66f57df7c65d6f1f00bb343ae284bb2d7214c88c824f53
 blocking: false
 dispositions:
   fixed: 0
@@ -26,7 +26,7 @@ dispositions:
 
 ## Summary
 
-Review of 020's reopen for scenario `waiver-file-lists` (task 13): a waiver's `file` may list several paths, each its own `(rule, file)` anchor. The five passes read the 17 files modified since `a620733b` — the command source, 020's data model and scenarios, the constitution row, README, and the runtime half 022 carries — against the 11 selected rule files; the three frontend rule files had no subject. Not counted as read: `.claude/commands/ductus/review.md`, a generated mirror regenerated in the same commits; `framework/commands/analyze.md`, `framework/commands/implement.md`, `framework/templates/spec/spec.md` and `framework/templates/ci/adopter-generators.yml`, plan entries this change does not touch (none mentions waivers); and `framework/templates/spec/spec-and-plan.md`, which no longer exists — 023 deleted it, as 020's Affected files already records. 0 MUST, 0 SHOULD, 0 low-confidence, no observations: the three chores the same diff produced were fixed in `ca5f411b` under 022's review, before this run.
+Scoped re-review of the 022 split's reference sweep: process-waivers-file-lists moved to 066, the check-command-flags shape to 067's data model, and cross-spec-impact now names 066, which discharges it through 066's process-waivers-file-lists and review-scope-union scenarios linking back here. examined: 2, each read in full: the scenarios review-flag-parsing-is-specified.md and waiver-file-lists.md. In the first, the sweep's substitution had left 067's data model described as the canonical registry of every primitive's result shapes; c4b14ac5 restored the sentence to what it meant, the registry of the check primitives' shapes. spec.md (24,075 bytes) was read only as its frontmatter diff and is not counted. Base --since=1054b8bd, the commit before the 022 split's move (d852b627): the edits predate any reopen of this spec, which stays done because each is a uniform pointer substitution. The five passes ran over the files counted as examined, against all eleven rule files and AGENTS.md, and found no finding and no observation; each repointed link or name resolves to the scenario, data model or criterion it names in its new home. Not read and not counted: every other scope entry. Those are the plan's Affected Files, unchanged in this window and covered by the previous review, and the files the split changed elsewhere in the repository (git diff --name-only 1054b8bd plus the working tree), which are the subject of 022's, 066's and 067's own reviews.
 
 ## MUST violations (blocking)
 

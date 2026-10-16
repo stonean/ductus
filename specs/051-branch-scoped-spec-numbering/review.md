@@ -1,24 +1,24 @@
 ---
 spec: 051-branch-scoped-spec-numbering
-last-run: 2026-10-01T20:33:09Z
-reviewed-against: 1e06ab84c9be89b84e4b36806dafbbefea1d50a8
-diff-base: c963ab4506211448bb18045bcd275b4615c5dafe
+last-run: 2026-10-16T00:58:29Z
+reviewed-against: c4b14ac5f8bc92a2510a4a9d25f7c9ea00900953
+diff-base: 1054b8bd2e2c51c8629b4e6a9d3193103739aa57
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 28
-scope: 46
+examined: 2
+scope: 190
 skipped-passes: []
 reviewed-digest:
   data-model.md: 416e488447e1fb195e85babd92882b3d5eefa1cb5e3e2876809a59f487420818
-  scenarios/a-fold-owed-to-another-tree-does-not-hold-done.md: ca44ec6cd85ccd0d3a52d9124c047fff81958807c8ffdb55f2858d6fd60a54aa
-  scenarios/a-pending-fold-never-holds-done.md: 29f85dfd8b78f2030ffaf7a517a4e0236ec580bfe8e05d8f1cbaa772c6ff0c08
+  scenarios/a-fold-owed-to-another-tree-does-not-hold-done.md: 6ae5b1d58174acda9aadcc1d96024e65f28eea998dd2fc857a84616991c9bc5b
+  scenarios/a-pending-fold-never-holds-done.md: 2835f0bcf79d00ac15787117d883c73bee80b6a2b797d25b51589a0c7a518da1
   scenarios/fold-target-checked-before-the-rewrite.md: 40bfa2011fb9af497ae85dac6f23f2ad8719dddcc8c5f5654dda7560aade7f32
   scenarios/rewrites-preserve-line-endings.md: 1ab09161757ade0d1f4a3959f574e54d68dab19f275ec84b345b8d16a75ccd26
   scenarios/the-numbering-grammar-reaches-every-surface.md: d4f11334754c65e3cf73346d224aaf8d782f5385a266a2bf22d3339a1079089a
 blocking: false
 dispositions:
-  fixed: 1
+  fixed: 0
   routed: 0
   discarded: 0
   undispositioned: 0
@@ -28,7 +28,7 @@ dispositions:
 
 ## Summary
 
-Task 27 (scenario a-pending-fold-never-holds-done) over 051's window since it re-entered in-progress (diff-base c963ab45): 0 MUST, 0 SHOULD, 0 low-confidence; not blocking. Examined 28 of 46 in scope: every hunk of 2ccf71a5, ae8195c6 and 1e06ab84 outside the four .claude/commands/ductus mirrors. The mirrors are not counted: gen-claude-commands regenerates them byte-for-byte from the framework sources read here and reported them in sync. The 14 plan-affected files this window did not touch (framework/bootstrap/*, analyze.md, specify.md, runtime-tools.txt, payload.rs, parser/mod.rs, create_feature.rs, mod.rs, resolve_feature.rs, rewrite_spec_links.rs, validate_frontmatter.rs, extensions.rs, mixed_corpus.rs, gen-help-tables.sh) were not read; a prose-claim grep over them for fold-gate statements found none. QUAL-TEST-001 holds for the new tests: four mutations, restored byte-identical, each failed at least one of them — a fold blocking on any folds-into, the exact old in-tree block, a fold passing early, and the fold owning the Next Action cell at every status. One observation, the gate module's doc reflow, was fixed as a chore in 1e06ab84; the stored discard about 050's scenario expired because this change rewrote that sentence.
+Scoped re-review of the 022 split's reference sweep: 022's AC27 is now 066's AC4 (the already-done gate, verified against the pre-move criterion text), and the gate's record, named in both fold scenarios' lists of where the rule is stated, now lives in 066's data model. examined: 2, each read in full: the scenarios a-fold-owed-to-another-tree-does-not-hold-done.md and a-pending-fold-never-holds-done.md. Base --since=1054b8bd, the commit before the 022 split's move (d852b627): the edits predate any reopen of this spec, which stays done because each is a uniform pointer substitution. The five passes ran over the files counted as examined, against all eleven rule files and AGENTS.md, and found no finding and no observation; each repointed link or name resolves to the scenario, data model or criterion it names in its new home. Not read and not counted: every other scope entry. Those are the plan's Affected Files, unchanged in this window and covered by the previous review, and the files the split changed elsewhere in the repository (git diff --name-only 1054b8bd plus the working tree), which are the subject of 022's, 066's and 067's own reviews.
 
 ## MUST violations (blocking)
 
@@ -48,7 +48,7 @@ Task 27 (scenario a-pending-fold-never-holds-done) over 051's window since it re
 
 ## Observations
 
-- convention: check-review-gate's module doc listed its checks on one overlong line after the fold check's removal — `runtime/src/primitives/check_review_gate.rs` — **fixed**
+*None.*
 
 ## Skipped passes
 
