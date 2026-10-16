@@ -31,7 +31,7 @@ jobs:
       # Pinned — keep in sync with runtime/rust-toolchain.toml. The check
       # compares that pin with the latest stable; it does not build with the
       # latest itself.
-      - uses: dtolnay/rust-toolchain@1.99.0
+      - uses: dtolnay/rust-toolchain@1.99.1
         with:
           components: clippy, rustfmt
 

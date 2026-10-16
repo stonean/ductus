@@ -3,8 +3,8 @@
 # red-CI unexpectedly; pinning makes toolchain upgrades a deliberate, reviewed
 # change. rustup honors this file for every `cargo` command run under runtime/.
 #
-# To upgrade: bump `channel` here AND the `dtolnay/rust-toolchain@<version>`
-# refs in .github/workflows/runtime.yml and runtime-release.yml (kept in sync).
+# To upgrade: bump `channel` here AND every `dtolnay/rust-toolchain@<version>`
+# ref under .github/workflows/ (kept in sync).
 [toolchain]
-channel = "1.99.0"
+channel = "1.99.1"
 components = ["clippy", "rustfmt"]

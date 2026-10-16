@@ -27,7 +27,7 @@ jobs:
 
       # The two frontmatter derivations are runtime primitives since spec 067's
       # adopter-generator-promotion, so this workflow now needs the binary.
-      - uses: dtolnay/rust-toolchain@1.99.0
+      - uses: dtolnay/rust-toolchain@1.99.1
         with:
           components: clippy, rustfmt
       - uses: actions/cache@v6

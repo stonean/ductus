@@ -70,7 +70,7 @@ jobs:
       # under runtime/ makes rustup honor rust-toolchain.toml, and if the
       # declared components are missing it auto-installs them mid-build —
       # a path that hits rustup's "detected conflict: 'bin/cargo-fmt'" bug.
-      - uses: dtolnay/rust-toolchain@1.99.0
+      - uses: dtolnay/rust-toolchain@1.99.1
         with:
           components: clippy, rustfmt
       - uses: actions/cache@v6
