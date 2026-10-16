@@ -2,6 +2,37 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.59.9] — 2026-10-16
+
+`check-artifacts`' scenario-consistency family reads `tasks.md` history at
+every status instead of the file's shape. One finding that used to be hidden
+can now fire: on a `done` spec whose `tasks.md` was reset, a scenario no
+revision of `tasks.md` ever named. A patch release: no primitive gains an
+argument or a result field, and the MSRV stays 1.89.
+
+### Changed
+
+- **Scenario consistency asks whether a scenario was ever tasked, at every
+  status.** A scenario with no task in `tasks.md` is a finding only when no
+  revision of `tasks.md` in the history from HEAD ever named its slug, and a
+  history that cannot be read (no repository, a shallow clone) flags nothing.
+  The family used to decide from the file's shape first: no task sections, or
+  numbering that starts above 1 or skips, vouched for every unmapped scenario.
+  That failed both ways. After a reset `append-task` numbers from 1, so a
+  reopened spec lost the fingerprint and every implemented scenario was
+  flagged; and on a `done` spec with a reset `tasks.md` the fingerprint
+  answered before history was asked, hiding a scenario that never had a task.
+  The `done` message is unchanged, so a stored decision still matches it;
+  below `done` the message now names the remedy. A history that cannot be
+  read is no longer silent: each unmapped scenario is listed in `skipped` as
+  `no-readable-state`, at every status, where below `done` a project outside
+  a git repository used to get a finding. Spec 067, scenario
+  `scenario-consistency-reads-tasks-history`.
+- **`/ductus:analyze` states the same rule.** Step 8 and the Scenario
+  consistency section said the family skips `done` specs, which had not been
+  true since the history probe shipped; they now describe the one rule both
+  paths apply.
+
 ## [0.59.8] — 2026-10-16
 
 `fetch-archive` bounds the whole download, `ductus exec`'s diagnostics name the
