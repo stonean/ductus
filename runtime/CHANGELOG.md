@@ -2,6 +2,47 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.59.10] — 2026-10-16
+
+`check-artifacts` gains a tenth family, `body-path-existence`: a path named in
+a `done` spec's body, plan, data model or scenarios that existed in this
+repository and no longer resolves is an advisory finding quoting its line.
+New findings can therefore fire on `done` specs, and `skipped` gains one
+reason, `never-existed`. A patch release: no primitive gains an argument or a
+result field, and the MSRV stays 1.89.
+
+### Added
+
+- **Body path existence (advisory).** The criterion family stops at
+  `## Acceptance Criteria` because body prose may name a dead path correctly
+  while describing history. Two discriminators make the rest of the spec
+  checkable without flagging those true statements. *History*: one walk from
+  HEAD per call answers every candidate at once, and a path no revision ever
+  held — an example, a never-built alternative — is recorded `never-existed`
+  rather than flagged; a history that cannot be read (no repository, a
+  shallow clone) records `no-readable-state` and flags nothing. *Markers*: a
+  line carrying a criterion marker, a negated-creation clause, or one of seven
+  body markers (`delete`, `remove`, `retire`, `replaced`, `superseded`,
+  `rename to`, `` ` → ` ``) describes a transition and is recorded
+  `not-a-live-claim`. Lines are markdown's logical lines — a paragraph, a list
+  item, a blockquote paragraph, a table row or a heading, hard wraps joined —
+  so a wrapped sentence keeps its marker. Candidates follow the criterion
+  grammar with a `#fragment` stripped, and `../` resolves from the citing
+  file. Spec 067, scenario `body-path-existence-family`; `/ductus:analyze`
+  documents it under Body path existence.
+- **`never-existed`** joins the closed `skipped` reason set, in the
+  excluded-by-construction class: correct, and nothing is owed.
+
+### Changed
+
+- **Two criterion markers widen, and identifiers are one word.** `no longer
+  exists` becomes `no longer exist`, which subsumes it and catches the
+  plural; `target_paths` joins `target paths` as the TOML key's own
+  spelling. The negated-creation predicate no longer splits a word at `_`,
+  so the field name `introduced_in` is not the creation verb `introduced`.
+  Measured over this repository's specs, the criterion family's results are
+  unchanged.
+
 ## [0.59.9] — 2026-10-16
 
 `check-artifacts`' scenario-consistency family reads `tasks.md` history at
