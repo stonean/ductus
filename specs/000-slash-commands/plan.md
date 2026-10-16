@@ -4,27 +4,24 @@ title: "000-slash-commands — plan"
 
 # 000 — Slash Command Templates Plan
 
-> **Note:** this plan was written against the original layout. Command sources now live in `framework/commands/`; several command names were later renamed (`about → help`, `setup → configure`, `validate → analyze`, `next` retired). See `spec.md` for the full rename history.
-
 ## Overview
 
-Create ten generic slash command `.md` files in a `commands/` directory at the `ductus` root. Each command is derived from the working implementation in a prior adopter project — a Go backend service that had built its own slash commands — but generalized: that project's own references are replaced with `{project}` placeholders, and its language-specific logic (Go code style, module patterns) is removed in favor of references to the constitution and AGENTS.md.
+Generic slash command `.md` files, one per command, in `framework/commands/`. Each command is derived from the working implementation in a prior adopter project — a Go backend service that had built its own slash commands — but generalized: that project's own references are replaced with `{project}` placeholders, and its language-specific logic (Go code style, module patterns) is removed in favor of references to the constitution and AGENTS.md.
 
 ## Technical Decisions
 
 ### Directory location
 
-Commands live at `commands/{command}.md` in the `ductus` root. This is the template source — adopting projects copy these to `.claude/commands/{project}/` and replace `{project}` placeholders.
+Command sources live at `framework/commands/{command}.md`; the `configure` command is the exception, sourced per agent from `framework/bootstrap/configure/{agent}.md`. This is the template source — `/ductus` installs each command at the agent's command path (`.claude/commands/{project}/` for Claude Code; `framework/bootstrap/ductus.md` §Derived values lists every layout) and replaces the placeholders.
 
-Rationale: Keeping them at the `ductus` root (not under `.claude/commands/`) avoids them being treated as active slash commands in the `ductus` repo itself. `ductus`'s own commands (like `/ductus:init`) live separately in `.claude/commands/ductus/`.
+Rationale: Keeping them under `framework/` (not under `.claude/commands/`) avoids them being treated as active slash commands in the `ductus` repo itself. The repo's own installed copies in `.claude/commands/ductus/` are generated from these sources by `scripts/gen-claude-commands.sh`.
 
 ### Parameterization approach
 
-Every command uses literal `{project}` as the placeholder. This appears in:
+Every command uses literal `{project}` as the project placeholder, and `{cli-config-dir}` for the agent's config directory (added by `012-multi-agent-govern`). They appear in:
 
 - Command cross-references: `/{project}:clarify`, `/{project}:plan`
-- Session file path: `.claude/{project}-session.json`
-- Command directory references: `.claude/commands/{project}/`
+- Command directory references: `{cli-config-dir}/commands/{project}/`
 
 No other placeholders are needed. The bootstrap command (spec 003) handles find-and-replace during project scaffolding.
 
@@ -39,41 +36,27 @@ Each command is based on the corresponding command in that project with these tr
 - Keep constitution references (pipeline gates, readiness check, spec lifecycle)
 - Keep AGENTS.md references (conventions, boundaries) as generic pointers
 
-### Spec file detection
+### Analyze and markdownlint
 
-> Superseded by [023](../023-govern-refinement/spec.md), which removed the lightweight track and with it the two-filename fallback from every command source. The pattern below is what 000 planned and delivered.
-
-Commands that operate on a feature's spec need to handle both `spec.md` and `spec-and-plan.md`. The pattern is:
-
-1. Check for `spec.md` first
-2. If not found, check for `spec-and-plan.md`
-3. If neither exists, report "no spec found"
-
-This applies to: target, clarify, plan, implement, validate, next, status.
-
-### Validate and markdownlint
-
-The validate command runs `npx markdownlint-cli2` on all `.md` files in the feature directory as its final check. This is reported as a PASS/FAIL alongside the other artifact checks.
+`/{project}:analyze` lints every markdown file in the feature directory through `lint-markdown`, which runs `markdownlint-cli2`, and reports each violation as an advisory finding.
 
 ## Affected Files
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `commands/about.md` | Create | Pipeline overview, no file reads |
-| `commands/target.md` | Create | Set session target |
-| `commands/status.md` | Create | Dashboard of all specs |
-| `commands/setup.md` | Create | Configure permissions |
-| `commands/specify.md` | Create | Create new feature spec |
-| `commands/clarify.md` | Create | Resolve open questions, advance to clarified |
-| `commands/plan.md` | Create | Create plan and tasks, advance to planned |
-| `commands/implement.md` | Create | Execute tasks, advance to done |
-| `commands/analyze.md` | Create | Audit artifacts for consistency |
-| `commands/next.md` | Create | Auto-advance to next pipeline phase |
-| `framework/commands/analyze.md` | Edit | Project-level consistency reads the installed command set by its layout-derived rows (scenario `analyze-reads-the-layout-derived-command-set`); its generated copies follow through `scripts/gen-claude-commands.sh` |
+| `framework/commands/help.md` | Create | Pipeline overview, no file reads |
+| `framework/commands/target.md` | Create | Set session target |
+| `framework/commands/status.md` | Create | Dashboard of all specs |
+| `framework/bootstrap/configure/claude.md` | Create | Configure permissions |
+| `framework/commands/specify.md` | Create | Create new feature spec |
+| `framework/commands/clarify.md` | Create | Resolve open questions, advance to clarified |
+| `framework/commands/plan.md` | Create | Create plan and tasks, advance to planned |
+| `framework/commands/implement.md` | Create | Execute tasks, advance to done |
+| `framework/commands/analyze.md` | Create | Audit artifacts for consistency; project-level consistency reads the installed command set by its layout-derived rows (scenario `analyze-reads-the-layout-derived-command-set`), and its generated copies follow through `scripts/gen-claude-commands.sh` |
 
 ## Trade-offs
 
-### Considered: single-file command reference instead of ten files
+### Considered: a single-file command reference instead of one file per command
 
 Rejected. Each command needs enough instruction detail that a single file would be unwieldy. Separate files also match how Claude Code discovers and lists slash commands — one file per command.
 
