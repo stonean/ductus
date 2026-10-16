@@ -1,15 +1,15 @@
 ---
 spec: 022-deterministic-runtime
-last-run: 2026-10-16T01:30:16Z
-analyzed-against: ad7be704f96ce4a62f303fbc3d989bedef1ec089
+last-run: 2026-10-16T02:59:11Z
+analyzed-against: 748d5eae9e61291a19a0b6c9c3567fb8cbc5697e
 hard-fail: 0
 blocking-findings: 0
-advisory: 10
+advisory: 12
 unexamined: 2
 analyzed-digest:
-  data-model.md: 246e101e4bd67cee52a37df1fdd2ec0448a69fe31335f79913b2039059a659ab
-  plan.md: fcb26e5ac43fa550692dcba54e9c95037c49a39b08906a21ffd819ce887b48f8
-  review.md: 9ebc296a632d769b4bf29060a39e589d1a4e7f0e5e1d99862275e0049c469b0d
+  data-model.md: 24ff3adf4eb9e14c5c3ac0f441603e6741e9606d32db06e6c85ed94d3a1b4015
+  plan.md: 91e815485a325f255a0ced120964044518f4dc8af341353035ed53075f9e0fa6
+  review.md: c4f54b2ffb7c68fe162e28cc0705f006c376aaa61fc01a41a9c652dc728a3247
   scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md: d092f9d4f59c67c575cc59039a6e0fdf162546969de2820e747b609d7a3d43c7
   scenarios/append-inbox-comment-aware-write.md: c26a16c3be1a7e1c52eca2254061d545ec62b3b7d7c865affd1fa679d6c0ab6b
   scenarios/append-primitive-marker-normalization.md: 26c5064dcdf3f697885faac80332207d079bfd7db2d14c0769254da21e5e4246
@@ -28,14 +28,15 @@ analyzed-digest:
   scenarios/coverage-expansion-primitives.md: 4626b19eef4cff4f9ce01047b2afa6746573ec289da039cc969b8d8d37ebcd3f
   scenarios/coverage-residue-cleanup.md: 04dc18f12694ed8b02821b50498c7e8ff8123993de72a27ae0d7c8722e024637
   scenarios/criterion-label-assignment.md: 4a1a3acc5d5ddcd44a07582988e06a1b97b2339c71482ccd24765fefb33207a0
-  scenarios/dashboard-primitive.md: 9b513d55debc46091babff8120b3395f0eca3555e2556b076a92555c6f28b303
+  scenarios/dashboard-primitive.md: a2bf446e6e8448474f0031a92211041148761b337c7e7a566fdf6a88e04cdcf1
   scenarios/derive-boundary-uncommitted-spec-dir.md: ca28aaef13416801e00bc40d9d58da09c7a513b237bb659597e1efc91a0aaef5
   scenarios/done-when-authoring-forms.md: 080f8717135b67c8400e072dae02f172e40cb0b6ad596c3e227d6cc5f90d0191
   scenarios/exec-analyze-derives-its-list-seeds.md: 9fda65d4cd7a5ec0fab7e07ba9d5d25e794944c967cd09e7b3547f8e1d560726
   scenarios/exec-clarify-asks-each-open-question.md: 4851dc543c6dd80603aa86c776543017b9ab1a7adac469e1b49ec311a9877cab
   scenarios/extension-request-hygiene.md: 1b0c77335af3a2caf82e01896207d60261cd0071a8bc8da3162b9785f7c16e48
+  scenarios/fetch-archive-bounds-the-whole-download.md: cb908fbcee4bdcb1f8701c2a678fd472716b4e8e2e61172200324af7abb05379
   scenarios/fetch-archive-dns-rebinding.md: 39482bed2a531d36dce770c9c20ae3848ba254da0d02ee51d5c6feabe7967031
-  scenarios/fetch-archive-names-its-timeout.md: e714dd3679dc72aa9bc27a933ba4e32505a9c4290f09b9b0eb48812f7459317a
+  scenarios/fetch-archive-names-its-timeout.md: d45c28473624ee40fb8f6bdf93961bf28947f8d0e05413c7e713f2b307d911a2
   scenarios/framework-list-dedup.md: 9aef03cab7d2494a662058d1091a65e38e26637b10ba338d94eedbd15f9f7f4b
   scenarios/govern-bootstrap.md: 81bc21e03aa1d2c48f63c6f710f1f3303294ffb580a14fe3964e3a69d72f5da2
   scenarios/groom-command-acceleration.md: 636a9fdaa8522c5ef0a1c81b583fe538869645a6867127de43401ec5c58222a4
@@ -57,7 +58,7 @@ analyzed-digest:
   scenarios/primitive-robustness-hardening.md: 7cdf3dcf99c06332244540b196c97b13783184f7b9fba989108dd98f84524ae5
   scenarios/project-directory-resolution-chain.md: d43223e3f037960a24f5660a9944aae0fe02df5f1da10257477926a63cfb5a82
   scenarios/resolve-references-cli-exec-wiring.md: 3ddff8ea493af57fdacb9fab644d33ae95e766cfe7b7d5b11a27d7f083ce5c59
-  scenarios/review-exec-wiring.md: de565bee22e478ebf57bd9fdf7ddc8ddd79374fa6caf659e8f669d76c398262d
+  scenarios/review-exec-wiring.md: 9dbf0c621deaa58d40d16d09c289abdd5cb31ab5555f2036088e1d8f04d76515
   scenarios/review-runtime-acceleration.md: 91bf90e87e1b4aebeda541201bc3f448ea293c34fd24dcc5371a7d50b20a813d
   scenarios/review-scope-parse-fidelity.md: 89747b789e8c2f6d1b550cd662ddfe04a4a42727edba6daa39e6b700a6d2eee1
   scenarios/runtime-primitive-structural-bugs.md: 7fb973b4c5ef5c0268df24996c585f9bf70465f4f7e36ad237d129894f5fd366
@@ -68,7 +69,7 @@ analyzed-digest:
   scenarios/severity-is-a-closed-set-not-a-string.md: 8b6ca46ef55c4f6b12420786ebae219f5aa4f2a2878c85d042098f5674013d2e
   scenarios/skipscanner-inline-code-exemption.md: ab402c94a437b19b1b9bdd5a58ad3303d6bb67e9822041520522e3a066c43ab5
   scenarios/spec-side-parser-hardening.md: 91a804882033f369ff98f36157a38896d29eb7d90e8ae4c78e86d45ac35aca3d
-  scenarios/specify-routes-before-scaffolding.md: a67c6a1d0ad9322b73f33581169f3d63c8d344e088d30e55bdf292a2748068ad
+  scenarios/specify-routes-before-scaffolding.md: afa3ced4b110e3b7d2f2e96e86cfd719487fce6983e948cbfea4150f4670ea33
   scenarios/the-cli-surface-nothing-pins.md: f63de14533aeb6b2c77f33421af289633e0fded63e795f219b82bfa30f071c8c
   scenarios/the-constitutions-registry-validates-its-values.md: 91d822062ae0e0d10a9796c7072a7cd03186283ba2aa7657b12a696f705bd2c2
   scenarios/the-pi-command-candidate.md: 38e81f6ca1732254fee5cce65eb829a0026c30bdb846ff0c3a80b7a308ba94bb
@@ -80,15 +81,15 @@ analyzed-digest:
   scenarios/writecode-boundary-derivation.md: 6c9f4071e87d008c30a3741740cbe5c294f0faa9e41c4a823c3898f52b7ce077
   scenarios/writecode-payload-bundling.md: 5c343929c3a42ac4406a02c173b6979231127b9583aabae171fee1f747d5084b
   scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
-  spec.md: 7928bbfe83ff3a80421ec03e789b272d9894e5c488a25f190941a1c3a2a6e610
-  tasks.md: 034d55915c65b29284ba384b8e6a8c81bc37a3f754030cde10a905982597eb07
+  spec.md: 2065fc8d04c039cab8f4067126c16afe1984e628bcf4fbe6362e3fd5e84748b9
+  tasks.md: 459b22f7a9929ca2dd7b682dd4392730ca1c1f666d450333a6b67592ec3d3826
 unexamined-by-reason:
   not-a-live-claim: 2
 blocking: false
 dispositions:
   fixed: 0
   routed: 0
-  discarded: 10
+  discarded: 12
   undispositioned: 0
 decisions:
   - key: "rule-assessment — BE-METRIC-001: the MCP tool handlers commit to no rate, error or duration metrics"
@@ -141,13 +142,23 @@ decisions:
     reason: describes the wiring the Bash script relationships section exists to record, naming the command and the hook it describes
     decided-at: 2026-10-15T16:54:50Z
     decided-by: andy@stone.dev
+  - key: scenario-consistency — scenario done-when-authoring-forms.md has no task in tasks.md and never had one in its history
+    outcome: discarded
+    reason: "written after the fact for behavior shipped in the same commit (959d897d, fix(022): recognize all done-when authoring forms in read-tasks); implemented and tested, read_tasks.rs recognizes_all_done_when_authoring_forms (operator decision, 2026-10-16)"
+    decided-at: 2026-10-16T02:59:11Z
+    decided-by: andy@stone.dev
+  - key: scenario-consistency — scenario scenario-question-parser-fix.md has no task in tasks.md and never had one in its history
+    outcome: discarded
+    reason: written after the fact to record shipped scenario-open-question work (f43818d1); implemented and tested, read_spec.rs parse_open_questions with commented_out_example_questions_are_not_counted, fenced_questions_are_not_counted and every_placeholder_is_skipped_even_as_a_bullet (operator decision, 2026-10-16)
+    decided-at: 2026-10-16T02:59:11Z
+    decided-by: andy@stone.dev
 ---
 
 # Analysis — 022-deterministic-runtime
 
 ## Summary
 
-0 hard-fail, 0 blocking, 10 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 routed, 10 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 12 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 routed, 12 discarded, 0 undispositioned.
 
 ## Hard failures
 
@@ -169,6 +180,8 @@ decisions:
 - grounding — plan.md says tokio is required by rmcp — `specs/022-deterministic-runtime/plan.md` — **discarded**: rationale for a dependency choice, the same class as the stored rmcp discard
 - grounding — plan.md says pulldown-cmark provides byte offsets — `specs/022-deterministic-runtime/plan.md` — **discarded**: rationale for the parser choice, the same class as the stored pulldown-cmark discard
 - grounding — spec.md and plan.md say analyze runs gen-help-tables through run-generator and the pre-commit hook calls the generators directly — `specs/022-deterministic-runtime/spec.md` — **discarded**: describes the wiring the Bash script relationships section exists to record, naming the command and the hook it describes
+- scenario-consistency — scenario done-when-authoring-forms.md has no task in tasks.md and never had one in its history — `specs/022-deterministic-runtime/scenarios/done-when-authoring-forms.md` — **discarded**: written after the fact for behavior shipped in the same commit (959d897d, fix(022): recognize all done-when authoring forms in read-tasks); implemented and tested, read_tasks.rs recognizes_all_done_when_authoring_forms (operator decision, 2026-10-16)
+- scenario-consistency — scenario scenario-question-parser-fix.md has no task in tasks.md and never had one in its history — `specs/022-deterministic-runtime/scenarios/scenario-question-parser-fix.md` — **discarded**: written after the fact to record shipped scenario-open-question work (f43818d1); implemented and tested, read_spec.rs parse_open_questions with commented_out_example_questions_are_not_counted, fenced_questions_are_not_counted and every_placeholder_is_skipped_even_as_a_bullet (operator decision, 2026-10-16)
 
 ## Unexamined targets
 
