@@ -6,9 +6,7 @@ section: "Declaring a reference"
 
 ## Context
 
-Spec 030's harvest step reads body-link references into the derived `references:` index by matching each link's repo against a registered `.ductus/config.toml [services]` entry and extracting the linked spec from the URL path. When this scenario was written the extraction was a hardcoded `/specs/NNN-slug/` matcher — it assumed the *referenced* service kept its ductus artifacts under `specs/`.
-
-> The harvest ran as the shell generator `scripts/gen-cross-service-refs.sh` when 030 delivered it, which is the name the Behavior below was written against. `067-analyze-and-audit-checks`'s `adopter-generator-promotion` promoted it to the `derive-references` runtime primitive (`runtime/src/primitives/derive_references.rs`), where the two-tier matcher this scenario requires now lives, documented under that module's "Root-aware matching" heading. The requirement is unchanged; only the artifact carrying it moved.
+Spec 030's harvest step — the `derive-references` runtime primitive (`runtime/src/primitives/derive_references.rs`, under its "Root-aware matching" heading) — reads body-link references into the derived `references:` index by matching each link's repo against a registered `.ductus/config.toml [services]` entry and extracting the linked spec from the URL path. When this scenario was written the extraction was a hardcoded `/specs/NNN-slug/` matcher — it assumed the *referenced* service kept its ductus artifacts under `specs/`.
 
 Spec [040-configurable-specs-dir](../../040-configurable-specs-dir/spec.md) made the spec-root directory name an operator setting (`[paths] specs-root`, default `specs`) and made *this* repo's enumeration root-aware, including the runtime `resolve-references` primitive's checkout-side read — which already resolves a *referenced* checkout's root from that checkout's own `.ductus/config.toml` (correct). The harvest-time URL matcher was out of 040's scope (040's acceptance criteria are scoped to the local repo) and remained `specs/`-only.
 
@@ -21,7 +19,7 @@ The result was a cross-repo gap: a referenced service that renamed its own spec 
   - **Checkout unreachable** — for a registered service that is not checked out, or an unregistered repo, the referenced root cannot be read, so it falls back to a bounded permissive match of a single well-formed segment, `/<[A-Za-z0-9_-]+>/NNN-slug/spec.md`, and still harvests the reference (with its service alias when registered, null when unregistered). A reference never silently drops from the index; the single-segment bound immediately before `/NNN-slug/spec.md` keeps false positives implausible.
 - A referenced service on the default `specs/` root harvests exactly as today: the common single-root case sees no behavior change.
 - The markdown-only fallback path and the runtime path resolve the referenced root identically (both from the referenced checkout's `.ductus/config.toml`), so the harvested `references:` index is byte-identical between the two paths — preserving 030's parity invariant.
-- The interpolated root reuses 040's `[A-Za-z0-9_-]` well-formedness guarantee, so it is safe to splice into the generator's regex without escaping.
+- The interpolated root reuses 040's `[A-Za-z0-9_-]` well-formedness guarantee, so it is safe to splice into the matcher's regex without escaping.
 
 ## Edge Cases
 

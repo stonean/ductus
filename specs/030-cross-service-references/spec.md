@@ -1,12 +1,12 @@
 ---
-status: done
+status: in-progress
 dependencies: []
 next-criterion: 13
 ---
 
 # 030 — Cross-Service References
 
-When a project spans multiple services — each its own repo with its own `ductus` install — specs in one service routinely relate to specs in another: a frontend page uses a backend data model; a backend model is used by particular frontend pages. `ductus` has no way to express that relationship across repos. The dependency graph, [§cross-spec-impact](../../framework/constitution.md#cross-spec-impact), and `/{project}:analyze`'s reference checks are all sibling-only (`scripts/gen-spec-deps.sh` resolves `](../NNN-slug/…)` and nothing else).
+When a project spans multiple services — each its own repo with its own `ductus` install — specs in one service routinely relate to specs in another: a frontend page uses a backend data model; a backend model is used by particular frontend pages. `ductus` has no way to express that relationship across repos. The dependency graph, [§cross-spec-impact](../../framework/constitution.md#cross-spec-impact), and `/{project}:analyze`'s reference checks are all sibling-only (`derive-dependencies` resolves `](../NNN-slug/…)` and nothing else).
 
 This feature adds **informative cross-service references**: a spec can link a spec in another service, in either direction, and — when that service is checked out locally and registered — `ductus` shows the linked spec's lifecycle status next to the reference. The references are informative, never dependencies: they do not gate completion, do not enter the blocking dependency graph, and play no part in readiness or build ordering. The most `ductus` does is surface the linked spec's status; nothing more.
 
