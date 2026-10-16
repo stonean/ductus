@@ -1,6 +1,6 @@
 ---
 title: "006-bug-workflow — spec"
-status: in-progress
+status: done
 dependencies: []
 tags: [process, scenarios, brownfield]
 next-criterion: 20

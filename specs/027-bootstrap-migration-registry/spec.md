@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [026-framework-self-audit]
 next-criterion: 31
 ---

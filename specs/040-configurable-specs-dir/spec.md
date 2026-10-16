@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [002-project-scaffolding, 003-bootstrap-automation, 017-derive-dont-ask, 022-deterministic-runtime]
 next-criterion: 14
 ---
