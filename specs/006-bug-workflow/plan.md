@@ -26,17 +26,13 @@ When a scenario is created, `/ductus:amend` also appends a task to the parent sp
 
 The inbox is a capture queue — a flat markdown list, not a directory structure. Each item is walked through the decision tree and migrated to the appropriate spec or scenario. Items are removed from `specs/inbox.md` as they are resolved. When `specs/inbox.md` is empty, the command reports the inbox is clean. The file is kept to preserve git history.
 
-### Command templates updated in both `commands/` and `.claude/commands/ductus/`
+### Command templates updated in both `framework/commands/` and `.claude/commands/ductus/`
 
-Template changes go into `commands/` (the source of truth for adopting projects). The dogfooded copies in `.claude/commands/ductus/` are then re-derived by copying the template and replacing `{project}` with `gov`. This maintains the dogfooding principle from spec 003.
+Template changes go into `framework/commands/` (the source of truth for adopting projects). The dogfooded copies in `.claude/commands/ductus/` are then re-derived from the template with `{project}` replaced by `ductus`, by `scripts/gen-claude-commands.sh`. This maintains the dogfooding principle from spec 003.
 
 ### Constitution updates are additive
 
 New sections are added to the constitution for bug handling and scenario lifecycle. The existing spec phase file structure is extended to include `scenarios/`. No existing sections are removed or restructured.
-
-### README table updated to reflect current status
-
-The README feature table is updated with the correct status for 006-bug-workflow (currently listed as `draft`, will become `planned`). Specs 004 and 005 are also in the table if present.
 
 ## Affected Files
 
@@ -50,13 +46,11 @@ The README feature table is updated with the correct status for 006-bug-workflow
 | `framework/commands/groom.md` | Create | `/groom` command template for reviewing and migrating inbox items |
 | `framework/commands/help.md` | Modify | Add `/amend` and `/groom` to command tables, add scenario concepts |
 | `framework/commands/status.md` | Modify | Add scenario counts per spec to dashboard |
-| `commands/next.md` | Modify | Add `/amend` as a suggested next action. **Retired** — `/next` was later removed outright, so this file no longer exists; the row records what the implementation touched, not a live path. |
 | `framework/commands/analyze.md` | Modify | Add scenario-linked task completeness check |
-| `.claude/commands/ductus/amend.md` | Create | Dogfooded copy with `gov` replacing `{project}` |
-| `.claude/commands/ductus/groom.md` | Create | Dogfooded copy with `gov` replacing `{project}` |
+| `.claude/commands/ductus/amend.md` | Create | Dogfooded copy with `ductus` replacing `{project}` |
+| `.claude/commands/ductus/groom.md` | Create | Dogfooded copy with `ductus` replacing `{project}` |
 | `.claude/commands/ductus/help.md` | Modify | Re-derive from updated template |
 | `.claude/commands/ductus/status.md` | Modify | Re-derive from updated template |
-| `.claude/commands/ductus/next.md` | Modify | Re-derive from updated template |
 | `.claude/commands/ductus/analyze.md` | Modify | Re-derive from updated template |
 | `README.md` | Modify | Document bug workflow and scenario conventions |
 
@@ -74,9 +68,9 @@ Rejected for the default case. The spec explicitly states bug files are rarely n
 
 Rejected. A flat markdown file is simpler for a temporary inbox. Individual files add filesystem overhead for items that should be migrated quickly.
 
-### Considered: updating only `commands/` templates and not `.claude/commands/ductus/`
+### Considered: updating only `framework/commands/` templates and not `.claude/commands/ductus/`
 
-Rejected. This repo must dogfood its own commands. Per spec 003, the gov copies are re-derived from templates after any template change.
+Rejected. This repo must dogfood its own commands. Per spec 003, the generated copies are re-derived from templates after any template change.
 
 ## Open Questions Resolved
 
