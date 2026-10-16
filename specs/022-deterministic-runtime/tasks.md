@@ -4,7 +4,7 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 
 ## 1. Implement scenario: [fetch-archive-bounds-the-whole-download](scenarios/fetch-archive-bounds-the-whole-download.md)
 
-- [ ] Implement the behavior described in `scenarios/fetch-archive-bounds-the-whole-download.md`
+- [x] Implement the behavior described in `scenarios/fetch-archive-bounds-the-whole-download.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
 

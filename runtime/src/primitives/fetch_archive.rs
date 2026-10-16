@@ -66,11 +66,11 @@
 //! shaped `<hex>  <filename>`. Only the first hex digest is consulted;
 //! filename column is informational.
 
-use std::io::Read;
+use std::io::{ErrorKind, Read};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs};
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use sha2::{Digest, Sha256};
 
@@ -83,10 +83,11 @@ use crate::schema::primitives::{FetchArchiveArgs, FetchArchiveResult};
 ///
 /// - [`PrimitiveError::Http`] / [`PrimitiveError::HttpStatus`] on network failure.
 /// - [`PrimitiveError::Io`] on local filesystem failures writing the archive,
-///   when the response body exceeds the `MAX_FETCH_BYTES` fetch cap (the
-///   error message names the cap; the archive is not written), or when the
-///   URL is refused by the SSRF/transport guard ([`validate_fetch_url`] —
-///   non-`https` scheme or a host resolving to an internal address).
+///   when the response body exceeds the `MAX_FETCH_BYTES` fetch cap or a
+///   fetch outlasts `FETCH_DEADLINE` (either error names its bound; the
+///   archive is not written), or when the URL is refused by the
+///   SSRF/transport guard ([`validate_fetch_url`] — non-`https` scheme or a
+///   host resolving to an internal address).
 /// - [`PrimitiveError::MalformedSidecar`] when the sidecar's first hex token isn't a valid 64-char sha256.
 /// - [`PrimitiveError::ChecksumMismatch`] when the computed sha differs from
 ///   the sidecar. Raised before the archive is written; the error's `path`
@@ -132,14 +133,21 @@ fn fetch_bytes(url: &str) -> Result<Vec<u8>> {
         url,
         PROXY_ENV.get().unwrap_or(&ProxyEnv::NONE),
         FETCH_TIMEOUT,
+        FETCH_DEADLINE,
     )
 }
 
 /// [`fetch_bytes`] through the proxy configuration `proxies`, waiting at most
-/// `timeout` at a time — the seam a test drives with values of its own, since
-/// the startup capture cannot be set from inside a test process and a test
-/// cannot wait out [`FETCH_TIMEOUT`].
-fn fetch_bytes_with(url: &str, proxies: &ProxyEnv, timeout: Duration) -> Result<Vec<u8>> {
+/// `timeout` at a time and `deadline` in all — the seam a test drives with
+/// values of its own, since the startup capture cannot be set from inside a
+/// test process and a test cannot wait out [`FETCH_TIMEOUT`].
+fn fetch_bytes_with(
+    url: &str,
+    proxies: &ProxyEnv,
+    timeout: Duration,
+    deadline: Duration,
+) -> Result<Vec<u8>> {
+    let started = Instant::now();
     let screen = validate_fetch_url(url)?;
     // The default reqwest client follows up to 10 redirects with no
     // re-validation, so a `302 Location:` pointing at `http://` or an
@@ -189,7 +197,11 @@ fn fetch_bytes_with(url: &str, proxies: &ProxyEnv, timeout: Duration) -> Result<
             status: status.as_u16(),
         });
     }
-    read_capped(response, MAX_FETCH_BYTES, url)
+    read_capped(
+        Deadline::new(response, started, deadline),
+        MAX_FETCH_BYTES,
+        url,
+    )
 }
 
 /// Outcome of screening one redirect hop's target URL.
@@ -592,6 +604,44 @@ fn is_link_local_v6(ip: Ipv6Addr) -> bool {
     (ip.segments()[0] & 0xffc0) == 0xfe80
 }
 
+/// A response body that refuses any read begun after its deadline, so a body
+/// that keeps arriving cannot hold the fetch past it. The check runs before
+/// each read rather than interrupting one, so a read in flight when the
+/// deadline passes finishes or times out first: the worst case is the
+/// deadline plus one [`FETCH_TIMEOUT`].
+struct Deadline<R> {
+    inner: R,
+    expires: Instant,
+    limit: Duration,
+}
+
+impl<R> Deadline<R> {
+    /// `limit` counted from `started`, the moment the fetch began.
+    fn new(inner: R, started: Instant, limit: Duration) -> Self {
+        Self {
+            inner,
+            expires: started + limit,
+            limit,
+        }
+    }
+}
+
+impl<R: Read> Read for Deadline<R> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if Instant::now() >= self.expires {
+            return Err(std::io::Error::new(
+                ErrorKind::TimedOut,
+                format!(
+                    "the download did not finish within the {:?} fetch deadline; \
+                     archive not written",
+                    self.limit
+                ),
+            ));
+        }
+        self.inner.read(buf)
+    }
+}
+
 /// Read at most `cap` bytes from `reader`, erroring when the stream holds
 /// more. Reads `cap + 1` bytes so an over-cap body is *detected* and
 /// rejected with an error naming the cap, rather than silently truncated
@@ -678,23 +728,33 @@ const MAX_FETCH_BYTES: u64 = 256 * 1024 * 1024;
 const MAX_FETCH_REDIRECTS: usize = 10;
 
 /// How long [`fetch_bytes`] waits for a response, and again for each read of
-/// its body: a bound on any one stall, not on the whole download, whose size
-/// [`MAX_FETCH_BYTES`] bounds instead. It is the value reqwest's blocking
-/// client defaults to, declared here so that a reqwest upgrade cannot move it.
+/// its body: a bound on any one stall. The whole download is bounded by
+/// [`FETCH_DEADLINE`] and its size by [`MAX_FETCH_BYTES`]. It is the value
+/// reqwest's blocking client defaults to, declared here so that a reqwest
+/// upgrade cannot move it.
 const FETCH_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// How long one fetch may take in all, from before its request to the end of
+/// its body, enforced by [`Deadline`]. Ten minutes fails only a download
+/// slower than about 11 KB/s on the largest release binary (6.7 MB at
+/// 0.59.7); reaching the [`MAX_FETCH_BYTES`] cap inside it would take about
+/// 450 KB/s. The archive and its sidecar are separate fetches, each with its
+/// own deadline.
+const FETCH_DEADLINE: Duration = Duration::from_secs(600);
 
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-    use std::io::Cursor;
+    use std::io::{Cursor, ErrorKind};
     use std::net::IpAddr;
+    use std::time::{Duration, Instant};
 
     use super::{
-        FETCH_TIMEOUT, FetchScreen, MAX_FETCH_REDIRECTS, PrimitiveError, ProxyEnv, ProxyScheme,
-        RedirectVerdict, fetch_bytes_with, host_is_insecure_allowed, is_internal_ip, is_sha256_hex,
-        load_once, parse_sidecar_hex, read_capped, redirect_verdict, roots_from, sha256_hex,
-        validate_fetch_url,
+        Deadline, FETCH_DEADLINE, FETCH_TIMEOUT, FetchScreen, MAX_FETCH_BYTES, MAX_FETCH_REDIRECTS,
+        PrimitiveError, ProxyEnv, ProxyScheme, RedirectVerdict, fetch_bytes_with,
+        host_is_insecure_allowed, is_internal_ip, is_sha256_hex, load_once, parse_sidecar_hex,
+        read_capped, redirect_verdict, roots_from, sha256_hex, validate_fetch_url,
     };
 
     fn ip(s: &str) -> IpAddr {
@@ -770,6 +830,56 @@ mod tests {
             msg.contains("fetch cap of 8 bytes"),
             "error must name the cap; got: {msg}"
         );
+    }
+
+    /// A body that answers every read promptly but outlasts the deadline
+    /// fails at the deadline, naming it. Without the check, the drip would
+    /// run to its end two seconds later and the read would succeed.
+    #[test]
+    fn a_body_that_outlasts_the_deadline_fails_naming_it() {
+        struct Drip(usize);
+        impl std::io::Read for Drip {
+            fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+                if self.0 == 0 || buf.is_empty() {
+                    return Ok(0);
+                }
+                std::thread::sleep(Duration::from_millis(5));
+                self.0 -= 1;
+                buf[0] = 0;
+                Ok(1)
+            }
+        }
+
+        let started = Instant::now();
+        let reader = Deadline::new(Drip(400), started, Duration::from_millis(100));
+        let err = read_capped(reader, MAX_FETCH_BYTES, "http://t").unwrap_err();
+        match &err {
+            PrimitiveError::Io { source, .. } => {
+                assert_eq!(source.kind(), ErrorKind::TimedOut, "{source}");
+            }
+            other => panic!("expected a deadline error, got {other:?}"),
+        }
+        let msg = err.to_string();
+        assert!(
+            msg.contains("100ms fetch deadline"),
+            "error must name the deadline; got: {msg}"
+        );
+        assert!(
+            started.elapsed() < Duration::from_secs(2),
+            "the read ran past the deadline"
+        );
+    }
+
+    /// A body that ends inside the deadline is read whole.
+    #[test]
+    fn a_body_inside_the_deadline_is_read_whole() {
+        let reader = Deadline::new(
+            Cursor::new(b"archive".to_vec()),
+            Instant::now(),
+            FETCH_DEADLINE,
+        );
+        let body = read_capped(reader, MAX_FETCH_BYTES, "http://t").unwrap();
+        assert_eq!(body, b"archive");
     }
 
     #[test]
@@ -1015,7 +1125,12 @@ mod tests {
         });
 
         let env = ProxyEnv::capture(lookup(&[("HTTPS_PROXY", proxy.as_str())]), false);
-        let result = fetch_bytes_with("https://192.0.2.1/main.tar.gz", &env, FETCH_TIMEOUT);
+        let result = fetch_bytes_with(
+            "https://192.0.2.1/main.tar.gz",
+            &env,
+            FETCH_TIMEOUT,
+            FETCH_DEADLINE,
+        );
         assert!(result.is_err(), "the proxy refused the tunnel");
         let request_line = rx
             .recv_timeout(std::time::Duration::from_secs(5))
@@ -1047,6 +1162,7 @@ mod tests {
             "https://192.0.2.1/main.tar.gz",
             &env,
             std::time::Duration::from_millis(200),
+            FETCH_DEADLINE,
         );
         let waited = started.elapsed();
         drop(release);

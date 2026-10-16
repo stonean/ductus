@@ -38,7 +38,9 @@ response and each read of its body, not the whole download.
 
 - **A slow, steady download** does not time out while each read returns
   within `FETCH_TIMEOUT`. A deadline on the whole download would change
-  behavior rather than name it, and is not made here.
+  behavior rather than name it, so this scenario does not add one;
+  [fetch-archive-bounds-the-whole-download](fetch-archive-bounds-the-whole-download.md)
+  does.
 - **A test of the bound** cannot wait 30 seconds. The client is built through
   a seam that takes the timeout, and the test drives it with a short one
   against a proxy that never answers, so the test fails if the client
