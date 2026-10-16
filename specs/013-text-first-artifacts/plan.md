@@ -58,7 +58,7 @@ Schema details captured in `data-model.md` for cross-reference.
 Embedded as a new step in the existing ductus.md flow, between the agent-selection phase and the file-manifest fetch phase. Migration step does:
 
 1. Run `git status --porcelain -- specs/` (project-relative; the project has no `framework/templates/spec/` of its own — that was governance's path, not the adopter's). If output is non-empty, refuse with a clear message and exit.
-2. Walk `specs/**/spec.md`, `specs/**/spec-and-plan.md`, and `specs/**/scenarios/*.md`.
+2. Walk `specs/**/spec.md` and `specs/**/scenarios/*.md`.
 3. For each file, check whether the first non-blank line is `---`. If yes, skip (already migrated). If no and bold-prefix lines (`**Status:**`, `**Dependencies:**`, `**spec-ref:**`) are present, convert: insert a frontmatter block at the top, remove the now-redundant bold-prefix lines from the body.
 4. Print a per-file summary (`migrated`, `skipped (already frontmatter)`, `skipped (pinned)`, `skipped (no metadata to migrate)`).
 5. Exit; the user reviews via `git diff` and commits or restores.
@@ -71,7 +71,7 @@ This repo has no `/ductus`. The work is a manual implementation task: convert ea
 
 ### Tag prompt UX in `/ductus:specify`
 
-`/ductus:specify` reads `specs/*/spec.md` (and `spec-and-plan.md`) frontmatter to collect the union of existing `tags`. At creation time, prompt: *"Tags for this spec? Existing tags in this repo: \[cli, bootstrap, process, ...\]. Enter one or more (or skip)."* Author input either selects from suggestions, adds new tags, or skips (writes `tags: []`). This implements Q2's reinforcement model without enforcing non-empty tags.
+`/ductus:specify` reads `specs/*/spec.md` frontmatter to collect the union of existing `tags`. At creation time, prompt: *"Tags for this spec? Existing tags in this repo: \[cli, bootstrap, process, ...\]. Enter one or more (or skip)."* Author input either selects from suggestions, adds new tags, or skips (writes `tags: []`). This implements Q2's reinforcement model without enforcing non-empty tags.
 
 ### Missing-tags advisory in `/ductus:clarify`
 
@@ -105,7 +105,6 @@ Phases 2 and 3 can run in parallel within the same session; everything else is s
 | --- | --- | --- |
 | `framework/constitution.md` | Modify | Add `§text-first-artifacts` section: principle, schema table, starter tag vocabulary, scope note |
 | `framework/templates/spec/spec.md` | Modify | Replace `**Status:**` / `**Dependencies:**` with YAML frontmatter; include `tags: []` |
-| `framework/templates/spec/spec-and-plan.md` | Modify | Same as `spec.md` |
 | `framework/templates/spec/scenario.md` | Modify | Replace bold-prefix `**spec-ref:**` with YAML frontmatter `spec-ref` |
 | `framework/commands/specify.md` | Modify | Write frontmatter on creation; add tag prompt with sibling-spec autocomplete |
 | `framework/commands/clarify.md` | Modify | Read frontmatter status; write status on advance; advisory for empty `tags` at draft→clarified |
@@ -114,9 +113,7 @@ Phases 2 and 3 can run in parallel within the same session; everything else is s
 | `framework/commands/status.md` | Modify | Parse frontmatter for status, dependencies, tags in dashboard |
 | `framework/commands/target.md` | Modify | Read frontmatter status when displaying target detail |
 | `framework/commands/analyze.md` | Modify | Implement strict/advisory split per data-model schema |
-| `framework/commands/capture.md` | Modify | Write frontmatter for new sketch specs |
 | `framework/commands/groom.md` | Audit/Modify | Update only if it reads spec metadata for routing |
-| `framework/commands/elaborate.md` | Audit/Modify | Update only if it touches scenario metadata (will: scenarios now use frontmatter `spec-ref`) |
 | `framework/commands/amend.md` | Audit/Modify | Update only if it reads spec/scenario metadata to identify the target |
 | `framework/commands/log.md` | Audit | Likely no change (inbox.md is out of frontmatter scope) |
 | `framework/commands/help.md` | No change | Fixed text, no metadata parsing |
@@ -126,8 +123,6 @@ Phases 2 and 3 can run in parallel within the same session; everything else is s
 | `specs/001-system-spec-templates/spec.md` | Migrate | Self-migration |
 | `specs/002-project-scaffolding/spec.md` | Migrate | Self-migration |
 | `specs/003-bootstrap-automation/spec.md` | Migrate | Self-migration |
-| `specs/004-tech-stack-selection/spec.md` | Migrate | Self-migration |
-| `specs/005-workflows/spec.md` | Migrate | Self-migration |
 | `specs/006-bug-workflow/spec.md` | Migrate | Self-migration |
 | `specs/007-govern-workflow/spec.md` | Migrate | Self-migration |
 | `specs/008-security-rules/spec.md` | Migrate | Self-migration |
