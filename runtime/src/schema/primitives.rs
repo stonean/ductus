@@ -4406,9 +4406,9 @@ pub struct ArtifactFinding {
     /// Check family: `artifact-completeness`, `task-consistency`,
     /// `scenario-consistency`, `review-state-drift`,
     /// `scenario-open-questions`, `link-adjacent-drift`,
-    /// `criterion-path-existence`, `criterion-labels`, or
-    /// `disposition-drift` — nine, matching the `family:` literals the
-    /// primitive emits.
+    /// `criterion-path-existence`, `body-path-existence`,
+    /// `criterion-labels`, or `disposition-drift` — ten, matching the
+    /// `family:` literals the primitive emits.
     pub family: String,
     /// Severity tier per the reference's assignments: `blocking`
     /// (artifact completeness, task consistency, review state drift,

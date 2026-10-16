@@ -38,6 +38,7 @@ Flags: `--all` scans every feature under the spec root (project-level checks sti
 | Grounding | Advisory | Descriptive claims about the existing system are cited or hedged (form, never truth) |
 | Link-adjacent decision drift | Advisory | Prose asserting an open state that its own sibling link's target contradicts |
 | Acceptance-criterion path existence | Advisory | A path named in a `done` spec's criterion that no longer resolves |
+| Body path existence | Advisory | A path named in a `done` spec's body, plan, data model or scenarios that existed in this repository and no longer resolves |
 | Acceptance-criterion labels | Advisory | Duplicate `AC{n}`, a lowered `next-criterion`, an unlabelled criterion |
 | Cross-spec / cross-service references | Advisory | Events, errors and data models align; a provably broken cross-service reference |
 | Project-level consistency | Advisory | Generator drift, anchor resolution, command frontmatter, orphaned references, un-folded branch specs |

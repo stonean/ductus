@@ -55,7 +55,7 @@ When the runtime is not on `PATH`, walk the same scripts directly. Each prints f
 
 17. Run `scripts/audit/host-namespace-parity.sh` (Family 17 — the namespace the runtime renders (`[host] project`, else the repo directory basename, as `Host::load` resolves it) matches a namespace actually installed under an agent config dir, so no rendered next-action names a namespace the operator cannot invoke).
 
-18. Run `scripts/audit/marker-list-parity.sh` (Family 18 — the `criterion-path-existence` non-assertion marker list agrees across its canonical source, the runtime array, and the adopter-facing restatement in `analyze.md`, including the spelled-out counts; a derivation that yields no markers is a finding rather than a silent pass).
+18. Run `scripts/audit/marker-list-parity.sh` (Family 18 — the `criterion-path-existence` non-assertion marker list, its negated-creation word lists, and `body-path-existence`'s body transition markers each agree across their canonical source, the runtime array, and the adopter-facing restatement in `analyze.md`, including the spelled-out counts; a derivation that yields no markers is a finding rather than a silent pass).
 
 19. Run `scripts/audit/review-freshness.sh` (Family 19 — no `done` spec ships with a review that predates its own code: a spec whose durable contracts changed since the `reviewed-against` sha in its `review.md` is stale, which every other check passes because they assert only that a review exists and does not block).
 
