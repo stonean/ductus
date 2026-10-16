@@ -17,7 +17,7 @@ Delete the workflows feature in one coordinated pass: remove `framework/workflow
 3. Deletion of the synced `workflows/registry.json` (pinned-checked); remove `workflows/` when empty.
 4. Removal of the `[workflows]` section (header, keys, attached comment lines) from the **active config file** (write policy per spec 042), all other tables preserved byte-for-byte.
 
-`target_paths` lists the adopter-relative paths (driving the bootstrap loop) plus `framework/workflows/` (driving `/audit` Family 10's no-stale-target-paths check). The explanatory comment about that dual role currently sits inside the `skills-to-workflows` entry (`framework/migrations.toml:44-45`) — it relocates to the `workflows-sunset` entry when the old entries leave.
+`target_paths` lists the adopter-relative paths (driving the bootstrap loop) plus `framework/workflows/` (driving `/audit` Family 10's no-stale-target-paths check). The explanatory comment about that dual role sits on the `workflows-sunset` entry, moved there from the archived `skills-to-workflows` entry.
 
 ### Archive per 027's sunset flow
 
@@ -50,7 +50,7 @@ There is no root `constitution.md` to sync (verified absent; the AGENTS.md proje
 
 - `framework/commands/groom.md` `:49`, `:82`: "the project's lint/format/test workflows cover the common cases" → "the project's lint/format/test tooling covers the common cases" (same meaning, no feature reference; placeholders untouched).
 - `framework/commands/link.md` `:71`: drop `[workflows]` from the illustrative preserve list (the list is explicitly non-exhaustive, so removal is safe).
-- `framework/templates/project/agents.md` `:74-79`: the Skills comment's disambiguation against "this repo's `framework/workflows/`" is dropped; the Skills description stands alone.
+- `framework/templates/project/agents.md` `:74-79`: the Skills comment's disambiguation against "this repo's `framework/workflows/`" is removed; the Skills description stands alone.
 - Regenerate `.claude/commands/ductus/*.md` via `scripts/gen-claude-commands.sh` (the pre-commit hook path) after source edits.
 
 ### Runtime: comment-only code changes, version bump, no golden re-bless for the version

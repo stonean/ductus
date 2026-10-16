@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [010-agent-autonomy, 018-adopter-owned-pre-commit, 019-config-decisions, 027-bootstrap-migration-registry]
 next-criterion: 12
 ---
@@ -16,11 +16,11 @@ Carrying the feature has real cost: a 13-template directory plus registry to mai
 
 ## Removal surface (framework side)
 
-- **`framework/workflows/`** — the entire directory: `registry.json` and all workflow templates.
+- **`framework/workflows/`** — the entire directory is deleted: `registry.json` and all workflow templates.
 - **`framework/bootstrap/ductus.md`** — the **Workflow recommendation** section; the `framework/workflows/registry.json` → `workflows/registry.json` Shared Files manifest row; the `[workflows]` section of the config schema and its `declined_categories` documentation; the workflow mentions in the procedural-fidelity preamble, the write-policy paragraph, the managed-block preserve list, the enforce-manifest step note, and the per-layout skip instructions. The **Tech Stack table parsing** spec text (canonical keys `backend_language` etc.) lives inside the recommendation flow and goes with it unless clarify surfaces a residual consumer.
 - **`framework/constitution.md`** — the Workflow registry row in the canonical-source map.
 - **Command sources** — the `[workflows]` mention in `link.md`'s illustrative preserve list; the "lint/format/test workflows" phrasing in `groom.md` (reword to name adopter-owned tooling rather than the removed feature).
-- **Templates** — the `framework/workflows/` disambiguation note in `framework/templates/project/agents.md`.
+- **Templates** — the `framework/workflows/` disambiguation note in `framework/templates/project/agents.md` is removed.
 - **Docs** — README (config-section docs, example TOML, repo-layout listing, any narrative claims that `/ductus` offers workflows) and AGENTS.md (project-structure bullet, procedural-fidelity mirror, the ships-as-is gotcha).
 - **Runtime** — comment-level references only (`[workflows]` writes in the config-path doc comment); no workflow-specific runtime behavior exists.
 - **Generated copies** — `.claude/commands/ductus/*.md` regenerate from source. This spec's sweep also hand-swept `.claude/commands/ductus/init.md`, the one hand-maintained file in that directory at the time; it was retired on 2026-09-15 and the directory is now wholly generated, so no hand sweep remains.
