@@ -63,7 +63,7 @@ Wiring: a new step in `.github/workflows/framework-checks.yml`, alongside the ex
 
 ### Constitution edit
 
-`framework/constitution.md` §rules gains one new subsection — `#### Filename suffix` — before `#### Lifecycle`. Body: states the closed suffix set, names the surface each suffix selects, references `scripts/lint-rule-filenames.sh` as the ductus-side enforcement and the runtime warning as the adopter-side safety net. Two existing inline references (`framework/rules/configuration.md` at lines 173 and 179) update to `framework/rules/configuration-cross.md`. No anchor changes, no cascading reference updates.
+`framework/constitution.md` §rules gains one new subsection — `#### Filename suffix` — before `#### Lifecycle`. Body: states the closed suffix set, names the surface each suffix selects, references `scripts/lint-rule-filenames.sh` as the ductus-side enforcement and the runtime warning as the adopter-side safety net. Its two inline references to `framework/rules/configuration.md` (lines 173 and 179) are renamed to `framework/rules/configuration-cross.md`. No anchor changes, no cascading reference updates.
 
 ### `AGENTS.md` fallback narrowed (not removed)
 
