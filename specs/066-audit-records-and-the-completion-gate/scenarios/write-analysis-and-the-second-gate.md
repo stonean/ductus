@@ -6,9 +6,9 @@ section: "The analyze record"
 
 ## Context
 
-The runtime half of [047's `analyze-run-durability`](../../047-analyze-findings-durability/scenarios/analyze-run-durability.md), recorded here because 022 owns the runtime and is where runtime rules stay findable.
+The runtime half of [047's `analyze-run-durability`](../../047-analyze-findings-durability/scenarios/analyze-run-durability.md), recorded with the runtime rather than with 047, because that is where runtime rules stay findable.
 
-The requirement is 047's: `/{project}:analyze` had no durable record, so `check-review-gate` could enforce the review half of the pipeline and nothing at all of the analyze half. What 022 owns is the shape of the primitive, the block's field set, the two new gate reasons, and the ninth `check-artifacts` family.
+The requirement is 047's: `/{project}:analyze` had no durable record, so `check-review-gate` could enforce the review half of the pipeline and nothing at all of the analyze half. What the runtime owns is the shape of the primitive, the block's field set, the two new gate reasons, and the ninth `check-artifacts` family.
 
 ## Behavior
 

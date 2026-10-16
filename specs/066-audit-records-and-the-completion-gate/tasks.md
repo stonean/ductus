@@ -20,3 +20,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Verify AC1–AC5 against `runtime/src/primitives/` and tick each that holds
 
 - **Done when**: every acceptance criterion is ticked, each verified against the code that implements it.
+
+## 4. State the reasons write-analysis adds to the breakdown itself
+
+- [x] Add to `data-model.md`'s **Derived, never accepted** list the two reasons `write_analysis.rs` adds to `unexamined-by-reason` itself: `constitution-unresolved` (one per registered shared constitution that did not resolve) and `constitution-registry-unreadable` (a `[constitutions]` registry that will not parse), both unexamined inputs rather than skipped targets
+
+- **Done when**: the data model names every reason the writer can record, and the closed reason table stays the set a caller supplies

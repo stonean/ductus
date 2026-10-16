@@ -120,6 +120,7 @@ Writes `specs/{feature}/analysis.md` — the run's record in its frontmatter and
 
 - `blocking` — from `hard-fail` and `blocking-findings`.
 - `unexamined` — summed from `unexamined-by-reason` when a breakdown is supplied, so the total and its parts cannot disagree; a caller-supplied total is used only when there is no breakdown.
+- Two reasons the writer adds to `unexamined-by-reason` itself: `constitution-unresolved`, one per registered shared constitution that did not resolve (spec 055), and `constitution-registry-unreadable` when the `[constitutions]` registry will not parse. Each is an unexamined input rather than a skipped target, so neither is in the table below, and each counts toward `unexamined`.
 - `analyzed-digest` / `analyzed-unreadable` — taken by the primitive from the feature directory through the same function `check-review-gate` recomputes them with; a subject that exists but could not be read is recorded in `analyzed-unreadable` rather than digested as empty. `write-review` derives `reviewed-digest` / `reviewed-unreadable` the same way over the narrower contract set.
 
 **`unexamined-by-reason` is what makes `unexamined` actionable**, because the reasons split into classes calling for opposite responses:
