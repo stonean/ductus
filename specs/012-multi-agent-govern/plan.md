@@ -6,11 +6,11 @@ title: "012-multi-agent-govern — plan"
 
 ## Overview
 
-Replace the two per-CLI ductus files (`ductus/ductus.md` for Claude Code, `ductus/ductus-auggie.md` for Auggie) with a single `ductus/ductus.md` that carries an agent registry. The registry is a small markdown table near the top of the file listing each supported agent and the per-agent values needed to scaffold it (`key`, `name`, `config_dir`, `settings_template`, `rules_file_note`). All other sections (pre-flight, manifest, scaffolding loop, post-scaffolding output) reference the registry rather than branching on agent name.
+Replace the two per-CLI ductus files (one for Claude Code, one for Auggie) with a single `framework/bootstrap/ductus.md` that carries an agent registry. The registry is a small markdown table near the top of the file listing each supported agent and the per-agent values needed to scaffold it (`key`, `name`, `config_dir`, `settings_template`, `rules_file_note`). All other sections (pre-flight, manifest, scaffolding loop, post-scaffolding output) reference the registry rather than branching on agent name.
 
-`/ductus` resolves which agents to scaffold using a fixed precedence: `--agents=` flag, then auto-detect (silent routine update), then a sequential `AskUserQuestion` prompt (one yes/no per agent). The scaffolding loop runs once per selected agent, writing the agent's commands, settings, session JSON, setup source (from `commands/setup/{key}.md`), and a copy of `ductus.md` into the agent's `commands/` directory.
+`/ductus` resolves which agents to scaffold using a fixed precedence: `--agents=` flag, then auto-detect (silent routine update), then a sequential `AskUserQuestion` prompt (one yes/no per agent). The scaffolding loop runs once per selected agent, writing the agent's commands, settings, configure command (from `framework/bootstrap/configure/{key}.md`), and a copy of `ductus.md` into the agent's command directory.
 
-The setup source files move from `commands/setup.md` and `commands/setup-auggie.md` to per-agent paths `commands/setup/{key}.md`. This makes the setup path derivable from the registry key and removes the asymmetric naming.
+The configure sources are per-agent files, `framework/bootstrap/configure/{key}.md`, so each source path is derivable from the registry key.
 
 The `CLAUDE.md` "Ductus File Parity" rule is deleted (only one ductus file exists), and `specs/007-govern-workflow/spec.md` gains a signpost note pointing to this spec.
 
@@ -18,13 +18,13 @@ The `CLAUDE.md` "Ductus File Parity" rule is deleted (only one ductus file exist
 
 ### Agent registry as a markdown table inside `ductus.md`
 
-The registry lives at the top of `ductus/ductus.md` as a fenced markdown table — readable from the file itself, no external lookup, easy to extend. The agent reads the table and iterates the rows during scaffolding. This is the same pattern 007 uses for its file manifest.
+The registry lives at the top of `framework/bootstrap/ductus.md` as a fenced markdown table — readable from the file itself, no external lookup, easy to extend. The agent reads the table and iterates the rows during scaffolding. This is the same pattern 007 uses for its file manifest.
 
 Schema (five fields per row):
 
 | Field | Description |
 | --- | --- |
-| `key` | Lowercase identifier used in flags (`--agents=claude`), file paths (`commands/setup/{key}.md`), and prompt text |
+| `key` | Lowercase identifier used in flags (`--agents=claude`), file paths (`framework/bootstrap/configure/{key}.md`), and prompt text |
 | `name` | Human-readable label shown in prompts and post-scaffolding summary |
 | `config_dir` | Project-relative config directory (e.g., `.claude`, `.augment`) |
 | `settings_template` | Bootstrap JSON for `{config_dir}/settings.local.json` in the agent's native format — only the curl/ls entries needed during `/ductus` itself |
@@ -32,8 +32,7 @@ Schema (five fields per row):
 
 Derived values (not stored — computed by convention):
 
-- Setup source path: `commands/setup/{key}.md`
-- Session JSON path: `{config_dir}/{project}-session.json`
+- Configure source path: `framework/bootstrap/configure/{key}.md`
 - Project commands directory: `{config_dir}/commands/{project}/`
 - Ductus install path: `{config_dir}/commands/ductus.md`
 
@@ -42,13 +41,11 @@ Rejected alternatives:
 - **Inline conditionals on agent name** — would scatter `if claude / else auggie` branches throughout the file. Rejected because adding a new agent would touch every branch. The registry centralizes per-agent values into a single addressable structure.
 - **External fragments fetched per agent** — would reintroduce multi-file fetch failure modes and a bootstrap question. The whole point of unification is to avoid those.
 
-### Setup source layout: `commands/setup/{key}.md`
+### Configure source layout: `framework/bootstrap/configure/{key}.md`
 
-Move `commands/setup.md` → `commands/setup/claude.md` and `commands/setup-auggie.md` → `commands/setup/auggie.md`. Setup source paths become derivable from the registry key (`commands/setup/{key}.md`), so the registry doesn't need an explicit `setup_source` field.
+Each agent's configure source lives at `framework/bootstrap/configure/{key}.md`, derivable from the registry key, so the registry doesn't need an explicit source field. Each uses `{cli-config-dir}` for paths and contains agent-native permission entries.
 
-The file contents do not change — both files already use `{cli-config-dir}` for paths and contain agent-native permission entries. Only the location changes.
-
-The Claude Code ductus instance under `.claude/commands/ductus/setup.md` is regenerated from `commands/setup/claude.md` to satisfy the existing "Command File Parity" rule.
+This repository's own `.claude/commands/ductus/configure.md` is generated from `framework/bootstrap/configure/claude.md` by `scripts/gen-claude-commands.sh`.
 
 ### Agent selection precedence
 
@@ -74,16 +71,15 @@ For each selected agent, run these steps with registry values substituted:
 
 1. Resolve `{cli-config-dir}` to the agent's `config_dir`.
 2. Process the slash-command manifest into `{config_dir}/commands/{project}/`. Substitute `{project}` and `{cli-config-dir}` in each copied file.
-3. Fetch `commands/setup/{key}.md` from the `ductus` repo and write it as `{config_dir}/commands/{project}/setup.md` (strategy: `update`).
-4. Create `{config_dir}/{project}-session.json` with `{}` if missing (strategy: `create`).
-5. Read or create `{config_dir}/settings.local.json` and merge in entries from the agent's `settings_template` if missing. Do not reorder, deduplicate, or overwrite entries beyond the bootstrap set.
-6. Fetch `ductus/ductus.md` and write it to `{config_dir}/commands/ductus.md` (strategy: `update`). Run the post-write integrity check: file must start with `# Ductus`. If not, re-fetch.
+3. Fetch `framework/bootstrap/configure/{key}.md` from the `ductus` repo and write it as `{config_dir}/commands/{project}/configure.md` (strategy: `update`).
+4. Read or create `{config_dir}/settings.local.json` and merge in entries from the agent's `settings_template` if missing. Do not reorder, deduplicate, or overwrite entries beyond the bootstrap set.
+5. Fetch `framework/bootstrap/ductus.md` and write it to `{config_dir}/commands/ductus.md` (strategy: `update`). Run the post-write integrity check: file must start with `# Ductus`. If not, re-fetch.
 
 Shared files (`constitution.md`, `.markdownlint-cli2.jsonc`, `AGENTS.md`, `CLAUDE.md`, `.gitignore`, `specs/system.md`, `specs/errors.md`, `specs/events.md`, `specs/inbox.md`, `specs/templates/*`) are scaffolded **once per run** outside the loop, regardless of how many agents are selected.
 
 ### `settings_template` content
 
-The registry's `settings_template` is the **fully populated** bootstrap JSON in each agent's native syntax. Only the bootstrap entries (curl, ls) — enough for `/ductus` to run without permission prompts. The full permission set lives in `commands/setup/{key}.md` and is applied later via `/{project}:setup`.
+The registry's `settings_template` is the **fully populated** bootstrap JSON in each agent's native syntax. Only the bootstrap entries (curl, ls) — enough for `/ductus` to run without permission prompts. The full permission set lives in `framework/bootstrap/configure/{key}.md` and is applied later via `/{project}:configure`.
 
 Claude Code (`permissions.allow`):
 
@@ -102,7 +98,7 @@ Auggie (`toolPermissions`):
 }
 ```
 
-Merge rules: read existing file, append any missing entries from `settings_template`, write back. Preserve all entries the user or `/{project}:setup` has already added — only the bootstrap set is touched.
+Merge rules: read existing file, append any missing entries from `settings_template`, write back. Preserve all entries the user or `/{project}:configure` has already added — only the bootstrap set is touched.
 
 ### Migration: 007's per-CLI files → unified file
 
@@ -110,15 +106,13 @@ No backward-compatibility alias at `ductus/ductus-auggie.md`. Migration is three
 
 1. Curl the unified `ductus.md` into the agent's command dir, overwriting the old per-CLI file.
 2. Run `/ductus` in a new session — detection pre-selects the agent whose dir exists.
-3. Run `/{project}:setup` — for Auggie, this strips any legacy `permissions` key written under the pre-`9eb9a2f` bug.
+3. Run `/{project}:configure`.
 
 A backward-compat alias was rejected because it would reintroduce the file the unification is meant to remove.
 
-The pre-`9eb9a2f` Auggie bug is already handled by the existing migration block in `commands/setup-auggie.md` (now `commands/setup/auggie.md`). No new code needed for that path.
-
 ### "Ductus File Parity" rule removed; "Command File Parity" rule kept
 
-The CLAUDE.md "Ductus File Parity" rule disappears — there is only one ductus file. The "Command File Parity" rule (between `commands/` and `.claude/commands/ductus/`) is unrelated and stays in place.
+The CLAUDE.md "Ductus File Parity" rule disappears — there is only one ductus file. The "Command File Parity" rule (between `framework/commands/` and `.claude/commands/ductus/`) is unrelated and stays in place.
 
 ### 007's signpost note
 
@@ -128,17 +122,17 @@ The CLAUDE.md "Ductus File Parity" rule disappears — there is only one ductus 
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `ductus/ductus.md` | Modify | Replace with unified content: agent registry table, selection logic, per-agent scaffolding loop |
+| `framework/bootstrap/ductus.md` | Modify | Replace with unified content: agent registry table, selection logic, per-agent scaffolding loop |
 | `ductus/ductus-auggie.md` | Delete | Superseded by unified `ductus.md` |
-| `commands/setup/claude.md` | Create | Move from `commands/setup.md` (no content change) |
-| `commands/setup/auggie.md` | Create | Move from `commands/setup-auggie.md` (no content change) |
-| `commands/setup.md` | Delete | Replaced by `commands/setup/claude.md` |
-| `commands/setup-auggie.md` | Delete | Replaced by `commands/setup/auggie.md` |
-| `.claude/commands/ductus/setup.md` | Modify | Re-derive from `commands/setup/claude.md` (Command File Parity) — no content change expected |
+| `framework/bootstrap/configure/claude.md` | Create | Claude Code's configure source |
+| `framework/bootstrap/configure/auggie.md` | Create | Auggie's configure source |
+| `commands/setup.md` | Delete | Replaced by `framework/bootstrap/configure/claude.md` |
+| `commands/setup-auggie.md` | Delete | Replaced by `framework/bootstrap/configure/auggie.md` |
+| `.claude/commands/ductus/configure.md` | Modify | Generated from `framework/bootstrap/configure/claude.md` (Command File Parity) |
 | `README.md` | Modify | Add framing line under each curl snippet noting the multi-agent flow is available on re-run |
 | `CLAUDE.md` | Modify | Remove the "Ductus File Parity" section |
 | `specs/007-govern-workflow/spec.md` | Modify | Add signpost paragraph pointing to 012 |
-| `specs/spec.md` | Modify | Refresh the "Auggie permissions setup" resolved-note to reference `commands/setup/auggie.md` and the unified `ductus.md` (added during implementation — original plan missed this stale note) |
+| `specs/README.md` | Modify | Refresh the "Auggie permissions setup" resolved-note to reference `framework/bootstrap/configure/auggie.md` and the unified `ductus.md` |
 | `specs/012-multi-agent-govern/data-model.md` | Create | Document the agent registry schema |
 | `specs/012-multi-agent-govern/spec.md` | Modify | Status to `done` after acceptance criteria are verified (final task) |
 
@@ -174,7 +168,7 @@ All eight open questions are resolved in the spec's "Resolved Questions" section
 
 - **Agent selection UI** — sequential per-agent `AskUserQuestion` yes/no, with `--agents=` bypass.
 - **Per-agent values: inline conditionals vs. fragments** — registry table inside `ductus.md`.
-- **Setup source layout** — `commands/setup/{key}.md`, derived from registry key.
+- **Configure source layout** — `framework/bootstrap/configure/{key}.md`, derived from registry key.
 - **Bootstrap install path** — keep one curl per supported agent in the README, with a framing line about the multi-agent flow on re-run.
 - **Add-an-agent contract** — five fields per agent (`key`, `name`, `config_dir`, `settings_template`, `rules_file_note`); other paths derived by convention.
 - **Stale per-CLI ductus files on migration** — manifest's `update` strategy overwrites the installed `ductus.md`; no special detection.
