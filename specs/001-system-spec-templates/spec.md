@@ -1,6 +1,6 @@
 ---
 title: "001-system-spec-templates — spec"
-status: in-progress
+status: done
 dependencies: []
 tags: [templates, pipeline]
 next-criterion: 7
