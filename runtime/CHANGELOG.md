@@ -2,6 +2,34 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.59.8] — 2026-10-16
+
+`fetch-archive` bounds the whole download, `ductus exec`'s diagnostics name the
+binary they come from, and the runtime is built with Rust 1.99.1. One fetch that
+used to finish can now fail: a download slower than about 11 KB/s on the largest
+release asset stops at the new ten-minute deadline. A patch release: no
+primitive gains an argument or a result field, and the MSRV stays 1.89.
+
+### Changed
+
+- **`fetch-archive` bounds the whole download.** `FETCH_TIMEOUT` (30 s) bounds
+  any one stall, so a body arriving just inside it on every read was bounded
+  only by the 256 MiB cap. `FETCH_DEADLINE` (600 s) now bounds each fetch end
+  to end, the archive and its sidecar separately. It is checked before every
+  read of the body, so the worst case is the deadline plus one `FETCH_TIMEOUT`.
+  A fetch past it fails with an error naming the deadline, and nothing is
+  written. Ten minutes fails only a download slower than about 11 KB/s on the
+  largest release binary (6.7 MB). Spec 022, scenario
+  `fetch-archive-bounds-the-whole-download`.
+- **`ductus exec`'s diagnostics name the binary.** Four stderr lines began
+  `runtime exec:`; they now begin `ductus exec:`. The same stale name is gone
+  from 022's spec, plan and data model, `AGENTS.md`, and the runtime's doc
+  comments and test messages, which invoked `runtime mcp`, `runtime exec`,
+  `runtime parse` and `runtime --version` for a binary the tree ships as
+  `ductus`.
+- **Built with Rust 1.99.1**, up from 1.99.0. The pinned toolchain and every
+  workflow's `dtolnay/rust-toolchain` pin moved together.
+
 ## [0.59.7] — 2026-10-16
 
 Spec 022 is split into three, the constitution corrects what the dependency
