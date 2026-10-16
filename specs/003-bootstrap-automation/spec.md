@@ -87,7 +87,7 @@ Before scaffolding, verify the target directory does not already exist. If it do
 ### Standard pipeline commands
 
 - [x] AC1: Every command template is copied to `.claude/commands/ductus/` with `{project}` replaced by this repo's namespace, `ductus`. The set was ten when this spec shipped and has grown since (see the Note above); `scripts/gen-claude-commands.sh` globs `framework/commands/`, so it tracks the set rather than a fixed list, and the criterion carries no count for the same reason
-- [x] AC2: Commands reference `.ductus/session.toml` for session state (was `.claude/gov-session.json` pre-0.10.0; consolidated in spec 022 task 40) — superseded by 042-consolidate-govern-per-project-files-under-govern-directory: the session file moved again — commands now reference `.ductus/session.toml`, and `.govern.session.toml` survives only as the legacy fallback `target.md` still resolves
+- [x] AC2: Commands reference `.ductus/session.toml` for session state, and `.govern.session.toml` survives only as the legacy fallback `target.md` still resolves
 - [x] AC3: Pipeline gates enforce status transitions (draft → clarified → planned → done)
 - [x] AC4: Dependency checks enforced via AGENTS.md boundary rule
 
