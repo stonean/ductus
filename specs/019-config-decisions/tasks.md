@@ -1,87 +1,41 @@
 # 019 — Config-Persisted Decisions Tasks
 
-Tasks derived from the [plan](plan.md). Complete in order. Each task is a documentation/runbook edit, not code; verification is reading the prose against the acceptance criteria, plus a synthetic walk-through where needed.
+Tasks derived from the [plan](plan.md). Complete in order.
 
-## 1. Document the extended `.ductus/config.toml` schema in the bootstrap runbook
+<!-- Each task should be small enough to implement and verify independently.
+     Mark subtasks as they are completed. Every task MUST close with a
+     `- **Done when**: …` line stating its completion condition — the
+     tooling reads this exact form to confirm the task is fully specified.
 
-- [x] Edit `framework/bootstrap/ductus.md` **Project Configuration** section (currently lines ~172–186):
-  - Reword the section intro so `.ductus/config.toml` is described as multi-purpose (configuration + persisted decisions), not pin-only.
-  - Keep the existing `[pinned]` example and behavior text exactly as today.
-  - Add a sibling `[workflows]` example showing `declined_categories = ["Linting", "Formatting"]`.
-  - Add a brief explanation of `declined_categories`: case-insensitive match against the registry-derived category list, drives the suppression step in the workflow recommendation flow.
-  - Add a back-link to `specs/019-config-decisions/data-model.md` as the canonical schema reference.
-- [x] **Done when**: the section documents both `[pinned]` and `[workflows]` schemas with examples; the prose explicitly states the case-insensitive match rule; lints pass.
+     A task body may also carry working notes — what the next session needs
+     to resume it: the mechanics, the order, what is left on disk — placed
+     as §tasks-phase says. Write them as prose on the pending task they
+     concern, so they go when the task is pruned. Put an ordering constraint
+     on the task that must wait, never above the first task or under a
+     heading of its own, which outlive every task; and never write a note as
+     a checkbox, which would count toward the task's completion. Anything
+     that must outlast the task belongs in its durable home first. Example:
 
-## 2. Add the decline-load step to the workflow recommendation flow
+## 1. Create sessions table migration
 
-- [x] Edit `framework/bootstrap/ductus.md` **Workflow recommendation** flow (currently lines ~481–535).
-- [x] Add a new sub-step **between step 3 (read tech stack) and step 4 (match registry entries)** titled "Load recorded declines" that instructs the agent to:
-  - Read `.ductus/config.toml` if present.
-  - Parse `[workflows] declined_categories` into a normalized lowercase set.
-  - Stash the set for use in the prompt step.
-  - Skip silently if `.ductus/config.toml` is absent, has no `[workflows]` section, or has an empty `declined_categories` array.
-- [x] **Done when**: the new sub-step exists, is unambiguous about how to handle each "missing" case, and explicitly says "no abort on missing/empty."
+- [ ] Write SQL migration for `sessions` table
+- [ ] Run migration and verify schema
 
-## 3. Replace the per-category prompt step with the three-option flow
+- **Done when**: the migration applies cleanly and `sessions` matches the data model.
 
-- [x] Edit step 8 of the workflow recommendation flow ("Present per-category accept/skip prompts").
-- [x] Restate the step as a two-branch loop over candidate categories:
-  - **Suppression branch**: if the lowercased category is in the decline set, do not invoke `AskUserQuestion`; emit `suppressed (workflow): {Category} (declined in .ductus/config.toml)` into the summary; skip scaffolding for the category's workflows.
-  - **Prompt branch**: invoke `AskUserQuestion` with three options exactly: `Yes, scaffold all in this category`, `Skip this run`, `Skip and don't ask again`.
-- [x] Define the answer-routing for the three options:
-  - `Yes` → unchanged from today's accept path.
-  - `Skip this run` → unchanged from today's skip path; nothing written to `.ductus/config.toml`.
-  - `Skip and don't ask again` → skip the category this run and add it to the persistence-write list (consumed in task 4).
-- [x] **Done when**: step 8 names all three options verbatim; the suppression branch is described with the summary-line text spelled out; the routing for each option is explicit.
+## 2. Implement session store
 
-## 4. Add the persistence-write step
+Blocked on task 1: the store tests run against the migrated schema.
 
-- [x] Add a new sub-step **between step 8 (prompts) and step 9 (fetch and write accepted workflows)** titled "Record persisted declines" that instructs the agent to:
-  - For each category whose answer was `Skip and don't ask again`, append it to `[workflows] declined_categories` in `.ductus/config.toml`.
-  - If `.ductus/config.toml` does not exist, create it with `[workflows] declined_categories = ["{Category}"]` and emit `created .ductus/config.toml to record decline` into the summary.
-  - If `.ductus/config.toml` exists without `[workflows]`, add the section.
-  - If `[workflows]` exists without `declined_categories`, add the key.
-  - If the key exists, append the category, deduplicating case-insensitively.
-  - Preserve all existing TOML content (other sections, comments, ordering).
-- [x] **Done when**: the sub-step covers every "shape of existing file" case (missing, present-without-section, present-without-key, present-with-key); the deduplication rule is explicit; the create-message text is spelled out.
+- [ ] Create `shared/auth/session.go` with Create, Get, Delete methods
+- [ ] Write store integration tests against real PostgreSQL
 
-## 5. Add the unrecognized-entry summary line to the load step
+- **Done when**: all store methods are covered by passing integration tests.
 
-- [x] In task 2's "Load recorded declines" sub-step, add a clause that records any `declined_categories` entry that doesn't match a canonical category name (case-insensitive against the registry-derived list).
-- [x] In step 11 (post-scaffolding summary) or wherever the summary is assembled, instruct the agent to emit one `unrecognized workflow decline: "{value}" (in .ductus/config.toml)` line per recorded unrecognized entry.
-- [x] **Done when**: an unrecognized entry produces exactly one summary line, the run continues normally, and the prompts for valid categories are unaffected.
+## 3. Update README link to migration guide
 
-## 6. Create `data-model.md`
+- [ ] Edit `README.md` to point at the new path
 
-- [x] Already drafted as part of `/ductus:plan`; verify it lints, references 005, and covers `[pinned]` (existing), `[workflows]` (new), category list, case-insensitive matching, unrecognized entries, empty cases, future-section guidance, and backwards compatibility.
-- [x] **Done when**: `npx markdownlint-cli2 specs/019-config-decisions/data-model.md` passes; the schema declaration matches the runbook prose word-for-word on category names and key names.
+- **Done when**: the README link resolves to the new path.
 
-## 7. Update README's `.ductus/config.toml` section
-
-- [x] Edit `README.md` lines ~282–296. Rename **"Pinning files with .ductus/config.toml"** to **"Configuring `.ductus/config.toml`"**.
-- [x] Keep the existing `[pinned]` example.
-- [x] Add a `[workflows]` example showing `declined_categories = ["Linting"]` with one or two sentences explaining the prompt origin and how to undo (delete the entry, or the section, or the file).
-- [x] Cross-link to `specs/019-config-decisions/spec.md` and `specs/019-config-decisions/data-model.md` for full schema rationale.
-- [x] **Done when**: the renamed section documents both sections with minimal examples and links to the canonical sources; lints pass; section anchors that may be referenced elsewhere in the README remain resolvable (or are updated).
-
-## 8. Add a signpost to spec 005
-
-- [x] Spec `005-workflows` is `done`. Per `done specs are frozen archaeology`, do not edit the body. Instead, add a top-of-spec signpost (between the frontmatter and the `# 005 — Workflows` heading area, sitting alongside the existing post-completion Note about the filename rename) that:
-  - States: the per-category prompt now has three options instead of two, with a third `Skip and don't ask again` option that records the decline in `.ductus/config.toml`.
-  - Back-links to `specs/019-config-decisions/spec.md` for the current behavior.
-  - Preserves the existing post-completion Note about the `{tool}.md` filename rename.
-- [x] **Done when**: 005's `spec.md` body is otherwise untouched; the signpost is at the top of the body and back-links to 019; lints pass.
-
-## 9. Walk-through verification
-
-- [x] Bench-test the runbook against three synthetic `.ductus/config.toml` shapes by reading the prose end-to-end:
-  - **Shape A**: file does not exist; user picks `Skip and don't ask again` for `Linting`. Verify the runbook prose unambiguously walks the agent to: prompt with three options, write a new `.ductus/config.toml` with `[workflows] declined_categories = ["Linting"]`, emit both summary lines (`created .ductus/config.toml...` and the suppressed line on the *next* hypothetical run).
-  - **Shape B**: file has `[pinned] files = [...]` and `[workflows] declined_categories = ["Formatting"]`. Verify the agent suppresses the `Formatting` prompt (with summary line), prompts for the rest with three options, and preserves `[pinned]` if the user adds a new decline.
-  - **Shape C**: file has `[workflows] declined_categories = ["Linitng"]` (typo). Verify the agent prompts for `Linting` normally and emits exactly one `unrecognized workflow decline: "Linitng"` summary line.
-- [x] **Done when**: all three walks confirm the runbook prose is unambiguous. If any shape exposes ambiguity, refine the prose in tasks 1–5 and re-walk.
-
-## 10. Lint and finalize
-
-- [x] Run `npx markdownlint-cli2` against the entire feature directory and any modified files (`framework/bootstrap/ductus.md`, `README.md`, `specs/005-workflows/spec.md`).
-- [x] Verify `scripts/gen-spec-deps.sh --dry-run` reports no changes (the dependency on 005 was already added during clarify).
-- [x] **Done when**: all lints pass; the dependencies frontmatter is in sync; spec status is ready to advance to `done`.
+-->
