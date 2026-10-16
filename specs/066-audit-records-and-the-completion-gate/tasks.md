@@ -6,7 +6,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 - [x] `git mv` the sixteen scenarios task 142 of `022-deterministic-runtime` places here, remap each `section:` to a heading of this spec, and rewrite each link into 022 as a `../../022-deterministic-runtime/` path; a link into `067-analyze-and-audit-checks` becomes a backticked slug
 
-- **Done when**: the sixteen files sit under `scenarios/` with their history intact, each `section:` names a heading of `spec.md`, and `check-corpus-links` reports no broken link.
+- **Done when**: the sixteen files sit under `scenarios/` with their history intact (`a-done-spec-has-no-transition-to-gate`, `a-multi-number-renumber-is-one-rewrite`, `a-renamed-file-contributes-its-rewrites`, `a-review-states-what-it-read`, `an-empty-scope-flag-does-not-decide-the-denominator`, `process-waivers-file-lists`, `review-base-includes-the-transition-commit`, `review-scope-includes-uncommitted-work`, `review-scope-plan-affected-table-format`, `review-scope-union`, `review-staleness-gate`, `review-staleness-on-done-specs`, `the-committed-tree-horizon`, `the-cross-spec-impact-gate`, `write-analysis-and-the-second-gate`, `write-review-known-field-quoting`), each `section:` names a heading of `spec.md`, and `check-corpus-links` reports no broken link.
 
 ## 2. Move the data-model sections
 

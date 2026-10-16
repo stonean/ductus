@@ -22,7 +22,7 @@ The sections moved from 022 keep every argument and result shape and every field
 
 ### The routing gate keeps offering 022
 
-`derive-routing-candidates` offers the lowest-numbered spec whose plan claims a `runtime/` path, which stays 022, so work naming one of these primitives is offered there first. Which of 022, 066 or 067 owns a primitive is the routing decision, stated in `AGENTS.md`'s routing entry. Listing this spec's runtime files below is what scopes its review.
+`derive-routing-candidates` offers the lowest-numbered spec whose plan claims a `runtime/` path (`runtime_home` in `runtime/src/primitives/derive_routing_candidates.rs`), which stays 022, so work naming one of these primitives is offered there first. Which of 022, 066 or 067 owns a primitive is the routing decision, stated in `AGENTS.md`'s routing entry. Listing this spec's runtime files below is what scopes its review.
 
 ## Affected Files
 
@@ -50,6 +50,6 @@ The sections moved from 022 keep every argument and result shape and every field
 
 ## Trade-offs
 
-- **One new spec for the records and the checks together** — rejected: its data model, and 022's after the cut, would each have sat within 2–4 KB of the read size, so the next field added to either would have reopened the problem.
+- **One new spec for the records and the checks together** — rejected: they are two subjects, and the checks have readers the records do not. Size does not decide it: one spec holding both would carry a data model of about 40 KB (the two as built, 19,775 and 20,201 bytes by `wc -c` on 2026-10-15), some 10 KB under the 50,000-byte read size, where two keep each near 20 KB; 022's 44,823 bytes are the same either way.
 - **Splitting each mixed scenario across specs** — rejected: it would rewrite each such requirement document to move part of its Behavior, when a pointer serves every reader.
 - **Leaving the primitives' sections in 022 behind a pointer** — rejected: the pointer would not shrink the file a reader has to open.
