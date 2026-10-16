@@ -4,14 +4,14 @@ Implements [042 — Consolidate ductus per-project files under a `.ductus/` dire
 
 ## Overview
 
-Move ductus's three per-project artifacts off the repo root into one `.ductus/` directory — `.ductus/config.toml` (was `.govern.toml`), `.ductus/session.toml` (was `.govern.session.toml`), and `.ductus/scripts/` (was the three adopter-facing generators in root `scripts/`) — and teach every reader, writer, migration, and doc to use the new locations. The work spans four surfaces:
+Move ductus's per-project files off the repo root into one `.ductus/` directory — `.ductus/config.toml` (was `.govern.toml`) and `.ductus/session.toml` (was `.govern.session.toml`) — and teach every reader, writer, migration, and doc to use the new locations. The migration also gathers an adopter's shipped generators, which the later `generator-primitives` migration removes. The work spans four surfaces:
 
 1. **Runtime (`ductus`)** — two shared path resolvers (config, session) that return the `.ductus/` path when it exists and fall back to the legacy root path otherwise; every ad-hoc `repo.join(".govern.toml")` and the `SESSION_FILE` constant route through them. Writers target the *active* file (never a partial `.ductus/` file).
 2. **Bootstrap migration (`/ductus`)** — a new `govern-dir-consolidate` registry entry (`introduced_in = 0.22.0`, no `sunset_after`) plus its procedure file; the sole cutover that moves the three artifacts, converging any split state.
-3. **Markdown surface** — the Shared Files manifest, the shipped command bodies / hooks / CI template / permission allowlists that name the three generators by literal path, the gitignore template, and the framework docs (constitution, `AGENTS.md`, `README.md`).
-4. **Dogfooding + tests** — ductus's own repo moves to the new layout (config, session, the three generators, its pre-commit hook, `.gitignore`, `.shellcheckrc`), the runtime fixtures move to the new layout, and the maintainer audit scripts follow.
+3. **Markdown surface** — the config and session path prose in command bodies and permission allowlists, the gitignore template, and the framework docs (constitution, `AGENTS.md`, `README.md`).
+4. **Dogfooding + tests** — ductus's own repo moves to the new layout (config, session, `.gitignore`), the runtime fixtures move to the new layout, and the maintainer audit scripts follow.
 
-Two load-bearing invariants: **(a) nothing breaks before `/ductus` runs** — readers fall back to the legacy path and writers stay on the active file, so an adopter who upgrades ductus first sees identical behavior; **(b) only the three adopter-facing generators move** — every maintainer-only script (audit, lints, `gen-help-tables.sh`, `gen-configure-mcp.sh`, `gen-claude-commands.sh`, `install-hooks.sh`) stays at root `scripts/`, so `.ductus/scripts/` structurally marks "ships to adopters."
+The load-bearing invariant: **nothing breaks before `/ductus` runs** — readers fall back to the legacy path and writers stay on the active file, so an adopter who upgrades ductus first sees identical behavior.
 
 ## Technical Decisions
 
@@ -54,37 +54,13 @@ Migration marker: `last_applied` advances only after the whole procedure complet
 
 The shipped template `framework/templates/project/gitignore` changes its session entry to `/.ductus/session.toml`; because `/ductus` rewrites the framework-managed gitignore block on every run (`merge-managed-block`), adopters pick up the superseded entry automatically — no per-adopter migration logic needed. ductus's own `.gitignore` carries the session-ignore line *outside* the managed block (anchored `/.govern.session.toml`, `.gitignore:9`); that is fixed by hand in the dogfooding step to `/.ductus/session.toml`. Root-anchoring is retained deliberately so the tracked fixture session files at `runtime/tests/fixtures/*/.ductus/session.toml` stay tracked (the anchored ignore matches only the repo-root file).
 
-### Markdown surface — only the three shipped generators' literals move
-
-Every literal naming a shipped generator moves to `.ductus/scripts/`; maintainer-only literals stay at `scripts/`:
-
-- **Shared Files manifest** (`framework/bootstrap/ductus.md:635-637`) — source *and* dest become `.ductus/scripts/…` (ductus dogfoods, so its own copies live there and ship from the archive; `.ductus/config.toml` and `.ductus/scripts/` are committed, hence present in the GitHub tarball).
-- **Command bodies** — `implement.md:98`, `clarify.md:102`, `amend.md:43`, `plan.md:74`, `target.md:39`, `specify.md:39,75`, `analyze.md:34,52` (the `gen-spec-deps.sh` references) → `.ductus/scripts/gen-spec-deps.sh`. `analyze.md:34,227`'s existence-gated `gen-help-tables.sh` **stays** at `scripts/` (maintainer-only, ductus-repo-only).
-- **Adopter hook** `framework/bootstrap/hooks/ductus-pre-commit:27-28` — both `gen-spec-deps.sh` and `gen-cross-service-refs.sh` → `.ductus/scripts/`.
-- **CI template** `framework/templates/ci/adopter-generators.yml:8,28,45,50` — the `gen-*` filter and run line → `.ductus/scripts/`.
-- **Permission allowlists** — `configure/claude.md:77-80`, `auggie.md:62-63`, `antigravity.md:56-60`, `opencode.md:58-61`: the `gen-*` globs move to `.ductus/scripts/gen-*.sh`; `install-hooks.sh` (maintainer-only) stays at `scripts/`.
-- **Constitution** — the generator-provenance notes `framework/constitution.md:421,422` (`gen-spec-deps.sh`, `gen-cross-service-refs.sh`) → `.ductus/scripts/`; the `lint-rule-filenames.sh` note (`:323`) stays at `scripts/`.
-
 ### Config/session doc + canonical-source updates
 
-Path references in prose move to `.ductus/…` as a uniform token substitution (constitution mechanical-edit rule — no back-edge on the touched done specs). Sites: the constitution's canonical-sources table + `§concurrent-features` session-state paragraph (`:569`) + `[services]`/`[paths]`/`[review]` mentions; `AGENTS.md` (the session-file permission note `:48-49`, the `.govern.toml`-as-shared-DB rule `:43-47`, and the **three-site wiring** rule `:61` — updated to name `.ductus/scripts/` as the shipped-generator home); `README.md` (`.govern.toml` schema mentions, `gen-cross-service-refs.sh` at `:236,247`). The pipeline command bodies that read config/session (`link`, `review`, `analyze`, `status`, `specify`, `groom`, `target`, `amend`, `implement`, `prune`, `plan`, `clarify`, `help`) update their path prose to `.ductus/…`; the runtime does the actual resolution.
-
-### Runtime write-boundary + generator-script detection
-
-The default write-boundary seed (`interpreter/mod.rs`) and generator-script detection (`derive_boundary.rs`, `primitives/mod.rs`) recognize `.ductus/scripts/**` in addition to `scripts/**`, so `/ductus:implement` can write the moved generators and `run-generator` still classifies them. `run_generator.rs` itself needs no change — it resolves whatever caller-supplied path the (now-updated) command literal passes.
-
-> **Not built as planned, and correctly so.** No such special-casing was ever
-> added — `git log -S` over these three files finds no `.govern/scripts` or
-> `.ductus/scripts` hit. `derive-boundary` emits a `{dir}/**` zone glob derived
-> from each changed path, so a write under `.ductus/scripts/` already produced
-> `.ductus/scripts/**` with no enumeration to maintain, and an explicit tier
-> would have been a second copy of a rule the generic derivation already
-> states. The point is moot either way since `022-deterministic-runtime`
-> retired the generators.
+Path references in prose move to `.ductus/…` as a uniform token substitution (constitution mechanical-edit rule — no back-edge on the touched done specs). Sites: the constitution's canonical-sources table + `§concurrent-features` session-state paragraph (`:569`) + `[services]`/`[paths]`/`[review]` mentions; `AGENTS.md` (the session-file permission note and the `.govern.toml`-as-shared-DB rule); `README.md` (`.govern.toml` schema mentions). The pipeline command bodies that read config/session (`link`, `review`, `analyze`, `status`, `specify`, `groom`, `target`, `amend`, `implement`, `prune`, `plan`, `clarify`, `help`) update their path prose to `.ductus/…`; the runtime does the actual resolution.
 
 ### Dogfooding + fixtures
 
-ductus's own repo moves to the new layout in one step: `git mv .govern.toml .ductus/config.toml`; move the gitignored `.govern.session.toml` → `.ductus/session.toml` and fix `.gitignore`; `git mv scripts/gen-spec-deps.sh scripts/gen-cross-service-refs.sh scripts/lib/specs-root.sh` into `.ductus/scripts/`; update `.githooks/pre-commit:32-36` (the two shipped gens → `.ductus/scripts/`, the three maintainer gens stay); update `.shellcheckrc` comments. For the runtime fixtures, the fallback changes the calculus: because the new-then-legacy resolver reads the existing root-layout fixtures correctly, they become valid end-to-end *fallback* coverage as-is, and relocating the fixture dirs only churns the parity stream-goldens for no correctness gain. So the fixtures stay at the legacy root layout (fallback proof), the new layout is proven end-to-end by pointing `exec_subprocess.rs` at `.ductus/session.toml`, and the resolvers are exhaustively unit-tested in `paths.rs` (see task 5).
+ductus's own repo moves to the new layout in one step: `git mv .govern.toml .ductus/config.toml`; move the gitignored `.govern.session.toml` → `.ductus/session.toml` and fix `.gitignore`. For the runtime fixtures, the fallback changes the calculus: because the new-then-legacy resolver reads the existing root-layout fixtures correctly, they become valid end-to-end *fallback* coverage as-is, and relocating the fixture dirs only churns the parity stream-goldens for no correctness gain. So the fixtures stay at the legacy root layout (fallback proof), the new layout is proven end-to-end by pointing `exec_subprocess.rs` at `.ductus/session.toml`, and the resolvers are exhaustively unit-tested in `paths.rs` (see task 5).
 
 ### No data model
 
@@ -108,29 +84,25 @@ Runtime unit tests for both resolvers (new-only, legacy-only, both-present→new
 | `runtime/src/primitives/resolve_references.rs` | Modify | `[services]` read via `config_path` |
 | `runtime/src/primitives/discover_rule_files.rs` | Modify | `[rules]`/`[review]` read via `config_path` |
 | `runtime/src/main.rs` | Modify | Exec walker seed via resolvers (replace `:362` literal) |
-| `runtime/src/interpreter/mod.rs`, `primitives/derive_boundary.rs`, `primitives/mod.rs` | Modify | Recognize `.ductus/scripts/**` in default boundary + generator detection |
 | `runtime/tests/fixtures/*/` | Modify | Move fixtures to `.ductus/{session,config}.toml`; add legacy-layout fixture |
 | `runtime/tests/{parity.rs,exec_subprocess.rs,specs_root_override.rs,cross_service.rs}` | Modify | Literal path updates |
 | `framework/migrations.toml` | Modify | Add `govern-dir-consolidate` entry |
 | `framework/migrations/govern-dir-consolidate.md` | Create | Migration procedure (3 moves, converge, no inner prompt) |
-| `framework/bootstrap/ductus.md` | Modify | Manifest rows `.ductus/scripts/…`; config/session path prose; write-active-file note |
-| `framework/commands/{implement,clarify,amend,plan,target,specify,analyze,link,review,status,groom,prune,help}.md` | Modify | Generator literals (shipped only) + config/session path prose |
-| `framework/bootstrap/hooks/ductus-pre-commit` | Modify | Both shipped gens → `.ductus/scripts/` |
-| `framework/bootstrap/configure/{claude,auggie,antigravity,opencode}.md` | Modify | `gen-*` permission globs → `.ductus/scripts/`; config/session permission paths |
-| `framework/templates/ci/adopter-generators.yml` | Modify | Filter + run line → `.ductus/scripts/` |
+| `framework/bootstrap/ductus.md` | Modify | Config/session path prose; write-active-file note |
+| `framework/commands/{implement,clarify,amend,plan,target,specify,analyze,link,review,status,groom,prune,help}.md` | Modify | Config/session path prose |
+| `framework/bootstrap/configure/{claude,auggie,antigravity,opencode}.md` | Modify | Config/session permission paths |
 | `framework/templates/project/gitignore` | Modify | Session entry → `/.ductus/session.toml` |
-| `framework/constitution.md` | Modify | Canonical-sources table, session-state para, generator-provenance notes (shipped only) |
-| `AGENTS.md` | Modify | Session/config path notes; three-site wiring rule names `.ductus/scripts/` |
-| `README.md` | Modify | `.govern.toml`/generator path mentions |
-| `.ductus/config.toml`, `.ductus/session.toml`, `.ductus/scripts/{gen-spec-deps.sh,gen-cross-service-refs.sh,lib/specs-root.sh}` | Create (git mv) | ductus's own dogfooded layout |
-| `.gitignore`, `.githooks/pre-commit`, `.shellcheckrc` | Modify | Dogfooded layout wiring |
+| `framework/constitution.md` | Modify | Canonical-sources table, session-state para |
+| `AGENTS.md` | Modify | Session/config path notes |
+| `README.md` | Modify | `.govern.toml` path mentions |
+| `.ductus/config.toml`, `.ductus/session.toml` | Create (git mv) | ductus's own dogfooded layout |
+| `.gitignore` | Modify | Dogfooded layout wiring |
 | `scripts/audit/{fixture-session-shape.sh,consolidation-pair.sh,migration-coverage.sh}` | Modify | New paths in fixture/consistency audits |
 
 ## Trade-offs
 
 - **Migration-owns-cutover vs. writes-always-target-new** — chose the migration as the sole cutover with writers on the active file. Rejected unconditional new-location writes: a runtime write before the migration would create a partial `.ductus/config.toml` and new-wins would strand the legacy file's other sections — the exact stale-layout breakage this feature exists to prevent.
 - **Indefinite fallback vs. time-boxed sunset** — chose indefinite (no `sunset_after`), mirroring `session-file-consolidate`. Rejected a sunset: removing the fallback would silently stop reading a straggler's config; the permanent fallback cost is one path probe.
-- **Only three generators move vs. all of `scripts/`** — chose the split so `.ductus/scripts/` marks adopter-facing. Rejected moving maintainer tooling: churns ~27 files and the audit/CI machinery and blurs the audience line.
 - **Two file-specific resolvers vs. one generic `.ductus/`-vs-root helper** — chose two named resolvers (config, session) for readable call sites and because the two files differ (config committed, session gitignored; different consumers). Minor duplication, clearer intent.
 - **Reuse `migrate-session-file`'s constant vs. a new session-migration path** — chose to let the constant move so `session-file-consolidate` lands ancient adopters directly at `.ductus/session.toml`; the compile-time guards keep the migration and the read/write path from drifting.
 - **Known limitations** — (1) A pinned invoker (command body or hook) referencing the old `scripts/…` path is not rewritten (pinning opts out); the migration warns but the adopter owns updating their pinned copy. (2) An adopter who never runs `/ductus` stays on the legacy layout indefinitely (safe via fallback; the reorg is deliberately a `/ductus` event). (3) Adopter CI globs or editor scopes hardcoding root `scripts/` for ductus generators must be updated by the adopter.

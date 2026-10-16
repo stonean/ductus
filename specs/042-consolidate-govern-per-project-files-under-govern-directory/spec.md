@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [027-bootstrap-migration-registry, 040-configurable-specs-dir]
 next-criterion: 17
 ---
