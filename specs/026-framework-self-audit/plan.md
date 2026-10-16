@@ -8,7 +8,7 @@ Implements [026 — Framework self-audit](spec.md).
 
 Per [Q2's resolution](spec.md#resolved-questions), v1 uses shell-first orchestration with the runtime as the invocation mechanism — no new primitives are added in 026. The pattern is intentional: when a check pattern proves common enough across multiple commands, it graduates to a runtime primitive in a follow-on. Inventing primitives for `/audit` alone would overengineer ahead of data.
 
-Output is stdout-only ([Q3](spec.md#resolved-questions) — no `audit.md` artifact). Exit code is binary (`0` / `1`). CI integration: `.github/workflows/markdown-only-pipeline.yml` runs `/audit` on every PR; `.github/workflows/runtime-release.yml` runs `/audit` as a pre-tag gate.
+Output is stdout-only ([Q3](spec.md#resolved-questions) — no `audit.md` artifact). Exit code is binary (`0` / `1`). CI integration: `.github/workflows/framework-checks.yml` runs `/audit` on every PR; `.github/workflows/runtime-release.yml` runs `/audit` as a pre-tag gate.
 
 ## Technical Decisions
 
@@ -31,19 +31,21 @@ Why not a single monolithic `scripts/audit.sh`:
 
 Before any family check fires, `/audit` invokes nine scripts in order via `run-generator`. The order matters because some checks read generator outputs:
 
-1. `scripts/gen-spec-deps.sh --dry-run` (first, so other checks see fresh `dependencies:` fields)
-2. `scripts/gen-readme-table.sh --dry-run`
+1. `ductus derive-dependencies` (first, so other checks see fresh `dependencies:` fields)
+2. `ductus derive-references`
 3. `scripts/gen-help-tables.sh --dry-run`
 4. `scripts/gen-configure-mcp.sh --dry-run`
-5. `scripts/gen-claude-commands.sh --dry-run`
+5. `scripts/gen-claude-commands.sh --check`
 6. `scripts/lint-rule-filenames.sh`
 7. `scripts/lint-frontmatter.sh`
 8. `scripts/lint-procedure-parseability.sh`
 9. `scripts/lint-tool-coverage.sh`
 
-Any non-zero exit produces a `check-zero` finding pointing at the failing script. When check-zero fails, the eight family checks are skipped — running them against known-stale generator output produces misleading findings. Exit code is `1`; stdout makes the cause unambiguous.
+The first two are runtime primitives, so `scripts/audit/check-zero.sh` builds the runtime before running them.
 
-Future-proofing: when a future spec adds a new generator or lint, the author updates both `scripts/audit/check-zero.sh` (orchestrator script) AND `markdown-only-pipeline.yml`'s generator-orchestration step. The audit's Family 5 (template-validate alignment) doesn't catch this — Family 1c (cross-doc claim consistency) could be extended to verify the two lists agree, but that's a follow-on enhancement, not v1 scope.
+Any non-zero exit produces a `check-zero` finding pointing at the failing script. When check-zero fails, the family checks are skipped — running them against known-stale generator output produces misleading findings. Exit code is `1`; stdout makes the cause unambiguous.
+
+Future-proofing: when a future spec adds a new generator or lint, the author updates both `scripts/audit/check-zero.sh` (orchestrator script) AND `framework-checks.yml`'s generator-orchestration step. The audit's Family 5 (template-validate alignment) doesn't catch this — Family 1c (cross-doc claim consistency) could be extended to verify the two lists agree, but that's a follow-on enhancement, not v1 scope.
 
 ### Per-family script designs
 
@@ -57,20 +59,15 @@ Each family check is one shell script. The contract:
 The eight scripts, with implementation notes:
 
 **`scripts/audit/cross-doc-consistency.sh`** (Family 1)
-Three sub-checks composed in one script:
+Two sub-checks composed in one script:
 
-- 1a README table: invoke `scripts/gen-readme-table.sh --check`; finding on non-zero exit.
-- 1b pipeline diagrams: extract the `draft → clarified → planned → in-progress → done` diagram block from `framework/constitution.md` §spec-lifecycle, `docs/introduction.md`, and `framework/templates/project/project-readme.md`. Normalize whitespace, diff pairwise, finding per divergence.
+- 1b pipeline diagrams: extract the `draft → clarified → planned → in-progress → done` diagram block from `framework/constitution.md` §spec-lifecycle, `README.md`, and `framework/templates/project/project-readme.md`. Verify all three visit the same five states in the same order; finding per divergence.
 - 1c back-edge wording: extract the back-edge sentences from §spec-lifecycle, then compare against the references in `framework/commands/amend.md` and `framework/commands/target.md`'s Status→next-action table.
 
 **`scripts/audit/manifest-parity.sh`** (Family 2)
-Two sub-checks:
+One sub-check:
 
-- 2a installer file list: parse the file manifest from `framework/bootstrap/ductus.md` and from `framework/commands/init.md` (via section-extraction regex). Diff the two file lists; finding per asymmetry.
 - 2b permission set: extract Claude `permissions.allow` array from `framework/bootstrap/configure/claude.md`, extract Auggie `toolPermissions` array from `framework/bootstrap/configure/auggie.md`. Normalize each entry to `(tool, command-pattern)` per Q6's resolution (strip `^` anchor and trailing space from Auggie regexes; case-normalize). Sort both, diff; finding per asymmetric entry.
-
-**`scripts/audit/registry-equivalence.sh`** (Family 3)
-Read `framework/workflows/registry.json` via `jq`. Walk `framework/workflows/*.md`. Verify: every registry entry references a real workflow file; every workflow file appears in the registry; registry `description` field matches the workflow file's frontmatter `description:`.
 
 **`scripts/audit/placeholder-roundtrip.sh`** (Family 4)
 `grep -rn` over `framework/commands/*.md` for hardcoded tokens that should be placeholders: `.claude/` (should be `{cli-config-dir}/`), `gov:` (should be `{project}:`), `/ductus:` (should be `/{project}:`). A few documented exceptions (e.g., `framework/commands/audit.md` itself NOT scaffolded so its self-references stay literal) are allowlisted via a comment-prefix `<!-- audit:ignore-placeholders -->` on the affected line.
@@ -127,14 +124,14 @@ The `run-generator` primitive's existing contract (drift detection on non-zero e
 
 ### CI integration
 
-**`.github/workflows/markdown-only-pipeline.yml`** — append a step after the existing `lint-tool-coverage` step:
+**`.github/workflows/framework-checks.yml`** — a step after the lint steps:
 
 ```yaml
-- name: Framework self-audit
-  run: ./runtime/target/release/ductus exec audit
+- name: (h) Framework self-audit
+  run: bash scripts/audit/run-all.sh
 ```
 
-The binary is already built earlier in the workflow (for the parseability check); `/audit` reuses that build. Failure of this step fails the PR.
+The binary is already built earlier in the workflow; the audit reuses that build. Failure of this step fails the PR.
 
 **`.github/workflows/runtime-release.yml`** — append a pre-tag gate after the build/test steps, before the matrix release fires:
 
@@ -162,7 +159,7 @@ The shipped `framework/templates/ci/adopter-generators.yml` is NOT modified.
 | `scripts/audit/ssot-invariants.sh` | Create | Family 6 — duplicate normative rule text detection |
 | `scripts/audit/sibling-coupling.sh` | Create | Family 7 — bundling-candidate detection with Q5 suppression-phrase support |
 | `scripts/audit/introducing-drift.sh` | Create | Family 8 — current-tense old-name references in done spec bodies |
-| `.github/workflows/markdown-only-pipeline.yml` | Modify | Add `/audit` step after existing lint steps |
+| `.github/workflows/framework-checks.yml` | Modify | Add `/audit` step after existing lint steps |
 | `.github/workflows/runtime-release.yml` | Modify | Add `/audit` pre-tag gate before release matrix fires |
 | `runtime/legacy-prose-commands.txt` | Modify | Remove `framework/commands/audit.md` from the legacy allowlist — the command ships parseable from day one |
 | `specs/026-framework-self-audit/spec.md` | Modify | Status `clarified → planned` at the end of this phase, then `planned → in-progress` and `→ done` during implementation |
@@ -216,7 +213,7 @@ All 7 questions resolved at clarify. No new questions surfaced during planning.
 - Adopter-facing or maintainer-only? → Maintainer-only in v1.
 - Consume runtime primitives? → Defer per-check to plan; this plan opts for shell-first orchestration via `run-generator`, with new primitives deferred to follow-ons.
 - Severity levels? → Binary in v1.
-- CI integration? → markdown-only-pipeline.yml on every PR + runtime-release.yml as pre-tag gate.
+- CI integration? → framework-checks.yml on every PR + runtime-release.yml as pre-tag gate.
 - Coupling-check ergonomics? → Both resolution paths in the suggested-fix; `Why split from {slug}:` literal-phrase suppression.
 - Manifest parity normalization? → Inline in `scripts/audit/manifest-parity.sh`, not a shared script.
 - Bootstrap order of checks? → Check-zero precondition pass before family checks; halt on precondition failure.
