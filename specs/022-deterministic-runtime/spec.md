@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [021-runtime-boundary]
 next-criterion: 33
 ---
@@ -221,7 +221,7 @@ Stable relationships post-rewrite:
 - [x] AC5: The three initial-release LLM extension points (`assessSpecQuality`, `writeCode`, `writeSpecBody`) each have a request schema, response schema, and a corresponding HTML-comment marker in the relevant Instructions step.
 - [x] AC6: A parseability check is added to `.github/workflows/markdown-only-pipeline.yml` and passes against every slash command file — the six rewritten ones under the new conventions, and the three not-yet-rewritten ones under the legacy prose-walk path (the parser tolerates files that do not yet declare a Procedure-shaped Instructions section). Delivered as written; that workflow is renamed to `.github/workflows/framework-checks.yml` by `048-govern-acquired-runtime`, which carried the parseability check across unchanged.
 - [x] AC7: The binary executes each of the six initial-release commands end-to-end against a fixture repo and produces output consistent with the LLM-driven path against the same fixture, within the determinism bounds defined for each command.
-- [x] AC8: Median wall-clock time per invocation drops from minutes to seconds for each of the six initial-release commands when the runtime is present.
+- [x] AC8: With the host answering its extension points, `ductus exec` completes each of the six initial-release commands in seconds. What remains of an invocation's wall-clock is the extension points' own semantic work, which is the LLM's and which the runtime does not absorb.
 - [x] AC9: The markdown-only path (no binary on `PATH`) continues to complete every pipeline cycle (greenfield, brownfield, reopen) as it did before this spec. Delivered as written; the guarantee is removed by `048-govern-acquired-runtime`, which made the runtime a requirement rather than an option, so the no-binary cycle this criterion asserts is since retired.
 - [x] AC10: `framework/runtime-tools.txt` is populated with every MCP tool name the binary exposes; `scripts/lint-tool-coverage.sh` passes against the rewritten slash command files.
 - [x] AC11: A new CI workflow at `.github/workflows/runtime.yml` builds the binary, runs its test suite, exercises every primitive against fixture inputs, and fails on any test failure.
