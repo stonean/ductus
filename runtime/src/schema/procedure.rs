@@ -2,7 +2,7 @@
 //!
 //! Types mirror the AST description in
 //! `specs/022-deterministic-runtime/data-model.md`. They serialize via `serde`
-//! only for the `runtime parse <file>` debug surface; the runtime never
+//! only for the `ductus parse <file>` debug surface; the runtime never
 //! persists the AST to disk.
 
 #![allow(clippy::module_name_repetitions)]

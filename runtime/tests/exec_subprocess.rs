@@ -1,4 +1,4 @@
-//! End-to-end test for the `runtime exec <command>` subprocess
+//! End-to-end test for the `ductus exec <command>` subprocess
 //! interpreter surface. Spawns the release binary as a real subprocess,
 //! pipes stdin/stdout, and exercises a synthetic procedure file from
 //! a tempfile repo.

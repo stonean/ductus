@@ -8,7 +8,7 @@
 //! 1. Stages each command's fixture (`runtime/tests/fixtures/<fixture>/`)
 //!    plus the canonical `framework/commands/<command>.md` into a fresh
 //!    tempdir.
-//! 2. Runs `runtime exec <command>` against the tempdir and captures
+//! 2. Runs `ductus exec <command>` against the tempdir and captures
 //!    stdout.
 //! 3. Asserts the captured stream equals the golden JSONL under
 //!    `runtime/tests/golden/<fixture>.jsonl`, byte-for-byte after the
@@ -144,7 +144,7 @@ fn ductus_basic_post_run_filesystem_state_matches_expectations() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         output.status.success(),
-        "runtime exec install failed: {:?}\nstderr:\n{stderr}",
+        "ductus exec install failed: {:?}\nstderr:\n{stderr}",
         output.status
     );
 
@@ -834,7 +834,7 @@ fn run_parity_case(command: &str, fixture: &str) {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         output.status.success(),
-        "runtime exec {command} exited with {:?}\nstderr:\n{stderr}",
+        "ductus exec {command} exited with {:?}\nstderr:\n{stderr}",
         output.status
     );
 

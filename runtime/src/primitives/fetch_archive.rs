@@ -31,6 +31,10 @@
 //! a self-consistent computed sha and only surface as corruption later
 //! in `extract-archive`. A body of exactly the cap size succeeds.
 //!
+//! Each fetch is bounded in time as well as size: `FETCH_TIMEOUT` bounds any
+//! one stall, and `FETCH_DEADLINE` the whole fetch. A fetch past its deadline
+//! raises an operational error naming it, and the archive is not written.
+//!
 //! The primitive is blocking — it spins reqwest's blocking client per
 //! call rather than dragging an async runtime through the primitive
 //! surface. Network failures map to [`PrimitiveError::Http`] (transport)

@@ -21,3 +21,11 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] State that the owning-spec judgment stays at `routeInboxItem` and the operator, with the routing entry in `AGENTS.md` naming the three homes, and that a heading-based fallback would still answer 022 for `resolve-constitutions`, `resolve-references` and `enforce-manifest`
 
 - **Done when**: the scenario records the decision and the measurements behind it, and no artifact describes deriving the owning spec as pending work.
+
+## 4. Retire the `runtime mcp|exec|parse` invocations: the binary is `ductus`
+
+- [x] Found reading 022 for this round's review: AC1, AC2, §MCP server, §Subprocess, the plan and the data model invoke a `runtime` binary the tree does not ship, while `runtime/README.md` (crates.io) says `ductus mcp`, `ductus exec` and `ductus parse --check`. Substitute every backticked `runtime mcp|exec|parse` invocation in live artifacts, the doc comments and test messages that name it, and `main.rs`'s four `runtime exec:` stderr prefixes
+- [x] Leave test fixtures and parity goldens (test data; editing a fixture moves a golden), changelogs and audit records (a record of a rename keeps the old name), and unbackticked prose about the surface ("the runtime exec path")
+- [x] Verify: `scripts/lint-procedure-parseability.sh` passes and `cargo test --release --locked --test parity` passes with no golden changed
+
+- **Done when**: no live artifact or runtime message invokes a binary named `runtime`; fixtures, goldens and records are unchanged; the parseability lint and the parity suite pass without a bless.

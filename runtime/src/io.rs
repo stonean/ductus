@@ -3,7 +3,7 @@
 //! The JSON-over-stdio protocol is line-delimited: every envelope is a
 //! single complete JSON object terminated by `\n`. These helpers are the
 //! single place where serialization, flushing, and EOF semantics live so
-//! the [`crate::interpreter::Walker`] and the `runtime exec` driver stay
+//! the [`crate::interpreter::Walker`] and the `ductus exec` driver stay
 //! decoupled from the framing choice.
 
 use std::io::{BufRead, Write};

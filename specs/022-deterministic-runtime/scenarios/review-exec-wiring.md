@@ -2,13 +2,13 @@
 section: "Follow-on scenarios"
 ---
 
-# Review-exec-wiring — thread primitive results so `/ductus:review` runs under `runtime exec`
+# Review-exec-wiring — thread primitive results so `/ductus:review` runs under `ductus exec`
 
 ## Context
 
 The [review-runtime-acceleration](review-runtime-acceleration.md) scenario landed the four review primitives (`discover-rule-files`, `process-waivers`, `compute-review-scope`, `write-review`), the `performReview` extension point, and the `/ductus:review` command rewrite. These work end-to-end on the **MCP/host path**, where the host threads each primitive's result into the next step.
 
-The **`runtime exec` path is not yet wired**: the interpreter walker discards primitive results (`dispatch_primitive` returns a value, but `handle_primitive` maps `Ok(_) => Ok(None)` in `runtime/src/interpreter/mod.rs`). So on `runtime exec review`, the `scope`/`diff-base` from `compute-review-scope` and the `selected`/`rules-dir` from `discover-rule-files` never reach `build_perform_review_request` or `write-review` — each pass would receive an empty scope and empty rule set, and `write-review` would receive no scope. Only `performReview` findings accumulate today (the 45e walker change), because that path was added explicitly. Surfaced during task 45i (integration + release prep) and deferred here as its own unit so the cross-command golden re-bless is deliberate rather than a tail-of-45i cram.
+The **`ductus exec` path is not yet wired**: the interpreter walker discards primitive results (`dispatch_primitive` returns a value, but `handle_primitive` maps `Ok(_) => Ok(None)` in `runtime/src/interpreter/mod.rs`). So on `ductus exec review`, the `scope`/`diff-base` from `compute-review-scope` and the `selected`/`rules-dir` from `discover-rule-files` never reach `build_perform_review_request` or `write-review` — each pass would receive an empty scope and empty rule set, and `write-review` would receive no scope. Only `performReview` findings accumulate today (the 45e walker change), because that path was added explicitly. Surfaced during task 45i (integration + release prep) and deferred here as its own unit so the cross-command golden re-bless is deliberate rather than a tail-of-45i cram.
 
 ## Behavior
 

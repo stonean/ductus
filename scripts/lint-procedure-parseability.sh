@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lint-procedure-parseability.sh — invoke `runtime parse --check` on every
+# lint-procedure-parseability.sh — invoke `ductus parse --check` on every
 # slash command markdown file, honoring runtime/legacy-prose-commands.txt
 # as the allowlist of files not yet rewritten to the new conventions.
 #

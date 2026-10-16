@@ -6,14 +6,14 @@ Implements [022 — Deterministic Runtime](spec.md).
 
 This spec ships a substantial new artifact: a Rust binary, `ductus`, built from `runtime/` in this repo, plus six rewritten slash command files and two new CI workflows. The spec body already settles the largest design questions in its Resolved Questions section (language, surfaces, ABI, distribution, install policy, MCP naming convention, partial-failure semantics, state management). This plan's job is to make the remaining implementation-concrete choices: project layout, dependency selection, parser strategy, test-fixture shape, ordering, and release engineering. Roughly:
 
-1. **A new Rust crate at `runtime/`** with `clap`-based CLI exposing two top-level subcommands (`runtime mcp`, `runtime exec`), plus per-primitive subcommands so each primitive is invokable standalone.
+1. **A new Rust crate at `runtime/`** with `clap`-based CLI exposing two top-level subcommands (`ductus mcp`, `ductus exec`), plus per-primitive subcommands so each primitive is invokable standalone.
 2. **The primitive operations** implemented in-process, each with a deterministic core and a thin CLI/MCP/JSON-protocol wrapper. State-modifying primitives use tempfile-plus-rename atomicity.
 3. **A markdown procedure parser** for slash command Instructions sections, hand-walked over `pulldown-cmark`'s event stream. The parser produces a typed AST the interpreter walks.
 4. **An interpreter** that walks the AST, calls primitives in-process, and round-trips JSON messages over stdio for LLM extension points and gates.
 5. **Three extension points** (`assessSpecQuality`, `writeCode`, `writeSpecBody`) with versioned request/response schemas defined in `data-model.md` and serialized via `serde`.
 6. **Six rewritten slash command files** under `framework/commands/`, adopting the parseable conventions.
 7. **Two new CI workflows**: `runtime.yml` (per-PR build + test on changes to runtime source paths) and a release workflow triggered by tags that cross-compiles and uploads artifacts.
-8. **Parseability check** in `framework-checks.yml` — `scripts/lint-procedure-parseability.sh` runs `runtime parse --check` against every `framework/commands/*.md` file, tolerating legacy prose only for a file on the `runtime/legacy-prose-commands.txt` allowlist.
+8. **Parseability check** in `framework-checks.yml` — `scripts/lint-procedure-parseability.sh` runs `ductus parse --check` against every `framework/commands/*.md` file, tolerating legacy prose only for a file on the `runtime/legacy-prose-commands.txt` allowlist.
 9. **Distribution + discovery**: GitHub release artifacts, which `/ductus` acquires during adoption since `048-govern-acquired-runtime`; the README's runtime section; a one-line pointer in the `/ductus` bootstrap completion message. No per-invocation install nags.
 
 Implementation proceeds bottom-up: primitives → MCP surface → parser → interpreter → slash command rewrites → CI/distribution. Each layer is testable in isolation before the one above it depends on it.
@@ -56,7 +56,7 @@ Each pick has a one-line rationale; cargo-version pins go into `Cargo.toml`.
 
 No `tracing`, no `log`, no async logging crates. Human-readable stderr output uses `eprintln!`; structured `progress` JSON messages over stdout are emitted by the interpreter directly. Observability is a single function in `src/io.rs` that writes one JSON object per line. Keeping the dependency surface tight matters because every new crate is supply-chain surface for a tool that runs in every adopter's environment.
 
-Nothing secret reaches stderr (`BE-LOG-002`). Its lines are diagnostics: paths, parse errors, and guidance. The one value the runtime holds that can carry a credential is a proxy URL, and `ProxyEnv` in `runtime/src/primitives/fetch_archive.rs` deliberately implements no `Debug`, so it is never formatted. The one raw echo, an unparseable stdin line under `runtime exec` (`runtime/src/io.rs`), returns the host's own input to the host's own stderr.
+Nothing secret reaches stderr (`BE-LOG-002`). Its lines are diagnostics: paths, parse errors, and guidance. The one value the runtime holds that can carry a credential is a proxy URL, and `ProxyEnv` in `runtime/src/primitives/fetch_archive.rs` deliberately implements no `Debug`, so it is never formatted. The one raw echo, an unparseable stdin line under `ductus exec` (`runtime/src/io.rs`), returns the host's own input to the host's own stderr.
 
 ### Dependency pinning, provenance, and upgrades
 
@@ -89,7 +89,7 @@ The interpreter `panic`s if it reads a malformed JSON line on stdin — that is 
 
 ### MCP surface: one tool per primitive, no orchestration tools
 
-`runtime mcp` starts an `rmcp` server exposing one tool per primitive in `spec.md` §The primitive library, under bare `<verb>-<noun>` names each host prefixes with its own server name, per the resolved-questions section. Tool input schemas are derived from each primitive's args struct via `schemars`. No orchestration tools (`run-procedure`, `walk-tasks`, etc.) are exposed via MCP — orchestration is the subprocess interpreter's job, not the MCP server's. This keeps the MCP surface flat and stable.
+`ductus mcp` starts an `rmcp` server exposing one tool per primitive in `spec.md` §The primitive library, under bare `<verb>-<noun>` names each host prefixes with its own server name, per the resolved-questions section. Tool input schemas are derived from each primitive's args struct via `schemars`. No orchestration tools (`run-procedure`, `walk-tasks`, etc.) are exposed via MCP — orchestration is the subprocess interpreter's job, not the MCP server's. This keeps the MCP surface flat and stable.
 
 A tool result is bounded by the project it describes rather than paginated (`BE-PAYLOAD-001`). A list grows with the project's own tree. `compute-review-scope`'s `scope` grows with the plan's Affected Files and the files modified since its base, with ignored files left out (066's `review-scope-includes-uncommitted-work`), and a body is one artifact's, as with `read-spec` and `read-tasks`, whose subjects `check-artifact-size` warns about past the configured read size. Pagination is not provided, because the subject is the project's own working tree and spec corpus. A result over a host's tool-output cap is re-run through the runtime binary with its output redirected to a file, as `framework/commands/review.md` step 1 directs for `compute-review-scope`.
 
@@ -171,7 +171,7 @@ There is no version field: the spec's Versioning-enforcement resolution rejects 
 A step in `framework-checks.yml` runs `bash scripts/lint-procedure-parseability.sh`, which:
 
 1. Builds the runtime binary in `--release` mode in the workflow runner and invokes it by its relative path, `runtime/target/release/ductus` — a workflow-private compile, not an install.
-2. Invokes `runtime parse --check` on every `framework/commands/*.md` file, allowing legacy prose only for files listed in `runtime/legacy-prose-commands.txt`; an Invalid parse fails for every file, allowlisted or not.
+2. Invokes `ductus parse --check` on every `framework/commands/*.md` file, allowing legacy prose only for files listed in `runtime/legacy-prose-commands.txt`; an Invalid parse fails for every file, allowlisted or not.
 3. Exits non-zero on any other failure.
 
 Alternative considered: ship a tiny standalone parser in bash. Rejected — the parser is the single source of truth for what "parseable" means, and a bash reimplementation would drift.
@@ -300,7 +300,7 @@ Considered and rejected:
 | `framework/commands/implement.md` | Edit | Rewrite Instructions to parseable conventions; add `writeCode` extension point marker |
 | `framework/commands/plan.md` | Edit | Rewrite Instructions to parseable conventions; add `writeSpecBody` extension point marker |
 | `framework/commands/specify.md` | Edit | Rewrite Instructions to parseable conventions; add `writeSpecBody` extension point marker |
-| `scripts/lint-procedure-parseability.sh` | Create | Bash wrapper that builds runtime and invokes `runtime parse --check` |
+| `scripts/lint-procedure-parseability.sh` | Create | Bash wrapper that builds runtime and invokes `ductus parse --check` |
 | `.github/workflows/framework-checks.yml` | Edit | The parseability check step |
 | `.github/workflows/runtime.yml` | Create | Per-PR build + test + clippy + fmt + `cargo audit` dependency scan |
 | `.github/workflows/runtime-release.yml` | Create | Tag-triggered cross-compile + release upload + CycloneDX SBOM |

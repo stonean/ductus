@@ -4,7 +4,7 @@ Defines the data structures the runtime owns: the parsed procedure AST, the JSON
 
 ## Procedure AST
 
-Produced by `runtime/src/parser/`. Internal to the runtime; not serialized to disk. JSON serialization exists only for `runtime parse <file>`'s debug output.
+Produced by `runtime/src/parser/`. Internal to the runtime; not serialized to disk. JSON serialization exists only for `ductus parse <file>`'s debug output.
 
 ```rust
 struct Procedure {
@@ -42,7 +42,7 @@ struct SourceRange {
 }
 ```
 
-The parser rejects a malformed procedure with a hard `ParseError::Invalid` — an unrecognized primitive name, or a single step naming two or more *distinct* primitives (only one can dispatch, so a second would be silently dropped on the exec path). `runtime parse --check` reports these, and `scripts/lint-procedure-parseability.sh` fails CI on them (for every `framework/commands/*.md` and `framework/bootstrap/*.md` file). A file that has no procedure-shaped Instructions section returns `ParseError::LegacyProse`, tolerated only for the files on the parseability allowlist.
+The parser rejects a malformed procedure with a hard `ParseError::Invalid` — an unrecognized primitive name, or a single step naming two or more *distinct* primitives (only one can dispatch, so a second would be silently dropped on the exec path). `ductus parse --check` reports these, and `scripts/lint-procedure-parseability.sh` fails CI on them (for every `framework/commands/*.md` and `framework/bootstrap/*.md` file). A file that has no procedure-shaped Instructions section returns `ParseError::LegacyProse`, tolerated only for the files on the parseability allowlist.
 
 ## JSON-over-stdio protocol
 
@@ -836,7 +836,7 @@ Request payload:
   "spec-path": "specs/022-deterministic-runtime/spec.md",
   "spec-content": "...full spec text...",
   "criteria": [
-    { "index": 0, "text": "`runtime exec implement` walks the procedure to completion.", "checked": false },
+    { "index": 0, "text": "`ductus exec implement` walks the procedure to completion.", "checked": false },
     { "index": 1, "text": "Out-of-boundary edits are rejected.", "checked": false }
   ]
 }

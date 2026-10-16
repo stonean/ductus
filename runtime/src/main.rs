@@ -447,7 +447,7 @@ fn emit_exec_parse_error(path: &std::path::Path, err: &ductus::parser::ParseErro
     let stdout = io::stdout();
     let mut writer = stdout.lock();
     if let Err(io_err) = write_envelope(&mut writer, &envelope) {
-        eprintln!("runtime exec: failed to emit parse-error envelope: {io_err}");
+        eprintln!("ductus exec: failed to emit parse-error envelope: {io_err}");
     }
     eprintln!("{message}");
     ExitCode::from(2)
@@ -472,7 +472,7 @@ fn emit_exec_error(code: &str, message: &str) {
     let stdout = io::stdout();
     let mut writer = stdout.lock();
     if let Err(io_err) = write_envelope(&mut writer, &envelope) {
-        eprintln!("runtime exec: failed to emit error envelope: {io_err}");
+        eprintln!("ductus exec: failed to emit error envelope: {io_err}");
     }
 }
 
@@ -575,7 +575,7 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
             .join(", ");
         let message = format!("command file not found (tried {tried})");
         emit_exec_error("command-not-found", &message);
-        eprintln!("runtime exec: {message}");
+        eprintln!("ductus exec: {message}");
         return ExitCode::from(1);
     };
 
@@ -634,7 +634,7 @@ fn run_exec(command: &str, args: &[String], repo: &std::path::Path) -> ExitCode 
         Err(err) => {
             let message = format!("I/O error: {err}");
             emit_exec_error("io-error", &message);
-            eprintln!("runtime exec: {message}");
+            eprintln!("ductus exec: {message}");
             ExitCode::from(74) // EX_IOERR
         }
     }

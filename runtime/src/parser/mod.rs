@@ -113,7 +113,7 @@ pub fn parse(source: &str, command_name: &str) -> Result<Procedure, ParseError> 
 }
 
 /// Lightweight wrapper around [`parse`] that discards the AST. Used by
-/// `runtime parse --check` and `scripts/lint-procedure-parseability.sh`.
+/// `ductus parse --check` and `scripts/lint-procedure-parseability.sh`.
 ///
 /// # Errors
 ///
