@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [050-constitution, 052-spec-supersession-and-consolidation]
 next-criterion: 27
 ---
