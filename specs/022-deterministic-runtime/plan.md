@@ -4,17 +4,17 @@ Implements [022 — Deterministic Runtime](spec.md).
 
 ## Overview
 
-This spec ships a substantial new artifact: a Rust binary called `runtime` that lives in this repo, plus six rewritten slash command files and two new CI workflows. The spec body already settles the largest design questions in its Resolved Questions section (language, surfaces, ABI, distribution, install policy, MCP naming convention, partial-failure semantics, state management). This plan's job is to make the remaining implementation-concrete choices: project layout, dependency selection, parser strategy, test-fixture shape, ordering, and release engineering. Roughly:
+This spec ships a substantial new artifact: a Rust binary, `ductus`, built from `runtime/` in this repo, plus six rewritten slash command files and two new CI workflows. The spec body already settles the largest design questions in its Resolved Questions section (language, surfaces, ABI, distribution, install policy, MCP naming convention, partial-failure semantics, state management). This plan's job is to make the remaining implementation-concrete choices: project layout, dependency selection, parser strategy, test-fixture shape, ordering, and release engineering. Roughly:
 
 1. **A new Rust crate at `runtime/`** with `clap`-based CLI exposing two top-level subcommands (`runtime mcp`, `runtime exec`), plus per-primitive subcommands so each primitive is invokable standalone.
-2. **Thirteen primitive operations** implemented in-process, each with a deterministic core and a thin CLI/MCP/JSON-protocol wrapper. State-modifying primitives use tempfile-plus-rename atomicity.
+2. **The primitive operations** implemented in-process, each with a deterministic core and a thin CLI/MCP/JSON-protocol wrapper. State-modifying primitives use tempfile-plus-rename atomicity.
 3. **A markdown procedure parser** for slash command Instructions sections, hand-walked over `pulldown-cmark`'s event stream. The parser produces a typed AST the interpreter walks.
 4. **An interpreter** that walks the AST, calls primitives in-process, and round-trips JSON messages over stdio for LLM extension points and gates.
 5. **Three extension points** (`assessSpecQuality`, `writeCode`, `writeSpecBody`) with versioned request/response schemas defined in `data-model.md` and serialized via `serde`.
 6. **Six rewritten slash command files** under `framework/commands/`, adopting the parseable conventions.
 7. **Two new CI workflows**: `runtime.yml` (per-PR build + test on changes to runtime source paths) and a release workflow triggered by tags that cross-compiles and uploads artifacts.
-8. **Parseability check** added to the existing `markdown-only-pipeline.yml` — a bash invocation of `runtime parse --check` against every `framework/commands/*.md` file. The check tolerates legacy prose (the three not-yet-rewritten commands) so the workflow doesn't fail on them.
-9. **Distribution + discovery**: GitHub release artifacts; README Runtime section; one-line pointer added to the `/ductus` bootstrap completion message. No auto-install, no per-invocation install nags.
+8. **Parseability check** in `framework-checks.yml` — `scripts/lint-procedure-parseability.sh` runs `runtime parse --check` against every `framework/commands/*.md` file, tolerating legacy prose only for a file on the `runtime/legacy-prose-commands.txt` allowlist.
+9. **Distribution + discovery**: GitHub release artifacts, which `/ductus` acquires during adoption since `048-govern-acquired-runtime`; the README's runtime section; a one-line pointer in the `/ductus` bootstrap completion message. No per-invocation install nags.
 
 Implementation proceeds bottom-up: primitives → MCP surface → parser → interpreter → slash command rewrites → CI/distribution. Each layer is testable in isolation before the one above it depends on it.
 
@@ -35,7 +35,7 @@ The runtime is a single binary crate at `runtime/Cargo.toml` (sibling to `framew
 - `runtime/tests/` — integration tests against fixture repos under `runtime/tests/fixtures/`.
 - `runtime/CHANGELOG.md` — runtime release notes, maintained in lockstep with framework releases per §runtime-boundary.
 
-`runtime/` is added to the existing `.gitignore`-level inclusion (no exclusion) and shipped as part of the repo. The path `runtime/target/` is added to the root `.gitignore`.
+`runtime/` is shipped as part of the repo, and `runtime/.gitignore` excludes its `target/`.
 
 ### Dependency selection
 
@@ -89,13 +89,13 @@ The interpreter `panic`s if it reads a malformed JSON line on stdin — that is 
 
 ### MCP surface: one tool per primitive, no orchestration tools
 
-`runtime mcp` starts an `rmcp` server exposing one tool per primitive in `spec.md` §The primitive library, with tool names following the `gov-rt:<verb>-<noun>` convention from the resolved-questions section. Tool input schemas are derived from each primitive's args struct via `schemars`. No orchestration tools (`run-procedure`, `walk-tasks`, etc.) are exposed via MCP — orchestration is the subprocess interpreter's job, not the MCP server's. This keeps the MCP surface flat and stable.
+`runtime mcp` starts an `rmcp` server exposing one tool per primitive in `spec.md` §The primitive library, under bare `<verb>-<noun>` names each host prefixes with its own server name, per the resolved-questions section. Tool input schemas are derived from each primitive's args struct via `schemars`. No orchestration tools (`run-procedure`, `walk-tasks`, etc.) are exposed via MCP — orchestration is the subprocess interpreter's job, not the MCP server's. This keeps the MCP surface flat and stable.
 
 A tool result is bounded by the project it describes rather than paginated (`BE-PAYLOAD-001`). A list grows with the project's own tree. `compute-review-scope`'s `scope` grows with the plan's Affected Files and the files modified since its base, with ignored files left out (066's `review-scope-includes-uncommitted-work`), and a body is one artifact's, as with `read-spec` and `read-tasks`, whose subjects `check-artifact-size` warns about past the configured read size. Pagination is not provided, because the subject is the project's own working tree and spec corpus. A result over a host's tool-output cap is re-run through the runtime binary with its output redirected to a file, as `framework/commands/review.md` step 1 directs for `compute-review-scope`.
 
 ### Atomic writes: tempfile in same directory, then `std::fs::rename`
 
-State-modifying primitives (`mark-task`, `mark-criterion`, `set-status`) write to a tempfile created via `tempfile::NamedTempFile::new_in(parent_dir)`. The tempfile is written, flushed, fsynced, then renamed over the target with `tempfile::NamedTempFile::persist`. POSIX rename is atomic within the same filesystem; placing the tempfile in the same directory guarantees that property. Windows rename semantics are weaker but acceptable for this use case — adopters running on Windows accept the small atomicity gap; partial-write recovery via `git checkout` is documented in the README Runtime section.
+State-modifying primitives (`mark-task`, `mark-criterion`, `set-status`) write to a tempfile created via `tempfile::NamedTempFile::new_in(parent_dir)`. The tempfile is written, flushed, fsynced, then renamed over the target with `tempfile::NamedTempFile::persist`. POSIX rename is atomic within the same filesystem; placing the tempfile in the same directory guarantees that property. Windows rename semantics are weaker but acceptable for this use case — adopters running on Windows accept the small atomicity gap, and a partial write is recovered from git.
 
 ### CLI surface shape
 
@@ -111,7 +111,7 @@ runtime --version                    # build-time version, from CARGO_PKG_VERSIO
 runtime --help                       # rendered by clap
 ```
 
-Primitive subcommand names match their MCP tool names without the `gov-rt:` prefix (e.g., `runtime read-spec --feature 022-deterministic-runtime`). This makes the CLI surface a 1:1 mirror of the MCP surface, which is what `framework/runtime-tools.txt` ultimately enumerates.
+Primitive subcommand names match their bare MCP tool names (e.g., `runtime read-spec --feature 022-deterministic-runtime`). This makes the CLI surface a 1:1 mirror of the MCP surface, which is what `framework/runtime-tools.txt` ultimately enumerates.
 
 ### Versioning: built-in from `Cargo.toml`
 
@@ -124,9 +124,9 @@ Integration tests live under `runtime/tests/` and exercise the runtime against f
 Each fixture exercises one slash command end-to-end. The test asserts:
 
 1. The runtime's output stream matches an expected sequence of JSON messages (golden file under `runtime/tests/golden/<fixture>.jsonl`).
-2. The fixture's on-disk state after the run matches a captured "after" tree (`runtime/tests/expected/<fixture>/`).
+2. The fixture's on-disk state after the run, where a command writes, is asserted by the test itself (`ductus_basic_post_run_filesystem_state_matches_expectations` in `runtime/tests/parity.rs`).
 
-Updating goldens uses a `RUNTIME_TEST_UPDATE_GOLDEN=1` env var that rewrites the expected files. CI runs without the env var; failures show a diff in the test output.
+Updating goldens uses a `BLESS=1` env var that rewrites the golden files. CI runs without the env var; failures show a diff in the test output.
 
 The fixture repo is the integration substrate. Per-primitive unit tests under each `src/primitives/<name>.rs` cover narrower behaviors (frontmatter shapes, anchor mismatches, atomic-write crash points via interrupted writes).
 
@@ -158,24 +158,21 @@ Order matches the spec's resolved Initial Scope:
 
 Each rewrite follows the spec's Per-rewrite checklist verbatim and adds nothing new beyond it. Rewrites do not change command behavior or argument shape; the runtime executes the same procedure the LLM walked before.
 
-### Slash command frontmatter: add `parity:` and `runtime:` fields
+### Slash command frontmatter: add a `parity:` field
 
-Two new optional frontmatter fields:
+One new optional frontmatter field:
 
-- `runtime: <minimum-version>` — if set, the runtime refuses to execute the command at a lower version. This is the only enforcement mechanism for runtime/framework version skew; spec resolution covers the broader policy.
 - `parity: { strict-files?: [...], strict-stdout?: bool, semantic-fields?: [...] }` — per the parity testing section above.
 
-Both fields are unknown to the markdown-only path (the LLM ignores fields it doesn't recognize). They are unknown to spec 021's parseability convention (which only constrains the Instructions section). No constitution edit needed.
+There is no version field: the spec's Versioning-enforcement resolution rejects a startup version comparison. The field is unknown to the markdown-only path (the LLM ignores fields it doesn't recognize). It is unknown to spec 021's parseability convention (which only constrains the Instructions section). No constitution edit needed.
 
-### Parseability check: new step in `markdown-only-pipeline.yml`
+### Parseability check: a step in `framework-checks.yml`
 
-A new step (f) is added to the existing workflow, after step (e). It runs `bash scripts/lint-procedure-parseability.sh`, which:
+A step in `framework-checks.yml` runs `bash scripts/lint-procedure-parseability.sh`, which:
 
-1. Builds the runtime binary in `--release` mode locally in the workflow runner. This is the *only* place the workflow has a Rust toolchain — confined to this lint, not poisoning the markdown-only assertion that the binary is absent at command-execution time.
-2. Invokes `runtime parse --check framework/commands/*.md`, allowing failures for files listed in `runtime/legacy-prose-commands.txt`.
+1. Builds the runtime binary in `--release` mode in the workflow runner and invokes it by its relative path, `runtime/target/release/ductus` — a workflow-private compile, not an install.
+2. Invokes `runtime parse --check` on every `framework/commands/*.md` file, allowing legacy prose only for files listed in `runtime/legacy-prose-commands.txt`; an Invalid parse fails for every file, allowlisted or not.
 3. Exits non-zero on any other failure.
-
-Wait — this contradicts spec 021's check (a) "no runtime binary on PATH." The parseability check needs the binary; check (a) demands its absence. Resolution: the parseability check runs the binary as `./runtime/target/release/runtime` directly (relative path, not PATH lookup). Spec 021's check (a) is unchanged — it greps PATH for names in `framework/runtime-tools.txt`, which is about whether the binary is *available to slash commands*, not whether the workflow runner has compiled a copy locally for its own lint. This distinction is annotated in `lint-procedure-parseability.sh` and surfaced in a comment in the workflow file so future readers don't trip on it.
 
 Alternative considered: ship a tiny standalone parser in bash. Rejected — the parser is the single source of truth for what "parseable" means, and a bash reimplementation would drift.
 
@@ -191,37 +188,31 @@ Triggers on PR and push to `main`, with `paths` filter covering `runtime/**` and
 6. `cargo fmt --check`.
 7. `cargo audit` — dependency vulnerability scan against the RustSec advisory database (`BE-DEPS-001`). Policy on findings: any advisory affecting the resolved `Cargo.lock` graph fails the build; a deliberate exception requires an `[advisories] ignore` entry in `runtime/audit.toml` with a justification comment naming the RUSTSEC id and the revisit condition.
 
-No matrix on OS in the per-PR workflow — Linux only. The release workflow is where cross-platform matters; PR CI is a smoke test.
+Build and test run on a matrix of `ubuntu-latest`, `macos-latest` and `windows-latest`; `cargo audit` runs once, on Linux.
 
 ### Release workflow
 
-A separate workflow at `.github/workflows/runtime-release.yml`, triggered on tag pushes matching `runtime-v*`. Steps:
+A separate workflow at `.github/workflows/runtime-release.yml`, triggered on tag pushes matching `ductus-v*`. Steps:
 
 1. Matrix across the target triples in the acceptance criteria: `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, and `x86_64-pc-windows-msvc` if cross-compilation is friction-free.
 2. Build via `cargo-zigbuild` for Linux ARM (cross-compilation), native build for macOS targets on macOS runners, and `cargo build` on a Windows runner for the Windows target.
-3. Tarball/zip each binary with a `sha256sum` checksum file.
+3. Package each binary as `ductus-<target>.tar.gz` on every platform, with a `.sha256` checksum file.
 4. Upload to a GitHub release created from the tag, using `softprops/action-gh-release`.
 5. Generate a CycloneDX SBOM during the release build (`cargo cyclonedx --format json --override-filename ductus.cdx`, `BE-DEPS-003`) and upload it with its own sha256 checksum to the same release. The SBOM is derived from the resolved `Cargo.lock` graph, which is identical across the target matrix, so one SBOM covers every artifact; attached to the GitHub release, it shares the artifacts' retention lifetime.
 
-Tag scheme is `runtime-v<MAJOR>.<MINOR>.<PATCH>`, distinct from any framework tag so framework releases and runtime releases evolve in lockstep but are independently traceable.
-
-The release workflow is documented in `runtime/CHANGELOG.md` (release process appendix) and exercised once before this spec is marked `done` — the first release tag (e.g., `runtime-v0.1.0`) ships in this spec to validate the workflow end-to-end.
+Tag scheme is `ductus-v<MAJOR>.<MINOR>.<PATCH>`, one tag per release, carrying the framework and the runtime in lockstep. The release procedure is `AGENTS.md`'s release entries under §Workflow.
 
 ### README placement: root `README.md` Runtime section
 
-The Runtime section lands in the root `README.md`, placed after the existing "Feature Specs" section and before the closing TL;DR-like material. The section:
+The runtime section is `## The runtime` in the root `README.md`. It says what the runtime is, that `/ductus` acquires it rather than the adopter installing it, how the per-machine store and the per-project pointer relate, and that it is required, and it points at `docs/runtime.md` for the operational detail.
 
-1. One paragraph of rationale: opt-in, faster slash commands, markdown-only path still works.
-2. Install instructions: a fenced bash block invoking `curl` against the GitHub release artifact URL pattern, with shasum verification.
-3. A "When to install" guidance paragraph (basically: install if you adopt ductus and run slash commands frequently; skip if you only use ductus occasionally).
-
-No edits to `framework/templates/project/project-readme.md` — the template ships to adopters, who do not redistribute the runtime themselves. Adopters install the runtime in their own dev environment; the section in *this* repo's README is the install-instructions surface.
+No edits to `framework/templates/project/project-readme.md`: the template ships to adopters, and the runtime reaches them through `/ductus`, not through their README.
 
 ### Bootstrap completion-message pointer
 
-One additional line is appended to the "Next steps" list in both First-run and Update-mode blocks of `framework/bootstrap/ductus.md` (lines 750-763 and the matching update-mode block). The line reads roughly: *"Optional: install the deterministic runtime for faster slash commands — see [Runtime](https://github.com/...#runtime) in the ductus README."* Wording finalized at implementation time.
+The "Next steps" list in `framework/bootstrap/ductus-procedure.md` §Post-Scaffolding Output ends with a line saying the runtime is already acquired and wired by the run, pointing at the README's runtime section for how it is pinned and upgraded.
 
-The line is the only place the bootstrap output mentions the runtime; per the spec's install-policy resolution, no slash command may detect-and-warn about the missing binary.
+Per the spec's install-policy resolution, no slash command may detect-and-warn about a missing binary.
 
 ### This repository's generator scripts stay bash
 
@@ -229,28 +220,9 @@ The `gen-*.sh` scripts under `scripts/` that build this repository's own artifac
 
 ### `framework/runtime-tools.txt` is the manifest
 
-Populated in this spec with the 13 MCP tool names following the `gov-rt:<verb>-<noun>` convention. Each name on its own line. Comment header preserved from spec 021. After population:
+`framework/runtime-tools.txt` lists every MCP tool name the binary exposes, one bare `<verb>-<noun>` name per line under the comment header spec 021 gave it. `runtime/tests/mcp.rs` holds it set-equal to the server's `TOOL_NAMES`, so a missing entry and a phantom one both fail the suite.
 
-```text
-gov-rt:read-spec
-gov-rt:read-tasks
-gov-rt:mark-task
-gov-rt:mark-criterion
-gov-rt:set-status
-gov-rt:derive-boundary
-gov-rt:check-stuck
-gov-rt:validate-frontmatter
-gov-rt:resolve-anchor
-gov-rt:traverse-deps
-gov-rt:check-rule-ids
-gov-rt:run-generator
-gov-rt:lint-markdown
-gov-rt:gate-confirm
-```
-
-That is 14, not 13 — `gate-confirm` is in the primitive library list in the spec and gets a tool name like every other primitive. The spec's "initial primitive set" enumeration has 14 entries when counted; `mark-task` / `mark-criterion` are listed together with a slash but are two distinct primitives. The plan reads them as two; the manifest reflects that.
-
-`scripts/lint-tool-coverage.sh` (from spec 021) verifies that every reference to any name in this manifest appears within 20 lines of a fallback marker. Each runtime-tool reference in a rewritten command will be paired with prose like "Otherwise, follow the procedure described above." to keep the lint green.
+`scripts/lint-tool-coverage.sh` (from spec 021) verifies that every reference to a name in this manifest appears within 20 lines of a fallback marker, except in a command carrying the §runtime-host-integration pointer, which declares the fallback once for the whole file.
 
 ### No data persistence outside session file + markdown
 
@@ -288,15 +260,15 @@ Considered and rejected:
 - **`reqwest` for HTTP** — rejected while the runtime made no outbound HTTP call, and since adopted: `reqwest` is a dependency (`runtime/Cargo.toml`) used by `fetch-archive`, which this spec's [ductus-bootstrap](scenarios/govern-bootstrap.md) scenario added to download the framework tarball `/ductus` installs. That is the runtime's one outbound HTTP path; `048-govern-acquired-runtime`'s `fetch-archive-reads-its-proxy-once` scenario has it read its proxy and certificate configuration once per process. No other primitive makes an HTTP request of its own (`lint-markdown`'s `npx` may fetch `markdownlint-cli2`, which is npm's request, not the runtime's).
 - **Daemon / persistent mode** — explicit non-goal in the spec.
 - **In-process LLM client** — explicit non-goal (`Determinism only` principle).
-- **Build the runtime as part of the markdown-only-pipeline workflow PR-by-PR** — rejected as default; only the parseability check builds it locally. The markdown-only assertion remains intact.
-- **Cross-platform parity testing in CI** — out of scope for this spec. The release workflow builds cross-platform artifacts; parity testing is Linux-only in `runtime.yml`. macOS/Windows binary correctness is covered by the release workflow's smoke test (each platform's binary runs `runtime --version` after build).
+- **Build the runtime in the framework workflow on every PR** — rejected while only the parseability check needed a binary and the runtime-absent path had to stay provable; adopted since `048-govern-acquired-runtime` made the runtime required, and `framework-checks.yml` builds it for the derivation primitives.
+- **Cross-platform parity testing in CI** — first out of scope, since adopted: `runtime.yml` runs the suite, parity tests included, on Linux, macOS and Windows, and the release workflow's acquire jobs run each built binary.
 - **Embedding a markdown linter natively** — explicit non-goal in spec; runtime wraps `npx markdownlint-cli2` via the `lint-markdown` primitive. Wrapping a tool means waiting on a child process, so `lint-markdown` and `run-generator` each run theirs under a bounded timeout (`BE-TIMEOUT-001`) — named constants in their modules, `LINT_MARKDOWN_TIMEOUT` and `GENERATOR_TIMEOUT`, five minutes each — and a child that outlives it is killed and the call errors naming the timeout. Both spawn their child with an argument vector, never a shell string (`BE-INPUT-003`). `run-generator` passes the script path and `--dry-run` as arguments to `bash` (`runtime/src/primitives/run_generator.rs`). `lint-markdown` resolves `npx` without a login shell ([lint-markdown-tool-resolution](scenarios/lint-markdown-tool-resolution.md)).
 
 ### Known limitations
 
 - **No retry / no resume**: a runtime crash mid-procedure loses position; the user re-invokes the command and the runtime walks the markdown to figure out where to resume. This is acceptable per the spec's state-management resolution but means long procedures with many tasks re-do all the boilerplate (re-reads files, re-parses) on resume. Mitigation: primitives are cheap enough that re-doing them is sub-second.
 - **`pulldown-cmark` edge cases**: certain markdown extensions (tables, footnotes, definition lists) are off by default in `pulldown-cmark`. The procedure parser opts into tables; other extensions are off. If a slash command body relies on an extension we don't opt into, the parser will silently misread it. Mitigation: the parseability check on every PR catches this at the earliest opportunity.
-- **Windows atomic-write semantics**: weaker than POSIX. A crash on Windows between write and rename can leave a partial tempfile in the parent directory (not the target file, which is unchanged). Cleanup is a manual `rm` operation; documented in the README.
+- **Windows atomic-write semantics**: weaker than POSIX. A crash on Windows between write and rename can leave a partial tempfile in the parent directory (not the target file, which is unchanged). Cleanup is a manual `rm`.
 - **Fixture maintenance cost**: every command rewrite needs a fixture under `runtime/tests/fixtures/`. The first fixture (for `/ductus:status`) costs the most to build; subsequent fixtures fork from it. The cost is bounded but real.
 - **Parity captures are manual**: the LLM-output captures under `runtime/tests/parity/` are taken once per command by a maintainer and committed. If the LLM-driven path's output changes (because constitution updates change what `/ductus:analyze` flags, for instance), the captures must be re-taken. There is no automatic regeneration; that would require an LLM in CI, which the spec rules out.
 
@@ -310,7 +282,7 @@ Considered and rejected:
 | `runtime/src/lib.rs` | Create | Module re-exports for integration tests |
 | `runtime/src/parser/` | Create | Procedure parser over `pulldown-cmark` events |
 | `runtime/src/interpreter/` | Create | Procedure walker, JSON protocol I/O |
-| `runtime/src/primitives/` | Create | One module per primitive (14 modules) |
+| `runtime/src/primitives/` | Create | One module per primitive |
 | `runtime/src/mcp/` | Create | `rmcp`-based MCP server |
 | `runtime/src/schema/` | Create | Typed schemas for primitives, protocol, extension points |
 | `runtime/src/io.rs` | Create | Stdio framing for protocol messages and progress |
@@ -321,7 +293,7 @@ Considered and rejected:
 | `runtime/legacy-prose-commands.txt` | Create | Allowlist of not-yet-rewritten command files |
 | `runtime/CHANGELOG.md` | Create | Runtime release notes |
 | `runtime/.gitignore` | Create | Exclude `target/` |
-| `framework/runtime-tools.txt` | Edit | Populate with the 14 MCP tool names |
+| `framework/runtime-tools.txt` | Edit | Every MCP tool name the binary exposes |
 | `framework/commands/status.md` | Edit | Rewrite Instructions to parseable conventions |
 | `framework/commands/target.md` | Edit | Rewrite Instructions to parseable conventions |
 | `framework/commands/analyze.md` | Edit | Rewrite Instructions to parseable conventions; add `assessSpecQuality` extension point marker |
@@ -329,11 +301,11 @@ Considered and rejected:
 | `framework/commands/plan.md` | Edit | Rewrite Instructions to parseable conventions; add `writeSpecBody` extension point marker |
 | `framework/commands/specify.md` | Edit | Rewrite Instructions to parseable conventions; add `writeSpecBody` extension point marker |
 | `scripts/lint-procedure-parseability.sh` | Create | Bash wrapper that builds runtime and invokes `runtime parse --check` |
-| `.github/workflows/markdown-only-pipeline.yml` | Edit | Add step (f) parseability check; preserve existing checks (a)–(e) |
+| `.github/workflows/framework-checks.yml` | Edit | The parseability check step |
 | `.github/workflows/runtime.yml` | Create | Per-PR build + test + clippy + fmt + `cargo audit` dependency scan |
 | `.github/workflows/runtime-release.yml` | Create | Tag-triggered cross-compile + release upload + CycloneDX SBOM |
-| `framework/bootstrap/ductus.md` | Edit | One-line pointer to runtime in completion message (first-run and update-mode blocks) |
-| `README.md` | Edit | New Runtime section: rationale, install, when to install |
+| `framework/bootstrap/ductus-procedure.md` | Edit | The runtime line in the §Post-Scaffolding Output next steps |
+| `README.md` | Edit | The runtime section: acquired by `/ductus`, store and pointer, required |
 | `specs/022-deterministic-runtime/plan.md` | Create | This file |
 | `specs/022-deterministic-runtime/tasks.md` | Create | Task breakdown |
 | `specs/022-deterministic-runtime/data-model.md` | Create | Procedure AST, JSON protocol, primitive and extension-point schemas |

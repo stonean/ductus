@@ -48,7 +48,7 @@ Slash command markdown files in `framework/commands/*.md` are rewritten so the e
 - **Backtick-quoted primitive names** inside a step (e.g., `` `read-spec` ``, `` `mark-task` ``, `` `derive-boundary` ``) are primitive calls. The full primitive set is enumerated in [The primitive library](#the-primitive-library) below.
 - **HTML-comment extension-point markers** (e.g., `<!-- llm:writeCode -->`, `<!-- llm:askClarifyQuestion -->`) mark the seams where the runtime invokes the LLM. The named identifier matches an entry in [LLM extension points](#llm-extension-points).
 
-A markdown-only adopter (no runtime on `PATH`) reads the prose as today — the conventions are unobtrusive and the prose stays human-readable. The runtime reads the same prose and extracts structure. There is no second source of truth to drift from.
+A reader walking the prose without the runtime — only in the window [Markdown-only path](#markdown-only-path) states — finds the conventions unobtrusive and the prose human-readable. The runtime reads the same prose and extracts structure. There is no second source of truth to drift from.
 
 A **parseability check** runs in CI: every slash command's Instructions section must parse cleanly under these conventions, and a parse failure fails the build. It catches the only relevant kind of drift (a prose convention slipped) at PR time, as `scripts/lint-procedure-parseability.sh` in `.github/workflows/framework-checks.yml`.
 

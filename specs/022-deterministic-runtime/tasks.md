@@ -92,3 +92,10 @@ Spent sections 129–140 were pruned in `17ce0667`; 141, 142 and 146 are spent n
 - [x] `runtime/README.md` still described the govern-era optional `gvrn` binary: the `stonean/govern` repository, `gvrn-v*` tags and `gvrn` asset names, a first-class markdown-only path 048 retired, `.claude/commands/gov/`, and a `parse --check` exit contract the binary does not have (it exits 2 for legacy prose and leaves the allowlist to the CI lint). Rewrite it to the required, `/ductus`-acquired `ductus` runtime, pointing at the root README's runtime section and `docs/runtime.md` rather than restating them; it is the readme `runtime/Cargo.toml` publishes to crates.io, so it lands before 0.59.7
 
 - **Done when**: `runtime/README.md` names no retired project, binary, tag or path, and every command and exit code it states matches `ductus --help`
+
+## 148. Correct the design record where it still describes the pre-048 optional runtime
+
+- [x] Edit each false sentence in `plan.md` to what is true now, leaving true text and headings alone: the bare `<verb>-<noun>` tool names (not `gov-rt:`), `ductus-v*` tags, `framework-checks.yml` (not the removed `markdown-only-pipeline.yml`), `BLESS=1`, the three-OS `runtime.yml` matrix, the required, `/ductus`-acquired runtime in the README and bootstrap passages, no `runtime:` frontmatter field, `runtime/.gitignore`, and `framework/runtime-tools.txt` pointed at rather than copied
+- [x] `spec.md` §Parseable slash command procedures: a reader walking the prose without the runtime does so only in the window §Markdown-only path states, not because no binary is on `PATH`
+
+- **Done when**: no sentence in `plan.md` or `spec.md` describes the runtime as optional, names `gov-rt:`, a `runtime-v` tag or `markdown-only-pipeline.yml`, or names a file, field or variable the tree does not have
