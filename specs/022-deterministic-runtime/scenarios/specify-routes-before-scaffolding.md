@@ -40,4 +40,21 @@ Requiring spec: [017 — Derive, Don't Ask](../../017-derive-dont-ask/spec.md). 
 
 ## Resolved Questions
 
-*None yet.*
+- **Should the runtime-work candidate be the spec that owns the named primitive,
+  rather than the lowest-numbered spec whose plan claims `runtime/`?** No.
+  Resolved 2026-10-16 by the operator.
+
+  Neither source the corpus offers records ownership. Measured over the 67
+  modules under `runtime/src/primitives/`, with `compute-review-scope`'s
+  `plan-affected` for every spec and a scan of every `data-model.md` heading:
+  a plan's Affected Files records which specs *touched* a file, so
+  `check_artifacts.rs` is claimed by seven plans and fifteen modules by none,
+  since 022's plan claims the whole directory; and headings name 44 modules in
+  exactly one data model, 6 in two (058 beside the owner) and 17 in none,
+  `fetch-archive` among them. A derivation from either would offer history as
+  ownership, or fall back to this candidate anyway — `resolve-constitutions`,
+  `resolve-references` and `enforce-manifest` would still be offered 022.
+
+  So the candidate stays a lexical hint, and which spec owns the primitive
+  stays with the operator at the `routeInboxItem` judgment, where `AGENTS.md`'s
+  routing entry names the runtime's three homes: 022, 066 and 067.
