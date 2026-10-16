@@ -135,7 +135,7 @@ The first three `could not be read` reasons are `check-artifacts` skips. The res
 
 `artifact-unreadable` is the one reason that escalates: below `done` it is a skipped target, and at `done` it is a blocking finding counted in `blocking-findings`, so the gate holds the spec. The reason set is closed and the map is omitted when empty.
 
-**The subject depends on the spec's status when the record is written.** `criterion-path-existence`, the source of most skipped targets, examines `done` specs only, so a record written while a spec is reopened describes a smaller subject than the same spec at `done`. Write the record last, after the status is settled.
+**The subject depends on the spec's status when the record is written.** `criterion-path-existence` and `body-path-existence`, the sources of most skipped targets, examine `done` specs only, so a record written while a spec is reopened describes a smaller subject than the same spec at `done`. Write the record last, after the status is settled.
 
 ## `check-review-gate` — evaluate implement's pre-done review gate
 
