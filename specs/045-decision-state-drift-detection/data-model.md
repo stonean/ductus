@@ -85,10 +85,11 @@ pub struct SkippedTarget {
 | `target-missing` | the link resolves to a path with no file on disk |
 | `target-unparseable` | the target exists but its frontmatter will not parse |
 | `no-readable-state` | the target carries no state the tell's class can be evaluated against |
-| `root-absent` | a criterion's path names a top-level segment this repo does not contain |
-| `ships-to-adopter` | a criterion's path is a **Shared Files** manifest destination — a file this repo scaffolds into an adopter's checkout, so it resolves in the repo the criterion is about rather than this one |
+| `root-absent` | a checked path names a top-level segment this repo does not contain |
+| `ships-to-adopter` | a checked path is a **Shared Files** manifest destination — a file this repo scaffolds into an adopter's checkout, so it resolves in the repo the criterion is about rather than this one |
 | `artifact-unreadable` | a scanned *citing* artifact could not be read at all |
-| `not-a-live-claim` | a criterion's path sits under a criterion that claims absence rather than presence, so a finding would be backwards |
+| `not-a-live-claim` | a checked path sits in a criterion, or a body line, that claims absence or describes a transition rather than claiming presence, so a finding would be backwards |
+| `never-existed` | a body path no revision of the repository ever held — an example or a never-built alternative, a name rather than a file ([067's body-path-existence-family](../067-analyze-and-audit-checks/scenarios/body-path-existence-family.md)) |
 
 `clean` keeps its existing definition — `findings.is_empty()` — so no existing consumer changes. A non-empty `skipped` alongside `clean: true` is the state the host renders in the Informational tier.
 
@@ -182,7 +183,7 @@ Triaging the 28 **by reading each criterion**, not by classifying its path:
 
 The five true positives are `specs/triage.md` in 006 (×2, renamed to `specs/inbox.md` alongside `/{project}:triage` → `/{project}:groom`), `scripts/gen-spec-deps.sh` in 018 (×2, moved to `.ductus/scripts/` by 042), and 005's criterion still asserting a workflow registry `exists` after 043 sunset the feature.
 
-**The 19 are a dogfooding artifact, not a check defect.** `.ductus/constitution.md`, `specs/rules/security-backend.md`, `specs/system.md`, `.githooks/ductus-pre-commit`, `specs/templates/` — every one is a path `ductus` *creates in an adopter's checkout*. They are absent here for the single reason that `ductus` is the source rather than an adopter, and each criterion naming one is correct and satisfied in the repo it describes. `root-absent` cannot catch them because their top-level segments (`specs`, `.ductus`, `.githooks`) do exist here. The class is structural to a framework repo documenting adopter layout while also being its own adopter, and it does not generalize to the projects this check ships to.
+**The 19 are a dogfooding artifact, not a check defect.** `.ductus/constitution.md`, `specs/rules/security-backend.md`, `specs/system.md`, `.githooks/ductus-pre-commit`, `specs/templates/` — every one is a path `ductus` *creates in an adopter's checkout*. They are absent here for the single reason that `ductus` is the source rather than an adopter, and each criterion naming one is correct and satisfied in the repo it describes. `root-absent` cannot catch them because their top-level segments (`specs`, `.ductus`, `.githooks`) do exist here. The class is structural to a framework repo documenting adopter layout while also being its own adopter, and it does not generalize to the projects this check ships to. 067's [criterion-adopter-scope-destinations](../067-analyze-and-audit-checks/scenarios/criterion-adopter-scope-destinations.md) later found the cost too high to leave: such a path is now recorded `ships-to-adopter`, read from the Shared Files manifest, and no longer reaches a finding.
 
 **Promotion verdict: do not promote — and re-measure in an adopter repo before deciding.** The volume half of the criterion is met several times over. The precision half reads 5/28 (18%) here and roughly 5/9 (56%) once the framework-repo artifact is set aside, and neither number is the one that matters: this repo is the least representative sample the check will ever run against.
 
