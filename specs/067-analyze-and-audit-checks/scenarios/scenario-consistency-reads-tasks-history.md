@@ -20,6 +20,7 @@ The fingerprint answers *was this file pruned*, which is not the question. The q
 - At every status, a scenario that no task in the current `tasks.md` references is a finding **only when no revision of `tasks.md` in the history from HEAD ever named its slug**. A scenario whose task was pruned, by keep-pending or by reset, had a task in some revision and is never flagged. How the file is numbered today plays no part.
 - The pruning fingerprint is removed. Nothing in the family reads the file's shape.
 - **A history that cannot be consulted flags nothing, at every status**: no repository, a shallow clone, an unreadable revision, a non-UTF-8 blob. §tasks-phase mandates that direction — a pruned spent task never produces a finding — so the family does not manufacture one out of what it cannot see.
+- **Nor is it silent.** Each unmapped scenario it could not judge is recorded in `skipped` with reason `no-readable-state`, so a clean result does not read as examined and found mapped (`QUAL-CLAIM-001`). A spec whose every scenario is mapped needs no history and records nothing.
 - Below `done`, the message says the scenario has no task and never had one, and names appending its task, as `/{project}:amend`'s scenario route does, as the remedy. The `done` message is unchanged, so a decision stored against it still matches.
 - `/{project}:analyze`'s markdown-only reference states the same rule, so the two paths agree.
 

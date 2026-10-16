@@ -37,3 +37,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] State the rule in the module and function docs, the `check-artifacts` tool description, `data-model.md`'s family line, `analyze-artifact-checks`' Behavior, and `framework/commands/analyze.md` step 8 and its Scenario consistency section
 
 - **Done when**: an in-progress spec whose `tasks.md` restarted at 1 reports none of its implemented scenarios, a `done` spec with a reset `tasks.md` reports a scenario no revision ever named, the `done` message is byte-identical, and no live text describes the pruning fingerprint
+
+## 6. Report an unread tasks.md history as skipped targets
+
+- [x] When `ever_tasked_slugs` cannot consult the history, record each unmapped scenario in `skipped` with reason `no-readable-state` instead of returning a clean family that examined nothing (QUAL-CLAIM-001, raised by the review's quality pass)
+- [x] Assert the skip in the outside-a-repository, shallow-history and undecodable-revision tests, and that a fully mapped spec records none
+- [x] Say so in the scenario, `check-artifacts-skipped-targets`' claim that the pre-045 families never skip, the `skipped` field's doc, the data model, and `analyze.md`'s Scenario consistency section
+
+- **Done when**: an unconsultable history leaves every unmapped scenario in `skipped` as `no-readable-state`, never as a finding and never silently, and no text says scenario-consistency cannot skip

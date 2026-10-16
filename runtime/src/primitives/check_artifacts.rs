@@ -28,9 +28,9 @@
 //!   `tasks.md` references is flagged, at every status, only when no
 //!   revision of `tasks.md` ever named it, since a spent task may have been
 //!   pruned or the file reset (067's `scenario-consistency-reads-tasks-history`);
-//!   a history that cannot be consulted flags nothing. It never requires a
-//!   pruned spent task to persist (constitution §tasks-phase — `tasks.md` is
-//!   ephemeral).
+//!   a history that cannot be consulted flags nothing and reports each
+//!   unmapped scenario as skipped. It never requires a pruned spent task to
+//!   persist (constitution §tasks-phase — `tasks.md` is ephemeral).
 //! - **review-state-drift** (blocking) — reference §"Review state drift
 //!   (blocking)": a `done` spec whose `review.md` record has `last-run`
 //!   unset, `blocking: true`, or a non-zero `should-violations`,
@@ -181,9 +181,10 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
     if let Some(tasks) = &tasks {
         check_task_consistency(&mut findings, &tasks.tasks, &tasks.path);
     }
+    let mut skipped: Vec<SkippedTarget> = Vec::new();
     check_scenario_consistency(
         &mut findings,
-        &feature_dir,
+        &mut skipped,
         &root,
         &args.feature,
         &status,
@@ -201,7 +202,6 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
     check_review_drift(&mut findings, review_record, &status, &spec_path, repo);
     check_disposition_drift(&mut findings, review_record, &status, &spec_path, repo);
 
-    let mut skipped: Vec<SkippedTarget> = Vec::new();
     check_scenario_open_questions(
         &mut findings,
         &mut skipped,
@@ -312,13 +312,18 @@ fn check_task_consistency(findings: &mut Vec<ArtifactFinding>, tasks: &[Task], t
 /// evaluable: the completeness family owns the missing-file signal at
 /// `planned`+, and a pre-plan spec's scenarios have no tasks yet by design.
 ///
+/// A history that cannot be consulted produces no finding, and records each
+/// unmapped scenario as a `no-readable-state` skip: the family could not
+/// examine it, and a clean result that said nothing would read as examined
+/// and found mapped (`QUAL-CLAIM-001`).
+///
 /// A scenario is *mapped* when its slug appears in any task's heading,
 /// subtask text, or `Done when` clause — this matches `append-task`'s
 /// default-body convention (`scenarios/{slug}.md`) while tolerating
 /// hand-written references that name the slug without the path.
 fn check_scenario_consistency(
     findings: &mut Vec<ArtifactFinding>,
-    feature_dir: &Path,
+    skipped: &mut Vec<SkippedTarget>,
     root: &str,
     feature: &str,
     status: &str,
@@ -328,7 +333,7 @@ fn check_scenario_consistency(
     let Some(tasks) = tasks else {
         return;
     };
-    let unmapped: Vec<String> = scenario_slugs(feature_dir)
+    let unmapped: Vec<String> = scenario_slugs(&repo.join(root).join(feature))
         .into_iter()
         .filter(|slug| !scenario_mapped(tasks, slug))
         .collect();
@@ -336,9 +341,16 @@ fn check_scenario_consistency(
         return;
     }
     // One history walk for every unmapped slug, and only when there is one —
-    // the common case does no git work at all. An unconsultable history
-    // (`None`) suppresses every finding.
+    // the common case does no git work at all.
     let Some(ever) = ever_tasked_slugs(repo, root, feature, &unmapped) else {
+        for slug in &unmapped {
+            record_skip(
+                skipped,
+                "scenario-consistency",
+                "no-readable-state",
+                &format!("{root}/{feature}/scenarios/{slug}.md"),
+            );
+        }
         return;
     };
     let done = status == "done";
@@ -2206,6 +2218,9 @@ mod tests {
         );
         let result = run(&args(), tmp.path()).unwrap();
         assert!(result.clean, "{:?}", result.findings);
+        // Every scenario is mapped, so no history was needed and none was
+        // missed, even with no repository to read it from.
+        assert!(result.skipped.is_empty(), "{:?}", result.skipped);
     }
 
     #[test]
@@ -2382,14 +2397,34 @@ mod tests {
         (tmp, repository)
     }
 
-    fn scenario_findings(repo: &Path) -> Vec<String> {
-        run(&args(), repo)
-            .unwrap()
+    /// The scenario-consistency findings' paths, and the family's skipped
+    /// targets as `(reason, path)`.
+    fn scenario_outcome(repo: &Path) -> (Vec<String>, Vec<(String, String)>) {
+        let result = run(&args(), repo).unwrap();
+        let findings = result
             .findings
             .iter()
             .filter(|f| f.family == "scenario-consistency")
             .map(|f| f.path.clone())
-            .collect()
+            .collect();
+        let skipped = result
+            .skipped
+            .iter()
+            .filter(|s| s.family == "scenario-consistency")
+            .map(|s| (s.reason.clone(), s.path.clone()))
+            .collect();
+        (findings, skipped)
+    }
+
+    /// An unread history flags `alpha` nowhere and says it was not examined.
+    fn alpha_skipped_unflagged() -> (Vec<String>, Vec<(String, String)>) {
+        (
+            Vec::new(),
+            vec![(
+                "no-readable-state".to_string(),
+                "specs/042-demo/scenarios/alpha.md".to_string(),
+            )],
+        )
     }
 
     /// A revision whose `tasks.md` is not UTF-8 is one the walk cannot read.
@@ -2398,7 +2433,7 @@ mod tests {
     fn a_revision_the_walk_cannot_decode_flags_nothing() {
         let (tmp, _repository) =
             history_fixture(b"# T\n\n## 1. Alpha \xff\n\n- [x] scenarios/alpha.md\n");
-        assert_eq!(scenario_findings(tmp.path()), Vec::<String>::new());
+        assert_eq!(scenario_outcome(tmp.path()), alpha_skipped_unflagged());
     }
 
     /// A shallow clone lacks commits, so a scenario whose task lived in one
@@ -2409,12 +2444,12 @@ mod tests {
         let head = repository.head().unwrap().target().unwrap();
         std::fs::write(tmp.path().join(".git/shallow"), format!("{head}\n")).unwrap();
         assert!(repository.is_shallow());
-        assert_eq!(scenario_findings(tmp.path()), Vec::<String>::new());
+        assert_eq!(scenario_outcome(tmp.path()), alpha_skipped_unflagged());
     }
 
     /// With no repository to consult, the history walk fails safe at every
-    /// status (000's `scenario-without-task-visibility`), so an unmapped
-    /// scenario flags nothing.
+    /// status (000's `scenario-without-task-visibility`): an unmapped scenario
+    /// flags nothing, and is reported as not examined.
     #[test]
     fn a_spec_outside_a_repository_flags_no_scenario() {
         for status in ["in-progress", "done"] {
@@ -2429,6 +2464,15 @@ mod tests {
             );
             let result = run(&args(), tmp.path()).unwrap();
             assert!(result.clean, "{status}: {:?}", result.findings);
+            assert_eq!(
+                result.skipped,
+                vec![SkippedTarget {
+                    family: "scenario-consistency".into(),
+                    reason: "no-readable-state".into(),
+                    path: "specs/042-demo/scenarios/unmapped.md".into(),
+                }],
+                "{status}"
+            );
         }
     }
 
@@ -2861,7 +2905,9 @@ mod tests {
         let skipped: Vec<_> = result
             .skipped
             .iter()
-            .filter(|s| s.path.ends_with("scenarios/linked.md"))
+            .filter(|s| {
+                s.family == "link-adjacent-drift" && s.path.ends_with("scenarios/linked.md")
+            })
             .collect();
         assert_eq!(skipped.len(), 1, "{:?}", result.skipped);
         assert_eq!(skipped[0].reason, "target-unparseable");

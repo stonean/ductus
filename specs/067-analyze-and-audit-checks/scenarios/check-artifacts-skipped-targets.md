@@ -30,7 +30,7 @@ That is `QUAL-CLAIM-001` precisely: a fully-implemented path whose output overst
 
 **`clean` is unchanged.** It stays `findings.is_empty()`. Redefining it to account for skips would silently change the verdict four shipped families produce, which is a larger behavior change than the honesty problem warrants. The assurance therefore lives in the pair: `clean: true` with an empty `skipped` is a verified-clean result, and `clean: true` with a non-empty `skipped` is a partially-examined one.
 
-**The five pre-existing families always return an empty `skipped`.** Their subjects are fully examinable by construction, so no existing result changes shape in value — only in schema.
+**The five pre-existing families return an empty `skipped`**, their subjects being fully examinable by construction, so no existing result changes shape in value — only in schema. `scenario-consistency` is the exception since it began reading `tasks.md` history: when the history cannot be consulted it records each unmapped scenario as `no-readable-state` ([`scenario-consistency-reads-tasks-history`](scenario-consistency-reads-tasks-history.md)).
 
 **Hosts render skips in the Informational tier.** That is where `/{project}:analyze` already puts the cross-service reference unknowns (`unregistered`, `not-checked-out`, `status-unreadable`), which are the same distinction one surface over: provably broken is a finding, cannot-be-checked is recorded and not counted against the artifact.
 

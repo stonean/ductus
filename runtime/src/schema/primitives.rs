@@ -4465,10 +4465,11 @@ pub struct CheckArtifactsResult {
     /// `clean` with an empty `skipped` is verified-clean, `clean` with a
     /// non-empty `skipped` is partially examined.
     pub clean: bool,
-    /// Targets no family could examine. Empty for the five families
-    /// predating spec 045 and for `criterion-labels`, whose subjects are
-    /// fully examinable by construction — only the two families that read
-    /// an artifact's *targets* can fail to look.
+    /// Targets no family could examine. The two families that read an
+    /// artifact's *targets* record the ones they could not look at, and
+    /// `scenario-consistency` records each unmapped scenario as
+    /// `no-readable-state` when the `tasks.md` history cannot be consulted.
+    /// The other families' subjects are fully examinable by construction.
     #[serde(default)]
     pub skipped: Vec<SkippedTarget>,
     /// Repo-relative path to the spec file.
