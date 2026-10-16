@@ -29,3 +29,10 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] Verify: `scripts/lint-procedure-parseability.sh` passes and `cargo test --release --locked --test parity` passes with no golden changed
 
 - **Done when**: no live artifact or runtime message invokes a binary named `runtime`; fixtures, goldens and records are unchanged; the parseability lint and the parity suite pass without a bless.
+
+## 5. Retire the runtime invocations task 4's pattern missed
+
+- [x] Task 4 matched only a backticked `runtime mcp|exec|parse`; reading spec.md and plan.md whole for the review found the same binary named with another subcommand or flag: AC14 and its Resolved Question (`--version`), the plan's fenced CLI surface block and two plan lines, `dashboard-primitive`, and `mcp/server.rs`'s doc comment. Substitute each, keeping the CLI block's comment column
+- [x] Re-run both patterns (a backticked `runtime <subcommand>` and a line-start invocation in a fenced block) over live artifacts; only task records may remain
+
+- **Done when**: no live artifact names the binary `runtime` in any invocation form; the only matches left are task records describing past work.

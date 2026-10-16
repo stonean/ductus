@@ -16,7 +16,7 @@ Spec 022 establishes the command-specific-primitive pattern (`check-stuck` for `
 
 ## Behavior
 
-New primitive: `dashboard`. MCP tool name `dashboard`; CLI subcommand `runtime dashboard`.
+New primitive: `dashboard`. MCP tool name `dashboard`; CLI subcommand `ductus dashboard`.
 
 Inputs: none beyond the standard repo-root context every primitive operates on. The primitive reads the committed project config, resolved through `CONFIG_CHAIN` (`.ductus/config.toml` first), and peeks the session target through `crate::session` (062): an identified process sees its own target under `.ductus/sessions/` (or the shared default it would adopt), an unidentified one the shared default `.ductus/session.toml`. Neither path is caller-supplied, and the peek writes nothing.
 

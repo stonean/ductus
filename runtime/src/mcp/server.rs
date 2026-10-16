@@ -15,7 +15,7 @@
 //! `gate-confirm` is special-cased: the MCP surface returns the prompt
 //! payload (gate + prompt + fresh request-id) without blocking. The LLM
 //! orchestrator is responsible for routing the prompt to the user. The
-//! subprocess-interpreter surface (CLI `runtime gate-confirm`) handles
+//! subprocess-interpreter surface (CLI `ductus gate-confirm`) handles
 //! the blocking handshake via [`crate::primitives::gate_confirm::run_blocking`].
 
 use std::collections::HashSet;

@@ -102,20 +102,20 @@ State-modifying primitives (`mark-task`, `mark-criterion`, `set-status`) write t
 `clap` derive-based, with subcommands flat under the top-level binary:
 
 ```text
-runtime mcp                          # start MCP server (long-running)
-runtime exec <command> [args...]     # subprocess interpreter
-runtime parse <file>                 # parser (debug/manual use)
-runtime parse --check <file>         # parseability check (CI)
-runtime <primitive-name> [args...]   # invoke a primitive standalone
-runtime --version                    # build-time version, from CARGO_PKG_VERSION
-runtime --help                       # rendered by clap
+ductus mcp                           # start MCP server (long-running)
+ductus exec <command> [args...]      # subprocess interpreter
+ductus parse <file>                  # parser (debug/manual use)
+ductus parse --check <file>          # parseability check (CI)
+ductus <primitive-name> [args...]    # invoke a primitive standalone
+ductus --version                     # build-time version, from CARGO_PKG_VERSION
+ductus --help                        # rendered by clap
 ```
 
-Primitive subcommand names match their bare MCP tool names (e.g., `runtime read-spec --feature 022-deterministic-runtime`). This makes the CLI surface a 1:1 mirror of the MCP surface, which is what `framework/runtime-tools.txt` ultimately enumerates.
+Primitive subcommand names match their bare MCP tool names (e.g., `ductus read-spec --feature 022-deterministic-runtime`). This makes the CLI surface a 1:1 mirror of the MCP surface, which is what `framework/runtime-tools.txt` ultimately enumerates.
 
 ### Versioning: built-in from `Cargo.toml`
 
-`runtime --version` reads `env!("CARGO_PKG_VERSION")` baked at compile time. Every `error` JSON message includes the runtime version so adopters reporting issues can attach it without an extra invocation. Per the resolved-questions section, there is no startup framework-version comparison; parse failures and primitive errors carry version metadata so mismatch is diagnosable when it arises.
+`ductus --version` reads `env!("CARGO_PKG_VERSION")` baked at compile time. Every `error` JSON message includes the runtime version so adopters reporting issues can attach it without an extra invocation. Per the resolved-questions section, there is no startup framework-version comparison; parse failures and primitive errors carry version metadata so mismatch is diagnosable when it arises.
 
 ### Fixture-based integration testing
 
