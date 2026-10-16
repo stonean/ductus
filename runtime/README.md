@@ -1,53 +1,30 @@
-# gvrn
+# ductus
 
-Deterministic runtime for the [govern](https://github.com/stonean/govern) spec-driven development framework.
+Deterministic runtime for the [ductus](https://github.com/stonean/ductus) spec-driven development pipeline.
 
-`gvrn` is an **optional** native binary that accelerates slash commands by interpreting their parseable procedures directly — reading specs, walking tasks, checking dependencies, performing atomic checkbox updates, and handshaking pipeline gates in Rust instead of asking the LLM to do it in slow tokens. The LLM is invoked only at named extension points (`assessSpecQuality`, `writeCode`, `writeSpecBody`) where semantic judgment actually matters.
-
-The govern framework's markdown-only path remains first-class: when `gvrn` is absent, the LLM walks the same procedure prose and produces the same results, just slower. See [§runtime-boundary](https://github.com/stonean/govern/blob/main/framework/constitution.md#runtime-boundary) in the constitution for the constraints this binary commits to.
+`ductus` interprets the parseable procedures of the pipeline's slash commands — reading specs, walking tasks, checking dependencies, performing atomic checkbox updates, and handshaking pipeline gates in Rust instead of LLM tokens. The model is invoked only at named extension points, where semantic judgment actually matters. The pipeline requires the runtime; [§runtime-boundary](https://github.com/stonean/ductus/blob/main/framework/constitution.md#runtime-boundary) in the constitution states the constraints this binary commits to.
 
 ## Install
 
-Pre-built binaries are published to GitHub releases on every `gvrn-v*` tag. Download the asset for your target triple and verify the checksum:
+A project adopting ductus does not install the runtime by hand: `/ductus` acquires the pinned release into a ductus-owned store during adoption. See [The runtime](https://github.com/stonean/ductus#the-runtime) in the ductus README, and [docs/runtime.md](https://github.com/stonean/ductus/blob/main/docs/runtime.md) for supplying your own binary.
 
-```bash
-# Example for aarch64-apple-darwin; substitute your target triple.
-VERSION="0.1.0"
-TARGET="aarch64-apple-darwin"
-ARCHIVE="gvrn-${TARGET}.tar.gz"
-BASE="https://github.com/stonean/govern/releases/download/gvrn-v${VERSION}"
-
-tmp="$(mktemp -d)" && cd "${tmp}"
-curl -LO "${BASE}/${ARCHIVE}"
-curl -LO "${BASE}/${ARCHIVE}.sha256"
-shasum -a 256 -c "${ARCHIVE}.sha256"
-tar xzf "${ARCHIVE}"
-sudo install -m 0755 gvrn /usr/local/bin/gvrn
-gvrn --version
-cd - >/dev/null && rm -rf "${tmp}"
-```
-
-Pre-built binaries cover `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, and `x86_64-pc-windows-msvc`.
-
-Alternatively, build from source with `cargo install gvrn`.
+Every `ductus-v*` tag publishes `ductus-<target>.tar.gz` with a `.sha256` sidecar to GitHub releases, for `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, and `x86_64-pc-windows-msvc`. The crate also builds from source with `cargo install ductus`.
 
 ## Usage
 
-Two surfaces:
-
 ```bash
-gvrn mcp                # start an MCP server exposing every primitive as a tool
-gvrn exec <command>     # interpret a slash command procedure end-to-end via JSON-over-stdio
-gvrn parse <file>       # parse a procedure file and print its AST (debug)
-gvrn parse --check <f>  # exit 0 if parseable or on the legacy allowlist (CI lint)
-gvrn <primitive> [...]  # invoke a single primitive standalone (e.g., gvrn read-spec --feature 001)
+ductus mcp                # start an MCP server exposing every primitive as a tool
+ductus exec <command>     # interpret a slash command procedure end-to-end via JSON-over-stdio
+ductus parse <file>       # parse a procedure file and print its AST (debug)
+ductus parse --check <f>  # exit 0 when it parses, 2 when it is legacy prose, 1 when it is invalid
+ductus <primitive> [...]  # invoke a single primitive standalone (e.g., ductus read-spec --feature 001)
 ```
 
-The runtime expects to be invoked from a govern-adopting repository — one with `framework/commands/*.md` (or `.claude/commands/gov/*.md` for installed projects) and feature directories under `specs/`.
+The runtime expects to be invoked from a ductus-adopting repository — one with `framework/commands/*.md` or the project's installed command files, and feature directories under the configured spec root (`specs` by default).
 
 ## JSON-over-stdio protocol
 
-`gvrn exec` (and the interactive `gvrn gate-confirm` subcommand) speaks the envelope protocol: one JSON envelope per line on stdout. Standalone `gvrn <primitive>` invocations instead print the primitive's bare result object as a single line of JSON, with no envelope wrapper. The closed set of envelope types:
+`ductus exec` (and the interactive `ductus gate-confirm` subcommand) speaks the envelope protocol: one JSON envelope per line on stdout. Standalone `ductus <primitive>` invocations instead print the primitive's bare result object as a single line of JSON, with no envelope wrapper. The closed set of envelope types:
 
 | Type | Direction | Payload |
 | --- | --- | --- |
@@ -63,11 +40,11 @@ See [022's data model](https://github.com/stonean/ductus/blob/main/specs/022-det
 
 ## Stability
 
-The CLI surface and the JSON-over-stdio protocol are the supported public surface. The Rust library exposed by this crate (`use gvrn::…`) ships only so the runtime's own integration tests can link against its internals; the module surface is **not stable** in 0.x and may change without a semver bump. Use the binary, not the library.
+The CLI surface and the JSON-over-stdio protocol are the supported public surface. The Rust library exposed by this crate (`use ductus::…`) ships only so the runtime's own integration tests can link against its internals; the module surface is **not stable** in 0.x and may change without a semver bump. Use the binary, not the library.
 
 ## Repository
 
-Full source, specs, and the framework itself live at <https://github.com/stonean/govern>.
+Full source, specs, and the framework itself live at <https://github.com/stonean/ductus>.
 
 ## License
 

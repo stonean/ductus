@@ -86,3 +86,9 @@ Spent sections 129–140 were pruned in `17ce0667`; 141, 142 and 146 are spent n
 - [x] Fix: `framework/constitution.md` §text-first-artifacts' scenario-link bullet and `AGENTS.md`'s matching Gotchas entry say a correct scenario link creates a `dependencies:` edge and can close a cycle; `list_tracked_specs` / `is_spec_path` admit only `spec.md` and `spec-and-plan.md`, and neither the primitive nor the bash generator it replaced ever read a scenario. State what the derivation reads, keep the depth-error half, and land it with the 0.59.7 constitution change
 
 - **Done when**: the constitution bullet and the AGENTS.md entry describe the file set `derive-dependencies` actually harvests, verified against `runtime/src/primitives/derive_dependencies.rs`
+
+## 147. Bring runtime/README.md, the crate's published readme, to the ductus runtime as it ships
+
+- [x] `runtime/README.md` still described the govern-era optional `gvrn` binary: the `stonean/govern` repository, `gvrn-v*` tags and `gvrn` asset names, a first-class markdown-only path 048 retired, `.claude/commands/gov/`, and a `parse --check` exit contract the binary does not have (it exits 2 for legacy prose and leaves the allowlist to the CI lint). Rewrite it to the required, `/ductus`-acquired `ductus` runtime, pointing at the root README's runtime section and `docs/runtime.md` rather than restating them; it is the readme `runtime/Cargo.toml` publishes to crates.io, so it lands before 0.59.7
+
+- **Done when**: `runtime/README.md` names no retired project, binary, tag or path, and every command and exit code it states matches `ductus --help`
