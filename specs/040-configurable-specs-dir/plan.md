@@ -7,7 +7,7 @@ Implements [040 — Configurable spec-root directory name](spec.md).
 Introduce one operator-set `.ductus/config.toml` key — `[paths] specs-root`, default `"specs"` — as the single source of truth for the spec-root directory name, and teach every executable code path to resolve the root from it instead of hardcoding `specs/`. The work spans three surfaces:
 
 1. **Runtime (`ductus`)** — a single shared resolver reads `[paths] specs-root` (default `specs`), and every primitive that today calls `repo.join("specs")` calls the resolver instead.
-2. **Bootstrap and commands (markdown)** — `/ductus` gains the init-time prompt, validation, and notices; `/ductus:init` scaffolds under the configured name; command bodies resolve the root in executable path references while illustrative prose keeps `specs/` as the documented default.
+2. **Bootstrap and commands (markdown)** — `/ductus` gains the init-time prompt, validation, and notices; command bodies resolve the root in executable path references while illustrative prose keeps `specs/` as the documented default.
 3. **Generators (`scripts/`)** — the tree-walking generators and lints resolve the configured root before walking. (Retired since: 067's `adopter-generator-promotion` replaced both shipped generators with runtime primitives — see the section below.)
 
 The load-bearing invariant is **default-`specs` everywhere**: an adopter who never sets the key sees byte-for-byte identical behavior, so existing fixtures, golden tests, and the markdown-only opt-in CI all keep passing unchanged. (The opt-in CI job named here was retired by 048 — the constitution's §runtime-boundary now states an **acquisition** invariant in its place, exercised by `.github/workflows/runtime-acquisition.yml`.)
@@ -43,19 +43,13 @@ In `framework/bootstrap/ductus.md`:
 
 Authored with placeholders (`{project}`, `{cli-config-dir}`) per the source-editing convention.
 
-### Init (`/ductus:init`) scaffolds under the configured name
-
-`.claude/commands/ductus/init.md` is the hand-maintained, ductus-specific init command (no generator source counterpart). It scaffolds the spec-root directory — `inbox.md`, `rules/`, and shared docs — under the configured name, or `specs` when unset.
-
 ### Command sources resolve the root; prose keeps `specs/`
 
 In `framework/commands/*.md`, executable path references (where a command reads/writes under the spec tree, and where the session-file `path` is written) resolve the configured root. Illustrative prose keeps `specs/` as the documented default. The configurability fact is stated once at its canonical home — the constitution `§spec-phase` directory-layout block — with an adopter-facing mention in `README.md`; no other prose is parameterized.
 
-### Generators resolve the root
+### The derivations resolve the root
 
-As planned: `scripts/gen-spec-deps.sh` and `scripts/gen-cross-service-refs.sh` walked the spec tree to derive frontmatter; `scripts/lint-rule-ids.sh` and `scripts/lint-frontmatter.sh` walked it to lint. Each resolved `[paths] specs-root` (default `specs`) from the repo's `.ductus/config.toml` before walking. Because the two generators shipped to adopter repos and ran from the adopter pre-commit hook, they had to read the adopter's `.ductus/config.toml` at run time. No new generators were introduced, so the three-site generator-wiring rule did not apply — the existing generators were taught to resolve the root.
-
-**Since superseded, and the requirement survived the carrier.** Spec 067's `adopter-generator-promotion` replaced `gen-spec-deps.sh` and `gen-cross-service-refs.sh` with the `derive-dependencies` and `derive-references` primitives and deleted the `lib/specs-root.sh` helper they shared (migration `generator-primitives`). Both primitives resolve the root through the runtime's shared resolver, so root-awareness is unchanged; the adopter pre-commit hook now matches the spec root by *shape* rather than interpolating the configured name, leaving the runtime the only thing that resolves `[paths] specs-root`.
+The `derive-dependencies` and `derive-references` primitives walk the spec tree to derive frontmatter, and resolve `[paths] specs-root` (default `specs`) through the runtime's shared resolver. The adopter pre-commit hook matches the spec root by *shape* rather than interpolating the configured name, so the runtime is the only thing that resolves `[paths] specs-root`.
 
 ### No data model
 
@@ -84,16 +78,12 @@ Default-`specs` means every existing test, fixture, and golden file keeps passin
 | `runtime/src/primitives/dashboard.rs` | Modify | Resolve enumerated root |
 | `runtime/src/interpreter/payload.rs` | Modify | Resolve root for plan/spec path construction |
 | `runtime/tests/` (fixtures + parity/golden) | Create/Modify | Non-`specs` fixture; default-`specs` parity unchanged |
-| `scripts/gen-spec-deps.sh` | Modify | Resolve root before walking |
-| `scripts/gen-cross-service-refs.sh` | Modify | Resolve root before walking |
 | `scripts/lint-rule-ids.sh` | Modify | Resolve root |
 | `scripts/lint-frontmatter.sh` | Modify | Resolve root |
 | `scripts/tests/` | Create/Modify | Renamed-root generator coverage |
 | `framework/bootstrap/ductus.md` | Modify | Init prompt, validation, collision/half-rename notices, scaffold under root |
-| `.claude/commands/ductus/init.md` | Modify | Scaffold spec-root dir under configured name (hand-maintained) |
 | `framework/commands/*.md` | Modify | Resolve configured root in executable path refs; session `path` uses resolved root |
 | `framework/constitution.md` (`§spec-phase`) | Modify | One-line configurability note |
-| `constitution.md` (root) | Modify | Sync target of framework constitution |
 | `README.md` | Modify | Adopter-facing mention of `[paths] specs-root` |
 | `specs/002-…`, `specs/003-…`, `specs/022-…/spec.md` | Modify (conditional) | Back-linked signpost AC only where an absolute `specs/` claim is falsified |
 
