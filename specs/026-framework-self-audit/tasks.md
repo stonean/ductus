@@ -1,387 +1,41 @@
 # 026 — Framework self-audit (`/audit`) Tasks
 
-Tasks derived from the [plan](plan.md). Complete in order. Phased structure — `/audit` is a non-trivial implementation and the phases keep each landing reviewable on its own.
+Tasks derived from the [plan](plan.md). Complete in order.
 
-## Phase A — Scaffolding
+<!-- Each task should be small enough to implement and verify independently.
+     Mark subtasks as they are completed. Every task MUST close with a
+     `- **Done when**: …` line stating its completion condition — the
+     tooling reads this exact form to confirm the task is fully specified.
 
-### 1. Scaffold `framework/commands/audit.md` skeleton
+     A task body may also carry working notes — what the next session needs
+     to resume it: the mechanics, the order, what is left on disk — placed
+     as §tasks-phase says. Write them as prose on the pending task they
+     concern, so they go when the task is pruned. Put an ordering constraint
+     on the task that must wait, never above the first task or under a
+     heading of its own, which outlive every task; and never write a note as
+     a checkbox, which would count toward the task's completion. Anything
+     that must outlast the task belongs in its durable home first. Example:
 
-- [x] Create `framework/commands/audit.md` with frontmatter (`description`, no `argument-hint`, no `parity:` yet) and an empty Instructions section. The full procedure body lands in task 4 after the family scripts exist.
-- [x] Add frontmatter description: `Audit framework artifacts for cross-doc, cross-manifest, cross-registry drift. Maintainer-only.`
-- [x] Run `scripts/gen-claude-commands.sh` to regenerate `.claude/commands/ductus/audit.md`. Verify the mirror exists and matches the source.
+## 1. Create sessions table migration
 
-- **Done when**: `framework/commands/audit.md` exists with frontmatter + H1 + empty Instructions section; `.claude/commands/ductus/audit.md` regenerates without error.
+- [ ] Write SQL migration for `sessions` table
+- [ ] Run migration and verify schema
 
-### 2. Create `scripts/audit/` directory and `check-zero.sh` orchestrator
+- **Done when**: the migration applies cleanly and `sessions` matches the data model.
 
-- [x] Create `scripts/audit/` directory with an explanatory `README.md` describing the per-family contract (stdout findings, exit 0/1, read-only, idempotent).
-- [x] Create `scripts/audit/check-zero.sh` that invokes the 9 generators/lints in plan order. Print a `check-zero` finding per failing script to stdout. Exit 1 on any failure; exit 0 only when all pass.
-- [x] Smoke-test `scripts/audit/check-zero.sh` locally — confirm it exits 0 against the current repo state.
+## 2. Implement session store
 
-- **Done when**: `scripts/audit/check-zero.sh` exists, runs cleanly against a clean repo, and prints findings against a deliberately broken state (manually re-introduce drift in one file as a smoke test).
+Blocked on task 1: the store tests run against the migrated schema.
 
-## Phase B — Family checks (implement in parallel order; each is independent)
+- [ ] Create `shared/auth/session.go` with Create, Get, Delete methods
+- [ ] Write store integration tests against real PostgreSQL
 
-### 3. Implement Family 1 — `scripts/audit/cross-doc-consistency.sh`
+- **Done when**: all store methods are covered by passing integration tests.
 
-- [x] Sub-check 1a: invoke `scripts/gen-readme-table.sh --check`. Surface non-zero exit as a finding pointing at `README.md`.
-- [x] Sub-check 1b: extract the pipeline-diagram block (delimited by the canonical `draft → clarified → planned → in-progress → done` line and surrounding whitespace) from `framework/constitution.md` §spec-lifecycle, `docs/introduction.md`, and `framework/templates/project/project-readme.md`. Diff pairwise; finding per divergence.
-- [x] Sub-check 1c: extract back-edge sentences from `framework/constitution.md` §spec-lifecycle. Compare against references in `framework/commands/amend.md` and `framework/commands/target.md`'s Status→next-action table. Finding per wording divergence.
-- [x] Unit-test by running against the current repo (should exit 0) and against a deliberately-modified copy with one altered line in `docs/introduction.md` (should exit 1 with one finding).
+## 3. Update README link to migration guide
 
-- **Done when**: script runs, exits 0 on clean state, exits 1 with structured findings on injected drift.
+- [ ] Edit `README.md` to point at the new path
 
-### 4. Implement Family 2 — `scripts/audit/manifest-parity.sh`
+- **Done when**: the README link resolves to the new path.
 
-- [x] Sub-check 2a: parse the file manifest from `framework/bootstrap/ductus.md`'s scaffold section and from `framework/commands/init.md`'s scaffold section. Extract path lists via section-anchored regex. Diff; finding per asymmetry.
-- [x] Sub-check 2b: extract Claude `permissions.allow` array from `framework/bootstrap/configure/claude.md`'s canonical permission set. Extract Auggie `toolPermissions` array from `framework/bootstrap/configure/auggie.md`. Normalize each entry to `(tool, command-pattern)` per Q6's rule (Claude `Bash(X *)` → `("Bash", "X *")`; Auggie `{toolName: "launch-process", shellInputRegex: "^X "}` → `("Bash", "X *")` after stripping `^` and trailing space, normalizing case). Sort both, diff; finding per asymmetric entry.
-- [x] Smoke-test as in task 3.
-
-- **Done when**: script exits 0 on the current matched configure pair; exits 1 with finding when one configure file is missing a permission the other has.
-
-### 5. Implement Family 3 — `scripts/audit/registry-equivalence.sh`
-
-- [x] Read `framework/workflows/registry.json` via `jq`. Build a map of `(entry-name → workflow-file)`.
-- [x] Walk `framework/workflows/*.md` (excluding `registry.json`). Build the set of present workflow files.
-- [x] For each registry entry: verify the referenced workflow file exists. For each workflow file: verify it's in the registry.
-- [x] For each pair: extract the workflow file's frontmatter `description:` field; compare against the registry entry's `description` field. Finding per mismatch.
-
-- **Done when**: script exits 0 on the current registry/workflows; exits 1 on a deliberately-introduced asymmetry (e.g., register a non-existent workflow file).
-
-### 6. Implement Family 4 — `scripts/audit/placeholder-roundtrip.sh`
-
-- [x] `grep -rn` over `framework/commands/*.md` for hardcoded tokens: `.claude/`, `gov:`, `/ductus:`.
-- [x] Allowlist mechanism: skip lines preceded by `<!-- audit:ignore-placeholders -->` on the previous line. `framework/commands/audit.md` itself (NOT scaffolded into adopters) is the primary case where literals are correct.
-- [x] Surface remaining hits as findings with file:line and suggested fix (the placeholder form: `{cli-config-dir}/`, `{project}:`, `/{project}:`).
-
-- **Done when**: script exits 0 on the current command set (after audit.md ignore comments are placed); exits 1 if a hardcoded `.claude/` is introduced into any non-allowlisted location.
-
-### 7. Implement Family 5 — `scripts/audit/template-alignment.sh`
-
-- [x] Parse `framework/commands/analyze.md` for blocking-check sections. Each section names fields it requires (e.g., `Acceptance criteria section exists`, `status field is present and one of: draft, clarified, planned, in-progress, done`).
-- [x] For each named field, verify the corresponding template under `framework/templates/spec/` scaffolds it (e.g., `spec.md` template must include `## Acceptance Criteria`; the frontmatter shape in the template's `---` block must include `status`).
-- [x] Finding per template missing-element. The suggested-fix names the template file and the field to add.
-
-- **Done when**: script exits 0 on the current analyze/templates pair; exits 1 if `## Acceptance Criteria` is removed from `framework/templates/spec/spec.md`.
-
-### 8. Implement Family 6 — `scripts/audit/ssot-invariants.sh`
-
-- [x] Initial curated list (in the script): open-question counting rule, status state machine, back-edge ownership. Each entry is a struct of `{name, canonical-location, canonical-text-pattern, paraphrase-patterns}`.
-- [x] For each entry: grep all framework artifacts (`framework/`, `specs/`, `docs/`, `README.md`, `AGENTS.md`, `CLAUDE.md`) for the canonical text plus paraphrases.
-- [x] Finding when the canonical text appears in more than one file, or when a paraphrase appears outside the canonical location without a reference to it.
-- [x] Document in the script header: "to add a new SSOT-tracked rule, append a struct to the `SSOT_RULES` array in this file."
-
-- **Done when**: script exits 0 on the current repo state (assumes existing duplicates are tolerated for v1 or fixed before this lands); exits 1 if a tracked rule's canonical text is duplicated.
-
-### 9. Implement Family 7 — `scripts/audit/sibling-coupling.sh`
-
-- [x] Walk every `specs/NNN-*/spec.md`. Parse `status:` from frontmatter; skip `done` specs.
-- [x] For each non-`done` spec: extract inline markdown links to other `specs/NNN-*/` paths from the body; combine with frontmatter `dependencies:`.
-- [x] For each non-`done` spec: extract Affected Files table rows (first column) from `plan.md` if present.
-- [x] Build pairs `(A, B)` where A and B inline-link each other AND share at least one Affected Files row.
-- [x] For each pair: identify the second-drafted spec (higher NNN prefix). Grep its `## Resolved Questions` for the literal phrase `Why split from {A-slug}:`. If present, skip the pair (suppressed). Otherwise, emit a finding listing both specs, the overlapping rows, and both resolution paths from the plan in the suggested-fix column.
-- [x] Document the literal-phrase contract in the script's stdout output (so copy-paste from the finding produces a working suppression entry).
-
-- **Done when**: script exits 0 on the current spec set (no unsuppressed coupling pairs); exits 1 with a finding when a deliberately-introduced coupling pair (test by creating two stub draft specs that link each other) lacks the suppression phrase.
-
-### 10a. Implement Family 9 — `scripts/audit/primitive-promotion-candidates.sh`
-
-Pulled in from the original Future Considerations during the autonomous implementation run (user request, in-progress mid-implement scope expansion).
-
-- [x] Walk every `framework/commands/*.md` file. Honor `runtime/legacy-prose-commands.txt` allowlist — those files are out of /audit's parseability scope and out of Family 9's promotion scope too.
-- [x] For each command file: find the `## Instructions` section; iterate top-level numbered steps within it.
-- [x] For each step, check whether it contains a backticked primitive name from `framework/runtime-tools.txt` OR an `<!-- llm:* -->` extension-point marker. Steps with neither → finding.
-- [x] Allowlist: a step preceded by `<!-- audit:ignore-promotion -->` on the previous content line is exempt (genuine host-responsibility prose).
-- [x] Wire into `scripts/audit/run-all.sh` after Family 8.
-- [x] Update `scripts/audit/README.md` and `framework/commands/audit.md`'s markdown-only-reference list.
-
-- **Done when**: script exits 1 with structured findings against the six rewritten commands (analyze, implement, plan, specify, status, target); findings name the file, line, step number, and the prose snippet; legacy-prose commands are correctly skipped.
-
-### 10. Implement Family 8 — `scripts/audit/introducing-drift.sh`
-
-- [x] Build rename-history catalog: parse `git log --all --pretty=format:"%H %s" -- framework/commands/ scripts/` commit messages for rename indicators. Heuristic patterns: `renamed from X to Y`, `X → Y`, `consolidate X into Y`. Build the set of old-name tokens (e.g., `/capture`, `/elaborate`, `/validate`).
-- [x] For each old-name token: grep all `done` specs' bodies for the token in code-span form (backticked).
-- [x] For each match: examine the surrounding sentence (split at sentence boundaries). Look for current-tense verbs (`is`, `provides`, `exposes`, `creates`, `runs`, `defines`).
-- [x] If a current-tense verb is found near the old-name token: emit a finding with the affected sentence, the spec file:line, and a suggested past-tense rewrite (`is` → `was`, `provides` → `provided`, `exposes` → `exposed`, `creates` → `created`, `runs` → `ran`, `defines` → `defined`).
-- [x] Suggested-fix output names the `/ductus:amend` cycle as the resolution path (the maintainer adds a clarify-question on the affected spec, then accepts the past-tense rewrite).
-
-- **Done when**: script runs and produces findings against the documented ~9 specs from spec body's Family 8 background (011, 014, 017, 020, 021, 022, 023, 024, 000). False positives expected; manually verify the findings list is plausible.
-
-## Phase C — Wire the procedure
-
-### 11. Fill `framework/commands/audit.md` Instructions section
-
-- [x] Replace the empty Instructions section with a numbered procedure: step 1 invokes `run-generator` against `scripts/audit/check-zero.sh`; if it reports drift, halt and exit. Steps 2–9 invoke `run-generator` against each of the eight family scripts; stream output to /audit's stdout under family headers.
-- [x] Each step uses the parseable conventions per spec 022 — numbered, backtick-quoted `run-generator` name, no extension-point markers (every step is deterministic; no LLM extension required).
-- [x] Add an "Output" section to the command body documenting the stdout format and exit-code contract.
-- [x] Add a "Boundary with `/ductus:analyze`" section referencing the spec's table.
-
-- **Done when**: `framework/commands/audit.md`'s Instructions section parses cleanly under `scripts/lint-procedure-parseability.sh`; the regenerated `.claude/commands/ductus/audit.md` mirror is in sync.
-
-> **Implementation note:** the per-step args mismatch in the runtime's `run-generator` primitive (no per-step arg binding) was sidestepped by introducing `scripts/audit/run-all.sh` as the actual orchestrator — the procedure invokes that single script via `run-generator`. Per-family scripts retain their independent existence; `run-all.sh` is the aggregator. Future runtime enhancement: add per-step arg binding to procedural commands.
-
-### 12. Verify `framework/commands/audit.md` introduces no new MCP primitives
-
-- [x] Verify the command's body does NOT introduce any new MCP primitive names (only existing `run-generator` calls). Confirm `scripts/lint-tool-coverage.sh` exits 0.
-- [x] `framework/commands/audit.md` was not in `runtime/legacy-prose-commands.txt` to begin with (it ships parseable from day one).
-
-- **Done when**: lint-tool-coverage passes; lint-procedure-parseability passes against audit.md without it being on the legacy allowlist.
-
-### 13. Wire `/audit` self-invocation
-
-- [x] Run `scripts/audit/run-all.sh` against the current repo. It exits 1 with structured findings from Family 4 (placeholder-roundtrip — `/ductus:` literals in framework/commands/*.md, a pre-existing framework templating gap) and Family 8 (introducing-drift — old-name references in done spec bodies, the ~9 specs spec 026 listed). Both are expected findings the audit is designed to surface; resolution is follow-on framework work.
-- [x] `ductus exec audit` cannot bind the `script` argument for `run-generator` in the current runtime (no per-step arg binding in procedural commands). The implementation routes CI integration through `scripts/audit/run-all.sh` directly. The audit.md command file is parseable for lint purposes; the runtime exec path is a v2 enhancement.
-
-- **Done when**: `ductus exec audit` runs end-to-end and either exits 0, or exits 1 with findings whose resolution path is clear.
-
-## Phase D — CI integration
-
-### 14. Add `/audit` step to `markdown-only-pipeline.yml`
-
-- [x] Edit `.github/workflows/markdown-only-pipeline.yml`: append a step `(h) Framework self-audit (advisory in v1)` after the existing lint steps. The step runs `scripts/audit/run-all.sh` with `continue-on-error: true`.
-- [x] Verify the script is already executable from prior tasks; the workflow doesn't need a binary build (the runtime-exec path is a v2 enhancement; v1 invokes the orchestrator directly).
-- [x] v1 soft-launch mode documented in the workflow comments: continue-on-error is true while the framework's known drift (Family 4, 8) is being addressed; flip to hard-fail once the drift is resolved.
-
-- **Done when**: workflow file is structurally valid; the step appears in the workflow's job graph and runs on every PR.
-
-### 15. Add `/audit` pre-tag gate to `runtime-release.yml`
-
-- [x] Edit `.github/workflows/runtime-release.yml`: add a pre-matrix `audit` job that runs `scripts/audit/run-all.sh`. `continue-on-error: true` in v1 — release fires regardless of /audit findings until the framework drift is addressed.
-- [x] Soft-launch mode documented in workflow comments alongside the markdown-only-pipeline change.
-
-- **Done when**: workflow file is structurally valid; the audit job appears as a sibling to the build matrix in the workflow's job graph.
-
-## Phase E — Validation
-
-### 16. Run `/ductus:analyze` against this spec
-
-- [x] Invoke `/ductus:analyze` targeted at `026-framework-self-audit`. Resolve any hard-fail or blocking findings against `spec.md`, `plan.md`, `tasks.md`.
-- [x] Confirm anchor resolution: any §runtime-boundary / §rules / §spec-lifecycle references resolve to constitution markers.
-- [x] Confirm dependency status: 017, 022, 023, 024, 025 are all `done`.
-
-- **Done when**: `/ductus:analyze` reports no hard-fail and no blocking findings.
-
-### 17. Final lint sweep
-
-- [x] `npx markdownlint-cli2 'specs/026-framework-self-audit/**/*.md'` — exit 0.
-- [x] `scripts/lint-procedure-parseability.sh` — exit 0 (audit.md is parseable).
-- [x] `scripts/lint-tool-coverage.sh` — exit 0.
-- [x] `scripts/lint-frontmatter.sh` — exit 0.
-- [x] `scripts/audit/run-all.sh` — runs end-to-end against the post-implementation repo state. Exits 1 in v1 with documented findings from Family 4 (`/ductus:` literals across framework/commands/*.md) and Family 8 (old-name references in done specs); both are expected v1 findings the audit is *designed* to surface — resolution is follow-on framework work (re-template /ductus: → /{project}: across all command sources; past-tense rewrites in ~9 done spec bodies). The audit IS the meta-check that closes the loop; v1 ships with the loop visible but not yet quiet.
-
-- **Done when**: every lint exits 0; `/audit` runs end-to-end and surfaces findings whose resolution path is documented.
-
-### 18. Promote spec to `done`
-
-- [x] After the user confirms `/ductus:review` is clean against the five phases' commits, set `specs/026-framework-self-audit/spec.md` status from `in-progress` to `done`.
-
-- **Done when**: spec status is `done`; the runtime CI workflow passes on the final commit.
-
-## Phase F — Follow-on scenarios
-
-### 19. Implement scenario: audit-script-refactors
-
-- [x] Extract `scripts/audit/lib.sh` exposing `audit_emit FAMILY LOCATION MESSAGE FIX` plus ROOT/cd setup; refactor the nine family check scripts to source it (REUSE-001).
-- [x] Refactor `flush_step` in `scripts/audit/primitive-promotion-candidates.sh` to take state as explicit arguments and return the step list, eliminating caller-scope mutation (QUALITY-001).
-
-- **Done when**: `bash scripts/audit/run-all.sh` exits 0 with stdout-row parity against the pre-refactor state; each family script is shorter by ~10 lines; `flush_step` no longer reads or mutates caller-scope variables.
-
-### 20. Implement scenario: audit-ci-hard-gate
-
-- [x] Remove `continue-on-error: true` from `.github/workflows/markdown-only-pipeline.yml`'s `/audit` step and from `.github/workflows/runtime-release.yml`'s `audit` job. Preconditions verified 2026-05-17: `bash scripts/audit/run-all.sh` exits 0 against `main` at HEAD; Families 4, 8, and 9 each exit 0 (resolved in commit `1aca768`).
-
-- **Done when**: `/audit` is a hard PR-check and a hard pre-tag release gate; the next PR-check workflow run passes with the audit step blocking-eligible.
-
-### 21. Implement scenario: [host-namespace-parity](scenarios/host-namespace-parity.md)
-
-- [x] Implement the behavior described in `scenarios/host-namespace-parity.md`
-
-- **Done when**: `/ductus:audit` gains a host-namespace-parity family that resolves the effective namespace the way `Host::load` does (`[host] project`, else repo dir basename) and compares it against the installed `{cli-config-dir}/commands/<ns>/` directories, emitting a finding that names both values and the one-block fix; a repo with no installed commands dir and a repo whose basename fallback already matches both pass without a finding; `.ductus/config.toml` in this repo gains `[host]` / `project = "gov"` so the family is green and every rendered next-action names `/ductus:*`; `bash scripts/audit/run-all.sh` exits 0.
-
-### 22. Implement scenario: [family-17-contract-binding](scenarios/family-17-contract-binding.md)
-
-- [x] Implement the behavior described in `scenarios/family-17-contract-binding.md`
-
-- **Done when**: Family 17 derives its agent config-dir set from the Agent Registry table's `config_dir` column in `framework/bootstrap/ductus.md` rather than hardcoding it, emits a finding and exits non-zero when that derivation yields nothing instead of falling back to a built-in list, and asserts the `commands`/`command` pair and `[host] project` key against `runtime/src/host.rs` and the new-wins config order against `runtime/src/schema/paths.rs`, each failing loudly with a suggested fix that names the runtime-exposed-namespace option; the derived set matches the four registered agents; `scripts/audit/run-all.sh` exits clean.
-
-### 23. Implement scenario: [family-18-marker-list-parity](scenarios/family-18-marker-list-parity.md)
-
-- [x] Implement the behavior described in `scenarios/family-18-marker-list-parity.md`
-- [x] Extend the family with `18e`, binding the negated-creation predicate's negator and creation-verb lists across the same three restatements — derived from its own table in 045's data-model, compared against `CREATION_NEGATORS` / `CREATION_VERBS` and `analyze.md`'s bullet both ways, fail-closed on an empty derivation, no count arm; verified against three injected drift modes plus the restored baseline (022 task 122)
-
-- **Done when**: `scripts/audit/marker-list-parity.sh` derives the non-assertion marker set from the canonical table in 045's data-model and compares it against `NON_ASSERTION_MARKERS` in `check_artifacts.rs` and the shipped restatement in `analyze.md` in both directions, plus the declared array length and the spelled-out count in all three markdown homes; an empty derivation, a duplicate row, or a missing file is a finding rather than a silent pass; the `+ space` trailing-space convention and the all-code-span parenthesised-group filter are documented in the script; wired into `run-all.sh` as Family 18 with the family registries in `scripts/audit/README.md` and `framework/commands/audit.md` updated (and the stale "fifteen families" count corrected to seventeen in both, plus `run-all.sh`'s header); shellcheck clean; verified against five injected drift modes and the restored baseline; `scripts/audit/run-all.sh` exits 0; and `18e` binds the sixth exemption group's vocabulary the same way, proven by its own three injected drift modes and a clean baseline.
-
-### 24. Implement scenario: [family-19-review-freshness](scenarios/family-19-review-freshness.md)
-
-- [x] Implement the behavior described in `scenarios/family-19-review-freshness.md`
-
-- **Done when**: `scripts/audit/review-freshness.sh` flags every `done` spec whose `scenarios/*.md` or `data-model.md` changed since its `review.reviewed-against`, grandfathering specs with no `review:` block, deferring a null `reviewed-against` to `check-review-gate`, and reporting an unresolvable sha as its own finding; the durable-contract scope is documented against the two wider rules measured and rejected (Affected Files at 42/48, whole directory at 31/48) and verified to catch both `gvrn-v0.26.1` and `gvrn-v0.26.2`; shellcheck clean; deliberately **not** wired into `run-all.sh` while 10 pre-existing stale reviews stand, with that decision and the one-line wiring recorded in the scenario and `scripts/audit/README.md`
-
-### 25. Implement scenario: [family-19-mechanical-sweep-exemption](scenarios/family-19-mechanical-sweep-exemption.md)
-
-Opened by [049's rename sweep](../049-rename-govern-to-ductus/spec.md), which made 22 of 48 done specs read stale on a diff whose every changed line was the rename.
-
-- [x] `review-freshness.sh` no longer counts a durable contract whose diff is a uniform token substitution the same sweep applied elsewhere — one-for-one lines, one-for-one tokens, and every rewrite repo-wide or a direct consequence of a repo-wide one
-- [x] The exemption is derived from the diff, never declared: no commit trailer, opt-out flag, or maintained sweep-commit list, per `AGENTS.md`'s design principle
-- [x] Collapsing rewrites are admitted (`govern` and `gvrn` both → `ductus`); a collapse that is not a rename still fails the repo-wide test
-- [x] One `git diff --unified=0` per distinct base sha rather than two blob reads per changed file — the family is a hard release gate and the blob shape cost 61s
-
-- **Done when**: `scripts/audit/review-freshness.sh` exits 0 across the rename sweep, still flags a single changed table cell, a `MUST`→`SHOULD` reword, a mixed rename-plus-reword line, and any added or deleted contract; runs in under 5s on this repo's history; and shellcheck is clean.
-
-### 26. Implement scenario: [family-10-migration-coverage](scenarios/family-10-migration-coverage.md)
-
-Record backfilled 2026-08-16. The family shipped as `scripts/audit/migration-coverage.sh` and is registered in `run-all.sh` as Family 10, but its task was pruned from this file without leaving pruning evidence — so while this spec was `done` the scenario→task mapping family skipped it (that family is skipped on a `done` spec, whose tasks may already be pruned) and the gap stayed invisible. Reopening the spec for [049](../049-rename-govern-to-ductus/spec.md)'s Family 19 work surfaced it. The work is real and shipped; only the record was missing.
-
-- [x] `scripts/audit/migration-coverage.sh` asserts every `framework/migrations.toml` entry has a procedure body, every body has an entry, and no entry names a `target_paths` glob that matches nothing under `framework/`
-- [x] Registered in `scripts/audit/run-all.sh` as Family 10 and in `framework/commands/audit.md`'s family list
-
-- **Done when**: the family runs in `run-all.sh`, reports a missing procedure body and a stale `target_paths` entry, and this spec's scenario→task mapping is clean.
-
-### 27. Implement scenario: [family-22-adopter-shell-behavior](scenarios/family-22-adopter-shell-behavior.md)
-
-Opened by [048](../048-govern-acquired-runtime/spec.md)'s AC10 adopter runs, which found three silent defects in the shipped adopter shell that no check here could reach — because this repo runs different copies of that shell than adopters do.
-
-- [x] `scripts/audit/adopter-shell-behavior.sh` builds an adopter-shaped fixture — non-default `[paths] specs-root`, config only at `.ductus/config.toml`, runtime reachable only via the `.ductus/bin/ductus` pointer with nothing named `ductus` on `PATH` — and runs the real shipped `ductus-pre-commit` in it
-- [x] Asserts the configured spec root resolves, the hook reaches the runtime, and no generator rewrite is left unstaged
-- [x] Built at both the default and a configured root, so neither failure masks the other — the pointer-resolution assertion is only meaningful at the default root, where a scoping bug cannot suppress it
-- [x] Runtime is stubbed, so the family is hermetic and behaves identically in CI and locally — no `cargo build` dependency
-- [x] Every precondition failure (missing shipped file, no `mktemp`, git init failure) emits rather than skips
-- [x] Registered in `scripts/audit/run-all.sh` as Family 22 and in `framework/commands/audit.md`'s family list; Family 21's missing entry in that list was backfilled in the same pass, and both stale family counts corrected
-
-- **Done when**: the family goes red on the hardcoded-`specs` scoping in `framework/bootstrap/hooks/ductus-pre-commit`, green once that hook and `.githooks/pre-commit` resolve the root via `resolve_specs_root`, and `run-all.sh` is clean.
-
-### 28. Implement scenario: [family-23-sweep-target-manifest-parity](scenarios/family-23-sweep-target-manifest-parity.md)
-
-- [x] Restore the literal live-artifact enumeration to `AGENTS.md` §Workflow's dead-references entry — `framework/`, `scripts/`, `.ductus/scripts/`, `runtime/` (incl. `tests/fixtures/`, `tests/golden/`, `tests/parity/`), `.github/`, `docs/`, `README.md`, `AGENTS.md`, `specs/NNN-*/` — dropped when 050 rewrote the entry as a pointer mirror
-- [x] Repair the three dangling pointers: the entry's own "the live-artifact paths above" / "the artifact set above", and `framework/constitution.md` §spec-lifecycle case (a)'s deferral to "the `AGENTS.md` rename rule's scope"
-- [x] Leave the constitution's §drift-prevention wording categorical — it ships to adopters, whose layouts differ; only the contributor-side mirror carries literal paths
-- [x] `scripts/audit/sweep-target-manifest-parity.sh` extracts the enumeration and asserts every **source** path in the Shared Files manifest is covered by some entry, prefix-based
-- [x] Emit the count of entries extracted and paths examined, and state that coverage was verified manifest → list only; a zero-entry extraction is an error, not a pass
-- [x] Register as Family 23 in `scripts/audit/run-all.sh` and in `framework/commands/audit.md`'s family list, correcting the family count in both
-
-- **Done when**: the family goes red when the enumeration is reverted to the pre-042 `scripts/` form (the shape 049's sweep actually grepped), green against the restored list save for the one true finding it surfaces, and `scripts/audit/run-all.sh` is clean once that finding is resolved.
-
-### 29. Family 24 — rename-sweep residue
-
-- [x] Implement the behavior described in `scenarios/family-24-rename-sweep-residue.md`
-
-- **Done when**: `scripts/audit/rename-sweep-residue.sh` reports the project name in verb position across the markdown corpus, is wired into `run-all.sh` as Family 24, is listed in `scripts/audit/README.md`, and reports its examined-file count on stderr with a degenerate scan treated as a finding. Proven red against the pre-repair corpus (8 findings) and green at HEAD (0).
-
-#### 29a. Widen it to the possessive-determiner construction (2026-09-15)
-
-Extends task 29 rather than opening a second task on the same scenario, per 023's `extend-existing-scenario-task`. The family's first two constructions could not see a ninth surviving site, so it exited 0 over 514 files with live residue present.
-
-- [x] Add the possessive-determiner class, calibrated on **recall over known-true instances** — `govern its` occurs once at `9da4a7ae^` (the `framework/rules/api-backend.md` site) and `their` / `our` / `your` / `his` / `her` zero times
-- [x] Add the whole closed class rather than `its` alone: the existing lists are grammar-calibrated, not frequency-calibrated — three of seven followers and seven of eight modals had zero pre-sweep instances and are listed anyway
-- [x] Exclude `my` on the same test the header applies to `the`, `to` and `that` — `README.md` documents adoption as `/ductus my-project`, so the name is followed by `my` in correct prose on the front page
-- [x] Probe the **narrowed** direction as well as the widened one: the `my` false positive and an unquoted example in `specs/inbox.md` were both found that way, and neither was predictable by reading
-- [x] Correct the ninth-site count and the *exactly the 8 real sites* measurement wherever it is stated — the scenario, AC17, `framework/commands/audit.md`, `scripts/audit/README.md` and the script header
-- [x] Re-run `scripts/gen-claude-commands.sh` and the full cargo suite, since `framework/commands/audit.md` is runtime-adjacent
-
-- **Done when**: the family reports the name followed by a possessive determiner, proven in both directions — clean over the corpus with `my` excluded, and firing on exactly `framework/rules/api-backend.md:73` when the defect is restored — and every surface stating the construction count or the eight-sites measurement is corrected.
-
-### 30. Family 25 — unbalanced inline markup
-
-- [x] Implement the behavior described in `scenarios/family-25-unbalanced-inline-markup.md`
-
-- **Done when**: `scripts/audit/unbalanced-inline-markup.sh` reports odd backtick or odd `**` counts outside fenced code blocks in `AGENTS.md` and `framework/templates/project/agents.md`, is wired into `run-all.sh` as Family 25, is listed in `scripts/audit/README.md`, names its examined files on stderr, and reports a wrapped bullet rather than narrowing silently. Proven red against the pre-repair corpus (2 findings) and green at HEAD (0).
-
-### 31. Family 26 — broken relative links
-
-- [x] Implement the behavior described in `scenarios/family-26-broken-relative-links.md`
-
-- **Done when**: `scripts/audit/broken-relative-links.sh` reports every unresolvable relative markdown link with a `file:line` anchor and a repair path, strips inline code spans and fenced blocks without shifting line numbers, excludes generated copies and adopter templates by construction while counting both, treats a failed file listing as a finding, is wired into `run-all.sh` as Family 26 and listed in `scripts/audit/README.md`. Proven red against a seeded depth error and a failed listing; the 28 pre-existing broken links are fixed.
-
-### 32. Family 27 — done-spec unchecked criteria
-
-- [x] Implement the behavior described in `scenarios/family-27-done-spec-unchecked-criteria.md`
-
-- **Done when**: `scripts/audit/done-spec-criteria.sh` reports every `status: done` spec carrying an unchecked acceptance criterion with a `file:line` anchor and the criterion label, reads status from frontmatter and the checkbox from the Acceptance Criteria section rather than by loose grep, skips fenced blocks, enumerates specs from git while counting untracked skips, reports the examined `done`-spec count on stderr, treats an empty enumeration as a finding, and is wired into `run-all.sh` as Family 27, `framework/commands/audit.md`, and `scripts/audit/README.md`. Proven red against a seeded unchecked criterion on a `done` spec and against an empty enumeration; green at HEAD.
-
-### 33. Family 28 — audit family registry parity
-
-- [x] Implement the behavior described in `scenarios/family-28-audit-family-registry-parity.md`
-
-- **Done when**: `scripts/audit/audit-family-parity.sh` derives the family set from `run-all.sh`, from `audit.md`'s enumerated entries, and the script list from `scripts/audit/README.md`, reports registered-but-undocumented and documented-but-unregistered separately with their differing repairs, hardcodes neither set, needs no allowance for retired numbers, ignores prose mentions and the generated copy, treats an empty derivation on either side as a finding, and is wired into `run-all.sh` as Family 28, `framework/commands/audit.md`, and `scripts/audit/README.md`. Proven red against a family removed from each list in turn and against an empty derivation; green at HEAD.
-
-### 34. Family 31 — review block agreement
-
-- [x] Implement the behavior described in `scenarios/family-31-review-block-agreement.md`
-
-- **Done when**: `scripts/audit/review-block-agreement.sh` derives both records from frontmatter — `spec.md`'s `review:` block and the sibling `review.md` — and reports every disagreement across the five paired fields (`last-run`/`reviewed-at`, `reviewed-against`, and the three counts) with the spec, the field, and both values, naming `review.md` as the source of record in the fix; also reports `blocking: false` alongside a non-zero `must-violations`, and a waiver present in `review.md` with no matching `review.waivers` entry in `spec.md`. Hardcodes neither side, compares only specs carrying both files, never compares single-sided fields, reads frontmatter only, treats an empty subject set or unparseable frontmatter as a finding, reports the examined count on stderr, and is wired into `run-all.sh` as Family 31, `framework/commands/audit.md`, and `scripts/audit/README.md`. Proven red against a seeded count divergence in each direction and against an empty subject set; green at HEAD.
-
-### 35. Family 31 — move the check into a runtime primitive
-
-- [x] Extract the comparison into a `check-review-agreement` primitive under `runtime/src/primitives/`, reusing the runtime's frontmatter scanners rather than a fifth hand-rolled regex copy
-- [x] Register at all eight sites — six in `runtime/src` (`primitives/mod.rs`, `main.rs` enum + dispatch, `interpreter/mod.rs`, `mcp/server.rs`, `schema/registry.rs`, `schema/primitives.rs`) plus `framework/runtime-tools.txt` and the per-agent MCP allowlists via `scripts/gen-configure-mcp.sh`; the `mcp.rs` manifest test and `check-zero` are what surface the last two
-- [x] Reduce `scripts/audit/review-block-agreement.sh` to the Family 30 entry-point shape — resolve `.ductus/bin/ductus` falling back to `runtime/target/release/ductus`, call the primitive, render through `emit`, treat an unreachable runtime as a finding
-- [x] Fix the same `\s*` newline-swallow bug in `scripts/audit/review-freshness.sh`'s `scalar()`, or fold Family 19 onto the same primitive
-
-- **Done when**: `check-review-agreement` exists as a runtime primitive with unit tests covering the five paired fields, the `blocking`/`must-violations` rule, the orphan-waiver rule, an empty subject set, and unparseable frontmatter on either side; `scripts/audit/review-block-agreement.sh` is a thin entry point carrying no markdown parsing of its own; `scripts/lint-tool-coverage.sh` and `cargo test` pass; `scripts/audit/run-all.sh` exits 0 with Family 31 still proven red against a seeded divergence in each direction; and REUSE-001 from the 2026-08-28 review is resolved.
-
-### 36. Implement scenario: [readme-command-parity](scenarios/readme-command-parity.md) — the README is the one adopter surface with no parity check
-
-- [x] Implement the behavior described in `scenarios/readme-command-parity.md`
-
-- **Done when**: A new audit family fails when a command shipped to adopters is absent from the README's command tables, reusing Family 16's maintainer-only exclusion set rather than restating it, leaving `/audit`'s deliberate absence unreported, and reporting an unreadable README or command directory as a finding rather than a pass.
-
-### 37. Implement scenario: link-check-consolidation — one implementation of the link check, two scopes
-
-- [x] Implement the behavior described in `scenarios/link-check-consolidation.md`
-
-- **Done when**: Family 26 and `check-corpus-links` resolve links through one implementation with the two subjects stated, a root-absolute target resolves against the repository root on both, the family's examined-file count has not dropped, and Family 33's token-recognition constraint is stated where an author meets it.
-
-### 38. Family 34 — step-reference integrity
-
-- [x] Implement the behavior described in `scenarios/family-34-step-reference-integrity.md`
-- [x] Implement the check as the `check-step-references` runtime primitive, per the suite's primitives-first contract, with `scripts/audit/step-reference-integrity.sh` as the thin entry point
-- [x] Report three findings separately: a reference outside the file's step set, a step referring to its own number, and discontinuous numbering — and state, in the family header and both registries, that a reference renumbering shifted onto a different *existing* step is out of reach
-- [x] Fail closed on an empty extraction from a file that has an Instructions section, matching Families 17, 18, 23, and 28
-- [x] Scope the subject to the Instructions section, count out-of-subject mentions rather than resolving them, and exclude files holding several numbered lists rather than one procedure
-- [x] Register it in `scripts/audit/run-all.sh`, `framework/commands/audit.md`, and `scripts/audit/README.md` §Scripts — the three lists Family 28 holds together
-- [x] Prove it fails before keeping it: reintroduce one of the four stale references spec 054 fixed and confirm the family turns red
-
-- **Done when**: the family reports each of the three finding types, fails closed on an empty extraction, appears in all three registries Family 28 checks, and has been proven to fail on a deliberately reintroduced stale reference.
-
-### 39. Family 35 — manifest destination links
-
-- [x] Implement the behavior described in `scenarios/family-35-manifest-destination-links.md`
-- [x] Derive both subjects from the installer's own manifest tables rather than restating a file list — a hardcoded set would be a second copy of the fact under test
-- [x] 35a: copy each **Shared Files** entry to its literal destination in a throwaway tree and delegate to `check-corpus-links --scope repository`, per the suite's primitives-first contract, with the script as the thin entry point
-- [x] 35b: check the **Slash commands** entries lexically, and state both reasons they cannot go through 35a — placeholder destinations, and the primitive's by-construction exclusion of the host config dir
-- [x] Fail closed on an empty extraction from either table, an unreachable runtime, and an unparseable result, matching Families 17, 18, 23, 28 and 34
-- [x] Report both counts on stderr so "the shipped set resolves" cannot be read as "every link an adopter has resolves"
-- [x] Register it in `scripts/audit/run-all.sh`, `framework/commands/audit.md`, and `scripts/audit/README.md` §Scripts — the three lists Family 28 holds together
-- [x] Prove it fails before keeping it: restore the pre-fix `../../specs/017-…` link in `framework/rules/quality-cross.md` and confirm the family reproduces the adopter's failure
-
-- **Done when**: the family resolves shipped files against their manifest destinations, reports both subjects' counts, fails closed on every precondition above, appears in all three registries Family 28 checks, and has been proven to fail on the restored pre-fix link.
-
-### 40. Family 36 — self-URL resolution
-
-- [x] Implement the behavior described in `scenarios/family-36-self-url-resolution.md`
-- [x] Derive the repository slug from the installer's archive URL rather than hardcoding it — a literal would misfire in a fork rather than being merely absent
-- [x] Resolve `main` URLs against the working tree; count tag- and sha-pinned URLs separately rather than resolving or dropping them
-- [x] Report `unresolved`, `blob-names-dir` and `tree-names-file` as distinct findings, because the three repairs differ
-- [x] Exclude placeholder URLs and generated command copies by construction; strip fragments, queries and trailing punctuation, and percent-decode before the existence test
-- [x] Treat an empty markdown corpus as a finding and zero URLs as clean, with the URL count on stderr as the guard between them
-- [x] Register it in `scripts/audit/run-all.sh`, `framework/commands/audit.md`, and `scripts/audit/README.md` §Scripts — the three lists Family 28 holds together
-- [x] Prove it fails before keeping it: repoint one shipped URL at a renamed spec directory and confirm the family turns red
-
-- **Done when**: every `blob/main/<path>` URL in the corpus is resolved against the working tree, non-main refs are counted rather than resolved, the three finding kinds are distinguished, the family appears in all three registries Family 28 checks, and it has been proven to fail on a deliberately repointed URL.
-
-### 41. Family 19 states its own coverage
-
-- [x] Implement the behavior described in `scenarios/family-19-says-what-it-examined.md`
-
-- **Done when**: `review-freshness.sh` judges a record carrying `reviewed-digest` by that digest and one without it by the existing `reviewed-against`..HEAD diff, so the digest arm agrees with `check-review-gate` by construction while the proxy arm keeps the 53 pre-digest specs enforced; it closes every run with one stdout coverage line naming the examined count **split into digest and proxy** alongside the grandfathered and unresolvable exclusions, in the shape Families 27, 31 and 37 already use; the line prints on a clean run, on a findings run (above the findings), and on a corpus with zero `done` specs; a record with a digest and an unresolvable `reviewed-against` is examined rather than counted unresolvable, and `reviewed-digest: {}` reads as current on the digest arm; the line never affects the exit code, so `run_check`'s non-zero-means-findings contract and the aggregator are unchanged; `bash scripts/audit/run-all.sh` still exits 0 on a clean tree and the family's own output is no longer empty; `shellcheck -S warning` clean.
-
-### 42. Family 39 — shipped anchor resolution
-
-- [x] Implement the behavior described in `scenarios/family-39-shipped-anchor-resolution.md`
-- [x] Add `scripts/audit/shipped-anchor-resolution.sh` in the Family 35 shape: `lib.sh`, `audit_family`, `ductus_bin`, python3 computing tab-separated records the shell feeds to `emit`, Bash 3.2 compatible
-- [x] Enumerate `git ls-files 'framework/*.md'`, run `resolve-anchor --markers-path framework/constitution.md` on each, and report each unresolved reference at `file:line` with its anchor and the three repairs
-- [x] Report an unreachable runtime, an empty enumeration, and an unreadable or unparseable result as findings; print the coverage counts to stderr
-- [x] Register it in `scripts/audit/run-all.sh`, `framework/commands/audit.md`, and `scripts/audit/README.md` §Scripts, the three lists Family 28 holds together
-- [x] Prove it fails before keeping it: break one `§` in a shipped file and confirm the family turns red, then restore
-
-- **Done when**: every tracked `framework/**/*.md` is resolved against the constitution by the primitive, each unresolved reference is reported at `file:line`, the three cannot-examine states are findings, the coverage line prints on stderr, the family appears in all three registries Family 28 checks, `shellcheck -S warning` is clean, and it has been proven to fail on a deliberately broken reference.
+-->
