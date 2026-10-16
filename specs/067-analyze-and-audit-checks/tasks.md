@@ -62,3 +62,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] A test proving the join, failing with it disabled
 
 - **Done when**: a hard-wrapped blockquote note whose marker and path sit on different physical lines records the path `not-a-live-claim`, and the test fails when blockquote lines are read singly
+
+## 9. An identifier is one word to the negated-creation predicate
+
+- [x] `asserts_negated_creation` splits words on everything but ASCII alphanumerics and `_`, so `introduced_in` is an identifier, not the creation verb `introduced` (043's `gvrn-v{introduced_in}` line was exempted by `not … introduced`)
+- [x] A live-claim case in the clause-scoping test, failing with `_` treated as a separator
+- [x] The word rule's statements name the identifier case: the predicate's doc and 067's negated-creation scenario
+
+- **Done when**: a line whose only negator-then-verb pair runs through an `_`-joined identifier is a live claim, the test fails when `_` splits words, and the corpus delta is the one 043 line

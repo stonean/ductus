@@ -1581,7 +1581,8 @@ const CREATION_VERBS: [&str; 3] = ["created", "added", "introduced"];
 ///   added by this spec; no further generators are needed`` is a live claim
 ///   about a path that must still resolve.
 /// - **Word-matched.** `not` hides as a substring inside `cannot` and `note`,
-///   `no` inside `nano`; the negator has to be the whole word.
+///   `no` inside `nano`; the negator has to be the whole word. An identifier is
+///   one word — `_` joins, so `introduced_in` is not the verb `introduced`.
 /// - **Ordered.** The negator must precede the verb. English negates a verb
 ///   from in front of it (`no X was created`, `was never added`, `without a
 ///   lock file being created`), so a negator *after* the verb belongs to
@@ -1590,7 +1591,7 @@ const CREATION_VERBS: [&str; 3] = ["created", "added", "introduced"];
 fn asserts_negated_creation(lowered: &str) -> bool {
     clauses(lowered).any(|clause| {
         let mut negated = false;
-        for word in clause.split(|c: char| !c.is_ascii_alphanumeric()) {
+        for word in clause.split(|c: char| !(c.is_ascii_alphanumeric() || c == '_')) {
             if CREATION_NEGATORS.contains(&word) {
                 negated = true;
             } else if negated && CREATION_VERBS.contains(&word) {
@@ -4349,6 +4350,10 @@ mod tests {
             "- [x] `scripts/gen-spec-deps.sh` was created and not modified since.\n",
             // A creation verb with no negator anywhere.
             "- [x] `scripts/gen-spec-deps.sh` was introduced by this spec.\n",
+            // The verb only inside an identifier: `introduced_in` is a field
+            // name, so `not … introduced_in` negates nothing (043's
+            // completion-gate line).
+            "- [x] `scripts/gen-spec-deps.sh` ships; the spec is not done until `v{introduced_in}` is tagged.\n",
         ] {
             let tmp = tempdir().unwrap();
             seed_with_criteria(tmp.path(), "done", criterion);

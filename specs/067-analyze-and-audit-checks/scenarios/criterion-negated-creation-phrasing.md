@@ -58,7 +58,8 @@ Three rules keep the predicate from collapsing into the over-exempting phrase:
   are needed`` is a live claim about a path that must still resolve.
 - **Word-matched, not substring-matched.** `not` hides inside `cannot` and
   `note`, `no` inside `nano` — the `adopter` trap of the phrase list, in the
-  other direction.
+  other direction. An identifier is one word: `_` joins, so the field name
+  `introduced_in` is not the verb `introduced`.
 - **Ordered.** The negator precedes the verb. English negates a verb from in
   front of it, so a negator *after* the verb belongs to something else:
   ``X was created and not modified since`` is a delivery claim with a trailing
