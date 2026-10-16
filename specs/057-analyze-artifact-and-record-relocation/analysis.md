@@ -1,20 +1,23 @@
 ---
 spec: 057-analyze-artifact-and-record-relocation
-last-run: 2026-09-25T18:26:35Z
-analyzed-against: c425c4961be1a28eab4c8eecb136de36b8c97eb2
+last-run: 2026-10-16T19:38:46Z
+analyzed-against: 2ce89f9d91c5ef1d03f1294506ade742e1aa8ef3
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
-unexamined: 0
+unexamined: 5
 analyzed-digest:
   data-model.md: d6a91567baa5be37074c007b462024388c36d3bce9a305cd184199e7d1e5fd20
-  plan.md: ef098cb169324a364d51c7352d19f3953218921bdf46702a49f2f3a778581cda
+  plan.md: a0724cc9e9e7b4db8c522dc99ca982419b11d265eedf2fd6a2c75e52069ba9eb
   review.md: 26f96d4baad74d707f5c9ced16d6497ce57cd8f3197dfff66a44767888bf5813
-  spec.md: b7b25faf124707ef95b11506e8eb8e84d23688dbd349780e61bc29c60984f10c
+  spec.md: ad2b55c4866901aa8f814b2a036d310ae70415092edd473a96ff608f1558f506
   tasks.md: 32de2dbe7d863cd4e26d1a1a8160178e246e95d981fbeeed514fad5e2fd86dc3
+unexamined-by-reason:
+  not-a-live-claim: 2
+  root-absent: 3
 blocking: false
 dispositions:
-  fixed: 0
+  fixed: 2
   routed: 0
   discarded: 0
   undispositioned: 0
@@ -24,7 +27,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 0 unexamined target(s). Dispositions: 0 fixed, 0 routed, 0 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 5 unexamined target(s). Dispositions: 2 fixed, 0 routed, 0 discarded, 0 undispositioned.
 
 ## Hard failures
 
@@ -40,8 +43,10 @@ dispositions:
 
 ## Unexamined targets
 
-*None — every target was examined.*
+- not-a-live-claim: 2
+- root-absent: 3
 
 ## Fixed in this run
 
-*None.*
+- plan-record — plan.md section "Implementation notes" is outside the design record — `specs/057-analyze-artifact-and-record-relocation/plan.md` — **fixed**
+- plan-record — plan.md section "Resuming from here" is outside the design record — `specs/057-analyze-artifact-and-record-relocation/plan.md` — **fixed**
