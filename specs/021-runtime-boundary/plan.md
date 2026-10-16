@@ -28,21 +28,20 @@ The amendment is three edits, performed in this order so that each commit (or ea
 
 The opening-paragraph edit is performed first so that the forward reference to §runtime-boundary, which it introduces, resolves to a section that exists by the time the subsection is added in step 2. In a single PR this ordering is academic; if the work were split across commits, this is the safe order.
 
-### CI workflow lives at `.github/workflows/markdown-only-pipeline.yml`
+### CI workflow lives at `.github/workflows/framework-checks.yml`
 
-Filename matches the workflow's job: prove the markdown-only path still works. The workflow has a single job `markdown-only` with five steps mapping 1:1 to the spec's checks (a)–(e). Each step is a thin shell invocation:
+The workflow runs the framework's deterministic checks on every change. Its steps for the spec's checks (b)–(e) are thin shell invocations:
 
 | Step | Implementation |
 | --- | --- |
-| (a) runtime binary absent | `command -v <name> && exit 1 \|\| true` for each name in `framework/runtime-tools.txt` |
-| (b) bash generators clean | `bash scripts/gen-spec-deps.sh --dry-run && bash scripts/gen-readme-table.sh --dry-run && bash scripts/gen-help-tables.sh --dry-run` |
+| (b) generators and derived indexes clean | `ductus derive-dependencies`, `ductus derive-references` and `bash scripts/gen-help-tables.sh --dry-run`, each failing on a stale index |
 | (c) markdownlint | `npx markdownlint-cli2` |
 | (d) tool-coverage lint | `bash scripts/lint-tool-coverage.sh` |
 | (e) frontmatter integrity | `bash scripts/lint-frontmatter.sh` |
 
-Workflow trigger is `pull_request` with `paths` filter `framework/**`, `specs/**`, `.claude/commands/**`. Push to `main` also triggers the workflow to catch direct commits.
+Workflow trigger is `pull_request` with a `paths` filter that includes `framework/**`, `specs/**` and `.claude/commands/**`. Push to `main` also triggers the workflow to catch direct commits.
 
-No matrix, no caching, no Rust/Go toolchain — the entire job runs in plain Ubuntu with bash and `npx`. This is the markdown-only assertion in practice.
+The job builds the runtime before step (b), since the two derivations are runtime primitives.
 
 ### Runtime-tools manifest is a flat text file, initially empty
 
@@ -93,7 +92,7 @@ The tasks order is: (1) constitution amendment → (2) runtime-tools manifest st
 | `framework/runtime-tools.txt` | Create | Empty (comment-only) manifest of canonical runtime tool names; populated by spec 022 |
 | `scripts/lint-tool-coverage.sh` | Create | Proximity-scan bash script verifying every runtime-tool reference in `framework/commands/*.md` has a fallback marker within 20 lines |
 | `scripts/lint-frontmatter.sh` | Create | Bash script verifying frontmatter shape (delimiters, status enum, dependencies field presence/format) across spec and scenario files |
-| `.github/workflows/markdown-only-pipeline.yml` | Create | CI workflow running the five deterministic checks on every PR matching the path filter |
+| `.github/workflows/framework-checks.yml` | Create | CI workflow running the deterministic checks on every PR matching the path filter |
 | `specs/021-runtime-boundary/plan.md` | Create | This file |
 | `specs/021-runtime-boundary/tasks.md` | Create | Task breakdown derived from this plan |
 
@@ -103,7 +102,7 @@ The tasks order is: (1) constitution amendment → (2) runtime-tools manifest st
 
 - **Storing the runtime-tools manifest as YAML or JSON** — rejected. Consumers are shell scripts; a flat text file is unambiguous in PRs and removes a parsing dependency from CI. Upgrade path remains open if structured metadata is ever needed.
 - **Implementing the tool-coverage lint as a structured-marker check (e.g., `<!-- runtime-tool: name --> ... <!-- /runtime-tool -->`)** — rejected. Structured markers depend on author discipline, exactly the anti-pattern the Design Principles section in `AGENTS.md` forbids. The proximity scan is derived from existing command prose and requires no author markup.
-- **Running the tool-coverage lint as a Rust binary** — rejected for spec 021. The runtime itself is deferred to 022; introducing a binary here contradicts the spec's "no binary in this spec" non-goal. The lint runs only in the markdown-only-pipeline workflow (which asserts the runtime is absent), so a runtime version would be unreachable in that context — the bash implementation is permanent, not a stepping stone to a binary version.
+- **Running the tool-coverage lint as a Rust binary** — rejected for spec 021. The runtime itself is deferred to 022; introducing a binary here contradicts the spec's "no binary in this spec" non-goal. The lint stays bash: it runs in `.github/workflows/framework-checks.yml` and `scripts/audit/check-zero.sh`, where a runtime counterpart would buy nothing — the bash implementation is permanent, not a stepping stone to a binary version.
 - **Splitting the amendment into three separate PRs** — rejected. The three edits are interdependent (the opening-paragraph forward reference, the subsection it points to, and the canonical sources row pointing back at the subsection). They land together or not at all.
 - **Triggering the workflow on every PR regardless of path** — rejected. Docs-only or release-only PRs cannot introduce a silent runtime dependency; running the workflow on them wastes runner minutes without strengthening the invariant.
 - **Hand-authored "runtime-eligibility" labels on slash commands** — rejected during clarify (Q6). Resolution recorded in spec.
