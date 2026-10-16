@@ -133,7 +133,7 @@ This keeps the cross-agent in-sync invariant (drift fails the pre-commit hook).
 
 Add `.opencode/` to the framework-managed `.gitignore` block (the
 `merge-managed-block` content referenced in ductus.md and
-`framework/templates/project/gitignore.md`), parallel to `.claude/` / `.augment/`
+`framework/templates/project/gitignore`), parallel to `.claude/` / `.augment/`
 / `.agents/`. The **root `opencode.json` is deliberately not gitignored** — it
 carries the committed, team-shared ductus wiring (Decision 3). Like the Claude
 `commands` carve-out, ensure the regenerated command tree is ignored while the
@@ -189,7 +189,7 @@ Antigravity's:
 | `framework/bootstrap/ductus.md` | Modify | `opencode` registry row + §Derived-values column; §MCP-registration row (write-file, project-committed); §MCP-wiring write-file `opencode` sub-case (root `opencode.json` `mcp` shape); §ductus-auto-wiring `"ductus*"` grant; §Per-Agent-Scaffolding `opencode` branch (verbatim namespaced commands, cleanup); §Permission-Setup seed; self-install / self-update / integrity / placeholder / dir-creation branches; §"Adding a new agent" note; `.gitignore` block adds `.opencode/` |
 | `framework/bootstrap/configure/opencode.md` | Create | OpenCode permission set → root `opencode.json` `permission` (action map; `edit`/`bash` allows, denies, `"ductus*": "allow"`); prose-walk generic JSON merge; `generated:mcp-allow` markers |
 | `scripts/gen-configure-mcp.sh` | Modify | Fourth splice target: emit constant `"ductus*": "allow"` block into `opencode.md`; keep the cross-agent in-sync invariant |
-| `framework/templates/project/gitignore.md` | Modify | Add `.opencode/` to the managed block (root `opencode.json` stays tracked) |
+| `framework/templates/project/gitignore` | Modify | Add `.opencode/` to the managed block (root `opencode.json` stays tracked) |
 | `install.sh` | Modify | `opencode)` arm: dest `.opencode/command/ductus.md`, seed root `opencode.json`, usage + error text |
 | `README.md` | Modify | OpenCode install snippet (`sh -s -- opencode` arm); add OpenCode to supported-agents intro + paths summary; Registering-the-runtime note (auto-wired via root `opencode.json`, restart required — config loads once) |
 | `scripts/tests/test-gen-configure-mcp.sh` | Modify | Assert the `opencode.md` `"ductus*"` block is emitted and stays in sync |
