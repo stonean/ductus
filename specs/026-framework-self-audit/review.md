@@ -1,23 +1,22 @@
 ---
 spec: 026-framework-self-audit
-scenario: family-39-shipped-anchor-resolution
-last-run: 2026-10-13T15:58:06Z
-reviewed-against: 1bc3ad6446b18b75dd363e397cbaab9126649d9e
-diff-base: bd14fefe7d05788877b7cde6ed7a850be1b7fb74
+last-run: 2026-10-16T01:28:01Z
+reviewed-against: 3be5cda9f869af21fbc6e75f1758a76a66ce5331
+diff-base: 1054b8bd2e2c51c8629b4e6a9d3193103739aa57
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 7
-scope: 21
+examined: 4
+scope: 189
 skipped-passes: []
 reviewed-digest:
   scenarios/audit-ci-hard-gate.md: a7bad7a167532019112d79a746696ad32d963171598d2283072af0e9f3234be7
   scenarios/audit-script-refactors.md: 035bb7ef52c236135d791f35c3ec407d7908c8d51a169483bce40bc26c7a46c8
   scenarios/family-10-migration-coverage.md: 8684e643e4ea938cbeeed6d1342aef27efc84a7bf7559b111b6a12cacacfa02b
   scenarios/family-17-contract-binding.md: 1ab3dfbc5c53ca5ab082b587a299b1951c8dd3c3e29148db5ed3a5df50903faf
-  scenarios/family-18-marker-list-parity.md: 8d48555ad2ec2a7983bfa8dac24c6edf9dcbc051037ae6b00c9ec5e26f767e4d
+  scenarios/family-18-marker-list-parity.md: 603be582414b2cf49d14019afbd8fe1c0e9cdef49373d08b4a6c918ecfc755ec
   scenarios/family-19-mechanical-sweep-exemption.md: 1aed9678cb90da55fb314f9f8bd26addb3baebdbad04bda48fb11deeb95c4089
-  scenarios/family-19-review-freshness.md: 07adf4f5f7f0590e90c043d9254534f10f77fc717fb951bd7dfe2ff42a74d787
+  scenarios/family-19-review-freshness.md: 2347d993d37163036d9cf592c2e3a28bf14498cf262c5eac5d86ca6b9bd569d6
   scenarios/family-19-says-what-it-examined.md: 2ee343d1295dfc755ea19ae453e5edd61dfb7cdb3d1eecdd46865d54be48621d
   scenarios/family-22-adopter-shell-behavior.md: 2eac3b7db9587dd354168941be8a1816d11a9e6f7fb27ecd8b8f9c9f8f719754
   scenarios/family-23-sweep-target-manifest-parity.md: 9dfa1299cdeb27ad691c66d6e9adeb68187c7c60039576cafd6ba55f29274b38
@@ -29,23 +28,29 @@ reviewed-digest:
   scenarios/family-34-step-reference-integrity.md: 4d24ed6a08c54ae98f135ad108d3b8a7b85f782f5af7edf26c67d92aa509f067
   scenarios/family-35-manifest-destination-links.md: 8e94dce4172e2b326612da806327af31777d99b8c6ce89642c9d10a98dc148b3
   scenarios/family-36-self-url-resolution.md: 23716b0f5c3810890bab089c65258008842869e35616a71b86b663ed231bde18
-  scenarios/family-39-shipped-anchor-resolution.md: 989bc2bab609358c00183fd3711d0530f0ebb29a51e4c92f92d37192bce9b355
+  scenarios/family-39-shipped-anchor-resolution.md: 5a1600cb44670deb556bc0669717b1ef70122e1cb6072879cfdcca39a5a9f4b2
   scenarios/host-namespace-parity.md: 05714fe6b728391f699ed7328e1aea252a48259ae489fa9c06e0d0609dc1d376
-  scenarios/link-check-consolidation.md: f838133a535aa090e09d7f82903facc4dff8cc822c1dec5c22f9b4d1e17a5049
+  scenarios/link-check-consolidation.md: edaa15335c49241c5565a0b4063a3f59a5233b5b4a0c6362cbe9f4356b82812f
   scenarios/readme-command-parity.md: 3788aa1103dba1860af8cb9950a6425ed33e4a24498f825fcd980e0c9bb7f8bc
 blocking: false
 dispositions:
   fixed: 0
   routed: 0
-  discarded: 0
+  discarded: 1
   undispositioned: 0
+decisions:
+  - key: "convention: family-19-review-freshness's Behavior still describes a `review:` block in spec.md and a commit-diff staleness check, which spec 057's relocation to review.md and the digest arm replaced — `specs/026-framework-self-audit/scenarios/family-19-review-freshness.md`"
+    outcome: discarded
+    reason: relocation residue from spec 057, outside the 022 split's window this re-review covers; the sibling family-19-says-what-it-examined states the digest arm, so a reader of 026 meets the current rule (operator decision, 2026-10-16)
+    decided-at: 2026-10-16T01:28:01Z
+    decided-by: andy@stone.dev
 ---
 
 # Review — 026-framework-self-audit
 
 ## Summary
 
-Five passes over bd14fefe..1bc3ad64: scenario `family-39-shipped-anchor-resolution` (task 42, AC26), the new `scripts/audit/shipped-anchor-resolution.sh`, and its registration in `run-all.sh`, `framework/commands/audit.md` and `scripts/audit/README.md`. Rule files: the eleven `discover-rule-files` selects; `quality-cross.md` governs a check script and was applied in full. QUAL-CLAIM-001 is met by the stderr coverage line (files examined, references by kind, qualified named as excluded by construction) and by the three cannot-examine states each being a finding. QUAL-TEST-001 is met by mutation: reverting `ductus.md:901` to a short heading turned the family red at that line, and an empty enumeration, no reachable runtime and a runtime exiting non-zero each produced a finding and exit 1 in throwaway trees, beside a control that exited 0. The security pass found a list-form subprocess over git-enumerated paths and no new input source; reuse, efficiency and simplicity found nothing (it reuses `ductus_bin` and the README's documented python convention, and makes 64 short subprocess calls). A prose-claim sweep for stale family counts found none. No MUST or SHOULD finding and no observation. **Examined 7 of 21.** The 7 are the window's modified files: the new script and the scenario read in full, the other five read as their diffs over the diff base. Two modified files were not read and are not counted: the generated `.claude/commands/ductus/audit.md` and `.pi/prompts/ductus-audit.md`, which `scripts/gen-claude-commands.sh` reports in sync with their source. The other 12 scope entries are plan-affected paths the window does not touch (the other family scripts, two workflows, `legacy-prose-commands.txt`); they were not read.
+Scoped re-review of the 022 split's reference sweep: 026's family-18-marker-list-parity, family-19-review-freshness, family-39-shipped-anchor-resolution and link-check-consolidation scenarios name the moved scenarios (criterion-path-existence-family, criterion-negated-creation-phrasing, criterion-non-assertion-phrasings and adopter-corpus-link-integrity in 067, review-staleness-gate in 066) and 022's former AC23, now 067's AC2, at their new homes. examined: 4, each read in full: those four scenarios. spec.md (45,053 bytes) was read only as its two-token diff and is not counted. Base --since=1054b8bd, the commit before the 022 split's move (d852b627): the edits predate any reopen of this spec, which stays done because each is a pointer repoint. The five passes ran over the four files against all eleven rule files and AGENTS.md: no finding. One observation, discarded by the operator: family-19-review-freshness still describes the pre-057 review: block and commit-diff check, which is relocation residue outside this window, and its sibling family-19-says-what-it-examined states the digest arm. Not read and not counted: every other scope entry. Those are the plan's Affected Files, unchanged in this window and covered by the previous review, and the files the split changed elsewhere in the repository (git diff --name-only 1054b8bd plus the working tree), which are the subject of 022's, 066's and 067's own reviews.
 
 ## MUST violations (blocking)
 
@@ -65,7 +70,7 @@ Five passes over bd14fefe..1bc3ad64: scenario `family-39-shipped-anchor-resoluti
 
 ## Observations
 
-*None.*
+- convention: family-19-review-freshness's Behavior still describes a `review:` block in spec.md and a commit-diff staleness check, which spec 057's relocation to review.md and the digest arm replaced — `specs/026-framework-self-audit/scenarios/family-19-review-freshness.md` — **discarded**: relocation residue from spec 057, outside the 022 split's window this re-review covers; the sibling family-19-says-what-it-examined states the digest arm, so a reader of 026 meets the current rule (operator decision, 2026-10-16)
 
 ## Skipped passes
 
