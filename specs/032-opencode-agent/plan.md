@@ -194,7 +194,7 @@ Antigravity's:
 | `README.md` | Modify | OpenCode install snippet (`sh -s -- opencode` arm); add OpenCode to supported-agents intro + paths summary; Registering-the-runtime note (auto-wired via root `opencode.json`, restart required — config loads once) |
 | `scripts/tests/test-gen-configure-mcp.sh` | Modify | Assert the `opencode.md` `"ductus*"` block is emitted and stays in sync |
 | `specs/032-opencode-agent/data-model.md` | Create | The `opencode` layout's derived values + the two owned `opencode.json` regions (merge contract) |
-| `specs/028-antigravity-agent/spec.md` | Modify | Signpost note → 032 (registry now carries a third layout, `opencode`); blockquote so `gen-spec-deps` derives no cycle |
+| `specs/028-antigravity-agent/spec.md` | Modify | Signpost note → 032 (registry now carries a third layout, `opencode`); blockquote so `derive-dependencies` derives no cycle |
 
 (Authoritative write boundary is derived from git history at implement time; this
 table is a planning aid. Audit/parity coverage — `scripts/audit/run-all.sh`,
