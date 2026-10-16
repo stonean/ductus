@@ -27,6 +27,7 @@ That is `QUAL-CLAIM-001` precisely: a fully-implemented path whose output overst
 | `ships-to-adopter` | a criterion's path is a file this repo scaffolds into an adopter's checkout — a **Shared Files** manifest destination, or a registered agent's scaffold path ([per-agent-scaffold-paths-ship-to-adopter](per-agent-scaffold-paths-ship-to-adopter.md)) |
 | `artifact-unreadable` | a scanned artifact could not be read at all |
 | `not-a-live-claim` | the criterion naming a path does not claim the path is present |
+| `never-existed` | a body path no revision of the repository ever held — an example or a never-built alternative ([body-path-existence-family](body-path-existence-family.md)) |
 
 **`clean` is unchanged.** It stays `findings.is_empty()`. Redefining it to account for skips would silently change the verdict four shipped families produce, which is a larger behavior change than the honesty problem warrants. The assurance therefore lives in the pair: `clean: true` with an empty `skipped` is a verified-clean result, and `clean: true` with a non-empty `skipped` is a partially-examined one.
 

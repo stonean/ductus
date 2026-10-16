@@ -324,7 +324,9 @@ pub struct AnalyzeBlock {
     ///   registered agent's scaffold path, which resolves in an adopter's
     ///   tree, not this one), `root-absent`
     ///   (nothing is provable because the path's top-level segment does not
-    ///   exist here). Correct, and nothing is owed.
+    ///   exist here), `never-existed` (a body path no revision ever held — an
+    ///   example or a never-built alternative, a name rather than a file).
+    ///   Correct, and nothing is owed.
     /// - **Could not be read** — `target-missing`, `target-unparseable`,
     ///   `no-readable-state`, `artifact-unreadable`, and the gaps no check
     ///   decided on: `referrer-unreadable` (a referrer
@@ -4438,7 +4440,8 @@ pub struct SkippedTarget {
     /// Why it could not be examined — a closed set, so repeat runs over
     /// unchanged inputs are byte-identical: `target-missing`,
     /// `target-unparseable`, `no-readable-state`, `root-absent`,
-    /// `ships-to-adopter`, `artifact-unreadable`, or `not-a-live-claim`.
+    /// `ships-to-adopter`, `artifact-unreadable`, `not-a-live-claim`, or
+    /// `never-existed`.
     pub reason: String,
     /// Repo-relative path of the target that was not examined.
     pub path: String,
@@ -4452,10 +4455,11 @@ pub struct CheckArtifactsResult {
     pub feature: String,
     /// Spec frontmatter `status` the tier classification ran against.
     pub status: String,
-    /// Findings across the nine families, in the order the primitive emits
+    /// Findings across the ten families, in the order the primitive emits
     /// them (completeness → task consistency → scenario consistency → review
     /// drift → disposition drift → scenario open questions → link-adjacent
-    /// drift → criterion path existence → criterion labels).
+    /// drift → criterion path existence → body path existence → criterion
+    /// labels).
     pub findings: Vec<ArtifactFinding>,
     /// `true` when no family produced a finding.
     ///
@@ -4465,11 +4469,12 @@ pub struct CheckArtifactsResult {
     /// `clean` with an empty `skipped` is verified-clean, `clean` with a
     /// non-empty `skipped` is partially examined.
     pub clean: bool,
-    /// Targets no family could examine. The two families that read an
-    /// artifact's *targets* record the ones they could not look at, and
-    /// `scenario-consistency` records each unmapped scenario as
-    /// `no-readable-state` when the `tasks.md` history cannot be consulted.
-    /// The other families' subjects are fully examinable by construction.
+    /// Targets no family could examine. The three families that read
+    /// paths or targets an artifact names record the ones they could not, or
+    /// by construction did not, look at, and `scenario-consistency` records
+    /// each unmapped scenario as `no-readable-state` when the `tasks.md`
+    /// history cannot be consulted. The other families' subjects are fully
+    /// examinable by construction.
     #[serde(default)]
     pub skipped: Vec<SkippedTarget>,
     /// Repo-relative path to the spec file.

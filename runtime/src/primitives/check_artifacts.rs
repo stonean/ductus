@@ -1,8 +1,9 @@
 //! `check-artifacts` — the residual deterministic check families from
 //! `/ductus:analyze`'s markdown-only reference, mechanized for one feature.
 //!
-//! Owns nine families (spec 067, scenarios analyze-artifact-checks,
-//! link-adjacent-drift-family and criterion-path-existence-family; spec 022,
+//! Owns ten families (spec 067, scenarios analyze-artifact-checks,
+//! link-adjacent-drift-family, criterion-path-existence-family and
+//! body-path-existence-family; spec 022,
 //! scenarios scenario-open-question-signal and criterion-label-assignment;
 //! spec 058 for disposition drift). Each family MIRRORS
 //! `framework/commands/analyze.md`'s markdown-only reference — severity
@@ -82,6 +83,13 @@
 //!   **inside** inline code spans, the inverse of the family above — which
 //!   is why the two are separate families rather than one check with a flag
 //!   (spec 045).
+//! - **body-path-existence** (advisory) — a path named in a `done` spec's
+//!   body, plan, data model or scenarios that existed in this repository and
+//!   no longer resolves. Body prose may name a dead path correctly while
+//!   describing history, so two discriminators gate it: a path no revision
+//!   ever held is a name, not a file (`never-existed`), and a line describing
+//!   a transition is not a presence claim (`not-a-live-claim`). See
+//!   [`check_body_path_existence`].
 //! - **criterion-labels** (advisory) — the enforcement half of the `AC{n}`
 //!   labelling pass: a duplicate label within one spec, a `next-criterion`
 //!   that no longer exceeds the body, and an unlabelled criterion in a spec
@@ -112,9 +120,9 @@ use std::path::{Component, Path, PathBuf};
 
 use crate::primitives::label_criteria::StoredCounter;
 use crate::primitives::{
-    MarkdownBlock, PrimitiveError, ProjectRepository, Result, inline_code_spans, label_criteria,
-    list_scenario_files, read_spec, read_tasks, read_text, rel_path, scenario_name_cmp,
-    section_line_indices, split_blocks,
+    MarkdownBlock, PrimitiveError, ProjectRepository, Result, SkipScanner, inline_code_spans,
+    label_criteria, list_scenario_files, parse_atx_heading, read_spec, read_tasks, read_text,
+    rel_path, scenario_name_cmp, section_line_indices, split_blocks,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -219,6 +227,7 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
         &spec_path,
         repo,
     );
+    check_body_path_existence(&mut findings, &mut skipped, &status, &feature_dir, repo);
     check_criterion_labels(&mut findings, &spec, &spec_path, repo);
 
     let clean = findings.is_empty();
@@ -1162,7 +1171,9 @@ fn read_target_state(
 /// part of the delivered system. Body prose may name a dead path perfectly
 /// correctly while describing history — 026's own Behavior section records
 /// that spec 043 deleted `framework/workflows/` — so widening this check to
-/// whole spec bodies would flag true statements.
+/// whole spec bodies would flag true statements. Body prose is
+/// [`check_body_path_existence`]'s, which adds the two discriminators that
+/// make a body-wide check safe.
 ///
 /// Reads **only inside** inline code spans, the inverse of
 /// [`check_link_adjacent_drift`]'s rule. Paths are backticked by convention,
@@ -1680,6 +1691,288 @@ fn is_path_like(content: &str) -> bool {
         && content.is_ascii()
         && !content.chars().any(char::is_whitespace)
         && !content.chars().any(|c| REJECTED.contains(&c))
+}
+
+// --- (i) body path existence -----------------------------------------------
+
+/// The family name [`check_body_path_existence`] reports and skips under.
+const BODY_PATH_FAMILY: &str = "body-path-existence";
+
+/// Phrases that mark a body line as describing a transition rather than
+/// claiming a path is present, beyond [`NON_ASSERTION_MARKERS`].
+///
+/// Body prose states transitions in forms acceptance criteria do not use: an
+/// imperative (Delete, Remove), an Affected Files row whose action cell is
+/// Delete, and the rename notation, an arrow between two code spans.
+/// Each entry was measured on its own against the done specs and kept only
+/// when every line it exempted was a transition statement (spec 067 scenario
+/// `body-path-existence-family`). Bare `→` was not: it exempts any line that
+/// carries a pipeline diagram, hiding a stale path beside it, so only the arrow
+/// between two code spans is a marker. Body-only, so the criterion family's
+/// list and its documented groups are unchanged.
+const BODY_TRANSITION_MARKERS: [&str; 7] = [
+    "delete",
+    "remove",
+    "retire",
+    "replaced",
+    "superseded",
+    "rename to",
+    "` → `",
+];
+
+/// One unresolved candidate waiting on the history walk.
+struct BodyCandidate {
+    /// The citing artifact, repo-relative.
+    citing: String,
+    /// The path as written, which the finding and any skip name.
+    candidate: String,
+    /// The path resolved against the project root, which history is asked about.
+    resolved: String,
+    /// The line it was read from, quoted in the finding.
+    line: String,
+}
+
+/// (i) Body path existence (advisory) — a path named in a `done` spec's body,
+/// plan, data model or scenarios that existed in this repository and no
+/// longer resolves (spec 067 scenario `body-path-existence-family`).
+///
+/// [`check_criterion_path_existence`] stops at acceptance criteria because
+/// body prose may name a dead path correctly while describing history. Two
+/// discriminators make the rest of the spec checkable without flagging those
+/// true statements:
+///
+/// - **History.** A path no revision ever held — an example, a hypothetical, a
+///   rejected alternative that was never built — is a name, not a file, and is
+///   recorded `never-existed`. Only a path that existed and is gone is a
+///   finding. One walk from HEAD per call answers every candidate at once.
+/// - **Line-scoped markers.** A line carrying a criterion marker, a
+///   [`BODY_TRANSITION_MARKERS`] entry or a negated-creation clause describes
+///   a transition, and its paths are recorded `not-a-live-claim`. Lines are
+///   logical ([`logical_lines`]): a paragraph, a list item or a table row, its
+///   hard wraps joined, so an Affected Files row with a `Delete` action
+///   exempts itself and a wrapped sentence keeps its marker.
+///
+/// The acceptance criteria are skipped (the criterion family owns them), as are
+/// fenced blocks and HTML comments. Candidates follow the criterion grammar,
+/// with a `#fragment` stripped; one starting `../` resolves from the citing
+/// file's directory and is dropped when it climbs out of the project. A
+/// history that cannot be consulted fails safe, as `scenario-consistency`
+/// does: each remaining candidate is recorded `no-readable-state` and nothing
+/// is flagged.
+fn check_body_path_existence(
+    findings: &mut Vec<ArtifactFinding>,
+    skipped: &mut Vec<SkippedTarget>,
+    status: &str,
+    feature_dir: &Path,
+    repo: &Path,
+) {
+    if status != "done" {
+        return;
+    }
+    let ships_elsewhere = adopter_destinations(repo);
+    let mut pending: Vec<BodyCandidate> = Vec::new();
+    for artifact in body_artifacts(feature_dir) {
+        let citing = rel_path(&artifact, repo);
+        let Ok(text) = read_text(&artifact) else {
+            record_unreadable_artifact(findings, skipped, BODY_PATH_FAMILY, status, citing);
+            continue;
+        };
+        let from_dir = artifact.parent().unwrap_or(feature_dir);
+        let is_spec = artifact.file_name().is_some_and(|name| name == "spec.md");
+        let mut in_criteria = false;
+        for line in logical_lines(&text) {
+            let line = line.as_str();
+            if let Some((level, heading)) = parse_atx_heading(line)
+                && level <= 2
+            {
+                in_criteria = is_spec && level == 2 && heading.trim() == "Acceptance Criteria";
+            }
+            if in_criteria {
+                continue;
+            }
+            let lowered = line.to_ascii_lowercase();
+            let asserts = is_live_assertion(line)
+                && !BODY_TRANSITION_MARKERS
+                    .iter()
+                    .any(|marker| lowered.contains(marker));
+            for candidate in candidate_paths(line) {
+                let Some(resolved) = resolve_body_path(&candidate, from_dir, repo) else {
+                    continue;
+                };
+                if resolved.is_empty() || repo.join(&resolved).exists() {
+                    continue;
+                }
+                let root = resolved.split('/').next().unwrap_or(&resolved);
+                let reason = if !repo.join(root).exists() {
+                    Some("root-absent")
+                } else if ships_to_adopter(&ships_elsewhere, &resolved) {
+                    Some("ships-to-adopter")
+                } else if !asserts {
+                    Some("not-a-live-claim")
+                } else {
+                    None
+                };
+                if let Some(reason) = reason {
+                    record_skip(skipped, BODY_PATH_FAMILY, reason, &candidate);
+                    continue;
+                }
+                pending.push(BodyCandidate {
+                    citing: citing.clone(),
+                    candidate,
+                    resolved,
+                    line: line.trim().to_string(),
+                });
+            }
+        }
+    }
+    if pending.is_empty() {
+        return;
+    }
+    let wanted: BTreeSet<String> = pending.iter().map(|c| c.resolved.clone()).collect();
+    let Some(existed) = paths_in_history(repo, &wanted) else {
+        for c in &pending {
+            record_skip(skipped, BODY_PATH_FAMILY, "no-readable-state", &c.candidate);
+        }
+        return;
+    };
+    for c in pending {
+        if !existed.contains(&c.resolved) {
+            record_skip(skipped, BODY_PATH_FAMILY, "never-existed", &c.candidate);
+            continue;
+        }
+        findings.push(ArtifactFinding {
+            family: BODY_PATH_FAMILY.into(),
+            severity: AnalyzeSeverity::Advisory,
+            message: format!(
+                "names `{}`, which existed in this repository and no longer resolves: \"{}\"",
+                c.candidate, c.line
+            ),
+            path: c.citing,
+        });
+    }
+}
+
+/// `text` as markdown's logical lines — each paragraph, list item, table row,
+/// blockquote line and heading, with the hard wraps that continue a paragraph
+/// or list item joined by a space — and fenced blocks and multi-line HTML
+/// comments dropped.
+///
+/// The body family's markers and code spans are read per logical line, not per
+/// physical one. A hard-wrapped sentence puts its marker on one physical line
+/// and its path on the next, and a double-backtick span quoting an example can
+/// open on one line and close on the next; read physically, the first escapes
+/// its exemption and the second is misparsed into a candidate.
+fn logical_lines(text: &str) -> Vec<String> {
+    fn is_list_item(trimmed: &str) -> bool {
+        let digits = trimmed.chars().take_while(char::is_ascii_digit).count();
+        ["- ", "* ", "+ "].iter().any(|m| trimmed.starts_with(m))
+            || (digits > 0
+                && (trimmed[digits..].starts_with(". ") || trimmed[digits..].starts_with(") ")))
+    }
+    let mut out: Vec<String> = Vec::new();
+    let mut current = String::new();
+    // A heading, table row or blockquote line never takes a continuation.
+    let mut closed = false;
+    let mut skip = SkipScanner::default();
+    for line in text.lines() {
+        if skip.skip(line) {
+            if !current.is_empty() {
+                out.push(std::mem::take(&mut current));
+            }
+            continue;
+        }
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            if !current.is_empty() {
+                out.push(std::mem::take(&mut current));
+            }
+            continue;
+        }
+        let single =
+            trimmed.starts_with('#') || trimmed.starts_with('|') || trimmed.starts_with('>');
+        if current.is_empty() || closed || single || is_list_item(trimmed) {
+            if !current.is_empty() {
+                out.push(std::mem::take(&mut current));
+            }
+            current.push_str(trimmed);
+            closed = single;
+        } else {
+            current.push(' ');
+            current.push_str(trimmed);
+        }
+    }
+    if !current.is_empty() {
+        out.push(current);
+    }
+    out
+}
+
+/// The artifacts [`check_body_path_existence`] reads, in a fixed order:
+/// `spec.md`, `plan.md` and `data-model.md` when present, then each scenario
+/// in the shared scenario order.
+fn body_artifacts(feature_dir: &Path) -> Vec<PathBuf> {
+    let mut out: Vec<PathBuf> = ["spec.md", "plan.md", "data-model.md"]
+        .iter()
+        .map(|name| feature_dir.join(name))
+        .filter(|path| path.is_file())
+        .collect();
+    let scenarios = feature_dir.join("scenarios");
+    let mut names = list_scenario_files(&scenarios);
+    names.sort_by(|a, b| scenario_name_cmp(a, b));
+    out.extend(names.into_iter().map(|name| scenarios.join(name)));
+    out
+}
+
+/// A candidate's project-relative path, its `#fragment` stripped and any
+/// trailing slash dropped. A candidate starting `..` resolves from `from_dir`
+/// and is `None` when it climbs out of the project; any other is already
+/// project-relative.
+fn resolve_body_path(candidate: &str, from_dir: &Path, repo: &Path) -> Option<String> {
+    let file_part = candidate.split('#').next()?.trim_end_matches('/');
+    if !file_part.starts_with("..") {
+        return Some(file_part.to_string());
+    }
+    let mut resolved = from_dir.to_path_buf();
+    for component in Path::new(file_part).components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                resolved.pop();
+            }
+            Component::Normal(part) => resolved.push(part),
+            Component::RootDir | Component::Prefix(_) => return None,
+        }
+    }
+    let rel = resolved.strip_prefix(repo).ok()?;
+    Some(rel.to_string_lossy().replace('\\', "/"))
+}
+
+/// Which of `wanted` (project-relative) any revision from HEAD held, as a file
+/// or a directory. `None` when the history cannot be consulted in full — no
+/// repository, a shallow clone, an unreadable revision — which the caller
+/// treats as unknown, never as absent. Stops once every path is found.
+fn paths_in_history(repo: &Path, wanted: &BTreeSet<String>) -> Option<BTreeSet<String>> {
+    let project = ProjectRepository::discover(repo).ok()?;
+    let repository = &project.repository;
+    if repository.is_shallow() {
+        return None;
+    }
+    let git_paths: Vec<(&String, String)> = wanted.iter().map(|p| (p, project.to_git(p))).collect();
+    let mut walk = repository.revwalk().ok()?;
+    walk.push_head().ok()?;
+    let mut found: BTreeSet<String> = BTreeSet::new();
+    for oid in walk {
+        if found.len() == wanted.len() {
+            break;
+        }
+        let tree = repository.find_commit(oid.ok()?).ok()?.tree().ok()?;
+        for (path, git_path) in &git_paths {
+            if !found.contains(*path) && tree.get_path(Path::new(git_path)).is_ok() {
+                found.insert((*path).clone());
+            }
+        }
+    }
+    Some(found)
 }
 
 // --- (h) acceptance-criterion labels ----------------------------------------
@@ -2474,6 +2767,242 @@ mod tests {
                 "{status}"
             );
         }
+    }
+
+    // --- body path existence --------------------------------------------------------
+
+    /// A git-backed `status` spec whose `plan.md` is `plan`. Each of `deleted`
+    /// is committed, then removed in a second commit, so history holds it and
+    /// HEAD does not. `scripts/keep.sh` keeps the `scripts` root present.
+    fn body_fixture(status: &str, plan: &str, deleted: &[&str]) -> tempfile::TempDir {
+        use crate::primitives::git_fixture;
+        let tmp = tempdir().unwrap();
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/spec.md"),
+            &spec(status),
+        );
+        write(tmp.path(), &format!("specs/{FEATURE}/plan.md"), plan);
+        write(tmp.path(), &format!("specs/{FEATURE}/tasks.md"), GOOD_TASKS);
+        write(tmp.path(), "scripts/keep.sh", "#!/bin/sh\n");
+        for path in deleted {
+            write(tmp.path(), path, "gone soon\n");
+        }
+        git_fixture::commit_all(&repository, "feat: the files exist");
+        for path in deleted {
+            std::fs::remove_file(tmp.path().join(path)).unwrap();
+        }
+        let mut index = repository.index().unwrap();
+        index.update_all(["*"], None).unwrap();
+        index.write().unwrap();
+        git_fixture::commit_all(&repository, "chore: remove them");
+        tmp
+    }
+
+    /// The body family's findings as `(path, message)` and its skips as
+    /// `(reason, path)`.
+    type BodyOutcome = (Vec<(String, String)>, Vec<(String, String)>);
+
+    fn body_outcome(repo: &Path) -> BodyOutcome {
+        let result = run(&args(), repo).unwrap();
+        let findings = result
+            .findings
+            .iter()
+            .filter(|f| f.family == BODY_PATH_FAMILY)
+            .map(|f| (f.path.clone(), f.message.clone()))
+            .collect();
+        let skipped = result
+            .skipped
+            .iter()
+            .filter(|s| s.family == BODY_PATH_FAMILY)
+            .map(|s| (s.reason.clone(), s.path.clone()))
+            .collect();
+        (findings, skipped)
+    }
+
+    #[test]
+    fn a_body_line_naming_a_deleted_path_is_a_finding() {
+        let tmp = body_fixture(
+            "done",
+            "# Plan\n\nThe hook runs `scripts/old.sh` on every commit.\n",
+            &["scripts/old.sh"],
+        );
+        let (findings, skipped) = body_outcome(tmp.path());
+        assert_eq!(
+            findings,
+            vec![(
+                "specs/042-demo/plan.md".to_string(),
+                "names `scripts/old.sh`, which existed in this repository and no longer \
+                 resolves: \"The hook runs `scripts/old.sh` on every commit.\""
+                    .to_string()
+            )]
+        );
+        assert!(skipped.is_empty(), "{skipped:?}");
+    }
+
+    /// An example or a never-built alternative is a name, not a file: no
+    /// revision held it, so nothing about it went stale.
+    #[test]
+    fn a_path_no_revision_held_is_recorded_never_existed() {
+        let tmp = body_fixture(
+            "done",
+            "# Plan\n\nA shared `scripts/normalize.sh` was considered and not built.\n",
+            &[],
+        );
+        assert_eq!(
+            body_outcome(tmp.path()),
+            (
+                Vec::new(),
+                vec![(
+                    "never-existed".to_string(),
+                    "scripts/normalize.sh".to_string()
+                )]
+            )
+        );
+    }
+
+    /// Each body-only marker exempts its line: an Affected Files row with a
+    /// `Delete` action, and the `` `old` → `new` `` rename notation.
+    #[test]
+    fn a_line_describing_a_transition_is_not_a_live_claim() {
+        let tmp = body_fixture(
+            "done",
+            "# Plan\n\n| `scripts/old.sh` | Delete | Replaced by the runtime |\n\n\
+             Rename `scripts/gone.sh` → `scripts/keep.sh` in one commit.\n",
+            &["scripts/old.sh", "scripts/gone.sh"],
+        );
+        let (findings, skipped) = body_outcome(tmp.path());
+        assert!(findings.is_empty(), "{findings:?}");
+        assert_eq!(
+            skipped,
+            vec![
+                ("not-a-live-claim".to_string(), "scripts/old.sh".to_string()),
+                (
+                    "not-a-live-claim".to_string(),
+                    "scripts/gone.sh".to_string()
+                ),
+            ]
+        );
+    }
+
+    /// The criterion family owns `## Acceptance Criteria`; the body family must
+    /// not report the same path a second time.
+    #[test]
+    fn acceptance_criteria_are_left_to_the_criterion_family() {
+        let tmp = body_fixture("done", "# Plan\n", &["scripts/old.sh"]);
+        let spec_md = format!(
+            "{}\n## Acceptance Criteria\n\n- [x] AC1: `scripts/old.sh` runs on every commit\n\n## Notes\n\nNothing.\n",
+            spec("done")
+        );
+        write(tmp.path(), &format!("specs/{FEATURE}/spec.md"), &spec_md);
+        assert_eq!(body_outcome(tmp.path()), (Vec::new(), Vec::new()));
+    }
+
+    /// `../spec.md` cited from a scenario resolves from the scenario's own
+    /// directory; a `#fragment` is stripped before resolving.
+    #[test]
+    fn relative_paths_and_fragments_resolve_before_any_check() {
+        let tmp = body_fixture("done", "# Plan\n\nSee `scripts/keep.sh#usage`.\n", &[]);
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/scenarios/a.md"),
+            "---\nsection: \"X\"\n---\n\n# A\n\nThe parent is `../spec.md`.\n",
+        );
+        assert_eq!(body_outcome(tmp.path()), (Vec::new(), Vec::new()));
+    }
+
+    #[test]
+    fn fenced_and_commented_paths_are_not_read() {
+        let tmp = body_fixture(
+            "done",
+            "# Plan\n\n```text\nscripts run `scripts/old.sh`\n```\n\n<!--\n`scripts/old.sh`\n-->\n",
+            &["scripts/old.sh"],
+        );
+        assert_eq!(body_outcome(tmp.path()), (Vec::new(), Vec::new()));
+    }
+
+    /// A candidate whose top-level segment is absent here names an adopter's
+    /// checkout, as in the criterion family.
+    #[test]
+    fn an_absent_root_is_recorded_root_absent() {
+        let tmp = body_fixture("done", "# Plan\n\nAgents read `.agents/rules.md`.\n", &[]);
+        assert_eq!(
+            body_outcome(tmp.path()),
+            (
+                Vec::new(),
+                vec![("root-absent".to_string(), ".agents/rules.md".to_string())]
+            )
+        );
+    }
+
+    /// No repository to consult: each candidate is unexamined, never flagged.
+    #[test]
+    fn an_unreadable_history_records_no_readable_state() {
+        let tmp = tempdir().unwrap();
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/spec.md"),
+            &spec("done"),
+        );
+        write(
+            tmp.path(),
+            &format!("specs/{FEATURE}/plan.md"),
+            "# Plan\n\nThe hook runs `scripts/old.sh`.\n",
+        );
+        write(tmp.path(), &format!("specs/{FEATURE}/tasks.md"), GOOD_TASKS);
+        write(tmp.path(), "scripts/keep.sh", "#!/bin/sh\n");
+        assert_eq!(
+            body_outcome(tmp.path()),
+            (
+                Vec::new(),
+                vec![(
+                    "no-readable-state".to_string(),
+                    "scripts/old.sh".to_string()
+                )]
+            )
+        );
+    }
+
+    /// A hard-wrapped sentence keeps its marker: the transition word on one
+    /// physical line exempts the path on the next.
+    #[test]
+    fn a_marker_on_a_wrapped_line_exempts_the_whole_sentence() {
+        let tmp = body_fixture(
+            "done",
+            "# Plan\n\nThe hook that once ran the generator was retired; it\nlived at `scripts/old.sh`.\n",
+            &["scripts/old.sh"],
+        );
+        assert_eq!(
+            body_outcome(tmp.path()),
+            (
+                Vec::new(),
+                vec![("not-a-live-claim".to_string(), "scripts/old.sh".to_string())]
+            )
+        );
+    }
+
+    /// A double-backtick span quoting an example may open on one physical line
+    /// and close on the next; read as one logical line, its content is prose,
+    /// not a candidate path.
+    #[test]
+    fn a_wrapped_double_backtick_span_is_not_split_into_a_candidate() {
+        let tmp = body_fixture(
+            "done",
+            "# Plan\n\nAn example criterion reads ``the hook runs\n`scripts/old.sh` on every commit`` here.\n",
+            &["scripts/old.sh"],
+        );
+        assert_eq!(body_outcome(tmp.path()), (Vec::new(), Vec::new()));
+    }
+
+    #[test]
+    fn a_body_below_done_is_not_scanned() {
+        let tmp = body_fixture(
+            "in-progress",
+            "# Plan\n\nThe hook runs `scripts/old.sh` on every commit.\n",
+            &["scripts/old.sh"],
+        );
+        assert_eq!(body_outcome(tmp.path()), (Vec::new(), Vec::new()));
     }
 
     // --- review state drift ---------------------------------------------------------

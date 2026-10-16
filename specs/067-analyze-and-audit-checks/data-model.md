@@ -45,6 +45,7 @@ The families mirror `/ductus:analyze`'s markdown-only reference, severity tiers 
 - `scenario-open-questions` (blocking at `done`, advisory otherwise) — a scenario carries an unresolved question; at `done`, `/{project}:analyze --fix` reverts the spec `done → in-progress`. There is no grandfather rule, and the list is `read-spec`'s, so this finding, `check-review-gate`'s block and the count the user sees cannot disagree ([046 — Scenario open-question visibility](../046-scenario-open-question-visibility/spec.md)).
 - `link-adjacent-drift` (advisory) — prose asserting an open state that its own sibling link's target contradicts (scenario [`link-adjacent-drift-family`](scenarios/link-adjacent-drift-family.md)).
 - `criterion-path-existence` (advisory) — a filesystem path named in a `done` spec's acceptance criterion that no longer resolves (scenario [`criterion-path-existence-family`](scenarios/criterion-path-existence-family.md)).
+- `body-path-existence` (advisory) — a path named in a `done` spec's body, plan, data model or scenarios that existed in this repository and no longer resolves. A path no revision held is recorded `never-existed`; a line carrying a criterion marker, a negated-creation clause or a body transition marker below is `not-a-live-claim` (scenario [`body-path-existence-family`](scenarios/body-path-existence-family.md)).
 - `criterion-labels` (advisory) — a duplicate `AC{n}` within one spec, a `next-criterion` that no longer exceeds the body, and, once the spec carries `next-criterion`, an unlabelled criterion. It runs at every status and contributes nothing to `skipped`; it is the enforcement half of `label-criteria`, since a criterion typed in an editor never touches a primitive.
 - `disposition-drift` (blocking) — a `done` spec whose `review.md` records undispositioned findings; silent for a record with no `dispositions:` map.
 
@@ -52,7 +53,20 @@ The families mirror `/ductus:analyze`'s markdown-only reference, severity tiers 
 
 `scenario-consistency`'s **referencing-task rule is canonical for every surface that asks "does a task reference this scenario?"**: a task references a scenario when the scenario's **slug** appears in the task's heading, in any subtask's text, or in its `Done when` clause. The match is on the slug, not the `scenarios/{slug}.md` path `append-task`'s default body emits, so a hand-written task naming the scenario counts too. A surface restating the rule — as the markdown-only path must, per §runtime-host-integration — states *this* rule, or `/{project}:amend`'s reconcile pass offers a task for a scenario this family already considers mapped. `mapped_scenario_produces_no_finding` and `bare_slug_reference_satisfies_the_mapping` cover both forms.
 
-`skipped` records each target a family could not examine, as `{family, reason, path}` over the closed reason set `target-missing` / `target-unparseable` / `no-readable-state` / `root-absent` / `ships-to-adopter` / `artifact-unreadable` / `not-a-live-claim`, because a family that reads *targets* must not escalate an unreadable one into a finding ([045 — Decision-state drift detection](../045-decision-state-drift-detection/spec.md)). The one exception is `artifact-unreadable` at `done`, a blocking finding, since the subject is the spec's own artifact (scenario `unreadable-scenario-is-reported`). `clean` means `findings.is_empty()`, so the assurance lives in the pair: `clean: true` with an empty `skipped` is verified-clean, and with a non-empty one partially examined. Hosts render the entries in the Informational tier (scenario [`check-artifacts-skipped-targets`](scenarios/check-artifacts-skipped-targets.md)). A sibling whose path traverses a symlink at or below the feature directory is reported `target-unparseable` rather than followed (scenario [`sibling-symlink-trust-boundary`](scenarios/sibling-symlink-trust-boundary.md)).
+`skipped` records each target a family could not examine, as `{family, reason, path}` over the closed reason set `target-missing` / `target-unparseable` / `no-readable-state` / `root-absent` / `ships-to-adopter` / `artifact-unreadable` / `not-a-live-claim` / `never-existed`, because a family that reads *targets* must not escalate an unreadable one into a finding ([045 — Decision-state drift detection](../045-decision-state-drift-detection/spec.md)). The one exception is `artifact-unreadable` at `done`, a blocking finding, since the subject is the spec's own artifact (scenario `unreadable-scenario-is-reported`). `clean` means `findings.is_empty()`, so the assurance lives in the pair: `clean: true` with an empty `skipped` is verified-clean, and with a non-empty one partially examined. Hosts render the entries in the Informational tier (scenario [`check-artifacts-skipped-targets`](scenarios/check-artifacts-skipped-targets.md)). A sibling whose path traverses a symlink at or below the feature directory is reported `target-unparseable` rather than followed (scenario [`sibling-symlink-trust-boundary`](scenarios/sibling-symlink-trust-boundary.md)).
+
+### Body transition markers
+
+The canonical list. A line of a `done` spec's body, plan, data model or scenario is not a live claim when it carries any criterion marker (045's data model), a negated-creation clause, or any of these seven phrases:
+
+| Group | Phrases |
+| --- | --- |
+| Deletion | `delete`, `remove` |
+| Retirement | `retire` |
+| Replacement | `replaced`, `superseded` |
+| Rename | `rename to`, `` ` → ` `` |
+
+Each was measured against the done specs on its own and kept only when every line it exempted was a transition statement. Bare `→` and the past-tense auxiliaries (`was`, `were`) were not: the first exempts any line carrying a pipeline diagram, the second the history narratives a living document is meant to rewrite.
 
 ## `validate-frontmatter` — full frontmatter schema check
 

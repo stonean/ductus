@@ -26,7 +26,7 @@ A sixth group is carried by a clause-scoped **predicate** rather than a phrase, 
 
 **An unresolved candidate is a finding only when its own top-level segment exists here.** When that segment is absent, nothing is provable — a framework repo's criteria legitimately name paths living in an *adopter's* checkout — so the candidate is recorded as `root-absent` rather than flagged. Recorded, not exempted: the report says what went unexamined instead of quietly reading as clean. The rule self-corrects where it matters, since in an adopter repo those roots exist and drift beneath them is provable again.
 
-**Scope is `## Acceptance Criteria` on `done` specs, and nothing else.** Body prose may name a dead path perfectly correctly while describing history — 026's own Behavior section now reads that spec 043 "deleted `framework/workflows/`", a true statement about a path that is supposed to be gone. Widening this check to whole spec bodies would flag true statements, which is why the contract framing is load-bearing rather than incidental.
+**Scope is `## Acceptance Criteria` on `done` specs, and nothing else.** Body prose may name a dead path perfectly correctly while describing history — 026's own Behavior section now reads that spec 043 "deleted `framework/workflows/`", a true statement about a path that is supposed to be gone. Widening this check to whole spec bodies would flag true statements, which is why the contract framing is load-bearing rather than incidental. Body prose is checked by a sibling family, [body-path-existence-family](body-path-existence-family.md), which adds the two discriminators — history and transition markers — that make a body-wide check safe.
 
 ## Edge Cases
 

@@ -41,6 +41,13 @@
 #       than a phrase, and so carries two closed word lists of its own in the
 #       same three places. No count arm: its prose states no count, which is
 #       deliberate (a count that is never written cannot go stale).
+#   18f Do 18a-18d again for `body-path-existence`'s body transition markers:
+#       canonical in 067's data-model (§Body transition markers), implemented
+#       as `BODY_TRANSITION_MARKERS`, restated in `analyze.md`'s Body path
+#       existence section, and counted in 067's body-path-existence-family
+#       scenario. One marker is the rename notation, an arrow between two code
+#       spans, so its markdown form is a double-backtick span; the derivation
+#       reads both span forms.
 #
 # Table convention: a phrase whose trailing space is significant is written
 # `` `text` + space `` in markdown, because a trailing space inside an inline
@@ -73,8 +80,10 @@ CANON_MD="$ROOT/specs/045-decision-state-drift-detection/data-model.md"
 CHECK_RS="$ROOT/runtime/src/primitives/check_artifacts.rs"
 ANALYZE_MD="$ROOT/framework/commands/analyze.md"
 SCENARIO_MD="$ROOT/specs/067-analyze-and-audit-checks/scenarios/criterion-path-existence-family.md"
+BODY_CANON_MD="$ROOT/specs/067-analyze-and-audit-checks/data-model.md"
+BODY_SCENARIO_MD="$ROOT/specs/067-analyze-and-audit-checks/scenarios/body-path-existence-family.md"
 
-for f in "$CANON_MD" "$CHECK_RS" "$ANALYZE_MD" "$SCENARIO_MD"; do
+for f in "$CANON_MD" "$CHECK_RS" "$ANALYZE_MD" "$SCENARIO_MD" "$BODY_CANON_MD" "$BODY_SCENARIO_MD"; do
   if [ ! -f "$f" ]; then
     emit "${f#"$ROOT"/}" "file named by this family is missing — cannot compare the marker list" \
       "restore the file, or update scripts/audit/marker-list-parity.sh if it moved"
@@ -82,11 +91,11 @@ for f in "$CANON_MD" "$CHECK_RS" "$ANALYZE_MD" "$SCENARIO_MD"; do
   fi
 done
 
-python3 - "$CANON_MD" "$CHECK_RS" "$ANALYZE_MD" "$SCENARIO_MD" <<'PY'
+python3 - "$CANON_MD" "$CHECK_RS" "$ANALYZE_MD" "$SCENARIO_MD" "$BODY_CANON_MD" "$BODY_SCENARIO_MD" <<'PY'
 import re
 import sys
 
-canon_md, check_rs, analyze_md, scenario_md = sys.argv[1:5]
+canon_md, check_rs, analyze_md, scenario_md, body_canon_md, body_scenario_md = sys.argv[1:7]
 
 NUMBER_WORDS = {
     n: w
@@ -401,6 +410,92 @@ else:
             emit(label,
                  "negated-creation word(s) the canonical table does not list: "
                  + ", ".join(repr(w) for w in sorted(extra)), fix)
+
+# --- 18f: the body transition markers ----------------------------------------
+#
+# `body-path-existence` adds seven phrases to the criterion list for body
+# prose. Same four places, same failure if one drifts. A double-backtick span
+# carries the rename notation, whose content is itself backticked.
+
+
+def all_spans(text):
+    """Code spans in either form: ``…`` (one padding space stripped) or `…`."""
+    out = []
+    for double, single in re.findall(r"``\s?(.+?)\s?``|`([^`]+)`", text):
+        out.append(double if double else single)
+    return out
+
+
+body_text = open(body_canon_md, encoding="utf-8").read()
+body_section = re.search(
+    r"### Body transition markers\n(.*?)(?=\n### |\n## |\Z)", body_text, re.S
+)
+body_canonical = []
+if body_section:
+    for line in body_section.group(1).splitlines():
+        if not line.startswith("|"):
+            continue
+        cols = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cols) < 2 or cols[0] in ("Group", "---") or set(cols[0]) <= {"-", " "}:
+            continue
+        body_canonical.extend(all_spans(cols[1]))
+
+body_label = "specs/067-analyze-and-audit-checks/data-model.md"
+if not body_canonical:
+    emit(body_label,
+         "derived zero markers from the table under '### Body transition markers' — "
+         "the derivation is broken or the table moved, so this arm would pass while "
+         "checking nothing",
+         "restore the table, or update 18f in scripts/audit/marker-list-parity.sh")
+else:
+    body_set = set(body_canonical)
+    found = re.search(r"const BODY_TRANSITION_MARKERS: \[&str; (\d+)\] = \[(.*?)\n\];", rs, re.S)
+    if not found:
+        emit("runtime/src/primitives/check_artifacts.rs",
+             "could not locate the `BODY_TRANSITION_MARKERS` declaration",
+             "keep the `const BODY_TRANSITION_MARKERS: [&str; N] = [ … ];` shape, "
+             "or update scripts/audit/marker-list-parity.sh")
+    else:
+        literals = rust_literals(found.group(2))
+        if int(found.group(1)) != len(literals):
+            emit("runtime/src/primitives/check_artifacts.rs",
+                 f"`BODY_TRANSITION_MARKERS` declares length {found.group(1)} but holds "
+                 f"{len(literals)} literals",
+                 f"set the declared length to {len(literals)}")
+        if set(literals) != body_set:
+            emit("runtime/src/primitives/check_artifacts.rs",
+                 "BODY_TRANSITION_MARKERS disagrees with the canonical table: missing "
+                 + repr(sorted(body_set - set(literals))) + ", extra "
+                 + repr(sorted(set(literals) - body_set)),
+                 "reconcile against the table in " + body_label)
+    restated = re.search(r"any of (\w+) body phrases \((.*?)\)\.", analyze)
+    if not restated:
+        emit("framework/commands/analyze.md",
+             "could not locate the body-phrase restatement",
+             "keep the 'any of <count> body phrases (…).' clause, or update 18f")
+    else:
+        if set(all_spans(restated.group(2))) != body_set:
+            emit("framework/commands/analyze.md",
+                 "the body-phrase restatement disagrees with the canonical table",
+                 "reconcile against " + body_label + " — adopters have no copy of it")
+        if restated.group(1).lower() != NUMBER_WORDS.get(len(body_set)):
+            emit("framework/commands/analyze.md",
+                 f"states '{restated.group(1)}' body phrases but the table lists {len(body_set)}",
+                 "correct the count")
+    for path, label, pattern in (
+        (body_canon_md, body_label, r"any of these (\w+) phrases:"),
+        (body_scenario_md,
+         "specs/067-analyze-and-audit-checks/scenarios/body-path-existence-family.md",
+         r"The (\w+) body markers are body-only"),
+    ):
+        stated = re.search(pattern, open(path, encoding="utf-8").read())
+        if not stated:
+            emit(label, "could not locate the spelled-out body-marker count",
+                 "keep the count sentence, or update 18f's pattern")
+        elif stated.group(1).lower() != NUMBER_WORDS.get(len(body_set)):
+            emit(label,
+                 f"states '{stated.group(1)}' body markers but the table lists {len(body_set)}",
+                 "correct the count")
 
 if findings:
     print("\n".join(findings))

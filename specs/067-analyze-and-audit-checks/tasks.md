@@ -48,10 +48,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 7. Implement scenario: body-path-existence-family
 
-- [ ] Implement the behavior described in `scenarios/body-path-existence-family.md`
-- [ ] Add `check_body_path_existence` to `check-artifacts`: spec body outside Acceptance Criteria, plan, data model and scenarios of a done spec; criterion grammar with the fragment stripped; relative candidates resolved from the citing file; root-absent, ships-to-adopter and line-scoped markers (the criterion list plus the body-only list); one batched history walk deciding finding vs `never-existed`; `no-readable-state` when history cannot be read
-- [ ] Git-backed tests for each rule, each proven to fail with the rule disabled
-- [ ] Add `never-existed` to the closed reason set everywhere it is listed, update every count of the families (`nine` to `ten`), 067 AC1, the data model, analyze.md step 8 and its reference, the tool description, the result's order doc and the criterion family's scope note
-- [ ] Measure check-artifacts on 067 and across every spec with the release build
+- [x] Implement the behavior described in `scenarios/body-path-existence-family.md`
+- [x] Add `check_body_path_existence` to `check-artifacts`: spec body outside Acceptance Criteria, plan, data model and scenarios of a done spec; criterion grammar with the fragment stripped; relative candidates resolved from the citing file; root-absent, ships-to-adopter and line-scoped markers (the criterion list plus the body-only list); one batched history walk deciding finding vs `never-existed`; `no-readable-state` when history cannot be read
+- [x] Git-backed tests for each rule, each proven to fail with the rule disabled
+- [x] Add `never-existed` to the closed reason set everywhere it is listed, update every count of the families (`nine` to `ten`), 067 AC1, the data model, analyze.md step 8 and its reference, the tool description, the result's order doc and the criterion family's scope note
+- [x] Measure check-artifacts on 067 and across every spec with the release build
 
 - **Done when**: a done spec naming a path that existed and was deleted, on a line with no marker, yields one advisory finding quoting the line; a never-existed path, a marker line, an adopter path and an unreadable history each yield the matching skip and no finding; and every list of families and reasons names the new ones
