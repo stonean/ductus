@@ -1,16 +1,16 @@
 ---
 spec: 019-config-decisions
-last-run: 2026-10-16T15:27:43Z
-reviewed-against: 03db9d946586491b70fd2fa39c753a4184a1d50d
-diff-base: 6f651e5ba693afd1209951863c0b54768fbcc05c
+last-run: 2026-10-16T15:47:56Z
+reviewed-against: f680126fdc5e92caa950ce3cdfe8aab466eff1c4
+diff-base: ab224f5d3c7e5332209b156f986c5483d4aa6494
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 3
-scope: 45
+examined: 6
+scope: 18
 skipped-passes: []
 reviewed-digest:
-  data-model.md: 37d4df6deca1fa8f3764c625844c879d86326afc5c0318ef2095f1dd7ae48428
+  data-model.md: ab67d796bd8475b960e5349b97aee3ade63146d8bc9a5f85d62e4c7c876c690c
 blocking: false
 dispositions:
   fixed: 0
@@ -23,7 +23,7 @@ dispositions:
 
 ## Summary
 
-0 MUST, 0 SHOULD at 03db9d94, against all eleven rule files. The window is the dead-reference sweep: this spec's analysis.md, plan.md, spec.md were read in full -- the plan's path and claim corrections, the status line, the analysis record -- and no code changed, so no rule applies. The other 39 modified files belong to sibling specs reopened in the same sweep and are reviewed under their own specs; the plan's unchanged Affected Files were not read.
+0 MUST, 0 SHOULD at f680126f, against all eleven rule files. The window holds this spec's dead-reference fixes: framework/bootstrap/ductus.md, framework/bootstrap/govern.md, specs/019-config-decisions/data-model.md, specs/019-config-decisions/plan.md, specs/019-config-decisions/spec.md, specs/019-config-decisions/tasks.md, each read in full as its diff. No code changed, so no rule applies. The other 11 modified files belong to sibling specs fixed in the same sweep and are reviewed under their own specs; the plan's unchanged Affected Files were not read.
 
 ## MUST violations (blocking)
 
