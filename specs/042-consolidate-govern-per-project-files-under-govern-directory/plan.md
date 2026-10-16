@@ -46,7 +46,7 @@ A new `[[migrations]]` entry in `framework/migrations.toml` (`id = "govern-dir-c
 - **Converge, don't skip-and-leave** — on a destination collision, remove an identical legacy file silently and a divergent legacy file with a prominent warning naming it (never leave a stale legacy file; spec Q4). This is the one point it must differ from `rule-files-relocate`'s skip-and-warn.
 - **No inner prompt** — runs under the bootstrap's existing batch "apply N migrations?" consent (`governance-config-rename` and `session-file-consolidate` are also silent).
 
-`target_paths` are adopter-relative only, so audit Family 10b (no-stale-framework-target-paths) does not assert against them; Family 10a/10c (procedure-file existence, no orphan) are satisfied by the paired registry entry + procedure file. Because `target_paths` carry no `framework/`-prefixed path, ductus's own generators moving to `.ductus/scripts/` is a source relocation, not a registry-tracked removal.
+`target_paths` are adopter-relative only, so audit Family 10b (no-stale-framework-target-paths) does not assert against them; Family 10a/10c (procedure-file existence, no orphan) are satisfied by the paired registry entry + procedure file.
 
 Migration marker: `last_applied` advances only after the whole procedure completes; each of the three moves is independently idempotent, so an interrupted run re-runs the entry and converges without double-moving. A config-absent adopter no-ops on config, moves session/scripts if present, and the marker write creates `.ductus/config.toml` (consistent with today creating `.govern.toml`).
 

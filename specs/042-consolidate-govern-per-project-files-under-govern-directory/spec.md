@@ -1,12 +1,12 @@
 ---
-status: done
+status: in-progress
 dependencies: [027-bootstrap-migration-registry, 040-configurable-specs-dir]
 next-criterion: 17
 ---
 
 # 042 — Consolidate ductus per-project files under a `.ductus/` directory
 
-ductus scatters its per-project files across the adopter's repo root: `.govern.toml` (committed config), `.govern.session.toml` (gitignored session state), and the adopter-facing generator scripts that land in the project's root `scripts/`. This feature consolidates all three under a single `.ductus/` directory — `.ductus/config.toml`, `.ductus/session.toml`, and `.ductus/scripts/` — so ductus owns one predictable namespace instead of polluting the repo root and colliding with a project's own `scripts/`. `/ductus` detects a project still on the old layout and reorganizes it through a new adopter migration; the runtime reads the new locations with a fallback to the legacy root paths so an adopter who upgrades ductus before re-running `/ductus` is never broken.
+ductus scattered its per-project files across the adopter's repo root: `.govern.toml` (committed config), `.govern.session.toml` (gitignored session state), and the adopter-facing generator scripts that land in the project's root `scripts/`. This feature consolidates the config and session files under a single `.ductus/` directory — `.ductus/config.toml` and `.ductus/session.toml` — so ductus owns one predictable namespace instead of polluting the repo root. It moved the generator scripts out of the project's `scripts/` too; that leg is retired (see [Scripts](#scripts-retired)). `/ductus` detects a project still on the old layout and reorganizes it through a new adopter migration; the runtime reads the new locations with a fallback to the legacy root paths so an adopter who upgrades ductus before re-running `/ductus` is never broken.
 
 ## Motivation
 
@@ -22,30 +22,16 @@ This mirrors the single-namespace convention adopters already expect from tools 
 
 ## Target layout
 
-> **Superseded in part by `022-deterministic-runtime`:** the `scripts/` leg of this
-> layout is gone. 067's `adopter-generator-promotion` turned the two shipped
-> generators into the `derive-dependencies` and `derive-references` runtime
-> primitives, and the `generator-primitives` migration deletes
-> `.ductus/scripts/` from adopter trees. The config and session legs below are
-> unchanged and still describe the current layout; the `scripts/` leg records
-> what 042 delivered.
-
 ```text
 .ductus/
 ├── config.toml     # committed — replaces root .govern.toml
-├── session.toml    # gitignored — replaces root .govern.session.toml
-└── scripts/        # committed — replaces the adopter-facing scripts in root scripts/
-    ├── gen-spec-deps.sh
-    ├── gen-cross-service-refs.sh
-    └── lib/
-        └── specs-root.sh
+└── session.toml    # gitignored — replaces root .govern.session.toml
 ```
 
 - **`.ductus/config.toml`** carries every section `.govern.toml` carries today, unchanged in schema. Only its location moves.
 - **`.ductus/session.toml`** carries the same session-target and per-contributor `cli-config-dir` content as `.govern.session.toml` today. It stays gitignored.
-- **`.ductus/scripts/`** holds only the adopter-facing generators (the three files above). It is committed, and the framework-managed files under it are still rewritten on every `/ductus` run and still honor `[pinned] files`.
 
-The `.ductus/` directory itself is committed; only `.ductus/session.toml` is gitignored. The gitignore entry names the session file specifically (`/.ductus/session.toml`), never the whole directory, so the committed config and scripts are tracked.
+The `.ductus/` directory itself is committed; only `.ductus/session.toml` is gitignored. The gitignore entry names the session file specifically (`/.ductus/session.toml`), never the whole directory, so the committed config is tracked.
 
 ## Config file: `.ductus/config.toml`
 
@@ -64,26 +50,9 @@ The session file's content and single-target semantics ([constitution §concurre
 - The session-file gitignore entry moves from `.govern.session.toml` to `/.ductus/session.toml` in both the shipped gitignore template and ductus's own `.gitignore`.
 - This feature composes with the earlier [session-file-consolidate](../027-bootstrap-migration-registry/spec.md) migration: an adopter far enough behind runs that migration (legacy per-agent JSON → root TOML) and then this one (root TOML → `.ductus/session.toml`) in order, each idempotent.
 
-## Scripts: `.ductus/scripts/`
+## Scripts (retired)
 
-> **Superseded by `022-deterministic-runtime`.** This whole section describes a
-> directory that no longer exists. 067's `adopter-generator-promotion` promoted
-> the two shipped generators to the `derive-dependencies` and
-> `derive-references` runtime primitives, and the `generator-primitives`
-> migration (`introduced_in = 0.30.0`) removes `.ductus/scripts/` from adopter
-> trees; nothing ships there now and the **Shared Files** manifest carries no
-> row for it. What survives from 042 is the config and session consolidation.
-> The section is kept as the record of what 042 delivered — the split it
-> established between adopter-facing and maintainer-only scripts still holds
-> for the maintainer half, which remains at root `scripts/`.
-
-Only the three adopter-facing generators move; ductus's own maintainer-only tooling (audit families, linters, maintainer generators) stays in the framework repo's root `scripts/` and is never shipped to adopters.
-
-- The Shared Files manifest ships the three generators to `.ductus/scripts/` (same relative sub-layout, `lib/specs-root.sh` preserved). The `update` strategy and `[pinned] files` opt-out are unchanged.
-- Every verbatim `scripts/…` string literal that names one of the three **shipped** generators resolves to `.ductus/scripts/…`: the command bodies that invoke `gen-spec-deps.sh` via `run-generator` (`implement`, `clarify`, `amend`, `plan`, `target`, `specify`, `analyze`), the adopter pre-commit hook (`ductus-pre-commit`, which runs `gen-spec-deps.sh` and `gen-cross-service-refs.sh`), the adopter CI generator template, the constitution's generator-provenance notes, and the per-agent permission allowlists for all four agents. References to **maintainer-only** scripts that stay at root `scripts/` are left unchanged — notably `analyze`'s existence-gated `gen-help-tables.sh` (ductus-repo-only, never shipped) and the constitution's `lint-rule-filenames.sh` provenance note.
-- The runtime's default write-boundary seed and generator-script detection recognize the new `.ductus/scripts/` location.
-- Because ductus dogfoods its own commands, the framework repo's own copies of the three generators (and `lib/`) move to `.ductus/scripts/` so the shipped `scripts/…` string resolves in ductus's own tree as well as in adopters'. Ductus's maintainer-only scripts stay at the root `scripts/`.
-- The generators source their shared lib self-relatively (`$(dirname "$0")/lib/…`) and the shellcheck config resolves sources self-relatively, so a wholesale move of the generator set with its `lib/` keeps sourcing intact.
+042 also moved the three adopter-facing generators — `gen-spec-deps.sh`, `gen-cross-service-refs.sh` and `lib/specs-root.sh` — from the adopter's root `scripts/` to `.ductus/scripts/`. 067's `adopter-generator-promotion` replaced them with the `derive-dependencies` and `derive-references` runtime primitives, and the `generator-primitives` migration deletes `.ductus/scripts/` from adopter trees, so nothing ships there now. ductus's own maintainer-only scripts stay at root `scripts/`, as 042 decided.
 
 ## `/ductus` migration: reorganize a project on the old layout
 
@@ -91,7 +60,7 @@ Only the three adopter-facing generators move; ductus's own maintainer-only tool
 
 - Move `.govern.toml` → `.ductus/config.toml`.
 - Move `.govern.session.toml` → `.ductus/session.toml`.
-- Move the adopter-facing generators from root `scripts/` to `.ductus/scripts/`.
+- Move the adopter-facing generators from root `scripts/` to `.ductus/scripts/`, where the later `generator-primitives` migration deletes them.
 
 Moves preserve git history (`git mv` when the source is tracked, `mv` otherwise) and preserve any adopter customization of the three generators. The move runs under the bootstrap's existing batch migration consent (the **Pre-run Migrations** "apply N migrations?" gate in `ductus.md`) with **no additional per-file prompt** — `governance-config-rename` and `session-file-consolidate` also move silently, and the bootstrap's **Procedural fidelity** posture discourages extra prompts on routine runs; `rule-files-relocate`'s inner prompt existed only because a rule file at the `specs/` root is a genuinely ambiguous choice, whereas ductus unambiguously owns these files.
 
@@ -149,6 +118,6 @@ The [constitution §drift-prevention](../../framework/constitution.md) canonical
 - **Interaction with `session-file-consolidate`'s runtime constant.** Resolved (grounded in the runtime source): the two migrations compose cleanly with no root-path staging — the `SESSION_FILE` constant (`runtime/src/primitives/write_session.rs:39`) moves directly to `.ductus/session.toml`. Because `migrate-session-file` writes its destination as that constant (`runtime/src/primitives/migrate_session_file.rs:25,49,66,96`), `session-file-consolidate` migrates an ancient adopter's per-agent JSON **directly** to `.ductus/session.toml`, never staging through the root path; the ductus-directory migration then no-ops on the session file (no root `.govern.session.toml` was written). A mid-era adopter (root `.govern.session.toml` present, no JSON) sees `session-file-consolidate` no-op and the ductus-directory migration move root → `.ductus/session.toml`. Ordering (`0.10.0` before `0.22.0`) and idempotency hold; the Q4 converge-on-collision rule covers the rare both-present state. Required runtime edits: move the constant's value and update its two compile-time guards plus the literal-asserting tests (`migrate_session_file.rs:189,345`; `write_session.rs:361,429`; `host.rs:262,275,292`) and the tracked session fixtures.
 
 - **Migration confirmation prompt and collision handling.** Resolved on both sub-points. **(a) No inner prompt** — the move runs under the bootstrap's existing batch "apply N migrations?" consent, matching `governance-config-rename` and `session-file-consolidate` and the bootstrap's **Procedural fidelity** posture against extra routine prompts; `rule-files-relocate`'s inner prompt existed only because a rule file at the `specs/` root is an ambiguous choice, which does not apply here. **(b) Converge, don't skip-and-leave** — this is the one point the migration must differ from `rule-files-relocate`: because new-location-wins makes a lingering legacy file dead, on a destination collision the migration removes an identical legacy file silently and removes a divergent legacy file with a prominent warning naming it (the divergent content was already inert under new-wins; git-tracked config makes removal recoverable), never leaving a stale legacy file in place. Accepted trade-off: the divergent case deletes a legacy file a user may have hand-edited after cutover — acceptable because the edit was already being ignored, the file is recoverable from git, and the warning surfaces it; rejected the safer "keep the divergent file with a warning" because it leaves the stale layout the fallback resolution ruled out.
-- **Scope of the framework's own `scripts/` move.** Resolved: only the three adopter-facing generators (plus `lib/specs-root.sh`) move into ductus's own `.ductus/scripts/`; the ~27 maintainer-only scripts (audit families, linters, maintainer generators, CI infra) stay at root `scripts/`. `.ductus/` is the footprint an adopter gets, and the three shipped generators must live there so the verbatim `scripts/…` strings in the shipped command bodies resolve in ductus's own tree. A useful consequence: the `.ductus/scripts/` location becomes the **structural marker of an adopter-facing script** — the audience is encoded by where the file lives, not only by the Shared Files manifest, so a contributor adding a generator immediately sees whether it ships. `AGENTS.md`'s "three-site wiring" rule is updated to name `.ductus/scripts/` as the shipped-generator home. Rejected moving all of `scripts/`: it would churn ~27 maintainer files plus the audit/CI machinery and blur the adopter-vs-maintainer line this split makes crisp. **The structural-marker half is superseded by `022-deterministic-runtime`:** with the generators promoted to runtime primitives there is no adopter-facing script left to mark, so `.ductus/scripts/` no longer encodes an audience, and `AGENTS.md` now records the opposite rule — a new derivation over spec frontmatter is a primitive, and there is no longer a Shared Files row, a permission entry, or a pin path for a shipped generator. The decision this question actually settled — that ductus's ~27 maintainer-only scripts stay at root `scripts/` — is unaffected and still holds.
+- **Scope of the framework's own `scripts/` move.** Resolved: the ~27 maintainer-only scripts (audit families, linters, maintainer generators, CI infra) stay at root `scripts/`; only the three adopter-facing generators moved, and 022 has since replaced those with runtime primitives. Rejected moving all of `scripts/`: it would churn ~27 maintainer files plus the audit/CI machinery and blur the line between what ships to adopters and what only maintains this repository.
 - **`introduced_in` version.** Resolved: the migration and its runtime changes ship under `introduced_in = "0.22.0"` (the next minor cut from the current `0.21.1`). A minor bump matches the change's weight — a new migration, a moved runtime session-path constant, config-path resolution, and new fallback behavior — where a patch would undersell it. With the fallback resolved as indefinite (no `sunset_after`), the version sets only `introduced_in`.
 - **Fallback lifetime and sunset.** Resolved: the runtime fallback is **indefinite** and the migration carries **no `sunset_after`** — both stay active forever, mirroring the `session-file-consolidate` high-impact-directory-reorg precedent (which also omits `sunset_after`). The fallback's per-read cost is negligible (one extra path probe only when the new file is absent) and indefinite retention guarantees an adopter who upgrades ductus but never re-runs `/ductus` is never orphaned. Crucially, the fallback is a **bridge, not a resting state**: a stale layout (a lingering legacy file after writes have moved to `.ductus/`) will break functionality if left, so convergence is mandatory — new-location-wins on read makes a split state read non-stale immediately, and because the migration never sunsets, every `/ductus` run converges a project still holding a legacy file to the new layout rather than leaving the divergent file to rot. Rejected option (b) (time-boxed `sunset_after` + eventual fallback removal): it trades a real "silently stops reading your config" failure mode for stragglers against a negligible amount of permanent fallback code.
