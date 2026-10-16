@@ -63,7 +63,7 @@ forbids.
 The check is the `check-command-flags` runtime primitive, surfaced as `/audit`
 Family 30 (`scripts/audit/command-flag-hint-parity.sh`). Its result shape is
 recorded in [067's `data-model.md`](../../067-analyze-and-audit-checks/data-model.md),
-the canonical registry of primitive result shapes.
+the canonical registry of the check primitives' result shapes.
 
 **Not `/ductus:analyze`, and the reason is the fix's location.** That command's
 command-frontmatter family looks like the obvious home and is the wrong one

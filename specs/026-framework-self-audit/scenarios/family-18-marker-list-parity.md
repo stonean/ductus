@@ -52,7 +52,7 @@ nothing.
 - **18d** compares the spelled-out count word in all three markdown restatements
   against the derived size.
 - **18e** repeats 18a–18c for the **negated-creation predicate's vocabulary**,
-  added by 022's
+  added by 067's
   [criterion-negated-creation-phrasing](../../067-analyze-and-audit-checks/scenarios/criterion-negated-creation-phrasing.md).
   That group is a clause-scoped predicate rather than a phrase, so it carries
   two closed word lists — negators and creation verbs — in the same three
@@ -92,7 +92,7 @@ derivation again), plus the restored baseline.
   two word lists as a single union for the same reason — a negator swapped into
   the verb row is not a drift mode anyone has, while a word dropped from either
   list is, and the union catches that.
-- **The 022 scenario carries no phrases**, only a count and group names. Only
+- **The 067 scenario carries no phrases**, only a count and group names. Only
   its count is checked (18d) — asserting phrases against a document that
   deliberately omits them would force a restatement this family exists to avoid.
 - **A marker containing parentheses** — the parenthetical-rename marker is exactly that — is handled:

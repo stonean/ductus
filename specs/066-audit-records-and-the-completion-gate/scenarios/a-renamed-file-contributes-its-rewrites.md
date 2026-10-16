@@ -91,7 +91,7 @@ half that inherited any of it fails too.
   `diff.renames`, a contributor with renames on saw only the new path, which
   the sweep exemption could clear. `--name-only` output is never coloured, so
   colour needs no pin there.
-- **The rule is 022's, though one half runs in 026's script.** The shared
+- **The rule is 066's, though one half runs in 026's script.** The shared
   rewrite rule is stated here for both halves, as
   [a-multi-number-renumber-is-one-rewrite](a-multi-number-renumber-is-one-rewrite.md)
   states its own, and `mechanical_sweep_parity` is what binds them. 026 owes no

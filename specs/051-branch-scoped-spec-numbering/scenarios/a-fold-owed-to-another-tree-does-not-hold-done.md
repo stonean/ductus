@@ -18,7 +18,7 @@ The framework already treats that absence as normal. This spec says the target "
 - **An absent target does not block.** When the target does not resolve in this tree, the fold check passes and the checks after it decide, so the spec reaches `done` through the normal gate when everything else passes.
 - **The fold stays owed, and stays visible.** `check-unfolded-specs` keeps reporting the spec, now with `status: done`, and `/{project}:status` renders it `done (fold pending)`, until fold-back discharges it in the first tree that holds both specs. Fold-back still refuses a target that does not exist (AC28), so a mistyped `folds-into` surfaces there, as it does today.
 - **`/{project}:fold` accepts a `done` staging spec.** The staging spec's status does not gate the fold. The upstream spec's reopen rules are unchanged: the scenario edge or the meaningful-body-edit edge, and only from `done`.
-- **The rule changes everywhere it is stated**: the constitution's §spec-lifecycle (the `done` row and the branch-scoped paragraph) and §numbering, this spec's AC35 and §Fold-back on merge, `/{project}:implement`'s gate text, `/{project}:fold`, `/{project}:status`, the user docs, and 022's record of the gate.
+- **The rule changes everywhere it is stated**: the constitution's §spec-lifecycle (the `done` row and the branch-scoped paragraph) and §numbering, this spec's AC35 and §Fold-back on merge, `/{project}:implement`'s gate text, `/{project}:fold`, `/{project}:status`, the user docs, and 066's record of the gate.
 
 ## Edge Cases
 

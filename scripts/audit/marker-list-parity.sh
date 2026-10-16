@@ -53,7 +53,7 @@
 #     the predicate's two word lists as one union for the same reason: a
 #     negator swapped into the verb row is not a drift mode anyone has, while
 #     a word dropped from either list is, and the union catches that.
-#   - The 022 scenario's phrase-free prose. It states counts and group names
+#   - The 067 scenario's phrase-free prose. It states counts and group names
 #     only, and its count is covered by 18d.
 #
 # Requires `python3`.

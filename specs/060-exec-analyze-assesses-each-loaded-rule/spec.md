@@ -36,7 +36,7 @@ Line references in this Motivation and in the Resolved Questions are to the tree
 
 - [x] AC1: An exec analyze assesses each rule in the tier the rule itself carries, never in a tier taken from the step alone, so no rule is assessed in both step 11 and step 12
 - [x] AC2: Each rule an exec analyze assesses contributes its verdict to the record at most once
-- [x] AC3: Every loaded rule an exec analyze did not ask the host about is recorded in `unexamined-by-reason`, under a reason `framework/commands/analyze.md`'s Unexamined targets and 022's data model classify, so the record never reads as though steps 11 and 12 examined a rule they did not
+- [x] AC3: Every loaded rule an exec analyze did not ask the host about is recorded in `unexamined-by-reason`, under a reason `framework/commands/analyze.md`'s Unexamined targets and 066's data model classify, so the record never reads as though steps 11 and 12 examined a rule they did not
 - [x] AC4: An exec run over `analyze-basic` counts `CFG-CONST-001`'s verdict once, and a test with two or more loaded rules shows each one either assessed or recorded unexamined
 - [x] AC5: An exec analyze sends one `assessSpecQuality` request for every loaded rule that carries a tier and a Verification, whether or not the rule's trigger fires against the spec, each request carrying that one rule in the request's existing typed shape
 - [x] AC6: An exec analyze reads a rule's tier from the RFC 2119 keyword in its Statement: MUST or MUST NOT makes it MUST-tier, SHOULD or SHOULD NOT with no MUST makes it SHOULD-tier, and a Statement carrying neither is recorded unexamined rather than assessed
