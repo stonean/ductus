@@ -4,13 +4,13 @@ Implements [043 — Workflows sunset](spec.md).
 
 ## Overview
 
-Delete the workflows feature in one coordinated pass: remove `framework/workflows/` and every procedural surface that drives it (the `/ductus` Workflow recommendation flow, the Shared Files registry row, the `[workflows]` config schema, `init.md` §8), register a `workflows-sunset` migration that cleans adopter projects (subsuming the two dormant 005-era migrations, which are archived per 027's sunset flow), sweep the remaining references by meaning across live artifacts, annotate the affected done specs, and ship as gvrn 0.23.0 with the `gvrn-v0.23.0` tag as the completion gate.
+Delete the workflows feature in one coordinated pass: remove `framework/workflows/` and every procedural surface that drives it (the `/ductus` Workflow recommendation flow, the Shared Files registry row, the `[workflows]` config schema), register a `workflows-sunset` migration that cleans adopter projects (subsuming the two dormant 005-era migrations, which are archived per 027's sunset flow), sweep the remaining references by meaning across live artifacts, annotate the affected done specs, and ship as gvrn 0.23.0 with the `gvrn-v0.23.0` tag as the completion gate.
 
 ## Technical Decisions
 
 ### Migration entry: one `workflows-sunset` entry, exact-set deletion
 
-`framework/migrations.toml` gains one entry with `introduced_in = "0.23.0"` (next minor over the current `runtime/Cargo.toml:3` `version = "0.22.0"`) and `sunset_after = "0.25.0"` (the uniform +2-minors window, 027's back-fill convention). Its procedure file `framework/migrations/workflows-sunset.md` follows the shape of the subsumed procedures (idempotency check → per-file pinned check → delete → summary line, per `framework/migrations/workflow-filename-rename.md`):
+`framework/migrations.toml` gains one entry with `introduced_in = "0.23.0"` (next minor over the current `runtime/Cargo.toml:3` `version = "0.22.0"`) and `sunset_after = "0.25.0"` (the uniform +2-minors window, 027's back-fill convention). Its procedure file `framework/migrations/workflows-sunset.md` follows the shape of the subsumed procedures (idempotency check → per-file pinned check → delete → summary line, as the archived `workflow-filename-rename` entry in `CHANGELOG.md` shows):
 
 1. Exact-set deletion in `{config_dir}/commands/{project}/workflows/` of the 22 known names — 13 current (`black.md`, `eslint.md`, `gofmt.md`, `golangci-lint.md`, `gotest.md`, `prettier.md`, `pytest.md`, `rails-migrate.md`, `rspec.md`, `rubocop.md`, `ruff.md`, `rufo.md`, `vitest.md`) + 9 legacy `{category}-{language}-{tool}.md` names (the set enumerated in `workflow-filename-rename`); remove the directory only when empty afterward.
 2. Recursive deletion of a remaining `{config_dir}/commands/{project}/skills/` directory (subsumed from `skills-to-workflows`, including its pinned-directory check).
@@ -39,10 +39,6 @@ Grounded inventory of every feature reference (line numbers pre-edit):
 
 Generic uses of the word (`:30` "tar -xzf workflow", `:1072` "fits your workflow") stay.
 
-### `init.md` is hand-maintained — §8 removed by hand
-
-`.claude/commands/ductus/init.md` is the one generator exception (AGENTS.md gotcha): its **### 8. Recommend and scaffold workflows** (`:144-168`) is removed by hand, later step numbers renumbered. The framework-implies-language inference at `:40` **stays** — only its justification changes: "since language-triggered workflows … match on it" becomes the table's remaining consumers (documentation value; `/ductus:review`'s tech-stack alignment check reads the section as prose, `framework/commands/review.md:100`).
-
 ### Constitution edits
 
 - Canonical-source map: drop the `Workflow registry | framework/workflows/registry.json` row (`framework/constitution.md:506`).
@@ -65,7 +61,7 @@ There is no root `constitution.md` to sync (verified absent; the AGENTS.md proje
 
 ### Sibling done-spec annotations (mechanical-class, no back-edge)
 
-Per clarify Q4: `specs/005-workflows/spec.md` gets a post-completion sunset blockquote (the idiom of its existing 019 note) pointing at 043; `004-tech-stack-selection`, `010-agent-autonomy`, and `019-config-decisions` get one-line notes marking their workflow-surface material historical. Passing historical mentions in other specs' plan/tasks bodies (design records) are left — they describe decision-time reality and assert no current behavior.
+Per clarify Q4: `010-agent-autonomy` and `019-config-decisions` get one-line notes marking their workflow-surface material historical.
 
 ### Sweep verification
 
@@ -88,13 +84,10 @@ The acceptance sweep greps live artifacts (`framework/`, `scripts/`, `runtime/`,
 | `framework/templates/project/agents.md` | Modify | Drop workflows disambiguation from Skills comment |
 | `README.md` | Modify | Drop `[workflows]` docs, example TOML section, repo-layout row; prose-claim pass |
 | `AGENTS.md` | Modify | Drop project-structure bullet, gotcha, procedural-fidelity mention |
-| `.claude/commands/ductus/init.md` | Modify | Remove §8 by hand; reword `:40` justification |
 | `.claude/commands/ductus/groom.md`, `link.md` | Regenerate | Via `scripts/gen-claude-commands.sh` |
 | `runtime/src/schema/paths.rs` | Modify | Doc-comment enumeration |
 | `runtime/src/primitives/enforce_manifest.rs` | Modify | Module doc-comment example |
 | `runtime/Cargo.toml`, `runtime/CHANGELOG.md` | Modify | 0.23.0 bump + entry |
-| `specs/005-workflows/spec.md` | Modify | Sunset note (status stays `done`) |
-| `specs/004-tech-stack-selection/spec.md` | Modify | Historical-surface note |
 | `specs/010-agent-autonomy/spec.md` | Modify | Historical-surface note |
 | `specs/019-config-decisions/spec.md` | Modify | Historical-surface note |
 
