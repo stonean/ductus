@@ -1,7 +1,11 @@
 //! Per-primitive args + result shapes.
 //!
-//! Mirrors the canonical JSON shapes in
-//! `specs/022-deterministic-runtime/data-model.md`. Each primitive has an
+//! Mirrors the canonical JSON shapes in each owning spec's data model —
+//! `specs/022-deterministic-runtime/data-model.md` for the core primitives,
+//! `specs/066-audit-records-and-the-completion-gate/data-model.md` for the audit
+//! records and the completion gate, `specs/067-analyze-and-audit-checks/data-model.md` for
+//! the checks, and a feature spec's own for a primitive that carries one
+//! feature's behavior. Each primitive has an
 //! `…Args` struct (also the `clap`-derive shape for the CLI surface) and a
 //! `…Result` struct. JSON field names are kebab-case across the surface.
 
@@ -1993,7 +1997,7 @@ pub enum PromotionTableState {
 /// Result for `check-promotion-coverage`.
 ///
 /// The four terms of `unclassified = rule-bearing - (table-keyed u
-/// constitution-citing)` are each reported alongside the difference, because
+/// pointer-citing)` are each reported alongside the difference, because
 /// the figure has never been reproducible by hand: every recorded
 /// disagreement about it resolved to a difference of **method** rather than
 /// decay — counting the pointer side as whole-file lines rather than as
@@ -4754,7 +4758,7 @@ pub struct DeriveRoutingCandidatesResult {
 /// references to ductus-managed paths no longer resolve — the runtime half of
 /// spec 027's `migration-chain-reference-integrity`, invoked from both
 /// `/ductus:analyze` §Project-level consistency and the bootstrap's
-/// migration-batch end (spec 022 scenario `orphaned-reference-check`).
+/// migration-batch end (spec 067 scenario `orphaned-reference-check`).
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct CheckOrphanedReferencesArgs {}
@@ -4868,7 +4872,7 @@ pub enum LinkScope {
 /// feature plus its declared dependencies, and `/{project}:audit` Family 26
 /// performs exactly the right check but is maintainer-only — adopters never
 /// invoke it. So an adopter who deletes or renames a spec directory dangles
-/// every inbound pointer and nothing reports it (spec 022 scenario
+/// every inbound pointer and nothing reports it (spec 067 scenario
 /// `adopter-corpus-link-integrity`).
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]

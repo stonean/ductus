@@ -1756,7 +1756,7 @@ mod tests {
 
     #[test]
     fn quotes_bool_like_known_waiver_field_for_round_trip() {
-        // scenarios/write-review-known-field-quoting.md: a known waiver field
+        // 066's scenario write-review-known-field-quoting: a known waiver field
         // (here `reason`) whose value would re-parse as a non-string must be
         // quoted like the extras, so it round-trips through the spec
         // frontmatter as a string instead of a bool/number and does not break

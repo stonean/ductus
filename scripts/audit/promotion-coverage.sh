@@ -36,7 +36,7 @@
 #     direction.
 #
 # MEASURED 2026-09-15: 121 rule-bearing across the four sections, 98 table
-# rows all matched, 74 constitution-citing, 119 classified, 2 unclassified,
+# rows all matched, 74 pointer-citing, 119 classified, 2 unclassified,
 # 0 unmatched keys, 0 missing sections.
 #
 # Bash 3.2 compatible (macOS system bash). The runtime emits JSON; python3
@@ -120,7 +120,7 @@ if data.get("table-state") == "no-table":
 else:
     sys.stderr.write(
         "promotion-coverage: %d rule-bearing across 4 section(s) — %d table-keyed, "
-        "%d constitution-citing, %d classified => %d unclassified\n" % (
+        "%d pointer-citing, %d classified => %d unclassified\n" % (
             data.get("rule-bearing", 0), data.get("table-keyed", 0),
             data.get("pointer-citing", 0), data.get("classified", 0),
             data.get("unclassified", 0)))

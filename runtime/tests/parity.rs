@@ -233,7 +233,7 @@ fn ductus_basic_post_run_filesystem_state_matches_expectations() {
 
 #[test]
 fn traverse_deps_cycle_check_surfaces_two_cycle_via_cli() {
-    // Parity coverage for spec 022's `traverse-deps-cycle-check` scenario:
+    // Parity coverage for spec 067's `traverse-deps-cycle-check` scenario:
     // both the markdown-only walker (the agent reading frontmatter via
     // host tools and feeding traverse-deps via MCP) and the runtime
     // walker (`ductus traverse-deps` subprocess used by `/ductus:analyze` step

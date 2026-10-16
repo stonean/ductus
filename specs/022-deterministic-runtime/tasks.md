@@ -58,10 +58,10 @@ The manifest task 141 produced. Slugs: `066-audit-records-and-the-completion-gat
 
 ## 144. Sweep every reference, routing rule and canonical row the split moves
 
-- [ ] Repoint every reference to a moved scenario or section: runtime doc comments (`runtime/src/schema/primitives.rs` alone had 39 references to 022), other specs, `AGENTS.md`, `runtime/CHANGELOG.md`, `framework/` and scripts, as its own commit
+- [x] Repoint every reference to a moved scenario or section: runtime doc comments (`runtime/src/schema/primitives.rs` alone had 39 references to 022), other specs, `AGENTS.md`, `runtime/CHANGELOG.md`, `framework/` and scripts, as its own commit
 - [x] `scripts/audit/marker-list-parity.sh` reads `criterion-path-existence-family.md` by its 022 path (lines 75 and 268): change it in the same commit as that scenario's move
 - [x] `framework/constitution.md`'s canonical-sources row for the scenario-to-task referencing rule names 022's data model: point it at 067's (this ships to adopters, so the round ends in release 0.59.7)
-- [ ] Reword `AGENTS.md`'s *Route shared runtime work to spec 022* entry to name three homes (022 core and shared surfaces, 066 records and gate, 067 checks) and re-key 050 plan.md's W23 classification row in the same commit, so promotion-coverage reports 0 unmatched keys
+- [x] Reword `AGENTS.md`'s *Route shared runtime work to spec 022* entry to name three homes (022 core and shared surfaces, 066 records and gate, 067 checks) and re-key 050 plan.md's W23 classification row in the same commit, so promotion-coverage reports 0 unmatched keys
 - [ ] Verify: `check-corpus-links` 0 broken, a grep for every moved and retired slug across `runtime/`, `scripts/`, `framework/`, `AGENTS.md` and the changelog finds only live paths, then `scripts/audit/review-freshness.sh` on the committed tree, with a scoped `--since` re-review of any done spec it flags
 
 - **Done when**: no reference anywhere in the repository resolves to a moved or retired location, the routing rule names three homes, and the self-audit passes.
@@ -77,6 +77,6 @@ The manifest task 141 produced. Slugs: `066-audit-records-and-the-completion-gat
 
 ## 146. Disposition out-of-spec finding: the constitution says a scenario's sibling link induces a dependencies edge, and derive-dependencies harvests spec.md bodies only
 
-- [ ] Fix: `framework/constitution.md` §text-first-artifacts' scenario-link bullet and `AGENTS.md`'s matching Gotchas entry say a correct scenario link creates a `dependencies:` edge and can close a cycle; `list_tracked_specs` / `is_spec_path` admit only `spec.md` and `spec-and-plan.md`, and neither the primitive nor the bash generator it replaced ever read a scenario. State what the derivation reads, keep the depth-error half, and land it with the 0.59.7 constitution change
+- [x] Fix: `framework/constitution.md` §text-first-artifacts' scenario-link bullet and `AGENTS.md`'s matching Gotchas entry say a correct scenario link creates a `dependencies:` edge and can close a cycle; `list_tracked_specs` / `is_spec_path` admit only `spec.md` and `spec-and-plan.md`, and neither the primitive nor the bash generator it replaced ever read a scenario. State what the derivation reads, keep the depth-error half, and land it with the 0.59.7 constitution change
 
 - **Done when**: the constitution bullet and the AGENTS.md entry describe the file set `derive-dependencies` actually harvests, verified against `runtime/src/primitives/derive_dependencies.rs`

@@ -17,7 +17,7 @@
 # The two frontmatter indexes — `dependencies:` and `references:` — are then
 # derived by runtime primitives rather than shell generators: `ductus
 # derive-dependencies` and `ductus derive-references`, which replaced the
-# shipped bash generators (spec 022, adopter-generator-promotion). An
+# shipped bash generators (spec 067, adopter-generator-promotion). An
 # unreachable runtime halts the commit rather
 # than skipping them: they produce derived frontmatter this commit captures, so
 # a silent skip lands values the primitives would have superseded.
@@ -30,7 +30,7 @@
 # Last — after every write above has landed and been staged — it runs
 # `ductus check-corpus-links`, which reports every relative
 # markdown link under the spec root that resolves to nothing and exits non-zero
-# on one (spec 022 / adopter-corpus-link-integrity). Corpus-wide rather than
+# on one (spec 067 / adopter-corpus-link-integrity). Corpus-wide rather than
 # staged-scoped, because the commit that breaks a link is usually the one that
 # deletes its target and the dangling referrers are not in the commit at all.
 # Family 26 of /ductus:audit covers the whole repository including

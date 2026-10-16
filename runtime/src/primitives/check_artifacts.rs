@@ -1,10 +1,10 @@
 //! `check-artifacts` — the residual deterministic check families from
 //! `/ductus:analyze`'s markdown-only reference, mechanized for one feature.
 //!
-//! Owns nine families (spec 022, scenarios analyze-artifact-checks,
-//! scenario-open-question-signal, link-adjacent-drift-family,
-//! criterion-path-existence-family, and criterion-label-assignment; spec 058
-//! for disposition drift). Each family MIRRORS
+//! Owns nine families (spec 067, scenarios analyze-artifact-checks,
+//! link-adjacent-drift-family and criterion-path-existence-family; spec 022,
+//! scenarios scenario-open-question-signal and criterion-label-assignment;
+//! spec 058 for disposition drift). Each family MIRRORS
 //! `framework/commands/analyze.md`'s markdown-only reference — severity
 //! tiers and skip rules come from the reference, the primitive introduces
 //! no policy of its own:
@@ -39,7 +39,7 @@
 //!   drifted. The third condition arrived with 045's task 15: §implement-phase
 //!   forbids reaching `done` over an outstanding SHOULD, and the count is what
 //!   states whether one is outstanding. The grandfather rule applies: a `done`
-//!   spec with no `review:` block at all predates `/ductus:review` and is
+//!   spec with no `review.md` at all predates `/ductus:review` and is
 //!   exempt.
 //! - **artifact-unreadable at `done`** (blocking, across families) — an
 //!   artifact a family was meant to scan but could not read is a skipped
@@ -1430,7 +1430,7 @@ const SCAFFOLD_ROWS: [&str; 2] = ["ductus install path", "settings file"];
 /// criterion naming one is a repo-relative path claim.
 const PROJECT_SCOPES: [&str; 2] = ["project-committed", "project-local"];
 
-/// The **registry** arm of [`adopter_destinations`] (spec 022 scenario
+/// The **registry** arm of [`adopter_destinations`] (spec 067 scenario
 /// `per-agent-scaffold-paths-ship-to-adopter`). A per-agent scaffold path is
 /// not a Shared Files row: it is the agent's `config_dir` substituted into a
 /// layout-derived formula, which the manifest carries only as an inert
@@ -2238,7 +2238,7 @@ mod tests {
         // exist because a second surface applying the narrower path rule
         // disagrees with this family asymmetrically: /ductus:amend's
         // reconcile pass would offer a task for a scenario already
-        // mapped here (specs/022-deterministic-runtime/data-model.md,
+        // mapped here (specs/067-analyze-and-audit-checks/data-model.md,
         // registered canonical in constitution §drift-prevention).
         let tmp = tempdir().unwrap();
         write(tmp.path(), "specs/042-demo/spec.md", &spec("in-progress"));

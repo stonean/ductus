@@ -11,7 +11,7 @@
 # Order matters: the frontmatter derivations run first so downstream checks
 # see fresh `dependencies:` / `references:` if anything was out of sync.
 #
-# Those two are runtime primitives since spec 022's adopter-generator-promotion,
+# Those two are runtime primitives since spec 067's adopter-generator-promotion,
 # so this pass needs the binary. It builds it explicitly rather than assuming a
 # prior step did: `lint-procedure-parseability.sh` below also builds it, but
 # depending on the *order of a later entry* to satisfy an earlier one is the

@@ -7,7 +7,7 @@
 //! `clarified` blocks consumers because there is no committed plan to build
 //! against; absent dependency directories block always.
 //!
-//! Cycle detection (added by spec 022's `traverse-deps-cycle-check`
+//! Cycle detection (added by spec 067's `traverse-deps-cycle-check`
 //! scenario): the primitive walks every reachable spec from the targeted
 //! feature, reads each visited spec's frontmatter `dependencies`, and runs
 //! Tarjan's strongly-connected-components algorithm over the resulting

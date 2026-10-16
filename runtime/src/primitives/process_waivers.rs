@@ -28,7 +28,8 @@
 //!
 //! Defined by
 //! `specs/022-deterministic-runtime/scenarios/review-runtime-acceleration.md`;
-//! the per-path anchors by `process-waivers-file-lists.md` beside it.
+//! the per-path anchors by
+//! `specs/066-audit-records-and-the-completion-gate/scenarios/process-waivers-file-lists.md`.
 
 use std::path::Path;
 

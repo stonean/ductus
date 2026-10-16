@@ -6,7 +6,9 @@
 //!
 //! - [`procedure`] — the AST emitted by the procedure parser.
 //! - [`protocol`] — the JSON-over-stdio envelope and message types.
-//! - [`primitives`] — per-primitive args/result shapes.
+//! - [`primitives`] — per-primitive args/result shapes, whose canonical
+//!   records are split across the owning specs' data models (see that
+//!   module's doc).
 //! - [`extensions`] — the three initial-release extension-point payloads.
 //! - [`services`] — the `[services]` registry shape from the project config
 //!   (spec 030 cross-service references).

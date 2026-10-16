@@ -17,7 +17,7 @@
 //! hand-edited the reference, and a rewrite that guessed wrong is worse than a
 //! report that is precise.
 //!
-//! Defined by `specs/022-deterministic-runtime/scenarios/orphaned-reference-check.md`,
+//! Defined by `specs/067-analyze-and-audit-checks/scenarios/orphaned-reference-check.md`,
 //! required by `specs/027-bootstrap-migration-registry/scenarios/migration-chain-reference-integrity.md`.
 
 use std::collections::BTreeSet;

@@ -48,7 +48,7 @@
 //! write, with drifted-but-unstaged specs reported in `unwritten`. This
 //! primitive needs the full walk *more* than `derive-dependencies` does, not
 //! less — the opposite of what the original rationale concluded. See
-//! `scenarios/derive-references-unstaged-drift-is-reported.md`.
+//! `specs/067-analyze-and-audit-checks/scenarios/derive-references-unstaged-drift-is-reported.md`.
 //!
 //! ## Root-aware matching
 //!

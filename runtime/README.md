@@ -59,7 +59,7 @@ The runtime expects to be invoked from a govern-adopting repository — one with
 | `complete` | runtime → host | Procedure finished cleanly; carries the runtime version |
 | `error` | runtime → host | Procedure halted on operational failure; halts the walk |
 
-See the [data model](https://github.com/stonean/govern/blob/main/specs/022-deterministic-runtime/data-model.md) for the full envelope shapes and primitive schemas.
+See [022's data model](https://github.com/stonean/ductus/blob/main/specs/022-deterministic-runtime/data-model.md) for the envelope shapes and the core primitive schemas; the audit-record and completion-gate primitives are in [066's](https://github.com/stonean/ductus/blob/main/specs/066-audit-records-and-the-completion-gate/data-model.md), and the analyze and audit checks in [067's](https://github.com/stonean/ductus/blob/main/specs/067-analyze-and-audit-checks/data-model.md).
 
 ## Stability
 

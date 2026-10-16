@@ -23,7 +23,7 @@
 //! removal is named in prose instead of linked — and a rewrite that guessed
 //! wrong is worse than a report that is precise.
 //!
-//! Defined by `specs/022-deterministic-runtime/scenarios/adopter-corpus-link-integrity.md`.
+//! Defined by `specs/067-analyze-and-audit-checks/scenarios/adopter-corpus-link-integrity.md`.
 
 use std::path::{Component, Path, PathBuf};
 

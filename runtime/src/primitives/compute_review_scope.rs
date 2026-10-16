@@ -7,7 +7,8 @@
 //!   `check-stuck`), `HEAD` when that transition is not committed yet, or a
 //!   caller-supplied `--since` override used verbatim. The parent, because the
 //!   reopen flow commits the back-edge flip together with the work it
-//!   authorises — see `scenarios/review-base-includes-the-transition-commit.md`.
+//!   authorises — see
+//!   `specs/066-audit-records-and-the-completion-gate/scenarios/review-base-includes-the-transition-commit.md`.
 //! - **scope** — the union of the plan's `Affected Files` set and the set of
 //!   files modified since `diff-base`, in the working tree as well as in
 //!   commits. Both, because either alone can omit what the review exists to
@@ -18,7 +19,7 @@
 //! transition starts the window at `HEAD`. Answered from commits alone, a
 //! review run before its work was committed — the pipeline's natural order —
 //! was scoped away from every file the work touched
-//! (`scenarios/review-scope-includes-uncommitted-work.md`).
+//! (`specs/066-audit-records-and-the-completion-gate/scenarios/review-scope-includes-uncommitted-work.md`).
 //!
 //! The project need not sit at its git repository's root: history is read by
 //! each path from the work tree, and the files modified since the base are

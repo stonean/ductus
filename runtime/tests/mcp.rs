@@ -299,7 +299,7 @@ async fn traverse_deps_returns_compatibility() {
 
 #[tokio::test]
 async fn traverse_deps_surfaces_two_cycle_via_mcp() {
-    // Parity coverage for spec 022's `traverse-deps-cycle-check` scenario:
+    // Parity coverage for spec 067's `traverse-deps-cycle-check` scenario:
     // the MCP surface (called by adopter hosts in markdown-only mode and
     // by every slash command host) returns the same `cycles` payload the
     // primitive's unit tests produce. Asserts the end-to-end wiring from

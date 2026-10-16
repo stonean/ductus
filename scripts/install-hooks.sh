@@ -29,7 +29,7 @@ chmod +x "$ROOT/.githooks/pre-commit"
 # --- the runtime the hook calls ---------------------------------------------
 #
 # `.githooks/pre-commit` derives the `dependencies:` and `references:`
-# frontmatter through the runtime (spec 022, adopter-generator-promotion) and
+# frontmatter through the runtime (spec 067, adopter-generator-promotion) and
 # HALTS when the binary is unreachable, because those indexes are captured by
 # the commit and skipping them would land stale values.
 #

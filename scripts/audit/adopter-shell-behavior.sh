@@ -24,7 +24,7 @@
 # and, for a project in a subdirectory of its repository (spec 059), the outer
 # stub and the inner hook together through a real `git commit`.
 #
-# **What this family covers changed with spec 022's adopter-generator-promotion.**
+# **What this family covers changed with spec 067's adopter-generator-promotion.**
 # The two frontmatter derivations moved out of shell and into the
 # `derive-dependencies` / `derive-references` primitives, which carry their own
 # end-to-end golden tests (`runtime/tests/derive_*_golden.rs`). What remains

@@ -51,7 +51,7 @@
 //! disagree one gate is the stricter, so nothing passes both unexamined.
 //!
 //! Defined by
-//! `specs/022-deterministic-runtime/scenarios/review-staleness-on-done-specs.md`.
+//! `specs/066-audit-records-and-the-completion-gate/scenarios/review-staleness-on-done-specs.md`.
 
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};

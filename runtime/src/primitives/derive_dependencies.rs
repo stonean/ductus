@@ -7,7 +7,7 @@
 //! commit. §runtime-boundary principle 3 names shell pipelines that parse
 //! frontmatter or markdown structure as *not* a sanctioned substitute for a
 //! primitive; the script predates the runtime being required, and this is the
-//! promotion (see `scenarios/adopter-generator-promotion.md`).
+//! promotion (see `specs/067-analyze-and-audit-checks/scenarios/adopter-generator-promotion.md`).
 //!
 //! ## What it derives
 //!

@@ -210,7 +210,7 @@ fn active_path(repo: &Path, chain: &[&'static str; TIERS]) -> PathBuf {
 /// `grep -E` / awk regexes, where a `.`, `+`, `*`, `(`, … acted as a regex
 /// metacharacter (over-matching, or a syntax error that silently dropped a
 /// spec). Those generators were promoted to the `derive-dependencies` /
-/// `derive-references` primitives (spec 022) and the adopter pre-commit hook
+/// `derive-references` primitives (spec 067) and the adopter pre-commit hook
 /// now matches the spec root by *shape* rather than interpolating the
 /// configured name, so no shell consumer interpolates it any more.
 ///

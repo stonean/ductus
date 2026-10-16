@@ -1521,8 +1521,8 @@ dropped the next time the record is written.
   enforcement the mechanism does not have is the same discipline
   §cross-spec-impact uses for the impact nothing detects.
 - Specs [020](../specs/020-code-review/spec.md) (AC15, the requirement) and
-  [022](../specs/022-deterministic-runtime/scenarios/a-review-states-what-it-read.md)
-  (the runtime scenario). Both reviews for this release are the first to carry
+  022 ([`a-review-states-what-it-read`](../specs/066-audit-records-and-the-completion-gate/scenarios/a-review-states-what-it-read.md),
+  the runtime scenario). Both reviews for this release are the first to carry
   the new fields, and both record honest partials — 16 of 20 and 19 of 43 —
   which is the field working rather than a shortfall hidden.
 

@@ -254,7 +254,7 @@ Detection runs in this order — first match wins:
 
 The detection ladder no longer treats `.githooks/pre-commit` itself as a ductus-managed file — under the new model the outer file is adopter-owned, so its presence is not a signal that ductus installed it. Migration of pre-existing ductus-installed hooks (from spec-017 adopters) is handled by the **Migration from spec-017 hook** subsection below, which runs before the detection ladder.
 
-The two frontmatter derivations are **runtime primitives**, not shipped scripts: `ductus derive-dependencies` and `ductus derive-references` (spec 022, `adopter-generator-promotion`). They arrive with the runtime `/ductus` acquires, so there is nothing to scaffold, refresh, or pin — a generator fix reaches adopters through the version bump that ships the binary. The pre-existing `.ductus/scripts/` entries were removed by the `generator-primitives` migration.
+The two frontmatter derivations are **runtime primitives**, not shipped scripts: `ductus derive-dependencies` and `ductus derive-references` (spec 067, `adopter-generator-promotion`). They arrive with the runtime `/ductus` acquires, so there is nothing to scaffold, refresh, or pin — a generator fix reaches adopters through the version bump that ships the binary. The pre-existing `.ductus/scripts/` entries were removed by the `generator-primitives` migration.
 
 ### Migration from spec-017 hook
 

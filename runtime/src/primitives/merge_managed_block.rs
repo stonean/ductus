@@ -255,22 +255,12 @@ fn merge_html_comment(
 /// its terminating newline), and `body` is the body trimmed of
 /// leading/trailing newlines.
 ///
-/// The body extent is determined by walking up to
-/// `expected_block.lines().count()` lines from the position past the
-/// marker line, using `expected_block` as a *structural* template:
-/// expected blank lines (interior subsection separators) are matched
-/// against on-disk blanks, and expected non-blank lines may match any
-/// non-blank on-disk content. The walk terminates early when the
-/// structure mismatches — specifically, when the expected line is
-/// non-blank but the on-disk line is blank, signalling the end-of-block
-/// blank-line terminator the previous run wrote. The content of each
+/// The body extent is [`walk_body_extent`]'s: the on-disk blank-separated
+/// groups past the marker line are aligned with `expected_block`'s groups by
+/// their pattern lines, so a multi-subsection block is bounded past its
+/// interior blank lines rather than at the first one. The content of each
 /// on-disk line is not required to match `expected_block`; the caller
-/// performs the byte-equality check against the returned `body`.
-///
-/// This replaces an earlier "next blank line is the terminator"
-/// heuristic that mis-truncated multi-subsection canonicals (those with
-/// interior blank lines between subsections), causing repeated runs to
-/// leave orphan subsection headers below the managed region. See
+/// performs the byte-equality check against the returned `body`. See
 /// `scenarios/merge-managed-block-multi-subsection-end.md`.
 fn find_line_prefix_block<'a>(
     text: &'a str,

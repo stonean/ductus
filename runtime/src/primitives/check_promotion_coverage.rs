@@ -28,7 +28,7 @@
 //! decays and a hand method drifts; this does neither, which is why all four
 //! terms are reported rather than just the difference.
 //!
-//! **A notice, never a gate** (spec 022, scenario `the-promotion-coverage-line`).
+//! **A notice, never a gate** (spec 067, scenario `the-promotion-coverage-line`).
 //! Promotion has to stay free for the reason §brownfield-inbox gives for
 //! capture: gating a release on how much is unrouted would make the honest
 //! choice between a growing backlog and a silent one push toward silence.

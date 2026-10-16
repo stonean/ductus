@@ -196,7 +196,7 @@ introduced_in = "0.30.0"
 # hook whose targets no longer exist, so the entry stays active until every
 # tree is converged. The removal is safe on any release because the primitives
 # arrive with the runtime `/ductus` acquires in the same run.
-summary = "Remove the shipped frontmatter generators — .ductus/scripts/gen-spec-deps.sh, gen-cross-service-refs.sh and lib/specs-root.sh — now that the derivations are the derive-dependencies and derive-references runtime primitives (spec 022, adopter-generator-promotion)"
+summary = "Remove the shipped frontmatter generators — .ductus/scripts/gen-spec-deps.sh, gen-cross-service-refs.sh and lib/specs-root.sh — now that the derivations are the derive-dependencies and derive-references runtime primitives (spec 067, adopter-generator-promotion)"
 target_paths = [
   ".ductus/scripts/gen-spec-deps.sh",
   ".ductus/scripts/gen-cross-service-refs.sh",

@@ -7,7 +7,7 @@ and `gen-cross-service-refs.sh` derived `references:` from cross-service URLs.
 Both parsed YAML frontmatter and markdown structure in `awk`.
 
 They are now the `derive-dependencies` and `derive-references` runtime
-primitives (spec 022, `adopter-generator-promotion`). The scripts are removed,
+primitives (spec 067, `adopter-generator-promotion`). The scripts are removed,
 along with the `lib/specs-root.sh` helper they shared — the runtime resolves
 `[paths] specs-root` itself.
 

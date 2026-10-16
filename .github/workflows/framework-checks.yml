@@ -62,7 +62,7 @@ jobs:
         run: npm ci
 
       # The two frontmatter derivations are runtime primitives since spec
-      # 022's adopter-generator-promotion, so this step needs the binary and
+      # 067's adopter-generator-promotion, so this step needs the binary and
       # the toolchain block below has to precede it. Step (f) reuses the same
       # build as a cache-warm no-op.
       # Pinned — keep in sync with runtime/rust-toolchain.toml.
