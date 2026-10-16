@@ -1,6 +1,6 @@
 ---
 title: "014-reclarify-backedge — spec"
-status: done
+status: in-progress
 dependencies: [000-slash-commands, 009-scenario-targeting, 013-text-first-artifacts, 023-govern-refinement]
 tags: [pipeline, commands]
 next-criterion: 27
@@ -21,7 +21,7 @@ Prior to this spec, the constitution §spec-lifecycle (`framework/constitution.m
 
 The first was implemented; the second was not, and its destination state was wrong on inspection (see below). This spec wires up the second back-edge and revises the constitution's wording so source and behavior match.
 
-Back-edge 1 is implemented in `framework/commands/elaborate.md` step 7. Back-edge 2 is not implemented anywhere:
+Back-edge 1 is implemented in `framework/commands/elaborate.md` step 7 (deleted by 023, which moved it into `amend.md`). Back-edge 2 is not implemented anywhere:
 
 - `framework/commands/amend.md` "Status warning" only warns the user and explicitly states "Do not change the status — this is informational only."
 - `framework/commands/clarify.md` Gate refuses any non-`draft` status with "Spec is already clarified. Run `/{project}:plan`…".
