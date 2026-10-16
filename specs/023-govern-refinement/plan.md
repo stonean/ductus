@@ -6,7 +6,7 @@ Implements [023 — `ductus` Refinement](spec.md).
 
 The work splits into two phases: (A) extend the `ductus` runtime with two new primitives via a follow-on scenario on spec [022](../022-deterministic-runtime/spec.md), then (B) consolidate the slash command surface in `ductus` and sweep the dependent prose. Phase A must ship before phase B because `framework/commands/amend.md` (rewritten in phase B) invokes the new primitives on its scenario branch.
 
-Within phase B, the four scope-of-change items from the spec land in this order: `/configure` MCP allow-list (independent), lightweight track removal (constitution and command sweep), `/capture` merge into `/specify`, `/amend` rewrite. The prose sweep (`README`, `docs/introduction.md`, help tables, brownfield-process body) runs last because it depends on the final verb set.
+Within phase B, the four scope-of-change items from the spec land in this order: `/configure` MCP allow-list (independent), lightweight track removal (constitution and command sweep), `/capture` merge into `/specify`, `/amend` rewrite. The prose sweep (`README`, help tables, brownfield-process body) runs last because it depends on the final verb set.
 
 ## Technical Decisions
 
@@ -27,7 +27,7 @@ Rationale: deferring the primitive landing to mid-023 would force the `amend.md`
 
 ### MCP allow-list generator — `scripts/gen-configure-mcp.sh`
 
-New generator following the same pattern as `gen-readme-table.sh`, `gen-help-tables.sh`, `gen-spec-deps.sh`. Reads `framework/runtime-tools.txt`, emits per-agent permission entries into managed blocks in `framework/bootstrap/configure/claude.md` and `framework/bootstrap/configure/auggie.md`. Marker shape: `<!-- generated:mcp-allow:start -->` / `<!-- generated:mcp-allow:end -->`.
+New generator following the same pattern as `gen-help-tables.sh`. Reads `framework/runtime-tools.txt`, emits per-agent permission entries into managed blocks in `framework/bootstrap/configure/claude.md` and `framework/bootstrap/configure/auggie.md`. Marker shape: `<!-- generated:mcp-allow:start -->` / `<!-- generated:mcp-allow:end -->`.
 
 Per-host format mapping baked into the generator:
 
@@ -84,7 +84,7 @@ Three additions to `framework/commands/amend.md`:
 Pure rename with no behavior change. The command's frontmatter `parity:` block stays unchanged under the new filename — the runtime parser is name-agnostic and primitive names (`gov-rt:validate-frontmatter`, etc.) are not touched. Three categories of work:
 
 1. **File rename** — `git mv framework/commands/validate.md framework/commands/analyze.md`. Update the H1 from "# Validate" to "# Analyze".
-2. **Reference sweep** — replace `/{project}:validate`, `/ductus:validate`, and `validate.md` with their `analyze` counterparts across 11 files (per the audit count in the spec). Specifically `framework/commands/help.md`, `framework/commands/review.md`, `framework/constitution.md`, `framework/commands/validate.md` (becoming `analyze.md`), `framework/bootstrap/ductus.md`, `framework/templates/spec/spec.md`, `framework/templates/project/project-readme.md`, `scripts/gen-help-tables.sh`, `scripts/lint-frontmatter.sh`, `README.md`, `docs/introduction.md`. The Claude-commands generator picks up the rename on its next run and prunes the old `.claude/commands/ductus/validate.md`.
+2. **Reference sweep** — replace `/{project}:validate`, `/ductus:validate`, and `validate.md` with their `analyze` counterparts in every file that named them: `framework/commands/help.md`, `framework/commands/review.md`, `framework/constitution.md`, `framework/commands/validate.md` (becoming `analyze.md`), `framework/bootstrap/ductus.md`, `framework/templates/spec/spec.md`, `framework/templates/project/project-readme.md`, `scripts/gen-help-tables.sh`, `scripts/lint-frontmatter.sh`, `README.md`. The Claude-commands generator picks up the rename on its next run and prunes the old `.claude/commands/ductus/validate.md`.
 3. **Frozen-archaeology accommodation** — planned as: done specs under `specs/NNN-*/` retain their `/ductus:validate` references, with a single "Past Renames" note in `specs/README.md` mapping old to new without per-spec signposts. This accommodation was reversed by this spec's own [`living-specs`](scenarios/living-specs.md) follow-on scenario, which deleted the frozen-archaeology carve-out from `framework/constitution.md` §drift-prevention: done spec bodies are live artifacts and were swept with everything else. §Past Renames was deleted with it — see AC23 — and rename history lives in git log.
 
 The rename lands in Phase B between `/elaborate` deletion (task 12) and the help-tables generator update (task 13). The help-tables generator must be updated in the same commit as the rename or pre-commit hooks will fail (the script tries to read `validate.md` which no longer exists).
@@ -116,20 +116,6 @@ Prose-only step added to `framework/bootstrap/ductus.md`. Runs after archive fet
 The check is idempotent — finds nothing on second run. No new primitive needed; the existing shell-out for `find` plus host-level `Edit`-equivalent file operations cover it. The completion message gains one line: "Migrated N `spec-and-plan.md` files to `spec.md`" (or omitted if N=0).
 
 The changelog entry accompanying the paired runtime and framework release documents the rename for adopters who upgrade without re-running `/ductus`.
-
-### Validation strategy
-
-The acceptance criteria are concrete enough that a `grep`-based pass against the repo verifies most of them. Order of checks before declaring the spec done:
-
-1. `git ls-files | xargs grep -l 'spec-and-plan'` → zero hits under `framework/`, `docs/`, `README.md`.
-2. `git ls-files | xargs grep -l '/capture\b\|/elaborate\b'` → zero hits in the same scope.
-3. `scripts/gen-help-tables.sh --dry-run` → reports "in sync".
-4. `scripts/lint-tool-coverage.sh` → passes.
-5. `scripts/gen-spec-deps.sh --dry-run` → reports "in sync".
-6. `npx markdownlint-cli2 '**/*.md'` → passes.
-7. `runtime` parseability check on rewritten `specify.md` and `amend.md` → passes.
-8. `/ductus:validate` on spec 023 → no hard-fail or blocking.
-9. Markdown-only CI workflow (locally simulated) → passes.
 
 ## Affected Files
 
@@ -169,7 +155,6 @@ The acceptance criteria are concrete enough that a `grep`-based pass against the
 | `README.md` | Modify | Remove `/capture`, `/elaborate`, and lightweight-track references; update Slash Commands tables; drop `spec-and-plan.md` from templates table. |
 | `AGENTS.md` | Modify | Drop `spec-and-plan` from the framework templates list (line 17). |
 | `specs/README.md` | Modify | Remove the "Lightweight track detection" bullet from §Design Decisions (active-design statement being undone); add a "Past Renames" note recording `/validate → /analyze`. |
-| `docs/introduction.md` | Modify | Sweep deleted-verb references (lines 24, 31, 32, 65, 66) and lightweight-track mentions; update the help-tables-mirroring table to match the new category set. |
 | `framework/templates/project/agents.md` | Modify | Drop `spec-and-plan` from the templates list (line 43) and remove the `spec-and-plan.md` row from the templates description (line 46). |
 | `framework/templates/project/project-readme.md` | Modify | Drop `spec-and-plan` from the templates list (line 26). |
 | `framework/bootstrap/ductus.md` | Modify | Add migration check for `spec-and-plan.md` files (see Phase B task 14); sweep all `spec-and-plan` and deleted-verb references (lines ~296, 311, 384, 442, 479, 481) including manifest entries for `capture.md`, `elaborate.md`, and `spec-and-plan.md`. |
