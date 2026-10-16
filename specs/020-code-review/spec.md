@@ -1,6 +1,6 @@
 ---
 spec: 020-code-review
-status: done
+status: in-progress
 dependencies: []
 cross-spec-impact: [066-audit-records-and-the-completion-gate]
 next-criterion: 16
@@ -103,17 +103,15 @@ tools — a discipline dependency the framework should remove.
 | `framework/commands/implement.md` | edit — add blocking check before `status: done` transition | update |
 | `framework/commands/analyze.md` | edit — add review-drift check, integrate with `--fix` | update |
 | `framework/templates/spec/spec.md` | edit — add `review:` block to frontmatter schema | update |
-| `framework/templates/spec/spec-and-plan.md` | edit — same `review:` block addition | update |
 | `framework/templates/ci/adopter-generators.yml` | edit — add review-blocking check | update |
 | `framework/constitution.md` | edit — reference the review gate in the pipeline section | update |
 | `README.md` | edit — add `/ductus:review` row to Pipeline commands table; document waivers | update |
 | `scripts/regenerate-commands.sh` (or equivalent) | run after edits to regenerate `.claude/commands/ductus/review.md` | n/a |
 | `.claude/commands/ductus/review.md` | regenerated output | derived |
 
-The two template rows and the CI row record what 020 changed, not what those
+The template row and the CI row record what 020 changed, not what those
 files hold now: 057 removed the `review:` block from `framework/templates/spec/spec.md`
-and replaced the CI step's block-presence predicate. `spec-and-plan.md` was
-deleted outright by 023's lightweight-track sunset.
+and replaced the CI step's block-presence predicate.
 
 ## Tasks
 
@@ -127,7 +125,7 @@ deleted outright by 023's lightweight-track sunset.
    at `status: done` with `review.blocking: true` or missing `review.last-run`
    as a validation failure. Wire `--fix` to revert affected specs from
    `done` → `in-progress` and emit a notice (never silent).
-4. Edit `framework/templates/spec/spec.md` and `spec-and-plan.md` frontmatter
+4. Edit `framework/templates/spec/spec.md` frontmatter
    to include the `review:` block schema (see [Frontmatter schema](#frontmatter-schema)).
 5. Edit `framework/templates/ci/adopter-generators.yml` to add a step that
    exits non-zero if any `specs/*/spec.md` has `status: done` with
