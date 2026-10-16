@@ -76,12 +76,12 @@ tree.
 The check was measured before being proposed
 ([§recommendations](../../../framework/constitution.md#recommendations)):
 
-- Against the restored list today it produces exactly one finding —
+- Against the restored list it produced exactly one finding —
   `.markdownlint-cli2.jsonc`, shipped to adopters and uncovered by any entry.
-- Replaying the originating failure, it fires: the manifest ships
-  `.ductus/scripts/gen-spec-deps.sh` while the list says `scripts/`, so the
-  path is uncovered and the family goes red on the exact defect 049's sweep
-  walked past.
+- Replaying the originating failure, it fired: the manifest then shipped
+  `.ductus/scripts/gen-spec-deps.sh`, since deleted, while the list said
+  `scripts/`, so the path was uncovered and the family went red on the exact
+  defect 049's sweep walked past.
 
 That is the opposite result from the acceptance-criterion-supersession check,
 which was measured at 215 firings with every sample a false positive and

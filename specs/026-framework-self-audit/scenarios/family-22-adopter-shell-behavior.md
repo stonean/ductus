@@ -8,9 +8,9 @@ section: "Check families"
 
 Every other family reads artifacts. This one *runs* them.
 
-`framework/bootstrap/hooks/ductus-pre-commit` and the generators under
-`.ductus/scripts/` are executed by adopters, but this repository exercises
-different copies of that same job: `.githooks/pre-commit` is a separate file,
+`framework/bootstrap/hooks/ductus-pre-commit` is executed by adopters, but
+this repository exercises a different copy of that same job:
+`.githooks/pre-commit` is a separate file,
 this repo's spec root is the default `specs`, and its runtime is a local
 `cargo` build rather than the pointer `/ductus` installs. Each of those three
 facts masks a class of assumption, and a green run here says nothing about any
@@ -42,15 +42,19 @@ constructed to be hostile to every masking condition above: `[paths] specs-root`
 set to a non-default name, config present *only* at `.ductus/config.toml` with
 no legacy tier to fall back to, the runtime reachable only at
 `.ductus/bin/ductus` with nothing named `ductus` on `PATH`, and one staged spec
-whose `dependencies:` frontmatter the generators must rewrite.
+whose `dependencies:` frontmatter the derivations must rewrite.
 
-Three assertions, each isolating one cause:
+The derivations themselves are the `derive-dependencies` and
+`derive-references` primitives, which carry their own golden tests (067's
+`adopter-generator-promotion` replaced the shell generators), so what the
+family asserts is the hook's orchestration, each assertion isolating one cause:
 
-1. `resolve_specs_root` answers the configured root — the config ladder reaches
-   the converged tier.
+1. An unreachable runtime halts the commit rather than skipping the
+   derivations.
 2. The hook invokes the runtime — resolution goes through the pointer.
-3. The worktree and index agree afterwards — the re-stage loop was scoped to the
-   configured root, so no generator rewrite was left unstaged.
+3. Both derivations run as writes over the staged specs and reach the spec.
+4. The worktree and index agree afterwards — the re-stage loop was scoped to the
+   configured root, so no rewrite was left unstaged.
 
 The fixture is built twice, at the default root and at a configured one. With
 the default root a scoping bug is invisible, so that run isolates runtime
@@ -70,9 +74,10 @@ family stays hermetic: no `cargo build`, identical behavior in CI and locally.
   each emit rather than skip. This family exists because checks that cannot run
   are what let the three defects ship, so it must not join them
   ([§quality-cross `QUAL-CLAIM-001`](../../036-quality-cross-rules/spec.md)).
-- **The spec root is interpolated into a regex.** `specs_root_of` validates the
-  name against `[A-Za-z0-9_-]`, which is what makes that safe; the generators
-  rely on the same guarantee.
+- **The spec root is never interpolated.** The hook matches a staged spec by
+  shape — any single leading segment, then `NNN-slug/spec.md` — so it has no
+  configured value to get wrong, and the runtime stays the only thing that
+  resolves `[paths] specs-root`.
 - **The stub is not a runtime conformance test.** Whether `label-criteria`
   labels correctly belongs to [022](../../022-deterministic-runtime/spec.md) and
   its own suite. Asserting only *that the hook reached it* keeps the boundary

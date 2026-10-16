@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [017-derive-dont-ask, 022-deterministic-runtime, 023-govern-refinement, 024-rule-loader, 025-rule-opt-out]
 next-criterion: 27
 ---
@@ -52,9 +52,7 @@ One installer path remains. **Until 2026-09-15 there were two** — `/ductus` fo
 
 #### 3. Registry equivalence — retired
 
-Implemented in v1 as `scripts/audit/registry-equivalence.sh`, which checked that `framework/workflows/registry.json` and `framework/workflows/*.md` agreed: every registry entry referenced a real workflow file, every workflow file appeared in the registry, and registry descriptions matched the workflow file's frontmatter `description:`.
-
-Retired by spec `043-workflows-sunset`, which sunset the workflows feature and deleted `framework/workflows/` along with the check script (commit `531e3ea`). It is referenced by name rather than inline link because 026 does not depend on 043 — the reverse-chronological relationship would induce a `026 → 043 → 027 → 026` cycle in the derived dependency graph. Nothing remains for the family to compare, so it is no longer registered in `scripts/audit/run-all.sh`. The number stays reserved rather than reused.
+Retired with the workflows feature: spec `043-workflows-sunset` deleted the workflow registry this family compared against the workflow files, along with its script (commit `531e3ea`). It is referenced by name rather than inline link because 026 does not depend on 043 — the reverse-chronological relationship would induce a `026 → 043 → 027 → 026` cycle in the derived dependency graph. The number stays reserved rather than reused.
 
 #### 4. Placeholder roundtrip
 
