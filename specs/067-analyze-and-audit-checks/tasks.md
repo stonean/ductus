@@ -28,3 +28,12 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] `scenarios/analyze-artifact-checks.md` says the primitive runs "given a feature (or `--all`)"; `check-artifacts` takes `--feature` alone and the data model leaves `--all` iteration with the caller, so the Behavior names the one argument it takes
 
 - **Done when**: the scenario's Behavior agrees with `ductus check-artifacts --help` and with the data model
+
+## 5. Implement scenario: scenario-consistency-reads-tasks-history
+
+- [ ] Implement the behavior described in `scenarios/scenario-consistency-reads-tasks-history.md`
+- [ ] Delete `pruning_evidence`; `check_scenario_consistency` asks `ever_tasked_slugs` at every status, and the message below `done` names the remedy instead of the fingerprint
+- [ ] Rebuild the scenario-consistency tests on git-backed fixtures, and add the restart-at-1 and reset-at-done shapes, each proven to fail against the old code
+- [ ] State the rule in the module and function docs, the `check-artifacts` tool description, `data-model.md`'s family line, `analyze-artifact-checks`' Behavior, and `framework/commands/analyze.md` step 8 and its Scenario consistency section
+
+- **Done when**: an in-progress spec whose `tasks.md` restarted at 1 reports none of its implemented scenarios, a `done` spec with a reset `tasks.md` reports a scenario no revision ever named, the `done` message is byte-identical, and no live text describes the pruning fingerprint
