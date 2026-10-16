@@ -1,23 +1,23 @@
 ---
 spec: 067-analyze-and-audit-checks
-last-run: 2026-10-16T01:12:13Z
-analyzed-against: 0181d389ea864448db21120498482f718073234e
+last-run: 2026-10-16T13:50:54Z
+analyzed-against: 25d7d7863daf83ef80bb6ce6517b5466f2f44add
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 0
 analyzed-digest:
-  data-model.md: 98c97abac04c4b38af0781f87a6f9ecb568a7285c01260e28ad2460d9b5c8c46
+  data-model.md: 65380d601216b582e77b82951aa08527c82b1b5b3b3f750be9d8e6c196b45375
   plan.md: cf9223eac3d1aaeaa8c3ee1f008039bc21287f6d4f6ce194c50d52530bf7494a
-  review.md: 6263d2ea6c2fbb22c8f8411d998d4d4c39c512dbf55e8d0a18060dadfc24109b
+  review.md: d428de33f04bd64341682f0bb756409a42503980fcc7b73dae2d69d4202d452c
   scenarios/a-revision-qualified-path-is-not-a-working-tree-reference.md: 4057057a18a969d37b8c503f0022b277754d9c41d34f96b443a3dc1e8df7e858
   scenarios/adopter-corpus-link-integrity.md: 7950b5560f15986c7bed5cc134034ed46fb0d2cbc517e4b030eb55ac114da3e9
   scenarios/adopter-generator-promotion.md: 386beb5d136f78ea8f3d8542209cfd9381ce7d29c1c5ea8a2871880bc802cbca
-  scenarios/analyze-artifact-checks.md: 0dbaa7167a55eb7c373cbe74ad5fee99cc79175ab75c416f8657b7699247867a
+  scenarios/analyze-artifact-checks.md: 4375259e5872ad058d9c8169e7b8981ad550a681be03f16e3bc5813ede982dc5
   scenarios/anchor-reference-kinds.md: 27e72e3aa41d7a6eca6fa128d6b86aae518adb9b1212ace06bf5bb6015455a45
   scenarios/argument-hint-needs-a-token.md: 130b949e9ca72ab34b48e43d2179fbed5d21ef111b40213180c72ae41bc28ae7
   scenarios/block-element-scanner.md: 0b96c1dc41bd91f898e535c17c8964ef9da5ccf39411d888d8e244c82afe9c38
-  scenarios/check-artifacts-skipped-targets.md: 8997c7853ae7f954b05d19ab649ec44f2303a1c148ece7da51898f03550a1be7
+  scenarios/check-artifacts-skipped-targets.md: 51a799128f5af011e4c76e88949b5bcccc7f53bd6f8d1262806d06174416a6f4
   scenarios/criterion-adopter-scope-destinations.md: 3787689a96528f3dfa1e526bb18bda86ba3ab0c3446902d570186de6a97c8ad8
   scenarios/criterion-negated-creation-phrasing.md: 9182066874fbfdba889487da4f41fdd30d329691b9e5e0daca565e7aa94740cd
   scenarios/criterion-non-assertion-phrasings.md: 788a9b38d41c67496635ae93d8df4293c5faedda2c94d63933a6938e992b091e
@@ -31,12 +31,13 @@ analyzed-digest:
   scenarios/orphaned-reference-check.md: 6c990e4c4668e432381107b3d0bc184204a5888f01004868b4f22d55f9012ee0
   scenarios/orphaned-reference-historical-roots.md: 969cc86318c764f9297c199287e68c104ac186d1160ade68829f03d9b839bc3b
   scenarios/per-agent-scaffold-paths-ship-to-adopter.md: b9d60c57c3ef5f4a6fc443cd25dbfd0decf189f47aa5571da036be0c90ea6e19
+  scenarios/scenario-consistency-reads-tasks-history.md: 34f4ec8f9142207add588fa357e77dc1a1e2261b9f5068c64220b255a98e4f6f
   scenarios/sibling-link-grammar-is-the-shared-one.md: a186aab513ad32d2be12f541e36e5780a1d11b47e87940d1639004236f8d3d4a
   scenarios/sibling-symlink-trust-boundary.md: 752fabdf39eba625cf83e6c7ba3a57d593d7d5661af9eca800c852ca620c2ff7
   scenarios/the-promotion-coverage-line.md: 0aca63478ef99e42077f4460680846592ddf60a8b5bec891cf4d0fc05e97efe3
   scenarios/traverse-deps-cycle-check.md: 67a6f8c2b451c2db1ec85abaf5d3f5516b38f7618ce607f23fa318a49dc7f09e
   spec.md: dd56388db899d4518dcbbcd7e720b246bc981dba2544301d00424a1164049276
-  tasks.md: f1d754752b0915e135900cfb77259bb21d2ae5506de7888fc49ba919e811d146
+  tasks.md: f409298d85241a3cd169e40cd46971cddd0736255f603647998325da6e1b8d90
 blocking: false
 dispositions:
   fixed: 0
