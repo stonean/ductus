@@ -8,7 +8,7 @@ Introduce one operator-set `.ductus/config.toml` key — `[paths] specs-root`, d
 
 1. **Runtime (`ductus`)** — a single shared resolver reads `[paths] specs-root` (default `specs`), and every primitive that today calls `repo.join("specs")` calls the resolver instead.
 2. **Bootstrap and commands (markdown)** — `/ductus` gains the init-time prompt, validation, and notices; `/ductus:init` scaffolds under the configured name; command bodies resolve the root in executable path references while illustrative prose keeps `specs/` as the documented default.
-3. **Generators (`scripts/`)** — the tree-walking generators and lints resolve the configured root before walking. (Retired since: 022's `adopter-generator-promotion` replaced both shipped generators with runtime primitives — see the section below.)
+3. **Generators (`scripts/`)** — the tree-walking generators and lints resolve the configured root before walking. (Retired since: 067's `adopter-generator-promotion` replaced both shipped generators with runtime primitives — see the section below.)
 
 The load-bearing invariant is **default-`specs` everywhere**: an adopter who never sets the key sees byte-for-byte identical behavior, so existing fixtures, golden tests, and the markdown-only opt-in CI all keep passing unchanged. (The opt-in CI job named here was retired by 048 — the constitution's §runtime-boundary now states an **acquisition** invariant in its place, exercised by `.github/workflows/runtime-acquisition.yml`.)
 
@@ -55,7 +55,7 @@ In `framework/commands/*.md`, executable path references (where a command reads/
 
 As planned: `scripts/gen-spec-deps.sh` and `scripts/gen-cross-service-refs.sh` walked the spec tree to derive frontmatter; `scripts/lint-rule-ids.sh` and `scripts/lint-frontmatter.sh` walked it to lint. Each resolved `[paths] specs-root` (default `specs`) from the repo's `.ductus/config.toml` before walking. Because the two generators shipped to adopter repos and ran from the adopter pre-commit hook, they had to read the adopter's `.ductus/config.toml` at run time. No new generators were introduced, so the three-site generator-wiring rule did not apply — the existing generators were taught to resolve the root.
 
-**Since superseded, and the requirement survived the carrier.** Spec 022's `adopter-generator-promotion` replaced `gen-spec-deps.sh` and `gen-cross-service-refs.sh` with the `derive-dependencies` and `derive-references` primitives and deleted the `lib/specs-root.sh` helper they shared (migration `generator-primitives`). Both primitives resolve the root through the runtime's shared resolver, so root-awareness is unchanged; the adopter pre-commit hook now matches the spec root by *shape* rather than interpolating the configured name, leaving the runtime the only thing that resolves `[paths] specs-root`.
+**Since superseded, and the requirement survived the carrier.** Spec 067's `adopter-generator-promotion` replaced `gen-spec-deps.sh` and `gen-cross-service-refs.sh` with the `derive-dependencies` and `derive-references` primitives and deleted the `lib/specs-root.sh` helper they shared (migration `generator-primitives`). Both primitives resolve the root through the runtime's shared resolver, so root-awareness is unchanged; the adopter pre-commit hook now matches the spec root by *shape* rather than interpolating the configured name, leaving the runtime the only thing that resolves `[paths] specs-root`.
 
 ### No data model
 

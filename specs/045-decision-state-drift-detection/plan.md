@@ -130,10 +130,10 @@ No golden re-bless. `runtime/tests/golden/analyze-basic.jsonl` records 13 lines 
 | `runtime/Cargo.toml` | Modify | Version `0.25.0` → `0.26.0` |
 | `runtime/CHANGELOG.md` | Modify | `[0.26.0]` section |
 | `specs/045-decision-state-drift-detection/data-model.md` | Create | Tell table, contradiction mapping, path grammar, `SkippedTarget` shape |
-| `specs/022-deterministic-runtime/scenarios/block-element-scanner.md` | Create | Block splitter and the blockquote exemption |
-| `specs/022-deterministic-runtime/scenarios/check-artifacts-skipped-targets.md` | Create | `SkippedTarget` and the `skipped` field |
-| `specs/022-deterministic-runtime/scenarios/link-adjacent-drift-family.md` | Create | The first family's behavior |
-| `specs/022-deterministic-runtime/scenarios/criterion-path-existence-family.md` | Create | The second family's behavior |
+| `specs/067-analyze-and-audit-checks/scenarios/block-element-scanner.md` | Create | Block splitter and the blockquote exemption |
+| `specs/067-analyze-and-audit-checks/scenarios/check-artifacts-skipped-targets.md` | Create | `SkippedTarget` and the `skipped` field |
+| `specs/067-analyze-and-audit-checks/scenarios/link-adjacent-drift-family.md` | Create | The first family's behavior |
+| `specs/067-analyze-and-audit-checks/scenarios/criterion-path-existence-family.md` | Create | The second family's behavior |
 | `specs/022-deterministic-runtime/data-model.md` | Modify | Family registry five → seven; `skipped` on the `check-artifacts` result shape |
 | `specs/022-deterministic-runtime/spec.md` | Modify | Scenario back-edge `done` → `in-progress` |
 | `specs/022-deterministic-runtime/tasks.md` | Modify | Tasks for the four scenarios |

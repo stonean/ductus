@@ -41,26 +41,26 @@ The manifest task 141 produced. Slugs: `066-audit-records-and-the-completion-gat
 - [x] Retire `review-gate-unexaminable-contracts` and `check-stuck-read-blob-reuse` the same way
 - [x] For the four partly superseded scenarios (`the-cross-spec-impact-gate`, `merge-managed-block-multi-subsection-end`, `review-staleness-on-done-specs`, `commands-dir-parameterization`) delete the passage restating the replaced design; a one-line pointer to the replacing spec is the decision record
 - [x] In every other scenario, edit each Behavior, Edge Case or Resolved Question that states a replaced requirement or names machinery that no longer exists to what is true now, or delete it with a one-line pointer; collapse an inline "Changed by NNN" pair to the current statement; leave Context, which records the situation that prompted the scenario
-- [ ] Data model: keep shapes and field meanings; delete what a 022 scenario or a command source already states, and reduce each pointer paragraph to one sentence
+- [x] Data model: keep shapes and field meanings; delete what a 022 scenario or a command source already states, and reduce each pointer paragraph to one sentence
 
 - **Done when**: no superseded scenario or passage remains, no file references a deleted one, and no data-model paragraph restates a scenario or command source.
 
 ## 143. Create 066 and 067 and move their content
 
-- [ ] Create each through `/ductus:specify`'s procedure (`create-feature` from `framework/templates/spec/`); its routing gate offers 022 — decline, recording in the new spec's Resolved Questions that 022's data model exceeded one read and this slice has one subject
-- [ ] Dependency direction is 067 -> 066 -> 022: 066 never links 067, and 022 names both by backticked slug only; any spec 066 or 067 would link that also links them is named, not linked (run `derive-dependencies` and expect no cycles)
-- [ ] Move each placed data-model section, scenario (`git mv`, so the rename is visible) and criterion; 066's data model also gains the shapes `compute-review-scope` and `process-waivers` never had (from `runtime/src/schema/primitives.rs`, kebab-case: compute-review-scope args feature, since; result diff-base, scope, modified-since, plan-affected; process-waivers args feature, fired [{rule, file}], skipped-passes; result applied, expired, retained, notices)
-- [ ] Each new spec's plan.md lists the `runtime/` files of its primitives under Affected Files, which is what its review scope is computed from; `derive-routing-candidates` offers only the lowest-numbered spec whose plan claims `runtime/`, which stays 022, so the routing entry in `AGENTS.md` names the three homes
+- [x] Create each through `/ductus:specify`'s procedure (`create-feature` from `framework/templates/spec/`); its routing gate offers 022 — decline, recording in the new spec's Resolved Questions that 022's data model exceeded one read and this slice has one subject
+- [x] Dependency direction is 067 -> 066 -> 022: 066 never links 067, and 022 names both by backticked slug only; any spec 066 or 067 would link that also links them is named, not linked (run `derive-dependencies` and expect no cycles)
+- [x] Move each placed data-model section, scenario (`git mv`, so the rename is visible) and criterion; 066's data model also gains the shapes `compute-review-scope` and `process-waivers` never had (from `runtime/src/schema/primitives.rs`, kebab-case: compute-review-scope args feature, since; result diff-base, scope, modified-since, plan-affected; process-waivers args feature, fired [{rule, file}], skipped-passes; result applied, expired, retained, notices)
+- [x] Each new spec's plan.md lists the `runtime/` files of its primitives under Affected Files, which is what its review scope is computed from; `derive-routing-candidates` offers only the lowest-numbered spec whose plan claims `runtime/`, which stays 022, so the routing entry in `AGENTS.md` names the three homes
 - [ ] Walk each new spec to done: clarify, plan, implement (the moves are its tasks), review (both new data models read in full), analyze, completion gate
-- [ ] Measure: 022, 066 and 067 data models each at or under 50,000 bytes
+- [x] Measure: 022, 066 and 067 data models each at or under 50,000 bytes
 
 - **Done when**: 066 and 067 are done, each data model is at or under 50,000 bytes, and 022 keeps nothing that moved.
 
 ## 144. Sweep every reference, routing rule and canonical row the split moves
 
 - [ ] Repoint every reference to a moved scenario or section: runtime doc comments (`runtime/src/schema/primitives.rs` alone had 39 references to 022), other specs, `AGENTS.md`, `runtime/CHANGELOG.md`, `framework/` and scripts, as its own commit
-- [ ] `scripts/audit/marker-list-parity.sh` reads `criterion-path-existence-family.md` by its 022 path (lines 75 and 268): change it in the same commit as that scenario's move
-- [ ] `framework/constitution.md`'s canonical-sources row for the scenario-to-task referencing rule names 022's data model: point it at 067's (this ships to adopters, so the round ends in release 0.59.7)
+- [x] `scripts/audit/marker-list-parity.sh` reads `criterion-path-existence-family.md` by its 022 path (lines 75 and 268): change it in the same commit as that scenario's move
+- [x] `framework/constitution.md`'s canonical-sources row for the scenario-to-task referencing rule names 022's data model: point it at 067's (this ships to adopters, so the round ends in release 0.59.7)
 - [ ] Reword `AGENTS.md`'s *Route shared runtime work to spec 022* entry to name three homes (022 core and shared surfaces, 066 records and gate, 067 checks) and re-key 050 plan.md's W23 classification row in the same commit, so promotion-coverage reports 0 unmatched keys
 - [ ] Verify: `check-corpus-links` 0 broken, a grep for every moved and retired slug across `runtime/`, `scripts/`, `framework/`, `AGENTS.md` and the changelog finds only live paths, then `scripts/audit/review-freshness.sh` on the committed tree, with a scoped `--since` re-review of any done spec it flags
 

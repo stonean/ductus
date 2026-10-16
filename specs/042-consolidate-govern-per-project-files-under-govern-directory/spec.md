@@ -23,7 +23,7 @@ This mirrors the single-namespace convention adopters already expect from tools 
 ## Target layout
 
 > **Superseded in part by `022-deterministic-runtime`:** the `scripts/` leg of this
-> layout is gone. 022's `adopter-generator-promotion` turned the two shipped
+> layout is gone. 067's `adopter-generator-promotion` turned the two shipped
 > generators into the `derive-dependencies` and `derive-references` runtime
 > primitives, and the `generator-primitives` migration deletes
 > `.ductus/scripts/` from adopter trees. The config and session legs below are
@@ -67,7 +67,7 @@ The session file's content and single-target semantics ([constitution §concurre
 ## Scripts: `.ductus/scripts/`
 
 > **Superseded by `022-deterministic-runtime`.** This whole section describes a
-> directory that no longer exists. 022's `adopter-generator-promotion` promoted
+> directory that no longer exists. 067's `adopter-generator-promotion` promoted
 > the two shipped generators to the `derive-dependencies` and
 > `derive-references` runtime primitives, and the `generator-primitives`
 > migration (`introduced_in = 0.30.0`) removes `.ductus/scripts/` from adopter

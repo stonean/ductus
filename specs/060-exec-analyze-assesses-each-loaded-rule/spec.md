@@ -42,7 +42,7 @@ Line references in this Motivation and in the Resolved Questions are to the tree
 - [x] AC6: An exec analyze reads a rule's tier from the RFC 2119 keyword in its Statement: MUST or MUST NOT makes it MUST-tier, SHOULD or SHOULD NOT with no MUST makes it SHOULD-tier, and a Statement carrying neither is recorded unexamined rather than assessed
 - [x] AC7: A rule file an exec analyze cannot read is recorded in `unexamined-by-reason`, and a walk with no rule loaded records one `rule-assessments-not-checked` target at each of steps 11 and 12
 - [x] AC8: `framework/commands/analyze.md` steps 11 and 12 and the `assessSpecQuality` section of `specs/022-deterministic-runtime/data-model.md` state that an exec run leaves trigger evaluation to the host, which answers a rule whose trigger does not fire with `passed: true`
-- [x] AC9: 022 records the per-rule exec walk: the `rule-assessments-not-checked` description in `specs/022-deterministic-runtime/data-model.md` counts rules rather than requests, and 022's body or a scenario under it links back to this spec, discharging the `cross-spec-impact:` entry this spec declares on it
+- [x] AC9: 066 records the per-rule exec walk: the `rule-assessments-not-checked` description in `specs/066-audit-records-and-the-completion-gate/data-model.md` counts rules rather than requests, and 022's body or a scenario under it links back to this spec, discharging the `cross-spec-impact:` entry this spec declares on it
 
 ## Open Questions
 

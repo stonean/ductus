@@ -91,7 +91,7 @@ The interpreter `panic`s if it reads a malformed JSON line on stdin — that is 
 
 `runtime mcp` starts an `rmcp` server exposing one tool per primitive in `spec.md` §The primitive library, with tool names following the `gov-rt:<verb>-<noun>` convention from the resolved-questions section. Tool input schemas are derived from each primitive's args struct via `schemars`. No orchestration tools (`run-procedure`, `walk-tasks`, etc.) are exposed via MCP — orchestration is the subprocess interpreter's job, not the MCP server's. This keeps the MCP surface flat and stable.
 
-A tool result is bounded by the project it describes rather than paginated (`BE-PAYLOAD-001`). A list grows with the project's own tree. `compute-review-scope`'s `scope` grows with the plan's Affected Files and the files modified since its base, with ignored files left out ([review-scope-includes-uncommitted-work](scenarios/review-scope-includes-uncommitted-work.md)), and a body is one artifact's, as with `read-spec` and `read-tasks`, whose subjects `check-artifact-size` warns about past the configured read size. Pagination is not provided, because the subject is the project's own working tree and spec corpus. A result over a host's tool-output cap is re-run through the runtime binary with its output redirected to a file, as `framework/commands/review.md` step 1 directs for `compute-review-scope`.
+A tool result is bounded by the project it describes rather than paginated (`BE-PAYLOAD-001`). A list grows with the project's own tree. `compute-review-scope`'s `scope` grows with the plan's Affected Files and the files modified since its base, with ignored files left out (066's `review-scope-includes-uncommitted-work`), and a body is one artifact's, as with `read-spec` and `read-tasks`, whose subjects `check-artifact-size` warns about past the configured read size. Pagination is not provided, because the subject is the project's own working tree and spec corpus. A result over a host's tool-output cap is re-run through the runtime binary with its output redirected to a file, as `framework/commands/review.md` step 1 directs for `compute-review-scope`.
 
 ### Atomic writes: tempfile in same directory, then `std::fs::rename`
 
@@ -225,7 +225,7 @@ The line is the only place the bootstrap output mentions the runtime; per the sp
 
 ### This repository's generator scripts stay bash
 
-The `gen-*.sh` scripts under `scripts/` that build this repository's own artifacts (`gen-claude-commands.sh`, `gen-help-tables.sh`, `gen-configure-mcp.sh`) are not wrapped or replaced by the runtime; the pre-commit hook calls them directly. The two frontmatter derivations were the exception: `derive-dependencies` and `derive-references` replaced the adopter-facing generator scripts (scenario `adopter-generator-promotion`). The runtime's `run-generator` primitive invokes a generator with `--dry-run` for procedure use and surfaces drift as a finding — `/{project}:analyze` runs `scripts/gen-help-tables.sh` through it — but the pre-commit path never goes through it.
+The `gen-*.sh` scripts under `scripts/` that build this repository's own artifacts (`gen-claude-commands.sh`, `gen-help-tables.sh`, `gen-configure-mcp.sh`) are not wrapped or replaced by the runtime; the pre-commit hook calls them directly. The two frontmatter derivations were the exception: `derive-dependencies` and `derive-references` replaced the adopter-facing generator scripts (067's scenario `adopter-generator-promotion`). The runtime's `run-generator` primitive invokes a generator with `--dry-run` for procedure use and surfaces drift as a finding — `/{project}:analyze` runs `scripts/gen-help-tables.sh` through it — but the pre-commit path never goes through it.
 
 ### `framework/runtime-tools.txt` is the manifest
 
@@ -329,7 +329,6 @@ Considered and rejected:
 | `framework/commands/plan.md` | Edit | Rewrite Instructions to parseable conventions; add `writeSpecBody` extension point marker |
 | `framework/commands/specify.md` | Edit | Rewrite Instructions to parseable conventions; add `writeSpecBody` extension point marker |
 | `scripts/lint-procedure-parseability.sh` | Create | Bash wrapper that builds runtime and invokes `runtime parse --check` |
-| `scripts/audit/review-freshness.sh` | Edit | Family 19, the release-gate half of the staleness rule `mechanical_sweep` implements; `mechanical_sweep_parity` holds the two to one rule (scenarios `review-staleness-on-done-specs`, `a-renamed-file-contributes-its-rewrites`) |
 | `.github/workflows/markdown-only-pipeline.yml` | Edit | Add step (f) parseability check; preserve existing checks (a)–(e) |
 | `.github/workflows/runtime.yml` | Create | Per-PR build + test + clippy + fmt + `cargo audit` dependency scan |
 | `.github/workflows/runtime-release.yml` | Create | Tag-triggered cross-compile + release upload + CycloneDX SBOM |

@@ -28,7 +28,7 @@ The captured-issues half of this scenario was removed by 058: neither `compute-r
 
 - A section with exactly one table is unaffected — the reset only fires where a table has already ended.
 - A cell holding several backticked spans yields the first, which is the path; later spans are qualifiers by position.
-- The scope is the union of the plan-affected set and the modified-since set, so an accurate small set is never dropped for a larger one (`review-scope-union`).
+- The scope is the union of the plan-affected set and the modified-since set, so an accurate small set is never dropped for a larger one (066's `review-scope-union`).
 
 ## Open Questions
 

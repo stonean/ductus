@@ -19,7 +19,7 @@ rather than incidental:
 - `framework/commands/analyze.md` — the adopter-facing restatement. This one
   **cannot** be replaced by a pointer: `analyze.md` ships to adopter projects,
   which have no copy of 045's data-model;
-- `specs/022-deterministic-runtime/scenarios/criterion-path-existence-family.md`
+- `specs/067-analyze-and-audit-checks/scenarios/criterion-path-existence-family.md`
   — carries the count and the group names, not the phrases.
 
 Nothing compared them. Adding three phrases under 022's
@@ -53,7 +53,7 @@ nothing.
   against the derived size.
 - **18e** repeats 18a–18c for the **negated-creation predicate's vocabulary**,
   added by 022's
-  [criterion-negated-creation-phrasing](../../022-deterministic-runtime/scenarios/criterion-negated-creation-phrasing.md).
+  [criterion-negated-creation-phrasing](../../067-analyze-and-audit-checks/scenarios/criterion-negated-creation-phrasing.md).
   That group is a clause-scoped predicate rather than a phrase, so it carries
   two closed word lists — negators and creation verbs — in the same three
   load-bearing places, with the same consequence if one drifts. Derived from

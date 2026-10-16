@@ -22,7 +22,7 @@ The framework already treats that absence as normal. This spec says the target "
 
 ## Edge Cases
 
-- **The target arrives later.** When the branch merges into a tree that holds the target, the spec is already `done`, so `check-review-gate` answers that there is no transition to gate (022's AC27). `check-unfolded-specs` and `/{project}:status` report the fold until it is run.
+- **The target arrives later.** When the branch merges into a tree that holds the target, the spec is already `done`, so `check-review-gate` answers that there is no transition to gate (066's AC4). `check-unfolded-specs` and `/{project}:status` report the fold until it is run.
 - **A target that does not exist anywhere.** Indistinguishable here from one on another line, so it does not block `done`. It is caught where it always was: fold-back refuses it, and `/{project}:status` calls it out as not in this tree on every run.
 
 ## Open Questions

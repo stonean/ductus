@@ -114,7 +114,7 @@ Updates the schema declared in `framework/constitution.md` §text-first-artifact
 | Field | Required | Type | Allowed values | Notes |
 | --- | --- | --- | --- | --- |
 | `status` | yes | string | `draft`, `clarified`, `planned`, `in-progress`, `done` | Spec lifecycle state |
-| `dependencies` | yes | list of strings | spec slugs (e.g., `002-events`); empty list permitted | **Generated** from body inline links; not hand-authored. Delivered here as `gen-spec-deps.sh`; since `022-deterministic-runtime`'s `adopter-generator-promotion` it is the `derive-dependencies` runtime primitive (AC23) |
+| `dependencies` | yes | list of strings | spec slugs (e.g., `002-events`); empty list permitted | **Generated** from body inline links; not hand-authored. Delivered here as `gen-spec-deps.sh`; since `067-analyze-and-audit-checks`'s `adopter-generator-promotion` it is the `derive-dependencies` runtime primitive (AC23) |
 
 Removed: `tags` (deleted from schema and from `/{project}:analyze`). The `track` field on `spec-and-plan.md` is also removed; track is inferred from the filename.
 

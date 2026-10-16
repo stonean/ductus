@@ -41,6 +41,8 @@ The sections moved from 022 keep every argument and result shape and every field
 | `runtime/src/primitives/analyze_subjects.rs` | Specify | The digest and freshness computation both records and the gate share |
 | `runtime/src/primitives/mechanical_sweep.rs` | Specify | The rename exemption freshness applies |
 | `runtime/src/primitives/diff_cross_spec.rs` | Specify | `diff-cross-spec` |
+| `scripts/audit/review-freshness.sh` | Specify | `/{project}:audit` Family 19, the release-gate half of the staleness rule `mechanical_sweep` implements |
+| `runtime/tests/mechanical_sweep_parity.rs` | Specify | Holds Family 19 and `mechanical_sweep` to one rule (scenarios `review-staleness-on-done-specs`, `a-renamed-file-contributes-its-rewrites`) |
 
 ## Data Model
 

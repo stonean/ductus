@@ -693,7 +693,7 @@ For every kind of fact described in multiple places, one location is authoritati
 | Where contributor knowledge is recorded (git vs. per-user agent memory) | `framework/constitution.md` §drift-prevention (Shared knowledge stays in git) |
 | A plan's design record — which `plan.md` sections carry its claims | the `##` headings of `framework/templates/spec/plan.md`, installed as `specs/templates/plan.md` |
 | Open-state tell list and decision-drift check grammars | `specs/045-decision-state-drift-detection/data-model.md` |
-| Scenario→task referencing rule (what counts as a task referencing a scenario) | `specs/022-deterministic-runtime/data-model.md` (`scenario-consistency`) |
+| Scenario→task referencing rule (what counts as a task referencing a scenario) | `specs/067-analyze-and-audit-checks/data-model.md` (`scenario-consistency`) |
 | Spec-root resolution (substituting `[paths] specs-root` for the literal `specs/`) | `framework/constitution.md` §spec-phase |
 | Constitution content — what belongs in it, how it is organized, which rules adopters receive | `specs/050-constitution/spec.md` (a spec that changes *behavior* still amends the principle its change contradicts, in the same change) |
 

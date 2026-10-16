@@ -17,7 +17,7 @@
 #   * `framework/commands/analyze.md` — the adopter-facing restatement. This
 #     one cannot be replaced by a pointer: `analyze.md` ships to adopter
 #     projects, which have no copy of 045's data-model;
-#   * `specs/022-deterministic-runtime/scenarios/criterion-path-existence-family.md`
+#   * `specs/067-analyze-and-audit-checks/scenarios/criterion-path-existence-family.md`
 #     — carries the count and the group names, not the phrases.
 #
 # Nothing compared them. Adding three phrases (022 scenario
@@ -72,7 +72,7 @@ fi
 CANON_MD="$ROOT/specs/045-decision-state-drift-detection/data-model.md"
 CHECK_RS="$ROOT/runtime/src/primitives/check_artifacts.rs"
 ANALYZE_MD="$ROOT/framework/commands/analyze.md"
-SCENARIO_MD="$ROOT/specs/022-deterministic-runtime/scenarios/criterion-path-existence-family.md"
+SCENARIO_MD="$ROOT/specs/067-analyze-and-audit-checks/scenarios/criterion-path-existence-family.md"
 
 for f in "$CANON_MD" "$CHECK_RS" "$ANALYZE_MD" "$SCENARIO_MD"; do
   if [ ! -f "$f" ]; then
@@ -265,7 +265,7 @@ for path, label, pattern in (
      r"any of these (\w+) phrases is exempted whole"),
     (analyze_md, "framework/commands/analyze.md",
      r"carrying any of (\w+) closed phrases is exempted whole"),
-    (scenario_md, "specs/022-deterministic-runtime/scenarios/criterion-path-existence-family.md",
+    (scenario_md, "specs/067-analyze-and-audit-checks/scenarios/criterion-path-existence-family.md",
      r"(\w+) closed phrases mark a criterion"),
 ):
     body = open(path, encoding="utf-8").read()

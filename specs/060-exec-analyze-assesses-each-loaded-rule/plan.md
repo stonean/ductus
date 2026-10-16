@@ -8,7 +8,7 @@ The exec walker loads the project's rules once per `/{project}:analyze` walk, th
 
 `framework/commands/analyze.md` and 022's data model are updated to describe the per-rule walk and the host's trigger judgment. 022 is reopened to take those edits and a signpost back to this spec, which discharges the `cross-spec-impact:` entry, then re-reviewed back to `done`. The runtime change ships in a patch release, `0.54.2`.
 
-No `data-model.md` is created here. The only vocabulary this spec adds, one unexamined reason, belongs in the reason table 022's data model already owns (`specs/022-deterministic-runtime/data-model.md:473`), and the walker's rule type is internal. There is no `specs/system.md`, `specs/events.md` or `specs/errors.md` in this repository to check the plan against.
+No `data-model.md` is created here. The only vocabulary this spec adds, one unexamined reason, belongs in the reason table 066's data model owns (`specs/066-audit-records-and-the-completion-gate/data-model.md`, `write-analysis`), and the walker's rule type is internal. There is no `specs/system.md`, `specs/events.md` or `specs/errors.md` in this repository to check the plan against.
 
 ## Technical Decisions
 
@@ -116,7 +116,7 @@ The steps keep their `MUST-tier` and `SHOULD-tier` phrases, which `severity_from
 
 The edits to 022's data model change a durable contract, and the signpost AC9 requires is a body edit. Neither is a mechanical edit under §spec-lifecycle. The canonical-sources map names 022's data model only for the scenario→task rule, so the sync exemption does not reach the unexamined-reason table. 022 is therefore reopened `done → in-progress` through the status primitive, following 059's discharge of its impact on 018 (`specs/059-project-in-a-repository-subdirectory/tasks.md`, task 14).
 
-The signpost goes in 022's body beside the extension-point inventory (`specs/022-deterministic-runtime/spec.md:170`), as a **block-quoted** line linking to this spec. The block quote matters. 060 already depends on 022 through its Motivation's link, and `derive-dependencies` induces no edge from a block-quoted line while `check-review-gate`'s discharge test still reads it (022's AC30). An unquoted link would add a `022 → 060` edge and close a cycle.
+The signpost goes in 022's body beside the extension-point inventory (`specs/022-deterministic-runtime/spec.md:170`), as a **block-quoted** line linking to this spec. The block quote matters. 060 already depends on 022 through its Motivation's link, and `derive-dependencies` induces no edge from a block-quoted line while `check-review-gate`'s discharge test still reads it (066's AC5). An unquoted link would add a `022 → 060` edge and close a cycle.
 
 022 is then reviewed and analyzed with 022 targeted. Its review window is measured after the reopen's first commit, as §implement-phase requires. `/ductus:implement`'s completion gate returns it to `done`, and 060 is targeted again.
 

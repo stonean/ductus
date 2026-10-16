@@ -10,7 +10,7 @@ A waiver's `file` named one path. When a rule fired in several files for the sam
 
 The one-path anchor was never a decision against lists; no spec weighed one. What it protects is that each file expires on its own, and that a waiver never covers a file nobody judged — [waiver-expiry](waiver-expiry.md), rule 5. A list of explicit paths keeps both, provided each listed path stays its own anchor.
 
-The runtime half — the primitives that read, prune and re-render the list — is 022's [process-waivers-file-lists](../../022-deterministic-runtime/scenarios/process-waivers-file-lists.md).
+The runtime half — the primitives that read, prune and re-render the list — is 066's [process-waivers-file-lists](../../066-audit-records-and-the-completion-gate/scenarios/process-waivers-file-lists.md).
 
 ## Behavior
 

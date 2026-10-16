@@ -128,7 +128,7 @@ The primitive is registered everywhere a primitive is, following the `prune-plan
 
 ## Trade-offs
 
-- **A tenth `check-artifacts` family** would have reached `/analyze` with no renumbering, and was rejected: `/clarify` and `/plan` could not call it alone, and changing `check-artifacts`' family count or argument shape rewrites `done` claims in 022 (AC22 states it runs nine families), which would reopen 022 for a change that is not about it.
+- **A tenth `check-artifacts` family** would have reached `/analyze` with no renumbering, and was rejected: `/clarify` and `/plan` could not call it alone, and changing `check-artifacts`' family count or argument shape rewrites `done` claims in 067 (AC1 names its families), which would reopen 067 for a change that is not about it.
 - **A `families` filter on `check-artifacts`** was rejected for the same reopen, and because it would couple `/clarify` to a primitive whose other families judge artifacts `/clarify` does not touch.
 - **Leaving decided-matching to the host's judgment** was rejected: AC10 is a numeric rule, judgment over reworded messages cannot hold it, and `prune-plan` already shows the deterministic shape.
 - **Failing on an unparseable `decisions:` list**, as `prune-plan` does, was rejected because `/clarify` and `/plan` would then fail on a defect in a record they do not own.

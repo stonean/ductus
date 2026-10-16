@@ -6,7 +6,7 @@ section: "Follow-on scenarios"
 
 ## Context
 
-The release-time half of the rule 022's `review-staleness-gate` enforces at
+The release-time half of the rule 066's `review-staleness-gate` enforces at
 completion time. `check-review-gate` fires when someone moves *one* spec to
 `done`; nothing asked the same question of every `done` spec at once, which is
 the question a release needs answered.

@@ -2,7 +2,7 @@
 spec: 020-code-review
 status: done
 dependencies: []
-cross-spec-impact: [022-deterministic-runtime]
+cross-spec-impact: [066-audit-records-and-the-completion-gate]
 next-criterion: 16
 ---
 

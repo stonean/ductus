@@ -5,7 +5,7 @@ section: "Generators and Hooks"
 # Detect-dependency-cycles
 
 > **Superseded mechanism (022):** `scripts/gen-spec-deps.sh` no longer exists.
-> [022-deterministic-runtime](../../022-deterministic-runtime/spec.md)'s `adopter-generator-promotion`
+> [067-analyze-and-audit-checks](../../067-analyze-and-audit-checks/spec.md)'s `adopter-generator-promotion`
 > replaced it with the `derive-dependencies` and `derive-references` runtime primitives, which carry the
 > requirements below across unchanged. The behaviour below still binds — read the script name as the
 > primitives that took it over.

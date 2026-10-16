@@ -5,7 +5,7 @@ section: "Behavior"
 # Generator-sync-claim-honesty
 
 > **Superseded mechanism (022):** `scripts/gen-spec-deps.sh` no longer exists.
-> [022-deterministic-runtime](../../022-deterministic-runtime/spec.md)'s `adopter-generator-promotion`
+> [067-analyze-and-audit-checks](../../067-analyze-and-audit-checks/spec.md)'s `adopter-generator-promotion`
 > replaced it with the `derive-dependencies` and `derive-references` runtime primitives, which carry the
 > requirements below across unchanged. The behaviour below still binds — read the script name as the
 > primitives that took it over.
@@ -64,7 +64,7 @@ A `dependencies:` edge is a pure function of the body, so it can only drift when
 
 So "enumerated equals written" was true of the reference derivation only because it had narrowed its enumeration to the staged set, which is precisely what made the drift unreportable. An adopter carried dead references for nine commits after a `[services]` rename while the pre-commit hook reported the tree in sync every time; the dependency derivation would have reported the same tree, on the same commit, as drifted.
 
-The conclusion inverts: the reference derivation needs the full walk **more** than the dependency one does, not less. `derive-references` now enumerates every tracked spec and filters only the write, and its result carries `unwritten` — the same field, with the same meaning, as its sibling's. The corrected reasoning lives in [022's `derive-references-unstaged-drift-is-reported`](../../022-deterministic-runtime/scenarios/derive-references-unstaged-drift-is-reported.md), which is the authority for the primitive's behavior; this section exists so the scenario that asserted the opposite does not still read as current.
+The conclusion inverts: the reference derivation needs the full walk **more** than the dependency one does, not less. `derive-references` now enumerates every tracked spec and filters only the write, and its result carries `unwritten` — the same field, with the same meaning, as its sibling's. The corrected reasoning lives in [067's `derive-references-unstaged-drift-is-reported`](../../067-analyze-and-audit-checks/scenarios/derive-references-unstaged-drift-is-reported.md), which is the authority for the primitive's behavior; this section exists so the scenario that asserted the opposite does not still read as current.
 
 ## Edge Cases
 

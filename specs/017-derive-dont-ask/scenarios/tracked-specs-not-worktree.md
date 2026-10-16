@@ -5,7 +5,7 @@ section: "Generators and Hooks"
 # Tracked-specs-not-worktree
 
 > **Superseded mechanism (022):** the shell generators this scenario names no longer exist.
-> [022-deterministic-runtime](../../022-deterministic-runtime/spec.md)'s `adopter-generator-promotion`
+> [067-analyze-and-audit-checks](../../067-analyze-and-audit-checks/spec.md)'s `adopter-generator-promotion`
 > replaced the dependency derivation with the `derive-dependencies` and `derive-references` runtime
 > primitives, which carry the requirements below across unchanged, and `gen-readme-table.sh` was retired
 > with the generated README table (AC10). The behaviour below still binds — read each script name as the
