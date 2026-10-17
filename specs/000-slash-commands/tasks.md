@@ -141,6 +141,6 @@ Done when: the scenario's described behavior is correctly implemented; every gov
 
 ## 20. Implement scenario: implement-stops-below-planned
 
-- [ ] Implement the behavior described in `scenarios/implement-stops-below-planned.md`
+- [x] Implement the behavior described in `scenarios/implement-stops-below-planned.md`
 
 - **Done when**: framework/commands/implement.md step 4 stops a draft, clarified or done spec before any task is walked, with the scenario's three messages; the generated copies are regenerated; the implement parity golden is re-blessed with a sha-only diff
