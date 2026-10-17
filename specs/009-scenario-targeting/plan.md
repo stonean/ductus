@@ -6,13 +6,13 @@ title: "009-scenario-targeting — plan"
 
 ## Overview
 
-Extend the pipeline so individual scenarios can be targeted alongside features. This involves modifying the session file format, updating the target command to support scenario syntax and no-argument display, adding an Open Questions section to the scenario template, and updating four scenario-aware commands (question, clarify, status, implement) plus the scenario-creating command. All artifacts are markdown command files and a template — no application code, no persistence.
+Extend the pipeline so individual scenarios can be targeted alongside features. This involves modifying the session file format, updating the target command to support scenario syntax and no-argument display, adding an Open Questions section to the scenario template, and updating the scenario-aware commands (`amend`'s question route, `clarify`, `status`, `implement`) plus `amend`'s scenario route, which creates scenarios. All artifacts are markdown command files and a template — no application code, no persistence.
 
 ## Technical Decisions
 
 ### Session file gains optional `scenario` and `scenario-path` fields
 
-The existing session JSON structure is extended with two optional fields. When present, scenario-aware commands use `scenario-path` to locate the primary artifact. When absent, behavior is unchanged. The `scenario` field holds the slug; `scenario-path` holds the full relative path for direct file access without path construction.
+The session file, `.ductus/session.toml`, is extended with two optional fields. When present, scenario-aware commands use `scenario-path` to locate the primary artifact. When absent, behavior is unchanged. The `scenario` field holds the slug; `scenario-path` holds the full relative path for direct file access without path construction.
 
 ### Target command supports three invocation modes
 
@@ -28,27 +28,27 @@ The `framework/templates/spec/scenario.md` file gets `## Open Questions` and `##
 
 ### Scenario-aware commands check session for scenario field
 
-Each scenario-aware command (question, clarify, status, implement) reads the session file and checks for the `scenario`/`scenario-path` fields. If present, the command operates on the scenario file instead of the spec. The branching is at the "target file detection" step — the rest of each command's logic operates on whichever file was selected.
+Each scenario-aware command (`amend`'s question route, `clarify`, `status`, `implement`) reads the session file and checks for the `scenario`/`scenario-path` fields. If present, the command operates on the scenario file instead of the spec. The branching is at the "target file detection" step — the rest of each command's logic operates on whichever file was selected.
 
 ### Clarify operates on scenario Open Questions when scenario-targeted
 
 When a scenario is targeted, clarify resolves questions in the scenario file and enumerates scenario-specific edge cases. It does not touch the spec. When no scenario is targeted, existing behavior is unchanged and scenario-level questions are not surfaced.
 
-### Scenario command sets target without confirmation
+### `amend` sets the target after creating a scenario, without confirmation
 
-After creating a scenario file, the scenario command writes the session file with the new scenario as the target. No confirmation prompt — the user explicitly asked to create it.
+After creating a scenario file, `amend`'s scenario route writes the session target with the new scenario. No confirmation prompt — the user explicitly asked to create it.
 
 ### Feature-only commands ignore the scenario field
 
 Specify, plan, and analyze read the session file for the feature but disregard the scenario field entirely. No changes needed to these commands beyond documenting the behavior (which the spec already covers).
 
-### Command file parity maintained via paired edits
+### Command file parity maintained by the generator
 
-Every command change is applied to both `framework/commands/` (templates with `{project}` and `{cli-config-dir}` placeholders) and `.claude/commands/ductus/` (dogfooded copies with `ductus` and `.claude`). The ductus file manifest already includes these command files, so adopting projects get the updates on next `/ductus` run.
+Every command change is made in `framework/commands/` (templates with `{project}` and `{cli-config-dir}` placeholders). `scripts/gen-claude-commands.sh` regenerates the dogfooded copies in `.claude/commands/ductus/` (with `ductus` and `.claude` substituted), and the pre-commit hook runs it. The bootstrap's manifest already includes these command files, so adopting projects get the updates on their next `/ductus` run.
 
-### Ductus file parity maintained across variants
+### The bootstrap needs no structural change
 
-The scenario template's Open Questions section is already in the ductus file manifest (`framework/templates/spec/scenario.md` → `specs/templates/scenario.md`). No new files need to be added to the manifest. The ductus files themselves need no structural changes — only the command files they reference are updated.
+The scenario template's Open Questions section is already in the bootstrap's manifest (`framework/templates/spec/scenario.md` → `specs/templates/scenario.md`). No new files need to be added to the manifest, and the bootstrap itself needs no structural change — only the command files it installs are updated.
 
 ## Affected Files
 
@@ -80,7 +80,7 @@ Rejected. Specify, plan, and analyze are inherently feature-level operations. Ma
 
 ### Considered: requiring target confirmation when scenario is set
 
-Rejected per user decision during clarification. Over-prompting for confirmations is annoying. The scenario command creates what the user asked for and targets it — the next step is obvious.
+Rejected per user decision during clarification. Over-prompting for confirmations is annoying. `amend` creates the scenario the user asked for and targets it — the next step is obvious.
 
 ### Considered: surfacing scenario questions during feature-level clarify
 
