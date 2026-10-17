@@ -33,7 +33,7 @@ The ductus file is the distribution entry point: `install.sh` places it as the a
 
 ### File manifest is a markdown table in the ductus file
 
-The ductus file contains manifest tables (**Shared Files**, **Per-Agent Scaffolding**) mapping source paths to destination paths with conflict strategies. This is readable, self-documenting, and easy to update. The agent reads the tables and executes the fetches.
+The ductus file contains manifest tables (**Shared Files**, **Per-Agent Scaffolding**) mapping source paths to destination paths with conflict strategies. This is readable, self-documenting, and easy to update. The host builds the manifest entries from the tables, and the runtime's `apply-manifest` applies them against the extracted framework archive.
 
 ### Gitignore language patterns fetched from GitHub
 
@@ -43,7 +43,7 @@ For each primary language, fetch from `https://raw.githubusercontent.com/github/
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `framework/bootstrap/ductus.md` | Create | The ductus command, one file for every CLI; its self-update pre-check runs File Fetching before Frontmatter Migration (scenario `ductus-self-update-precheck`) |
+| `framework/bootstrap/ductus.md` | Create | The ductus command, one file for every CLI; its self-update check runs in the pre-flight phase, ahead of the framework archive fetch (scenario `ductus-self-update-precheck`) |
 | `framework/commands/help.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
 | `framework/commands/specify.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
 | `framework/commands/clarify.md` | Modify | Replace `.claude/` with `{cli-config-dir}/` |
