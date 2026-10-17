@@ -18,9 +18,10 @@ file-scaffold model** but a **different layout**: workspace skills under
 `.agents/settings.json` with an `allow`/`deny`/`ask` schema. Closing that gap is
 the work — once the registry models per-agent **command/skill location**,
 **settings file + permission format**, **rules location**, and **native rules
-file**, the *next* agent on an existing layout becomes a true one-row append,
-which is the promise [012-multi-agent-govern](../012-multi-agent-govern/spec.md)
-made but only delivered for `.claude`-style agents.
+file**, the *next* agent on an existing layout is a registry row plus its own
+files rather than a framework change, which is the promise
+[012-multi-agent-govern](../012-multi-agent-govern/spec.md) made but only
+delivered for `.claude`-style agents.
 
 How an agent registers the ductus runtime as an MCP server is **not** part of
 its layout. `031-agent-mcp-wiring` made it a per-agent descriptor (`target` /
