@@ -138,3 +138,9 @@ Done when: the scenario's described behavior is correctly implemented; every gov
 - [x] Implement the behavior described in `scenarios/analyze-reads-the-layout-derived-command-set.md`
 
 - **Done when**: `framework/commands/analyze.md` names the installed command set and the bootstrap installer by the §Derived values Command/skill path and `ductus` install path rows — no `claude-style` path spelled at line 34 or in §Project-level consistency — scopes membership by the layout's cleanup glob, checks `argument-hint:` only where the layout carries source frontmatter, reports an absent derived path as unexamined, and the generated copies are regenerated.
+
+## 20. Implement scenario: implement-stops-below-planned
+
+- [ ] Implement the behavior described in `scenarios/implement-stops-below-planned.md`
+
+- **Done when**: framework/commands/implement.md step 4 stops a draft, clarified or done spec before any task is walked, with the scenario's three messages; the generated copies are regenerated; the implement parity golden is re-blessed with a sha-only diff
