@@ -1,6 +1,6 @@
 ---
 title: "010-agent-autonomy — spec"
-status: done
+status: in-progress
 dependencies: [000-slash-commands]
 tags: [agent, process]
 next-criterion: 15
@@ -10,83 +10,49 @@ next-criterion: 15
 
 Evaluate capabilities found in autonomous agent orchestration tools (e.g., GSD-2) and determine which can be adopted within `ductus`'s constraints: zero dependencies, markdown-only artifacts, platform-agnostic, and human-in-the-loop pipeline gates.
 
-> **Note (post-completion, [043-workflows-sunset](../043-workflows-sunset/spec.md)):** the `skills/` → `workflows/` rename this spec delivered was itself sunset — the workflows feature no longer exists, and the `workflows-sunset` migration cleans up both directory generations in adopter projects. Body references to workflows below are historical.
-
-Each capability is evaluated independently. The outcome for each is one of: **adopt** (add to `ductus`), **adapt** (modify the concept to fit `ductus`'s model), or **decline** (not a fit).
-
-## Completion record (2026-08-17)
-
-**Closed.** Task 17 — the next-step offer — shipped in `ductus-v0.29.2`, and the
-scenario's open question was resolved by the operator: **name one task, and say
-how many remain after it.** A menu re-renders a slice of `tasks.md` after every
-completion; the count recovers most of its value, and looking further ahead is a
-free-text redirect like any other. The reasoning is in the scenario's Resolved
-Questions.
-
-What actually held the spec open at the end was a stale review:
-[`implement-offers-the-next-step`](scenarios/implement-offers-the-next-step.md)
-was edited after the recorded `reviewed-against`, a real contract change rather
-than a rename, so the mechanical-sweep exemption correctly did not apply. The
-closing `/{project}:review` run reported one advisory `QUAL-CLAIM-001` against
-`SweepIndex::build` — the staleness machinery itself — which was **fixed** rather
-than carried, per this repo's rule that a SHOULD gates `done` exactly as a MUST
-does. That fix shipped as `ductus-v0.29.3`.
-
-Three acceptance criteria are annotated **superseded** in place: AC7 and AC8
-(the `[simple]` marker and its `/{project}:plan` proposal step, dropped by
-`017-derive-dont-ask`) and half of AC14 (`framework/workflows/`, sunset by
-`043-workflows-sunset`). They stay checked because 010 delivered them; the
-removals belong to the later specs. The annotations exist because nothing
-detects a later spec invalidating an earlier one's criterion — an inbox item
-records that gap.
+Each capability is evaluated independently. The outcome for each is one of: **adopt** (add to `ductus`), **adapt** (modify the concept to fit `ductus`'s model), or **decline** (not a fit). Each capability below records the state of `ductus` when it was evaluated, the verdict, and what of the verdict holds today.
 
 ## Capabilities Under Evaluation
 
 ### Skills system
 
-Composable, context-specific instruction sets loaded based on task type. Currently `ductus` uses a single monolithic `AGENTS.md` per project. A skills system would split this into reusable skill files that commands selectively reference.
+Composable, context-specific instruction sets loaded based on task type. When evaluated, `ductus` used a single monolithic `AGENTS.md` per project, and a skills system would split it into reusable skill files that commands selectively reference.
 
-- Current state: `AGENTS.md` covers all conventions in one file
+- State when evaluated: `AGENTS.md` covered all conventions in one file
 - GSD-2 approach: 16 bundled skill profiles loaded by task context
 - `ductus` opportunity: skill files in a `skills/` directory, selectively `@import`-ed by commands or CLAUDE.md based on task type
 
 **Verdict: adapt.** Adopt Anthropic/Claude Code's "skills" terminology for context-loaded instruction packs (the only mainstream vendor using the term — they use it for agent-loaded specialized capabilities, matching this concept). Layering, not replacement: `AGENTS.md` stays as the always-loaded baseline; the `AGENTS.md` template gains an optional "Skills" index section listing available skill files and the task types/topics that activate them. `ductus` documents the pattern and the per-platform mapping (Claude Code skills, Cursor rules, etc.) but does not prescribe a fixed directory or ship platform-specific files. Adopters who don't decompose leave the index empty.
 
-Cross-spec impact on 005: 005's "skills" are functionally tech-stack-conditional development **workflows** (lint, test, format, migrate — scaffolded as slash commands into `.claude/commands/{slug}/`), not skills in the Anthropic sense. To free the term for 010's use, 005's concept is renamed to "workflows" — see Acceptance Criteria.
+To free the term, this spec renamed 005's concept from "skills" to "workflows": 005's skills were tech-stack-conditional development workflows (lint, test, format, migrate — scaffolded as slash commands into `.claude/commands/{slug}/`), not skills in the Anthropic sense. The workflows feature was later removed outright by `043-workflows-sunset`, and 005's spec directory with it, so the rename survives only in AC14's record.
 
 ### Complexity routing
 
-Classify tasks by complexity to inform model selection and batching. Currently `ductus` treats all tasks uniformly regardless of scope.
+Classify tasks by complexity to inform model selection and batching. When evaluated, `ductus` treated all tasks uniformly regardless of scope.
 
-- Current state: lightweight-vs-standard track decision at spec level only
+- State when evaluated: a lightweight-vs-standard track decision at spec level only
 - GSD-2 approach: simple/standard/complex classification with automatic model routing
 - `ductus` opportunity: complexity field in `tasks.md` entries; `implement` command uses this to suggest model or batch simple tasks
 
-> **Note (post-completion, `017-derive-dont-ask`):** the `[simple]` marker this section adopts was delivered and then dropped — it exists nowhere under `framework/` today, and neither does the `/ductus:plan` proposal step. AC7 and AC8 below carry the same record. The verdict as written is historical.
-
-**Verdict: adapt.** Cost matters and is rising; platform-level autorouting is opaque and unpredictable. Add an optional inline `[simple]` marker on tasks (no marker = default tier — whatever the adopter's platform config maps to "standard"). `/ductus:plan` proposes the marker on tasks it judges trivial; the user may add or remove markers during review (mirrors how the lightweight-track decision works). `/ductus:implement` reads the marker and surfaces a suggested model — does not auto-switch, since platforms differ in how model selection is exposed and the user remains in the loop.
-
-Durable signal vs. volatile mapping: the marker (`[simple]`) lives in `tasks.md` and never changes with model releases; the per-platform mapping (which model "simple" routes to today) lives in adopter config (`AGENTS.md` or `system.md`), which adopters update as models evolve. `ductus` defines only the marker.
-
-A `[complex]` tier was considered and declined — the default is already "use the strongest model," so a `complex` marker would not change behavior. May be added later if a concrete need arises.
+**Verdict: adapt — delivered, then dropped by `017-derive-dont-ask`.** `ductus` has no complexity routing today: neither the `[simple]` marker nor the `/ductus:plan` proposal step exists under `framework/`. As delivered, cost mattered and was rising, and platform-level autorouting was opaque and unpredictable, so an optional inline `[simple]` marker on tasks (no marker = default tier — whatever the adopter's platform config maps to "standard") let `/ductus:plan` propose the marker on tasks it judged trivial, the user add or remove markers during review, and `/ductus:implement` surface a suggested model without auto-switching. The marker was the durable signal and the per-platform mapping lived in adopter config. A `[complex]` tier was considered and declined — the default is already "use the strongest model."
 
 ### Stuck detection
 
-Detect when an agent is cycling on the same task without progress. Currently `ductus` has no mechanism to identify repeated failed attempts.
+Detect when an agent is cycling on the same task without progress. When evaluated, `ductus` had no mechanism to identify repeated failed attempts.
 
-- Current state: no detection — user must notice manually
+- State when evaluated: no detection — the user had to notice manually
 - GSD-2 approach: sliding-window analysis of dispatch history catches cycles
 - `ductus` opportunity: append-only execution log per spec; `implement` command checks for repeated attempts and suggests decomposition
 
 **Verdict: decline the artifact, adopt the behavior.** No execution log file. An append-only markdown log duplicates information already encoded in `git log`, creates per-invocation git churn that fights the text-first-artifacts principle (artifacts should change with intent), introduces merge-conflict surface on parallel work, and gets out of sync the moment commits are squashed or rebased. Platform transcripts (Claude Code session history, Cursor chat) already capture richer signal than a markdown log can carry.
 
-The stuck-detection *behavior* is worth adopting using existing signals: `/ductus:implement` instructions gain a step that reads `git log` for `tasks.md` and the current `tasks.md` checkbox state to detect when a task has been touched across N invocations without flipping to `[x]`. When detected, surface to the user and suggest decomposition. No new file, no schema, no git noise. (This sentence read *"for the affected paths"* until 2026-09-13; the plan narrowed the signal to `tasks.md` at plan time and said why — see its §Trade-offs — and that is what shipped.)
+The stuck-detection *behavior* is adopted using existing signals: `/ductus:implement` reads `git log` for `tasks.md` and the current `tasks.md` checkbox state to detect when a task has been touched across N invocations without flipping to `[x]`. When detected, it surfaces the cycle to the user and suggests decomposition. No new file, no schema, no git noise.
 
 ### Autonomous execution
 
-Chain task execution without pausing for user approval between individual tasks within a phase. Currently every status change requires explicit approval.
+Chain task execution without pausing for user approval between individual tasks within a phase. When evaluated, every status change required explicit approval.
 
-- Current state: user approves every transition
+- State when evaluated: the user approved every transition
 - GSD-2 approach: full auto mode — agent loops until milestone is complete
 - `ductus` opportunity: auto-advance between tasks within a phase while preserving approval gates at phase transitions (planned→done)
 
@@ -103,38 +69,36 @@ Without the flag, behavior is unchanged: user confirms each task. With the flag,
 
 ### Parallel milestones
 
-Work on multiple features concurrently with isolated git state. Currently `ductus` targets one feature at a time via a single session target.
+Work on multiple features concurrently with isolated git state. When evaluated, `ductus` targeted one feature at a time via a single session target.
 
-- Current state: single-feature session (`session.json` holds one target)
+- State when evaluated: single-feature session (`session.json` held one target)
 - GSD-2 approach: multiple worktrees running concurrently with file-based coordination
 - `ductus` opportunity: multi-target session, `--feature` flag on commands, guidance for worktree-based isolation
 
 **Verdict: decline.** Single-target sessions stay. The pipeline is serial within a feature by design, and the rare case of working on two truly independent features at once is best served by two independent sessions in two terminals — git and the agent platform already provide isolation (`git worktree`, Claude Code's `isolation: "worktree"` agent parameter, Cursor's worktree integration). Multi-target session state would invite ambiguity (which target does the next command operate on? what if two targets have conflicting cross-spec impact?) without solving a real problem `ductus` has. Worktree workflow itself is git's job, not `ductus`'s.
 
-The session file keeps holding one target. Documentation gains a one-paragraph note (in the constitution or `AGENTS.md` template) directing users to `git worktree` and platform isolation for concurrent feature work.
+As decided, the session file kept one target, and documentation gained a one-paragraph note directing users to `git worktree` and platform isolation for concurrent feature work — the constitution's §concurrent-features.
 
 > **Note (post-completion, superseded by [062-concurrent-session-targets](../062-concurrent-session-targets/spec.md), 2026-09-29):** this verdict no longer holds. It rested on two premises that did not survive use: running two or more agent processes at once turned out to be the common case, not the rare one, and the worktree remedy does not put two worktrees on the same branch, which trunk-based work needs — by default `git worktree add` refuses a branch already checked out by another worktree (git-worktree(1), under `--force`). 062 gives each agent process its own session target — keyed by `DUCTUS_SESSION` or the agent's own session id, with `.ductus/session.toml` kept as the shared default — and answers the ambiguity this verdict declined over by keeping one target *per process*: "which target does the next command operate on?" still has exactly one answer. `git worktree` stays the answer for isolating edits, and the constitution's §concurrent-features now says so. The verdict and its reasoning are left above as the record of the decision as it was made.
 
 ### Cost controls
 
-Track token usage and enforce budget limits. Currently `ductus` has no cost awareness.
+Track token usage and enforce budget limits. When evaluated, `ductus` had no cost awareness.
 
-- Current state: no cost tracking — delegated entirely to the AI platform
+- State when evaluated: no cost tracking — delegated entirely to the AI platform
 - GSD-2 approach: per-task token/cost metrics, budget ceilings with warnings/pauses/halts
 - `ductus` opportunity: unclear — `ductus` has nothing that observes a model call; this may remain the platform's responsibility
 
-**Verdict: decline budget tooling, adopt a documentation cross-reference.** Per-task token tracking and budget ceilings require instrumenting the model call itself — that part is platform-level by definition. But several decisions in this spec are themselves cost-aware patterns; the remaining work is to name them and point at platform tooling for the runtime piece.
+**Verdict: decline budget tooling, adopt a documentation cross-reference.** Per-task token tracking and budget ceilings require instrumenting the model call itself — that part is platform-level by definition, and out of reach of `ductus`'s runtime, which §runtime-boundary's principle 2 forbids from calling an LLM, so it can never observe token usage. But several decisions in this spec are themselves cost-aware patterns, so the remaining work was to name them and point at platform tooling for the runtime piece.
 
-> **Note (post-completion, premise corrected 2026-09-13):** this verdict was argued in 2026 as *"require a runtime `ductus` does not have"*, which was true before spec 022. `ductus` now ships a required runtime ([§runtime-boundary](../../framework/constitution.md#runtime-boundary)), so the premise moved — but **the decision stands and is now better founded**: principle 2 forbids that runtime from calling an LLM, so it can never observe token usage. The wording was corrected here and in the constitution's `### Cost levers` paragraph in the same change.
-
-The "Cost-conscious" principle already exists in the constitution (§principles → Business). It currently has no operational guidance. Add a short cross-reference paragraph (location TBD during planning — likely in the constitution near the principle, or in the `AGENTS.md` template) that names `ductus`'s existing cost levers:
+The constitution's "Cost-conscious" principle (§principles → Business) had no operational guidance, so this spec added `### Cost levers` beside it (§cost-levers), naming `ductus`'s cost levers:
 
 - Lightweight track — skip the plan phase for small features — **removed by `023-govern-refinement`**
 - `[simple]` tier marker on tasks (Q2 above) — route trivial work to cheaper models — **removed by `017-derive-dont-ask`**
 - Stuck detection (Q3 above) — catch runaway loops before they compound spend
 - Default-off autonomy (Q4 above) — human-in-the-loop gating contains blast radius
 
-…and points at the adopter's platform (Claude Code's `/cost`, Anthropic usage dashboard, Cursor's request limits, etc.) for runtime cost controls.
+…and pointing at the adopter's platform (Claude Code's `/cost`, Anthropic usage dashboard, Cursor's request limits, etc.) for runtime cost controls.
 
 No new artifact, no per-task estimates, no budget files. The cross-reference paragraph is the entire deliverable.
 
@@ -161,7 +125,7 @@ No new artifact, no per-task estimates, no budget files. The cross-reference par
 
 ### Cross-spec deliverable
 
-- [x] AC14: If the skills capability is delivered, 005's concept is renamed from "skills" to "workflows" (cross-spec impact: reopens 005 to `in-progress` per §cross-spec-impact). Affected paths in `ductus`: `framework/skills/` → `framework/workflows/` (flattened — registry and workflow files sit at the same level, no inner `templates/` directory), `skills/registry.json` → `workflows/registry.json`, `specs/005-skills-and-plugins/` → `specs/005-workflows/` (spec directory rename), and prose updates in 005's spec, plan, tasks, and any project templates that reference the term. — **partially superseded**: the `specs/005-workflows/` rename stands, but `framework/workflows/` no longer exists, sunset by `043-workflows-sunset` (which does declare 010, so that half is traceable from its frontmatter). Checked because 010 delivered the rename as specified; the later sunset is 043's.
+- [x] AC14: If the skills capability is delivered, 005's concept is renamed from "skills" to "workflows" (cross-spec impact: reopens 005 to `in-progress` per §cross-spec-impact). Affected paths in `ductus`: `framework/skills/` → `framework/workflows/` (flattened — registry and workflow files sit at the same level, no inner `templates/` directory), `skills/registry.json` → `workflows/registry.json`, `specs/005-skills-and-plugins/` → `specs/005-workflows/` (spec directory rename), and prose updates in 005's spec, plan, tasks, and any project templates that reference the term. — **delivered, then superseded in full**: `043-workflows-sunset` (which declares 010) removed the workflows feature and `framework/workflows/` with it, and 005's spec directory was then deleted as a retired feature's spec, so neither renamed path exists. Checked because 010 delivered the rename as specified; the removals are 043's and 005's own retirement.
 
 ## Open Questions
 
@@ -170,11 +134,11 @@ No new artifact, no per-task estimates, no budget files. The cross-reference par
 ## Resolved Questions
 
 1. **Skills system: replace `AGENTS.md` or layer on top?** — Layer on top. `AGENTS.md` remains the always-loaded baseline; the template gains an optional "Skills" index section listing available skill files and the task types/topics that activate them (empty by default). Verdict for the capability is **adapt**: `ductus` documents the pattern and per-platform mapping (Claude Code skills, Cursor rules, etc.) without prescribing a fixed directory or shipping platform-specific files. Terminology aligns with Anthropic/Claude Code's "skills" — the only mainstream vendor using the term, and they use it for context-loaded instruction packs (matching this concept). 005's "skills" are functionally tech-stack-conditional development workflows (lint, test, format, migrate); per §cross-spec-impact, 005 is renamed to "workflows" so 010 can use the standard term — see Acceptance Criteria.
-2. **Complexity routing: who assigns?** — Hybrid: `/ductus:plan` proposes, user may override. Granularity: single optional `[simple]` inline marker on tasks (no marker = default tier). Verdict for the capability is **adapt**. Rationale: agentic-coding cost is rising and platform autorouting is opaque, so an explicit signal in `tasks.md` gives the user visibility and control. The marker is the durable signal; the per-platform model mapping ("simple" → which model today) lives in adopter config so model churn doesn't rot specs. `[complex]` tier declined as redundant against the default.
-3. **Execution log: worth maintaining?** — No. Verdict for the capability is **decline the artifact, adopt the behavior**. No persisted execution log: an append-only markdown file duplicates `git log`, creates per-invocation git churn that fights text-first-artifacts (artifacts should change with intent), and goes out of sync on squash/rebase. The stuck-detection *behavior* is adopted using existing signals — `/ductus:implement` reads `git log` for `tasks.md` and its checkbox state to detect tasks touched across N invocations without completing, then surfaces the cycle and suggests decomposition. (Read *"for affected paths"* until 2026-09-13; the plan declined affected-files history at plan time, and `tasks.md` is what shipped — see AC9.)
+2. **Complexity routing: who assigns?** — Hybrid: `/ductus:plan` proposes, user may override. Granularity: single optional `[simple]` inline marker on tasks (no marker = default tier). Verdict for the capability is **adapt**. Rationale: agentic-coding cost is rising and platform autorouting is opaque, so an explicit signal in `tasks.md` gives the user visibility and control. The marker is the durable signal; the per-platform model mapping ("simple" → which model today) lives in adopter config so model churn doesn't rot specs. `[complex]` tier declined as redundant against the default. **Dropped by `017-derive-dont-ask`**, marker and proposal step together; see §Complexity routing.
+3. **Execution log: worth maintaining?** — No. Verdict for the capability is **decline the artifact, adopt the behavior**. No persisted execution log: an append-only markdown file duplicates `git log`, creates per-invocation git churn that fights text-first-artifacts (artifacts should change with intent), and goes out of sync on squash/rebase. The stuck-detection *behavior* is adopted using existing signals — `/ductus:implement` reads `git log` for `tasks.md` and its checkbox state to detect tasks touched across N invocations without completing, then surfaces the cycle and suggests decomposition.
 4. **Autonomous execution: opt-in or default?** — Opt-in via `/ductus:implement --auto`, default off. Verdict for the capability is **adapt**. Per-invocation flag rather than session state or spec frontmatter — autonomy is an execution-time decision, not a selection-time or spec-level property, and putting it on the verb that does work matches CLI convention. The session file does not gain an `autoAdvance` field. Phase boundaries, stuck-detection events, spec/plan edits, mid-implement task discovery, and risky actions all continue to gate even with the flag on; the flag only skips per-task confirmations within a phase. Default-off matches the constitutional spirit (§pipeline-boundaries) of keeping the human in the loop unless explicitly opted out.
 5. **Parallel milestones: prescribe worktree management?** — No. Verdict for the capability is **decline** — **superseded by 062-concurrent-session-targets**, which gives each agent process its own session target; see the note under §Parallel milestones. Single-target sessions stay. The pipeline is serial within a feature by design; concurrent work on independent features uses independent sessions in independent terminals, with isolation provided by `git worktree` and platform features (Claude Code's `isolation: "worktree"`, Cursor's worktree integration). Multi-target session state would introduce ambiguity (which target does the next command operate on?) without solving a real `ductus` problem. Documentation gains a one-paragraph note pointing users at the platform/git mechanisms — staying focused on one spec at a time supports parallel work via separate sessions, not via in-session multi-targeting.
-6. **Cost guidance beyond platform controls?** — Yes, but only as documentation. Verdict for the capability is **decline budget tooling, adopt a documentation cross-reference**. Per-task token tracking and budget ceilings require instrumenting the model call itself, which `ductus`'s runtime is forbidden to do. The "Cost-conscious" constitutional principle (§principles → Business) gains a short paragraph naming `ductus`'s existing cost levers (lightweight track, `[simple]` tier marker, stuck detection, default-off autonomy) and pointing at the adopter's platform tooling for runtime controls. No new artifact, no per-task estimates, no budget files. **The decision stands; two of the four levers do not** — see AC11 and the §Cost controls note above.
+6. **Cost guidance beyond platform controls?** — Yes, but only as documentation. Verdict for the capability is **decline budget tooling, adopt a documentation cross-reference**. Per-task token tracking and budget ceilings require instrumenting the model call itself, which `ductus`'s runtime is forbidden to do. The "Cost-conscious" constitutional principle (§principles → Business) gains a short paragraph naming `ductus`'s existing cost levers (lightweight track, `[simple]` tier marker, stuck detection, default-off autonomy) and pointing at the adopter's platform tooling for runtime controls. No new artifact, no per-task estimates, no budget files. **The decision stands; two of the four levers do not** — see AC11 and §Cost controls.
 
 ## References
 
