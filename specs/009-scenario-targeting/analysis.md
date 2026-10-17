@@ -1,14 +1,14 @@
 ---
 spec: 009-scenario-targeting
-last-run: 2026-10-17T03:33:47Z
-analyzed-against: 7740be872c1284f04ca3ba0fa41ad7e8069e45d5
+last-run: 2026-10-17T03:35:28Z
+analyzed-against: db2fa965654930ec587c347810ee17bcb027bd5c
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 2
 analyzed-digest:
   plan.md: 7765f9095d8544b318ade70a76c0c42aee2de44c0b2f4b4f769e1c59ce7b8fa6
-  review.md: 813f9aced2b2d1ae0e220c367c020be3e31e899b9f50f65e7066658209259e85
+  review.md: 49b536c2ed32a72e09d35c43c5579f615e1be3839da84b68a8b9f612638b6b4e
   spec.md: 10c1a209f77c9b1bd4c4dfabab0d1540144d68cf1361bf64d7e382c5f411fc1a
   tasks.md: b6dcce805cf7a405ca5643b6bc6029a184fad7c001a44709488a540391e2acb0
 unexamined-by-reason:
