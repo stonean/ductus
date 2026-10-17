@@ -1,14 +1,14 @@
 ---
 spec: 050-constitution
-last-run: 2026-10-17T12:36:40Z
-analyzed-against: 10e93d223a05039a05265ac50c41cbceed3a4c9f
+last-run: 2026-10-17T13:53:12Z
+analyzed-against: 861e6b9fac4fa95a2c9be5ad8d45b17c7aef2b0a
 hard-fail: 0
 blocking-findings: 0
 advisory: 1
 unexamined: 4
 analyzed-digest:
   plan.md: 7918f73197dd0c6d9ed94ca3f0262870d81f1ab08334719a67cd078e7819f4c9
-  review.md: 9ff53e0a84a5cbf0ebab650b871e43596ea658d73afe49229249802ec86b2046
+  review.md: 0c67b3b7a3010cd54f9cf15caaa04cfc0851c7914dd861daaf2ca3171b2ff543
   scenarios/a-canonical-source-is-pointed-at-not-copied.md: 6936b866607a842ece8ebfd749223d4f7d98637200e8db87d85772702589e98a
   scenarios/a-declared-cross-spec-impact-gates-done.md: b84dfb3cd3652dc116fbdd7dee60199185ae661a3f0aefb7ad14bc64a2c1d4cc
   scenarios/a-measurement-states-its-method-and-units.md: 4c250a480c11e9788058f1012b647daa14aba2036d4a3baa9d0c1ba3c5965b2a
@@ -23,8 +23,10 @@ analyzed-digest:
   scenarios/governance-is-multi-source.md: ae59aca7a049317806297839a73cf335eeb3764db97999a7ddc0b12103e6ffeb
   scenarios/knowledge-routes-by-population-not-by-kind.md: 0e934ea65cbaf2bf31acc4f45c461bfb868be45deb5aa9fa6601c59b8c003c5c
   scenarios/report-outcomes-not-edits.md: caf13342d7fe0a5af4108024cf424ab921030c896f0743307cf5111be2e163ab
+  scenarios/reports-end-with-the-remaining-work.md: b642a2d08b2227e856aefba9fa3ec8cd1efae0eb2a14cc674dfcd455982dbec3
+  scenarios/the-constitution-states-rules-not-stories.md: 2461f7371619e2dbd236a602b2dc76fb77ab844accb7d22b495d38e54b0a0d05
   spec.md: 79c6b9b0c83748023101d6246dd941fe2bffa6a191fbbcdb645a77fae3b0de68
-  tasks.md: d238786bcb795bfdabbde58b13e22a574c64d476e6f489150abff506b204d59c
+  tasks.md: 782c5250f3ed4cc08b2d5816bb9c7e39f85e28249f5446ab1ef5555e8cd0e852
 unexamined-by-reason:
   root-absent: 1
   ships-to-adopter: 3
