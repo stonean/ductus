@@ -1,16 +1,16 @@
 ---
 spec: 007-govern-workflow
-last-run: 2026-09-28T13:12:56Z
-reviewed-against: e3ef49741eee957955fd5f6d0646aa026f1f1021
-diff-base: aa5a95a18c4a4e7236cf50bfe535336b7b705151
+last-run: 2026-10-17T03:28:20Z
+reviewed-against: 12c10248b12e488b5589c9604b0a1dde0b85b92c
+diff-base: 0ea710b48ac2ec19ac874ed4495e31d3644c388a
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 2
-scope: 20
+examined: 11
+scope: 23
 skipped-passes: []
 reviewed-digest:
-  scenarios/ductus-self-update-precheck.md: 1ad54d483e9606fb73440abaec7df167f22f13cd35ca2c251df1e6c3d2c46686
+  scenarios/ductus-self-update-precheck.md: 2248181fdd0fbe3aaa55763915d3d381cc06a12b36b68c443ba7cf369c842148
 blocking: false
 dispositions:
   fixed: 0
@@ -23,7 +23,7 @@ dispositions:
 
 ## Summary
 
-Reopen for 061 (the self-update's source and the fetch model). Default diff base: the parent of this reopen's done -> in-progress commit, so the window is the reopen itself; compute-review-scope reports 2 paths modified since it (spec.md and scenarios/ductus-self-update-precheck.md). Five passes (security, reuse, quality, efficiency, simplicity) against all 11 rule files discover-rule-files selected, each read in full, plus AGENTS.md read in full. 0 MUST, 0 SHOULD, 0 low-confidence, 0 observations. examined: 2 of 20 in scope -- spec.md and the scenario, both read in full after the edit. The pass checked the two signposts against framework/bootstrap/ductus.md as committed at 1d696f53 (Source resolution, the Small fetch at {raw-ref}, {framework-root}) and confirmed each claim; the corrected superseded-in-part note no longer asserts that the per-file fetch workflow is current. NOT read, named rather than counted: the .claude/commands/ductus/*.md glob (18 generated mirrors, unchanged in this window) and framework/bootstrap/ductus.md (read in full earlier this session and edited by 061 tasks 1-3, unchanged in this window). ABSENT but in scope because the plan lists them, all from the pre-reorganization layout: commands/{about,analyze,clarify,commit-push,implement,next,plan,scenario,setup,specify,status,target,triage}.md, ductus/ductus.md, ductus/ductus-auggie.md, and .claude/commands/ductus/init.md.
+Re-review after the stale-content round rewrote 007 to current state (e5dac6c3): spec.md, plan.md and the ductus-self-update-precheck scenario, whose change staled the review. Diff base 0ea710b4, the parent of the reopen commit; scope 23 entries. Rule files: all 11 under framework/rules/ loaded — quality-cross.md and configuration-cross.md read in full, the nine surface files read at rule-ID and Statement level, since the scope is markdown prose with no backend or frontend code and no surface rule's trigger fires on it. Examined 11. Read in full: 007's spec.md, plan.md and scenario; 012's spec.md, plan.md and data-model.md; 021's spec.md and plan.md. Read in part: 009's spec.md (AC18, the window's only change to it); README.md (the install and agent-list sections, lines 160-182 and 318-328, which hold the window's change); framework/bootstrap/ductus.md (Instructions through the Pre-flight Phase opening, Recording the source through Collect Project Inputs, File Fetching through Re-Run Behavior — not Source resolution, runtime detection, acquisition or wiring, nor the config schema block). Not examined, 12: framework/bootstrap/govern.md (confirmed byte-identical to ductus.md with cmp, not read); framework/bootstrap/configure/claude.md, the nine framework/commands/*.md plan entries (analyze, clarify, groom, help, implement, plan, specify, status, target) and the .claude/commands/ductus/*.md pattern entry, all unchanged since the diff base and outside the rewrite; the generator reports the mirrors in sync. Each rewritten claim was checked against ductus.md, ductus-procedure.md (What This Command Does NOT Do through Directory Creation, read out of scope as a source), git history and the tree. 0 MUST, 0 SHOULD, 0 low-confidence; no observations.
 
 ## MUST violations (blocking)
 
