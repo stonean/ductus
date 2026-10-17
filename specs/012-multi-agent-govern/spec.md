@@ -1,6 +1,6 @@
 ---
 title: "012-multi-agent-govern — spec"
-status: in-progress
+status: done
 dependencies: [007-govern-workflow]
 tags: [bootstrap, agent]
 next-criterion: 20
