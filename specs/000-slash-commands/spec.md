@@ -31,7 +31,7 @@ The commands fall into two groups.
 
 #### Utility commands
 
-This spec defined five utilities beside the pipeline commands:
+This spec delivered five utilities beside the pipeline commands (a sixth it named, `next`, was never written — AC7):
 
 - **help** — print a fixed overview of the pipeline and command usage (no file reads)
 - **target** — set the working feature for the session, persisted in the session file
