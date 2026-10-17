@@ -1,25 +1,29 @@
 ---
 spec: 028-antigravity-agent
-diff-base: 108714e07006a59d5306d33905dd7504efea877b
-captured-issues: 0
-skipped-passes: []
-last-run: 2026-09-15T14:31:04Z
-reviewed-against: dd03f65aed41d190c7f2cf3bcd76f7876123ef62
+last-run: 2026-10-17T13:14:30Z
+reviewed-against: e2fd392b3aaed2a593441cc4eee19eab8b8b88d3
+diff-base: d95a4b786f881836901530468826d219452c726a
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 17
-scope: 17
+examined: 13
+scope: 21
+skipped-passes: []
 reviewed-digest:
-  data-model.md: 3183763fc3bb6d5f227ae47b26fe84edbbe2ee89a4f20590f0d65f7a3402c834
+  data-model.md: 36088e741d1cc080f5a1fca27fe1e04cdf970305f6a6a134710bf3930f2467d3
 blocking: false
+dispositions:
+  fixed: 0
+  routed: 0
+  discarded: 0
+  undispositioned: 0
 ---
 
 # Review — 028-antigravity-agent
 
 ## Summary
 
-Five passes run against all 11 rule files `discover-rule-files` selected, each read in full, plus AGENTS.md's four rule-bearing sections and the constitution. 0 MUST, 0 SHOULD, 0 low-confidence. examined: 17 of 17 — every in-scope file read in full, nothing absent and nothing unread. That includes `framework/bootstrap/ductus.md` (110,417 B, nine byte-bounded ranges covering the whole file), `README.md` (three ranges), `specs/012-multi-agent-govern/spec.md` (two ranges), `framework/bootstrap/configure/antigravity.md`, `scripts/gen-configure-mcp.sh` and its test, `framework/templates/project/gitignore`, and the eight sibling artifacts this pass edited. The pass's own change here is one line of `data-model.md`: the `§Agent Selection` reference now names `framework/bootstrap/ductus.md` on its own line. The target was verified present (`framework/bootstrap/ductus.md:128`) and its claim re-checked against the section — auto-detect rule 2 does key on `config_dir` existing, as the data-model bullet states. Security pass note: the permission surfaces in scope (`configure/antigravity.md`'s action-grammar allow/deny set and the registry `settings_template`) carry destructive-operation denies and no wildcard-before-subcommand shape; Family 29's subject set excludes the Antigravity grammar by construction because it has no glob grammar to get wrong, which the audit source states rather than leaves implied.
+Re-review after the notes check rewrote 028 to current state (013acb74, f586fe9f): spec.md, plan.md and data-model.md, whose change staled the review. Diff base d95a4b78, the parent of the reopen commit; scope 21 entries. Rule files: all 11 under framework/rules/ loaded — quality-cross.md and configuration-cross.md read in full, the nine surface files at rule-ID and Statement level, since the scope is markdown prose plus one command source and no surface rule's trigger fires on it. Examined 13. Read in full: 028's spec.md, plan.md and data-model.md; 000's spec.md and its implement-stops-below-planned scenario; 010's spec.md and plan.md; 012's spec.md. Read in part: framework/commands/implement.md (Purpose, Context and Flags, Instructions steps 1-4, Setup and Stuck-detection details); framework/bootstrap/ductus.md (Agent Registry through the Pre-flight Phase opening, Self-update check, Pre-flight abort, Collect Project Inputs, File Fetching through Re-Run Behavior); README.md (the install and agent-list sections); AGENTS.md (Workflow and Gotchas, plus the two passages edited this round); 000's tasks.md (task 20). Not examined, 8: the two implement.md mirrors (.claude/commands/ductus/ and .pi/prompts/), regenerated from a source read here; framework/bootstrap/configure/antigravity.md, scripts/gen-configure-mcp.sh and scripts/tests/test-gen-configure-mcp.sh, unchanged since the diff base; framework/templates/project/gitignore, grepped for its .agents/ line only; runtime/tests/golden/implement-basic.jsonl, compared with its sha fields normalized and otherwise byte-identical, not read; and 000's validate-fix-mode scenario, deleted in this window. The quality pass found the intro's one-row-append claim stale against the current add-an-agent checklist, and it was fixed before this record (f586fe9f). 0 MUST, 0 SHOULD, 0 low-confidence; no open observations.
 
 ## MUST violations (blocking)
 
@@ -34,10 +38,6 @@ Five passes run against all 11 rule files `discover-rule-files` selected, each r
 *None.*
 
 ## Waived findings
-
-*None.*
-
-## Captured issues
 
 *None.*
 
