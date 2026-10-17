@@ -311,6 +311,16 @@ The 11 entries the promotion-coverage notice reported unclassified on 2026-10-15
 | Since spec 062 the runtime reads a session identity from its own process environment | Runtime and test authoring; an adopter receives the behavior, not the rule |
 | A rule that assumes a deployed service does not fire against the runtime | Applies the rule set's triggers to this repository's runtime; an adopter's own system has its own shape |
 
+### Fifth round — classified 2026-10-17
+
+The one entry the promotion-coverage notice reported unclassified on 2026-10-17, judged by the same reword test and recorded the same way (AC1): **project-only.** The verdict is the operator's, confirmed 2026-10-17. Like the rounds before it, this is a deliberate round rather than a standing requirement, and AC1 is unchanged.
+
+#### Fifth round — project-only
+
+| Entry | Reason |
+| --- | --- |
+| Adding a member to a closed set the `check-artifacts` families use | Runtime check-family authoring in this repository; an adopter extends no `check-artifacts` family, so the sweep it prices never reaches one |
+
 Two entries were reclassified after checking the constitution rather than the
 survey: **W14 and W15 are already promoted.** They are cases (b) and (c) of
 §spec-lifecycle's mechanical-edit rule, and both `AGENTS.md` entries already

@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: []
 cross-spec-impact: [036-quality-cross-rules]
 next-criterion: 23
