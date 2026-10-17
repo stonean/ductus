@@ -277,3 +277,11 @@ Implements `scenarios/a-retired-feature-leaves-no-spec.md`. The constitution sta
 - [x] Verify: the promotion-coverage family reports 0 unclassified and 0 unmatched keys; each promoted rule's distinctive phrasing finds one normative statement and pointers only (AC3); lint, generators, audit and `cargo test`
 
 - **Done when**: the promotion-coverage notice reports 0 unclassified, the promoted text has one canonical home, and the local gate passes
+
+## 32. Reports end with the remaining work
+
+- [x] Implement the behavior described in `scenarios/reports-end-with-the-remaining-work.md`
+- [x] `framework/constitution.md` §pipeline-boundaries: add the bullet after *Report outcomes, not edits* — the closing line is *No further work identified* or a must/should/advisory list, with the reason and the dispositions boundary
+- [x] Verify: lint, the shipped-anchors and promotion-coverage families, the full audit and `cargo test`
+
+- **Done when**: the bullet ships in the constitution, the scenario records why, and the local gate passes
