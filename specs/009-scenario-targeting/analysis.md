@@ -1,21 +1,53 @@
 ---
 spec: 009-scenario-targeting
-last-run: 2026-09-13T13:07:26Z
-analyzed-against: c9e4d45aee534f651d4aecabf1bea869861cb1c7
+last-run: 2026-10-17T03:33:47Z
+analyzed-against: 7740be872c1284f04ca3ba0fa41ad7e8069e45d5
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
-unexamined: 0
+unexamined: 2
 analyzed-digest:
-  plan.md: f488733479dcf8af2383140e3190bd3eccba6a53bbdb4f2ed11a3c68f55bf3f1
-  review.md: fab3471880a980a2aa3abee766bdbbe4780230e44363f693815e57cf19128c8c
-  spec.md: a332d8dd032298b0ad4880bee6e035e02633bfdeb1abd79d1d2dd797381fa551
+  plan.md: 7765f9095d8544b318ade70a76c0c42aee2de44c0b2f4b4f769e1c59ce7b8fa6
+  review.md: 813f9aced2b2d1ae0e220c367c020be3e31e899b9f50f65e7066658209259e85
+  spec.md: 10c1a209f77c9b1bd4c4dfabab0d1540144d68cf1361bf64d7e382c5f411fc1a
   tasks.md: b6dcce805cf7a405ca5643b6bc6029a184fad7c001a44709488a540391e2acb0
+unexamined-by-reason:
+  not-a-live-claim: 1
+  ships-to-adopter: 1
 blocking: false
+dispositions:
+  fixed: 4
+  routed: 0
+  discarded: 0
+  undispositioned: 0
 ---
 
 # Analysis — 009-scenario-targeting
 
 ## Summary
 
-Relocated from the spec's frontmatter by the record-relocation migration. The counts above are the recorded run's; this report body begins at the next run.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 2 unexamined target(s). Dispositions: 4 fixed, 0 routed, 0 discarded, 0 undispositioned.
+
+## Hard failures
+
+*None.*
+
+## Blocking findings
+
+*None.*
+
+## Advisory findings
+
+*None.*
+
+## Unexamined targets
+
+- not-a-live-claim: 1
+- ships-to-adopter: 1
+
+## Fixed in this run
+
+- grounding — plan.md says the session file is a JSON structure; it is .ductus/session.toml — `specs/009-scenario-targeting/plan.md` — **fixed**
+- grounding — plan.md names a question command and a scenario command that are routes of amend since 023 — `specs/009-scenario-targeting/plan.md` — **fixed**
+- grounding — plan.md says command parity is kept by paired edits; the generator regenerates the dogfooded copies — `specs/009-scenario-targeting/plan.md` — **fixed**
+- grounding — plan.md describes the bootstrap as plural ductus files kept in parity across variants — `specs/009-scenario-targeting/plan.md` — **fixed**
