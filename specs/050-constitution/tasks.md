@@ -285,3 +285,11 @@ Implements `scenarios/a-retired-feature-leaves-no-spec.md`. The constitution sta
 - [x] Verify: lint, the shipped-anchors and promotion-coverage families, the full audit and `cargo test`
 
 - **Done when**: the bullet ships in the constitution, the scenario records why, and the local gate passes
+
+## 33. The constitution states rules, not stories
+
+- [x] Implement the behavior described in `scenarios/the-constitution-states-rules-not-stories.md`
+- [x] `framework/constitution.md`: tighten every prose section to rule, reason and boundary, keeping markers, headings, tables, the diagram and bold leads byte-identical, and the passages 021 quotes verbatim
+- [x] Verify: structure comparison against the base, lint, anchors and links, the audit and `cargo test`
+
+- **Done when**: the constitution is smaller with every rule kept, the scenario records the shape, and the local gate passes
