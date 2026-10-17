@@ -1,6 +1,6 @@
 ---
 title: "009-scenario-targeting — spec"
-status: done
+status: in-progress
 dependencies: [006-bug-workflow]
 tags: [scenarios, pipeline]
 next-criterion: 19
@@ -130,7 +130,7 @@ When `clarify` is run with only a feature targeted (no scenario):
 - [x] AC15: `target` command reports no scenarios exist when the feature has no `scenarios/` directory
 - [x] AC16: `target` command reports feature not found when the feature does not exist
 - [x] AC17: Command file parity maintained between `framework/commands/` and `.claude/commands/ductus/`
-- [x] AC18: Ductus file parity maintained across `ductus/` variants. Delivered as written against the per-agent bootstrap files of the time (`ductus/ductus.md` and `ductus/ductus-auggie.md`). `012-multi-agent-govern` replaced them with a single registry-driven `framework/bootstrap/ductus.md`, so the variants this criterion keeps in parity no longer exist — the claim was superseded rather than renamed. The surviving parity obligation is between `ductus.md` and the retired `govern.md` alias, held byte-identical by `/ductus:audit` Family 21.
+- [x] AC18: Ductus file parity maintained across the per-agent bootstrap variants. Delivered against the per-agent bootstrap files of the time, one for Claude Code and one for Auggie. `012-multi-agent-govern` replaced them with a single registry-driven `framework/bootstrap/ductus.md`, so the variants this criterion keeps in parity no longer exist — the claim was superseded rather than renamed. The surviving parity obligation is between `ductus.md` and the retired `govern.md` alias, held byte-identical by `/ductus:audit` Family 21.
 
 ## Open Questions
 
