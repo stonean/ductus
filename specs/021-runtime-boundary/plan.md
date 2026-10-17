@@ -7,7 +7,7 @@ Implements [021 — Runtime Boundary](spec.md).
 Three distinct deliverables:
 
 1. **Constitutional amendment** to `framework/constitution.md` — three edits: the opening paragraph of §text-first-artifacts, a new §runtime-boundary subsection at the end of §text-first-artifacts, and a row added to the §drift-prevention canonical sources table.
-2. **CI workflow** — a new GitHub Actions workflow that asserts the five deterministic checks from the spec's opt-in invariant. The workflow runs on every PR matching the path filter and is the tripwire that catches a future PR introducing a silent runtime dependency.
+2. **CI workflow** — `.github/workflows/framework-checks.yml`, which runs the deterministic checks the spec's invariant named on every PR matching the path filter. As shipped it opened with the opt-in invariant's own step, asserting no runtime binary on `PATH`, as the tripwire for a PR that introduced a silent runtime dependency. 048 removed that step when it replaced the opt-in invariant with the acquisition invariant, and the workflow's other checks stand.
 3. **Runtime-tools manifest + tool-coverage lint script** — a small bash/grep script under `scripts/` plus a manifest file (initially empty) under `framework/`. The manifest enumerates runtime tools by canonical name; the lint scans `framework/commands/*.md` for references to any tool in the manifest and verifies each is paired with a graceful-fallback marker.
 
 The amendment text is fully drafted in the spec body; this plan's job is to specify *where* in the constitution it lands, *how* the CI workflow is structured, and *how* the tool-coverage lint operates concretely.
@@ -22,8 +22,8 @@ The amendment text is fully drafted in the spec body; this plan's job is to spec
 
 The amendment is three edits, performed in this order so that each commit (or each diff in a single commit) leaves the document well-formed:
 
-1. **Opening paragraph of §text-first-artifacts** — replace the "no bootstrap tooling beyond the AI agent" clause with the two-clause version that distinguishes the markdown framework (standalone) from the optional runtime (opt-in, with a forward reference to §runtime-boundary).
-2. **New §runtime-boundary subsection** — append at the end of §text-first-artifacts, after the existing "Validation Severity" subsection. Body composes the five principles (RFC 2119 MUST/MUST NOT), three eligibility criteria, opt-in invariant, versioning rule, non-scope (RFC 2119 MUST NOT), and the one-line forward pointer to spec 022. Anchor marker `<!-- §runtime-boundary -->` placed above the subsection heading per existing convention.
+1. **Opening paragraph of §text-first-artifacts** — replace the "no bootstrap tooling beyond the AI agent" clause with the two-clause version that distinguishes the artifacts (standalone) from the pipeline that reads them, which requires the runtime, with a forward reference to §runtime-boundary. As shipped, the second clause called the runtime optional and opt-in; 048 made it required.
+2. **New §runtime-boundary subsection** — append at the end of §text-first-artifacts, after the existing "Validation Severity" subsection. Body composes the five principles (RFC 2119 MUST/MUST NOT), three eligibility criteria, the CI invariant (the opt-in invariant as shipped, the acquisition invariant since 048), versioning rule, non-scope (RFC 2119 MUST NOT), and the one-line forward pointer to spec 022. Anchor marker `<!-- §runtime-boundary -->` placed above the subsection heading per existing convention.
 3. **Row added to §drift-prevention canonical sources table** — single new row whose Fact column reads "Runtime contract / boundary" and whose Canonical-source column points at `framework/constitution.md` §runtime-boundary.
 
 The opening-paragraph edit is performed first so that the forward reference to §runtime-boundary, which it introduces, resolves to a section that exists by the time the subsection is added in step 2. In a single PR this ordering is academic; if the work were split across commits, this is the safe order.
@@ -61,6 +61,8 @@ The manifest is plain text rather than YAML/JSON because (1) the consumers are s
 20-line window is a heuristic; revisit when real tools are added in spec 022 and the heuristic can be validated against actual usage. The lint is purely structural — it does not validate that the fallback is *correct*, only that one is present. Correctness is reviewer responsibility.
 
 This trades false-positive risk (a fallback that exists but doesn't match the keywords) for a fully derived check (no author-supplied markers required). False positives are easy to resolve by paraphrasing into one of the four accepted tokens.
+
+Two exemptions came later. A reference inside a command's `## Markdown-only reference` section is skipped, since that section is the fallback. A command carrying the constitution's §runtime-host-integration pointer is exempt file-wide, because the pointer declares the fallback contract once for the whole command (022).
 
 ### Frontmatter integrity lint is also bash, not Python or yq
 
@@ -104,12 +106,11 @@ The tasks order is: (1) constitution amendment → (2) runtime-tools manifest st
 - **Implementing the tool-coverage lint as a structured-marker check (e.g., `<!-- runtime-tool: name --> ... <!-- /runtime-tool -->`)** — rejected. Structured markers depend on author discipline, exactly the anti-pattern the Design Principles section in `AGENTS.md` forbids. The proximity scan is derived from existing command prose and requires no author markup.
 - **Running the tool-coverage lint as a Rust binary** — rejected for spec 021. The runtime itself is deferred to 022; introducing a binary here contradicts the spec's "no binary in this spec" non-goal. The lint stays bash: it runs in `.github/workflows/framework-checks.yml` and `scripts/audit/check-zero.sh`, where a runtime counterpart would buy nothing — the bash implementation is permanent, not a stepping stone to a binary version.
 - **Splitting the amendment into three separate PRs** — rejected. The three edits are interdependent (the opening-paragraph forward reference, the subsection it points to, and the canonical sources row pointing back at the subsection). They land together or not at all.
-- **Triggering the workflow on every PR regardless of path** — rejected. Docs-only or release-only PRs cannot introduce a silent runtime dependency; running the workflow on them wastes runner minutes without strengthening the invariant.
+- **Triggering the workflow on every PR regardless of path** — rejected. Docs-only or release-only PRs cannot introduce a silent runtime dependency; running the workflow on them wastes runner minutes without strengthening the invariant. The invariant is retired, and the path filter now scopes the remaining framework checks on the same reasoning.
 - **Hand-authored "runtime-eligibility" labels on slash commands** — rejected during clarify (Q6). Resolution recorded in spec.
 
 ### Known limitations
 
 - The tool-coverage lint's 20-line proximity window is a heuristic. False positives occur when a real fallback uses synonyms outside the accepted token list (`Otherwise`, `Fallback`, `If unavailable`, `markdown-only path`). Resolution is paraphrasing — author cost is low. The window can be tuned when spec 022 introduces real tool references and the heuristic is empirically tested.
 - The frontmatter lint is shape-only, not a real YAML parser. Adversarial frontmatter (deeply nested, multi-line strings with `---` inside) can defeat it. `/ductus:analyze`'s hard-fail tier remains the rigorous check; this lint is a CI-side smoke test.
-- The CI workflow asserts the runtime binary is absent, but only knows binary names from `framework/runtime-tools.txt`. A binary using a different name than is in the manifest could slip past. Mitigated by treating the manifest as the canonical list spec 022 must populate; deviations are caught at PR review of 022.
 - The workflow does not exercise LLM-driven slash commands. By design — see spec's Q2 resolution. A separate scheduled smoke-test job exercising the LLM path is out of scope for 021.
