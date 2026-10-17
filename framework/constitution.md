@@ -637,7 +637,7 @@ A capability that fails any criterion stays out of the runtime. Anything that re
 
 The repository's CI MUST include a job that exercises acquisition end-to-end on every supported platform: fetch the published asset for the target, verify its sidecar digest, install it into a temporary store, and execute the installed binary. A change that causes this job to fail — i.e. a release whose assets an adopter cannot actually acquire — is a constitution violation, not a feature.
 
-It replaced the **opt-in invariant**, a full pipeline cycle with the binary absent from `PATH`, when principle 3 made the runtime required ([048](https://github.com/stonean/ductus/blob/main/specs/048-govern-acquired-runtime/spec.md)): the guarantee is now that the binary is *obtainable*, and the job that proves it is the one that fetches it.
+It replaced the **opt-in invariant**, a job asserting a full pipeline cycle with the binary absent from `PATH`, when principle 3 made the runtime required ([048](https://github.com/stonean/ductus/blob/main/specs/048-govern-acquired-runtime/spec.md)): the guarantee is now that the binary is *obtainable*, and the job that proves it is the one that fetches it.
 
 #### Versioning
 
