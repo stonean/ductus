@@ -101,12 +101,12 @@ MCP discovery is **not** layout-derived — it is a per-agent property. A host c
 
 ### Adding a new agent
 
-A `claude-style` agent (markdown commands under `{config_dir}/commands/{project}/`, reads `CLAUDE.md`) is a one-row registry append plus an MCP registration entry plus two satellite files:
+A `claude-style` agent (markdown commands under `{config_dir}/commands/{project}/`, reads `CLAUDE.md`) is a one-row registry append plus an MCP registration entry, a permission file, and its installer arm:
 
 1. Append a row with the six fields (`layout: claude-style`).
 2. Add a row to §MCP registration (per-agent). MCP discovery is per-agent, not layout-derived, so even a `claude-style` agent must declare its own `target` / `scope` / `mechanism` — it is **not** inherited from the layout.
 3. Add `framework/bootstrap/configure/{key}.md` with the agent's full permission set in its native settings format.
-4. Add a curl snippet for the new agent to the README's adoption section.
+4. Add a `case` arm for the new agent to `install.sh`, which places the bootstrap at the agent's `ductus` install path, and a row to the README's per-agent install table.
 
 An agent on a **different layout** (a new value in the `layout` column) additionally needs its branch added to §Derived values and the layout-keyed steps in §Per-Agent Scaffolding and §Permission Setup — the work the `antigravity` and `opencode` layouts each introduced. (MCP registration is per-agent regardless of layout, covered by step 2 above.)
 
@@ -948,5 +948,5 @@ After writing the agent's installed `ductus` file — whether via the **Pre-flig
 `/ductus` is idempotent and additive across agents:
 
 - **Re-run with the same selection** — applies the manifest's `update` strategy to the agent's slash commands and refreshes shared files. `create`-strategy files are skipped if present. `skip`-strategy files are never overwritten.
-- **Re-run adding a new agent** — scaffolds the new agent's tree from scratch alongside the existing one. The existing agent's command dir, settings, and session JSON are not touched.
+- **Re-run adding a new agent** — scaffolds the new agent's tree from scratch alongside the existing one. The existing agent's command dir and settings are not touched.
 - **Re-run removing an agent** — this command does not delete an agent's tree on its own. Removing an adopted agent is a manual `rm -rf {config_dir}` operation outside `/ductus`'s scope.
