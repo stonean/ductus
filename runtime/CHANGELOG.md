@@ -2,6 +2,43 @@
 
 All notable changes to the `ductus` deterministic runtime are recorded here. The runtime ships in lockstep with the framework per [§runtime-boundary](../framework/constitution.md#runtime-boundary); release tags use the `ductus-v<MAJOR>.<MINOR>.<PATCH>` scheme (was `gvrn-v*` before 0.28.0, and `runtime-v*` before 0.2.0 — see those entries below). Entries below 0.28.0 name the runtime `gvrn` because that is what was published under those tags.
 
+## [0.59.11] — 2026-10-17
+
+No runtime code change. A framework release: `/{project}:implement` regains
+its stop below `planned`, the constitution gains a reporting rule and is
+tightened, and the lockfile takes three patch updates. A patch release: no
+primitive gains an argument or a result field, and the MSRV stays 1.89.
+
+### Fixed
+
+- **`/{project}:implement` stops a spec below `planned` again.** Step 4 stops
+  a `draft`, `clarified` or `done` spec before any task is walked, changing
+  nothing, and names the command to run instead (`clarify`, `plan`, `amend`).
+  The command shipped with this stop and lost it when it was rewritten for the
+  runtime (`feaf7899`). Recording a question reverts an in-progress spec to
+  `draft` and leaves its tasks in place, so the command could walk tasks on a
+  spec with open questions. Spec 000, scenario `implement-stops-below-planned`.
+- **The bootstrap's add-an-agent recipe and re-run behavior.** `ductus.md`
+  §Adding a new agent names the `install.sh` arm and the README install-table
+  row rather than a README curl snippet, and §Re-Run Behavior no longer names
+  a per-agent session JSON.
+
+### Changed
+
+- **The constitution is a fifth shorter.** Every prose section states the
+  rule, one reason, and its boundary; anchors, headings, tables and rule leads
+  are unchanged. It goes from 148,528 to 116,564 bytes, which `/{project}:target`
+  loads in every session. Spec 050, scenario
+  `the-constitution-states-rules-not-stories`.
+- **A report ends with the remaining work, or says there is none.**
+  §pipeline-boundaries: a reply reporting on finished work is short and ends
+  with *No further work identified* or a list of outstanding work tagged must,
+  should or advisory. Spec 050, scenario `reports-end-with-the-remaining-work`.
+- **Lockfile refresh**: `libc` 0.2.191, `schannel` 0.1.30, `zip` 9.0.4.
+
+The `ductus.md` change means each adopter's self-update replaces the installed
+bootstrap on the first `/ductus` after this release, which costs one restart.
+
 ## [0.59.10] — 2026-10-16
 
 `check-artifacts` gains a tenth family, `body-path-existence`: a path named in
