@@ -110,8 +110,7 @@ The CLAUDE.md "Ductus File Parity" rule disappears — there is only one ductus 
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `framework/bootstrap/ductus.md` | Modify | Replace with unified content: agent registry table, selection logic, per-agent scaffolding loop |
-| Auggie's per-CLI bootstrap file | Delete | Superseded by unified `ductus.md` |
+| `framework/bootstrap/ductus.md` | Modify | Replace with unified content: agent registry table, selection logic, per-agent scaffolding loop; Auggie's per-CLI bootstrap file is deleted, superseded by the unified file |
 | `framework/bootstrap/configure/claude.md` | Create | Claude Code's configure source |
 | `framework/bootstrap/configure/auggie.md` | Create | Auggie's configure source |
 | `commands/setup.md` | Delete | Replaced by `framework/bootstrap/configure/claude.md` |
