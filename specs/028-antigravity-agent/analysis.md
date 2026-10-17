@@ -1,25 +1,55 @@
 ---
 spec: 028-antigravity-agent
-last-run: 2026-09-15T14:32:49Z
-analyzed-against: c08c0eb6c2cb3b3bc11753624a08c5a2352756c1
+last-run: 2026-10-17T13:15:43Z
+analyzed-against: f519bb07bce4fdd46cb61ca5857c3e8e8d2b4c08
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
-unexamined: 4
-captured-issues: 0
+unexamined: 23
 analyzed-digest:
-  data-model.md: 3183763fc3bb6d5f227ae47b26fe84edbbe2ee89a4f20590f0d65f7a3402c834
-  plan.md: 2fbb58ab7ff17124d7ade00ea41a9bb17980bb1f81412b2bb188be75708c386c
-  review.md: bbcb670a60cad1f60af8ed01415bd7d38c185f2cbb3eb8718bd76780cabd6183
-  spec.md: 5c62b6b4b130bc90c2dcf491651886e7811bc7ed9781deed4293fcf03590b928
+  data-model.md: 36088e741d1cc080f5a1fca27fe1e04cdf970305f6a6a134710bf3930f2467d3
+  plan.md: 1cbe6148654014f4fdd3afbaa37d14e21e7a8ae2f425c8296d50e2b409c0da0b
+  review.md: 291702a74c111996ff9f0aa26faf77ca71f43639d090ecaa730c726b6eda9509
+  spec.md: 00045cfed9f05ce4989a8d146c5706d95e46e738e0dda1b0e784811d3be652b1
   tasks.md: 1e06bfb5b12d7b95dc28f96ce5a492f80ce692f4799eac831139dadcb1ac971b
 unexamined-by-reason:
-  root-absent: 4
+  never-existed: 1
+  not-a-live-claim: 1
+  root-absent: 19
+  ships-to-adopter: 2
 blocking: false
+dispositions:
+  fixed: 0
+  routed: 0
+  discarded: 0
+  undispositioned: 0
 ---
 
 # Analysis — 028-antigravity-agent
 
 ## Summary
 
-Relocated from the spec's frontmatter by the record-relocation migration. The counts above are the recorded run's; this report body begins at the next run.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 23 unexamined target(s). Dispositions: 0 fixed, 0 routed, 0 discarded, 0 undispositioned.
+
+## Hard failures
+
+*None.*
+
+## Blocking findings
+
+*None.*
+
+## Advisory findings
+
+*None.*
+
+## Unexamined targets
+
+- never-existed: 1
+- not-a-live-claim: 1
+- root-absent: 19
+- ships-to-adopter: 2
+
+## Fixed in this run
+
+*None.*
