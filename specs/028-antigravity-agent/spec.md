@@ -1,31 +1,36 @@
 ---
-status: done
+status: in-progress
 dependencies: [012-multi-agent-govern, 022-deterministic-runtime]
 next-criterion: 12
 ---
 
 # 028 — Antigravity Agent Support
 
-> **Signpost (post-031):** the MCP-wiring model in this spec — Auggie via `.mcp.json`, Antigravity via `.agents/mcp_config.json`, both treated as **layout-derived** — was corrected by [031-agent-mcp-wiring](../031-agent-mcp-wiring/spec.md). MCP discovery is **not** layout-derived: Auggie registers MCP servers in user-global `~/.augment/settings.json` (not `.mcp.json`), so ductus surfaces a one-line registration command instead of writing a file; Antigravity's project-local `.agents/mcp_config.json` loading is verification-gated against the live `agy` CLI. 031 moves MCP into a per-agent descriptor (`target` / `scope` / `mechanism`); the registry's other per-agent fields (command/skill location, settings file, rules location, native rules file) are unchanged.
->
-> **Signpost (post-032):** [032-opencode-agent](../032-opencode-agent/spec.md) adds a **third layout profile**, `opencode`, to the registry generalized here — verbatim namespaced markdown commands under `.opencode/command/{project}/`, native `AGENTS.md` reading, and a single committed root `opencode.json` carrying both the `ductus` MCP wiring (`write-file`, project-committed) and the `permission` set. The `claude-style` and `antigravity` branches in this spec are unchanged; `opencode` is a new branch alongside them.
-
 Generalize the agent registry from "two agents that share one layout" to "N
 agents across differing per-agent layouts and host conventions," then use that
 generalization to add Google's **Antigravity CLI** (`agy`) as the third
-supported agent. Claude Code and Auggie both adopt ductus by **file-scaffolding
-into a per-project config dir** (`.claude/`, `.augment/`): markdown slash
-commands under `{config_dir}/commands/{project}/`, a native rules file
-(`CLAUDE.md`), the ductus runtime via `.mcp.json` + per-tool allowlists in
-`{config_dir}/settings.local.json`. Antigravity uses the **same file-scaffold
-model** but a **different layout**: workspace skills under `.agents/skills/`,
-the ductus runtime via `.agents/mcp_config.json`, and permissions via
+supported agent. Claude Code and Auggie adopt ductus by **file-scaffolding into
+a per-project config dir** (`.claude/`, `.augment/`): markdown slash commands
+under `{config_dir}/commands/{project}/`, a native rules file (`CLAUDE.md`), and
+permissions in `{config_dir}/settings.local.json`. Antigravity uses the **same
+file-scaffold model** but a **different layout**: workspace skills under
+`.agents/skills/`, native rule files under `.agents/rules/`, and permissions in
 `.agents/settings.json` with an `allow`/`deny`/`ask` schema. Closing that gap is
 the work — once the registry models per-agent **command/skill location**,
-**MCP-wiring file**, **settings file + permission format**, **rules location**,
-and **native rules file**, the *next* agent becomes a true one-row append, which
-is the promise [012-multi-agent-govern](../012-multi-agent-govern/spec.md) made
-but only delivered for `.claude`-style agents.
+**settings file + permission format**, **rules location**, and **native rules
+file**, the *next* agent on an existing layout becomes a true one-row append,
+which is the promise [012-multi-agent-govern](../012-multi-agent-govern/spec.md)
+made but only delivered for `.claude`-style agents.
+
+How an agent registers the ductus runtime as an MCP server is **not** part of
+its layout. `031-agent-mcp-wiring` made it a per-agent descriptor (`target` /
+`scope` / `mechanism`), because agents sharing a layout register MCP servers in
+different places: Claude Code in the project's committed `.mcp.json`, Auggie in
+user-global `~/.augment/settings.json`, and Antigravity in home-level
+`~/.gemini/config/mcp_config.json`. Later specs added further layouts on the
+same generalization — `032-opencode-agent` added `opencode` and
+`064-pi-host-support` added `pi` — each a branch alongside the two this spec
+defines.
 
 > **Why Antigravity, not Gemini CLI.** This spec originally targeted Gemini CLI.
 > Google is shutting down Gemini CLI on **2026-06-18** (no grace period for
@@ -42,38 +47,40 @@ but only delivered for `.claude`-style agents.
 > config; it was **empirically refuted** (a live `agy` session loaded a
 > workspace skill from `.agents/skills/<name>/SKILL.md` and reported its exact
 > path, while identical probes under `.claude/commands/` and `.claude/skills/`
-> did not load). Self-reports from the agent are treated as unverified; observed
-> behavior governs.
+> did not load). A second, from the docs of the day — that Antigravity loads MCP
+> servers from a project-local `.agents/mcp_config.json` — was refuted by
+> `031-agent-mcp-wiring`, which measured 0 server spawns there against a
+> positive control that did spawn. Self-reports and unprobed docs are treated
+> as unverified; observed behavior governs.
 
 ## Problem
 
-[012-multi-agent-govern](../012-multi-agent-govern/spec.md) collapsed the
-per-CLI `ductus.md` variants into one unified file driven by an **Agent
+[012-multi-agent-govern](../012-multi-agent-govern/spec.md) had collapsed the
+per-CLI bootstrap variants into one unified file driven by an **Agent
 Registry** (defined in `framework/bootstrap/ductus.md`). Its closing
 contract — *"Adding a new agent is a one-row addition to the registry"* plus a
 `configure/{key}.md` file and a README curl snippet, with *"No other changes are
-required"* — holds only because Claude and Auggie share layout assumptions baked
+required"* — held only because Claude and Auggie shared layout assumptions baked
 into the unified procedure:
 
-1. **Commands** live at `{config_dir}/commands/{project}/<name>.md` and resolve
+1. **Commands** lived at `{config_dir}/commands/{project}/<name>.md` and resolved
    to `/{project}:<name>`.
-2. **The native rules file is `CLAUDE.md`**, read by both agents.
-3. **The runtime is `.mcp.json`** + per-tool allowlists in
+2. **The native rules file was `CLAUDE.md`**, read by both agents.
+3. **Permissions** were per-tool allowlists in
    `{config_dir}/settings.local.json`, populated by `/{project}:configure`.
 
 **Antigravity keeps the file-scaffold model but diverges on every one of those
 specifics.** Its invocable units are **skills** (`.agents/skills/<name>/SKILL.md`,
 frontmatter `name` + `description`, invoked `/<name>`), not
-`commands/{project}/`. It reads **`AGENTS.md`** natively, not `CLAUDE.md`. The
-runtime is wired in **`.agents/mcp_config.json`**, not `.mcp.json`. And
-permissions live in **`.agents/settings.json`** under a `permissions` object
+`commands/{project}/`. It reads **`AGENTS.md`** natively, not `CLAUDE.md`. And
+its permissions live in **`.agents/settings.json`** under a `permissions` object
 with **`allow`/`deny`/`ask`** arrays whose entries use an action grammar
 (`command(...)`, `read_file(...)`, `mcp(server/tool)`, `unsandboxed(...)`, …) —
 a *third* format alongside Claude's `permissions.allow/deny` and Auggie's
-`toolPermissions[]`. Appending an Antigravity row to today's registry would
-scaffold commands into a directory Antigravity never scans and a runtime it
-cannot reach. This spec is therefore a **framework change** — generalizing the
-registry's layout and host-convention assumptions — not a row append.
+`toolPermissions[]`. Appending an Antigravity row to the registry as it stood
+would have scaffolded commands into a directory Antigravity never scans. This
+spec was therefore a **framework change** — generalizing the registry's layout
+and host-convention assumptions — not a row append.
 
 ### The structural divergences
 
@@ -85,16 +92,12 @@ registry's layout and host-convention assumptions — not a row append.
 | Invocation | `/{project}:<name>` (colon namespace) | `/<name>` (flat; ductus prefixes, e.g. `/{project}-<name>`) |
 | Native rules file | `CLAUDE.md` | `AGENTS.md` (already shipped) |
 | Domain rule files | filesystem `specs/rules/` | `.agents/rules/<name>.md` |
-| MCP wiring | `.mcp.json` (server) + per-tool allowlist | `.agents/mcp_config.json` (server) + `mcp(ductus/*)` allow |
 | Permissions | `settings.local.json` (`permissions.allow/deny` or `toolPermissions[]`) | `.agents/settings.json` (`permissions.allow/deny/ask`, action grammar) |
+| MCP registration (per agent, not per layout) | Claude: project `.mcp.json`, written by ductus; Auggie: user-global `~/.augment/settings.json`, a command ductus surfaces | home-level `~/.gemini/config/mcp_config.json`, an edit ductus surfaces |
 
 (Antigravity facts verified against `agy 1.0.7` and maintainer-supplied docs;
-see Resolved Questions for the per-fact provenance. **The MCP-wiring row was
-later refuted**: `031-agent-mcp-wiring` reproduced the project-local
-`.agents/mcp_config.json` case against a spawning positive control and measured
-0 server spawns, so Antigravity's MCP target is home-level
-`~/.gemini/config/mcp_config.json`. The row is left as written because it records
-what the docs of the day claimed; the refutation is the durable half.)
+see Resolved Questions for the per-fact provenance, and `031-agent-mcp-wiring`
+for the MCP row.)
 
 ## Verified Antigravity Layout
 
@@ -105,9 +108,9 @@ workspace skill at `<repo>/.agents/skills/<name>/SKILL.md`):
 | ductus artifact | Antigravity destination | Notes |
 | --- | --- | --- |
 | Pipeline commands (`framework/commands/*.md`) | `.agents/skills/{project}-<name>/SKILL.md` | dir-form skill; body = the command procedure (gates preserved as in-body prompts); `name` + `description` frontmatter; invoked `/{project}-<name>` |
-| `ductus` installer | `.agents/skills/ductus/SKILL.md` | curl-scaffolded for bootstrap |
+| `ductus` installer | `.agents/skills/ductus/SKILL.md` | placed by `install.sh` for bootstrap |
 | Domain rule files | `.agents/rules/<name>.md` | native Antigravity rule loading |
-| ductus runtime | ~~`.agents/mcp_config.json`~~ → home-level `~/.gemini/config/mcp_config.json` | **Superseded by `031-agent-mcp-wiring`.** Project-local `.agents/mcp_config.json` is ignored by Antigravity (0 spawns against a spawning positive control), so ductus writes no MCP file here — the user edits the home-level config once and reloads with `/mcp` |
+| ductus runtime | home-level `~/.gemini/config/mcp_config.json` | Antigravity ignores a project-local `.agents/mcp_config.json`, so ductus writes no MCP file — the user edits the home-level config once and reloads with `/mcp` |
 | Permissions | `.agents/settings.json` | `permissions.allow/deny/ask`; ductus covered by a single `mcp(ductus/*)` |
 | Project context | `AGENTS.md` (already shipped) | read natively; no `CLAUDE.md`, no new context file |
 
@@ -120,19 +123,21 @@ Resolved Questions / marketplace), not ductus's adoption path.
 ## Registry Generalization
 
 The Agent Registry stops assuming the `.claude`-style layout. These become
-per-agent registry-derived values rather than hard-coded constants:
+per-layout registry-derived values rather than hard-coded constants:
 
 - **Command/skill location & invocation** — `{config_dir}/commands/{project}/`
   with `/{project}:<name>` vs `.agents/skills/<name>/SKILL.md` with `/<name>`.
-- **MCP-wiring file** — `.mcp.json` vs `.agents/mcp_config.json`.
 - **Settings file & permission format** — `settings.local.json`
   (`permissions.allow/deny` / `toolPermissions[]`) vs `.agents/settings.json`
   (`permissions.allow/deny/ask`, action grammar).
 - **Rules location** — filesystem `specs/rules/` vs `.agents/rules/`.
 - **Native rules file** — `CLAUDE.md` vs `AGENTS.md`.
 
-A future `.claude`-style agent that reads `CLAUDE.md` remains a pure one-row
-append — the generalization must not tax the common case.
+MCP registration is per agent, not per layout (the descriptor `031-agent-mcp-wiring`
+introduced). A future `.claude`-style agent that reads `CLAUDE.md` remains a
+registry-row append plus its own files — the generalization must not tax the
+common case. **Derived values** in `framework/bootstrap/ductus.md` is the live
+table of per-layout values, including the layouts added after this spec.
 
 ## Per-Agent Adoption for Antigravity
 
@@ -142,27 +147,29 @@ For Antigravity, `/ductus` scaffolds the project-local `.agents/` tree:
   `.agents/skills/{project}-<name>/SKILL.md`: keep the body (the procedure, with
   its approval-gate prompts) unchanged, carry the `description` frontmatter, add
   the `name` field. Placeholder substitution (`{project}`, `{cli-config-dir}`)
-  still applies. The argument-token equivalent of `$ARGUMENTS` is a plan-phase
-  detail to confirm.
-- **Rules.** Scaffold ductus's domain rule files to `.agents/rules/<name>.md`.
-- **MCP.** ~~Write `.agents/mcp_config.json` wiring ductus as a local stdio server,
-  additively if the file already exists.~~ **Superseded by `031-agent-mcp-wiring`:**
-  ductus writes no MCP file for Antigravity. Registration is `surface-instruction` —
-  the user adds a `ductus` block naming the absolute store path to home-level
-  `~/.gemini/config/mcp_config.json` once per machine, then reloads with `/mcp`.
-- **Permissions (`configure`).** A new `framework/bootstrap/configure/{key}.md`
-  for Antigravity writes `.agents/settings.json` `permissions` in Antigravity's
-  action grammar: `mcp(ductus/*)` for the runtime, `command(...)` allows/denies for
-  shell, with workspace files auto-allowed by default. `gen-configure-mcp.sh`
-  emits the Antigravity MCP block (a single `mcp(ductus/*)` line).
+  still applies. The body's `$ARGUMENTS` references are carried as written;
+  Antigravity's argument-passing equivalent was never pinned.
+- **Rules.** Mirror every rule file in `specs/rules/` — the framework's and any
+  the project authors — to `.agents/rules/<name>.md`, and remove a mirrored file
+  whose source is gone, so Antigravity loads the same rule set the pipeline
+  enforces.
+- **MCP.** ductus writes no MCP file for Antigravity. Registration is
+  `surface-instruction`: the user adds a `ductus` block naming the absolute store
+  path to home-level `~/.gemini/config/mcp_config.json` once per machine, then
+  reloads with `/mcp`.
+- **Permissions (`configure`).** `framework/bootstrap/configure/antigravity.md`
+  writes `.agents/settings.json` `permissions` in Antigravity's action grammar:
+  `mcp(ductus/*)` for the runtime, `command(...)` allows/denies for shell, with
+  workspace files auto-allowed by default. `gen-configure-mcp.sh` emits the
+  Antigravity MCP block (a single `mcp(ductus/*)` line).
 - **Context.** `AGENTS.md` (already shipped) is read natively — nothing new.
 
 ## Bootstrap
 
 Because Antigravity skills are markdown and discovered from `.agents/`, the
-existing curl-scaffold bootstrap works — only the destination changes: the
-README documents installing the `ductus` skill into
-`.agents/skills/ductus/SKILL.md`, after which the user runs `/ductus`, which
+file-scaffold bootstrap works unchanged — only the destination differs.
+`install.sh` with the `antigravity` (or `agy`) argument places the `ductus` skill
+at `.agents/skills/ductus/SKILL.md`, after which the user runs `/ductus`, which
 scaffolds the rest. The ductus self-install rule (keep every placeholder literal)
 carries over. No plugin build, no `agy plugin install`, no chicken-and-egg.
 
@@ -182,8 +189,7 @@ unchanged.
   `skills/<name>/SKILL.md` loads as an agent-context skill while a flat
   `.agents/skills/<name>.md` did not load in `agy -p` (print mode reported "no
   custom slash commands"), hinting at a skill (agent-context) vs slash-command
-  (TUI-only) distinction. ductus targets the verified dir-form skill; pinning the
-  exact form and the `$ARGUMENTS` equivalent is a plan-phase detail.
+  (TUI-only) distinction. ductus targets the verified dir-form skill.
 - Agents beyond Antigravity (Cursor, Copilot, …).
 - Removing an adopted agent (unchanged from 012 — manual).
 
@@ -195,10 +201,16 @@ unchanged.
       Claude/Auggie keep their `.claude`/`.augment` layout, Antigravity is
       `config_dir = .agents` with the skill/`mcp_config.json`/`settings.json`/
       `rules` layout, and the unified procedure branches on registry values, not
-      the agent name
+      the agent name. **The MCP leg is superseded**: `031-agent-mcp-wiring` took
+      the MCP-wiring file out of the layout-derived values and made it a
+      per-agent descriptor. The other legs hold.
 - [x] AC2: A `.claude`-style file-scaffold agent that reads `CLAUDE.md` can still be
       added by a single registry-row append + `configure/{key}.md` + README
-      snippet (verified by a documented "add a hypothetical agent" checklist)
+      snippet (verified by a documented "add a hypothetical agent" checklist).
+      **The checklist has since grown**: the current one, **Adding a new agent**
+      in `framework/bootstrap/ductus.md`, also asks for an MCP registration row
+      (since 031) and an `install.sh` arm, and the README edit is an install-table
+      row. It is still no layout change.
 - [x] AC3: Scaffolding Antigravity writes each pipeline command as
       `.agents/skills/{project}-<name>/SKILL.md` (dir-form skill, body = the
       command procedure with gates intact, `name` + `description` frontmatter),
@@ -228,7 +240,10 @@ unchanged.
 - [x] AC9: Auto-detection recognizes an existing `.agents/` adoption and re-scaffolds
       on routine re-runs, consistent with the 012 detect path
 - [x] AC10: The README documents the Antigravity bootstrap (curl the `ductus` skill
-      into `.agents/skills/ductus/SKILL.md`, then run `/ductus`)
+      into `.agents/skills/ductus/SKILL.md`, then run `/ductus`). **The install
+      step changed**: since `003-bootstrap-automation`, `install.sh` with the
+      `antigravity` argument places the skill at that path, and the README's
+      per-agent install table documents it; running `/ductus` afterwards holds
 - [x] AC11: All shipped markdown passes `npx markdownlint-cli2`; the emitted
       `.agents/mcp_config.json` and `.agents/settings.json` are valid JSON.
       The markdown half holds. Of the JSON half only `.agents/settings.json`
@@ -249,7 +264,8 @@ unchanged.
   import-compatibility shim (for `agy plugin import claude|gemini`); ductus does
   not rely on it. Skill names are **flat** — no `/{project}:<name>` colon
   namespace — so ductus prefixes names (`/{project}-<name>`). ductus's rule files
-  map 1:1 onto `rules/`.
+  map 1:1 onto `rules/`. The `mcp_config.json` leg was reversed by
+  `031-agent-mcp-wiring`: ductus writes no MCP file for Antigravity.
 - **Skill invocation / UX (and the `.claude/` refutation).** Skills are
   user-invoked: `.agents/skills/<name>/SKILL.md` → `/<name>` (maintainer-confirmed
   for `.agents/skills/format-tests.md` → `/format-tests`). ductus's gated,
@@ -260,8 +276,8 @@ unchanged.
   and `.claude/skills/` did **not** load — empirically refuting the agent's
   self-report that Antigravity uses `.claude/`. The **dir form**
   `<name>/SKILL.md` is what loaded; a flat `.agents/skills/<name>.md` did not load
-  in print mode. The flat-vs-dir / skill-vs-slash-command nuance and the
-  `$ARGUMENTS` equivalent are plan-phase details.
+  in print mode. ductus ships the dir form; the `$ARGUMENTS` equivalent was never
+  pinned.
 - **Install model + update flow (was "install: copy vs reference") — scoped to
   the optional plugin path.** `agy plugin install <dir>` snapshot-copies into
   `~/.gemini/config/plugins/<name>/` and is idempotent (re-install overwrites;
@@ -271,15 +287,17 @@ unchanged.
 - **Rules file + context (was "CLAUDE.md readership").** Confirmed: Antigravity
   reads `AGENTS.md` natively. ductus ships **no `CLAUDE.md`** and no new context
   file; `AGENTS.md` (already shipped) carries the context; rule files map to the
-  `.agents/rules/` dir. Where the constitution content lands (inline in
-  `AGENTS.md` vs a rule) is a plan-phase mapping detail.
+  `.agents/rules/` dir. The constitution lands at `.ductus/constitution.md`, as
+  it does for every agent.
 - **Adoption model + detection (was "detection key").** Antigravity has a
-  per-workspace scope — `.agents/skills/`, `.agents/mcp_config.json`,
-  `.agents/settings.json` (workspace-skill loading empirically verified). ductus
-  adopts by **file-scaffolding into `.agents/`** per project, exactly as for
+  per-workspace scope — `.agents/skills/`, `.agents/settings.json`
+  (workspace-skill loading empirically verified). ductus adopts by
+  **file-scaffolding into `.agents/`** per project, exactly as for
   Claude/Auggie — not by building/installing a global plugin. Registry row:
   `config_dir = .agents`. **Detection** keys on `.agents/` existing in the
-  project. **Update** is re-scaffolding (from the resolved source).
+  project. **Update** is re-scaffolding (from the resolved source). The
+  workspace scope was also believed to cover `.agents/mcp_config.json`, until
+  `031-agent-mcp-wiring` measured it ignored.
 - **Permissions / `configure` (corrected from "N/A").** Antigravity **does** have
   a permissions file — `.agents/settings.json` (workspace; global form
   `~/.gemini/antigravity-cli/settings.json`), **not** `.claude/settings.local.json`
