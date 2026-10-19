@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [022-deterministic-runtime, 058-findings-route-at-discovery]
 cross-spec-impact: [022-deterministic-runtime]
 next-criterion: 10
