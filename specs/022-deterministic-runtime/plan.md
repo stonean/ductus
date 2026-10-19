@@ -186,7 +186,7 @@ Triggers on PR and push to `main`, with `paths` filter covering `runtime/**` and
 4. `cargo test --release` in `runtime/`.
 5. `cargo clippy -- -D warnings`.
 6. `cargo fmt --check`.
-7. `cargo audit` — dependency vulnerability scan against the RustSec advisory database (`BE-DEPS-001`). Policy on findings: any advisory affecting the resolved `Cargo.lock` graph fails the build; a deliberate exception requires an `[advisories] ignore` entry in `runtime/audit.toml` with a justification comment naming the RUSTSEC id and the revisit condition.
+7. `cargo audit` — dependency vulnerability scan against the RustSec advisory database (`BE-DEPS-001`, and the per-change scan of `BE-DEPS-007`). Policy on findings: any advisory affecting the resolved `Cargo.lock` graph fails the build; a deliberate exception requires an `[advisories] ignore` entry in `runtime/audit.toml` with a justification comment naming the RUSTSEC id and the revisit condition.
 
 Build and test run on a matrix of `ubuntu-latest`, `macos-latest` and `windows-latest`; `cargo audit` runs once, on Linux.
 

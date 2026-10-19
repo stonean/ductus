@@ -166,7 +166,7 @@ Neither is an error. A missing checkout is a valid state — correct for any tea
 
 ## A malformed entry halts
 
-The outcomes above are about a checkout. A malformed **entry** is a different thing and carries a different severity: `ductus` halts, naming the offending alias and field, per `CFG-ENV-003`. An entry is malformed when its alias is not a bare TOML key, when `repo` is not URL-shaped (a scheme and a host), or when `path` is empty. The exact rules are stated once in [`framework/bootstrap/ductus.md` §Validating the registry](../framework/bootstrap/ductus.md#project-configuration).
+The outcomes above are about a checkout. A malformed **entry** is a different thing and carries a different severity: `ductus` halts, naming the offending alias and field, per `CFG-ENV-008`. An entry is malformed when its alias is not a bare TOML key, when `repo` is not URL-shaped (a scheme and a host), or when `path` is empty. The exact rules are stated once in [`framework/bootstrap/ductus.md` §Validating the registry](../framework/bootstrap/ductus.md#project-configuration).
 
 **The asymmetry is the point.** A malformed entry is a mistake in your project's own committed config and is always wrong, so it fails fast. An unresolved checkout is machine-local state that is correct for a teammate who has not cloned yet, so it warns. Collapsing them would tell you to clone a repository when the mistake is in your config — which is what an empty `path` used to do, resolving to your repository root and reporting `no-constitution-document` against a checkout that was never the problem. Fixed in `0.49.3`.
 

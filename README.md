@@ -54,15 +54,15 @@ Each command advances the feature one step and leaves a durable artifact behind.
 - **Accessibility** — WCAG 2.2 AA
 - **Performance**, backend and frontend — query efficiency, caching, Core Web Vitals, bundle size
 - **Reliability**, **concurrency**, and **observability** — timeouts and retries, races and locking, metrics and tracing
-- **API contracts** and **configuration** — versioning and breaking changes; no magic numbers or undocumented environment variables
+- **API contracts** and **configuration** — versioning and breaking changes; no magic numbers, undocumented environment variables, or feature flags without a declared default
 
 One more, `quality-cross.md`, applies to every project and catches five failure modes that look like working code and are not:
 
 - **Silent stubs** — an unimplemented path whose contract implies it does work, returning success anyway. A no-op rate limiter ships indistinguishably from a real one.
-- **Unverified external contracts** — code whose correctness depends on a schema, an API shape, or a file format it does not own, with nothing that fails loudly when the assumption is wrong.
+- **Unverified contracts** — code whose correctness depends on a schema, an API shape, or a file format defined somewhere else — by another system or elsewhere in the repository — with nothing that fails loudly when the assumption is wrong.
 - **Unsubstantiated clean results** — a result that reports "clean" when it means "could not check". A caller cannot tell a verified-clean answer from an unverifiable one, and will read the reassuring one.
 - **Unenumerated delegation to shared code** — a hand-rolled predicate, parser or validator replaced by a shared one without first listing what the local version enforced by construction, so the change silently widens or narrows what it accepts.
-- **Tests that cannot fail** — a test that passes whether or not the behavior it names works: it asserts nothing about the result, pins a value incidental to it, or lets a fallback satisfy the assertion meant for the primary path.
+- **Tests that cannot fail** — a test that passes whether or not the behavior it names works: it asserts nothing about the result, pins a value incidental to it, lets a fallback satisfy the assertion meant for the primary path, can fail only under a condition it never sets up, or never reaches the code it names.
 
 Your own rules are a markdown file added to the rule-file directory: discovered automatically, and never touched by an update. Which files load for your stack, how MUST and SHOULD differ, how waivers expire, and how to write a rule are in **[docs/rules.md](docs/rules.md)**.
 
@@ -185,7 +185,7 @@ The runtime is **required**: acquisition failure halts the run rather than degra
 - **`[rules]`** — declare which rule surfaces your project needs: `surfaces = ["backend"]`, `["frontend"]`, or both. `/ductus` prompts for this on first run, then installs only the matching rule files (cross-cutting `-cross` rules always apply) and `/review` enforces only those. Leave it unset to let `ductus` derive the surface from your stack and install every rule file.
 - **`[paths]`** — rename the top-level directory that holds every `ductus` artifact: `specs-root = "governance"`. Defaults to `specs`; set it to avoid colliding with a sibling framework's directory (e.g. RSpec's `spec/`). `/ductus` prompts for it on first run; once set, every command and the runtime resolve it. A single directory name — no path separators, no `..`, no leading slash.
 - **`[runtime]`** — `path` to a binary you supply, instead of the one `/ductus` downloads (see [docs/runtime.md](docs/runtime.md#supplying-your-own-binary)).
-- **`[[review.disabled-rule-files]]`** — stand a rule file down with a mandatory `reason` (see [Which rules load](docs/rules.md#which-rules-load)).
+- **`[[review.disabled-rule-files]]`** — stand a rule file down from `/review` with a mandatory `reason` (see [Which rules load](docs/rules.md#which-rules-load)).
 - **`[artifacts]`** — `read-size-bytes`, the size in bytes above which `/clarify`, `/plan` and `/analyze` warn that a spec artifact may not be read in one call by an agent's file reader, naming the fixes for it. A whole number of bytes, `50000` when unset: raise it for a host with a larger read cap, lower it for a smaller one or for token-dense artifacts. Any other value is reported and the default used. It cannot switch the warning off — discard one file's finding in `/analyze` instead.
 - **`[services]`** — register sibling services so cross-service reference links resolve to the linked spec's lifecycle status. Add entries with `/link`, not by hand.
 - **`[constitutions]`** — register a governance document your organization owns, so one house rule reaches every project instead of being retyped into each (see [Shared constitutions](#shared-constitutions)). Hand-edited; `repo` is never fetched, the local `path` is what is read.

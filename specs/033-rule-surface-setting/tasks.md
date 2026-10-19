@@ -46,4 +46,20 @@ Tasks derived from the [plan](plan.md). Complete in order.
 ## 8. Specify degenerate `[rules] surfaces` configs (empty list, invalid member)
 
 - [x] Implement the behavior described in `scenarios/degenerate-surfaces-config.md`
-- Done when: `surfaces = []` selects cross-only (distinct from unset = derive); an unrecognized member, a mixed valid/invalid list, and a non-list value all fail fast per `CFG-ENV-003`, naming the offending value and the accepted members. `/ductus` and `/ductus:review` both honor the behavior, the spec's Setting section documents it, and tests cover the empty-list, unknown-member, mixed-list, and wrong-type cases.
+- Done when: `surfaces = []` selects cross-only (distinct from unset = derive); an unrecognized member, a mixed valid/invalid list, and a non-list value all fail fast per `CFG-ENV-008`, naming the offending value and the accepted members. `/ductus` and `/ductus:review` both honor the behavior, the spec's Setting section documents it, and tests cover the empty-list, unknown-member, mixed-list, and wrong-type cases.
+
+## 9. Rule-file review 2026-10-19: correct the analyze/surfaces claim and re-point malformed-config citations
+
+- [x] Correct the Enforcement behavior bullet and the analyze Resolved Question in `spec.md`: `[rules] surfaces` never scopes `/ductus:analyze` (it loads and assesses every rule file in the rule-file directory, per `framework/commands/analyze.md` §Rules and `derive_analyze_seeds` in `runtime/src/interpreter/mod.rs`); it scopes only `/ductus` install/update and `/ductus:review` selection. The Resolved Question carries a dated correction note
+- [x] Re-point the malformed-`surfaces` fail-fast citations in `scenarios/degenerate-surfaces-config.md` and task 8's Done-when from `CFG-ENV-003` (a required value unset or empty) to `CFG-ENV-008` (a present value that fails to parse into its declared type)
+
+- **Done when**: no 033 artifact outside the audit records says analyze's findings are surface-scoped, and every 033 citation for an unrecognized member or non-list `surfaces` value names `CFG-ENV-008`.
+
+## 10. An out-of-surface citation resolves
+
+- [ ] Implement the behavior described in `scenarios/an-out-of-surface-citation-resolves.md`
+- [ ] Resolve the scenario's open question (which mechanism)
+- [ ] Implement the chosen mechanism so a citation to a known rule on an unselected surface raises no blocking finding
+- [ ] A test covers a surfaces = ["backend"] project citing FE-XSS-001 with security-frontend.md not installed
+
+- **Done when**: The scenario's open question is resolved and an out-of-surface citation resolves without a blocking finding when its rule file was never installed.

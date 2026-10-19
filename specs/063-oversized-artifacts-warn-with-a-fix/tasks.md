@@ -82,3 +82,13 @@ Task 5's step-number sync rewrote 058's scenario `only-unreadable-targets-retain
 - [x] Add `MIN_READ_SIZE_BYTES` beside `DEFAULT_READ_SIZE_BYTES` in `runtime/src/primitives/check_artifact_size.rs` and check the configured value against it.
 - [x] Name both constants in the plan's threshold decision.
 - **Done when**: the threshold tests pass and fail when the minimum moves above 1.
+
+## 12. An invalid read-size-bytes fails fast (CFG-ENV-008)
+
+- [ ] Implement the behavior described in `scenarios/an-invalid-threshold-fails-fast.md`
+- [ ] The runtime reader halts on a present read-size-bytes that is not a positive whole number, naming the setting, the value, and the accepted form; unset still means 50,000
+- [ ] The markdown-only path halts the same way
+- [ ] spec.md's invalid-threshold edge case, data-model.md, and the read-size-bytes comment in framework/bootstrap/ductus.md (and govern.md) state the fail-fast behavior
+- [ ] A test fails if the reader falls back to the default for a malformed value
+
+- **Done when**: A malformed read-size-bytes halts every command that reads it, no artifact describes a reported fallback, and 063 is re-reviewed back to done.

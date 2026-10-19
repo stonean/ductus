@@ -528,7 +528,7 @@ pub enum PrimitiveError {
     /// will not parse: this entry *did* parse, so nothing but the value check
     /// would ever name it. Raised rather than reported as an outcome because
     /// `framework/bootstrap/ductus.md` §Validating the registry makes it a
-    /// halt per `CFG-ENV-003` — a malformed entry is a mistake in the
+    /// halt per `CFG-ENV-008` — a malformed entry is a mistake in the
     /// project's own committed config and is always wrong, unlike an
     /// unresolved checkout, which stays the warning-level `not-checked-out`
     /// state. The asymmetry is the whole point; collapsing the two would tell

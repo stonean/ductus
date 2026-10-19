@@ -84,7 +84,7 @@ At least one concrete, testable criterion is required before `/{project}:clarify
 
      Replace this comment block with a list of rule references when applicable:
 
-- `BE-AUTHN-001` — memory-hard password hashing
+- `BE-AUTHN-001` — deliberately slow password hashing
 - `FE-XSS-001` — output encoding strategy
 - `BE-INPUT-001` — server-side input validation
 

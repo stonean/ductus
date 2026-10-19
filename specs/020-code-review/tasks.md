@@ -106,3 +106,13 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Regenerate the `.claude/commands/ductus/` mirrors
 
 - **Done when**: `review.md`, 020's data model, the constitution's review-record table and `README.md` all describe `file` as one path or a list of explicit paths with each path its own anchor; the mirrors are regenerated; 022's `process-waivers-file-lists` is implemented; and markdownlint, the generators and `scripts/audit/run-all.sh` are clean.
+
+## 14. Every loaded rule file has a pass
+
+- [ ] Implement the behavior described in `scenarios/every-loaded-rule-file-has-a-pass.md`
+- [ ] Resolve the scenario's open question (which design)
+- [ ] framework/commands/review.md names the pass that applies each loaded rule file; generated command copies regenerated
+- [ ] The runtime performReview extension and its payload carry the chosen mapping, with a test
+- [ ] quality-cross.md's header claim about its enforcing pass agrees with review.md
+
+- **Done when**: Every rule file /review loads is applied to code by a pass review.md names, and 020 is re-reviewed back to done.

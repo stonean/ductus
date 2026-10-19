@@ -81,3 +81,33 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Both Verifications end "it does not block `done`" / "does not block `done`", but constitution §implement-phase holds that a spec does not reach `done` with an outstanding SHOULD, and analyze's review-state drift reports a `done` spec whose review records one (`runtime/src/primitives/check_artifacts.rs:665`). Restate both as QUAL-TEST-001 does: the finding never sets the review's `blocking` flag, and like any outstanding SHOULD it is fixed or waived before the spec reaches `done`. Surfaced writing task 10
 
 - **Done when**: no rule in `quality-cross.md` claims a SHOULD finding leaves `done` unblocked
+
+## 12. Rule-file review 2026-10-19: land the QUAL-TEST-001 trigger amendment, the QUAL-CLAIM-001 fixes and the header opt-out rewrite
+
+- [x] `framework/rules/quality-cross.md` header: the opt-out paragraph says cross files load for every stack (`[rules] surfaces` cannot exclude them; `/{project}:analyze` loads every rule file present), names `[[review.disabled-rule-files]]` with its mandatory `reason` as the review exclusion, and says `[pinned] files` only stops updates overwriting a customized copy
+- [x] `QUAL-CLAIM-001` Verification: it never sets the review's `blocking` flag, and like any outstanding SHOULD it is fixed or waived before the spec reaches `done`
+- [x] `QUAL-CLAIM-001` Source: `run-all.sh` in past tense, and the derive primitives' field list names `examined`, `untracked-skipped`, `unwritten`, `absent` and `unparseable`, matching `derive_dependencies.rs` / `derive_references.rs`
+- [x] `QUAL-TEST-001` Verification: trigger (4), a test whose ability to fail depends on a condition it does not establish, and trigger (5), a test that never reaches the unit it names, with the matching compliant cases (establishes the condition, gated as a whole, doubles collaborators but calls the unit)
+- [x] `QUAL-TEST-001` Source: the 062 review finding (`cb54dc8f`, 2026-09-29) and the 048 review findings (`f7c14890`, 2026-09-30) the new triggers came from
+- [x] `data-model.md` QUAL-TEST namespace names the new triggers and compliant cases
+- [x] `spec.md`: the `TEST` bullet under Added categories names the new shapes, and AC12 covers triggers (4) and (5)
+- [x] `plan.md`: the header-note decision states the opt-out that exists (`[[review.disabled-rule-files]]`) and what `[pinned]` does not do
+- [x] Verify: `npx markdownlint-cli2` on the changed spec files and `scripts/lint-frontmatter.sh` pass
+
+- **Done when**: 036's spec, plan and data model describe `quality-cross.md` as it stands after the 2026-10-19 rule-file review, with no rule ID, Statement or category changed. Re-run `/ductus:review` before 036 returns to `done`, since the data-model edit stales its completed review.
+
+## 13. Rule-file review 2026-10-19 (second pass): QUAL-GROUND-001 covers in-repo contracts and cedes configuration to CFG; source and wording fixes
+
+- [x] `framework/rules/quality-cross.md` `QUAL-GROUND-001` Statement, Rationale and Verification: the rule covers code depending on a contract defined outside that code, including a list, schema, or format defined elsewhere in the repository; the in-repo exemption is replaced by a contract used through its own definition, so the compiler or type checker enforces it; a schema or migration reference counts only when the build or a test checks it; configuration keys and values are left to `configuration-cross.md` `CFG-ENV-003` / `CFG-ENV-008`
+- [x] `quality-cross.md` header gloss reads `GROUND` (unverified contracts) and the section heading reads `## QUAL-GROUND — Verify contracts`
+- [x] `quality-cross.md` `QUAL-STUB-001` Verification cites `BE-SCHEMA-002` for the API-schema fail-loud case (a published schema bound to its implementation), no longer for a build-time case
+- [x] `quality-cross.md` `QUAL-STUB-001` and `QUAL-GROUND-001` Sources cite Jim Shore, "Fail Fast", IEEE Software, September/October 2004, pp. 21–25; checked against martinfowler.com/ieeeSoftware/failFast.pdf, whose byline, issue line and page folios 21–25 match and whose worked example returns a default for a missing configuration property where the fail-fast version throws. Verify-only: no 036 artifact restates a Source
+- [x] `quality-cross.md` `QUAL-DELEG-001` Source records the 2026-09-14 link-slug delegation incident. Verify-only: no 036 artifact restates a Source
+- [x] `spec.md`: the Motivation's `BE-SCHEMA-002` sentence and the first Boundaries bullet describe the API-schema case rather than build-time; a second Boundaries bullet names `CFG-ENV-003` / `CFG-ENV-008` as the owners of configuration; the `GROUND` bullet under Added categories matches the new Statement
+- [x] `spec.md`: AC6 names the API-schema case, and AC9 says the Source records the outcome of assessing each candidate that shared only the message shape, since no instance is unassessed any more
+- [x] `spec.md`: a Resolved Question, `QUAL-GROUND-001` scope, records the 2026-10-19 owner decision and its reasons (the exemption contradicted the Statement's own examples; 026's and 022's reviews applied the rule to in-repo contracts; a configuration defect would surface under two IDs, which `write-review`'s `(rule, file)` dedup does not collapse)
+- [x] `data-model.md`: the category row reads Unverified contracts, the namespace heading reads (Verify contracts category), the `QUAL-GROUND-001` summary matches the new Statement and the `CFG` cession, and the `QUAL-STUB-001` summary names the API-schema case
+- [x] `plan.md`: the `QUAL-STUB-001` Verification bullet cites `BE-SCHEMA-002` for the API-schema case, and Cross-spec impact lists `CFG-ENV-003` / `CFG-ENV-008` as cited, not changed
+- [x] Verify: `npx markdownlint-cli2` on the changed spec files and `scripts/lint-frontmatter.sh` pass
+
+- **Done when**: 036's spec, plan and data model describe `quality-cross.md` as it stands after the second 2026-10-19 rule-file review: `QUAL-GROUND-001` covers in-repo contracts and cedes configuration to `CFG`, `BE-SCHEMA-002` is cited for the API-schema case, and no criterion claims an unassessed instance. The rule IDs and tiers are unchanged. Re-run `/ductus:review` before 036 returns to `done`, since the data-model edit stales its completed review.

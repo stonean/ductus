@@ -54,3 +54,12 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 - [x] After the spec advances to `in-progress` and tasks 1–7 are complete, run `/ductus:review` to populate `spec.md`'s `review` frontmatter block and produce `review.md`.
 - [x] Done when: `review.md` exists, `must-violations: 0` (or all surfaced findings are resolved/waived), and `review.blocking: false`.
+
+## 10. A malformed disabled-rule-files entry fails fast (CFG-ENV-008)
+
+- [ ] Implement the behavior described in `scenarios/a-malformed-disabled-entry-fails-fast.md`
+- [ ] discover-rule-files halts on a malformed [[review.disabled-rule-files]] entry, naming the entry index and failing field, before any rule file is selected
+- [ ] AC4 and framework/commands/review.md's malformed-entry handling state the halt; generated command copies regenerated
+- [ ] A test fails if a malformed entry is skipped instead of halting
+
+- **Done when**: A malformed disabled-rule-files entry halts /review with a named configuration error, no artifact describes skip-and-warn for it, and 025 is re-reviewed back to done.

@@ -39,3 +39,13 @@ Blocked on task 1: the store tests run against the migrated schema.
 - **Done when**: the README link resolves to the new path.
 
 -->
+
+## 1. An unknown config key is named (CFG-ENV-012)
+
+- [ ] Implement the behavior described in `scenarios/an-unknown-config-key-is-named.md`
+- [ ] The runtime reports unknown keys in ductus-owned sections of .ductus/config.toml and .ductus/session.toml by name, section, and file, without failing the run
+- [ ] Recognized keys are declared in one place shared by every reader of a section
+- [ ] A test fails if a mistyped key in a ductus-owned section is silently dropped
+- [ ] 019's data-model and framework/bootstrap/ductus.md §Project Configuration state the behavior
+
+- **Done when**: A mistyped key in a ductus-owned config section is reported by name on the run that reads it, and 019 is re-reviewed back to done.

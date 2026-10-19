@@ -1,32 +1,36 @@
 # Security Rules — Backend
 
-Enforceable security rules for server-side code, APIs, data persistence, and integration boundaries. These rules apply to all projects adopting `ductus`.
+Enforceable security rules for server-side code, APIs, data persistence, and integration boundaries. These rules apply to projects adopting `ductus` whose surface includes a backend.
 
 Rules use RFC 2119 language: **MUST** / **MUST NOT** are enforced as errors; **SHOULD** / **SHOULD NOT** are flagged as warnings.
 
 Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assigned, an ID is never renumbered, even if the rule is moved within the file or deprecated. Categories: `AUTHN` (authentication), `AUTHZ` (authorization), `INPUT` (input validation), `DATA` (data protection), `API` (API security), `LOG` (logging and audit), `DEPS` (dependency management), `ERR` (error handling). See `specs/008-security-rules/data-model.md` for the full schema.
 
+These rules verify **design-time commitments** — what a spec, plan, or `specs/system.md` must state — and `/{project}:analyze` enforces them against feature artifacts; `/{project}:review`'s security pass also checks the code in scope against them.
+
+Projects without a backend need not opt out: `/{project}:analyze` loads every rule file present, regardless of stack or `[rules] surfaces`, and these rules fire only on a spec or plan that meets their Verification trigger. In `.ductus/config.toml`, a `[rules] surfaces` list without `backend` stops `ductus` from installing or updating this file (a copy already on disk is left in place) and stops `/{project}:review` from selecting it; a `[[review.disabled-rule-files]]` entry with its mandatory `reason` excludes it from `/{project}:review` alone; and listing it under `[pinned] files` only stops `ductus` updates from overwriting a customized copy, which still loads for review and analyze.
+
 ## BE-AUTHN — Authentication
 
 ### BE-AUTHN-001
 
-> Passwords MUST be hashed using a deliberately slow password-hashing algorithm before persistence — never encrypted, never stored in plaintext. Acceptable algorithms are Argon2id (preferred), scrypt, bcrypt, or PBKDF2 (where FIPS compliance is required). General-purpose hashes (MD5, SHA-1, SHA-2 family, SHA-3 family) MUST NOT be used for password storage even when salted.
+> Passwords MUST be hashed using a deliberately slow password-hashing algorithm before persistence — never encrypted, never stored in plaintext. Acceptable algorithms are Argon2id (preferred), scrypt, PBKDF2 (where FIPS compliance is required), and bcrypt only in a legacy system where neither Argon2id nor scrypt is available. General-purpose hashes (MD5, SHA-1, SHA-2 family, SHA-3 family) MUST NOT be used for password storage even when salted.
 
-**Rationale:** Encryption is reversible — a database breach plus key access yields plaintext credentials. One-way hashing is irreversible by design. Memory-hard algorithms (Argon2id, scrypt, bcrypt) specifically resist GPU-accelerated cracking; PBKDF2 is iteration-hard rather than memory-hard but remains NIST SP 800-63B–approved and is the only FIPS 140–validated option in many regulated environments.
+**Rationale:** Encryption is reversible — a database breach plus key access yields plaintext credentials. One-way hashing is irreversible by design. Argon2id and scrypt are memory-hard (RFC 9106, RFC 7914), which raises the cost of cracking on custom hardware. The OWASP Password Storage Cheat Sheet says bcrypt should only be used for password storage in legacy systems where Argon2 and scrypt are not available, and notes that most implementations read at most 72 bytes of input — so a longer password is silently truncated unless the design handles it, while NIST SP 800-63B-4 requires the verifier to check the entire submitted password. PBKDF2 is iteration-hard only, but NIST SP 800-63B-4 permits it and it has FIPS 140–validated implementations, so the cheat sheet makes it the choice where FIPS 140 compliance is required.
 
-**Verification:** Any spec or plan that introduces credential storage (search keywords: `password`, `credential`, `auth`, `login`) MUST name the hashing algorithm. `/{project}:analyze` flags persistence paths that use `MD5`, `SHA-1`, `SHA-256`, `SHA-512`, plain `crypt`, "encrypted", or that omit the algorithm question entirely. Salting and cost/iteration parameters MUST be specified or referenced.
+**Verification:** Any spec or plan that introduces credential storage (search keywords: `password`, `credential`, `auth`, `login`) MUST name the hashing algorithm. Salting and cost/iteration parameters MUST be specified or referenced, at or above the OWASP Password Storage Cheat Sheet minimums (Argon2id 19 MiB memory, 2 iterations, parallelism 1; scrypt N=2^17, r=8, p=1; bcrypt cost 10; PBKDF2-HMAC-SHA256 600,000 iterations or PBKDF2-HMAC-SHA512 220,000). A spec that chooses bcrypt MUST state why neither Argon2id nor scrypt is available to the system, and how input beyond bcrypt's 72-byte limit is handled rather than silently truncated. `/{project}:analyze` flags persistence paths that store a password as a plain or salted single-pass digest (`MD5`, `SHA-1`, `SHA-256`, `SHA-512` — not the HMAC inside PBKDF2), plain `crypt`, or "encrypted", that choose bcrypt without stating that Argon2id and scrypt are unavailable, that name parameters below those minimums, or that omit the algorithm question entirely.
 
-**Source:** OWASP Password Storage Cheat Sheet, NIST SP 800-63B
+**Source:** OWASP Password Storage Cheat Sheet, NIST SP 800-63B-4 §3.1.1.2, NIST SP 800-132, RFC 9106 (Argon2), RFC 7914 (scrypt)
 
 ### BE-AUTHN-002
 
 > API tokens and bearer tokens MUST be generated by a CSPRNG with at least 128 bits of entropy and MUST be stored as hashes (SHA-256 minimum) — never in plaintext. The raw token MUST be returned to the user once at creation and never persisted. SHA-256 (single-pass) is acceptable for high-entropy tokens generated per this rule; tokens whose entropy is below the 128-bit threshold MUST use a password-hash algorithm per `BE-AUTHN-001` instead.
 
-**Rationale:** Storing raw tokens enables immediate credential theft on database compromise. Hashing tokens turns the database into a verification store rather than a credential vault. The entropy precondition matters because a fast hash like SHA-256 is only safe when the input is uncrackable by brute force — a 128-bit random token cannot be enumerated, but a 6-character recovery code can.
+**Rationale:** Storing raw tokens enables immediate credential theft on database compromise. Hashing tokens turns the database into a verification store rather than a credential vault — RFC 6819 lists storing only access-token hashes as the countermeasure to theft from the authorization server's database. The entropy precondition matters because a fast hash like SHA-256 is only safe when the input is uncrackable by brute force — a 128-bit random token cannot be enumerated, but a 6-character recovery code can. The OWASP Session Management Cheat Sheet draws the same line: a fast hash suffices for a random verifier, and password-hashing algorithms are unnecessary for one.
 
 **Verification:** Any spec or plan that introduces API tokens, personal access tokens, or service tokens MUST commit to (a) CSPRNG generation with ≥128 bits of entropy, (b) hashed storage, and (c) a one-time-display pattern at issuance. `/{project}:analyze` flags token-issuance specs that describe storing the token itself in the database, that omit the entropy source, or that use SHA-256 on low-entropy values.
 
-**Source:** OWASP Authentication Cheat Sheet
+**Source:** OWASP Session Management Cheat Sheet, RFC 6819 §4.3.2, §5.1.4.1.3 (OAuth 2.0 Threat Model and Security Considerations)
 
 ### BE-AUTHN-003
 
@@ -96,47 +100,47 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 **Verification:** Any spec or plan that introduces secret/token/HMAC/signature comparison MUST commit to a constant-time primitive (e.g., `crypto.timingSafeEqual`, `hmac.compare_digest`, `subtle.ConstantTimeCompare`, `MessageDigest.isEqual`). `/{project}:analyze` flags specs that compare secrets with `==`, `===`, `equals`, `strcmp`, or any short-circuiting comparison.
 
-**Source:** OWASP Authentication Cheat Sheet, NIST SP 800-63B
+**Source:** OWASP Authentication Cheat Sheet, OWASP Webhook Security Cheat Sheet
 
 ### BE-AUTHN-010
 
 > Multi-factor authentication MUST be enforced for privileged accounts (administrators, role-managers, billing operators, security operators). Acceptable second factors are WebAuthn/passkeys (preferred), TOTP authenticator apps, or hardware security keys. SMS-delivered codes MUST NOT be the only available second factor for privileged accounts.
 
-**Rationale:** Single-factor authentication is no longer sufficient against credential stuffing, phishing, and database leaks. Privileged accounts are the highest-value targets — compromising one administrator typically compromises the system. WebAuthn and TOTP are phishing-resistant or phishing-resilient; SMS is vulnerable to SIM-swap attacks and is the weakest mainstream second factor.
+**Rationale:** Single-factor authentication is no longer sufficient against credential stuffing, phishing, and database leaks. Privileged accounts are the highest-value targets — compromising one administrator typically compromises the system. WebAuthn/passkeys and FIDO hardware security keys are phishing-resistant because the credential is bound to the origin it was registered for. TOTP defeats credential stuffing and leaked password databases, but it is not phishing-resistant: a real-time phishing proxy relays the code as easily as the password (`BE-AUTHN-021` covers that gap for privileged accounts). SMS adds SIM-swap exposure on top of that, and NIST SP 800-63B-4 restricts out-of-band authentication over the PSTN, the channel SMS codes travel. The OWASP Multifactor Authentication Cheat Sheet requires MFA for administrative and other highly privileged users.
 
 **Verification:** Any spec or plan that introduces administrative, role-management, billing, or security-operator capabilities MUST commit to MFA enforcement for those accounts and MUST name the supported factor types. `/{project}:analyze` flags privileged-feature specs that omit MFA, that allow SMS as the sole factor for privileged accounts, or that describe enrollment paths permitting administrators to skip MFA.
 
-**Source:** OWASP Authentication Cheat Sheet, NIST SP 800-63B
+**Source:** OWASP Multifactor Authentication Cheat Sheet, NIST SP 800-63B-4 §3.1.3.3
 
 ### BE-AUTHN-011
 
-> Password policy MUST follow NIST SP 800-63B: minimum length of 8 characters (12+ recommended), allow at least 64 characters, allow all printable Unicode and spaces, screen new passwords against a breached-password corpus, and reject compromised entries. Composition rules ("must include uppercase, digit, symbol") and forced periodic rotation MUST NOT be imposed; rotation MUST be required only on suspicion of compromise.
+> Password policy MUST follow NIST SP 800-63B-4: a minimum length of 15 characters when the password is the sole authenticator and 8 characters when it is used only as one factor of multi-factor authentication, allow at least 64 characters, allow all printable Unicode and spaces, screen each new password against a blocklist of commonly used, expected, or compromised passwords, and reject any password the blocklist contains. Composition rules ("must include uppercase, digit, symbol") and forced periodic rotation MUST NOT be imposed; rotation MUST be required only on suspicion of compromise.
 
-**Rationale:** Older "complexity + rotation" policies push users toward predictable patterns (`Password1!` → `Password2!`) and degrade actual entropy. NIST 800-63B (revised 2017, reaffirmed in subsequent drafts) replaces them with length-over-complexity plus breached-password screening — the policy that demonstrably reduces credential compromise.
+**Rationale:** Older "complexity + rotation" policies push users toward predictable patterns (`Password1!` → `Password2!`) and degrade actual entropy. NIST SP 800-63B replaced them with length-over-complexity plus blocklist screening in 2017, and revision 4 (final, July 2025) keeps that model while raising the floor for a password that is the only authenticator from 8 to 15 characters.
 
-**Verification:** Any spec or plan that introduces password creation, change, or reset flows MUST commit to (a) the minimum and maximum length bounds, (b) acceptance of the full printable-Unicode character set, (c) screening against a breached-password list (e.g., HaveIBeenPwned k-anonymity API, local corpus), and (d) absence of forced periodic rotation. `/{project}:analyze` flags password-policy specs that mandate composition rules, that force calendar-based rotation, or that omit breached-password screening.
+**Verification:** Any spec or plan that introduces password creation, change, or reset flows MUST commit to (a) the minimum and maximum length bounds, distinguishing a password that is the sole authenticator from one used only within MFA, (b) acceptance of the full printable-Unicode character set, (c) screening against a blocklist of commonly used, expected, or compromised passwords (e.g., a breached-password corpus such as the Pwned Passwords k-anonymity range API, dictionary words, and context-specific words such as the service name and the username), and (d) absence of forced periodic rotation. `/{project}:analyze` flags password-policy specs that mandate composition rules, that force calendar-based rotation, that omit blocklist screening, or that set a minimum below 15 characters for a password that is the sole authenticator.
 
-**Source:** NIST SP 800-63B §5.1.1, OWASP Authentication Cheat Sheet
+**Source:** NIST SP 800-63B-4 §3.1.1.2, OWASP Authentication Cheat Sheet
 
 ### BE-AUTHN-012
 
 > JWT-based authentication MUST (a) declare an explicit algorithm allowlist on the verifier and reject any token whose `alg` header is not in the allowlist; (b) reject the `none` algorithm unconditionally; (c) reject tokens whose `alg` does not match the key type expected for the `kid` (preventing HS/RS confusion attacks); (d) validate `iss`, `aud`, `exp`, and `nbf` claims on every verification; and (e) keep access-token lifetimes short (≤15 minutes for typical web sessions) with refresh-token rotation for longer-lived access.
 
-**Rationale:** JWT misuse is one of the most consistently exploited modern auth vulnerabilities. The `alg: none` bypass, HS/RS algorithm confusion (verifying an RS256 token's signature using the RSA public key as an HMAC secret), and missing claim validation each enable full authentication bypass. Short access tokens with rotated refresh tokens limit the damage when a token leaks.
+**Rationale:** RFC 8725 documents the attacks these checks close: an attacker can change `alg` to `none` and some libraries trust the unsigned token, or change `RS256` to `HS256` so the verifier checks an HMAC keyed with the RSA public key (algorithm confusion). Its remedies are the ones listed here — libraries must let the caller specify the supported algorithms, each key must be used with exactly one algorithm and that must be checked, and the issuer and audience must be validated. Each failure enables authentication bypass. Short access tokens with rotated refresh tokens limit the damage when a token leaks.
 
 **Verification:** Any spec or plan that introduces JWT issuance or verification MUST commit to all five requirements. `/{project}:analyze` flags JWT specs that accept tokens without naming an algorithm allowlist, that omit `kid`-to-alg binding, that skip `iss`/`aud`/`exp`/`nbf` validation, or that propose long-lived access tokens without refresh-token rotation.
 
-**Source:** OWASP JSON Web Token for Java Cheat Sheet, RFC 8725 (JWT Best Current Practices)
+**Source:** OWASP JSON Web Token Cheat Sheet, RFC 8725 §2.1, §3.1, §3.8, §3.9 (JSON Web Token Best Current Practices)
 
 ### BE-AUTHN-013
 
 > OAuth 2.0 and OIDC client flows MUST (a) include and verify a unique `state` parameter on every authorization request to defeat CSRF; (b) use PKCE (`code_challenge` / `code_verifier`) for every authorization-code flow, including confidential clients; (c) validate the `nonce` claim on OIDC ID tokens; and (d) validate redirect URIs against an exact-match allowlist registered with the authorization server.
 
-**Rationale:** Missing `state` enables login CSRF that hijacks the OAuth callback. Missing PKCE leaves authorization codes interceptable on the user agent's network. Loose redirect-URI matching (substring, prefix) is exploited via attacker-registered subpaths. RFC 9700 (OAuth 2.0 Security Best Current Practice, 2025) makes PKCE the requirement for all clients, not just public ones.
+**Rationale:** Missing `state` enables login CSRF that hijacks the OAuth callback. Missing PKCE leaves the client open to the authorization code interception attack RFC 7636 was written to stop. Loose redirect-URI matching (substring, prefix) lets an attacker steer the code to a URI it controls, which is why RFC 9700 requires authorization servers to compare redirect URIs by exact string matching. OpenID Connect Core requires the client to check that the ID token's `nonce` matches the value it sent. RFC 9700 (OAuth 2.0 Security Best Current Practice, January 2025) requires PKCE for public clients and recommends it for confidential ones; this rule deliberately goes further and requires it for every client, because PKCE also protects confidential clients against authorization-code injection. It likewise requires `state` even where RFC 9700 would let PKCE or the OIDC `nonce` stand in as the CSRF defense, so that defense never depends on the authorization server's PKCE support. The grant types and PKCE method RFC 9700 rules out are covered by `BE-AUTHN-020`.
 
 **Verification:** Any spec or plan that introduces an OAuth client, OIDC client, or third-party login integration MUST commit to all four requirements. `/{project}:analyze` flags OAuth/OIDC specs that omit `state`, that limit PKCE to public clients, that omit ID-token `nonce` validation, or that describe redirect-URI matching using `startsWith`/`contains`/regex instead of exact equality.
 
-**Source:** RFC 9700 (OAuth 2.0 Security Best Current Practice), OpenID Connect Core 1.0, OWASP Authentication Cheat Sheet
+**Source:** RFC 9700 §2.1, §2.1.1 (OAuth 2.0 Security Best Current Practice), RFC 7636 (PKCE), OpenID Connect Core 1.0
 
 ### BE-AUTHN-014
 
@@ -152,11 +156,11 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 > Authentication throttling SHOULD layer per-IP and per-device limits on top of the account-scoped limit `BE-AUTHN-007` requires, as defense in depth.
 
-**Rationale:** An account-scoped limit contains attacks aimed at one account, but not credential stuffing, which spreads a few attempts across many accounts from the same sources. Per-IP and per-device limits contain that pattern, so layering the scopes covers both.
+**Rationale:** An account-scoped limit contains attacks aimed at one account, but not credential stuffing or password spraying, which spread a few attempts across many accounts so that no single account's limit trips. Per-IP limits and device fingerprinting catch the attempts that share a source, so layering the scopes covers both; the OWASP Credential Stuffing Prevention Cheat Sheet recommends layered defenses for this reason, since attackers rotate addresses to defeat any single limit.
 
 **Verification:** Any spec or plan covering login, password reset, or token-issuance endpoints SHOULD name per-IP and per-device limits alongside the account-scoped throttle. `/{project}:analyze` emits a warning when an auth spec's only documented throttle scope is per-account.
 
-**Source:** OWASP Authentication Cheat Sheet
+**Source:** OWASP Credential Stuffing Prevention Cheat Sheet, OWASP Authentication Cheat Sheet
 
 ### BE-AUTHN-016
 
@@ -166,17 +170,67 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 **Verification:** Any spec or plan that introduces account authentication or account-security settings SHOULD commit to offering MFA enrollment to every account. `/{project}:analyze` emits a warning when an authentication spec restricts MFA to privileged accounts or omits enrollment for ordinary ones.
 
-**Source:** OWASP Authentication Cheat Sheet, NIST SP 800-63B
+**Source:** OWASP Multifactor Authentication Cheat Sheet, OWASP Authentication Cheat Sheet
 
 ### BE-AUTHN-017
 
 > The `Domain` attribute of a cookie that carries a session identifier, authentication token, or other privileged credential SHOULD be omitted unless cross-subdomain sharing is explicitly required.
 
-**Rationale:** Without `Domain`, the browser returns the cookie only to the exact host that set it. Setting `Domain` sends it to every subdomain as well, so any one compromised subdomain receives the credential.
+**Rationale:** Without `Domain`, the browser returns the cookie only to the exact host that set it. Setting `Domain` sends it to every subdomain as well, so any one compromised subdomain receives the credential. The `__Host-` cookie-name prefix (`FE-STORAGE-005`) has the browser itself enforce this host-only scope.
 
 **Verification:** Any spec or plan that issues a session, authentication, or other privileged cookie SHOULD omit the `Domain` attribute, or justify cross-subdomain sharing where it sets one. `/{project}:analyze` emits a warning when a cookie-issuing spec sets `Domain` without justification.
 
 **Source:** OWASP Session Management Cheat Sheet
+
+### BE-AUTHN-018
+
+> Password-reset and account-recovery flows MUST (a) issue a single-use token that expires within a bounded, documented window and is invalidated once used or once a newer token is issued for the account; (b) generate that token with a CSPRNG per `BE-DATA-009` and persist only a hash of it, as `BE-AUTHN-002` requires for tokens; (c) build the reset link from a configured base URL, never from the request's `Host` or forwarded-host headers; (d) on a successful reset, invalidate the account's existing sessions and any outstanding reset or recovery tokens, and require the user to sign in through the normal flow; and (e) not rely on security questions as the sole recovery factor.
+
+**Rationale:** A reset token is a password-equivalent credential for its lifetime — whoever holds it owns the account — so reuse, a long expiry, or plaintext storage widens the window in which a stolen one works. A link built from the `Host` header lets an attacker request a reset for the victim with a forged host and receive the victim's token at a domain they control (password-reset poisoning); the OWASP Forgot Password Cheat Sheet requires the reset URL to be hard-coded or validated against trusted domains instead. Leaving existing sessions alive lets an attacker who already had access keep it after the victim recovers the account; the cheat sheet allows asking the user, and this rule chooses automatic invalidation. Security-question answers are often guessable or publicly discoverable, so OWASP rejects them as a sole reset mechanism. Uniform responses on the reset endpoint are covered by `BE-AUTHN-006` and its throttling by `BE-AUTHN-007`.
+
+**Verification:** Any spec or plan that introduces password reset, account recovery, or "forgot password" flows MUST commit to all five properties and name the token lifetime. `/{project}:analyze` flags recovery specs that omit token expiry or single-use invalidation, that persist the raw token, that derive the reset URL from the incoming request's host, that leave existing sessions valid after a reset, or that offer security questions as the only recovery path.
+
+**Source:** OWASP Forgot Password Cheat Sheet, PortSwigger Web Security Academy — Password reset poisoning
+
+### BE-AUTHN-019
+
+> JWT verifiers MUST select the verification key only from key material configured in advance (a pinned key, or a JWKS fetched from the issuer's configured URL). Keys or key locations carried in the token header — `jwk`, `jku`, `x5u`, `x5c` — MUST NOT be trusted unless they resolve to that configured material (an allowlisted `jku`/`x5u` URL, or an `x5c` chain validated to a configured trust anchor). The `kid` header MUST be treated as untrusted input: it MAY select among configured keys, and MUST NOT reach a database query, file path, or URL without validation.
+
+**Rationale:** A token is attacker-supplied data until its signature verifies, so honoring a header that names its own key lets the attacker sign with a key they control — the embedded-`jwk` and attacker-hosted-`jku` bypasses. RFC 8725 warns that blindly following a `jku` or `x5u` URL is a server-side request forgery vector and that `kid` must be sanitized before it reaches a database or LDAP lookup; a `kid` that reaches a file path has been used for directory traversal, to make the server verify with a file the attacker chose. This rule complements the algorithm and claim checks of `BE-AUTHN-012`.
+
+**Verification:** Any spec or plan that introduces JWT verification MUST name where verification keys come from (static key, configured JWKS URL, configured trust anchor) and commit to ignoring token-supplied key material outside that set. `/{project}:analyze` flags JWT specs that resolve keys from `jku`/`x5u` without an allowlist, that accept an embedded `jwk` or an `x5c` chain not validated to a configured anchor, or that use `kid` in a query, path, or URL without validation.
+
+**Source:** RFC 8725 §3.10 (Do Not Trust Received Claims), OWASP JSON Web Token Cheat Sheet, PortSwigger Web Security Academy — JWT attacks
+
+### BE-AUTHN-020
+
+> OAuth 2.0 clients and authorization servers MUST NOT use the resource owner password credentials grant, the implicit grant, or any other response type that returns an access token in the authorization response. PKCE MUST use the `S256` code challenge method; the `plain` method MUST NOT be used. Refresh tokens issued to public clients MUST be sender-constrained (e.g., DPoP per RFC 9449, mutual TLS per RFC 8705) or rotated on every use.
+
+**Rationale:** RFC 9700 forbids the resource owner password credentials grant outright — it exposes the user's credentials to the client, is not designed to work with two-factor authentication, and may make cryptographic authentication impossible — and advises against the implicit grant, which it finds vulnerable to access-token leakage and replay and for which no standardized way to sender-constrain the token exists. This rule forbids both, since the authorization-code flow with PKCE that `BE-AUTHN-013` requires replaces them. The `plain` PKCE method sends the verifier itself in the authorization request, so anyone who can read that request defeats PKCE; RFC 9700 names `S256` as the only method that does not expose it. A public client cannot keep a refresh token secret, so RFC 9700 requires binding it to a key the client holds or rotating it so a replayed copy is detectable.
+
+**Verification:** Any spec or plan that introduces an OAuth 2.0 client or authorization server MUST name the grant types it uses or supports, the PKCE challenge method, and, for public clients, the refresh-token protection. `/{project}:analyze` flags OAuth specs that use or enable the password grant or the implicit grant (`response_type=token`), that allow the `plain` PKCE method, or that issue refresh tokens to public clients without sender-constraining or rotation.
+
+**Source:** RFC 9700 §2.1.1, §2.1.2, §2.2.2, §2.4 (OAuth 2.0 Security Best Current Practice), RFC 7636 (PKCE), RFC 9449 (DPoP), RFC 8705 (OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens)
+
+### BE-AUTHN-021
+
+> Multi-factor authentication for privileged accounts SHOULD require a phishing-resistant authenticator — WebAuthn/passkeys, FIDO2 hardware security keys, or PKI-based smart cards — rather than one-time codes or push approvals.
+
+**Rationale:** `BE-AUTHN-010` accepts TOTP as a second factor, but a real-time phishing proxy relays a one-time code as easily as a password, push prompts invite fatigue attacks that repeat the prompt until the user approves, and privileged accounts are exactly the targets such campaigns pursue. Phishing-resistant authenticators bind the credential to the origin it was registered for, so a look-alike site cannot use it. NIST SP 800-63B-4 requires verifiers at AAL2 to offer at least one phishing-resistant option; the rule is advisory here because not every project targets AAL2.
+
+**Verification:** Any spec or plan that introduces administrative, role-management, billing, or security-operator capabilities SHOULD commit to phishing-resistant authenticators for those accounts. `/{project}:analyze` emits a warning when a privileged-feature spec accepts only one-time-code, push, or SMS factors for privileged accounts.
+
+**Source:** NIST SP 800-63B-4 §2.2.2, §3.2.5, OWASP Multifactor Authentication Cheat Sheet
+
+### BE-AUTHN-022
+
+> Changing an account's password or other authenticator, its email address or other recovery or notification contact, or its multi-factor settings (enrolling, replacing, or removing a factor, or turning MFA off) MUST require the user to re-authenticate within that change flow with an authenticator already bound to the account — the current password, or a fresh second-factor or passkey verification (step-up) — rather than relying on the existing session alone. A password reset through the recovery flow `BE-AUTHN-018` governs MAY proceed on its reset token instead, since the user has lost the credential it replaces.
+
+**Rationale:** A session proves only that someone authenticated earlier. Whoever holds it — through XSS, CSRF, a stolen session ID, or a browser left signed in — could otherwise change the password, point the recovery address at a mailbox they control, or enroll their own second factor, turning temporary access into a takeover that locks the owner out. The OWASP Authentication Cheat Sheet calls it important to require the account's current credentials before updating a password or email address, for these reasons, and among its re-authentication mechanisms requires an authenticator already bound to the account, such as the current password or a passkey, never a security question. The OWASP Multifactor Authentication Cheat Sheet requires re-authentication with an existing enrolled factor before MFA factors change, warning not to rely solely on the active session, and lists changing the password or email address and disabling MFA among the actions that may warrant MFA. NIST SP 800-63B-4 requires that binding a new authenticator to an account require authentication at the highest assurance level the account currently supports, or the level the new authenticator will be used at if that is lower, with the subscriber notified through an independent channel, and says a CSP should let subscribers authenticated at AAL2 or higher (AAL1 where that is the account's highest) update their notification addresses. Regenerating the session after a step-up is `BE-AUTHN-004`; the unauthenticated recovery path is `BE-AUTHN-018`.
+
+**Verification:** Any spec or plan that introduces a password change, an email or recovery-contact change, or MFA enrollment, replacement, removal, or disablement MUST name the re-authentication each of those changes requires (current password, second factor, or passkey). `/{project}:analyze` flags account-settings specs that allow any of those changes on the strength of the existing session alone, or that accept a security question as the re-authentication.
+
+**Source:** OWASP Authentication Cheat Sheet, OWASP Multifactor Authentication Cheat Sheet, NIST SP 800-63B-4 §4.1.2.1, §4.6
 
 ## BE-AUTHZ — Authorization
 
@@ -218,13 +272,13 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 **Verification:** Any spec or plan that introduces role grants, permission assignments, or admin invitations MUST commit to a ceiling check at the grant operation. `/{project}:analyze` flags admin-management specs that describe assigning roles without a documented permissions-superset check on the caller.
 
-**Source:** OWASP Authorization Cheat Sheet
+**Source:** CWE-269 (Improper Privilege Management), OWASP Authorization Cheat Sheet
 
 ### BE-AUTHZ-005
 
 > Authorization MUST be checked against the specific resource being accessed (object-level authorization), not just the resource type or endpoint.
 
-**Rationale:** A user authorized to read their own records MUST NOT be able to read another user's records by changing an ID parameter. This is OWASP API1:2023 — Broken Object Level Authorization (BOLA), the most-exploited API vulnerability.
+**Rationale:** A user authorized to read their own records MUST NOT be able to read another user's records by changing an ID parameter. This is OWASP API1:2023 — Broken Object Level Authorization (BOLA), ranked first in the OWASP API Security Top 10.
 
 **Verification:** Any spec or plan that introduces resource-by-id endpoints (`/users/:id`, `/orders/:id`, `/projects/:id/files/:fileId`) MUST commit to an ownership or resource-scoped authorization check, not just a coarse "is this user authenticated" check. `/{project}:analyze` flags resource endpoints whose authorization commitment is only at the type level (e.g., "any authenticated user can call /orders/:id").
 
@@ -234,17 +288,17 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 > Authorization failures SHOULD return `404 Not Found` rather than `403 Forbidden` for resources whose existence should not be revealed to unauthorized callers.
 
-**Rationale:** A `403` confirms the resource exists, which is itself information leakage useful for reconnaissance and enumeration. A `404` reveals nothing about existence.
+**Rationale:** A `403` confirms the resource exists, which is itself information leakage useful for reconnaissance and enumeration. A `404` reveals nothing about existence, and RFC 9110 explicitly lets an origin server that wishes to hide a forbidden resource's existence respond `404` instead.
 
 **Verification:** Any spec or plan that introduces authorization on existence-sensitive resources (private documents, internal user records, draft content) SHOULD commit to `404` responses for unauthorized callers. `/{project}:analyze` emits a warning when a spec explicitly proposes `403` for such resources without justification.
 
-**Source:** OWASP Authorization Cheat Sheet
+**Source:** RFC 9110 §15.5.4 (403 Forbidden)
 
 ### BE-AUTHZ-007
 
 > Request handlers that bind user input to persistence or domain objects MUST use an explicit allowlist of writable fields. Mass assignment of arbitrary input to model fields is forbidden.
 
-**Rationale:** Frameworks that auto-bind request bodies to model fields (Rails `params`, Spring `@RequestBody`, Express body-spread) let users set fields they shouldn't — admin flags, internal IDs, ownership references, billing tier — when those fields aren't excluded. The allowlist is the only safe default; the denylist (strong parameters with field exclusion) inevitably misses new fields added later.
+**Rationale:** Frameworks and ORMs that bind request bodies straight onto model objects (Spring MVC data binding or `@RequestBody` onto an entity, ASP.NET model binding onto an entity, `Model.create(req.body)`, Express body-spread) let users set fields they shouldn't — admin flags, internal IDs, ownership references, billing tier — when those fields aren't excluded. The allowlist is the only safe default (Rails strong parameters' `permit` is one); a denylist that excludes named fields (`@JsonIgnore` on sensitive properties, a list of blocked keys) inevitably misses new fields added later.
 
 **Verification:** Any spec or plan that describes accepting structured input (form bodies, JSON requests) and persisting or assigning it to a domain object MUST commit to an allowlist of acceptable fields per endpoint. `/{project}:analyze` flags any commitment to "auto-bind", "spread the body", "accept all fields", or "use the request body directly" without a corresponding allowlist mechanism (DTO, schema-validated input type, explicit `pick`/`select` of fields).
 
@@ -258,7 +312,7 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 **Verification:** Any spec or plan that introduces tokens, sessions, or any long-lived credential MUST commit to a revocation mechanism and state the maximum time between revocation and effect. `/{project}:analyze` flags credential specs that omit the revocation question, that rely on token expiry as the only revocation mechanism without naming the maximum lifetime, or that describe immediate logout UX without a server-side invalidation step.
 
-**Source:** OWASP Session Management Cheat Sheet, RFC 8725
+**Source:** OWASP Session Management Cheat Sheet, OWASP JSON Web Token Cheat Sheet (JWT revocation)
 
 ## BE-INPUT — Input Validation
 
@@ -284,13 +338,13 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 ### BE-INPUT-003
 
-> Queries and commands sent to external interpreters (SQL databases, NoSQL stores, shell processes, OS command runners, search-engine query strings) MUST be built so that user input cannot alter the structure of the request. SQL and NoSQL access MUST use parameterized statements, prepared statements, or an ORM/driver that parameterizes by default. Shell or OS command execution MUST pass arguments as a vector (e.g., `execve`-style argument arrays, `subprocess.run([...], shell=False)`) rather than constructing a shell command string. Query strings, NoSQL operator documents (MongoDB `$where`, dynamic field projections), and command lines MUST NOT be constructed via string concatenation, interpolation, or template literals containing user input.
+> Queries and commands sent to external interpreters (SQL databases, NoSQL stores, shell processes, OS command runners, search-engine query strings) MUST be built so that user input cannot alter the structure of the request. SQL and NoSQL access MUST use parameterized statements, prepared statements, or an ORM/driver that parameterizes by default. Shell or OS command execution MUST pass arguments as a vector (e.g., `execve`-style argument arrays, `subprocess.run([...], shell=False)`) rather than constructing a shell command string. Query strings, NoSQL operator documents (MongoDB `$where`, `$regex`, `$expr`), and command lines MUST NOT be constructed via string concatenation, interpolation, or template literals containing user input.
 
-**Rationale:** Injection remains one of the most exploited vulnerability classes. Parameterization (for SQL/NoSQL) and argument-vector invocation (for shells) make injection structurally impossible — the driver or kernel, not the application, handles escaping and tokenization. A single rule covers all interpreter boundaries because the failure mode is identical: user data being parsed as code.
+**Rationale:** Injection remains a category of its own in the OWASP Top 10 (A05:2025). Parameterized SQL and argument-vector invocation (for shells) make injection structurally impossible — the driver or kernel, not the application, handles escaping and tokenization. NoSQL query objects need one more step: the OWASP NoSQL Security Cheat Sheet warns that building a query object does not prevent operator injection when an untrusted value is itself an object (MongoDB reads `{ "$ne": "" }` as "not equal"), so each value must be checked to be the expected scalar type before it enters the query. A single rule covers all interpreter boundaries because the failure mode is identical: user data being parsed as code.
 
-**Verification:** Any spec or plan that introduces database access, shell-out, or command execution MUST describe the safe-invocation mechanism (parameterized statements, prepared statements, ORM defaults, argument-vector exec). `/{project}:analyze` flags any commitment to building queries via concatenation, `f-string`/`.format()`, template literals interpolating request fields, dynamic NoSQL operator construction from client input, or shell invocation with `shell=True`/string-concatenated command lines.
+**Verification:** Any spec or plan that introduces database access, shell-out, or command execution MUST describe the safe-invocation mechanism (parameterized statements, prepared statements, ORM defaults, argument-vector exec, type-checked NoSQL query values). `/{project}:analyze` flags any commitment to building queries via concatenation, `f-string`/`.format()`, template literals interpolating request fields, dynamic NoSQL operator construction from client input, NoSQL filters that take request values without checking that each is the expected scalar type, or shell invocation with `shell=True`/string-concatenated command lines.
 
-**Source:** OWASP SQL Injection Prevention Cheat Sheet, OWASP Command Injection Prevention Cheat Sheet, OWASP NoSQL Injection Prevention Cheat Sheet
+**Source:** OWASP SQL Injection Prevention Cheat Sheet, OWASP OS Command Injection Defense Cheat Sheet, OWASP NoSQL Security Cheat Sheet
 
 ### BE-INPUT-004
 
@@ -298,9 +352,9 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 **Rationale:** Path traversal (`../../../etc/passwd`) lets attackers read or write arbitrary files when user input flows into file paths without canonicalization-and-base-check.
 
-**Verification:** Any spec or plan that opens, reads, writes, or serves files based on user input (filename parameter, upload destination, template path) MUST commit to path canonicalization (e.g., `path.resolve` + `startsWith(baseDir)`, `os.path.realpath` + `commonpath`, language-equivalent) before opening. `/{project}:analyze` flags file-handling specs that take user input without a documented canonicalization step.
+**Verification:** Any spec or plan that opens, reads, writes, or serves files based on user input (filename parameter, upload destination, template path, entry names of an uploaded archive being extracted) MUST commit to path canonicalization followed by a containment check that compares whole path components, not a bare string prefix (e.g., Python `os.path.realpath` + `os.path.commonpath`, or a resolved path tested against the base directory plus a trailing separator; a check like `startsWith(baseDir)` alone accepts `/srv/base2` for `/srv/base`) before opening. `/{project}:analyze` flags file-handling specs that take user input without a documented canonicalization step.
 
-**Source:** OWASP Input Validation Cheat Sheet
+**Source:** CWE-22 (Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')), Python documentation — `os.path` (`commonpath`, `commonprefix`)
 
 ### BE-INPUT-005
 
@@ -314,31 +368,31 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 ### BE-INPUT-006
 
-> Inputs that contribute to resource consumption (request bodies, file uploads, list lengths, page sizes, regex inputs) MUST have explicit upper bounds. Requests exceeding limits MUST be rejected with `413 Payload Too Large` (or the format-appropriate equivalent).
+> Inputs that contribute to resource consumption (request bodies, file uploads, list lengths, page sizes, regex inputs) MUST have explicit upper bounds. Request content over its size limit MUST be rejected with `413 Content Too Large` (RFC 9110 §15.5.14; formerly "Payload Too Large"); a parameter over its maximum (a list length, a page size) MUST be rejected with a `400`-class client error or, for a page size, clamped to the documented maximum (`BE-PAGE-001` names it). Non-HTTP protocols MUST use their equivalent rejection.
 
 **Rationale:** Unbounded inputs enable denial-of-service through memory exhaustion, payload bombs, and ReDoS. Bounds turn DoS attempts into clean rejections.
 
 **Verification:** Any spec or plan that accepts variable-size input (file uploads, JSON bodies, list parameters, search queries, paginated endpoints) MUST commit to a maximum size or count and to the rejection response. `/{project}:analyze` flags input descriptions without explicit limits, particularly for uploads, bulk endpoints, and search queries that accept user-supplied regex.
 
-**Source:** OWASP REST Security Cheat Sheet
+**Source:** OWASP REST Security Cheat Sheet, RFC 9110 §15.5.14, RFC 7231 §6.5.11 (the former name)
 
 ### BE-INPUT-007
 
 > When the server fetches a URL supplied or influenced by user input, the destination MUST be validated against an allowlist of acceptable hosts or schemes, AND outbound requests MUST be denied by default to internal address ranges (loopback `127.0.0.0/8`, link-local `169.254.0.0/16`, RFC 1918 `10.0.0.0/8` / `172.16.0.0/12` / `192.168.0.0/16`, IPv6 equivalents, and cloud metadata endpoints).
 
-**Rationale:** Server-Side Request Forgery (SSRF) lets attackers make the server fetch arbitrary URLs, often as a stepping stone to cloud metadata services (`169.254.169.254` for AWS/GCP/Azure), internal admin panels, or arbitrary intranet probing. OWASP A10:2021 / API6:2023.
+**Rationale:** Server-Side Request Forgery (SSRF) lets attackers make the server fetch arbitrary URLs, often as a stepping stone to cloud metadata services (`169.254.169.254` for AWS/GCP/Azure), internal admin panels, or arbitrary intranet probing. OWASP API7:2023; in the OWASP Top 10, SSRF (CWE-918) was A10:2021 and is mapped into A01:2025 Broken Access Control. The bypasses that defeat a check made only on the submitted URL — redirects, DNS rebinding, alternative address encodings — are covered by `BE-INPUT-016`.
 
 **Verification:** Any spec or plan that includes server-side URL fetching, webhook callbacks, image proxies, RSS pulls, or any user-supplied URL retrieval MUST commit to (a) host or scheme allowlisting, AND (b) outbound network restrictions or DNS-resolution-time blocks for internal address ranges. `/{project}:analyze` flags outbound-fetch features without both commitments. Cloud metadata-address denial MUST be named explicitly when the project deploys to a cloud provider.
 
-**Source:** OWASP SSRF Prevention Cheat Sheet, OWASP API Security Top 10 (API6:2023)
+**Source:** OWASP Server-Side Request Forgery Prevention Cheat Sheet, OWASP API Security Top 10 (API7:2023), OWASP Top 10:2025 (A01)
 
 ### BE-INPUT-008
 
 > Deserialization of untrusted input MUST use a format and parser that cannot execute code as a side effect of parsing.
 
-**Rationale:** Pickle (Python), `ObjectInputStream` (Java), `unserialize` (PHP), `Marshal.load` (Ruby), and similar binary deserialization formats can execute attacker-controlled code as part of parsing — a direct path to remote code execution. JSON, MessagePack, Protobuf, and similar data-only formats do not have this property.
+**Rationale:** Pickle (Python), `ObjectInputStream` (Java), `unserialize` (PHP), `Marshal.load` (Ruby), `BinaryFormatter` (.NET), and similar native object-serialization formats can execute attacker-controlled code as part of parsing — a direct path to remote code execution. JSON, MessagePack, Protobuf, and similar data-only formats do not have this property — unless the parser is configured to instantiate types named in the payload, which reintroduces the same class (Jackson default typing, Json.NET `TypeNameHandling` other than `None`).
 
-**Verification:** Any spec or plan that ingests data from clients, queues, files, or third-party APIs MUST name the serialization format. `/{project}:analyze` flags any commitment to Pickle, `ObjectInputStream`, PHP `unserialize`, or `Marshal.load` for untrusted input. JSON, MessagePack, and Protobuf are acceptable. YAML is acceptable only when the spec names a safe-loading mode explicitly (e.g., `yaml.safe_load` in Python, `SafeYAML` in Ruby).
+**Verification:** Any spec or plan that ingests data from clients, queues, files, or third-party APIs MUST name the serialization format. `/{project}:analyze` flags any commitment to Pickle, `ObjectInputStream`, PHP `unserialize`, `Marshal.load`, or `BinaryFormatter` for untrusted input, and flags polymorphic type handling driven by type names in untrusted payloads. JSON, MessagePack, and Protobuf are acceptable when bound to fixed types. YAML is acceptable only when the spec names a safe-loading mode explicitly (e.g., `yaml.safe_load` in Python, `YAML.safe_load` in Ruby's Psych, SnakeYAML's `SafeConstructor` in Java).
 
 **Source:** OWASP Deserialization Cheat Sheet
 
@@ -346,7 +400,7 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 > XML parsers MUST be configured to disable external entity expansion, DTD processing, and parameter entity expansion before parsing untrusted input.
 
-**Rationale:** Default XML parser configurations in many languages allow XXE — external entity expansion that can read local files (`file:///etc/passwd`), perform SSRF via entity URLs, or trigger denial-of-service via billion-laughs attacks. Disabling these features at parser construction is the only reliable mitigation.
+**Rationale:** Default XML parser configurations in many languages allow XXE — external entity expansion that can read local files (`file:///etc/passwd`) or perform SSRF via entity URLs — and DTD processing also permits the billion-laughs attack, a denial of service through nested internal entities that disabling external entities alone does not stop. The OWASP XML External Entity Prevention Cheat Sheet recommends disabling DTDs whenever possible, which is configured when the parser is constructed.
 
 **Verification:** Any spec or plan that parses XML from untrusted sources (SOAP services, SAML responses, document uploads, RSS, configuration imports) MUST commit to a hardened parser configuration (`disallow-doctype-decl`, `external-general-entities=false`, `external-parameter-entities=false`, language-equivalent settings) at parser construction. `/{project}:analyze` flags XML-parsing specs without an explicit hardening commitment, and flags reliance on default parser settings.
 
@@ -356,11 +410,11 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 > User input MUST NOT be concatenated or interpolated into template strings rendered by a server-side template engine. User input MAY be passed only as bound variables to a template whose source is controlled by the application.
 
-**Rationale:** Server-Side Template Injection (SSTI) in Jinja, Twig, ERB, Handlebars, Velocity, etc. enables arbitrary code execution or template-sandbox escape when user input becomes part of the template *text* (not template *data*). Treating user input as data — values bound to variables — is safe; treating it as template source is not.
+**Rationale:** Server-Side Template Injection (SSTI) in Jinja2, Twig, FreeMarker, and similar engines enables remote code execution on the server when user input becomes part of the template *text* (not template *data*); some engines offer sandboxes, which an injection then has to escape. Treating user input as data — values bound to variables — is safe; treating it as template source is not.
 
 **Verification:** Any spec or plan that uses server-side template rendering MUST describe how user input flows into templates: only as bound variables, never as concatenated template text. `/{project}:analyze` flags any commitment to building template strings dynamically from user input, or rendering templates whose source is partially user-controlled.
 
-**Source:** OWASP Server-Side Template Injection guidance, PortSwigger SSTI research
+**Source:** OWASP Server-Side Template Injection Prevention Cheat Sheet, OWASP Web Security Testing Guide v4.2 — Testing for Server-side Template Injection (WSTG-INPV-18)
 
 ### BE-INPUT-011
 
@@ -374,23 +428,23 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 ### BE-INPUT-012
 
-> When the application generates CSV, TSV, or Excel-readable output containing user-supplied values, each cell whose content starts with `=`, `+`, `-`, `@`, `\t`, or `\r` MUST be prefixed with a single quote (`'`) or wrapped in a way that prevents spreadsheet formula execution on open.
+> When the application generates CSV, TSV, or Excel-readable output containing user-supplied values, each cell whose content starts with `=`, `+`, `-`, `@`, tab (`0x09`), carriage return (`0x0D`), line feed (`0x0A`), or a full-width form of the first four (`＝`, `＋`, `－`, `＠`) MUST be prefixed with a single quote (`'`) or wrapped in a way that prevents spreadsheet formula execution on open.
 
-**Rationale:** CSV formula injection (a.k.a. "spreadsheet injection") lets an attacker stash a payload like `=cmd|'/c calc.exe'!A1` in a free-text field; when a finance or operations user opens the downloaded report in Excel/LibreOffice/Numbers, the formula executes with the user's local privileges. The escape is a single-character prefix that costs nothing and closes the entire class.
+**Rationale:** CSV formula injection (a.k.a. "spreadsheet injection") lets an attacker stash a formula in a free-text field; when a user opens the exported file in a spreadsheet application such as Microsoft Excel or LibreOffice Calc, the cell is interpreted as a formula — CWE-1236 describes it as interpreted as a command — rather than displayed as text. The OWASP CSV Injection page lists the leading characters above; neutralizing them at export time is cheap and closes the vector.
 
 **Verification:** Any spec or plan that introduces CSV, TSV, or Excel-format export of user-supplied content MUST commit to formula-escaping per cell. `/{project}:analyze` flags export specs that describe writing user-supplied strings directly into spreadsheet output without naming an escape.
 
-**Source:** OWASP CSV Injection guidance, CWE-1236
+**Source:** OWASP CSV Injection (attack page), CWE-1236 (Improper Neutralization of Formula Elements in a CSV File)
 
 ### BE-INPUT-013
 
-> Front-end reverse proxies, load balancers, and application servers MUST be configured so that HTTP request smuggling is structurally prevented. The deployment MUST commit to one of: (a) HTTP/2 end-to-end (no HTTP/1.1 downgrades between proxy and app), (b) explicit framing reconciliation (proxy and app agree on `Content-Length` vs `Transfer-Encoding` priority; ambiguous requests are rejected), or (c) a single-tier deployment with no proxy-to-app HTTP boundary. Duplicate `Content-Length` headers or `Transfer-Encoding` plus `Content-Length` on the same request MUST be rejected by the edge.
+> Front-end reverse proxies, load balancers, and application servers MUST be configured so that HTTP request smuggling is structurally prevented. The deployment MUST commit to one of: (a) HTTP/2 end-to-end (no HTTP/1.1 downgrades between proxy and app), (b) explicit framing reconciliation (proxy and app agree on `Content-Length` vs `Transfer-Encoding` priority; ambiguous requests are rejected), or (c) a single-tier deployment with no proxy-to-app HTTP boundary. The edge MUST reject a request that carries both `Transfer-Encoding` and `Content-Length`, or that carries `Content-Length` values that differ — whether as repeated header lines or as one comma-separated list. A request whose `Content-Length` values are all identical MAY be accepted, provided the edge replaces them with a single instance of that value before processing or forwarding the request.
 
-**Rationale:** HTTP request smuggling (CL.TE, TE.CL, TE.TE, H2.CL, H2.TE) exploits framing disagreements between two HTTP parsers in series to inject hidden requests that bypass front-end controls. The class affects nearly every reverse-proxy/app pair when defaults disagree, and the impact ranges from cache poisoning to full session hijacking.
+**Rationale:** HTTP request smuggling (CL.TE, TE.CL, TE.TE, H2.CL, H2.TE) exploits framing disagreements between two HTTP parsers in series to inject hidden requests that bypass front-end controls. It arises wherever a front-end and a back-end disagree about where one request ends and the next begins, and it lets an attacker bypass security controls, reach sensitive data, and compromise other users' requests. RFC 9112 says a message carrying both `Transfer-Encoding` and `Content-Length` might indicate a smuggling attempt and ought to be handled as an error. Repeated header lines combine into one comma-separated value (RFC 9110 §5.3), and RFC 9112 treats a `Content-Length` that is not a single valid value as an unrecoverable framing error — a server responds `400` and closes the connection — unless it parses as a list whose values are all valid and all the same, in which case the message is processed with that single value. RFC 9110 lets a recipient of such a repeated value either reject the message or replace the list with one instance, and forbids forwarding it as received. Identical copies give every parser in the chain the same length; differing values are the disagreement smuggling exploits.
 
-**Verification:** Any spec or plan covering deployment topology, edge configuration, or `system.md` MUST commit to one of the three structural mitigations. `/{project}:analyze` flags topology specs that describe an HTTP/1.1 proxy-to-app boundary without naming a framing-reconciliation policy, and flags edge configurations that accept ambiguous framing instead of rejecting it.
+**Verification:** Any spec or plan covering deployment topology, edge configuration, or `system.md` MUST commit to one of the three structural mitigations. `/{project}:analyze` flags topology specs that describe an HTTP/1.1 proxy-to-app boundary without naming a framing-reconciliation policy, flags edge configurations that accept ambiguous framing — `Transfer-Encoding` with `Content-Length`, or differing `Content-Length` values — instead of rejecting it, and flags edges that forward repeated identical `Content-Length` values without collapsing them to one.
 
-**Source:** PortSwigger HTTP Request Smuggling research, OWASP Web Security Testing Guide
+**Source:** PortSwigger Web Security Academy — HTTP request smuggling, OWASP Web Security Testing Guide v4.2 — Testing for HTTP Splitting Smuggling (WSTG-INPV-15), RFC 9112 §6.3 (Message Body Length), RFC 9110 §5.3 (Field Order), §8.6 (Content-Length)
 
 ### BE-INPUT-014
 
@@ -406,11 +460,21 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 > LDAP queries MUST escape user-supplied values according to RFC 4515 (search filter) and RFC 4514 (distinguished name) before insertion into a filter or DN string, OR MUST use a library API that performs parameterization automatically. Search filters and DNs MUST NOT be built by string concatenation of unescaped user input.
 
-**Rationale:** LDAP injection lets an attacker turn a username lookup into an authentication bypass (`*)(&(uid=*)` collapses an `(&(uid=...)(...))` filter into one that matches every entry). Parameterized LDAP APIs and RFC 4515/4514 escaping prevent the structural change.
+**Rationale:** LDAP injection lets an attacker turn a credential lookup into an authentication bypass: the OWASP Web Security Testing Guide's example username `*)(uid=*))(|(uid=*` turns the filter `(&(uid=…)(userPassword=…))` into `(&(uid=*)(uid=*))(|(uid=*)(userPassword=…))`, which the guide notes is always true, granting a login as the first user in the LDAP tree. Parameterized LDAP APIs and RFC 4515/4514 escaping prevent the structural change.
 
 **Verification:** Any spec or plan that introduces LDAP queries (directory lookups, AD authentication, group membership checks) MUST commit to parameterized filter/DN construction or to escape-per-field. `/{project}:analyze` flags LDAP specs that concatenate user input into filter strings without naming an escape function or parameterized API.
 
-**Source:** OWASP LDAP Injection Prevention Cheat Sheet, RFC 4514, RFC 4515
+**Source:** OWASP LDAP Injection Prevention Cheat Sheet, OWASP Web Security Testing Guide v4.2 — Testing for LDAP Injection (WSTG-INPV-06), RFC 4514, RFC 4515
+
+### BE-INPUT-016
+
+> Server-side URL fetches subject to `BE-INPUT-007` MUST enforce its destination checks on the connection actually made, not only on the URL as submitted: the client MUST connect to the IP address that passed validation rather than resolving the hostname a second time, MUST disable automatic redirect following or re-validate every redirect target against the same checks, and MUST parse and normalize the host before comparison so alternative address encodings (hex, octal, dword, mixed, URL-encoded) cannot slip past the internal-range denial.
+
+**Rationale:** A check made on the submitted URL is bypassed by anything that changes the destination between the check and the connection. DNS rebinding answers the validation lookup with a public address and the connection's own lookup with an internal one; an allowlisted host that answers with a redirect to `http://169.254.169.254/` sends a redirect-following client to the cloud metadata service; and a comparison that does not normalize `0x7f000001` or `2130706433` reads loopback as some other address. Each is a documented SSRF bypass that satisfies the letter of `BE-INPUT-007` while defeating it.
+
+**Verification:** Any spec or plan that introduces server-side URL fetching (webhook delivery, image proxies, link previews, import-from-URL) MUST describe how the validated address is pinned for the connection and how redirects are handled. `/{project}:analyze` flags outbound-fetch specs that validate a hostname and then hand the URL to a client that resolves it again, that leave redirect following enabled without per-hop validation, or that compare hosts as raw strings.
+
+**Source:** OWASP Server-Side Request Forgery Prevention Cheat Sheet
 
 ## BE-DATA — Data Protection
 
@@ -418,11 +482,11 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 > All network communication that crosses a host boundary MUST use TLS 1.2 or later. Plaintext protocols MUST NOT be used for any host-to-host data exchange in production. Loopback (`127.0.0.0/8`, `::1`) traffic between cooperating processes on the same host MAY use plaintext when those processes share the host's trust boundary (e.g., a sidecar proxy that terminates mTLS at the loopback edge); the use of loopback plaintext MUST be documented in `specs/system.md`.
 
-**Rationale:** Unencrypted traffic on a network is trivially intercepted. TLS 1.0 and 1.1 are formally deprecated by IETF (RFC 8996); TLS 1.2 is the floor and TLS 1.3 is preferred. The loopback exception exists because service-mesh sidecars (Istio, Linkerd, Consul Connect) and similar local proxies terminate mTLS at the host boundary and hand off plaintext over loopback to the application — re-encrypting loopback adds cost without changing the threat model.
+**Rationale:** Unencrypted traffic on a network is trivially intercepted. TLS 1.0 and 1.1 are formally deprecated by IETF (RFC 8996); TLS 1.2 is the floor and TLS 1.3 is preferred — the OWASP Transport Layer Security Cheat Sheet has web applications default to TLS 1.3 and support TLS 1.2 only for compatibility. The loopback exception exists because service-mesh sidecars and similar local proxies terminate mTLS for the workload and hand traffic to the application over a local connection — Istio's server-side Envoy, for example, forwards authorized traffic to the backend service through local TCP connections — and re-encrypting that hop adds cost without changing the threat model.
 
 **Verification:** Any spec or plan covering network communication, edge configuration, or `system.md` MUST commit to TLS 1.2+ across all host-crossing surfaces (HTTPS, gRPC, message brokers, database connections). `/{project}:analyze` flags specs that allow plaintext protocols for host-to-host traffic, that name TLS 1.0/1.1, or that omit the TLS version question entirely. Plaintext loopback exceptions MUST be named explicitly with the sidecar/proxy that provides the encrypted host-boundary leg.
 
-**Source:** OWASP Cryptographic Storage Cheat Sheet, RFC 8996, NIST SP 800-52r2
+**Source:** OWASP Transport Layer Security Cheat Sheet, RFC 8996, NIST SP 800-52r2, Istio documentation — Security (Mutual TLS authentication)
 
 ### BE-DATA-002
 
@@ -452,7 +516,7 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 **Verification:** Any spec or plan that introduces encryption MUST name the algorithm and mode. `/{project}:analyze` flags custom or unnamed algorithms, and flags any commitment to ECB, unauthenticated CBC, or pre-AEAD constructions for new code. Legacy compatibility deviations MUST be explicitly justified in the spec.
 
-**Source:** OWASP Cryptographic Storage Cheat Sheet, NIST SP 800-38D
+**Source:** OWASP Cryptographic Storage Cheat Sheet, NIST SP 800-38D, RFC 8439 (ChaCha20 and Poly1305)
 
 ### BE-DATA-005
 
@@ -468,11 +532,11 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 > Personally Identifiable Information (PII) MUST be minimized at collection, scoped to a documented purpose, and deletable on user request. Data retention periods MUST be defined for each PII field.
 
-**Rationale:** PII you don't collect is PII you don't have to protect, leak, or be subpoenaed for. Minimization is the strongest privacy control. Purpose limitation, deletion, and retention bounds are baseline GDPR/CCPA requirements.
+**Rationale:** PII you don't collect is PII you don't have to protect, leak, or be subpoenaed for. Minimization is the strongest privacy control. GDPR Article 5 makes purpose limitation, data minimisation, and storage limitation principles of all processing, and GDPR Article 17 and the CCPA's §1798.105 give individuals a right to have their personal data deleted.
 
 **Verification:** Any spec or plan that collects PII (names, emails, addresses, phone numbers, government IDs, biometrics, geolocation) MUST describe (a) the minimum data set required, (b) the documented purpose for each field, (c) the deletion path, and (d) the retention period. `/{project}:analyze` flags PII-collecting specs that omit any of these.
 
-**Source:** OWASP Cryptographic Storage Cheat Sheet, GDPR Article 5
+**Source:** GDPR Article 5(1)(b), (c), (e) (purpose limitation, data minimisation, storage limitation), GDPR Article 17 (right to erasure), CCPA (Cal. Civ. Code §1798.105, right to delete)
 
 ### BE-DATA-007
 
@@ -482,17 +546,17 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 **Verification:** Any spec or plan covering database access, deployment configuration, or `system.md` MUST commit to (a) separate application accounts per environment, (b) the minimum privilege set the application requires (typically `SELECT`/`INSERT`/`UPDATE`/`DELETE` on its own schema, no `CREATE`/`DROP`/`ALTER`), and (c) a separate account for migrations with elevated privileges that the application itself does not use. `/{project}:analyze` flags database access specs that omit the privilege question or that name a `root`/`admin`/`postgres` account for application use.
 
-**Source:** CIS Database Benchmarks, OWASP SQL Injection Prevention Cheat Sheet
+**Source:** OWASP Database Security Cheat Sheet, OWASP SQL Injection Prevention Cheat Sheet
 
 ### BE-DATA-008
 
 > Secrets MUST NOT be embedded in container images, Dockerfiles, or container-build manifests. Secrets MUST be injected at runtime via environment variables sourced from a secrets manager, mounted secret volumes, or platform-native secret APIs.
 
-**Rationale:** Container images are stored in registries, cached in build systems, and inspectable by anyone with registry pull access. Embedded secrets are trivially extracted via `docker history` or layer inspection. This rule complements `BE-DATA-003` for the container-specific case.
+**Rationale:** Container images are stored in registries, cached in build systems, and inspectable by anyone with registry pull access. Docker documents that build arguments and environment variables persist in the final image — in its metadata, provenance attestations, and history — so they are unsuitable for secrets, and NIST SP 800-190 notes that a secret embedded in the image file system can be parsed out by anyone with access to the image. This rule complements `BE-DATA-003` for the container-specific case.
 
 **Verification:** Any spec or plan that describes containerization or container deployment MUST commit to runtime secret injection. `/{project}:analyze` flags `Dockerfile` content (or equivalent build manifests) that includes `ENV SECRET=...`, `ARG SECRET=...` baked into layers, or `COPY` of secret files into the image.
 
-**Source:** OWASP Secrets Management Cheat Sheet, NIST SP 800-190 (Container Security)
+**Source:** OWASP Secrets Management Cheat Sheet, Docker documentation — Build variables, NIST SP 800-190 (Application Container Security Guide) §3.1.4, §4.1.4
 
 ### BE-DATA-009
 
@@ -502,7 +566,7 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 **Verification:** Any spec or plan that generates a security-sensitive random value MUST name the CSPRNG primitive. `/{project}:analyze` flags specs that propose `Math.random`, `random.randint`, `Random()`, `rand()`, or any non-CSPRNG source for tokens, IDs, IVs, salts, or keys.
 
-**Source:** OWASP Cryptographic Storage Cheat Sheet, NIST SP 800-90A
+**Source:** OWASP Cryptographic Storage Cheat Sheet, NIST SP 800-90A Rev. 1
 
 ### BE-DATA-010
 
@@ -512,7 +576,7 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 **Verification:** Any spec or plan that introduces backups, snapshots, or long-term data retention MUST commit to (a) encryption with a backup-specific key, (b) key custody separate from both the backup storage and the production data plane, and (c) a documented restore-test cadence. `/{project}:analyze` flags backup specs that omit any of these, and flags specs that propose using the production encryption key directly for backup encryption.
 
-**Source:** NIST SP 800-209 (Storage Security), OWASP Cryptographic Storage Cheat Sheet
+**Source:** NIST SP 800-209 (Security Guidelines for Storage Infrastructure), OWASP Cryptographic Storage Cheat Sheet
 
 ### BE-DATA-011
 
@@ -522,7 +586,17 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 **Verification:** Any spec or plan that introduces outbound TLS connections MUST commit to full certificate and hostname validation. `/{project}:analyze` flags any commitment to `verify=False`, `rejectUnauthorized: false`, `InsecureSkipVerify`, `-k`/`--insecure`, or a custom trust-all certificate handler on a production path.
 
-**Source:** OWASP Transport Layer Security Cheat Sheet, OWASP Cryptographic Storage Cheat Sheet
+**Source:** CWE-295 (Improper Certificate Validation), Go `crypto/tls` documentation (`InsecureSkipVerify`), Requests documentation — SSL Cert Verification
+
+### BE-DATA-012
+
+> Every secret the application uses other than the encryption and signing keys `BE-DATA-005` governs (database credentials, third-party API keys, service tokens, OAuth client secrets) MUST be revocable and replaceable without a source-code change or an artifact rebuild, and the procedure for revoking and replacing a leaked secret MUST be documented.
+
+**Rationale:** `BE-DATA-003` keeps secrets out of source; this rule makes sure a secret that leaks anyway can be killed quickly. Restarting the application does not revoke a stolen credential — only revoking it at the issuer does — and a secret whose replacement needs a code change and a rebuild stays live for as long as that release takes. `BE-DATA-005` covers encryption and signing keys, whose rotation must also handle existing ciphertext and signatures; this rule covers every other credential.
+
+**Verification:** Any spec or plan that introduces a secret, or `specs/system.md` where secrets are inventoried, MUST name for each secret where it is revoked (the issuing system) and how a replacement reaches the running application (secret-manager update, re-injection by the orchestrator, restart). `/{project}:analyze` flags secret-introducing specs that omit the revocation path, or whose replacement path requires editing source or rebuilding an image.
+
+**Source:** OWASP Secrets Management Cheat Sheet
 
 ## BE-API — API Security
 
@@ -530,7 +604,7 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 > All HTTP responses MUST include a documented set of security headers covering: HSTS, content-type options, frame protection, referrer policy, content security policy (for HTML responses), and cache control for sensitive responses.
 
-**Rationale:** Each header converts the browser into a layered defense. HSTS prevents downgrade attacks; `X-Content-Type-Options` prevents MIME sniffing; frame-ancestors prevents clickjacking; `Referrer-Policy` controls Referer leakage; CSP defends against XSS and mixed content; `Cache-Control: no-store` keeps sensitive responses out of shared caches and the back-button cache. CSP `frame-ancestors` is the modern clickjacking defense and supersedes `X-Frame-Options`, which `BE-API-012` keeps as an advisory fallback for browsers that do not implement CSP Level 2.
+**Rationale:** Each header converts the browser into a layered defense. HSTS prevents downgrade attacks; `X-Content-Type-Options` prevents MIME sniffing; frame-ancestors prevents clickjacking; `Referrer-Policy` controls Referer leakage; CSP defends against XSS and mixed content; `Cache-Control: no-store` instructs compliant private and shared HTTP caches not to store sensitive responses. CSP `frame-ancestors`, introduced in CSP Level 2, is the modern clickjacking defense and obsoletes `X-Frame-Options`, which `BE-API-012` keeps as an advisory fallback for browsers that do not implement it.
 
 **Verification:** Any spec or plan that introduces an HTTP response (especially HTML) MUST commit to setting these headers, ideally at the framework or reverse-proxy layer for uniform coverage. `/{project}:analyze` flags response specs that omit any of the headers above, and specifically flags HTML-serving specs without a CSP commitment. The minimum required headers and their values:
 
@@ -543,9 +617,11 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 | `Cache-Control` | `no-store` | Authenticated and sensitive-data responses |
 | `Content-Type` | Explicit type with charset (e.g., `text/html; charset=UTF-8`) | All responses |
 
-The HSTS `preload` directive commits the domain — and, with `includeSubDomains`, every subdomain — to HTTPS for the lifetime of the browser preload list, which is effectively irreversible. Operators MUST confirm long-term HTTPS coverage of every subdomain before enabling `preload`.
+Submitting a domain to the HSTS preload list commits it — and, because the list requires `includeSubDomains`, every subdomain — to HTTPS in browsers that ship the list; hstspreload.org warns that inclusion cannot easily be undone, since a removal takes months to reach users. Operators MUST confirm long-term HTTPS coverage of every subdomain before enabling `preload`.
 
-**Source:** OWASP HTTP Headers Cheat Sheet, MDN Web Docs, hstspreload.org
+The browser-facing headers for HTML responses beyond this minimum are specified by the frontend rule set and are not restated here: `Permissions-Policy` (`FE-CSP-007`) and `Cross-Origin-Opener-Policy` (`FE-CSP-009`).
+
+**Source:** OWASP HTTP Headers Cheat Sheet, OWASP HTTP Strict Transport Security Cheat Sheet, W3C Content Security Policy Level 2 (`frame-ancestors`), hstspreload.org (HSTS Preload List Submission)
 
 ### BE-API-002
 
@@ -561,11 +637,11 @@ The HSTS `preload` directive commits the domain — and, with `includeSubDomains
 
 > CORS policy MUST be explicit. Wildcard `Access-Control-Allow-Origin: *` MUST NOT be used for any endpoint that returns user data, and MUST NOT be combined with `Access-Control-Allow-Credentials: true`.
 
-**Rationale:** A `*` CORS allow on a credentialed or user-data endpoint exposes the user's data to any origin that can convince a browser to make the request. The CORS spec forbids `*` plus credentials; applications still misconfigure servers around it.
+**Rationale:** A `*` CORS allow on a credentialed or user-data endpoint exposes the user's data to any origin that can convince a browser to make the request. Browsers reject the `*` wildcard on a credentialed request, so a server that wants to serve credentials to any origin is tempted to echo the request's `Origin` instead, which is the same wildcard. Allowlisting `null` is no safer: sandboxed documents and `data:` or `file:` resources serialize their origin as `null`, so any origin can create a hostile document that presents it.
 
-**Verification:** Any spec or plan that describes a browser-facing API MUST name the allowed origins explicitly. `/{project}:analyze` flags any commitment to `*` origin combined with cookies or auth headers, flags `*` origin on user-scoped endpoints, and flags CORS commitments that omit the origin allowlist.
+**Verification:** Any spec or plan that describes a browser-facing API MUST name the allowed origins explicitly. `/{project}:analyze` flags any commitment to `*` origin combined with cookies or auth headers, flags `*` origin on user-scoped endpoints, flags CORS commitments that omit the origin allowlist, and flags designs that echo the request's `Origin` back without checking it against the allowlist or that allowlist the `null` origin — both are a wildcard in effect.
 
-**Source:** OWASP REST Security Cheat Sheet
+**Source:** OWASP REST Security Cheat Sheet, MDN Web Docs — Access-Control-Allow-Origin header
 
 ### BE-API-004
 
@@ -575,7 +651,7 @@ The HSTS `preload` directive commits the domain — and, with `includeSubDomains
 
 **Verification:** Any spec or plan that introduces a public endpoint MUST commit to a rate-limit policy — what is throttled, the threshold, and the response on exceedance. `/{project}:analyze` flags public endpoints without this commitment, especially authentication, password reset, and search endpoints.
 
-**Source:** OWASP REST Security Cheat Sheet
+**Source:** OWASP REST Security Cheat Sheet, RFC 6585 §4 (429 Too Many Requests)
 
 ### BE-API-005
 
@@ -601,11 +677,11 @@ The HSTS `preload` directive commits the domain — and, with `includeSubDomains
 
 > Management, administration, and monitoring interfaces for infrastructure services (databases, message brokers, caches, search engines, debug consoles) MUST NOT be reachable from public networks. Management ports MUST be bound to internal networks, VPN, or localhost only.
 
-**Rationale:** Management interfaces provide privileged access to data, configuration, and runtime control. Public exposure makes them targets for credential stuffing, exploit attacks, and direct compromise of the underlying service.
+**Rationale:** Management interfaces provide privileged access to data, configuration, and runtime control. Public exposure makes them targets for credential stuffing, exploit attacks, and direct compromise of the underlying service — Redis, for one, is designed to be accessed by trusted clients inside trusted environments, and a single command from an outside attacker can delete its whole data set. The management and diagnostic endpoints the application itself serves are covered by `BE-API-014`.
 
 **Verification:** Any spec or plan covering deployment, networking, or `system.md` MUST commit to restricting management interface exposure. `/{project}:analyze` flags deployment specs that bind management ports (e.g., RabbitMQ management UI on `15672`, Elasticsearch on `9200`, Redis on `6379`, database admin tools) to public interfaces or that omit the network-exposure question.
 
-**Source:** CIS Benchmarks, OWASP REST Security Cheat Sheet
+**Source:** OWASP REST Security Cheat Sheet (Management endpoints), OWASP Database Security Cheat Sheet, Redis documentation — Redis security
 
 ### BE-API-008
 
@@ -615,7 +691,7 @@ The HSTS `preload` directive commits the domain — and, with `includeSubDomains
 
 **Verification:** Any spec or plan covering deployment or `system.md` MUST commit to (a) database ports unreachable from public networks (private subnet, security group, firewall rule), and (b) TLS-encrypted application-to-database connections. `/{project}:analyze` flags deployment specs that allow public database access or that describe database connections without naming TLS.
 
-**Source:** CIS Benchmarks, OWASP SQL Injection Prevention Cheat Sheet
+**Source:** OWASP Database Security Cheat Sheet
 
 ### BE-API-009
 
@@ -631,21 +707,21 @@ The HSTS `preload` directive commits the domain — and, with `includeSubDomains
 
 > Inbound webhook endpoints (receiving callbacks from third-party services) MUST verify a cryptographic signature over the request before acting on the payload. Verification MUST cover (a) an HMAC or asymmetric signature using a per-sender secret/public key, (b) the full request body (not a derived hash the sender computed), (c) a timestamp or nonce with a bounded replay window (typically ≤5 minutes), and (d) constant-time comparison per `BE-AUTHN-009`. Outbound webhooks the application emits MUST sign requests the same way and document the verification contract for receivers.
 
-**Rationale:** A webhook endpoint that does not verify signatures is an unauthenticated state-changing API exposed to the internet — anyone who knows the URL can forge events. Replay-window enforcement prevents an attacker from re-sending a captured-but-valid request hours later. Documented signing on outbound webhooks lets receivers protect themselves symmetrically.
+**Rationale:** A webhook endpoint that does not verify signatures is an unauthenticated state-changing API exposed to the internet — anyone who knows the URL can forge events. Replay-window enforcement prevents an attacker from re-sending a captured-but-valid request hours later; the OWASP Webhook Security Cheat Sheet notes that five minutes is the default tolerance in Stripe's libraries. Documented signing on outbound webhooks lets receivers protect themselves symmetrically. Delivering outbound webhooks to subscriber-supplied URLs is a server-side fetch, so `BE-INPUT-007` and `BE-INPUT-016` apply to it.
 
 **Verification:** Any spec or plan that introduces inbound or outbound webhooks MUST commit to all four verification properties (signature, body coverage, replay window, constant-time comparison) and MUST name the algorithm. `/{project}:analyze` flags webhook specs that omit signature verification, that verify only headers without the body, that lack a timestamp/nonce, or that use ordinary string comparison.
 
-**Source:** Stripe / GitHub / Slack webhook signing patterns, OWASP REST Security Cheat Sheet
+**Source:** OWASP Webhook Security Cheat Sheet
 
 ### BE-API-011
 
-> State-changing requests authenticated by an ambient credential the browser attaches automatically (session cookie, HTTP Basic, TLS client certificate) MUST be validated server-side against a CSRF defense before the state change is applied: a synchronizer or double-submit token verified on the server, or a `SameSite` cookie combined with a server-side `Origin`/`Sec-Fetch-Site` check. Token comparison MUST be constant-time per `BE-AUTHN-009`. Requests that fail the check MUST be rejected with `403`. Endpoints authenticated solely by a non-ambient bearer token (e.g., `Authorization: Bearer`, not stored in a cookie) are exempt.
+> State-changing requests authenticated by an ambient credential the browser attaches automatically (session cookie, HTTP Basic, TLS client certificate) MUST be validated server-side against a CSRF defense before the state change is applied: a synchronizer token or a signed (session-bound HMAC) double-submit cookie token verified on the server; a required custom request header, under a CORS policy that does not admit that header from other origins; or `Sec-Fetch-Site` validation, under which a state-changing request that lacks the header is either rejected (failing closed) or checked against its `Origin` as the fallback. `SameSite` cookies and `Origin`/`Referer` checks MUST NOT be the sole defense. Token comparison MUST be constant-time per `BE-AUTHN-009`. Requests that fail the check MUST be rejected with `403`. Endpoints authenticated solely by a non-ambient bearer token (e.g., `Authorization: Bearer`, not stored in a cookie) are exempt.
 
-**Rationale:** CSRF is exploitable only when the browser attaches a credential without the calling site's involvement, so the defense must be enforced on the server — the client cannot be trusted to send it. `FE-CSRF-001` specifies the token generation and submission strategy; this rule is its server-side enforcement half, which a backend-only service must implement even when it ships no frontend rule file. The bearer-token exemption reflects that a token the attacker's page cannot read is not auto-attached and so cannot be forged cross-site.
+**Rationale:** CSRF is exploitable only when the browser attaches a credential without the calling site's involvement, so the defense must be enforced on the server — the client cannot be trusted to send it. `FE-CSRF-001` names the same three defenses from the client side; this rule is its server-side enforcement half, which a backend-only service must implement even when it ships no frontend rule file. `SameSite` is defense in depth rather than a defense on its own — the OWASP CSRF Prevention Cheat Sheet treats it that way, since not every browser enforces Lax-by-default, `Lax` still sends cookies on top-level `GET` navigations, and every subdomain counts as same-site. Because some legacy browsers send no `Sec-Fetch-*` headers, the cheat sheet's Fetch Metadata section calls a fallback to standard origin verification mandatory for any Fetch Metadata implementation, yet its server-side policy for a request without them offers two choices: treat the absence as unknown and block the request (fail-safe, which it recommends for sensitive endpoints), or fall back to standard origin verification (fail-open, compatibility-first). The fallback is a different check that completes, not a skipped one, so `BE-ERR-005`'s deny-on-failure does not rule it out. Failing closed costs the outdated or embedded browsers that send no Fetch Metadata — every major browser has sent it since March 2023, the cheat sheet notes — and requests whose headers an intermediary strips, and since browsers send the headers only to potentially trustworthy URLs, it presumes the application is served over HTTPS. On the fallback path, a missing or `null` `Origin` is not evidence of a same-origin request. An unsigned double-submit cookie is bypassable by anyone who can write a cookie on the domain, so only the signed variant qualifies. The bearer-token exemption reflects that a token the attacker's page cannot read is not auto-attached and so cannot be forged cross-site.
 
-**Verification:** Any spec or plan that introduces cookie-authenticated (or otherwise ambient-credential) state-changing endpoints MUST name the server-side CSRF check and its rejection behavior. `/{project}:analyze` flags state-changing endpoints that rely on an ambient credential without a documented server-side token or origin validation, and flags token checks that are not constant-time.
+**Verification:** Any spec or plan that introduces cookie-authenticated (or otherwise ambient-credential) state-changing endpoints MUST name the server-side CSRF check and its rejection behavior, and a `Sec-Fetch-Site` check MUST state how it treats a request that lacks the header (rejection, or the `Origin` fallback). `/{project}:analyze` flags state-changing endpoints that rely on an ambient credential without a documented server-side token, custom-header, or `Sec-Fetch-Site` check, that name `SameSite` or `Origin`/`Referer` checks as the only defense, that propose an unsigned double-submit cookie, or that validate `Sec-Fetch-Site` without stating what happens to a request that lacks it, and flags token checks that are not constant-time.
 
-**Source:** OWASP Cross-Site Request Forgery Prevention Cheat Sheet
+**Source:** OWASP Cross-Site Request Forgery Prevention Cheat Sheet, W3C Fetch Metadata Request Headers
 
 ### BE-API-012
 
@@ -656,6 +732,36 @@ The HSTS `preload` directive commits the domain — and, with `includeSubDomains
 **Verification:** Any spec or plan that describes serving HTML responses SHOULD commit to `X-Frame-Options: DENY` (or `SAMEORIGIN`) alongside the CSP `frame-ancestors` directive. `/{project}:analyze` emits a warning when HTML-serving specs omit `X-Frame-Options`.
 
 **Source:** OWASP HTTP Headers Cheat Sheet, OWASP Clickjacking Defense Cheat Sheet
+
+### BE-API-013
+
+> Passwords, session identifiers, access and refresh tokens, and API keys MUST NOT be accepted in URL query parameters or path segments; the server MUST accept them only in request headers (e.g., `Authorization`, `Cookie`) or the request body. Single-use, short-lived values that a protocol carries in the URL by design — OAuth authorization codes, password-reset and email-verification tokens (`BE-AUTHN-018`), expiring pre-signed URLs — MAY appear in URLs.
+
+**Rationale:** URLs are copied into web-server and proxy access logs, browser history, bookmarks, and the `Referer` header sent to other sites, so a credential in a URL leaks to everyone who can read any of them. RFC 9700 forbids OAuth clients from passing access tokens in a URI query parameter for this reason. The carve-out covers values whose single use and short lifetime bound the damage of that exposure. `FE-STORAGE-003` keeps the client from putting sensitive data in URLs; this rule is the server-side half, which a backend-only service that never loads the frontend rule set enforces by refusing to read credentials from the URL at all.
+
+**Verification:** Any spec or plan that introduces an authenticated endpoint, an API-key scheme, or a token transport MUST name where the credential is carried (header, cookie, or body). `/{project}:analyze` flags specs that accept passwords, session IDs, bearer tokens, or API keys as query parameters (`?token=`, `?api_key=`, `?access_token=`) or path segments, other than the single-use, short-lived values the carve-out names.
+
+**Source:** OWASP REST Security Cheat Sheet (Sensitive information in HTTP requests), RFC 9700 §4.3.2
+
+### BE-API-014
+
+> The application's own management and diagnostic endpoints — metrics, profiling and debug handlers (e.g., Go's `/debug/pprof/`), heap or thread dumps, configuration and environment dumps, and framework management endpoints such as Spring Boot Actuator's — MUST NOT be reachable from public networks unless every request to them is authenticated; serving them on a separate port or host that only internal networks can reach satisfies this. A health endpoint that returns only an up/down status MAY be public.
+
+**Rationale:** These endpoints are easy to publish by accident. Importing Go's `net/http/pprof` registers its handlers under `/debug/pprof/` on the default mux for that side effect alone, so a service that serves the default mux publicly serves them too, and its CPU-profile handler profiles the process for as long as the caller asks (30 seconds by default). Spring Boot exposes only its health endpoint over HTTP by default and warns that endpoints may contain sensitive information, so widening the exposure without securing them publishes it — a heap dump captures the contents of the process's heap, including whatever secrets and personal data it held. The OWASP REST Security Cheat Sheet advises against exposing management endpoints to the internet, recommends serving them on separate ports or hosts restricted by firewall rules or access lists, and requires a strong authentication mechanism, such as multi-factor, where they must be internet-reachable. `BE-API-007` covers the management interfaces of infrastructure services; this rule covers the endpoints the application itself serves.
+
+**Verification:** Any spec or plan that introduces metrics, profiling, debug, or framework management endpoints, or `specs/system.md` where the deployment's listeners are described, MUST state where each such endpoint is served (port, host, network) and how access to it is restricted. `/{project}:analyze` flags specs that serve these endpoints on the public listener without authentication, that enable a framework's management endpoints over HTTP without naming their access control, or that register debug or profiling handlers on the router that serves public traffic.
+
+**Source:** OWASP REST Security Cheat Sheet (Management endpoints), Spring Boot reference documentation — Endpoints (Actuator), Go `net/http/pprof` package documentation
+
+### BE-API-015
+
+> A WebSocket endpoint that serves non-public data or accepts state-changing messages MUST (a) check the `Origin` header of each opening handshake against an explicit allowlist of trusted origins, matched exactly, and refuse with `403 Forbidden` a handshake whose `Origin` is absent or not on the list; (b) authenticate the connection before it sends protected data or acts on a message — during the handshake, or with a token in the first message, accepting nothing else until that token validates — and close the connection when authentication fails; and (c) treat every message as a request subject to the schema validation of `BE-INPUT-001`, the size bounds of `BE-INPUT-006`, and the per-request, object-level authorization of `BE-AUTHZ-003` and `BE-AUTHZ-005`. A handshake without an `Origin` header MAY be accepted when the connection is authenticated by a credential the browser does not attach automatically.
+
+**Rationale:** Browsers attach cookies to the WebSocket opening handshake, and WebSocket connections are not restricted by the same-origin policy or CORS (CWE-1385), so `BE-API-003`'s CORS allowlist does not protect them: any page the victim visits can open a socket that the server authenticates with the victim's cookie — cross-site WebSocket hijacking. PortSwigger describes it as CSRF on the handshake, with one difference that makes it worse: the attacker's page can also read the messages the server sends back. `BE-API-011`'s custom-header defense cannot be applied, since the browser's `WebSocket()` constructor takes only a URL and subprotocols, but the `Origin` check fits the handshake: RFC 6455 requires browser clients to send `Origin` and says a server meant only for certain sites should verify it and refuse an unacceptable one with `403`, and the OWASP WebSocket Security Cheat Sheet requires validating it on every handshake against an explicit allowlist, without wildcards or substring matching — nor a `null` entry, which `BE-API-003` explains is a wildcard in effect. RFC 6455 also says a handshake lacking `Origin` should not be interpreted as coming from a browser, and a non-browser client can send any `Origin` it likes, so the check guards against hijacking through a browser and does not replace authentication; the permission for a handshake without `Origin` is limited to a credential the attacker's page cannot attach, the reasoning behind `BE-API-011`'s bearer-token exemption. RFC 6455 prescribes no particular way to authenticate clients, and a connection stays open long after the handshake, so the OWASP cheat sheet requires authorization checks on each action, treats every message as untrusted input to be validated and size-limited, and has a first-message token accepted alone, with no protected data sent until it validates. The rule is a MUST because the cheat sheet states these requirements without condition; RFC 6455's SHOULD on `Origin` is scoped to servers not meant to take input from any web page, which describes every endpoint this rule covers. TLS for the connection (`wss`) is `BE-DATA-001`, and a token must not travel in the handshake URL (`BE-API-013`).
+
+**Verification:** Any spec or plan that introduces a WebSocket endpoint MUST name (a) the handshake's `Origin` allowlist, (b) how and when the connection is authenticated, and (c) the validation, size limit, and authorization applied to each message type. `/{project}:analyze` flags WebSocket specs that accept any `Origin` (e.g., a Gorilla WebSocket `CheckOrigin` that returns `true`), that match origins by wildcard or substring or allowlist `null`, that send protected data or act on messages before authentication completes, that carry a token in the handshake URL, or that authorize only when the connection opens rather than per message.
+
+**Source:** OWASP WebSocket Security Cheat Sheet, RFC 6455 §4.1, §4.2.1, §10.1, §10.2, §10.5 (The WebSocket Protocol), CWE-1385 (Missing Origin Validation in WebSockets), PortSwigger Web Security Academy — Cross-site WebSocket hijacking, MDN Web Docs — `WebSocket()` constructor
 
 ## BE-ERR — Error Handling
 
@@ -693,11 +799,21 @@ The HSTS `preload` directive commits the domain — and, with `includeSubDomains
 
 > The structured error format SHOULD follow RFC 9457 (Problem Details for HTTP APIs, which obsoletes RFC 7807).
 
-**Rationale:** A standard format lets clients and intermediaries parse error responses with existing libraries rather than project-specific code. `api-backend.md` states the same preference as a contract concern (`BE-ERRENV-003`); it is stated here too because a project can load the security rules without the API contract rules.
+**Rationale:** A standard format lets clients and intermediaries parse error responses with existing libraries rather than project-specific code. `api-backend.md` states the same preference as a contract concern (`BE-ERRENV-003`); it is stated here too because the two files, though selected together as backend rule files, can be enforced apart — a project can exclude `api-backend.md` from `/{project}:review` through `[[review.disabled-rule-files]]` while keeping the security rules.
 
 **Verification:** Any spec or plan that describes error responses SHOULD commit to RFC 9457 as the structured format, or name the documented format that replaces it. `/{project}:analyze` emits a warning when an error-response spec defines a structured format that is neither RFC 9457 nor documented in `specs/system.md`.
 
 **Source:** RFC 9457
+
+### BE-ERR-005
+
+> When a security control cannot complete its check — an authorization service times out or errors, a signature or token validation throws, a revocation or introspection lookup is unavailable — the request MUST be denied. Error handling around a security decision MUST NOT default to allowing the request or skipping the check.
+
+**Rationale:** A control that fails open turns any way of making it error — a malformed token, an overloaded dependency, a timeout — into a bypass. OWASP Top 10:2025 adds A10 Mishandling of Exceptional Conditions, with CWE-636 (Not Failing Securely, "failing open") among its notable weaknesses. Where `reliability-backend.md` `BE-BREAKER-001` lets a call guarded by a circuit breaker fall back while the breaker is open, the fallback for an authentication or authorization decision is denial.
+
+**Verification:** Any spec or plan that introduces an authorization check, token or signature validation, or a call to an external authorization, identity, or revocation service MUST state the outcome when that check errors or times out. `/{project}:analyze` flags security-decision specs that omit the error outcome, or that describe allowing the request or skipping the check when the control is unavailable.
+
+**Source:** OWASP Top 10:2025 (A10 — Mishandling of Exceptional Conditions), CWE-636 (Not Failing Securely)
 
 ## BE-LOG — Logging and Audit
 
@@ -735,7 +851,7 @@ The HSTS `preload` directive commits the domain — and, with `includeSubDomains
 
 > All changes to roles, permissions, user-role assignments, and service-account permissions MUST be recorded in an audit trail with actor, action, target entity, timestamp, and request correlation ID.
 
-**Rationale:** Authorization changes are the highest-impact security events — a single bad role grant can hand over the system. Audit trails enable incident response and compliance reporting (SOC 2, ISO 27001, HIPAA).
+**Rationale:** Authorization changes are the highest-impact security events — a single bad role grant can hand over the system. Audit trails enable incident response and compliance reporting — the HIPAA Security Rule's audit-controls standard (45 CFR 164.312(b)), for one, requires mechanisms that record and examine activity in systems holding electronic protected health information — and the OWASP Logging Cheat Sheet lists user administration actions, including changes to privileges, among the events to log.
 
 **Verification:** Any spec or plan that introduces role management, permission grants, or admin invitations MUST commit to audit-log entries with the five required fields. `/{project}:analyze` flags admin-management specs without this commitment.
 
@@ -755,11 +871,11 @@ The HSTS `preload` directive commits the domain — and, with `includeSubDomains
 
 > Every request entering the system MUST carry (or be assigned) a correlation ID that propagates through every log line, downstream service call, queue message, and audit-trail entry generated as a result of that request. The correlation ID MUST be present in error responses returned to clients so users can quote it back to support without exposing internal details.
 
-**Rationale:** Without a correlation ID, tracing a single user-visible failure through a distributed system requires guessing which of thousands of concurrent log lines belong together. Standard primitives are W3C `traceparent`, `X-Request-ID`, or an OpenTelemetry trace ID; the specific choice matters less than that every component on the request path emits it.
+**Rationale:** Without a correlation ID, tracing a single user-visible failure through a distributed system requires guessing which of thousands of concurrent log lines belong together. Common carriers are the W3C Trace Context `traceparent` header (the default propagation format in OpenTelemetry), an opaque `X-Request-ID` header, or the trace ID itself; the specific choice matters less than that every component on the request path emits it. The OWASP Logging Cheat Sheet calls this an interaction identifier, linking all the events of a single user interaction.
 
 **Verification:** Any spec or plan that introduces request handling, inter-service calls, queue producers/consumers, or background-job dispatch MUST commit to correlation-ID generation at the edge, propagation across hops, and inclusion in every log line. `/{project}:analyze` flags request-handling specs that omit correlation-ID propagation, and flags error-response specs (per `BE-ERR-002`) that do not surface the correlation ID to the client.
 
-**Source:** W3C Trace Context, OWASP Logging Cheat Sheet, OpenTelemetry
+**Source:** W3C Trace Context, OWASP Logging Cheat Sheet, OpenTelemetry documentation — Context propagation
 
 ### BE-LOG-007
 
@@ -771,17 +887,27 @@ The HSTS `preload` directive commits the domain — and, with `includeSubDomains
 
 **Source:** OWASP Logging Cheat Sheet
 
+### BE-LOG-008
+
+> Trace span attributes and events, metric labels, error-reporting payloads, and propagated trace context (W3C `tracestate` and OpenTelemetry baggage entries) MUST NOT carry the values `BE-LOG-002` bars from logs (passwords, authentication tokens, session IDs, keys, one-time and recovery codes, raw PII, full payment card numbers). A value needed for correlation MUST be redacted, truncated, or replaced by an opaque internal identifier before it is recorded or propagated.
+
+**Rationale:** Traces, metrics, and error reports travel the same aggregation pipelines as logs — often to a third-party vendor, with broader access and longer retention than the data they describe — so `BE-LOG-002`'s reasoning applies unchanged, but that rule names logs only. OpenTelemetry's semantic conventions record full URLs including the query string, with only a handful of signature parameters redacted by default, and warn that capturing all request headers is a security risk; its "Handling sensitive data" guidance says instrumentation libraries may collect and expose sensitive information and places the responsibility on the implementer. Propagated context leaves the system in request headers: W3C Trace Context forbids personally identifiable information in `tracestate` and advises keeping confidential data out of it, and OpenTelemetry warns that baggage items can reach unintended recipients such as third-party APIs. `observability-backend.md` `BE-METRIC-003` bounds label cardinality for cost reasons; this rule bars sensitive values whatever their cardinality.
+
+**Verification:** Any spec or plan that introduces tracing, metrics, error reporting, or baggage MUST commit to excluding or redacting sensitive values from span attributes, span events, metric labels, error-report payloads, and propagated context, at the instrumentation or in the collection pipeline (e.g., an attribute allowlist or a redaction processor). `/{project}:analyze` flags telemetry specs that record request or response bodies, full request headers, or PII such as email addresses as attributes or labels without a redaction commitment, and flags specs that place tokens or PII in baggage or `tracestate`.
+
+**Source:** OpenTelemetry documentation — Handling sensitive data, OpenTelemetry semantic conventions (URL and HTTP attributes), OpenTelemetry documentation — Baggage, W3C Trace Context §6.2, §7.1, OWASP Logging Cheat Sheet
+
 ## BE-DEPS — Dependency Management
 
 ### BE-DEPS-001
 
-> Project dependencies MUST be scanned for known vulnerabilities on every CI run. Dependencies with known critical or high-severity vulnerabilities MUST be updated, replaced, or have a documented exception.
+> Project dependencies MUST be scanned for known vulnerabilities before every release and on a recurring schedule between releases. Dependencies with known critical or high-severity vulnerabilities MUST be updated, replaced, or have a documented exception.
 
-**Rationale:** Vulnerable dependencies are the most common path to compromise in modern web stacks. Continuous scanning catches CVEs as they're disclosed; a documented action policy ensures findings are addressed rather than ignored.
+**Rationale:** Vulnerable dependencies are a standing path to compromise — the OWASP Top 10 has carried them since 2013 ("Using Components with Known Vulnerabilities"), widened in 2025 to A03 Software Supply Chain Failures. Scanning before each release keeps a known vulnerability from shipping, and scanning on a schedule catches advisories disclosed against code already in production; a documented action policy ensures findings are addressed rather than ignored. How the scan runs — a CI job, a scheduled job, a dependency bot — is the project's choice; `BE-DEPS-007` recommends also scanning each dependency change. US Executive Order 14028 asked for the same cadence in its guidance for software sold to the federal government: tools that check for known vulnerabilities, operating regularly or, at a minimum, before each product, version, or update release.
 
-**Verification:** Any spec or plan covering CI, deployment, or `system.md` MUST name the vulnerability scanner (Snyk, Dependabot, Trivy, `pip-audit`, `npm audit`, OWASP Dependency-Check, etc.) AND the policy on findings (fail the build, file an issue, alert on-call). `/{project}:analyze` flags CI/dependency specs that omit either.
+**Verification:** Any spec or plan covering dependency management, deployment, or `system.md` MUST name the vulnerability scanner (Snyk, Dependabot, Trivy, `pip-audit`, `npm audit`, OWASP Dependency-Check, etc.), when it runs (before release and on what schedule), AND the policy on findings (block the release, file an issue, alert on-call). `/{project}:analyze` flags dependency specs that omit any of the three.
 
-**Source:** OWASP Dependency-Check, OWASP Top 10 (A06:2021 — Vulnerable and Outdated Components)
+**Source:** OWASP Vulnerable Dependency Management Cheat Sheet, OWASP Dependency-Check, OWASP Top 10:2025 (A03 — Software Supply Chain Failures, an expansion of A06:2021 — Vulnerable and Outdated Components), US Executive Order 14028 §4(e)(iv)
 
 ### BE-DEPS-002
 
@@ -791,34 +917,54 @@ The HSTS `preload` directive commits the domain — and, with `includeSubDomains
 
 **Verification:** Any spec or plan covering build artifacts or deployment MUST commit to (a) pinned versions in lockfiles or pinned-version manifests for production builds, and (b) a documented upgrade process. `/{project}:analyze` flags deployment specs that allow floating dependencies in production or that omit the lockfile question.
 
-**Source:** OWASP A06:2021, npm/pnpm/yarn lockfile documentation, supply-chain attack research
+**Source:** OWASP Top 10:2025 (A03 — Software Supply Chain Failures, an expansion of A06:2021), npm documentation — package-lock.json, OpenSSF Scorecard (Pinned-Dependencies check)
 
 ### BE-DEPS-003
 
 > Every production build artifact MUST be accompanied by a machine-readable Software Bill of Materials (SBOM) in CycloneDX or SPDX format. The SBOM MUST be generated during the build (not after) and retained for the lifetime of the artifact.
 
-**Rationale:** SBOMs let security teams answer "are we affected by the new CVE in libfoo 2.3.1?" in seconds rather than days. They are increasingly compliance-mandated — US Executive Order 14028 requires SBOMs for federal software, and the EU Cyber Resilience Act extends the requirement to most commercial products. Generating during the build (e.g., via `syft`, `cyclonedx-cli`, native package-manager output) captures the actual resolved dependency graph, not an approximation.
+**Rationale:** SBOMs let security teams answer "are we affected by the new CVE in libfoo 2.3.1?" in seconds rather than days. They are increasingly compliance-mandated — US Executive Order 14028 (May 2021) directed that guidance for software sold to the federal government include providing the purchaser an SBOM for each product, and the EU Cyber Resilience Act (Regulation (EU) 2024/2847) requires manufacturers of products with digital elements to draw up an SBOM in a commonly used, machine-readable format, an obligation that applies from 11 December 2027. Generating during the build (e.g., via `syft`, or package-manager output such as `npm sbom`) captures the actual resolved dependency graph, not an approximation; the OWASP Dependency Graph & SBOM Best Practices Cheat Sheet recommends generating after dependency resolution and reconciling with the final artifact, since manifests alone can misrepresent what ships.
 
 **Verification:** Any spec or plan covering build pipelines, release artifacts, or `system.md` MUST name the SBOM tool and format and commit to per-build generation and retention. `/{project}:analyze` flags build/release specs that omit SBOM generation or that describe one-off SBOM exports separate from the build.
 
-**Source:** US Executive Order 14028, NIST SP 800-161r1, CycloneDX / SPDX specifications
+**Source:** US Executive Order 14028 §4(e)(vii), Regulation (EU) 2024/2847 (Cyber Resilience Act) Annex I Part II point (1) and Article 71, OWASP Dependency Graph & SBOM Best Practices Cheat Sheet, CycloneDX / SPDX specifications
 
 ### BE-DEPS-004
 
-> Dependencies pulled from public registries MUST be verified against a publisher signature or attested provenance before installation. Acceptable verification mechanisms include npm package provenance (sigstore-backed), PyPI sigstore signatures, Go module checksums via the public sum database, Maven Central GPG signatures, or registry-signed attestations. Unsigned packages from public registries MUST be either replaced, vendored, or accompanied by a documented exception with a remediation plan.
+> Dependencies pulled from public registries MUST be verified against a publisher signature or attested provenance — or, for Go modules, against the public checksum database, a transparency log of module hashes — as part of installation, before they are built into or shipped with an artifact. Acceptable verification mechanisms include npm package provenance (sigstore-backed) and registry signatures, both checked with `npm audit signatures`, PyPI digital attestations (PEP 740, sigstore-backed) checked by a verifier the install step runs, such as the `pypi-attestations` tool, Go module checksums verified against `sum.golang.org`, Maven Central GPG signatures, or registry-signed attestations. Unsigned packages from public registries MUST be either replaced, vendored, or accompanied by a documented exception with a remediation plan. A project whose ecosystem's standard installer provides no signature or provenance verification (pip, for one) MAY, in place of the verification step, document that gap — naming the installer and the verification it lacks — and install with the integrity checking the ecosystem does offer, which for pip is hash-checking mode (`--require-hashes`) against the hashes `BE-DEPS-005` commits to the repository.
 
-**Rationale:** Lockfiles pin a version but not the bytes that came from the registry — a registry compromise, account takeover, or malicious release can publish a poisoned version under the same tag. Signed attestations bind the artifact to the publisher's verified identity, raising the bar from "compromise the registry" to "compromise the publisher's signing key."
+**Rationale:** A lockfile's integrity hash (npm's `integrity` field, for one) pins the bytes resolved when the lock was generated, but says nothing about who published them — a poisoned release published after a registry compromise or maintainer account takeover passes the hash check from the moment it is locked in. Signed attestations bind the artifact to the publisher's verified identity, raising the bar from "compromise the registry" to "compromise the publisher's signing key." Go's checksum database is a global source of hashes for public modules — it guarantees verified, repeatable downloads rather than a publisher identity — which is why the Statement names it separately. The exception exists because verification depends on the installer, and not every ecosystem's installer offers it: PEP 740 standardizes how an index serves attestations but makes no policy recommendation that installing clients like pip verify them, PyPI documents verifying a file against its attestations with the separate `pypi-attestations` tool, and pip's changelog through 26.2.1 (August 2026) records no attestation verification on install. pip's own documentation says that by default it performs no checks against remote tampering and that hash-checking mode protects against it; hash-checking does not identify the publisher, but it fails an install whose bytes differ from the ones locked, and documenting the gap keeps the missing verification visible until the installer can provide it.
 
-**Verification:** Any spec or plan covering dependency management, build pipelines, or `system.md` MUST commit to a signature/provenance verification step in install. `/{project}:analyze` flags dependency specs that pull from public registries without naming a verification mechanism.
+**Verification:** Any spec or plan covering dependency management, build pipelines, or `system.md` MUST commit to a signature/provenance verification step in install, or, for an ecosystem whose standard installer provides none, document that gap and commit to hash-checked installs. `/{project}:analyze` flags dependency specs that pull from public registries without naming a verification mechanism or a documented installer gap, flags a claimed gap with no hash-checked install (`pip --require-hashes`), and flags a gap claimed for an ecosystem whose standard installer does verify (the npm CLI ships `npm audit signatures`; the `go` command checks `sum.golang.org` by default).
 
-**Source:** SLSA framework, sigstore, npm package provenance documentation
+**Source:** npm documentation — Generating provenance statements and `npm audit` (Audit Signatures), PEP 740 (Index support for digital attestations), PyPI documentation — Attestations: Security Model and Considerations and Consuming attestations, pip documentation — Secure installs (Hash-checking mode) and Changelog, Go Modules Reference (checksum database), Maven Central publishing requirements (Sign Files with GPG/PGP)
 
 ### BE-DEPS-005
 
-> Builds MUST be configured to prevent dependency-confusion and typosquatting attacks. Specifically, (a) when private packages share a namespace with public registries, the resolver MUST be scoped to the private registry for that namespace (npm `.npmrc` scope mapping, pip index priority, Maven repository ordering); (b) lockfiles MUST record the resolved registry URL per dependency; (c) new dependency additions MUST be reviewed against a known-typo list for the project's hot dependencies (e.g., `colorss` vs `colors`, `request-promse` vs `request-promise`).
+> Builds MUST be configured to prevent dependency-confusion and typosquatting attacks. Specifically, (a) when private packages share a namespace with public registries, the resolver MUST be configured so a private package name resolves only from the private registry (npm scope-to-registry mapping in `.npmrc`; for pip, a single `--index-url` that serves the private packages and proxies the public index, never `--extra-index-url` for private names, or a resolver that pins a package to one index, such as uv's `tool.uv.sources`; Maven repository ordering); (b) where the package manager supports it, builds MUST install with integrity verification against hashes committed to the repository (npm `package-lock.json` `integrity`, pip `--require-hashes`, Go `go.sum`, Gradle `verification-metadata.xml`), so a same-named package from another registry fails the install instead of replacing the locked one; (c) new dependency additions MUST be reviewed against a known-typo list for the project's hot dependencies (e.g., `colorss` vs `colors`, `request-promse` vs `request-promise`).
 
-**Rationale:** Dependency confusion (Birsan, 2021) tricks the resolver into pulling a malicious public package that shadows a private one with the same name — observed against major tech companies and now a routine supply-chain attack class. Typosquatting (a package named one keystroke off from a popular one) targets developers' muscle memory at `npm install` time. Scoped resolvers and lockfile registry pinning close the confusion vector; review at addition time closes the typo vector.
+**Rationale:** Dependency confusion (Birsan, 2021) tricks the resolver into pulling a malicious public package that shadows a private one with the same name — Birsan demonstrated it against more than 35 companies, among them Apple, Microsoft, and PayPal, and the OWASP Software Supply Chain Security Cheat Sheet lists it among supply-chain threats. pip has no index priority: it checks every configured index and installs the best match, and its documentation calls `--extra-index-url` for private packages unsafe for exactly this reason. Scoped resolution keeps a private name from resolving publicly when a dependency is added or updated, and integrity-verified installs keep a locked dependency from being swapped afterwards. Typosquatting (a package named one keystroke off from a popular one) targets developers' muscle memory at install time; review at addition time closes the typo vector.
 
-**Verification:** Any spec or plan covering dependency management or build configuration MUST commit to (a) private-namespace scoping when private packages exist, (b) registry-URL recording in lockfiles, and (c) a review step on new dependency additions. `/{project}:analyze` flags dependency-management specs that omit any of these when the project uses private packages or has a high dependency-churn rate.
+**Verification:** Any spec or plan covering dependency management or build configuration MUST commit to (a) private-namespace scoping when private packages exist, (b) integrity-verified installs from committed hashes, and (c) a review step on new dependency additions. `/{project}:analyze` flags dependency-management specs that omit any of these when the project uses private packages or has a high dependency-churn rate, and flags pip configurations that reach private packages through `--extra-index-url`.
 
-**Source:** Alex Birsan, "Dependency Confusion" (2021); npm/pip/Maven repository documentation; OWASP Supply Chain Security guidance
+**Source:** Alex Birsan, "Dependency Confusion" (Medium, February 2021); pip documentation — `pip install` (Finding Packages; `--extra-index-url`); npm documentation — scope; uv documentation — Package indexes; Maven guide — Setting up Multiple Repositories (Repository Order); Gradle User Manual — Verifying Dependencies; OWASP Software Supply Chain Security Cheat Sheet
+
+### BE-DEPS-006
+
+> Build and release inputs that the package lockfile does not cover — CI/CD actions and reusable workflows, container base images, and tools or scripts downloaded during the build — MUST be pinned to an immutable reference: a full commit SHA, an image digest, or a checksum the build verifies. Mutable references (branch names, version tags, `latest`) MUST NOT select what runs in the build.
+
+**Rationale:** `BE-DEPS-002` pins application dependencies through the lockfile, but CI actions, base images, and download-and-run installers never enter it, and each runs with the build's secrets and write access to its artifacts. Tags on actions and images can be moved to new content by whoever controls the upstream repository, so a compromised upstream changes what every consumer's build executes without any change to the consumer's files — the March 2025 `tj-actions/changed-files` compromise (CVE-2025-30066) retargeted the action's existing version tags to a commit that dumped CI secrets into build logs. Pinning to a SHA or digest makes each input content-addressed, so upstream changes take effect only through a reviewed pin update.
+
+**Verification:** Any spec or plan covering CI/CD pipelines, container builds, or build tooling MUST commit to immutable pinning for each of these input kinds and to an update process for the pins (e.g., Dependabot or Renovate digest updates). `/{project}:analyze` flags build specs that reference actions by tag or branch (`uses: org/action@v4`), base images by tag alone (`FROM node:22`), or download-and-execute steps without checksum verification.
+
+**Source:** OpenSSF Scorecard (Pinned-Dependencies check), GitHub Docs — Secure use reference (GitHub Actions), CVE-2025-30066, OWASP Top 10:2025 (A03 — Software Supply Chain Failures)
+
+### BE-DEPS-007
+
+> The vulnerability scan of `BE-DEPS-001` SHOULD also run automatically on every change that alters the dependency set — the manifest or the lockfile — so a vulnerable dependency is caught on the change that introduces it.
+
+**Rationale:** A scan that runs only at release or on a schedule finds a vulnerable dependency after the change that added it has merged and become entangled with other work. Scanning each dependency change attributes the finding to its cause while that change is still under review. Where the scan runs — CI, a pre-commit hook, a dependency bot — is adopter-owned and outside what a spec or plan can bind, so this rule is advisory.
+
+**Verification:** Any spec or plan covering dependency management or CI configuration SHOULD commit to an automated scan on dependency changes. `/{project}:analyze` emits a warning when such a spec omits it.
+
+**Source:** OWASP Dependency-Check, OWASP Top 10:2025 (A03 — Software Supply Chain Failures)

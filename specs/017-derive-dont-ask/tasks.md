@@ -374,3 +374,44 @@ Done when: this spec's artifacts have no `title:` or `tags:` frontmatter; valida
 - **Done when**: `gen-spec-deps.sh` and `gen-cross-service-refs.sh` report `No changes (N tracked specs in sync; M untracked spec(s) skipped — git add to include)` on a zero rewrite count, omitting the skipped clause when M is zero; the `list_specs()` tracked-files exclusion is byte-for-byte unchanged (`tracked-specs-not-worktree` still holds); `gen-help-tables.sh` and `gen-configure-mcp.sh` are each assessed against the same question and corrected only if their zero count can mean "did not examine"; the pre-commit hook and CI still pass.
 
   **Completed 2026-08-16.** The first two clauses landed with the original change; the third — the two-generator assessment — did not, and this checkbox was ticked while it was outstanding, which is how `quality-cross.md` came to record both generators as unassessed for two releases. `/ductus:review` on 013 performed it and the scenario now records the result: `gen-configure-mcp.sh` is sound and unchanged, `gen-help-tables.sh` was not and is corrected. The scenario's own reporting is now covered by test R in `scripts/tests/test-gen-spec-deps.sh`, which had no assertion before.
+
+### 36. Rule-file review 2026-10-19: register FLAG and land new and amended configuration rules
+
+- [x] Register the `FLAG` category (Feature flags): the `configuration-cross.md` header lists it and its scope sentence names feature flags; `data-model.md` carries it in the ID-prefix and Category-name bullets, the category-abbreviation table and § Rule set; spec Q6 records the third category; the plan's format line reads `CFG-{CONST|ENV|FLAG}-{NNN}`
+- [x] `CFG-ENV-008` (MUST, new) — every configuration value parsed into its declared type at startup; a present but malformed value fails fast, never falls back or coerces — enumerated in `data-model.md` § Rule set
+- [x] `CFG-ENV-009` (SHOULD, new) — deployment-varying values supplied at deploy time; no branching on the environment's name — enumerated in § Rule set
+- [x] `CFG-ENV-010` (MUST, new) — nothing secret injected into client-delivered build artifacts; only designated variables exposed — enumerated in § Rule set
+- [x] `CFG-FLAG-001` (MUST, new) — every flag has a declared default that evaluation resolves to on any evaluation failure — enumerated in § Rule set
+- [x] `CFG-FLAG-002` (SHOULD, new) — release, rollout and experiment flags carry an owner and a removal criterion; removal tracked as a work item — enumerated in § Rule set
+- [x] `CFG-CONST-001` amended — Source now cites DRY (Hunt & Thomas) instead of Twelve-Factor; the obligation is unchanged, so § Rule set needs no other change
+- [x] `CFG-ENV-002` amended — `.env.example` named for dotenv-style loaders rather than twelve-factor projects; § Rule set describes the inventory's forms that way
+- [x] `CFG-ENV-003` amended — a required variable that is unset or empty fails fast; Source now Jim Shore, "Fail Fast"; § Rule set describes unset-or-empty
+- [x] `CFG-ENV-004` amended — typed-duration examples across languages; Source now ISO 80000-3 instead of IEC 60027; § Rule set describes both unit patterns and the `data-model.md` Source-field example cites ISO 80000-3
+- [x] `CFG-ENV-005` amended — the range's bounds are named per `CFG-CONST-004`; § Rule set says so
+- [x] `CFG-ENV-006` amended — Rationale now defers log-line content to `BE-LOG-002`; the obligation is unchanged, so § Rule set needs no other change
+- [x] `CFG-ENV-007` amended — Source now Viper and Spring Boot precedence orders; the obligation is unchanged, so § Rule set needs no other change
+- [x] Backfill: `CFG-CONST-004` and `CFG-ENV-005`–`007`, added to the rule file in May 2026 without being registered here, are enumerated in `data-model.md` § Rule set
+
+- **Done when**: Every rule in `framework/rules/configuration-cross.md` is enumerated in `data-model.md` § Rule set with its current obligation and tier, matching the file ID for ID; `FLAG` is registered wherever this spec enumerates the category set (data-model, spec Q6, plan); `npx markdownlint-cli2` and `scripts/lint-frontmatter.sh` pass on the changed artifacts.
+
+### 37. Rule-file review 2026-10-19 (second pass): register CFG-ENV-011/012 and land amended configuration rules
+
+- [x] `CFG-ENV-011` (MUST, new, existing `ENV` category) — a data-size env var states its unit in the value (a size string whose parser rejects a non-zero value without a unit) or in the name (`_BYTES`, `_KIB`, `_MIB`); a unit whose multiplier differs between parsers (`KB`, `MB`, `GB`, `M`, `G`) has powers of 1000 or of 1024 stated in its `CFG-ENV-002` inventory entry — enumerated in `data-model.md` § Rule set
+- [x] `CFG-ENV-012` (SHOULD, new, existing `ENV` category) — an unrecognized key in an application-owned configuration file fails startup naming the key and the file, or warns by name where more than one application version reads the file at once; never silently ignored — enumerated in § Rule set
+- [x] `CFG-ENV-001` amended — a third declaration, optional with no default, where an unset or empty value disables a feature the declaration names; secrets carry no in-application default and are required, or optional with no default when their absence disables the integration they authenticate; § Rule set describes all three forms, and spec Q6's 2026-10-19 update names the no-default optional form
+- [x] `CFG-ENV-002` amended — the Helm form is a chart's `values.yaml` (defaults) with its `values.schema.json` (types and required keys); § Rule set says so
+- [x] `CFG-ENV-004` amended — the unit-in-value parser rejects a non-zero value without a unit, so a bare `0` is exempt; § Rule set says so
+- [x] `CFG-ENV-008` amended — Verification also flags a parser that stops at the first invalid character and returns what it read so far; the Statement is unchanged, so § Rule set needs no change
+- [x] Sources added or corrected across the file; every rule but `CFG-CONST-002` now carries one. Verify-only: neither `spec.md`, `plan.md` nor `data-model.md` restates a rule's Source, except the generic examples in `data-model.md`'s Source-field row (12-Factor App, NIST SP 800, ISO 80000-3), of which Twelve-Factor (`CFG-ENV-001`, `CFG-ENV-009`) and ISO 80000-3 (`CFG-ENV-004`) are still cited
+- [x] `spec.md` AC27 lists `CFG-ENV-011` (MUST) and `CFG-ENV-012` (SHOULD) beside the first pass's rules, so its explicit list agrees with its every-rule claim; the § Rule set intro records the second pass; §36's `CFG-ENV-003` checkbox names the Source's author as the file does (Jim Shore); `plan.md` needs no change — its format line already reads `CFG-{CONST|ENV|FLAG}-{NNN}` and it defers the rule list to § Rule set
+- [x] Verify: `npx markdownlint-cli2` on the changed spec files and `scripts/lint-frontmatter.sh` pass
+
+- **Done when**: Every rule in `framework/rules/configuration-cross.md` — 18 of them: `CFG-CONST-001`–`004`, `CFG-ENV-001`–`012`, `CFG-FLAG-001`–`002` — is enumerated in `data-model.md` § Rule set with its current obligation and tier, matching the file ID for ID; `CFG-ENV-011` and `CFG-ENV-012` sit in the existing `ENV` category, so the category bullets and abbreviation table are unchanged; AC27's explicit list includes both; `npx markdownlint-cli2` and `scripts/lint-frontmatter.sh` pass on the changed artifacts.
+
+### 38. Rule-file review 2026-10-19 (owner decision): rename the ENV category to Environment and configuration values
+
+- [x] configuration-cross.md header category list and the CFG-ENV section heading read 'Environment and configuration values'
+- [x] data-model.md Category Name bullet, abbreviation table, and CFG-ENV namespace heading use the new name; IDs unchanged
+- [x] spec.md Q6 note records the rename as an owner decision
+
+- **Done when**: Every place that names the ENV category uses 'Environment and configuration values', no CFG-ENV ID changed, and 017 is re-reviewed back to done.

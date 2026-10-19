@@ -293,13 +293,13 @@ Write code, tests, and migrations. Implementation follows the tasks list.
 
 #### Constants and configuration
 
-See `framework/rules/configuration-cross.md` (`CFG-CONST-NNN` rules) for the enforceable rules covering centralized shared constants, module-local constants, and the no-bare-literals requirement for operator-tunable values. `/{project}:analyze` enforces these rules.
+See `specs/rules/configuration-cross.md` for the enforceable rules: its `CFG-CONST-NNN` rules cover where named constants live and keep operator-tunable values and their range bounds out of bare literals, and its `CFG-FLAG-NNN` rules cover feature flags. The file's header declares its categories. `/{project}:analyze` enforces these rules.
 
 <!-- §env-vars -->
 
 #### Environment variables
 
-See `framework/rules/configuration-cross.md` (`CFG-ENV-NNN` rules) for the enforceable rules covering env-var defaults backed by named constants, `.env.example` completeness, fail-fast startup validation, and unit suffixes for time-valued variables. `/{project}:analyze` enforces these rules.
+See `specs/rules/configuration-cross.md` (`CFG-ENV-NNN` rules) for the enforceable rules on environment variables and other configuration values — among them how each is declared and read once at startup, a canonical inventory of every variable, fail-fast startup validation of missing, out-of-range, and malformed values, and keeping secrets out of logs and client builds. `/{project}:analyze` enforces these rules.
 
 <!-- §bug-handling -->
 
@@ -394,6 +394,11 @@ Every rule has four required fields:
 
 The full schema, ID-stability invariants, the ID grammar (including the `[A-Z][A-Z0-9]*` category-abbreviation format), and Verification phrasing rules are canonically declared in `specs/008-security-rules/data-model.md` — and, for configuration rules, in `specs/017-derive-dont-ask/data-model.md`. The specific category abbreviations a given rule file uses are declared in that file's own header (e.g., `api-backend.md` declares `SCHEMA`/`APIVER`/…). New rule files follow the same schema.
 
+Two authoring disciplines bind every rule, each stated canonically in the 008 data-model and only pointed to here:
+
+- A MUST or MUST NOT never requires continuous integration — that a project run CI, or run a check in it; it states the outcome, and running the check automatically on every change is a SHOULD of its own — `specs/008-security-rules/data-model.md` §Severity classification.
+- A claim a rule makes about an external standard is fetched, never recalled — the `Source` row of `specs/008-security-rules/data-model.md` §Rule entry fields.
+
 #### When to write a rule
 
 **A new rule belonging to an existing rule surface is added to that surface's owning spec through the back-edge — it does not get a spec of its own.** Register the category, add the rule and a task, and let the owning spec return to `done`; a spec per rule fragments one concern's record across many specs ([§spec-lifecycle](#spec-lifecycle)). Keep the cross-cutting principle in one canonical home and have each enforcement point reference it. Reserve a new spec for a genuinely new rule *file* or surface.
@@ -427,13 +432,13 @@ Enforcement is two-layered. In `ductus`'s own repository, `scripts/lint-rule-fil
 
 #### Project-level opt-out
 
-A project may exclude a stack-selected rule file from `/{project}:review` by listing it in `.ductus/config.toml` `[[review.disabled-rule-files]]` with a mandatory `reason` — the reason is the audit trail for the override, surfaced on stdout at the start of every run. The opt-out is project-wide and applies to whole files; per-`(rule, file)` exceptions remain the job of `/{project}:review --waive`. Schema and behavior are documented in `/{project}:review`'s command source.
+A project may exclude a rule file from `/{project}:review` — whether its surface selected it or it is an unconditional `-cross.md` — by listing it in `.ductus/config.toml` `[[review.disabled-rule-files]]` with a mandatory `reason`, which is the audit trail for the override and is surfaced on stdout at the start of every run. The opt-out is project-wide, applies to whole files, and binds `/{project}:review` alone — `/{project}:analyze` still loads every rule file present. Per-`(rule, file)` exceptions remain the job of `/{project}:review --waive`. Schema and behavior are documented in `/{project}:review`'s command source.
 
 #### Lifecycle
 
 - Rule IDs are permanent. Once assigned, an ID is never renumbered, even if the rule moves within the file or is edited.
 - Rules are deprecated with a `**DEPRECATED in {version}:**` label and a removal target version, then removed only after the deprecation window has passed.
-- New rule files **that ship with `ductus`** are introduced via their own feature spec (as 008 introduced `security-backend.md` and `security-frontend.md`). A rule file a project authors for itself needs no introducing spec: placing it in the rule-file directory registers it, and its own header declares its ID prefix and category abbreviations. Every consumer treats the two origins identically; nothing may condition loading, citation resolution, or validation on a rule file having an introducing spec. **Recorded exception (backfill):** `api-backend.md`, `accessibility-frontend.md`, and `performance-frontend.md` were introduced in commit `9ccbd0b`, bundled into specs 024/025 rather than their own introducing specs; they are in active use, their ID grammar is reconciled with this section, and they are retained as-is.
+- New rule files **that ship with `ductus`** are introduced via their own feature spec (as 008 introduced `security-backend.md` and `security-frontend.md`). A rule file a project authors for itself needs no introducing spec: placing it in the rule-file directory registers it, and its own header declares its ID prefix and category abbreviations. Every consumer treats the two origins identically; nothing may condition loading, citation resolution, or validation on a rule file having an introducing spec. **Recorded backfill:** `api-backend.md`, `accessibility-frontend.md`, and `performance-frontend.md` were introduced in commit `9ccbd0b` without introducing specs of their own, bundled into specs 024/025. Their owning specs were backfilled on 2026-10-19 — `068-api-backend-rules`, `069-accessibility-frontend-rules`, and `070-performance-frontend-rules` respectively — and each file's rules are added and amended through its owning spec from then on.
 
 See `specs/008-security-rules/data-model.md` for the full ID-stability invariants and deprecation rules.
 

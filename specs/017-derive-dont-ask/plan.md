@@ -92,15 +92,7 @@ Validate check changes:
 
 ### Configuration rule file
 
-Per spec Q5/Q6: a single file at `framework/rules/configuration-cross.md` with `CFG-` prefix and `CONST`/`ENV` categories. Format `CFG-{CONST|ENV}-{NNN}`. Initial rule set:
-
-- `CFG-CONST-001` — Shared constants live in a centralized location
-- `CFG-CONST-002` — Module-local constants live in the module's own constants file
-- `CFG-CONST-003` — Configurable values are not bare literals
-- `CFG-ENV-001` — Every env var has a default constant
-- `CFG-ENV-002` — `.env.example` contains every introduced var with a descriptive comment and safe placeholder
-- `CFG-ENV-003` — Required env vars are validated at startup (fail fast with naming)
-- `CFG-ENV-004` — Time-value env vars include unit suffix in name (`_MS`, `_SECONDS`, `_MINUTES`); the corresponding constant makes the unit explicit
+Per spec Q5/Q6: a single file at `framework/rules/configuration-cross.md` with `CFG-` prefix and `CONST`/`ENV`/`FLAG` categories — `FLAG` (feature flags) added 2026-10-19 by the rule-file review. Format `CFG-{CONST|ENV|FLAG}-{NNN}`. The first version shipped seven rules (`CFG-CONST-001`–`003`, `CFG-ENV-001`–`004`); the current rule set, with each rule's tier and obligation, is enumerated in `data-model.md` § Rule set rather than repeated here.
 
 Rule format details (Statement, Rationale, Verification, Source, ID stability) declared in `data-model.md` alongside this plan, mirroring the precedent set by `specs/008-security-rules/data-model.md`.
 
@@ -180,7 +172,7 @@ A second workflow file (`framework/templates/ci/adopter-generators.yml`) ships a
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `framework/rules/configuration-cross.md` | Create | `CFG-CONST-NNN` and `CFG-ENV-NNN` rules with Statement / Rationale / Verification / Source per data-model |
+| `framework/rules/configuration-cross.md` | Create | `CFG-CONST-NNN`, `CFG-ENV-NNN` and `CFG-FLAG-NNN` rules with Statement / Rationale / Verification / Source per data-model |
 
 ### Bootstrap installer
 
@@ -216,7 +208,7 @@ A second workflow file (`framework/templates/ci/adopter-generators.yml`) ships a
 
 ## Data Model
 
-See `data-model.md` for the configuration rule file structure, ID format, category abbreviations, and the new spec/scenario frontmatter schema after deletions.
+See `data-model.md` for the configuration rule file structure, ID format, category abbreviations, current rule set, and the new spec/scenario frontmatter schema after deletions.
 
 ## Trade-offs
 

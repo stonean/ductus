@@ -20,16 +20,16 @@ ductus writes both files to `specs/rules/security-backend.md` and `specs/rules/s
 
 ### Rule entry format is heading-anchored markdown
 
-Each rule is a level-3 heading whose text is the Rule ID, followed by a statement (block-quoted), and then bold-prefixed `**Rationale:**` and `**Verification:**` paragraphs. Example:
+Each rule is a level-3 heading whose text is the Rule ID, followed by a statement (block-quoted), and then bold-prefixed `**Rationale:**` and `**Verification:**` paragraphs. Example, abridged at each `…` from `BE-AUTHN-001` in `framework/rules/security-backend.md`, which holds the full text:
 
 ```markdown
 ### BE-AUTHN-001
 
-> Credentials MUST be hashed with a memory-hard algorithm (Argon2id, scrypt, or bcrypt) before persistence.
+> Passwords MUST be hashed using a deliberately slow password-hashing algorithm before persistence — never encrypted, never stored in plaintext. …
 
-**Rationale:** Plaintext or fast-hashed credentials enable mass account compromise after a database breach.
+**Rationale:** Encryption is reversible — a database breach plus key access yields plaintext credentials. One-way hashing is irreversible by design. …
 
-**Verification:** Any spec or plan that introduces credential storage MUST specify the hashing algorithm by name. `/{project}:analyze` searches for credential/password/auth keywords and flags persistence paths that do not name a memory-hard hash.
+**Verification:** Any spec or plan that introduces credential storage (search keywords: `password`, `credential`, `auth`, `login`) MUST name the hashing algorithm. Salting and cost/iteration parameters MUST be specified or referenced, at or above the OWASP Password Storage Cheat Sheet minimums (…). … `/{project}:analyze` flags persistence paths that store a password as a plain or salted single-pass digest (…), plain `crypt`, or "encrypted", that name parameters below those minimums, or that omit the algorithm question entirely.
 ```
 
 This format is grep-friendly (`grep '^### BE-' framework/rules/security-backend.md` returns the rule index), human-readable, and parseable by the analyze prompt without a custom format. Categories are level-2 headings; the Rule ID heading sits under its category.
@@ -38,9 +38,9 @@ Alternative considered: YAML frontmatter per rule. Rejected — adds complexity,
 
 ### Starter set: real, threat-grounded rules covering OWASP Top 10 + API Top 10 essentials
 
-Backend has 8 categories, frontend has 7. v1 ships ~35 backend + ~21 frontend = ~56 rules total. Each rule is a real, threat-grounded MUST or MUST NOT (occasionally SHOULD) — not a stub. The registry is designed for extension; subsequent specs or PRs add rules incrementally without changing the format.
+Backend has 8 categories, frontend has 7. v1 targeted ~35 backend + ~21 frontend = ~56 rules; the files have since grown well past that target (see **Trade-offs**). Each rule is a real, threat-grounded MUST or MUST NOT (occasionally SHOULD) — not a stub. The registry is designed for extension; subsequent specs or PRs add rules incrementally without changing the format.
 
-Coverage targets were selected by walking OWASP Top 10 (2021), OWASP API Security Top 10 (2023), and the CWE Top 25, then mapping each item to the appropriate category. Items that are commonly cited and frequently exploited get explicit rules in v1; items that are emerging or use-case-specific (WebSockets, Service Workers, container hardening, API inventory) are deferred for incremental additions. Software supply chain was on that deferred list at plan time and has since been covered — `BE-DEPS` carries lockfile pinning and a dependency-confusion rule, and `FE-DEPS` carries the frontend half.
+Coverage targets were selected by walking OWASP Top 10 (2021), OWASP API Security Top 10 (2023), and the CWE Top 25, then mapping each item to the appropriate category. Items that are commonly cited and frequently exploited get explicit rules in v1; items that are emerging or use-case-specific (WebSockets, Service Workers, container hardening, API inventory) are deferred for incremental additions. Software supply chain was on that deferred list at plan time and has since been covered — `BE-DEPS` carries lockfile pinning, SBOM generation, signature/provenance verification, dependency-confusion defenses with integrity-verified installs, and immutable pinning of the build inputs a lockfile does not cover (CI actions, container base images, downloaded build tools), and `FE-DEPS` carries the frontend half. Service Workers have since gained one rule: `FE-STORAGE-006` keeps sensitive and authenticated responses out of the Cache API a service worker writes. The rest of their surface, such as worker scope and script origin, stays deferred with container hardening and API inventory. WebSockets have since gained one rule: `BE-API-015` allowlists the handshake's `Origin`, authenticates the connection, and validates and authorizes every message as an HTTP request would be; the rest of their surface, such as connection limits and session expiry on long-lived connections, stays deferred.
 
 Concrete v1 coverage targets (representative, may shift slightly during writing):
 
@@ -69,8 +69,8 @@ The following rules were added during plan refinement after a gap audit against 
 - **BE-AUTHN constant-time comparison** — token/HMAC equality with `==` enables timing attacks; explicit rule prevents the bug class.
 - **BE-AUTHZ mass assignment** — frameworks that bind request bodies to model fields without an allowlist let users set fields they shouldn't (admin flags, internal IDs).
 - **BE-INPUT parameterized queries** — the canonical web vulnerability. Generic "validate at boundaries" doesn't enforce the right mitigation.
-- **BE-INPUT SSRF** — OWASP A10:2021 / API6:2023. Server-side fetching of user-supplied URLs is a major attack vector for cloud metadata service exfiltration and internal network probing.
-- **BE-INPUT deserialization** — Java/Pickle/JSON deserialization of untrusted input enables RCE on many platforms.
+- **BE-INPUT SSRF** — OWASP API7:2023, and A10:2021 in the OWASP Top 10, whose 2025 edition maps SSRF (CWE-918) into A01:2025 Broken Access Control. Server-side fetching of user-supplied URLs is a major attack vector for cloud metadata service exfiltration and internal network probing.
+- **BE-INPUT deserialization** — native object deserialization of untrusted input (Java `ObjectInputStream`, Python Pickle, .NET `BinaryFormatter`), and data-format parsers configured to instantiate types named in the payload, enable RCE on many platforms.
 - **BE-INPUT path traversal** — file-handling rule about validating paths against a base directory before opening files.
 - **BE-INPUT XXE** — when the project parses XML, default parser configurations frequently allow external entity expansion.
 - **BE-INPUT SSTI** — Jinja, Twig, and similar template engines RCE when user input reaches template strings.
@@ -78,13 +78,13 @@ The following rules were added during plan refinement after a gap audit against 
 - **BE-API Cache-Control for sensitive responses** — `no-store` for authenticated/sensitive endpoints prevents shared caches and back-button leakage.
 - **BE-API redirect validation** — backend redirect endpoints (`/redirect?url=...`) must validate against an allowlist.
 
-Trade-off: comprehensive coverage would require 80+ rules with careful threat modeling — still too much for v1. The starter set targets the most-likely-to-bite-you items per OWASP/CWE, with the format inviting subsequent additions for emerging or domain-specific concerns (WebSockets, Service Workers, supply-chain attestation, etc.).
+Trade-off: comprehensive coverage would require 80+ rules with careful threat modeling — still too much for v1. The starter set targets the most-likely-to-bite-you items per OWASP/CWE, with the format inviting subsequent additions for emerging or domain-specific concerns (WebSockets, Service Workers, etc.).
 
 ### `/{project}:analyze` uses each rule's `Verification` field as a mini-prompt
 
 `/{project}:analyze` is a markdown-reading agent prompt; it does not run static analysis. For each MUST/MUST NOT rule, the rule's **Verification** field tells it *how* to check the rule against the project's specs/plans/`system.md`. Verification fields are written as instructions to an agent, not as code patterns:
 
-> Verification: Any spec or plan that introduces credential storage MUST specify the hashing algorithm by name. `/{project}:analyze` searches for credential/password/auth keywords and flags persistence paths that do not name a memory-hard hash.
+> Verification: Any spec or plan that introduces credential storage (search keywords: `password`, `credential`, `auth`, `login`) MUST name the hashing algorithm. Salting and cost/iteration parameters MUST be specified or referenced, at or above the OWASP Password Storage Cheat Sheet minimums (…). … `/{project}:analyze` flags persistence paths that store a password as a plain or salted single-pass digest (…), plain `crypt`, or "encrypted", that name parameters below those minimums, or that omit the algorithm question entirely.
 
 This delegates the per-rule logic to the rule itself — adding a new rule does not require modifying the command. Its job is to:
 
@@ -153,7 +153,7 @@ Like the workflow registry spec 005 introduced (since retired by `043-workflows-
 
 ### Starter set vs. comprehensive coverage
 
-V1 targeted ~45 rules across 15 categories, leaving less common attack surfaces (GraphQL-specific, gRPC-specific, mobile-app-specific) uncovered. Acceptable because the rule format is designed for trivial extension — adding a rule is one heading, three paragraphs, one new ID number, and that is exactly how the gap closed: the shipped files have grown well past the v1 target, including a GraphQL rule under `BE-INPUT`. Mobile-app-specific surfaces remain uncovered.
+V1 targeted ~56 rules across 15 categories, leaving less common attack surfaces (GraphQL-specific, gRPC-specific, mobile-app-specific) uncovered. Acceptable because the rule format is designed for trivial extension — adding a rule is one heading, three paragraphs, one new ID number, and that is exactly how the gap closed: the shipped files have grown well past the v1 target, including a GraphQL rule under `BE-INPUT`. gRPC-specific and mobile-app-specific surfaces remain uncovered.
 
 ### Verification-by-prompt vs. Verification-by-pattern
 

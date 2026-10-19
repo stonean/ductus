@@ -401,7 +401,7 @@ For each loaded rule file:
 
 **Which ID format governs a file.** Take the first source that applies:
 
-1. **The file's introducing-spec data-model**, when the file has one — `{BE|FE}-{CATEGORY}-{NNN}` for the security files (`specs/008-security-rules/data-model.md`), `CFG-{CONST|ENV}-{NNN}` for configuration (`specs/017-derive-dont-ask/data-model.md`).
+1. **The file's introducing-spec data-model**, when the file has one — `{BE|FE}-{CATEGORY}-{NNN}` for the security files (`specs/008-security-rules/data-model.md`), `CFG-{CONST|ENV|FLAG}-{NNN}` for configuration (`specs/017-derive-dont-ask/data-model.md`).
 2. **The format the file declares in its own header**, which is where a rule file's ID prefix and category abbreviations are canonically declared (`.ductus/constitution.md` §rules) — e.g. `quality-cross.md` declares `QUAL-{CATEGORY}-{NNN}` and lists its category abbreviations in that header.
 3. **The generic rule-ID grammar** — an uppercase prefix, an `[A-Z][A-Z0-9]*` category abbreviation, and a zero-padded sequence number, as declared in `specs/008-security-rules/data-model.md` §Rule ID format. This is the shape `check-rule-ids` resolves citations against, so an ID that fails it cannot be cited from a spec regardless of what any header says.
 

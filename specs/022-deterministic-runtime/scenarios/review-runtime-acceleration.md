@@ -61,7 +61,7 @@ Every new primitive ships a `#[cfg(test)]` module in the norm of the existing on
 ## Edge Cases
 
 - **Empty review scope** — `write-review` emits the 0-findings, `blocking: false`, exit-0 report; the "nothing to review yet" behavior is preserved as a primitive branch, not a prose special-case.
-- **`[rules] surfaces` degenerate value** — `discover-rule-files` fails fast with the existing `CFG-ENV-003`-style operational error (message text unchanged from `review.md`); a list mixing valid and invalid members fails on the invalid member.
+- **`[rules] surfaces` degenerate value** — `discover-rule-files` fails fast with the existing `CFG-ENV-008`-style operational error (message text unchanged from `review.md`); a list mixing valid and invalid members fails on the invalid member.
 - **`surfaces = []` vs unset** — the empty list is valid and means cross-only; `discover-rule-files` must not conflate it with the unset (derive-from-stack) case.
 - **Waiver code-movement** — because the anchor is the (rule, file) pair, `process-waivers` does not expire a waiver when the offending code moves within the file. Malformed and duplicate waivers are surfaced, never auto-pruned — they are operator state.
 - **Boilerplate-dedup drift** — a command referencing a not-yet-migrated constitution section is caught at PR time by `/ductus:analyze`'s `resolve-anchor` check (an unresolved `§` reference), so the dedup cannot silently break the markdown-only path.

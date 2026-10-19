@@ -82,3 +82,9 @@ Operator-approved (2026-09-27, with the `cross-spec-impact:` declaration): this 
 - [x] Run audit Family 20
 
 - **Done when**: Family 20 passes and the changelog section names every runtime change. The tag is cut after 060 and 022 are `done`, in the same session.
+
+## 10. Rule-file review 2026-10-19: replace the stale rule count
+
+- [x] spec.md's edge case states the property (no shipped rule lacks a Verification or a tier, held by every_shipped_rule_is_assessable) instead of the 192-rule count the corpus has outgrown
+
+- **Done when**: spec.md makes no count claim about the shipped rule corpus that the tree contradicts, and 060 is re-reviewed back to done.

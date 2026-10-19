@@ -32,7 +32,7 @@ QUAL-{category}-{NNN}
 | Category | Abbreviation |
 | --- | --- |
 | Silent stubs | `STUB` |
-| Unverified external contracts | `GROUND` |
+| Unverified contracts | `GROUND` |
 | Unsubstantiated clean results | `CLAIM` |
 | Unenumerated delegation to shared code | `DELEG` |
 | Tests that cannot fail | `TEST` |
@@ -45,11 +45,11 @@ The category set is declared in the `quality-cross.md` file header per the per-f
 
 ### QUAL-STUB namespace (Silent stubs category)
 
-- `QUAL-STUB-001` (MUST) — partial or unimplemented code paths fail loudly (panic / explicit error / failing test fixture) rather than silently passing through; stubs that return zero values, no-op middleware that returns `next` unchanged, handlers that return early without an error, and methods that return `nil, nil` are forbidden when the surrounding contract implies the path performs work. Verified at review time by `/ductus:review`'s quality pass; cites `api-backend.md` `BE-SCHEMA-002` for the build-time schema case.
+- `QUAL-STUB-001` (MUST) — partial or unimplemented code paths fail loudly (panic / explicit error / failing test fixture) rather than silently passing through; stubs that return zero values, no-op middleware that returns `next` unchanged, handlers that return early without an error, and methods that return `nil, nil` are forbidden when the surrounding contract implies the path performs work. Verified at review time by `/ductus:review`'s quality pass; cites `api-backend.md` `BE-SCHEMA-002` for the API-schema case (a published schema bound to its implementation).
 
-### QUAL-GROUND namespace (Verify external contracts category)
+### QUAL-GROUND namespace (Verify contracts category)
 
-- `QUAL-GROUND-001` (SHOULD) — code whose correctness depends on an external contract it does not own (database schema, external API shape, config key, file/wire format) binds to that contract so a wrong assumption fails loudly (typed/generated binding, schema/migration reference, startup/first-use validation, or a test against the real shape) rather than silently encoding an unverified assumption. Verified at review time by `/ductus:review`'s quality pass; the code-side counterpart to `/ductus:analyze`'s artifact-grounding check, both enforcing constitution §grounding.
+- `QUAL-GROUND-001` (SHOULD) — code whose correctness depends on a contract defined outside that code (a database schema, another service's API shape, a file or wire format, or a list, schema, or format defined elsewhere in the repository) binds to that contract so a wrong assumption fails loudly (a typed or generated binding, a schema or migration reference that the build or a test checks, a startup or first-use validation, or a test that exercises the real shape) rather than silently encoding an unverified assumption. A contract used through its own definition, so the compiler or type checker enforces it, is compliant. Configuration keys and values are not its subject: `configuration-cross.md` `CFG-ENV-003` and `CFG-ENV-008` govern them at MUST, so a configuration defect is reported once, under the `CFG` ID. Verified at review time by `/ductus:review`'s quality pass; the code-side counterpart to `/ductus:analyze`'s artifact-grounding check, both enforcing constitution §grounding.
 
 ### QUAL-CLAIM namespace (Unsubstantiated clean results category)
 
@@ -61,7 +61,7 @@ The category set is declared in the `quality-cross.md` file header per the per-f
 
 ### QUAL-TEST namespace (Tests that cannot fail category)
 
-- `QUAL-TEST-001` (SHOULD) — a test fails when the behavior it names is removed or broken; one that exercises a path without asserting its result, pins only an incidental value, or passes because a fallback or default path satisfies its assertion as well as the primary path does is not coverage and is not added or counted as such. Distinct from `QUAL-CLAIM-001` (a code path's output overstating what it examined) and `QUAL-STUB-001` (an unimplemented path returning success): this rule governs the test itself, a check that reports a pass it could never withhold. Verified at review time by `/ductus:review`'s quality pass; a test whose report, commit or comment records how it was shown to fail is compliant. Added through this spec's back-edge by `050-constitution`'s third promotion round, which classified the rule as universal but code-governing, as its second round did `QUAL-DELEG-001`.
+- `QUAL-TEST-001` (SHOULD) — a test fails when the behavior it names is removed or broken; one that exercises a path without asserting its result, pins only an incidental value, or passes because a fallback or default path satisfies its assertion as well as the primary path does is not coverage and is not added or counted as such. Distinct from `QUAL-CLAIM-001` (a code path's output overstating what it examined) and `QUAL-STUB-001` (an unimplemented path returning success): this rule governs the test itself, a check that reports a pass it could never withhold. Verified at review time by `/ductus:review`'s quality pass, which also flags a test whose ability to fail depends on a condition it does not establish (assertions compiled or branched away inside its body on some platform or feature set, or an outcome that differs only when an environment variable it never sets is present) and a test that never reaches the unit it names (mocked, stubbed, re-implemented inside the test, or not called). Compliant: a test whose report, commit or comment records how it was shown to fail; one that establishes the condition it depends on itself; one gated as a whole, by a test-level attribute or skip marker, to the configurations where the named behavior applies; and one that replaces the unit's collaborators with doubles but calls the unit itself. Added through this spec's back-edge by `050-constitution`'s third promotion round, which classified the rule as universal but code-governing, as its second round did `QUAL-DELEG-001`.
 
 ## Severity and ID-stability invariants
 

@@ -14,14 +14,13 @@ The one structural difference from 034 (which reused the existing `BE` surface):
 
 Modeled on `configuration-cross.md` (the closest sibling: `-cross.md` suffix, domain-prefixed IDs) and `performance-backend.md`'s header style:
 
-- **Header.** `# Code Quality Rules` + an intro paragraph stating the discipline is cross-cutting (applies to every stack); the RFC 2119 note; the ID-format / category declaration line (per the 016 per-file category-declaration policy) —
-  `Rule IDs follow the format \`QUAL-{CATEGORY}-{NNN}\` and are permanent … Categories: \`STUB\` (silent stubs). See \`specs/036-quality-cross-rules/data-model.md\` for the \`QUAL\` surface and \`specs/008-security-rules/data-model.md\` for the full rule schema.`
-- **Pin note** adapted for a cross file: cross-cutting files always apply (never surface-filtered), so the note is the standard "pin in `.ductus/config.toml` `[pinned]` if you customize it," not a "projects without X can exclude it" note.
-- **Category section** `## QUAL-STUB — Silent stubs` containing the one rule.
+- **Header.** `# Code Quality Rules` + an intro paragraph stating the discipline is cross-cutting (applies to every stack); the RFC 2119 note; the ID-format / category declaration line (per the 016 per-file category-declaration policy), which declares the file's category set and points to `specs/036-quality-cross-rules/data-model.md` for the `QUAL` surface and `specs/008-security-rules/data-model.md` for the full rule schema. The file launched with `STUB` alone; each later category was added to that line through this spec's back-edge, so the header — not this plan — is the current list.
+- **Opt-out note** adapted for a cross file: cross-cutting files are never surface-filtered — `[rules] surfaces` cannot exclude them, and `/ductus:analyze` loads every rule file present — so the note is not a "projects without X can exclude it" note. It names the one exclusion that exists, a `.ductus/config.toml` `[[review.disabled-rule-files]]` entry with its mandatory `reason`, which removes the file from `/ductus:review` only, and says what `[pinned] files` does not do: it stops `ductus` updates from overwriting a customized copy, which still loads for review and analyze.
+- **Category sections**, one `## QUAL-{CATEGORY} — {Name}` section per declared category; the file launched with `## QUAL-STUB — Silent stubs` and its one rule.
 - **`### QUAL-STUB-001`** (MUST — per the clarify resolution):
   - **Statement:** *Partial or unimplemented code paths MUST fail loudly (panic / explicit error / failing test fixture) rather than silently pass through. Stubs that return zero values, no-op middleware that returns `next` unchanged, handlers that return early without an error, and methods that return `nil, nil` are forbidden when the surrounding contract implies the path performs work.*
   - **Rationale:** silent stubs ship indistinguishably from working code; the gap surfaces only under stress (the adopter rate-limiter passthrough that would have silently disabled rate limiting in production).
-  - **Verification (review-time):** `/ductus:review`'s quality pass flags a path only when **all three** hold — (1) reachable under the current spec, (2) the surrounding contract implies work, (3) it returns success/zero/pass-through with no loud signal. Exemptions (not flagged): an explicit incompleteness marker is compliant (`panic`/`todo!`/`unimplemented!`, a raised `NotImplementedError`, a failing/skipped test fixture); intentional pass-through middleware documented as deliberate; default/interface implementations meant to be empty; not-yet-reachable branches behind a flag or guard. Cite `api-backend.md` `BE-SCHEMA-002` for the build-time schema fail-loud case rather than restating it.
+  - **Verification (review-time):** `/ductus:review`'s quality pass flags a path only when **all three** hold — (1) reachable under the current spec, (2) the surrounding contract implies work, (3) it returns success/zero/pass-through with no loud signal. Exemptions (not flagged): an explicit incompleteness marker is compliant (`panic`/`todo!`/`unimplemented!`, a raised `NotImplementedError`, a failing/skipped test fixture); intentional pass-through middleware documented as deliberate; default/interface implementations meant to be empty; not-yet-reachable branches behind a flag or guard. Cite `api-backend.md` `BE-SCHEMA-002` for the API-schema fail-loud case — a published schema bound to its implementation — rather than restating it.
 
 ### New surface registration — `scripts/lint-rule-ids.sh`
 
@@ -42,7 +41,7 @@ Add `| \`framework/rules/quality-cross.md\` | \`specs/rules/quality-cross.md\` |
 | `framework/rules/quality-cross.md` | Create | The `quality-cross` rule set with `QUAL-STUB-001` |
 | `specs/036-quality-cross-rules/data-model.md` | Create | Register the `QUAL` surface + `STUB` category; reference 008's schema |
 | `scripts/lint-rule-ids.sh` | Modify | Add `QUAL` to the surface allowlist regex + error message + source-of-truth comment |
-| `framework/bootstrap/ductus.md` | Modify | Add the manifest row (between `performance-frontend` and `security-backend`); bump the rule-file count six → seven |
+| `framework/bootstrap/ductus.md` | Modify | Add the manifest row (between `performance-frontend` and `security-backend`); the surface-filter note's hard-coded rule-file count was removed rather than bumped (see Manifest wiring) |
 
 `.claude/commands/*` are unaffected — no command source changes (the bootstrap `ductus.md` is not generated into `.claude/`).
 
@@ -56,7 +55,7 @@ Add `| \`framework/rules/quality-cross.md\` | \`specs/rules/quality-cross.md\` |
 
 ## Cross-spec impact
 
-The spec/plan reference 008, 016, 017, 024, 033 (deps) and `api-backend.md` `BE-SCHEMA-002` (cited, not changed). None need an edit:
+The spec/plan reference 008, 016, 017, 024, 033 (deps), `api-backend.md` `BE-SCHEMA-002`, and `configuration-cross.md` `CFG-ENV-003` / `CFG-ENV-008` (all cited, not changed — `QUAL-GROUND-001` leaves configuration keys and values to the two `CFG` rules, which 017 owns, rather than restating them). None need an edit:
 
 - **024 (rule-loader)** auto-selects `-cross.md` by suffix — adding a cross file is exactly what it supports; no contract change.
 - **033 (rule-surface-setting)** treats cross files as unconditional — a new cross file composes without falsifying any 033 claim.

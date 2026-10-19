@@ -11,7 +11,7 @@ A rule file is a markdown document with the following structure:
 ```markdown
 # Security Rules — {Surface}
 
-{One-paragraph introduction stating the file's scope.}
+{Introduction, one short paragraph each: the file's scope; the RFC 2119 severity mapping; the ID format and category list; how the rules are enforced; how a project without this surface is affected.}
 
 ## {ID prefix} — {Category Name}
 
@@ -75,7 +75,7 @@ A rule file is a markdown document with the following structure:
 | Statement | yes | Block quote (`> …`) | The rule's obligation, stated with RFC 2119 keywords of one tier — MUST and MUST NOT, or SHOULD and SHOULD NOT — and optionally MAY for a permission or scope boundary. See **Severity classification** below. |
 | Rationale | yes | Paragraph beginning `**Rationale:**` | Brief explanation of the threat or risk the rule mitigates. |
 | Verification | yes | Paragraph beginning `**Verification:**` | Instruction to `/{project}:analyze` — see **Verification phrasing** below. |
-| Source | no | Paragraph beginning `**Source:**` | Citation to authoritative origin (e.g., OWASP cheat sheet name, RFC number, NIST publication, CIS Benchmark). Optional but recommended — aids `Learnable` (readers can trace the rule's grounding) and `Verified` (reviewers can audit the citation). |
+| Source | no | Paragraph beginning `**Source:**` | Citation to authoritative origin (e.g., OWASP cheat sheet name, RFC number, NIST publication, CWE entry). Optional but recommended — aids `Learnable` (readers can trace the rule's grounding) and `Verified` (reviewers can audit the citation). Every claim a rule makes about an external standard, specification, or product behavior — in any field, not only Source — is checked against the cited document's current text when the rule is written or amended: fetched, never recalled. A claim that cannot be verified that way is rewritten to what can be, or removed; it is not landed on recall. Nothing enforces this mechanically; it is a discipline for rule authors and for anyone reviewing a rule file. |
 | Deprecated | no | Paragraph beginning `**DEPRECATED in {version}:**` | Present only on deprecated rules. Includes the removal target version. The rule remains in the file with this label until removed. |
 
 ## Verification phrasing
@@ -95,8 +95,9 @@ The Verification field is read by `/{project}:analyze` during an analyze run. It
 Verification: Any spec or plan that introduces credential storage MUST
 specify the hashing algorithm by name. /{project}:analyze searches feature
 specs and plans for credential/password/auth keywords; for each match,
-flags the artifact if it does not name a memory-hard hash (Argon2id,
-scrypt, or bcrypt).
+flags the artifact if it does not name a deliberately slow
+password-hashing algorithm (Argon2id, scrypt, bcrypt, or PBKDF2) and
+its cost parameters.
 ```
 
 **Documentation-commitment Verification (runtime/infra):**
@@ -122,6 +123,8 @@ A Statement's obligation keywords MUST come from one tier: MUST and MUST NOT, or
 MAY is permitted beside either tier, to state a permission or a scope boundary (e.g., "offset pagination MAY be used only for append-only collections"). It states no obligation and carries no tier, so a Statement using MAY alone has no tier and cannot be assessed.
 
 The shipped rule files are held to this by the runtime's corpus test (`no_shipped_statement_mixes_tiers` in `runtime/src/primitives/rule_sections.rs`). A rule file a project authors, or a pinned copy of a shipped one, is not checked; `/{project}:analyze` reads a Statement there that carries both tiers as MUST-tier.
+
+A MUST or MUST NOT obligation never requires continuous integration — neither that a project run CI nor that a check run in it. Whether a project has CI, and what it runs there, is its own choice: `ductus` ships its own CI checks only as a template an adopter may copy (`framework/templates/ci/adopter-generators.yml`), and a spec or plan cannot show how a project's CI behaves, so `/{project}:analyze` has no artifact against which to verify such an obligation. The MUST states the outcome instead, and where running a check in automation on every change is worth recommending, the recommendation is a SHOULD of its own, under the next unused number in the category — `BE-SCHEMA-003` (the committed schema must match the implementation) and `BE-SCHEMA-004` (that check should run automatically on every change) are the pattern. A rule MAY still constrain the inputs a project's build or CI uses when it has one — `BE-DEPS-006` requires CI actions and base images to be pinned to immutable references — because that governs what runs, not whether CI exists. Decided by the project owner, 2026-10-19. Nothing enforces this mechanically; it is a discipline for rule authors and for anyone reviewing a rule file.
 
 ## ID stability invariants
 

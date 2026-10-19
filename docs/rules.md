@@ -18,17 +18,17 @@ They are plain markdown in your project's rule-file directory — the `rules/` d
 | --- | --- |
 | `security-backend.md` | Authentication, authorization, input validation, data protection, API security, logging and audit, dependency management, error handling |
 | `security-frontend.md` | XSS, CSRF, secure client-side storage, authentication UX, content security policy, dependencies, handling of sensitive data |
-| `quality-cross.md` | Silent stubs, unverified external contracts, unsubstantiated clean results, unenumerated delegation to shared code, tests that cannot fail |
-| `reliability-backend.md` | Bounded timeouts, retry discipline, circuit breakers, graceful shutdown, bulkheads that shed load rather than queue unboundedly |
-| `performance-backend.md` | Query efficiency (N+1, unindexed filters, unbounded reads), caching with a stated expiry, connection-pool discipline, payload budgets, offloading slow work off the request path |
-| `performance-frontend.md` | Core Web Vitals budgets, bundle size, image delivery, resource loading, web-font discipline |
-| `api-backend.md` | The *contract* other people call: versioning, pagination, status-code semantics, breaking-change discipline (the HTTP *attack* surface is `security-backend.md` §BE-API) |
+| `quality-cross.md` | Silent stubs, unverified contracts, unsubstantiated clean results, unenumerated delegation to shared code, tests that cannot fail |
+| `reliability-backend.md` | Bounded timeouts and deadlines, retry discipline and dead-lettering, circuit breakers, graceful shutdown, bulkheads that shed load rather than queue unboundedly, graceful degradation when a non-critical dependency fails |
+| `performance-backend.md` | Query efficiency (N+1, unindexed filters, unbounded reads, batched writes), caching with a stated expiry, connection-pool discipline, payload budgets and streaming, offloading slow work off the request path |
+| `performance-frontend.md` | Core Web Vitals budgets, bundle size, image delivery, resource loading (prioritization, caching, layout reservation), web-font discipline, main-thread work |
+| `api-backend.md` | The *contract* other people call: schema publication, versioning and deprecation, error envelopes, status-code semantics, pagination, idempotency, breaking-change discipline, partial updates, conditional requests, long-running operations, representation conventions (the HTTP *attack* surface is `security-backend.md` §BE-API) |
 | `concurrency-backend.md` | Shared-state races, locking and deadlock avoidance, transaction isolation, distributed coordination |
 | `observability-backend.md` | Metrics, distributed tracing, health signaling — so a failure in production is diagnosable rather than merely visible |
-| `accessibility-frontend.md` | WCAG 2.2 AA: semantic HTML, keyboard navigation and focus, ARIA usage, color and contrast, accessible forms, text alternatives |
-| `configuration-cross.md` | Named constants and environment variables: no magic numbers, no undocumented env vars, fail-fast on invalid configuration |
+| `accessibility-frontend.md` | WCAG 2.2 AA: semantic HTML, keyboard navigation and focus, ARIA usage, color and contrast, accessible forms, text alternatives and media, pointer input and target size, reflow and zoom, text spacing and orientation, motion and flashing, time limits, accessibility testing |
+| `configuration-cross.md` | Named constants, environment variables, and feature flags: no magic numbers, no undocumented env vars, fail-fast on missing or malformed configuration, no secrets baked into client builds, a declared default for every flag |
 
-The two security files carry the highest proportion of **MUST** rules, because the failures they describe are exploitable rather than merely untidy. Accessibility is AA because that is the baseline written into law in several jurisdictions, which is why it is a shipped rule file rather than a suggestion. `quality-cross.md`'s five failure modes are stated in full in the README's [Rules](../README.md#rules) section.
+The security files are mostly **MUST** rules, because the failures they describe are exploitable rather than merely untidy. The backend reliability, observability, performance, and concurrency files default to **SHOULD** where the right approach depends on context, and each states in its header what earns a rule **MUST**. Accessibility is AA because that is the baseline written into law in several jurisdictions, which is why it is a shipped rule file rather than a suggestion; a rule that adopts a Level AAA criterion says so and is a **SHOULD**. `quality-cross.md`'s five failure modes are stated in full in the README's [Rules](../README.md#rules) section.
 
 ## Which rules load
 
@@ -40,9 +40,9 @@ A rule file's **filename suffix** decides which projects load it, and there are 
 | `-frontend.md` | projects with a frontend surface | `security-frontend.md` |
 | `-cross.md` | every project, unconditionally | `quality-cross.md` |
 
-Set `[rules] surfaces` in `.ductus/config.toml` to declare your surfaces (`["backend"]`, `["backend", "frontend"]`, or `[]` for cross-only); leave it unset and `ductus` falls back to the stack it detects. A file with an unrecognized suffix loads for *every* stack and warns — the default is never a silent skip.
+Set `[rules] surfaces` in `.ductus/config.toml` to declare your surfaces (`["backend"]`, `["backend", "frontend"]`, or `[]` for cross-only); leave it unset and `ductus` falls back to the stack it detects. A file with an unrecognized suffix loads for *every* stack and warns — the default is never a silent skip. Suffix and `surfaces` decide what `ductus` installs and what `/review` enforces; `/analyze` loads every rule file present, and a rule fires there only when a spec or plan meets its Verification trigger.
 
-To stand a rule file down without deleting it, list it under `[[review.disabled-rule-files]]` with a mandatory `reason`. The reason is the audit trail, and it is why the opt-out is a config entry rather than a deletion.
+To stand a rule file down from `/review` without deleting it — a `-cross.md` file included — list it under `[[review.disabled-rule-files]]` with a mandatory `reason`. The reason is the audit trail, and it is why the opt-out is a config entry rather than a deletion.
 
 ## Waivers
 

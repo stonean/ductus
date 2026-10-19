@@ -12,7 +12,7 @@ Create `framework/rules/security-backend.md` with the v1 starter set. ~35 rules 
 
 - [x] Create `framework/rules/` directory
 - [x] Create `framework/rules/security-backend.md` with file-level introduction
-- [x] **Authentication** category — at least 4 rules: credential storage (memory-hard hash); session/token handling; MFA consideration; constant-time comparison of secrets
+- [x] **Authentication** category — at least 4 rules: credential storage (deliberately slow password hash); session/token handling; MFA consideration; constant-time comparison of secrets
 - [x] **Authorization** category — at least 4 rules: default-deny; explicit permission checks at every entry point; privilege escalation prevention; mass-assignment / over-posting prevention
 - [x] **Input validation** category — at least 9 rules: boundary validation; allowlist over denylist; size limits; parameterized queries (SQL/NoSQL/command injection); SSRF prevention on outbound URL fetches; safe deserialization of untrusted data; path-traversal prevention on filesystem ops; XXE prevention on XML parsing; SSTI prevention on template rendering
 - [x] **Data protection** category — at least 4 rules: encryption at rest commitment; secrets management; PII handling; key rotation
@@ -178,3 +178,78 @@ Reopen surfaced upstream from an adopter: an `FE-DEPS` rule was missing for a de
 - [x] Verify AC18 and AC21 against the restored text and re-tick them; run the runtime suite, since command files are its input
 
 - **Done when**: `framework/commands/analyze.md` states both blocking messages and the exec reduction, AC18 and AC21 are re-verified and ticked, and `008` is re-reviewed and re-analyzed back to `done`.
+
+## 13. Rule-file review 2026-10-19: land new and amended security rules
+
+- [x] `BE-AUTHN-018` (new, MUST) — password-reset and account-recovery flows: a single-use, bounded-lifetime token persisted only as a hash, the reset link built from a configured base URL, existing sessions invalidated on reset, no security questions as the sole recovery factor
+- [x] `BE-AUTHN-019` (new, MUST) — JWT verification keys selected only from key material configured in advance; token-supplied `jwk`/`jku`/`x5u`/`x5c` not trusted outside it; `kid` treated as untrusted input
+- [x] `BE-AUTHN-020` (new, MUST) — no resource owner password credentials grant and no implicit grant; PKCE uses `S256`, never `plain`; public-client refresh tokens sender-constrained or rotated on every use
+- [x] `BE-AUTHN-021` (new, SHOULD) — privileged-account MFA uses a phishing-resistant authenticator (WebAuthn/passkeys, FIDO2 keys, PKI smart cards)
+- [x] `BE-INPUT-016` (new, MUST) — `BE-INPUT-007`'s SSRF checks enforced on the connection actually made: validated address pinned, redirects disabled or re-validated per hop, hosts normalized before comparison
+- [x] `BE-DATA-012` (new, MUST) — every secret other than `BE-DATA-005`'s keys revocable and replaceable without a source change or rebuild, with a documented procedure for a leaked secret
+- [x] `BE-API-013` (new, MUST) — passwords, session IDs, access and refresh tokens, and API keys never accepted in URL query parameters or path segments; single-use, short-lived URL values carved out
+- [x] `BE-ERR-005` (new, MUST) — a security control that cannot complete its check denies the request (fail closed)
+- [x] `BE-LOG-008` (new, MUST) — the values `BE-LOG-002` bars from logs kept out of trace span attributes and events, metric labels, and error-reporting payloads
+- [x] `BE-DEPS-006` (new, MUST) — CI actions and reusable workflows, container base images, and downloaded build tools pinned to an immutable reference (commit SHA, image digest, verified checksum)
+- [x] `BE-DEPS-007` (new, SHOULD) — `BE-DEPS-001`'s scan also runs automatically on every change to the dependency manifest or lockfile
+- [x] `FE-XSS-010` (new, MUST) — a `postMessage` carrying non-public data names the exact recipient origin; `'*'` never its target origin
+- [x] `FE-STORAGE-005` (new, SHOULD) — session and authentication cookies use the `__Host-` name prefix
+- [x] `FE-CSP-009` (new, SHOULD) — HTML responses set `Cross-Origin-Opener-Policy: same-origin`, or `same-origin-allow-popups` for a page whose cross-origin popups report back through `window.opener`
+- [x] `FE-DEPS-006` (new, SHOULD) — `FE-DEPS-001`'s scan also runs automatically on every change to the frontend dependency manifest or lockfile
+- [x] `BE-AUTHN-001` (amended Verification) — cost parameters at or above the OWASP Password Storage Cheat Sheet minimums; a bcrypt choice states how input beyond its 72-byte limit is handled
+- [x] `BE-AUTHN-011` (amended Statement) — NIST SP 800-63B-4 minimum length: 15 characters when the password is the sole authenticator, 8 when it is one factor of MFA
+- [x] `BE-INPUT-004` (amended Verification) — trigger covers the entry names of an uploaded archive being extracted
+- [x] `BE-INPUT-006` (amended Statement) — over-limit request content rejected with `413 Content Too Large`; an over-maximum parameter rejected with a `400`-class error or, for a page size, clamped, no longer `413`
+- [x] `BE-INPUT-008` (amended Verification) — `BinaryFormatter` and payload-driven polymorphic type handling flagged; data-only formats acceptable when bound to fixed types
+- [x] `BE-API-003` (amended Verification) — echoing the request `Origin` without an allowlist check, or allowlisting the `null` origin, flagged as a wildcard in effect
+- [x] `BE-API-011` (amended Statement) — the CSRF defense is a synchronizer or signed double-submit token, a custom header the CORS policy does not admit cross-origin, or `Sec-Fetch-Site` validation with an `Origin` fallback; `SameSite` and `Origin`/`Referer` checks never the sole defense
+- [x] `BE-DEPS-001` (amended Statement) — scan before every release and on a recurring schedule between releases; the MUST no longer names CI, and the per-change scan is `BE-DEPS-007`
+- [x] `BE-DEPS-004` (amended Statement) — accepted mechanisms name npm provenance and registry signatures checked with `npm audit signatures`, and PyPI digital attestations (PEP 740)
+- [x] `FE-XSS-009` (amended Statement) — Trusted Types adoption recommended for every application rendering dynamic HTML in the browser, no longer scoped to supporting browsers
+- [x] `FE-CSRF-001` (amended Statement) — scoped to ambient-credential requests, with the same three defenses as `BE-API-011`; `SameSite` and `Origin`/`Referer` checks never the sole defense
+- [x] `FE-STORAGE-001` (amended Verification) — encrypting a stored token or credential does not lift the browser-storage prohibition
+- [x] `FE-STORAGE-002` (amended Statement) — `SameSite=None` MAY replace `Lax`/`Strict` only under the conditions `FE-CSRF-002` sets
+- [x] `FE-STORAGE-003` (amended Statement) — a single-use, short-lived token whose flow requires URL delivery MAY appear in a query parameter when invalidated on first use and the landing page sets `Referrer-Policy: no-referrer`
+- [x] `FE-CSP-003` (amended Statement) — a page designed to be embedded MAY list the exact origins permitted to frame it; wildcard `frame-ancestors` sources forbidden
+- [x] `FE-CSP-006` (amended Statement) — the `allow-scripts` + `allow-same-origin` prohibition applies to a frame whose document is served from the embedding page's own origin, not to cross-origin frames
+- [x] `FE-CSP-007` (amended Statement) — `interest-cohort=()` dropped from the required `Permissions-Policy` denials
+- [x] `FE-DEPS-001` (amended Statement) — scan before every release and on a recurring schedule between releases; the MUST no longer names CI, and the per-change scan is `FE-DEPS-006`
+- [x] `FE-DEPS-002` (amended Statement) — the no-load-without-integrity clause covers cross-origin scripts referenced from markup or build output; runtime-injected scripts are `FE-DEPS-003`'s
+- [x] `FE-DEPS-003` (amended Statement) — a runtime-injected third-party script is permitted only when it carries integrity verification or is gated by a CSP-and-vendor-review process
+- [x] `FE-DEPS-004` (amended Verification) — a `pnpm` or `yarn` production install without its frozen-lockfile flag flagged alongside `npm install`
+
+- **Done when**: every listed rule reads as described in `framework/rules/security-backend.md` or `framework/rules/security-frontend.md`, `spec.md`, `plan.md`, `data-model.md`, and `research.md` describe the rule files as they now are, and `008` is re-reviewed back to `done`.
+
+## 14. Rule-file review 2026-10-19 (second pass): land new and amended security rules
+
+- [x] `BE-API-014` (new, MUST) — the application's own management and diagnostic endpoints (metrics, profiling and debug handlers such as Go's `/debug/pprof/`, heap or thread dumps, configuration and environment dumps, framework management endpoints such as Spring Boot Actuator's) not reachable from public networks unless every request to them is authenticated; a separate port or host only internal networks reach satisfies it, and a status-only health endpoint MAY be public
+- [x] `FE-CSRF-004` (new, MUST) — client-side CSRF: attacker-controllable input (the URL's path, query string, or fragment, `window.name`, `document.referrer`, `postMessage` data) never determines the endpoint or HTTP method of a state-changing request client-side code sends, other than by selecting from a fixed set of requests the application defines; a value from such input that becomes a request parameter is validated against the expected format and values before the request is sent
+- [x] `FE-STORAGE-006` (new, MUST NOT) — service worker code never stores responses carrying sensitive data (tokens, credentials, PII, other user-specific authenticated content) in the Cache API
+- [x] `BE-AUTHN-011` (amended Statement and Verification) — each new password screened against a blocklist of commonly used, expected, or compromised passwords, and any password the blocklist contains rejected; no longer only a breached-password corpus
+- [x] `BE-INPUT-003` (amended Statement and Verification) — the Statement's NoSQL operator examples are MongoDB `$where`, `$regex`, `$expr`; Verification names type-checked NoSQL query values and flags NoSQL filters that take request values without checking each is the expected scalar type
+- [x] `BE-INPUT-004` (amended Verification) — the containment check after canonicalization compares whole path components, not a bare string prefix
+- [x] `BE-INPUT-012` (amended Statement) — the trigger characters add line feed (`0x0A`) and the full-width forms `＝`, `＋`, `－`, `＠`
+- [x] `BE-API-001` (amended Verification, no obligation change) — the HSTS `preload` paragraph says preload-list inclusion cannot easily be undone, since a removal takes months to reach users, no longer that it is effectively irreversible; the paragraph pointing to `FE-CSP-007` and `FE-CSP-009` for the other HTML-response headers, added in the first pass, was missing from §13
+- [x] `BE-LOG-008` (amended Statement and Verification) — the bar covers propagated trace context (W3C `tracestate`, OpenTelemetry baggage entries) as well as span attributes and events, metric labels, and error reports; a correlation value is redacted, truncated, or replaced before it is recorded or propagated, and specs that place tokens or PII in baggage or `tracestate` are flagged
+- [x] `BE-DEPS-004` (amended Statement) — verification happens as part of installation, before a dependency is built into or shipped with an artifact, no longer before installation; Go modules are verified against the public checksum database, named as a transparency log of module hashes beside the publisher-signature and provenance paths
+- [x] `BE-DEPS-005` (amended Statement and Verification) — (a) for pip, a single `--index-url` that serves the private packages and proxies the public index, never `--extra-index-url` for private names, or a resolver that pins a package to one index (uv `tool.uv.sources`), no longer pip index priority; (b) where the package manager supports it, installs verify against hashes committed to the repository (npm `integrity`, pip `--require-hashes`, `go.sum`, Gradle `verification-metadata.xml`), no longer lockfiles recording each dependency's registry URL; Verification flags pip configurations that reach private packages through `--extra-index-url`
+- [x] `FE-XSS-005` (amended Verification, no obligation change) — `bleach` dropped from the example sanitization libraries
+- [x] `FE-XSS-008` (amended Statement and Verification) — a reviewed policy named `default` MAY receive the raw strings of legacy code paths while they are migrated to explicit policies; Verification flags raw strings reaching sinks only under an adoption with no reviewed `default` policy to route them through
+- [x] `FE-CSP-005` (amended Statement and Verification) — the reporting endpoint keeps reports where the team responsible for the CSP can review them, not discarding them on receipt; no longer that it MUST be monitored so violations surface
+- [x] `FE-DEPS-001` (amended Verification, no obligation change) — the Yarn scanner example reads `yarn npm audit` or Yarn 1's `yarn audit`
+- [x] `FE-DEPS-004` (amended Verification) — the lockfile-rewriting installs are named (`npm install` rather than `npm ci`, `pnpm install` without `--frozen-lockfile`, a Yarn install without `--immutable`, Yarn 1 without `--frozen-lockfile`), except where pnpm or Yarn 2+ applies that behavior by default on detecting a CI environment
+- [x] `FE-PII-002` (amended Statement, no obligation change) — breached-password warnings dropped from the purposes the `autocomplete` tokens serve
+- [x] `FE-CSRF-002` (amended Statement in the first pass and missing from §13, no obligation change) — the parenthetical saying modern browsers reject a `SameSite=None` cookie without `Secure` dropped
+
+- **Done when**: every listed rule reads as described in `framework/rules/security-backend.md` or `framework/rules/security-frontend.md`, `spec.md`, `plan.md`, `data-model.md`, and `research.md` describe the rule files as they now are, and `008` is re-reviewed back to `done`.
+
+## 15. Rule-file review 2026-10-19 (owner decisions): CSRF fail-closed option, bcrypt legacy-only, duplicate Content-Length, verification exception, BE-AUTHN-022, WebSocket rule
+
+- [x] `FE-CSRF-001` and `BE-API-011` (amended Statement, Rationale, and Verification) — under `Sec-Fetch-Site` validation, a state-changing request that lacks the header is either rejected (failing closed) or checked against its `Origin` as the fallback, as the OWASP CSRF Prevention Cheat Sheet's server-side policy presents it; the two rules word it identically, and a `Sec-Fetch-Site` check that does not state its treatment of a missing header is flagged
+- [x] `BE-AUTHN-001` (amended Statement and Verification, ID kept) — bcrypt acceptable only in a legacy system where neither Argon2id nor scrypt is available, per the OWASP Password Storage Cheat Sheet; a spec choosing bcrypt states why; PBKDF2 unchanged (where FIPS compliance is required)
+- [x] `BE-INPUT-013` (amended Statement, Rationale, Verification, and Source) — the edge rejects `Transfer-Encoding` with `Content-Length` and `Content-Length` values that differ (repeated lines or one list); identical values MAY be accepted when collapsed to a single instance before processing or forwarding, per RFC 9112 §6.3 and RFC 9110 §5.3, §8.6
+- [x] `BE-DEPS-004` (amended Statement, Rationale, Verification, and Source) — MAY exception for an ecosystem whose standard installer provides no signature or provenance verification (pip: PEP 740 makes no recommendation that installers verify attestations), conditioned on documenting the gap and installing hash-checked (`pip --require-hashes`, per `BE-DEPS-005`); PyPI attestations remain acceptable when a verifier such as `pypi-attestations` runs in the install step
+- [x] `BE-AUTHN-022` (new, MUST) — re-authentication with an already-bound authenticator (current password, or a fresh second-factor or passkey step-up) before changing a password or other authenticator, the email or recovery contact, or the MFA settings; a `BE-AUTHN-018` recovery reset MAY proceed on its token
+- [x] `BE-API-015` (new, MUST) — a WebSocket endpoint serving non-public data or accepting state-changing messages checks the handshake `Origin` against an exact-match allowlist (`403` otherwise; a handshake without `Origin` MAY be accepted only with a non-ambient credential), authenticates the connection before sending protected data or acting on messages, and subjects every message to `BE-INPUT-001`, `BE-INPUT-006`, `BE-AUTHZ-003`, and `BE-AUTHZ-005`
+
+- **Done when**: every listed rule reads as described in `framework/rules/security-backend.md` or `framework/rules/security-frontend.md`, `spec.md` (category bullets and Resolved Questions 5–10), `plan.md`, and `research.md` describe the rule files as they now are, and `008` is re-reviewed back to `done`.

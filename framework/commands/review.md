@@ -194,8 +194,8 @@ The numbered Instructions above are the deterministic path — the runtime's pri
      operator explicitly declaring "no surface rules, only cross-cutting
      ones," not a request to derive.
    - **Set to a degenerate value** — fail fast (do not silently ignore,
-     do not warn-and-continue), consistent with `CFG-ENV-003`'s
-     fail-fast-on-invalid-configuration posture:
+     do not warn-and-continue), consistent with `CFG-ENV-008`'s
+     fail-fast-on-malformed-configuration posture:
      - **Unrecognized member.** A member outside `{backend, frontend}` —
        a typo like `"fullstack"`, or `"cross"` (cross-cutting files are
        unconditional, not a selectable surface) — halts the run with

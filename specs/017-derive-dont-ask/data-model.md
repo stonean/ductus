@@ -28,8 +28,8 @@ A configuration rule file is a markdown document with the following structure (m
 …
 ```
 
-- **ID prefix** is `CFG-CONST` or `CFG-ENV` — the `CFG-{category}` pair the section's rules share, so the heading carries the abbreviation a reader needs to cite a rule under it.
-- **Category Name** is `Constants` or `Environment variables`.
+- **ID prefix** is `CFG-CONST`, `CFG-ENV`, or `CFG-FLAG` — the `CFG-{category}` pair the section's rules share, so the heading carries the abbreviation a reader needs to cite a rule under it.
+- **Category Name** is `Constants`, `Environment and configuration values`, or `Feature flags`.
 - **Rule ID** appears as a level-3 heading and is the only level-3 heading content (no surrounding text). This makes rules grep-able by ID.
 
 ## Configuration rule ID format
@@ -49,7 +49,8 @@ CFG-{category}-{NNN}
 | Category | Abbreviation |
 | --- | --- |
 | Constants | `CONST` |
-| Environment variables | `ENV` |
+| Environment and configuration values | `ENV` |
+| Feature flags | `FLAG` |
 
 The full ID always includes the `CFG-` prefix to disambiguate from `BE-` (backend security) and `FE-` (frontend security) rule IDs.
 
@@ -61,7 +62,7 @@ The full ID always includes the `CFG-` prefix to disambiguate from `BE-` (backen
 | Statement | yes | Block quote (`> …`) | The rule's obligation, stated with RFC 2119 keywords of one tier — MUST and MUST NOT, or SHOULD and SHOULD NOT — and optionally MAY for a permission or scope boundary. See **Severity classification** below. |
 | Rationale | yes | Paragraph beginning `**Rationale:**` | Brief explanation of the threat or risk the rule mitigates. |
 | Verification | yes | Paragraph beginning `**Verification:**` | Instruction to `/{project}:analyze` — see **Verification phrasing** below. |
-| Source | no | Paragraph beginning `**Source:**` | Citation to authoritative origin (e.g., 12-Factor App, NIST SP 800, IEC 60027 for unit suffixes). Optional but recommended. |
+| Source | no | Paragraph beginning `**Source:**` | Citation to authoritative origin (e.g., 12-Factor App, NIST SP 800, ISO 80000-3 for units of time). Optional but recommended. |
 | Deprecated | no | Paragraph beginning `**DEPRECATED in {version}:**` | Present only on deprecated rules. Includes the removal target version. The rule remains in the file with this label until removed. |
 
 ## Verification phrasing
@@ -88,22 +89,36 @@ A Statement's obligation keywords MUST come from one tier: MUST and MUST NOT, or
 
 Same as security rules. Once an ID is assigned, the rule retains that ID for life. Editing the Statement or moving the rule within the file does not change its ID. Deprecated rules retain their ID. Sequence numbers are never reused after a rule is fully removed. Two rules in the same file MUST NOT share an ID.
 
-## Initial rule set
+## Rule set
 
-The first version of `framework/rules/configuration-cross.md` ships with the following rules. Numbering is assigned at creation and is permanent.
+`framework/rules/configuration-cross.md` shipped its first version with seven rules (`CFG-CONST-001`–`003`, `CFG-ENV-001`–`004`). `CFG-CONST-004` and `CFG-ENV-005` were added on 2026-05-09 and `CFG-ENV-006` and `CFG-ENV-007` on 2026-05-16, both times without this data model being updated; they are registered here as of 2026-10-19. The rule-file review of 2026-10-19 added `CFG-ENV-008`–`010` and the `FLAG` category with `CFG-FLAG-001` and `CFG-FLAG-002`, through this spec's back-edge per [§rules](../../framework/constitution.md#rules); a second pass the same day added `CFG-ENV-011` and `CFG-ENV-012` to the existing `ENV` category and amended `CFG-ENV-001`, `002`, `004` and `008`. Numbering is permanent. This list enumerates the shipped set and is therefore a claim of its own — extend it whenever a rule is added, per [§grounding](../../framework/constitution.md#grounding).
 
 ### CFG-CONST namespace (Constants category)
 
-- `CFG-CONST-001` — Shared constants live in a centralized location (e.g., `shared/constants/`)
-- `CFG-CONST-002` — Module-local constants live in the module's own constants file
-- `CFG-CONST-003` — Configurable values are not bare literals — every operator-tunable value (timeout, retry count, batch size, threshold, rate limit) is a named constant or env-var-backed value, not a repeated literal
+- `CFG-CONST-001` (MUST) — a value used by more than one module lives in one centralized location idiomatic to the project's language, not duplicated across modules
+- `CFG-CONST-002` (MUST) — a constant used by one module lives within that module (its own constants file, or the top of the file that uses it), not in the shared location
+- `CFG-CONST-003` (MUST) — every operator-tunable value (timeout, retry count, batch size, threshold, rate limit, expiry duration) is backed by a named constant or an environment variable, never a bare literal in business logic
+- `CFG-CONST-004` (MUST) — a tunable value's valid-range bounds are named constants defined alongside its default constant
 
-### CFG-ENV namespace (Environment variables category)
+### CFG-ENV namespace (Environment and configuration values category)
 
-- `CFG-ENV-001` — Every env var has a default constant defined in code; the env var is read once at startup and falls back to the constant when unset
-- `CFG-ENV-002` — `.env.example` contains every introduced var with a descriptive comment and safe placeholder value
-- `CFG-ENV-003` — Required env vars are validated at startup with fail-fast naming of any var that cannot be resolved
-- `CFG-ENV-004` — Time-value env vars include a unit suffix in the variable name (`_MS`, `_SECONDS`, `_MINUTES`); the corresponding constant makes the unit explicit (e.g., `DEFAULT_SHUTDOWN_TIMEOUT_SECONDS = 30`)
+- `CFG-ENV-001` (MUST) — every env var is declared one of three ways: required, with no default; optional, with a default fallback that is a named constant; or optional with no default, where an unset or empty value disables a feature or integration the declaration names; secrets carry no in-application default, so a secret is required, or optional with no default when its absence disables the integration it authenticates; every env var is read once at startup and cached
+- `CFG-ENV-002` (MUST) — one canonical inventory, kept with the source, lists every env var the application reads with its purpose, whether it is required, and a safe placeholder or default; its form follows the deployment model (`.env.example` where a dotenv-style loader reads configuration, a Helm chart's `values.yaml` for defaults with its `values.schema.json` for types and required keys, a typed config module, or an equivalent checked-in manifest)
+- `CFG-ENV-003` (MUST) — required env vars are validated at startup; one that is unset or set to an empty value fails fast, exiting non-zero with an error naming the variable
+- `CFG-ENV-004` (MUST) — a time-valued env var states its unit unambiguously, either in the value (a duration string whose parser rejects a non-zero value without a unit — preferred) or in the name (a `_MS`, `_SECONDS`, `_MINUTES` or `_HOURS` suffix on an integer value); its default constant is a typed duration or carries the matching suffix
+- `CFG-ENV-005` (MUST) — an env var with a documented valid range (bounds named per `CFG-CONST-004`) is checked against it at startup; an out-of-range value fails fast, naming the variable, the value, and the violated bound
+- `CFG-ENV-006` (MUST) — sensitive configuration values are redacted at the config-loading layer before they reach logs, error messages, diagnostic dumps, health-check responses, or any other operator-facing output
+- `CFG-ENV-007` (MUST) — configuration precedence is documented and uniform: command-line flag, then environment variable, then configuration file, then in-code default constant; a deviation is justified in `specs/system.md`
+- `CFG-ENV-008` (MUST) — every configuration value, whether from an env var, a file, or a flag, is parsed into its declared type at startup; a present but malformed value fails fast, naming the setting and the value (redacted per `CFG-ENV-006` when sensitive), and never falls back to the default or is coerced to zero, empty, or `false`
+- `CFG-ENV-009` (SHOULD) — a value that varies between deployments (backing-service locators, external endpoints, per-deploy hosts and ports) is supplied at deploy time rather than compiled in, and application code does not branch on the deployment environment's name; build tooling that keys on a standard mode variable may still read it
+- `CFG-ENV-010` (MUST) — no secret is injected into an artifact delivered to end users (a browser bundle, a mobile app binary, a distributed desktop or CLI build), and the build exposes to client code only the variables explicitly designated for it, never the whole build environment; values their issuer designs to be public may be injected
+- `CFG-ENV-011` (MUST) — a data-size env var (a byte count such as a buffer, request-body, upload, cache, or memory limit) states its unit unambiguously, either in the value (a size string whose parser rejects a non-zero value without a unit) or in the name (a unit suffix such as `_BYTES`, `_KIB` or `_MIB` on an integer value); under either pattern a unit whose multiplier differs between parsers (`KB`, `MB`, `GB`, `M`, `G`) has its multiplier — powers of 1000 or of 1024 — stated in the variable's `CFG-ENV-002` inventory entry; its default constant is a typed size or carries the matching suffix
+- `CFG-ENV-012` (SHOULD) — an unrecognized key in a configuration file, within the settings the application owns, fails startup with an error naming the key and the file; where one file is read by more than one version of the application at once (a rolling deploy, older binaries reading the same file), it instead produces a startup warning naming the key; an unrecognized key is never silently ignored, and sections of a shared file that belong to other tools may pass unexamined
+
+### CFG-FLAG namespace (Feature flags category)
+
+- `CFG-FLAG-001` (MUST) — every feature flag has a declared default value, and evaluation resolves to it — never throwing, blocking indefinitely, or yielding an undefined state — when the flag source is unreachable, times out, or returns a value of the wrong type
+- `CFG-FLAG-002` (SHOULD) — a flag gating a release, rollout, or experiment is recorded with an owner and a removal criterion when introduced, and its removal is tracked as a work item; a long-lived operational flag declared permanent may omit the removal criterion
 
 ## Frontmatter schema (after this spec)
 
