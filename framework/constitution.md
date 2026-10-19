@@ -70,7 +70,7 @@ Grounding is the working counterpart to the **Verified** principle: that one gov
 
 The ranking above orders **evidence**, not **governance documents**: one asks what is true, the other what binds. A project may load more than one governing document — the constitution `ductus` ships, and any shared constitution its `.ductus/config.toml` registers under `[constitutions.*]` (spec 055) — and where they disagree, this is the order:
 
-**The framework constitution is a floor.** A shared or project source may add rules and tighten existing ones; it may not loosen them. Where the framework is silent, the more specific source wins: **project > shared > framework**. Every command reads the framework constitution to know how to behave, so a source able to disable one of its gates would make the pipeline's own invariants negotiable per repository.
+**The framework constitution is a floor.** A shared or project source may add rules and tighten existing ones; it may not loosen them, except a rule that names itself a default a project may replace. Where the framework is silent, the more specific source wins: **project > shared > framework**. Every command reads the framework constitution to know how to behave, so a source able to disable one of its gates would make the pipeline's own invariants negotiable per repository.
 
 **Nothing enforces this.** No check compares governing documents for contradiction, and prose contradiction is not mechanically detectable. This is the rule for whoever resolves a disagreement.
 
@@ -93,6 +93,8 @@ A recommendation is a claim, so grounding governs it. When the agent offers opti
 Where the options differ by a quantity the user cares about — steps removed, restarts saved, files touched, time or cost — that quantity MUST be computed for **every** option and stated with the recommendation. Reasoning from an option's *shape* to its *effect* ("this is the biggest change available") is inference presented as analysis, whether or not the ranking turns out right.
 
 When the deciding quantity cannot be computed yet, the agent MUST say so and say what would settle it, rather than ranking the options anyway; otherwise the user's approval rests on the framing rather than on the facts. Advice about the system is held to the standard the system is held to.
+
+**Decisions go to the owner one at a time.** When the agent has more than one decision for the owner, it presents one per message — the question, the context it turns on, its options, and its recommendation — and waits for the answer before presenting the next, so each question and each answer can be clarified on its own. It does not group decisions into one list or one multi-question prompt, and it does not put a question while work it started is still reporting into the conversation, where the question scrolls out of view. This rule is a default: a project MAY replace it in its `AGENTS.md` ([Governance sources, and which governs](#governance-sources-and-which-governs)).
 
 ### Rules
 
