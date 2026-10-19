@@ -28,12 +28,12 @@
 
 > Agent-specific routing for the constitution's *shared knowledge stays in git* principle ([§drift-prevention](framework/constitution.md#drift-prevention)).
 
-Before saving an auto-memory entry, ask **two** questions, in this order.
+This repository keeps **no** auto-memory — no entries and no `MEMORY.md` (`AGENTS.md` §Workflow). Adopting projects may keep one; this is this repository's rule. So a learning worth keeping goes into git or is not kept. Before keeping one, ask **two** questions, in this order.
 
 **1. Would this learning help any other contributor?**
 
-- **Yes** → it belongs in a git-tracked artifact, never local auto-memory. Local memory lives under the user's home directory, invisible to everyone else and absent from clones — parking contributor-beneficial guidance there defeats the purpose of a committed framework. Skip the memory entry and answer question 2.
-- **No** → auto-memory is correct. Reserve it for facts that are purely personal to this user and carry no value to other contributors: cross-project user facts (role, persistent style preferences) and external reference pointers (Linear/Slack/dashboard bookmarks).
+- **Yes** → it belongs in a git-tracked artifact. Local memory lives under the user's home directory, invisible to everyone else and absent from clones — parking contributor-beneficial guidance there defeats the purpose of a committed framework. Answer question 2.
+- **No** → it is not kept. In this repository even a fact purely personal to one user (role, a style preference, a dashboard bookmark) is not written to auto-memory; if it shapes how agents should work here, it is not purely personal — record it in `AGENTS.md`.
 
 **2. Who is it true for?** This decides *which* committed artifact, and it is a question about the learning's population, never about its kind — a gotcha, a convention and a workflow rule all route by the same test.
 
