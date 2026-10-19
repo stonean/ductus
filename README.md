@@ -1,19 +1,20 @@
 # ductus
 
-**Talk it through. Build it together. Keep the why.**
+**Focused, grounded AI-assisted development: durable specs for your business rules, built-in rules for security, accessibility, and performance.**
 
-You and your AI coding agent work out each feature before any code is written. The result is reviewed against your standards — more than 200 built-in rules for security, accessibility, performance, and reliability, plus any you write — and a broken rule holds the feature open instead of sitting in a prompt as a suggestion. The reasoning stays in your repo, where the next session, the next teammate, or you in six months will find it.
+Your AI coding agent works from the feature in front of it — its spec, plan, and tasks — instead of piecing together context from the whole codebase. The constitution and the commands keep it grounded: it reads the source rather than recalling it, and asks when something isn't settled. Your business rules live in specs that stay accurate after the code ships, and every feature is reviewed against built-in rules, plus any you write, before it's done.
 
 `ductus` works with Claude Code, Auggie, Antigravity, OpenCode, and Pi. It is tech-stack agnostic and its artifacts are plain markdown, so nothing is added to your project's dependency manifest and there is nothing to compile.
 
 ## What you get
 
+- **Your agent works on the feature, not the whole codebase.** `/target` sets the feature every command acts on, so the agent starts from that feature's spec, plan, and tasks. The constitution requires it to read the source rather than answer from memory, and to say what it did not examine.
 - **You find out what you don't know before the code does.** Describe a feature in plain English and `/specify` turns it into a spec; `/clarify` then works through the questions it raises, and nothing is planned until they are answered. Explaining a feature is where its gaps show — a rubber duck, except this one asks back.
 - **A reviewer that already knows security, accessibility, and performance.** `/review` audits every feature against the [rules](#rules) your project loads, and every finding quotes the rule it came from by a permanent ID, so a finding can be argued with rather than taken on faith.
 - **Your standards are enforced, not suggested.** A rule written into a prompt is one the agent may follow. A `ductus` MUST violation holds the feature out of `done` until it is fixed or waived with a recorded reason, and the waiver expires when the code it excused changes.
 - **"Done" means done.** A feature reaches `done` only after its review and analysis have run and every finding has been fixed, routed to where the work belongs, or discarded with its reason. Both records state what they did not examine, so a check that could not run never passes for a clean one.
 - **Every bug makes the project sharper.** A bug that exposes a missing rule becomes one, so every later review checks for it; a bug in specified behavior becomes a scenario recording what correct looks like.
-- **You never re-explain a decision.** The spec, plan, and review record why each feature was built the way it was — reasoning that otherwise ends up scattered across chat threads, wiki pages, and closed tickets.
+- **Your business rules stay written down.** The spec records what each feature does and why it was built that way, and it stays accurate after the code ships — reasoning that otherwise ends up scattered across chat threads, wiki pages, and closed tickets.
 
 ## Quick start
 
