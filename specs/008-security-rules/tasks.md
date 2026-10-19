@@ -253,3 +253,12 @@ Reopen surfaced upstream from an adopter: an `FE-DEPS` rule was missing for a de
 - [x] `BE-API-015` (new, MUST) — a WebSocket endpoint serving non-public data or accepting state-changing messages checks the handshake `Origin` against an exact-match allowlist (`403` otherwise; a handshake without `Origin` MAY be accepted only with a non-ambient credential), authenticates the connection before sending protected data or acting on messages, and subjects every message to `BE-INPUT-001`, `BE-INPUT-006`, `BE-AUTHZ-003`, and `BE-AUTHZ-005`
 
 - **Done when**: every listed rule reads as described in `framework/rules/security-backend.md` or `framework/rules/security-frontend.md`, `spec.md` (category bullets and Resolved Questions 5–10), `plan.md`, and `research.md` describe the rule files as they now are, and `008` is re-reviewed back to `done`.
+
+## 16. Independent-review findings await the owner
+
+- [ ] Implement the behavior described in `scenarios/independent-review-findings-await-the-owner.md`
+- [ ] Owner answers each of the scenario's six open questions, one at a time
+- [ ] Apply each answer to security-backend.md / security-frontend.md, fetching any external claim, and record it in Resolved Questions
+- [ ] Lints, audit suite, and rule-corpus tests pass
+
+- **Done when**: All six questions are resolved and applied, and 008 is re-reviewed back to done.
