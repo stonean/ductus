@@ -1,21 +1,23 @@
 # ductus
 
-**Spec-driven development for AI coding agents.** Describe a feature in plain English; your agent turns it into a spec, a plan, tasks, and reviewed code — and every feature lands with a written record of *why* it was built the way it is.
+**Talk it through. Build it together. Keep the why.**
 
-`ductus` is tech-stack agnostic and its artifacts are plain markdown, so nothing is added to your project's dependency manifest and there is nothing to compile. You install a single command, and `/ductus` acquires everything else — including the deterministic runtime the pipeline executes on. It works with Claude Code, Auggie, Antigravity, OpenCode, and Pi.
+You and your AI coding agent work out each feature before any code is written. The result is reviewed against your standards — more than 200 built-in rules for security, accessibility, performance, and reliability, plus any you write — and a broken rule holds the feature open instead of sitting in a prompt as a suggestion. The reasoning stays in your repo, where the next session, the next teammate, or you in six months will find it.
 
-## Why ductus
+`ductus` works with Claude Code, Auggie, Antigravity, OpenCode, and Pi. It is tech-stack agnostic and its artifacts are plain markdown, so nothing is added to your project's dependency manifest and there is nothing to compile.
 
-AI agents are fast, but left to their own devices they're inconsistent: they guess at ambiguous requirements, lose the reasoning behind a change as soon as the chat scrolls away, and reinvent structure on every task. `ductus` puts a thin, opinionated pipeline in front of the agent so that:
+## What you get
 
-- **Ambiguity is caught upstream of code.** Open questions get resolved in the spec, not discovered halfway through implementation.
-- **Every feature carries its "why."** The spec is a living document that stays accurate after the code ships — not a ticket that gets buried when it closes.
-- **The surface area is small.** A few commands map to things you already do: write a ticket, surface unknowns, sketch an approach, build it, audit it.
-- **Artifacts stay portable.** Everything is markdown with YAML frontmatter — readable in GitHub, Obsidian, or `cat`, with no proprietary format to escape.
+- **You find out what you don't know before the code does.** Describe a feature in plain English and `/specify` turns it into a spec; `/clarify` then works through the questions it raises, and nothing is planned until they are answered. Explaining a feature is where its gaps show — a rubber duck, except this one asks back.
+- **A reviewer that already knows security, accessibility, and performance.** `/review` audits every feature against the [rules](#rules) your project loads, and every finding quotes the rule it came from by a permanent ID, so a finding can be argued with rather than taken on faith.
+- **Your standards are enforced, not suggested.** A rule written into a prompt is one the agent may follow. A `ductus` MUST violation holds the feature out of `done` until it is fixed or waived with a recorded reason, and the waiver expires when the code it excused changes.
+- **"Done" means done.** A feature reaches `done` only after its review and analysis have run and every finding has been fixed, routed to where the work belongs, or discarded with its reason. Both records state what they did not examine, so a check that could not run never passes for a clean one.
+- **Every bug makes the project sharper.** A bug that exposes a missing rule becomes one, so every later review checks for it; a bug in specified behavior becomes a scenario recording what correct looks like.
+- **You never re-explain a decision.** The spec, plan, and review record why each feature was built the way it was — reasoning that otherwise ends up scattered across chat threads, wiki pages, and closed tickets.
 
 ## Quick start
 
-Install `ductus` into any project:
+You install a single command, and `/ductus` acquires everything else — including the deterministic runtime the pipeline executes on. Install `ductus` into any project:
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSfL https://github.com/stonean/ductus/releases/latest/download/install.sh | sh
@@ -41,9 +43,31 @@ The installed commands are **namespaced to your project**, so the name you passe
 
 Each command advances the feature one step and leaves a durable artifact behind. That's the whole loop.
 
+## Rules
+
+**Rules are how `ductus` knows what "good" means for your project.** A spec says what a feature should do; the rules say what any code is held to, whatever the feature. They are plain markdown, they are the only thing `/review` may cite besides your `AGENTS.md`, and every rule carries a permanent ID (`BE-AUTHN-003`, `FE-XSS-001`, `QUAL-CLAIM-001`) that a waiver, a code comment, or a spec can still cite years later.
+
+`ductus` ships rule files for:
+
+- **Security**, backend and frontend — authentication, authorization, input validation, data protection, XSS, CSRF
+- **Accessibility** — WCAG 2.2 AA
+- **Performance**, backend and frontend — query efficiency, caching, Core Web Vitals, bundle size
+- **Reliability**, **concurrency**, and **observability** — timeouts and retries, races and locking, metrics and tracing
+- **API contracts** and **configuration** — versioning and breaking changes; no magic numbers or undocumented environment variables
+
+One more, `quality-cross.md`, applies to every project and catches five failure modes that look like working code and are not:
+
+- **Silent stubs** — an unimplemented path whose contract implies it does work, returning success anyway. A no-op rate limiter ships indistinguishably from a real one.
+- **Unverified external contracts** — code whose correctness depends on a schema, an API shape, or a file format it does not own, with nothing that fails loudly when the assumption is wrong.
+- **Unsubstantiated clean results** — a result that reports "clean" when it means "could not check". A caller cannot tell a verified-clean answer from an unverifiable one, and will read the reassuring one.
+- **Unenumerated delegation to shared code** — a hand-rolled predicate, parser or validator replaced by a shared one without first listing what the local version enforced by construction, so the change silently widens or narrows what it accepts.
+- **Tests that cannot fail** — a test that passes whether or not the behavior it names works: it asserts nothing about the result, pins a value incidental to it, or lets a fallback satisfy the assertion meant for the primary path.
+
+Your own rules are a markdown file added to the rule-file directory: discovered automatically, and never touched by an update. Which files load for your stack, how MUST and SHOULD differ, how waivers expire, and how to write a rule are in **[docs/rules.md](docs/rules.md)**.
+
 ## How it works
 
-Every feature moves through one pipeline. The status on each spec tracks where it is:
+Under the hood, `ductus` is spec-driven development: every feature moves through one pipeline, and the status on each spec tracks where it is:
 
 ```text
 draft ──/clarify──▶ clarified ──/plan──▶ planned ──/implement──▶ in-progress ──[/review + /analyze gates]──▶ done
@@ -91,72 +115,6 @@ Each entry below says what the command **does**; the section it links to says wh
   - [`/configure`](docs/slash-commands.md#configure--agent-permissions-for-the-ductus-commands) — grant your agent the permissions the `ductus` commands need
 
 Each command is documented in full — what it is for, why it exists, and what it will not do — in **[docs/slash-commands.md](docs/slash-commands.md)**.
-
-## Rules
-
-**Rules are how `ductus` knows what "good" means for your project.** A spec says what a feature should do; the rules say what any code is held to regardless of feature — and `/review` audits the implementation against them before a spec can reach `done`. Without them the review has taste and nothing else.
-
-They are plain markdown in your project's rule-file directory — the `rules/` directory under your spec root once scaffolded, or [`framework/rules/`](framework/rules/) here in `ductus`'s own repo — and they are the **only** normative source a review may cite: `/review` is instructed not to invent criteria beyond these files and your `AGENTS.md`. That is what keeps two reviews of the same code from disagreeing, and what makes a finding arguable — every one quotes the rule it came from.
-
-**Every rule uses RFC 2119 language, and the distinction is load-bearing.** **MUST** / **MUST NOT** violations are blocking: they hold the spec out of `done` until they are fixed or waived with a recorded reason. **SHOULD** / **SHOULD NOT** violations are advisory — reported, never blocking the review record — but an outstanding SHOULD still keeps the spec out of `done` until it is fixed or waived.
-
-**Every rule carries a permanent ID** (`BE-AUTHN-003`, `FE-XSS-001`, `QUAL-CLAIM-001`). IDs are never renumbered or reused, even when a rule moves within its file, so a waiver, a code comment, or a spec can cite one and still mean the same thing years later.
-
-### What ships
-
-| Rule file | Covers |
-| --- | --- |
-| `security-backend.md` | Authentication, authorization, input validation, data protection, API security, logging and audit, dependency management, error handling |
-| `security-frontend.md` | XSS, CSRF, secure client-side storage, authentication UX, content security policy, dependencies, handling of sensitive data |
-| `quality-cross.md` | Silent stubs, unverified external contracts, unsubstantiated clean results, unenumerated delegation to shared code, tests that cannot fail |
-| `reliability-backend.md` | Bounded timeouts, retry discipline, circuit breakers, graceful shutdown, bulkheads that shed load rather than queue unboundedly |
-| `performance-backend.md` | Query efficiency (N+1, unindexed filters, unbounded reads), caching with a stated expiry, connection-pool discipline, payload budgets, offloading slow work off the request path |
-| `performance-frontend.md` | Core Web Vitals budgets, bundle size, image delivery, resource loading, web-font discipline |
-| `api-backend.md` | The *contract* other people call: versioning, pagination, status-code semantics, breaking-change discipline (the HTTP *attack* surface is `security-backend.md` §BE-API) |
-| `concurrency-backend.md` | Shared-state races, locking and deadlock avoidance, transaction isolation, distributed coordination |
-| `observability-backend.md` | Metrics, distributed tracing, health signaling — so a failure in production is diagnosable rather than merely visible |
-| `accessibility-frontend.md` | WCAG 2.2 AA: semantic HTML, keyboard navigation and focus, ARIA usage, color and contrast, accessible forms, text alternatives |
-| `configuration-cross.md` | Named constants and environment variables: no magic numbers, no undocumented env vars, fail-fast on invalid configuration |
-
-The two security files carry the highest proportion of **MUST** rules, because the failures they describe are exploitable rather than merely untidy. Accessibility is AA because that is the baseline written into law in several jurisdictions, which is why it is a shipped rule file rather than a suggestion.
-
-`quality-cross.md` is the odd one out, and worth stating in full — five failure modes that look like working code and are not, on any surface:
-
-- **Silent stubs** — an unimplemented path whose contract implies it does work, returning success anyway. A no-op rate limiter ships indistinguishably from a real one.
-- **Unverified external contracts** — code whose correctness depends on a schema, an API shape, or a file format it does not own, with nothing that fails loudly when the assumption is wrong.
-- **Unsubstantiated clean results** — a result that reports "clean" when it means "could not check". A caller cannot tell a verified-clean answer from an unverifiable one, and will read the reassuring one.
-- **Unenumerated delegation to shared code** — a hand-rolled predicate, parser or validator replaced by a shared one without first listing what the local version enforced by construction, so the change silently widens or narrows what it accepts.
-- **Tests that cannot fail** — a test that passes whether or not the behavior it names works: it asserts nothing about the result, pins a value incidental to it, or lets a fallback satisfy the assertion meant for the primary path.
-
-### Which rules load
-
-A rule file's **filename suffix** decides which projects load it, and there are exactly three:
-
-| Suffix | Loads for | Example |
-| --- | --- | --- |
-| `-backend.md` | projects with a backend surface | `security-backend.md` |
-| `-frontend.md` | projects with a frontend surface | `security-frontend.md` |
-| `-cross.md` | every project, unconditionally | `quality-cross.md` |
-
-Set `[rules] surfaces` in `.ductus/config.toml` to declare your surfaces (`["backend"]`, `["backend", "frontend"]`, or `[]` for cross-only); leave it unset and `ductus` falls back to the stack it detects. A file with an unrecognized suffix loads for *every* stack and warns — the default is never a silent skip.
-
-To stand a rule file down without deleting it, list it under `[[review.disabled-rule-files]]` with a mandatory `reason`. The reason is the audit trail, and it is why the opt-out is a config entry rather than a deletion.
-
-### Waivers
-
-When a **MUST** violation is intentional, record a waiver rather than silencing the gate:
-
-```text
-/review --waive <rule-id> --reason "<text>"
-```
-
-The waiver is anchored to the `(rule, file)` pair, so code moving within a file keeps it while a rename or a fix expires it and the finding re-blocks — a waiver cannot quietly outlive the thing it excused. When the rule fires in several files, one waiver lists them all, and each listed path still expires on its own. The schema is open, so an organization can require its own fields (a ticket, a second approver) and `ductus` preserves them. See [specs/020-code-review/data-model.md](specs/020-code-review/data-model.md).
-
-### Writing your own
-
-Add a file to the rule-file directory — `rules/` under your spec root, or [`framework/rules/`](framework/rules/) here — with one of the three suffixes and it is discovered automatically — no registration step, no manifest entry. Give each rule a permanent ID, state it in RFC 2119 language, and record the rationale: a rule whose reasoning is not written down is one nobody can argue with when it is wrong.
-
-**A rule file you wrote is yours.** `/ductus` only ever rewrites the rule files it ships; it does not touch, move, or delete a file you added, on any upgrade. The one case that needs a decision is a shipped file you have *edited* — that one is overwritten on the next update unless you pin it in `.ductus/config.toml` `[pinned] files`. Upstreaming the change is usually better than pinning: a pinned file stops receiving fixes.
 
 ## Installing (per agent)
 
@@ -226,7 +184,7 @@ The runtime is **required**: acquisition failure halts the run rather than degra
 - **`[rules]`** — declare which rule surfaces your project needs: `surfaces = ["backend"]`, `["frontend"]`, or both. `/ductus` prompts for this on first run, then installs only the matching rule files (cross-cutting `-cross` rules always apply) and `/review` enforces only those. Leave it unset to let `ductus` derive the surface from your stack and install every rule file.
 - **`[paths]`** — rename the top-level directory that holds every `ductus` artifact: `specs-root = "governance"`. Defaults to `specs`; set it to avoid colliding with a sibling framework's directory (e.g. RSpec's `spec/`). `/ductus` prompts for it on first run; once set, every command and the runtime resolve it. A single directory name — no path separators, no `..`, no leading slash.
 - **`[runtime]`** — `path` to a binary you supply, instead of the one `/ductus` downloads (see [docs/runtime.md](docs/runtime.md#supplying-your-own-binary)).
-- **`[[review.disabled-rule-files]]`** — stand a rule file down with a mandatory `reason` (see [Which rules load](#which-rules-load)).
+- **`[[review.disabled-rule-files]]`** — stand a rule file down with a mandatory `reason` (see [Which rules load](docs/rules.md#which-rules-load)).
 - **`[artifacts]`** — `read-size-bytes`, the size in bytes above which `/clarify`, `/plan` and `/analyze` warn that a spec artifact may not be read in one call by an agent's file reader, naming the fixes for it. A whole number of bytes, `50000` when unset: raise it for a host with a larger read cap, lower it for a smaller one or for token-dense artifacts. Any other value is reported and the default used. It cannot switch the warning off — discard one file's finding in `/analyze` instead.
 - **`[services]`** — register sibling services so cross-service reference links resolve to the linked spec's lifecycle status. Add entries with `/link`, not by hand.
 - **`[constitutions]`** — register a governance document your organization owns, so one house rule reaches every project instead of being retyped into each (see [Shared constitutions](#shared-constitutions)). Hand-edited; `repo` is never fetched, the local `path` is what is read.
@@ -317,7 +275,7 @@ This repo is the source for everything `ductus` ships, plus its own dogfooded sp
   - [commands/](framework/commands/) — slash command sources
   - [bootstrap/](framework/bootstrap/) — the `ductus.md` installer and per-agent permission files
 - **[install.sh](install.sh)** — the `curl … | sh` installer that places the `/ductus` bootstrap command for your agent
-- **[docs/](docs/)** — the reference manuals: [slash-commands.md](docs/slash-commands.md), [analyze.md](docs/analyze.md), [runtime.md](docs/runtime.md), [cross-service-references.md](docs/cross-service-references.md), [shared-constitution.md](docs/shared-constitution.md)
+- **[docs/](docs/)** — the reference manuals: [slash-commands.md](docs/slash-commands.md), [analyze.md](docs/analyze.md), [rules.md](docs/rules.md), [runtime.md](docs/runtime.md), [cross-service-references.md](docs/cross-service-references.md), [shared-constitution.md](docs/shared-constitution.md)
 - **[runtime/](runtime/)** — the `ductus` deterministic runtime (Rust)
 - **[specs/](specs/)** — `ductus`'s own feature specs; it develops itself with its own pipeline. See [specs/README.md](specs/README.md) for cross-cutting decisions and deferred work.
 - **[scripts/](scripts/)** — maintenance and generator scripts
