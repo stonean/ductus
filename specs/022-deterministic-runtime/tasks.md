@@ -13,8 +13,8 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 
 ## 2. Pin every redirect hop to its screened address (BE-INPUT-016)
 
-- [ ] Implement the behavior described in `scenarios/fetch-archive-dns-rebinding.md`
-- [ ] fetch-archive's connections, including every redirect hop, use only addresses that passed the internal-range screen (e.g. a screening dns::Resolve instead of a per-host resolve_to_addrs pin)
-- [ ] A test fails if a redirect host is resolved a second time without the screen
+- [x] Implement the behavior described in `scenarios/fetch-archive-dns-rebinding.md`
+- [x] fetch-archive's connections, including every redirect hop, use only addresses that passed the internal-range screen (e.g. a screening dns::Resolve instead of a per-host resolve_to_addrs pin)
+- [x] A test fails if a redirect host is resolved a second time without the screen
 
 - **Done when**: No fetch-archive connection, initial or redirected, resolves a host without screening the addresses it connects to, and 022 is re-reviewed back to done.
