@@ -564,7 +564,9 @@ pub enum PrimitiveError {
     /// a newline, and a raw rendering would let committed config forge a
     /// second line in an operator-facing message (`BE-INPUT-011`).
     #[error(
-        "invalid `{setting}` in {path}: {value} — `[artifacts] read-size-bytes` takes a whole number of bytes, at least {min}; remove it to use the {default}-byte default",
+        "invalid `{setting}` in {path}: {value} — `[{section}] {key}` takes a whole number of bytes, at least {min}; remove it to use the {default}-byte default",
+        section = check_artifact_size::SECTION,
+        key = check_artifact_size::KEY,
         min = check_artifact_size::MIN_READ_SIZE_BYTES,
         default = check_artifact_size::DEFAULT_READ_SIZE_BYTES
     )]
@@ -574,7 +576,7 @@ pub enum PrimitiveError {
         /// `[artifacts] read-size-bytes`, or `artifacts` when the section
         /// itself is not a table.
         setting: String,
-        /// The value as written in the config file, flattened to one line.
+        /// The value as TOML renders it, flattened to one line.
         value: String,
     },
 }

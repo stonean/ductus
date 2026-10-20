@@ -64,8 +64,8 @@ pub(crate) const DEFAULT_READ_SIZE_BYTES: u64 = 50_000;
 pub(crate) const MIN_READ_SIZE_BYTES: u64 = 1;
 
 /// The config section and key the threshold is read from.
-const SECTION: &str = "artifacts";
-const KEY: &str = "read-size-bytes";
+pub(crate) const SECTION: &str = "artifacts";
+pub(crate) const KEY: &str = "read-size-bytes";
 
 /// Measure `args.feature`'s subject artifacts against the configured read
 /// size.
@@ -448,7 +448,7 @@ fn resolve_threshold(repo: &Path) -> Result<ReadSizeThreshold> {
         bytes: DEFAULT_READ_SIZE_BYTES,
         source: ThresholdSource::Default,
     };
-    let (path, _) = paths::resolve_config(repo);
+    let path = paths::config_path(repo);
     if !path.is_file() {
         return Ok(default);
     }
@@ -611,8 +611,13 @@ mod tests {
 
     #[test]
     fn an_invalid_value_is_named_on_one_line() {
-        // A line separator inside a TOML string reaches the message as a
-        // space, so committed config cannot forge a second line in it.
+        // A line break inside a TOML string reaches the message as a space,
+        // so committed config cannot forge a second line in it. TOML renders
+        // a string holding a newline as a multi-line string, raw newlines
+        // and all, and passes U+2028 through unescaped; both are flattened.
+        let (_, value, message) = invalid("[artifacts]\nread-size-bytes = \"5\\nx\"\n");
+        assert!(!value.contains('\n') && value.contains("5 x"), "{value:?}");
+        assert!(!message.contains('\n'), "{message:?}");
         let (_, value, message) = invalid("[artifacts]\nread-size-bytes = \"5\\u2028x\"\n");
         assert_eq!(value, "\"5 x\"");
         assert!(!message.contains('\u{2028}'), "{message:?}");

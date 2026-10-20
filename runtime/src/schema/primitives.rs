@@ -4638,8 +4638,8 @@ pub struct CheckArtifactSizeResult {
     pub skipped: Vec<SkippedTarget>,
     /// Whether the stored decisions behind `decided` were read.
     pub decisions: DecisionsState,
-    /// Notices every caller shows: today, only that the stored decisions
-    /// could not be read. An invalid threshold is an error, never a notice.
+    /// Notices every caller shows: that the stored decisions could not be
+    /// read. An invalid threshold is an error, never a notice.
     #[serde(default)]
     pub notices: Vec<String>,
     /// Repo-relative path to the spec file.

@@ -19,7 +19,7 @@ Resolved through the same config ladder every reader uses (`.ductus/config.toml`
 
 ### The invalid-threshold error
 
-`PrimitiveError::InvalidReadSize` carries the config file's `path`, the `setting` (`[artifacts] read-size-bytes`, or `artifacts` when the section is not a table) and the `value` as written, flattened to one line. Its message names all three and the accepted form:
+`PrimitiveError::InvalidReadSize` carries the config file's `path`, the `setting` (`[artifacts] read-size-bytes`, or `artifacts` when the section is not a table) and the `value` as TOML renders it (a string in double quotes), flattened to one line. Its message names all three and the accepted form:
 
 ```text
 invalid `{setting}` in {path}: {value} — `[artifacts] read-size-bytes` takes a whole number of bytes, at least 1; remove it to use the 50000-byte default

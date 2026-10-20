@@ -68,7 +68,7 @@ A discarded warning stays discarded while its file keeps the read-page count it 
 - **The size is the file's bytes on disk**, line endings and multi-byte characters included. Nothing is normalized first.
 - **A file exactly at the threshold** is one read page and is not reported. One byte over is two pages.
 - **Several oversized subjects** get one warning each. A spec with many scenarios is checked file by file.
-- **An invalid configured threshold** (anything but a positive whole number of bytes) halts the command that reads it, naming the setting, the offending value, the file and the accepted form. A fraction or a string does not parse as a whole number (`CFG-ENV-008`); zero or a negative parses but falls below the minimum of 1 byte, which is held to `CFG-ENV-005`'s out-of-range treatment. The default never stands in for a value the project set: only an unset threshold means 50,000 bytes. See [an invalid threshold fails fast](scenarios/an-invalid-threshold-fails-fast.md).
+- **An invalid configured threshold** (anything but a positive whole number of bytes, or an `artifacts` that is not a table and so cannot hold the key) halts the command that reads it, naming the setting, the offending value, the file and the accepted form. A fraction or a string does not parse as a whole number (`CFG-ENV-008`); zero or a negative parses but falls below the minimum of 1 byte, which is held to `CFG-ENV-005`'s out-of-range treatment. The default never stands in for a value the project set: only an unset threshold means 50,000 bytes. See [an invalid threshold fails fast](scenarios/an-invalid-threshold-fails-fast.md).
 - **Changing the threshold recounts every subject's pages.** A discard recorded at one page count fires again if the new threshold puts its file at a higher count.
 - **The markdown-only path** measures with the host's own file tools. A subject whose size those tools cannot report is reported as not examined, never as under the threshold.
 
@@ -86,7 +86,7 @@ These gaps remain after a warning, and each is its own change:
 - [x] AC2: `/clarify` and `/plan`'s readiness check report the same over-threshold subjects as a warning, and neither blocks its transition on it.
 - [x] AC3: `research.md`, `review.md` and `analysis.md` are never reported, whatever their size.
 - [x] AC4: With no threshold configured, the threshold is 50,000 bytes; a threshold set in `.ductus/config.toml` replaces it.
-- [x] AC5: A configured threshold that is not a positive whole number of bytes halts the command that reads it, naming the setting, the value, the file and the accepted form; the default never replaces a value the project set.
+- [x] AC5: A configured threshold that is not a positive whole number of bytes, or an `artifacts` that is not a table, halts the command that reads it, naming the setting, the value, the file and the accepted form; the default never replaces a value the project set.
 - [x] AC6: Each warning names the fixes for its artifact kind from the table in [The warning names a fix](#the-warning-names-a-fix).
 - [x] AC7: A discard is offered in `/analyze` only.
 - [x] AC8: On a `done` spec, the warning says that splitting the spec and promoting a scenario reopen it, that trimming reopens it unless the trim changes no claim, and that pruning `tasks.md` and a discard do not.
