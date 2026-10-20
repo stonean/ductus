@@ -6,7 +6,7 @@ section: "Follow-on scenarios"
 
 ## Context
 
-On 2026-10-19 the owner decided that `quality-cross.md` `QUAL-GROUND-001` cedes configuration keys and values to the CFG rules, so one configuration defect is never reported under two IDs. An independent review then found the handover leaves a gap: `CFG-ENV-003` covers only a missing required *environment variable*, `CFG-ENV-008` covers present-but-malformed values from any source, and `CFG-ENV-012` (SHOULD) covers unrecognized keys in a configuration file. No rule now covers a required key absent from a configuration file, or a missing required command-line flag — the exact case of the Shore "Fail Fast" article `QUAL-GROUND-001` cites (a property missing from `config.properties`, silently replaced by a default).
+On 2026-10-19 the owner decided that `quality-cross.md` `QUAL-GROUND-001` cedes configuration keys and values to the CFG rules, so one configuration defect is never reported under two IDs. An independent review then found the handover left a gap: `CFG-ENV-003` covered only a missing required *environment variable*, `CFG-ENV-008` covered present-but-malformed values from any source, and `CFG-ENV-012` (SHOULD) covered unrecognized keys in a configuration file. No rule then covered a required key absent from a configuration file, or a missing required command-line flag — the exact case of the Shore "Fail Fast" article `QUAL-GROUND-001` cites (a property missing from `config.properties`, silently replaced by a default).
 
 ## Behavior
 
@@ -16,6 +16,7 @@ On 2026-10-19 the owner decided that `quality-cross.md` `QUAL-GROUND-001` cedes 
 
 - A value with a declared default is optional and does not fail when absent; `CFG-ENV-001` asks every value, from any source, to be declared required or optional.
 - The read-once requirement in `CFG-ENV-001` stays about the process environment; widening the declaration does not extend it to files or flags.
+- A value read from more than one source (`CFG-ENV-007`) is absent only when every source leaves it absent; a flag given an empty value, and a configuration file that is missing, count as absent.
 
 ## Open Questions
 
