@@ -25,7 +25,7 @@ Resolved through the same config ladder every reader uses (`.ductus/config.toml`
 invalid `{setting}` in {path}: {value} — `[artifacts] read-size-bytes` takes a whole number of bytes, at least 1; remove it to use the 50000-byte default
 ```
 
-Every command that invokes `check-artifact-size` halts on it. A string or a fraction is malformed (`CFG-ENV-008`); zero or a negative is out of range (`CFG-ENV-005`'s treatment, held to a file-based key). Both halt alike.
+Every command that invokes `check-artifact-size` halts on it. A string or a fraction is malformed (`CFG-ENV-008`); zero or a negative is out of range (`CFG-ENV-005`). Both halt alike.
 
 ## `CheckArtifactSizeArgs`
 
