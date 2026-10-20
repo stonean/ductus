@@ -171,19 +171,24 @@ pub fn unknown_keys_in_text(content: &str, sections: &[&str]) -> Vec<UnknownKey>
 /// must never fail the run it warns about.
 pub fn warn_unknown_keys(path: &Path, content: &str, sections: &[&str]) {
     static WARNED: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
-    let file = path.display().to_string();
-    let lines: Vec<String> = unknown_keys_in_text(content, sections)
-        .iter()
-        .map(|key| key.notice(&file))
-        .collect();
     let fresh = first_seen(
-        lines,
+        warning_lines(path, content, sections),
         &mut WARNED.lock().unwrap_or_else(PoisonError::into_inner),
     );
     let mut stderr = std::io::stderr().lock();
     for line in fresh {
         let _ = writeln!(stderr, "ductus: {line}");
     }
+}
+
+/// The lines [`warn_unknown_keys`] writes for `content`, read from `path`,
+/// before the once-per-process filter.
+fn warning_lines(path: &Path, content: &str, sections: &[&str]) -> Vec<String> {
+    let file = path_text(path);
+    unknown_keys_in_text(content, sections)
+        .iter()
+        .map(|key| key.notice(&file))
+        .collect()
 }
 
 /// The `lines` `warned` does not already hold, each recorded there as it is
@@ -265,14 +270,41 @@ fn key_text(key: &str) -> String {
         match c {
             '"' => text.push_str("\\\""),
             '\\' => text.push_str("\\\\"),
-            c if c == '\t' || is_line_hazard(c) || is_bidi_control(c) => {
-                let _ = write!(text, "\\u{:04X}", u32::from(c));
-            }
+            c if is_display_hazard(c) => push_escaped(&mut text, c),
             c => text.push(c),
         }
     }
     text.push('"');
     text
+}
+
+/// `path` as the stderr report names it, with every character
+/// [`key_text`] escapes for display escaped the same way. The path can come
+/// from committed config — a registered service checkout's `path` — so a
+/// newline or a terminal escape in it must not forge a line (`BE-INPUT-011`).
+/// A backslash is left alone: on Windows it is the path separator.
+fn path_text(path: &Path) -> String {
+    let mut text = String::new();
+    for c in path.display().to_string().chars() {
+        if is_display_hazard(c) {
+            push_escaped(&mut text, c);
+        } else {
+            text.push(c);
+        }
+    }
+    text
+}
+
+/// A character shown escaped rather than raw: a line hazard, a tab, or a
+/// bidirectional formatting control.
+fn is_display_hazard(c: char) -> bool {
+    c == '\t' || is_line_hazard(c) || is_bidi_control(c)
+}
+
+/// Append `c` as a TOML `\uXXXX` escape; every display hazard is in the
+/// Basic Multilingual Plane.
+fn push_escaped(text: &mut String, c: char) {
+    let _ = write!(text, "\\u{:04X}", u32::from(c));
 }
 
 /// The Unicode bidirectional formatting controls (UAX #9): the Arabic letter
@@ -493,6 +525,26 @@ mod tests {
         assert_eq!(
             first_seen(vec![line("root"), line("base")], &mut warned),
             [line("base")]
+        );
+    }
+
+    #[test]
+    fn a_path_from_committed_config_is_shown_with_its_hazards_escaped() {
+        // A service checkout's path comes from `[services] path`, so it can
+        // carry what a key can; a backslash stays, as a Windows separator.
+        let path = Path::new("../svc\nfake\u{1b}[31m\u{202E}\\x/.ductus/config.toml");
+        let shown = path_text(path);
+        assert_eq!(
+            shown,
+            "../svc\\u000Afake\\u001B[31m\\u202E\\x/.ductus/config.toml"
+        );
+        assert!(!shown.chars().any(is_display_hazard), "{shown:?}");
+        // The warning names the file by that escaped form.
+        assert_eq!(
+            warning_lines(Path::new("svc\n/c.toml"), "[paths]\nroot = 1\n", &["paths"]),
+            [
+                "unknown config key: [paths] root (svc\\u000A/c.toml) — this version of ductus does not read it"
+            ]
         );
     }
 

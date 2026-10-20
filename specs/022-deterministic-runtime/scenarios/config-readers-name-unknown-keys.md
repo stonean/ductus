@@ -22,7 +22,7 @@ section: "Follow-on scenarios"
 - A field an adopter adds to a `[[review.disabled-rule-files]]` entry is reported the same way, naming the entry's index, and the entry still applies.
 - Sections `ductus` does not own are not examined, and neither is the session file, whose top level is the exec walker's open seed.
 - The legacy config locations are examined the same way while readers still honor them, and the notice names the file that was read.
-- `resolve-references` and `derive-references` also read each registered service checkout's `[paths]` through `Paths::load`, so an unknown key in that checkout's config is named too, with that file's path: its `specs-root` decides where the service's specs are found.
+- `resolve-references` and `derive-references` also read each registered service checkout's `[paths]` through `Paths::load`, so an unknown key in that checkout's config is named too, with that file's path: its `specs-root` decides where the service's specs are found. That path comes from committed config, so it is shown with the same characters escaped as a key.
 - One key can be reported twice in one CLI run: `dashboard` names it in its callout, and the reader of its section on stderr.
 
 ## Open Questions

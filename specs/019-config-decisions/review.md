@@ -1,16 +1,16 @@
 ---
 spec: 019-config-decisions
-last-run: 2026-10-20T12:35:29Z
-reviewed-against: b482e0295a706962163e084993a0a0cbeebd523a
+last-run: 2026-10-20T12:59:45Z
+reviewed-against: 92ef635c3e7a1fd2e7d08ee22e8789210dd16c8f
 diff-base: 37c8219c8730fd23b5fbac7629c11fd2d6bc5b3b
 must-violations: 0
 should-violations: 0
 low-confidence: 0
 examined: 52
-scope: 144
+scope: 145
 skipped-passes: []
 reviewed-digest:
-  data-model.md: 3d70ace67dd70ca8ad437ac8aa0ac11bb25e15a43934a6b2801b25fe742c46e8
+  data-model.md: d8bdc02dfbb5b9f2b299ece5704f596de6a3ab268008fa7860b9a7deff6cd480
   scenarios/an-unknown-config-key-is-named.md: eb41ca8d0c1f6064da2407524a5e8e23a9b043a4a19dd067dd8cf0af6e0f8c34
 blocking: false
 dispositions:
@@ -185,7 +185,7 @@ decisions:
 
 ## Summary
 
-Five-pass review of 019 over `37c8219c..b482e029` plus the working tree, after task 1, the owner's 2026-10-20 unknown-config-key decision. The 144 scope entries are the 2026-10-19 rule-file window and every commit since: 063's, 025's and 022's fixes, and this session's 019 change set. **Read this session** (`examined: 52`): 019's `spec.md`, `plan.md`, `data-model.md`, `tasks.md` and its scenario in full; the 019 change set as 063's review of `e7044738` read it, which covers `runtime/src/schema/config_keys.rs` in full (by this pass and by two parallel reviewer passes) and the diffs of the other fifteen changed runtime files, both test files, `README.md`, `AGENTS.md`, `.github/workflows/runtime.yml`, `framework/bootstrap/ductus.md`, `framework/bootstrap/ductus-procedure.md`, the five changed command sources, and 022's and 063's changed artifacts; and all eleven `framework/rules/*.md` in full. **Not read** (92): the ten generated mirrors (`scripts/gen-claude-commands.sh --check` in sync), `framework/bootstrap/govern.md` (`cmp` identical to `ductus.md`), 063's `review.md` (written by `write-review` this session), and the 80 entries of `37c8219c..9c22944f` this session did not change. Those are other specs' artifacts from the rule-file campaign, read in 034's review and reused by its sibling reviews, and the earlier 022, 025 and 063 commits, read by 022's review of `00e4bd3f`. **Findings: none.** **Observations: 33.** One was fixed in the run: 019's plan listed several files per Affected Files row, of which `compute-review-scope` reads only the first, so each row now names one file. Thirty are carried byte-identical from 022's standing set (7 routed, 23 discarded); 048's scenario is left out as outside this scope, and so is the route to 019's own task 1, whose work has landed. Two more are discards from today's change set that hold here: the double config parse, and a misspelled section name, which the owner's decision puts outside the owned sections. The change set's fourteen other observations were fixed in 063's review and no longer hold.
+Refresh of 019's review after its analysis changed `data-model.md`, over `37c8219c..92ef635c` plus the working tree. What changed since the record of `9d3b4ad3`: `runtime/src/schema/config_keys.rs`, where the stderr warning's file path is now escaped by `path_text` through the shared `is_display_hazard` and `push_escaped`, and `warning_lines` was split out so a test reaches it; the sentences stating that in 019's `plan.md` and `data-model.md` and in 022's `config-readers-name-unknown-keys`; the grounding and `BE-LOCK-001` sentences in 019's plan; and 063's `spec.md`, `plan.md` and `analysis.md`, which 063's analysis wrote. This pass read that code delta and those artifacts in full and ran the five passes over them. Two mutations each fail a test: the raw path restored, and `path_text` escaping nothing. **Read this session** (`examined: 52`, unchanged): 019's `spec.md`, `plan.md`, `data-model.md`, `tasks.md` and its scenario; the 019 change set as 063's review of `e7044738` read it; and all eleven `framework/rules/*.md` in full. **Not read** (93): the ten generated mirrors (`scripts/gen-claude-commands.sh --check` in sync), `framework/bootstrap/govern.md` (`cmp` identical to `ductus.md`), 063's `review.md` and `analysis.md` (written by their primitives this session), and the 80 entries of `37c8219c..9c22944f` this session did not change. Those were read in 034's review and its siblings, and in 022's review of `00e4bd3f`. **Findings: none.** **Observations: 33.** One was fixed in the run: the stderr warning printed the config path raw, though a registered service checkout's path comes from committed config. That was found by 019's analysis pass under `BE-INPUT-011`. The 32 stored decisions all match and keep their outcomes (7 routed, 25 discarded).
 
 ## MUST violations (blocking)
 
@@ -205,7 +205,6 @@ Five-pass review of 019 over `37c8219c..b482e029` plus the working tree, after t
 
 ## Observations
 
-- other: 019's plan listed several files in one Affected Files row, of which compute-review-scope reads only the first — `specs/019-config-decisions/plan.md` — **fixed**
 - reliability: dropping a timed-out client joins its runtime thread, so a slow connect-time lookup can hold a fetch past FETCH_TIMEOUT — `runtime/src/primitives/fetch_archive.rs` — **discarded**: the GaiResolver it replaced behaves the same way, and in production the lookup is getaddrinfo, which the operating system resolver's own timeouts bound
 - reliability: the initial and redirect-screen lookups run outside the client's timeout — `runtime/src/primitives/fetch_archive.rs` — **discarded**: unchanged by this fix and bounded the same way, by the operating system resolver's timeouts; FETCH_DEADLINE bounds the download itself
 - security: a redirect hop is looked up twice rather than connected to the address its screen resolved — `runtime/src/primitives/fetch_archive.rs` — **discarded**: 022's scenario allows an equivalent connect-time re-check, both lookups are screened, and the owner prescribed this resolver and its staged-rebind test
@@ -238,6 +237,7 @@ Five-pass review of 019 over `37c8219c..b482e029` plus the working tree, after t
 - other: 008's first resolved question reasons from CI gating — `specs/008-security-rules/spec.md` — **discarded**: a resolved question records the reasoning at the time; rewriting it records a fiction
 - perf: readers parse the same config text twice, once as a table for the key names and once as their typed struct — `runtime/src/schema/config_keys.rs` — **discarded**: the files are a few hundred bytes, and parsing the typed struct from the text keeps a wrong-typed value's error located by its line, which a conversion from the parsed table loses
 - other: a misspelled section name such as [artifact] is never examined, so its settings take their defaults without a word — `runtime/src/schema/config_keys.rs` — **discarded**: the owner's 2026-10-20 decision scopes the check to owned sections; flagging near-miss section names would be a new requirement
+- security: the stderr warning printed the config file's path raw, though a registered service checkout's path comes from committed config — `runtime/src/schema/config_keys.rs` — **fixed**
 
 ## Skipped passes
 
