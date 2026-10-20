@@ -102,7 +102,7 @@ Before creating the plan, load only the cross-spec context this feature actually
 1. **If the user picked "keep" in the existing-artifact prompt above**, skip the template copy — `plan.md` is already on disk and is the working artifact. Otherwise (no prior artifacts, or "replace"), copy `specs/templates/plan.md` into the feature directory as `plan.md`.
 2. Fill in (or, on the keep path, edit/extend the existing content):
    - **Technical Decisions**: each decision with rationale. Name the code a decision concerns by path, citing `path:line`, rather than reproducing it: a code sketch goes stale the moment the code lands, and it regrows a plan that was trimmed to stay readable in one call. **Ground every claim about existing code, schema, or interfaces in the source — read the specific file (or query the dev database) and cite it (`path:line`), or label the claim an assumption (§grounding). Do not assert how existing code behaves from memory or conversation.**
-   - **Affected Files**: a *planning aid* — list the files you expect to create or modify so reviewers can sanity-check scope.
+   - **Affected Files**: a *planning aid* — list the files you expect to create or modify so reviewers can sanity-check scope. Name one file per row: `/ductus:review` builds its scope from the first path in each row's File cell, so a second path in the same cell is dropped from it.
    - **Data Model**: data structure definitions. Create `data-model.md` if the feature introduces or modifies domain entities or data structures.
    - **Trade-offs**: what was considered and rejected, known limitations.
 3. Cross-validate against the files loaded in the checklist above:
