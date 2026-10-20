@@ -23,6 +23,8 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 
 BE-DEPS-006 (rewritten 2026-10-19) asks a plan covering CI or build tooling to commit to immutable pinning and an update process for the pins; 022's analysis of 2026-10-20 found neither in plan.md, and the workflows reference actions by tag.
 
+Owner-gated: not started until the owner authorizes it. Decision put to the owner 2026-10-20: (a) leave 017 in progress until this task runs, or (b) authorize it now. The release needs 022 at done, and 022 cannot reach done with this task open, so (a) changes when the task is spent, not whether. Measured that day: dtolnay/rust-toolchain's README says a pinned SHA must be "within the history of the master branch. Any commit that is not within the history of master will eventually get garbage-collected", and the head of its `1.99.1` branch is one commit ahead of master, so its 10 steps pin a master SHA and pass `toolchain: 1.99.1`, the input master's action.yml requires.
+
 - [ ] Pin every uses: in .github/workflows/*.yml to a full commit SHA with its tag in a comment (8 actions, 39 references on 2026-10-20: actions/checkout, dtolnay/rust-toolchain, actions/cache, taiki-e/install-action, actions/upload-artifact, actions/download-artifact, softprops/action-gh-release, actions/setup-node)
 - [ ] Pin the versions of cargo-zigbuild and cargo-cyclonedx that runtime-release.yml installs, and of each tool taiki-e/install-action installs
 - [ ] Add an update process for the pins (Dependabot or Renovate for github-actions) and teach scripts/check-runtime-currency.sh to read a SHA-pinned dtolnay/rust-toolchain
