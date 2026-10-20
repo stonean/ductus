@@ -638,8 +638,8 @@ last_applied = "rule-files-relocate"
 # command warns on every artifact over it and names the fixes. A whole number
 # of bytes, at least 1; unset means 50000. Raise it for a host with a larger
 # read cap, lower it for a smaller one or for token-dense artifacts. Any other
-# value is reported and the default used. There is no value that switches the
-# warning off. Listed here for schema reference; uncomment and edit to use.
+# value halts the command that reads it, naming the setting and the value.
+# There is no value that switches the warning off. Listed here for schema reference; uncomment and edit to use.
 #
 # [artifacts]
 # read-size-bytes = 50000

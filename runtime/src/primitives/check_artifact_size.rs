@@ -61,7 +61,7 @@ pub(crate) const DEFAULT_READ_SIZE_BYTES: u64 = 50_000;
 
 /// The smallest threshold a project may set. A threshold is a byte count every
 /// read-page count is divided by, so zero is not one; there is no maximum.
-const MIN_READ_SIZE_BYTES: u64 = 1;
+pub(crate) const MIN_READ_SIZE_BYTES: u64 = 1;
 
 /// The config section and key the threshold is read from.
 const SECTION: &str = "artifacts";
@@ -82,6 +82,9 @@ const KEY: &str = "read-size-bytes";
 /// - [`PrimitiveError::Toml`] when the config file does not parse, as for
 ///   every config reader: the project's configuration is broken for every
 ///   command, and a size check is not the place to paper over that.
+/// - [`PrimitiveError::InvalidReadSize`] when `[artifacts] read-size-bytes`
+///   is set to anything but a positive whole number, or `artifacts` is not a
+///   table: the project set a value, so the default never stands in for it.
 /// - [`PrimitiveError::Io`] when the config file exists but cannot be read.
 pub fn run(args: &CheckArtifactSizeArgs, repo: &Path) -> Result<CheckArtifactSizeResult> {
     super::validate_no_traversal(&args.feature)?;
@@ -94,7 +97,7 @@ pub fn run(args: &CheckArtifactSizeArgs, repo: &Path) -> Result<CheckArtifactSiz
         });
     }
     let status = read_status(&feature_dir, &root, &args.feature)?;
-    let (threshold, threshold_notice) = resolve_threshold(repo)?;
+    let threshold = resolve_threshold(repo)?;
 
     let mut skipped = Vec::new();
     let mut examined: u32 = 0;
@@ -119,7 +122,6 @@ pub fn run(args: &CheckArtifactSizeArgs, repo: &Path) -> Result<CheckArtifactSiz
     }
 
     let mut notices = Vec::new();
-    notices.extend(threshold_notice);
     let decisions = decide(&feature_dir, repo, &mut oversized, &mut notices);
     Ok(CheckArtifactSizeResult {
         feature: args.feature.clone(),
@@ -433,43 +435,41 @@ fn effect_text(effect: OnDone) -> &'static str {
     }
 }
 
-/// The threshold to check at, and the notice an invalid setting owes.
+/// The threshold to check at.
 ///
 /// The file is found through the config ladder every reader uses. The key is
-/// read as a raw value so a wrong type is reported rather than failing the
-/// parse: anything but a positive integer is invalid, and the check runs at
-/// the default and says so. A non-table `artifacts` is invalid the same way,
-/// since it cannot hold the key.
-fn resolve_threshold(repo: &Path) -> Result<(ReadSizeThreshold, Option<String>)> {
-    let default = |source| ReadSizeThreshold {
+/// read as a raw value so a wrong type is named by setting and value rather
+/// than surfacing as a parse error: anything but a positive integer halts
+/// with [`PrimitiveError::InvalidReadSize`], and so does a non-table
+/// `artifacts`, since it cannot hold the key. Only an unset key, or an absent
+/// file, means the default (`CFG-ENV-008`).
+fn resolve_threshold(repo: &Path) -> Result<ReadSizeThreshold> {
+    let default = ReadSizeThreshold {
         bytes: DEFAULT_READ_SIZE_BYTES,
-        source,
-        rejected: None,
+        source: ThresholdSource::Default,
     };
-    let (path, name) = paths::resolve_config(repo);
+    let (path, _) = paths::resolve_config(repo);
     if !path.is_file() {
-        return Ok((default(ThresholdSource::Default), None));
+        return Ok(default);
     }
     let content = read_text(&path)?;
-    let parsed: toml::Table =
-        toml::from_str(&content).map_err(|source| PrimitiveError::Toml { path, source })?;
+    let parsed: toml::Table = toml::from_str(&content).map_err(|source| PrimitiveError::Toml {
+        path: path.clone(),
+        source,
+    })?;
     let (setting, value) = match parsed.get(SECTION) {
-        None => return Ok((default(ThresholdSource::Default), None)),
+        None => return Ok(default),
         Some(toml::Value::Table(section)) => match section.get(KEY) {
-            None => return Ok((default(ThresholdSource::Default), None)),
+            None => return Ok(default),
             Some(value) => {
                 if let toml::Value::Integer(bytes) = value
                     && let Ok(bytes) = u64::try_from(*bytes)
                     && bytes >= MIN_READ_SIZE_BYTES
                 {
-                    return Ok((
-                        ReadSizeThreshold {
-                            bytes,
-                            source: ThresholdSource::Config,
-                            rejected: None,
-                        },
-                        None,
-                    ));
+                    return Ok(ReadSizeThreshold {
+                        bytes,
+                        source: ThresholdSource::Config,
+                    });
                 }
                 (format!("[{SECTION}] {KEY}"), value)
             }
@@ -477,19 +477,11 @@ fn resolve_threshold(repo: &Path) -> Result<(ReadSizeThreshold, Option<String>)>
         // Whatever it holds, a non-table `artifacts` cannot carry the key.
         Some(other) => (SECTION.to_string(), other),
     };
-    let rejected = value.to_string();
-    let notice = format!(
-        "`{setting}` in {name} is {rejected}, not a positive whole number of bytes; \
-         checked at the default of {DEFAULT_READ_SIZE_BYTES} bytes instead"
-    );
-    Ok((
-        ReadSizeThreshold {
-            bytes: DEFAULT_READ_SIZE_BYTES,
-            source: ThresholdSource::Invalid,
-            rejected: Some(rejected),
-        },
-        Some(notice),
-    ))
+    Err(PrimitiveError::InvalidReadSize {
+        path,
+        setting,
+        value: flatten_line(&value.to_string()),
+    })
 }
 
 #[cfg(test)]
@@ -531,7 +523,6 @@ mod tests {
         let result = check(&repo(None)).unwrap();
         assert_eq!(result.threshold.bytes, 50_000);
         assert_eq!(result.threshold.source, ThresholdSource::Default);
-        assert!(result.threshold.rejected.is_none());
         assert_eq!(result.notices, [] as [String; 0]);
         assert_eq!(result.status, "draft");
     }
@@ -561,9 +552,31 @@ mod tests {
         assert_eq!(result.threshold.bytes, 1);
     }
 
+    /// The error a present but invalid setting halts with: the setting, the
+    /// value as written, and the message that names both with the file and
+    /// the accepted form.
+    fn invalid(config: &str) -> (String, String, String) {
+        let err = check(&repo(Some(config))).unwrap_err();
+        let message = err.to_string();
+        let PrimitiveError::InvalidReadSize {
+            path,
+            setting,
+            value,
+        } = err
+        else {
+            panic!("expected InvalidReadSize, got {err:?}");
+        };
+        assert!(path.ends_with(".ductus/config.toml"), "{}", path.display());
+        (setting, value, message)
+    }
+
     #[test]
-    fn every_invalid_shape_falls_back_to_the_default_and_says_so() {
-        for (value, rejected) in [
+    fn every_invalid_shape_halts_naming_the_setting_and_value() {
+        // A string, a fraction, an array and a boolean do not parse as a
+        // whole number (CFG-ENV-008); zero and a negative parse but fall
+        // below the minimum of 1 (CFG-ENV-005). All halt alike, and none
+        // falls back to the default.
+        for (value, written) in [
             ("\"50kb\"", "\"50kb\""),
             ("50000.5", "50000.5"),
             ("0", "0"),
@@ -572,29 +585,37 @@ mod tests {
             ("true", "true"),
         ] {
             let config = format!("[artifacts]\nread-size-bytes = {value}\n");
-            let result = check(&repo(Some(&config))).unwrap();
-            assert_eq!(result.threshold.bytes, 50_000, "{value}");
-            assert_eq!(result.threshold.source, ThresholdSource::Invalid, "{value}");
-            assert_eq!(result.threshold.rejected.as_deref(), Some(rejected));
-            assert_eq!(result.notices.len(), 1, "{value}");
-            let notice = &result.notices[0];
-            assert!(notice.contains(rejected), "{notice}");
-            assert!(notice.contains("[artifacts] read-size-bytes"), "{notice}");
-            assert!(notice.contains(".ductus/config.toml"), "{notice}");
-            assert!(notice.contains("50000"), "{notice}");
+            let (setting, rejected, message) = invalid(&config);
+            assert_eq!(setting, "[artifacts] read-size-bytes", "{value}");
+            assert_eq!(rejected, written, "{value}");
+            assert!(message.contains(written), "{message}");
+            assert!(
+                message.contains("`[artifacts] read-size-bytes`"),
+                "{message}"
+            );
+            assert!(message.contains(".ductus/config.toml"), "{message}");
+            assert!(
+                message.contains("a whole number of bytes, at least 1"),
+                "{message}"
+            );
         }
     }
 
     #[test]
-    fn a_non_table_section_is_invalid() {
-        let result = check(&repo(Some("artifacts = 50000\n"))).unwrap();
-        assert_eq!(result.threshold.source, ThresholdSource::Invalid);
-        assert_eq!(result.threshold.rejected.as_deref(), Some("50000"));
-        assert!(
-            result.notices[0].contains("`artifacts`"),
-            "{}",
-            result.notices[0]
-        );
+    fn a_non_table_section_halts() {
+        let (setting, value, message) = invalid("artifacts = 50000\n");
+        assert_eq!(setting, "artifacts");
+        assert_eq!(value, "50000");
+        assert!(message.contains("invalid `artifacts`"), "{message}");
+    }
+
+    #[test]
+    fn an_invalid_value_is_named_on_one_line() {
+        // A line separator inside a TOML string reaches the message as a
+        // space, so committed config cannot forge a second line in it.
+        let (_, value, message) = invalid("[artifacts]\nread-size-bytes = \"5\\u2028x\"\n");
+        assert_eq!(value, "\"5 x\"");
+        assert!(!message.contains('\u{2028}'), "{message:?}");
     }
 
     #[test]

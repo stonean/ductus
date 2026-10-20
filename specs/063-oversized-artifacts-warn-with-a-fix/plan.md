@@ -36,7 +36,8 @@ The file is located through `paths::resolve_config` (`runtime/src/schema/paths.r
 
 - **default** — the key is unset, or the config file is absent.
 - **config** — a positive integer was read and used.
-- **invalid** — the key is set to anything but a positive integer. The check runs at 50,000 and returns a notice naming the rejected value (AC5); every command that invokes it shows the notice.
+
+Any other value halts (AC5). A string, a fraction, a boolean or an array does not parse as a whole number (`CFG-ENV-008`); zero or a negative parses but falls below `MIN_READ_SIZE_BYTES` (`CFG-ENV-005`, which names environment variables and is held to this file-based key the same way). Both, and an `artifacts` that is not a table, fail with `PrimitiveError::InvalidReadSize`, which names the setting, the value as written (flattened to one line, so committed config cannot forge a second line in the message), the file, and the accepted form. The default never stands in for a value the project set, so every command that invokes the primitive halts on it, as it does on an unparseable config file. An invalid value ran at the default with a notice until the owner's 2026-10-19 decision that `CFG-ENV-008` stands, which the scenario [an invalid threshold fails fast](scenarios/an-invalid-threshold-fails-fast.md) records.
 
 A config file that does not parse as TOML is an operational error, as it is for `discover-rule-files` and every other config reader: the project's configuration is broken for every command, and a size check is not the place to paper over that.
 
@@ -79,7 +80,7 @@ When `analysis.md` is absent, nothing is decided. When its `decisions:` list doe
 
 ### `/clarify` and `/plan`: a warning, never a gate
 
-`/clarify` gains a step after step 9 (`label-criteria`), so the size is measured after the questions' answers have been written into the spec, and steps 10–13 become 11–14 (AC2). `/plan` gains a step after step 7, the task breakdown, so `plan.md` and `tasks.md` are measured as written, and steps 8–10 become 9–11. Each step prints every warning and the threshold notice, and states that the result never blocks the transition. `/plan`'s **Validation gate** reference lists the size check as advisory beside markdownlint, the other advisory check there. A scenario-targeted `/clarify` run does not take the step.
+`/clarify` gains a step after step 9 (`label-criteria`), so the size is measured after the questions' answers have been written into the spec, and steps 10–13 become 11–14 (AC2). `/plan` gains a step after step 7, the task breakdown, so `plan.md` and `tasks.md` are measured as written, and steps 8–10 become 9–11. Each step prints every warning and notice, and states that the result never blocks the transition; an invalid threshold halts the command instead, as above. `/plan`'s **Validation gate** reference lists the size check as advisory beside markdownlint, the other advisory check there. A scenario-targeted `/clarify` run does not take the step.
 
 ### The markdown-only path
 

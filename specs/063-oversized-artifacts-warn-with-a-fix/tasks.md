@@ -85,10 +85,10 @@ Task 5's step-number sync rewrote 058's scenario `only-unreadable-targets-retain
 
 ## 12. An invalid read-size-bytes fails fast (CFG-ENV-008)
 
-- [ ] Implement the behavior described in `scenarios/an-invalid-threshold-fails-fast.md`
-- [ ] The runtime reader halts on a present read-size-bytes that is not a positive whole number, naming the setting, the value, and the accepted form; unset still means 50,000
-- [ ] The markdown-only path halts the same way
-- [ ] spec.md's invalid-threshold edge case and AC5, plan.md, data-model.md, README.md, framework/commands/analyze.md (and every other command source describing the threshold), the check-artifact-size tool description in runtime/src/mcp/server.rs, and the read-size-bytes comment in framework/bootstrap/ductus.md (and govern.md) state the fail-fast behavior
-- [ ] A test fails if the reader falls back to the default for a malformed value
+- [x] Implement the behavior described in `scenarios/an-invalid-threshold-fails-fast.md`
+- [x] The runtime reader halts on a present read-size-bytes that is not a positive whole number, naming the setting, the value, and the accepted form; unset still means 50,000
+- [x] The markdown-only path halts the same way
+- [x] spec.md's invalid-threshold edge case and AC5, plan.md, data-model.md, README.md, framework/commands/analyze.md (and every other command source describing the threshold), the check-artifact-size tool description in runtime/src/mcp/server.rs, and the read-size-bytes comment in framework/bootstrap/ductus.md (and govern.md) state the fail-fast behavior
+- [x] A test fails if the reader falls back to the default for a malformed value
 
 - **Done when**: A malformed read-size-bytes halts every command that reads it, no artifact describes a reported fallback, and 063 is re-reviewed back to done.

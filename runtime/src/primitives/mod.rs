@@ -550,6 +550,33 @@ pub enum PrimitiveError {
         /// One-line description of why, phrased to follow the field name.
         reason: String,
     },
+    /// `[artifacts] read-size-bytes` is present but is not a positive whole
+    /// number of bytes, or `artifacts` is not a table that could hold it
+    /// (spec 063).
+    ///
+    /// Raised rather than reported because a present value that fails to
+    /// parse, or parses outside its range, must halt the command instead of
+    /// letting the default stand in for what the project set (`CFG-ENV-008`,
+    /// and `CFG-ENV-005` applied to a file-based key). An unset key is not an
+    /// error: it means the default.
+    ///
+    /// The value is flattened to one line, never raw: a TOML string may carry
+    /// a newline, and a raw rendering would let committed config forge a
+    /// second line in an operator-facing message (`BE-INPUT-011`).
+    #[error(
+        "invalid `{setting}` in {path}: {value} — `[artifacts] read-size-bytes` takes a whole number of bytes, at least {min}; remove it to use the {default}-byte default",
+        min = check_artifact_size::MIN_READ_SIZE_BYTES,
+        default = check_artifact_size::DEFAULT_READ_SIZE_BYTES
+    )]
+    InvalidReadSize {
+        /// Path of the config file carrying the value.
+        path: PathBuf,
+        /// `[artifacts] read-size-bytes`, or `artifacts` when the section
+        /// itself is not a table.
+        setting: String,
+        /// The value as written in the config file, flattened to one line.
+        value: String,
+    },
 }
 
 /// Convenience alias for primitive return values.

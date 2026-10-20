@@ -4501,11 +4501,9 @@ pub struct CheckArtifactSizeArgs {
 pub enum ThresholdSource {
     /// `[artifacts] read-size-bytes` is unset, or there is no config file.
     Default,
-    /// A positive integer was read from the config file and used.
+    /// A positive integer was read from the config file and used. Any other
+    /// value halts the check rather than being reported here (`CFG-ENV-008`).
     Config,
-    /// The config file sets something other than a positive integer. The
-    /// default was used, and a notice names the rejected value.
-    Invalid,
 }
 
 /// The threshold a check ran at.
@@ -4516,10 +4514,6 @@ pub struct ReadSizeThreshold {
     pub bytes: u64,
     /// Where `bytes` came from.
     pub source: ThresholdSource,
-    /// The rejected value as written in the config file. Present exactly when
-    /// `source` is `invalid`.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub rejected: Option<String>,
 }
 
 /// The kind of spec artifact a subject is, which decides its fixes.
@@ -4644,8 +4638,8 @@ pub struct CheckArtifactSizeResult {
     pub skipped: Vec<SkippedTarget>,
     /// Whether the stored decisions behind `decided` were read.
     pub decisions: DecisionsState,
-    /// Notices every caller shows: an invalid threshold, unreadable stored
-    /// decisions.
+    /// Notices every caller shows: today, only that the stored decisions
+    /// could not be read. An invalid threshold is an error, never a notice.
     #[serde(default)]
     pub notices: Vec<String>,
     /// Repo-relative path to the spec file.
@@ -5728,9 +5722,8 @@ mod tests {
             feature: "063-oversized-artifacts-warn-with-a-fix".into(),
             status: "done".into(),
             threshold: ReadSizeThreshold {
-                bytes: 50_000,
-                source: ThresholdSource::Invalid,
-                rejected: Some("\"50kb\"".into()),
+                bytes: 120_000,
+                source: ThresholdSource::Config,
             },
             examined: 4,
             oversized: vec![OversizedArtifact {
@@ -5758,7 +5751,7 @@ mod tests {
             path: "specs/063/spec.md".into(),
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();
-        assert_eq!(value["threshold"]["source"], "invalid");
+        assert_eq!(value["threshold"]["source"], "config");
         assert_eq!(value["oversized"][0]["kind"], "data-model");
         assert_eq!(
             value["oversized"][0]["fixes"][0]["on-done"],
@@ -5768,13 +5761,12 @@ mod tests {
         assert_eq!(value["decisions"], "read");
         assert_eq!(round_trip(&result), result);
 
-        // Not computed is absent: a valid threshold has no `rejected`, a fix
-        // below `done` has no `on-done`, an undecided artifact no key.
+        // Not computed is absent: a fix below `done` has no `on-done`, an
+        // undecided artifact no key.
         let below = CheckArtifactSizeResult {
             threshold: ReadSizeThreshold {
                 bytes: 50_000,
                 source: ThresholdSource::Default,
-                rejected: None,
             },
             oversized: vec![OversizedArtifact {
                 fixes: vec![ArtifactFix {
@@ -5789,12 +5781,7 @@ mod tests {
             ..result.clone()
         };
         let value: serde_json::Value = serde_json::to_value(&below).unwrap();
-        assert!(
-            !value["threshold"]
-                .as_object()
-                .unwrap()
-                .contains_key("rejected")
-        );
+        assert_eq!(value["threshold"]["source"], "default");
         let artifact = value["oversized"][0].as_object().unwrap();
         assert!(!artifact.contains_key("decision-key"));
         assert!(

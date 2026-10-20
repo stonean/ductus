@@ -15,7 +15,17 @@ Defines the configuration key `check-artifact-size` reads, the primitive's reque
 read-size-bytes = 50000
 ```
 
-Resolved through the same config ladder every reader uses (`.ductus/config.toml`, then `.govern/config.toml`, then the legacy root `.govern.toml`). Any value other than a positive integer — a string, a float, zero, a negative number, an array — is **invalid**: it is reported and the default is used. A config file that does not parse as TOML is an operational error.
+Resolved through the same config ladder every reader uses (`.ductus/config.toml`, then `.govern/config.toml`, then the legacy root `.govern.toml`). Any value other than a positive integer — a string, a float, a boolean, zero, a negative number, an array — is **invalid**, and so is an `artifacts` that is not a table. An invalid value halts the primitive with the error below, never the default: only an unset key, or an absent file, means 50,000. A config file that does not parse as TOML is an operational error too.
+
+### The invalid-threshold error
+
+`PrimitiveError::InvalidReadSize` carries the config file's `path`, the `setting` (`[artifacts] read-size-bytes`, or `artifacts` when the section is not a table) and the `value` as written, flattened to one line. Its message names all three and the accepted form:
+
+```text
+invalid `{setting}` in {path}: {value} — `[artifacts] read-size-bytes` takes a whole number of bytes, at least 1; remove it to use the 50000-byte default
+```
+
+Every command that invokes `check-artifact-size` halts on it. A string or a fraction is malformed (`CFG-ENV-008`); zero or a negative is out of range (`CFG-ENV-005`'s treatment, held to a file-based key). Both halt alike.
 
 ## `CheckArtifactSizeArgs`
 
@@ -34,7 +44,7 @@ Resolved through the same config ladder every reader uses (`.ductus/config.toml`
 | `oversized` | list of `OversizedArtifact` | Subjects over the threshold, in subject order. Empty means none over it, among the `examined`. |
 | `skipped` | list of `SkippedTarget` | Subjects that exist but could not be examined: family `artifact-size`, reason `artifact-unreadable`. A missing subject is never listed. |
 | `decisions` | `DecisionsState` | Whether `analysis.md`'s stored decisions were read. |
-| `notices` | list of strings | Human-readable notices every caller shows: the invalid-threshold notice, and the unreadable-decisions notice. |
+| `notices` | list of strings | Human-readable notices every caller shows: the unreadable-decisions notice. An invalid threshold is the error above, never a notice. |
 | `path` | string | Repo-relative path of `spec.md`. |
 
 Subject order is `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, then the scenarios in the shared scenario ordering (case-insensitive, raw-byte tiebreak).
@@ -44,8 +54,7 @@ Subject order is `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, then the sce
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `bytes` | integer | The threshold applied: the configured value, or 50,000. |
-| `source` | `ThresholdSource` | `default`, `config`, or `invalid`. |
-| `rejected` | string, optional | The rejected value as written in the config file. Present only when `source` is `invalid`. |
+| `source` | `ThresholdSource` | `default` (unset, or no config file) or `config` (a positive integer read from the file). |
 
 ## `OversizedArtifact`
 
