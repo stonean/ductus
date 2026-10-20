@@ -44,7 +44,7 @@ BE-INPUT-004's Verification, rewritten 2026-10-19, asks for path canonicalizatio
 
 Authorized by the owner 2026-10-20, answering (b) to: (a) leave 063 in progress until this task runs, (b) authorize it now, or (c) canonicalize in `check-artifact-size` alone so 063 can close, leaving this task for the rest. Measured that day: 42 production `validate_no_traversal` call sites in 38 files (48 with tests), plus the writeCode boundary; 022 cannot reach done while this task or task 6 is open, and the release needs 022 at done, so (a) and (c) change when this task is spent, not whether. 063's review is stale under every option (a5e18ad7 and fc876871 edited its data model, a scenario and its spec).
 
-- [ ] Decide where canonicalization applies (48 validate_no_traversal call sites on 2026-10-20, and the writeCode boundary), record it as a scenario on 022, and implement it with tests that fail when a symlink inside the project escapes it
+- [ ] Implement the behavior described in `scenarios/a-path-argument-resolves-inside-its-base.md`, once its two open questions (how the check decides, and which call sites go through it) are answered, with tests that fail when a symlink inside the project escapes it
 - [ ] State the commitment in plan.md
 - [ ] State it in 063's plan too (§Subjects, absence, and readability), whose `feature` argument passes only `validate_no_traversal`: 063's analysis of 2026-10-20 routed its BE-INPUT-004 finding here, and 063 stays blocking until this lands
 
