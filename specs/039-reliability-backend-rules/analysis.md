@@ -1,21 +1,48 @@
 ---
 spec: 039-reliability-backend-rules
-last-run: 2026-09-13T12:43:56Z
-analyzed-against: 6ab35f6547ae64707aea295595f8ebdfc787edf5
+last-run: 2026-10-20T00:55:24Z
+analyzed-against: 06a7aa795952f3fe6d0165dad78869292173acee
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
-unexamined: 0
+unexamined: 1
 analyzed-digest:
-  plan.md: 805592c4fa3261e5f3f7eb0e82d817f6a54c3040f1e4cdb9e0eea4a748f1bc15
-  review.md: 6dab80f986c75d5f43a5093ac7823fb8a31c27775671c1bea59f07478fc9417a
-  spec.md: b3d13760f185404b8c06ec2a954fcd29d492ca6523d94986121aab6f05c3b2db
-  tasks.md: 2af09522de407cc855798208a067287b5d738a55e442bfeadb4cfcfe88c89219
+  plan.md: a1d8295c8f51b48a8b3a3518e44e75b5334de1cebdd95bf823e80195c584437d
+  review.md: 73236f1c3294d5be00eeb335e704e616ed70f97e579b94ccd3bc0f41b3dde063
+  spec.md: 3d4e959fda86807db23ed415696477f44289179c0c011cf98b4bad9676fd986c
+  tasks.md: 1ceaffd0d87640928d9cd23a67a43da77f822968780033c50e9193c444238119
+unexamined-by-reason:
+  ships-to-adopter: 1
 blocking: false
+dispositions:
+  fixed: 1
+  routed: 0
+  discarded: 0
+  undispositioned: 0
 ---
 
 # Analysis — 039-reliability-backend-rules
 
 ## Summary
 
-Relocated from the spec's frontmatter by the record-relocation migration. The counts above are the recorded run's; this report body begins at the next run.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 1 unexamined target(s). Dispositions: 1 fixed, 0 routed, 0 discarded, 0 undispositioned.
+
+## Hard failures
+
+*None.*
+
+## Blocking findings
+
+*None.*
+
+## Advisory findings
+
+*None.*
+
+## Unexamined targets
+
+- ships-to-adopter: 1
+
+## Fixed in this run
+
+- grounding — spec.md Motivation asserted in the present tense that recurring reliability failures have nowhere to be promoted, which reliability-backend.md falsified — `specs/039-reliability-backend-rules/spec.md` — **fixed**

@@ -12,7 +12,7 @@ Introduce `framework/rules/reliability-backend.md`, an enforceable rule set cove
 
 The constitution calls the system to be **Reliable** ("graceful degradation and automatic recovery when components fail"). [034-performance-backend-rules](../034-performance-backend-rules/spec.md) deliberately scoped *out* server-side deadlines, downstream-call timeouts, retries, and circuit breakers — "as much reliability as performance" — and forward-references a future `reliability-backend.md`. Landing this spec resolves that forward-reference and gives reliability concerns a home at the rules tier.
 
-Reliability failures that recur across features — an unbounded downstream wait that exhausts threads, a retry storm that amplifies an outage, a deploy that drops in-flight requests because nothing drains on shutdown — have nowhere to be promoted today. Each is re-litigated per feature or surfaces only when a dependency degrades.
+Reliability failures that recur across features — an unbounded downstream wait that exhausts threads, a retry storm that amplifies an outage, a deploy that drops in-flight requests because nothing drains on shutdown — had nowhere to be promoted when this spec was written. Each was re-litigated per feature or surfaced only when a dependency degraded.
 
 This spec closes that gap: a backend reliability rule set citable by ID (`BE-{CATEGORY}-{NNN}`) that `/ductus:analyze` checks against specs and plans (design-time reliability commitments).
 
