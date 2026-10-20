@@ -427,9 +427,9 @@ Done when: this spec's artifacts have no `title:` or `tags:` frontmatter; valida
 
 ### 40. Ranged and inventoried configuration values from any source (follow-on to task 39)
 
-- [ ] Implement the behavior described in `scenarios/ranged-and-inventoried-config-values-from-any-source.md`
-- [ ] Owner answers the scenario's two open questions, one at a time; measure CFG-ENV-002's impact before asking it
-- [ ] Apply each answer to configuration-cross.md and data-model.md §Rule set, fetching any external claim, and to 063 if CFG-ENV-005 widens
-- [ ] Lints, audit suite, and rule-corpus tests pass
+- [x] Implement the behavior described in `scenarios/ranged-and-inventoried-config-values-from-any-source.md`
+- [x] Owner answers the scenario's two open questions, one at a time; measure CFG-ENV-002's impact before asking it
+- [x] Apply each answer to configuration-cross.md and data-model.md §Rule set, fetching any external claim, and to 063 if CFG-ENV-005 widens
+- [x] Lints, audit suite, and rule-corpus tests pass
 
 - **Done when**: Both questions are resolved and applied, and 017 is re-reviewed back to done.

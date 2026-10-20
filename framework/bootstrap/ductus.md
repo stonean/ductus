@@ -589,7 +589,8 @@ ref = "main"
 # The inputs /ductus collects (§Collect Project Inputs), persisted so re-runs
 # and post-restart sessions read them back instead of re-prompting. This table
 # is the source of truth for the answers; host.project below is the derived
-# slash-command namespace, written from project.name.
+# slash-command namespace, written from project.name. A key that is absent
+# has no default: the next /ductus run asks for it.
 name = "my-service"
 description = "A new microservice"
 languages = ["Go", "Python"]
@@ -618,7 +619,8 @@ specs-root = "specs"
 
 [pinned]
 # Files listed here use 'skip' instead of 'update'.
-# Use destination paths (after placeholder resolution).
+# Use destination paths (after placeholder resolution). Absent means no file
+# is pinned: every manifest file keeps its listed strategy.
 files = [
   ".claude/commands/myapp/implement.md",
   ".ductus/constitution.md",
@@ -656,8 +658,9 @@ last_applied = "rule-files-relocate"
 
 # Consumed by /{project}:review (not /ductus itself). `tech-stack-verified`
 # skips the tech-stack alignment check on every run until the key is cleared;
-# the first successful check sets it, with the operator's confirmation. Listed
-# here for schema reference; uncomment and edit to use.
+# the first successful check sets it, with the operator's confirmation. Absent
+# means false: the check runs. Listed here for schema reference; uncomment and
+# edit to use.
 #
 # [review]
 # tech-stack-verified = true

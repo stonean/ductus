@@ -34,7 +34,7 @@ The alignment check (added during clarify) reads `AGENTS.md` `Tech Stack` and th
 
 ### `.ductus/config.toml` follows the shared-database convention
 
-Per AGENTS.md (Workflow): `.ductus/config.toml` is shared adopter-side state, not a schema owned by any one spec. The new `[review]` section with `tech-stack-verified = true` is documented in this spec's body (under Inputs and Behavior) and in the embedded `framework/commands/review.md` artifact. No signpost or edit on spec 019 is required; that policy is now codified in AGENTS.md.
+Per AGENTS.md (Workflow): `.ductus/config.toml` is shared adopter-side state, not a schema owned by any one spec. The new `[review]` section with `tech-stack-verified = true` is documented in this spec's body (under Inputs and Behavior), in the embedded `framework/commands/review.md` artifact, and in the installer's §Project Configuration (`framework/bootstrap/ductus.md`), the canonical inventory of configuration-file keys that `configuration-cross.md` `CFG-ENV-002` requires, which states its purpose and that an absent key means `false`. No signpost or edit on spec 019 is required; that policy is now codified in AGENTS.md.
 
 ### Frontmatter `review:` block ships in templates
 
@@ -74,6 +74,7 @@ Of the 13 acceptance criteria, AC 8's waiver auto-expiry has the subtlest behavi
 | File | Action | Purpose |
 | --- | --- | --- |
 | `framework/commands/review.md` | Create | Source for `/ductus:review`, and **the canonical content** — the spec body points at it rather than embedding it. The original plan had this inverted, naming the spec's embedded copy as canonical; that inversion is what produced a 561-line snapshot which then drifted more than half behind, and it was corrected on 2026-09-13 |
+| `framework/bootstrap/ductus.md` | Edit | §Project Configuration lists `[review] tech-stack-verified` with its purpose and its default, the inventory `CFG-ENV-002` requires |
 | `framework/commands/implement.md` | Edit | Pre-`done` review gate (halts when `review.blocking: true` or `review.last-run` missing) |
 | `framework/commands/analyze.md` | Edit | Add review-drift check on `done` specs; integrate `--fix` to revert to `in-progress` with notice |
 | `framework/templates/spec/spec.md` | Edit | Add `review:` block to frontmatter schema (removed again by 057) |
