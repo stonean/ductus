@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [020-code-review, 024-rule-loader]
 next-criterion: 10
 ---
