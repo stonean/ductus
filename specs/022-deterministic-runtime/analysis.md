@@ -1,15 +1,15 @@
 ---
 spec: 022-deterministic-runtime
-last-run: 2026-10-16T13:51:41Z
-analyzed-against: 6aeba6143d197690495a3658197f1990ca3e840e
+last-run: 2026-10-20T04:59:47Z
+analyzed-against: d21aaf0c6be37fec8e0ad0b2f1da0c6d0ca17226
 hard-fail: 0
-blocking-findings: 0
-advisory: 12
-unexamined: 2
+blocking-findings: 2
+advisory: 13
+unexamined: 44
 analyzed-digest:
-  data-model.md: 24ff3adf4eb9e14c5c3ac0f441603e6741e9606d32db06e6c85ed94d3a1b4015
-  plan.md: 91e815485a325f255a0ced120964044518f4dc8af341353035ed53075f9e0fa6
-  review.md: c4f54b2ffb7c68fe162e28cc0705f006c376aaa61fc01a41a9c652dc728a3247
+  data-model.md: ec5962dd1273f2c4171a779ee56a24b0b25267d7beb637dc2ad8ee17d359bb4f
+  plan.md: 25ebb78918d765416274c93507c7f43d7af7bc6df1578f4ccf1da057d8495718
+  review.md: e25dc40ef72392aae4396bc27bfbd4cc76c3c974300fafa99f572336443528a1
   scenarios/a-confirmed-gate-authorizes-the-writes-after-it.md: d092f9d4f59c67c575cc59039a6e0fdf162546969de2820e747b609d7a3d43c7
   scenarios/append-inbox-comment-aware-write.md: c26a16c3be1a7e1c52eca2254061d545ec62b3b7d7c865affd1fa679d6c0ab6b
   scenarios/append-primitive-marker-normalization.md: 26c5064dcdf3f697885faac80332207d079bfd7db2d14c0769254da21e5e4246
@@ -35,7 +35,7 @@ analyzed-digest:
   scenarios/exec-clarify-asks-each-open-question.md: 4851dc543c6dd80603aa86c776543017b9ab1a7adac469e1b49ec311a9877cab
   scenarios/extension-request-hygiene.md: 1b0c77335af3a2caf82e01896207d60261cd0071a8bc8da3162b9785f7c16e48
   scenarios/fetch-archive-bounds-the-whole-download.md: cb908fbcee4bdcb1f8701c2a678fd472716b4e8e2e61172200324af7abb05379
-  scenarios/fetch-archive-dns-rebinding.md: 39482bed2a531d36dce770c9c20ae3848ba254da0d02ee51d5c6feabe7967031
+  scenarios/fetch-archive-dns-rebinding.md: 95e7165ec8ffed49e017f8745e9e909111114ce377aadc5f7073723f2c2ba2d2
   scenarios/fetch-archive-names-its-timeout.md: d45c28473624ee40fb8f6bdf93961bf28947f8d0e05413c7e713f2b307d911a2
   scenarios/framework-list-dedup.md: 9aef03cab7d2494a662058d1091a65e38e26637b10ba338d94eedbd15f9f7f4b
   scenarios/govern-bootstrap.md: 81bc21e03aa1d2c48f63c6f710f1f3303294ffb580a14fe3964e3a69d72f5da2
@@ -59,7 +59,7 @@ analyzed-digest:
   scenarios/project-directory-resolution-chain.md: d43223e3f037960a24f5660a9944aae0fe02df5f1da10257477926a63cfb5a82
   scenarios/resolve-references-cli-exec-wiring.md: 3ddff8ea493af57fdacb9fab644d33ae95e766cfe7b7d5b11a27d7f083ce5c59
   scenarios/review-exec-wiring.md: 9dbf0c621deaa58d40d16d09c289abdd5cb31ab5555f2036088e1d8f04d76515
-  scenarios/review-runtime-acceleration.md: 91bf90e87e1b4aebeda541201bc3f448ea293c34fd24dcc5371a7d50b20a813d
+  scenarios/review-runtime-acceleration.md: c4e206206e14cd727bbb04503abd6a286f6d790b91dbdb6ac90e57c2de5944a1
   scenarios/review-scope-parse-fidelity.md: 89747b789e8c2f6d1b550cd662ddfe04a4a42727edba6daa39e6b700a6d2eee1
   scenarios/runtime-primitive-structural-bugs.md: 7fb973b4c5ef5c0268df24996c585f9bf70465f4f7e36ad237d129894f5fd366
   scenarios/runtime-review-019-hardening.md: 9b759c9ce4fc57702e28d764179dcae7b7df9d04dc99ac166b3c0726cf3f9449
@@ -71,7 +71,7 @@ analyzed-digest:
   scenarios/spec-side-parser-hardening.md: 91a804882033f369ff98f36157a38896d29eb7d90e8ae4c78e86d45ac35aca3d
   scenarios/specify-routes-before-scaffolding.md: afa3ced4b110e3b7d2f2e96e86cfd719487fce6983e948cbfea4150f4670ea33
   scenarios/the-cli-surface-nothing-pins.md: f63de14533aeb6b2c77f33421af289633e0fded63e795f219b82bfa30f071c8c
-  scenarios/the-constitutions-registry-validates-its-values.md: 91d822062ae0e0d10a9796c7072a7cd03186283ba2aa7657b12a696f705bd2c2
+  scenarios/the-constitutions-registry-validates-its-values.md: ca81f45e1bf0e7e8cb1ac99736115e5df5eb16afe9c8fa7debf10853e668c975
   scenarios/the-pi-command-candidate.md: 38e81f6ca1732254fee5cce65eb829a0026c30bdb846ff0c3a80b7a308ba94bb
   scenarios/unchecked-done-when-clause-tally.md: 2fa92d88a135df29d4097e5fac7ba2a42583303237cb81bcb8a8df3a7e157ade
   scenarios/unreadable-scenario-is-reported.md: 28c763fee22e177c50586f69989911128438c23964e1fa4831f628ae366792ae
@@ -81,15 +81,18 @@ analyzed-digest:
   scenarios/writecode-boundary-derivation.md: 6c9f4071e87d008c30a3741740cbe5c294f0faa9e41c4a823c3898f52b7ce077
   scenarios/writecode-payload-bundling.md: 5c343929c3a42ac4406a02c173b6979231127b9583aabae171fee1f747d5084b
   scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
-  spec.md: c5c4b8dbf3115655268b2935f3e42a6081e5b8c8b990a3fa25d37cde505fca4c
-  tasks.md: 28bc6f71ab8afc4bd35d7b6fd0636bda6df9325cc8523f63479206e297172106
+  spec.md: 33009a8527c5d0a864c6ac4dfcda0b573195272706c18783ae8da6fe1c0a7530
+  tasks.md: 58b28be39904df53b778373b3bfcf206c59a62580691f3c96cf8fe92ff499d7d
 unexamined-by-reason:
-  not-a-live-claim: 2
-blocking: false
+  never-existed: 9
+  not-a-live-claim: 5
+  root-absent: 27
+  ships-to-adopter: 3
+blocking: true
 dispositions:
-  fixed: 0
-  routed: 0
-  discarded: 12
+  fixed: 3
+  routed: 2
+  discarded: 13
   undispositioned: 0
 decisions:
   - key: "rule-assessment — BE-METRIC-001: the MCP tool handlers commit to no rate, error or duration metrics"
@@ -152,13 +155,28 @@ decisions:
     reason: written after the fact to record shipped scenario-open-question work (f43818d1); implemented and tested, read_spec.rs parse_open_questions with commented_out_example_questions_are_not_counted, fenced_questions_are_not_counted and every_placeholder_is_skipped_even_as_a_bullet (operator decision, 2026-10-16)
     decided-at: 2026-10-16T02:59:11Z
     decided-by: andy@stone.dev
+  - key: "rule-assessment — BE-DEPS-006: plan.md commits the CI workflows and release build tools to no immutable pinning and no update process for the pins"
+    outcome: routed
+    target: specs/022-deterministic-runtime/tasks.md
+    decided-at: 2026-10-20T04:59:47Z
+    decided-by: andy@stone.dev
+  - key: "rule-assessment — BE-INPUT-004: no artifact commits the host- and LLM-supplied paths to canonicalization before a whole-component containment check"
+    outcome: routed
+    target: specs/022-deterministic-runtime/tasks.md
+    decided-at: 2026-10-20T04:59:47Z
+    decided-by: andy@stone.dev
+  - key: "rule-assessment — BE-TRACE-002: plan.md commits fetch-archive, an externally dependent unit of work, to no spans"
+    outcome: discarded
+    reason: the runtime is a per-agent stdio process with no tracing pipeline, and plan.md's Trade-offs rejects tracing; adding the first spans belongs to a spec about the runtime's observability, as the stored BE-METRIC-001 discard says of metrics
+    decided-at: 2026-10-20T04:59:47Z
+    decided-by: andy@stone.dev
 ---
 
 # Analysis — 022-deterministic-runtime
 
 ## Summary
 
-0 hard-fail, 0 blocking, 12 advisory; not blocking. 2 unexamined target(s). Dispositions: 0 fixed, 0 routed, 12 discarded, 0 undispositioned.
+0 hard-fail, 2 blocking, 13 advisory; blocking. 44 unexamined target(s). Dispositions: 3 fixed, 2 routed, 13 discarded, 0 undispositioned.
 
 ## Hard failures
 
@@ -166,10 +184,12 @@ decisions:
 
 ## Blocking findings
 
-*None.*
+- rule-assessment — BE-DEPS-006: plan.md commits the CI workflows and release build tools to no immutable pinning and no update process for the pins — `specs/022-deterministic-runtime/plan.md` — **routed** to `specs/022-deterministic-runtime/tasks.md`
+- rule-assessment — BE-INPUT-004: no artifact commits the host- and LLM-supplied paths to canonicalization before a whole-component containment check — `specs/022-deterministic-runtime/plan.md` — **routed** to `specs/022-deterministic-runtime/tasks.md`
 
 ## Advisory findings
 
+- rule-assessment — BE-TRACE-002: plan.md commits fetch-archive, an externally dependent unit of work, to no spans — `specs/022-deterministic-runtime/plan.md` — **discarded**: the runtime is a per-agent stdio process with no tracing pipeline, and plan.md's Trade-offs rejects tracing; adding the first spans belongs to a spec about the runtime's observability, as the stored BE-METRIC-001 discard says of metrics
 - rule-assessment — BE-METRIC-001: the MCP tool handlers commit to no rate, error or duration metrics — `specs/022-deterministic-runtime/plan.md` — **discarded**: the runtime is a per-agent stdio process with no metrics pipeline, and no primitive emits metrics; adding the first belongs to a spec about the runtime's observability (as discarded in 062's analysis)
 - grounding — spec.md says a single-feature /ductus:analyze takes 2-4 minutes of LLM wall-clock time today — `specs/022-deterministic-runtime/spec.md` — **discarded**: a motivation measured when the spec was written, describing the problem the runtime was built to solve rather than current behavior
 - grounding — spec.md says 11 of 13 analyze check sections are mechanical — `specs/022-deterministic-runtime/spec.md` — **discarded**: a motivation measured when the spec was written; analyze's sections have since been restructured, and the claim records the case for the runtime, not current behavior
@@ -185,8 +205,13 @@ decisions:
 
 ## Unexamined targets
 
-- not-a-live-claim: 2
+- never-existed: 9
+- not-a-live-claim: 5
+- root-absent: 27
+- ships-to-adopter: 3
 
 ## Fixed in this run
 
-*None.*
+- rule-assessment — CFG-ENV-002: plan.md introduces DUCTUS_FETCH_ALLOW_INSECURE_HOSTS without the inventory update in its affected files — `specs/022-deterministic-runtime/plan.md` — **fixed**
+- rule-assessment — CFG-ENV-008: plan.md names no type or fail-fast parse for DUCTUS_FETCH_ALLOW_INSECURE_HOSTS, and a malformed entry was silently ignored — `specs/022-deterministic-runtime/plan.md` — **fixed**
+- rule-assessment — BE-COMPAT-001: AC20 narrows apply-manifest's accepted substitution keys without classifying the change — `specs/022-deterministic-runtime/spec.md` — **fixed**

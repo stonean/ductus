@@ -18,3 +18,23 @@ Tasks derived from the [plan](plan.md). Complete in order. Each task is small en
 - [x] A test fails if a redirect host is resolved a second time without the screen
 
 - **Done when**: No fetch-archive connection, initial or redirected, resolves a host without screening the addresses it connects to, and 022 is re-reviewed back to done.
+
+## 3. Pin CI actions and build tools immutably, with an update process (BE-DEPS-006)
+
+BE-DEPS-006 (rewritten 2026-10-19) asks a plan covering CI or build tooling to commit to immutable pinning and an update process for the pins; 022's analysis of 2026-10-20 found neither in plan.md, and the workflows reference actions by tag.
+
+- [ ] Pin every uses: in .github/workflows/*.yml to a full commit SHA with its tag in a comment (8 actions, 39 references on 2026-10-20: actions/checkout, dtolnay/rust-toolchain, actions/cache, taiki-e/install-action, actions/upload-artifact, actions/download-artifact, softprops/action-gh-release, actions/setup-node)
+- [ ] Pin the versions of cargo-zigbuild and cargo-cyclonedx that runtime-release.yml installs, and of each tool taiki-e/install-action installs
+- [ ] Add an update process for the pins (Dependabot or Renovate for github-actions) and teach scripts/check-runtime-currency.sh to read a SHA-pinned dtolnay/rust-toolchain
+- [ ] State the pinning and its update process in plan.md's runtime.yml and Release workflow sections
+
+- **Done when**: analyze's BE-DEPS-006 assessment of 022's plan passes, and every workflow references its actions and installed tools immutably
+
+## 4. Canonicalize host- and LLM-supplied paths before the containment check (BE-INPUT-004)
+
+BE-INPUT-004's Verification, rewritten 2026-10-19, asks for path canonicalization followed by a containment check comparing whole path components; validate_no_traversal (runtime/src/primitives/mod.rs) is textual, rejecting absolute, rooted and .. paths without resolving a symlink, and writeCode's write-boundary check matches globs.
+
+- [ ] Decide where canonicalization applies (48 validate_no_traversal call sites on 2026-10-20, and the writeCode boundary), record it as a scenario on 022, and implement it with tests that fail when a symlink inside the project escapes it
+- [ ] State the commitment in plan.md
+
+- **Done when**: analyze's BE-INPUT-004 assessment of 022's plan passes, and a path that escapes the project through a symlink is refused

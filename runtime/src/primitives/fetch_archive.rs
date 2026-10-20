@@ -159,7 +159,7 @@ fn fetch_bytes(url: &str) -> Result<Vec<u8>> {
         proxies,
         FETCH_TIMEOUT,
         FETCH_DEADLINE,
-        Arc::new(Screen::system(proxies)),
+        Arc::new(Screen::system(proxies)?),
     )
 }
 
@@ -354,16 +354,21 @@ struct Screen {
 impl Screen {
     /// The screen a real fetch uses: `std::net` resolution, the allowlist
     /// captured at startup, and the hosts of `proxies`.
-    fn system(proxies: &ProxyEnv) -> Self {
-        Self::new(
+    ///
+    /// # Errors
+    ///
+    /// [`PrimitiveError::InvalidEnvironmentVariable`] when the allowlist
+    /// captured at startup holds an entry that is not a bare host name.
+    fn system(proxies: &ProxyEnv) -> Result<Self> {
+        let insecure = match INSECURE_HOSTS.get() {
+            None => Vec::new(),
+            Some(parsed) => allowlist(parsed)?,
+        };
+        Ok(Self::new(
             Box::new(|host, port| (host, port).to_socket_addrs().map(Iterator::collect)),
-            INSECURE_HOSTS
-                .get()
-                .and_then(Option::as_deref)
-                .map(|list| list.split(',').map(str::trim).map(str::to_owned).collect())
-                .unwrap_or_default(),
+            insecure,
             proxies,
-        )
+        ))
     }
 
     fn new(lookup: Box<Lookup>, insecure: Vec<String>, proxies: &ProxyEnv) -> Self {
@@ -532,16 +537,66 @@ fn screen_url(url: &str, screen: &Screen) -> std::result::Result<FetchScreen, St
 /// losing it fails closed.
 const FETCH_ALLOW_INSECURE_HOSTS_ENV: &str = "DUCTUS_FETCH_ALLOW_INSECURE_HOSTS";
 
-/// The allowlist as this process's environment held it at startup, captured
+/// The allowlist as this process's environment held it at startup, parsed
 /// once by [`init_insecure_hosts`] (`CFG-ENV-001`: read once at startup and
-/// cached; listed in `docs/runtime.md`'s environment-variable inventory).
-static INSECURE_HOSTS: OnceLock<Option<String>> = OnceLock::new();
+/// cached; listed in `docs/runtime.md`'s environment-variable inventory): the
+/// host names it lists, or the reason one entry is not a bare host name.
+static INSECURE_HOSTS: OnceLock<std::result::Result<Vec<String>, String>> = OnceLock::new();
 
-/// Capture [`FETCH_ALLOW_INSECURE_HOSTS_ENV`] from this process's
+/// Capture and parse [`FETCH_ALLOW_INSECURE_HOSTS_ENV`] from this process's
 /// environment — once, at startup. The binary's `main` calls this before it
-/// dispatches anything; a later call is a no-op.
+/// dispatches anything; a later call is a no-op. Unset and empty both mean no
+/// host is exempted.
 pub fn init_insecure_hosts() {
-    INSECURE_HOSTS.get_or_init(|| std::env::var(FETCH_ALLOW_INSECURE_HOSTS_ENV).ok());
+    INSECURE_HOSTS.get_or_init(|| {
+        std::env::var(FETCH_ALLOW_INSECURE_HOSTS_ENV)
+            .map_or_else(|_| Ok(Vec::new()), |value| parse_insecure_hosts(&value))
+    });
+}
+
+/// The allowlist's type is a comma-separated list of host names (`CFG-ENV-008`):
+/// each entry is trimmed, an empty one is skipped, and the rest must each be
+/// a bare host — a name, an IPv4 literal, or a bracketed IPv6 literal — with
+/// no scheme, port, path or credentials. Each is kept in the form a URL's
+/// host takes, lower-cased, so it matches the host it names. An entry that is
+/// not a bare host would never match one, which silently exempts nothing the
+/// operator meant to, so it is the error instead.
+fn parse_insecure_hosts(value: &str) -> std::result::Result<Vec<String>, String> {
+    value
+        .split(',')
+        .map(str::trim)
+        .filter(|entry| !entry.is_empty())
+        .map(|entry| {
+            reqwest::Url::parse(&format!("https://{entry}/"))
+                .ok()
+                .filter(|url| {
+                    url.port().is_none()
+                        && url.path() == "/"
+                        && url.username().is_empty()
+                        && url.password().is_none()
+                        && url.query().is_none()
+                        && url.fragment().is_none()
+                })
+                .and_then(|url| url.host_str().map(str::to_owned))
+                .ok_or_else(|| {
+                    format!(
+                        "entry `{}` is not a bare host name; list host names or IP literals separated by commas, with no scheme, port or path",
+                        flatten_line(entry)
+                    )
+                })
+        })
+        .collect()
+}
+
+/// The parsed allowlist, or the error naming the variable when an entry did
+/// not parse.
+fn allowlist(parsed: &std::result::Result<Vec<String>, String>) -> Result<Vec<String>> {
+    parsed
+        .clone()
+        .map_err(|reason| PrimitiveError::InvalidEnvironmentVariable {
+            variable: FETCH_ALLOW_INSECURE_HOSTS_ENV.into(),
+            reason,
+        })
 }
 
 /// The proxy variables as this process's environment held them at startup —
@@ -962,7 +1017,7 @@ mod tests {
     /// The screen a fetch from this test process uses: the system resolver,
     /// no allowlist (the process never captured one) and no proxy.
     fn screen() -> Screen {
-        Screen::system(&ProxyEnv::NONE)
+        Screen::system(&ProxyEnv::NONE).unwrap()
     }
 
     fn ip(s: &str) -> IpAddr {
@@ -1342,7 +1397,7 @@ mod tests {
             &env,
             FETCH_TIMEOUT,
             FETCH_DEADLINE,
-            Arc::new(Screen::system(&env)),
+            Arc::new(Screen::system(&env).unwrap()),
         );
         assert!(result.is_err(), "the proxy refused the tunnel");
         let request_line = rx
@@ -1376,7 +1431,7 @@ mod tests {
             &env,
             std::time::Duration::from_millis(200),
             FETCH_DEADLINE,
-            Arc::new(Screen::system(&env)),
+            Arc::new(Screen::system(&env).unwrap()),
         );
         let waited = started.elapsed();
         drop(release);
@@ -1655,6 +1710,38 @@ mod tests {
             !message.contains('\u{1b}') && !message.contains('\n'),
             "{message:?}"
         );
+    }
+
+    #[test]
+    fn the_allowlist_parses_into_bare_host_names() {
+        assert_eq!(
+            super::parse_insecure_hosts(" Mirror.Corp , 10.0.0.1,,[::1] ,").unwrap(),
+            ["mirror.corp", "10.0.0.1", "[::1]"]
+        );
+        assert_eq!(super::parse_insecure_hosts("").unwrap(), [] as [String; 0]);
+    }
+
+    #[test]
+    fn an_allowlist_entry_that_is_not_a_bare_host_fails_every_fetch() {
+        // Each would never match a fetch's host, so it would exempt nothing
+        // the operator meant to, silently (CFG-ENV-008).
+        for entry in [
+            "http://mirror.corp",
+            "mirror.corp:8080",
+            "mirror.corp/archive",
+            "user@mirror.corp",
+            "::1",
+            "mirror corp",
+        ] {
+            let reason = super::parse_insecure_hosts(&format!("ok.example,{entry}")).unwrap_err();
+            assert!(reason.contains(&format!("entry `{entry}`")), "{reason}");
+            let err = super::allowlist(&Err(reason)).unwrap_err();
+            let message = err.to_string();
+            assert!(
+                message.contains("DUCTUS_FETCH_ALLOW_INSECURE_HOSTS") && message.contains(entry),
+                "{message}"
+            );
+        }
     }
 
     #[test]

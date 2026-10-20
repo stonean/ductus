@@ -579,6 +579,17 @@ pub enum PrimitiveError {
         /// The value as TOML renders it, flattened to one line.
         value: String,
     },
+    /// An environment variable the runtime reads at startup is set to a
+    /// value that does not parse into its declared type, so the primitive
+    /// that reads it halts rather than acting as though it were unset
+    /// (`CFG-ENV-008`). `reason` names the offending value, on one line.
+    #[error("invalid {variable}: {reason}")]
+    InvalidEnvironmentVariable {
+        /// The variable's name.
+        variable: String,
+        /// Why the value was rejected, naming it.
+        reason: String,
+    },
     /// A `[[review.disabled-rule-files]]` entry is malformed: it is not a
     /// table, its `file` or `reason` is missing or not a string, or its
     /// `reason` is shorter than the minimum once trimmed (spec 025).
