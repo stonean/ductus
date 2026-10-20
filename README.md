@@ -203,7 +203,7 @@ specs-root = "governance"
 
 `/ductus` also maintains `[host]`, `[project]`, `[source]`, and `[migrations]`; those are written for you and are not meant to be hand-edited — `[source]` records the release a project updates from, and changes with `/ductus --ref` (see [Updating an adopted project](#updating-an-adopted-project)). The fully commented schema — every section, with the values each key accepts — is in [`framework/bootstrap/ductus.md` §Project Configuration](framework/bootstrap/ductus.md#project-configuration); the `[services]` schema is declared in [specs/030-cross-service-references/data-model.md](specs/030-cross-service-references/data-model.md).
 
-A key in one of these sections that `ductus` does not read — a typo such as `surface` for `surfaces`, or a key a newer `ductus` added — is reported by name and never dropped, and it is never an error: `/status` lists every one, the command that reads the section names it as it runs, and `/ductus` names those in the sections it reads in its summary. Sections of your own are left alone.
+A key in one of these sections that `ductus` does not read — a typo such as `surface` for `surfaces`, or a key a newer `ductus` added — is reported by name and never dropped, and it is never an error. `/status` lists every one. `/review` names those in `[rules]` and `[review]` as it runs, and `/clarify`, `/plan` and `/analyze` those in `[artifacts]`; `/ductus` names those in the sections it reads in its summary; and the runtime writes any other to its stderr, which over MCP reaches the server's log rather than the agent. Sections of your own are left alone.
 
 ## Cross-service references
 

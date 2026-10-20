@@ -755,25 +755,25 @@ fn load_config(repo: &Path) -> Result<(DashboardConfig, &'static str)> {
         ));
     }
     let content = read_text(&toml_path)?;
-    let parsed: DuctusConfig = toml::from_str(&content).map_err(|source| PrimitiveError::Toml {
+    let toml_error = |source| PrimitiveError::Toml {
         path: toml_path.clone(),
         source,
-    })?;
+    };
+    // The whole file's unknown keys, whichever command reads each section,
+    // so `/status` names every one (spec 019). Key names only; the typed
+    // parse below is what reports a value of the wrong type, by its line.
+    let table: toml::Table = toml::from_str(&content).map_err(toml_error)?;
+    let unknown_keys = config_keys::unknown_keys(&table)
+        .iter()
+        .map(ToString::to_string)
+        .collect();
+    let parsed: DuctusConfig = toml::from_str(&content).map_err(toml_error)?;
     let disabled_rule_files = parsed
         .review
         .map(|r| r.disabled_rule_files)
         .unwrap_or_default()
         .into_iter()
         .map(|d| d.file)
-        .collect();
-    // The whole file's unknown keys, whichever command reads each section,
-    // so `/status` names every one (spec 019). Key names only: the struct
-    // parse above already reported a document that does not parse.
-    let unknown_keys = toml::from_str::<toml::Table>(&content)
-        .map(|table| config_keys::unknown_keys(&table))
-        .unwrap_or_default()
-        .iter()
-        .map(ToString::to_string)
         .collect();
     Ok((
         DashboardConfig {

@@ -15,7 +15,7 @@ Defines the configuration key `check-artifact-size` reads, the primitive's reque
 read-size-bytes = 50000
 ```
 
-Resolved through the same config ladder every reader uses (`.ductus/config.toml`, then `.govern/config.toml`, then the legacy root `.govern.toml`). Any value other than a positive integer — a string, a float, a boolean, zero, a negative number, an array — is **invalid**, and so is an `artifacts` that is not a table. An invalid value halts the primitive with the error below, never the default: only an unset key, or an absent file, means 50,000. A config file that does not parse as TOML is an operational error too.
+Resolved through the same config ladder every reader uses (`.ductus/config.toml`, then `.govern/config.toml`, then the legacy root `.govern.toml`). Any value other than a positive integer — a string, a float, a boolean, zero, a negative number, an array — is **invalid**, and so is an `artifacts` that is not a table. An invalid value halts the primitive with the error below, never the default: only an unset key, or an absent file, means 50,000. A config file that does not parse as TOML is an operational error too. Any other key in `[artifacts]` is named among the result's `notices` and never halts (`scenarios/an-unknown-artifacts-key-is-named.md`).
 
 ### The invalid-threshold error
 

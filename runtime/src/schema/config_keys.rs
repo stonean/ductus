@@ -12,15 +12,18 @@
 //!
 //! The check reads key names only. A value of the wrong type is its own
 //! reader's to report, so it never stops another section's report, and a
-//! document that does not parse reports nothing here: its reader's parse
-//! error stands. Sections `ductus` does not own are never examined, and
-//! neither is the session file, whose top level is the exec walker's open
-//! seed.
+//! document that does not parse reports nothing here. Whether a reader
+//! reports the parse error is its own contract: most halt or warn, while
+//! `derive-references` and `check-orphaned-references` read an unparseable
+//! file as an empty registry and an absent watermark. Sections `ductus` does
+//! not own are never examined, and neither is the session file, whose top
+//! level is the exec walker's open seed.
 
 use std::collections::BTreeSet;
 use std::fmt::{self, Write as _};
+use std::io::Write as _;
 use std::path::Path;
-use std::sync::{LazyLock, Mutex, PoisonError};
+use std::sync::{Mutex, PoisonError};
 
 use crate::primitives::is_line_hazard;
 
@@ -146,8 +149,7 @@ pub fn unknown_keys_in(config: &toml::Table, sections: &[&str]) -> Vec<UnknownKe
 }
 
 /// The unknown keys in the named `sections` of the config document
-/// `content`; none when it does not parse, since its reader's own parse error
-/// is the report then.
+/// `content`; none when it does not parse.
 #[must_use]
 pub fn unknown_keys_in_text(content: &str, sections: &[&str]) -> Vec<UnknownKey> {
     toml::from_str::<toml::Table>(content)
@@ -159,26 +161,36 @@ pub fn unknown_keys_in_text(content: &str, sections: &[&str]) -> Vec<UnknownKey>
 /// read from `path`, to stderr — the channel for a reader whose result has no
 /// notices. Each line is written once per process, however often the reader
 /// runs. A document that does not parse writes nothing.
+///
+/// The record of what was written is process-wide because the readers that
+/// call this share no context object to carry it. It is a `Mutex`, held only
+/// for the check-and-insert, which `BTreeSet::insert` makes one operation;
+/// the document is parsed before the lock and the lines written after it.
+/// A write that fails — stderr closed, or a pipe whose reader has gone — is
+/// dropped rather than panicking as `eprintln!` would, because a warning
+/// must never fail the run it warns about.
 pub fn warn_unknown_keys(path: &Path, content: &str, sections: &[&str]) {
-    static WARNED: LazyLock<Mutex<BTreeSet<String>>> = LazyLock::new(Mutex::default);
-    let mut warned = WARNED.lock().unwrap_or_else(PoisonError::into_inner);
-    for line in new_warnings(path, content, sections, &mut warned) {
-        eprintln!("ductus: {line}");
+    static WARNED: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
+    let file = path.display().to_string();
+    let lines: Vec<String> = unknown_keys_in_text(content, sections)
+        .iter()
+        .map(|key| key.notice(&file))
+        .collect();
+    let fresh = first_seen(
+        lines,
+        &mut WARNED.lock().unwrap_or_else(PoisonError::into_inner),
+    );
+    let mut stderr = std::io::stderr().lock();
+    for line in fresh {
+        let _ = writeln!(stderr, "ductus: {line}");
     }
 }
 
-/// The lines [`warn_unknown_keys`] writes for `content` that `warned` does
-/// not already hold, each recorded there as it is returned.
-fn new_warnings(
-    path: &Path,
-    content: &str,
-    sections: &[&str],
-    warned: &mut BTreeSet<String>,
-) -> Vec<String> {
-    let file = path.display().to_string();
-    unknown_keys_in_text(content, sections)
-        .iter()
-        .map(|key| key.notice(&file))
+/// The `lines` `warned` does not already hold, each recorded there as it is
+/// returned.
+fn first_seen(lines: Vec<String>, warned: &mut BTreeSet<String>) -> Vec<String> {
+    lines
+        .into_iter()
         .filter(|line| warned.insert(line.clone()))
         .collect()
 }
@@ -232,11 +244,14 @@ fn report_fields(table: &toml::Table, known: &[&str], location: &str, found: &mu
 }
 
 /// `key` as TOML writes it: bare when every character may appear in a bare
-/// key, otherwise a basic string with `"`, `\` and every line hazard escaped.
-/// The operator sees exactly which key it is, and a key holding a newline or
-/// a terminal escape cannot forge a second line or restyle the terminal
-/// (`BE-INPUT-011`). Escaping rather than flattening keeps two keys that
-/// differ only in a hazard character distinguishable.
+/// key, otherwise a basic string with `"`, `\`, every line hazard, a tab, and
+/// every bidirectional formatting control escaped. The operator sees exactly
+/// which key it is: a key holding a newline or a terminal escape cannot forge
+/// a second line or restyle the terminal (`BE-INPUT-011`), one holding a
+/// right-to-left override cannot reorder the rest of the line as displayed,
+/// and a tab is not shown as the space it resembles. Escaping rather than
+/// flattening keeps two keys that differ only in such a character
+/// distinguishable.
 fn key_text(key: &str) -> String {
     let bare = !key.is_empty()
         && key
@@ -250,7 +265,7 @@ fn key_text(key: &str) -> String {
         match c {
             '"' => text.push_str("\\\""),
             '\\' => text.push_str("\\\\"),
-            c if is_line_hazard(c) => {
+            c if c == '\t' || is_line_hazard(c) || is_bidi_control(c) => {
                 let _ = write!(text, "\\u{:04X}", u32::from(c));
             }
             c => text.push(c),
@@ -258,6 +273,13 @@ fn key_text(key: &str) -> String {
     }
     text.push('"');
     text
+}
+
+/// The Unicode bidirectional formatting controls (UAX #9): the Arabic letter
+/// mark, the left-to-right and right-to-left marks, the embeddings and
+/// overrides, and the isolates.
+fn is_bidi_control(c: char) -> bool {
+    matches!(c, '\u{061C}' | '\u{200E}' | '\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}')
 }
 
 /// Whether the registry recognizes `key` at `at`: `[]` asks about a section
@@ -451,32 +473,26 @@ mod tests {
         for name in &names {
             assert!(!name.chars().any(is_line_hazard), "{name:?}");
         }
+        // A tab and a right-to-left override are escaped too, so neither
+        // passes for a space nor reorders the line it is shown in.
+        let config = table("[rules]\n\"a\\tb\" = 1\n\"r\\u202Eevil\" = 2\n");
+        let names: Vec<String> = unknown_keys(&config).into_iter().map(|k| k.key).collect();
+        assert_eq!(names, ["\"a\\u0009b\"", "\"r\\u202Eevil\""]);
     }
 
     #[test]
     fn each_warning_is_written_once_however_often_its_section_is_read() {
         let mut warned = BTreeSet::new();
-        let path = Path::new("/p/.ductus/config.toml");
-        let content = "[paths]\nroot = 1\n[rules]\nsurface = 1\n";
+        let line = |key: &str| format!("unknown config key: [paths] {key} (f)");
+        assert_eq!(first_seen(vec![line("root")], &mut warned), [line("root")]);
         assert_eq!(
-            new_warnings(path, content, &["paths"], &mut warned),
-            [
-                "unknown config key: [paths] root (/p/.ductus/config.toml) — this version of ductus does not read it"
-            ]
-        );
-        assert_eq!(
-            new_warnings(path, content, &["paths"], &mut warned),
+            first_seen(vec![line("root")], &mut warned),
             [] as [String; 0]
         );
-        // Another section of the same file warns on its own first read.
+        // A different key warns on its own first appearance, beside a repeat.
         assert_eq!(
-            new_warnings(path, content, &["rules"], &mut warned).len(),
-            1
-        );
-        // A document that does not parse warns of nothing.
-        assert_eq!(
-            new_warnings(path, "[paths", &["paths"], &mut warned),
-            [] as [String; 0]
+            first_seen(vec![line("root"), line("base")], &mut warned),
+            [line("base")]
         );
     }
 
@@ -558,6 +574,14 @@ mod tests {
             .join("\n");
         let config: toml::Table = toml::from_str(&live).unwrap();
         assert_eq!(shown(&unknown_keys(&config)), [] as [String; 0]);
+        // Every section documented is one the registry owns, so none of
+        // them is skipped as unowned.
+        for name in config.keys() {
+            assert!(
+                recognizes(&[], name),
+                "[{name}] is documented but not owned"
+            );
+        }
         for section in SECTIONS.iter().filter(|s| !s.keys.is_empty()) {
             let Some(toml::Value::Table(body)) = config.get(section.name) else {
                 panic!("§Project Configuration omits [{}]", section.name);
@@ -581,6 +605,23 @@ mod tests {
                     "§Project Configuration omits [{}] {key}",
                     section.name
                 );
+            }
+            for (table, fields) in section.tables {
+                let Some(toml::Value::Array(entries)) = body.get(*table) else {
+                    continue;
+                };
+                let documented: BTreeSet<&str> = entries
+                    .iter()
+                    .filter_map(toml::Value::as_table)
+                    .flat_map(|entry| entry.keys().map(String::as_str))
+                    .collect();
+                for field in *fields {
+                    assert!(
+                        documented.contains(field),
+                        "§Project Configuration omits [[{}.{table}]] {field}",
+                        section.name
+                    );
+                }
             }
         }
     }

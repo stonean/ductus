@@ -69,6 +69,7 @@ A discarded warning stays discarded while its file keeps the read-page count it 
 - **A file exactly at the threshold** is one read page and is not reported. One byte over is two pages.
 - **Several oversized subjects** get one warning each. A spec with many scenarios is checked file by file.
 - **An invalid configured threshold** (anything but a positive whole number of bytes, or an `artifacts` that is not a table and so cannot hold the key) halts the command that reads it, naming the setting, the offending value, the file and the accepted form. A fraction or a string does not parse as a whole number (`CFG-ENV-008`); zero or a negative parses but falls below the minimum of 1 byte, which is held to `CFG-ENV-005`'s out-of-range treatment. The default never stands in for a value the project set: only an unset threshold means 50,000 bytes. See [an invalid threshold fails fast](scenarios/an-invalid-threshold-fails-fast.md).
+- **An unknown key in `[artifacts]`** — `read-size-byte` for `read-size-bytes` — is named in a notice and never halts; the check runs at the threshold the recognized keys give. See [an unknown artifacts key is named](scenarios/an-unknown-artifacts-key-is-named.md).
 - **Changing the threshold recounts every subject's pages.** A discard recorded at one page count fires again if the new threshold puts its file at a higher count.
 - **The markdown-only path** measures with the host's own file tools. A subject whose size those tools cannot report is reported as not examined, never as under the threshold.
 
@@ -104,6 +105,7 @@ These gaps remain after a warning, and each is its own change:
 
 - `QUAL-CLAIM-001` — a subject that could not be read, or a check that could not run, is reported as such and never as "nothing over the threshold".
 - `CFG-ENV-008` — a threshold that is present but does not parse as a whole number halts the command rather than falling back to the default; `CFG-ENV-005`'s out-of-range treatment applies to zero and a negative.
+- `CFG-ENV-012` — a key in `[artifacts]` the runtime does not read is named, never silently dropped (spec 019's decision).
 
 ## Open Questions
 

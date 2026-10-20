@@ -13,8 +13,8 @@ section: "Follow-on scenarios"
 - One registry, `runtime/src/schema/config_keys.rs`, declares the keys each `ductus`-owned section recognizes: plain keys; the fields of each named entry under `[constitutions]` and `[services]`; the fields of each `[[review.disabled-rule-files]]` entry; and `[workflows]`, retired by 043, which recognizes none. A test fails when a reader reads a key the registry lacks.
 - `discover-rule-files` returns one notice per unknown key in `[rules]` and `[review]`, ahead of its other notices: `unknown config key: [rules] surface (.ductus/config.toml) — this version of ductus does not read it`.
 - `dashboard`'s `config` carries `unknown-keys`, every unknown key in the file's `ductus`-owned sections, and its rendering adds a callout naming them and the file.
-- Every other runtime reader of the file writes the same line to stderr for the section it reads, once per process: `Host::load` (`[host]`), `Paths::load` (`[paths]`), `resolve-constitutions` (`[constitutions]`), `resolve-references` and `derive-references` (`[services]`), and `check-orphaned-references` (`[migrations]`).
-- The check reads key names only. A value of the wrong type is its own reader's to report, so it never stops another section's report, and a file that does not parse reports nothing here: its reader's parse error stands.
+- Every other runtime reader of the file writes the same report to stderr for the section it reads — prefixed with `ductus:` and naming the file by the path it read — once per process, and drops a write stderr cannot take rather than failing the run: `Host::load` (`[host]`), `Paths::load` (`[paths]`), `resolve-constitutions` (`[constitutions]`), `resolve-references` and `derive-references` (`[services]`), and `check-orphaned-references` (`[migrations]`).
+- The check reads key names only. A value of the wrong type is its own reader's to report, so it never stops another section's report, and a file that does not parse reports nothing here: whether its reader reports that is the reader's own contract, which this scenario leaves unchanged.
 
 ## Edge Cases
 
@@ -22,6 +22,8 @@ section: "Follow-on scenarios"
 - A field an adopter adds to a `[[review.disabled-rule-files]]` entry is reported the same way, naming the entry's index, and the entry still applies.
 - Sections `ductus` does not own are not examined, and neither is the session file, whose top level is the exec walker's open seed.
 - The legacy config locations are examined the same way while readers still honor them, and the notice names the file that was read.
+- `resolve-references` and `derive-references` also read each registered service checkout's `[paths]` through `Paths::load`, so an unknown key in that checkout's config is named too, with that file's path: its `specs-root` decides where the service's specs are found.
+- One key can be reported twice in one CLI run: `dashboard` names it in its callout, and the reader of its section on stderr.
 
 ## Open Questions
 
