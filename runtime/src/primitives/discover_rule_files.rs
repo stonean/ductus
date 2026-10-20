@@ -76,10 +76,10 @@ fn classify(basename: &str) -> Surface {
 pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFilesResult> {
     // Resolved once: the same probe backs both the read below and the
     // provenance tag in the disabled-rule-file notice.
-    let (config, config_name) = load_ductus_toml(repo)?;
+    let (config, config_name, config_path) = load_ductus_toml(repo)?;
     // Every entry is validated before any rule file is selected, so a
     // malformed one halts the run instead of leaving a partial selection.
-    let disabled = validate_disabled_entries(config.review.as_ref(), &repo.join(config_name))?;
+    let disabled = validate_disabled_entries(config.review.as_ref(), &config_path)?;
     let (rules_dir_path, rules_dir_rel) = resolve_rules_dir(repo);
 
     let mut notices: Vec<String> = Vec::new();
@@ -292,20 +292,23 @@ fn validate_disabled_entries<'a>(
 }
 
 /// One entry as a [`DisabledEntry`], or the problem naming the field that
-/// failed and any offending value, flattened to one line.
+/// failed and the offending value, rendered as TOML on one line
+/// ([`rendered`]).
 fn validate_disabled_entry(entry: &toml::Value) -> std::result::Result<DisabledEntry<'_>, String> {
     let toml::Value::Table(table) = entry else {
         return Err(format!(
-            "the entry is {}, not a table",
-            toml_type_name(entry)
+            "the entry is {} ({}), not a table",
+            toml_type_name(entry),
+            rendered(entry)
         ));
     };
     let string_field = |name: &str| match table.get(name) {
         None => Err(format!("`{name}` is missing")),
         Some(toml::Value::String(value)) => Ok(value.as_str()),
         Some(other) => Err(format!(
-            "`{name}` is {}, not a string",
-            toml_type_name(other)
+            "`{name}` is {} ({}), not a string",
+            toml_type_name(other),
+            rendered(other)
         )),
     };
     let file = string_field("file")?;
@@ -313,11 +316,19 @@ fn validate_disabled_entry(entry: &toml::Value) -> std::result::Result<DisabledE
     let length = reason.trim().chars().count();
     if length < MIN_REASON_LEN {
         return Err(format!(
-            "`reason` {:?} is {length} characters once trimmed, under the minimum of {MIN_REASON_LEN}",
-            flatten_line(reason)
+            "`reason` {} is {length} characters once trimmed, under the minimum of {MIN_REASON_LEN}",
+            rendered(&toml::Value::String(reason.to_owned()))
         ));
     }
     Ok(DisabledEntry { file, reason })
+}
+
+/// A config value as TOML renders it, flattened to one line: committed
+/// config can carry a newline or an escape sequence, and an operator-facing
+/// line must not let it forge a second line or restyle the terminal
+/// (`BE-INPUT-011`).
+fn rendered(value: &toml::Value) -> String {
+    flatten_line(&value.to_string())
 }
 
 /// Apply the validated `[[review.disabled-rule-files]]` entries to the
@@ -338,9 +349,13 @@ fn apply_disabled_filter(
     let mut seen: Vec<&str> = Vec::new();
     for (index, entry) in disabled.iter().enumerate() {
         let (file, reason) = (entry.file, entry.reason);
+        // Matched as written, rendered on one line (`BE-INPUT-011`): the
+        // notices are emitted verbatim, so a raw newline in either value
+        // would forge a notice line of its own.
+        let shown = flatten_line(file);
         if seen.contains(&file) {
             notices.push(format!(
-                "duplicate disabled-rule-file: {file} — entry [{index}] ignored"
+                "duplicate disabled-rule-file: {shown} — entry [{index}] ignored"
             ));
             continue;
         }
@@ -349,34 +364,37 @@ fn apply_disabled_filter(
         if let Some(pos) = selected.iter().position(|s| s == file) {
             selected.remove(pos);
             notices.push(format!(
-                "disabled-rule-file: {file} — {} ({config_name})",
-                super::collapse_whitespace(reason)
+                "disabled-rule-file: {shown} — {} ({config_name})",
+                super::collapse_whitespace(&flatten_line(reason))
             ));
         } else if all.iter().any(|s| s == file) {
             notices.push(format!(
-                "disabled-rule-file (no-op): {file} not selected by stack detection"
+                "disabled-rule-file (no-op): {shown} not selected by stack detection"
             ));
         } else {
             notices.push(format!(
-                "unknown disabled-rule-file: {file} (no such file in the rule-file directory)"
+                "unknown disabled-rule-file: {shown} (no such file in the rule-file directory)"
             ));
         }
     }
 }
 
 /// Parse the resolved config file, returning defaults when it is absent, plus
-/// the repo-relative name that resolution picked. Returning the name here —
-/// rather than re-probing at render time — is what keeps the parsed content
-/// and its provenance tag from disagreeing across a concurrent migration.
-fn load_ductus_toml(repo: &Path) -> Result<(DuctusToml, &'static str)> {
+/// the repo-relative name that resolution picked and its path. Returning both
+/// here — rather than re-probing at render time — is what keeps the parsed
+/// content, its provenance tag and the path an error names from disagreeing
+/// across a concurrent migration.
+fn load_ductus_toml(repo: &Path) -> Result<(DuctusToml, &'static str, PathBuf)> {
     let (path, name) = paths::resolve_config(repo);
     if !path.is_file() {
-        return Ok((DuctusToml::default(), name));
+        return Ok((DuctusToml::default(), name, path));
     }
     let content = read_text(&path)?;
-    let parsed =
-        toml::from_str(&content).map_err(|source| PrimitiveError::Toml { path, source })?;
-    Ok((parsed, name))
+    let parsed = toml::from_str(&content).map_err(|source| PrimitiveError::Toml {
+        path: path.clone(),
+        source,
+    })?;
+    Ok((parsed, name, path))
 }
 
 /// Minimal `.ductus/config.toml` shape: the `[rules]` and `[review]` sections
@@ -645,23 +663,26 @@ mod tests {
         // skipped entry would leave the file enforced, or unenforced after a
         // later fix, with nothing to say which.
         for (entry, problem) in [
-            ("\"quality-cross.md\"", "the entry is a string, not a table"),
+            (
+                "\"quality-cross.md\"",
+                "the entry is a string (\"quality-cross.md\"), not a table",
+            ),
             (
                 "{ reason = \"Not adopting this file yet, see PROJ-1.\" }",
                 "`file` is missing",
             ),
             (
                 "{ file = 5, reason = \"Not adopting this file yet, see PROJ-1.\" }",
-                "`file` is an integer, not a string",
+                "`file` is an integer (5), not a string",
             ),
             ("{ file = \"quality-cross.md\" }", "`reason` is missing"),
             (
                 "{ file = \"quality-cross.md\", reason = true }",
-                "`reason` is a boolean, not a string",
+                "`reason` is a boolean (true), not a string",
             ),
             (
                 "{ file = \"quality-cross.md\", reason = \"  too short     \" }",
-                "`reason` \"too short\" is 9 characters once trimmed, under the minimum of 16",
+                "`reason` \"  too short     \" is 9 characters once trimmed, under the minimum of 16",
             ),
         ] {
             let toml = format!("[review]\ndisabled-rule-files = [{entry}]\n");
@@ -708,11 +729,62 @@ mod tests {
 
     #[test]
     fn a_short_reason_is_named_on_one_line() {
+        // TOML renders a string holding a newline as a multi-line string,
+        // raw newlines and all; the problem flattens it.
         let (_, problem, message) = malformed(
             "[[review.disabled-rule-files]]\nfile = \"quality-cross.md\"\nreason = \"a\\nb\"\n",
         );
-        assert!(problem.contains("\"a b\""), "{problem}");
+        assert!(
+            problem.contains("a b") && !problem.contains('\n'),
+            "{problem:?}"
+        );
         assert!(!message.contains('\n'), "{message:?}");
+    }
+
+    #[test]
+    fn a_non_ascii_reason_is_shown_as_written() {
+        let (_, problem, _) = malformed(
+            "[[review.disabled-rule-files]]\nfile = \"quality-cross.md\"\nreason = \"हिन्दी कारण\"\n",
+        );
+        assert!(
+            problem.starts_with("`reason` \"हिन्दी कारण\" is "),
+            "{problem}"
+        );
+    }
+
+    #[test]
+    fn notices_render_config_values_on_one_line() {
+        // A newline in `file` would forge a notice line, and an escape
+        // sequence in `reason` would restyle the terminal (BE-INPUT-011).
+        let toml = "[[review.disabled-rule-files]]\nfile = \"nope.md\\nloading rule files: (forged)\"\nreason = \"Renamed upstream, see PROJ-1.\"\n\n[[review.disabled-rule-files]]\nfile = \"quality-cross.md\"\nreason = \"\\u001b[31mNot adopting this file yet\"\n";
+        let tmp = setup(THREE, Some(toml));
+        let result = run(&args(&[]), tmp.path()).unwrap();
+        assert_eq!(result.notices.len(), 3, "{:?}", result.notices);
+        assert_eq!(
+            result.notices[0],
+            "unknown disabled-rule-file: nope.md loading rule files: (forged) (no such file in the rule-file directory)"
+        );
+        assert!(
+            result.notices[1].starts_with("disabled-rule-file: quality-cross.md — "),
+            "{:?}",
+            result.notices[1]
+        );
+        for notice in &result.notices {
+            assert!(
+                !notice.contains('\n') && !notice.contains('\u{1b}'),
+                "{notice:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_adopter_field_on_an_entry_is_accepted() {
+        // The open-schema rule: a field an adopter adds, such as an approval,
+        // is neither an error nor a reason to skip the entry.
+        let toml = "[[review.disabled-rule-files]]\nfile = \"quality-cross.md\"\nreason = \"Not adopting this file yet, PROJ-1.\"\napproved-by = \"ops@example.com\"\n";
+        let tmp = setup(THREE, Some(toml));
+        let result = run(&args(&[]), tmp.path()).unwrap();
+        assert!(!result.selected.contains(&"quality-cross.md".to_string()));
     }
 
     #[test]

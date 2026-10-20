@@ -265,15 +265,18 @@ The numbered Instructions above are the deterministic path — the runtime's pri
      index and the field that failed:
 
      ```text
-     /{project}:review: invalid [[review.disabled-rule-files]] entry [N] in <config-file>: <problem> — each entry is a table with a `file` naming a rule file and a `reason` of at least 16 characters
+     /{project}:review: invalid [[review.disabled-rule-files]] entry [N] in <config-path>: <problem> — each entry is a table with a `file` naming a rule file and a `reason` of at least 16 characters
      ```
 
-     `<problem>` names the field and any offending value — for example
-     `` `reason` is missing `` or `` `reason` "PoC only" is 8
-     characters once trimmed, under the minimum of 16 ``. The entry is
-     not skipped and NOT auto-removed; the operator fixes it. The halt is
-     a configuration error that stops the run, never a review finding,
-     so it does not set `blocking`.
+     `<config-path>` is the resolved config file's full path.
+     `<problem>` names the field and the offending value as TOML renders
+     it, on one line — for example `` `reason` is missing ``,
+     `` `file` is an integer (5), not a string `` or
+     `` `reason` "PoC only" is 8 characters once trimmed, under the
+     minimum of 16 ``. The entry is not skipped and NOT auto-removed;
+     the operator fixes it. The halt is a configuration error that stops
+     the run with a non-zero exit (`CFG-ENV-008`), never a review
+     finding, so it does not set `blocking`.
 
    - **Duplicate warning.** Same `file` listed twice. Only the first
      entry applies; each subsequent duplicate emits one line and is
@@ -284,10 +287,12 @@ The numbered Instructions above are the deterministic path — the runtime's pri
      ```
 
    The no-op, unknown and duplicate lines emit to stdout and **do not
-   affect the exit code**. `/{project}:review`'s exit status is driven
-   exclusively by MUST violations (see [Output](#output)); a malformed
-   entry halts the run before it reaches any finding, so it never sets
-   `blocking` either.
+   affect the exit code**. A run that completes takes its exit status
+   from MUST violations alone (see [Output](#output)); a malformed entry
+   halts the run before it reaches any finding, exiting non-zero without
+   setting `blocking`. Every `file` and `reason` a notice or the halt
+   renders is put on one line first, so committed config cannot forge a
+   notice line.
 
    Finally, emit a single stdout line naming what was selected:
 

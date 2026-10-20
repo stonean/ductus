@@ -29,7 +29,9 @@ The single-line notice format is fixed by AC2. Internal whitespace (including ne
 
 ### Exit code invariance
 
-Warnings (duplicate, unknown, no-op) emit to stdout but never set the exit code. `/ductus:review`'s exit code remains `1` iff `must-violations > 0` (§Output). A malformed entry is not a warning: it halts the run before selection with `PrimitiveError::InvalidDisabledRuleFile` (`runtime/src/primitives/discover_rule_files.rs`, `validate_disabled_entries`), so the review never completes and records no `blocking`; `blocking: true` keeps meaning a MUST violation. This is enforced by the AC4 wording and called out again in the §Output section of the updated review.md.
+Warnings (duplicate, unknown, no-op) emit to stdout but never set the exit code. For a run that completes, `/ductus:review`'s exit code remains `1` iff `must-violations > 0` (§Output). A malformed entry is not a warning: it halts the run before selection with `PrimitiveError::InvalidDisabledRuleFile` (`runtime/src/primitives/discover_rule_files.rs`, `validate_disabled_entries`), so the review never completes, records no `blocking`, and exits non-zero (`CFG-ENV-008`); `blocking: true` keeps meaning a MUST violation. Every `file` and `reason` a notice or the halt renders passes through `flatten_line` first, so committed config cannot forge a notice line (`BE-INPUT-011`).
+
+That change is **breaking** under `BE-COMPAT-001`'s reading of behavior, though no field of `discover-rule-files`' result changes: a configuration that returned a selection with a `malformed …` notice now returns an error, and that notice form is gone. The runtime is pre-1.0, so the release that carries it is a minor bump (Cargo's caret requirements make the minor version the compatibility boundary below 1.0), and its one consumer, `framework/commands/review.md`, ships in the same release (§runtime-boundary). This is enforced by the AC4 wording and called out again in the §Output section of the updated review.md.
 
 ### `/ductus:status` integration
 
