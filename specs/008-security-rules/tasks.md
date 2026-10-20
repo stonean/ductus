@@ -262,3 +262,11 @@ Reopen surfaced upstream from an adopter: an `FE-DEPS` rule was missing for a de
 - [x] Lints, audit suite, and rule-corpus tests pass
 
 - **Done when**: All eight questions are resolved and applied, and 008 is re-reviewed back to done.
+
+## 17. BE-AUTHN-022 and a lost second factor (follow-on to task 16)
+
+- [ ] Owner answers the BE-AUTHN-022 lost-factor question in scenarios/independent-review-findings-await-the-owner.md
+- [ ] Apply the answer to security-backend.md BE-AUTHN-022, fetching any external claim, and record it in Resolved Questions
+- [ ] Lints, audit suite, and rule-corpus tests pass
+
+- **Done when**: The question is resolved and applied, and 008 is re-reviewed back to done.
