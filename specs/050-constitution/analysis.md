@@ -1,14 +1,14 @@
 ---
 spec: 050-constitution
-last-run: 2026-10-17T13:53:12Z
-analyzed-against: 861e6b9fac4fa95a2c9be5ad8d45b17c7aef2b0a
+last-run: 2026-10-20T00:59:41Z
+analyzed-against: bbc40d9cf10b25cbd59ed0153809b25fabc16471
 hard-fail: 0
 blocking-findings: 0
 advisory: 1
 unexamined: 4
 analyzed-digest:
   plan.md: 7918f73197dd0c6d9ed94ca3f0262870d81f1ab08334719a67cd078e7819f4c9
-  review.md: 0c67b3b7a3010cd54f9cf15caaa04cfc0851c7914dd861daaf2ca3171b2ff543
+  review.md: e71f05f0f1a7868d91732f26b680f452378ce2a1959c9384bc350534f7c77fd5
   scenarios/a-canonical-source-is-pointed-at-not-copied.md: 6936b866607a842ece8ebfd749223d4f7d98637200e8db87d85772702589e98a
   scenarios/a-declared-cross-spec-impact-gates-done.md: b84dfb3cd3652dc116fbdd7dee60199185ae661a3f0aefb7ad14bc64a2c1d4cc
   scenarios/a-measurement-states-its-method-and-units.md: 4c250a480c11e9788058f1012b647daa14aba2036d4a3baa9d0c1ba3c5965b2a
@@ -19,6 +19,7 @@ analyzed-digest:
   scenarios/a-review-may-precede-its-commit.md: 922278626cb1df8c001117f0567ad266d5efaf70b45dfba900e7e4ff0df26958
   scenarios/a-status-commit-holds-only-the-transition.md: 0d3fb1a701bc4b3112cfc2e54bb488df060c75fceeb0dc6c6b39205eb01d4438
   scenarios/completion-claims-carry-no-caveats.md: 2b2e43f4cea73ba9c81dc21848b5c668e1db5bf6a5e3becd7467ce025c4179c4
+  scenarios/decisions-go-to-the-owner-one-at-a-time.md: 91dd288f71c59a081c23f8b380218cc89924859727e52885a88cf491c5465060
   scenarios/findings-route-by-scope.md: a29ba00826b6109390c701ebd3eabdd8a1bd687f972f77339e57b629c6122226
   scenarios/governance-is-multi-source.md: ae59aca7a049317806297839a73cf335eeb3764db97999a7ddc0b12103e6ffeb
   scenarios/knowledge-routes-by-population-not-by-kind.md: 0e934ea65cbaf2bf31acc4f45c461bfb868be45deb5aa9fa6601c59b8c003c5c
@@ -26,7 +27,7 @@ analyzed-digest:
   scenarios/reports-end-with-the-remaining-work.md: b642a2d08b2227e856aefba9fa3ec8cd1efae0eb2a14cc674dfcd455982dbec3
   scenarios/the-constitution-states-rules-not-stories.md: 2461f7371619e2dbd236a602b2dc76fb77ab844accb7d22b495d38e54b0a0d05
   spec.md: 79c6b9b0c83748023101d6246dd941fe2bffa6a191fbbcdb645a77fae3b0de68
-  tasks.md: 782c5250f3ed4cc08b2d5816bb9c7e39f85e28249f5446ab1ef5555e8cd0e852
+  tasks.md: 1f05f8e61841af4976c32f4e28706fb254b9387da6effb571241f04e1d61bf1f
 unexamined-by-reason:
   root-absent: 1
   ships-to-adopter: 3
