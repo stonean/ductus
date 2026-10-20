@@ -4,7 +4,7 @@ Enforceable rules for the shape, stability, and documentation of HTTP and RPC AP
 
 These rules cover **contract quality**, not security. For HTTP-surface security concerns (security headers, CORS, rate limits, method allowlisting, content-type validation, webhook signing, network exposure) see `security-backend.md` §BE-API.
 
-A rule phrased in HTTP methods, status codes, or headers applies to them as HTTP defines them, and reaches an RPC protocol carried over HTTP — gRPC (every call an HTTP/2 `POST`), GraphQL, JSON-RPC — only as far as its own text says (`BE-APIVER-002`, `BE-STATUS-001`, `BE-IDEMP-001`, `BE-COND-001`).
+A rule phrased in HTTP methods, status codes, or headers applies to them as HTTP defines them, and reaches an RPC protocol carried over HTTP — gRPC (every call an HTTP/2 `POST`), GraphQL, JSON-RPC — only as far as its own text says (`BE-APIVER-001`, `BE-APIVER-002`, `BE-STATUS-001`, `BE-IDEMP-001`, `BE-COND-001`).
 
 Rules use RFC 2119 language: **MUST** / **MUST NOT** are enforced as errors; **SHOULD** / **SHOULD NOT** are flagged as warnings.
 
@@ -12,7 +12,7 @@ Rule IDs follow the format `BE-{CATEGORY}-{NNN}` and are permanent — once assi
 
 These rules verify **design-time commitments** — what a spec or plan must state — rather than code patterns; `/{project}:analyze` enforces them against feature artifacts.
 
-Projects without a programmatic API need not opt out: `/{project}:analyze` loads every rule file present, regardless of stack or `[rules] surfaces`, and these rules fire only on a spec or plan that introduces or changes a programmatic interface. In `.ductus/config.toml`, a `[rules] surfaces` list without `backend` stops `ductus` from installing or updating this file (a copy already on disk is left in place) and stops `/{project}:review` from selecting it; a `[[review.disabled-rule-files]]` entry with its mandatory `reason` excludes it from `/{project}:review` alone; and listing it under `[pinned] files` only stops `ductus` updates from overwriting a customized copy, which still loads for review and analyze.
+Projects without a programmatic API need not opt out: `/{project}:analyze` loads every rule file present, regardless of stack or `[rules] surfaces`, and these rules fire only on a spec or plan that meets their Verification trigger, every one of which presupposes a programmatic interface. In `.ductus/config.toml`, a `[rules] surfaces` list without `backend` stops `ductus` from installing or updating this file (a copy already on disk is left in place) and stops `/{project}:review` from selecting it; a `[[review.disabled-rule-files]]` entry with its mandatory `reason` excludes it from `/{project}:review` alone; and listing it under `[pinned] files` only stops `ductus` updates from overwriting a customized copy, which still loads for review and analyze.
 
 ## BE-SCHEMA — Schema Publication
 
@@ -126,7 +126,7 @@ Projects without a programmatic API need not opt out: `/{project}:analyze` loads
 
 ### BE-PAGE-001
 
-> List endpoints that can return more than a small fixed maximum number of items MUST paginate. The pagination strategy MUST be documented per endpoint.
+> List endpoints that can return more than a small fixed maximum number of items MUST paginate, with a default and a maximum page size. The pagination strategy MUST be documented per endpoint.
 
 **Rationale:** Unpaginated list endpoints are a DoS vector (large responses, slow queries) and an OOM-on-client risk. A strategy documented per endpoint tells clients how to walk the collection and what the walk guarantees when the collection changes underneath it.
 

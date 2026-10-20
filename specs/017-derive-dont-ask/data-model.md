@@ -9,7 +9,7 @@ A configuration rule file is a markdown document with the following structure (m
 ```markdown
 # Configuration Rules
 
-{One-paragraph introduction stating the file's scope.}
+{Introduction, one short paragraph each: the file's scope; the RFC 2119 severity mapping; the ID format and category list; how the rules are enforced; how a project's configuration selects or excludes the file.}
 
 ## {ID prefix} — {Category Name}
 
@@ -52,7 +52,7 @@ CFG-{category}-{NNN}
 | Environment and configuration values | `ENV` |
 | Feature flags | `FLAG` |
 
-The full ID always includes the `CFG-` prefix to disambiguate from `BE-` (backend security) and `FE-` (frontend security) rule IDs.
+The full ID always includes the `CFG-` prefix to disambiguate from the `BE-` (backend) and `FE-` (frontend) rule IDs of the surface rule files.
 
 ## Configuration rule entry fields
 
@@ -112,7 +112,7 @@ Same as security rules. Once an ID is assigned, the rule retains that ID for lif
 - `CFG-ENV-008` (MUST) — every configuration value, whether from an env var, a file, or a flag, is parsed into its declared type at startup; a present but malformed value fails fast, naming the setting and the value (redacted per `CFG-ENV-006` when sensitive), and never falls back to the default or is coerced to zero, empty, or `false`
 - `CFG-ENV-009` (SHOULD) — a value that varies between deployments (backing-service locators, external endpoints, per-deploy hosts and ports) is supplied at deploy time rather than compiled in, and application code does not branch on the deployment environment's name; build tooling that keys on a standard mode variable may still read it
 - `CFG-ENV-010` (MUST) — no secret is injected into an artifact delivered to end users (a browser bundle, a mobile app binary, a distributed desktop or CLI build), and the build exposes to client code only the variables explicitly designated for it, never the whole build environment; values their issuer designs to be public may be injected
-- `CFG-ENV-011` (MUST) — a data-size env var (a byte count such as a buffer, request-body, upload, cache, or memory limit) states its unit unambiguously, either in the value (a size string whose parser rejects a non-zero value without a unit) or in the name (a unit suffix such as `_BYTES`, `_KIB` or `_MIB` on an integer value); under either pattern a unit whose multiplier differs between parsers (`KB`, `MB`, `GB`, `M`, `G`) has its multiplier — powers of 1000 or of 1024 — stated in the variable's `CFG-ENV-002` inventory entry; its default constant is a typed size or carries the matching suffix
+- `CFG-ENV-011` (MUST) — a data-size env var (a byte count such as a buffer, request-body, upload, cache, or memory limit) states its unit unambiguously, either in the value (a size string whose parser rejects a non-zero value without a unit) or in the name (a unit suffix such as `_BYTES`, `_KIB` or `_MIB` on an integer value); under either pattern a unit whose multiplier differs between parsers (`KB`, `MB`, `GB`, `TB`, `k`, `M`, `G`, `T`) has its multiplier — powers of 1000 or of 1024 — stated in the variable's `CFG-ENV-002` inventory entry; its default constant is a typed size or carries the matching suffix
 - `CFG-ENV-012` (SHOULD) — an unrecognized key in a configuration file, within the settings the application owns, fails startup with an error naming the key and the file; where one file is read by more than one version of the application at once (a rolling deploy, older binaries reading the same file), it instead produces a startup warning naming the key; an unrecognized key is never silently ignored, and sections of a shared file that belong to other tools may pass unexamined
 
 ### CFG-FLAG namespace (Feature flags category)

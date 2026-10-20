@@ -298,6 +298,6 @@ Implements `scenarios/a-retired-feature-leaves-no-spec.md`. The constitution sta
 
 - [x] Implement the behavior described in `scenarios/decisions-go-to-the-owner-one-at-a-time.md`
 - [x] framework/constitution.md §recommendations states the rule: one decision per message with context, options, and recommendation; never a grouped list; never while started work is still reporting; a default a project MAY replace in its AGENTS.md
-- [ ] §governance-precedence's floor names the exception: a rule that names itself a default may be replaced by a project
+- [x] §governance-precedence's floor names the exception: a rule that names itself a default may be replaced by a project
 
 - **Done when**: The constitution states the rule as a replaceable default and the floor names that exception, and 050 is re-reviewed back to done.

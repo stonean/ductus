@@ -10,7 +10,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 Projects without a frontend need not opt out: `/{project}:analyze` loads every rule file present, regardless of stack or `[rules] surfaces`, and these rules fire only on a spec or plan that meets their Verification trigger. In `.ductus/config.toml`, a `[rules] surfaces` list without `frontend` stops `ductus` from installing or updating this file (a copy already on disk is left in place) and stops `/{project}:review` from selecting it; a `[[review.disabled-rule-files]]` entry with its mandatory `reason` excludes it from `/{project}:review` alone; and listing it under `[pinned] files` only stops `ductus` updates from overwriting a customized copy, which still loads for review and analyze.
 
-## FE-VITALS — Core Web Vitals Budgets
+## FE-VITALS — Core Web Vitals Budgets and Measurement
 
 ### FE-VITALS-001
 
@@ -70,11 +70,11 @@ Projects without a frontend need not opt out: `/{project}:analyze` loads every r
 
 > Raster images served as content imagery (hero images, product photos, article media) MUST be delivered in a modern format — AVIF or WebP — selected by `<picture>` `<source type>` elements or by server/CDN negotiation on the request's `Accept` header. A JPEG/PNG fallback MUST be provided when the project's supported-browser policy includes a browser that lacks the delivered format. A bare `<img src="*.jpg">`/`<img src="*.png">` with no modern-format source or negotiation MUST NOT be used for non-decorative content imagery.
 
-**Rationale:** WebP files are usually 25–35% smaller than equivalent JPEG and PNG files, and AVIF offers further compression gains over both JPEG and WebP, with savings above 50% against JPEG reported. Images account for more bytes than any other resource type on the median home page (911 KB of 2.56 MB on mobile in the 2025 Web Almanac), so the format choice moves a large share of the payload. Both formats are Baseline widely available (WebP since March 2023, AVIF since July 2026), so a fallback is owed only to older browsers a project's support policy still names. `<picture>` source selection and `Accept` negotiation both add no runtime script. MDN's table of default `Accept` values shows Safari's image requests listing `image/webp` but not `image/avif`, so negotiation on `Accept` alone serves Safari WebP even though Safari decodes AVIF.
+**Rationale:** WebP files are usually 25–35% smaller than equivalent JPEG and PNG files, and AVIF offers further compression gains over both JPEG and WebP, with savings above 50% against JPEG reported. Images account for more bytes than any other resource type on the median home page (911 KB of 2.56 MB on mobile in the 2025 Web Almanac), so the format choice moves a large share of the payload. Both formats are Baseline widely available (WebP since March 2023, AVIF since July 2026), so a fallback is owed only to older browsers a project's support policy still names. `<picture>` source selection and `Accept` negotiation both add no runtime script.
 
 **Verification:** Any spec or plan that introduces image-bearing UI MUST commit to modern-format delivery and state whether its supported-browser policy requires a JPEG/PNG fallback. `/{project}:analyze` flags affected-files snippets with `<img src="*.jpg">` or `<img src="*.png">` for content imagery without an accompanying `<picture>` element, `Accept`-negotiating image pipeline, or other modern-format pipeline.
 
-**Source:** web.dev "Use WebP images", web.dev "Using AVIF to compress images on your site", HTTP Archive Web Almanac 2025 "Page Weight", MDN `<picture>` documentation, MDN "List of default Accept values", Baseline (web-features) status for AVIF and WebP
+**Source:** web.dev "Use WebP images", web.dev "Using AVIF to compress images on your site", HTTP Archive Web Almanac 2025 "Page Weight", MDN `<picture>` documentation, Baseline (web-features) status for AVIF and WebP
 
 ### FE-IMAGE-002
 
@@ -114,7 +114,7 @@ Projects without a frontend need not opt out: `/{project}:analyze` loads every r
 
 **Rationale:** A parser-blocking script halts HTML parsing for its full download and execution time, so nothing after it in the document can render until it finishes. Deferred and async scripts download without blocking the parser, and a documented critical path is what tells a later change whether it adds to the render-blocking set. The difference is measured in seconds on slow networks. `defer` and `async` have no effect on inline classic scripts, which execute where they appear, so an inline classic script in the `<head>` belongs in the documented critical path.
 
-**Verification:** Any spec or plan that introduces a new route or that modifies the document `<head>` MUST commit to a documented critical rendering path and to `defer`/`async` (or module scripts) for non-essential scripts. `/{project}:analyze` flags affected-files snippets with external classic `<script src>` tags lacking `defer`, `async`, or `type="module"` (other than documented parser-blocking scripts).
+**Verification:** Any spec or plan that introduces a new route or that modifies the document `<head>` MUST commit to a documented critical rendering path and to `defer`/`async` (or module scripts) for every external classic script not documented as requiring parser-blocking execution. `/{project}:analyze` flags affected-files snippets with external classic `<script src>` tags lacking `defer`, `async`, or `type="module"` (other than documented parser-blocking scripts).
 
 **Source:** web.dev "Understand the critical path", MDN `<script>` documentation (`async`, `defer`, `type="module"`)
 
@@ -160,7 +160,7 @@ Projects without a frontend need not opt out: `/{project}:analyze` loads every r
 
 ### FE-LOAD-007
 
-> Build-emitted static assets (JavaScript, CSS, fonts, images) SHOULD be served from content-hashed URLs with a long-lived cache lifetime (`Cache-Control: max-age=31536000, immutable`), and the HTML documents that reference them SHOULD be served with `Cache-Control: no-cache` (or a short `max-age`) so each navigation revalidates them.
+> Build-emitted static assets (JavaScript, CSS, fonts, images) SHOULD be served from content-hashed URLs with a long-lived cache lifetime (`Cache-Control: max-age=31536000, immutable`), and the HTML documents that reference them SHOULD be served with `Cache-Control: no-cache`, so each navigation revalidates them, or with a short `max-age`, which bounds how long a returning visitor keeps the old asset URLs after a deploy.
 
 **Rationale:** A repeat visit that revalidates or re-downloads unchanged assets spends round trips and bytes on nothing. A content hash in the filename changes the URL whenever the content changes, so a browser holding the old file in a long-lived cache simply requests the new URL, and the long lifetime is safe. Long-caching an unhashed URL serves stale code after a deploy, and long-caching the HTML pins users to old asset URLs. `immutable` additionally tells a cache not to revalidate a fresh response, even on reload; Safari and desktop Firefox honor it, and Chromium-based browsers ignore it. HTML that displays sensitive data stays `no-store` per `FE-PII-003` (security-frontend.md), and compressing these assets is `BE-PAYLOAD-003`'s concern (performance-backend.md); cache policy for other server responses is `BE-CACHE-004` (performance-backend.md).
 

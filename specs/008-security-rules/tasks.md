@@ -257,8 +257,8 @@ Reopen surfaced upstream from an adopter: an `FE-DEPS` rule was missing for a de
 ## 16. Independent-review findings await the owner
 
 - [ ] Implement the behavior described in `scenarios/independent-review-findings-await-the-owner.md`
-- [ ] Owner answers each of the scenario's six open questions, one at a time
+- [ ] Owner answers each of the scenario's eight open questions, one at a time
 - [ ] Apply each answer to security-backend.md / security-frontend.md, fetching any external claim, and record it in Resolved Questions
 - [ ] Lints, audit suite, and rule-corpus tests pass
 
-- **Done when**: All six questions are resolved and applied, and 008 is re-reviewed back to done.
+- **Done when**: All eight questions are resolved and applied, and 008 is re-reviewed back to done.

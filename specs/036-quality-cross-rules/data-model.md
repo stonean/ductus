@@ -65,4 +65,4 @@ The category set is declared in the `quality-cross.md` file header per the per-f
 
 ## Severity and ID-stability invariants
 
-Inherited unchanged from `specs/008-security-rules/data-model.md`: MUST/MUST NOT are blocking errors, SHOULD/SHOULD NOT are advisory warnings; each Statement's obligation keywords come from one tier, with MAY permitted beside them as a permission that carries no tier; an assigned ID is permanent (never renumbered, moved-within-file, or reused after removal); two rules in one file never share an ID.
+Inherited unchanged from `specs/008-security-rules/data-model.md`: MUST/MUST NOT are blocking errors, SHOULD/SHOULD NOT are advisory warnings; each Statement's obligation keywords come from one tier, with MAY permitted beside them as a permission that carries no tier; an assigned ID is permanent (never renumbered, even when its rule moves within the file, and never reused after removal); two rules in one file never share an ID.

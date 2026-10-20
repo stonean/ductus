@@ -61,5 +61,6 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [ ] Resolve the scenario's open question (which mechanism)
 - [ ] Implement the chosen mechanism so a citation to a known rule on an unselected surface raises no blocking finding
 - [ ] A test covers a surfaces = ["backend"] project citing FE-XSS-001 with security-frontend.md not installed
+- [ ] Amend the acceptance criterion the chosen mechanism changes: AC3 (only surface-matching rule files are installed) if every rule file is installed, or AC7 (citations resolve against the full rule-file set) if they are not
 
 - **Done when**: The scenario's open question is resolved and an out-of-surface citation resolves without a blocking finding when its rule file was never installed.

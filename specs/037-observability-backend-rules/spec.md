@@ -12,7 +12,7 @@ Introduce `framework/rules/observability-backend.md`, an enforceable rule set co
 
 The constitution names **observability** a governance-recognized cross-cutting category (§rules), and the principles list calls the system to be **Supportable** and **Observable**. The backend surface today covers only the logging/audit slice via `security-backend.md` §BE-LOG; the rest of observability — metrics, distributed tracing, health/readiness, SLOs, alerting — has nowhere to be promoted to the rules tier. Each is re-litigated per feature or discovered missing only during an incident, when the absence of a metric, span, or readiness probe is what turns a degradation into an outage.
 
-This spec closes that gap: a backend observability rule set citable by ID (`BE-{CATEGORY}-{NNN}`) that `/ductus:analyze` checks against specs and plans (design-time observability commitments) and `/ductus:review` references where applicable.
+This spec closes that gap for metrics, distributed tracing, and health/readiness — SLOs and alerting are excluded as operational policy (Resolved Questions): a backend observability rule set citable by ID (`BE-{CATEGORY}-{NNN}`) that `/ductus:analyze` checks against specs and plans (design-time observability commitments) and `/ductus:review` references where applicable.
 
 ## Rule set scope
 
@@ -30,9 +30,9 @@ Observability rules default to **SHOULD** (the right metrics, spans, and probes 
 
 ### Boundaries (cross-reference, do not duplicate)
 
-- **Logging and audit trail** are already `security-backend.md` §BE-LOG (`BE-LOG-005`/`BE-LOG-006`) — this set cites them and covers the rest of observability. `BE-LOG-006` already requires a correlation ID to cross every hop and reach every log line, in any primitive; `TRACE` extends it rather than restating it, on *what* is carried — trace context across the boundary (`BE-TRACE-001`), the trace and span IDs on a log record (`BE-TRACE-003`). What is logged, and how, stays in §BE-LOG.
+- **Logging and audit trail** are already `security-backend.md` §BE-LOG — this set cites `BE-LOG-006` (and, below, `BE-LOG-008`) and covers the rest of observability. `BE-LOG-006` already requires a correlation ID to cross every hop and reach every log line, in any primitive; `TRACE` extends it rather than restating it, on *what* is carried — trace context across the boundary (`BE-TRACE-001`), the trace and span IDs on a log record (`BE-TRACE-003`). What is logged, and how, stays in §BE-LOG.
 - **Sensitive values in telemetry** are `security-backend.md` `BE-LOG-008` and `configuration-cross.md` `CFG-ENV-006` — `BE-METRIC-003` governs label cardinality only and points to `BE-LOG-008` for the values barred from labels whatever their cardinality, `BE-TRACE-002` points there for the values barred from span attributes, and `BE-HEALTH-001` cites `CFG-ENV-006` for redacting sensitive configuration values from a readiness response that reports dependency state.
-- **Operator-tunable values** (scrape intervals, probe intervals and timeouts) are `configuration-cross.md` `CFG-CONST-*` / `CFG-ENV-*` — these rules require the value to exist; the config rules govern how it is named and validated.
+- **Operator-tunable values** (the probe intervals and timeouts `BE-HEALTH-002` names) are `configuration-cross.md` `CFG-CONST-*` / `CFG-ENV-*`, which govern how they are named and validated; this set cites them rather than restating them.
 - **Platforms without a readiness hook** sit outside `BE-HEALTH-001`'s MUST: a service on a platform that offers no per-instance readiness hook (the rule's example is AWS Lambda) MAY omit the readiness signal, provided its spec or plan names the platform and states what stands in for readiness, or that nothing does. The exception turns on the platform, not on being serverless — a Cloud Run service accepts a readiness probe, so it commits to readiness as usual.
 
 ## Acceptance Criteria

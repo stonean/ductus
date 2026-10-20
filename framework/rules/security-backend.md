@@ -14,7 +14,7 @@ Projects without a backend need not opt out: `/{project}:analyze` loads every ru
 
 ### BE-AUTHN-001
 
-> Passwords MUST be hashed using a deliberately slow password-hashing algorithm before persistence — never encrypted, never stored in plaintext. Acceptable algorithms are Argon2id (preferred), scrypt, PBKDF2 (where FIPS compliance is required), and bcrypt only in a legacy system where neither Argon2id nor scrypt is available. General-purpose hashes (MD5, SHA-1, SHA-2 family, SHA-3 family) MUST NOT be used for password storage even when salted.
+> Passwords MUST be hashed using a deliberately slow password-hashing algorithm before persistence — never encrypted, never stored in plaintext. Acceptable algorithms are Argon2id (preferred), scrypt, PBKDF2 (where FIPS compliance is required), and bcrypt only in a legacy system where neither Argon2id nor scrypt is available, with input beyond bcrypt's 72-byte limit handled rather than silently truncated. General-purpose hashes (MD5, SHA-1, SHA-2 family, SHA-3 family) MUST NOT be used for password storage even when salted.
 
 **Rationale:** Encryption is reversible — a database breach plus key access yields plaintext credentials. One-way hashing is irreversible by design. Argon2id and scrypt are memory-hard (RFC 9106, RFC 7914), which raises the cost of cracking on custom hardware. The OWASP Password Storage Cheat Sheet says bcrypt should only be used for password storage in legacy systems where Argon2 and scrypt are not available, and notes that most implementations read at most 72 bytes of input — so a longer password is silently truncated unless the design handles it, while NIST SP 800-63B-4 requires the verifier to check the entire submitted password. PBKDF2 is iteration-hard only, but NIST SP 800-63B-4 permits it and it has FIPS 140–validated implementations, so the cheat sheet makes it the choice where FIPS 140 compliance is required.
 
@@ -368,7 +368,7 @@ Projects without a backend need not opt out: `/{project}:analyze` loads every ru
 
 ### BE-INPUT-006
 
-> Inputs that contribute to resource consumption (request bodies, file uploads, list lengths, page sizes, regex inputs) MUST have explicit upper bounds. Request content over its size limit MUST be rejected with `413 Content Too Large` (RFC 9110 §15.5.14; formerly "Payload Too Large"); a parameter over its maximum (a list length, a page size) MUST be rejected with a `400`-class client error or, for a page size, clamped to the documented maximum (`BE-PAGE-001` names it). Non-HTTP protocols MUST use their equivalent rejection.
+> Inputs that contribute to resource consumption (request bodies, file uploads, list lengths, page sizes, regex inputs) MUST have explicit upper bounds. Request content over its size limit MUST be rejected with `413 Content Too Large` (RFC 9110 §15.5.14; formerly "Payload Too Large"); a parameter over its maximum (a list length, a page size) MUST be rejected with a `400`-class client error or, for a page size, clamped to the documented maximum (`api-backend.md` `BE-PAGE-001` names it). Non-HTTP protocols MUST use their equivalent rejection.
 
 **Rationale:** Unbounded inputs enable denial-of-service through memory exhaustion, payload bombs, and ReDoS. Bounds turn DoS attempts into clean rejections.
 
@@ -510,7 +510,7 @@ Projects without a backend need not opt out: `/{project}:analyze` loads every ru
 
 ### BE-DATA-004
 
-> Encryption MUST use AES-256 (or AES-128 minimum) with an authenticated mode (GCM, CCM) or ChaCha20-Poly1305. Custom cryptographic primitives MUST NOT be used. ECB mode MUST NOT be used for any payload longer than one block.
+> Encryption MUST use AES-256 (or AES-128 minimum) with an authenticated mode (GCM, CCM) or ChaCha20-Poly1305. Custom cryptographic primitives MUST NOT be used, and ECB mode MUST NOT be used. A non-AEAD construction other than ECB that legacy compatibility forces (decrypting existing data, interoperating with a peer that supports nothing else) MAY remain where the spec justifies the deviation.
 
 **Rationale:** Proven algorithms have undergone extensive analysis. Custom implementations contain vulnerabilities by default. Authenticated modes (AEAD) prevent tampering as well as preserving confidentiality. ECB reveals patterns in ciphertext (the canonical "ECB Penguin").
 
@@ -602,11 +602,11 @@ Projects without a backend need not opt out: `/{project}:analyze` loads every ru
 
 ### BE-API-001
 
-> All HTTP responses MUST include a documented set of security headers covering: HSTS, content-type options, frame protection, referrer policy, content security policy (for HTML responses), and cache control for sensitive responses.
+> All HTTP responses MUST include a documented set of security headers covering: HSTS, content-type options, frame protection, referrer policy, content security policy (for HTML responses), cache control for sensitive responses, and an explicit content type (with a charset on HTML).
 
 **Rationale:** Each header converts the browser into a layered defense. HSTS prevents downgrade attacks; `X-Content-Type-Options` prevents MIME sniffing; frame-ancestors prevents clickjacking; `Referrer-Policy` controls Referer leakage; CSP defends against XSS and mixed content; `Cache-Control: no-store` instructs compliant private and shared HTTP caches not to store sensitive responses. CSP `frame-ancestors`, introduced in CSP Level 2, is the modern clickjacking defense and obsoletes `X-Frame-Options`, which `BE-API-012` keeps as an advisory fallback for browsers that do not implement it.
 
-**Verification:** Any spec or plan that introduces an HTTP response (especially HTML) MUST commit to setting these headers, ideally at the framework or reverse-proxy layer for uniform coverage. `/{project}:analyze` flags response specs that omit any of the headers above, and specifically flags HTML-serving specs without a CSP commitment. The minimum required headers and their values:
+**Verification:** Any spec or plan that introduces an HTTP response (especially HTML) MUST commit to setting these headers, ideally at the framework or reverse-proxy layer for uniform coverage. `/{project}:analyze` flags response specs that omit any of the headers listed below, and specifically flags HTML-serving specs without a CSP commitment. The minimum required headers and their values:
 
 | Header | Value | Applies to |
 | --- | --- | --- |
@@ -615,7 +615,7 @@ Projects without a backend need not opt out: `/{project}:analyze` loads every ru
 | `Content-Security-Policy` | Project-defined CSP including `frame-ancestors` (see `FE-CSP-002`/`FE-CSP-003`) | HTML responses |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` (or stricter) | All responses |
 | `Cache-Control` | `no-store` | Authenticated and sensitive-data responses |
-| `Content-Type` | Explicit type with charset (e.g., `text/html; charset=UTF-8`) | All responses |
+| `Content-Type` | The response's actual media type, with a charset on HTML (e.g., `text/html; charset=UTF-8`) | All responses |
 
 Submitting a domain to the HSTS preload list commits it — and, because the list requires `includeSubDomains`, every subdomain — to HTTPS in browsers that ship the list; hstspreload.org warns that inclusion cannot easily be undone, since a removal takes months to reach users. Operators MUST confirm long-term HTTPS coverage of every subdomain before enabling `preload`.
 
@@ -749,7 +749,7 @@ The browser-facing headers for HTML responses beyond this minimum are specified 
 
 **Rationale:** These endpoints are easy to publish by accident. Importing Go's `net/http/pprof` registers its handlers under `/debug/pprof/` on the default mux for that side effect alone, so a service that serves the default mux publicly serves them too, and its CPU-profile handler profiles the process for as long as the caller asks (30 seconds by default). Spring Boot exposes only its health endpoint over HTTP by default and warns that endpoints may contain sensitive information, so widening the exposure without securing them publishes it — a heap dump captures the contents of the process's heap, including whatever secrets and personal data it held. The OWASP REST Security Cheat Sheet advises against exposing management endpoints to the internet, recommends serving them on separate ports or hosts restricted by firewall rules or access lists, and requires a strong authentication mechanism, such as multi-factor, where they must be internet-reachable. `BE-API-007` covers the management interfaces of infrastructure services; this rule covers the endpoints the application itself serves.
 
-**Verification:** Any spec or plan that introduces metrics, profiling, debug, or framework management endpoints, or `specs/system.md` where the deployment's listeners are described, MUST state where each such endpoint is served (port, host, network) and how access to it is restricted. `/{project}:analyze` flags specs that serve these endpoints on the public listener without authentication, that enable a framework's management endpoints over HTTP without naming their access control, or that register debug or profiling handlers on the router that serves public traffic.
+**Verification:** Any spec or plan that introduces metrics, profiling, debug, or framework management endpoints, or `specs/system.md` where the deployment's listeners are described, MUST state where each such endpoint is served (port, host, network) and how access to it is restricted. `/{project}:analyze` flags specs that serve these endpoints on the public listener without authentication, that enable a framework's management endpoints over HTTP without naming their access control, or that register debug or profiling handlers, without authentication, on the router that serves public traffic.
 
 **Source:** OWASP REST Security Cheat Sheet (Management endpoints), Spring Boot reference documentation — Endpoints (Actuator), Go `net/http/pprof` package documentation
 
@@ -843,7 +843,7 @@ The browser-facing headers for HTML responses beyond this minimum are specified 
 
 **Rationale:** If an attacker gains application database access, logs stored in the same database can be modified to cover tracks. Separation plus access control escalate the attacker effort required to hide.
 
-**Verification:** Any spec or plan covering logging infrastructure or `system.md` MUST commit to log storage separation and access control.
+**Verification:** Any spec or plan covering logging infrastructure or `system.md` MUST commit to log storage separation, restricted access, and monitoring of access to the logs. `/{project}:analyze` flags logging-infrastructure specs that store logs with application data, leave log access unrestricted, or omit how access to the logs is monitored.
 
 **Source:** OWASP Logging Cheat Sheet
 
@@ -889,7 +889,7 @@ The browser-facing headers for HTML responses beyond this minimum are specified 
 
 ### BE-LOG-008
 
-> Trace span attributes and events, metric labels, error-reporting payloads, and propagated trace context (W3C `tracestate` and OpenTelemetry baggage entries) MUST NOT carry the values `BE-LOG-002` bars from logs (passwords, authentication tokens, session IDs, keys, one-time and recovery codes, raw PII, full payment card numbers). A value needed for correlation MUST be redacted, truncated, or replaced by an opaque internal identifier before it is recorded or propagated.
+> Trace span attributes and events, metric labels, error-reporting payloads, and propagated trace context (W3C `tracestate` and OpenTelemetry baggage entries) MUST NOT carry the values `BE-LOG-002` bars from logs (among them passwords, authentication tokens, session IDs, keys, one-time and recovery codes, security-question answers, raw PII, and full payment card numbers). A value needed for correlation MUST be redacted, truncated, or replaced by an opaque internal identifier before it is recorded or propagated.
 
 **Rationale:** Traces, metrics, and error reports travel the same aggregation pipelines as logs — often to a third-party vendor, with broader access and longer retention than the data they describe — so `BE-LOG-002`'s reasoning applies unchanged, but that rule names logs only. OpenTelemetry's semantic conventions record full URLs including the query string, with only a handful of signature parameters redacted by default, and warn that capturing all request headers is a security risk; its "Handling sensitive data" guidance says instrumentation libraries may collect and expose sensitive information and places the responsibility on the implementer. Propagated context leaves the system in request headers: W3C Trace Context forbids personally identifiable information in `tracestate` and advises keeping confidential data out of it, and OpenTelemetry warns that baggage items can reach unintended recipients such as third-party APIs. `observability-backend.md` `BE-METRIC-003` bounds label cardinality for cost reasons; this rule bars sensitive values whatever their cardinality.
 

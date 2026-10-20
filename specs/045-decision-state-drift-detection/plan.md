@@ -77,9 +77,9 @@ A block emits **one finding per link**, not one per tell. `does not exist yet` m
 
 ### An unreadable target produces no finding, but is not silent
 
-AC9 forbids escalating an unknown to a defect: a link whose target state cannot be read produces no finding. Left there, the family would emit zero findings both when it examined every link and found nothing and when it could not read a single target — the exact shape `QUAL-CLAIM-001` forbids (its Statement in `framework/rules/quality-cross.md`).
+AC9 forbids escalating an unknown to a defect: a link whose target state cannot be read produces no finding. Left there, the family would emit zero findings both when it examined every link and found nothing and when it could not read a single target — the exact shape `QUAL-CLAIM-001` forbids (`framework/rules/quality-cross.md:39`).
 
-`CheckArtifactsResult` therefore gains a `skipped: Vec<SkippedTarget>` field recording `{family, reason, path}` for every target a family could not examine. The rule's own Verification names "a `skipped` list" among the explicitly compliant shapes (`QUAL-CLAIM-001`'s Verification in `quality-cross.md`), so this is the sanctioned form rather than an invention.
+`CheckArtifactsResult` therefore gains a `skipped: Vec<SkippedTarget>` field recording `{family, reason, path}` for every target a family could not examine. The rule's own Verification names "a `skipped` list" among the explicitly compliant shapes (`quality-cross.md:43`), so this is the sanctioned form rather than an invention.
 
 `clean` keeps its existing meaning — no findings — so no existing consumer changes. The host renders `skipped` in the report's **Informational** tier, which is where `analyze.md:169-174` already puts cross-service unknowns (`unregistered`, `not-checked-out`, `status-unreadable`): informational, not a finding. Same contract, second surface.
 

@@ -16,7 +16,7 @@ section: "Edge Cases"
 
 ## Edge Cases
 
-- A fraction or a non-numeric string does not parse as a whole number, so it is malformed under `CFG-ENV-008`. Zero or a negative number parses but falls outside the documented range (at least 1 byte), so it is out of range under `CFG-ENV-005`, which also requires fail-fast naming the setting, the value, and the violated bound. Both halt alike.
+- A fraction or a non-numeric string does not parse as a whole number, so it is malformed under `CFG-ENV-008`. Zero or a negative number parses but falls outside the documented range (at least 1 byte). `CFG-ENV-005` requires an out-of-range environment variable to fail fast, naming the setting, the value, and the violated bound; it names environment variables only, and this file-based key is held to the same treatment. Both halt alike.
 - The markdown-only path halts the same way, naming the same setting and value.
 
 ## Open Questions

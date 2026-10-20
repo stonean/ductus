@@ -44,7 +44,7 @@ Projects without a backend need not opt out: `/{project}:analyze` loads every ru
 
 ### BE-METRIC-004
 
-> Latency SHOULD be recorded as a histogram, which aggregates across instances — with exponential buckets created dynamically at a chosen resolution, or with fixed buckets chosen to cover the expected latency range — and reported by percentile, not by a mean alone or by per-instance precomputed quantiles.
+> Latency SHOULD be recorded as a histogram, which aggregates across instances — with exponential buckets created dynamically at a chosen resolution, or with fixed buckets chosen to cover the expected latency range — and reported by percentile, not by a mean alone or, on a service that runs more than one instance, by per-instance precomputed quantiles.
 
 **Rationale:** A mean hides the slow tail users actually feel: the Google SRE book's example is a web service averaging 100 ms at 1,000 requests per second in which 1% of requests might easily take 5 seconds. Precomputed quantiles (a client-side summary) are computed per instance and cannot be meaningfully combined — averaging per-instance quantiles yields statistically nonsensical values — so a fleet-wide percentile needs a histogram. Recording the distribution is what makes the "duration" of `BE-METRIC-001` able to show a tail regression.
 

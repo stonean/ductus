@@ -30,7 +30,7 @@ A rule file is a markdown document with the following structure:
 
 - **Surface** is `Backend` or `Frontend`.
 - **ID prefix** is the `{surface}-{category}` pair the section's rules share (`BE-AUTHN`, `FE-XSS`), so the heading carries the abbreviation a reader needs to cite a rule under it.
-- **Category Name** is the section's human-readable title in title case (`Authentication`, `Input Validation`, `Cross-Site Scripting Prevention`). It **names the same category** as the spec's `## Two Rule Files` list and the abbreviation table below, but is **not byte-identical** to either: the shipped headings title-case the words and several are longer than the spec's label (`Cross-Site Scripting Prevention` for `Cross-site scripting (XSS)`, `Secure Client-Side Storage` for `Secure storage`, `Content Security Policy` for `Content security`). The binding identity is the **abbreviation**, not the prose title — an earlier wording of this bullet claimed the titles matched the spec's list "verbatim", which was never true of 13 of the 15.
+- **Category Name** is the section's human-readable title in title case (`Authentication`, `Input Validation`, `Cross-Site Scripting Prevention`). It **names the same category** as the spec's `## Two Rule Files` list and the abbreviation table below, but is **not byte-identical** to either: the shipped headings title-case the words and several are longer than the spec's label (`Cross-Site Scripting Prevention` for `Cross-site scripting (XSS)`, `Secure Client-Side Storage` for `Secure storage`, `Content Security Policy` for `Content security`). The binding identity is the **abbreviation**, not the prose title — an earlier wording of this bullet claimed the titles matched the spec's list "verbatim", which was never true of 12 of the 15.
 - **Rule ID** appears as a level-3 heading and is the only level-3 heading content (no surrounding text). This makes rules grep-able by ID.
 
 ## Rule ID format
@@ -66,6 +66,8 @@ A rule file is a markdown document with the following structure:
 | FE | Sensitive data handling | `PII` |
 
 `AUTHN` (authentication) and `AUTHZ` (authorization) are deliberately distinct abbreviations to prevent collision; both surfaces use `AUTHN` for their authentication-related rules. `AUTHN` and `DEPS` are shared across surfaces (`BE-AUTHN` and `FE-AUTHN` are different namespaces). The full ID always includes the surface prefix to disambiguate.
+
+The table is the category set of the two security files, `security-backend.md` and `security-frontend.md`. Every other rule file declares its ID prefix and categories in its own header (constitution §rules): `api-backend.md` declares `SCHEMA`, `APIVER`, and the rest; `configuration-cross.md` uses the `CFG` prefix registered in `specs/017-derive-dont-ask/data-model.md`, and `quality-cross.md` the `QUAL` prefix registered in `specs/036-quality-cross-rules/data-model.md`. Every rule ID, in any file, follows one generic grammar: an uppercase prefix of two to five letters, an `[A-Z][A-Z0-9]*` category abbreviation, and a zero-padded sequence number of three or four digits. That is the shape `check-rule-ids` resolves citations against.
 
 ## Rule entry fields
 

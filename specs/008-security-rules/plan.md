@@ -29,7 +29,7 @@ Each rule is a level-3 heading whose text is the Rule ID, followed by a statemen
 
 **Rationale:** Encryption is reversible — a database breach plus key access yields plaintext credentials. One-way hashing is irreversible by design. …
 
-**Verification:** Any spec or plan that introduces credential storage (search keywords: `password`, `credential`, `auth`, `login`) MUST name the hashing algorithm. Salting and cost/iteration parameters MUST be specified or referenced, at or above the OWASP Password Storage Cheat Sheet minimums (…). … `/{project}:analyze` flags persistence paths that store a password as a plain or salted single-pass digest (…), plain `crypt`, or "encrypted", that name parameters below those minimums, or that omit the algorithm question entirely.
+**Verification:** Any spec or plan that introduces credential storage (search keywords: `password`, `credential`, `auth`, `login`) MUST name the hashing algorithm. Salting and cost/iteration parameters MUST be specified or referenced, at or above the OWASP Password Storage Cheat Sheet minimums (…). … `/{project}:analyze` flags persistence paths that store a password as a plain or salted single-pass digest (…), plain `crypt`, or "encrypted", that choose bcrypt without stating that Argon2id and scrypt are unavailable, that name parameters below those minimums, or that omit the algorithm question entirely.
 ```
 
 This format is grep-friendly (`grep '^### BE-' framework/rules/security-backend.md` returns the rule index), human-readable, and parseable by the analyze prompt without a custom format. Categories are level-2 headings; the Rule ID heading sits under its category.
@@ -84,7 +84,7 @@ Trade-off: comprehensive coverage would require 80+ rules with careful threat mo
 
 `/{project}:analyze` is a markdown-reading agent prompt; it does not run static analysis. For each MUST/MUST NOT rule, the rule's **Verification** field tells it *how* to check the rule against the project's specs/plans/`system.md`. Verification fields are written as instructions to an agent, not as code patterns:
 
-> Verification: Any spec or plan that introduces credential storage (search keywords: `password`, `credential`, `auth`, `login`) MUST name the hashing algorithm. Salting and cost/iteration parameters MUST be specified or referenced, at or above the OWASP Password Storage Cheat Sheet minimums (…). … `/{project}:analyze` flags persistence paths that store a password as a plain or salted single-pass digest (…), plain `crypt`, or "encrypted", that name parameters below those minimums, or that omit the algorithm question entirely.
+> Verification: Any spec or plan that introduces credential storage (search keywords: `password`, `credential`, `auth`, `login`) MUST name the hashing algorithm. Salting and cost/iteration parameters MUST be specified or referenced, at or above the OWASP Password Storage Cheat Sheet minimums (…). … `/{project}:analyze` flags persistence paths that store a password as a plain or salted single-pass digest (…), plain `crypt`, or "encrypted", that choose bcrypt without stating that Argon2id and scrypt are unavailable, that name parameters below those minimums, or that omit the algorithm question entirely.
 
 This delegates the per-rule logic to the rule itself — adding a new rule does not require modifying the command. Its job is to:
 

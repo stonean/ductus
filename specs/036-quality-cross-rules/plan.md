@@ -32,7 +32,7 @@ A small data-model documenting the `QUAL` surface (rule-ID prefix; cross-cutting
 
 ### Manifest wiring — `framework/bootstrap/ductus.md`
 
-Add `| \`framework/rules/quality-cross.md\` | \`specs/rules/quality-cross.md\` |` to the `### ductus-owned shared files` table, slotted between `performance-frontend.md` and `security-backend.md` (AC #7). The §Shared Files "Rule-file surface filter" note was planned to have its count bumped from **six** to **seven** entries; implementation instead **removed** the hard-coded number, which had already drifted (it read six while seven files were listed) and which nothing machine-checks — eliminating the drift class rather than correcting one instance. Task 3 carries the decision; do not reintroduce a count here. The `-cross.md` suffix means 024's loader auto-selects it for every stack and 033's surface filter keeps it unconditionally — no change needed in either; the wiring is purely the manifest row + count.
+Add `| \`framework/rules/quality-cross.md\` | \`specs/rules/quality-cross.md\` |` to the `### ductus-owned shared files` table, in alphabetical order after `performance-frontend.md` (AC #7). The §Shared Files "Rule-file surface filter" note was planned to have its count bumped from **six** to **seven** entries; implementation instead **removed** the hard-coded number, which had already drifted (it read six while seven files were listed) and which nothing machine-checks — eliminating the drift class rather than correcting one instance. Task 3 carries the decision; do not reintroduce a count here. The `-cross.md` suffix means 024's loader auto-selects it for every stack and 033's surface filter keeps it unconditionally — no change needed in either; the wiring is purely the manifest row.
 
 ## Affected Files
 
