@@ -41,7 +41,7 @@ Add `| \`framework/rules/quality-cross.md\` | \`specs/rules/quality-cross.md\` |
 | `framework/rules/quality-cross.md` | Create | The `quality-cross` rule set with `QUAL-STUB-001` |
 | `specs/036-quality-cross-rules/data-model.md` | Create | Register the `QUAL` surface + `STUB` category; reference 008's schema |
 | `scripts/lint-rule-ids.sh` | Modify | Add `QUAL` to the surface allowlist regex + error message + source-of-truth comment |
-| `framework/bootstrap/ductus.md` | Modify | Add the manifest row (between `performance-frontend` and `security-backend`); the surface-filter note's hard-coded rule-file count was removed rather than bumped (see Manifest wiring) |
+| `framework/bootstrap/ductus.md` | Modify | Add the manifest row (in alphabetical order, after `performance-frontend`); the surface-filter note's hard-coded rule-file count was removed rather than bumped (see Manifest wiring) |
 
 `.claude/commands/*` are unaffected — no command source changes (the bootstrap `ductus.md` is not generated into `.claude/`).
 
