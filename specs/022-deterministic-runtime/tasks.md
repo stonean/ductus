@@ -27,6 +27,7 @@ BE-DEPS-006 (rewritten 2026-10-19) asks a plan covering CI or build tooling to c
 - [ ] Pin the versions of cargo-zigbuild and cargo-cyclonedx that runtime-release.yml installs, and of each tool taiki-e/install-action installs
 - [ ] Add an update process for the pins (Dependabot or Renovate for github-actions) and teach scripts/check-runtime-currency.sh to read a SHA-pinned dtolnay/rust-toolchain
 - [ ] State the pinning and its update process in plan.md's runtime.yml and Release workflow sections
+- [ ] Pin the shipped adopter template framework/templates/ci/adopter-generators.yml the same way, and state the pinning and its update process in 017's plan (§CI safety net): 017's analysis of 2026-10-20 routed its BE-DEPS-006 finding here, and 017 stays blocking until this lands
 
 - **Done when**: analyze's BE-DEPS-006 assessment of 022's plan passes, and every workflow references its actions and installed tools immutably
 
