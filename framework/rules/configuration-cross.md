@@ -32,11 +32,11 @@ Cross-cutting (`-cross.md`) rule files load for every stack: `[rules] surfaces` 
 
 ### CFG-CONST-003
 
-> Operator-tunable values (timeouts, retry counts, batch sizes, thresholds, rate limits, expiry durations) MUST be backed by a named constant or an environment variable. They MUST NOT appear as bare literals in business logic.
+> Operator-tunable values (timeouts, retry counts, batch sizes, thresholds, rate limits, expiry durations) MUST be backed by a named constant or by a configuration value declared per `CFG-ENV-001` — an environment variable, a configuration-file key, or a command-line flag. They MUST NOT appear as bare literals in business logic.
 
 **Rationale:** Bare literals scattered across the codebase are invisible to operators, hard to audit, and easy to leave inconsistent during tuning. A single named source of truth makes the value findable, changeable, and auditable.
 
-**Verification:** Any spec or plan that introduces operator-tunable behavior MUST commit to a named constant or env var for each value. `/{project}:analyze` flags plan affected-files snippets that show numeric or string literals of operator-tunable shape (durations, counts, thresholds, rate limits) without a constant or env var lookup. Ordinary literals used for local logic — loop indices, intermediate calculations, string formatting within a function — are out of scope.
+**Verification:** Any spec or plan that introduces operator-tunable behavior MUST commit to a named constant or a configuration value for each value. `/{project}:analyze` flags plan affected-files snippets that show numeric or string literals of operator-tunable shape (durations, counts, thresholds, rate limits) without a constant or configuration lookup. Ordinary literals used for local logic — loop indices, intermediate calculations, string formatting within a function — are out of scope.
 
 **Source:** Martin Fowler, *Refactoring* (2nd ed.), "Replace Magic Literal" (formerly "Replace Magic Number with Symbolic Constant")
 
@@ -78,7 +78,7 @@ Cross-cutting (`-cross.md`) rule files load for every stack: `[rules] surfaces` 
 
 **Rationale:** Unvalidated config produces partial-failure modes that surface only at first use of the value, often deep in a request path. Fail-fast at startup turns a confusing intermittent error into an obvious deployment-time failure. An empty value is the common disguise of a missing one — a `FOO=` line in an env file, or a templated value that rendered blank — and a presence check that accepts it passes the deployment through to that same first-use failure. A required key missing from a configuration file is the same defect reached through another source: in the Fail Fast article's worked example, a typo in the configuration file leaves `maxConnections` absent, and a reader that returns a default for it lets the system run on into slowdowns that take days to trace, where failing names the property and the file it was not found in. That reader treats the key as optional; this rule applies once the key is declared required (`CFG-ENV-001`), which is the article's fix. A present but malformed value is `CFG-ENV-008`; an out-of-range one is `CFG-ENV-005`.
 
-**Verification:** Any spec or plan that introduces a required configuration value — an environment variable, a configuration-file key, or a command-line flag — MUST commit to startup-time validation that treats an absent or empty value as missing — at every source a multi-source value is read from — and names the failing setting, and for a file key the file, in its error message. `/{project}:analyze` flags plans that introduce required configuration values without a startup-validation step.
+**Verification:** Any spec or plan that introduces a required configuration value — an environment variable, a configuration-file key, or a command-line flag — MUST commit to startup-time validation that treats an absent or empty value as missing — at every source a multi-source value is read from — and names the failing setting, and for a file key the file, in its error message — and, for a value read from several sources, each source checked. `/{project}:analyze` flags plans that introduce required configuration values without a startup-validation step.
 
 **Source:** Jim Shore, "Fail Fast" (IEEE Software 21(5), 2004); dotenv README (parsing rules: `EMPTY=` becomes an empty string, not an unset variable)
 
@@ -95,7 +95,7 @@ Cross-cutting (`-cross.md`) rule files load for every stack: `[rules] surfaces` 
 
 **Verification:** Any spec or plan that introduces a time-valued env var MUST commit to one of the two patterns. For unit-in-value, the loader MUST use a duration parser that rejects bare non-zero numbers; for unit-in-name, both the env var name and the default constant name MUST carry the unit suffix. `/{project}:analyze` flags plans that propose `*_TIMEOUT`, `*_INTERVAL`, `*_DELAY`, `*_TTL`, etc. without committing to one of the two patterns.
 
-**Source:** ISO 80000-3 (quantities and units — space and time); Yaron Minsky, "Make illegal states unrepresentable" ("Effective ML Revisited", Jane Street, 2011)
+**Source:** ISO 80000-3 (quantities and units — space and time); Yaron Minsky, "Make illegal states unrepresentable" ("Effective ML Revisited", Jane Street, 2011); Spring Boot, "Externalized Configuration" (a unit-less `Duration` value uses milliseconds as the default unit unless `@DurationUnit` says otherwise); Go, `time.ParseDuration` (accepts `0`, rejects a non-zero number with `missing unit in duration`)
 
 ### CFG-ENV-005
 
@@ -131,7 +131,7 @@ Cross-cutting (`-cross.md`) rule files load for every stack: `[rules] surfaces` 
 
 > Every configuration value — whether read from an environment variable, a configuration file, or a command-line flag — MUST be parsed into its declared type (integer, boolean, enumerated member, duration, URL, list) at startup. A value that is present but fails to parse MUST cause fail-fast — exit non-zero with an error naming the setting and the offending value (redacted per `CFG-ENV-006` when the setting is sensitive) — and MUST NOT silently fall back to the default constant or be coerced to a zero, empty, or `false` value.
 
-**Rationale:** JavaScript's `parseInt` returning `NaN` for `abc` and `30` for `30s`, `Number("")` returning `0`, a discarded `strconv.Atoi` error (which comes with a `0`), or a boolean parser that reads every string other than `true` as false (Java's `Boolean.parseBoolean`) turns an operator's typo or blank value into silently different behavior — the default, a zero, or the opposite of what was meant — with nothing to say the setting was ignored. `CFG-ENV-003` catches a missing value and `CFG-ENV-005` an out-of-range one; this rule closes the remaining gap, a value that is present but malformed. Parsing at the boundary also means the rest of the code handles a typed value and never re-parses a string.
+**Rationale:** JavaScript's `parseInt` returning `NaN` for `abc` and `30` for `30s`, `Number("")` returning `0`, a discarded `strconv.Atoi` error (which comes with a `0`), or a boolean parser that reads every string other than a case-insensitive `true` as false (Java's `Boolean.parseBoolean`) turns an operator's typo or blank value into silently different behavior — the default, a zero, or the opposite of what was meant — with nothing to say the setting was ignored. `CFG-ENV-003` catches a missing value and `CFG-ENV-005` an out-of-range one; this rule closes the remaining gap, a value that is present but malformed. Parsing at the boundary also means the rest of the code handles a typed value and never re-parses a string.
 
 **Verification:** Any spec or plan that introduces a configuration value MUST name its type and commit to a startup parse that fails fast on a malformed value. `/{project}:analyze` flags plans that describe falling back to the default when a value fails to parse, and flags affected-files snippets that discard a parse error, use a parser that yields `NaN`, zero, or `false` instead of an error, or use one that stops at the first invalid character and returns what it read so far.
 

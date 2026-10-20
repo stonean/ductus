@@ -433,3 +433,11 @@ Done when: this spec's artifacts have no `title:` or `tags:` frontmatter; valida
 - [x] Lints, audit suite, and rule-corpus tests pass
 
 - **Done when**: Both questions are resolved and applied, and 017 is re-reviewed back to done.
+
+### 41. Which command-line flags are configuration values (follow-on to task 39)
+
+- [ ] Owner answers the flag-scope question in scenarios/required-config-values-from-any-source.md
+- [ ] Apply the answer to configuration-cross.md and data-model.md §Rule set, fetching any external claim
+- [ ] Lints, audit suite, and rule-corpus tests pass
+
+- **Done when**: The question is resolved and applied, and 017 is re-reviewed back to done.

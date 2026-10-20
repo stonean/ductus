@@ -97,7 +97,7 @@ Same as security rules. Once an ID is assigned, the rule retains that ID for lif
 
 - `CFG-CONST-001` (MUST) — a value used by more than one module lives in one centralized location idiomatic to the project's language, not duplicated across modules
 - `CFG-CONST-002` (MUST) — a constant used by one module lives within that module (its own constants file, or the top of the file that uses it), not in the shared location
-- `CFG-CONST-003` (MUST) — every operator-tunable value (timeout, retry count, batch size, threshold, rate limit, expiry duration) is backed by a named constant or an environment variable, never a bare literal in business logic
+- `CFG-CONST-003` (MUST) — every operator-tunable value (timeout, retry count, batch size, threshold, rate limit, expiry duration) is backed by a named constant or by a configuration value declared per `CFG-ENV-001`, never a bare literal in business logic
 - `CFG-CONST-004` (MUST) — a tunable value's valid-range bounds are named constants defined alongside its default constant
 
 ### CFG-ENV namespace (Environment and configuration values category)
