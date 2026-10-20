@@ -45,15 +45,28 @@ The stderr readers share one record of the lines already written, so a key is wa
 | `framework/bootstrap/ductus-procedure.md` | Modify | Post-Scaffolding Output names unknown keys |
 | `framework/commands/status.md` | Modify | The rendering reference gains the unknown-keys callout |
 | `framework/commands/review.md` | Modify | Rule-file selection names unknown `[rules]` and `[review]` keys |
-| `framework/commands/clarify.md`, `framework/commands/plan.md`, `framework/commands/analyze.md` | Modify | The size check's markdown-only path names unknown `[artifacts]` keys; `/analyze` renders them as notices |
+| `framework/commands/clarify.md` | Modify | The size check's markdown-only path names unknown `[artifacts]` keys |
+| `framework/commands/plan.md` | Modify | The size check's markdown-only path names unknown `[artifacts]` keys |
+| `framework/commands/analyze.md` | Modify | The same, and the size check's notices are rendered as such |
 | `README.md` | Modify | The `.ductus/config.toml` section documents the store for adopters |
 | `specs/019-config-decisions/data-model.md` | Create | The conventions every section follows |
 | `runtime/src/schema/config_keys.rs` | Create | The registry of recognized keys and the unknown-key report (022's surface) |
 | `runtime/src/primitives/discover_rule_files.rs` | Modify | Unknown-key notices for `[rules]` and `[review]` (022's surface) |
 | `runtime/src/primitives/dashboard.rs` | Modify | `config.unknown-keys` and its callout (022's surface) |
 | `runtime/src/primitives/check_artifact_size.rs` | Modify | Unknown-key notices for `[artifacts]` (063's surface) |
-| `runtime/src/host.rs`, `runtime/src/schema/paths.rs`, `runtime/src/primitives/resolve_constitutions.rs`, `runtime/src/primitives/resolve_references.rs`, `runtime/src/primitives/derive_references.rs`, `runtime/src/primitives/check_orphaned_references.rs` | Modify | The stderr warning for the section each reads, and a test holding its keys to the registry (022's surface) |
-| `runtime/src/schema/primitives.rs`, `runtime/src/mcp/server.rs` | Modify | `DashboardConfig.unknown_keys`, and the three tool descriptions (022's surface) |
+| `runtime/src/host.rs` | Modify | The `[host]` stderr warning, and a test holding its keys to the registry (022's surface) |
+| `runtime/src/schema/paths.rs` | Modify | The `[paths]` stderr warning and registry test (022's surface) |
+| `runtime/src/primitives/resolve_constitutions.rs` | Modify | The `[constitutions]` stderr warning (022's surface) |
+| `runtime/src/schema/constitutions.rs` | Modify | Registry test for the constitution entry's fields (022's surface) |
+| `runtime/src/primitives/resolve_references.rs` | Modify | The `[services]` stderr warning (022's surface) |
+| `runtime/src/primitives/derive_references.rs` | Modify | The `[services]` stderr warning (022's surface) |
+| `runtime/src/schema/services.rs` | Modify | Registry test for the service entry's fields (022's surface) |
+| `runtime/src/primitives/check_orphaned_references.rs` | Modify | The `[migrations]` stderr warning and registry test (022's surface) |
+| `runtime/src/schema/primitives.rs` | Modify | `DashboardConfig.unknown_keys` (022's surface) |
+| `runtime/src/mcp/server.rs` | Modify | The three tool descriptions (022's surface) |
+| `runtime/src/schema/mod.rs` | Modify | The registry module (022's surface) |
+| `runtime/tests/config_unknown_keys.rs` | Create | Every stderr reader names its section's unknown keys, and a broken stderr pipe never fails the run |
+| `runtime/tests/derive_references_golden.rs` | Modify | `derive-references` warns once on stderr |
 | `.github/workflows/runtime.yml` | Modify | `framework/bootstrap/ductus.md` triggers the runtime suite, whose registry test reads it |
 
 ## Trade-offs
