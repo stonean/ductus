@@ -29,6 +29,7 @@ use std::path::Path;
 
 use serde::Deserialize;
 
+use crate::schema::config_keys;
 use crate::schema::paths;
 
 /// Default `cli-config-dir` when the resolved config file's `[host]` block
@@ -108,6 +109,7 @@ impl Host {
     fn load_host_block(repo: &Path) -> Option<HostBlock> {
         let toml_path = paths::config_path(repo);
         let content = std::fs::read_to_string(&toml_path).ok()?;
+        config_keys::warn_unknown_keys(&toml_path, &content, &["host"]);
         match toml::from_str::<HostFile>(&content) {
             Ok(parsed) => parsed.host,
             Err(err) => {
@@ -223,6 +225,21 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
     use super::*;
     use tempfile::TempDir;
+
+    /// The shared registry declares every key this reader reads, so none of
+    /// them is reported as unknown (spec 019).
+    #[test]
+    fn the_registry_recognizes_every_key_this_reader_reads() {
+        use crate::schema::config_keys::{fields_of, unrecognized};
+        assert_eq!(
+            unrecognized(&[], fields_of::<HostFile>()),
+            [] as [String; 0]
+        );
+        assert_eq!(
+            unrecognized(&["host"], fields_of::<HostBlock>()),
+            [] as [String; 0]
+        );
+    }
 
     fn tmp_repo(name: &str) -> TempDir {
         tempfile::Builder::new().prefix(name).tempdir().unwrap()

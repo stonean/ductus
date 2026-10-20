@@ -18,14 +18,16 @@
 //!   the configurable spec-root directory name (spec 040), and the
 //!   three-tier `CONFIG_CHAIN` / `SESSION_CHAIN` resolution ladders themselves.
 //!
-//! Three registries also live here as the single source of truth for their
+//! Four registries also live here as the single source of truth for their
 //! respective closed sets: [`registry`] (primitive names), `status` (spec
-//! lifecycle statuses), and [`severity`] (the three finding-tier
-//! vocabularies). `status` is crate-internal; `registry` is public because
+//! lifecycle statuses), [`severity`] (the three finding-tier
+//! vocabularies), and [`config_keys`] (the keys each `ductus`-owned section
+//! of the project config recognizes, spec 019). `status` is crate-internal; `registry` is public because
 //! `main.rs` is a separate crate and its CLI-parity test has to name the
 //! canonical set — see that module's docs — and `severity` is public because
 //! its types appear in the public finding shapes.
 
+pub mod config_keys;
 pub mod constitutions;
 pub mod extensions;
 pub mod paths;

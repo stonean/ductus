@@ -26,6 +26,10 @@ on:
       # edit to a rule file is an edit to their subject. Without this path a
       # rules-only change never runs them.
       - 'framework/rules/**'
+      # src/schema/config_keys.rs holds the installer's §Project Configuration
+      # to the registry of recognized config keys (spec 019), so an edit to
+      # that section is an edit to the test's subject.
+      - 'framework/bootstrap/ductus.md'
   push:
     branches:
       - main
@@ -36,6 +40,7 @@ on:
       - '.github/workflows/runtime-release.yml'
       - 'scripts/audit/review-freshness.sh'
       - 'framework/rules/**'
+      - 'framework/bootstrap/ductus.md'
 
 permissions:
   contents: read

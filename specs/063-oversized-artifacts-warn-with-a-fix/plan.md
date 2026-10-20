@@ -45,6 +45,8 @@ That change is **breaking** under `BE-COMPAT-001`: the `check-artifact-size` res
 
 A config file that does not parse as TOML is an operational error, as it is for `discover-rule-files` and every other config reader: the project's configuration is broken for every command, and a size check is not the place to paper over that.
 
+A key in `[artifacts]` that the shared config-key registry (`runtime/src/schema/config_keys.rs`, 022's `config-readers-name-unknown-keys`) does not recognize — `read-size-byte` for `read-size-bytes` — is named in a notice rather than dropped, and the check runs at the threshold the recognized keys give (`scenarios/an-unknown-artifacts-key-is-named.md`, for spec 019's `CFG-ENV-012` decision). The notice is a new member of `notices`, not a new field, so the result's shape is unchanged; a malformed `read-size-bytes` still halts before any notice is returned.
+
 There is no key that disables the check (spec, Resolved Questions).
 
 ### The fixes, and their effect on a `done` spec

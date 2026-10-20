@@ -28,6 +28,7 @@ use crate::primitives::{
     ANALYSIS_RECORD_FILE, PrimitiveError, Result, flatten_line, read_text, rel_path,
     scenario_name_cmp,
 };
+use crate::schema::config_keys;
 use crate::schema::paths;
 use crate::schema::primitives::{
     ArtifactFix, ArtifactKind, CheckArtifactSizeArgs, CheckArtifactSizeResult, DecisionsState,
@@ -97,7 +98,7 @@ pub fn run(args: &CheckArtifactSizeArgs, repo: &Path) -> Result<CheckArtifactSiz
         });
     }
     let status = read_status(&feature_dir, &root, &args.feature)?;
-    let threshold = resolve_threshold(repo)?;
+    let (threshold, mut notices) = resolve_threshold(repo)?;
 
     let mut skipped = Vec::new();
     let mut examined: u32 = 0;
@@ -121,7 +122,6 @@ pub fn run(args: &CheckArtifactSizeArgs, repo: &Path) -> Result<CheckArtifactSiz
         }
     }
 
-    let mut notices = Vec::new();
     let decisions = decide(&feature_dir, repo, &mut oversized, &mut notices);
     Ok(CheckArtifactSizeResult {
         feature: args.feature.clone(),
@@ -435,7 +435,10 @@ fn effect_text(effect: OnDone) -> &'static str {
     }
 }
 
-/// The threshold to check at.
+/// The threshold to check at, and a notice for each key in `[artifacts]`
+/// the shared registry does not recognize (spec 019): a mistyped
+/// `read-size-byte` beside an unset `read-size-bytes` is named rather than
+/// leaving the default to apply without a word.
 ///
 /// The file is found through the config ladder every reader uses. The key is
 /// read as a raw value so a wrong type is named by setting and value rather
@@ -443,24 +446,37 @@ fn effect_text(effect: OnDone) -> &'static str {
 /// with [`PrimitiveError::InvalidReadSize`], and so does a non-table
 /// `artifacts`, since it cannot hold the key. Only an unset key, or an absent
 /// file, means the default (`CFG-ENV-008`).
-fn resolve_threshold(repo: &Path) -> Result<ReadSizeThreshold> {
-    let default = ReadSizeThreshold {
-        bytes: DEFAULT_READ_SIZE_BYTES,
-        source: ThresholdSource::Default,
-    };
-    let path = paths::config_path(repo);
+fn resolve_threshold(repo: &Path) -> Result<(ReadSizeThreshold, Vec<String>)> {
+    let (path, name) = paths::resolve_config(repo);
     if !path.is_file() {
-        return Ok(default);
+        return Ok((DEFAULT_THRESHOLD, Vec::new()));
     }
     let content = read_text(&path)?;
     let parsed: toml::Table = toml::from_str(&content).map_err(|source| PrimitiveError::Toml {
         path: path.clone(),
         source,
     })?;
+    let threshold = configured_threshold(&parsed, path)?;
+    let notices = config_keys::unknown_keys_in(&parsed, &[SECTION])
+        .iter()
+        .map(|key| key.notice(name))
+        .collect();
+    Ok((threshold, notices))
+}
+
+/// The threshold when `[artifacts] read-size-bytes` is unset.
+const DEFAULT_THRESHOLD: ReadSizeThreshold = ReadSizeThreshold {
+    bytes: DEFAULT_READ_SIZE_BYTES,
+    source: ThresholdSource::Default,
+};
+
+/// The threshold `parsed`, the config file at `path`, sets, or the default
+/// when it sets none.
+fn configured_threshold(parsed: &toml::Table, path: PathBuf) -> Result<ReadSizeThreshold> {
     let (setting, value) = match parsed.get(SECTION) {
-        None => return Ok(default),
+        None => return Ok(DEFAULT_THRESHOLD),
         Some(toml::Value::Table(section)) => match section.get(KEY) {
-            None => return Ok(default),
+            None => return Ok(DEFAULT_THRESHOLD),
             Some(value) => {
                 if let toml::Value::Integer(bytes) = value
                     && let Ok(bytes) = u64::try_from(*bytes)
@@ -539,6 +555,39 @@ mod tests {
             assert_eq!(result.threshold.bytes, 50_000);
             assert_eq!(result.notices, [] as [String; 0]);
         }
+    }
+
+    #[test]
+    fn a_mistyped_key_is_named_and_the_default_applies() {
+        // `read-size-byte` for `read-size-bytes` would otherwise leave the
+        // check at the default without a word (spec 019); a section the
+        // primitive does not read is not its to report.
+        let result = check(&repo(Some(
+            "[artifacts]\nread-size-byte = 80000\n[rules]\nsurface = []\n",
+        )))
+        .unwrap();
+        assert_eq!(result.threshold.source, ThresholdSource::Default);
+        assert_eq!(result.threshold.bytes, 50_000);
+        assert_eq!(
+            result.notices,
+            [
+                "unknown config key: [artifacts] read-size-byte (.ductus/config.toml) — this version of ductus does not read it"
+            ]
+        );
+        // Beside a valid setting, the setting still applies.
+        let result = check(&repo(Some(
+            "[artifacts]\nread-size-bytes = 120000\nread-size = 1\n",
+        )))
+        .unwrap();
+        assert_eq!(result.threshold.bytes, 120_000);
+        assert_eq!(result.notices.len(), 1, "{:?}", result.notices);
+    }
+
+    #[test]
+    fn the_registry_recognizes_every_key_this_reader_reads() {
+        use crate::schema::config_keys::unrecognized;
+        assert_eq!(unrecognized(&[], &[SECTION]), [] as [String; 0]);
+        assert_eq!(unrecognized(&[SECTION], &[KEY]), [] as [String; 0]);
     }
 
     #[test]

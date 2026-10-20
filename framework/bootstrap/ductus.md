@@ -631,6 +631,14 @@ files = [
 # Maintained by /ductus; do not edit by hand.
 last_applied = "rule-files-relocate"
 
+# The runtime binary the project supplies itself (spec 048), used instead of
+# acquiring the pinned release (§Runtime acquisition, Branch 1). Absent means
+# /ductus acquires it. Listed here for schema reference; uncomment and edit to
+# use.
+#
+# [runtime]
+# path = "tools/ductus"
+
 # Consumed by /{project}:clarify, /{project}:plan and /{project}:analyze (spec
 # 063), through the check-artifact-size primitive. The size, in bytes, above
 # which a spec artifact (spec.md, plan.md, tasks.md, data-model.md, each
@@ -645,6 +653,14 @@ last_applied = "rule-files-relocate"
 #
 # [artifacts]
 # read-size-bytes = 50000
+
+# Consumed by /{project}:review (not /ductus itself). `tech-stack-verified`
+# skips the tech-stack alignment check on every run until the key is cleared;
+# the first successful check sets it, with the operator's confirmation. Listed
+# here for schema reference; uncomment and edit to use.
+#
+# [review]
+# tech-stack-verified = true
 
 # Consumed by /{project}:review (not /ductus itself). Excludes rule files from
 # /{project}:review's selection regardless of stack detection. The `reason`
@@ -672,6 +688,17 @@ last_applied = "rule-files-relocate"
 # repo = "https://github.com/acme/governance"
 # path = "../governance"
 # description = "Acme engineering house rules"
+
+# Cross-service references (spec 030) — the services whose specs this
+# project's specs link to, written by /{project}:link. Alias-keyed, like
+# `[constitutions]`: `repo` is identity only and never fetched, the local
+# `path` is read for status, and `description` is optional. Listed here for
+# schema reference.
+#
+# [services.api]
+# repo = "https://github.com/acme/api"
+# path = "../api"
+# description = "Public HTTP API"
 ```
 
 `host.project` — the project's slash-command namespace, written by `/ductus` into a managed block (`# ductus (host)` line-prefix marker) in committed `.ductus/config.toml` on every run (idempotent — re-runs update rather than append). The per-contributor `cli-config-dir` (the agent's config-dir name) is **not** committed: teammates on one project may each use a different agent, so `/ductus` writes it to the gitignored `.ductus/session.toml` instead (§Instructions step 7). The runtime reads `project` from `.ductus/config.toml` and `cli-config-dir` from the session file at `ductus exec` time to resolve the installed command file — `{cli-config-dir}/commands/{project}/<name>.md` for `claude-style`, then `{cli-config-dir}/command/{project}/<name>.md` for `opencode`, then `{cli-config-dir}/prompts/{project}-<name>.md` for `pi` (§Derived values **Command/skill path**; the runtime tries all three, so any layout resolves); all three fall back to `.claude` / the repo directory basename when absent. Adopters whose layout matches the defaults (this repo, anyone on Claude Code with the conventional `.claude/commands/<project>/`) never observe the difference; Auggie / OpenCode adopters and anyone with a non-standard layout do.
@@ -691,6 +718,8 @@ last_applied = "rule-files-relocate"
 `constitutions.<alias>` — the shared-constitution registry (spec 055). Each `[constitutions.<alias>]` table names a `repo` (the canonical repository URL, recorded verbatim as identity and navigation only — **never fetched**) and a local `path` (the checkout, relative to the repo root or absolute; `..` is permitted because a sibling checkout is the normal case), plus an optional `description` saying what the source governs — no resolution behavior depends on it, and it is rendered wherever `ductus` names the source (`/{project}:target`'s loaded and skipped reports, a review's **Unexamined governance** section), so an alias is never the only thing an operator has to go on. The document read from a resolved checkout is `{path}/constitution.md`; nothing else in the checkout is read, and a registered checkout's own config is never read, so registration is not transitive. More than one entry may be registered, and every registered entry is loaded, in alias order. Where a registered constitution and the shipped one disagree, the constitution's §governance-precedence says which governs — and that nothing enforces it. The full schema is declared in [`specs/055-shared-constitution/data-model.md`](https://github.com/stonean/ductus/blob/main/specs/055-shared-constitution/data-model.md).
 
 **Validating the registry.** `/ductus` validates each entry when it reads the config, and the two failure modes are deliberately different severities. A **malformed entry halts** the run per `CFG-ENV-008`, naming the offending alias and field: an alias that is not a bare TOML key (letters, digits, hyphens, underscores — no whitespace, dots, or quotes), a `repo` that is not URL-shaped (a scheme and a host — an scp-style git address such as `git@github.com:acme/gov.git` carries no scheme and is written `ssh://git@github.com/acme/gov.git` instead), or a `path` that is empty, whitespace counting as empty because it is the same operator mistake and an empty `path` resolves to the repository root, where the run would report the operator's own config error as a missing document in their checkout. A **`path` that does not resolve only warns** — `/ductus` emits a one-line notice naming the alias and continues, exactly as `/{project}:link` treats a missing service checkout ("a missing checkout is the valid `not-checked-out` state, surfaced at resolution time, not a config error"). The asymmetry is the point: a malformed entry is a mistake in the project's own committed config and is always wrong, while an unresolved checkout is a machine-local state that is correct for any contributor who has not cloned the governance repository yet, and blocking on it would make the pipeline a hard dependency on someone else's repo state. Registration itself is a hand-edit — there is no `/{project}:link`-style command for it, matching that command's own rule that edits to an existing entry stay hand-edits.
+
+**Unknown keys.** Every section above is `ductus`-owned, and the keys shown are the ones its readers recognize — those and `[host] cli-config-dir`, which a project predating that key's move to the session file may still carry and which is read as a fallback. A key outside that set in an owned section — a typo such as `[rules] surface`, a key a newer `ductus` added, or a field an adopter adds to a `[[review.disabled-rule-files]]` entry — is never an error and is never silently dropped: it is reported by name, with its section and the file, as `unknown config key: [rules] surface (.ductus/config.toml) — this version of ductus does not read it`, and the run continues (spec 019, `CFG-ENV-012`). `/ductus` reports every unknown key in the sections it reads in its post-scaffolding summary; on the markdown-only path the host compares the file against the keys documented here, by hand, and reports the same lines. The commands that read a section report its unknown keys as they read it, and `/{project}:status` names every unknown key in the file. The retired `[workflows]` section (spec 043) is reported key by key until the `workflows-sunset` migration removes it. A section `ductus` does not own is never examined, and neither is the session file, whose top level seeds the exec walker's context.
 
 The conventions every section shares — a flat layout with no umbrella namespace, validation per key at the point of use, and how a new section is added — are declared in [`specs/019-config-decisions/data-model.md`](https://github.com/stonean/ductus/blob/main/specs/019-config-decisions/data-model.md).
 

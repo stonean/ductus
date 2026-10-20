@@ -36,7 +36,7 @@ Returns one structured payload:
 - `config` — object describing `.ductus/config.toml` review state:
   - `present` — boolean; `true` when `.ductus/config.toml` exists at repo root, `false` otherwise
   - `disabled-rule-files` — array of basenames from `[[review.disabled-rule-files]]`; empty when the section is absent or the array is empty
-- Fields added since: `rendered-markdown`, `inbox-standing`, and each spec's `scenario-open-question-count` and `scenarios-with-questions` (022's data model, the `dashboard` addendum); each spec's `folds-into` and `fold-target-missing` (spec 051); and the session peek's `session-identity`, `session-source`, `session-notices` and `session-unreadable` (spec 062).
+- Fields added since: `rendered-markdown`, `inbox-standing`, and each spec's `scenario-open-question-count` and `scenarios-with-questions` (022's data model, the `dashboard` addendum); each spec's `folds-into` and `fold-target-missing` (spec 051); the session peek's `session-identity`, `session-source`, `session-notices` and `session-unreadable` (spec 062); and `config`'s `unknown-keys`, every key in a `ductus`-owned section that no reader recognizes, which the rendering names in an `unknown config keys:` callout (`config-readers-name-unknown-keys`, for spec 019).
 
 Reasons (the human-readable `reason` field on each disabled-rule-files entry) are not surfaced — the dashboard is a glance, not a pretty-printer; `.ductus/config.toml` remains the source of truth for full context, matching the existing prose rule.
 

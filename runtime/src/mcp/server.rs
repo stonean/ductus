@@ -603,7 +603,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "discover-rule-files",
-        description = "Select rule files for /ductus:review by suffix, [rules] surfaces, and disabled-rule-files."
+        description = "Select rule files for /ductus:review by suffix, [rules] surfaces, and disabled-rule-files, with the notice lines to emit, among them one per unknown key in [rules] or [review]."
     )]
     async fn discover_rule_files(
         &self,
@@ -720,7 +720,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "dashboard",
-        description = "Single-call pipeline-state surface for /{project}:status. Returns the per-spec inventory (status, deps, tags, open-question count, artifact existence, scenarios count, blocked-by), the repo-wide tags-union, the config review-state summary (.ductus/config.toml), the standing inbox (outstanding count and oldest item's date, rendered as an Inbox: line on every run), and the optional session target resolved for this process (spec 062): its own target when it has a session identity (DUCTUS_SESSION or a platform session id), else the shared default (.ductus/session.toml, falling back to .govern/session.toml then the legacy root pre-migration). An identified process also gets session-identity, session-source and session-notices, rendered under the target line. The read is a peek: it pins no adoption and consumes no notice, so the notices shown are the ones the process's next command delivers."
+        description = "Single-call pipeline-state surface for /{project}:status. Returns the per-spec inventory (status, deps, tags, open-question count, artifact existence, scenarios count, blocked-by), the repo-wide tags-union, the config summary (.ductus/config.toml: disabled rule files, and every key in a ductus-owned section that no reader recognizes), the standing inbox (outstanding count and oldest item's date, rendered as an Inbox: line on every run), and the optional session target resolved for this process (spec 062): its own target when it has a session identity (DUCTUS_SESSION or a platform session id), else the shared default (.ductus/session.toml, falling back to .govern/session.toml then the legacy root pre-migration). An identified process also gets session-identity, session-source and session-notices, rendered under the target line. The read is a peek: it pins no adoption and consumes no notice, so the notices shown are the ones the process's next command delivers."
     )]
     async fn dashboard(
         &self,
@@ -906,7 +906,7 @@ impl GovRuntimeServer {
 
     #[tool(
         name = "check-artifact-size",
-        description = "Measure a feature's spec artifacts (spec.md, plan.md, tasks.md, data-model.md, and each scenario — never research.md, review.md or analysis.md) by their length on disk against the configured read size, `[artifacts] read-size-bytes` in .ductus/config.toml (default 50000 when unset; a value that is not a positive whole number, or a non-table `artifacts`, is an error naming the setting, the value and the file, never the default). Each artifact over it is reported with its size, read-page count, the fixes for its kind and, on a done spec, whether each reopens it, a warning saying it may not be read in one call, the artifact-size finding message /{project}:analyze records, and whether a stored discard in analysis.md still covers it (a discard of the same path at a read-page count at least this one's), with that discard's key. A missing artifact is not reported; one that cannot be opened is listed in `skipped`, never as clean. Read-only. Used by /{project}:clarify, /{project}:plan and /{project}:analyze (spec 063)."
+        description = "Measure a feature's spec artifacts (spec.md, plan.md, tasks.md, data-model.md, and each scenario — never research.md, review.md or analysis.md) by their length on disk against the configured read size, `[artifacts] read-size-bytes` in .ductus/config.toml (default 50000 when unset; a value that is not a positive whole number, or a non-table `artifacts`, is an error naming the setting, the value and the file, never the default). Each artifact over it is reported with its size, read-page count, the fixes for its kind and, on a done spec, whether each reopens it, a warning saying it may not be read in one call, the artifact-size finding message /{project}:analyze records, and whether a stored discard in analysis.md still covers it (a discard of the same path at a read-page count at least this one's), with that discard's key. A missing artifact is not reported; one that cannot be opened is listed in `skipped`, never as clean. A key in `[artifacts]` other than read-size-bytes is named in `notices`. Read-only. Used by /{project}:clarify, /{project}:plan and /{project}:analyze (spec 063)."
     )]
     async fn check_artifact_size(
         &self,

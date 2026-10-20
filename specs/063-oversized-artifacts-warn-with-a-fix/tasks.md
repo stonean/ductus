@@ -95,9 +95,9 @@ Task 5's step-number sync rewrote 058's scenario `only-unreadable-targets-retain
 
 ## 13. An unknown [artifacts] key is named (CFG-ENV-012, for 019)
 
-- [ ] Implement the behavior described in `scenarios/an-unknown-artifacts-key-is-named.md`
-- [ ] check-artifact-size adds a notice naming each key in [artifacts] the shared registry does not recognize, and still runs at the threshold the recognized keys give
-- [ ] data-model.md's notices row names the notice
-- [ ] A test fails if a mistyped [artifacts] key is dropped without a notice
+- [x] Implement the behavior described in `scenarios/an-unknown-artifacts-key-is-named.md`
+- [x] check-artifact-size adds a notice naming each key in [artifacts] the shared registry does not recognize, and still runs at the threshold the recognized keys give
+- [x] data-model.md's notices row names the notice
+- [x] A test fails if a mistyped [artifacts] key is dropped without a notice
 
 - **Done when**: A mistyped [artifacts] key is named among check-artifact-size notices on every command that reads it, and 063 is re-reviewed back to done.

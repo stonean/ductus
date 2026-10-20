@@ -23,6 +23,7 @@ use crate::primitives::{
     PrimitiveError, Result, frontmatter_status, read_text, rel_path, resolve_path,
     split_frontmatter,
 };
+use crate::schema::config_keys;
 use crate::schema::paths;
 use crate::schema::primitives::{
     ReferenceOutcome, ResolutionRecord, ResolveReferencesArgs, ResolveReferencesResult,
@@ -104,6 +105,7 @@ pub(crate) fn load_services(repo: &Path) -> Result<Services> {
         return Ok(Services::default());
     }
     let content = read_text(&toml_path)?;
+    config_keys::warn_unknown_keys(&toml_path, &content, &["services"]);
     Services::from_toml_str(&content).map_err(|source| PrimitiveError::Toml {
         path: toml_path,
         source,

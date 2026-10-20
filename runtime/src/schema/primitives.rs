@@ -383,7 +383,8 @@ pub struct DiscoverRuleFilesResult {
     /// Selected rule-file basenames, sorted, after surface selection and the
     /// disabled-rule-files filter.
     pub selected: Vec<String>,
-    /// Ordered stdout notice lines to emit verbatim: unrecognized-suffix
+    /// Ordered stdout notice lines to emit verbatim: a line per unknown key
+    /// in `[rules]` and `[review]` (spec 019), then unrecognized-suffix
     /// warnings, then disabled-rule-file notices, then the closing
     /// `loading rule files: …` line.
     pub notices: Vec<String>,
@@ -1800,6 +1801,12 @@ pub struct DashboardConfig {
     /// Basenames from `[[review.disabled-rule-files]]`. Empty when the
     /// section is absent or its array is empty.
     pub disabled_rule_files: Vec<String>,
+    /// Every key in a `ductus`-owned section that no reader recognizes, as
+    /// `{location} {key}` — `[rules] surface`, or
+    /// `[[review.disabled-rule-files]] entry [0] approved-by` — with a key
+    /// that needs quoting quoted and escaped (spec 019). Empty when there are
+    /// none or the file is absent.
+    pub unknown_keys: Vec<String>,
 }
 
 /// Scenario-level detail returned when the session target names a scenario.

@@ -24,6 +24,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use crate::primitives::Result;
+use crate::schema::config_keys;
 use crate::schema::paths;
 use crate::schema::primitives::{
     CheckOrphanedReferencesArgs, CheckOrphanedReferencesResult, OrphanedReference,
@@ -419,9 +420,11 @@ fn covers(claimed: &str, target: &str) -> bool {
 /// bootstrap treats as null. It is never rendered as a migration name; the
 /// caller distinguishes it from an id by its emptiness.
 fn read_last_applied(repo: &Path) -> String {
-    let Ok(text) = std::fs::read_to_string(paths::config_path(repo)) else {
+    let path = paths::config_path(repo);
+    let Ok(text) = std::fs::read_to_string(&path) else {
         return String::new();
     };
+    config_keys::warn_unknown_keys(&path, &text, &["migrations"]);
     let Ok(parsed) = toml::from_str::<ConfigFile>(&text) else {
         return String::new();
     };
@@ -438,6 +441,21 @@ mod tests {
     use super::*;
     use std::fs;
     use tempfile::{TempDir, tempdir};
+
+    /// The shared registry declares every key this reader reads, so none of
+    /// them is reported as unknown (spec 019).
+    #[test]
+    fn the_registry_recognizes_every_key_this_reader_reads() {
+        use crate::schema::config_keys::{fields_of, unrecognized};
+        assert_eq!(
+            unrecognized(&[], fields_of::<ConfigFile>()),
+            [] as [String; 0]
+        );
+        assert_eq!(
+            unrecognized(&["migrations"], fields_of::<MigrationsSection>()),
+            [] as [String; 0]
+        );
+    }
 
     fn write(path: &Path, body: &str) {
         fs::create_dir_all(path.parent().unwrap()).unwrap();

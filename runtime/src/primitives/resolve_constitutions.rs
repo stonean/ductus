@@ -33,6 +33,7 @@
 use std::path::Path;
 
 use crate::primitives::{PrimitiveError, Result, read_text, rel_path, resolve_path};
+use crate::schema::config_keys;
 use crate::schema::constitutions::{Constitutions, ConstitutionsError};
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -112,6 +113,7 @@ fn load_constitutions(repo: &Path) -> Result<Constitutions> {
         return Ok(Constitutions::default());
     }
     let content = read_text(&toml_path)?;
+    config_keys::warn_unknown_keys(&toml_path, &content, &["constitutions"]);
     Constitutions::from_toml_str(&content).map_err(|source| match source {
         ConstitutionsError::Parse(source) => PrimitiveError::Toml {
             path: toml_path,

@@ -32,6 +32,8 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
+use crate::schema::config_keys;
+
 /// Default spec-root directory name when the project config does not configure
 /// one. Matches the framework's historical hardcoded value, so an adopter who
 /// never sets `[paths] specs-root` sees byte-for-byte identical behavior.
@@ -285,6 +287,7 @@ impl Paths {
     fn load_configured(base: &Path) -> Option<String> {
         let toml_path = config_path(base);
         let content = std::fs::read_to_string(&toml_path).ok()?;
+        config_keys::warn_unknown_keys(&toml_path, &content, &["paths"]);
         let parsed: PathsFile = match toml::from_str(&content) {
             Ok(parsed) => parsed,
             Err(err) => {
@@ -344,6 +347,21 @@ mod tests {
 
     use super::*;
     use tempfile::TempDir;
+
+    /// The shared registry declares every key this reader reads, so none of
+    /// them is reported as unknown (spec 019).
+    #[test]
+    fn the_registry_recognizes_every_key_this_reader_reads() {
+        use crate::schema::config_keys::{fields_of, unrecognized};
+        assert_eq!(
+            unrecognized(&[], fields_of::<PathsFile>()),
+            [] as [String; 0]
+        );
+        assert_eq!(
+            unrecognized(&["paths"], fields_of::<PathsBlock>()),
+            [] as [String; 0]
+        );
+    }
 
     fn tmp_repo() -> TempDir {
         tempfile::Builder::new()

@@ -23,6 +23,7 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 use crate::primitives::{PrimitiveError, Result, flatten_line, read_text};
+use crate::schema::config_keys::{self, UnknownKey};
 use crate::schema::paths;
 use crate::schema::primitives::{DiscoverRuleFilesArgs, DiscoverRuleFilesResult};
 
@@ -76,13 +77,13 @@ fn classify(basename: &str) -> Surface {
 pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFilesResult> {
     // Resolved once: the same probe backs both the read below and the
     // provenance tag in the disabled-rule-file notice.
-    let (config, config_name, config_path) = load_ductus_toml(repo)?;
+    let (config, unknown, config_name, config_path) = load_ductus_toml(repo)?;
     // Every entry is validated before any rule file is selected, so a
     // malformed one halts the run instead of leaving a partial selection.
     let disabled = validate_disabled_entries(config.review.as_ref(), &config_path)?;
     let (rules_dir_path, rules_dir_rel) = resolve_rules_dir(repo);
 
-    let mut notices: Vec<String> = Vec::new();
+    let mut notices: Vec<String> = unknown.iter().map(|key| key.notice(config_name)).collect();
     let mut selected: Vec<String> = Vec::new();
 
     if let Some(dir) = rules_dir_path {
@@ -291,6 +292,11 @@ fn validate_disabled_entries<'a>(
         .collect()
 }
 
+/// The two fields of a `[[review.disabled-rule-files]]` entry this primitive
+/// reads; the shared registry declares the same pair (spec 019).
+const FILE: &str = "file";
+const REASON: &str = "reason";
+
 /// One entry as a [`DisabledEntry`], or the problem naming the field that
 /// failed and the offending value, rendered as TOML on one line
 /// ([`rendered`]).
@@ -311,8 +317,8 @@ fn validate_disabled_entry(entry: &toml::Value) -> std::result::Result<DisabledE
             rendered(other)
         )),
     };
-    let file = string_field("file")?;
-    let reason = string_field("reason")?;
+    let file = string_field(FILE)?;
+    let reason = string_field(REASON)?;
     let length = reason.trim().chars().count();
     if length < MIN_REASON_LEN {
         return Err(format!(
@@ -380,27 +386,30 @@ fn apply_disabled_filter(
 }
 
 /// Parse the resolved config file, returning defaults when it is absent, plus
-/// the repo-relative name that resolution picked and its path. Returning both
+/// the unknown keys in the two sections this primitive reads, the
+/// repo-relative name that resolution picked, and its path. Returning the name
 /// here — rather than re-probing at render time — is what keeps the parsed
 /// content, its provenance tag and the path an error names from disagreeing
 /// across a concurrent migration.
-fn load_ductus_toml(repo: &Path) -> Result<(DuctusToml, &'static str, PathBuf)> {
+fn load_ductus_toml(repo: &Path) -> Result<(DuctusToml, Vec<UnknownKey>, &'static str, PathBuf)> {
     let (path, name) = paths::resolve_config(repo);
     if !path.is_file() {
-        return Ok((DuctusToml::default(), name, path));
+        return Ok((DuctusToml::default(), Vec::new(), name, path));
     }
     let content = read_text(&path)?;
     let parsed = toml::from_str(&content).map_err(|source| PrimitiveError::Toml {
         path: path.clone(),
         source,
     })?;
-    Ok((parsed, name, path))
+    let unknown = config_keys::unknown_keys_in_text(&content, &["rules", "review"]);
+    Ok((parsed, unknown, name, path))
 }
 
 /// Minimal `.ductus/config.toml` shape: the `[rules]` and `[review]` sections
-/// this primitive consults. Unknown keys are accepted. Resolution is the
-/// newest-wins ladder in `schema::paths` (`.ductus/` → `.govern/` → legacy
-/// root), so an older tier still parses into this same shape.
+/// this primitive consults. A key outside the shared registry is reported as a
+/// notice, never an error (spec 019). Resolution is the newest-wins ladder in
+/// `schema::paths` (`.ductus/` → `.govern/` → legacy root), so an older tier
+/// still parses into this same shape.
 #[derive(Deserialize, Default)]
 struct DuctusToml {
     #[serde(default)]
@@ -785,6 +794,49 @@ mod tests {
         let tmp = setup(THREE, Some(toml));
         let result = run(&args(&[]), tmp.path()).unwrap();
         assert!(!result.selected.contains(&"quality-cross.md".to_string()));
+        // Reported as informational all the same (spec 019).
+        assert_eq!(
+            result.notices[0],
+            "unknown config key: [[review.disabled-rule-files]] entry [0] approved-by (.govern.toml) — this version of ductus does not read it"
+        );
+    }
+
+    #[test]
+    fn a_mistyped_key_is_named_ahead_of_the_other_notices() {
+        // `surface` for `surfaces` would otherwise be dropped, and the
+        // selection fall back to stack detection without a word (spec 019).
+        let toml = "[rules]\nsurface = [\"backend\"]\n[review]\ndisabled-rule-file = \"x\"\ntech-stack-verified = true\n[paths]\nroot = \"x\"\n";
+        let tmp = setup(THREE, Some(toml));
+        let result = run(&args(&["frontend"]), tmp.path()).unwrap();
+        assert_eq!(
+            result.notices,
+            [
+                "unknown config key: [rules] surface (.govern.toml) — this version of ductus does not read it",
+                "unknown config key: [review] disabled-rule-file (.govern.toml) — this version of ductus does not read it",
+                "loading rule files: accessibility-frontend.md, quality-cross.md",
+            ]
+        );
+    }
+
+    #[test]
+    fn the_registry_recognizes_every_key_this_reader_reads() {
+        use crate::schema::config_keys::{fields_of, unrecognized};
+        assert_eq!(
+            unrecognized(&[], fields_of::<DuctusToml>()),
+            [] as [String; 0]
+        );
+        assert_eq!(
+            unrecognized(&["rules"], fields_of::<RulesSection>()),
+            [] as [String; 0]
+        );
+        assert_eq!(
+            unrecognized(&["review"], fields_of::<ReviewSection>()),
+            [] as [String; 0]
+        );
+        assert_eq!(
+            unrecognized(&["review", "disabled-rule-files"], &[FILE, REASON]),
+            [] as [String; 0]
+        );
     }
 
     #[test]

@@ -75,6 +75,7 @@ use crate::primitives::spec_links::{
     harvestable_lines, has_unterminated_frontmatter, is_frontmatter_fence,
 };
 use crate::primitives::{Result, inline_code_spans, read_text, write_atomic};
+use crate::schema::config_keys;
 use crate::schema::paths;
 use crate::schema::primitives::{DeriveReferencesArgs, DeriveReferencesResult};
 use crate::schema::services::{self, Services};
@@ -186,6 +187,7 @@ fn load_registry(repo: &Path) -> BTreeMap<String, RegisteredService> {
     let Ok(content) = std::fs::read_to_string(&config_path) else {
         return BTreeMap::new();
     };
+    config_keys::warn_unknown_keys(&config_path, &content, &["services"]);
     let Ok(services) = Services::from_toml_str(&content) else {
         return BTreeMap::new();
     };

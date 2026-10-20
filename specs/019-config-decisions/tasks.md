@@ -42,10 +42,10 @@ Blocked on task 1: the store tests run against the migrated schema.
 
 ## 1. An unknown config key is named (CFG-ENV-012)
 
-- [ ] Implement the behavior described in `scenarios/an-unknown-config-key-is-named.md`
-- [ ] The runtime reports unknown keys in ductus-owned sections of .ductus/config.toml by name, section, and file, without failing the run (the session file is not examined; see the scenario's Resolved Questions) — `[artifacts]`, which 063's check-artifact-size reads, and `[review]` with the fields of each `[[review.disabled-rule-files]]` entry, which 025's discover-rule-files reads, among them (063's and 025's analyses routed their CFG-ENV-012 findings here)
-- [ ] Recognized keys are declared in one place shared by every reader of a section
-- [ ] A test fails if a mistyped key in a ductus-owned section is silently dropped
-- [ ] 019's data-model and framework/bootstrap/ductus.md §Project Configuration state the behavior, including for a host reading a ductus-owned section by hand on the markdown-only path
+- [x] Implement the behavior described in `scenarios/an-unknown-config-key-is-named.md`
+- [x] The runtime reports unknown keys in ductus-owned sections of .ductus/config.toml by name, section, and file, without failing the run (the session file is not examined; see the scenario's Resolved Questions) — `[artifacts]`, which 063's check-artifact-size reads, and `[review]` with the fields of each `[[review.disabled-rule-files]]` entry, which 025's discover-rule-files reads, among them (063's and 025's analyses routed their CFG-ENV-012 findings here)
+- [x] Recognized keys are declared in one place shared by every reader of a section
+- [x] A test fails if a mistyped key in a ductus-owned section is silently dropped
+- [x] 019's data-model and framework/bootstrap/ductus.md §Project Configuration state the behavior, including for a host reading a ductus-owned section by hand on the markdown-only path
 
 - **Done when**: A mistyped key in a ductus-owned config section is reported by name on the run that reads it, and 019 is re-reviewed back to done.

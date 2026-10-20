@@ -181,6 +181,22 @@ The numbered Instructions above are the deterministic path — the runtime's pri
      rule file <name> has unrecognized suffix — loading for all stacks; rename to -backend.md, -frontend.md, or -cross.md
      ```
 
+   Name every **unknown key** in the two sections this step reads, ahead
+   of every other line it emits (spec 019, `CFG-ENV-012`). `[rules]`
+   recognizes `surfaces`; `[review]` recognizes `tech-stack-verified` and
+   `disabled-rule-files`, each of whose entries recognizes `file` and
+   `reason`. Any other key — a typo such as `surface`, which would
+   otherwise be dropped while its setting silently took its default — is
+   reported and the run continues, one stdout line per key:
+
+   ```text
+   unknown config key: [rules] surface (<config-file>) — this version of ductus does not read it
+   unknown config key: [[review.disabled-rule-files]] entry [N] approved-by (<config-file>) — this version of ductus does not read it
+   ```
+
+   An entry carrying an unknown field still applies. A key that needs
+   quoting is shown quoted and escaped, as TOML writes it.
+
    Determine the **surface selection** for this run. Read `.ductus/config.toml`
    `[rules] surfaces` (see [Inputs](#inputs)):
 

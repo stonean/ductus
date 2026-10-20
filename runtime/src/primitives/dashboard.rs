@@ -35,6 +35,7 @@ use crate::primitives::{
     list_scenario_files, parse_feature_dir, read_spec, read_text, rel_path, section_lines,
     split_frontmatter,
 };
+use crate::schema::config_keys;
 use crate::schema::paths;
 use crate::schema::primitives::{
     DashboardArgs, DashboardConfig, DashboardResult, DashboardScenarioDetail,
@@ -362,6 +363,15 @@ fn render_callouts(view: &View<'_>, project: &str) -> String {
             "disabled rule files: {} ({config_name}) — {}",
             config.disabled_rule_files.len(),
             shown.join(", ")
+        ));
+    }
+    if !config.unknown_keys.is_empty() {
+        // Each entry is already one line: a key that needs it is quoted and
+        // escaped by the registry (`BE-INPUT-011`).
+        lines.push(format!(
+            "unknown config keys: {} ({config_name}) — {} — this version of ductus does not read them",
+            config.unknown_keys.len(),
+            config.unknown_keys.join(", ")
         ));
     }
     lines.push(render_inbox_line(view.inbox, project));
@@ -739,6 +749,7 @@ fn load_config(repo: &Path) -> Result<(DashboardConfig, &'static str)> {
             DashboardConfig {
                 present: false,
                 disabled_rule_files: Vec::new(),
+                unknown_keys: Vec::new(),
             },
             name,
         ));
@@ -755,10 +766,20 @@ fn load_config(repo: &Path) -> Result<(DashboardConfig, &'static str)> {
         .into_iter()
         .map(|d| d.file)
         .collect();
+    // The whole file's unknown keys, whichever command reads each section,
+    // so `/status` names every one (spec 019). Key names only: the struct
+    // parse above already reported a document that does not parse.
+    let unknown_keys = toml::from_str::<toml::Table>(&content)
+        .map(|table| config_keys::unknown_keys(&table))
+        .unwrap_or_default()
+        .iter()
+        .map(ToString::to_string)
+        .collect();
     Ok((
         DashboardConfig {
             present: true,
             disabled_rule_files,
+            unknown_keys,
         },
         name,
     ))
@@ -1494,6 +1515,84 @@ reason = "Deferred until v2 perf budget lands."
         assert_eq!(
             result.config.disabled_rule_files,
             vec!["accessibility-frontend.md", "performance-frontend.md"]
+        );
+    }
+
+    #[test]
+    fn every_unknown_key_in_the_file_is_named_in_one_callout() {
+        // Whichever command reads each section, `/status` names every key no
+        // reader recognizes, and leaves sections ductus does not own alone
+        // (spec 019).
+        let tmp = TempDir::new().unwrap();
+        let cfg_dir = tmp.path().join(".ductus");
+        std::fs::create_dir_all(&cfg_dir).unwrap();
+        std::fs::write(
+            cfg_dir.join("config.toml"),
+            "[rules]\nsurface = []\n[paths]\nspec-root = \"x\"\n[team]\nowner = \"x\"\n\
+             [[review.disabled-rule-files]]\nfile = \"a.md\"\nreason = \"r\"\napproved-by = \"ops\"\n\
+             [review]\n\"evil\\n- line\" = 1\n",
+        )
+        .unwrap();
+        write_spec(
+            tmp.path(),
+            "001-alpha",
+            "status: draft\ndependencies: []\n",
+            "",
+        );
+        let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
+        assert_eq!(
+            result.config.unknown_keys,
+            [
+                "[rules] surface",
+                "[paths] spec-root",
+                "[[review.disabled-rule-files]] entry [0] approved-by",
+                "[review] \"evil\\u000A- line\"",
+            ]
+        );
+        let callout = result
+            .rendered_markdown
+            .lines()
+            .find(|line| line.starts_with("unknown config keys:"))
+            .expect("the unknown-keys callout is rendered");
+        assert_eq!(
+            callout,
+            "unknown config keys: 4 (.ductus/config.toml) — [rules] surface, [paths] spec-root, \
+             [[review.disabled-rule-files]] entry [0] approved-by, [review] \"evil\\u000A- line\" \
+             — this version of ductus does not read them"
+        );
+        assert!(!result.rendered_markdown.contains("\n- line"));
+    }
+
+    #[test]
+    fn a_config_of_known_keys_renders_no_unknown_keys_callout() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(
+            tmp.path().join(".govern.toml"),
+            "[host]\nproject = \"p\"\n[review]\ntech-stack-verified = true\n[runtime]\npath = \"b\"\n",
+        )
+        .unwrap();
+        let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
+        assert_eq!(result.config.unknown_keys, [] as [String; 0]);
+        assert!(!result.rendered_markdown.contains("unknown config keys"));
+    }
+
+    #[test]
+    fn the_registry_recognizes_every_key_this_reader_reads() {
+        use crate::schema::config_keys::{fields_of, unrecognized};
+        assert_eq!(
+            unrecognized(&[], fields_of::<DuctusConfig>()),
+            [] as [String; 0]
+        );
+        assert_eq!(
+            unrecognized(&["review"], fields_of::<ReviewConfig>()),
+            [] as [String; 0]
+        );
+        assert_eq!(
+            unrecognized(
+                &["review", "disabled-rule-files"],
+                fields_of::<DisabledRuleFile>()
+            ),
+            [] as [String; 0]
         );
     }
 

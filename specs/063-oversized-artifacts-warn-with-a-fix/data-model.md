@@ -44,7 +44,7 @@ Every command that invokes `check-artifact-size` halts on it. A string or a frac
 | `oversized` | list of `OversizedArtifact` | Subjects over the threshold, in subject order. Empty means none over it, among the `examined`. |
 | `skipped` | list of `SkippedTarget` | Subjects that exist but could not be examined: family `artifact-size`, reason `artifact-unreadable`. A missing subject is never listed. |
 | `decisions` | `DecisionsState` | Whether `analysis.md`'s stored decisions were read. |
-| `notices` | list of strings | Human-readable notices every caller shows: the unreadable-decisions notice. An invalid threshold is the error above, never a notice. |
+| `notices` | list of strings | Human-readable notices every caller shows: a line for each key in `[artifacts]` the shared config-key registry does not recognize, `unknown config key: [artifacts] {key} ({config file}) — this version of ductus does not read it` (`scenarios/an-unknown-artifacts-key-is-named.md`, for spec 019), then the unreadable-decisions notice. An invalid threshold is the error above, never a notice. |
 | `path` | string | Repo-relative path of `spec.md`. |
 
 Subject order is `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, then the scenarios in the shared scenario ordering (case-insensitive, raw-byte tiebreak).

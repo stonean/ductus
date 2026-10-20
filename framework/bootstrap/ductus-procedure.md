@@ -340,6 +340,7 @@ After scaffolding, display:
 - For each scaffolded agent, the agent's `rules_file_note` from the registry
 - Hook installation status — one line: `pre-commit hook installed`, `pre-commit hook already wired up`, `pre-commit hook rewired: .githooks → {H}`, `pre-commit hook not wired: …` (the pre-059 outer-stub precondition, with its replacement line), `pre-commit hook skipped — .githooks/pre-commit does not invoke ductus-pre-commit; see manual integration snippet above`, or `pre-commit hook skipped — existing {husky|lefthook|pre-commit-py|core.hooksPath} detected; see manual integration snippet above`. When the spec-017 → spec-018 migration ran, append the migration summary line described in §Hook Installation > Migration from spec-017 hook (or the relevant recovery-branch warning if the rename was skipped or failed).
 - Any fetch failures encountered
+- Unknown config keys (if any) — one line per key outside what `ductus.md` §Project Configuration documents, in each section this run read: `unknown config key: [{section}] {key} (.ductus/config.toml) — this version of ductus does not read it` (§Project Configuration → **Unknown keys**)
 - Pinned `ductus.md` advisory (if applicable — see below)
 - Security audit summary (if applicable — see below)
 - ductus runtime tip (failed acquisition only — see below)

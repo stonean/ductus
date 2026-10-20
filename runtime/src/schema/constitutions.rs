@@ -260,6 +260,21 @@ mod tests {
 
     use super::*;
 
+    /// The shared registry declares every key this reader reads, so none of
+    /// them is reported as unknown (spec 019).
+    #[test]
+    fn the_registry_recognizes_every_key_this_reader_reads() {
+        use crate::schema::config_keys::{fields_of, unrecognized};
+        assert_eq!(
+            unrecognized(&[], fields_of::<ConstitutionsConfig>()),
+            [] as [String; 0]
+        );
+        assert_eq!(
+            unrecognized(&["constitutions", "acme"], fields_of::<ConstitutionEntry>()),
+            [] as [String; 0]
+        );
+    }
+
     #[test]
     fn parses_present_entries() {
         let toml = r#"

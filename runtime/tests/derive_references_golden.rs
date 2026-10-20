@@ -628,3 +628,44 @@ fn a_well_formed_corpus_reports_nothing_unparseable() {
     );
     assert_eq!(result["drift"], true);
 }
+
+/// A key no reader recognizes, in a section this primitive reads, is written
+/// to stderr by name, once, and the run still completes with its result
+/// (spec 019). That a second read of the section writes nothing more is
+/// `config_keys`' own unit test.
+#[test]
+fn an_unknown_config_key_warns_once_on_stderr() {
+    let dir = tempfile::tempdir().unwrap();
+    let specs = [
+        SpecFile {
+            slug: "001-a",
+            body: "---\nstatus: done\ndependencies: []\n---\n\n\
+                   [u](https://github.com/acme/api/specs/003-user/spec.md)\n",
+        },
+        SpecFile {
+            slug: "002-b",
+            body: "---\nstatus: done\ndependencies: []\n---\n\n\
+                   [u](https://github.com/acme/api/specs/004-team/spec.md)\n",
+        },
+    ];
+    let config = "[services.api]\nrepo = \"https://github.com/acme/api\"\npath = \"../api\"\nurl = \"x\"\n\
+                  [paths]\nspec-root = \"x\"\n";
+    build_fixture(dir.path(), "specs", &specs, Some(config), &[]);
+    let output = ductus_command(env!("CARGO_BIN_EXE_ductus"))
+        .arg("derive-references")
+        .current_dir(dir.path())
+        .output()
+        .expect("binary runs");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let result: serde_json::Value = serde_json::from_str(&stdout).expect("a JSON result");
+    assert_eq!(result["examined"], 2, "{result}");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    for key in ["[services.api] url", "[paths] spec-root"] {
+        let line = format!("ductus: unknown config key: {key} (");
+        assert_eq!(stderr.matches(&line).count(), 1, "{key}: {stderr}");
+    }
+    assert!(
+        stderr.contains("— this version of ductus does not read it"),
+        "{stderr}"
+    );
+}
