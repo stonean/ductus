@@ -1,6 +1,7 @@
 ---
 status: in-progress
 dependencies: []
+cross-spec-impact: [022-deterministic-runtime, 063-oversized-artifacts-warn-with-a-fix]
 next-criterion: 11
 ---
 

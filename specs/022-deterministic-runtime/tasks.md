@@ -38,3 +38,14 @@ BE-INPUT-004's Verification, rewritten 2026-10-19, asks for path canonicalizatio
 - [ ] State the commitment in plan.md
 
 - **Done when**: analyze's BE-INPUT-004 assessment of 022's plan passes, and a path that escapes the project through a symlink is refused
+
+## 5. Config readers name unknown keys (CFG-ENV-012, for 019)
+
+- [ ] Implement the behavior described in `scenarios/config-readers-name-unknown-keys.md`
+- [ ] A registry in runtime/src/schema/config_keys.rs declares every ductus-owned section and its recognized keys, entry fields and array-of-table fields, with [workflows] retired
+- [ ] discover-rule-files returns a notice per unknown key in [rules] and [review], and dashboard carries config.unknown-keys and renders a callout
+- [ ] Host::load, Paths::load, resolve-constitutions, resolve-references, derive-references and check-orphaned-references warn on stderr for the section each reads, once per process
+- [ ] A test per reader fails when it reads a key the registry lacks, and a test fails if a mistyped key in an owned section is dropped silently
+- [ ] data-model.md's discover-rule-files notices and dashboard config entries, and framework/commands/status.md's rendering reference, state the behavior
+
+- **Done when**: Every runtime reader of a ductus-owned config section reports an unknown key by name, the registry is the one declaration of recognized keys, and 022 is re-reviewed back to done.
