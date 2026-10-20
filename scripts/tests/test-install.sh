@@ -31,6 +31,7 @@
 #      next step says to export it to the agent
 #   T. an empty DUCTUS_REPO is the canonical origin, unannounced
 #   U. the pi agent installs .pi/prompts/ductus.md and writes no settings file
+#   V. every request carries a connect timeout and a total timeout
 #
 # Each assertion was shown to fail against an installer with its check
 # removed before it was trusted (spec 061, task 5).
@@ -70,16 +71,18 @@ trap 'rm -rf "$WORK"' EXIT
 #     failure when $STUB_LATEST_FAIL is set;
 #   - a GET of a raw bootstrap URL with -o/-w: a 404 when the URL's ref is
 #     $STUB_MISSING_REF, else a well-formed bootstrap and 200.
-# Every URL requested is appended to $STUB_LOG.
+# Every URL requested is appended to $STUB_LOG, and every invocation's whole
+# argument list to $STUB_LOG.argv, one line per request.
 mkdir -p "$WORK/bin"
 cat > "$WORK/bin/curl" <<'STUB'
 #!/bin/sh
+printf '%s\n' "$*" >> "$STUB_LOG.argv"
 head=0; out=""; fmt=""; url=""
 while [ $# -gt 0 ]; do
   case "$1" in
     -o) out="$2"; shift ;;
     -w) fmt="$2"; shift ;;
-    --proto) shift ;;
+    --proto|--connect-timeout|--max-time) shift ;;
     --*) ;;
     -*I*) head=1 ;;
     -*) ;;
@@ -341,6 +344,18 @@ if [ "$rc" -eq 0 ] && [ -f "$WORK/u-pi/.pi/prompts/ductus.md" ] \
   pass "U: pi installs .pi/prompts/ductus.md and nothing else"
 else
   fail "U: pi agent (rc=$rc): $(out u-pi)"
+fi
+
+# V. every request is bounded (BE-TIMEOUT-001): the default run makes both of
+# the installer's requests, and each carries --connect-timeout and --max-time
+# with a whole number of seconds.
+STUB_LOCATION="$TAG_URL/ductus-v99.0.0" run v-bounded
+argv="$WORK/v-bounded.log.argv"
+if [ "$rc" -eq 0 ] && [ "$(grep -c . "$argv")" -eq 2 ] \
+  && [ "$(grep -cE -- '--connect-timeout [0-9]+ .*--max-time [0-9]+ ' "$argv")" -eq 2 ]; then
+  pass "V: every request carries a connect timeout and a total timeout"
+else
+  fail "V: unbounded request (rc=$rc): $(cat "$argv")"
 fi
 
 echo

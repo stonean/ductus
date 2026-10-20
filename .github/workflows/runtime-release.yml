@@ -615,13 +615,34 @@ jobs:
 
       - name: Fetch the published installer and compare it with the tag's
         shell: bash
+        # A just-uploaded asset can answer 404 from the download host for a
+        # brief window, so the fetch is retried. Each attempt is bounded
+        # (BE-TIMEOUT-001) and the retries are bounded, with exponential
+        # backoff and full jitter (BE-RETRY-001): before attempt n+1 the job
+        # waits a random 0 to FETCH_BACKOFF_BASE_SECONDS * 2^(n-1) seconds.
+        # A GET of a release asset is idempotent, so retrying it is safe.
+        env:
+          FETCH_CONNECT_TIMEOUT_SECONDS: "10"
+          FETCH_MAX_TIME_SECONDS: "60"
+          FETCH_ATTEMPTS: "6"
+          FETCH_BACKOFF_BASE_SECONDS: "5"
         run: |
           set -euo pipefail
           url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/install.sh"
-          # --retry-all-errors covers the brief window in which a just-uploaded
-          # asset can answer 404 from the download host.
-          curl --proto '=https' --tlsv1.2 -fsSL --retry 5 --retry-delay 10 --retry-all-errors \
-            "$url" -o published-install.sh
+          attempt=1
+          until curl --proto '=https' --tlsv1.2 -fsSL \
+              --connect-timeout "$FETCH_CONNECT_TIMEOUT_SECONDS" --max-time "$FETCH_MAX_TIME_SECONDS" \
+              "$url" -o published-install.sh; do
+            if [ "$attempt" -ge "$FETCH_ATTEMPTS" ]; then
+              echo "::error::could not fetch $url in $attempt attempts"
+              exit 1
+            fi
+            ceiling=$(( FETCH_BACKOFF_BASE_SECONDS * (1 << (attempt - 1)) ))
+            delay=$(( RANDOM % (ceiling + 1) ))
+            echo "attempt $attempt failed; retrying in ${delay}s"
+            sleep "$delay"
+            attempt=$(( attempt + 1 ))
+          done
           if ! cmp -s published-install.sh install.sh; then
             echo "::error::$url differs from install.sh at ${GITHUB_REF_NAME}"
             exit 1

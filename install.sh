@@ -44,6 +44,14 @@ if [ "$repo" != "$CANONICAL_REPO" ]; then
   echo "ductus: source repository is $repo (from DUCTUS_REPO), not the canonical $CANONICAL_REPO" >&2
 fi
 
+# Every request the installer makes is bounded (BE-TIMEOUT-001): a connection
+# gets CONNECT_TIMEOUT_SECONDS and a whole request REQUEST_TIMEOUT_SECONDS,
+# after which curl fails and the installer halts naming the URL. The two
+# requests read a redirect's headers and the bootstrap, 137,600 bytes on
+# 2026-10-20, so a minute is ample on a slow link and short of a hang.
+CONNECT_TIMEOUT_SECONDS=10
+REQUEST_TIMEOUT_SECONDS=60
+
 # The first release whose bootstrap honors --ref. Every earlier release's
 # bootstrap fetches from main whatever ref it is given, so a tag below this
 # cannot be honored. framework/bootstrap/ductus.md carries the same value as
@@ -121,7 +129,9 @@ fi
 # prerelease — read from the redirect's Location header without following it.
 # There is no fallback to main: an unresolvable latest release halts.
 if [ -z "$ref" ] || [ "$ref" = "latest" ]; then
-  if ! headers="$(curl --proto '=https' --tlsv1.2 -sSI "$LATEST_URL" 2>&1)"; then
+  if ! headers="$(curl --proto '=https' --tlsv1.2 -sSI \
+    --connect-timeout "$CONNECT_TIMEOUT_SECONDS" --max-time "$REQUEST_TIMEOUT_SECONDS" \
+    "$LATEST_URL" 2>&1)"; then
     echo "ductus: could not resolve the latest release from $LATEST_URL — curl failed: $headers" >&2
     echo "ductus: the installer does not fall back to main; pass --ref=main or --ref=<tag> to choose a source explicitly" >&2
     exit 1
@@ -160,7 +170,9 @@ RAW="$REPO_RAW/$raw_ref/framework/bootstrap/ductus.md"
 
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
-if ! code="$(curl --proto '=https' --tlsv1.2 -sSL -o "$tmp" -w '%{http_code}' "$RAW")"; then
+if ! code="$(curl --proto '=https' --tlsv1.2 -sSL \
+  --connect-timeout "$CONNECT_TIMEOUT_SECONDS" --max-time "$REQUEST_TIMEOUT_SECONDS" \
+  -o "$tmp" -w '%{http_code}' "$RAW")"; then
   echo "ductus: could not fetch the bootstrap from $RAW — check network access" >&2
   exit 1
 fi

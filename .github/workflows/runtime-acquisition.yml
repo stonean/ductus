@@ -114,6 +114,13 @@ jobs:
 
       - name: Acquire, verify, install, execute
         shell: bash
+        # Each download is bounded (BE-TIMEOUT-001): a connection gets
+        # DOWNLOAD_CONNECT_TIMEOUT_SECONDS and a whole transfer
+        # DOWNLOAD_MAX_TIME_SECONDS, the values the adopter CI template uses
+        # for the same archive.
+        env:
+          DOWNLOAD_CONNECT_TIMEOUT_SECONDS: "30"
+          DOWNLOAD_MAX_TIME_SECONDS: "300"
         run: |
           set -euo pipefail
           version="${{ steps.pin.outputs.version }}"
@@ -128,8 +135,9 @@ jobs:
           # 1. Fetch the archive and its sidecar. A missing sidecar is a
           #    failure here, not a skip: unlike the source tarball, release
           #    assets always carry theirs.
-          curl -fsSL "${base}/${archive}" -o "$archive"
-          curl -fsSL "${base}/${archive}.sha256" -o "${archive}.sha256"
+          bounded=(--connect-timeout "$DOWNLOAD_CONNECT_TIMEOUT_SECONDS" --max-time "$DOWNLOAD_MAX_TIME_SECONDS")
+          curl -fsSL "${bounded[@]}" "${base}/${archive}" -o "$archive"
+          curl -fsSL "${bounded[@]}" "${base}/${archive}.sha256" -o "${archive}.sha256"
 
           # 2. Verify the digest BEFORE anything is installed.
           if command -v sha256sum >/dev/null 2>&1; then

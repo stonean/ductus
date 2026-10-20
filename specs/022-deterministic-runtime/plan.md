@@ -216,6 +216,13 @@ A separate workflow at `.github/workflows/runtime-release.yml`, triggered on tag
 4. Upload to a GitHub release created from the tag, using `softprops/action-gh-release`, pinned by commit SHA like every action (see **Pinned inputs** above).
 5. Generate a CycloneDX SBOM during the release build (`cargo cyclonedx --format json --override-filename ductus.cdx`, `BE-DEPS-003`), with `cargo-cyclonedx` installed at an exact version the same way as `cargo-zigbuild`, and upload it with its own sha256 checksum to the same release. The SBOM is derived from the resolved `Cargo.lock` graph, which is identical across the target matrix, so one SBOM covers every artifact; attached to the GitHub release, it shares the artifacts' retention lifetime.
 
+Every download the release path makes is bounded (`BE-TIMEOUT-001`), each by named environment variables on its step:
+
+- **`runtime-acquisition.yml`'s** fetch of each published archive and its `.sha256`: `DOWNLOAD_CONNECT_TIMEOUT_SECONDS` (30) for the connection and `DOWNLOAD_MAX_TIME_SECONDS` (300) for the transfer, the values the adopter CI template uses for the same archive.
+- **`verify-installer`'s** fetch of the published `install.sh`: `FETCH_CONNECT_TIMEOUT_SECONDS` (10) and `FETCH_MAX_TIME_SECONDS` (60) per attempt. A just-uploaded asset can answer 404 from the download host for a brief window, so the fetch is retried (`BE-RETRY-001`): at most `FETCH_ATTEMPTS` (6) attempts. Before attempt n+1 the job waits a random 0 to `FETCH_BACKOFF_BASE_SECONDS` (5) × 2^(n−1) seconds, exponential backoff with full jitter, so the waits sum to at most 155 seconds. A GET of a release asset is idempotent, so retrying it is safe. The fixed-delay `curl --retry 5 --retry-delay 10` it replaces had no jitter.
+
+The installer's own two requests are bounded in `install.sh`, as 061's plan §Installer states.
+
 Tag scheme is `ductus-v<MAJOR>.<MINOR>.<PATCH>`, one tag per release, carrying the framework and the runtime in lockstep. The release procedure is `AGENTS.md`'s release entries under §Workflow.
 
 ### README placement: root `README.md` Runtime section
