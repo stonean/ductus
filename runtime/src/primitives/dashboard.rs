@@ -31,8 +31,9 @@ use serde::Deserialize;
 use crate::host::Host;
 use crate::primitives::resolve_references::{self, load_services};
 use crate::primitives::{
-    PrimitiveError, Result, ScenarioFrontmatter, list_feature_dirs, list_scenario_files,
-    parse_feature_dir, read_spec, read_text, rel_path, section_lines, split_frontmatter,
+    PrimitiveError, Result, ScenarioFrontmatter, flatten_line, list_feature_dirs,
+    list_scenario_files, parse_feature_dir, read_spec, read_text, rel_path, section_lines,
+    split_frontmatter,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -349,10 +350,18 @@ fn render_callouts(view: &View<'_>, project: &str) -> String {
         lines.push(format!("tags: {}", tags_union.join(", ")));
     }
     if config.present && !config.disabled_rule_files.is_empty() {
+        // Each basename is committed config, rendered on one line so a
+        // newline in it cannot forge a dashboard line (`BE-INPUT-011`), as
+        // `discover-rule-files` renders the same values.
+        let shown: Vec<String> = config
+            .disabled_rule_files
+            .iter()
+            .map(|file| flatten_line(file))
+            .collect();
         lines.push(format!(
             "disabled rule files: {} ({config_name}) — {}",
             config.disabled_rule_files.len(),
-            config.disabled_rule_files.join(", ")
+            shown.join(", ")
         ));
     }
     lines.push(render_inbox_line(view.inbox, project));
@@ -1485,6 +1494,31 @@ reason = "Deferred until v2 perf budget lands."
         assert_eq!(
             result.config.disabled_rule_files,
             vec!["accessibility-frontend.md", "performance-frontend.md"]
+        );
+    }
+
+    #[test]
+    fn a_disabled_file_name_renders_on_one_line() {
+        // A newline in committed config would otherwise forge a dashboard
+        // line of its own (BE-INPUT-011).
+        let tmp = TempDir::new().unwrap();
+        let toml = "[[review.disabled-rule-files]]\nfile = \"security-backend.md\\nTags: forged-line\"\nreason = \"Not adopting this file yet, PROJ-1.\"\n";
+        std::fs::write(tmp.path().join(".govern.toml"), toml).unwrap();
+        let result = run(&DashboardArgs::default(), tmp.path()).unwrap();
+        assert!(
+            !result
+                .rendered_markdown
+                .lines()
+                .any(|line| line.starts_with("Tags: forged-line")),
+            "{}",
+            result.rendered_markdown
+        );
+        assert!(
+            result
+                .rendered_markdown
+                .contains("— security-backend.md Tags: forged-line"),
+            "{}",
+            result.rendered_markdown
         );
     }
 

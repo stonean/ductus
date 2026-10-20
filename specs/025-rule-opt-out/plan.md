@@ -18,7 +18,7 @@ When this spec was planned, the feature was a narrow, markdown-only change. Ther
    - If `file` matches a file in the post-stack-filter set, drop it and emit the `disabled-rule-file: <name> — <reason> (.ductus/config.toml)` notice.
    - If `file` matches a `framework/rules/` basename that was NOT selected by stack detection, emit the `disabled-rule-file (no-op): <name> not selected by stack detection` notice (no drop — there was nothing to drop).
    - If `file` does not match any `framework/rules/` basename, emit the `unknown disabled-rule-file: <name> (no such file in framework/rules/)` warning (already covered by AC3).
-   - A duplicate entry follows the warn-and-skip pattern documented in §Malformed and duplicate waivers. A malformed entry is different: every entry is validated before any rule file is selected, and a malformed one halts the run naming its index and the failing field (`CFG-ENV-008`; scenario `a-malformed-disabled-entry-fails-fast`).
+   - A duplicate entry follows the warn-and-skip pattern documented in `review.md` §Malformed and duplicate waivers. A malformed entry is different: every entry is validated before any rule file is selected, and a malformed one halts the run naming its index and the failing field (`CFG-ENV-008`; scenario `a-malformed-disabled-entry-fails-fast`).
 4. Emit the existing `loading rule files: <list>` notice with disabled files excluded.
 
 Reading order matters: the disabled-rule-file notices fire **before** the `loading rule files` notice so the stdout transcript reads top-down as "what got excluded, then what's loading."
@@ -29,7 +29,7 @@ The single-line notice format is fixed by AC2. Internal whitespace (including ne
 
 ### Exit code invariance
 
-Warnings (duplicate, unknown, no-op) emit to stdout but never set the exit code. For a run that completes, `/ductus:review`'s exit code remains `1` iff `must-violations > 0` (§Output). A malformed entry is not a warning: it halts the run before selection with `PrimitiveError::InvalidDisabledRuleFile` (`runtime/src/primitives/discover_rule_files.rs`, `validate_disabled_entries`), so the review never completes, records no `blocking`, and exits non-zero (`CFG-ENV-008`); `blocking: true` keeps meaning a MUST violation. Every `file` and `reason` a notice or the halt renders passes through `flatten_line` first, so committed config cannot forge a notice line (`BE-INPUT-011`).
+Warnings (duplicate, unknown, no-op) emit to stdout but never set the exit code. For a run that completes, `/ductus:review`'s exit code remains `1` iff `must-violations > 0` (`review.md` §Output). A malformed entry is not a warning: it halts the run before selection with `PrimitiveError::InvalidDisabledRuleFile` (`runtime/src/primitives/discover_rule_files.rs`, `validate_disabled_entries`), so the review never completes, records no `blocking`, and exits non-zero (`CFG-ENV-008`); `blocking: true` keeps meaning a MUST violation. Every `file` and `reason` a notice or the halt renders passes through `flatten_line` first, so committed config cannot forge a notice line (`BE-INPUT-011`).
 
 That change is **breaking** under `BE-COMPAT-001`'s reading of behavior, though no field of `discover-rule-files`' result changes: a configuration that returned a selection with a `malformed …` notice now returns an error, and that notice form is gone. The runtime is pre-1.0, so the release that carries it is a minor bump (Cargo's caret requirements make the minor version the compatibility boundary below 1.0), and its one consumer, `framework/commands/review.md`, ships in the same release (§runtime-boundary). This is enforced by the AC4 wording and called out again in the §Output section of the updated review.md.
 
@@ -43,7 +43,7 @@ disabled rule files: <N> (.ductus/config.toml) — <comma-separated basenames>
 
 Single line; no verbose mode. Adopters who need the reasons read `.ductus/config.toml` directly. Surfacing the list at all is the AC6 contract — the dashboard is the discoverability surface, not a full pretty-printer.
 
-The dashboard reads only each entry's `file` (`runtime/src/primitives/dashboard.rs`, `DisabledRuleFile`), so an entry missing its `file` fails `/ductus:status`'s config parse with a TOML error naming the file, while a short or missing `reason` — which the dashboard does not read — does not stop it. The named halt for every malformed shape is `/ductus:review`'s, the reader that consumes the reason.
+The dashboard reads only each entry's `file` (`runtime/src/primitives/dashboard.rs`, `DisabledRuleFile`), so an entry missing its `file` fails `/ductus:status`'s config parse with a TOML error naming the file, while a short or missing `reason` — which the dashboard does not read — does not stop it. The named halt for every malformed shape is `/ductus:review`'s, the reader that consumes the reason. Each basename passes through `flatten_line` before the callout renders it, as in `/ductus:review`'s notices, so a newline in committed config cannot forge a dashboard line (`BE-INPUT-011`).
 
 ### Constitution edit
 
@@ -55,11 +55,11 @@ The canonical `.ductus/config.toml` schema example lives in `framework/bootstrap
 
 ### `framework/commands/analyze.md` — no edit needed
 
-Verified during planning: `framework/commands/analyze.md` does not read `.ductus/config.toml` at all (grep returns no matches). AC7 ("`/ductus:analyze` does NOT error on the new key") is structurally satisfied by analyze never seeing the file. The Affected files row from spec.md is dropped — there is nothing to extend.
+Verified during planning: `framework/commands/analyze.md` did not read `.ductus/config.toml` at all then (grep returned no matches). AC7 ("`/ductus:analyze` does NOT error on the new key") was structurally satisfied by analyze never seeing the file. The Affected files row from spec.md is dropped — there is nothing to extend. Analyze has since come to read two other sections, `[services]` (spec 030) and `[artifacts]` (spec 063), and neither read touches `[review]`, so AC7 still holds.
 
 ### `scripts/lint-ductus-toml.sh` — out of scope
 
-Verified during planning: the script does not exist. The spec body Affected files row carries an `(if it exists)` qualifier, and the Q3 resolution treats `.ductus/config.toml` hygiene as a separate single-purpose tool. Adding the script as part of 025 is scope creep — runtime warnings (stdout) already cover the operator-feedback path. Defer to a future spec when demand emerges.
+Verified during planning: the script does not exist. The spec body Affected files row carries an `(if it exists)` qualifier, and the Q3 resolution treats `.ductus/config.toml` hygiene as a separate single-purpose tool. Adding the script as part of 025 is scope creep — the runtime's stdout notices, and its halt on a malformed entry, already cover the operator-feedback path. Defer to a future spec when demand emerges.
 
 ## Affected Files
 
@@ -85,5 +85,5 @@ Verified during planning: the script does not exist. The spec body Affected file
 ### Known limitations
 
 - The disabled list is consulted once per `/ductus:review` invocation, at step 5. There is no in-process rescan or hot-reload — consistent with the rest of `.ductus/config.toml` reads in the codebase.
-- The no-op notice (`disabled-rule-file (no-op): ...`) depends on stack detection having produced a definite result. The existing tech-stack alignment gate (§Behavior step 4) guarantees this either via `tech-stack-verified = true` or a fresh check; if both fail the run halts before step 5, so the no-op branch is never reached without a stack.
+- The no-op notice (`disabled-rule-file (no-op): ...`) depends on stack detection having produced a definite result. The existing tech-stack alignment gate (`review.md`, Instructions step 1) guarantees this either via `tech-stack-verified = true` or a fresh check; if both fail the run halts before step 5, so the no-op branch is never reached without a stack.
 - Adopters who rename a rule file in their fork (e.g., `accessibility-frontend.md` → `a11y-frontend.md`) and forget to update `.ductus/config.toml` get the `unknown disabled-rule-file` warning and the rule file stays enforced. This is the AC3 design — quiet re-enablement would be a worse failure mode.
