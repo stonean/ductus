@@ -34,7 +34,7 @@ The `writeCode` write boundary (`validate_write_code_boundary`, `runtime/src/sch
 - After the check passes, the primitive keeps using the path it was given and keeps naming it that way in results and errors.
 - The `writeCode` boundary applies the same check to each edit path before matching it against the boundary's globs, so a boundary of `runtime/**` does not admit `runtime/link/x` when `runtime/link` points into `framework/`.
 - The three session-file sites keep the lexical check alone, because they open nothing.
-- Every call site that opens a path goes through the check: the 32 that take a feature argument and the 7 that take a file or directory path. `create-scenario` checks its destination whole, since its slug names it.
+- Every call site that opens a path goes through the check: the 32 that take a feature argument and the 7 that take a file or directory path.
 - A call that takes a feature argument also lists the feature directory recursively, following a link only when it stays inside the project, and is refused when any link in it resolves outside the project. This covers the files the primitive then opens beneath the directory under fixed names (`spec.md`, `tasks.md`, the `scenarios/` listing).
 - `check-artifacts` checks its feature argument but is exempt from the walk, because 067's `sibling-symlink-trust-boundary` has it skip a linked sibling as `target-unparseable` and keep running. It can still read a fixed-name file through a link that leaves the project.
 

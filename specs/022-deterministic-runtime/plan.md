@@ -97,6 +97,18 @@ A tool result is bounded by the project it describes rather than paginated (`BE-
 
 State-modifying primitives (`mark-task`, `mark-criterion`, `set-status`) write to a tempfile created via `tempfile::NamedTempFile::new_in(parent_dir)`. The tempfile is written, flushed, fsynced, then renamed over the target with `tempfile::NamedTempFile::persist`. POSIX rename is atomic within the same filesystem; placing the tempfile in the same directory guarantees that property. Windows rename semantics are weaker but acceptable for this use case — adopters running on Windows accept the small atomicity gap, and a partial write is recovered from git.
 
+### Path arguments: a lexical screen, then canonical containment
+
+A path the host or the LLM supplies is checked before the primitive opens anything under it (`BE-INPUT-004`, [a-path-argument-resolves-inside-its-base](scenarios/a-path-argument-resolves-inside-its-base.md)). Both halves live in `runtime/src/primitives/mod.rs`:
+
+- **The lexical screen.** `validate_no_traversal` refuses an empty, absolute, rooted, drive-prefixed or `..` path. It reads the text alone, so on its own it guards only the primitives that record a path and never open it: `write-session` and `retarget-sessions`.
+- **Canonicalization and containment.** `validate_contained` runs the screen, then resolves every symlink on the path and refuses it unless the resolution lies inside the canonicalized base, compared by whole components (`Path::starts_with`), never by string prefix. A path not created yet is judged by its deepest existing ancestor, and a dangling link by where its target would resolve. The base is the directory the primitive names: the project root, or `apply-manifest`'s `source-root` and `target-root`. A link that stays inside the base is followed and accepted. The check compares canonical forms only, and the primitive keeps using and naming the path it was given.
+- **Every site that opens a path.** The 32 call sites that take a feature argument go through `validate_feature_argument` or `validate_feature_path`, and the 7 that take a file or directory path (`apply-manifest`, `enforce-manifest`, `merge-managed-block`, `merge-permissions`, `migrate-session-file`, `run-generator`) through `validate_contained`.
+- **A walk of the feature directory.** A feature-argument call also lists the directory recursively and is refused when any link in it resolves outside the project, which covers the files it then opens under fixed names (`spec.md`, `tasks.md`, the `scenarios/` listing). `check-artifacts` checks its argument but is exempt from the walk, because it skips a linked sibling as `target-unparseable` and keeps running (067's `sibling-symlink-trust-boundary`); it reads its spec and tasks through `read_spec::read_checked` and `read_tasks::read_checked`, which skip the walk for that reason.
+- **The `writeCode` boundary.** The runtime never opens an edit path, since the host applies the edits, so the boundary is the containment decision the host relies on: `validate_write_code_resolution` matches where each edit path lands (`resolved_relative`) as well as its text, and refuses one that reaches outside the project.
+
+The check runs once per call, so a link created between it and the open is not caught. The tests are `interpreter::tests::every_feature_argument_site_refuses_an_outward_feature_link`, `every_feature_argument_site_but_check_artifacts_walks_the_feature_directory`, `every_file_path_site_refuses_an_outward_link` and `the_write_code_boundary_matches_where_an_edit_lands`, which hold each call site to the check by name, and the `primitives::tests` cases for the resolution itself.
+
 ### CLI surface shape
 
 `clap` derive-based, with subcommands flat under the top-level binary:

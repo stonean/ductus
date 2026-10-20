@@ -44,11 +44,13 @@ BE-INPUT-004's Verification, rewritten 2026-10-19, asks for path canonicalizatio
 
 Authorized by the owner 2026-10-20, answering (b) to: (a) leave 063 in progress until this task runs, (b) authorize it now, or (c) canonicalize in `check-artifact-size` alone so 063 can close, leaving this task for the rest. Measured that day: 42 production `validate_no_traversal` call sites in 38 files (48 with tests), plus the writeCode boundary; 022 cannot reach done while this task or task 6 is open, and the release needs 022 at done, so (a) and (c) change when this task is spent, not whether. 063's review is stale under every option (a5e18ad7 and fc876871 edited its data model, a scenario and its spec).
 
-- [ ] Implement the behavior described in `scenarios/a-path-argument-resolves-inside-its-base.md`, once its two open questions (how the check decides, and which call sites go through it) are answered, with tests that fail when a symlink inside the project escapes it
-- [ ] State the commitment in plan.md
-- [ ] State it in 063's plan too (§Subjects, absence, and readability), whose `feature` argument passes only `validate_no_traversal`: 063's analysis of 2026-10-20 routed its BE-INPUT-004 finding here, and 063 stays blocking until this lands
+- [x] Implement the behavior described in `scenarios/a-path-argument-resolves-inside-its-base.md`, once its two open questions (how the check decides, and which call sites go through it) are answered, with tests that fail when a symlink inside the project escapes it
+- [x] State the commitment in plan.md
+- [x] State it in 063's plan too (§Subjects, absence, and readability), whose `feature` argument passes only `validate_no_traversal`: 063's analysis of 2026-10-20 routed its BE-INPUT-004 finding here, and 063 stays blocking until this lands
 
 - **Done when**: analyze's BE-INPUT-004 assessment of 022's plan passes, and a path that escapes the project through a symlink is refused
+
+State on 2026-10-20: every subtask is done, and the owner answered both of the scenario's questions (a): canonicalize and compare, and every site that opens a path plus a walk of each feature directory, `check-artifacts` exempt. The release binary refuses the three escapes the scenario probed, and ten mutations of the check each failed the test that covers it. The analyze half waits on 022's next analysis, and 063 needs a re-review and a re-analysis.
 
 ## 5. Config readers name unknown keys (CFG-ENV-012, for 019)
 
