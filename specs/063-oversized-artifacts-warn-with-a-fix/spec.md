@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [041-task-pruning, 052-spec-supersession-and-consolidation, 058-findings-route-at-discovery]
 next-criterion: 18
 ---
