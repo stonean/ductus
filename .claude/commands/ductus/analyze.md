@@ -412,6 +412,13 @@ If any check above fails, the affected rule file is treated as unloadable for th
 
 A file whose rules drop out without a finding makes a malformed rule set indistinguishable from a clean one. These two messages have been the contract since 008, generalized from security files to every rule surface by 016; 022's parseable-procedure rewrite dropped them without a decision to drop them, and they are restored here.
 
+A citation step 5 resolves is reported in the same way, naming the citing artifact:
+
+- `Spec at {path} references unknown rule {ID}` — **Blocking**: no loaded rule file defines the cited ID
+- `Spec at {path} references deprecated rule {ID}; targeted for removal in {version}` — **Advisory**: the cited rule is marked `DEPRECATED`, and the citation still satisfies it for the deprecation window
+
+These are 008's messages too, dropped by the same rewrite and restored with the two above.
+
 **Under `ductus exec` neither message is produced.** The walker checks no rule-file integrity: a rule with no Verification, or whose Statement carries no MUST or SHOULD keyword, is recorded unexamined under `rule-assessments-not-checked`, a file it cannot read is recorded under `rule-file-unreadable`, and a missing Rationale or a duplicate ID goes unnoticed — each such rule is assessed as though whole. The reduction is stated rather than silent, per the two-paths guarantee in §runtime-host-integration.
 
 A rule file is **never** unloadable merely for having no introducing spec, or for declaring no format in its header — those conditions select which tier governs, they are not themselves failures. A project-authored rule file has no introducing spec by construction; it is validated on exactly the same terms as a shipped one, at tier 2 when its header declares a format and tier 3 when it does not. Treating the absence of an introducing spec as a validation failure would make a supported adopter extension unloadable, silently dropping its rules from citation resolution and from the fired-rule set that steps 11 and 12 assess.
