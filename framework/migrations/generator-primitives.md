@@ -51,10 +51,10 @@ and acquired, which retired that constraint.
    generators; replace those lines with 'ductus derive-dependencies --write
    --staged' and 'ductus derive-references --write --staged'.`
 
-4. **CI.** An adopter using the shipped `adopter-generators.yml` template gets
-   the updated copy from the scaffolding pass. One that has customized it may
-   still invoke `.ductus/scripts/gen-spec-deps.sh`; the orphaned-reference check
-   reports it on the next `/ductus:analyze`.
+4. **CI.** No scaffolding pass writes the `adopter-generators.yml` template:
+   an adopter copied it by hand, and re-copies it to pick up the updated
+   version. A copy that still invokes `.ductus/scripts/gen-spec-deps.sh` is
+   reported by the orphaned-reference check on the next `/ductus:analyze`.
 
 ## What the adopter sees afterwards
 

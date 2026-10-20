@@ -156,12 +156,12 @@ fi
 # tool to an exact version. A pin stays current only if something compares it
 # with upstream, and this is that comparison (022 task 3). An action pin is
 # current when its tag is the action's latest release and still names the
-# pinned commit; a tool pin is current when its version is the newest stable
-# one its registry publishes (crates.io or PyPI); and every `toolchain:`
-# input must equal rust-toolchain.toml's channel, which check 3 holds against
-# stable Rust. A reference with no pin at all is reported too: there is
-# nothing to compare, and the build runs whatever its upstream points at that
-# day.
+# pinned commit; a tool pin is current when its version is the latest its
+# registry reports (crates.io's newest stable version, PyPI's latest); and
+# every `toolchain:` input must equal rust-toolchain.toml's channel, which
+# check 3 holds against stable Rust. A reference with no pin at all is
+# reported too: there is nothing to compare, and the build runs whatever its
+# upstream points at that day.
 #
 # It reports and never edits. A red run names each pin and where it is, and
 # the bump lands as its own commit like any other fix this script names.

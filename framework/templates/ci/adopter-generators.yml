@@ -29,9 +29,9 @@
 #      `review:` block, which ductus 0.50.0 made true of every spec.
 #
 # When new adopter-relevant checks are added by future ductus releases, this
-# template gains a step for each. Re-running /ductus updates the template;
-# you re-copy it manually (CI files are not auto-installed by /ductus — that
-# would require platform detection beyond ductus's scope).
+# template gains a step for each. /ductus neither installs nor updates it (CI
+# files would need platform detection beyond ductus's scope), so re-copy it
+# from the ductus repository to pick up a change.
 
 name: ductus-generators
 
