@@ -43,7 +43,7 @@ Blocked on task 1: the store tests run against the migrated schema.
 ## 1. An unknown config key is named (CFG-ENV-012)
 
 - [ ] Implement the behavior described in `scenarios/an-unknown-config-key-is-named.md`
-- [ ] The runtime reports unknown keys in ductus-owned sections of .ductus/config.toml and .ductus/session.toml by name, section, and file, without failing the run
+- [ ] The runtime reports unknown keys in ductus-owned sections of .ductus/config.toml and .ductus/session.toml by name, section, and file, without failing the run — `[artifacts]`, which 063's check-artifact-size reads, among them (063's analysis routed its CFG-ENV-012 finding here)
 - [ ] Recognized keys are declared in one place shared by every reader of a section
 - [ ] A test fails if a mistyped key in a ductus-owned section is silently dropped
 - [ ] 019's data-model and framework/bootstrap/ductus.md §Project Configuration state the behavior, including for a host reading a ductus-owned section by hand on the markdown-only path
