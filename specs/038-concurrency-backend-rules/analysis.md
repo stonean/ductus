@@ -1,21 +1,49 @@
 ---
 spec: 038-concurrency-backend-rules
-last-run: 2026-09-13T12:43:56Z
-analyzed-against: 6ab35f6547ae64707aea295595f8ebdfc787edf5
+last-run: 2026-10-20T00:52:03Z
+analyzed-against: 709e043f00dc1f311d689fb8642f86b3bc0e5b7c
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
-unexamined: 0
+unexamined: 1
 analyzed-digest:
-  plan.md: d6d26190bd83e47dbcf12b98cf43df0f894a7350b15d8ee5bfeac2756efbc9ab
-  review.md: de4fe9ba3551a44e28648de17fa05a51e8f3c61ecc033c78f43b2b39cf6406e0
-  spec.md: 53e041730ab425d4b52eea11ac7909cbd62e6fa62cff71257da972ea5c363cd0
-  tasks.md: d4981df262d8e8df78fc7f1e408986f61395f7773208318dbf68bb01c2e13d67
+  plan.md: cd84ff2856193cc78a01d3912ac043a07aab204251ba1d6896c6eb92699850ad
+  review.md: 6887eec2b33fe8116aa6c635aa903c84fd80f86c9cf670f2d490a050fe943841
+  spec.md: 283db126d7eb9142565855c61b43cc04df25f63c07462c024b77ba9ac5dfa749
+  tasks.md: 86f9335290c68cb01110e06b398bf556aa0f6de90d05358f4228240a0aacf777
+unexamined-by-reason:
+  ships-to-adopter: 1
 blocking: false
+dispositions:
+  fixed: 2
+  routed: 0
+  discarded: 0
+  undispositioned: 0
 ---
 
 # Analysis — 038-concurrency-backend-rules
 
 ## Summary
 
-Relocated from the spec's frontmatter by the record-relocation migration. The counts above are the recorded run's; this report body begins at the next run.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 1 unexamined target(s). Dispositions: 2 fixed, 0 routed, 0 discarded, 0 undispositioned.
+
+## Hard failures
+
+*None.*
+
+## Blocking findings
+
+*None.*
+
+## Advisory findings
+
+*None.*
+
+## Unexamined targets
+
+- ships-to-adopter: 1
+
+## Fixed in this run
+
+- anchor-resolution — spec.md:63 references §Trade-offs, a plan section, which resolves to no constitution marker — `specs/038-concurrency-backend-rules/spec.md` — **fixed**
+- grounding — spec.md Motivation asserted in the present tense that the backend surface has zero concurrency coverage, which concurrency-backend.md falsified — `specs/038-concurrency-backend-rules/spec.md` — **fixed**
