@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Test surface for scripts/check-runtime-currency.sh's pins check (check 5).
+# Test surface for scripts/check-runtime-currency.sh's pins check (check 5),
+# and for check 3's version comparison, which uses the same `ver_lt`.
 #
 # The check exists so that a pin falling behind its upstream turns the weekly
 # run red. A comparison that silently stops comparing reads exactly like a pin
@@ -35,10 +36,16 @@
 #   U. an action written as a step's `uses:` key, under `- name:`, is read too
 #   V. every lookup carries a connect timeout and a total timeout
 #   W. an unknown check name is refused
+#   X. a pin repeated across files is reported once, with its reference count
+#   Y. check 3: a toolchain equal to the latest stable is current
+#   Z. check 3: a toolchain behind the latest stable is behind, and one ahead
+#      of it is current
 #
 # Usage: scripts/tests/test-check-runtime-currency.sh
 
 set -euo pipefail
+# The stub logs every curl's arguments, and a failing case prints them.
+unset GH_TOKEN
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -60,10 +67,16 @@ cat >"$WORK/bin/curl" <<'STUB'
 # Serves each https:// URL from $STUB_DIR/curl.tsv (url, file); unknown is a
 # 404. Every call's arguments are logged to $STUB_DIR/calls.log.
 printf '%s\n' "$*" >>"$STUB_DIR/calls.log"
-url=""
-for a in "$@"; do case "$a" in https://*) url=$a ;; esac; done
+url="" out=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    https://*) url=$1 ;;
+    -o) out=$2; shift ;;
+  esac
+  shift
+done
 file=$(awk -F'\t' -v u="$url" '$1 == u { print $2; found = 1 } END { exit !found }' "$STUB_DIR/curl.tsv") || exit 22
-cat "$STUB_DIR/$file"
+if [ -n "$out" ]; then cat "$STUB_DIR/$file" >"$out"; else cat "$STUB_DIR/$file"; fi
 STUB
 chmod +x "$WORK/bin/curl"
 
@@ -172,7 +185,8 @@ expect "A: a fixture matching upstream is current" 0 \
   "pins: current (5 action pin(s) and 5 tool pin(s) across 2 file(s))"
 
 probe b-release 'stub/api-repos_actions_setup-node_releases_latest.json|s|v6.5.0|v7.1.0|'
-expect "B: a newer release is behind" 1 "actions/setup-node pins v6.5.0, latest release is v7.1.0"
+expect "B: a newer release is behind" 1 \
+  "actions/setup-node pins v6.5.0, latest release is v7.1.0 (1 reference(s), first at .github/workflows/ci.yml:14)"
 
 probe c-moved "stub/api-repos_dtolnay_rust-toolchain_commits_v1.json|s|$(sha 2)|$(sha 5)|"
 expect "C: a tag naming another commit is behind" 1 "but v1 now names $(sha 5)"
@@ -250,6 +264,28 @@ fi
 code=0
 out=$(cd "$BASE/repo" && bash "$CHECK" pinz 2>&1) || code=$?
 expect "W: an unknown check is refused" 2 "unknown check: pinz"
+
+probe x-repeated 'stub/api-repos_actions_checkout_releases_latest.json|s|v7.0.1|v8.0.0|'
+expect "X: a pin repeated across files is reported once" 1 \
+  "actions/checkout pins v7.0.1, latest release is v8.0.0 (2 reference(s), first at .github/workflows/ci.yml:7)"
+
+# toolchain <case> <stable> runs check 3 alone against a stubbed stable
+# channel manifest naming <stable>; the fixture pins 1.99.1.
+toolchain() {
+  case_dir="$WORK/$1"
+  cp -R "$BASE" "$case_dir"
+  printf '[pkg.rust]\nversion = "%s (0000000 2026-10-13)"\n' "$2" >"$case_dir/stub/channel.toml"
+  printf '%s\t%s\n' https://static.rust-lang.org/dist/channel-rust-stable.toml channel.toml >>"$case_dir/stub/curl.tsv"
+  code=0
+  out=$(cd "$case_dir/repo" && STUB_DIR="$case_dir/stub" PATH="$WORK/bin:$PATH" bash "$CHECK" toolchain 2>&1) || code=$?
+}
+toolchain y-equal 1.99.1
+expect "Y: a toolchain equal to the latest stable is current" 0 "toolchain: current (1.99.1)"
+toolchain z-behind 1.100.0
+expect "Z: a toolchain behind the latest stable is behind" 1 \
+  "toolchain: behind — runtime/rust-toolchain.toml pins 1.99.1, latest stable is 1.100.0"
+toolchain z-ahead 1.98.0
+expect "Z: a toolchain ahead of the latest stable is current" 0 "toolchain: current (1.99.1)"
 
 echo
 if [ "$failures" -ne 0 ]; then

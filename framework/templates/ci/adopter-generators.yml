@@ -73,7 +73,8 @@ jobs:
       # (BE-DEPS-006), and checks the hash before anything runs. No Rust
       # toolchain is needed. The archive is the x86_64 Linux one an
       # ubuntu-latest runner uses; on another architecture the verified
-      # binary will not execute, so the version check below fails the step.
+      # binary will not execute, and running it fails the step before any
+      # version is compared.
       # To move to a newer release, re-copy this template, or set
       # DUCTUS_VERSION to that release's version and DUCTUS_SHA256 from its
       # `ductus-x86_64-unknown-linux-gnu.tar.gz.sha256` asset.

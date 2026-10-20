@@ -58,7 +58,8 @@ trap 'rm -rf "$tmp"' EXIT
 
 report() { printf '%s\n' "$*"; }
 
-# Every lookup is bounded (BE-TIMEOUT-001): a connection gets
+# Every lookup this script makes itself is bounded (BE-TIMEOUT-001); cargo's
+# own requests in checks 1, 2 and 4 keep cargo's defaults. A connection gets
 # lookup_connect_seconds and a whole request lookup_max_seconds, after which
 # the check reports what it could not read rather than waiting on it.
 lookup_connect_seconds=10
@@ -174,6 +175,10 @@ fi
 # reported too: there is nothing to compare, and the build runs whatever its
 # upstream points at that day.
 #
+# It reads the forms this repository's workflows use: `uses:`, taiki-e's
+# `tool:`, `cargo install`, pip requirements, `toolchain:` and the template's
+# DUCTUS_* pair. A download written in any other form is not seen.
+#
 # It reports and never edits. A red run names each pin and where it is, and
 # the bump lands as its own commit like any other fix this script names.
 ua="ductus check-runtime-currency (https://github.com/stonean/ductus)"
@@ -205,7 +210,11 @@ latest_pypi() {
 github_api() {
   local args=(-H 'Accept: application/vnd.github+json')
   if [ -n "${GH_TOKEN:-}" ]; then
-    args+=(-H "Authorization: Bearer $GH_TOKEN")
+    # From a file, so the token never appears in a process's arguments.
+    if [ ! -e "$tmp/github-auth-header" ]; then
+      (umask 077 && printf 'Authorization: Bearer %s\n' "$GH_TOKEN" >"$tmp/github-auth-header")
+    fi
+    args+=(-H "@$tmp/github-auth-header")
   fi
   fetch "${args[@]}" "https://api.github.com/$1"
 }

@@ -21,7 +21,7 @@ An independent BE-DEPS-006 assessment of 022 task 3's pinning found it (2026-10-
 ## Edge Cases
 
 - A project in a subdirectory of its repository keeps working under the template's commented `working-directory` default (spec 059, AC10).
-- The template's runtime and the runtime an adopter's `/ductus` acquired can be different versions, since the adopter's copy is taken once and `/ductus` follows the latest release. Where derived frontmatter differs between the two, the template's sync check would fail a correct commit.
+- The template's runtime and the runtime an adopter's `/ductus` acquired can be different versions, since the adopter's copy is taken once and `/ductus` follows the release its source resolves, the latest by default. Where derived frontmatter differs between the two, the template's sync check would fail a correct commit.
 - Reading the version from this repository's latest release at run time would select what runs by a mutable reference, which `BE-DEPS-006` does not allow, so the template does not do it.
 
 ## Open Questions
