@@ -1,6 +1,6 @@
 # Configuration Rules
 
-Enforceable rules for operator-tunable values, named constants, environment variables and other configuration values, and feature flags. These rules apply to all projects adopting `ductus`, regardless of whether the code is backend or frontend — configuration is the same problem on both surfaces.
+Enforceable rules for operator-tunable values, named constants, environment variables and other configuration values, and feature flags. These rules apply to all projects adopting `ductus`, regardless of whether the code is backend or frontend — configuration is the same problem on both surfaces. A command-line flag is a configuration value here when it supplies a setting that could equally come from an environment variable, a configuration file, or a default, the sources `CFG-ENV-007` orders; an argument that names what one invocation acts on, or how, belongs to the command-line interface and is left to its help output.
 
 Rules use RFC 2119 language: **MUST** / **MUST NOT** are enforced as errors; **SHOULD** / **SHOULD NOT** are flagged as warnings.
 
