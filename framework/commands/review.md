@@ -66,7 +66,8 @@ Report an unrecognized `--flag` and stop. Never absorb it into the feature ident
     ≥ 16 Unicode codepoints). Files listed here are excluded from
     rule-file selection regardless of stack detection. Consulted in
     step 2 (`discover-rule-files`). Reason is mandatory — it is the
-    audit trail for the override.
+    audit trail for the override. A malformed entry fails fast in
+    step 2, before any rule file is selected.
   - `[rules] surfaces` (array of strings, default unset): the project's
     rule surfaces, members in `{"backend", "frontend"}` (full-stack lists
     both; `*-cross.md` files are unconditional and not members). When set,
@@ -212,8 +213,10 @@ The numbered Instructions above are the deterministic path — the runtime's pri
    unconditionally.
 
    Then apply the **disabled-rule-files filter**. Read `.ductus/config.toml`
-   `[[review.disabled-rule-files]]` (see [Inputs](#inputs)). For each
-   entry, in list order:
+   `[[review.disabled-rule-files]]` (see [Inputs](#inputs)). First
+   validate **every** entry, before any rule file is selected — a
+   malformed one halts the run (below). Then, for each entry, in list
+   order:
 
    - **Drop + notice (selected match).** `file` matches the
      basename of a file currently in the post-selection set. Remove
@@ -253,16 +256,24 @@ The numbered Instructions above are the deterministic path — the runtime's pri
 
      This covers renamed/moved files; not a fatal error.
 
-   - **Malformed warning.** Entry is missing `file` or `reason`, or
-     `reason`'s trimmed length is < 16 Unicode codepoints. Skip the
-     entry (no file is dropped) and emit one line naming the offending
-     index (same pattern as **Malformed and duplicate waivers** below):
+   - **Malformed entry — fail fast.** An entry that is not a table,
+     whose `file` or `reason` is missing or not a string, or whose
+     `reason`'s trimmed length is < 16 Unicode codepoints, is a
+     configuration value that does not parse, so — consistent with
+     `CFG-ENV-008`, as for a degenerate `[rules] surfaces` above — it
+     halts the run before any rule file is selected, naming the entry's
+     index and the field that failed:
 
      ```text
-     malformed disabled-rule-file at review.disabled-rule-files[N]: <reason>
+     /{project}:review: invalid [[review.disabled-rule-files]] entry [N] in <config-file>: <problem> — each entry is a table with a `file` naming a rule file and a `reason` of at least 16 characters
      ```
 
-     The entry is NOT auto-removed; the operator cleans it up.
+     `<problem>` names the field and any offending value — for example
+     `` `reason` is missing `` or `` `reason` "PoC only" is 8
+     characters once trimmed, under the minimum of 16 ``. The entry is
+     not skipped and NOT auto-removed; the operator fixes it. The halt is
+     a configuration error that stops the run, never a review finding,
+     so it does not set `blocking`.
 
    - **Duplicate warning.** Same `file` listed twice. Only the first
      entry applies; each subsequent duplicate emits one line and is
@@ -272,10 +283,11 @@ The numbered Instructions above are the deterministic path — the runtime's pri
      duplicate disabled-rule-file: <filename> — entry [N] ignored
      ```
 
-   All four warning forms emit to stdout and **do not affect the exit
-   code**. `/{project}:review`'s exit status is driven exclusively by MUST
-   violations (see [Output](#output)). `.ductus/config.toml` hygiene is a
-   separate concern.
+   The no-op, unknown and duplicate lines emit to stdout and **do not
+   affect the exit code**. `/{project}:review`'s exit status is driven
+   exclusively by MUST violations (see [Output](#output)); a malformed
+   entry halts the run before it reaches any finding, so it never sets
+   `blocking` either.
 
    Finally, emit a single stdout line naming what was selected:
 

@@ -4,7 +4,7 @@ Implements [025 — Rule-file opt-out via `.ductus/config.toml`](spec.md).
 
 ## Overview
 
-The feature is a narrow, markdown-only change. There is no new module, no new parser, no new CLI surface — `.ductus/config.toml` is read ad-hoc by the agent runtime in each command that needs it, following the precedent established by [spec 020's](../020-code-review/spec.md) handling of `[review] tech-stack-verified`. This spec adds one new array-of-tables key (`[[review.disabled-rule-files]]`) and threads its consultation into `/ductus:review`'s rule-file selection step (§Behavior step 5), with discoverability notices on stdout and a one-line callout in `/ductus:status`. Two files in the spec's original Affected list are dropped after planning (see Trade-offs).
+When this spec was planned, the feature was a narrow, markdown-only change. There was no new module, no new parser, no new CLI surface — `.ductus/config.toml` was read ad-hoc by the agent runtime in each command that needs it, following the precedent established by [spec 020's](../020-code-review/spec.md) handling of `[review] tech-stack-verified`. This spec adds one new array-of-tables key (`[[review.disabled-rule-files]]`) and threads its consultation into `/ductus:review`'s rule-file selection step (§Behavior step 5), with discoverability notices on stdout and a one-line callout in `/ductus:status`. Two files in the spec's original Affected list are dropped after planning (see Trade-offs). Selection has since moved into 022's `discover-rule-files` primitive, which is where the malformed-entry halt of scenario `a-malformed-disabled-entry-fails-fast` lands.
 
 ## Technical Decisions
 
@@ -18,7 +18,7 @@ The feature is a narrow, markdown-only change. There is no new module, no new pa
    - If `file` matches a file in the post-stack-filter set, drop it and emit the `disabled-rule-file: <name> — <reason> (.ductus/config.toml)` notice.
    - If `file` matches a `framework/rules/` basename that was NOT selected by stack detection, emit the `disabled-rule-file (no-op): <name> not selected by stack detection` notice (no drop — there was nothing to drop).
    - If `file` does not match any `framework/rules/` basename, emit the `unknown disabled-rule-file: <name> (no such file in framework/rules/)` warning (already covered by AC3).
-   - Malformed / duplicate entries follow the warn-and-skip pattern documented in §Malformed and duplicate waivers (review.md lines 358–375).
+   - A duplicate entry follows the warn-and-skip pattern documented in §Malformed and duplicate waivers. A malformed entry is different: every entry is validated before any rule file is selected, and a malformed one halts the run naming its index and the failing field (`CFG-ENV-008`; scenario `a-malformed-disabled-entry-fails-fast`).
 4. Emit the existing `loading rule files: <list>` notice with disabled files excluded.
 
 Reading order matters: the disabled-rule-file notices fire **before** the `loading rule files` notice so the stdout transcript reads top-down as "what got excluded, then what's loading."
@@ -29,7 +29,7 @@ The single-line notice format is fixed by AC2. Internal whitespace (including ne
 
 ### Exit code invariance
 
-Warnings (malformed, duplicate, unknown, length-fail) emit to stdout but never set the exit code. `/ductus:review`'s exit code remains `1` iff `must-violations > 0` (per existing §Output line 426). This is enforced by the AC4 wording and called out again in the §Output section of the updated review.md.
+Warnings (duplicate, unknown, no-op) emit to stdout but never set the exit code. `/ductus:review`'s exit code remains `1` iff `must-violations > 0` (§Output). A malformed entry is not a warning: it halts the run before selection with `PrimitiveError::InvalidDisabledRuleFile` (`runtime/src/primitives/discover_rule_files.rs`, `validate_disabled_entries`), so the review never completes and records no `blocking`; `blocking: true` keeps meaning a MUST violation. This is enforced by the AC4 wording and called out again in the §Output section of the updated review.md.
 
 ### `/ductus:status` integration
 
@@ -40,6 +40,8 @@ disabled rule files: <N> (.ductus/config.toml) — <comma-separated basenames>
 ```
 
 Single line; no verbose mode. Adopters who need the reasons read `.ductus/config.toml` directly. Surfacing the list at all is the AC6 contract — the dashboard is the discoverability surface, not a full pretty-printer.
+
+The dashboard reads only each entry's `file` (`runtime/src/primitives/dashboard.rs`, `DisabledRuleFile`), so an entry missing its `file` fails `/ductus:status`'s config parse with a TOML error naming the file, while a short or missing `reason` — which the dashboard does not read — does not stop it. The named halt for every malformed shape is `/ductus:review`'s, the reader that consumes the reason.
 
 ### Constitution edit
 
@@ -73,9 +75,10 @@ Verified during planning: the script does not exist. The spec body Affected file
 
 - **Surface `.ductus/config.toml` parsing in a shared TOML reader module.** Ductus has no shared parser — each command's markdown instructions tell the agent to read the file ad-hoc. Following the precedent set by [spec 020's](../020-code-review/spec.md) handling of `[review] tech-stack-verified` keeps the change shape uniform; introducing a shared module for one new key is premature.
 - **Extend `framework/commands/analyze.md` to validate `.ductus/config.toml`.** Analyze reads markdown spec artifacts, not `.ductus/config.toml`. Adding a `.ductus/config.toml` validator to analyze would couple two unrelated concerns (artifact-vs-artifact audits vs. config hygiene); single-purpose `scripts/lint-ductus-toml.sh` is the right home if and when it exists.
-- **Create `scripts/lint-ductus-toml.sh` as part of this spec.** Spec body line 68's `(if it exists)` qualifier and the Q3 resolution both treat the lint as a separate concern. The feature works without it — malformed entries warn at runtime via stdout. Deferring keeps 025 narrow.
+- **Create `scripts/lint-ductus-toml.sh` as part of this spec.** Spec body line 68's `(if it exists)` qualifier and the Q3 resolution both treat the lint as a separate concern. The feature works without it — a malformed entry halts `/ductus:review` itself, naming the entry. Deferring keeps 025 narrow.
 - **Verbose `/ductus:status` listing of disabled files with reasons.** The dashboard is meant to be glanceable; full reasons live in `.ductus/config.toml`. One-line callout with basenames is the AC6 contract.
-- **Auto-removing malformed disabled entries.** Same posture as malformed waivers (review.md lines 358–365): operator-authored state is not framework-collected garbage. Warn and skip; the operator cleans it up.
+- **Auto-removing malformed disabled entries.** Same posture as malformed waivers (review.md §Malformed and duplicate waivers): operator-authored state is not framework-collected garbage. The run halts naming the entry, and the operator fixes it.
+- **Warning and skipping a malformed entry**, as malformed waivers do. This was the design until the owner's 2026-10-19 decision that `CFG-ENV-008` stands: a skipped entry leaves the rule file enforced while the operator believes it disabled, and a present value that does not parse fails fast rather than being dropped.
 
 ### Known limitations
 

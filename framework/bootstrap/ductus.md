@@ -649,8 +649,10 @@ last_applied = "rule-files-relocate"
 # Consumed by /{project}:review (not /ductus itself). Excludes rule files from
 # /{project}:review's selection regardless of stack detection. The `reason`
 # field is mandatory (trimmed length ≥ 16 Unicode codepoints) and is the audit
-# trail for the override. Listed here for schema reference; uncomment and edit
-# to use.
+# trail for the override. A malformed entry (not a table, a missing or
+# non-string `file` or `reason`, or a short `reason`) halts /{project}:review
+# before any rule file is selected, naming the entry's index and the field.
+# Listed here for schema reference; uncomment and edit to use.
 #
 # [[review.disabled-rule-files]]
 # file = "accessibility-frontend.md"

@@ -579,6 +579,31 @@ pub enum PrimitiveError {
         /// The value as TOML renders it, flattened to one line.
         value: String,
     },
+    /// A `[[review.disabled-rule-files]]` entry is malformed: it is not a
+    /// table, its `file` or `reason` is missing or not a string, or its
+    /// `reason` is shorter than the minimum once trimmed (spec 025).
+    ///
+    /// Raised before any rule file is selected, rather than reported and the
+    /// entry skipped, because a present value that does not parse must halt
+    /// the command instead of being dropped (`CFG-ENV-008`). It is a
+    /// configuration error that stops `/{project}:review`, never a review
+    /// finding, so `blocking: true` keeps meaning only that a MUST rule was
+    /// violated. `problem` names the failing field and carries any offending
+    /// value flattened to one line, for the reason [`Self::InvalidReadSize`]
+    /// gives (`BE-INPUT-011`).
+    #[error(
+        "invalid [[review.disabled-rule-files]] entry [{index}] in {path}: {problem} — each entry is a table with a `file` naming a rule file and a `reason` of at least {min} characters",
+        min = discover_rule_files::MIN_REASON_LEN
+    )]
+    InvalidDisabledRuleFile {
+        /// Path of the config file carrying the entry.
+        path: PathBuf,
+        /// The entry's 0-based position in the array, as the duplicate
+        /// warning numbers it.
+        index: usize,
+        /// What failed, naming the field: `` `reason` is missing ``.
+        problem: String,
+    },
 }
 
 /// Convenience alias for primitive return values.

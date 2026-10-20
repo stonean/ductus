@@ -22,7 +22,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::primitives::{PrimitiveError, Result, read_text};
+use crate::primitives::{PrimitiveError, Result, flatten_line, read_text};
 use crate::schema::paths;
 use crate::schema::primitives::{DiscoverRuleFilesArgs, DiscoverRuleFilesResult};
 
@@ -33,7 +33,7 @@ const VALID_SURFACES: &[&str] = &["backend", "frontend"];
 
 /// Minimum trimmed length (Unicode codepoints) of a disabled-rule-file
 /// `reason`. Mirrors the review contract's audit-trail requirement.
-const MIN_REASON_LEN: usize = 16;
+pub(crate) const MIN_REASON_LEN: usize = 16;
 
 /// Suffix classification of a rule file.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -68,12 +68,18 @@ fn classify(basename: &str) -> Surface {
 /// Returns [`PrimitiveError::Toml`] when the resolved config file is malformed,
 /// [`PrimitiveError::InvalidSurfacesMember`] when `[rules] surfaces` names a
 /// value outside `{backend, frontend}`, [`PrimitiveError::InvalidSurfacesType`]
-/// when the key is not a list of strings, or [`PrimitiveError::Io`] on
-/// filesystem failures listing the rule-file directory.
+/// when the key is not a list of strings,
+/// [`PrimitiveError::InvalidDisabledRuleFile`] when a
+/// `[[review.disabled-rule-files]]` entry is malformed, or
+/// [`PrimitiveError::Io`] on filesystem failures listing the rule-file
+/// directory.
 pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFilesResult> {
     // Resolved once: the same probe backs both the read below and the
     // provenance tag in the disabled-rule-file notice.
     let (config, config_name) = load_ductus_toml(repo)?;
+    // Every entry is validated before any rule file is selected, so a
+    // malformed one halts the run instead of leaving a partial selection.
+    let disabled = validate_disabled_entries(config.review.as_ref(), &repo.join(config_name))?;
     let (rules_dir_path, rules_dir_rel) = resolve_rules_dir(repo);
 
     let mut notices: Vec<String> = Vec::new();
@@ -105,13 +111,7 @@ pub fn run(args: &DiscoverRuleFilesArgs, repo: &Path) -> Result<DiscoverRuleFile
             }
         }
 
-        apply_disabled_filter(
-            config.review.as_ref(),
-            &all,
-            &mut selected,
-            &mut notices,
-            config_name,
-        );
+        apply_disabled_filter(&disabled, &all, &mut selected, &mut notices, config_name);
     }
 
     selected.sort();
@@ -250,34 +250,101 @@ fn toml_type_name(value: &toml::Value) -> &'static str {
     }
 }
 
-/// Apply the `[[review.disabled-rule-files]]` filter to the post-selection
-/// set, appending the ordered notice lines for each entry. Entries are
-/// processed in config order; the first entry for a given `file` applies,
-/// later duplicates warn. Malformed entries warn and are skipped without
-/// dropping anything. `config_name` is the repo-relative resolved config
-/// file the disable came from, rendered in the drop notice's provenance
-/// tag — the newest existing of `.ductus/config.toml`, `.govern/config.toml`,
-/// or the legacy root `.govern.toml`, per `schema::paths`'s `CONFIG_CHAIN`.
+/// A well-formed `[[review.disabled-rule-files]]` entry.
+struct DisabledEntry<'a> {
+    /// The rule-file basename the entry disables.
+    file: &'a str,
+    /// The audit-trail justification, at least [`MIN_REASON_LEN`] codepoints
+    /// once trimmed.
+    reason: &'a str,
+}
+
+/// Validate every `[[review.disabled-rule-files]]` entry, in config order,
+/// and return them all or halt on the first malformed one. `config` is the
+/// resolved config file the entries were read from, named in the error.
+///
+/// A malformed entry is a configuration value that does not parse into its
+/// declared shape, so it fails fast rather than being skipped (`CFG-ENV-008`):
+/// skipping it would leave the rule file enforced while the operator believes
+/// it disabled, or the reverse after a later fix, with nothing to say which.
+/// A duplicate is well-formed and is not judged here.
+fn validate_disabled_entries<'a>(
+    review: Option<&'a ReviewSection>,
+    config: &Path,
+) -> Result<Vec<DisabledEntry<'a>>> {
+    let Some(review) = review else {
+        return Ok(Vec::new());
+    };
+    review
+        .disabled_rule_files
+        .iter()
+        .enumerate()
+        .map(|(index, entry)| {
+            validate_disabled_entry(entry).map_err(|problem| {
+                PrimitiveError::InvalidDisabledRuleFile {
+                    path: config.to_path_buf(),
+                    index,
+                    problem,
+                }
+            })
+        })
+        .collect()
+}
+
+/// One entry as a [`DisabledEntry`], or the problem naming the field that
+/// failed and any offending value, flattened to one line.
+fn validate_disabled_entry(entry: &toml::Value) -> std::result::Result<DisabledEntry<'_>, String> {
+    let toml::Value::Table(table) = entry else {
+        return Err(format!(
+            "the entry is {}, not a table",
+            toml_type_name(entry)
+        ));
+    };
+    let string_field = |name: &str| match table.get(name) {
+        None => Err(format!("`{name}` is missing")),
+        Some(toml::Value::String(value)) => Ok(value.as_str()),
+        Some(other) => Err(format!(
+            "`{name}` is {}, not a string",
+            toml_type_name(other)
+        )),
+    };
+    let file = string_field("file")?;
+    let reason = string_field("reason")?;
+    let length = reason.trim().chars().count();
+    if length < MIN_REASON_LEN {
+        return Err(format!(
+            "`reason` {:?} is {length} characters once trimmed, under the minimum of {MIN_REASON_LEN}",
+            flatten_line(reason)
+        ));
+    }
+    Ok(DisabledEntry { file, reason })
+}
+
+/// Apply the validated `[[review.disabled-rule-files]]` entries to the
+/// post-selection set, appending the ordered notice lines for each entry.
+/// Entries are processed in config order; the first entry for a given `file`
+/// applies, later duplicates warn. `config_name` is the repo-relative
+/// resolved config file the disable came from, rendered in the drop notice's
+/// provenance tag — the newest existing of `.ductus/config.toml`,
+/// `.govern/config.toml`, or the legacy root `.govern.toml`, per
+/// `schema::paths`'s `CONFIG_CHAIN`.
 fn apply_disabled_filter(
-    review: Option<&ReviewSection>,
+    disabled: &[DisabledEntry<'_>],
     all: &[String],
     selected: &mut Vec<String>,
     notices: &mut Vec<String>,
     config_name: &str,
 ) {
-    let Some(review) = review else { return };
-    let mut seen: Vec<String> = Vec::new();
-    for (index, entry) in review.disabled_rule_files.iter().enumerate() {
-        let Some((file, reason)) = validate_disabled_entry(entry, index, notices) else {
-            continue;
-        };
-        if seen.iter().any(|s| s == file) {
+    let mut seen: Vec<&str> = Vec::new();
+    for (index, entry) in disabled.iter().enumerate() {
+        let (file, reason) = (entry.file, entry.reason);
+        if seen.contains(&file) {
             notices.push(format!(
                 "duplicate disabled-rule-file: {file} — entry [{index}] ignored"
             ));
             continue;
         }
-        seen.push(file.to_string());
+        seen.push(file);
 
         if let Some(pos) = selected.iter().position(|s| s == file) {
             selected.remove(pos);
@@ -293,47 +360,6 @@ fn apply_disabled_filter(
             notices.push(format!(
                 "unknown disabled-rule-file: {file} (no such file in the rule-file directory)"
             ));
-        }
-    }
-}
-
-/// Validate one disabled-rule-file entry, returning `(file, reason)` when
-/// well-formed. Emits a `malformed …` notice and returns `None` otherwise.
-fn validate_disabled_entry<'a>(
-    entry: &'a toml::Value,
-    index: usize,
-    notices: &mut Vec<String>,
-) -> Option<(&'a str, &'a str)> {
-    let toml::Value::Table(table) = entry else {
-        notices.push(format!(
-            "malformed disabled-rule-file at review.disabled-rule-files[{index}]: entry is not a table"
-        ));
-        return None;
-    };
-    let file = table.get("file").and_then(toml::Value::as_str);
-    let reason = table.get("reason").and_then(toml::Value::as_str);
-    match (file, reason) {
-        (None, _) => {
-            notices.push(format!(
-                "malformed disabled-rule-file at review.disabled-rule-files[{index}]: missing 'file'"
-            ));
-            None
-        }
-        (Some(_), None) => {
-            notices.push(format!(
-                "malformed disabled-rule-file at review.disabled-rule-files[{index}]: missing 'reason'"
-            ));
-            None
-        }
-        (Some(file), Some(reason)) => {
-            if reason.trim().chars().count() < MIN_REASON_LEN {
-                notices.push(format!(
-                    "malformed disabled-rule-file at review.disabled-rule-files[{index}]: reason must be at least {MIN_REASON_LEN} characters"
-                ));
-                None
-            } else {
-                Some((file, reason))
-            }
         }
     }
 }
@@ -374,9 +400,10 @@ struct RulesSection {
     surfaces: Option<toml::Value>,
 }
 
-/// `[review]` — the `disabled-rule-files` entries, kept as raw values so
-/// malformed entries (missing `file`/`reason`, short `reason`) can be reported
-/// rather than failing the whole parse.
+/// `[review]` — the `disabled-rule-files` entries, kept as raw values so a
+/// malformed entry (not a table, a missing or mistyped `file`/`reason`, a
+/// short `reason`) halts naming its index and field rather than surfacing as
+/// a generic parse error.
 #[derive(Deserialize, Default)]
 struct ReviewSection {
     #[serde(default, rename = "disabled-rule-files")]
@@ -594,30 +621,113 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn disabled_rule_file_missing_reason_is_malformed() {
-        let toml = "[[review.disabled-rule-files]]\nfile = \"quality-cross.md\"\n";
+    /// The error a malformed disabled entry halts with: its index, the
+    /// problem it names, and the rendered message.
+    fn malformed(toml: &str) -> (usize, String, String) {
         let tmp = setup(THREE, Some(toml));
-        let result = run(&args(&[]), tmp.path()).unwrap();
-        assert!(
-            result.notices.contains(
-                &"malformed disabled-rule-file at review.disabled-rule-files[0]: missing 'reason'"
-                    .to_string()
-            )
-        );
-        // Not dropped — malformed entries change nothing.
-        assert!(result.selected.contains(&"quality-cross.md".to_string()));
+        let err = run(&args(&[]), tmp.path()).unwrap_err();
+        let message = err.to_string();
+        let PrimitiveError::InvalidDisabledRuleFile {
+            path,
+            index,
+            problem,
+        } = err
+        else {
+            panic!("expected InvalidDisabledRuleFile, got {err:?}");
+        };
+        assert!(path.ends_with(".govern.toml"), "{}", path.display());
+        (index, problem, message)
     }
 
     #[test]
-    fn disabled_rule_file_short_reason_is_malformed() {
-        let toml =
-            "[[review.disabled-rule-files]]\nfile = \"quality-cross.md\"\nreason = \"too short\"\n";
+    fn every_malformed_entry_halts_naming_its_index_and_field() {
+        // Each shape fails fast (CFG-ENV-008) rather than being skipped: a
+        // skipped entry would leave the file enforced, or unenforced after a
+        // later fix, with nothing to say which.
+        for (entry, problem) in [
+            ("\"quality-cross.md\"", "the entry is a string, not a table"),
+            (
+                "{ reason = \"Not adopting this file yet, see PROJ-1.\" }",
+                "`file` is missing",
+            ),
+            (
+                "{ file = 5, reason = \"Not adopting this file yet, see PROJ-1.\" }",
+                "`file` is an integer, not a string",
+            ),
+            ("{ file = \"quality-cross.md\" }", "`reason` is missing"),
+            (
+                "{ file = \"quality-cross.md\", reason = true }",
+                "`reason` is a boolean, not a string",
+            ),
+            (
+                "{ file = \"quality-cross.md\", reason = \"  too short     \" }",
+                "`reason` \"too short\" is 9 characters once trimmed, under the minimum of 16",
+            ),
+        ] {
+            let toml = format!("[review]\ndisabled-rule-files = [{entry}]\n");
+            let (index, found, message) = malformed(&toml);
+            assert_eq!(index, 0, "{entry}");
+            assert_eq!(found, problem, "{entry}");
+            assert!(
+                message.starts_with("invalid [[review.disabled-rule-files]] entry [0] in "),
+                "{message}"
+            );
+            assert!(message.contains(problem), "{message}");
+            assert!(message.contains("at least 16 characters"), "{message}");
+        }
+    }
+
+    #[test]
+    fn a_malformed_entry_halts_after_well_formed_ones() {
+        // The second entry is malformed; the first, valid, entry is not
+        // applied, because the run halts before any rule file is selected.
+        let toml = "[[review.disabled-rule-files]]\nfile = \"quality-cross.md\"\nreason = \"First entry, this one is fine.\"\n\n[[review.disabled-rule-files]]\nfile = \"security-backend.md\"\nreason = \"short\"\n";
+        let (index, problem, _) = malformed(toml);
+        assert_eq!(index, 1);
+        assert!(problem.starts_with("`reason` \"short\""), "{problem}");
+    }
+
+    #[test]
+    fn a_malformed_entry_halts_with_no_rule_directory() {
+        // Validation does not wait for a rule file to select.
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(
+            tmp.path().join(".govern.toml"),
+            "[[review.disabled-rule-files]]\nfile = \"quality-cross.md\"\n",
+        )
+        .unwrap();
+        let err = run(&args(&[]), tmp.path()).unwrap_err();
+        assert!(
+            matches!(
+                err,
+                PrimitiveError::InvalidDisabledRuleFile { index: 0, .. }
+            ),
+            "{err:?}"
+        );
+    }
+
+    #[test]
+    fn a_short_reason_is_named_on_one_line() {
+        let (_, problem, message) = malformed(
+            "[[review.disabled-rule-files]]\nfile = \"quality-cross.md\"\nreason = \"a\\nb\"\n",
+        );
+        assert!(problem.contains("\"a b\""), "{problem}");
+        assert!(!message.contains('\n'), "{message:?}");
+    }
+
+    #[test]
+    fn the_reason_length_counts_codepoints_not_bytes() {
+        // Eight codepoints in twenty-four bytes is under the minimum, which a
+        // byte count would accept.
+        let (_, problem, _) = malformed(
+            "[[review.disabled-rule-files]]\nfile = \"quality-cross.md\"\nreason = \"対応は第三四半期\"\n",
+        );
+        assert!(problem.contains("is 8 characters"), "{problem}");
+        // Sixteen codepoints in forty-eight bytes meets it.
+        let toml = "[[review.disabled-rule-files]]\nfile = \"quality-cross.md\"\nreason = \"アクセシビリティ対応は第三四半期\"\n";
         let tmp = setup(THREE, Some(toml));
         let result = run(&args(&[]), tmp.path()).unwrap();
-        assert!(result.notices.contains(
-            &"malformed disabled-rule-file at review.disabled-rule-files[0]: reason must be at least 16 characters".to_string()
-        ));
+        assert!(!result.selected.contains(&"quality-cross.md".to_string()));
     }
 
     #[test]

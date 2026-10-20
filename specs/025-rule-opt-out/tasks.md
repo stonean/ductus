@@ -57,9 +57,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 10. A malformed disabled-rule-files entry fails fast (CFG-ENV-008)
 
-- [ ] Implement the behavior described in `scenarios/a-malformed-disabled-entry-fails-fast.md`
-- [ ] discover-rule-files halts on a malformed [[review.disabled-rule-files]] entry, naming the entry index and failing field, before any rule file is selected
-- [ ] AC4, AC1's self-correcting-skip sentence, and the Resolved Questions on the reason's minimum length and on exit status for malformed entries, plus framework/commands/review.md's malformed-entry handling, state the halt; generated command copies regenerated
-- [ ] A test fails if a malformed entry is skipped instead of halting
+- [x] Implement the behavior described in `scenarios/a-malformed-disabled-entry-fails-fast.md`
+- [x] discover-rule-files halts on a malformed [[review.disabled-rule-files]] entry, naming the entry index and failing field, before any rule file is selected
+- [x] AC4, AC1's self-correcting-skip sentence, and the Resolved Questions on the reason's minimum length and on exit status for malformed entries, plus framework/commands/review.md's malformed-entry handling, state the halt; generated command copies regenerated
+- [x] A test fails if a malformed entry is skipped instead of halting
 
 - **Done when**: A malformed disabled-rule-files entry halts /review with a named configuration error, no artifact describes skip-and-warn for it, and 025 is re-reviewed back to done.
