@@ -10,7 +10,7 @@ Introduce `framework/rules/performance-backend.md`, the backend counterpart to `
 
 ## Motivation
 
-The constitution names **performance** a governance-recognized cross-cutting category (§rules), and the frontend surface already ships `performance-frontend.md` (Core Web Vitals, bundle size, image/font discipline). The backend surface has no performance rule set at all — only `security-backend.md` and `api-backend.md`. Backend performance failures that recur across features — N+1 queries, missing indexes, unbounded caches, exhausted connection pools, oversized responses, slow work on the request path — have nowhere to be promoted to the rules tier; each is re-litigated per feature or caught only in production.
+The constitution names **performance** a governance-recognized cross-cutting category (§rules), and when this spec was written the frontend surface already shipped `performance-frontend.md` (Core Web Vitals, bundle size, image/font discipline) while the backend surface had no performance rule set at all — only `security-backend.md` and `api-backend.md`. Backend performance failures that recur across features — N+1 queries, missing indexes, unbounded caches, exhausted connection pools, oversized responses, slow work on the request path — had nowhere to be promoted to the rules tier; each was re-litigated per feature or caught only in production.
 
 This spec closes the asymmetry: a backend performance rule set citable by ID (`BE-{CATEGORY}-{NNN}`) that `/ductus:analyze` checks against specs and plans and `/ductus:review` checks against code.
 
