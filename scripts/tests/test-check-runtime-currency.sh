@@ -5,8 +5,9 @@
 # run red. A comparison that silently stops comparing reads exactly like a pin
 # that is current, so the only evidence it works is that it FAILS on each case
 # it claims to catch, and reports NOT EXAMINED, never current, when it cannot
-# look. Each case runs the check in a throwaway git repository against stubbed
-# `gh` and `curl`, so nothing here touches the network.
+# look. Each case runs the check in a throwaway git repository against a
+# stubbed `curl`, which serves the GitHub API and the registries, so nothing
+# here touches the network.
 #
 # Coverage:
 #   A. a fixture whose pins all match upstream is current (control); it also
@@ -31,7 +32,9 @@
 #   R. a DUCTUS_SHA256 that is not the release's published sha256 is behind
 #   S. a DUCTUS_VERSION with no DUCTUS_SHA256 beside it is behind
 #   T. a published sha256 that cannot be read is NOT EXAMINED (exit 2)
-#   U. an unknown check name is refused
+#   U. an action written as a step's `uses:` key, under `- name:`, is read too
+#   V. every lookup carries a connect timeout and a total timeout
+#   W. an unknown check name is refused
 #
 # Usage: scripts/tests/test-check-runtime-currency.sh
 
@@ -52,21 +55,17 @@ sha() { printf '%040d' "$1"; }
 
 # --- the stubs ----------------------------------------------------------------
 mkdir -p "$WORK/bin"
-cat >"$WORK/bin/gh" <<'STUB'
-#!/usr/bin/env bash
-# `gh api <path> [--jq <expr>]`, answered from $STUB_DIR/gh.tsv (path, value).
-[ "${1:-}" = api ] || exit 1
-awk -F'\t' -v p="${2:-}" '$1 == p { print $2; found = 1 } END { exit !found }' "$STUB_DIR/gh.tsv"
-STUB
 cat >"$WORK/bin/curl" <<'STUB'
 #!/usr/bin/env bash
-# Serves each https:// URL from $STUB_DIR/curl.tsv (url, file); unknown is a 404.
+# Serves each https:// URL from $STUB_DIR/curl.tsv (url, file); unknown is a
+# 404. Every call's arguments are logged to $STUB_DIR/calls.log.
+printf '%s\n' "$*" >>"$STUB_DIR/calls.log"
 url=""
 for a in "$@"; do case "$a" in https://*) url=$a ;; esac; done
 file=$(awk -F'\t' -v u="$url" '$1 == u { print $2; found = 1 } END { exit !found }' "$STUB_DIR/curl.tsv") || exit 22
 cat "$STUB_DIR/$file"
 STUB
-chmod +x "$WORK/bin/gh" "$WORK/bin/curl"
+chmod +x "$WORK/bin/curl"
 
 # --- the base fixture ---------------------------------------------------------
 BASE="$WORK/base"
@@ -87,6 +86,8 @@ jobs:
         with:
           tool: cargo-audit@0.22.2
       - uses: actions/setup-node@$(sha 4) # v6.5.0
+      - name: Stage
+        uses: actions/upload-artifact@$(sha 6) # v4.6.2
       # a cargo install in a comment is not a pin
       - run: |
           printf '%s\n' 'ziglang==0.17.0 --hash=sha256:$(printf '%064d' 9)' > r.txt
@@ -111,21 +112,29 @@ EOF
 (cd "$BASE/repo" && git init -q && git add -A)
 
 printf '%s\t%s\n' \
-  repos/actions/checkout/commits/v7.0.1 "$(sha 1)" \
-  repos/actions/checkout/releases/latest v7.0.1 \
-  repos/dtolnay/rust-toolchain/commits/v1 "$(sha 2)" \
-  repos/dtolnay/rust-toolchain/releases/latest v1 \
-  repos/taiki-e/install-action/commits/v2.87.29 "$(sha 3)" \
-  repos/taiki-e/install-action/releases/latest v2.87.29 \
-  repos/actions/setup-node/commits/v6.5.0 "$(sha 4)" \
-  repos/actions/setup-node/releases/latest v6.5.0 \
-  repos/stonean/ductus/releases/latest ductus-v0.59.11 >"$BASE/stub/gh.tsv"
-printf '%s\t%s\n' \
   https://crates.io/api/v1/crates/cargo-audit cargo-audit.json \
   https://crates.io/api/v1/crates/cargo-zigbuild cargo-zigbuild.json \
   https://pypi.org/pypi/ziglang/json ziglang.json \
   https://github.com/stonean/ductus/releases/download/ductus-v0.59.11/ductus-x86_64-unknown-linux-gnu.tar.gz.sha256 \
   ductus.sha256 >"$BASE/stub/curl.tsv"
+# api <path> <json> serves https://api.github.com/<path> from stub/api-<path>.json,
+# its slashes made underscores.
+api() {
+  f="api-$(printf '%s' "$1" | tr '/' '_').json"
+  printf '%s\n' "$2" >"$BASE/stub/$f"
+  printf 'https://api.github.com/%s\t%s\n' "$1" "$f" >>"$BASE/stub/curl.tsv"
+}
+api repos/actions/checkout/commits/v7.0.1 "{\"sha\":\"$(sha 1)\"}"
+api repos/actions/checkout/releases/latest '{"tag_name":"v7.0.1"}'
+api repos/dtolnay/rust-toolchain/commits/v1 "{\"sha\":\"$(sha 2)\"}"
+api repos/dtolnay/rust-toolchain/releases/latest '{"tag_name":"v1"}'
+api repos/taiki-e/install-action/commits/v2.87.29 "{\"sha\":\"$(sha 3)\"}"
+api repos/taiki-e/install-action/releases/latest '{"tag_name":"v2.87.29"}'
+api repos/actions/setup-node/commits/v6.5.0 "{\"sha\":\"$(sha 4)\"}"
+api repos/actions/setup-node/releases/latest '{"tag_name":"v6.5.0"}'
+api repos/actions/upload-artifact/commits/v4.6.2 "{\"sha\":\"$(sha 6)\"}"
+api repos/actions/upload-artifact/releases/latest '{"tag_name":"v4.6.2"}'
+api repos/stonean/ductus/releases/latest '{"tag_name":"ductus-v0.59.11"}'
 printf '{"crate":{"max_stable_version":"0.22.2"}}\n' >"$BASE/stub/cargo-audit.json"
 printf '{"crate":{"max_stable_version":"0.23.4"}}\n' >"$BASE/stub/cargo-zigbuild.json"
 printf '{"info":{"version":"0.17.0"}}\n' >"$BASE/stub/ziglang.json"
@@ -160,12 +169,12 @@ echo "Running check-runtime-currency pins tests..."
 
 probe a-control
 expect "A: a fixture matching upstream is current" 0 \
-  "pins: current (4 action pin(s) and 5 tool pin(s) across 2 file(s))"
+  "pins: current (5 action pin(s) and 5 tool pin(s) across 2 file(s))"
 
-probe b-release 'stub/gh.tsv|/setup-node\/releases\/latest/s|v6.5.0|v7.1.0|'
+probe b-release 'stub/api-repos_actions_setup-node_releases_latest.json|s|v6.5.0|v7.1.0|'
 expect "B: a newer release is behind" 1 "actions/setup-node pins v6.5.0, latest release is v7.1.0"
 
-probe c-moved "stub/gh.tsv|/dtolnay\/rust-toolchain\/commits\/v1/s|$(sha 2)|$(sha 5)|"
+probe c-moved "stub/api-repos_dtolnay_rust-toolchain_commits_v1.json|s|$(sha 2)|$(sha 5)|"
 expect "C: a tag naming another commit is behind" 1 "but v1 now names $(sha 5)"
 
 probe d-tag "repo/framework/templates/ci/adopter.yml|s|actions/checkout@[0-9]* # v7.0.1|actions/checkout@v7|"
@@ -196,7 +205,7 @@ probe l-toolchain 'repo/.github/workflows/ci.yml|s|toolchain: 1.99.1|toolchain: 
 expect "L: a toolchain input off rust-toolchain.toml is behind" 1 \
   "toolchain: 1.98.0 differs from runtime/rust-toolchain.toml's 1.99.1"
 
-probe m-github 'stub/gh.tsv|/install-action\/releases\/latest/d'
+probe m-github 'stub/curl.tsv|/install-action\/releases\/latest/d'
 expect "M: a failed GitHub lookup is not examined" 2 "pins: NOT EXAMINED — 1 of"
 if printf '%s\n' "$out" | grep -q 'pins: current'; then fail "M: a failed lookup still printed current"; fi
 
@@ -215,7 +224,7 @@ expect "O: no workflow is not examined, not current" 2 "the enumeration is broke
 probe p-both 'stub/cargo-audit.json|s|0.22.2|0.23.0|' 'stub/curl.tsv|/ziglang/d'
 expect "P: behind outranks unexamined" 1 "pins: NOT EXAMINED — 1 of"
 
-probe q-release 'stub/gh.tsv|/stonean\/ductus\/releases\/latest/s|ductus-v0.59.11|ductus-v0.60.0|'
+probe q-release 'stub/api-repos_stonean_ductus_releases_latest.json|s|ductus-v0.59.11|ductus-v0.60.0|'
 expect "Q: a template release behind the latest release is behind" 1 "ductus pins 0.59.11, latest is 0.60.0"
 
 probe r-hash 'stub/ductus.sha256|s|^0|1|'
@@ -227,9 +236,20 @@ expect "S: a release version with no hash is behind" 1 "ductus 0.59.11 has no DU
 probe t-sidecar 'stub/curl.tsv|/ductus-v0.59.11/d'
 expect "T: an unreadable published hash is not examined" 2 "could not read the release's published sha256"
 
+probe u-stepkey 'stub/api-repos_actions_upload-artifact_releases_latest.json|s|v4.6.2|v7.0.2|'
+expect "U: a step-key uses: is read too" 1 "actions/upload-artifact pins v4.6.2, latest release is v7.0.2"
+
+log="$WORK/a-control/stub/calls.log"
+if [ -s "$log" ] && ! grep -v -e '--connect-timeout' "$log" | grep -q . &&
+  ! grep -v -e '--max-time' "$log" | grep -q .; then
+  pass "V: every lookup carries a connect timeout and a total timeout"
+else
+  fail "V: a lookup ran without a timeout, or none ran: $(cat "$log" 2>/dev/null)"
+fi
+
 code=0
 out=$(cd "$BASE/repo" && bash "$CHECK" pinz 2>&1) || code=$?
-expect "U: an unknown check is refused" 2 "unknown check: pinz"
+expect "W: an unknown check is refused" 2 "unknown check: pinz"
 
 echo
 if [ "$failures" -ne 0 ]; then

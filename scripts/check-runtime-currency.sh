@@ -24,7 +24,7 @@
 # reported, never failed: the MSRV is a deliberate floor, raised on purpose.
 #
 # Exit status: 1 when any check found the runtime behind; otherwise 2 when any
-# check could not run (no network, no cargo-audit, no gh), so an unexamined
+# check could not run (no network, no cargo-audit), so an unexamined
 # subject never reads as current; 0 only when every check ran and found nothing.
 #
 # Usage: scripts/check-runtime-currency.sh [check ...]   (from anywhere in the
@@ -57,6 +57,15 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 report() { printf '%s\n' "$*"; }
+
+# Every lookup is bounded (BE-TIMEOUT-001): a connection gets
+# lookup_connect_seconds and a whole request lookup_max_seconds, after which
+# the check reports what it could not read rather than waiting on it.
+lookup_connect_seconds=10
+lookup_max_seconds=60
+fetch() { curl -fsSL --connect-timeout "$lookup_connect_seconds" --max-time "$lookup_max_seconds" "$@"; }
+# True when version $1 sorts strictly before version $2.
+ver_lt() { [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -1)" = "$1" ]; }
 
 # --- 1 + 2: lockfile and majors, from one verbose dry run --------------------
 if ! want lockfile && ! want majors; then
@@ -111,13 +120,13 @@ fi
 pinned=$(sed -nE 's/^channel = "([^"]+)"$/\1/p' "$runtime/rust-toolchain.toml")
 if ! want toolchain; then
   :
-elif curl -fsSL https://static.rust-lang.org/dist/channel-rust-stable.toml -o "$tmp/channel.toml"; then
+elif fetch https://static.rust-lang.org/dist/channel-rust-stable.toml -o "$tmp/channel.toml"; then
   stable=$(awk '/^\[pkg\.rust\]$/{f=1} f && /^version = /{print; exit}' "$tmp/channel.toml" |
     sed -E 's/^version = "([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
   if [ -z "$pinned" ] || [ -z "$stable" ]; then
     unexamined=1
     report "toolchain: NOT EXAMINED — pinned '${pinned:-?}', latest stable '${stable:-?}'"
-  elif [ "$(printf '%s\n%s\n' "$pinned" "$stable" | sort -V | tail -1)" != "$pinned" ]; then
+  elif ver_lt "$pinned" "$stable"; then
     behind=1
     report "toolchain: behind — runtime/rust-toolchain.toml pins $pinned, latest stable is $stable"
   else
@@ -172,24 +181,45 @@ pins_behind=""
 pins_unexamined=""
 note_behind() { pins_behind+="  $*"$'\n'; }
 note_unexamined() { pins_unexamined+="  $*"$'\n'; }
-# True when version $1 sorts strictly before version $2.
-ver_lt() { [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -1)" = "$1" ]; }
+# The value of a `key: value` line, without quotes.
+scalar_of() { printf '%s\n' "$2" | sed -E "s/^[[:space:]]*$1:[[:space:]]*['\"]?([^'\"[:space:]]*).*/\1/"; }
+# "N reference(s), first at file:line" over the rows of tsv $1 whose first
+# three fields are $2, $3 and $4; each row's fourth field is where it was read.
+refs_summary() {
+  awk -F'\t' -v a="$2" -v b="$3" -v c="$4" '
+    $1 == a && $2 == b && $3 == c { n++; if (n == 1) first = $4 }
+    END { printf "%d reference(s), first at %s", n, first }' "$1"
+}
 
 # Look up the newest stable version a registry publishes: crates.io or PyPI.
 # Prints nothing when the lookup fails.
 latest_crate() {
-  curl -fsSL -A "$ua" "https://crates.io/api/v1/crates/$1" 2>/dev/null |
+  fetch -A "$ua" "https://crates.io/api/v1/crates/$1" 2>/dev/null |
     jq -r '.crate.max_stable_version // empty' 2>/dev/null
 }
 latest_pypi() {
-  curl -fsSL "https://pypi.org/pypi/$1/json" 2>/dev/null | jq -r '.info.version // empty' 2>/dev/null
+  fetch "https://pypi.org/pypi/$1/json" 2>/dev/null | jq -r '.info.version // empty' 2>/dev/null
+}
+# The GitHub REST API, through the same bounded fetch. GH_TOKEN, which
+# runtime-currency.yml passes, raises the anonymous rate limit.
+github_api() {
+  local args=(-H 'Accept: application/vnd.github+json')
+  if [ -n "${GH_TOKEN:-}" ]; then
+    args+=(-H "Authorization: Bearer $GH_TOKEN")
+  fi
+  fetch "${args[@]}" "https://api.github.com/$1"
+}
+# A repository's latest release tag, looked up once however many pins name it.
+latest_release_of() {
+  cache="$tmp/latest-release-$(printf '%s' "$1" | tr '/' '_')"
+  if [ ! -e "$cache" ]; then
+    github_api "repos/$1/releases/latest" 2>/dev/null | jq -r '.tag_name // empty' >"$cache" 2>/dev/null || : >"$cache"
+  fi
+  cat "$cache"
 }
 # This repository's own latest release, which the adopter CI template's
 # install step downloads by version.
-latest_ductus_release() {
-  command -v gh >/dev/null 2>&1 || return 0
-  gh api repos/stonean/ductus/releases/latest --jq .tag_name 2>/dev/null | sed 's/^ductus-v//'
-}
+latest_ductus_release() { latest_release_of stonean/ductus | sed 's/^ductus-v//'; }
 
 # Compare one tool pin with its registry. $1 kind, $2 name, $3 pinned version,
 # $4 where it is pinned.
@@ -217,14 +247,18 @@ if want pins; then
     unexamined=1
     report "pins: NOT EXAMINED — no tracked workflow or CI template matched, so the enumeration is broken, not the pins"
   else
-    : >"$tmp/actions.tsv"
-    : >"$tmp/tools.tsv"
-    # Every non-comment line, as `file:line:text`.
-    (cd "$root" && grep -H -n -v -E '^[[:space:]]*#' "${pin_files[@]}") >"$tmp/lines.txt"
+    for list in actions tools release-versions release-hashes; do : >"$tmp/$list.tsv"; done
+    # Only the lines a branch below can match, as `file:line:text`, comments
+    # dropped: one grep rather than a pass of subprocesses over every line.
+    candidates='^[[:space:]]*(-[[:space:]]+)?(uses|tool|DUCTUS_VERSION|DUCTUS_SHA256|toolchain):[[:space:]]'
+    candidates+='|(^|[^[:alnum:]_-])(cargo|pip3?) install[[:space:]]|==[0-9][^[:space:]]*[[:space:]]+--hash=sha256:'
+    (cd "$root" && grep -H -n -E "$candidates" "${pin_files[@]}" |
+      grep -v -E '^[^:]+:[0-9]+:[[:space:]]*#') >"$tmp/lines.txt"
 
     while IFS= read -r hit; do
-      where=$(printf '%s\n' "$hit" | cut -d: -f1-2)
-      text=$(printf '%s\n' "$hit" | cut -d: -f3-)
+      rest=${hit#*:}
+      where="${hit%%:*}:${rest%%:*}"
+      text=${rest#*:}
 
       # Actions: `uses: owner/repo[/path]@ref # tag`. A local reusable
       # workflow (`./…`) is this repository's own file and has no upstream.
@@ -287,20 +321,20 @@ if want pins; then
       # The adopter CI template's install step pins a ductus release by
       # version and by its x86_64 Linux archive's sha256.
       if printf '%s\n' "$text" | grep -qE '^[[:space:]]*DUCTUS_VERSION:[[:space:]]'; then
-        version=$(printf '%s\n' "$text" | sed -E "s/^[[:space:]]*DUCTUS_VERSION:[[:space:]]*['\"]?([^'\"[:space:]]*).*/\1/")
+        version=$(scalar_of DUCTUS_VERSION "$text")
         printf 'ductus-release\tductus\t%s\t%s\n' "$version" "$where" >>"$tmp/tools.tsv"
         printf '%s\t%s\t%s\n' "${where%%:*}" "$version" "$where" >>"$tmp/release-versions.tsv"
         continue
       fi
       if printf '%s\n' "$text" | grep -qE '^[[:space:]]*DUCTUS_SHA256:[[:space:]]'; then
-        hash=$(printf '%s\n' "$text" | sed -E "s/^[[:space:]]*DUCTUS_SHA256:[[:space:]]*['\"]?([^'\"[:space:]]*).*/\1/")
+        hash=$(scalar_of DUCTUS_SHA256 "$text")
         printf '%s\t%s\n' "${where%%:*}" "$hash" >>"$tmp/release-hashes.tsv"
         continue
       fi
 
       # dtolnay/rust-toolchain's `toolchain:` input moves with the toolchain file.
       if printf '%s\n' "$text" | grep -qE '^[[:space:]]*toolchain:[[:space:]]'; then
-        version=$(printf '%s\n' "$text" | sed -E "s/^[[:space:]]*toolchain:[[:space:]]*['\"]?([^'\"[:space:]]*).*/\1/")
+        version=$(scalar_of toolchain "$text")
         printf 'toolchain\trust\t%s\t%s\n' "$version" "$where" >>"$tmp/tools.tsv"
         continue
       fi
@@ -309,14 +343,13 @@ if want pins; then
     # Each pinned ductus release needs its hash beside it, and the hash must
     # be the one the release published, or the install step fails on a hash
     # nobody can satisfy.
-    touch "$tmp/release-versions.tsv" "$tmp/release-hashes.tsv"
     while IFS=$'\t' read -r file version where; do
       hash=$(awk -F'\t' -v f="$file" '$1 == f { print $2; exit }' "$tmp/release-hashes.tsv")
       if [ -z "$hash" ]; then
         note_behind "ductus $version has no DUCTUS_SHA256 beside it ($where)"
         continue
       fi
-      published=$(curl -fsSL "https://github.com/stonean/ductus/releases/download/ductus-v$version/ductus-x86_64-unknown-linux-gnu.tar.gz.sha256" 2>/dev/null | awk '{ print $1; exit }')
+      published=$(fetch "https://github.com/stonean/ductus/releases/download/ductus-v$version/ductus-x86_64-unknown-linux-gnu.tar.gz.sha256" 2>/dev/null | awk '{ print $1; exit }')
       if [ -z "$published" ]; then
         note_unexamined "ductus $version ($where): could not read the release's published sha256"
       elif [ "$published" != "$hash" ]; then
@@ -328,16 +361,9 @@ if want pins; then
     action_pins=0
     while IFS=$'\t' read -r repo sha tag; do
       action_pins=$((action_pins + 1))
-      refs=$(awk -F'\t' -v r="$repo" -v s="$sha" -v t="$tag" '$1 == r && $2 == s && $3 == t { print $4 }' "$tmp/actions.tsv")
-      count=$(printf '%s\n' "$refs" | wc -l | tr -d ' ')
-      first=$(printf '%s\n' "$refs" | head -1)
-      at="$count reference(s), first at $first"
-      if ! command -v gh >/dev/null 2>&1; then
-        note_unexamined "$repo $tag ($at): gh is not installed"
-        continue
-      fi
-      commit=$(gh api "repos/$repo/commits/$tag" --jq .sha 2>/dev/null)
-      latest=$(gh api "repos/$repo/releases/latest" --jq .tag_name 2>/dev/null)
+      at=$(refs_summary "$tmp/actions.tsv" "$repo" "$sha" "$tag")
+      commit=$(github_api "repos/$repo/commits/$tag" 2>/dev/null | jq -r '.sha // empty' 2>/dev/null)
+      latest=$(latest_release_of "$repo")
       if [ -z "$commit" ] || [ -z "$latest" ]; then
         note_unexamined "$repo $tag ($at): could not read the tag's commit or the latest release from GitHub"
       else
@@ -353,9 +379,7 @@ if want pins; then
     tool_pins=0
     while IFS=$'\t' read -r kind name version; do
       tool_pins=$((tool_pins + 1))
-      refs=$(awk -F'\t' -v k="$kind" -v n="$name" -v v="$version" '$1 == k && $2 == n && $3 == v { print $4 }' "$tmp/tools.tsv")
-      count=$(printf '%s\n' "$refs" | wc -l | tr -d ' ')
-      at="$count reference(s), first at $(printf '%s\n' "$refs" | head -1)"
+      at=$(refs_summary "$tmp/tools.tsv" "$kind" "$name" "$version")
       if [ "$kind" = toolchain ]; then
         if [ "$version" != "$pinned" ]; then
           note_behind "toolchain: $version differs from runtime/rust-toolchain.toml's $pinned ($at)"

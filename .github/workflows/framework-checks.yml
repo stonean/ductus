@@ -139,7 +139,7 @@ jobs:
         run: bash scripts/tests/test-install.sh
 
       # (m) The weekly currency run is the update process for the CI pins
-      # (BE-DEPS-006, 022 task 3), and it runs only on a schedule, so a
+      # (BE-DEPS-006, 022 task 3), and it runs on a schedule, not on push, so a
       # comparison that stopped comparing would read as current for weeks.
       # The test drives the pins check against stubbed lookups and shows it
       # fails on each case it claims to catch.

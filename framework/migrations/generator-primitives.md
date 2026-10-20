@@ -53,8 +53,9 @@ and acquired, which retired that constraint.
 
 4. **CI.** No scaffolding pass writes the `adopter-generators.yml` template:
    an adopter copied it by hand, and re-copies it to pick up the updated
-   version. A copy that still invokes `.ductus/scripts/gen-spec-deps.sh` is
-   reported by the orphaned-reference check on the next `/ductus:analyze`.
+   version. A copy that still invokes `.ductus/scripts/gen-spec-deps.sh`
+   fails on its first run, since that script no longer exists; the
+   orphaned-reference check does not read workflow files.
 
 ## What the adopter sees afterwards
 

@@ -72,18 +72,26 @@ jobs:
       # release binary, pinned by version and by the sha256 of its archive
       # (BE-DEPS-006), and checks the hash before anything runs. No Rust
       # toolchain is needed. The archive is the x86_64 Linux one an
-      # ubuntu-latest runner uses; on another architecture the hash check
-      # fails rather than running an unverified binary. To move to a newer
-      # release, re-copy this template, or set both values from that
-      # release's `ductus-x86_64-unknown-linux-gnu.tar.gz.sha256` asset.
+      # ubuntu-latest runner uses; on another architecture the verified
+      # binary will not execute, so the version check below fails the step.
+      # To move to a newer release, re-copy this template, or set
+      # DUCTUS_VERSION to that release's version and DUCTUS_SHA256 from its
+      # `ductus-x86_64-unknown-linux-gnu.tar.gz.sha256` asset.
+      #
+      # The download is bounded (BE-TIMEOUT-001) and not retried: a failed
+      # one fails the job, which can be re-run.
       - name: Install the ductus runtime
+        timeout-minutes: 10
         env:
           DUCTUS_VERSION: 0.59.11
           DUCTUS_SHA256: cc5177bb28e0f8c2ffe6c3a0903f76ccd3da45c51c128d41a7ba343b58d1c49e
+          DOWNLOAD_CONNECT_TIMEOUT_SECONDS: "30"
+          DOWNLOAD_MAX_TIME_SECONDS: "300"
         run: |
           set -euo pipefail
           archive="$RUNNER_TEMP/ductus-x86_64-unknown-linux-gnu.tar.gz"
-          curl --proto '=https' --tlsv1.2 -fsSL --retry 3 \
+          curl --proto '=https' --tlsv1.2 -fsSL \
+            --connect-timeout "$DOWNLOAD_CONNECT_TIMEOUT_SECONDS" --max-time "$DOWNLOAD_MAX_TIME_SECONDS" \
             "https://github.com/stonean/ductus/releases/download/ductus-v${DUCTUS_VERSION}/ductus-x86_64-unknown-linux-gnu.tar.gz" \
             -o "$archive"
           printf '%s  %s\n' "$DUCTUS_SHA256" "$archive" | sha256sum -c -
