@@ -157,7 +157,9 @@ fi
 # with upstream, and this is that comparison (022 task 3). An action pin is
 # current when its tag is the action's latest release and still names the
 # pinned commit; a tool pin is current when its version is the latest its
-# registry reports (crates.io's newest stable version, PyPI's latest); and
+# registry reports (crates.io's newest stable version, PyPI's latest, or this
+# repository's latest release for the adopter CI template's runtime, whose
+# sha256 must also be the one that release published); and
 # every `toolchain:` input must equal rust-toolchain.toml's channel, which
 # check 3 holds against stable Rust. A reference with no pin at all is
 # reported too: there is nothing to compare, and the build runs whatever its
@@ -182,6 +184,12 @@ latest_crate() {
 latest_pypi() {
   curl -fsSL "https://pypi.org/pypi/$1/json" 2>/dev/null | jq -r '.info.version // empty' 2>/dev/null
 }
+# This repository's own latest release, which the adopter CI template's
+# install step downloads by version.
+latest_ductus_release() {
+  command -v gh >/dev/null 2>&1 || return 0
+  gh api repos/stonean/ductus/releases/latest --jq .tag_name 2>/dev/null | sed 's/^ductus-v//'
+}
 
 # Compare one tool pin with its registry. $1 kind, $2 name, $3 pinned version,
 # $4 where it is pinned.
@@ -189,6 +197,7 @@ check_tool() {
   case "$1" in
     crate) latest=$(latest_crate "$2") ;;
     pypi) latest=$(latest_pypi "$2") ;;
+    ductus-release) latest=$(latest_ductus_release) ;;
   esac
   if [ -z "$latest" ]; then
     note_unexamined "$2 $3 ($4): could not read the latest version from its registry"
@@ -275,6 +284,20 @@ if want pins; then
         continue
       fi
 
+      # The adopter CI template's install step pins a ductus release by
+      # version and by its x86_64 Linux archive's sha256.
+      if printf '%s\n' "$text" | grep -qE '^[[:space:]]*DUCTUS_VERSION:[[:space:]]'; then
+        version=$(printf '%s\n' "$text" | sed -E "s/^[[:space:]]*DUCTUS_VERSION:[[:space:]]*['\"]?([^'\"[:space:]]*).*/\1/")
+        printf 'ductus-release\tductus\t%s\t%s\n' "$version" "$where" >>"$tmp/tools.tsv"
+        printf '%s\t%s\t%s\n' "${where%%:*}" "$version" "$where" >>"$tmp/release-versions.tsv"
+        continue
+      fi
+      if printf '%s\n' "$text" | grep -qE '^[[:space:]]*DUCTUS_SHA256:[[:space:]]'; then
+        hash=$(printf '%s\n' "$text" | sed -E "s/^[[:space:]]*DUCTUS_SHA256:[[:space:]]*['\"]?([^'\"[:space:]]*).*/\1/")
+        printf '%s\t%s\n' "${where%%:*}" "$hash" >>"$tmp/release-hashes.tsv"
+        continue
+      fi
+
       # dtolnay/rust-toolchain's `toolchain:` input moves with the toolchain file.
       if printf '%s\n' "$text" | grep -qE '^[[:space:]]*toolchain:[[:space:]]'; then
         version=$(printf '%s\n' "$text" | sed -E "s/^[[:space:]]*toolchain:[[:space:]]*['\"]?([^'\"[:space:]]*).*/\1/")
@@ -282,6 +305,24 @@ if want pins; then
         continue
       fi
     done <"$tmp/lines.txt"
+
+    # Each pinned ductus release needs its hash beside it, and the hash must
+    # be the one the release published, or the install step fails on a hash
+    # nobody can satisfy.
+    touch "$tmp/release-versions.tsv" "$tmp/release-hashes.tsv"
+    while IFS=$'\t' read -r file version where; do
+      hash=$(awk -F'\t' -v f="$file" '$1 == f { print $2; exit }' "$tmp/release-hashes.tsv")
+      if [ -z "$hash" ]; then
+        note_behind "ductus $version has no DUCTUS_SHA256 beside it ($where)"
+        continue
+      fi
+      published=$(curl -fsSL "https://github.com/stonean/ductus/releases/download/ductus-v$version/ductus-x86_64-unknown-linux-gnu.tar.gz.sha256" 2>/dev/null | awk '{ print $1; exit }')
+      if [ -z "$published" ]; then
+        note_unexamined "ductus $version ($where): could not read the release's published sha256"
+      elif [ "$published" != "$hash" ]; then
+        note_behind "DUCTUS_SHA256 $hash is not the sha256 ductus $version published, $published ($where)"
+      fi
+    done <"$tmp/release-versions.tsv"
 
     # One lookup per distinct pin, however many lines repeat it.
     action_pins=0

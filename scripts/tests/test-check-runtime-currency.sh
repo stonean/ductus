@@ -27,7 +27,11 @@
 #   N. a registry lookup that fails is NOT EXAMINED (exit 2), never current
 #   O. a tree with no workflow is NOT EXAMINED rather than vacuously current
 #   P. a behind pin outranks an unexamined one (exit 1)
-#   Q. an unknown check name is refused
+#   Q. the CI template's ductus release behind the latest release is behind
+#   R. a DUCTUS_SHA256 that is not the release's published sha256 is behind
+#   S. a DUCTUS_VERSION with no DUCTUS_SHA256 beside it is behind
+#   T. a published sha256 that cannot be read is NOT EXAMINED (exit 2)
+#   U. an unknown check name is refused
 #
 # Usage: scripts/tests/test-check-runtime-currency.sh
 
@@ -99,6 +103,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@$(sha 1) # v7.0.1
+      - name: Install the ductus runtime
+        env:
+          DUCTUS_VERSION: 0.59.11
+          DUCTUS_SHA256: $(printf '%064d' 7)
 EOF
 (cd "$BASE/repo" && git init -q && git add -A)
 
@@ -110,14 +118,18 @@ printf '%s\t%s\n' \
   repos/taiki-e/install-action/commits/v2.87.29 "$(sha 3)" \
   repos/taiki-e/install-action/releases/latest v2.87.29 \
   repos/actions/setup-node/commits/v6.5.0 "$(sha 4)" \
-  repos/actions/setup-node/releases/latest v6.5.0 >"$BASE/stub/gh.tsv"
+  repos/actions/setup-node/releases/latest v6.5.0 \
+  repos/stonean/ductus/releases/latest ductus-v0.59.11 >"$BASE/stub/gh.tsv"
 printf '%s\t%s\n' \
   https://crates.io/api/v1/crates/cargo-audit cargo-audit.json \
   https://crates.io/api/v1/crates/cargo-zigbuild cargo-zigbuild.json \
-  https://pypi.org/pypi/ziglang/json ziglang.json >"$BASE/stub/curl.tsv"
+  https://pypi.org/pypi/ziglang/json ziglang.json \
+  https://github.com/stonean/ductus/releases/download/ductus-v0.59.11/ductus-x86_64-unknown-linux-gnu.tar.gz.sha256 \
+  ductus.sha256 >"$BASE/stub/curl.tsv"
 printf '{"crate":{"max_stable_version":"0.22.2"}}\n' >"$BASE/stub/cargo-audit.json"
 printf '{"crate":{"max_stable_version":"0.23.4"}}\n' >"$BASE/stub/cargo-zigbuild.json"
 printf '{"info":{"version":"0.17.0"}}\n' >"$BASE/stub/ziglang.json"
+printf '%064d  ductus-x86_64-unknown-linux-gnu.tar.gz\n' 7 >"$BASE/stub/ductus.sha256"
 
 # probe <case> [sed-edit-of-a-fixture-file ...] runs the pins check in a copy of
 # the base fixture. Each edit is `file|sed-expression`, its file relative to
@@ -148,7 +160,7 @@ echo "Running check-runtime-currency pins tests..."
 
 probe a-control
 expect "A: a fixture matching upstream is current" 0 \
-  "pins: current (4 action pin(s) and 4 tool pin(s) across 2 file(s))"
+  "pins: current (4 action pin(s) and 5 tool pin(s) across 2 file(s))"
 
 probe b-release 'stub/gh.tsv|/setup-node\/releases\/latest/s|v6.5.0|v7.1.0|'
 expect "B: a newer release is behind" 1 "actions/setup-node pins v6.5.0, latest release is v7.1.0"
@@ -203,9 +215,21 @@ expect "O: no workflow is not examined, not current" 2 "the enumeration is broke
 probe p-both 'stub/cargo-audit.json|s|0.22.2|0.23.0|' 'stub/curl.tsv|/ziglang/d'
 expect "P: behind outranks unexamined" 1 "pins: NOT EXAMINED — 1 of"
 
+probe q-release 'stub/gh.tsv|/stonean\/ductus\/releases\/latest/s|ductus-v0.59.11|ductus-v0.60.0|'
+expect "Q: a template release behind the latest release is behind" 1 "ductus pins 0.59.11, latest is 0.60.0"
+
+probe r-hash 'stub/ductus.sha256|s|^0|1|'
+expect "R: a hash the release did not publish is behind" 1 "is not the sha256 ductus 0.59.11 published"
+
+probe s-nohash 'repo/framework/templates/ci/adopter.yml|/DUCTUS_SHA256/d'
+expect "S: a release version with no hash is behind" 1 "ductus 0.59.11 has no DUCTUS_SHA256 beside it"
+
+probe t-sidecar 'stub/curl.tsv|/ductus-v0.59.11/d'
+expect "T: an unreadable published hash is not examined" 2 "could not read the release's published sha256"
+
 code=0
 out=$(cd "$BASE/repo" && bash "$CHECK" pinz 2>&1) || code=$?
-expect "Q: an unknown check is refused" 2 "unknown check: pinz"
+expect "U: an unknown check is refused" 2 "unknown check: pinz"
 
 echo
 if [ "$failures" -ne 0 ]; then

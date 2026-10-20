@@ -124,7 +124,7 @@ Per Q2 (twin constitutions collapsed) and Q7 (spec-deps derivation), three new g
 
 ### CI safety net
 
-Both repos run the generators in CI and fail the build on a non-empty diff — this repository in `.github/workflows/generators.yml`, adopters through the shipped template `framework/templates/ci/adopter-generators.yml`. Catches contributors who never installed the hook locally and adopters whose hook was skipped due to existing-hook detection. As delivered here the CI step ran them in dry-run mode; it now runs them for real and compares the tree afterwards, which additionally catches a generator that creates a *new* output rather than modifying a tracked one.
+Both repos run the generators in CI and fail the build on a non-empty diff — this repository in `.github/workflows/generators.yml`, adopters through the shipped template `framework/templates/ci/adopter-generators.yml`. An adopter's checkout carries no runtime, so the template downloads the release binary at a version and sha256 it names, which needs no Rust or cargo ([the-adopter-ci-template-can-run](scenarios/the-adopter-ci-template-can-run.md)). Catches contributors who never installed the hook locally and adopters whose hook was skipped due to existing-hook detection. As delivered here the CI step ran them in dry-run mode; it now runs them for real and compares the tree afterwards, which additionally catches a generator that creates a *new* output rather than modifying a tracked one.
 
 ## Acceptance Criteria
 

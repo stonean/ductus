@@ -444,9 +444,9 @@ Done when: this spec's artifacts have no `title:` or `tags:` frontmatter; valida
 
 ### 42. The adopter CI template can run
 
-- [ ] Implement the behavior described in `scenarios/the-adopter-ci-template-can-run.md`
-- [ ] Owner answers the scenario's open question
-- [ ] Apply the answer to the template, 017's spec (§CI safety net, AC24) and plan, fetching any external claim, with the template's fetched runtime pinned and read by the pins check
-- [ ] Lints, audit suite, and script tests pass
+- [x] Implement the behavior described in `scenarios/the-adopter-ci-template-can-run.md`
+- [x] Owner answers the scenario's open question
+- [x] Apply the answer to the template, 017's spec (§CI safety net, AC24) and plan, fetching any external claim, with the template's fetched runtime pinned and read by the pins check
+- [x] Lints, audit suite, and script tests pass
 
 - **Done when**: The question is resolved and applied, and 017 is re-reviewed and re-analyzed back to done
