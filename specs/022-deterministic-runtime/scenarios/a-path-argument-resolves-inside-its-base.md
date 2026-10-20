@@ -47,6 +47,7 @@ The `writeCode` write boundary (`validate_write_code_boundary`, `runtime/src/sch
 - A project in a repository subdirectory (059) is contained by its project root, not by the work tree's root, so a link to a sibling directory in the same repository is refused.
 - A symlink created between the check and the open is not caught. The check runs once at the start of each call.
 - A primitive that walks the corpus without a path argument (`derive-dependencies`, a sibling spec read from frontmatter by `traverse-deps` or `diff-cross-spec`) opens nothing based on input, and this scenario does not change it.
+- A corpus walk that reaches one of the checked call sites once per feature is refused as a whole when any feature it reaches fails the check: `prune-plan` and `prune-tasks` with `all`, and `dashboard`, which resolves every spec's references through `resolve-references`. So `/{project}:status` fails, naming the link, in a project where any spec directory is or holds a link that leaves the project.
 - `extract-archive` skips symlink entries, so a staging `source-root` holds none.
 
 ## Open Questions

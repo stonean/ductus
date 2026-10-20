@@ -588,9 +588,11 @@ pub enum ValidationError {
         source: serde_json::Error,
     },
     /// A `writeCode` edit targeted a path outside the request's
-    /// `write-boundary`, or used a form that is rejected before pattern
+    /// `write-boundary`, used a form that is rejected before pattern
     /// matching (absolute, or containing `.` / `..` / empty segments) per
-    /// the write-boundary-path-normalization scenario.
+    /// the write-boundary-path-normalization scenario, or lands through a
+    /// symlink outside the boundary or the project per
+    /// `a-path-argument-resolves-inside-its-base`.
     #[error("out-of-boundary-edit: path `{path}` {reason}")]
     OutOfBoundary {
         /// Offending edit path.
@@ -598,9 +600,11 @@ pub enum ValidationError {
         /// Boundary patterns the path was checked against.
         boundary: Vec<String>,
         /// Why the path was rejected: `is not within {boundary:?}` for a
-        /// clean path matching no pattern, or a description naming the
+        /// clean path matching no pattern, a description naming the
         /// traversal segment / absolute prefix that disqualified the path
-        /// before matching.
+        /// before matching, or, from [`validate_write_code_resolution`],
+        /// where a symlink took it (`resolves through a symlink to …` or
+        /// `reaches outside the project through a symlink`).
         reason: String,
     },
     /// A `writeCode` edit violated the content contract documented on
