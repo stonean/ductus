@@ -1,13 +1,13 @@
 ---
 spec: 022-deterministic-runtime
-last-run: 2026-10-20T04:21:02Z
-reviewed-against: 00e4bd3ff0683e1fa9fd346ef5757857be7b5304
+last-run: 2026-10-20T13:09:28Z
+reviewed-against: 683e92041bc0fa943c6d458e5ae7b2a9c46a28f2
 diff-base: 37c8219c8730fd23b5fbac7629c11fd2d6bc5b3b
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 50
-scope: 146
+examined: 52
+scope: 170
 skipped-passes: []
 reviewed-digest:
   data-model.md: ec5962dd1273f2c4171a779ee56a24b0b25267d7beb637dc2ad8ee17d359bb4f
@@ -23,13 +23,14 @@ reviewed-digest:
   scenarios/clarify-command-acceleration.md: 0aab9170591c9030fe595b682073b2ad22d9db7ca34280e2f044eb50fdc99b1e
   scenarios/cli-config-dir-per-contributor.md: 89380792bcc3750de4070627d44ede6385f29b0e50f2a4e94b54b8cb18b6f51f
   scenarios/commands-dir-parameterization.md: 46f0a96502a38df49d6089ff1b94bfc4b858dfb0f5bd71129d54736966548f5e
+  scenarios/config-readers-name-unknown-keys.md: 72bd21a792e7f31e29d73303f1e3947df41ae4c5496368eae31d8b9f1fa869c6
   scenarios/config-resolution-single-probe.md: fc602eb6f2d64f6d1956da411b809af3a53a0c91b26dd198f6b1af61e3347ab4
   scenarios/config-sourced-paths-and-the-traversal-boundary.md: 5ce4f8c45bdfd56606b9a977431e06683f4f38904742f96c358e6b6c5828b30e
   scenarios/constitution-excerpts-as-skill-resources.md: c093f8288e03f8df28666cfd93ce057abba77a7badbcaac16413aacb8da7f746
   scenarios/coverage-expansion-primitives.md: 4626b19eef4cff4f9ce01047b2afa6746573ec289da039cc969b8d8d37ebcd3f
   scenarios/coverage-residue-cleanup.md: 04dc18f12694ed8b02821b50498c7e8ff8123993de72a27ae0d7c8722e024637
   scenarios/criterion-label-assignment.md: 4a1a3acc5d5ddcd44a07582988e06a1b97b2339c71482ccd24765fefb33207a0
-  scenarios/dashboard-primitive.md: a2bf446e6e8448474f0031a92211041148761b337c7e7a566fdf6a88e04cdcf1
+  scenarios/dashboard-primitive.md: eed2bcc78c3ec0be96c09cfedd63a27f227f4f9d92bb18af1abab4755a07b7b3
   scenarios/derive-boundary-uncommitted-spec-dir.md: ca28aaef13416801e00bc40d9d58da09c7a513b237bb659597e1efc91a0aaef5
   scenarios/done-when-authoring-forms.md: 080f8717135b67c8400e072dae02f172e40cb0b6ad596c3e227d6cc5f90d0191
   scenarios/exec-analyze-derives-its-list-seeds.md: 9fda65d4cd7a5ec0fab7e07ba9d5d25e794944c967cd09e7b3547f8e1d560726
@@ -60,7 +61,7 @@ reviewed-digest:
   scenarios/project-directory-resolution-chain.md: d43223e3f037960a24f5660a9944aae0fe02df5f1da10257477926a63cfb5a82
   scenarios/resolve-references-cli-exec-wiring.md: 3ddff8ea493af57fdacb9fab644d33ae95e766cfe7b7d5b11a27d7f083ce5c59
   scenarios/review-exec-wiring.md: 9dbf0c621deaa58d40d16d09c289abdd5cb31ab5555f2036088e1d8f04d76515
-  scenarios/review-runtime-acceleration.md: c4e206206e14cd727bbb04503abd6a286f6d790b91dbdb6ac90e57c2de5944a1
+  scenarios/review-runtime-acceleration.md: 11cc6eb0a77f963a0eb268276057d06e66e624bdbbea562a0e32b9c7d958ff91
   scenarios/review-scope-parse-fidelity.md: 89747b789e8c2f6d1b550cd662ddfe04a4a42727edba6daa39e6b700a6d2eee1
   scenarios/runtime-primitive-structural-bugs.md: 7fb973b4c5ef5c0268df24996c585f9bf70465f4f7e36ad237d129894f5fd366
   scenarios/runtime-review-019-hardening.md: 9b759c9ce4fc57702e28d764179dcae7b7df9d04dc99ac166b3c0726cf3f9449
@@ -84,9 +85,9 @@ reviewed-digest:
   scenarios/writecode-payload-canonicalize-paths.md: 61fc0c5dffd7d22ffd6e413e1c4f98adc1869f3fef7357340021d49b964a4a7c
 blocking: false
 dispositions:
-  fixed: 5
-  routed: 8
-  discarded: 24
+  fixed: 1
+  routed: 7
+  discarded: 25
   undispositioned: 0
 decisions:
   - key: "reliability: dropping a timed-out client joins its runtime thread, so a slow connect-time lookup can hold a fetch past FETCH_TIMEOUT — `runtime/src/primitives/fetch_archive.rs`"
@@ -102,11 +103,6 @@ decisions:
   - key: "security: a redirect hop is looked up twice rather than connected to the address its screen resolved — `runtime/src/primitives/fetch_archive.rs`"
     outcome: discarded
     reason: 022's scenario allows an equivalent connect-time re-check, both lookups are screened, and the owner prescribed this resolver and its staged-rebind test
-    decided-at: 2026-10-20T04:21:02Z
-    decided-by: andy@stone.dev
-  - key: "other: 048's fetch-archive-reads-its-proxy-once says a direct connection stays pinned to the addresses it screened, where a redirect hop is screened again at connect — `specs/048-govern-acquired-runtime/scenarios/fetch-archive-reads-its-proxy-once.md`"
-    outcome: discarded
-    reason: its substance holds — every direct connection reaches only addresses the screen passed, on every hop — and 'pinned' names the initial-host mechanism loosely; a reopen and five-pass re-review for one word is out of proportion
     decided-at: 2026-10-20T04:21:02Z
     decided-by: andy@stone.dev
   - key: "other: two proxy tests each define the same four-line internal-address lookup — `runtime/src/primitives/fetch_archive.rs`"
@@ -172,11 +168,6 @@ decisions:
   - key: "other: 033's task 10 names no acceptance criterion for the chosen mechanism to amend — `specs/033-rule-surface-setting/tasks.md`"
     outcome: routed
     target: specs/033-rule-surface-setting/tasks.md
-    decided-at: 2026-10-20T04:21:02Z
-    decided-by: andy@stone.dev
-  - key: "other: 019's task 1 did not cover a host reading config by hand on the markdown-only path — `specs/019-config-decisions/tasks.md`"
-    outcome: routed
-    target: specs/019-config-decisions/tasks.md
     decided-at: 2026-10-20T04:21:02Z
     decided-by: andy@stone.dev
   - key: "other: FE-SEMHTML-001 and FE-ARIA-001 both forbid a div with role=button — `framework/rules/accessibility-frontend.md`"
@@ -249,13 +240,23 @@ decisions:
     reason: a resolved question records the reasoning at the time; rewriting it records a fiction
     decided-at: 2026-10-20T04:21:02Z
     decided-by: andy@stone.dev
+  - key: "perf: readers parse the same config text twice, once as a table for the key names and once as their typed struct — `runtime/src/schema/config_keys.rs`"
+    outcome: discarded
+    reason: the files are a few hundred bytes, and parsing the typed struct from the text keeps a wrong-typed value's error located by its line, which a conversion from the parsed table loses
+    decided-at: 2026-10-20T13:09:28Z
+    decided-by: andy@stone.dev
+  - key: "other: a misspelled section name such as [artifact] is never examined, so its settings take their defaults without a word — `runtime/src/schema/config_keys.rs`"
+    outcome: discarded
+    reason: the owner's 2026-10-20 decision scopes the check to owned sections; flagging near-miss section names would be a new requirement
+    decided-at: 2026-10-20T13:09:28Z
+    decided-by: andy@stone.dev
 ---
 
 # Review — 022-deterministic-runtime
 
 ## Summary
 
-Five-pass review of 022 over `37c8219c..00e4bd3f` plus the working tree, after task 2's per-hop screening (`00e4bd3f`). The 146 scope entries are the 2026-10-19 rule-file window, this session's 063, 025 and 019 commits, and 022's fix; nine of them are whole directories from the plan (`runtime/src/interpreter/`, `runtime/src/primitives/`, `runtime/tests/` and the like). **What this session read** (`examined: 50`): 022's `spec.md`, `plan.md`, `data-model.md` and `tasks.md` in full, and its three in-scope scenarios (`fetch-archive-dns-rebinding`, `review-runtime-acceleration`, `the-constitutions-registry-validates-its-values`) in full; `runtime/src/primitives/fetch_archive.rs` in full, by this pass, by two parallel reviewer passes over `00e4bd3f`, and by a third, security-only pass over the fixed working tree; `discover_rule_files.rs` and `check_artifact_size.rs` in full and this session's diffs to `dashboard.rs`, `mod.rs`, `schema/primitives.rs` and `mcp/server.rs`; all eleven `framework/rules/*.md` in full; and the files 063's and 025's reviews read earlier this session. **Not read** (96 entries): the nine directory entries beyond the files named, `framework/bootstrap/govern.md` (`cmp` identical), the generated mirrors (`scripts/gen-claude-commands.sh --check`), the `.github/workflows/` files, `framework/constitution.md` beyond the sections cited, `docs/`, and the other specs' artifacts; 022's 68 scenarios outside the scope keep their recorded digests. **Findings: none remain.** One MUST fired on the committed fix and was fixed in the run: `BE-INPUT-007`, since `00e4bd3f` exempted a configured proxy's host inside the shared screen, so a fetch URL or redirect target naming the proxy host — or an IP-literal or rejected proxy value — passed it, reproduced end to end against a loopback listener. The exemption now applies only at connect, to named hosts of proxies reqwest accepts, and a test fails when it leaks back into the URL screen. `BE-INPUT-016` is met under the scenario's connect-time re-check: the initial host is pinned (now with port 0, so a same-host redirect keeps its own port) and every redirect hop's connect-time lookup is screened. Also fixed: `BE-INPUT-011` in every error the primitive renders (the URL argument, the sidecar's remote leading token, the archive path), and the NAT64 prefix `64:ff9b::/96`, now screened as its embedded IPv4 address. A refusal at connect or of a redirect target is now named in the error the CLI and MCP print, verified through the CLI binary against a local redirecting server. Eleven mutations run this session each fail a test (resolver removed, proxy exemption in the URL screen, pin removed, pin keeping its port, refusal not surfaced, NAT64 unscreened, raw URL in a refusal, rejected and literal proxies exempt, raw URL and raw sidecar token in other errors). **Observations: 37.** Five fixed in the run (the refusal named, the pin's port, a test for the pin, the scenario's 'pinned' wording, the data model's pre-1.0 version rule). Five new discards with reasons. The 8 routed and 19 discarded observations standing from earlier passes keep their text and dispositions.
+Refresh of 022's review over `37c8219c..683e9204` plus the working tree, after task 5 (`config-readers-name-unknown-keys`, for spec 019) landed and 022's own scenarios changed with it. This is a truthful partial, not a full five-pass review of 022's contracts. The 170 scope entries are the 2026-10-19 rule-file window, the 022, 025 and 063 commits since, and this session's 019 change set; nine are whole directories from the plan. **Read this session** (`examined: 52`): 022's `tasks.md` and its three changed scenarios (`config-readers-name-unknown-keys`, `dashboard-primitive`, `review-runtime-acceleration`) in full. Also the 019 change set as 063's review of `e7044738` read it: `runtime/src/schema/config_keys.rs` in full, by this session's pass and by two parallel reviewer passes; the diffs of the other fifteen changed runtime files, both test files, the five changed command sources, `README.md`, `AGENTS.md`, `.github/workflows/runtime.yml` and the bootstrap; and 019's and 063's changed artifacts. Also the later delta, `path_text` and `warning_lines`, in full; and all eleven `framework/rules/*.md` in full. **Not read** (118): 022's `spec.md`, `plan.md` and `data-model.md`, unchanged since 022's review of `00e4bd3f` read them; the nine directory entries beyond the files named; the ten generated mirrors (`scripts/gen-claude-commands.sh --check` in sync); `framework/bootstrap/govern.md` (`cmp` identical); 019's and 063's `review.md` and `analysis.md`, written by their primitives this session; and the other entries of the rule-file window, read in 034's review and its siblings and in 022's review of `00e4bd3f`. **Findings: none.** **Observations: 33.** One was fixed in the run: the stderr warning printed the config path raw, though a registered service checkout's path comes from committed config (`BE-INPUT-011`, found by 019's analysis); `path_text` now escapes it. Thirty stored decisions match (7 routed, 23 discarded). Two discards are carried from today's change set: the double config parse, and a misspelled section name. Two stored decisions expire: 048's scenario, now outside this scope, and the route to 019's task 1, whose work landed. The fourteen observations 063's review fixed in this change set no longer hold. 022 stays in progress on tasks 3 and 4, and 063's BE-INPUT-004 instance is now a subtask of task 4.
 
 ## MUST violations (blocking)
 
@@ -278,7 +279,6 @@ Five-pass review of 022 over `37c8219c..00e4bd3f` plus the working tree, after t
 - reliability: dropping a timed-out client joins its runtime thread, so a slow connect-time lookup can hold a fetch past FETCH_TIMEOUT — `runtime/src/primitives/fetch_archive.rs` — **discarded**: the GaiResolver it replaced behaves the same way, and in production the lookup is getaddrinfo, which the operating system resolver's own timeouts bound
 - reliability: the initial and redirect-screen lookups run outside the client's timeout — `runtime/src/primitives/fetch_archive.rs` — **discarded**: unchanged by this fix and bounded the same way, by the operating system resolver's timeouts; FETCH_DEADLINE bounds the download itself
 - security: a redirect hop is looked up twice rather than connected to the address its screen resolved — `runtime/src/primitives/fetch_archive.rs` — **discarded**: 022's scenario allows an equivalent connect-time re-check, both lookups are screened, and the owner prescribed this resolver and its staged-rebind test
-- other: 048's fetch-archive-reads-its-proxy-once says a direct connection stays pinned to the addresses it screened, where a redirect hop is screened again at connect — `specs/048-govern-acquired-runtime/scenarios/fetch-archive-reads-its-proxy-once.md` — **discarded**: its substance holds — every direct connection reaches only addresses the screen passed, on every hop — and 'pinned' names the initial-host mechanism loosely; a reopen and five-pass re-review for one word is out of proportion
 - other: two proxy tests each define the same four-line internal-address lookup — `runtime/src/primitives/fetch_archive.rs` — **discarded**: test fixtures local to each test; sharing one would couple the tests for no gain
 - other: 025's ticked task 2 lists a malformed warning among the step-5 outcomes that task 10 replaced — `specs/025-rule-opt-out/tasks.md` — **discarded**: spent task history: each records what the task said when it was done, and rewriting it records a fiction
 - other: [rules] surfaces is validated only when a rule directory exists, while disabled entries are validated always — `runtime/src/primitives/discover_rule_files.rs` — **discarded**: with no rule directory nothing is selected, so the unread surfaces value changes no result; when it is validated is 033's degenerate-surfaces contract, not this change
@@ -292,7 +292,6 @@ Five-pass review of 022 over `37c8219c..00e4bd3f` plus the working tree, after t
 - other: QUAL-GROUND-001 cedes configuration to CFG rules that do not cover a required key missing from a file or flag — `framework/rules/quality-cross.md` — **routed** to `specs/017-derive-dont-ask/scenarios/required-config-values-from-any-source.md`
 - other: configuration-cross.md's header names only analyze as enforcing it; which review pass applies the file is open — `framework/rules/configuration-cross.md` — **routed** to `specs/020-code-review/scenarios/every-loaded-rule-file-has-a-pass.md`
 - other: 033's task 10 names no acceptance criterion for the chosen mechanism to amend — `specs/033-rule-surface-setting/tasks.md` — **routed** to `specs/033-rule-surface-setting/tasks.md`
-- other: 019's task 1 did not cover a host reading config by hand on the markdown-only path — `specs/019-config-decisions/tasks.md` — **routed** to `specs/019-config-decisions/tasks.md`
 - other: FE-SEMHTML-001 and FE-ARIA-001 both forbid a div with role=button — `framework/rules/accessibility-frontend.md` — **discarded**: consistent overlap of two MUSTs with no contradiction; consolidating them changes rule ownership, which 069's clarify owns
 - other: FE-KBD-002 and FE-CONTRAST-001 both require 3:1 for focus indicators — `framework/rules/accessibility-frontend.md` — **discarded**: the owner decided FE-KBD-002's MUST carries the 3:1 ratio (069 Resolved Questions, 2026-10-19); the overlap is consistent
 - other: accessibility-frontend.md's first header paragraph is long — `framework/rules/accessibility-frontend.md` — **discarded**: style only; the content is accurate, and 069's first open question owns what the header claims about conformance
@@ -307,11 +306,9 @@ Five-pass review of 022 over `37c8219c..00e4bd3f` plus the working tree, after t
 - other: concurrency, observability, reliability, quality and configuration section titles are sentence case — `framework/rules/concurrency-backend.md` — **discarded**: 017's and 036's data models record their files' category names in sentence case (017 task 38, an owner decision); 008's title-case bullet describes the security files
 - other: ticked task-1 items in 037, 038 and 039 say one RFC 2119 keyword, and 039's task 4 names an alert — `specs/039-reliability-backend-rules/tasks.md` — **discarded**: spent task history: each records what the task said when it was done, and rewriting it records a fiction
 - other: 008's first resolved question reasons from CI gating — `specs/008-security-rules/spec.md` — **discarded**: a resolved question records the reasoning at the time; rewriting it records a fiction
-- quality: a refusal at connect, or of a redirect target, never named the host or address in the error the CLI and MCP print — `runtime/src/primitives/fetch_archive.rs` — **fixed**
-- quality: the initial-host pin carried the first URL's explicit port to a same-host redirect that names none — `runtime/src/primitives/fetch_archive.rs` — **fixed**
-- test: nothing tested the initial-host pin; removing it left the suite green — `runtime/src/primitives/fetch_archive.rs` — **fixed**
-- convention: the scenario's 'A redirect hop is pinned too' described a connect-time re-check as pinning — `specs/022-deterministic-runtime/scenarios/fetch-archive-dns-rebinding.md` — **fixed**
-- quality: 022's data model said a breaking schema change increments the major version, without saying what that means before 1.0 — `specs/022-deterministic-runtime/data-model.md` — **fixed**
+- perf: readers parse the same config text twice, once as a table for the key names and once as their typed struct — `runtime/src/schema/config_keys.rs` — **discarded**: the files are a few hundred bytes, and parsing the typed struct from the text keeps a wrong-typed value's error located by its line, which a conversion from the parsed table loses
+- other: a misspelled section name such as [artifact] is never examined, so its settings take their defaults without a word — `runtime/src/schema/config_keys.rs` — **discarded**: the owner's 2026-10-20 decision scopes the check to owned sections; flagging near-miss section names would be a new requirement
+- security: the stderr warning printed the config file's path raw, though a registered service checkout's path comes from committed config — `runtime/src/schema/config_keys.rs` — **fixed**
 
 ## Skipped passes
 
