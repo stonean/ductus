@@ -52,11 +52,12 @@
 //!
 //! The connection uses only screened addresses (`BE-INPUT-016`). The first
 //! host is pinned to the addresses the screen resolved, so it is resolved
-//! once and reused; every other lookup the client makes — a redirect host's
-//! included — goes through [`ScreeningResolver`], which applies the same
-//! screen at connect time. A host that answers the screen with a public
-//! address and the connect with an internal one is therefore refused on
-//! every hop, not only the first.
+//! once and reused. A redirect host is screened by the redirect policy and
+//! then resolved again when the client connects to it, and that second
+//! lookup goes through [`ScreeningResolver`], which applies the same screen:
+//! two lookups, both screened. A host that answers the redirect screen with a
+//! public address and the connect with an internal one is therefore refused,
+//! and the refusal is named in the error the operator reads.
 //!
 //! The HTTP client reads no environment variable per fetch (`CFG-ENV-001`;
 //! spec 048, scenario `fetch-archive-reads-its-proxy-once`). The proxy
@@ -72,9 +73,15 @@
 //! proxy set, or a host `NO_PROXY` names — connects only to screened
 //! addresses. A proxied one does not resolve its target at all: reqwest sends
 //! the hostname in its `CONNECT`, the proxy resolves it, and what it resolves
-//! and reaches is the policy of the operator who configured it. The proxy's
-//! own host is resolved through the same resolver but never refused, since a
-//! proxy on a private network is the ordinary case.
+//! and reaches is the policy of the operator who configured it. A configured
+//! proxy's own host is resolved at connect without the internal-address
+//! screen, since a proxy on a private network is the ordinary case. The
+//! exemption is by name, on any connect-time lookup of that host; a fetch URL
+//! or redirect target naming it still passes the URL screen first. The
+//! residual is such a target that rebinds between that screen and a direct
+//! connect — reached directly when `NO_PROXY` names it, or when the proxy
+//! does not serve the target's scheme — which sits inside the proxy's own
+//! trust boundary.
 //!
 //! The sidecar format matches `shasum -a 256` output: one or more lines
 //! shaped `<hex>  <filename>`. Only the first hex digest is consulted;
@@ -88,7 +95,7 @@ use std::time::{Duration, Instant};
 
 use sha2::{Digest, Sha256};
 
-use crate::primitives::{PrimitiveError, Result, resolve_path, write_atomic_bytes};
+use crate::primitives::{PrimitiveError, Result, flatten_line, resolve_path, write_atomic_bytes};
 use crate::schema::primitives::{FetchArchiveArgs, FetchArchiveResult};
 
 /// Execute the `fetch-archive` primitive.
@@ -121,7 +128,9 @@ pub fn run(args: &FetchArchiveArgs, repo: &Path) -> Result<FetchArchiveResult> {
                 // destination (kept for error-message compatibility and
                 // retry context), but no file is created there.
                 return Err(PrimitiveError::ChecksumMismatch {
-                    path: dest,
+                    // The archive path is a tool argument, rendered on one
+                    // line like every other this primitive names.
+                    path: PathBuf::from(flatten_line(&dest.to_string_lossy())),
                     expected,
                     actual: computed,
                 });
@@ -168,6 +177,10 @@ fn fetch_bytes_with(
     screen: Arc<Screen>,
 ) -> Result<Vec<u8>> {
     let started = Instant::now();
+    // The URL as every error names it: a tool argument on one line, so it
+    // cannot forge a second line of the message (`BE-INPUT-011`). The fetch
+    // itself uses the URL as given.
+    let shown = flatten_line(url);
     let pin = validate_fetch_url(url, &screen)?;
     // The default reqwest client follows up to 10 redirects with no
     // re-validation, so a `302 Location:` pointing at `http://` or an
@@ -186,7 +199,7 @@ fn fetch_bytes_with(
                 &policy_screen,
             ) {
                 RedirectVerdict::Follow => attempt.follow(),
-                RedirectVerdict::Refuse(reason) => attempt.error(reason),
+                RedirectVerdict::Refuse(reason) => attempt.error(ScreenRefused(reason)),
             },
         ))
         // Every lookup the client makes at connect time goes through the
@@ -202,7 +215,7 @@ fn fetch_bytes_with(
     // for that host only. An operator-allowlisted insecure host is left to
     // resolve normally.
     if let FetchScreen::Pinned { host, addrs } = &pin {
-        builder = builder.resolve_to_addrs(host, addrs);
+        builder = builder.resolve_to_addrs(host, &pin_addresses(addrs));
     }
     builder = apply_proxies(builder, proxies);
     if VERIFIER_READS_CERT_ENV {
@@ -210,27 +223,32 @@ fn fetch_bytes_with(
         builder = builder.tls_certs_only(roots.iter().cloned());
     }
     let client = builder.build().map_err(|source| PrimitiveError::Http {
-        url: url.into(),
+        url: shown.clone(),
         source,
     })?;
-    let response = client
-        .get(url)
-        .send()
-        .map_err(|source| PrimitiveError::Http {
-            url: url.into(),
-            source,
-        })?;
+    let response = client.get(url).send().map_err(|source| {
+        // A screen refusal — a redirect target, or a host refused at connect
+        // — is named in the error the operator reads, never left in a cause
+        // chain the CLI and MCP renderings do not print.
+        match screen_refusal(&source) {
+            Some(reason) => fetch_refused(url, reason),
+            None => PrimitiveError::Http {
+                url: shown.clone(),
+                source,
+            },
+        }
+    })?;
     let status = response.status();
     if !status.is_success() {
         return Err(PrimitiveError::HttpStatus {
-            url: url.into(),
+            url: shown.clone(),
             status: status.as_u16(),
         });
     }
     read_capped(
         Deadline::new(response, started, deadline),
         MAX_FETCH_BYTES,
-        url,
+        &shown,
     )
 }
 
@@ -249,10 +267,50 @@ fn redirect_verdict(url: &str, prior_hops: usize, screen: &Screen) -> RedirectVe
     if prior_hops >= MAX_FETCH_REDIRECTS {
         return RedirectVerdict::Refuse(format!("exceeded {MAX_FETCH_REDIRECTS} redirects"));
     }
-    match validate_fetch_url(url, screen) {
+    match screen_url(url, screen) {
         Ok(_) => RedirectVerdict::Follow,
-        Err(err) => RedirectVerdict::Refuse(err.to_string()),
+        Err(reason) => {
+            RedirectVerdict::Refuse(format!("redirect to `{}`: {reason}", flatten_line(url)))
+        }
     }
+}
+
+/// The addresses the initial connection is pinned to, with the port left to
+/// the URL. reqwest uses a pinned address's non-zero port in place of the
+/// URL's default one, so a pin carrying the first URL's explicit port would
+/// carry it to a same-host redirect that names none.
+fn pin_addresses(addrs: &[SocketAddr]) -> Vec<SocketAddr> {
+    addrs
+        .iter()
+        .map(|addr| SocketAddr::new(addr.ip(), 0))
+        .collect()
+}
+
+/// A refusal by the address screen, carried through reqwest's error chain so
+/// [`screen_refusal`] can find it and name it in the error the operator
+/// reads.
+#[derive(Debug)]
+struct ScreenRefused(String);
+
+impl std::fmt::Display for ScreenRefused {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for ScreenRefused {}
+
+/// The screen's reason, when `err` or anything in its cause chain is a
+/// [`ScreenRefused`].
+fn screen_refusal<'a>(err: &'a (dyn std::error::Error + 'static)) -> Option<&'a str> {
+    let mut cause = Some(err);
+    while let Some(current) = cause {
+        if let Some(refused) = current.downcast_ref::<ScreenRefused>() {
+            return Some(&refused.0);
+        }
+        cause = current.source();
+    }
+    None
 }
 
 /// The screened connection target for a validated fetch URL.
@@ -285,9 +343,11 @@ struct Screen {
     lookup: Box<Lookup>,
     /// Hosts exempted from both screens (`DUCTUS_FETCH_ALLOW_INSECURE_HOSTS`).
     insecure: Vec<String>,
-    /// The hosts of the configured proxies. Through a proxy the operator's
-    /// proxy is the trust boundary (module docs), so its own address — on a
-    /// private network, as often as not — is resolved but never refused.
+    /// The named hosts of the configured proxies reqwest accepts. Through a
+    /// proxy the operator's proxy is the trust boundary (module docs), so the
+    /// connection *to* it — on a private network, as often as not — is
+    /// resolved without the internal-range screen. A fetch URL naming one is
+    /// screened like any other.
     proxy_hosts: Vec<String>,
 }
 
@@ -307,9 +367,12 @@ impl Screen {
     }
 
     fn new(lookup: Box<Lookup>, insecure: Vec<String>, proxies: &ProxyEnv) -> Self {
+        // Only a proxy reqwest accepts is ever connected to, and an
+        // IP-literal proxy is never looked up, so neither needs an exemption.
         let proxy_hosts = proxies
             .proxies()
             .into_iter()
+            .filter(|(_, value)| reqwest::Proxy::all(*value).is_ok())
             .filter_map(|(_, value)| {
                 reqwest::Url::parse(value)
                     .ok()
@@ -318,6 +381,7 @@ impl Screen {
                     .host_str()
                     .map(str::to_owned)
             })
+            .filter(|host| host.parse::<IpAddr>().is_err() && !host.starts_with('['))
             .collect();
         Self {
             lookup,
@@ -333,14 +397,10 @@ impl Screen {
 
     /// `host`'s addresses, every one screened, or the reason the host is
     /// refused: it did not resolve, resolved to nothing, or resolved to an
-    /// internal address. An exempt host and a proxy host are resolved
-    /// without the internal-range screen.
+    /// internal address. No host is exempt here — this is the screen a fetch
+    /// URL and every redirect target pass.
     fn addresses(&self, host: &str, port: u16) -> std::result::Result<Vec<SocketAddr>, String> {
-        let addrs = (self.lookup)(host, port)
-            .map_err(|err| format!("host `{host}` did not resolve: {err}"))?;
-        if self.exempt(host) || self.proxy_hosts.iter().any(|proxy| proxy == host) {
-            return Ok(addrs);
-        }
+        let addrs = self.resolve(host, port)?;
         if let Some(internal) = addrs.iter().find(|addr| is_internal_ip(addr.ip())) {
             return Err(format!(
                 "resolves to internal address {} (loopback / link-local / private / metadata ranges are denied)",
@@ -352,14 +412,30 @@ impl Screen {
         }
         Ok(addrs)
     }
+
+    /// The addresses the client may connect `host` to: screened, except for
+    /// an allowlisted host and a configured proxy's own host, which are
+    /// resolved without the internal-range screen. A redirect target already
+    /// passed [`Self::addresses`] before the client connects to it.
+    fn connect_addresses(&self, host: &str) -> std::result::Result<Vec<SocketAddr>, String> {
+        if self.exempt(host) || self.proxy_hosts.iter().any(|proxy| proxy == host) {
+            return self.resolve(host, 0);
+        }
+        self.addresses(host, 0)
+    }
+
+    fn resolve(&self, host: &str, port: u16) -> std::result::Result<Vec<SocketAddr>, String> {
+        (self.lookup)(host, port).map_err(|err| format!("host `{host}` did not resolve: {err}"))
+    }
 }
 
 /// The error a [`reqwest::dns::Resolve`] implementation returns.
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
 /// The resolver every connect-time lookup of a fetch goes through: it returns
-/// only addresses that passed [`Screen::addresses`], so the client never
-/// connects to a host it resolved without the screen.
+/// only addresses that passed [`Screen::connect_addresses`], so the client
+/// never connects to a host it resolved without the screen, the operator's
+/// own exemptions aside.
 struct ScreeningResolver(Arc<Screen>);
 
 impl reqwest::dns::Resolve for ScreeningResolver {
@@ -369,10 +445,14 @@ impl reqwest::dns::Resolve for ScreeningResolver {
         Box::pin(async move {
             // A blocking lookup leaves the client's runtime free, as
             // reqwest's own resolver does. The port is the client's to set.
-            let screened = tokio::task::spawn_blocking(move || screen.addresses(&host, 0))
-                .await
-                .map_err(|err| -> BoxError { err.into() })?;
-            let addrs = screened.map_err(|reason| -> BoxError { reason.into() })?;
+            let screened = tokio::task::spawn_blocking(move || {
+                screen
+                    .connect_addresses(&host)
+                    .map_err(|reason| ScreenRefused(format!("connecting to `{host}`: {reason}")))
+            })
+            .await
+            .map_err(|err| -> BoxError { err.into() })?;
+            let addrs = screened.map_err(|refused| -> BoxError { Box::new(refused) })?;
             Ok(Box::new(addrs.into_iter()) as reqwest::dns::Addrs)
         })
     }
@@ -395,8 +475,13 @@ impl reqwest::dns::Resolve for ScreeningResolver {
 /// those pinned; a redirect hop's connect is screened by
 /// [`ScreeningResolver`] instead.
 fn validate_fetch_url(url: &str, screen: &Screen) -> Result<FetchScreen> {
-    let parsed = reqwest::Url::parse(url)
-        .map_err(|err| fetch_refused(url, &format!("is not a valid URL: {err}")))?;
+    screen_url(url, screen).map_err(|reason| fetch_refused(url, &reason))
+}
+
+/// [`validate_fetch_url`]'s screen, returning the bare reason a URL is
+/// refused so a redirect refusal can name its own target.
+fn screen_url(url: &str, screen: &Screen) -> std::result::Result<FetchScreen, String> {
+    let parsed = reqwest::Url::parse(url).map_err(|err| format!("is not a valid URL: {err}"))?;
     // Explicit opt-in escape hatch for internal mirrors and local testing.
     // The SSRF rule (BE-INPUT-007) denies internal ranges *by default*; a
     // host named in `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS` (comma-separated) is
@@ -410,17 +495,14 @@ fn validate_fetch_url(url: &str, screen: &Screen) -> Result<FetchScreen> {
         return Ok(FetchScreen::Unpinned);
     }
     if parsed.scheme() != "https" {
-        return Err(fetch_refused(
-            url,
-            &format!(
-                "scheme `{}` is not permitted; only https is allowed",
-                parsed.scheme()
-            ),
+        return Err(format!(
+            "scheme `{}` is not permitted; only https is allowed",
+            parsed.scheme()
         ));
     }
     let host = parsed
         .host_str()
-        .ok_or_else(|| fetch_refused(url, "has no host to resolve"))?;
+        .ok_or_else(|| "has no host to resolve".to_string())?;
     // `url` returns IPv6 hosts in bracketed form (`[::1]`); the resolver
     // parses the bare literal, so strip a matched `[` … `]` pair.
     let host = host
@@ -428,9 +510,7 @@ fn validate_fetch_url(url: &str, screen: &Screen) -> Result<FetchScreen> {
         .and_then(|inner| inner.strip_suffix(']'))
         .unwrap_or(host);
     let port = parsed.port_or_known_default().unwrap_or(443);
-    let addrs = screen
-        .addresses(host, port)
-        .map_err(|reason| fetch_refused(url, &reason))?;
+    let addrs = screen.addresses(host, port)?;
     Ok(FetchScreen::Pinned {
         host: host.to_string(),
         addrs,
@@ -651,8 +731,11 @@ fn roots_from(
 /// [`PrimitiveError::Io`] (as [`read_capped`] does for its cap breach) so
 /// no new error variant is needed; the `path` carries the offending URL.
 fn fetch_refused(url: &str, reason: &str) -> PrimitiveError {
+    // The URL is a tool argument, rendered on one line so it cannot forge a
+    // second line of the error (`BE-INPUT-011`).
+    let url = flatten_line(url);
     PrimitiveError::Io {
-        path: PathBuf::from(url),
+        path: PathBuf::from(&url),
         source: std::io::Error::other(format!("refusing to fetch `{url}`: {reason}")),
     }
 }
@@ -693,6 +776,14 @@ fn is_internal_v4(ip: Ipv4Addr) -> bool {
 fn is_internal_v6(ip: Ipv6Addr) -> bool {
     if let Some(v4) = ip.to_ipv4_mapped() {
         return is_internal_v4(v4);
+    }
+    // 64:ff9b::/96, the NAT64 well-known prefix (RFC 6052): on a NAT64
+    // network it reaches the IPv4 address in its last 32 bits, so it is
+    // screened as that address.
+    let segments = ip.segments();
+    if segments[..6] == [0x64, 0xff9b, 0, 0, 0, 0] {
+        let [.., a, b, c, d] = ip.octets();
+        return is_internal_v4(Ipv4Addr::new(a, b, c, d));
     }
     ip.is_loopback() || ip.is_unspecified() || is_unique_local_v6(ip) || is_link_local_v6(ip)
 }
@@ -775,7 +866,7 @@ fn read_capped(reader: impl Read, cap: u64, url: &str) -> Result<Vec<u8>> {
 fn fetch_text(url: &str) -> Result<String> {
     let bytes = fetch_bytes(url)?;
     String::from_utf8(bytes).map_err(|err| PrimitiveError::MalformedSidecar {
-        url: url.into(),
+        url: flatten_line(url),
         reason: format!("not valid UTF-8: {err}"),
     })
 }
@@ -796,13 +887,18 @@ pub(crate) fn parse_sidecar_hex(body: &str, url: &str) -> Result<String> {
         if is_sha256_hex(token) {
             return Ok(token.to_ascii_lowercase());
         }
+        // The token is remote content and the URL a tool argument, so both
+        // are rendered on one line, escape sequences included (`BE-INPUT-011`).
         return Err(PrimitiveError::MalformedSidecar {
-            url: url.into(),
-            reason: format!("leading token `{token}` is not 64-char lowercase hex"),
+            url: flatten_line(url),
+            reason: format!(
+                "leading token `{}` is not 64-char lowercase hex",
+                flatten_line(token)
+            ),
         });
     }
     Err(PrimitiveError::MalformedSidecar {
-        url: url.into(),
+        url: flatten_line(url),
         reason: "sidecar body is empty or has no non-comment line".into(),
     })
 }
@@ -860,6 +956,7 @@ mod tests {
         is_internal_ip, is_sha256_hex, load_once, parse_sidecar_hex, read_capped, redirect_verdict,
         roots_from, sha256_hex, validate_fetch_url,
     };
+    use std::net::ToSocketAddrs;
     use std::sync::Arc;
 
     /// The screen a fetch from this test process uses: the system resolver,
@@ -1295,34 +1392,22 @@ mod tests {
         );
     }
 
-    /// A lookup that answers `rebind.test` with a public address the first
-    /// time and a loopback one after, counting its calls, and refuses every
-    /// other name.
+    /// A lookup that answers `rebind.test` with a public (TEST-NET-1)
+    /// address the first time and a loopback one after, counting its calls,
+    /// and refuses every other name.
     fn rebinding_lookup(calls: Arc<std::sync::atomic::AtomicUsize>) -> Box<super::Lookup> {
         Box::new(move |host, port| {
             if host != "rebind.test" {
                 return Err(std::io::Error::other(format!("no such host {host}")));
             }
             let call = calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-            let ip = if call == 0 {
-                "93.184.216.34"
-            } else {
-                "127.0.0.1"
-            };
+            let ip = if call == 0 { "192.0.2.1" } else { "127.0.0.1" };
             Ok(vec![std::net::SocketAddr::new(ip.parse().unwrap(), port)])
         })
     }
 
-    /// scenarios/fetch-archive-dns-rebinding.md, *A redirect hop is pinned
-    /// too*: a redirect host that answers the redirect screen with a public
-    /// address and the connect-time lookup with an internal one is refused
-    /// at connect. The first hop is a local server the screen allowlists; it
-    /// redirects to `https://rebind.test/`. With the screening resolver
-    /// removed, the client resolves `rebind.test` itself, so the fetch fails
-    /// on an ordinary lookup error instead and the injected lookup sees one
-    /// call, not two.
-    #[test]
-    fn a_redirect_host_that_rebinds_is_refused_at_connect() {
+    /// A local server answering one request with a redirect to `location`.
+    fn redirecting_server(location: &'static str) -> String {
         use std::io::{BufRead, BufReader, Write};
 
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
@@ -1335,13 +1420,25 @@ mod tests {
                 line.clear();
             }
             let mut stream = stream;
-            stream
-                .write_all(
-                    b"HTTP/1.1 302 Found\r\nLocation: https://rebind.test/main.tar.gz\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
-                )
-                .unwrap();
+            let response = format!(
+                "HTTP/1.1 302 Found\r\nLocation: {location}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+            );
+            stream.write_all(response.as_bytes()).unwrap();
         });
+        start
+    }
 
+    /// scenarios/fetch-archive-dns-rebinding.md, *A redirect hop is screened
+    /// at connect too*: a redirect host that answers the redirect screen with
+    /// a public address and the connect-time lookup with an internal one is
+    /// refused at connect, and the error the operator reads names it. The
+    /// first hop is a local server the screen allowlists; it redirects to
+    /// `https://rebind.test/`. With the screening resolver removed, the
+    /// client resolves `rebind.test` itself, so the fetch fails on an
+    /// ordinary lookup error instead.
+    #[test]
+    fn a_redirect_host_that_rebinds_is_refused_at_connect() {
+        let start = redirecting_server("https://rebind.test/main.tar.gz");
         let calls = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let screen = Screen::new(
             rebinding_lookup(Arc::clone(&calls)),
@@ -1356,19 +1453,10 @@ mod tests {
             Arc::new(screen),
         )
         .unwrap_err();
-        let PrimitiveError::Http { source, .. } = &err else {
-            panic!("expected a transport error, got {err:?}");
-        };
-        let mut chain = source.to_string();
-        let mut cause = std::error::Error::source(source);
-        while let Some(inner) = cause {
-            chain.push_str(" | ");
-            chain.push_str(&inner.to_string());
-            cause = inner.source();
-        }
+        let message = err.to_string();
         assert!(
-            chain.contains("resolves to internal address 127.0.0.1"),
-            "{chain}"
+            message.contains("connecting to `rebind.test`: resolves to internal address 127.0.0.1"),
+            "{message}"
         );
         assert_eq!(
             calls.load(std::sync::atomic::Ordering::SeqCst),
@@ -1377,38 +1465,196 @@ mod tests {
         );
     }
 
+    /// A redirect the screen refuses is named in the error the operator
+    /// reads, not only in a cause chain the CLI and MCP renderings drop.
     #[test]
-    fn a_proxy_host_and_an_allowlisted_host_are_resolved_unscreened() {
-        // Through a proxy the operator's proxy is the trust boundary, and it
-        // commonly sits on a private network; an allowlisted host is exempt
-        // by the operator's choice. Any other host resolving internally is
-        // refused.
-        let resolve: Box<super::Lookup> = Box::new(|_, port| {
-            Ok(vec![std::net::SocketAddr::new(
-                "10.0.0.5".parse().unwrap(),
-                port,
-            )])
-        });
-        let proxies =
-            ProxyEnv::capture(lookup(&[("HTTPS_PROXY", "http://proxy.corp:3128")]), false);
-        let screen = Screen::new(resolve, vec!["mirror.corp".into()], &proxies);
-        assert!(screen.addresses("proxy.corp", 0).is_ok());
-        assert!(screen.addresses("mirror.corp", 0).is_ok());
-        let refused = screen.addresses("archive.example", 0).unwrap_err();
-        assert!(refused.contains("internal address 10.0.0.5"), "{refused}");
+    fn a_refused_redirect_is_named_in_the_error() {
+        // The allowlisted first hop redirects to an internal literal the
+        // allowlist does not name, so the redirect screen refuses it.
+        let start = redirecting_server("https://10.0.0.1/main.tar.gz");
+        let err = fetch_bytes_with(
+            &start,
+            &ProxyEnv::NONE,
+            FETCH_TIMEOUT,
+            FETCH_DEADLINE,
+            Arc::new(Screen::new(
+                Box::new(|host, port| (host, port).to_socket_addrs().map(Iterator::collect)),
+                vec!["127.0.0.1".into()],
+                &ProxyEnv::NONE,
+            )),
+        )
+        .unwrap_err();
+        let message = err.to_string();
+        assert!(
+            message.contains(
+                "redirect to `https://10.0.0.1/main.tar.gz`: resolves to internal address 10.0.0.1"
+            ),
+            "{message}"
+        );
+    }
+
+    /// The initial host is pinned to the addresses its screen resolved, so
+    /// it is looked up once: a host that rebinds after that lookup is never
+    /// resolved again. The pinned address is TEST-NET-1 (RFC 5737), and this
+    /// is the one unit test that really opens a connection: nothing answers
+    /// it, so the fetch ends on the short timeout or an unreachable-network
+    /// error, and neither assertion depends on which.
+    #[test]
+    fn the_initial_host_is_looked_up_once() {
+        let calls = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let screen = Screen::new(
+            rebinding_lookup(Arc::clone(&calls)),
+            Vec::new(),
+            &ProxyEnv::NONE,
+        );
+        let err = fetch_bytes_with(
+            "https://rebind.test/main.tar.gz",
+            &ProxyEnv::NONE,
+            std::time::Duration::from_millis(200),
+            FETCH_DEADLINE,
+            Arc::new(screen),
+        )
+        .unwrap_err();
+        assert_eq!(
+            calls.load(std::sync::atomic::Ordering::SeqCst),
+            1,
+            "the pin serves the connect; {err}"
+        );
+        assert!(!err.to_string().contains("internal address"), "{err}");
     }
 
     #[test]
-    fn a_proxy_named_without_a_scheme_is_still_recognized() {
-        let resolve: Box<super::Lookup> = Box::new(|_, port| {
+    fn the_pin_leaves_the_port_to_the_url() {
+        // A pinned non-zero port would carry the first URL's explicit port to
+        // a same-host redirect that names none.
+        let addrs = [std::net::SocketAddr::new(ip("192.0.2.1"), 8443)];
+        assert_eq!(
+            super::pin_addresses(&addrs),
+            [std::net::SocketAddr::new(ip("192.0.2.1"), 0)]
+        );
+    }
+
+    /// A configured proxy's host is resolved without the screen only when the
+    /// client connects to it. A fetch URL or redirect target naming it passes
+    /// the same screen as any other host, so the exemption cannot reach an
+    /// internal address by name.
+    #[test]
+    fn a_proxy_host_is_exempt_only_at_connect() {
+        let internal = |_: &str, port| {
             Ok(vec![std::net::SocketAddr::new(
                 "10.0.0.5".parse().unwrap(),
                 port,
             )])
+        };
+        let proxies =
+            ProxyEnv::capture(lookup(&[("HTTPS_PROXY", "http://proxy.corp:3128")]), false);
+        let screen = Screen::new(Box::new(internal), vec!["mirror.corp".into()], &proxies);
+        assert!(screen.connect_addresses("proxy.corp").is_ok());
+        assert!(screen.connect_addresses("mirror.corp").is_ok());
+        let refused = screen.connect_addresses("archive.example").unwrap_err();
+        assert!(refused.contains("internal address 10.0.0.5"), "{refused}");
+        let target = validate_fetch_url("https://proxy.corp:6379/x", &screen).unwrap_err();
+        assert!(
+            target.to_string().contains("internal address 10.0.0.5"),
+            "{target}"
+        );
+    }
+
+    #[test]
+    fn only_named_proxies_reqwest_accepts_are_exempt() {
+        let internal = |_: &str, port| {
+            Ok(vec![std::net::SocketAddr::new(
+                "10.0.0.5".parse().unwrap(),
+                port,
+            )])
+        };
+        // Without a scheme, the host is still recognized.
+        let bare = ProxyEnv::capture(lookup(&[("HTTPS_PROXY", "proxy.corp:3128")]), false);
+        assert!(
+            Screen::new(Box::new(internal), Vec::new(), &bare)
+                .connect_addresses("proxy.corp")
+                .is_ok()
+        );
+        // A value reqwest rejects is never connected to, so it exempts
+        // nothing — not even the scheme its fallback parse reads as a host.
+        let rejected = ProxyEnv::capture(lookup(&[("HTTPS_PROXY", "http://proxy:99999")]), false);
+        let screen = Screen::new(Box::new(internal), Vec::new(), &rejected);
+        assert!(screen.connect_addresses("http").is_err());
+        assert!(screen.connect_addresses("proxy").is_err());
+        // An IP-literal proxy is never looked up, so it needs no exemption.
+        let literal = ProxyEnv::capture(lookup(&[("HTTPS_PROXY", "http://10.0.0.5:3128")]), false);
+        assert_eq!(
+            Screen::new(Box::new(internal), Vec::new(), &literal).proxy_hosts,
+            [] as [String; 0]
+        );
+    }
+
+    #[test]
+    fn a_nat64_address_is_screened_as_its_ipv4_address() {
+        // 64:ff9b::/96 reaches the embedded IPv4 address on a NAT64 network.
+        assert!(is_internal_ip(ip("64:ff9b::a9fe:a9fe")));
+        assert!(is_internal_ip(ip("64:ff9b::7f00:1")));
+        assert!(!is_internal_ip(ip("64:ff9b::808:808")));
+    }
+
+    #[test]
+    fn a_refused_url_is_named_on_one_line() {
+        let err = validate_fetch_url("https://127.0.0.1/a\nFORGED LINE", &screen()).unwrap_err();
+        assert!(!err.to_string().contains('\n'), "{err:?}");
+    }
+
+    #[test]
+    fn every_error_names_its_url_and_remote_text_on_one_line() {
+        // A non-success status from a local server the screen allowlists:
+        // the URL carries a newline the URL parser strips, so the fetch
+        // proceeds and the error renders the argument as given.
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!(
+            "http://{}/a\nFORGED LINE: user admin authenticated",
+            listener.local_addr().unwrap()
+        );
+        std::thread::spawn(move || {
+            use std::io::{BufRead, BufReader, Write};
+            let (stream, _) = listener.accept().unwrap();
+            let mut reader = BufReader::new(stream.try_clone().unwrap());
+            let mut line = String::new();
+            while reader.read_line(&mut line).unwrap() > 2 {
+                line.clear();
+            }
+            let mut stream = stream;
+            stream
+                .write_all(
+                    b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                )
+                .unwrap();
         });
-        let proxies = ProxyEnv::capture(lookup(&[("HTTPS_PROXY", "proxy.corp:3128")]), false);
-        let screen = Screen::new(resolve, Vec::new(), &proxies);
-        assert!(screen.addresses("proxy.corp", 0).is_ok());
+        let screen = Screen::new(
+            Box::new(|host, port| (host, port).to_socket_addrs().map(Iterator::collect)),
+            vec!["127.0.0.1".into()],
+            &ProxyEnv::NONE,
+        );
+        let err = fetch_bytes_with(
+            &url,
+            &ProxyEnv::NONE,
+            FETCH_TIMEOUT,
+            FETCH_DEADLINE,
+            Arc::new(screen),
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::HttpStatus { status: 404, .. }),
+            "{err:?}"
+        );
+        assert!(!err.to_string().contains('\n'), "{err:?}");
+
+        // A sidecar's leading token is remote content: an escape sequence in
+        // it must not reach the terminal.
+        let err = parse_sidecar_hex("\u{1b}[1A\u{1b}[2Kabc  file\n", "https://h/s\nX").unwrap_err();
+        let message = err.to_string();
+        assert!(
+            !message.contains('\u{1b}') && !message.contains('\n'),
+            "{message:?}"
+        );
     }
 
     #[test]

@@ -859,7 +859,7 @@ Response payload:
 
 ## Versioning of these schemas
 
-Schemas evolve in lockstep with the runtime binary per §runtime-boundary's lockstep-versioning rule. A breaking schema change increments the runtime's major version. Hosts integrating against the JSON protocol pin a runtime version; mismatches are surfaced by `error` envelopes that carry `runtime-version`, per the resolved Versioning Enforcement question in the spec.
+Schemas evolve in lockstep with the runtime binary per §runtime-boundary's lockstep-versioning rule. A breaking schema change increments the runtime's compatibility version: the major version from 1.0 on, and the minor version before it, since a `^0.y.z` requirement accepts only `0.y` releases (the Cargo Book, *Specifying Dependencies*, Caret requirements). 0.53.0's removal of result fields was a minor bump for that reason. Hosts integrating against the JSON protocol pin a runtime version; mismatches are surfaced by `error` envelopes that carry `runtime-version`, per the resolved Versioning Enforcement question in the spec.
 
 ## Notes
 
