@@ -104,7 +104,7 @@ These gaps remain after a warning, and each is its own change:
 ## Applicable Rules
 
 - `QUAL-CLAIM-001` — a subject that could not be read, or a check that could not run, is reported as such and never as "nothing over the threshold".
-- `CFG-ENV-008` — a threshold that is present but does not parse as a whole number halts the command rather than falling back to the default; `CFG-ENV-005`'s out-of-range treatment applies to zero and a negative.
+- `CFG-ENV-008` — a threshold that is present but does not parse as a whole number halts the command rather than falling back to the default; zero and a negative halt the same way (Edge Cases).
 - `CFG-ENV-012` — a key in `[artifacts]` the runtime does not read is named, never silently dropped (spec 019's decision).
 
 ## Open Questions

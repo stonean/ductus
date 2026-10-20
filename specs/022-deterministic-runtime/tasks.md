@@ -36,6 +36,7 @@ BE-INPUT-004's Verification, rewritten 2026-10-19, asks for path canonicalizatio
 
 - [ ] Decide where canonicalization applies (48 validate_no_traversal call sites on 2026-10-20, and the writeCode boundary), record it as a scenario on 022, and implement it with tests that fail when a symlink inside the project escapes it
 - [ ] State the commitment in plan.md
+- [ ] State it in 063's plan too (§Subjects, absence, and readability), whose `feature` argument passes only `validate_no_traversal`: 063's analysis of 2026-10-20 routed its BE-INPUT-004 finding here, and 063 stays blocking until this lands
 
 - **Done when**: analyze's BE-INPUT-004 assessment of 022's plan passes, and a path that escapes the project through a symlink is refused
 
