@@ -61,7 +61,7 @@ Nothing secret reaches stderr (`BE-LOG-002`). Its lines are diagnostics: paths, 
 ### Dependency pinning, provenance, and upgrades
 
 - **Pinned** (`BE-DEPS-002`). `runtime/Cargo.lock` is committed, and every CI build and test and every release build runs `--locked` (`.github/workflows/runtime.yml`, `.github/workflows/runtime-release.yml`), so the lockfile alone decides what ships.
-- **Upgraded on a schedule** (`BE-DEPS-002`). `.github/workflows/runtime-currency.yml` runs `scripts/check-runtime-currency.sh` every Monday: the lockfile, the direct dependencies' major versions, the pinned toolchain, and the advisories. A red run is fixed by a lockfile refresh, a major bump, a toolchain bump, or a dependency update, each committed on its own and shipped through the ordinary gate and release. `cargo audit` also runs on every push that touches the runtime (`runtime.yml`) and as a release-gate job (`runtime-release.yml`).
+- **Upgraded on a schedule** (`BE-DEPS-002`). `.github/workflows/runtime-currency.yml` runs `scripts/check-runtime-currency.sh` every Monday: the lockfile, the direct dependencies' major versions, the pinned toolchain, the advisories, and the CI pins the lockfile does not cover (see the `runtime.yml` CI workflow below). A red run is fixed by a lockfile refresh, a major bump, a toolchain bump, a dependency update, or a pin bump, each committed on its own and shipped through the ordinary gate and release. `cargo audit` also runs on every push that touches the runtime (`runtime.yml`) and as a release-gate job (`runtime-release.yml`).
 - **Provenance: a documented exception** (`BE-DEPS-004`). The runtime's build verifies no publisher signature or provenance attestation for its crates. Its workflows run no such step, and this plan assumes cargo offers none for crates.io packages beyond checking each downloaded crate against the sha256 `checksum` its `runtime/Cargo.lock` entry carries, so the crates cannot meet the rule as written. That checksum and the audits above stand in for it. Remediation: adopt signature or attestation verification for crates.io dependencies once cargo supports it. `markdownlint-cli2`, which `lint-markdown` runs through the project's own `npx`, is the project's npm dependency rather than the runtime's, and npm resolves it.
 
 ### Parser strategy: pulldown-cmark events + hand-walked structural recognizer
@@ -181,7 +181,7 @@ Alternative considered: ship a tiny standalone parser in bash. Rejected — the 
 Triggers on PR and push to `main`, with `paths` filter covering `runtime/**` and any `framework/commands/*.md` (rewrites must keep parseability). Steps:
 
 1. Checkout.
-2. Setup Rust toolchain (`actions-rust-lang/setup-rust-toolchain` or `dtolnay/rust-toolchain`).
+2. Set up the Rust toolchain with `dtolnay/rust-toolchain`, whose `toolchain:` and `components:` inputs match `runtime/rust-toolchain.toml`.
 3. `cargo build --release` in `runtime/`.
 4. `cargo test --release` in `runtime/`.
 5. `cargo clippy -- -D warnings`.
@@ -190,15 +190,19 @@ Triggers on PR and push to `main`, with `paths` filter covering `runtime/**` and
 
 Build and test run on a matrix of `ubuntu-latest`, `macos-latest` and `windows-latest`; `cargo audit` runs once, on Linux.
 
+**Pinned inputs** (`BE-DEPS-006`). Every action this workflow, the release workflow and the repository's other workflows use is referenced by a full commit SHA with its release tag in a same-line comment (`actions/checkout@<sha> # v7.0.1`), so an upstream that moves a tag changes nothing that runs. `dtolnay/rust-toolchain` pins a commit on its master branch and takes the version as its `toolchain:` input, because its README requires a pinned SHA to be "within the history of the master branch", which its per-version branches are not. `cargo-audit` installs through `taiki-e/install-action` as `tool: cargo-audit@<version>`, and that action's README says it "will also verify SHA256 checksums for downloaded files". Runner labels (`ubuntu-latest` and the rest) stay as they are, since a GitHub-hosted runner image has no immutable reference to pin, and a tool a job takes from the image rather than downloading moves with it: Node in `framework-checks.yml` is the image's own (owner decision, 2026-10-20), since `actions/setup-node` downloaded it with no checksum check, from a version manifest read off a branch.
+
+**Their update process** (`BE-DEPS-006`). The fifth check of `scripts/check-runtime-currency.sh`, `pins`, which `runtime-currency.yml` runs every Monday, compares each action pin with the action's latest release and with the commit its tag names now, each tool pin with the newest stable version crates.io or PyPI publishes, and each `toolchain:` input with `runtime/rust-toolchain.toml`. It also reports an action, `cargo install`, `pip install` or taiki-e tool that is not pinned at all. It reports and never edits: a red run is fixed by a pin bump committed on its own. `scripts/tests/test-check-runtime-currency.sh`, run by `framework-checks.yml`, shows it fails on each case it claims to catch.
+
 ### Release workflow
 
 A separate workflow at `.github/workflows/runtime-release.yml`, triggered on tag pushes matching `ductus-v*`. Steps:
 
 1. Matrix across the target triples in the acceptance criteria: `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, and `x86_64-pc-windows-msvc` if cross-compilation is friction-free.
-2. Build via `cargo-zigbuild` for Linux ARM (cross-compilation), native build for macOS targets on macOS runners, and `cargo build` on a Windows runner for the Windows target.
+2. Build via `cargo-zigbuild` for Linux ARM (cross-compilation), native build for macOS targets on macOS runners, and `cargo build` on a Windows runner for the Windows target. `cargo-zigbuild` installs with `cargo install --locked --version <version>`, which the Cargo book says "will install exactly that version", and a crates.io version "can never be overwritten". The zig it drives comes from PyPI's `ziglang` in pip's hash-checking mode (`--require-hashes`, against the wheel's sha256).
 3. Package each binary as `ductus-<target>.tar.gz` on every platform, with a `.sha256` checksum file.
-4. Upload to a GitHub release created from the tag, using `softprops/action-gh-release`.
-5. Generate a CycloneDX SBOM during the release build (`cargo cyclonedx --format json --override-filename ductus.cdx`, `BE-DEPS-003`) and upload it with its own sha256 checksum to the same release. The SBOM is derived from the resolved `Cargo.lock` graph, which is identical across the target matrix, so one SBOM covers every artifact; attached to the GitHub release, it shares the artifacts' retention lifetime.
+4. Upload to a GitHub release created from the tag, using `softprops/action-gh-release`, pinned by commit SHA like every action (see **Pinned inputs** above).
+5. Generate a CycloneDX SBOM during the release build (`cargo cyclonedx --format json --override-filename ductus.cdx`, `BE-DEPS-003`), with `cargo-cyclonedx` installed at an exact version the same way as `cargo-zigbuild`, and upload it with its own sha256 checksum to the same release. The SBOM is derived from the resolved `Cargo.lock` graph, which is identical across the target matrix, so one SBOM covers every artifact; attached to the GitHub release, it shares the artifacts' retention lifetime.
 
 Tag scheme is `ductus-v<MAJOR>.<MINOR>.<PATCH>`, one tag per release, carrying the framework and the runtime in lockstep. The release procedure is `AGENTS.md`'s release entries under §Workflow.
 

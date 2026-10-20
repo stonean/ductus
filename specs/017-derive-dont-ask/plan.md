@@ -110,6 +110,8 @@ A GitHub Actions workflow (`.github/workflows/generators.yml`) runs the generato
 
 A second workflow file (`framework/templates/ci/adopter-generators.yml`) ships as a template referenced from the adopter README — not auto-installed. Adopters who want CI enforcement copy it into their own `.github/workflows/`. Auto-shipping CI files via `/ductus` would require platform detection (GitHub Actions vs. GitLab CI vs. Buildkite) that's out of scope for this spec.
 
+Both workflows reference their actions by full commit SHA with the release tag in a same-line comment (`BE-DEPS-006`), the shipped template included, so an upstream that moves a tag changes nothing either one runs. Their update process is this repository's weekly currency check: the `pins` check of `scripts/check-runtime-currency.sh`, run every Monday by `runtime-currency.yml`, reads the template along with the repository's own workflows and fails when a pin is behind its action's latest release or no longer names the commit its tag does. A bump to the template reaches adopters at the next release, and an adopter who copied it re-copies it, as its header says.
+
 ## Affected Files
 
 ### Templates
