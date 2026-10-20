@@ -75,6 +75,7 @@ Of the 13 acceptance criteria, AC 8's waiver auto-expiry has the subtlest behavi
 | --- | --- | --- |
 | `framework/commands/review.md` | Create | Source for `/ductus:review`, and **the canonical content** — the spec body points at it rather than embedding it. The original plan had this inverted, naming the spec's embedded copy as canonical; that inversion is what produced a 561-line snapshot which then drifted more than half behind, and it was corrected on 2026-09-13 |
 | `framework/bootstrap/ductus.md` | Edit | §Project Configuration lists `[review] tech-stack-verified` with its purpose and its default, the inventory `CFG-ENV-002` requires |
+| `framework/bootstrap/govern.md` | Edit | Byte-identical mirror of `ductus.md` (audit Family 21) |
 | `framework/commands/implement.md` | Edit | Pre-`done` review gate (halts when `review.blocking: true` or `review.last-run` missing) |
 | `framework/commands/analyze.md` | Edit | Add review-drift check on `done` specs; integrate `--fix` to revert to `in-progress` with notice |
 | `framework/templates/spec/spec.md` | Edit | Add `review:` block to frontmatter schema (removed again by 057) |

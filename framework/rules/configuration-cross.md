@@ -68,9 +68,9 @@ Cross-cutting (`-cross.md`) rule files load for every stack: `[rules] surfaces` 
 
 **Rationale:** Operators discover required configuration by reading this inventory. Variables introduced in code but absent from the inventory produce silent runtime failures in fresh deployments and obscure the application's true configuration surface. The form of the inventory follows the deployment model — `.env.example` for processes, Helm values for Kubernetes, etc. — but the single-source-of-truth requirement does not. A configuration-file key is discovered the same way, so it is inventoried too, and a commented example of the file serves as its inventory, as a Helm chart's `values.yaml` does for the chart's values. A flag is read where it is passed, in the help output of the command that takes it, so it is left there.
 
-**Verification:** Any spec or plan that introduces an environment variable or a configuration-file key MUST name the inventory that lists it and include updating it as part of its tasks. `/{project}:analyze` flags plans that introduce either without a corresponding inventory update in affected-files.
+**Verification:** Any spec or plan that introduces an environment variable or a configuration-file key MUST name the inventory that lists it and include updating it as part of its tasks. `/{project}:analyze` flags plans that introduce either without a corresponding inventory update in affected-files, and plans that start a second inventory for a source that already has one.
 
-**Source:** dotenv-safe README (`.env.example`, committed with the project, names the variables the application needs); Helm, "Charts" (`values.yaml` holds a chart's defaults; Schema Files: `values.schema.json`)
+**Source:** dotenv-safe README (`.env.example`, committed with the project, names the variables the application needs); Helm, "Charts" (`values.yaml` holds a chart's defaults; Schema Files: `values.schema.json`); Helm, "Chart Best Practices: Values" (every defined property in `values.yaml` should be documented)
 
 ### CFG-ENV-003
 

@@ -270,3 +270,11 @@ Reopen surfaced upstream from an adopter: an `FE-DEPS` rule was missing for a de
 - [x] Lints, audit suite, and rule-corpus tests pass
 
 - **Done when**: The question is resolved and applied, and 008 is re-reviewed back to done.
+
+## 18. BE-AUTHN-022 saved recovery codes against BE-AUTHN-018 (follow-on to task 17)
+
+- [ ] Owner answers the saved-recovery-code question in scenarios/independent-review-findings-await-the-owner.md
+- [ ] Apply the answer to security-backend.md BE-AUTHN-018 or BE-AUTHN-022, fetching any external claim, and record it in Resolved Questions
+- [ ] Lints, audit suite, and rule-corpus tests pass
+
+- **Done when**: The question is resolved and applied, and 008 is re-reviewed back to done.

@@ -590,7 +590,8 @@ ref = "main"
 # and post-restart sessions read them back instead of re-prompting. This table
 # is the source of truth for the answers; host.project below is the derived
 # slash-command namespace, written from project.name. A key that is absent
-# has no default: the next /ductus run asks for it.
+# has no default: the next /ductus run asks for it, after `name` falls back to
+# the command argument and then to [host] project.
 name = "my-service"
 description = "A new microservice"
 languages = ["Go", "Python"]
@@ -671,7 +672,8 @@ last_applied = "rule-files-relocate"
 # trail for the override. A malformed entry (not a table, a missing or
 # non-string `file` or `reason`, or a short `reason`) halts /{project}:review
 # before any rule file is selected, naming the entry's index and the field.
-# Listed here for schema reference; uncomment and edit to use.
+# Absent means no rule file is excluded. Listed here for schema reference;
+# uncomment and edit to use.
 #
 # [[review.disabled-rule-files]]
 # file = "accessibility-frontend.md"
