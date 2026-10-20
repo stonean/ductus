@@ -36,6 +36,8 @@ Answered (c) by the owner 2026-10-20, for the third subtask's question of which 
 
 - **Done when**: analyze's BE-DEPS-006 assessment of 022's plan passes, and every workflow references its actions and installed tools immutably
 
+State on 2026-10-20: every subtask is done and every workflow pins immutably (`458fa3e3`, `d8d078db`, `f4da0512`, `02a5ac13`, `fa489f6a`). The analyze half waits on 022's next analysis, which stays blocking by design while task 4 is open. An independent BE-DEPS-006 assessment of 022's plan at `8595fcbd` found one gap, no checksum basis stated for the Rust toolchain download, which `d235e722` closed; 017's analysis at `742db59b` found BE-DEPS-006 passing for the workflows 017's plan covers.
+
 ## 4. Canonicalize host- and LLM-supplied paths before the containment check (BE-INPUT-004)
 
 BE-INPUT-004's Verification, rewritten 2026-10-19, asks for path canonicalization followed by a containment check comparing whole path components; validate_no_traversal (runtime/src/primitives/mod.rs) is textual, rejecting absolute, rooted and .. paths without resolving a symlink, and writeCode's write-boundary check matches globs.
@@ -61,8 +63,19 @@ Owner-gated: not started until the owner authorizes it. Decision put to the owne
 
 ## 6. Name the timeout on every download in the release workflows and the installer (BE-TIMEOUT-001, BE-RETRY-001)
 
+Owner-gated: not started until the owner authorizes it, since it changes the release path and the shipped installer. Check the route first: install.sh is 003's deliverable (`9847647b`, the curl-sh installer) whose source resolution 061 reshaped, so its half may belong to one of those specs rather than to 022.
+
 - [ ] runtime-acquisition.yml:131-132 and install.sh:124 and :163 call curl with no connect or total timeout, and runtime-release.yml:623 has none and retries with a fixed delay and no jitter; found by 017's review of 2026-10-20, which bounded the new calls (scripts/check-runtime-currency.sh's fetch, the adopter CI template's download) and routed these pre-existing ones here
 - [ ] Give each a named connect timeout and total timeout, and make the release retry jittered or remove it
 - [ ] State the timeouts in plan.md's Release workflow section; install.sh changes are tested by scripts/tests/test-install.sh
 
 - **Done when**: Every curl in the workflows and install.sh carries a named timeout, and analyze's BE-TIMEOUT-001 assessment of 022's plan passes
+
+## 7. Move the three action pins a major release behind
+
+Found by the pins check 022 task 3 added; the first weekly run (Monday 2026-10-26) exits 1 on these three until they move. Measured 2026-10-20: upload-artifact and download-artifact run only in runtime-release.yml, on a tag, which the owner is holding, so a bump there cannot be exercised before the release; the template's checkout can be exercised in a linux/amd64 container the way 017's `the-adopter-ci-template-can-run` was. Also measured: taiki-e/install-action published 13 releases between 2026-09-20 and 2026-10-20, so its pin will turn the weekly run red most Mondays and need a bump each time, a consequence of the owner's option (c) for task 3; state it as a fact when this is asked.
+
+- [ ] Owner decides whether and when (not yet put to the owner); then bump each pin's SHA and tag comment together, after reading each action's release notes for breaking changes between the pinned and the latest major
+- [ ] actions/upload-artifact v4.6.2 to v7.0.2 and actions/download-artifact v4.3.0 to v8.0.2 in runtime-release.yml, and the adopter CI template's actions/checkout v4.4.0 to v7.0.1
+
+- **Done when**: scripts/check-runtime-currency.sh pins reports no action pin behind, or the owner has decided to hold them
