@@ -23,8 +23,9 @@ use crate::schema::primitives::{DeriveBoundaryArgs, DeriveBoundaryResult};
 ///
 /// # Errors
 ///
-/// Returns [`PrimitiveError::InvalidPath`] when `feature` would leave the
-/// spec root, [`PrimitiveError::FeatureNotFound`] when the feature directory
+/// Returns [`PrimitiveError::InvalidPath`] when `feature` would leave the spec
+/// root, or when the feature directory, or a link inside it, resolves outside
+/// the project, [`PrimitiveError::FeatureNotFound`] when the feature directory
 /// is absent, and [`PrimitiveError::Git`] for any libgit2 failure, including
 /// a project no work tree contains.
 ///
@@ -35,8 +36,8 @@ use crate::schema::primitives::{DeriveBoundaryArgs, DeriveBoundaryResult};
 /// the first out-of-spec edit halts with `out-of-boundary-edit` — while the
 /// walk itself reaches a legible next-step instead of dying at step 2.
 pub fn run(args: &DeriveBoundaryArgs, repo: &Path) -> Result<DeriveBoundaryResult> {
-    super::validate_feature_argument(repo, &args.feature)?;
     let layout = paths::Paths::load(repo);
+    super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
     let feature_dir = repo.join(&layout.specs_root).join(&args.feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {

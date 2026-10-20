@@ -144,13 +144,12 @@ use crate::schema::status::COMPATIBLE_STATUSES;
 /// classify tiers at all), or
 /// [`PrimitiveError::Io`] on filesystem failures.
 pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResult> {
-    super::validate_no_traversal(&args.feature)?;
     let root = paths::Paths::load(repo).specs_root;
     // The argument is checked, the directory's contents are not: this
     // primitive skips a linked sibling as `target-unparseable` and keeps
     // running (scenario `sibling-symlink-trust-boundary`), which the walk in
-    // `validate_feature_path` would pre-empt by refusing the whole call.
-    super::validate_contained(repo, &format!("{root}/{}", args.feature))?;
+    // `validate_feature_argument` would pre-empt by refusing the whole call.
+    super::validate_feature_contained(repo, &root, &args.feature)?;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {
@@ -173,6 +172,7 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
             include_body: false,
         },
         repo,
+        &root,
     )?;
     let frontmatter = &spec.frontmatter;
     let status = frontmatter.status.clone();
@@ -187,6 +187,7 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
                 feature: args.feature.clone(),
             },
             repo,
+            &root,
         )?)
     } else {
         None

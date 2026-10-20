@@ -37,7 +37,8 @@ use crate::schema::primitives::{InvalidateReviewArgs, InvalidateReviewResult};
 /// # Errors
 ///
 /// Returns [`PrimitiveError::InvalidPath`] when `feature` carries a
-/// parent-directory component, [`PrimitiveError::FeatureNotFound`] when the
+/// parent-directory component, or when the feature directory, or a link inside it,
+/// resolves outside the project, [`PrimitiveError::FeatureNotFound`] when the
 /// feature directory is missing, [`PrimitiveError::UnclosedFrontmatter`] when
 /// `review.md`'s frontmatter block never closes, [`PrimitiveError::Yaml`] when
 /// its frontmatter or `waivers:` list does not parse, or [`PrimitiveError::Io`]
@@ -46,9 +47,9 @@ use crate::schema::primitives::{InvalidateReviewArgs, InvalidateReviewResult};
 /// A spec that records no current review is **not** an error — it is
 /// `invalidated: false`, already in the state this primitive produces.
 pub fn run(args: &InvalidateReviewArgs, repo: &Path) -> Result<InvalidateReviewResult> {
-    super::validate_feature_argument(repo, &args.feature)?;
-
     let root = paths::Paths::load(repo).specs_root;
+    super::validate_feature_argument(repo, &root, &args.feature)?;
+
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {

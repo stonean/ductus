@@ -795,7 +795,7 @@ pub fn validate_write_code_resolution(
     for edit in &response.edits {
         let reason = match resolve(&edit.path) {
             None => "reaches outside the project through a symlink".to_string(),
-            Some(resolved) if resolved != edit.path && !path_in_boundary(&resolved, boundary) => {
+            Some(resolved) if !path_in_boundary(&resolved, boundary) => {
                 format!(
                     "resolves through a symlink to `{resolved}`, which is not within {boundary:?}"
                 )

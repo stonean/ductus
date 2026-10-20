@@ -52,8 +52,9 @@ const DEFAULT_GLOB: &str = "*.md";
 /// # Errors
 ///
 /// - [`PrimitiveError::InvalidPath`] when `directory` resolves outside
-///   the repo root (parent-directory components, or an absolute path
-///   that does not sit under `repo`). This primitive deletes files, so
+///   the repo root (parent-directory components, an absolute path that
+///   does not sit under `repo`, or a symlink on it that resolves outside
+///   the project). This primitive deletes files, so
 ///   the containment check runs before any filesystem operation
 ///   (BE-INPUT-004 defense-in-depth). Legitimate absolute directories
 ///   inside the repo keep working.
@@ -140,7 +141,7 @@ fn resolve_contained_dir(repo: &Path, p: &str) -> Result<PathBuf> {
             reason: "parent-directory component ('..') not permitted".into(),
         });
     }
-    if !candidate.starts_with(repo) {
+    let Ok(rest) = candidate.strip_prefix(repo) else {
         return Err(PrimitiveError::InvalidPath {
             path: p.into(),
             reason: format!(
@@ -148,10 +149,8 @@ fn resolve_contained_dir(repo: &Path, p: &str) -> Result<PathBuf> {
                 repo.display()
             ),
         });
-    }
-    if let Ok(rest) = candidate.strip_prefix(repo)
-        && !rest.as_os_str().is_empty()
-    {
+    };
+    if !rest.as_os_str().is_empty() {
         validate_contained(repo, &rest.to_string_lossy())?;
     }
     Ok(candidate.to_path_buf())

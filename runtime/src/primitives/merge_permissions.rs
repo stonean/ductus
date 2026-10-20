@@ -62,9 +62,9 @@ use crate::schema::primitives::{MergePermissionsArgs, MergePermissionsResult};
 /// # Errors
 ///
 /// - [`PrimitiveError::InvalidPath`] when `path` is absolute, empty, or
-///   contains a parent-directory component — the BE-INPUT-004
-///   defense-in-depth check every path-taking primitive applies before
-///   filesystem operations. `path` is repo-relative (the
+///   contains a parent-directory component, or when a symlink on it
+///   resolves outside the project — the BE-INPUT-004 check every
+///   primitive that opens a path applies before filesystem operations. `path` is repo-relative (the
 ///   bootstrap-substituted `{cli-config-dir}/settings.local.json`); no
 ///   caller needs an out-of-repo destination.
 /// - [`PrimitiveError::Io`] on local filesystem failures.

@@ -34,6 +34,8 @@ use crate::schema::primitives::{
 ///
 /// Returns [`PrimitiveError::InvalidPath`] when `feature` is empty,
 /// absolute, or carries a parent-directory component,
+/// or when the feature directory, or a link inside it, resolves outside the
+/// project,
 /// [`PrimitiveError::FeatureNotFound`] when the feature directory does not
 /// exist, [`PrimitiveError::TemplateNotFound`] when any to-be-copied
 /// artifact's template exists at neither candidate location (checked for
@@ -42,8 +44,8 @@ use crate::schema::primitives::{
 /// failures. Pre-existing artifacts are the `kept` **domain outcome**,
 /// never an error.
 pub fn run(args: &CreatePlanArtifactsArgs, repo: &Path) -> Result<CreatePlanArtifactsResult> {
-    super::validate_feature_argument(repo, &args.feature)?;
     let root = paths::Paths::load(repo).specs_root;
+    super::validate_feature_argument(repo, &root, &args.feature)?;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {

@@ -168,7 +168,9 @@ fn adds_unchecked_box(now: &str, head: &str) -> bool {
 /// - [`PrimitiveError::InvalidArgument`] when both `feature` and `all` are
 ///   given, when `all` comes with `apply`, and when `remove` is given without
 ///   `apply` or names a design-record section.
-/// - [`PrimitiveError::InvalidPath`] when `feature` would escape the spec root.
+/// - [`PrimitiveError::InvalidPath`] when `feature` would escape the spec root,
+///   or when the feature directory, or a link inside it, resolves outside the
+///   project.
 /// - [`PrimitiveError::FeatureNotFound`] when the feature directory is absent.
 /// - [`PrimitiveError::MissingSpecFile`] / [`PrimitiveError::StatusFieldMissing`]
 ///   / [`PrimitiveError::MissingFrontmatter`] /
@@ -248,7 +250,7 @@ fn summarize(
     repo: &Path,
     root: &str,
 ) -> Result<PrunePlanSummary> {
-    super::validate_feature_argument(repo, feature)?;
+    super::validate_feature_argument(repo, root, feature)?;
     let feature_dir = repo.join(root).join(feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {

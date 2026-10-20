@@ -71,7 +71,8 @@ use crate::schema::primitives::{
 /// # Errors
 ///
 /// - [`PrimitiveError::InvalidPath`] when `feature` is empty, absolute, or
-///   carries a parent-directory component.
+///   carries a parent-directory component, or when the feature directory, or
+///   a link inside it, resolves outside the project.
 /// - [`PrimitiveError::FeatureNotFound`] when the feature directory does not
 ///   exist.
 /// - [`PrimitiveError::InvalidArgument`] when `analyzed-at` is blank, when a
@@ -95,8 +96,8 @@ use crate::schema::primitives::{
 ///   prior `analysis.md` that opens no block carries no decisions and is
 ///   overwritten.
 pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult> {
-    super::validate_feature_argument(repo, &args.feature)?;
     let root = paths::Paths::load(repo).specs_root;
+    super::validate_feature_argument(repo, &root, &args.feature)?;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {

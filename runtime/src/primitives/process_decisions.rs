@@ -36,7 +36,9 @@ use crate::schema::primitives::{
 /// # Errors
 ///
 /// Returns [`PrimitiveError::InvalidPath`] when `feature` is empty, absolute,
-/// or carries a parent-directory component, [`PrimitiveError::FeatureNotFound`]
+/// or carries a parent-directory component,
+/// or when the feature directory, or a link inside it, resolves outside the
+/// project, [`PrimitiveError::FeatureNotFound`]
 /// when the feature has no `spec.md`, [`PrimitiveError::UnclosedFrontmatter`]
 /// when the record's frontmatter block never closes,
 /// [`PrimitiveError::Yaml`] when its frontmatter or `decisions:` list does
@@ -45,8 +47,8 @@ use crate::schema::primitives::{
 /// one that opens no frontmatter block, holds no decisions: the writers
 /// overwrite such a file.
 pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsResult> {
-    super::validate_feature_argument(repo, &args.feature)?;
     let layout = paths::Paths::load(repo);
+    super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
     let feature_dir = repo.join(&layout.specs_root).join(&args.feature);
     if !feature_dir.join("spec.md").is_file() {
         return Err(PrimitiveError::FeatureNotFound {

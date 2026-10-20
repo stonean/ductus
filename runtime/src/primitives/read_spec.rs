@@ -22,8 +22,9 @@ use crate::schema::primitives::{
 /// [`PrimitiveError::UnclosedFrontmatter`] when its block never closes,
 /// or [`PrimitiveError::Yaml`] when the frontmatter is not valid YAML.
 pub fn run(args: &ReadSpecArgs, repo: &Path) -> Result<ReadSpecResult> {
-    super::validate_feature_argument(repo, &args.feature)?;
-    read_checked(args, repo)
+    let root = paths::Paths::load(repo).specs_root;
+    super::validate_feature_argument(repo, &root, &args.feature)?;
+    read_checked(args, repo, &root)
 }
 
 /// [`run`] without its walk of the feature directory, for a caller that has
@@ -34,12 +35,11 @@ pub fn run(args: &ReadSpecArgs, repo: &Path) -> Result<ReadSpecResult> {
 /// # Errors
 ///
 /// As [`run`], less the walk's refusal.
-pub(crate) fn read_checked(args: &ReadSpecArgs, repo: &Path) -> Result<ReadSpecResult> {
-    let root = paths::Paths::load(repo).specs_root;
-    let feature_dir = repo.join(&root).join(&args.feature);
+pub(crate) fn read_checked(args: &ReadSpecArgs, repo: &Path, root: &str) -> Result<ReadSpecResult> {
+    let feature_dir = repo.join(root).join(&args.feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {
-            root,
+            root: root.to_string(),
             feature: args.feature.clone(),
         });
     }

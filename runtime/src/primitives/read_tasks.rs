@@ -32,8 +32,9 @@ use crate::schema::primitives::{ReadTasksArgs, ReadTasksResult, Subtask, Task};
 /// Returns [`PrimitiveError::FeatureNotFound`] when `specs/<feature>/` does
 /// not exist, or [`PrimitiveError::Io`] when `tasks.md` cannot be read.
 pub fn run(args: &ReadTasksArgs, repo: &Path) -> Result<ReadTasksResult> {
-    super::validate_feature_argument(repo, &args.feature)?;
-    read_checked(args, repo)
+    let root = paths::Paths::load(repo).specs_root;
+    super::validate_feature_argument(repo, &root, &args.feature)?;
+    read_checked(args, repo, &root)
 }
 
 /// [`run`] without its walk of the feature directory, for a caller that has
@@ -44,12 +45,15 @@ pub fn run(args: &ReadTasksArgs, repo: &Path) -> Result<ReadTasksResult> {
 /// # Errors
 ///
 /// As [`run`], less the walk's refusal.
-pub(crate) fn read_checked(args: &ReadTasksArgs, repo: &Path) -> Result<ReadTasksResult> {
-    let root = paths::Paths::load(repo).specs_root;
-    let feature_dir = repo.join(&root).join(&args.feature);
+pub(crate) fn read_checked(
+    args: &ReadTasksArgs,
+    repo: &Path,
+    root: &str,
+) -> Result<ReadTasksResult> {
+    let feature_dir = repo.join(root).join(&args.feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {
-            root,
+            root: root.to_string(),
             feature: args.feature.clone(),
         });
     }

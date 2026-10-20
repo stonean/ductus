@@ -31,8 +31,8 @@ use crate::schema::primitives::{CheckStuckArgs, CheckStuckResult};
 /// is absent and [`PrimitiveError::Git`] for any libgit2 failure (repo not
 /// found, walk failure, tree lookup, etc.).
 pub fn run(args: &CheckStuckArgs, repo: &Path) -> Result<CheckStuckResult> {
-    super::validate_feature_argument(repo, &args.feature)?;
     let layout = paths::Paths::load(repo);
+    super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
     let feature_dir = repo.join(&layout.specs_root).join(&args.feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {

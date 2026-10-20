@@ -44,6 +44,8 @@ use crate::schema::primitives::{
 ///
 /// Returns [`PrimitiveError::InvalidPath`] when `feature` is empty,
 /// absolute, or carries a parent-directory component,
+/// or when the feature directory, or a link inside it, resolves outside the
+/// project,
 /// [`PrimitiveError::FeatureNotFound`] when the feature directory does
 /// not exist, [`PrimitiveError::Io`] when `spec.md` is unreadable or
 /// `npx` cannot be spawned, or [`PrimitiveError::Yaml`] for a malformed
@@ -61,8 +63,8 @@ pub(crate) fn run_with_lint(
     repo: &Path,
     lint: impl FnOnce(&LintMarkdownArgs, &Path) -> Result<LintMarkdownResult>,
 ) -> Result<CheckReviewGateResult> {
-    super::validate_feature_argument(repo, &args.feature)?;
     let root = paths::Paths::load(repo).specs_root;
+    super::validate_feature_argument(repo, &root, &args.feature)?;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {

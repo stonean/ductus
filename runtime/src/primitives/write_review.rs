@@ -125,7 +125,8 @@ fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
 /// Every refusal lands before any write.
 ///
 /// - [`PrimitiveError::InvalidPath`] when `feature` is empty, absolute, or
-///   carries a parent-directory component.
+///   carries a parent-directory component, or when the feature directory, or
+///   a link inside it, resolves outside the project.
 /// - [`PrimitiveError::InvalidArgument`] when a scalar argument, an
 ///   observation's text, path, or `decision-key`, or a route's target or a
 ///   discard's reason carries a line break or another character that is not
@@ -143,9 +144,9 @@ fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
 ///   does.
 /// - [`PrimitiveError::Io`] on read/write failure.
 pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
-    super::validate_feature_argument(repo, &args.feature)?;
-    validate_scalar_fields(args)?;
     let root = paths::Paths::load(repo).specs_root;
+    super::validate_feature_argument(repo, &root, &args.feature)?;
+    validate_scalar_fields(args)?;
     let feature_dir = repo.join(&root).join(&args.feature);
     let spec_path = feature_dir.join("spec.md");
     if !spec_path.is_file() {

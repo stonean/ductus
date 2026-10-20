@@ -43,7 +43,8 @@ use crate::schema::primitives::{RetireFeatureArgs, RetireFeatureResult};
 /// # Errors
 ///
 /// Returns [`PrimitiveError::InvalidPath`] when either argument is empty,
-/// absolute, or carries a parent-directory component;
+/// absolute, or carries a parent-directory component, or when either feature
+/// directory, or a link inside it, resolves outside the project;
 /// [`PrimitiveError::InvalidArgument`] when `feature` is not the
 /// branch-scoped form **and** `allow-sequential` was not set — the
 /// sequential refusal is gated rather than unconditional (spec 052), so a
@@ -92,10 +93,10 @@ pub fn run(args: &RetireFeatureArgs, repo: &Path) -> Result<RetireFeatureResult>
         });
     }
 
-    super::validate_feature_argument(repo, &args.feature)?;
-    super::validate_feature_argument(repo, &args.fold_target)?;
-
     let layout = paths::Paths::load(repo);
+    super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
+    super::validate_feature_argument(repo, &layout.specs_root, &args.fold_target)?;
+
     let specs_dir = repo.join(&layout.specs_root);
 
     // Refusal 2: the content must have somewhere to have landed. A directory

@@ -99,10 +99,14 @@ jobs:
       - name: Resolve the version pin
         id: pin
         shell: bash
+        # The input reaches the script through the environment, never spliced
+        # into its text.
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
           # The same pin /ductus fetches from raw.githubusercontent.com in pre-flight.
-          version="${{ inputs.version }}"
+          version="$INPUT_VERSION"
           if [ -z "$version" ]; then
             version="$(tr -d '[:space:]' < version)"
           fi
@@ -114,17 +118,21 @@ jobs:
 
       - name: Acquire, verify, install, execute
         shell: bash
-        # Each download is bounded (BE-TIMEOUT-001): a connection gets
+        # Each download is HTTPS only, at TLS 1.2 or later, with curl's
+        # certificate and host-name verification left on (BE-DATA-001,
+        # BE-DATA-011), and bounded (BE-TIMEOUT-001): a connection gets
         # DOWNLOAD_CONNECT_TIMEOUT_SECONDS and a whole transfer
         # DOWNLOAD_MAX_TIME_SECONDS, the values the adopter CI template uses
         # for the same archive.
         env:
           DOWNLOAD_CONNECT_TIMEOUT_SECONDS: "30"
           DOWNLOAD_MAX_TIME_SECONDS: "300"
+          PIN_VERSION: ${{ steps.pin.outputs.version }}
+          TARGET: ${{ matrix.target }}
         run: |
           set -euo pipefail
-          version="${{ steps.pin.outputs.version }}"
-          target="${{ matrix.target }}"
+          version="$PIN_VERSION"
+          target="$TARGET"
           base="https://github.com/stonean/ductus/releases/download/ductus-v${version}"
           archive="ductus-${target}.tar.gz"
 
@@ -135,9 +143,10 @@ jobs:
           # 1. Fetch the archive and its sidecar. A missing sidecar is a
           #    failure here, not a skip: unlike the source tarball, release
           #    assets always carry theirs.
-          bounded=(--connect-timeout "$DOWNLOAD_CONNECT_TIMEOUT_SECONDS" --max-time "$DOWNLOAD_MAX_TIME_SECONDS")
-          curl -fsSL "${bounded[@]}" "${base}/${archive}" -o "$archive"
-          curl -fsSL "${bounded[@]}" "${base}/${archive}.sha256" -o "${archive}.sha256"
+          fetch=(--proto '=https' --tlsv1.2 -fsSL
+            --connect-timeout "$DOWNLOAD_CONNECT_TIMEOUT_SECONDS" --max-time "$DOWNLOAD_MAX_TIME_SECONDS")
+          curl "${fetch[@]}" "${base}/${archive}" -o "$archive"
+          curl "${fetch[@]}" "${base}/${archive}.sha256" -o "${archive}.sha256"
 
           # 2. Verify the digest BEFORE anything is installed.
           if command -v sha256sum >/dev/null 2>&1; then
@@ -170,5 +179,8 @@ jobs:
       - name: Fail when the asset is unavailable
         if: failure()
         shell: bash
+        env:
+          PIN_VERSION: ${{ steps.pin.outputs.version }}
+          TARGET: ${{ matrix.target }}
         run: |
-          echo "::error::acquisition failed for ${{ matrix.target }} at ${{ steps.pin.outputs.version }} — an adopter on this platform cannot bootstrap. Check that the release published every asset and its sidecar."
+          echo "::error::acquisition failed for $TARGET at $PIN_VERSION — an adopter on this platform cannot bootstrap. Check that the release published every asset and its sidecar."

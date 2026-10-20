@@ -48,15 +48,17 @@ const REQUIRED_FIELDS: &[&str] = &["rule", "file", "reason", "waived-at", "waive
 /// # Errors
 ///
 /// Returns [`PrimitiveError::InvalidPath`] when `feature` is empty, absolute,
-/// or carries a parent-directory component, [`PrimitiveError::FeatureNotFound`]
+/// or carries a parent-directory component,
+/// or when the feature directory, or a link inside it, resolves outside the
+/// project, [`PrimitiveError::FeatureNotFound`]
 /// when the feature has no `spec.md`, [`PrimitiveError::UnclosedFrontmatter`]
 /// when `review.md`'s frontmatter block never closes, [`PrimitiveError::Yaml`]
 /// when its frontmatter or `waivers:` list fails to parse, or
 /// [`PrimitiveError::Io`] on read failure. An absent `review.md`, or one that
 /// opens no frontmatter block, records no waivers.
 pub fn run(args: &ProcessWaiversArgs, repo: &Path) -> Result<ProcessWaiversResult> {
-    super::validate_feature_argument(repo, &args.feature)?;
     let layout = paths::Paths::load(repo);
+    super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
     let spec_path = repo
         .join(&layout.specs_root)
         .join(&args.feature)

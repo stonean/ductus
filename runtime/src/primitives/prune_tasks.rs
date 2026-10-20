@@ -238,7 +238,7 @@ impl Reduction {
 
 /// Compute one feature's reduction without writing it.
 fn reduce(feature: &str, args: &PruneTasksArgs, repo: &Path, root: &str) -> Result<Reduction> {
-    super::validate_feature_argument(repo, feature)?;
+    super::validate_feature_argument(repo, root, feature)?;
     let feature_dir = repo.join(root).join(feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {

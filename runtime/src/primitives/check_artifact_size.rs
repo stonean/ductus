@@ -73,7 +73,9 @@ pub(crate) const KEY: &str = "read-size-bytes";
 ///
 /// # Errors
 ///
-/// - [`PrimitiveError::InvalidPath`] when `feature` would escape the spec root.
+/// - [`PrimitiveError::InvalidPath`] when `feature` would escape the spec root,
+///   or when the feature directory, or a link inside it, resolves outside the
+///   project.
 /// - [`PrimitiveError::FeatureNotFound`] when the feature directory is absent.
 /// - [`PrimitiveError::MissingSpecFile`] / [`PrimitiveError::StatusFieldMissing`]
 ///   / [`PrimitiveError::MissingFrontmatter`] /
@@ -88,8 +90,8 @@ pub(crate) const KEY: &str = "read-size-bytes";
 ///   table: the project set a value, so the default never stands in for it.
 /// - [`PrimitiveError::Io`] when the config file exists but cannot be read.
 pub fn run(args: &CheckArtifactSizeArgs, repo: &Path) -> Result<CheckArtifactSizeResult> {
-    super::validate_feature_argument(repo, &args.feature)?;
     let root = paths::Paths::load(repo).specs_root;
+    super::validate_feature_argument(repo, &root, &args.feature)?;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {

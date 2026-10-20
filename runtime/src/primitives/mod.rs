@@ -1322,7 +1322,7 @@ fn strip_label_ci<'a>(s: &'a str, label: &str) -> Option<&'a str> {
 /// downloaded archives, sibling-service checkouts) resolve through this
 /// helper; primitives that must stay inside the repo root
 /// (`merge-managed-block`, `merge-permissions`, …) call
-/// [`validate_no_traversal`] first and never accept absolute input.
+/// [`validate_contained`] first and never accept absolute input.
 /// `enforce-manifest` keeps its own stricter `resolve_contained_dir`
 /// (absolute allowed only under the repo root) because its cleanup loop is
 /// destructive.
@@ -1486,16 +1486,26 @@ pub(crate) fn validate_no_traversal(path: &str) -> Result<()> {
 /// (a loop); [`PrimitiveError::Io`] when `base` itself cannot be resolved.
 pub(crate) fn validate_contained(base: &Path, rel: &str) -> Result<()> {
     validate_no_traversal(rel)?;
-    let canonical_base = resolve_symlinks(base).map_err(|source| PrimitiveError::Io {
+    check_links_on(base, &canonical_base(base)?, rel)
+}
+
+/// `base` resolved through [`resolve_symlinks`], or the I/O error that
+/// stopped it.
+fn canonical_base(base: &Path) -> Result<PathBuf> {
+    resolve_symlinks(base).map_err(|source| PrimitiveError::Io {
         path: base.into(),
         source,
-    })?;
+    })
+}
+
+/// The link check [`validate_contained`] runs on an already screened `rel`.
+fn check_links_on(base: &Path, canonical_base: &Path, rel: &str) -> Result<()> {
     let mut probe = base.to_path_buf();
     for component in Path::new(rel).components() {
         probe.push(component);
         match std::fs::symlink_metadata(&probe) {
             Ok(meta) if meta.file_type().is_symlink() => {
-                refuse_outward_link(&probe, base, &canonical_base, rel)?;
+                refuse_outward_link(&probe, base, canonical_base, rel)?;
             }
             Ok(_) => {}
             // Absent, or unreachable: nothing beyond it can be followed, by
@@ -1506,13 +1516,23 @@ pub(crate) fn validate_contained(base: &Path, rel: &str) -> Result<()> {
     Ok(())
 }
 
-/// [`validate_contained`] for a feature argument, a name under the spec root,
-/// plus a walk of the feature directory itself ([`validate_feature_path`]).
-/// The name is screened on its own first: joined to the root, an absolute
-/// name would read as a relative one (`specs//etc` is `specs/etc`).
-pub(crate) fn validate_feature_argument(repo: &Path, feature: &str) -> Result<()> {
+/// [`validate_contained`] for a feature argument, a name under the spec root
+/// `root`, without the walk of [`validate_feature_argument`]: what
+/// `check-artifacts` runs, since it skips a linked sibling as
+/// `target-unparseable` and keeps running (spec 067, scenario
+/// `sibling-symlink-trust-boundary`), which the walk would pre-empt by
+/// refusing the whole call. The name is screened on its own first: joined to
+/// the root, an absolute name would read as a relative one (`specs//etc` is
+/// `specs/etc`).
+pub(crate) fn validate_feature_contained(repo: &Path, root: &str, feature: &str) -> Result<()> {
     validate_no_traversal(feature)?;
-    let root = crate::schema::paths::Paths::load(repo).specs_root;
+    validate_contained(repo, &format!("{root}/{feature}"))
+}
+
+/// [`validate_feature_contained`] plus a walk of the feature directory
+/// ([`validate_feature_path`]). `root` is the spec root the caller loaded.
+pub(crate) fn validate_feature_argument(repo: &Path, root: &str, feature: &str) -> Result<()> {
+    validate_no_traversal(feature)?;
     validate_feature_path(repo, &format!("{root}/{feature}"))
 }
 
@@ -1522,20 +1542,19 @@ pub(crate) fn validate_feature_argument(repo: &Path, feature: &str) -> Result<()
 /// then opens beneath the directory under fixed names (`spec.md`, `tasks.md`,
 /// the `scenarios/` listing) without checking each open. A linked directory
 /// that stays inside the project is walked too, each directory once.
-/// `check-artifacts` calls [`validate_contained`] alone: it skips a linked
-/// sibling as `target-unparseable` and keeps running (spec 067, scenario
-/// `sibling-symlink-trust-boundary`), which a refusal here would pre-empt.
+///
+/// A directory the walk cannot list is left to the primitive, which reports
+/// it in its own terms (`check-artifact-size`'s `artifact-unreadable`, for
+/// one), so a link inside a directory that is traversable but not readable
+/// is not seen: the walk can check only what it can list.
 ///
 /// # Errors
 ///
-/// As [`validate_contained`]; a directory that cannot be listed is left to
-/// the primitive, which reports it in its own terms.
+/// As [`validate_contained`].
 pub(crate) fn validate_feature_path(repo: &Path, rel: &str) -> Result<()> {
-    validate_contained(repo, rel)?;
-    let canonical_base = resolve_symlinks(repo).map_err(|source| PrimitiveError::Io {
-        path: repo.into(),
-        source,
-    })?;
+    validate_no_traversal(rel)?;
+    let canonical_base = canonical_base(repo)?;
+    check_links_on(repo, &canonical_base, rel)?;
     let mut visited = std::collections::BTreeSet::new();
     let mut pending = vec![repo.join(rel)];
     while let Some(dir) = pending.pop() {
@@ -1549,16 +1568,17 @@ pub(crate) fn validate_feature_path(repo: &Path, rel: &str) -> Result<()> {
             continue;
         };
         for entry in entries.flatten() {
-            let entry_path = entry.path();
-            let Ok(meta) = std::fs::symlink_metadata(&entry_path) else {
+            // `DirEntry::file_type` does not follow a link.
+            let Ok(kind) = entry.file_type() else {
                 continue;
             };
-            if meta.file_type().is_symlink() {
+            let entry_path = entry.path();
+            if kind.is_symlink() {
                 refuse_outward_link(&entry_path, repo, &canonical_base, rel)?;
                 if entry_path.is_dir() {
                     pending.push(entry_path);
                 }
-            } else if meta.is_dir() {
+            } else if kind.is_dir() {
                 pending.push(entry_path);
             }
         }
@@ -1608,11 +1628,13 @@ fn refuse_outward_link(link: &Path, base: &Path, canonical_base: &Path, rel: &st
 }
 
 /// The canonical form of `path`, for a path that does not exist as well as
-/// one that does. An existing path is canonicalized. Otherwise a dangling
-/// link is judged by where its target would resolve, and a missing path by
-/// its parent's resolution with the last component appended — `..` taking
-/// the parent of that resolution, as the kernel would once the parent exists.
-/// Links are followed at most [`MAX_SYMLINK_HOPS`] deep.
+/// one that does, judged as the kernel would once every missing directory on
+/// it exists. An existing path is canonicalized. Otherwise a dangling link is
+/// judged by where its target would resolve, and a missing path by its
+/// parent's resolution with the last component appended — `..` taking the
+/// parent of that resolution, and an appended name that turns out to exist
+/// (reached through a `..` after a missing directory) resolved in turn, since
+/// it may be a link. Links are followed at most [`MAX_SYMLINK_HOPS`] deep.
 fn resolve_symlinks(path: &Path) -> std::io::Result<PathBuf> {
     resolve_symlinks_within(path, 0)
 }
@@ -1637,20 +1659,24 @@ fn resolve_symlinks_within(path: &Path, hops: u32) -> std::io::Result<PathBuf> {
             .map_or_else(|| target.clone(), |parent| parent.join(&target));
         return resolve_symlinks_within(&next, hops + 1);
     }
-    let Some(parent) = path.parent() else {
-        return Ok(path.to_path_buf());
-    };
-    match path.components().next_back() {
+    let mut components = path.components();
+    match components.next_back() {
         Some(std::path::Component::Normal(name)) => {
-            Ok(resolve_symlinks_within(parent, hops)?.join(name))
+            let joined = resolve_symlinks_within(components.as_path(), hops)?.join(name);
+            if joined != path && std::fs::symlink_metadata(&joined).is_ok() {
+                return resolve_symlinks_within(&joined, hops);
+            }
+            Ok(joined)
         }
         Some(std::path::Component::ParentDir) => {
-            let resolved = resolve_symlinks_within(parent, hops)?;
+            let resolved = resolve_symlinks_within(components.as_path(), hops)?;
             Ok(resolved
                 .parent()
                 .map_or_else(|| resolved.clone(), Path::to_path_buf))
         }
-        Some(std::path::Component::CurDir) => resolve_symlinks_within(parent, hops),
+        Some(std::path::Component::CurDir) => resolve_symlinks_within(components.as_path(), hops),
+        // A root, a drive prefix, or nothing at all: there is no parent to
+        // resolve it through.
         _ => Ok(path.to_path_buf()),
     }
 }
@@ -4189,6 +4215,20 @@ mod tests {
         assert!(refused_through(&err, "out"), "{err:?}");
     }
 
+    /// After a `..` past a missing directory, the next name can be a link
+    /// that exists, and it is followed: `missing/../out` lands where `out`
+    /// points, not at `out` itself.
+    #[cfg(unix)]
+    #[test]
+    fn a_link_reached_after_a_missing_directory_is_followed() {
+        let (project, outside) = project_and_outside();
+        let base = project.path().canonicalize().unwrap();
+        link(outside.path().join("dir"), base.join("out"));
+        link("missing/../out/x.md", base.join("dangling.md"));
+        let err = validate_contained(&base, "dangling.md").unwrap_err();
+        assert!(refused_through(&err, "dangling.md"), "{err:?}");
+    }
+
     #[cfg(unix)]
     #[test]
     fn a_link_loop_is_refused_rather_than_followed() {
@@ -4291,7 +4331,7 @@ mod tests {
         // Joined to the root, `/etc` would read `specs//etc`, which `Path`
         // collapses to the relative `specs/etc`.
         assert!(matches!(
-            validate_feature_argument(tmp.path(), "/etc"),
+            validate_feature_argument(tmp.path(), "specs", "/etc"),
             Err(PrimitiveError::InvalidPath { .. })
         ));
     }

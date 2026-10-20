@@ -80,9 +80,11 @@ const ACTION_SOURCE_MISSING: &str = "source-missing";
 /// # Errors
 ///
 /// - [`PrimitiveError::InvalidPath`] when any entry's `source` or `dest`
-///   is absolute, empty, or contains a parent-directory component. The
-///   manifest is fetched-artifact-class input (BE-INPUT-004): a `..`
-///   entry would write outside the target root. Every entry is validated
+///   is absolute, empty, or contains a parent-directory component, or when
+///   a symlink on it resolves outside its root (`source-root` for a
+///   `source`, `target-root` for a `dest`). The manifest is
+///   fetched-artifact-class input (BE-INPUT-004): a `..` entry, or an entry
+///   through such a link, would write outside the target root. Every entry is validated
 ///   before any filesystem operation so a bad entry halts the whole walk
 ///   with zero writes. The two *roots* stay absolute-capable as before.
 /// - [`PrimitiveError::Io`] on local filesystem failures while reading

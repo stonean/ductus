@@ -1161,11 +1161,13 @@ fn derive_analyze_seeds(context: &mut Map<String, Value>, repo: &Path) {
     }
     if !context.contains_key("paths")
         && let Some(Value::String(feature)) = context.get("feature")
-        && primitives::validate_feature_argument(repo, feature).is_ok()
     {
         let root = crate::schema::paths::Paths::load(repo).specs_root;
-        let glob = primitives::lint_markdown::feature_markdown_glob(&format!("{root}/{feature}"));
-        context.insert("paths".into(), Value::Array(vec![Value::String(glob)]));
+        if primitives::validate_feature_argument(repo, &root, feature).is_ok() {
+            let glob =
+                primitives::lint_markdown::feature_markdown_glob(&format!("{root}/{feature}"));
+            context.insert("paths".into(), Value::Array(vec![Value::String(glob)]));
+        }
     }
 }
 
@@ -2248,41 +2250,12 @@ mod tests {
 
     #[test]
     fn out_of_boundary_write_code_edit_emits_error() {
-        let procedure = Procedure {
-            command: "test".into(),
-            steps: vec![Step::Extension {
-                number: StepNumber(vec![1]),
-                identifier: "writeCode".into(),
-                prose: String::new(),
-                location: loc(),
-            }],
-        };
-        // Schema-valid writeCode response with an edit outside the boundary.
-        let response = "{\"type\":\"llm-response\",\"request-id\":\"req-1\",\"response\":{\"edits\":[{\"path\":\"framework/constitution.md\",\"action\":\"edit\",\"content\":\"malicious\"}],\"summary\":\"x\"}}\n";
-        let mut reader = Cursor::new(response.to_string());
-        let mut writer: Vec<u8> = Vec::new();
-        let mut context = Map::new();
-        context.insert(
-            "write-boundary".into(),
-            Value::Array(vec![Value::String("runtime/**".into())]),
-        );
-        let mut walker = Walker::new(
-            &procedure,
-            fixture_repo(),
-            context,
-            &mut reader,
-            &mut writer,
-        );
-        let outcome = walker.run().unwrap();
+        // A schema-valid writeCode response with an edit outside `runtime/**`.
+        let (outcome, envelopes) = walk_write_code(fixture_repo(), "framework/constitution.md");
         match outcome {
             WalkOutcome::Errored { code, .. } => assert_eq!(code, "out-of-boundary-edit"),
             WalkOutcome::Complete => panic!("expected Errored, got Complete"),
         }
-        let envelopes: Vec<Value> = std::str::from_utf8(&writer)
-            .unwrap()
-            .lines()
-            .map(|l| serde_json::from_str(l).unwrap())
-            .collect();
         assert_eq!(envelopes.last().unwrap()["code"], "out-of-boundary-edit");
         assert!(
             envelopes.last().unwrap()["message"]
@@ -3037,9 +3010,12 @@ mod tests {
                 );
             }
         }
-        // The same calls against a feature with no link are not refused.
+        // The same calls against a feature with no link are not refused, each
+        // against a fresh fixture: `retire-feature` removes its feature, which
+        // would leave every later case nothing to refuse.
         for (name, args) in feature_argument_cases("003-clean", "003-clean") {
-            let result = dispatch_primitive(name, &context_of(&args), &fixture.repo);
+            let fresh = escape_fixture();
+            let result = dispatch_primitive(name, &context_of(&args), &fresh.repo);
             assert!(!refused_through_a_symlink(&result), "`{name}`: {result:?}");
         }
     }
@@ -3112,7 +3088,8 @@ mod tests {
         assert!(!fixture.outside.path().join("dir/f.md").exists());
     }
 
-    #[cfg(unix)]
+    /// Walk one `writeCode` step whose response edits `edit_path` under a
+    /// `runtime/**` boundary, returning the outcome and the emitted envelopes.
     fn walk_write_code(repo: PathBuf, edit_path: &str) -> (WalkOutcome, Vec<Value>) {
         let procedure = Procedure {
             command: "test".into(),

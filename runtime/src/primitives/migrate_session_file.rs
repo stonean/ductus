@@ -31,7 +31,8 @@ use crate::schema::primitives::{MigrateSessionFileArgs, MigrateSessionFileResult
 /// # Errors
 ///
 /// Returns [`PrimitiveError::InvalidPath`] when `legacy-path` is absolute
-/// or contains a parent-directory component, [`PrimitiveError::Json`]
+/// or contains a parent-directory component, or a symlink on it resolves
+/// outside the project, [`PrimitiveError::Json`]
 /// when the legacy file is malformed JSON, [`PrimitiveError::JsonSchema`]
 /// when the legacy file's top-level value isn't a JSON object, or
 /// [`PrimitiveError::Io`] for filesystem failures during read, write,

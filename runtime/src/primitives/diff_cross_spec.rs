@@ -35,8 +35,9 @@ use crate::schema::primitives::{DiffCrossSpecArgs, DiffCrossSpecResult};
 ///
 /// # Errors
 ///
-/// Returns [`PrimitiveError::InvalidPath`] when `feature` would leave the
-/// spec root, [`PrimitiveError::FeatureNotFound`] when the feature directory
+/// Returns [`PrimitiveError::InvalidPath`] when `feature` would leave the spec
+/// root, or when the feature directory, or a link inside it, resolves outside
+/// the project, [`PrimitiveError::FeatureNotFound`] when the feature directory
 /// is absent, and [`PrimitiveError::Git`] for any libgit2 failure, including
 /// a project no work tree contains.
 ///
@@ -46,8 +47,8 @@ use crate::schema::primitives::{DiffCrossSpecArgs, DiffCrossSpecResult};
 /// only relocate the halt `derive-boundary` no longer raises — the same
 /// `/{project}:implement` walk hits this primitive at steps 7 and 13.
 pub fn run(args: &DiffCrossSpecArgs, repo: &Path) -> Result<DiffCrossSpecResult> {
-    super::validate_feature_argument(repo, &args.feature)?;
     let layout = paths::Paths::load(repo);
+    super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
     let feature_dir = repo.join(&layout.specs_root).join(&args.feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {

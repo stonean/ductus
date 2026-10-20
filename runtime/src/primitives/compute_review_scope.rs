@@ -51,14 +51,15 @@ use crate::schema::primitives::{ComputeReviewScopeArgs, ComputeReviewScopeResult
 /// # Errors
 ///
 /// Returns [`PrimitiveError::InvalidPath`] when `feature` would leave the spec
-/// root, [`PrimitiveError::FeatureNotFound`] when the feature directory is
+/// root, or when the feature directory, or a link inside it, resolves outside
+/// the project, [`PrimitiveError::FeatureNotFound`] when the feature directory is
 /// absent, [`PrimitiveError::Io`] when `plan.md` exists but cannot be read,
 /// or [`PrimitiveError::Git`] for any libgit2 failure (repo discovery,
 /// including a project no work tree contains, revparse of `--since`,
 /// tree/diff lookup).
 pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewScopeResult> {
-    super::validate_feature_argument(repo, &args.feature)?;
     let layout = paths::Paths::load(repo);
+    super::validate_feature_argument(repo, &layout.specs_root, &args.feature)?;
     let feature_dir = repo.join(&layout.specs_root).join(&args.feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {

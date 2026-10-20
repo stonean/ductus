@@ -55,14 +55,15 @@ use crate::schema::primitives::{RelocateAuditRecordsArgs, RelocateAuditRecordsRe
 /// # Errors
 ///
 /// - [`PrimitiveError::InvalidPath`] when `feature` carries a parent-directory
-///   component.
+///   component, or when the feature directory, or a link inside it, resolves
+///   outside the project.
 /// - [`PrimitiveError::FeatureNotFound`] when the feature directory is missing.
 /// - [`PrimitiveError::Io`] when a file cannot be read or written.
 /// - [`PrimitiveError::MissingFrontmatter`] when `spec.md` has no `---` fences,
 ///   and [`PrimitiveError::UnclosedFrontmatter`] when its block never closes.
 pub fn run(args: &RelocateAuditRecordsArgs, repo: &Path) -> Result<RelocateAuditRecordsResult> {
-    super::validate_feature_argument(repo, &args.feature)?;
     let root = paths::Paths::load(repo).specs_root;
+    super::validate_feature_argument(repo, &root, &args.feature)?;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {

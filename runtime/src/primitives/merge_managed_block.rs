@@ -60,9 +60,9 @@ const STYLE_LINE_PREFIX: &str = "line-prefix";
 /// # Errors
 ///
 /// - [`PrimitiveError::InvalidPath`] when `path` is absolute, empty, or
-///   contains a parent-directory component — the BE-INPUT-004
-///   defense-in-depth check every path-taking primitive applies before
-///   filesystem operations. `path` is repo-relative (`.gitignore`,
+///   contains a parent-directory component, or when a symlink on it
+///   resolves outside the project — the BE-INPUT-004 check every
+///   primitive that opens a path applies before filesystem operations. `path` is repo-relative (`.gitignore`,
 ///   `CLAUDE.md`); no caller needs an out-of-repo destination.
 /// - [`PrimitiveError::Io`] on local filesystem failures.
 /// - [`PrimitiveError::MalformedMarkers`] when an `html-comment` style

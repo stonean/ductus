@@ -90,10 +90,10 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
     // Both arguments reach a filesystem path below — `from` as a path
     // component to skip, `to` as the directory whose existence is checked —
     // so neither may carry a parent-directory escape (BE-INPUT-004).
-    super::validate_feature_argument(repo, &args.from)?;
-    super::validate_feature_argument(repo, &args.to)?;
-    let target = FoldTarget::parse(&args.to)?;
     let layout = paths::Paths::load(repo);
+    super::validate_feature_argument(repo, &layout.specs_root, &args.from)?;
+    super::validate_feature_argument(repo, &layout.specs_root, &args.to)?;
+    let target = FoldTarget::parse(&args.to)?;
     let specs_dir = repo.join(&layout.specs_root);
 
     // Refuse before writing anything when the destination does not exist.

@@ -25,8 +25,8 @@ const ACCEPTANCE_HEADING: &str = "Acceptance Criteria";
 /// the number of criteria, or [`PrimitiveError::Io`] for filesystem
 /// failures.
 pub fn run(args: &MarkCriterionArgs, repo: &Path) -> Result<CheckboxToggleResult> {
-    super::validate_feature_argument(repo, &args.feature)?;
     let root = paths::Paths::load(repo).specs_root;
+    super::validate_feature_argument(repo, &root, &args.feature)?;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {

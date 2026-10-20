@@ -61,7 +61,8 @@ const BACK_EDGE_STATUSES: [&str; 3] = ["clarified", "planned", "in-progress"];
 ///
 /// # Errors
 ///
-/// Returns [`PrimitiveError::InvalidPath`] for a malformed `feature`,
+/// Returns [`PrimitiveError::InvalidPath`] for a malformed `feature`, or one
+/// whose directory, or a link inside it, resolves outside the project,
 /// [`PrimitiveError::InvalidSlug`] for a malformed `scenario`,
 /// [`PrimitiveError::InvalidArgument`] when `question` is empty or
 /// multi-line, [`PrimitiveError::FeatureNotFound`] when the feature
@@ -71,7 +72,8 @@ const BACK_EDGE_STATUSES: [&str; 3] = ["clarified", "planned", "in-progress"];
 /// never closes. A duplicate question is the `appended: false` domain
 /// outcome, not an error.
 pub fn run(args: &AppendQuestionArgs, repo: &Path) -> Result<AppendQuestionResult> {
-    super::validate_feature_argument(repo, &args.feature)?;
+    let root = paths::Paths::load(repo).specs_root;
+    super::validate_feature_argument(repo, &root, &args.feature)?;
     validate_single_line("append-question", "question", &args.question)?;
     // Normalize before the dedup comparison below, not after: the stripped
     // form is both what is compared and what is written, so an entry can
@@ -86,7 +88,6 @@ pub fn run(args: &AppendQuestionArgs, repo: &Path) -> Result<AppendQuestionResul
         });
     }
 
-    let root = paths::Paths::load(repo).specs_root;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {

@@ -347,12 +347,14 @@ else
 fi
 
 # V. every request is bounded (BE-TIMEOUT-001): the default run makes both of
-# the installer's requests, and each carries --connect-timeout and --max-time
-# with a whole number of seconds.
+# the installer's requests, and each carries --connect-timeout and --max-time,
+# in either order, with a positive whole number of seconds (curl reads a zero
+# --max-time as no limit at all).
 STUB_LOCATION="$TAG_URL/ductus-v99.0.0" run v-bounded
 argv="$WORK/v-bounded.log.argv"
 if [ "$rc" -eq 0 ] && [ "$(grep -c . "$argv")" -eq 2 ] \
-  && [ "$(grep -cE -- '--connect-timeout [0-9]+ .*--max-time [0-9]+ ' "$argv")" -eq 2 ]; then
+  && [ "$(grep -cE -- '(^| )--connect-timeout [1-9][0-9]*( |$)' "$argv")" -eq 2 ] \
+  && [ "$(grep -cE -- '(^| )--max-time [1-9][0-9]*( |$)' "$argv")" -eq 2 ]; then
   pass "V: every request carries a connect timeout and a total timeout"
 else
   fail "V: unbounded request (rc=$rc): $(cat "$argv")"
