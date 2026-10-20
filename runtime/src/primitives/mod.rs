@@ -1386,10 +1386,11 @@ pub(crate) fn output_within(
 }
 
 /// Reject caller-supplied paths that contain parent-directory components
-/// (`..`) or absolute prefixes — the BE-INPUT-004 defense-in-depth check.
-/// Primitives that accept paths from the host or LLM call this before any
-/// filesystem operation to guarantee the resolved path stays inside the
-/// repo root.
+/// (`..`) or absolute prefixes — the lexical half of the BE-INPUT-004 check.
+/// It reads the text alone, so a symlink inside the project that points out
+/// of it passes; a primitive that opens the path calls [`validate_contained`]
+/// (or [`validate_feature_argument`]), which runs this first and then
+/// resolves the links. A primitive that only records a path calls this alone.
 ///
 /// # The config-sourced path boundary
 ///
@@ -1455,6 +1456,203 @@ pub(crate) fn validate_no_traversal(path: &str) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// Refuse `rel` when it leaves `base` through a symlink — the canonicalizing
+/// half of BE-INPUT-004 that [`validate_no_traversal`] cannot do on text
+/// alone (spec 022, scenario `a-path-argument-resolves-inside-its-base`).
+///
+/// `rel` is screened lexically first. Then each component of `base/rel` that
+/// exists and is a symlink is resolved, and the path is refused when that
+/// resolution does not lie inside the canonicalized `base`, compared by whole
+/// components (`Path::starts_with`), never by string prefix. A link that stays
+/// inside is followed and accepted. A component past the first one that does
+/// not exist cannot be a link, so a path not created yet is judged by its
+/// deepest existing ancestor; a dangling link is judged by where its target
+/// would resolve ([`resolve_symlinks`]).
+///
+/// Every non-link component between two checked links lies inside `base` by
+/// induction — its canonical form is its parent's plus a name that is not
+/// `..` — so checking the links alone decides where the whole path resolves.
+///
+/// The check compares canonical forms only; the caller keeps using, and
+/// naming, the path it was given. It runs once, so a link created between the
+/// check and the open is not caught.
+///
+/// # Errors
+///
+/// [`PrimitiveError::InvalidPath`] for a path the lexical screen refuses, for
+/// a link that resolves outside `base`, and for one that cannot be resolved
+/// (a loop); [`PrimitiveError::Io`] when `base` itself cannot be resolved.
+pub(crate) fn validate_contained(base: &Path, rel: &str) -> Result<()> {
+    validate_no_traversal(rel)?;
+    let canonical_base = resolve_symlinks(base).map_err(|source| PrimitiveError::Io {
+        path: base.into(),
+        source,
+    })?;
+    let mut probe = base.to_path_buf();
+    for component in Path::new(rel).components() {
+        probe.push(component);
+        match std::fs::symlink_metadata(&probe) {
+            Ok(meta) if meta.file_type().is_symlink() => {
+                refuse_outward_link(&probe, base, &canonical_base, rel)?;
+            }
+            Ok(_) => {}
+            // Absent, or unreachable: nothing beyond it can be followed, by
+            // this check or by the open that comes after it.
+            Err(_) => break,
+        }
+    }
+    Ok(())
+}
+
+/// [`validate_contained`] for a feature argument, a name under the spec root,
+/// plus a walk of the feature directory itself ([`validate_feature_path`]).
+/// The name is screened on its own first: joined to the root, an absolute
+/// name would read as a relative one (`specs//etc` is `specs/etc`).
+pub(crate) fn validate_feature_argument(repo: &Path, feature: &str) -> Result<()> {
+    validate_no_traversal(feature)?;
+    let root = crate::schema::paths::Paths::load(repo).specs_root;
+    validate_feature_path(repo, &format!("{root}/{feature}"))
+}
+
+/// [`validate_contained`] for a project-relative feature directory, plus a
+/// walk of everything under it: the call is refused when any symlink in the
+/// directory resolves outside the project. That covers the files a primitive
+/// then opens beneath the directory under fixed names (`spec.md`, `tasks.md`,
+/// the `scenarios/` listing) without checking each open. A linked directory
+/// that stays inside the project is walked too, each directory once.
+/// `check-artifacts` calls [`validate_contained`] alone: it skips a linked
+/// sibling as `target-unparseable` and keeps running (spec 067, scenario
+/// `sibling-symlink-trust-boundary`), which a refusal here would pre-empt.
+///
+/// # Errors
+///
+/// As [`validate_contained`]; a directory that cannot be listed is left to
+/// the primitive, which reports it in its own terms.
+pub(crate) fn validate_feature_path(repo: &Path, rel: &str) -> Result<()> {
+    validate_contained(repo, rel)?;
+    let canonical_base = resolve_symlinks(repo).map_err(|source| PrimitiveError::Io {
+        path: repo.into(),
+        source,
+    })?;
+    let mut visited = std::collections::BTreeSet::new();
+    let mut pending = vec![repo.join(rel)];
+    while let Some(dir) = pending.pop() {
+        let Ok(canonical) = dir.canonicalize() else {
+            continue;
+        };
+        if !visited.insert(canonical) {
+            continue;
+        }
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let entry_path = entry.path();
+            let Ok(meta) = std::fs::symlink_metadata(&entry_path) else {
+                continue;
+            };
+            if meta.file_type().is_symlink() {
+                refuse_outward_link(&entry_path, repo, &canonical_base, rel)?;
+                if entry_path.is_dir() {
+                    pending.push(entry_path);
+                }
+            } else if meta.is_dir() {
+                pending.push(entry_path);
+            }
+        }
+    }
+    Ok(())
+}
+
+/// The `base`-relative, `/`-separated path `rel` reaches once its symlinks
+/// are resolved, or `None` when it reaches outside `base` or a link on the
+/// way cannot be resolved. The `writeCode` boundary matches this against its
+/// patterns as well as the path as given
+/// ([`crate::schema::extensions::validate_write_code_resolution`]).
+pub(crate) fn resolved_relative(base: &Path, rel: &str) -> Option<String> {
+    let canonical_base = resolve_symlinks(base).ok()?;
+    let resolved = resolve_symlinks(&base.join(rel)).ok()?;
+    let inside = resolved.strip_prefix(&canonical_base).ok()?;
+    let segments: Vec<String> = inside
+        .components()
+        .map(|component| component.as_os_str().to_string_lossy().into_owned())
+        .collect();
+    Some(segments.join("/"))
+}
+
+/// Refuse the symlink at `link` when it resolves outside `canonical_base`.
+/// `rel` is the argument being checked, named in the error.
+fn refuse_outward_link(link: &Path, base: &Path, canonical_base: &Path, rel: &str) -> Result<()> {
+    let shown = link
+        .strip_prefix(base)
+        .unwrap_or(link)
+        .display()
+        .to_string();
+    let resolved = resolve_symlinks(link).map_err(|err| PrimitiveError::InvalidPath {
+        path: rel.into(),
+        reason: format!("the symlink `{shown}` cannot be resolved: {err}"),
+    })?;
+    if resolved.starts_with(canonical_base) {
+        return Ok(());
+    }
+    Err(PrimitiveError::InvalidPath {
+        path: rel.into(),
+        reason: format!(
+            "the symlink `{shown}` resolves to {}, outside {}",
+            resolved.display(),
+            canonical_base.display()
+        ),
+    })
+}
+
+/// The canonical form of `path`, for a path that does not exist as well as
+/// one that does. An existing path is canonicalized. Otherwise a dangling
+/// link is judged by where its target would resolve, and a missing path by
+/// its parent's resolution with the last component appended — `..` taking
+/// the parent of that resolution, as the kernel would once the parent exists.
+/// Links are followed at most [`MAX_SYMLINK_HOPS`] deep.
+fn resolve_symlinks(path: &Path) -> std::io::Result<PathBuf> {
+    resolve_symlinks_within(path, 0)
+}
+
+/// Linux's own limit on the links one lookup follows (`MAXSYMLINKS`).
+const MAX_SYMLINK_HOPS: u32 = 40;
+
+fn resolve_symlinks_within(path: &Path, hops: u32) -> std::io::Result<PathBuf> {
+    match path.canonicalize() {
+        Ok(canonical) => return Ok(canonical),
+        Err(err) if err.kind() != std::io::ErrorKind::NotFound => return Err(err),
+        Err(_) => {}
+    }
+    if std::fs::symlink_metadata(path).is_ok_and(|meta| meta.file_type().is_symlink()) {
+        if hops >= MAX_SYMLINK_HOPS {
+            return Err(std::io::Error::other("too many levels of symbolic links"));
+        }
+        let target = std::fs::read_link(path)?;
+        // `join` replaces the parent when the target is absolute.
+        let next = path
+            .parent()
+            .map_or_else(|| target.clone(), |parent| parent.join(&target));
+        return resolve_symlinks_within(&next, hops + 1);
+    }
+    let Some(parent) = path.parent() else {
+        return Ok(path.to_path_buf());
+    };
+    match path.components().next_back() {
+        Some(std::path::Component::Normal(name)) => {
+            Ok(resolve_symlinks_within(parent, hops)?.join(name))
+        }
+        Some(std::path::Component::ParentDir) => {
+            let resolved = resolve_symlinks_within(parent, hops)?;
+            Ok(resolved
+                .parent()
+                .map_or_else(|| resolved.clone(), Path::to_path_buf))
+        }
+        Some(std::path::Component::CurDir) => resolve_symlinks_within(parent, hops),
+        _ => Ok(path.to_path_buf()),
+    }
 }
 
 /// Reject a text value carrying an embedded newline or carriage return, or
@@ -3866,6 +4064,257 @@ mod tests {
             validate_no_traversal("").unwrap_err(),
             PrimitiveError::InvalidPath { .. }
         ));
+    }
+
+    // --- scenario a-path-argument-resolves-inside-its-base (spec 022) ------
+
+    /// A project and a directory outside it, both real directories.
+    #[cfg(unix)]
+    fn project_and_outside() -> (tempfile::TempDir, tempfile::TempDir) {
+        let project = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(outside.path().join("dir")).unwrap();
+        std::fs::write(outside.path().join("file.md"), "outside\n").unwrap();
+        (project, outside)
+    }
+
+    #[cfg(unix)]
+    fn link(target: impl AsRef<Path>, at: impl AsRef<Path>) {
+        if let Some(parent) = at.as_ref().parent() {
+            std::fs::create_dir_all(parent).unwrap();
+        }
+        std::os::unix::fs::symlink(target, at).unwrap();
+    }
+
+    #[cfg(unix)]
+    fn refused_through(err: &PrimitiveError, shown: &str) -> bool {
+        matches!(err, PrimitiveError::InvalidPath { reason, .. }
+            if reason.contains(&format!("the symlink `{shown}`")))
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_link_that_leaves_the_base_is_refused_and_named() {
+        let (project, outside) = project_and_outside();
+        link(
+            outside.path().join("dir"),
+            project.path().join("specs/001-x"),
+        );
+        let err = validate_contained(project.path(), "specs/001-x/spec.md").unwrap_err();
+        assert!(refused_through(&err, "specs/001-x"), "{err:?}");
+        let PrimitiveError::InvalidPath { path, .. } = &err else {
+            unreachable!()
+        };
+        assert_eq!(path, "specs/001-x/spec.md");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_link_that_stays_inside_the_base_is_followed_and_accepted() {
+        let (project, _outside) = project_and_outside();
+        std::fs::create_dir_all(project.path().join("specs/002-real")).unwrap();
+        link("002-real", project.path().join("specs/001-x"));
+        validate_contained(project.path(), "specs/001-x/spec.md").unwrap();
+    }
+
+    /// The comparison is by whole components: a sibling whose name extends the
+    /// base's (`proj2` beside `proj`) is outside it.
+    #[cfg(unix)]
+    #[test]
+    fn containment_compares_whole_components_not_a_string_prefix() {
+        let parent = tempfile::tempdir().unwrap();
+        let base = parent.path().join("proj");
+        std::fs::create_dir_all(&base).unwrap();
+        std::fs::create_dir_all(parent.path().join("proj2")).unwrap();
+        link(parent.path().join("proj2"), base.join("sibling"));
+        let err = validate_contained(&base, "sibling/x.md").unwrap_err();
+        assert!(refused_through(&err, "sibling"), "{err:?}");
+    }
+
+    /// A link below the first link is checked too, and a later component
+    /// reached through an inside link is judged where it lands.
+    #[cfg(unix)]
+    #[test]
+    fn a_link_reached_through_an_inside_link_is_checked() {
+        let (project, outside) = project_and_outside();
+        std::fs::create_dir_all(project.path().join("real")).unwrap();
+        link("real", project.path().join("alias"));
+        link(outside.path().join("dir"), project.path().join("real/out"));
+        let err = validate_contained(project.path(), "alias/out/x.md").unwrap_err();
+        assert!(refused_through(&err, "alias/out"), "{err:?}");
+    }
+
+    /// A path not created yet is judged by its deepest existing ancestor, so
+    /// a new file under a real directory passes and one under an outward link
+    /// does not.
+    #[cfg(unix)]
+    #[test]
+    fn a_missing_path_is_judged_by_its_deepest_existing_ancestor() {
+        let (project, outside) = project_and_outside();
+        validate_contained(project.path(), "specs/001-x/scenarios/new.md").unwrap();
+        link(
+            outside.path().join("dir"),
+            project.path().join("specs/001-x/scenarios"),
+        );
+        let err = validate_contained(project.path(), "specs/001-x/scenarios/new.md").unwrap_err();
+        assert!(refused_through(&err, "specs/001-x/scenarios"), "{err:?}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_dangling_link_is_judged_by_where_its_target_would_resolve() {
+        let (project, outside) = project_and_outside();
+        link(
+            outside.path().join("gone/x.md"),
+            project.path().join("out.md"),
+        );
+        let err = validate_contained(project.path(), "out.md").unwrap_err();
+        assert!(refused_through(&err, "out.md"), "{err:?}");
+        link("gone/x.md", project.path().join("in.md"));
+        validate_contained(project.path(), "in.md").unwrap();
+    }
+
+    /// A dangling target that climbs through a directory not created yet is
+    /// judged as the kernel would once it exists, not by its text: lexically
+    /// `missing/../..` would stay under the project.
+    #[cfg(unix)]
+    #[test]
+    fn a_dangling_target_climbing_through_a_missing_directory_is_judged_physically() {
+        let (project, _outside) = project_and_outside();
+        // A canonical base, so a lexical answer cannot be refused merely for
+        // spelling the base differently (macOS `/var` against `/private/var`).
+        let base = project.path().canonicalize().unwrap();
+        link("missing/../../elsewhere", base.join("out"));
+        let err = validate_contained(&base, "out/x.md").unwrap_err();
+        assert!(refused_through(&err, "out"), "{err:?}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_link_loop_is_refused_rather_than_followed() {
+        let (project, _outside) = project_and_outside();
+        link("b", project.path().join("a"));
+        link("a", project.path().join("b"));
+        let err = validate_contained(project.path(), "a/x.md").unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { reason, .. }
+                if reason.contains("the symlink `a` cannot be resolved")),
+            "{err:?}"
+        );
+    }
+
+    /// The base is canonicalized too, so a project reached through a link (as
+    /// macOS reaches every tempdir, `/var` → `/private/var`) still contains
+    /// its own files.
+    #[cfg(unix)]
+    #[test]
+    fn a_base_reached_through_a_link_contains_its_own_files() {
+        let (project, outside) = project_and_outside();
+        std::fs::create_dir_all(project.path().join("real/specs")).unwrap();
+        link(project.path().join("real"), outside.path().join("via"));
+        std::fs::create_dir_all(project.path().join("real/specs/002-y")).unwrap();
+        link("002-y", project.path().join("real/specs/001-x"));
+        validate_contained(&outside.path().join("via"), "specs/001-x/spec.md").unwrap();
+    }
+
+    #[test]
+    fn the_lexical_screen_still_runs_first() {
+        let tmp = tempfile::tempdir().unwrap();
+        for rel in ["", "/etc", "a/../b"] {
+            assert!(
+                matches!(
+                    validate_contained(tmp.path(), rel),
+                    Err(PrimitiveError::InvalidPath { .. })
+                ),
+                "{rel}"
+            );
+        }
+    }
+
+    /// The walk finds an outward link under a fixed name the primitive opens
+    /// itself, which checking the argument alone cannot see.
+    #[cfg(unix)]
+    #[test]
+    fn the_feature_walk_refuses_an_outward_link_beneath_the_directory() {
+        let (project, outside) = project_and_outside();
+        std::fs::create_dir_all(project.path().join("specs/001-x/scenarios")).unwrap();
+        validate_feature_path(project.path(), "specs/001-x").unwrap();
+        link(
+            outside.path().join("file.md"),
+            project.path().join("specs/001-x/scenarios/a.md"),
+        );
+        validate_contained(project.path(), "specs/001-x").unwrap();
+        let err = validate_feature_path(project.path(), "specs/001-x").unwrap_err();
+        assert!(
+            refused_through(&err, "specs/001-x/scenarios/a.md"),
+            "{err:?}"
+        );
+    }
+
+    /// An inside link to a directory is walked into, so an outward link behind
+    /// it is found; a link back up the tree is walked once, not forever.
+    #[cfg(unix)]
+    #[test]
+    fn the_feature_walk_follows_inside_links_once() {
+        let (project, outside) = project_and_outside();
+        std::fs::create_dir_all(project.path().join("specs/001-x")).unwrap();
+        std::fs::create_dir_all(project.path().join("shared")).unwrap();
+        link("../..", project.path().join("specs/001-x/up"));
+        link("../../shared", project.path().join("specs/001-x/shared"));
+        validate_feature_path(project.path(), "specs/001-x").unwrap();
+        link(
+            outside.path().join("file.md"),
+            project.path().join("shared/out.md"),
+        );
+        let err = validate_feature_path(project.path(), "specs/001-x").unwrap_err();
+        assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err:?}");
+    }
+
+    /// A dangling link that would land inside is left to the primitive, the
+    /// case `check-artifact-size` reports as `artifact-unreadable`.
+    #[cfg(unix)]
+    #[test]
+    fn the_feature_walk_leaves_an_inside_dangling_link_to_the_primitive() {
+        let (project, _outside) = project_and_outside();
+        std::fs::create_dir_all(project.path().join("specs/001-x/scenarios")).unwrap();
+        link(
+            "../gone.md",
+            project.path().join("specs/001-x/scenarios/b.md"),
+        );
+        validate_feature_path(project.path(), "specs/001-x").unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_feature_argument_is_screened_before_it_meets_the_root() {
+        let tmp = tempfile::tempdir().unwrap();
+        // Joined to the root, `/etc` would read `specs//etc`, which `Path`
+        // collapses to the relative `specs/etc`.
+        assert!(matches!(
+            validate_feature_argument(tmp.path(), "/etc"),
+            Err(PrimitiveError::InvalidPath { .. })
+        ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn resolved_relative_names_where_a_path_lands() {
+        let (project, outside) = project_and_outside();
+        std::fs::create_dir_all(project.path().join("framework")).unwrap();
+        link("../framework", project.path().join("runtime/link"));
+        link(
+            outside.path().join("dir"),
+            project.path().join("runtime/out"),
+        );
+        assert_eq!(
+            resolved_relative(project.path(), "runtime/link/new.md").as_deref(),
+            Some("framework/new.md")
+        );
+        assert_eq!(
+            resolved_relative(project.path(), "runtime/real.md").as_deref(),
+            Some("runtime/real.md")
+        );
+        assert_eq!(resolved_relative(project.path(), "runtime/out/x.md"), None);
     }
 
     #[test]

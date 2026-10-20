@@ -35,7 +35,7 @@ use std::path::Path;
 use crate::primitives::set_status::locate_status_field;
 use crate::primitives::{
     PrimitiveError, Result, read_spec, read_text, rel_path, split_frontmatter_with_offset,
-    strip_bullet_marker, validate_no_traversal, validate_single_line, validate_slug, write_atomic,
+    strip_bullet_marker, validate_single_line, validate_slug, write_atomic,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{AppendQuestionArgs, AppendQuestionResult};
@@ -71,7 +71,7 @@ const BACK_EDGE_STATUSES: [&str; 3] = ["clarified", "planned", "in-progress"];
 /// never closes. A duplicate question is the `appended: false` domain
 /// outcome, not an error.
 pub fn run(args: &AppendQuestionArgs, repo: &Path) -> Result<AppendQuestionResult> {
-    validate_no_traversal(&args.feature)?;
+    super::validate_feature_argument(repo, &args.feature)?;
     validate_single_line("append-question", "question", &args.question)?;
     // Normalize before the dedup comparison below, not after: the stripped
     // form is both what is compared and what is written, so an entry can

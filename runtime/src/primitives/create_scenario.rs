@@ -9,9 +9,7 @@
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-use crate::primitives::{
-    PrimitiveError, Result, rel_path, validate_no_traversal, validate_slug, write_atomic,
-};
+use crate::primitives::{PrimitiveError, Result, rel_path, validate_slug, write_atomic};
 use crate::schema::primitives::{CreateScenarioArgs, CreateScenarioResult};
 
 /// Execute the `create-scenario` primitive.
@@ -28,7 +26,7 @@ use crate::schema::primitives::{CreateScenarioArgs, CreateScenarioResult};
 /// file already lives at the destination path, or [`PrimitiveError::Io`]
 /// for filesystem failures during the write.
 pub fn run(args: &CreateScenarioArgs, repo: &Path) -> Result<CreateScenarioResult> {
-    validate_no_traversal(&args.feature_path)?;
+    super::validate_feature_path(repo, &args.feature_path)?;
     validate_slug(&args.slug)?;
     let feature_dir = repo.join(&args.feature_path);
     if !feature_dir.is_dir() {

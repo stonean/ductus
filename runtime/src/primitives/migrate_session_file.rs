@@ -22,7 +22,7 @@ use std::path::Path;
 
 use serde_json::{Map, Value as JsonValue};
 
-use crate::primitives::{PrimitiveError, Result, read_text, validate_no_traversal, write_atomic};
+use crate::primitives::{PrimitiveError, Result, read_text, write_atomic};
 use crate::schema::paths::SESSION_FILE;
 use crate::schema::primitives::{MigrateSessionFileArgs, MigrateSessionFileResult};
 
@@ -37,7 +37,7 @@ use crate::schema::primitives::{MigrateSessionFileArgs, MigrateSessionFileResult
 /// [`PrimitiveError::Io`] for filesystem failures during read, write,
 /// or delete.
 pub fn run(args: &MigrateSessionFileArgs, repo: &Path) -> Result<MigrateSessionFileResult> {
-    validate_no_traversal(&args.legacy_path)?;
+    super::validate_contained(repo, &args.legacy_path)?;
     let legacy_path = repo.join(&args.legacy_path);
     let dest_path = repo.join(SESSION_FILE);
 

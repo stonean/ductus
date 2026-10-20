@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use crate::primitives::{
     PhaseRange, PrimitiveError, Result, TasksStructure, detect_tasks_structure, iter_phase_ranges,
     iter_task_numbers_at_levels, parse_atx_heading, read_text, rel_path, split_frontmatter,
-    strip_bullet_marker, validate_no_traversal, validate_slug, write_atomic,
+    strip_bullet_marker, validate_slug, write_atomic,
 };
 use crate::schema::primitives::{AppendTaskArgs, AppendTaskResult};
 
@@ -25,7 +25,7 @@ use crate::schema::primitives::{AppendTaskArgs, AppendTaskResult};
 /// feature directory does not exist, or [`PrimitiveError::Io`] for
 /// filesystem failures.
 pub fn run(args: &AppendTaskArgs, repo: &Path) -> Result<AppendTaskResult> {
-    validate_no_traversal(&args.feature_path)?;
+    super::validate_feature_path(repo, &args.feature_path)?;
     // Text arguments are interpolated verbatim into tasks.md line
     // templates; an embedded newline would smuggle extra markdown
     // structure (phantom headings, checkboxes, Done-when lines) past the

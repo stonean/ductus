@@ -9,9 +9,7 @@ use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
 
-use crate::primitives::{
-    PrimitiveError, Result, output_within, resolve_path, validate_no_traversal,
-};
+use crate::primitives::{PrimitiveError, Result, output_within, resolve_path};
 use crate::schema::primitives::{RunGeneratorArgs, RunGeneratorResult};
 
 /// How long a generator may run before it is stopped (`BE-TIMEOUT-001`). A
@@ -46,7 +44,7 @@ pub(crate) fn run_within(
     // would otherwise be granting "run any bash script at any path". Bound
     // it to the repo — absolute paths and `..` escapes are refused — so the
     // permission means what its name implies.
-    validate_no_traversal(&args.script)?;
+    super::validate_contained(repo, &args.script)?;
     let script_path = resolve_path(repo, &args.script);
     if !script_path.exists() {
         return Err(PrimitiveError::Io {

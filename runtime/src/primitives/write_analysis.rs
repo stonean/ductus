@@ -58,8 +58,7 @@ use std::path::Path;
 use crate::primitives::decisions;
 use crate::primitives::write_review::yaml_string;
 use crate::primitives::{
-    PrimitiveError, Result, flatten_line, read_text, rel_path, split_frontmatter,
-    validate_no_traversal, write_atomic,
+    PrimitiveError, Result, flatten_line, read_text, rel_path, split_frontmatter, write_atomic,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -96,7 +95,7 @@ use crate::schema::primitives::{
 ///   prior `analysis.md` that opens no block carries no decisions and is
 ///   overwritten.
 pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult> {
-    validate_no_traversal(&args.feature)?;
+    super::validate_feature_argument(repo, &args.feature)?;
     let root = paths::Paths::load(repo).specs_root;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {

@@ -30,7 +30,6 @@ use crate::host::Host;
 use crate::primitives::spec_links;
 use crate::primitives::{
     PrimitiveError, Result, lint_markdown, read_spec, read_text, split_frontmatter,
-    validate_no_traversal,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -62,7 +61,7 @@ pub(crate) fn run_with_lint(
     repo: &Path,
     lint: impl FnOnce(&LintMarkdownArgs, &Path) -> Result<LintMarkdownResult>,
 ) -> Result<CheckReviewGateResult> {
-    validate_no_traversal(&args.feature)?;
+    super::validate_feature_argument(repo, &args.feature)?;
     let root = paths::Paths::load(repo).specs_root;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {

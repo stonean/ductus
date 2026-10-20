@@ -45,7 +45,7 @@ use crate::schema::primitives::{
 /// one that opens no frontmatter block, holds no decisions: the writers
 /// overwrite such a file.
 pub fn run(args: &ProcessDecisionsArgs, repo: &Path) -> Result<ProcessDecisionsResult> {
-    super::validate_no_traversal(&args.feature)?;
+    super::validate_feature_argument(repo, &args.feature)?;
     let layout = paths::Paths::load(repo);
     let feature_dir = repo.join(&layout.specs_root).join(&args.feature);
     if !feature_dir.join("spec.md").is_file() {

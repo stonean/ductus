@@ -63,9 +63,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
-use crate::primitives::{
-    PrimitiveError, Result, resolve_path, validate_no_traversal, write_atomic_bytes,
-};
+use crate::primitives::{PrimitiveError, Result, resolve_path, write_atomic_bytes};
 use crate::schema::primitives::{
     ApplyManifestArgs, ApplyManifestResult, ManifestEntry, ManifestEntryResult,
 };
@@ -101,12 +99,12 @@ pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult>
     for key in args.substitutions.keys() {
         validate_substitution_key(key)?;
     }
-    for entry in &args.entries {
-        validate_no_traversal(&entry.source)?;
-        validate_no_traversal(&entry.dest)?;
-    }
     let source_root = resolve_path(repo, &args.source_root);
     let target_root = resolve_path(repo, &args.target_root);
+    for entry in &args.entries {
+        super::validate_contained(&source_root, &entry.source)?;
+        super::validate_contained(&target_root, &entry.dest)?;
+    }
 
     let pinned: Vec<String> = args.pinned.iter().map(|p| normalize_dest_path(p)).collect();
 

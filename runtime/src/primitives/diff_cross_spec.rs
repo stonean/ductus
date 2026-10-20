@@ -46,7 +46,7 @@ use crate::schema::primitives::{DiffCrossSpecArgs, DiffCrossSpecResult};
 /// only relocate the halt `derive-boundary` no longer raises — the same
 /// `/{project}:implement` walk hits this primitive at steps 7 and 13.
 pub fn run(args: &DiffCrossSpecArgs, repo: &Path) -> Result<DiffCrossSpecResult> {
-    super::validate_no_traversal(&args.feature)?;
+    super::validate_feature_argument(repo, &args.feature)?;
     let layout = paths::Paths::load(repo);
     let feature_dir = repo.join(&layout.specs_root).join(&args.feature);
     if !feature_dir.is_dir() {

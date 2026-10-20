@@ -57,7 +57,7 @@ use crate::schema::primitives::{ComputeReviewScopeArgs, ComputeReviewScopeResult
 /// including a project no work tree contains, revparse of `--since`,
 /// tree/diff lookup).
 pub fn run(args: &ComputeReviewScopeArgs, repo: &Path) -> Result<ComputeReviewScopeResult> {
-    super::validate_no_traversal(&args.feature)?;
+    super::validate_feature_argument(repo, &args.feature)?;
     let layout = paths::Paths::load(repo);
     let feature_dir = repo.join(&layout.specs_root).join(&args.feature);
     if !feature_dir.is_dir() {

@@ -55,7 +55,7 @@ const REQUIRED_FIELDS: &[&str] = &["rule", "file", "reason", "waived-at", "waive
 /// [`PrimitiveError::Io`] on read failure. An absent `review.md`, or one that
 /// opens no frontmatter block, records no waivers.
 pub fn run(args: &ProcessWaiversArgs, repo: &Path) -> Result<ProcessWaiversResult> {
-    super::validate_no_traversal(&args.feature)?;
+    super::validate_feature_argument(repo, &args.feature)?;
     let layout = paths::Paths::load(repo);
     let spec_path = repo
         .join(&layout.specs_root)

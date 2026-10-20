@@ -38,7 +38,7 @@ use super::checkbox::{find_checkbox_line, flip_checkbox_at};
 /// exceeds the number of subtasks found, or [`PrimitiveError::Io`] for any
 /// filesystem failure.
 pub fn run(args: &MarkTaskArgs, repo: &Path) -> Result<CheckboxToggleResult> {
-    super::validate_no_traversal(&args.feature)?;
+    super::validate_feature_argument(repo, &args.feature)?;
     let root = paths::Paths::load(repo).specs_root;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {

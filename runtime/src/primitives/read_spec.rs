@@ -22,7 +22,19 @@ use crate::schema::primitives::{
 /// [`PrimitiveError::UnclosedFrontmatter`] when its block never closes,
 /// or [`PrimitiveError::Yaml`] when the frontmatter is not valid YAML.
 pub fn run(args: &ReadSpecArgs, repo: &Path) -> Result<ReadSpecResult> {
-    super::validate_no_traversal(&args.feature)?;
+    super::validate_feature_argument(repo, &args.feature)?;
+    read_checked(args, repo)
+}
+
+/// [`run`] without its walk of the feature directory, for a caller that has
+/// already checked the feature argument itself: `check-artifacts`, which is
+/// exempt from the walk (spec 022, scenario
+/// `a-path-argument-resolves-inside-its-base`) and reads its spec here.
+///
+/// # Errors
+///
+/// As [`run`], less the walk's refusal.
+pub(crate) fn read_checked(args: &ReadSpecArgs, repo: &Path) -> Result<ReadSpecResult> {
     let root = paths::Paths::load(repo).specs_root;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {

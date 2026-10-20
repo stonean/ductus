@@ -769,6 +769,44 @@ fn boundary_rejection_reason(path: &str) -> Option<String> {
     None
 }
 
+/// The symlink half of the boundary check (spec 022, scenario
+/// `a-path-argument-resolves-inside-its-base`). Each edit path, already
+/// screened by [`validate_write_code_boundary`], is mapped by `resolve` to
+/// the project-relative path it reaches once its symlinks are resolved, or
+/// `None` when it reaches outside the project; the resolved path must be
+/// within the boundary too, so `runtime/**` does not admit `runtime/link/x`
+/// when `runtime/link` points into `framework/`. The runtime never opens
+/// these paths — the host applies the edits — so this is the containment
+/// decision the host relies on, not a check before an open.
+///
+/// # Errors
+///
+/// [`ValidationError::OutOfBoundary`] for the first edit path that resolves
+/// outside the project or outside the boundary.
+pub fn validate_write_code_resolution(
+    response: &WriteCodeResponse,
+    boundary: &[String],
+    resolve: impl Fn(&str) -> Option<String>,
+) -> Result<(), ValidationError> {
+    for edit in &response.edits {
+        let reason = match resolve(&edit.path) {
+            None => "reaches outside the project through a symlink".to_string(),
+            Some(resolved) if resolved != edit.path && !path_in_boundary(&resolved, boundary) => {
+                format!(
+                    "resolves through a symlink to `{resolved}`, which is not within {boundary:?}"
+                )
+            }
+            Some(_) => continue,
+        };
+        return Err(ValidationError::OutOfBoundary {
+            path: edit.path.clone(),
+            boundary: boundary.to_vec(),
+            reason,
+        });
+    }
+    Ok(())
+}
+
 fn path_in_boundary(path: &str, boundary: &[String]) -> bool {
     boundary
         .iter()

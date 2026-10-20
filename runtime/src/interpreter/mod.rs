@@ -822,7 +822,13 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
         if identifier == "writeCode" {
             let parsed = reparse::<WriteCodeResponse>(response)?;
             let boundary = self.write_boundary();
-            if let Err(err) = extensions::validate_write_code_boundary(&parsed, &boundary) {
+            let checked =
+                extensions::validate_write_code_boundary(&parsed, &boundary).and_then(|()| {
+                    extensions::validate_write_code_resolution(&parsed, &boundary, |path| {
+                        primitives::resolved_relative(&self.repo, path)
+                    })
+                });
+            if let Err(err) = checked {
                 let message = err.to_string();
                 self.emit_error("out-of-boundary-edit".into(), message.clone(), None)?;
                 return Ok(Some(WalkOutcome::Errored {
@@ -1155,7 +1161,7 @@ fn derive_analyze_seeds(context: &mut Map<String, Value>, repo: &Path) {
     }
     if !context.contains_key("paths")
         && let Some(Value::String(feature)) = context.get("feature")
-        && primitives::validate_no_traversal(feature).is_ok()
+        && primitives::validate_feature_argument(repo, feature).is_ok()
     {
         let root = crate::schema::paths::Paths::load(repo).specs_root;
         let glob = primitives::lint_markdown::feature_markdown_glob(&format!("{root}/{feature}"));
@@ -2824,5 +2830,354 @@ mod tests {
         let context = mark_criterion_context(None);
         let result = dispatch_primitive("mark-criterion", &context, tmp.path()).unwrap();
         assert_eq!(result["current"], Value::Bool(true));
+    }
+
+    // --- scenario a-path-argument-resolves-inside-its-base (spec 022) ------
+
+    /// A project whose links lead out of it. `specs/001-out` is a link to a
+    /// feature directory outside the project; `specs/002-in` is a real feature
+    /// directory whose `tasks.md` links out; `specs/003-clean` has no link;
+    /// `link` is a directory link out of the project.
+    #[cfg(unix)]
+    struct EscapeFixture {
+        _project: tempfile::TempDir,
+        outside: tempfile::TempDir,
+        repo: PathBuf,
+    }
+
+    #[cfg(unix)]
+    fn escape_fixture() -> EscapeFixture {
+        let project = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let repo = project.path().to_path_buf();
+        let out = outside.path();
+        let spec =
+            "---\nstatus: in-progress\n---\n\n# X\n\n## Acceptance Criteria\n\n- [ ] AC1: one\n";
+        let tasks = "# Tasks\n\n## 1. One\n\n- [ ] a\n";
+        std::fs::create_dir_all(out.join("001-out/scenarios")).unwrap();
+        std::fs::write(out.join("001-out/spec.md"), spec).unwrap();
+        std::fs::write(out.join("001-out/tasks.md"), tasks).unwrap();
+        std::fs::write(out.join("tasks.md"), tasks).unwrap();
+        std::fs::create_dir_all(out.join("dir")).unwrap();
+        std::fs::write(out.join("dir/gen.sh"), "exit 0\n").unwrap();
+        for feature in ["002-in", "003-clean"] {
+            std::fs::create_dir_all(repo.join("specs").join(feature)).unwrap();
+            std::fs::write(repo.join("specs").join(feature).join("spec.md"), spec).unwrap();
+        }
+        std::fs::write(repo.join("specs/003-clean/tasks.md"), tasks).unwrap();
+        std::os::unix::fs::symlink(out.join("001-out"), repo.join("specs/001-out")).unwrap();
+        std::os::unix::fs::symlink(out.join("tasks.md"), repo.join("specs/002-in/tasks.md"))
+            .unwrap();
+        std::os::unix::fs::symlink(out.join("dir"), repo.join("link")).unwrap();
+        std::fs::create_dir_all(repo.join("staging")).unwrap();
+        std::fs::write(repo.join("staging/x.md"), "x\n").unwrap();
+        EscapeFixture {
+            _project: project,
+            outside,
+            repo,
+        }
+    }
+
+    #[cfg(unix)]
+    /// One case per feature-argument call site, `feature` in the slot the
+    /// site checks and `other` in any second feature slot.
+    fn feature_argument_cases(feature: &str, other: &str) -> Vec<(&'static str, Value)> {
+        let path = format!("specs/{feature}");
+        let at = "2026-10-20T00:00:00Z";
+        let sha = "0".repeat(40);
+        vec![
+            (
+                "append-question",
+                serde_json::json!({"feature": feature, "question": "Q?"}),
+            ),
+            (
+                "append-task",
+                serde_json::json!({"feature-path": path, "title": "T", "done-when": "D", "slug": "s"}),
+            ),
+            (
+                "check-artifact-size",
+                serde_json::json!({"feature": feature}),
+            ),
+            ("check-artifacts", serde_json::json!({"feature": feature})),
+            ("check-review-gate", serde_json::json!({"feature": feature})),
+            (
+                "check-stuck",
+                serde_json::json!({"feature": feature, "threshold": 3}),
+            ),
+            (
+                "compute-review-scope",
+                serde_json::json!({"feature": feature}),
+            ),
+            (
+                "create-plan-artifacts",
+                serde_json::json!({"feature": feature}),
+            ),
+            (
+                "create-scenario",
+                serde_json::json!({"feature-path": path, "slug": "s", "section": "S", "body": "## Context\n\nc"}),
+            ),
+            ("derive-boundary", serde_json::json!({"feature": feature})),
+            ("diff-cross-spec", serde_json::json!({"feature": feature})),
+            ("invalidate-review", serde_json::json!({"feature": feature})),
+            ("label-criteria", serde_json::json!({"feature": feature})),
+            (
+                "mark-criterion",
+                serde_json::json!({"feature": feature, "criterion-index": 0, "checked": true}),
+            ),
+            (
+                "mark-task",
+                serde_json::json!({"feature": feature, "task-number": "1", "subtask-index": 0, "checked": true}),
+            ),
+            (
+                "process-decisions",
+                serde_json::json!({"feature": feature, "record": "review"}),
+            ),
+            ("process-waivers", serde_json::json!({"feature": feature})),
+            ("prune-plan", serde_json::json!({"feature": feature})),
+            ("prune-tasks", serde_json::json!({"feature": feature})),
+            ("read-spec", serde_json::json!({"feature": feature})),
+            ("read-tasks", serde_json::json!({"feature": feature})),
+            (
+                "relocate-audit-records",
+                serde_json::json!({"feature": feature}),
+            ),
+            (
+                "resolve-references",
+                serde_json::json!({"feature": feature}),
+            ),
+            (
+                "retire-feature",
+                serde_json::json!({"feature": feature, "fold-target": other, "allow-sequential": true}),
+            ),
+            (
+                "retire-feature",
+                serde_json::json!({"feature": other, "fold-target": feature, "allow-sequential": true}),
+            ),
+            (
+                "rewrite-spec-links",
+                serde_json::json!({"from": feature, "to": other}),
+            ),
+            (
+                "rewrite-spec-links",
+                serde_json::json!({"from": other, "to": feature}),
+            ),
+            (
+                "set-status",
+                serde_json::json!({"feature": feature, "from": "in-progress", "to": "done"}),
+            ),
+            ("traverse-deps", serde_json::json!({"feature": feature})),
+            (
+                "write-analysis",
+                serde_json::json!({"feature": feature, "analyzed-at": at, "analyzed-against": sha}),
+            ),
+            (
+                "write-review",
+                serde_json::json!({"feature": feature, "reviewed-at": at, "reviewed-against": sha, "diff-base": sha}),
+            ),
+        ]
+    }
+
+    #[cfg(unix)]
+    fn refused_through_a_symlink(result: &Result<Value, DispatchError>) -> bool {
+        matches!(
+            result,
+            Err(DispatchError::Primitive(primitives::PrimitiveError::InvalidPath { reason, .. }))
+                if reason.contains("symlink")
+        )
+    }
+
+    #[cfg(unix)]
+    fn context_of(args: &Value) -> Map<String, Value> {
+        args.as_object().unwrap().clone()
+    }
+
+    /// Every feature-argument call site refuses a feature directory that is a
+    /// link out of the project, before it reads or writes anything there.
+    /// Removing the check from any one site fails its case by name.
+    #[cfg(unix)]
+    #[test]
+    fn every_feature_argument_site_refuses_an_outward_feature_link() {
+        let fixture = escape_fixture();
+        let cases = feature_argument_cases("001-out", "003-clean");
+        assert_eq!(cases.len(), 31);
+        for (name, args) in &cases {
+            let result = dispatch_primitive(name, &context_of(args), &fixture.repo);
+            assert!(
+                refused_through_a_symlink(&result),
+                "`{name}` {args} was not refused through its symlink: {result:?}"
+            );
+        }
+        let outside = fixture.outside.path();
+        assert_eq!(
+            std::fs::read_to_string(outside.join("001-out/tasks.md")).unwrap(),
+            "# Tasks\n\n## 1. One\n\n- [ ] a\n"
+        );
+        assert!(!outside.join("001-out/scenarios/s.md").exists());
+    }
+
+    /// Every feature-argument call site but `check-artifacts` walks the
+    /// feature directory and refuses an outward link beneath it, which the
+    /// argument check alone does not see. `check-artifacts` keeps 067's
+    /// skip-and-continue (scenario `sibling-symlink-trust-boundary`).
+    #[cfg(unix)]
+    #[test]
+    fn every_feature_argument_site_but_check_artifacts_walks_the_feature_directory() {
+        let fixture = escape_fixture();
+        for (name, args) in feature_argument_cases("002-in", "003-clean") {
+            let result = dispatch_primitive(name, &context_of(&args), &fixture.repo);
+            if name == "check-artifacts" {
+                assert!(
+                    !refused_through_a_symlink(&result),
+                    "`check-artifacts` is exempt from the walk: {result:?}"
+                );
+            } else {
+                assert!(
+                    refused_through_a_symlink(&result),
+                    "`{name}` {args} did not walk its feature directory: {result:?}"
+                );
+            }
+        }
+        // The same calls against a feature with no link are not refused.
+        for (name, args) in feature_argument_cases("003-clean", "003-clean") {
+            let result = dispatch_primitive(name, &context_of(&args), &fixture.repo);
+            assert!(!refused_through_a_symlink(&result), "`{name}`: {result:?}");
+        }
+    }
+
+    /// The analyze walker binds a lint subject only for a feature the check
+    /// accepts, so an outward feature link is never handed to the linter.
+    #[cfg(unix)]
+    #[test]
+    fn the_analyze_lint_subject_is_bound_only_for_a_contained_feature() {
+        let fixture = escape_fixture();
+        for feature in ["001-out", "002-in"] {
+            let mut context = ctx_with_feature(feature);
+            derive_analyze_seeds(&mut context, &fixture.repo);
+            assert!(!context.contains_key("paths"), "{feature}: {context:?}");
+        }
+        let mut context = ctx_with_feature("003-clean");
+        derive_analyze_seeds(&mut context, &fixture.repo);
+        assert_eq!(
+            context["paths"],
+            serde_json::json!(["specs/003-clean/**/*.md"])
+        );
+    }
+
+    /// Every file-path call site refuses a path that leaves the project (or,
+    /// for `apply-manifest`, its source or target root) through a link.
+    #[cfg(unix)]
+    #[test]
+    fn every_file_path_site_refuses_an_outward_link() {
+        let fixture = escape_fixture();
+        let cases = [
+            (
+                "apply-manifest",
+                serde_json::json!({"source-root": "staging", "target-root": ".",
+                    "entries": [{"source": "x.md", "dest": "link/x.md", "strategy": "update"}]}),
+            ),
+            (
+                "apply-manifest",
+                serde_json::json!({"source-root": ".", "target-root": "staging",
+                    "entries": [{"source": "link/gen.sh", "dest": "y.md", "strategy": "update"}]}),
+            ),
+            (
+                "enforce-manifest",
+                serde_json::json!({"directory": "link", "expected": []}),
+            ),
+            (
+                "merge-managed-block",
+                serde_json::json!({"path": "link/f.md", "block": "b"}),
+            ),
+            (
+                "merge-permissions",
+                serde_json::json!({"path": "link/settings.json", "allow": []}),
+            ),
+            (
+                "migrate-session-file",
+                serde_json::json!({"legacy-path": "link/session.json"}),
+            ),
+            (
+                "run-generator",
+                serde_json::json!({"script": "link/gen.sh"}),
+            ),
+        ];
+        for (name, args) in &cases {
+            let result = dispatch_primitive(name, &context_of(args), &fixture.repo);
+            assert!(
+                refused_through_a_symlink(&result),
+                "`{name}` {args} was not refused through its symlink: {result:?}"
+            );
+        }
+        assert!(!fixture.outside.path().join("dir/x.md").exists());
+        assert!(!fixture.outside.path().join("dir/f.md").exists());
+    }
+
+    #[cfg(unix)]
+    fn walk_write_code(repo: PathBuf, edit_path: &str) -> (WalkOutcome, Vec<Value>) {
+        let procedure = Procedure {
+            command: "test".into(),
+            steps: vec![Step::Extension {
+                number: StepNumber(vec![1]),
+                identifier: "writeCode".into(),
+                prose: String::new(),
+                location: loc(),
+            }],
+        };
+        let response = serde_json::json!({
+            "type": "llm-response",
+            "request-id": "req-1",
+            "response": {"edits": [{"path": edit_path, "action": "edit", "content": "x"}], "summary": "x"},
+        });
+        let mut reader = Cursor::new(format!("{response}\n"));
+        let mut writer: Vec<u8> = Vec::new();
+        let mut context = Map::new();
+        context.insert("write-boundary".into(), serde_json::json!(["runtime/**"]));
+        let mut walker = Walker::new(&procedure, repo, context, &mut reader, &mut writer);
+        let outcome = walker.run().unwrap();
+        let envelopes = std::str::from_utf8(&writer)
+            .unwrap()
+            .lines()
+            .map(|l| serde_json::from_str(l).unwrap())
+            .collect();
+        (outcome, envelopes)
+    }
+
+    /// The `writeCode` boundary matches where an edit path lands, not only its
+    /// text: `runtime/**` does not admit `runtime/link/x` when `runtime/link`
+    /// points into `framework/`, nor an edit that leaves the project; an
+    /// inside link that lands within the boundary is admitted.
+    #[cfg(unix)]
+    #[test]
+    fn the_write_code_boundary_matches_where_an_edit_lands() {
+        let fixture = escape_fixture();
+        let repo = fixture.repo.clone();
+        std::fs::create_dir_all(repo.join("framework")).unwrap();
+        std::fs::create_dir_all(repo.join("runtime/real")).unwrap();
+        std::os::unix::fs::symlink("../framework", repo.join("runtime/link")).unwrap();
+        std::os::unix::fs::symlink("real", repo.join("runtime/alias")).unwrap();
+        std::os::unix::fs::symlink(fixture.outside.path(), repo.join("runtime/out")).unwrap();
+        for (edit, landing) in [
+            (
+                "runtime/link/x.md",
+                "resolves through a symlink to `framework/x.md`",
+            ),
+            (
+                "runtime/out/x.md",
+                "reaches outside the project through a symlink",
+            ),
+        ] {
+            let (outcome, envelopes) = walk_write_code(repo.clone(), edit);
+            assert!(
+                matches!(&outcome, WalkOutcome::Errored { code, .. } if code == "out-of-boundary-edit"),
+                "{edit}: {outcome:?}"
+            );
+            let message = envelopes.last().unwrap()["message"]
+                .as_str()
+                .unwrap()
+                .to_string();
+            assert!(message.contains(landing), "{edit}: {message}");
+        }
+        let (outcome, _) = walk_write_code(repo, "runtime/alias/x.md");
+        assert!(matches!(outcome, WalkOutcome::Complete), "{outcome:?}");
     }
 }

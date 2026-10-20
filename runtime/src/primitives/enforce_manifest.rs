@@ -42,7 +42,7 @@ use std::path::{Path, PathBuf};
 use regex::Regex;
 use walkdir::WalkDir;
 
-use crate::primitives::{PrimitiveError, Result, validate_no_traversal};
+use crate::primitives::{PrimitiveError, Result, validate_contained};
 use crate::schema::primitives::{EnforceManifestArgs, EnforceManifestResult};
 
 const DEFAULT_GLOB: &str = "*.md";
@@ -120,14 +120,15 @@ pub fn run(args: &EnforceManifestArgs, repo: &Path) -> Result<EnforceManifestRes
 }
 
 /// Resolve `directory` against `repo`, guaranteeing the result sits under
-/// the repo root. Relative paths go through [`validate_no_traversal`]
-/// (no `..`, non-empty); absolute paths are allowed only when they are
-/// `..`-free and prefixed by `repo` — the destructive cleanup loop must
+/// the repo root. Relative paths go through [`validate_contained`] (no `..`,
+/// non-empty, and no symlink leading out of `repo`); absolute paths are
+/// allowed only when they are `..`-free and prefixed by `repo`, and their
+/// remainder goes through the same check — the destructive cleanup loop must
 /// never walk an arbitrary filesystem location.
 fn resolve_contained_dir(repo: &Path, p: &str) -> Result<PathBuf> {
     let candidate = Path::new(p);
     if !candidate.is_absolute() {
-        validate_no_traversal(p)?;
+        validate_contained(repo, p)?;
         return Ok(repo.join(candidate));
     }
     if candidate
@@ -147,6 +148,11 @@ fn resolve_contained_dir(repo: &Path, p: &str) -> Result<PathBuf> {
                 repo.display()
             ),
         });
+    }
+    if let Ok(rest) = candidate.strip_prefix(repo)
+        && !rest.as_os_str().is_empty()
+    {
+        validate_contained(repo, &rest.to_string_lossy())?;
     }
     Ok(candidate.to_path_buf())
 }

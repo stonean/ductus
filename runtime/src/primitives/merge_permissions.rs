@@ -54,7 +54,7 @@ use std::path::Path;
 
 use serde_json::{Map, Value, json};
 
-use crate::primitives::{PrimitiveError, Result, read_text, validate_no_traversal, write_atomic};
+use crate::primitives::{PrimitiveError, Result, read_text, write_atomic};
 use crate::schema::primitives::{MergePermissionsArgs, MergePermissionsResult};
 
 /// Execute the `merge-permissions` primitive.
@@ -76,7 +76,7 @@ use crate::schema::primitives::{MergePermissionsArgs, MergePermissionsResult};
 ///   both `allow` and `revoke`. Checked before any filesystem read,
 ///   so a contradictory call never leaves a partial write.
 pub fn run(args: &MergePermissionsArgs, repo: &Path) -> Result<MergePermissionsResult> {
-    validate_no_traversal(&args.path)?;
+    super::validate_contained(repo, &args.path)?;
     validate_revoke_disjoint(&args.allow, &args.revoke)?;
     let target_path = repo.join(&args.path);
 

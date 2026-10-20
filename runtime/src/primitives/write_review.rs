@@ -56,7 +56,6 @@ use crate::schema::severity::ReviewSeverity;
 /// are markdown body content and are deliberately not screened; waiver fields
 /// are separately quoted through `yaml_string`.
 fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
-    super::validate_no_traversal(&args.feature)?;
     // Scalar fields spliced verbatim into review.md frontmatter must be
     // single-line: an embedded newline would inject a top-level frontmatter
     // key (e.g. a spoofed `blocking:`) into the record and corrupt what every
@@ -144,6 +143,7 @@ fn validate_scalar_fields(args: &WriteReviewArgs) -> Result<()> {
 ///   does.
 /// - [`PrimitiveError::Io`] on read/write failure.
 pub fn run(args: &WriteReviewArgs, repo: &Path) -> Result<WriteReviewResult> {
+    super::validate_feature_argument(repo, &args.feature)?;
     validate_scalar_fields(args)?;
     let root = paths::Paths::load(repo).specs_root;
     let feature_dir = repo.join(&root).join(&args.feature);

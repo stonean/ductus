@@ -92,6 +92,9 @@ pub fn run(args: &RetireFeatureArgs, repo: &Path) -> Result<RetireFeatureResult>
         });
     }
 
+    super::validate_feature_argument(repo, &args.feature)?;
+    super::validate_feature_argument(repo, &args.fold_target)?;
+
     let layout = paths::Paths::load(repo);
     let specs_dir = repo.join(&layout.specs_root);
 

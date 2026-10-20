@@ -45,7 +45,7 @@ use std::path::Path;
 
 use crate::primitives::{
     ANALYSIS_RECORD_FILE, PrimitiveError, REVIEW_RECORD_FILE, Result, read_text, rel_path,
-    split_frontmatter, validate_no_traversal, write_atomic,
+    split_frontmatter, write_atomic,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{RelocateAuditRecordsArgs, RelocateAuditRecordsResult};
@@ -61,7 +61,7 @@ use crate::schema::primitives::{RelocateAuditRecordsArgs, RelocateAuditRecordsRe
 /// - [`PrimitiveError::MissingFrontmatter`] when `spec.md` has no `---` fences,
 ///   and [`PrimitiveError::UnclosedFrontmatter`] when its block never closes.
 pub fn run(args: &RelocateAuditRecordsArgs, repo: &Path) -> Result<RelocateAuditRecordsResult> {
-    validate_no_traversal(&args.feature)?;
+    super::validate_feature_argument(repo, &args.feature)?;
     let root = paths::Paths::load(repo).specs_root;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {

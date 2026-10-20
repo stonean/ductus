@@ -146,6 +146,11 @@ use crate::schema::status::COMPATIBLE_STATUSES;
 pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResult> {
     super::validate_no_traversal(&args.feature)?;
     let root = paths::Paths::load(repo).specs_root;
+    // The argument is checked, the directory's contents are not: this
+    // primitive skips a linked sibling as `target-unparseable` and keeps
+    // running (scenario `sibling-symlink-trust-boundary`), which the walk in
+    // `validate_feature_path` would pre-empt by refusing the whole call.
+    super::validate_contained(repo, &format!("{root}/{}", args.feature))?;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {
@@ -162,7 +167,7 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
     // FeatureNotFound / MissingFrontmatter / UnclosedFrontmatter / Yaml / Io
     // variants on the same file, so the documented error contract above is
     // unchanged.
-    let spec = read_spec::run(
+    let spec = read_spec::read_checked(
         &ReadSpecArgs {
             feature: args.feature.clone(),
             include_body: false,
@@ -177,7 +182,7 @@ pub fn run(args: &CheckArtifactsArgs, repo: &Path) -> Result<CheckArtifactsResul
 
     // Task parsing is shared by families (b) and (c); parse once.
     let tasks = if feature_dir.join("tasks.md").is_file() {
-        Some(read_tasks::run(
+        Some(read_tasks::read_checked(
             &ReadTasksArgs {
                 feature: args.feature.clone(),
             },

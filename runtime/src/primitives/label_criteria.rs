@@ -43,7 +43,7 @@ const NEXT_FIELD: &str = "next-criterion:";
 /// label was already reissued, so the pass refuses rather than repairing it
 /// in place), or [`PrimitiveError::Io`] for filesystem failures.
 pub fn run(args: &LabelCriteriaArgs, repo: &Path) -> Result<LabelCriteriaResult> {
-    super::validate_no_traversal(&args.feature)?;
+    super::validate_feature_argument(repo, &args.feature)?;
     let root = paths::Paths::load(repo).specs_root;
     let feature_dir = repo.join(&root).join(&args.feature);
     if !feature_dir.is_dir() {

@@ -46,7 +46,7 @@ use crate::schema::primitives::{InvalidateReviewArgs, InvalidateReviewResult};
 /// A spec that records no current review is **not** an error — it is
 /// `invalidated: false`, already in the state this primitive produces.
 pub fn run(args: &InvalidateReviewArgs, repo: &Path) -> Result<InvalidateReviewResult> {
-    super::validate_no_traversal(&args.feature)?;
+    super::validate_feature_argument(repo, &args.feature)?;
 
     let root = paths::Paths::load(repo).specs_root;
     let feature_dir = repo.join(&root).join(&args.feature);

@@ -248,7 +248,7 @@ fn summarize(
     repo: &Path,
     root: &str,
 ) -> Result<PrunePlanSummary> {
-    super::validate_no_traversal(feature)?;
+    super::validate_feature_argument(repo, feature)?;
     let feature_dir = repo.join(root).join(feature);
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeatureNotFound {

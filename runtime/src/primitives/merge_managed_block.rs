@@ -48,7 +48,7 @@
 
 use std::path::Path;
 
-use crate::primitives::{PrimitiveError, Result, read_text, validate_no_traversal, write_atomic};
+use crate::primitives::{PrimitiveError, Result, read_text, write_atomic};
 use crate::schema::primitives::{MergeManagedBlockArgs, MergeManagedBlockResult};
 
 const DEFAULT_MARKER: &str = "ductus-managed";
@@ -73,7 +73,7 @@ const STYLE_LINE_PREFIX: &str = "line-prefix";
 ///   to cover both manifest strategies and marker styles); the message
 ///   text makes the surface explicit.
 pub fn run(args: &MergeManagedBlockArgs, repo: &Path) -> Result<MergeManagedBlockResult> {
-    validate_no_traversal(&args.path)?;
+    super::validate_contained(repo, &args.path)?;
     let path = repo.join(&args.path);
     let marker = args
         .marker

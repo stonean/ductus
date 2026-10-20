@@ -35,7 +35,7 @@ use crate::schema::primitives::{DeriveBoundaryArgs, DeriveBoundaryResult};
 /// the first out-of-spec edit halts with `out-of-boundary-edit` — while the
 /// walk itself reaches a legible next-step instead of dying at step 2.
 pub fn run(args: &DeriveBoundaryArgs, repo: &Path) -> Result<DeriveBoundaryResult> {
-    super::validate_no_traversal(&args.feature)?;
+    super::validate_feature_argument(repo, &args.feature)?;
     let layout = paths::Paths::load(repo);
     let feature_dir = repo.join(&layout.specs_root).join(&args.feature);
     if !feature_dir.is_dir() {
