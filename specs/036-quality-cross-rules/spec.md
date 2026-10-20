@@ -27,7 +27,7 @@ Inaugural rule:
 ### Boundaries (cross-reference, do not duplicate)
 
 - **API-schema fail-loud** — a published schema bound to its implementation, so the two cannot diverge silently — is already `api-backend.md` `BE-SCHEMA-002`; `quality-cross.md` cites it for that case rather than restating it, and `QUAL-STUB-001` governs the broader runtime/contract case across all surfaces.
-- **Configuration keys and values** are `configuration-cross.md` `CFG-ENV-003` (required environment variables present at startup) and `CFG-ENV-008` (every value parsed into its declared type at startup, failing fast), both MUST — `QUAL-GROUND-001` cites them and leaves configuration to them, so a configuration defect is never reported under two IDs; where the `CFG` rules apply, it is reported under theirs (Resolved Questions — `QUAL-GROUND-001` scope).
+- **Configuration keys and values** are `configuration-cross.md` `CFG-ENV-003` (required configuration values present at startup, from any source — widened from environment variables on 2026-10-20 by 017's `required-config-values-from-any-source`) and `CFG-ENV-008` (every value parsed into its declared type at startup, failing fast), both MUST — `QUAL-GROUND-001` cites them and leaves configuration to them, so a configuration defect is never reported under two IDs; where the `CFG` rules apply, it is reported under theirs (Resolved Questions — `QUAL-GROUND-001` scope).
 
 ### Added categories
 

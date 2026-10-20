@@ -418,9 +418,9 @@ Done when: this spec's artifacts have no `title:` or `tags:` frontmatter; valida
 
 ### 39. Required configuration values from any source
 
-- [ ] Implement the behavior described in `scenarios/required-config-values-from-any-source.md`
-- [ ] Owner answers the scenario's open question
-- [ ] Apply it: widen CFG-ENV-003 (configuration-cross.md, data-model.md §Rule set) or narrow QUAL-GROUND-001's handover (quality-cross.md, spec 036), fetching any external claim
-- [ ] Lints, audit suite, and rule-corpus tests pass
+- [x] Implement the behavior described in `scenarios/required-config-values-from-any-source.md`
+- [x] Owner answers the scenario's open question
+- [x] Apply it: widen CFG-ENV-003 (configuration-cross.md, data-model.md §Rule set) or narrow QUAL-GROUND-001's handover (quality-cross.md, spec 036), fetching any external claim
+- [x] Lints, audit suite, and rule-corpus tests pass
 
 - **Done when**: The open question is resolved and applied, no rule leaves a required configuration value from a file or flag uncovered, and 017 is re-reviewed back to done.
