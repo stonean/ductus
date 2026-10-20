@@ -68,7 +68,7 @@ jobs:
       # passing on an empty set. Same requirement Family 19's job carries in
       # runtime-release.yml, and the same one AGENTS.md records after
       # gvrn-v0.27.1 blocked its own publish on it.
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -77,11 +77,12 @@ jobs:
       # under runtime/ makes rustup honor rust-toolchain.toml, and if the
       # declared components are missing it auto-installs them mid-build —
       # a path that hits rustup's "detected conflict: 'bin/cargo-fmt'" bug.
-      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
+          toolchain: 1.99.1
           components: clippy, rustfmt
 
-      - uses: actions/cache@v6
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.cargo/registry
@@ -142,19 +143,20 @@ jobs:
       run:
         working-directory: runtime
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Pinned — keep in sync with runtime/rust-toolchain.toml (see the
       # components note on the build-and-test job above).
-      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
+          toolchain: 1.99.1
           components: clippy, rustfmt
 
       # Prebuilt binary — a cargo install would recompile cargo-audit on
       # every cold cache and dominate the job's wall-clock.
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
-          tool: cargo-audit
+          tool: cargo-audit@0.22.2
 
       - name: cargo audit
         run: cargo audit
@@ -166,15 +168,16 @@ jobs:
       run:
         working-directory: runtime
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Pinned — keep in sync with runtime/rust-toolchain.toml (see the
       # components note on the build-and-test job above).
-      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
+          toolchain: 1.99.1
           components: clippy, rustfmt
 
-      - uses: actions/cache@v6
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.cargo/registry

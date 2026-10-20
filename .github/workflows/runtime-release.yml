@@ -38,7 +38,7 @@ jobs:
       # clone has none of those commits, so every spec reports "not a commit in
       # this repo" and the gate fails for a reason unrelated to review freshness
       # (observed on gvrn-v0.27.1, which blocked its own publish).
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Run /audit
@@ -66,18 +66,19 @@ jobs:
       run:
         working-directory: runtime
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Pinned — keep in sync with runtime/rust-toolchain.toml.
-      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
+          toolchain: 1.99.1
           components: clippy, rustfmt
 
       # Prebuilt binary — a cargo install would recompile cargo-audit on every
       # cold cache and dominate the job's wall-clock.
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
-          tool: cargo-audit
+          tool: cargo-audit@0.22.2
 
       - name: cargo audit
         run: cargo audit
@@ -113,7 +114,7 @@ jobs:
             cross: false
             ext: ".exe"
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Pinned — keep in sync with runtime/rust-toolchain.toml.
       # `components` must match the toolchain file: any cargo command run
@@ -121,16 +122,23 @@ jobs:
       # declared components are missing it auto-installs them mid-build —
       # a path that hits rustup's "detected conflict: 'bin/cargo-fmt'" bug.
       # Pre-installing them here keeps that auto-install path from running.
-      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
+          toolchain: 1.99.1
           targets: ${{ matrix.target }}
           components: clippy, rustfmt
 
       - name: Install cargo-zigbuild (cross builds)
         if: matrix.cross
+        # Both pinned (BE-DEPS-006). The hash is the manylinux x86_64 wheel's,
+        # the only one an ubuntu-latest runner selects; hash-checking mode
+        # refuses any other file, so a runner on another architecture fails
+        # here rather than installing an unverified zig.
         run: |
-          pip3 install ziglang
-          cargo install --locked cargo-zigbuild
+          printf '%s\n' 'ziglang==0.17.0 --hash=sha256:97079827064a7492cce5541ceb438ae8003ce1e54e399676da2d62fb7a5dc08b' \
+            > "$RUNNER_TEMP/zig-requirements.txt"
+          pip3 install --require-hashes -r "$RUNNER_TEMP/zig-requirements.txt"
+          cargo install --locked cargo-zigbuild --version 0.23.4
 
       - name: Build (native)
         if: ${{ !matrix.cross }}
@@ -223,7 +231,7 @@ jobs:
       # one-day retention would make "re-run tomorrow" fail on expired
       # artifacts rather than on the thing that actually broke.
       - name: Stage release assets
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-asset-${{ matrix.target }}
           path: |
@@ -288,13 +296,13 @@ jobs:
           - target: x86_64-pc-windows-msvc
             runner: windows-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # By exact name, not by pattern: this leg must fail when ITS target
       # staged nothing, rather than quietly proceeding on another target's
       # assets.
       - name: Download the staged assets for this target
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release-asset-${{ matrix.target }}
           path: staged
@@ -363,16 +371,17 @@ jobs:
       run:
         working-directory: runtime
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Pinned — keep in sync with runtime/rust-toolchain.toml.
       # `components` must match the toolchain file (see build job above).
-      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
+          toolchain: 1.99.1
           components: clippy, rustfmt
 
       - name: Install cargo-cyclonedx
-        run: cargo install --locked cargo-cyclonedx
+        run: cargo install --locked cargo-cyclonedx --version 0.5.9
 
       # --override-filename pins the output name (it replaces the whole
       # stem, so the .cdx convention must be part of the value); the
@@ -386,7 +395,7 @@ jobs:
       # it alongside the five platform archives; same retention as those, for
       # the same re-run reason.
       - name: Stage the SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-asset-sbom
           path: |
@@ -427,11 +436,12 @@ jobs:
       run:
         working-directory: runtime
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Pinned — keep in sync with runtime/rust-toolchain.toml.
       # `components` must match the toolchain file (see build job above).
-      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
+          toolchain: 1.99.1
           components: clippy, rustfmt
       - name: cargo publish
         env:
@@ -496,10 +506,10 @@ jobs:
     steps:
       # First, because checkout cleans the workspace and would delete a
       # `staged/` downloaded ahead of it.
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Download staged assets
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: release-asset-*
           path: staged
@@ -551,7 +561,7 @@ jobs:
           fi
 
       - name: Upload the complete set to the release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: |
             staged/*.tar.gz
@@ -601,7 +611,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Fetch the published installer and compare it with the tag's
         shell: bash
