@@ -1,21 +1,48 @@
 ---
 spec: 037-observability-backend-rules
-last-run: 2026-09-13T12:42:47Z
-analyzed-against: f2a6447f6963951faf14b5e6aafab01bd2a5e925
+last-run: 2026-10-20T00:48:19Z
+analyzed-against: d3ade00ea528f1e284519adcc5f4c6398a50cee1
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 0
 analyzed-digest:
-  plan.md: 50ae8cb13c1e2c02983672bd350e34638a3603379992adda8386ae1e44f0b81a
-  review.md: 7811d455efb793908b7ae95dc1e594dde3eb7db121149d60d31beaf593e30e97
-  spec.md: f0a55b6e3829b921680b1aa5f79fec0a56c69939f294af96620b356e26ff1b4c
-  tasks.md: 14b0252dbdcb3357cde8e3501e30b9aa594335c1e7dedf271bbf1fd015dbdaf9
+  plan.md: 56cf7f146691f7c8094e34f9355017236120b39a568c08b91b2aa06be97d154e
+  review.md: 4a7db667285b99933813583c582c1d257867f953ef7c8a36b64f53a92b2cdac0
+  spec.md: 09aa664b8d1defa6172e61fb991942f84e7772931c761444c40d6d9530f088fb
+  tasks.md: 4ce86902611c81e188f096b4290b59d88a0c0bd9031c42342e6448c2248ae06c
 blocking: false
+dispositions:
+  fixed: 3
+  routed: 0
+  discarded: 0
+  undispositioned: 0
 ---
 
 # Analysis — 037-observability-backend-rules
 
 ## Summary
 
-Relocated from the spec's frontmatter by the record-relocation migration. The counts above are the recorded run's; this report body begins at the next run.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 0 unexamined target(s). Dispositions: 3 fixed, 0 routed, 0 discarded, 0 undispositioned.
+
+## Hard failures
+
+*None.*
+
+## Blocking findings
+
+*None.*
+
+## Advisory findings
+
+*None.*
+
+## Unexamined targets
+
+*None — every target was examined.*
+
+## Fixed in this run
+
+- anchor-resolution — spec.md:57 references §BE-LOG unqualified, which resolves to no constitution marker — `specs/037-observability-backend-rules/spec.md` — **fixed**
+- grounding — spec.md's BE-LOG-006 Resolved Question names scrape intervals as tunable config the rules cite, which no rule names — `specs/037-observability-backend-rules/spec.md` — **fixed**
+- grounding — spec.md Motivation asserted in the present tense that the backend surface covers only the logging slice, which observability-backend.md falsified — `specs/037-observability-backend-rules/spec.md` — **fixed**
