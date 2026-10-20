@@ -1,13 +1,13 @@
 ---
 spec: 017-derive-dont-ask
-last-run: 2026-10-20T16:20:20Z
-reviewed-against: 8dd72c61441af428cdc3ba899a1f65f682fea113
+last-run: 2026-10-20T19:37:31Z
+reviewed-against: fa489f6ae4a08bb10b95fde274c72fd4363f6a35
 diff-base: 37c8219c8730fd23b5fbac7629c11fd2d6bc5b3b
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 30
-scope: 172
+examined: 19
+scope: 184
 skipped-passes: []
 reviewed-digest:
   data-model.md: 59aa84e8bc06cb7526e20597cbeb672066cfbe1e8fa9e70a0f3db6f97b4a756b
@@ -16,12 +16,13 @@ reviewed-digest:
   scenarios/ranged-and-inventoried-config-values-from-any-source.md: 873eeab49a775f68b5283737ad21952b98e771c5409c018df418f573b89b2041
   scenarios/required-config-values-from-any-source.md: a42163d6d945a1387ee92b834ece04f4430c4adb2bbd996cc44a16644b4dc463
   scenarios/skip-prose-cross-references.md: 7b080b9a2cfad2635b704f7418143cae520a151601b6d2a66368b0811e4a3c43
+  scenarios/the-adopter-ci-template-can-run.md: 2d197440840c8229dc3dda3f93df9ebd73f2af5b491b9991db2c070b1f5b6c4c
   scenarios/tracked-specs-not-worktree.md: e3808ab1ae9a4d6b1b2103c85537c6236e99898b7569536eb9ac2bfcdde684bf
 blocking: false
 dispositions:
-  fixed: 5
-  routed: 2
-  discarded: 41
+  fixed: 8
+  routed: 3
+  discarded: 53
   undispositioned: 0
 decisions:
   - key: "other: CFG-ENV-001 does not say whether an empty value on an optional value with a default is absent or malformed — `framework/rules/configuration-cross.md`"
@@ -239,21 +240,88 @@ decisions:
     reason: the owner's 2026-10-20 decision scopes the check to owned sections; flagging near-miss section names would be a new requirement
     decided-at: 2026-10-20T16:20:20Z
     decided-by: andy@stone.dev
+  - key: "other: pre-existing downloads with no named timeout, unchanged in this window: runtime-acquisition.yml:131-132, runtime-release.yml:623 (also retried with a fixed delay and no jitter) and install.sh:124 and :163 — `.github/workflows/runtime-release.yml`"
+    outcome: routed
+    target: specs/022-deterministic-runtime/tasks.md
+    decided-at: 2026-10-20T19:37:31Z
+    decided-by: andy@stone.dev
+  - key: "other: framework-checks step (m) tests the pins check on fixtures only, so a pull request adding a tag-pinned uses: merges green until the weekly run reports it — `.github/workflows/framework-checks.yml`"
+    outcome: discarded
+    reason: The owner chose the weekly currency check as the pins' update process (022 task 3, option c); a per-pull-request pin lint is not part of it and would be its own decision.
+    decided-at: 2026-10-20T19:37:31Z
+    decided-by: andy@stone.dev
+  - key: "bug: a pinned pre-release would read as current once its stable release ships, since sort -V orders 1.0.0 before 1.0.0-rc.1 — `scripts/check-runtime-currency.sh`"
+    outcome: discarded
+    reason: No pin in this tree is a pre-release, and the values it is compared with are crates.io's newest stable version and published release tags, so no input reaches the misordering.
+    decided-at: 2026-10-20T19:37:31Z
+    decided-by: andy@stone.dev
+  - key: "other: DUCTUS_SHA256 pairs with a DUCTUS_VERSION by file rather than by step, a tab split collapses an empty version field, and cargo install's --version=X, --vers and name@X forms are not parsed — `scripts/check-runtime-currency.sh`"
+    outcome: discarded
+    reason: Each fails loud, as a hash mismatch or an unpinned report, and the tree has one install step and only the `--version X` form.
+    decided-at: 2026-10-20T19:37:31Z
+    decided-by: andy@stone.dev
+  - key: "other: an unknown check name exits 2, the code that also means a check could not run — `scripts/check-runtime-currency.sh`"
+    outcome: discarded
+    reason: A misspelt argument is a run that examined nothing, which is what exit 2 states, and the message names the cause.
+    decided-at: 2026-10-20T19:37:31Z
+    decided-by: andy@stone.dev
+  - key: "other: 022's plan states a provenance exception for crates (BE-DEPS-004) but none for the pip-installed ziglang — `specs/022-deterministic-runtime/plan.md`"
+    outcome: discarded
+    reason: 022's own analysis assesses BE-DEPS-004 against 022's plan, which names the ziglang install; it is outside 017's scope.
+    decided-at: 2026-10-20T19:37:31Z
+    decided-by: andy@stone.dev
+  - key: "other: the first weekly pins run will exit 1 on three action pins a major release behind, the template's checkout, upload-artifact and download-artifact — `.github/workflows/runtime-currency.yml`"
+    outcome: discarded
+    reason: Expected and recorded in 022's task 3 measurement; moving those majors is outside task 3 and goes to the owner as its own question.
+    decided-at: 2026-10-20T19:37:31Z
+    decided-by: andy@stone.dev
+  - key: "other: the template's version check is close to redundant, since the sha256 pin already fixes the bytes — `framework/templates/ci/adopter-generators.yml`"
+    outcome: discarded
+    reason: Scenario the-adopter-ci-template-can-run requires it, and it catches a mispackaged release the hash cannot.
+    decided-at: 2026-10-20T19:37:31Z
+    decided-by: andy@stone.dev
+  - key: "other: the pins check's .yaml globs match no tracked file — `scripts/check-runtime-currency.sh`"
+    outcome: discarded
+    reason: A guard, so a workflow added as .yaml is not skipped silently.
+    decided-at: 2026-10-20T19:37:31Z
+    decided-by: andy@stone.dev
+  - key: "other: pass() and fail() are copied across the four scripts/tests/*.sh — `scripts/tests/test-check-runtime-currency.sh`"
+    outcome: discarded
+    reason: There is no shared test library to reuse, and adding one for two lines is not this change's work.
+    decided-at: 2026-10-20T19:37:31Z
+    decided-by: andy@stone.dev
+  - key: "other: runs-on: ubuntu-latest is mutable and now supplies framework-checks' Node too — `.github/workflows/framework-checks.yml`"
+    outcome: discarded
+    reason: The owner chose the runner image's Node (022 task 3, option a), and a GitHub-hosted image has no immutable reference to pin.
+    decided-at: 2026-10-20T19:37:31Z
+    decided-by: andy@stone.dev
+  - key: "other: \"shipped\" still describes the CI template in 017's AC24, plan.md's Affected Files row and 022's task 3 text — `specs/017-derive-dont-ask/spec.md`"
+    outcome: discarded
+    reason: AC24 calls it a shipped example, the Affected Files row says adopters copy it, and 022's task 3 text is a spent task; none claims it is installed.
+    decided-at: 2026-10-20T19:37:31Z
+    decided-by: andy@stone.dev
+  - key: "other: cargo's own requests in checks 1, 2 and 4 keep cargo's defaults rather than a timeout the script names — `scripts/check-runtime-currency.sh`"
+    outcome: discarded
+    reason: Pre-existing checks, unchanged in this window; runtime-currency.yml's timeout-minutes bounds the whole CI run.
+    decided-at: 2026-10-20T19:37:31Z
+    decided-by: andy@stone.dev
 ---
 
 # Review — 017-derive-dont-ask
 
 ## Summary
 
-Re-review of 017 after tasks 39, 40 and 41, the owner's four answers of 2026-10-20 that widened `configuration-cross.md` from environment variables to configuration values from any source. 0 MUST, 0 SHOULD, 0 low-confidence, not blocking.
+Re-review of 017 after 022 task 3's CI pinning, which 017's plan covers through `generators.yml` and the adopter CI template, and after the owner's answer (b) to the scenario `the-adopter-ci-template-can-run`. 0 MUST, 0 SHOULD, 0 low-confidence, not blocking.
 
-**Base.** `37c8219c`, the parent of the reopen (`3d7f20e9`). 008's review of `88d934d4` is the newest record over the shared window, and it read everything in this scope that changed since 022's record of `683e9204`, `configuration-cross.md`'s widening and its fixes among them. This review reads 017's own in-scope artifacts and its deliverable in full, and what changed since 008's record.
+**Base.** `37c8219c`, the parent of the reopen (`3d7f20e9`). The newest record, `6855e5bf`, was reviewed against `8dd72c61`; this review reads what changed in 017's scope since `8dd72c61`.
 
-**Read** (`examined: 30`). In full: 017's `spec.md`, `plan.md`, `data-model.md`, `tasks.md` and both in-scope scenarios; `configuration-cross.md` at `5e42ec3d` by an independent pass that fetched every source the file cites (Fail Fast, Twelve-Factor, dotenv, dotenv-safe, Helm, Viper, Spring Boot and its Javadoc, Go, serde, MDN, Kubernetes, NIST, BIPM, Vite, Next.js, RFC 6749, OWASP, OpenFeature and others), and its last two edits re-read as a diff; `framework/commands/analyze.md`'s §Rules and step 5, whose two restored citation messages are the change since 008's record that is not a record or a status line. The 22 other files 008's review read this session, listed in its record, are counted here too.
+**Read** (`examined: 19`). The 21 in-scope files changed since `8dd72c61`, less `review.md` and `analysis.md`, which are regenerated whole and were read only for their decisions and counts. Two independent passes at `b85e4907` (security and quality; reuse, efficiency, simplicity and prose accuracy) and an independent re-read of the first fix round at `02a5ac13` read in full `scripts/check-runtime-currency.sh`, `scripts/tests/test-check-runtime-currency.sh`, `framework/templates/ci/adopter-generators.yml`, the six workflows, `runtime/rust-toolchain.toml` and the new scenario. The host read 017's `spec.md` and `plan.md` in full, and the changed sections of `AGENTS.md`, `framework/migrations/generator-primitives.md`, 017's `tasks.md`, 022's `plan.md` and `tasks.md`, and `specs/inbox.md`. Every rule's Statement and Verification in the eleven rule files was applied, and the template's steps ran in a linux/amd64 container against two adopter-shaped fixtures. Not read in this run: the other 163 scope entries, unchanged since `8dd72c61`, and 017's `data-model.md` and five older scenarios, also unchanged.
 
-**Not read.** The ten generated command mirrors (`scripts/gen-claude-commands.sh --check` in sync); `framework/bootstrap/govern.md` (`cmp` identical to `ductus.md`); 017's plan-listed templates, commands, hooks, scripts and CI files unchanged since the base (the spec templates, `amend.md`, `groom.md`, `help.md`, `implement.md`, `log.md`, `specify.md`, `target.md`, the hooks, `scripts/gen-help-tables.sh`, `scripts/install-hooks.sh`, `.github/workflows/generators.yml`, `framework/templates/ci/adopter-generators.yml`, the two `configure` files, and `specs/000-016/spec.md`); 019's runtime change set, reviewed by 019's and 022's records today; the other rule files and the constitution, read by 034's review and its siblings; and the sibling specs' other artifacts and records, 008's new `review.md` and `analysis.md` among them.
+**Fixed in the run.** BE-TIMEOUT-001 (MUST, twice): neither the template's download nor the pins check's lookups had a timeout. Both are now bounded by named values, the GitHub API goes through the same bounded `curl` in place of `gh api`, and the weekly job sets `timeout-minutes`. BE-RETRY-001: the template retried without jitter and no longer retries. A test gap: no fixture wrote a step-key `uses:`, and no case asserted a pin's location or check 3's comparison. Efficiency: a per-line subprocess loop (32 s) became one grep prefilter and a per-repository cache (6 s). Prose: the template's architecture comment, the migration's orphaned-reference claim, "shipped" read as installed, and two task notes. The token now reaches `curl` from a 0600 file. 27 test assertions pass, and mutating each fixed behavior turns a case red.
 
-**Findings: none.** **Observations: 48.** 5 fixed: four `configuration-cross.md` wordings (`CFG-CONST-003`'s backing list, `CFG-ENV-003`'s Verification, `CFG-ENV-008`'s `parseBoolean`, `CFG-ENV-004`'s Source) and the owner's answer that a command-line flag is configuration only when it supplies a setting (task 41). 7 new discards, each with its reason. 34 discards and 2 routes carried byte-identically from 008's record. Three of 017's own stored routes expire: their routed work (AC25's annotation and two data-model corrections) has landed.
+**Routed.** Pre-existing downloads with no named timeout, unchanged in this window (`runtime-acquisition.yml`, `runtime-release.yml:623`, `install.sh`), to 022's task 6.
+
+**Carried.** The 43 standing decisions (2 routed, 41 discarded), byte-identical; every path they name is unchanged since `8dd72c61`.
 
 ## MUST violations (blocking)
 
@@ -273,11 +341,6 @@ Re-review of 017 after tasks 39, 40 and 41, the owner's four answers of 2026-10-
 
 ## Observations
 
-- convention: CFG-CONST-003 listed only a named constant or an environment variable as an operator-tunable value's backing, so after the widening its Verification would flag a plan backing one with a configuration-file key — `framework/rules/configuration-cross.md` — **fixed**
-- convention: CFG-ENV-003's Verification did not check its Statement's naming of each source checked for a value read from several sources — `framework/rules/configuration-cross.md` — **fixed**
-- convention: CFG-ENV-008's Rationale said Boolean.parseBoolean reads every string other than true as false; it accepts true in any case — `framework/rules/configuration-cross.md` — **fixed**
-- convention: CFG-ENV-004's Rationale made Spring Boot and Go claims its Source did not cite — `framework/rules/configuration-cross.md` — **fixed**
-- other: CFG-ENV-001 and CFG-ENV-003 covered a command-line flag with nothing separating a configuration flag from a per-invocation argument; the owner's 2026-10-20 answer defined it in the file's header — `framework/rules/configuration-cross.md` — **fixed**
 - other: CFG-ENV-001 does not say whether an empty value on an optional value with a default is absent or malformed — `framework/rules/configuration-cross.md` — **discarded**: predates the widening for environment variables and is unchanged by it; which way an empty optional value falls is a new decision, and CFG-ENV-008 already fails a present malformed value
 - other: "at startup" in CFG-ENV-003, CFG-ENV-005 and CFG-ENV-008 does not cover a configuration file a running process reads again — `framework/rules/configuration-cross.md` — **discarded**: a value first read later is validated when it is read, the reading 063 applies on every call, and no spec here reloads a file mid-process
 - other: CFG-ENV-008's error names the setting and the value but not the file, which CFG-ENV-003 and CFG-ENV-005 now name for a file key — `framework/rules/configuration-cross.md` — **discarded**: naming the file is a new requirement on a rule today's answers did not widen; the setting and the value already locate the defect
@@ -321,6 +384,27 @@ Re-review of 017 after tasks 39, 40 and 41, the owner's four answers of 2026-10-
 - other: 008's first resolved question reasons from CI gating — `specs/008-security-rules/spec.md` — **discarded**: a resolved question records the reasoning at the time; rewriting it records a fiction
 - perf: readers parse the same config text twice, once as a table for the key names and once as their typed struct — `runtime/src/schema/config_keys.rs` — **discarded**: the files are a few hundred bytes, and parsing the typed struct from the text keeps a wrong-typed value's error located by its line, which a conversion from the parsed table loses
 - other: a misspelled section name such as [artifact] is never examined, so its settings take their defaults without a word — `runtime/src/schema/config_keys.rs` — **discarded**: the owner's 2026-10-20 decision scopes the check to owned sections; flagging near-miss section names would be a new requirement
+- other: the pins check's comments implied it bounds every lookup and reads every CI download; it bounds the lookups it makes itself and reads six forms, and now says so — `scripts/check-runtime-currency.sh` — **fixed**
+- other: the template said an arm runner fails the hash check; its URL is always the x86_64 archive, so the step fails on running the binary, and the comment now says so — `framework/templates/ci/adopter-generators.yml` — **fixed**
+- other: the generator-primitives migration said the orphaned-reference check reports a stale copied workflow; that check reads no workflow file, and the step now says the copy fails on its first run — `framework/migrations/generator-primitives.md` — **fixed**
+- other: 017's spec and AGENTS.md called the CI template shipped, which reads as installed, AGENTS.md's Renovate comparison lacked its qualifier, and 017's task 42 and 022's task 3 note overstated; each corrected — `AGENTS.md` — **fixed**
+- perf: the pins check spawned subprocesses for every workflow line and fetched a repository's latest release once per pin (32 s); one grep prefilter and a per-repository cache bring it to 6 s with the same report — `scripts/check-runtime-currency.sh` — **fixed**
+- other: three copies of one sed, two of one reference count, an inline version comparison beside ver_lt, and a missing-gh message worded as a registry failure; replaced by helpers, ver_lt, and the GitHub API through the bounded fetch — `scripts/check-runtime-currency.sh` — **fixed**
+- bug: no fixture wrote a uses: as a step key, and no case asserted where a pin is reported or exercised check 3's comparison; cases U, X, Y and Z cover them — `scripts/tests/test-check-runtime-currency.sh` — **fixed**
+- security: the GitHub token went on curl's argument list and into the test stub's log; it is passed from a 0600 file, and the test unsets GH_TOKEN — `scripts/check-runtime-currency.sh` — **fixed**
+- other: pre-existing downloads with no named timeout, unchanged in this window: runtime-acquisition.yml:131-132, runtime-release.yml:623 (also retried with a fixed delay and no jitter) and install.sh:124 and :163 — `.github/workflows/runtime-release.yml` — **routed** to `specs/022-deterministic-runtime/tasks.md`
+- other: framework-checks step (m) tests the pins check on fixtures only, so a pull request adding a tag-pinned uses: merges green until the weekly run reports it — `.github/workflows/framework-checks.yml` — **discarded**: The owner chose the weekly currency check as the pins' update process (022 task 3, option c); a per-pull-request pin lint is not part of it and would be its own decision.
+- bug: a pinned pre-release would read as current once its stable release ships, since sort -V orders 1.0.0 before 1.0.0-rc.1 — `scripts/check-runtime-currency.sh` — **discarded**: No pin in this tree is a pre-release, and the values it is compared with are crates.io's newest stable version and published release tags, so no input reaches the misordering.
+- other: DUCTUS_SHA256 pairs with a DUCTUS_VERSION by file rather than by step, a tab split collapses an empty version field, and cargo install's --version=X, --vers and name@X forms are not parsed — `scripts/check-runtime-currency.sh` — **discarded**: Each fails loud, as a hash mismatch or an unpinned report, and the tree has one install step and only the `--version X` form.
+- other: an unknown check name exits 2, the code that also means a check could not run — `scripts/check-runtime-currency.sh` — **discarded**: A misspelt argument is a run that examined nothing, which is what exit 2 states, and the message names the cause.
+- other: 022's plan states a provenance exception for crates (BE-DEPS-004) but none for the pip-installed ziglang — `specs/022-deterministic-runtime/plan.md` — **discarded**: 022's own analysis assesses BE-DEPS-004 against 022's plan, which names the ziglang install; it is outside 017's scope.
+- other: the first weekly pins run will exit 1 on three action pins a major release behind, the template's checkout, upload-artifact and download-artifact — `.github/workflows/runtime-currency.yml` — **discarded**: Expected and recorded in 022's task 3 measurement; moving those majors is outside task 3 and goes to the owner as its own question.
+- other: the template's version check is close to redundant, since the sha256 pin already fixes the bytes — `framework/templates/ci/adopter-generators.yml` — **discarded**: Scenario the-adopter-ci-template-can-run requires it, and it catches a mispackaged release the hash cannot.
+- other: the pins check's .yaml globs match no tracked file — `scripts/check-runtime-currency.sh` — **discarded**: A guard, so a workflow added as .yaml is not skipped silently.
+- other: pass() and fail() are copied across the four scripts/tests/*.sh — `scripts/tests/test-check-runtime-currency.sh` — **discarded**: There is no shared test library to reuse, and adding one for two lines is not this change's work.
+- other: runs-on: ubuntu-latest is mutable and now supplies framework-checks' Node too — `.github/workflows/framework-checks.yml` — **discarded**: The owner chose the runner image's Node (022 task 3, option a), and a GitHub-hosted image has no immutable reference to pin.
+- other: "shipped" still describes the CI template in 017's AC24, plan.md's Affected Files row and 022's task 3 text — `specs/017-derive-dont-ask/spec.md` — **discarded**: AC24 calls it a shipped example, the Affected Files row says adopters copy it, and 022's task 3 text is a spent task; none claims it is installed.
+- other: cargo's own requests in checks 1, 2 and 4 keep cargo's defaults rather than a timeout the script names — `scripts/check-runtime-currency.sh` — **discarded**: Pre-existing checks, unchanged in this window; runtime-currency.yml's timeout-minutes bounds the whole CI run.
 
 ## Skipped passes
 
