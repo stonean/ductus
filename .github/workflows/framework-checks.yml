@@ -50,10 +50,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
-        with:
-          node-version: '20.20.2'
-
+      # Node is the runner image's own, not a download (owner decision,
+      # 2026-10-20, 022 task 3). setup-node fetched it with no checksum check,
+      # from a version manifest read off a branch, which BE-DEPS-006 does not
+      # allow; the image's Node, like its shellcheck and jq, moves when GitHub
+      # updates the image.
+      #
       # Installs the pinned markdownlint-cli2 from package-lock.json. Without
       # it, step (c)'s `npx` would fetch whatever is latest that day, so the
       # version CI enforces could differ from the one the manifest records —

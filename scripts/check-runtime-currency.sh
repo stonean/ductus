@@ -157,11 +157,11 @@ fi
 # with upstream, and this is that comparison (022 task 3). An action pin is
 # current when its tag is the action's latest release and still names the
 # pinned commit; a tool pin is current when its version is the newest stable
-# one its registry publishes (crates.io, PyPI, or the latest LTS line for
-# Node); and every `toolchain:` input must equal rust-toolchain.toml's
-# channel, which check 3 holds against stable Rust. A reference with no pin at
-# all is reported too: there is nothing to compare, and the build runs
-# whatever its upstream points at that day.
+# one its registry publishes (crates.io or PyPI); and every `toolchain:`
+# input must equal rust-toolchain.toml's channel, which check 3 holds against
+# stable Rust. A reference with no pin at all is reported too: there is
+# nothing to compare, and the build runs whatever its upstream points at that
+# day.
 #
 # It reports and never edits. A red run names each pin and where it is, and
 # the bump lands as its own commit like any other fix this script names.
@@ -173,18 +173,14 @@ note_unexamined() { pins_unexamined+="  $*"$'\n'; }
 # True when version $1 sorts strictly before version $2.
 ver_lt() { [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -1)" = "$1" ]; }
 
-# Look up the newest stable version a registry publishes: crates.io, PyPI, or
-# Node's latest LTS release. Prints nothing when the lookup fails.
+# Look up the newest stable version a registry publishes: crates.io or PyPI.
+# Prints nothing when the lookup fails.
 latest_crate() {
   curl -fsSL -A "$ua" "https://crates.io/api/v1/crates/$1" 2>/dev/null |
     jq -r '.crate.max_stable_version // empty' 2>/dev/null
 }
 latest_pypi() {
   curl -fsSL "https://pypi.org/pypi/$1/json" 2>/dev/null | jq -r '.info.version // empty' 2>/dev/null
-}
-latest_node_lts() {
-  curl -fsSL https://nodejs.org/dist/index.json 2>/dev/null |
-    jq -r '[.[] | select(.lts != false)][0].version // empty' 2>/dev/null | sed 's/^v//'
 }
 
 # Compare one tool pin with its registry. $1 kind, $2 name, $3 pinned version,
@@ -193,7 +189,6 @@ check_tool() {
   case "$1" in
     crate) latest=$(latest_crate "$2") ;;
     pypi) latest=$(latest_pypi "$2") ;;
-    node) latest=$(latest_node_lts) ;;
   esac
   if [ -z "$latest" ]; then
     note_unexamined "$2 $3 ($4): could not read the latest version from its registry"
@@ -277,17 +272,6 @@ if want pins; then
         req=$(printf '%s\n' "$text" | grep -oE '[A-Za-z0-9_.-]+==[0-9][^[:space:]]*[[:space:]]+--hash' | head -1)
         req=${req%%[[:space:]]*}
         printf 'pypi\t%s\t%s\t%s\n' "${req%%==*}" "${req#*==}" "$where" >>"$tmp/tools.tsv"
-        continue
-      fi
-
-      # setup-node's Node must name an exact version.
-      if printf '%s\n' "$text" | grep -qE '^[[:space:]]*node-version:[[:space:]]'; then
-        version=$(printf '%s\n' "$text" | sed -E "s/^[[:space:]]*node-version:[[:space:]]*['\"]?([^'\"[:space:]]*).*/\1/")
-        if printf '%s\n' "$version" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-          printf 'node\tnode\t%s\t%s\n' "$version" "$where" >>"$tmp/tools.tsv"
-        else
-          note_behind "node-version '$version' is not an exact version ($where)"
-        fi
         continue
       fi
 

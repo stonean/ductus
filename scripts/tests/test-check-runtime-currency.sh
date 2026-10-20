@@ -22,14 +22,12 @@
 #   I. a `cargo install` with no --version is behind
 #   J. a hash-pinned pip requirement behind PyPI is behind
 #   K. a pip install without --require-hashes is behind
-#   L. a Node pin behind the latest LTS release is behind
-#   M. a Node pin that is not an exact version is behind
-#   N. a toolchain input that differs from rust-toolchain.toml is behind
-#   O. a GitHub lookup that fails is NOT EXAMINED (exit 2), never current
-#   P. a registry lookup that fails is NOT EXAMINED (exit 2), never current
-#   Q. a tree with no workflow is NOT EXAMINED rather than vacuously current
-#   R. a behind pin outranks an unexamined one (exit 1)
-#   S. an unknown check name is refused
+#   L. a toolchain input that differs from rust-toolchain.toml is behind
+#   M. a GitHub lookup that fails is NOT EXAMINED (exit 2), never current
+#   N. a registry lookup that fails is NOT EXAMINED (exit 2), never current
+#   O. a tree with no workflow is NOT EXAMINED rather than vacuously current
+#   P. a behind pin outranks an unexamined one (exit 1)
+#   Q. an unknown check name is refused
 #
 # Usage: scripts/tests/test-check-runtime-currency.sh
 
@@ -85,8 +83,6 @@ jobs:
         with:
           tool: cargo-audit@0.22.2
       - uses: actions/setup-node@$(sha 4) # v6.5.0
-        with:
-          node-version: '20.20.2'
       # a cargo install in a comment is not a pin
       - run: |
           printf '%s\n' 'ziglang==0.17.0 --hash=sha256:$(printf '%064d' 9)' > r.txt
@@ -118,12 +114,10 @@ printf '%s\t%s\n' \
 printf '%s\t%s\n' \
   https://crates.io/api/v1/crates/cargo-audit cargo-audit.json \
   https://crates.io/api/v1/crates/cargo-zigbuild cargo-zigbuild.json \
-  https://pypi.org/pypi/ziglang/json ziglang.json \
-  https://nodejs.org/dist/index.json node.json >"$BASE/stub/curl.tsv"
+  https://pypi.org/pypi/ziglang/json ziglang.json >"$BASE/stub/curl.tsv"
 printf '{"crate":{"max_stable_version":"0.22.2"}}\n' >"$BASE/stub/cargo-audit.json"
 printf '{"crate":{"max_stable_version":"0.23.4"}}\n' >"$BASE/stub/cargo-zigbuild.json"
 printf '{"info":{"version":"0.17.0"}}\n' >"$BASE/stub/ziglang.json"
-printf '[{"version":"v26.0.0","lts":false},{"version":"v20.20.2","lts":"Iron"}]\n' >"$BASE/stub/node.json"
 
 # probe <case> [sed-edit-of-a-fixture-file ...] runs the pins check in a copy of
 # the base fixture. Each edit is `file|sed-expression`, its file relative to
@@ -154,7 +148,7 @@ echo "Running check-runtime-currency pins tests..."
 
 probe a-control
 expect "A: a fixture matching upstream is current" 0 \
-  "pins: current (4 action pin(s) and 5 tool pin(s) across 2 file(s))"
+  "pins: current (4 action pin(s) and 4 tool pin(s) across 2 file(s))"
 
 probe b-release 'stub/gh.tsv|/setup-node\/releases\/latest/s|v6.5.0|v7.1.0|'
 expect "B: a newer release is behind" 1 "actions/setup-node pins v6.5.0, latest release is v7.1.0"
@@ -186,38 +180,32 @@ expect "J: a pip requirement behind PyPI is behind" 1 "ziglang pins 0.17.0, late
 probe k-nohash 'repo/.github/workflows/ci.yml|s|pip3 install --require-hashes -r r.txt|pip3 install ziglang|'
 expect "K: a pip install without --require-hashes is behind" 1 "pip install without --require-hashes"
 
-probe l-node 'stub/node.json|s|^\[|[{"version":"v24.22.0","lts":"Krypton"},|'
-expect "L: Node behind the latest LTS is behind" 1 "node pins 20.20.2, latest is 24.22.0"
-
-probe m-nodemajor "repo/.github/workflows/ci.yml|s|node-version: '20.20.2'|node-version: '20'|"
-expect "M: a Node major alone is not a pin" 1 "node-version '20' is not an exact version"
-
-probe n-toolchain 'repo/.github/workflows/ci.yml|s|toolchain: 1.99.1|toolchain: 1.98.0|'
-expect "N: a toolchain input off rust-toolchain.toml is behind" 1 \
+probe l-toolchain 'repo/.github/workflows/ci.yml|s|toolchain: 1.99.1|toolchain: 1.98.0|'
+expect "L: a toolchain input off rust-toolchain.toml is behind" 1 \
   "toolchain: 1.98.0 differs from runtime/rust-toolchain.toml's 1.99.1"
 
-probe o-github 'stub/gh.tsv|/install-action\/releases\/latest/d'
-expect "O: a failed GitHub lookup is not examined" 2 "pins: NOT EXAMINED — 1 of"
-if printf '%s\n' "$out" | grep -q 'pins: current'; then fail "O: a failed lookup still printed current"; fi
+probe m-github 'stub/gh.tsv|/install-action\/releases\/latest/d'
+expect "M: a failed GitHub lookup is not examined" 2 "pins: NOT EXAMINED — 1 of"
+if printf '%s\n' "$out" | grep -q 'pins: current'; then fail "M: a failed lookup still printed current"; fi
 
-probe p-registry 'stub/curl.tsv|/cargo-audit/d'
-expect "P: a failed registry lookup is not examined" 2 "cargo-audit 0.22.2"
-if printf '%s\n' "$out" | grep -q 'pins: current'; then fail "P: a failed lookup still printed current"; fi
+probe n-registry 'stub/curl.tsv|/cargo-audit/d'
+expect "N: a failed registry lookup is not examined" 2 "cargo-audit 0.22.2"
+if printf '%s\n' "$out" | grep -q 'pins: current'; then fail "N: a failed lookup still printed current"; fi
 
-case_dir="$WORK/q-empty"
+case_dir="$WORK/o-empty"
 mkdir -p "$case_dir/runtime"
 printf '[toolchain]\nchannel = "1.99.1"\n' >"$case_dir/runtime/rust-toolchain.toml"
 (cd "$case_dir" && git init -q && git add -A)
 code=0
 out=$(cd "$case_dir" && STUB_DIR="$BASE/stub" PATH="$WORK/bin:$PATH" bash "$CHECK" pins 2>&1) || code=$?
-expect "Q: no workflow is not examined, not current" 2 "the enumeration is broken, not the pins"
+expect "O: no workflow is not examined, not current" 2 "the enumeration is broken, not the pins"
 
-probe r-both 'stub/cargo-audit.json|s|0.22.2|0.23.0|' 'stub/curl.tsv|/ziglang/d'
-expect "R: behind outranks unexamined" 1 "pins: NOT EXAMINED — 1 of"
+probe p-both 'stub/cargo-audit.json|s|0.22.2|0.23.0|' 'stub/curl.tsv|/ziglang/d'
+expect "P: behind outranks unexamined" 1 "pins: NOT EXAMINED — 1 of"
 
 code=0
 out=$(cd "$BASE/repo" && bash "$CHECK" pinz 2>&1) || code=$?
-expect "S: an unknown check is refused" 2 "unknown check: pinz"
+expect "Q: an unknown check is refused" 2 "unknown check: pinz"
 
 echo
 if [ "$failures" -ne 0 ]; then
