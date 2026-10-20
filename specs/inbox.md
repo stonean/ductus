@@ -27,3 +27,5 @@
         `- [ ] {Brief description of the issue and any relevant context}`
 
      When an item is migrated, remove it from this list. -->
+
+- [ ] Constitution §recommendations, through 050's back-edge: an owner's answer is applied as the chosen option reads, and a refinement the sources suggest (narrower, broader, or reshaped) goes back to the owner as its own question before it lands. On 2026-10-20 one owner question (BE-AUTHN-018 against saved recovery codes) existed only because the text applied for 008's BE-AUTHN-022 answer departed from the chosen option, and a review caught a second departure (NIST's code-plus-authenticator route narrowed to the password).
