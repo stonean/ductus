@@ -6,7 +6,7 @@
 # pinned toolchain was two releases old, and four rustls advisories were found
 # only because someone ran `cargo audit` by hand — the push workflow runs it
 # only when a commit touches runtime/. Each of those is a chore that depends on
-# someone remembering it, so this asks all four questions on a schedule
+# someone remembering it, so this asks all five questions on a schedule
 # (.github/workflows/runtime-currency.yml) and from a contributor's shell:
 #
 #   1. lockfile     — `cargo update --dry-run` would change Cargo.lock.
@@ -16,17 +16,37 @@
 #                     the latest stable Rust.
 #   4. advisories   — `cargo audit` reports a vulnerability (runtime/audit.toml
 #                     still governs what is ignored).
+#   5. pins         — a CI input the lockfile does not cover has fallen behind
+#                     what its upstream publishes, or is not pinned at all
+#                     (BE-DEPS-006; see the section below).
 #
 # A compatible update held back only by the declared `rust-version` (MSRV) is
 # reported, never failed: the MSRV is a deliberate floor, raised on purpose.
 #
 # Exit status: 1 when any check found the runtime behind; otherwise 2 when any
-# check could not run (no network, no cargo-audit), so an unexamined subject
-# never reads as current; 0 only when every check ran and found nothing.
+# check could not run (no network, no cargo-audit, no gh), so an unexamined
+# subject never reads as current; 0 only when every check ran and found nothing.
 #
-# Usage: scripts/check-runtime-currency.sh   (from anywhere in the repo)
+# Usage: scripts/check-runtime-currency.sh [check ...]   (from anywhere in the
+# repo). With no arguments every check runs; naming checks (lockfile, majors,
+# toolchain, advisories, pins) runs only those. lockfile and majors read one
+# dry run, so naming either runs both.
 
 set -uo pipefail
+
+checks="lockfile majors toolchain advisories pins"
+for arg in "$@"; do
+  case " $checks " in
+    *" $arg "*) ;;
+    *)
+      printf 'unknown check: %s (expected one of: %s)\n' "$arg" "$checks" >&2
+      exit 2
+      ;;
+  esac
+done
+selected=" $* "
+# True when the named check is to run: every check when none was named.
+want() { [ "$selected" = "  " ] || case "$selected" in *" $1 "*) true ;; *) false ;; esac; }
 
 root=$(git rev-parse --show-toplevel)
 runtime="$root/runtime"
@@ -39,7 +59,9 @@ trap 'rm -rf "$tmp"' EXIT
 report() { printf '%s\n' "$*"; }
 
 # --- 1 + 2: lockfile and majors, from one verbose dry run --------------------
-if (cd "$runtime" && cargo update --dry-run --verbose) >"$tmp/update.out" 2>&1; then
+if ! want lockfile && ! want majors; then
+  :
+elif (cd "$runtime" && cargo update --dry-run --verbose) >"$tmp/update.out" 2>&1; then
   moves=$(grep -E '^[[:space:]]+(Updating|Adding|Removing|Downgrading) [A-Za-z0-9_-]+ v' "$tmp/update.out" |
     sed -E 's/^[[:space:]]+//')
   if [ -n "$moves" ]; then
@@ -87,7 +109,9 @@ fi
 
 # --- 3: toolchain -------------------------------------------------------------
 pinned=$(sed -nE 's/^channel = "([^"]+)"$/\1/p' "$runtime/rust-toolchain.toml")
-if curl -fsSL https://static.rust-lang.org/dist/channel-rust-stable.toml -o "$tmp/channel.toml"; then
+if ! want toolchain; then
+  :
+elif curl -fsSL https://static.rust-lang.org/dist/channel-rust-stable.toml -o "$tmp/channel.toml"; then
   stable=$(awk '/^\[pkg\.rust\]$/{f=1} f && /^version = /{print; exit}' "$tmp/channel.toml" |
     sed -E 's/^version = "([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
   if [ -z "$pinned" ] || [ -z "$stable" ]; then
@@ -105,7 +129,9 @@ else
 fi
 
 # --- 4: advisories ------------------------------------------------------------
-if (cd "$runtime" && cargo audit --version) >/dev/null 2>&1; then
+if ! want advisories; then
+  :
+elif (cd "$runtime" && cargo audit --version) >/dev/null 2>&1; then
   (cd "$runtime" && cargo audit) >"$tmp/audit.out" 2>&1
   status=$?
   if [ "$status" -eq 0 ]; then
@@ -122,6 +148,213 @@ if (cd "$runtime" && cargo audit --version) >/dev/null 2>&1; then
 else
   unexamined=1
   report "advisories: NOT EXAMINED — cargo-audit is not installed (cargo install cargo-audit --locked)"
+fi
+
+# --- 5: pins ------------------------------------------------------------------
+# BE-DEPS-006 pins every CI input the lockfile does not cover: each action to
+# a full commit SHA with its release tag in a same-line comment, each installed
+# tool to an exact version. A pin stays current only if something compares it
+# with upstream, and this is that comparison (022 task 3). An action pin is
+# current when its tag is the action's latest release and still names the
+# pinned commit; a tool pin is current when its version is the newest stable
+# one its registry publishes (crates.io, PyPI, or the latest LTS line for
+# Node); and every `toolchain:` input must equal rust-toolchain.toml's
+# channel, which check 3 holds against stable Rust. A reference with no pin at
+# all is reported too: there is nothing to compare, and the build runs
+# whatever its upstream points at that day.
+#
+# It reports and never edits. A red run names each pin and where it is, and
+# the bump lands as its own commit like any other fix this script names.
+ua="ductus check-runtime-currency (https://github.com/stonean/ductus)"
+pins_behind=""
+pins_unexamined=""
+note_behind() { pins_behind+="  $*"$'\n'; }
+note_unexamined() { pins_unexamined+="  $*"$'\n'; }
+# True when version $1 sorts strictly before version $2.
+ver_lt() { [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -1)" = "$1" ]; }
+
+# Look up the newest stable version a registry publishes: crates.io, PyPI, or
+# Node's latest LTS release. Prints nothing when the lookup fails.
+latest_crate() {
+  curl -fsSL -A "$ua" "https://crates.io/api/v1/crates/$1" 2>/dev/null |
+    jq -r '.crate.max_stable_version // empty' 2>/dev/null
+}
+latest_pypi() {
+  curl -fsSL "https://pypi.org/pypi/$1/json" 2>/dev/null | jq -r '.info.version // empty' 2>/dev/null
+}
+latest_node_lts() {
+  curl -fsSL https://nodejs.org/dist/index.json 2>/dev/null |
+    jq -r '[.[] | select(.lts != false)][0].version // empty' 2>/dev/null | sed 's/^v//'
+}
+
+# Compare one tool pin with its registry. $1 kind, $2 name, $3 pinned version,
+# $4 where it is pinned.
+check_tool() {
+  case "$1" in
+    crate) latest=$(latest_crate "$2") ;;
+    pypi) latest=$(latest_pypi "$2") ;;
+    node) latest=$(latest_node_lts) ;;
+  esac
+  if [ -z "$latest" ]; then
+    note_unexamined "$2 $3 ($4): could not read the latest version from its registry"
+  elif ver_lt "$3" "$latest"; then
+    note_behind "$2 pins $3, latest is $latest ($4)"
+  fi
+}
+
+if want pins; then
+  pin_files=()
+  while IFS= read -r f; do
+    [ -n "$f" ] && pin_files+=("$f")
+  done < <(cd "$root" && git ls-files -- '.github/workflows/*.yml' '.github/workflows/*.yaml' \
+    'framework/templates/ci/*.yml' 'framework/templates/ci/*.yaml')
+
+  if [ "${#pin_files[@]}" -eq 0 ]; then
+    unexamined=1
+    report "pins: NOT EXAMINED — no tracked workflow or CI template matched, so the enumeration is broken, not the pins"
+  else
+    : >"$tmp/actions.tsv"
+    : >"$tmp/tools.tsv"
+    # Every non-comment line, as `file:line:text`.
+    (cd "$root" && grep -H -n -v -E '^[[:space:]]*#' "${pin_files[@]}") >"$tmp/lines.txt"
+
+    while IFS= read -r hit; do
+      where=$(printf '%s\n' "$hit" | cut -d: -f1-2)
+      text=$(printf '%s\n' "$hit" | cut -d: -f3-)
+
+      # Actions: `uses: owner/repo[/path]@ref # tag`. A local reusable
+      # workflow (`./…`) is this repository's own file and has no upstream.
+      if printf '%s\n' "$text" | grep -qE '^[[:space:]]*(-[[:space:]]+)?uses:[[:space:]]'; then
+        ref=$(printf '%s\n' "$text" | sed -E 's/^[[:space:]]*(-[[:space:]]+)?uses:[[:space:]]+([^[:space:]]+).*/\2/')
+        case "$ref" in ./*) continue ;; esac
+        sha=${ref##*@}
+        repo=$(printf '%s\n' "${ref%@*}" | cut -d/ -f1-2)
+        tag=$(printf '%s\n' "$text" | sed -nE 's/.*[[:space:]]#[[:space:]]*([^[:space:]]+)[[:space:]]*$/\1/p')
+        if ! printf '%s\n' "$sha" | grep -qE '^[0-9a-f]{40}$'; then
+          note_behind "$ref is not pinned to a commit SHA ($where)"
+        elif [ -z "$tag" ]; then
+          note_behind "$repo@$sha has no release tag in a comment to compare ($where)"
+        else
+          printf '%s\t%s\t%s\t%s\n' "$repo" "$sha" "$tag" "$where" >>"$tmp/actions.tsv"
+        fi
+        continue
+      fi
+
+      # taiki-e/install-action's `tool:` input: each tool as `name@version`.
+      if printf '%s\n' "$text" | grep -qE '^[[:space:]]*tool:[[:space:]]'; then
+        for item in $(printf '%s\n' "$text" | sed -E 's/^[[:space:]]*tool:[[:space:]]*//' | tr ',' ' '); do
+          case "$item" in
+            *@*) printf 'crate\t%s\t%s\t%s\n' "${item%@*}" "${item#*@}" "$where" >>"$tmp/tools.tsv" ;;
+            *) note_behind "tool $item has no pinned version ($where)" ;;
+          esac
+        done
+        continue
+      fi
+
+      # `cargo install` must name an exact version; cargo verifies the crate
+      # against the registry's checksum, and a published version never changes.
+      if printf '%s\n' "$text" | grep -qE '(^|[^[:alnum:]_-])cargo install[[:space:]]'; then
+        name=$(printf '%s\n' "$text" |
+          sed -E 's/.*cargo install[[:space:]]+((--[a-z-]+[[:space:]]+)*)([A-Za-z0-9_-]+).*/\3/')
+        version=$(printf '%s\n' "$text" | sed -nE 's/.*[[:space:]]--version[[:space:]]+=?([0-9][^[:space:]]*).*/\1/p')
+        if [ -z "$version" ]; then
+          note_behind "cargo install $name has no pinned version ($where)"
+        else
+          printf 'crate\t%s\t%s\t%s\n' "$name" "$version" "$where" >>"$tmp/tools.tsv"
+        fi
+        continue
+      fi
+
+      # pip installs only in hash-checking mode, from requirements that pin
+      # `name==version --hash=sha256:…`.
+      if printf '%s\n' "$text" | grep -qE '(^|[^[:alnum:]_-])pip3? install[[:space:]]'; then
+        if ! printf '%s\n' "$text" | grep -q -- '--require-hashes'; then
+          note_behind "pip install without --require-hashes ($where)"
+        fi
+        continue
+      fi
+      if printf '%s\n' "$text" | grep -qE '[A-Za-z0-9_.-]+==[0-9][^[:space:]]*[[:space:]]+--hash=sha256:[0-9a-f]{64}'; then
+        req=$(printf '%s\n' "$text" | grep -oE '[A-Za-z0-9_.-]+==[0-9][^[:space:]]*[[:space:]]+--hash' | head -1)
+        req=${req%%[[:space:]]*}
+        printf 'pypi\t%s\t%s\t%s\n' "${req%%==*}" "${req#*==}" "$where" >>"$tmp/tools.tsv"
+        continue
+      fi
+
+      # setup-node's Node must name an exact version.
+      if printf '%s\n' "$text" | grep -qE '^[[:space:]]*node-version:[[:space:]]'; then
+        version=$(printf '%s\n' "$text" | sed -E "s/^[[:space:]]*node-version:[[:space:]]*['\"]?([^'\"[:space:]]*).*/\1/")
+        if printf '%s\n' "$version" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+          printf 'node\tnode\t%s\t%s\n' "$version" "$where" >>"$tmp/tools.tsv"
+        else
+          note_behind "node-version '$version' is not an exact version ($where)"
+        fi
+        continue
+      fi
+
+      # dtolnay/rust-toolchain's `toolchain:` input moves with the toolchain file.
+      if printf '%s\n' "$text" | grep -qE '^[[:space:]]*toolchain:[[:space:]]'; then
+        version=$(printf '%s\n' "$text" | sed -E "s/^[[:space:]]*toolchain:[[:space:]]*['\"]?([^'\"[:space:]]*).*/\1/")
+        printf 'toolchain\trust\t%s\t%s\n' "$version" "$where" >>"$tmp/tools.tsv"
+        continue
+      fi
+    done <"$tmp/lines.txt"
+
+    # One lookup per distinct pin, however many lines repeat it.
+    action_pins=0
+    while IFS=$'\t' read -r repo sha tag; do
+      action_pins=$((action_pins + 1))
+      refs=$(awk -F'\t' -v r="$repo" -v s="$sha" -v t="$tag" '$1 == r && $2 == s && $3 == t { print $4 }' "$tmp/actions.tsv")
+      count=$(printf '%s\n' "$refs" | wc -l | tr -d ' ')
+      first=$(printf '%s\n' "$refs" | head -1)
+      at="$count reference(s), first at $first"
+      if ! command -v gh >/dev/null 2>&1; then
+        note_unexamined "$repo $tag ($at): gh is not installed"
+        continue
+      fi
+      commit=$(gh api "repos/$repo/commits/$tag" --jq .sha 2>/dev/null)
+      latest=$(gh api "repos/$repo/releases/latest" --jq .tag_name 2>/dev/null)
+      if [ -z "$commit" ] || [ -z "$latest" ]; then
+        note_unexamined "$repo $tag ($at): could not read the tag's commit or the latest release from GitHub"
+      else
+        if [ "$commit" != "$sha" ]; then
+          note_behind "$repo pins $sha as $tag, but $tag now names $commit ($at)"
+        fi
+        if ver_lt "${tag#v}" "${latest#v}"; then
+          note_behind "$repo pins $tag, latest release is $latest ($at)"
+        fi
+      fi
+    done < <(cut -f1-3 "$tmp/actions.tsv" | sort -u)
+
+    tool_pins=0
+    while IFS=$'\t' read -r kind name version; do
+      tool_pins=$((tool_pins + 1))
+      refs=$(awk -F'\t' -v k="$kind" -v n="$name" -v v="$version" '$1 == k && $2 == n && $3 == v { print $4 }' "$tmp/tools.tsv")
+      count=$(printf '%s\n' "$refs" | wc -l | tr -d ' ')
+      at="$count reference(s), first at $(printf '%s\n' "$refs" | head -1)"
+      if [ "$kind" = toolchain ]; then
+        if [ "$version" != "$pinned" ]; then
+          note_behind "toolchain: $version differs from runtime/rust-toolchain.toml's $pinned ($at)"
+        fi
+      else
+        check_tool "$kind" "$name" "$version" "$at"
+      fi
+    done < <(cut -f1-3 "$tmp/tools.tsv" | sort -u)
+
+    scope="$action_pins action pin(s) and $tool_pins tool pin(s) across ${#pin_files[@]} file(s)"
+    if [ -n "$pins_behind" ]; then
+      behind=1
+      report "pins: behind — $(printf '%s' "$pins_behind" | grep -c .) to update, from $scope:"
+      printf '%s' "$pins_behind"
+    fi
+    if [ -n "$pins_unexamined" ]; then
+      unexamined=1
+      report "pins: NOT EXAMINED — $(printf '%s' "$pins_unexamined" | grep -c .) of $scope:"
+      printf '%s' "$pins_unexamined"
+    fi
+    if [ -z "$pins_behind" ] && [ -z "$pins_unexamined" ]; then
+      report "pins: current ($scope)"
+    fi
+  fi
 fi
 
 if [ "$behind" -eq 1 ]; then

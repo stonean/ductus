@@ -23,6 +23,8 @@ on:
       - 'install.sh'
       - 'scripts/tests/test-install.sh'
       - 'scripts/tests/test-lint-release-ordering.sh'
+      - 'scripts/check-runtime-currency.sh'
+      - 'scripts/tests/test-check-runtime-currency.sh'
       - '.github/workflows/runtime-release.yml'
       - '.github/workflows/framework-checks.yml'
       - 'runtime/legacy-prose-commands.txt'
@@ -133,6 +135,14 @@ jobs:
       # on an adopter's machine.
       - name: (l) Installer source resolution
         run: bash scripts/tests/test-install.sh
+
+      # (m) The weekly currency run is the update process for the CI pins
+      # (BE-DEPS-006, 022 task 3), and it runs only on a schedule, so a
+      # comparison that stopped comparing would read as current for weeks.
+      # The test drives the pins check against stubbed lookups and shows it
+      # fails on each case it claims to catch.
+      - name: (m) Pins currency check
+        run: bash scripts/tests/test-check-runtime-currency.sh
 
       # (j) The shell surface is the framework's own machinery — the audit
       # families that form the release gate, the generators, the lints, the

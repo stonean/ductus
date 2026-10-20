@@ -1,7 +1,8 @@
 name: runtime-currency
 
 # Weekly check that the runtime is current: its lockfile, its direct
-# dependencies' major versions, its pinned toolchain, and its advisories. The
+# dependencies' major versions, its pinned toolchain, its advisories, and the
+# CI pins the lockfile does not cover (actions and installed tools). The
 # logic lives in scripts/check-runtime-currency.sh, the project's own command
 # for it, so a contributor runs exactly what this job runs.
 #
@@ -11,7 +12,7 @@ name: runtime-currency
 # touched runtime/, so runtime.yml's cargo audit would have stayed silent
 # until the next such push happened to come along.
 # A red run is the signal: the fix is a lockfile refresh, a major bump, a
-# toolchain bump, or a dependency update, each committed on its own.
+# toolchain bump, a dependency update, or a pin bump, each committed on its own.
 on:
   schedule:
     # Mondays 06:17 UTC — off the hour, where scheduled runs queue.
@@ -41,5 +42,9 @@ jobs:
         with:
           tool: cargo-audit@0.22.2
 
+      # The pins check reads each pinned action's tag and latest release
+      # through `gh api`, which needs a token on a runner.
       - name: scripts/check-runtime-currency.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: ./scripts/check-runtime-currency.sh
