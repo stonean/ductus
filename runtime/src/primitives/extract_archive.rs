@@ -5,9 +5,10 @@
 //! via `flate2` + `tar`, zip via the `zip` crate. Every entry path is
 //! validated before anything is written for it: an absolute path, a `..`
 //! component, or a name that is not UTF-8 yields
-//! [`PrimitiveError::UnsafeArchivePath`], and a path that a link already
-//! under `dest` would carry outside it yields [`PrimitiveError::InvalidPath`]
-//! naming the link.
+//! [`PrimitiveError::UnsafeArchivePath`] (on Windows the `tar` crate refuses
+//! a tar entry name that is not UTF-8 first, as [`PrimitiveError::Io`]), and
+//! a path that a link already under `dest` would carry outside it yields
+//! [`PrimitiveError::InvalidPath`] naming the link.
 //!
 //! On Unix, file permissions are preserved from the archive's entry
 //! metadata (`tar` header mode bits; zip `unix_mode`), masked to the
@@ -51,7 +52,8 @@ use crate::schema::primitives::{ExtractArchiveArgs, ExtractArchiveResult};
 /// - [`PrimitiveError::UnknownArchiveFormat`] when the format cannot be inferred
 ///   and no override was supplied.
 /// - [`PrimitiveError::UnsafeArchivePath`] for an entry with an absolute
-///   path, a `..` component, or a name that is not UTF-8.
+///   path, a `..` component, or a name that is not UTF-8 (on Windows a tar
+///   entry name that is not UTF-8 fails earlier, as [`PrimitiveError::Io`]).
 /// - [`PrimitiveError::InvalidPath`] for an entry a link already under
 ///   `dest` would carry outside it, naming the link.
 /// - [`PrimitiveError::InvalidPath`] when `archive` or `dest` is not an
