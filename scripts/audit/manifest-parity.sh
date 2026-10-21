@@ -100,9 +100,9 @@ done
 # that names an entry is not one. A step is a numbered line (`4.` or `4)`) and ends at the next
 # one or at any other line, a marker line aside, that starts in column 0; a line inside a fenced
 # block is none of these, and a fence closes only on its opener's character
-# repeated at least as often. Two shapes the scan cannot read,
-# an unclosed fence and an indented heading, markdownlint reports first
-# (MD031, MD023).
+# repeated at least as often. An unclosed fence is reported, since the
+# scan cannot see past it; an indented heading it reads as text, and
+# markdownlint reports it (MD023).
 stray_entries() {
   awk -v pat="$2" '
     {
@@ -112,7 +112,7 @@ stray_entries() {
         run = substr(line, RSTART, RLENGTH)
         gsub(/ /, "", run)
         rest = substr(line, RSTART + RLENGTH)
-        if (!infence) { infence = 1; fch = substr(run, 1, 1); flen = length(run); next }
+        if (!infence) { infence = 1; fch = substr(run, 1, 1); flen = length(run); fstart = FNR; next }
         if (substr(run, 1, 1) == fch && length(run) >= flen && rest ~ /^[ \t]*$/) { infence = 0; next }
       }
       if (infence) next
@@ -129,6 +129,7 @@ stray_entries() {
       }
       if (!inblock && !exempt && line ~ pat && line !~ /"type": *"deny"/) print "entry " FNR
     }
+    END { if (infence) print "fence " fstart }
   ' "$1"
 }
 bullet='^[ \t]*[-*+][ \t]+'
@@ -136,7 +137,10 @@ for pair in "$claude_file:$bullet"'.*`mcp__ductus(__[^`]*)?`' "$auggie_file:$bul
   f="${pair%%:*}"
   while IFS=' ' read -r kind line_no; do
     [ -n "$line_no" ] || continue
-    if [ "$kind" = block ]; then
+    if [ "$kind" = fence ]; then
+      emit "$f:$line_no" "a fence opened here is never closed, so the stray-entry scan cannot read the rest of the file" \
+        "close the fence"
+    elif [ "$kind" = block ]; then
       emit "$f:$line_no" "the generated block sits inside the retired or deny step, so its entries would be revoked or denied rather than granted" \
         "move the generated block, both markers with it, back into the canonical allow step"
     else

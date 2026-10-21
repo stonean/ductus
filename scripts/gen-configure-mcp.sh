@@ -35,9 +35,12 @@
 #                  →  OpenCode: a single `"ductus*": "allow"` glob (covers
 #                                  every tool; not per-tool enumerated)
 #
-# Exits non-zero, writing nothing, if a source file's markers are missing,
-# repeated, or out of order: the splice copies every line outside the two
-# markers, so a repeated or swapped marker would drop the lines between them.
+# Exits non-zero, and writes nothing to that file, if a source file's markers
+# are missing, repeated, sharing a line, or out of order. The splice drops
+# every line from a start marker to the next end marker, so a second start
+# would drop the lines between the two starts, and an end above the start
+# every line after the start; refusing a repeated end is a precaution, since
+# the splice loses nothing to one. The other files are still processed.
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -117,27 +120,36 @@ if [ "$tool_count" -eq 0 ]; then
 fi
 
 # Splice a block file between markers in a target file. Fails unless each
-# marker appears exactly once and the end follows the start: the awk below
-# drops every line from a start marker to the next end marker, so a second
-# start, or an end above the start, would delete the lines in between.
+# marker appears exactly once, on a line of its own, with the end after the
+# start (the header says what the awk below would drop otherwise). Each
+# test compares as a string first, so a value that is not a line number
+# refuses rather than passing an integer test by erroring.
 splice() {
   local file="$1"
   local block_file="$2"
   local marker n start_line end_line
+  if [ ! -f "$file" ]; then
+    echo "Missing source $file" >&2
+    return 5
+  fi
   for marker in start end; do
-    n="$(grep -c "<!-- generated:mcp-allow:$marker -->" "$file" || true)"
-    if [ "$n" -eq 0 ]; then
+    n="$(grep -a -c "<!-- generated:mcp-allow:$marker -->" "$file" || true)"
+    if [ "$n" = 0 ]; then
       echo "Missing marker <!-- generated:mcp-allow:$marker --> in $file" >&2
       return 5
     fi
-    if [ "$n" -gt 1 ]; then
+    if [ "$n" != 1 ]; then
       echo "Marker <!-- generated:mcp-allow:$marker --> appears $n times in $file; expected once" >&2
       return 5
     fi
   done
-  start_line="$(grep -n '<!-- generated:mcp-allow:start -->' "$file" | cut -d: -f1)"
-  end_line="$(grep -n '<!-- generated:mcp-allow:end -->' "$file" | cut -d: -f1)"
-  if [ "$start_line" -ge "$end_line" ]; then
+  start_line="$(grep -a -n '<!-- generated:mcp-allow:start -->' "$file" | cut -d: -f1)"
+  end_line="$(grep -a -n '<!-- generated:mcp-allow:end -->' "$file" | cut -d: -f1)"
+  if [ "$start_line" = "$end_line" ]; then
+    echo "Markers <!-- generated:mcp-allow:start --> and <!-- generated:mcp-allow:end --> share line $start_line in $file" >&2
+    return 5
+  fi
+  if ! [ "$start_line" -lt "$end_line" ] 2>/dev/null; then
     echo "Marker <!-- generated:mcp-allow:end --> (line $end_line) comes before the start marker (line $start_line) in $file" >&2
     return 5
   fi

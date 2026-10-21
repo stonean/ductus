@@ -7,8 +7,9 @@
 #   B. antigravity.md's generated block is the single `mcp(ductus/*)` wildcard
 #   C. claude.md / auggie.md still carry their per-tool blocks (regression)
 #   D. opencode.md's generated block is the single `"ductus*": "allow"` glob
-#   E. a configure file whose markers are swapped or repeated is refused,
-#      and left byte-identical (the splice would drop the lines between)
+#   E. a configure file whose markers are swapped or repeated is refused for
+#      that reason and left byte-identical (the splice would drop every line
+#      after a misplaced start, or between two starts)
 #
 # Usage: scripts/tests/test-gen-configure-mcp.sh
 
@@ -77,6 +78,13 @@ trap 'rm -rf "$scratch"' EXIT
 mkdir -p "$scratch/scripts" "$scratch/framework/bootstrap/configure"
 cp "$GEN" "$scratch/scripts/"
 cp "$REPO_ROOT/framework/runtime-tools.txt" "$scratch/framework/"
+cp "$CLAUDE" "$AUGGIE" "$ANTIGRAVITY" "$OPENCODE" "$scratch/framework/bootstrap/configure/"
+# Control: the scratch tree is complete, so a refusal below is the marker's.
+if "$scratch/scripts/gen-configure-mcp.sh" --dry-run >/dev/null 2>&1; then
+  pass "E: the scratch copy is in sync before any marker is changed"
+else
+  fail "E: the scratch copy fails before any marker is changed, so the cases below prove nothing"
+fi
 for case_name in swapped repeated; do
   cp "$CLAUDE" "$AUGGIE" "$ANTIGRAVITY" "$OPENCODE" "$scratch/framework/bootstrap/configure/"
   target="$scratch/framework/bootstrap/configure/claude.md"
@@ -84,12 +92,16 @@ for case_name in swapped repeated; do
     sed -e 's/generated:mcp-allow:start/generated:mcp-allow:TMP/' \
         -e 's/generated:mcp-allow:end/generated:mcp-allow:start/' \
         -e 's/generated:mcp-allow:TMP/generated:mcp-allow:end/' "$CLAUDE" > "$target"
+    reason='comes before the start marker'
   else
     awk '/^2\. /{print "   <!-- generated:mcp-allow:start -->"} {print}' "$CLAUDE" > "$target"
+    reason='appears 2 times'
   fi
   cp "$target" "$scratch/before.md"
-  if "$scratch/scripts/gen-configure-mcp.sh" >/dev/null 2>&1; then
+  if "$scratch/scripts/gen-configure-mcp.sh" >/dev/null 2>"$scratch/err"; then
     fail "E: a $case_name marker was not refused"
+  elif ! grep -qF "$reason" "$scratch/err"; then
+    fail "E: a $case_name marker was refused for another reason: $(head -n 1 "$scratch/err")"
   elif ! cmp -s "$target" "$scratch/before.md"; then
     fail "E: a $case_name marker was refused, but the file was rewritten"
   else

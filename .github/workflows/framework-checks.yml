@@ -25,6 +25,8 @@ on:
       - 'scripts/tests/test-lint-release-ordering.sh'
       - 'scripts/check-runtime-currency.sh'
       - 'scripts/tests/test-check-runtime-currency.sh'
+      - 'scripts/gen-configure-mcp.sh'
+      - 'scripts/tests/test-gen-configure-mcp.sh'
       - '.github/workflows/runtime-release.yml'
       - '.github/workflows/framework-checks.yml'
       - 'runtime/legacy-prose-commands.txt'
@@ -157,6 +159,14 @@ jobs:
       # fails on each case it claims to catch.
       - name: (m) Pins currency check
         run: bash scripts/tests/test-check-runtime-currency.sh
+
+      # (n) The configure generator runs on every commit through the
+      # pre-commit hook and rewrites four shipped permission files. Its test
+      # shows the four in sync and that a swapped or repeated marker is
+      # refused with the file left as it was, where the splice would
+      # otherwise delete lines.
+      - name: (n) Configure generator
+        run: bash scripts/tests/test-gen-configure-mcp.sh
 
       # (j) The shell surface is the framework's own machinery — the audit
       # families that form the release gate, the generators, the lints, the
