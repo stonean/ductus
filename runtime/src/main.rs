@@ -40,7 +40,7 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Command {
-    /// Start the MCP server, exposing every primitive as a tool.
+    /// Start the MCP server, exposing every primitive but `run-generator` as a tool.
     Mcp,
 
     /// Execute a slash command end-to-end via the subprocess interpreter.

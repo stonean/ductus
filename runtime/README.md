@@ -13,7 +13,7 @@ Every `ductus-v*` tag publishes `ductus-<target>.tar.gz` with a `.sha256` sideca
 ## Usage
 
 ```bash
-ductus mcp                # start an MCP server exposing every primitive as a tool
+ductus mcp                # start an MCP server exposing every primitive but run-generator as a tool
 ductus exec <command>     # interpret a slash command procedure end-to-end via JSON-over-stdio
 ductus parse <file>       # parse a procedure file and print its AST (debug)
 ductus parse --check <f>  # exit 0 when it parses, 2 when it is legacy prose, 1 when it is invalid

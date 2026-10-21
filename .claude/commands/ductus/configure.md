@@ -95,7 +95,6 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
    - `mcp__ductus__traverse-deps`
    - `mcp__ductus__check-rule-ids`
    - `mcp__ductus__check-promotion-coverage`
-   - `mcp__ductus__run-generator`
    - `mcp__ductus__lint-markdown`
    - `mcp__ductus__gate-confirm`
    - `mcp__ductus__fetch-archive`
@@ -180,6 +179,9 @@ Configure `.claude/settings.local.json` with the permissions needed for slash co
    **Path-scoped `Write(...)`** (dropped from the canonical set alongside this list, spec 023 `configure-inert-write-path-entries`; file permission checks match only `Edit(path)` rules, so these granted nothing their `Edit(...)` siblings in step 2 had not already granted, and the host warned about each at session start):
    - `Write(.ductus/session.toml)`
    - `Write(.ductus/config.toml)`
+
+   **A tool the server no longer serves** (spec 022 task 14: `run-generator` runs any project file with `bash`, so it is a `ductus run-generator` subcommand and not an MCP tool; the entry names no tool, and is retired so it cannot approve one that takes the name later):
+   - `mcp__ductus__run-generator`
 
    **Why this list lives here and not in a `/ductus` migration.** The registry in `framework/migrations.toml` is the framework's usual home for adopter-side cleanup, and it is the wrong mechanism for this one. Its `[migrations].last_applied` marker lives in the **committed** `.ductus/config.toml`, while this file is **per-contributor and gitignored** — so the first teammate to run `/ductus` would mark the entry applied for the whole repo and every other teammate would keep the retired entries forever. `/ductus` also never writes the full permission set (it seeds only the bootstrap entries and directs the operator here). This command has neither problem: it is the sole owner of this file, it runs per-contributor, and it is idempotent, so retirement simply happens on the next run for each person who runs it.
 

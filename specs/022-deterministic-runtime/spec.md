@@ -79,7 +79,7 @@ Primitives are the deterministic operations the interpreter offers procedures. E
 - `resolve-anchor` — verify every `§<anchor>` reference resolves to a `<!-- §anchor -->` marker.
 - `traverse-deps` — verify spec dependencies exist as directories and have compatible status.
 - `check-rule-ids` — verify cited rule IDs exist in loaded rule files and aren't deprecated.
-- `run-generator` — invoke a bash generator in `--dry-run` mode and report drift.
+- `run-generator` — invoke a bash generator in `--dry-run` mode and report drift. A `ductus run-generator` subcommand and a `ductus exec` step, never an MCP tool: it runs any project file with `bash` (task 14, the owner's answer (b)).
 - `lint-markdown` — wrap `npx markdownlint-cli2`.
 - `gate-confirm` — surface a pipeline gate to the user through the agent host and await confirmation.
 
@@ -215,7 +215,7 @@ Stable relationships post-rewrite:
 ## Acceptance Criteria
 
 - [x] AC1: A single binary builds from this repo and exposes two surfaces: `ductus mcp` (MCP server) and `ductus exec <command> [args...]` (subprocess interpreter).
-- [x] AC2: Every primitive in [The primitive library](#the-primitive-library) is exposed as an MCP tool by `ductus mcp`, under a bare `<verb>-<noun>` name that each host prefixes with its server name, as §runtime-host-integration states.
+- [x] AC2: Every primitive in [The primitive library](#the-primitive-library) but `run-generator` is exposed as an MCP tool by `ductus mcp`, under a bare `<verb>-<noun>` name that each host prefixes with its server name, as §runtime-host-integration states; `run-generator` is not served (task 14).
 - [x] AC3: The subprocess interpreter's JSON-over-stdio message protocol is documented in the runtime's docs and stable enough for third-party agent hosts to integrate against.
 - [x] AC4: The six initial-release slash commands (`/ductus:status`, `/ductus:target`, `/ductus:analyze`, `/ductus:implement`, `/ductus:plan`, `/ductus:specify`) have their prose Instructions sections rewritten to follow the structural conventions and parse cleanly under the runtime parser. The remaining three (`/ductus:clarify`, `/ductus:review`, `/ductus:groom`) are not rewritten in this spec — they ship as scenarios.
 - [x] AC5: The three initial-release LLM extension points (`assessSpecQuality`, `writeCode`, `writeSpecBody`) each have a request schema, response schema, and a corresponding HTML-comment marker in the relevant Instructions step.

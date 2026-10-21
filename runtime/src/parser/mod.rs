@@ -49,8 +49,8 @@ use crate::schema::procedure::{Procedure, SourceRange, Step, StepNumber};
 
 /// Closed set of primitive names recognized by the parser — defined from
 /// the canonical registry (`crate::schema::registry::PRIMITIVE_REGISTRY`),
-/// so it is identical to the MCP tool list in
-/// [`crate::mcp::server::TOOL_NAMES`] by construction.
+/// so it holds every MCP tool name ([`crate::mcp::server::tool_names`]) and
+/// the [`crate::schema::registry::CLI_ONLY_PRIMITIVES`] by construction.
 pub const PRIMITIVE_NAMES: &[&str] = crate::schema::registry::PRIMITIVE_REGISTRY;
 
 /// Parse errors raised by [`parse`] and [`check`].
@@ -981,15 +981,16 @@ mod tests {
         // Guard against the six-site wiring gap (AGENTS.md gotcha,
         // recorded 2026-06-14 for `resolve-references`): a primitive
         // exposed over MCP must also be recognizable in command prose.
-        // The two registries are exact-set equal today; if a deliberate
-        // asymmetry ever appears, downgrade this to a superset check
-        // with a comment naming the exception.
+        // The parser recognizes every MCP tool plus the CLI-only
+        // primitives, which the server deliberately does not serve
+        // (`CLI_ONLY_PRIMITIVES`, 022 task 14).
         use std::collections::BTreeSet;
         let parser: BTreeSet<&str> = PRIMITIVE_NAMES.iter().copied().collect();
-        let mcp: BTreeSet<&str> = crate::mcp::server::TOOL_NAMES.iter().copied().collect();
+        let mut served: BTreeSet<&str> = crate::mcp::server::tool_names().collect();
+        served.extend(crate::schema::registry::CLI_ONLY_PRIMITIVES.iter().copied());
         assert_eq!(
-            parser, mcp,
-            "parser PRIMITIVE_NAMES and mcp TOOL_NAMES diverged — wire the missing sites (see AGENTS.md Gotchas)"
+            parser, served,
+            "parser PRIMITIVE_NAMES and the MCP tool names plus CLI_ONLY_PRIMITIVES diverged — wire the missing sites (see AGENTS.md Gotchas)"
         );
     }
 

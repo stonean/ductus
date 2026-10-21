@@ -155,7 +155,7 @@ Re-read 1 (2026-10-21, of `2aec1962` and `54068808`): 1 MUST, 2 SHOULD, 5 notes.
 
 The analysis found `BE-AUTHZ-004` firing: "A caller MUST NOT be able to grant permissions they do not themselves hold. Role-management and permission-grant operations MUST enforce a ceiling rule". `merge-permissions` (scenario `framework-list-dedup`, Part A) appends a caller-supplied `allow` set to the permission file at a caller-supplied path and checks the entries against nothing. A blocking finding is fixed or routed, never discarded.
 
-**Re-measure before asking.** Task 16 was answered (b) on 2026-10-21 (plan.md, Agent reach), so this question is asked again under that posture, after task 14, with the CLI and shell surfaces in scope; the options below are superseded. This measurement counted only the MCP surface. `/ductus`'s Permission Setup seeds a shell allow for the ductus CLI on Claude (`Bash(.ductus/bin/ductus *)`, `Bash(~/.ductus/bin/ductus *)`), Auggie and OpenCode (`framework/bootstrap/ductus.md` §Agent Registry, `settings_template`), so every primitive below also runs through the shell with no prompt, where an MCP flag does not reach; re-read 2 wrote `Bash(*)` with `ductus merge-permissions` that way in a scratch project. Option (c)'s settings-file list is also short: Claude merges `permissions.allow` from `.claude/settings.json` and `~/.claude/settings.json` as well.
+**Re-measure before asking.** Task 16 was answered (b) on 2026-10-21 (plan.md, Agent reach), so this question is asked again under that posture, after task 14, with the CLI and shell surfaces in scope; the options below are superseded. The owner also ruled out any mechanism an auto mode cannot waive, so an option may not use `anthropic/requiresUserInteraction` or an `ask` rule. This measurement counted only the MCP surface. `/ductus`'s Permission Setup seeds a shell allow for the ductus CLI on Claude (`Bash(.ductus/bin/ductus *)`, `Bash(~/.ductus/bin/ductus *)`), Auggie and OpenCode (`framework/bootstrap/ductus.md` §Agent Registry, `settings_template`), so every primitive below also runs through the shell with no prompt, where an MCP flag does not reach; re-read 2 wrote `Bash(*)` with `ductus merge-permissions` that way in a scratch project. Option (c)'s settings-file list is also short: Claude merges `permissions.allow` from `.claude/settings.json` and `~/.claude/settings.json` as well.
 
 Measured 2026-10-21. This replaces the first draft, which counted four configure steps calling `merge-permissions` where there is one, and offered a ceiling in `merge-permissions` as bounding every agent, which routes 2 to 4 below disprove.
 
@@ -257,8 +257,10 @@ Both options leave the `lint-markdown` route (task 15, item 1): markdownlint-cli
 
 Recommended: (b). Both reach the same state at the next release, since task 18 is decided and applied before it (the release is held). (b) gets there reopening one done spec instead of three, keeps the CLI use 067 sanctions behind the host's prompt, and leaves 026's orchestration decision standing. What it trades is that its CLI closure rests on task 18 narrowing the allow on Claude, Auggie and OpenCode. If task 18's measurement finds an agent where that cannot be done, retiring it as in (a) is the fallback, and task 18's question will say so.
 
+Resolved 2026-10-21 by the owner: (b). Applied: `run-generator` is in `CLI_ONLY_PRIMITIVES` (`runtime/src/schema/registry.rs`) and not served; `runtime/tests/mcp.rs` holds the served tools and `runtime-tools.txt` set-equal to the registry less that list, and `run_generator_is_not_an_mcp_tool` fails if it is served again (both mutation-checked); `mcp__ductus__run-generator` is on Claude's retired list; `ductus.md`'s State-A rule, `audit.md` step 1, `analyze.md`'s drift check, 022's `spec.md` (AC2, the primitive library) and plan.md follow; 029 reopens for its scenario's list. The owner added, the same day, that the operator must still be able to waive these prompts with an auto mode, so no part uses an `ask` rule or `anthropic/requiresUserInteraction` (plan.md, Agent reach).
+
 - [x] Measure and write the measured question here
-- [ ] The owner answers (a) or (b); apply the answer
+- [x] The owner answers (a) or (b); apply the answer
 
 ## 15. Disposition three findings from task 11's measurement
 
@@ -302,6 +304,8 @@ Resolved 2026-10-21 by the owner: (b), bounded agent. Recorded in plan.md, Agent
 ## 18. Decide: the seed's and the canonical sets' entries that can run or write anything (task 16 (b))
 
 `/ductus`'s Permission Setup seeds, on every run, shell allows whose commands can run or write anything (task 16: the two ductus CLI paths, `awk`, `curl`, `cp`, `tar`, `ln`, `git config`), and `/configure`'s canonical sets allow `make` beside a file writer on Claude, Auggie, OpenCode and Antigravity. Under task 16 (b) each is dropped or narrowed to what a ductus step needs, and the rest goes to the host's prompt.
+
+Constraints from earlier answers: the narrowed ductus CLI allow leaves out `run-generator` and `exec` (task 14 (b)); an entry is narrowed or dropped from an allow list, never turned into an `ask` rule, so an auto mode still waives the prompt (the owner, 2026-10-21). Auggie's configure set keeps no `mcp:ductus:run-generator` entry after task 14, but an Auggie project that ran `/configure` before still holds one, which names no tool; whether Auggie's retired list removes it belongs here.
 
 - [ ] Measure, per agent, which step uses each entry, whether the host's rule grammar can narrow it to that use, and the prompts a bootstrap and a `/configure` run would then show; write the measured question here, and ask the owner after task 17
 - [ ] Apply the answer

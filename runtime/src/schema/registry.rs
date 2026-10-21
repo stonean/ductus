@@ -1,16 +1,17 @@
 //! Canonical primitive-name registry.
 //!
 //! Single source of truth for the runtime's primitive names. The parser's
-//! `PRIMITIVE_NAMES` and the MCP server's `TOOL_NAMES` are both defined
-//! from [`PRIMITIVE_REGISTRY`], so neither can drift; `framework/runtime-tools.txt`
-//! (the shipped manifest) is asserted set-equal in `runtime/tests/mcp.rs`, and
+//! `PRIMITIVE_NAMES` is [`PRIMITIVE_REGISTRY`], and the MCP server's
+//! `tool_names` is the registry less [`CLI_ONLY_PRIMITIVES`], so neither can
+//! drift; `framework/runtime-tools.txt` (the shipped manifest of MCP tools)
+//! is asserted set-equal to the served tools in `runtime/tests/mcp.rs`, and
 //! the interpreter's `dispatch_primitive` is asserted to handle every registry
 //! name in `interpreter::tests`.
 //!
 //! Two hand-written surfaces cannot consume a const slice — the rmcp
 //! `#[tool]` methods and the clap subcommand enum in `main.rs` — and each is
 //! held to this slice by a **set-equality** test instead: `tests/mcp.rs` lists
-//! the served tools against `TOOL_NAMES`, and
+//! the served tools against `tool_names`, and
 //! `main::tests::every_registry_primitive_has_a_clap_subcommand` compares the
 //! subcommand names clap exposes against this registry. Both directions fail:
 //! a registry name with no surface is unreachable, and a surface with no
@@ -24,8 +25,9 @@
 //! rather than `pub(crate)`: `main.rs` is a separate crate from the library
 //! and has to be able to name the canonical set to be tested against it.
 
-/// Every primitive name exposed by the runtime. Its order is its own — the
-/// tests compare it with `framework/runtime-tools.txt` as a set. Names
+/// Every primitive name the runtime defines. Its order is its own — the
+/// tests compare it, less [`CLI_ONLY_PRIMITIVES`], with
+/// `framework/runtime-tools.txt` as a set. Names
 /// are bare `<verb>-<noun>` strings; server-level namespacing (`ductus`) is
 /// supplied by the host's MCP registration.
 pub const PRIMITIVE_REGISTRY: &[&str] = &[
@@ -91,3 +93,14 @@ pub const PRIMITIVE_REGISTRY: &[&str] = &[
     "retire-feature",
     "invalidate-review",
 ];
+
+/// Primitives the MCP server does not serve, each reachable only through the
+/// `ductus <name>` CLI and the `ductus exec` walker. A host auto-approves the
+/// server's tools, so a primitive here is one an agent must not be able to
+/// call without the host's prompt (022's plan, Agent reach):
+///
+/// - `run-generator` hands any project file to `bash`, so any ductus tool
+///   that writes a project file would otherwise make it run any command
+///   (022 task 14, the owner's answer (b)). Its CLI and `exec` forms are
+///   kept out of the shell allow `/ductus` seeds by 022 task 18.
+pub const CLI_ONLY_PRIMITIVES: &[&str] = &["run-generator"];

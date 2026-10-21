@@ -18,6 +18,11 @@
 # rather than a spelling — the separator is a host detail, and a new host
 # is one more spelling of the same namespace. The bare names are also the
 # `ductus <name>` subcommand identifiers.
+#
+# A primitive the server does not serve is not listed: `run-generator`
+# runs any project file with `bash`, so it is a `ductus run-generator`
+# subcommand and a `ductus exec` step but not a tool
+# (`CLI_ONLY_PRIMITIVES` in runtime/src/schema/registry.rs, spec 022 task 14).
 
 read-spec
 read-tasks
@@ -41,7 +46,6 @@ resolve-constitutions
 traverse-deps
 check-rule-ids
 check-promotion-coverage
-run-generator
 lint-markdown
 gate-confirm
 fetch-archive

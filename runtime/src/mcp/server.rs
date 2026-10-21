@@ -1,4 +1,4 @@
-//! MCP server exposing every primitive as a tool.
+//! MCP server exposing every primitive but the CLI-only ones as a tool.
 //!
 //! Tool names are bare `<verb>-<noun>` strings (e.g. `read-spec`).
 //! Server-level namespacing is supplied by the MCP server registration —
@@ -61,20 +61,24 @@ use crate::schema::primitives::{
     ResolveConstitutionsArgs, ResolveConstitutionsResult, ResolveFeatureArgs, ResolveFeatureResult,
     ResolveReferencesArgs, ResolveReferencesResult, ResolveSessionArgs, ResolveSessionResult,
     RetargetSessionsArgs, RetargetSessionsResult, RetireFeatureArgs, RetireFeatureResult,
-    RewriteSpecLinksArgs, RewriteSpecLinksResult, RunGeneratorArgs, RunGeneratorResult,
-    SetStatusArgs, SetStatusResult, TraverseDepsArgs, TraverseDepsResult, ValidateFrontmatterArgs,
-    ValidateFrontmatterResult, WriteAnalysisArgs, WriteAnalysisResult, WriteReviewArgs,
-    WriteReviewResult, WriteSessionArgs, WriteSessionResult,
+    RewriteSpecLinksArgs, RewriteSpecLinksResult, SetStatusArgs, SetStatusResult, TraverseDepsArgs,
+    TraverseDepsResult, ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteAnalysisArgs,
+    WriteAnalysisResult, WriteReviewArgs, WriteReviewResult, WriteSessionArgs, WriteSessionResult,
 };
+use crate::schema::registry::CLI_ONLY_PRIMITIVES;
 
-/// Canonical MCP tool names exposed by the server, in manifest order —
-/// defined from the canonical registry
-/// (`crate::schema::registry::PRIMITIVE_REGISTRY`), so it is identical to
-/// the parser's [`crate::parser::PRIMITIVE_NAMES`] by construction. The
-/// `#[tool]` methods below stay hand-written (the rmcp macro needs literal
-/// method items); `runtime/tests/mcp.rs` asserts every registry name is
-/// actually served.
-pub const TOOL_NAMES: &[&str] = crate::schema::registry::PRIMITIVE_REGISTRY;
+/// The MCP tool names the server exposes, in registry order: the canonical
+/// registry (`crate::schema::registry::PRIMITIVE_REGISTRY`) less
+/// [`CLI_ONLY_PRIMITIVES`], so it follows the parser's
+/// [`crate::parser::PRIMITIVE_NAMES`] by construction. The `#[tool]` methods
+/// below stay hand-written (the rmcp macro needs literal method items);
+/// `runtime/tests/mcp.rs` asserts the served set equals this one.
+pub fn tool_names() -> impl Iterator<Item = &'static str> {
+    crate::schema::registry::PRIMITIVE_REGISTRY
+        .iter()
+        .copied()
+        .filter(|name| !CLI_ONLY_PRIMITIVES.contains(name))
+}
 
 /// MCP server. Cloned per request by `rmcp`, so all state lives behind
 /// `Arc` and tool dispatch is `&self`.
@@ -225,8 +229,8 @@ fn strip_numeric_formats(value: &mut Value) {
 /// `fetch-archive` drives reqwest's *blocking* client, which panics when
 /// invoked from an async context in debug builds (reqwest guards
 /// blocking-in-async under `cfg(debug_assertions)`) and would pin a tokio
-/// worker thread for the whole download in release. `run-generator` and
-/// `lint-markdown` shell out via `std::process::Command`, and
+/// worker thread for the whole download in release. `lint-markdown` shells
+/// out via `std::process::Command`, and
 /// `extract-archive` decompresses entire archives — the same
 /// worker-pinning hazard, so they take the same seam. The git-walk tools
 /// (`check-stuck`, `compute-review-scope`, `derive-boundary`,
@@ -432,18 +436,6 @@ impl GovRuntimeServer {
         primitives::check_promotion_coverage::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
-    }
-
-    #[tool(
-        name = "run-generator",
-        description = "Invoke a bash generator with `--dry-run`; non-zero exit is drift."
-    )]
-    async fn run_generator(
-        &self,
-        params: Parameters<RunGeneratorArgs>,
-    ) -> Result<Json<RunGeneratorResult>, String> {
-        let repo = Arc::clone(&self.repo);
-        dispatch_blocking(move || primitives::run_generator::run(&params.0, repo.as_path())).await
     }
 
     #[tool(

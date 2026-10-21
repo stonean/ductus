@@ -1,6 +1,7 @@
 //! MCP server wiring built on `rmcp`.
 //!
-//! Exposes every primitive in [`crate::primitives`] as an MCP tool with
+//! Exposes every primitive in [`crate::primitives`] but the
+//! [`crate::schema::registry::CLI_ONLY_PRIMITIVES`] as an MCP tool with
 //! bare `<verb>-<noun>` names. Server-level namespacing comes from the
 //! adopter's `.mcp.json` server registration (typically `ductus`), so the
 //! Claude Code-side wire identifier is `mcp__ductus__<verb>-<noun>`. Tool

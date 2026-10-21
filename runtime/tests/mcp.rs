@@ -3,9 +3,10 @@
 //! Starts a `GovRuntimeServer` in-process on one half of a `tokio::io::duplex`
 //! pair and connects an `rmcp` client on the other half. The test:
 //!
-//! 1. Lists tools and asserts every name in `TOOL_NAMES` is present.
+//! 1. Lists tools and asserts the served set equals `tool_names()` (the
+//!    canonical primitive registry less `CLI_ONLY_PRIMITIVES`).
 //! 2. Asserts `framework/runtime-tools.txt` (the shipped manifest) is
-//!    set-equal to `TOOL_NAMES` (the canonical primitive registry).
+//!    set-equal to the same set.
 //! 3. Invokes read-only primitives against the shared fixture repo and
 //!    asserts each response is a structured JSON object — a sample of the
 //!    surface, not every tool.
@@ -23,7 +24,7 @@ use rmcp::ServiceExt;
 use rmcp::model::CallToolRequestParams;
 use serde_json::{Value, json};
 
-use ductus::mcp::server::{GovRuntimeServer, TOOL_NAMES};
+use ductus::mcp::server::{GovRuntimeServer, tool_names};
 
 fn fixture_repo() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/primitives/sample-repo")
@@ -114,20 +115,20 @@ fn structured_object(result: &rmcp::model::CallToolResult) -> &serde_json::Map<S
 async fn lists_every_manifest_tool_and_canonical_set() {
     let client = start_pair(fixture_repo()).await;
     let tools = client.list_tools(Option::default()).await.unwrap();
-    let names: Vec<&str> = tools.tools.iter().map(|t| t.name.as_ref()).collect();
+    let names: std::collections::BTreeSet<&str> =
+        tools.tools.iter().map(|t| t.name.as_ref()).collect();
+    let expected: std::collections::BTreeSet<&str> = tool_names().collect();
 
-    for expected in TOOL_NAMES {
-        assert!(
-            names.contains(expected),
-            "tool {expected} missing from list_tools (got {names:?})"
-        );
-    }
+    // The served tools must be set-EQUAL to `tool_names` (the registry less
+    // `CLI_ONLY_PRIMITIVES`): a name with no tool is unreachable over MCP,
+    // and a served tool outside the set is one the registry, or the
+    // CLI-only list, says must not be served.
+    assert_eq!(names, expected, "list_tools diverged from tool_names()");
 
-    // The shipped manifest must be set-EQUAL to the canonical registry
-    // (`TOOL_NAMES` is defined from `schema::registry::PRIMITIVE_REGISTRY`):
-    // a manifest entry with no tool is a phantom, and a tool missing from
-    // the manifest escapes the markdown-only pipeline's PATH assertion and
-    // the graceful-fallback lint.
+    // The shipped manifest must be set-EQUAL to the same set: a manifest
+    // entry with no tool is a phantom, and a tool missing from the manifest
+    // escapes the markdown-only pipeline's PATH assertion and the
+    // graceful-fallback lint.
     let manifest = fs::read_to_string(workspace_root().join("framework/runtime-tools.txt"))
         .expect("framework/runtime-tools.txt must exist (canonical manifest)");
     let manifest_names: std::collections::BTreeSet<&str> = manifest
@@ -135,10 +136,9 @@ async fn lists_every_manifest_tool_and_canonical_set() {
         .map(str::trim)
         .filter(|l| !l.is_empty() && !l.starts_with('#'))
         .collect();
-    let registry_names: std::collections::BTreeSet<&str> = TOOL_NAMES.iter().copied().collect();
     assert_eq!(
-        manifest_names, registry_names,
-        "framework/runtime-tools.txt diverged from the primitive registry"
+        manifest_names, expected,
+        "framework/runtime-tools.txt diverged from the served tools"
     );
 }
 
@@ -513,22 +513,34 @@ async fn derive_boundary_returns_diff_paths() {
     assert!(obj["first-commit"].is_string());
 }
 
-// Requires bash and Unix permission bits; the production run-generator
-// path is likewise Unix-oriented (see run_generator.rs's unix-gated tests).
+/// `run-generator` hands any project file to `bash`, so the server does not
+/// serve it (022 task 14): it is absent from `list_tools`, and a call to it
+/// is refused rather than run.
 #[cfg(unix)]
 #[tokio::test]
-async fn run_generator_invokes_bash_script() {
+async fn run_generator_is_not_an_mcp_tool() {
     let tmp = tempfile::tempdir().unwrap();
-    let script = tmp.path().join("gen.sh");
-    fs::write(&script, "#!/usr/bin/env bash\necho ok\nexit 0\n").unwrap();
-    let mut perms = fs::metadata(&script).unwrap().permissions();
-    perms.set_mode(0o755);
-    fs::set_permissions(&script, perms).unwrap();
+    let marker = tmp.path().join("ran");
+    fs::write(
+        tmp.path().join("gen.sh"),
+        format!("touch '{}'\n", marker.display()),
+    )
+    .unwrap();
     let client = start_pair(tmp.path().to_path_buf()).await;
-    let result = call_tool(&client, "run-generator", json!({"script": "gen.sh"})).await;
-    let obj = structured_object(&result);
-    assert_eq!(obj["drift"], false);
-    assert_eq!(obj["exit-code"], 0);
+    let tools = client.list_tools(Option::default()).await.unwrap();
+    assert!(
+        !tools.tools.iter().any(|t| t.name == "run-generator"),
+        "run-generator is served"
+    );
+    let args = json!({"script": "gen.sh"}).as_object().cloned().unwrap();
+    let outcome = client
+        .call_tool(CallToolRequestParams::new("run-generator".to_string()).with_arguments(args))
+        .await;
+    assert!(
+        outcome.is_err() || outcome.as_ref().is_ok_and(|r| r.is_error == Some(true)),
+        "a call to run-generator was not refused: {outcome:?}"
+    );
+    assert!(!marker.exists(), "the script ran");
 }
 
 #[tokio::test]

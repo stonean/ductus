@@ -1257,7 +1257,7 @@ mod tests {
     /// Registry pin: `dispatch_primitive` must handle every name in the
     /// canonical [`crate::schema::registry::PRIMITIVE_REGISTRY`]. The
     /// dispatch match is hand-written, so a primitive added to the registry
-    /// (and thereby to `PRIMITIVE_NAMES` / `TOOL_NAMES`) without a dispatch
+    /// (and thereby to `PRIMITIVE_NAMES` and the MCP tool names) without a dispatch
     /// arm would parse in command files but fail at execution with
     /// `unknown-primitive`. Empty args against a scratch tempdir: any
     /// outcome is acceptable except the unknown-primitive variant.
