@@ -1598,7 +1598,8 @@ pub(crate) fn contained_path(repo: &Path, rel: &str) -> Result<PathBuf> {
 /// - A path naming an existing directory, `.` among them, is walked the same
 ///   way: globby expands a directory to everything under it
 ///   (`expandDirectories` is on unless set), and markdownlint-cli2 reads `.`,
-///   when it is the only argument, as the Markdown files in the directory.
+///   when it is the only path argument, as the Markdown files in the
+///   directory.
 /// - Any other path is checked as a path.
 ///
 /// # Errors
@@ -1685,12 +1686,18 @@ pub(crate) fn validate_in_temp_dir(path_arg: &str) -> Result<PathBuf> {
 /// names. There `mktemp -d -t` ignores `TMPDIR`: its manual says the `-t`
 /// template is "based on the prefix and the `_CS_DARWIN_USER_TEMP_DIR`
 /// configuration variable if available", with `TMPDIR` only a fallback. On
-/// Linux, GNU `mktemp -t` uses `TMPDIR` or `/tmp`, as `temp_dir` does.
+/// Linux, GNU `mktemp -t` uses `TMPDIR`, or `/tmp` when it is unset or
+/// empty; `temp_dir` follows `TMPDIR` too but returns an empty path for an
+/// empty one, so `/tmp` is a root of its own on Unix.
 fn staging_roots() -> &'static [PathBuf] {
     static ROOTS: std::sync::OnceLock<Vec<PathBuf>> = std::sync::OnceLock::new();
     ROOTS.get_or_init(|| {
         #[allow(unused_mut)]
         let mut candidates = vec![std::env::temp_dir()];
+        // `temp_dir()` returns an empty path for a `TMPDIR` set but empty,
+        // where `mktemp -t` uses `/tmp`.
+        #[cfg(unix)]
+        candidates.push(PathBuf::from("/tmp"));
         #[cfg(target_os = "macos")]
         candidates.extend(darwin_user_temp_dir());
         usable_staging_roots(candidates)
@@ -4527,6 +4534,15 @@ mod tests {
         );
         // A link to itself is a loop, which no resolution gets past.
         link("loop", alias_parent.path().join("loop"));
+        // Spelled canonically, an inner root reached through the outer one's
+        // alias is still the root itself, not a path inside the outer root.
+        let aliased = [alias.clone(), alias.join("inner")];
+        let err = validate_in_staging(&aliased, &inner.to_string_lossy()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { reason, .. }
+                if reason.contains("names the system temp directory itself")),
+            "{err:?}"
+        );
         let unresolvable = [alias_parent.path().join("loop"), alias.clone()];
         validate_in_staging(&unresolvable, &alias.join("run/a.tar.gz").to_string_lossy()).unwrap();
         link(outside.path().join("dir"), real.join("out"));
@@ -4543,19 +4559,23 @@ mod tests {
     /// empty makes `temp_dir()` return an empty path, a prefix of every path.
     #[test]
     fn only_absolute_staging_roots_are_kept() {
-        let absolute = std::env::temp_dir();
+        let absolute = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let roots = usable_staging_roots(vec![
             PathBuf::new(),
             PathBuf::from("relative"),
             absolute.clone(),
             absolute.clone(),
         ]);
+        // On Unix `/tmp` is always a root, which an empty `TMPDIR` leaves as
+        // the one `mktemp -t` uses off macOS.
+        #[cfg(unix)]
+        assert!(staging_roots().contains(&PathBuf::from("/tmp")));
         assert_eq!(roots, vec![absolute]);
     }
 
     /// `getconf DARWIN_USER_TEMP_DIR` names the directory `mktemp -d -t`
-    /// makes its directory in on macOS, whatever `TMPDIR` says: the one the
-    /// staging roots add beside `temp_dir()`. `TMPDIR` here points under
+    /// makes its directory in on macOS, whatever `TMPDIR` says: the directory
+    /// `staging_roots` adds beside `temp_dir()`. `TMPDIR` here points under
     /// `/tmp`, outside the per-user directory, so a `mktemp` that honoured it
     /// would fail the test.
     #[cfg(target_os = "macos")]
@@ -4566,7 +4586,7 @@ mod tests {
             .prefix("ductus-tmpdir-")
             .tempdir_in("/tmp")
             .unwrap();
-        let made = std::process::Command::new("mktemp")
+        let made = std::process::Command::new("/usr/bin/mktemp")
             .args(["-d", "-t", "ductus-XXXXXX"])
             .env("TMPDIR", elsewhere.path())
             .output()
@@ -4635,7 +4655,7 @@ mod tests {
             ("x).md", "`)`"),
             ("a|b.md", "`|`"),
         ];
-        // On every platform: before a glob character it is fast-glob's
+        // On every platform: before one of `$()*+?[]^` it is fast-glob's
         // escape, which Rust on Windows would read as a separator.
         refused.push(("link\\x.md", "`\\`"));
         refused.push(("a\\$b.md", "`\\`"));

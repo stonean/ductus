@@ -635,7 +635,7 @@ fn a_staging_directory_from_mktemp_t_is_accepted_whatever_tmpdir_says() {
     let elsewhere = tempfile::tempdir().unwrap();
     let tmpdir = elsewhere.path().join("tmpdir");
     fs::create_dir_all(&tmpdir).unwrap();
-    let made = Command::new("mktemp")
+    let made = Command::new("/usr/bin/mktemp")
         .args(["-d", "-t", "ductus-XXXXXX"])
         .env("TMPDIR", &tmpdir)
         .output()
