@@ -99,8 +99,11 @@ done
 # (`mcp__ductus__*`, `mcp__ductus`) included, so prose outside a bullet
 # that names an entry is not one. A step is a numbered line (`4.` or `4)`) and ends at the next
 # one or at any other line, a marker line aside, that starts in column 0; a line inside a fenced
-# block is none of these, and a fence closes only on its opener's character
-# repeated at least as often. An unclosed fence is reported, since the
+# block is none of these. A fence opens on three or more backticks or
+# tildes indented at most three spaces (a backtick line whose remainder
+# holds a backtick is inline code, not a fence) and closes on the same
+# character repeated at least as often, indented at most three spaces more
+# than the opener. An unclosed fence is reported, since the
 # scan cannot see past it; an indented heading it reads as text, and
 # markdownlint reports it (MD023).
 stray_entries() {
@@ -108,12 +111,20 @@ stray_entries() {
     {
       line = $0
       sub(/\r$/, "", line)
-      if (match(line, /^ ? ? ?(```+|~~~+)/)) {
-        run = substr(line, RSTART, RLENGTH)
-        gsub(/ /, "", run)
-        rest = substr(line, RSTART + RLENGTH)
-        if (!infence) { infence = 1; fch = substr(run, 1, 1); flen = length(run); fstart = FNR; next }
-        if (substr(run, 1, 1) == fch && length(run) >= flen && rest ~ /^[ \t]*$/) { infence = 0; next }
+      match(line, /^ */)
+      lead = RLENGTH
+      body = substr(line, lead + 1)
+      if (match(body, /^(```+|~~~+)/)) {
+        run = substr(body, 1, RLENGTH)
+        rest = substr(body, RLENGTH + 1)
+        c = substr(run, 1, 1)
+        if (!infence) {
+          if (lead <= 3 && !(c == "`" && rest ~ /`/)) {
+            infence = 1; fch = c; flen = length(run); find = lead; fstart = FNR; next
+          }
+        } else if (c == fch && length(run) >= flen && lead <= find + 3 && rest ~ /^[ \t]*$/) {
+          infence = 0; next
+        }
       }
       if (infence) next
       if (line ~ /<!-- generated:mcp-allow:start -->/) {

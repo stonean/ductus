@@ -36,11 +36,9 @@
 #                                  every tool; not per-tool enumerated)
 #
 # Exits non-zero, and writes nothing to that file, if a source file's markers
-# are missing, repeated, sharing a line, or out of order. The splice drops
-# every line from a start marker to the next end marker, so a second start
-# would drop the lines between the two starts, and an end above the start
-# every line after the start; refusing a repeated end is a precaution, since
-# the splice loses nothing to one. The other files are still processed.
+# are missing, repeated, sharing a line, or out of order, since the splice
+# below could drop lines from a file shaped that way. The other files are
+# still processed.
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -120,10 +118,9 @@ if [ "$tool_count" -eq 0 ]; then
 fi
 
 # Splice a block file between markers in a target file. Fails unless each
-# marker appears exactly once, on a line of its own, with the end after the
-# start (the header says what the awk below would drop otherwise). Each
-# test compares as a string first, so a value that is not a line number
-# refuses rather than passing an integer test by erroring.
+# marker appears exactly once, the two on different lines, with the end
+# after the start. A count or line number that is empty or not a number
+# refuses rather than passes.
 splice() {
   local file="$1"
   local block_file="$2"
