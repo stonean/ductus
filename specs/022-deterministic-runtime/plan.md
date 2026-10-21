@@ -117,6 +117,12 @@ A path the host or the LLM supplies is checked before the primitive opens anythi
 
 The check runs once per call, so a link created between it and the open is not caught. The tests are `interpreter::tests::every_feature_argument_site_refuses_an_outward_feature_link`, `every_feature_argument_site_but_check_artifacts_walks_the_feature_directory`, `every_file_path_site_refuses_an_outward_link`, `every_staging_site_refuses_a_path_outside_the_temp_directory` and `the_write_code_boundary_matches_where_an_edit_lands`, which hold each call site to the check by name, and the `primitives::tests` cases for the resolution itself. On macOS, `exec_subprocess.rs`'s `a_staging_directory_from_mktemp_t_is_accepted_whatever_tmpdir_says` runs the binary, with `TMPDIR` pointed elsewhere, on a directory `mktemp -d -t` made.
 
+### Agent reach: what ductus installs grants only what its steps need
+
+The owner's answer (b) to 022 task 16, 2026-10-21. What ductus installs (its runtime's tools and CLI, `/ductus`'s Permission Setup seed, and `/configure`'s canonical permission sets) grants an agent only what ductus's own steps need. Anything that can run an arbitrary command, write outside the project, or write a host's settings or command files goes to the host's prompt. `BE-AUTHZ-004` asks the same of a permission grant: "A caller MUST NOT be able to grant permissions they do not themselves hold."
+
+The release current on 2026-10-21 does not meet it. Measured that day, ductus's tools and the shell allows `/ductus` seeds let an agent run any command and write a host's permission file with no prompt (022 tasks 11, 14 and 16). Each part is decided by its own measured question: `run-generator` over an arbitrary file (task 14); permission entries outside the canonical set, and writes to a host's settings or command files (task 11); `apply-manifest`'s roots outside the project and the staging directory (task 17); and the seed's and canonical sets' entries that can run or write anything, `make` among them (task 18).
+
 ### CLI surface shape
 
 `clap` derive-based, with subcommands flat under the top-level binary:
