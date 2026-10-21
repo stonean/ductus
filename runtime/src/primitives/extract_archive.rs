@@ -3,10 +3,10 @@
 //!
 //! Both formats are handled entirely in-process (no shell-out): tar.gz
 //! via `flate2` + `tar`, zip via the `zip` crate. Every entry path is
-//! validated against directory traversal — absolute paths, components
-//! containing `..`, and paths that would resolve outside the requested
-//! `dest` directory all yield [`PrimitiveError::UnsafeArchivePath`]
-//! before any file is written.
+//! validated before anything is written for it: an absolute path or a
+//! component containing `..` yields [`PrimitiveError::UnsafeArchivePath`],
+//! and a path that a link already under `dest` would carry outside it
+//! yields [`PrimitiveError::InvalidPath`] naming the link.
 //!
 //! On Unix, file permissions are preserved from the archive's entry
 //! metadata (`tar` header mode bits; zip `unix_mode`), masked to the
@@ -49,8 +49,10 @@ use crate::schema::primitives::{ExtractArchiveArgs, ExtractArchiveResult};
 ///   written to disk.
 /// - [`PrimitiveError::UnknownArchiveFormat`] when the format cannot be inferred
 ///   and no override was supplied.
-/// - [`PrimitiveError::UnsafeArchivePath`] for absolute paths or paths that
-///   resolve outside `dest`.
+/// - [`PrimitiveError::UnsafeArchivePath`] for an entry with an absolute
+///   path or a `..` component.
+/// - [`PrimitiveError::InvalidPath`] for an entry a link already under
+///   `dest` would carry outside it, naming the link.
 /// - [`PrimitiveError::InvalidPath`] when `archive` or `dest` is not an
 ///   absolute path inside the system temp directory, or a link on it leaves
 ///   that directory ([`validate_in_temp_dir`]); raised before anything is
@@ -355,9 +357,13 @@ fn zip_to_io(archive: &Path) -> impl Fn(zip::result::ZipError) -> PrimitiveError
     }
 }
 
-/// Join `dest` and an entry path safely. Rejects absolute paths,
-/// `..` components, and paths that resolve outside `dest`. Returns the
-/// fully resolved destination path on success.
+/// Join `dest` and an entry path safely. Rejects absolute paths and `..`
+/// components by text, then checks the joined path with
+/// [`crate::primitives::validate_contained`] against `dest`: canonicalized
+/// and compared by whole components, so a link already under `dest` cannot
+/// carry an entry outside it (`BE-INPUT-004`, spec 022). The archive itself
+/// creates no link, since symlink entries are skipped. Returns the joined
+/// path, as given, on success.
 pub(crate) fn safe_join(dest: &Path, entry: &Path) -> Result<PathBuf> {
     let entry_str = entry.to_string_lossy().to_string();
     let mut accumulated = PathBuf::new();
@@ -369,6 +375,10 @@ pub(crate) fn safe_join(dest: &Path, entry: &Path) -> Result<PathBuf> {
                 return Err(PrimitiveError::UnsafeArchivePath { entry: entry_str });
             }
         }
+    }
+    // An entry naming `dest` itself (a tarball's `./`) has nothing to check.
+    if !accumulated.as_os_str().is_empty() {
+        crate::primitives::validate_contained(dest, &accumulated.to_string_lossy())?;
     }
     Ok(dest.join(accumulated))
 }
@@ -429,6 +439,35 @@ mod tests {
         assert!(result.files.contains(&"dir/b.txt".to_string()));
         assert_eq!(fs::read(dest.join("a.txt")).unwrap(), b"alpha");
         assert_eq!(fs::read(dest.join("dir/b.txt")).unwrap(), b"beta");
+    }
+
+    /// An entry whose path a link already under `dest` would carry outside
+    /// it is refused before anything is written through the link.
+    #[cfg(unix)]
+    #[test]
+    fn an_entry_through_a_link_under_dest_is_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let archive = tmp.path().join("test.tar.gz");
+        make_tar_gz(&archive, &[("sub/x.txt", b"escaped")]);
+        let dest = tmp.path().join("out");
+        fs::create_dir_all(&dest).unwrap();
+        std::os::unix::fs::symlink(outside.path(), dest.join("sub")).unwrap();
+        let err = run(
+            &ExtractArchiveArgs {
+                archive: archive.to_string_lossy().into_owned(),
+                dest: dest.to_string_lossy().into_owned(),
+                format: None,
+            },
+            tmp.path(),
+        )
+        .unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { reason, .. }
+                if reason.contains("the symlink `sub`")),
+            "{err:?}"
+        );
+        assert!(!outside.path().join("x.txt").exists());
     }
 
     #[test]
