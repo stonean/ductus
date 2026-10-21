@@ -113,3 +113,23 @@ Recommended: (a). The measure is what reaches adopters at the held release and w
 - [x] Apply the answer: the two runtime-acquisition downloads carry the TLS flags and `{download-connect-timeout}` (30 s) and `{download-timeout}` (300 s), the `.gitignore` fetch is shown with the TLS flags and `{connect-timeout}` and `{request-timeout}`, and `govern.md` follows
 
 - **Done when**: 022's review records each of the four findings fixed or waived.
+
+## 9. Disposition the path arguments outside task 4's count (BE-INPUT-004)
+
+022's re-review at `384249de` found a low-confidence `BE-INPUT-004` finding: task 4 put the 39 call sites of `validate_no_traversal` that open a path through the check, but primitives that never called it take host- or LLM-supplied paths with no check at all, and 022's routed finding names every such path. Each resolves its paths through `resolve_path` (`runtime/src/primitives/mod.rs`), which accepts an absolute path by design, or matches a name:
+
+- Readers: `validate-frontmatter` (`path`), `resolve-anchor` (`path`, `markers-path`), `check-rule-ids` (`path`, `rule-file`), `check-promotion-coverage` (`rules-file`, `table-file`).
+- `lint-markdown` (`paths`): screens only a leading `-`; with `fix`, markdownlint rewrites what the paths match.
+- `resolve-feature`: matches its identifier against the feature directories, then reads `spec.md`'s status and a scenario's section through the matched directory, which can be a link that leaves the project.
+- Writers: `fetch-archive` (its destination) and `extract-archive` (`archive`, `dest`).
+
+Measured 2026-10-21. Every shipped caller passes the readers, `lint-markdown` and `resolve-feature` a project-relative path or a feature name (`analyze.md`, `implement.md`, `review.md`, `log.md`, `plan.md`, `target.md`, and audit Families 38 and 39). The bootstrap passes the two archive primitives `{tempdir}`, which it makes with `mktemp -d -t ductus-XXXXXX` under `$TMPDIR` or `/tmp`, the directory Rust's `std::env::temp_dir()` names on Unix. A probe that refused an absolute path at those primitives' `resolve_path` calls failed 36 tests: 19 of `validate-frontmatter`, 7 of `check-rule-ids`, 1 of `resolve-anchor`, and 9 of `extract-archive`, whose paths lie under the temp directory.
+
+Asked the owner 2026-10-21: (a) put all nine through a check: the readers, `lint-markdown` and `resolve-feature`'s matched feature against the project root, refusing absolute input as the 39 sites do, and the two archive primitives against the system temp directory. 27 tests are rewritten to project-relative paths; no shipped caller changes. On Windows the bootstrap's `mktemp` runs under Git Bash, and whether its directory and the runtime's temp directory agree is not measured here; if they differ, acquisition halts naming the path. (b) The readers, `lint-markdown` and `resolve-feature` as in (a); the two archive primitives recorded in the scenario and plan as an exclusion, because their one caller writes into a directory it made outside the project, so a destination an LLM supplies can still write anywhere the operator can. (c) Record all nine as an exclusion, and waive the finding in 022's review: they take operator- and machine-local paths by design. The readers then still read, and `lint-markdown` still rewrites, any file the operator can, and the archive primitives write anywhere.
+
+Recommended: (a). The measure is what a host- or LLM-supplied path can reach outside the project after each option. (a) leaves the system temp directory, for nine call sites and 27 test rewrites; (b) leaves anywhere through the two writers; (c) leaves anywhere through all nine. (a)'s one unmeasured cost is the Windows temp directory, and its failure is a named halt rather than a silent write.
+
+- [ ] The owner answers (a), (b) or (c)
+- [ ] Apply the answer, and state it in the scenario `a-path-argument-resolves-inside-its-base` and in plan.md
+
+- **Done when**: 022's review records the finding fixed or waived.
