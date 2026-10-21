@@ -7,6 +7,8 @@
 #   B. antigravity.md's generated block is the single `mcp(ductus/*)` wildcard
 #   C. claude.md / auggie.md still carry their per-tool blocks (regression)
 #   D. opencode.md's generated block is the single `"ductus*": "allow"` glob
+#   E. a configure file whose markers are swapped or repeated is refused,
+#      and left byte-identical (the splice would drop the lines between)
 #
 # Usage: scripts/tests/test-gen-configure-mcp.sh
 
@@ -66,6 +68,34 @@ if printf '%s\n' "$oc_block" | grep -qF -- '- `"ductus*": "allow"`'; then
 else
   fail "D: opencode.md block unexpected: $(printf '%s' "$oc_block" | tr '\n' '|')"
 fi
+
+# E. malformed markers: run the generator on a scratch copy, where it
+# resolves its paths from its own location, and check it refuses the file
+# and writes nothing to it.
+scratch="$(mktemp -d)"
+trap 'rm -rf "$scratch"' EXIT
+mkdir -p "$scratch/scripts" "$scratch/framework/bootstrap/configure"
+cp "$GEN" "$scratch/scripts/"
+cp "$REPO_ROOT/framework/runtime-tools.txt" "$scratch/framework/"
+for case_name in swapped repeated; do
+  cp "$CLAUDE" "$AUGGIE" "$ANTIGRAVITY" "$OPENCODE" "$scratch/framework/bootstrap/configure/"
+  target="$scratch/framework/bootstrap/configure/claude.md"
+  if [ "$case_name" = swapped ]; then
+    sed -e 's/generated:mcp-allow:start/generated:mcp-allow:TMP/' \
+        -e 's/generated:mcp-allow:end/generated:mcp-allow:start/' \
+        -e 's/generated:mcp-allow:TMP/generated:mcp-allow:end/' "$CLAUDE" > "$target"
+  else
+    awk '/^2\. /{print "   <!-- generated:mcp-allow:start -->"} {print}' "$CLAUDE" > "$target"
+  fi
+  cp "$target" "$scratch/before.md"
+  if "$scratch/scripts/gen-configure-mcp.sh" >/dev/null 2>&1; then
+    fail "E: a $case_name marker was not refused"
+  elif ! cmp -s "$target" "$scratch/before.md"; then
+    fail "E: a $case_name marker was refused, but the file was rewritten"
+  else
+    pass "E: a $case_name marker is refused and the file left as it was"
+  fi
+done
 
 if [ "$failures" -gt 0 ]; then
   echo "$failures test(s) failed" >&2

@@ -77,7 +77,7 @@ for f in "$claude_file" "$auggie_file"; do
     n="$(grep -c "<!-- generated:mcp-allow:$marker -->" "$f" || true)"
     if [ "$n" -ne 1 ]; then
       emit "$f" "the generated:mcp-allow:$marker marker appears $n times, not once — the generated block cannot be read" \
-        "restore exactly one start and one end marker around the generated block by hand (scripts/gen-configure-mcp.sh refuses a file without them and writes no marker), then re-run it"
+        "restore exactly one start and one end marker around the generated block by hand (scripts/gen-configure-mcp.sh refuses a file whose markers are missing, repeated or out of order, and writes no marker), then re-run it"
     fi
   done
   start_line="$(grep -n '<!-- generated:mcp-allow:start -->' "$f" | head -n 1 | cut -d: -f1)"
@@ -96,12 +96,13 @@ done
 # rather than grant it; an Auggie entry of type deny is likewise not a
 # grant, and the generated block itself must not sit in either step. The
 # scan reads a bullet naming the tool, a wildcard or the bare server
-# (`mcp__ductus__*`, `mcp__ductus`) included, so prose that names an entry
-# is not one. A step is a numbered line (`4.` or `4)`) and ends at the next
-# one or at any other line that starts in column 0; a line inside a fenced
+# (`mcp__ductus__*`, `mcp__ductus`) included, so prose outside a bullet
+# that names an entry is not one. A step is a numbered line (`4.` or `4)`) and ends at the next
+# one or at any other line, a marker line aside, that starts in column 0; a line inside a fenced
 # block is none of these, and a fence closes only on its opener's character
-# repeated at least as often. What the scan cannot see markdownlint
-# reports first: an unclosed fence (MD031) or an indented heading (MD023).
+# repeated at least as often. Two shapes the scan cannot read,
+# an unclosed fence and an indented heading, markdownlint reports first
+# (MD031, MD023).
 stray_entries() {
   awk -v pat="$2" '
     {

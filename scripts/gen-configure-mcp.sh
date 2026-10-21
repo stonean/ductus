@@ -35,7 +35,9 @@
 #                  →  OpenCode: a single `"ductus*": "allow"` glob (covers
 #                                  every tool; not per-tool enumerated)
 #
-# Exits non-zero if either marker is missing in any source file.
+# Exits non-zero, writing nothing, if a source file's markers are missing,
+# repeated, or out of order: the splice copies every line outside the two
+# markers, so a repeated or swapped marker would drop the lines between them.
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -114,17 +116,29 @@ if [ "$tool_count" -eq 0 ]; then
   exit 4
 fi
 
-# Splice a block file between markers in a target file. Fails when either
-# marker is absent.
+# Splice a block file between markers in a target file. Fails unless each
+# marker appears exactly once and the end follows the start: the awk below
+# drops every line from a start marker to the next end marker, so a second
+# start, or an end above the start, would delete the lines in between.
 splice() {
   local file="$1"
   local block_file="$2"
-  if ! grep -q '<!-- generated:mcp-allow:start -->' "$file"; then
-    echo "Missing marker <!-- generated:mcp-allow:start --> in $file" >&2
-    return 5
-  fi
-  if ! grep -q '<!-- generated:mcp-allow:end -->' "$file"; then
-    echo "Missing marker <!-- generated:mcp-allow:end --> in $file" >&2
+  local marker n start_line end_line
+  for marker in start end; do
+    n="$(grep -c "<!-- generated:mcp-allow:$marker -->" "$file" || true)"
+    if [ "$n" -eq 0 ]; then
+      echo "Missing marker <!-- generated:mcp-allow:$marker --> in $file" >&2
+      return 5
+    fi
+    if [ "$n" -gt 1 ]; then
+      echo "Marker <!-- generated:mcp-allow:$marker --> appears $n times in $file; expected once" >&2
+      return 5
+    fi
+  done
+  start_line="$(grep -n '<!-- generated:mcp-allow:start -->' "$file" | cut -d: -f1)"
+  end_line="$(grep -n '<!-- generated:mcp-allow:end -->' "$file" | cut -d: -f1)"
+  if [ "$start_line" -ge "$end_line" ]; then
+    echo "Marker <!-- generated:mcp-allow:end --> (line $end_line) comes before the start marker (line $start_line) in $file" >&2
     return 5
   fi
   awk -v block_file="$block_file" '
