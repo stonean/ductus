@@ -84,7 +84,7 @@ for f in "$claude_file" "$auggie_file"; do
   end_line="$(grep -n '<!-- generated:mcp-allow:end -->' "$f" | head -n 1 | cut -d: -f1)"
   if [ -n "$start_line" ] && [ -n "$end_line" ] && [ "$start_line" -ge "$end_line" ]; then
     emit "$f" "the generated:mcp-allow:end marker (line $end_line) comes before the start marker (line $start_line)" \
-      "put the end marker after the generated block by hand, then re-run scripts/gen-configure-mcp.sh"
+      "put the start marker before the generated entries and the end marker after them, by hand, then re-run scripts/gen-configure-mcp.sh"
   fi
 done
 [ "$drift" -eq 0 ] || exit "$drift"
@@ -94,27 +94,54 @@ done
 # block: the retired step (Claude's and Auggie's step 4), which lists
 # entries to remove, and Claude's deny step, whose entries refuse a tool
 # rather than grant it; an Auggie entry of type deny is likewise not a
-# grant. A step ends at the next numbered step or at a heading, and a
-# numbered line inside a fenced block is not a step. The entry is matched
-# by the token the extraction above reads, anywhere on its line.
+# grant, and the generated block itself must not sit in either step. The
+# scan reads a bullet naming the tool, a wildcard or the bare server
+# (`mcp__ductus__*`, `mcp__ductus`) included, so prose that names an entry
+# is not one. A step is a numbered line (`4.` or `4)`) and ends at the next
+# one or at any other line that starts in column 0; a line inside a fenced
+# block is none of these, and a fence closes only on its opener's character
+# repeated at least as often. What the scan cannot see markdownlint
+# reports first: an unclosed fence (MD031) or an indented heading (MD023).
 stray_entries() {
   awk -v pat="$2" '
-    /^ *(```|~~~)/ { infence = !infence }
-    /<!-- generated:mcp-allow:start -->/ { inblock = 1; next }
-    /<!-- generated:mcp-allow:end -->/ { inblock = 0; next }
-    !infence && /^#/ { exempt = 0 }
-    !infence && /^[0-9]+\. / {
-      exempt = ($0 ~ /^[0-9]+\. (\*\*)?Retired/ || $0 ~ /^[0-9]+\. (\*\*)?Canonical .permissions\.deny/)
+    {
+      line = $0
+      sub(/\r$/, "", line)
+      if (match(line, /^ ? ? ?(```+|~~~+)/)) {
+        run = substr(line, RSTART, RLENGTH)
+        gsub(/ /, "", run)
+        rest = substr(line, RSTART + RLENGTH)
+        if (!infence) { infence = 1; fch = substr(run, 1, 1); flen = length(run); next }
+        if (substr(run, 1, 1) == fch && length(run) >= flen && rest ~ /^[ \t]*$/) { infence = 0; next }
+      }
+      if (infence) next
+      if (line ~ /<!-- generated:mcp-allow:start -->/) {
+        if (exempt) print "block " FNR
+        inblock = 1
+        next
+      }
+      if (line ~ /<!-- generated:mcp-allow:end -->/) { inblock = 0; next }
+      if (line ~ /^[0-9]+[.)] /) {
+        exempt = (line ~ /^[0-9]+[.)] (\*\*)?Retired/ || line ~ /^[0-9]+[.)] (\*\*)?Canonical .permissions\.deny/)
+      } else if (line ~ /^[^ \t]/) {
+        exempt = 0
+      }
+      if (!inblock && !exempt && line ~ pat && line !~ /"type": *"deny"/) print "entry " FNR
     }
-    !inblock && !exempt && $0 ~ pat && $0 !~ /"type": *"deny"/ { print FNR }
   ' "$1"
 }
-for pair in "$claude_file"':`mcp__ductus__[a-z-]+`' "$auggie_file"':"toolName": *"mcp:ductus:'; do
+bullet='^[ \t]*[-*+][ \t]+'
+for pair in "$claude_file:$bullet"'.*`mcp__ductus(__[^`]*)?`' "$auggie_file:$bullet"'.*"toolName": *"mcp:ductus'; do
   f="${pair%%:*}"
-  while IFS= read -r line_no; do
+  while IFS=' ' read -r kind line_no; do
     [ -n "$line_no" ] || continue
-    emit "$f:$line_no" "an MCP allow entry outside the generated block, which this family does not compare" \
-      "remove it; a tool the runtime serves belongs in framework/runtime-tools.txt, from which scripts/gen-configure-mcp.sh writes it inside the block"
+    if [ "$kind" = block ]; then
+      emit "$f:$line_no" "the generated block sits inside the retired or deny step, so its entries would be revoked or denied rather than granted" \
+        "move the generated block, both markers with it, back into the canonical allow step"
+    else
+      emit "$f:$line_no" "an MCP allow entry outside the generated block, which this family does not compare" \
+        "remove it; a tool the runtime serves belongs in framework/runtime-tools.txt, from which scripts/gen-configure-mcp.sh writes it inside the block"
+    fi
   done < <(stray_entries "$f" "${pair#*:}")
 done
 [ "$drift" -eq 0 ] || exit "$drift"
