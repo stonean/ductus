@@ -1695,16 +1695,17 @@ fn staging_roots() -> &'static [PathBuf] {
 }
 
 /// The staging roots for a given `temp_dir` and macOS per-user directory, in
-/// order, each once. `temp_dir` follows `TMPDIR` but is an empty path for a
-/// `TMPDIR` set but empty, where GNU `mktemp -t` uses `/tmp` (it reads
-/// `TMPDIR` only when non-empty), so on Unix a `temp_dir` that is not
-/// absolute stands for `/tmp`; elsewhere it contributes no root. On macOS
-/// `mktemp -d -t` ignores `TMPDIR` altogether: its manual says the `-t`
-/// template is "based on the prefix and the `_CS_DARWIN_USER_TEMP_DIR`
-/// configuration variable if available", so the per-user directory is a
-/// root beside `temp_dir`.
+/// order, each once, absolute ones only. `temp_dir` follows `TMPDIR` but is
+/// an empty path for a `TMPDIR` set but empty, where GNU `mktemp -t` uses
+/// `/tmp` (it reads `TMPDIR` only when non-empty), so off macOS an empty
+/// `temp_dir` stands for `/tmp` on Unix. A relative one contributes no root:
+/// `mktemp` would print a relative path, which the check refuses anyway. On
+/// macOS `mktemp -d -t` uses `TMPDIR` only as a fallback: its manual says
+/// the `-t` template is "based on the prefix and the
+/// `_CS_DARWIN_USER_TEMP_DIR` configuration variable if available", so the
+/// per-user directory is a root beside `temp_dir`.
 fn staging_roots_for(temp_dir: PathBuf, darwin: Option<PathBuf>) -> Vec<PathBuf> {
-    let temp_dir = if cfg!(unix) && !temp_dir.is_absolute() {
+    let temp_dir = if cfg!(all(unix, not(target_os = "macos"))) && temp_dir.as_os_str().is_empty() {
         PathBuf::from("/tmp")
     } else {
         temp_dir
@@ -1765,36 +1766,42 @@ fn validate_in_staging(roots: &[PathBuf], path_arg: &str) -> Result<PathBuf> {
         .iter()
         .filter_map(|root| canonical_base(root).ok().map(|canonical| (root, canonical)))
         .collect();
-    // The candidate's resolution is compared with every root's before any
-    // root is matched, so a root inside another (`TMPDIR` an ancestor of
-    // macOS's per-user directory) is refused as itself however either is
-    // spelled.
-    let resolved_candidate = resolve_symlinks(candidate).ok();
-    if resolved
-        .iter()
-        .any(|(_, canonical)| resolved_candidate.as_ref() == Some(canonical))
-    {
+    // Matched by text before the candidate is touched: on Windows resolving a
+    // path opens it, and a candidate outside every root (a UNC path) must be
+    // refused without that.
+    let Some((base, rest)) = resolved.iter().find_map(|(root, canonical)| {
+        candidate
+            .strip_prefix(root)
+            .map(|rest| (root.as_path(), rest))
+            .or_else(|_| {
+                candidate
+                    .strip_prefix(canonical)
+                    .map(|rest| (canonical.as_path(), rest))
+            })
+            .ok()
+    }) else {
+        return Err(refuse(format!(
+            "is not inside the system temp directory ({shown})"
+        )));
+    };
+    // The root itself is refused however it is spelled, a root inside
+    // another (`TMPDIR` an ancestor of macOS's per-user directory) included:
+    // the candidate's canonical form is compared with every root's. A
+    // candidate that does not exist yet is not an existing root.
+    let names_a_root = rest.as_os_str().is_empty()
+        || candidate
+            .canonicalize()
+            .is_ok_and(|real| resolved.iter().any(|(_, canonical)| *canonical == real));
+    if names_a_root {
         return Err(refuse(format!(
             "names the system temp directory itself ({shown}); pass a directory made inside it"
         )));
     }
-    for (root, canonical_root) in &resolved {
-        let (base, rest) = if let Ok(rest) = candidate.strip_prefix(root) {
-            (root.as_path(), rest)
-        } else if let Ok(rest) = candidate.strip_prefix(canonical_root) {
-            (canonical_root.as_path(), rest)
-        } else {
-            continue;
-        };
-        validate_contained(base, &rest.to_string_lossy()).map_err(|err| match err {
-            PrimitiveError::InvalidPath { reason, .. } => refuse(reason),
-            other => other,
-        })?;
-        return Ok(candidate.to_path_buf());
-    }
-    Err(refuse(format!(
-        "is not inside the system temp directory ({shown})"
-    )))
+    validate_contained(base, &rest.to_string_lossy()).map_err(|err| match err {
+        PrimitiveError::InvalidPath { reason, .. } => refuse(reason),
+        other => other,
+    })?;
+    Ok(candidate.to_path_buf())
 }
 
 /// Walk `start` and everything under it, refusing the first symlink that
@@ -4550,6 +4557,14 @@ mod tests {
                 "{candidate:?} under {spelled_roots:?}: {err:?}"
             );
         }
+        // A root not created yet is still refused as itself, by its spelling.
+        let missing = [alias_parent.path().join("not-yet")];
+        let err = validate_in_staging(&missing, &missing[0].to_string_lossy()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { reason, .. }
+                if reason.contains("names the system temp directory itself")),
+            "{err:?}"
+        );
         // A link to itself is a loop, which no resolution gets past.
         link("loop", alias_parent.path().join("loop"));
         let unresolvable = [alias_parent.path().join("loop"), alias.clone()];
@@ -4564,9 +4579,9 @@ mod tests {
         );
     }
 
-    /// The staging roots follow `temp_dir`, each once, and on Unix a
-    /// `temp_dir` that is not absolute (a `TMPDIR` set but empty) stands for
-    /// `/tmp`, where GNU `mktemp -t` then puts its directory.
+    /// The staging roots follow `temp_dir`, each once. Off macOS on Unix an
+    /// empty `temp_dir` (a `TMPDIR` set but empty) stands for `/tmp`, where
+    /// GNU `mktemp -t` then puts its directory; a relative one is no root.
     #[test]
     fn staging_roots_follow_temp_dir_and_fall_back_to_tmp() {
         let temp = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -4580,13 +4595,16 @@ mod tests {
             staging_roots_for(temp.clone(), Some(other.clone())),
             vec![temp, other]
         );
-        let fallback = if cfg!(unix) {
+        let fallback = if cfg!(all(unix, not(target_os = "macos"))) {
             vec![PathBuf::from("/tmp")]
         } else {
             Vec::new()
         };
         assert_eq!(staging_roots_for(PathBuf::new(), None), fallback);
-        assert_eq!(staging_roots_for(PathBuf::from("relative"), None), fallback);
+        assert_eq!(
+            staging_roots_for(PathBuf::from("relative"), None),
+            Vec::<PathBuf>::new()
+        );
     }
 
     /// `getconf DARWIN_USER_TEMP_DIR` names the directory `mktemp -d -t`
