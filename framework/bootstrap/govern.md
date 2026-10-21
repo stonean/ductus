@@ -187,7 +187,7 @@ On macOS/Linux this lands under `$TMPDIR` or `/tmp`. Never reuse a directory fro
 
 ### Source resolution
 
-Settle the run's one source before anything fetches from it. **One run, one source**: the version pin, the self-update fetch, and the framework archive all name the ref this step resolves, and nothing re-resolves it later, so a release published partway through the run cannot split the run across two releases. The values it settles — `{raw-ref}`, `{archive-ref}`, `{source-label}`, `{pin}` — and the `{ref-floor}` constant are listed in **Derived paths** below. The steps run in order, and each halt below fires before anything is written — only the **Permission Setup** seed, which is additive, idempotent and identical for every source, precedes this step.
+Settle the run's one source before anything fetches from it. **One run, one source**: the version pin, the self-update fetch, and the framework archive all name the ref this step resolves, and nothing re-resolves it later, so a release published partway through the run cannot split the run across two releases. The values it settles — `{raw-ref}`, `{archive-ref}`, `{source-label}`, `{pin}` — and the `{ref-floor}`, `{connect-timeout}` and `{request-timeout}` constants are listed in **Derived paths** below; `{tag origin}`, which only its halts name, is defined in step 2. The steps run in order, and each halt below fires before anything is written — only the **Permission Setup** seed, which is additive, idempotent and identical for every source, precedes this step.
 
 Every fetch this step makes, and the self-update fetch in the **Self-update check**, is HTTPS only at TLS 1.2 or later (`--proto '=https' --tlsv1.2`), keeps `curl`'s certificate and host-name verification (never pass `-k`/`--insecure`), and is bounded: `--connect-timeout {connect-timeout}` for the connection and `--max-time {request-timeout}` for the whole request (**Derived paths**). A fetch that times out fails like any other, and that fetch's halt or abort fires.
 
@@ -219,7 +219,7 @@ Every fetch this step makes, and the self-update fetch in the **Self-update chec
 
    The tag is the last path segment of the `Location` header (`location` over HTTP/2) after `/releases/tag/`. A response carrying no `Location`, or one whose target has no `/releases/tag/` segment, halts; so does a tag outside the `ductus-v<MAJOR>.<MINOR>.<PATCH>` grammar. Neither falls back to `main`: a fallback would put the run on exactly the unreleased state the default exists to avoid, and would read identically to a successful resolution.
 
-   > Halt: `could not resolve the latest release from https://github.com/${DUCTUS_REPO:-stonean/ductus}/releases/latest — {what came back: the status line and the Location value, or "no Location header"}. /ductus does not fall back to main; pass --ref=main or --ref=<tag> to choose a source explicitly.`
+   > Halt: `could not resolve the latest release from https://github.com/${DUCTUS_REPO:-stonean/ductus}/releases/latest — {what came back: the status line and the Location value, "no Location header", or curl's error when the request failed or timed out}. /ductus does not fall back to main; pass --ref=main or --ref=<tag> to choose a source explicitly.`
 
    The REST API's `releases/latest` means the same thing but is limited to 60 unauthenticated calls an hour, and the highest `ductus-v*` tag can name a tag whose release, and so whose runtime assets, does not exist yet. The redirect has neither problem (spec 061, Resolved Questions).
 
@@ -303,8 +303,10 @@ The reason is not tidiness. A retired-namespace server is a *different runtime a
 | `{archive-ref}` | the path segment naming the resolved source on `codeload.github.com`: `refs/heads/main`, or `refs/tags/{tag}` |
 | `{source-label}` | the resolved source and its origin, as reported: `main (--ref)`, `ductus-v0.55.0 (recorded)`, `latest release ductus-v0.55.0 (default)` |
 | `{ref-floor}` | `0.55.0` — the version of the first release whose bootstrap carries **Source resolution**; `install.sh` carries the same value, and `/ductus:audit` Family 14 asserts the two agree |
-| `{connect-timeout}` | `10` — the seconds a **Source resolution** or self-update fetch waits for its connection (`curl --connect-timeout`) |
-| `{request-timeout}` | `60` — the seconds such a fetch may take in all (`curl --max-time`); the files it fetches are a header, a version line, a migration registry and this bootstrap |
+| `{connect-timeout}` | `10` — the seconds a **Source resolution**, self-update or per-language `.gitignore` fetch waits for its connection (`curl --connect-timeout`); Pi's configure command names it for its bridge fetch too |
+| `{request-timeout}` | `60` — the seconds such a fetch may take in all (`curl --max-time`); the files it fetches are small: a header, a version line, a migration registry, this bootstrap, a `.gitignore`, and Pi's bridge |
+| `{download-connect-timeout}` | `30` — the seconds a runtime archive or sidecar download in **Runtime acquisition** waits for its connection (`curl --connect-timeout`) |
+| `{download-timeout}` | `300` — the seconds such a download may take in all (`curl --max-time`); an archive is several megabytes, too large for `{request-timeout}` on a slow link |
 
 #### State A — runtime live this session
 
@@ -390,11 +392,15 @@ When `.ductus/config.toml` has a `[runtime]` `path` key, the project has taken r
 4. **Fetch the archive and its sidecar** from the release, into `{tempdir}`:
 
    ```text
-   curl -fsSL "https://github.com/${DUCTUS_REPO:-stonean/ductus}/releases/download/ductus-v{pin}/ductus-{triple}.tar.gz" \
+   curl --proto '=https' --tlsv1.2 -fsSL --connect-timeout {download-connect-timeout} --max-time {download-timeout} \
+     "https://github.com/${DUCTUS_REPO:-stonean/ductus}/releases/download/ductus-v{pin}/ductus-{triple}.tar.gz" \
      -o {tempdir}/ductus-{triple}.tar.gz
-   curl -fsSL "https://github.com/${DUCTUS_REPO:-stonean/ductus}/releases/download/ductus-v{pin}/ductus-{triple}.tar.gz.sha256" \
+   curl --proto '=https' --tlsv1.2 -fsSL --connect-timeout {download-connect-timeout} --max-time {download-timeout} \
+     "https://github.com/${DUCTUS_REPO:-stonean/ductus}/releases/download/ductus-v{pin}/ductus-{triple}.tar.gz.sha256" \
      -o {tempdir}/ductus-{triple}.tar.gz.sha256
    ```
+
+   Both downloads are HTTPS only at TLS 1.2 or later, redirects included, keep `curl`'s certificate and host-name verification (never pass `-k`/`--insecure`), and are bounded: `--connect-timeout {download-connect-timeout}` for the connection and `--max-time {download-timeout}` for the whole transfer (**Derived paths**). A download that times out is a network failure under **Failure** below.
 
 5. **Verify the digest before installing anything.** Compute the archive's SHA-256 with the platform tool — `shasum -a 256` on macOS, `sha256sum` on Linux, `certutil -hashfile … SHA256` on Windows — and compare against the sidecar. This is stricter than the framework archive fetch, which tolerates a missing sidecar because GitHub's auto-generated source tarballs ship without one; the runtime's release assets always carry theirs, so a **missing sidecar is a failure here**, not a skip.
 
@@ -857,7 +863,14 @@ These files are scaffolded **once per `/ductus` invocation**, regardless of how 
 2. If `.gitignore` does not exist, create it with `# ductus\n{canonical-block}\n`. Skip to step 5 for language patterns.
 3. If `.gitignore` exists and contains a `# ductus` line preamble, replace the managed region (the `# ductus` line through the rest of the block — note the canonical block itself contains blank lines between subsections, so do not stop at the first interior blank) with `# ductus\n{canonical-block}\n`. If no `# ductus` line is present, append `# ductus\n{canonical-block}\n` after the existing content, separated by exactly one blank line.
 4. **Dedup pass (canonical-block wins).** After the managed block is in place, scan the rest of the file (everything outside `# ductus` through the canonical block's end) and remove any non-blank, non-comment line that string-equals a non-blank, non-comment line inside the canonical block. Adopter-area blank lines and comment lines are preserved untouched even when they happen to share text with a canonical pattern. This collapses duplicates that an adopter (or another command) pasted above or below the marker; the canonical copy inside `# ductus` is the surviving one.
-5. For each primary language provided by the user, fetch from `https://raw.githubusercontent.com/github/gitignore/main/{Language}.gitignore` and append below a `# {Language}` comment header. If the file is being re-merged on a subsequent run and a `# {Language}` section is already present, leave it alone — language sections, once written, are adopter territory.
+5. For each primary language provided by the user, fetch its patterns and append them below a `# {Language}` comment header. The fetch is HTTPS only at TLS 1.2 or later and bounded like **Source resolution**'s (`{connect-timeout}` and `{request-timeout}`, **Derived paths**):
+
+   ```text
+   curl --proto '=https' --tlsv1.2 -fsSL --connect-timeout {connect-timeout} --max-time {request-timeout} \
+     "https://raw.githubusercontent.com/github/gitignore/main/{Language}.gitignore"
+   ```
+
+   If the file is being re-merged on a subsequent run and a `# {Language}` section is already present, leave it alone — language sections, once written, are adopter territory.
 
 **Shared constitution imports** (strategy: merge, layout-derived) — install or update a framework-managed block in each selected layout's **native rules file**, listing the shared constitutions registered in `[constitutions.*]` (§Project Configuration, spec 055).
 

@@ -8,7 +8,7 @@ Verify and, when drifted, repair the Pi extension bridge that exposes the `ductu
 
 ## Scope Boundaries
 
-- Read `.pi/prompts/` only to confirm trust is granted (`/ductus` scaffolds there) and, in `.pi/prompts/ductus.md`, for **Source resolution** and the two fetch bounds its **Derived paths** table defines; read `.ductus/config.toml` only for its `[source] ref`; read and write only `.pi/extensions/ductus.ts`. Do NOT modify any other file.
+- Read `.pi/prompts/` only to confirm trust is granted (`/ductus` scaffolds there) and, in `.pi/prompts/ductus.md`, for **Source resolution** and the `{connect-timeout}` and `{request-timeout}` bounds its **Derived paths** table defines; read `.ductus/config.toml` only for its `[source] ref`; read and write only `.pi/extensions/ductus.ts`. Do NOT modify any other file.
 - The bridge file — the copy of `framework/bootstrap/pi/ductus-bridge.ts` installed by `/ductus` at State-B wire time — is the single persistent artifact this agent's runtime access depends on. A pip-installed adopter's checkout gets the bridge from `/ductus`; this command repairs it between runs.
 - Do NOT scan source code, specs, or git history. This command manages the bridge file and reports the permission/trust facts; it does not manage session state.
 - Reference: no constitution sections apply — this command operates on agent-specific wiring state, not `ductus` artifacts.
@@ -19,7 +19,7 @@ Verify and, when drifted, repair the Pi extension bridge that exposes the `ductu
 
 ## Verify-and-repair
 
-1. **Locate the canonical source.** The bridge this project should have is the one its framework source ships, so name the source exactly as `/ductus` does (`.pi/prompts/ductus.md` §Source resolution): `.ductus/config.toml` `[source] ref` when it is set (`main` or a `ductus-v<MAJOR>.<MINOR>.<PATCH>` tag), else the latest release — the tag in the `Location` header of `curl --proto '=https' --tlsv1.2 -sSI --connect-timeout {connect-timeout} --max-time {request-timeout} https://github.com/${DUCTUS_REPO:-stonean/ductus}/releases/latest`. Both fetches here carry the TLS flags and the two bounds `/ductus` defines in its Derived paths table (`.pi/prompts/ductus.md`), so a stalled host fails the step rather than hanging it. Fetch the bridge at that ref into a fresh `{tempdir}` (`mktemp -d`):
+1. **Locate the canonical source.** The bridge this project should have is the one its framework source ships, so name the source exactly as `/ductus` does (`.pi/prompts/ductus.md` §Source resolution): `.ductus/config.toml` `[source] ref` when it is set (`main` or a `ductus-v<MAJOR>.<MINOR>.<PATCH>` tag), else the latest release — the tag in the `Location` header of `curl --proto '=https' --tlsv1.2 -sSI --connect-timeout {connect-timeout} --max-time {request-timeout} https://github.com/${DUCTUS_REPO:-stonean/ductus}/releases/latest`. Both fetches here carry the TLS flags and the bounds `/ductus` gives its small fetches, `{connect-timeout}` and `{request-timeout}`, from its Derived paths table (`.pi/prompts/ductus.md`), so a stalled host fails the step rather than hanging it. Fetch the bridge at that ref into a fresh `{tempdir}` (`mktemp -d`):
 
    ```text
    curl --proto '=https' --tlsv1.2 -fsSL --connect-timeout {connect-timeout} --max-time {request-timeout} \
