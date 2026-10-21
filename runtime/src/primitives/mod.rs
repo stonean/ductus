@@ -1576,31 +1576,81 @@ pub(crate) fn contained_path(repo: &Path, rel: &str) -> Result<PathBuf> {
     Ok(repo.join(rel))
 }
 
-/// [`validate_contained`] for a glob pattern a tool expands itself, as
-/// `lint-markdown` hands its paths to markdownlint-cli2. Its globbing
-/// follows a symlinked directory it meets (fast-glob's `followSymbolicLinks`
-/// is on unless set, and markdownlint-cli2 0.23.2 does not set it), so the
-/// directory before the pattern's first glob character is also walked as a
-/// feature directory is ([`validate_feature_path`]), the project root when
-/// the pattern starts with one. A pattern with no glob character is a path,
-/// and is checked as one.
+/// [`validate_contained`] for a path or glob a tool expands itself, as
+/// `lint-markdown` hands its paths to markdownlint-cli2 0.23.2, which
+/// rewrites an argument before globby 16 and fast-glob 3 expand it (spec 022
+/// task 9). The check judges the forms it can model and refuses the rest:
+///
+/// - Refused: a leading `:`, markdownlint-cli2's literal-path prefix, which
+///   it resolves against its working directory; a leading `!` or `#`, its
+///   negations; anywhere a `{`, `}`, `(`, `)` or `|`, micromatch's brace
+///   expansion, extglobs and regex groups, any of which can spell a `..` or
+///   an absolute alternative the lexical screen never sees; and, off
+///   Windows, a `\`, which markdownlint-cli2 reads as `/`.
+/// - A pattern with a `*`, `?` or `[` is checked as a path, and the directory
+///   before its first such component is walked as a feature directory is
+///   ([`validate_feature_path`]), the project root when the pattern starts
+///   with one: fast-glob follows a linked directory it meets
+///   (`followSymbolicLinks` is on unless set, and markdownlint-cli2 does not
+///   set it).
+/// - A path naming an existing directory, `.` among them, is walked the same
+///   way: globby expands a directory to everything under it
+///   (`expandDirectories` is on unless set), and markdownlint-cli2 reads a
+///   lone `.` as the Markdown files in the directory.
+/// - Any other path is checked as a path.
 ///
 /// # Errors
 ///
-/// As [`validate_contained`].
+/// [`PrimitiveError::InvalidPath`] for a refused form, naming it, and as
+/// [`validate_contained`].
 pub(crate) fn validate_glob_contained(repo: &Path, pattern: &str) -> Result<()> {
+    let refuse = |what: String| PrimitiveError::InvalidPath {
+        path: pattern.into(),
+        reason: format!(
+            "{what}, which this check does not model; name the files with a plain path \
+             or a `*`, `?` or `[` glob"
+        ),
+    };
+    match pattern.chars().next() {
+        Some(':') => {
+            return Err(refuse(
+                "begins with `:`, markdownlint-cli2's literal-path prefix".into(),
+            ));
+        }
+        Some(lead @ ('!' | '#')) => {
+            return Err(refuse(format!(
+                "begins with `{lead}`, a markdownlint-cli2 negation"
+            )));
+        }
+        _ => {}
+    }
+    if let Some(syntax) = pattern.chars().find(|c| "{}()|".contains(*c)) {
+        return Err(refuse(format!(
+            "contains `{syntax}`, glob syntax that can spell a path the check does not see"
+        )));
+    }
+    if !cfg!(windows) && pattern.contains('\\') {
+        return Err(refuse(
+            "contains `\\`, which markdownlint-cli2 reads as `/`".into(),
+        ));
+    }
     validate_contained(repo, pattern)?;
     let mut prefix = PathBuf::new();
     for component in Path::new(pattern).components() {
         if component
             .as_os_str()
             .to_string_lossy()
-            .contains(['*', '?', '[', '{'])
+            .contains(['*', '?', '['])
         {
             let canonical_base = canonical_base(repo)?;
             return walk_for_outward_links(repo, &canonical_base, repo.join(prefix), pattern);
         }
         prefix.push(component);
+    }
+    let named = repo.join(pattern);
+    if named.is_dir() {
+        let canonical_base = canonical_base(repo)?;
+        return walk_for_outward_links(repo, &canonical_base, named, pattern);
     }
     Ok(())
 }
@@ -1608,35 +1658,78 @@ pub(crate) fn validate_glob_contained(repo: &Path, pattern: &str) -> Result<()> 
 /// The containment check for a staging path, which lies in the system temp
 /// directory rather than in the project: `fetch-archive`'s destination and
 /// `extract-archive`'s archive and destination, which `/ductus` passes under
-/// the `{tempdir}` it makes with `mktemp -d` (spec 022 task 9, the owner's
-/// answer (a)). The path must be absolute and lie inside
-/// [`std::env::temp_dir`], spelled as that function returns it or in its
-/// canonical form (macOS's `/var` is `/private/var`); the rest of it goes
-/// through [`validate_contained`] against that directory, so a link on it
-/// that leaves the temp directory is refused. Returns the path as given.
+/// the `{tempdir}` it makes with `mktemp -d -t` (spec 022 task 9, the owner's
+/// answer (a)). The path must be absolute and lie strictly inside one of
+/// [`staging_roots`], spelled as that root is or in its canonical form
+/// (macOS's `/var` is `/private/var`); the rest of it goes through
+/// [`validate_contained`] against that root, so a link on it that leaves the
+/// root is refused. The root itself is refused: on Linux it is the shared
+/// `/tmp`, and `/ductus` always passes a directory it made inside it.
+/// Returns the path as given.
 ///
 /// # Errors
 ///
 /// [`PrimitiveError::InvalidPath`], naming the argument, for a relative
-/// path, a `..` component, a path outside the temp directory, or a link on
-/// it that resolves outside the temp directory or cannot be resolved;
-/// [`PrimitiveError::Io`] when the temp directory itself cannot be resolved.
+/// path, a `..` component, a path outside every staging root or naming one,
+/// or a link on it that resolves outside its root or cannot be resolved;
+/// [`PrimitiveError::Io`] when a root itself cannot be resolved.
 pub(crate) fn validate_in_temp_dir(path_arg: &str) -> Result<PathBuf> {
-    validate_in_staging(&std::env::temp_dir(), path_arg)
+    validate_in_staging(staging_roots(), path_arg)
 }
 
-/// [`validate_in_temp_dir`] against a named staging directory, the seam a
-/// test uses to hold the check to a directory it controls.
-fn validate_in_staging(staging: &Path, path_arg: &str) -> Result<PathBuf> {
+/// The directories a staging path may lie in, read once per process:
+/// [`std::env::temp_dir`], which follows `TMPDIR` when it is set, and on
+/// macOS also the per-user temp directory `getconf DARWIN_USER_TEMP_DIR`
+/// names. There `mktemp -d -t` ignores `TMPDIR`: its manual says the `-t`
+/// template is "based on the prefix and the `_CS_DARWIN_USER_TEMP_DIR`
+/// configuration variable if available", with `TMPDIR` only a fallback. On
+/// Linux, GNU `mktemp -t` uses `TMPDIR` or `/tmp`, as `temp_dir` does.
+fn staging_roots() -> &'static [PathBuf] {
+    static ROOTS: std::sync::OnceLock<Vec<PathBuf>> = std::sync::OnceLock::new();
+    ROOTS.get_or_init(|| {
+        #[allow(unused_mut)]
+        let mut roots = vec![std::env::temp_dir()];
+        #[cfg(target_os = "macos")]
+        if let Some(dir) = darwin_user_temp_dir()
+            && !roots.contains(&dir)
+        {
+            roots.push(dir);
+        }
+        roots
+    })
+}
+
+/// The per-user temp directory macOS keeps whatever `TMPDIR` says, from
+/// `getconf DARWIN_USER_TEMP_DIR`, or `None` when that cannot be read.
+#[cfg(target_os = "macos")]
+fn darwin_user_temp_dir() -> Option<PathBuf> {
+    let mut getconf = std::process::Command::new("/usr/bin/getconf");
+    getconf.arg("DARWIN_USER_TEMP_DIR");
+    let output = output_within(&mut getconf, std::time::Duration::from_secs(5)).ok()??;
+    if !output.status.success() {
+        return None;
+    }
+    let text = String::from_utf8(output.stdout).ok()?;
+    let dir = text.trim();
+    (!dir.is_empty()).then(|| PathBuf::from(dir))
+}
+
+/// [`validate_in_temp_dir`] against named staging roots, the seam a test uses
+/// to hold the check to directories it controls.
+fn validate_in_staging(roots: &[PathBuf], path_arg: &str) -> Result<PathBuf> {
     let refuse = |reason: String| PrimitiveError::InvalidPath {
         path: path_arg.into(),
         reason,
     };
+    let shown = roots
+        .iter()
+        .map(|root| root.display().to_string())
+        .collect::<Vec<_>>()
+        .join(" or ");
     let candidate = Path::new(path_arg);
     if !candidate.is_absolute() {
         return Err(refuse(format!(
-            "must be an absolute path inside the system temp directory {}",
-            staging.display()
+            "must be an absolute path inside the system temp directory ({shown})"
         )));
     }
     if candidate
@@ -1647,24 +1740,29 @@ fn validate_in_staging(staging: &Path, path_arg: &str) -> Result<PathBuf> {
             "parent-directory component ('..') not permitted".into(),
         ));
     }
-    let canonical_staging = canonical_base(staging)?;
-    let (base, rest) = if let Ok(rest) = candidate.strip_prefix(staging) {
-        (staging, rest)
-    } else if let Ok(rest) = candidate.strip_prefix(&canonical_staging) {
-        (canonical_staging.as_path(), rest)
-    } else {
-        return Err(refuse(format!(
-            "is not inside the system temp directory {}",
-            staging.display()
-        )));
-    };
-    if !rest.as_os_str().is_empty() {
+    for root in roots {
+        let canonical_root = canonical_base(root)?;
+        let (base, rest) = if let Ok(rest) = candidate.strip_prefix(root) {
+            (root.as_path(), rest)
+        } else if let Ok(rest) = candidate.strip_prefix(&canonical_root) {
+            (canonical_root.as_path(), rest)
+        } else {
+            continue;
+        };
+        if rest.as_os_str().is_empty() {
+            return Err(refuse(format!(
+                "names the system temp directory itself ({shown}); pass a directory made inside it"
+            )));
+        }
         validate_contained(base, &rest.to_string_lossy()).map_err(|err| match err {
             PrimitiveError::InvalidPath { reason, .. } => refuse(reason),
             other => other,
         })?;
+        return Ok(candidate.to_path_buf());
     }
-    Ok(candidate.to_path_buf())
+    Err(refuse(format!(
+        "is not inside the system temp directory ({shown})"
+    )))
 }
 
 /// Walk `start` and everything under it, refusing the first symlink that
@@ -4359,39 +4457,73 @@ mod tests {
         validate_contained(&base, "in.md").unwrap();
     }
 
-    /// A staging path is absolute and inside the staging directory, spelled
-    /// as given or canonically (macOS's `/var` is `/private/var`), and a link
-    /// on it that leaves is refused, the error naming the whole argument
-    /// (spec 022 task 9).
+    /// A staging path is absolute and strictly inside a staging root, spelled
+    /// as the root is or canonically (macOS's `/var` is `/private/var`); the
+    /// root itself is refused, and a link on the path that leaves its root is
+    /// refused, the error naming the whole argument (spec 022 task 9). A
+    /// second root is honoured as the first is, as macOS's per-user temp
+    /// directory is beside `TMPDIR`'s.
     #[cfg(unix)]
     #[test]
-    fn a_staging_path_lies_inside_the_staging_directory() {
+    fn a_staging_path_lies_inside_a_staging_root() {
         let (staging, outside) = project_and_outside();
         let real = staging.path().canonicalize().unwrap();
         let alias_parent = tempfile::tempdir().unwrap();
         let alias = alias_parent.path().join("alias");
         link(&real, &alias);
-        validate_in_staging(&alias, &alias.join("run/a.tar.gz").to_string_lossy()).unwrap();
-        validate_in_staging(&alias, &real.join("run/a.tar.gz").to_string_lossy()).unwrap();
-        validate_in_staging(&alias, &alias.to_string_lossy()).unwrap();
+        let other = tempfile::tempdir().unwrap();
+        let roots = [other.path().to_path_buf(), alias.clone()];
+        validate_in_staging(&roots, &alias.join("run/a.tar.gz").to_string_lossy()).unwrap();
+        validate_in_staging(&roots, &real.join("run/a.tar.gz").to_string_lossy()).unwrap();
         for arg in [
             "run/a.tar.gz".to_string(),
             alias.join("run/../a").to_string_lossy().into_owned(),
             outside.path().join("a").to_string_lossy().into_owned(),
+            alias.to_string_lossy().into_owned(),
         ] {
-            let err = validate_in_staging(&alias, &arg).unwrap_err();
+            let err = validate_in_staging(&roots, &arg).unwrap_err();
             assert!(
                 matches!(&err, PrimitiveError::InvalidPath { path, .. } if *path == arg),
                 "{arg}: {err:?}"
             );
         }
+        let err = validate_in_staging(&roots, &alias.to_string_lossy()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { reason, .. }
+                if reason.contains("names the system temp directory itself")),
+            "{err:?}"
+        );
         link(outside.path().join("dir"), real.join("out"));
         let arg = alias.join("out/a.tar.gz").to_string_lossy().into_owned();
-        let err = validate_in_staging(&alias, &arg).unwrap_err();
+        let err = validate_in_staging(&roots, &arg).unwrap_err();
         assert!(
             matches!(&err, PrimitiveError::InvalidPath { path, reason }
                 if *path == arg && reason.contains("the symlink `out`")),
             "{err:?}"
+        );
+    }
+
+    /// On macOS the per-user temp directory is among the staging roots, and
+    /// it is where `mktemp -d -t` puts a directory whatever `TMPDIR` says.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn the_darwin_user_temp_dir_is_a_staging_root() {
+        let dir = darwin_user_temp_dir().expect("getconf DARWIN_USER_TEMP_DIR");
+        assert!(staging_roots().contains(&dir), "{dir:?}");
+        let elsewhere = tempfile::tempdir().unwrap();
+        let made = std::process::Command::new("mktemp")
+            .args(["-d", "-t", "ductus-XXXXXX"])
+            .env("TMPDIR", elsewhere.path())
+            .output()
+            .unwrap();
+        let staging = PathBuf::from(String::from_utf8(made.stdout).unwrap().trim());
+        let inside = staging.starts_with(&dir) || staging.starts_with(dir.canonicalize().unwrap());
+        std::fs::remove_dir(&staging).unwrap();
+        assert!(
+            inside,
+            "{} is not under {}",
+            staging.display(),
+            dir.display()
         );
     }
 
@@ -4416,7 +4548,48 @@ mod tests {
             );
         }
         validate_glob_contained(project.path(), "docs/**/*.md").unwrap();
+        // A directory is walked as a glob's prefix is, `.` among them: globby
+        // expands a directory to everything under it.
+        for directory in ["specs/001-x", "specs", "."] {
+            let err = validate_glob_contained(project.path(), directory).unwrap_err();
+            assert!(
+                refused_through(&err, "specs/001-x/notes"),
+                "{directory}: {err:?}"
+            );
+        }
+        validate_glob_contained(project.path(), "docs/clean").unwrap();
+        // A file is checked as a path: a link beside it is not its concern.
+        std::fs::write(project.path().join("specs/001-x/spec.md"), "x\n").unwrap();
         validate_glob_contained(project.path(), "specs/001-x/spec.md").unwrap();
+    }
+
+    /// The forms markdownlint-cli2 or its globbing rewrites in ways the check
+    /// does not model are refused, each named in the error.
+    #[test]
+    fn a_glob_form_the_check_does_not_model_is_refused() {
+        let project = tempfile::tempdir().unwrap();
+        let mut refused = vec![
+            (":x.md", "`:`"),
+            ("!x.md", "`!`"),
+            ("#x.md", "`#`"),
+            ("{..,x}/y.md", "`{`"),
+            ("x}.md", "`}`"),
+            ("@(x)/y.md", "`(`"),
+            ("x).md", "`)`"),
+            ("a|b.md", "`|`"),
+        ];
+        if !cfg!(windows) {
+            refused.push(("link\\x.md", "`\\`"));
+        }
+        for (pattern, named) in refused {
+            let err = validate_glob_contained(project.path(), pattern).unwrap_err();
+            assert!(
+                matches!(&err, PrimitiveError::InvalidPath { reason, .. }
+                    if reason.contains(named) && reason.contains("does not model")),
+                "{pattern}: {err:?}"
+            );
+        }
+        validate_glob_contained(project.path(), "x [draft].md").unwrap();
     }
 
     /// After a `..` past a missing directory, the next name can be a link

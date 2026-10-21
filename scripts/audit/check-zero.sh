@@ -36,7 +36,7 @@ runtime_bin="runtime/target/release/ductus"
 # in the release workflow's audit job.
 if ! (cd runtime && cargo build --release --locked --quiet) 2>/dev/null; then
   emit "runtime/" "cargo build --release --locked failed — the frontmatter derivations cannot run" \
-    "fix the build; a precondition that cannot run must not read as a pass"
+    "fix the build, or refresh runtime/Cargo.lock if Cargo.toml changed (one build without --locked); a precondition that cannot run must not read as a pass"
   exit "$drift"
 fi
 

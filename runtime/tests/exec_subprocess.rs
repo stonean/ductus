@@ -621,3 +621,65 @@ fn exec_returns_nonzero_when_command_file_missing() {
         "expected nonzero exit on missing command"
     );
 }
+
+/// On macOS `mktemp -d -t` makes its directory in the per-user temp
+/// directory whatever `TMPDIR` says, so `/ductus`'s `{tempdir}` lies outside
+/// `std::env::temp_dir()` when `TMPDIR` points elsewhere. The staging check
+/// accepts that directory too (spec 022 task 9): the binary, run with
+/// `TMPDIR` pointing elsewhere, extracts into a directory `mktemp -d -t`
+/// made.
+#[cfg(target_os = "macos")]
+#[test]
+fn a_staging_directory_from_mktemp_t_is_accepted_whatever_tmpdir_says() {
+    ensure_binary_built();
+    let elsewhere = tempfile::tempdir().unwrap();
+    let tmpdir = elsewhere.path().join("tmpdir");
+    fs::create_dir_all(&tmpdir).unwrap();
+    let made = Command::new("mktemp")
+        .args(["-d", "-t", "ductus-XXXXXX"])
+        .env("TMPDIR", &tmpdir)
+        .output()
+        .unwrap();
+    assert!(made.status.success(), "mktemp failed: {made:?}");
+    let staging = PathBuf::from(String::from_utf8(made.stdout).unwrap().trim());
+    assert!(
+        !staging.starts_with(&tmpdir),
+        "mktemp -t honoured TMPDIR, so this case does not arise: {}",
+        staging.display()
+    );
+    let archive = staging.join("framework.tar.gz");
+    {
+        let file = fs::File::create(&archive).unwrap();
+        let encoder = flate2::write::GzEncoder::new(file, flate2::Compression::default());
+        let mut builder = tar::Builder::new(encoder);
+        let body = b"# README\n";
+        let mut header = tar::Header::new_gnu();
+        header.set_size(body.len() as u64);
+        header.set_mode(0o644);
+        header.set_cksum();
+        builder
+            .append_data(&mut header, "README.md", &body[..])
+            .unwrap();
+        builder.into_inner().unwrap().finish().unwrap();
+    }
+    let out = ductus_command(runtime_binary())
+        .args(["extract-archive", "--archive"])
+        .arg(&archive)
+        .arg("--dest")
+        .arg(staging.join("out"))
+        .env("TMPDIR", &tmpdir)
+        .current_dir(elsewhere.path())
+        .output()
+        .unwrap();
+    let extracted = staging.join("out/README.md").is_file();
+    fs::remove_dir_all(&staging).unwrap();
+    assert!(
+        out.status.success(),
+        "a staging path mktemp -t made was refused: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(
+        extracted,
+        "the archive was not extracted into the staging path"
+    );
+}

@@ -183,7 +183,7 @@ The phase runs both checks and sorts every restart-requiring write into one of *
 mktemp -d -t ductus-XXXXXX
 ```
 
-On macOS/Linux this lands under `$TMPDIR` or `/tmp`. Never reuse a directory from a prior run — a fresh fetch is the only way `/ductus` picks up upstream changes. It is created here rather than inside any one step because the steps run in order and the *first* of them needs it: **Source resolution** fetches the version pin into it. Creating it inside a later step left the earlier ones with nowhere to fetch to, which is what made greenfield acquisition halt before it could start.
+On Linux it lands under `$TMPDIR`, or `/tmp` when that is unset. On macOS `-t` puts it in the per-user temp directory (`getconf DARWIN_USER_TEMP_DIR`) whatever `$TMPDIR` says, and the runtime's archive primitives accept a path in either place. Never reuse a directory from a prior run — a fresh fetch is the only way `/ductus` picks up upstream changes. It is created here rather than inside any one step because the steps run in order and the *first* of them needs it: **Source resolution** fetches the version pin into it. Creating it inside a later step left the earlier ones with nowhere to fetch to, which is what made greenfield acquisition halt before it could start.
 
 ### Source resolution
 
@@ -240,7 +240,7 @@ Every fetch this step makes, and the self-update fetch in the **Self-update chec
 
    This fetch is also the existence check for a named or recorded tag, so a tag costs no extra request: every release at or above the floor carries a `version` file, so an HTTP 404 on a tag means the tag does not exist.
 
-   > Halt (404 on a named or recorded tag): `tag {tag} does not exist — https://raw.githubusercontent.com/${DUCTUS_REPO:-stonean/ductus}/{tag}/version returned 404.`
+   > Halt (404 on a named or recorded tag): `tag {tag} ({tag origin}) does not exist — https://raw.githubusercontent.com/${DUCTUS_REPO:-stonean/ductus}/{tag}/version returned 404.`
 
    Any other failure, or a file that is **absent or unparseable**, halts naming the URL: guessing a version or falling through to another source silently installs a runtime the framework was never tested against.
 

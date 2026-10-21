@@ -2077,7 +2077,9 @@ pub struct RunGeneratorResult {
 #[serde(rename_all = "kebab-case")]
 pub struct LintMarkdownArgs {
     /// Repo-relative paths or globs to lint. Each must stay inside the
-    /// project, and a glob's literal prefix may hold no link that leaves it.
+    /// project, and a glob's literal prefix or a named directory may hold no
+    /// link that leaves it. A leading `:`, `!` or `#`, a brace, parenthesis
+    /// or `|`, and off Windows a backslash, are refused.
     #[arg(long = "path")]
     pub paths: Vec<String>,
     /// Whether to invoke `markdownlint-cli2` in fix mode.
