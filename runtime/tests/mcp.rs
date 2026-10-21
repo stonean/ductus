@@ -142,6 +142,28 @@ async fn lists_every_manifest_tool_and_canonical_set() {
     );
 }
 
+/// The manifest names each primitive the server does not serve on a
+/// `# cli-only:` line, which `/audit`'s Family 9 reads, and the set must be
+/// `CLI_ONLY_PRIMITIVES` exactly.
+#[test]
+fn the_manifest_names_the_cli_only_primitives() {
+    let manifest = fs::read_to_string(workspace_root().join("framework/runtime-tools.txt"))
+        .expect("framework/runtime-tools.txt must exist (canonical manifest)");
+    let named: std::collections::BTreeSet<&str> = manifest
+        .lines()
+        .filter_map(|l| l.strip_prefix("# cli-only:"))
+        .map(str::trim)
+        .collect();
+    let expected: std::collections::BTreeSet<&str> = ductus::schema::registry::CLI_ONLY_PRIMITIVES
+        .iter()
+        .copied()
+        .collect();
+    assert_eq!(
+        named, expected,
+        "`# cli-only:` lines diverged from CLI_ONLY_PRIMITIVES"
+    );
+}
+
 /// The handshake names this runtime, not the SDK it is built on. rmcp fills
 /// `serverInfo` from its own build environment unless the server sets it, so
 /// a host was told it was talking to `rmcp` at the SDK's version.

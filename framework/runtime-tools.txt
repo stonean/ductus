@@ -19,10 +19,13 @@
 # is one more spelling of the same namespace. The bare names are also the
 # `ductus <name>` subcommand identifiers.
 #
-# A primitive the server does not serve is not listed: `run-generator`
-# runs any project file with `bash`, so it is a `ductus run-generator`
-# subcommand and a `ductus exec` step but not a tool
-# (`CLI_ONLY_PRIMITIVES` in runtime/src/schema/registry.rs, spec 022 task 14).
+# A primitive the server does not serve is not a tool line. It is named on
+# a `# cli-only:` line instead: a `ductus <name>` subcommand and a
+# `ductus exec` step, never a tool. /audit's Family 9 reads those lines so a
+# step naming one still counts as a primitive call, and runtime/tests/mcp.rs
+# holds them equal to `CLI_ONLY_PRIMITIVES` (runtime/src/schema/registry.rs).
+# `run-generator` runs any project file with `bash` (spec 022 task 14).
+# cli-only: run-generator
 
 read-spec
 read-tasks

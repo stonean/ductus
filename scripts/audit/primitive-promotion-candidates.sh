@@ -13,7 +13,8 @@
 # (e.g., "render the dashboard", "aggregate findings") gets the annotation.
 #
 # Method:
-#   1. Read framework/runtime-tools.txt to load the set of primitive names.
+#   1. Read framework/runtime-tools.txt to load the set of primitive names:
+#      its tool lines and its `# cli-only:` lines.
 #   2. Walk each framework/commands/*.md file.
 #   3. Find the ## Instructions section; iterate numbered steps within it.
 #   4. For each step, check whether it contains a backticked primitive name
@@ -37,6 +38,12 @@ while IFS= read -r raw; do
   [ -z "$line" ] && continue
   primitives+=("$line")
 done < "$MANIFEST"
+
+# The primitives the MCP server does not serve are named on `# cli-only:`
+# lines of the same manifest; a step naming one is a primitive call too.
+while IFS= read -r name; do
+  [ -n "$name" ] && primitives+=("$name")
+done < <(sed -n 's/^# cli-only:[[:space:]]*//p' "$MANIFEST")
 
 # Load legacy-prose allowlist: command files in this list have not yet
 # been rewritten to the parseable conventions. They're already known to

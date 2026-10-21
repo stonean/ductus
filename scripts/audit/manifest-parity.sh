@@ -37,9 +37,15 @@ audit_family manifest-parity
 # Claude uses `mcp__ductus__name` (double-underscore); Auggie uses
 # `mcp:ductus:name` (colon). Normalize both to just the bare tool name
 # (e.g., `read-spec`, `mark-task`).
+# The lines between the generated-block markers: the canonical MCP entries.
+# A retired entry elsewhere in the file (Claude's step 4) is not one.
+generated_block() {
+  sed -n '/<!-- generated:mcp-allow:start -->/,/<!-- generated:mcp-allow:end -->/p' "$1"
+}
+
 extract_claude_mcp() {
   local file="$1"
-  grep -oE '`mcp__ductus__[a-z-]+`' "$file" \
+  generated_block "$file" | grep -oE '`mcp__ductus__[a-z-]+`' \
     | tr -d '`' \
     | sed -E 's/^mcp__ductus__//' \
     | sort -u
@@ -47,7 +53,7 @@ extract_claude_mcp() {
 
 extract_auggie_mcp() {
   local file="$1"
-  grep -oE '"toolName": *"mcp:ductus:[a-z-]+"' "$file" \
+  generated_block "$file" | grep -oE '"toolName": *"mcp:ductus:[a-z-]+"' \
     | sed -E 's/.*"mcp:ductus:([a-z-]+)".*/\1/' \
     | sort -u
 }
