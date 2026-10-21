@@ -37,8 +37,8 @@
 #
 # Exits non-zero, and writes nothing to that file, if a source file's markers
 # are missing, repeated, sharing a line, or out of order, since the splice
-# below could drop lines from a file shaped that way. The other files are
-# still processed.
+# below would write a wrong file, or silently skip it, for a file shaped that
+# way. The other files are still processed.
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

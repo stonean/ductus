@@ -101,9 +101,9 @@ done
 # one or at any other line, a marker line aside, that starts in column 0; a line inside a fenced
 # block is none of these. A fence opens on three or more backticks or
 # tildes indented at most three spaces (a backtick line whose remainder
-# holds a backtick is inline code, not a fence) and closes on the same
-# character repeated at least as often, indented at most three spaces more
-# than the opener. An unclosed fence is reported, since the
+# holds a backtick is text, not a fence) and closes only on the same
+# character repeated at least as often, with nothing after it but spaces or
+# tabs, indented at most three spaces more than the opener. An unclosed fence is reported, since the
 # scan cannot see past it; an indented heading it reads as text, and
 # markdownlint reports it (MD023).
 stray_entries() {
