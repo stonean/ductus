@@ -1634,30 +1634,35 @@ fn refuse_outward_link(link: &Path, base: &Path, canonical_base: &Path, rel: &st
 /// parent's resolution with the last component appended — `..` taking the
 /// parent of that resolution, and an appended name that turns out to exist
 /// (reached through a `..` after a missing directory) resolved in turn, since
-/// it may be a link. Links are followed at most [`MAX_SYMLINK_HOPS`] deep.
+/// it may be a link. At most [`MAX_SYMLINK_HOPS`] links are followed across
+/// the whole resolution, as the kernel counts them across one lookup: a count
+/// kept per branch would let a chain of links that each name the next twice
+/// cost time exponential in its length.
 fn resolve_symlinks(path: &Path) -> std::io::Result<PathBuf> {
-    resolve_symlinks_within(path, 0)
+    let mut hops = 0;
+    resolve_symlinks_within(path, &mut hops)
 }
 
 /// Linux's own limit on the links one lookup follows (`MAXSYMLINKS`).
 const MAX_SYMLINK_HOPS: u32 = 40;
 
-fn resolve_symlinks_within(path: &Path, hops: u32) -> std::io::Result<PathBuf> {
+fn resolve_symlinks_within(path: &Path, hops: &mut u32) -> std::io::Result<PathBuf> {
     match path.canonicalize() {
         Ok(canonical) => return Ok(canonical),
         Err(err) if err.kind() != std::io::ErrorKind::NotFound => return Err(err),
         Err(_) => {}
     }
     if std::fs::symlink_metadata(path).is_ok_and(|meta| meta.file_type().is_symlink()) {
-        if hops >= MAX_SYMLINK_HOPS {
+        if *hops >= MAX_SYMLINK_HOPS {
             return Err(std::io::Error::other("too many levels of symbolic links"));
         }
+        *hops += 1;
         let target = std::fs::read_link(path)?;
         // `join` replaces the parent when the target is absolute.
         let next = path
             .parent()
             .map_or_else(|| target.clone(), |parent| parent.join(&target));
-        return resolve_symlinks_within(&next, hops + 1);
+        return resolve_symlinks_within(&next, hops);
     }
     let mut components = path.components();
     match components.next_back() {
@@ -4227,6 +4232,33 @@ mod tests {
         link("missing/../out/x.md", base.join("dangling.md"));
         let err = validate_contained(&base, "dangling.md").unwrap_err();
         assert!(refused_through(&err, "dangling.md"), "{err:?}");
+    }
+
+    /// Every link followed counts against one budget for the whole
+    /// resolution. Twelve links that each name the next twice, through a
+    /// missing directory so the kernel cannot resolve them itself, need 4,096
+    /// follows: refused at the budget, not resolved after exponential work.
+    #[cfg(unix)]
+    #[test]
+    fn links_that_fan_out_share_one_hop_budget() {
+        let (project, _outside) = project_and_outside();
+        let base = project.path().canonicalize().unwrap();
+        std::fs::create_dir_all(base.join("real")).unwrap();
+        let chain = 12;
+        for i in 0..chain {
+            let next = format!("L{}", i + 1);
+            link(
+                format!("m/../{next}/../m/../{next}"),
+                base.join(format!("L{i}")),
+            );
+        }
+        link("real", base.join(format!("L{chain}")));
+        let err = validate_contained(&base, "L0/x.md").unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { reason, .. }
+                if reason.contains("too many levels of symbolic links")),
+            "{err:?}"
+        );
     }
 
     #[cfg(unix)]
