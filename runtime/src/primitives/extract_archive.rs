@@ -3,10 +3,11 @@
 //!
 //! Both formats are handled entirely in-process (no shell-out): tar.gz
 //! via `flate2` + `tar`, zip via the `zip` crate. Every entry path is
-//! validated before anything is written for it: an absolute path or a
-//! component containing `..` yields [`PrimitiveError::UnsafeArchivePath`],
-//! and a path that a link already under `dest` would carry outside it
-//! yields [`PrimitiveError::InvalidPath`] naming the link.
+//! validated before anything is written for it: an absolute path, a `..`
+//! component, or a name that is not UTF-8 yields
+//! [`PrimitiveError::UnsafeArchivePath`], and a path that a link already
+//! under `dest` would carry outside it yields [`PrimitiveError::InvalidPath`]
+//! naming the link.
 //!
 //! On Unix, file permissions are preserved from the archive's entry
 //! metadata (`tar` header mode bits; zip `unix_mode`), masked to the
@@ -50,7 +51,7 @@ use crate::schema::primitives::{ExtractArchiveArgs, ExtractArchiveResult};
 /// - [`PrimitiveError::UnknownArchiveFormat`] when the format cannot be inferred
 ///   and no override was supplied.
 /// - [`PrimitiveError::UnsafeArchivePath`] for an entry with an absolute
-///   path or a `..` component.
+///   path, a `..` component, or a name that is not UTF-8.
 /// - [`PrimitiveError::InvalidPath`] for an entry a link already under
 ///   `dest` would carry outside it, naming the link.
 /// - [`PrimitiveError::InvalidPath`] when `archive` or `dest` is not an
@@ -357,22 +358,33 @@ fn zip_to_io(archive: &Path) -> impl Fn(zip::result::ZipError) -> PrimitiveError
     }
 }
 
-/// Join `dest` and an entry path safely. Rejects absolute paths and `..`
-/// components by text, then checks the joined path with
-/// [`crate::primitives::validate_contained`] against `dest`: canonicalized
-/// and compared by whole components, so a link already under `dest` cannot
-/// carry an entry outside it (`BE-INPUT-004`, spec 022). The archive itself
+/// Join `dest` and an entry path safely. Rejects a name that is not UTF-8,
+/// absolute paths and `..` components by text, then checks the joined path
+/// with [`crate::primitives::validate_contained`] against `dest`:
+/// canonicalized and compared by whole components, so a link already under
+/// `dest` cannot carry an entry outside it (`BE-INPUT-004`, spec 022). The
+/// containment check reads the path as text, so a name that is not UTF-8
+/// would be checked in its lossy form and written under its own bytes,
+/// through a link the lossy form does not name; it is refused instead, as
+/// the result's `files` reports names as text anyway. On Unix a tar entry
+/// name is raw bytes; elsewhere both formats give UTF-8. The archive itself
 /// creates no link, since symlink entries are skipped. Returns the joined
 /// path, as given, on success.
 pub(crate) fn safe_join(dest: &Path, entry: &Path) -> Result<PathBuf> {
-    let entry_str = entry.to_string_lossy().to_string();
+    let Some(entry_str) = entry.to_str() else {
+        return Err(PrimitiveError::UnsafeArchivePath {
+            entry: entry.to_string_lossy().into_owned(),
+        });
+    };
     let mut accumulated = PathBuf::new();
     for component in entry.components() {
         match component {
             Component::Normal(part) => accumulated.push(part),
             Component::CurDir => {}
             Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
-                return Err(PrimitiveError::UnsafeArchivePath { entry: entry_str });
+                return Err(PrimitiveError::UnsafeArchivePath {
+                    entry: entry_str.to_owned(),
+                });
             }
         }
     }
@@ -541,6 +553,60 @@ mod tests {
         let dest = Path::new("/tmp/out");
         let err = safe_join(dest, Path::new("/etc/passwd")).unwrap_err();
         assert!(matches!(err, PrimitiveError::UnsafeArchivePath { .. }));
+    }
+
+    /// A name that is not UTF-8 would be checked in its lossy form and
+    /// written under its own bytes, so it is refused before any check runs.
+    #[cfg(unix)]
+    #[test]
+    fn safe_join_rejects_a_name_that_is_not_utf8() {
+        use std::os::unix::ffi::OsStrExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let name = Path::new(std::ffi::OsStr::from_bytes(b"\xff/x.txt"));
+        let err = safe_join(tmp.path(), name).unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::UnsafeArchivePath { .. }),
+            "{err:?}"
+        );
+    }
+
+    /// A tarball made with `tar -C dir -czf x.tgz .` carries a `./` entry,
+    /// which names `dest` itself and has nothing to check.
+    #[test]
+    fn a_tarball_with_a_current_directory_entry_extracts() {
+        let tmp = tempfile::tempdir().unwrap();
+        let archive = tmp.path().join("dot.tar.gz");
+        let file = fs::File::create(&archive).unwrap();
+        let encoder = flate2::write::GzEncoder::new(file, flate2::Compression::default());
+        let mut builder = tar::Builder::new(encoder);
+        let mut dir = tar::Header::new_gnu();
+        dir.set_entry_type(tar::EntryType::Directory);
+        dir.set_size(0);
+        dir.set_mode(0o755);
+        dir.set_cksum();
+        builder
+            .append_data(&mut dir, "./", std::io::empty())
+            .unwrap();
+        let mut body = tar::Header::new_gnu();
+        body.set_size(5);
+        body.set_mode(0o644);
+        body.set_cksum();
+        builder
+            .append_data(&mut body, "./a.txt", &b"alpha"[..])
+            .unwrap();
+        builder.into_inner().unwrap().finish().unwrap();
+        let dest = tmp.path().join("out");
+        let result = run(
+            &ExtractArchiveArgs {
+                archive: archive.to_string_lossy().into_owned(),
+                dest: dest.to_string_lossy().into_owned(),
+                format: None,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(fs::read(dest.join("a.txt")).unwrap(), b"alpha");
+        assert_eq!(result.files.len(), 1, "{:?}", result.files);
     }
 
     #[test]

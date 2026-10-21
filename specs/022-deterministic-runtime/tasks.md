@@ -147,6 +147,8 @@ Detection ran at `1572bb3e` (steps 1–10, 16, 17 through the CLI; steps 11–12
 - [ ] Have an independent agent re-read the fix round (the commit carrying this task's ticked items, and the fixes above) through `git show`; fix what it finds and re-read again until a re-read returns no MUST or SHOULD finding
 - [ ] After tasks 11–15 are answered and applied: re-check (steps 1–17), process-decisions (expect BE-DEPS-006 and the old BE-INPUT-004 route to expire), write-analysis with every finding itemized, then the done transition under the owner's pre-authorization
 
+Re-read 1 (2026-10-21, of `2aec1962` and `54068808`): 1 MUST, 2 SHOULD, 4 notes. MUST: `safe_join` checked an entry's lossy text and wrote its raw bytes, so on Linux an entry under a non-UTF-8 directory name went through a link the check never saw (reproduced by the re-reader in a Linux container); fixed by refusing a name that is not UTF-8, tested and mutation-proved. SHOULD: task 11's "four configure steps" (already corrected by the re-measurement in `4a92a92b`); the module doc's "a component containing `..`" (fixed). Notes: the `./` guard had no test (added, mutation-proved); plan.md's "every job" beside "`verify-published` sets none" and "at most 0.5" against a 0.53-minute run (both fixed); `ductus.md`'s "`/tmp` when that is unset" (fixed to "unset or empty"); the scenario `a-path-argument-resolves-inside-its-base`'s "Either is accepted" leaves out a `getconf` that cannot be read, a case that predates this round, and editing the scenario would stale 022's review, so it is left; the timeout arithmetic adds the connect bound to curl's per-transfer bound, which overstates the worst case by a minute and is left as a stated upper bound.
+
 - **Done when**: 022's analysis record is non-blocking with every finding dispositioned, and `check-review-gate` passes.
 
 ## 11. Decide: auto-approved ductus tools write Claude's permission files (BE-AUTHZ-004, blocking)
@@ -187,7 +189,25 @@ The analysis found `CFG-ENV-008` firing on scenario `cli-config-dir-per-contribu
 
 Before asking: measure every caller of `Host::load` and of the session preserve-read, what each does on error today, and which commands would stop on a malformed file. Options to shape from that: (a) fail fast everywhere, naming the file and the value; (b) fail fast for `[host]` in config and treat the session file as state rather than configuration (then say why `cli-config-dir` there is not a configuration value); (c) another split the measurement suggests.
 
-- [ ] Measure, write the measured question here, and ask the owner; apply the answer
+Measured 2026-10-21, over the runtime at `4a92a92b` (non-test code):
+
+- **`.ductus/config.toml`, a document that does not parse.** Five readers halt with an error naming the file: `discover-rule-files` (`[rules]`, `[review]`), `check-artifact-size` (`[artifacts]`), `dashboard`, `resolve-constitutions` (`[constitutions]`) and `resolve-references` (`[services]`). Four fall back: `Host::load` (`[host]`) to the default `project` and `cli-config-dir` with a stderr line; `Paths::load` (`[paths]`) to the spec root `specs` with a stderr line; `derive-references` (`[services]`) to an empty registry, silently; and `check-orphaned-references` (`[migrations] last_applied`) to an empty value, silently. 063's plan already says "A config file that does not parse as TOML is an operational error, as it is for `discover-rule-files` and every other config reader", which is untrue of those four.
+- **The shared session file, `.ductus/session.toml`.** Resolution halts naming it (`resolve-session`, `dashboard`'s peek; 062's AC22: "A file holding session state that cannot be parsed is reported by name, and the process does not treat it as absent or adopt the default in its place"). `Host::load` reads its `cli-config-dir` and falls back with a stderr line; `ductus exec`'s context seed (`seed_context`, `runtime/src/main.rs`) falls back silently. `write-session` replaces a malformed file and names it in `unreadable`, which is how `/target` repairs one (062 task 20; 000's `target-clear-flag`: "`--clear` resets it cleanly").
+- **Who reaches the fallbacks.** `Host::load`: `ductus exec`'s command lookup (`run_exec`), the interpreter's (`locate_command_file`), and the `project` name `check-review-gate` and `dashboard` print. `Paths::load`: 48 call sites in 42 source files, nearly every primitive. So today a malformed config halts `/status`, `/review` and `/analyze` at the readers above while other primitives run against `specs` and the `[host]` defaults, which is wrong for any project that sets `[paths] specs-root`.
+- **Is the session file's `cli-config-dir` configuration?** Yes: `cli-config-dir-per-contributor` makes it the per-contributor value `Host::load` resolves ahead of `[host] cli-config-dir`, the same setting. So the rule fires on the session read too, and a split that keeps those reads lenient is not offered.
+
+Options:
+
+- (a) Fail fast on every read and every write. The six fallbacks above halt with an error naming the file and the parse error, and `write-session` refuses to write over a malformed session file, so the operator repairs or deletes it by hand. Rewrites 022's `cli-config-dir-per-contributor` (Behavior bullet 1, Edge Case "Malformed session file"), which stales 022's review digest, and contradicts 000's `target-clear-flag` edge case, reopening 000.
+- (b) Fail fast on every read, and keep `write-session`'s repair. The same six fallbacks halt naming the file; a write over a malformed session file still replaces it and names it, so `/target` stays the repair when an agent runs it (`ductus exec target` halts at its command lookup first). Rewrites the same 022 scenario, and nothing in 000 or 062 changes: 062's AC22 already requires the reads to report the file.
+- (c) Fail fast on the config file alone. Not offered, by the last measurement above: the session read would keep the fallback the rule forbids.
+
+Under (a) and (b) a malformed config halts every command at its first primitive, where today it halts some and misdirects the rest; and `ductus exec` halts on a malformed session file, which 062 task 20 had let it run past. Both make 063's plan sentence true.
+
+Recommended: (b). It meets `CFG-ENV-008` on every read, keeps the repair `/target` gives today, and changes one 022 scenario, where (a) also leaves a malformed session file with no tool to repair it and reopens 000.
+
+- [x] Measure and write the measured question here
+- [ ] The owner answers (a) or (b); apply the answer
 
 ## 13. Decide: known vulnerabilities in the npm lint tooling (BE-DEPS-001, blocking)
 
@@ -195,7 +215,24 @@ The analysis found `BE-DEPS-001` firing: plan.md's Provenance bullet covers the 
 
 Options to put to the owner: (a) bump to 0.24.0, run `npm audit` in `framework-checks.yml` and weekly, failing on any high or critical advisory not on a documented exception list (npm has no ignore flag, so the list is a filter over `npm audit --json` by advisory id), and document the five remaining advisories as that exception with a remediation trigger; (b) bump to 0.24.0, document the exception in plan.md, and run `npm audit` weekly as a report that does not fail; (c) another shape. If 0.24.0 is adopted, update the version named in plan.md and in `validate_glob_contained`'s doc (`runtime/src/primitives/mod.rs`), which say 0.23.2.
 
-- [ ] Measure what (a)'s filter needs, write the measured question here, and ask the owner; apply the answer
+Measured 2026-10-21 with npm 11.17.0, in a scratch copy of `package.json` and `package-lock.json`:
+
+- **At the pinned 0.23.2**, `npm audit` reports 11 vulnerable packages from 9 distinct advisories: 4 high (braces `GHSA-vfj7-8cjw-p6xm`; markdown-it `GHSA-r7fv-28h4-cvq7` and `GHSA-gfr2-rv44-r23c`; smol-toml `GHSA-7w5x-hrqm-74c2`), 3 moderate and 2 low.
+- **At 0.24.0** (`npm install markdownlint-cli2@0.24.0 --package-lock-only`), 8 packages from 2 advisories. The 5 high packages are one advisory, `GHSA-vfj7-8cjw-p6xm`, "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns" (braces `<=3.0.3`, CWE-674, CVSS 7.5), reported again on micromatch, fast-glob, globby and markdownlint-cli2, which depend on it. braces has no fixed release: its published versions end at 3.0.3, its `latest`. The 3 low packages are `GHSA-238p-pmpm-9mq7` (katex `<0.18.2`), which micromark-extension-math's `^0.16.0` range keeps from reaching the fixed katex.
+- **Reach.** The braces advisory needs a crafted, deeply nested brace pattern. `lint-markdown` refuses braces in the globs it passes (`validate_glob_contained`), and the globs in the configuration are the project's own.
+- **What (a)'s filter needs.** npm 11.17.0 has no flag to ignore one advisory: `npm audit --help` lists `--audit-level`, `--omit` and `--include`, and nothing that names an advisory. `npm audit --json` gives each advisory as a `via` object carrying its `url` (the GHSA URL) and `severity`, so a filter collects the high and critical URLs across `.vulnerabilities` and fails on any URL not on the exception list. At 0.24.0 the list holds one id.
+
+Options:
+
+- (a) Bump to 0.24.0. `framework-checks.yml`, on every push and pull request, and the weekly `runtime-currency.yml` run `npm audit --json` through that filter and fail on a high or critical advisory not on the exception list. The list holds `GHSA-vfj7-8cjw-p6xm`, documented in plan.md's Provenance bullet with the reach above and its remediation trigger: a braces release that fixes it, or a markdownlint-cli2 release that stops depending on a vulnerable braces. A new high advisory fails a run.
+- (b) Bump to 0.24.0, document the same exception in plan.md, and run `npm audit` in the same two places as a report that never fails. A new high advisory is printed in a passing run, and acting on it depends on someone reading the log.
+
+Either way, the version named in plan.md and in `validate_glob_contained`'s doc (`runtime/src/primitives/mod.rs`), 0.23.2 today, moves to 0.24.0.
+
+Recommended: (a). `BE-DEPS-001` asks for a policy on findings, and (a) is the one whose policy acts without anyone remembering to look: a new high or critical advisory fails the run, while the one advisory with no fix is excepted by id, with its reach and the event that ends the exception written down. Its cost is the filter and a test that shows it fails on an advisory not on the list.
+
+- [x] Measure what (a)'s filter needs and write the measured question here
+- [ ] The owner answers (a) or (b); apply the answer
 
 ## 14. Decide: `run-generator` runs any project file, so two auto-approved tools run any command (blocking)
 

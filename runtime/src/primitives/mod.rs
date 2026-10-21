@@ -257,7 +257,8 @@ pub enum PrimitiveError {
         /// Local archive path whose format couldn't be determined.
         path: PathBuf,
     },
-    /// Archive entry path escapes the destination directory (`..`, absolute).
+    /// Archive entry path that is not safe to join to the destination: an
+    /// absolute path, a `..` component, or a name that is not UTF-8.
     #[error("unsafe archive entry path: {entry}")]
     UnsafeArchivePath {
         /// Entry path as it appeared inside the archive.
