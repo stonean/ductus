@@ -262,7 +262,7 @@ fi
 run m-named-below --ref=ductus-v0.54.2
 if [ "$rc" -ne 0 ] && wrote_nothing m-named-below \
   && [ "$(requests m-named-below)" -eq 0 ] \
-  && out m-named-below | grep -qF "ductus-v0.54.2 is older than ductus-v$FLOOR"; then
+  && out m-named-below | grep -qF "ductus-v0.54.2 (from --ref) is older than ductus-v$FLOOR"; then
   pass "M: a named tag below the floor halts before any fetch"
 else
   fail "M: named tag below the floor (rc=$rc): $(out m-named-below)"

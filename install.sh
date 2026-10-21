@@ -162,7 +162,7 @@ if [ -n "$tag" ] && version_lt "${tag#ductus-v}" "$REF_FLOOR"; then
   if [ -z "$ref" ] || [ "$ref" = "latest" ]; then
     echo "ductus: the latest release, $tag, is older than ductus-v$REF_FLOOR, the first release that carries this installer's bootstrap. That release may still be publishing. Re-run once it exists, or pass --ref=main to proceed now." >&2
   else
-    echo "ductus: $tag is older than ductus-v$REF_FLOOR, the first release whose bootstrap honors --ref. Every earlier release's bootstrap fetches from main, so $tag could not be honored. Name ductus-v$REF_FLOOR or later, or pass --ref=main." >&2
+    echo "ductus: $tag (from --ref) is older than ductus-v$REF_FLOOR, the first release whose bootstrap honors --ref. Every earlier release's bootstrap fetches from main, so $tag could not be honored. Name ductus-v$REF_FLOOR or later, or pass --ref=main." >&2
   fi
   exit 1
 fi

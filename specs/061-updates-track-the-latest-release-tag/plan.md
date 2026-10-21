@@ -28,11 +28,15 @@ The new subsection sits between the `{tempdir}` creation and **ductus runtime de
 6. **Check the migration floor** (tags only; see below).
 7. **Report the source**: one line naming the source, where it came from (`--ref`, recorded, or default), and the ref it resolved to. It is emitted here so that a run which later halts or aborts still says which release it was on (AC5).
 
+**Every fetch resolution makes is bounded and verified.** The redirect read, the pin, both registry reads and the self-update fetch are HTTPS only at TLS 1.2 or later (`--proto '=https' --tlsv1.2`, `BE-DATA-001`), keep `curl`'s certificate and host-name verification, which curl's manual (8.7.1, `--insecure`) says it performs on every TLS connection unless `--insecure` is given (`BE-DATA-011`), and are bounded (`BE-TIMEOUT-001`) by two named values in the bootstrap's Derived paths table: `{connect-timeout}` (10 s) for the connection and `{request-timeout}` (60 s) for the whole request, the values the installer names `CONNECT_TIMEOUT_SECONDS` and `REQUEST_TIMEOUT_SECONDS`. A fetch that times out fails like any other, so the halt naming its URL fires. None is retried. The bounds were added by 061 task 24, the owner's answer (a) of 2026-10-20; the runtime-acquisition downloads and the markdown-only archive fetch are 048's and 015's and keep their own terms.
+
+**Each floor halt names where its tag came from** (`CFG-ENV-005`): `from --ref`, `recorded as [source] ref in {active config file}`, or `the latest release`. A recorded value below a floor therefore names the setting and the file to fix, as the grammar halt already does.
+
 **Runtime acquisition Branch 2 step 1 stops fetching the pin.** It reads the one resolution fetched. This also retires the paragraph that justified two fetches agreeing "only because both name `main`".
 
 ### The ref is recorded after acquisition, before the self-update check
 
-`--ref=main` or a tag is written as a `# ductus (source)` line-prefix managed block. The block holds a `[source]` table in the active config file, written with `merge-managed-block`, as the `[host]` block is (`framework/bootstrap/ductus.md`, §Instructions step 6). The primitive appends a new block at the end of the file (`runtime/src/primitives/merge_managed_block.rs:28`). A trailing TOML table cannot capture another table's keys, so appending is safe.
+`--ref=main` or a tag is written as a `# ductus (source)` line-prefix managed block. A key in `[source]` other than `ref` is reported by name and never halts, as the bootstrap's §Project Configuration rule for unknown keys says (spec 019's `CFG-ENV-012` decision; `runtime/src/schema/config_keys.rs` registers `[source]` with `ref` alone). The block holds a `[source]` table in the active config file, written with `merge-managed-block`, as the `[host]` block is (`framework/bootstrap/ductus.md`, §Instructions step 6). The primitive appends a new block at the end of the file (`runtime/src/primitives/merge_managed_block.rs:28`). A trailing TOML table cannot capture another table's keys, so appending is safe.
 
 The write happens right after **ductus runtime detection**, because that is the first point at which the primitive is reachable in both states: over MCP in State A, and through `{pointer-path}` in State B. It happens before the **Self-update check**. The self-update's stale path aborts pre-flight, and the re-run that follows must read the choice from the record. Otherwise it would resolve the default and replace the bootstrap again, which is the flip-flop the spec's persistence answer exists to prevent.
 
@@ -71,7 +75,7 @@ This replaces the literal `ductus-main/` at every occurrence: six in `framework/
   - **Present at `main`**: the migration was added after the tag. Halt, naming the tag and the migration's `introduced_in`.
   - **Absent at `main` too**: the migration has been retired, so the project's layout predates every live entry. Pass, as §Pre-run Migrations' stale-reference behavior already treats a retired id.
 
-A null `last_applied` passes, and on the `main` source the check is skipped entirely. The `main` registry read is a validation lookup, not a source fetch. Nothing in the run's content comes from it, so *One run, one source* is not touched. Only the target tag's registry cannot tell a migration newer than the tag from a retired one, and those two need opposite answers.
+Either registry fetch failing halts, naming its URL, as the pin's does (`BE-BULK-002`): the floor is never passed on a registry the run could not read. A null `last_applied` passes, and on the `main` source the check is skipped entirely. The `main` registry read is a validation lookup, not a source fetch. Nothing in the run's content comes from it, so *One run, one source* is not touched. Only the target tag's registry cannot tell a migration newer than the tag from a retired one, and those two need opposite answers.
 
 ### Both floors apply to any resolved tag, not only a named one
 
@@ -110,7 +114,7 @@ All of it happens before the payload verification the installer already does, so
 
 When `--ref` was given, the completion message names `/ductus --ref=<value>` as the next command (AC13). The header comment's *live-on-main, no release-pinning knob* claim is replaced. The installer's own seeds already allow the `curl` it issues: `Bash(curl *)` for Claude, and the `^curl` matchers for the others (`install.sh` settings arms).
 
-Both of the installer's requests, the `latest` redirect's headers and the bootstrap fetch, are bounded (`BE-TIMEOUT-001`) by two named constants in `install.sh`: `CONNECT_TIMEOUT_SECONDS` (10) for the connection and `REQUEST_TIMEOUT_SECONDS` (60) for the whole request. The bootstrap was 134,396 bytes in ductus-v0.59.11, the latest release on 2026-10-20, and 137,600 on main, so a minute is ample on a slow link. A request that times out fails like any other curl failure, so the installer halts naming the URL and writes nothing. Neither request is retried. `scripts/tests/test-install.sh` case V fails when either request drops a bound. The bounds were added by 022 task 6, the owner's answer (b) of 2026-10-20.
+Both of the installer's requests, the `latest` redirect's headers and the bootstrap fetch, are HTTPS only at TLS 1.2 or later (`--proto '=https' --tlsv1.2`, `BE-DATA-001`), keep curl's certificate and host-name verification (`BE-DATA-011`), and are bounded (`BE-TIMEOUT-001`) by two named constants in `install.sh`: `CONNECT_TIMEOUT_SECONDS` (10) for the connection and `REQUEST_TIMEOUT_SECONDS` (60) for the whole request. The bootstrap was 134,396 bytes in ductus-v0.59.11, the latest release on 2026-10-20, and 137,600 on main, so a minute is ample on a slow link. A request that times out fails like any other curl failure, so the installer halts naming the URL and writes nothing. Neither request is retried. `scripts/tests/test-install.sh` case V fails when either request drops a bound. The bounds were added by 022 task 6, the owner's answer (b) of 2026-10-20.
 
 ### The installer ships as a release asset
 
@@ -121,7 +125,7 @@ Both of the installer's requests, the `latest` redirect's headers and the bootst
 3. An assertion in *Assert the asset set is complete* that the installer is present.
 4. `staged/install.sh` added to the upload's `files`.
 
-A job after `release-assets` then fetches `releases/download/<tag>/install.sh` and compares it byte-for-byte with the tag's copy. That makes AC12 machine-checked on every release, rather than resting on the first adopter who runs the one-liner. The lint's rule 3 requires *some* job after `release-assets` to exercise acquisition. The new job is an addition beside `verify-published`, and the lint's test is re-run.
+061 adds no dependency manifest or lockfile; the per-change dependency scan stays `cargo audit` in `runtime.yml`, which 022's plan states and which `runtime-release.yml`'s `publish` job needs (`BE-DEPS-007`). A job after `release-assets` then fetches `releases/download/<tag>/install.sh` and compares it byte-for-byte with the tag's copy. That makes AC12 machine-checked on every release, rather than resting on the first adopter who runs the one-liner. The lint's rule 3 requires *some* job after `release-assets` to exercise acquisition. The new job is an addition beside `verify-published`, and the lint's test is re-run.
 
 ### Documentation, release procedure, and the retired path
 
