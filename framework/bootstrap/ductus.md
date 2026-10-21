@@ -189,7 +189,7 @@ On macOS/Linux this lands under `$TMPDIR` or `/tmp`. Never reuse a directory fro
 
 Settle the run's one source before anything fetches from it. **One run, one source**: the version pin, the self-update fetch, and the framework archive all name the ref this step resolves, and nothing re-resolves it later, so a release published partway through the run cannot split the run across two releases. The values it settles — `{raw-ref}`, `{archive-ref}`, `{source-label}`, `{pin}` — and the `{ref-floor}` constant are listed in **Derived paths** below. The steps run in order, and each halt below fires before anything is written — only the **Permission Setup** seed, which is additive, idempotent and identical for every source, precedes this step.
 
-Every fetch this step makes, and the self-update fetch in the **Self-update check**, is HTTPS only at TLS 1.2 or later (`--proto '=https' --tlsv1.2`), keeps `curl`'s certificate and host-name verification (never pass `-k`/`--insecure`), and is bounded: `--connect-timeout {connect-timeout}` for the connection and `--max-time {request-timeout}` for the whole request (**Derived paths**). A fetch that times out fails like any other, and the halt that names its URL fires.
+Every fetch this step makes, and the self-update fetch in the **Self-update check**, is HTTPS only at TLS 1.2 or later (`--proto '=https' --tlsv1.2`), keeps `curl`'s certificate and host-name verification (never pass `-k`/`--insecure`), and is bounded: `--connect-timeout {connect-timeout}` for the connection and `--max-time {request-timeout}` for the whole request (**Derived paths**). A fetch that times out fails like any other, and that fetch's halt or abort fires.
 
 1. **Read the inputs.** Collect every `--ref` in `$ARGUMENTS` (§Inputs). Read the **active config file** (§Project Configuration) once, for its `[source] ref`, its `[migrations] last_applied`, and the `[runtime] path` that **Runtime acquisition** Branch 1 reads. A malformed config file aborts here under §Project Configuration's existing rule, since this is now the first step to read it.
 
@@ -208,7 +208,7 @@ Every fetch this step makes, and the self-update fetch in the **Self-update chec
 
      > Halt: `invalid [source] ref "{value}" in {active config file} — accepted forms are latest, main, or ductus-v<MAJOR>.<MINOR>.<PATCH>. Fix or remove it, or re-run with --ref to replace it.`
 
-   The source is the `--ref` value, else the recorded value, else `latest`, and its origin is `--ref`, `recorded`, or `default` accordingly. A recorded `latest` is never written by `/ductus`, since the record's absence already means it, but reads as the default when present. A floor halt below names where its tag came from as `{tag origin}`: `from --ref`, `recorded as [source] ref in {active config file}`, or `the latest release`, so a recorded value below a floor names the setting and the file to fix.
+   The source is the `--ref` value, else the recorded value, else `latest`, and its origin is `--ref`, `recorded`, or `default` accordingly. A recorded `latest` is never written by `/ductus`, since the record's absence already means it, but reads as the default when present. A floor halt below names where its tag came from as `{tag origin}`: `from --ref`, `recorded as [source] ref in {active config file}`, or `the latest release` — which a tag resolved from `latest` is however `latest` was given, `--ref=latest` included — so a recorded value below a floor names the setting and the file to fix.
 
 3. **Resolve `latest`.** When the source is `latest`, read GitHub's latest release — never a draft or a prerelease — from the redirect, without following it:
 
@@ -303,8 +303,8 @@ The reason is not tidiness. A retired-namespace server is a *different runtime a
 | `{archive-ref}` | the path segment naming the resolved source on `codeload.github.com`: `refs/heads/main`, or `refs/tags/{tag}` |
 | `{source-label}` | the resolved source and its origin, as reported: `main (--ref)`, `ductus-v0.55.0 (recorded)`, `latest release ductus-v0.55.0 (default)` |
 | `{ref-floor}` | `0.55.0` — the version of the first release whose bootstrap carries **Source resolution**; `install.sh` carries the same value, and `/ductus:audit` Family 14 asserts the two agree |
-| `{connect-timeout}` | `10` — the seconds a **Source resolution** or self-update fetch waits for its connection (`curl --connect-timeout`), the value `install.sh` names `CONNECT_TIMEOUT_SECONDS` |
-| `{request-timeout}` | `60` — the seconds such a fetch may take in all (`curl --max-time`), the value `install.sh` names `REQUEST_TIMEOUT_SECONDS`; the files it fetches are a header, a version line, a migration registry and this bootstrap |
+| `{connect-timeout}` | `10` — the seconds a **Source resolution** or self-update fetch waits for its connection (`curl --connect-timeout`) |
+| `{request-timeout}` | `60` — the seconds such a fetch may take in all (`curl --max-time`); the files it fetches are a header, a version line, a migration registry and this bootstrap |
 
 #### State A — runtime live this session
 
