@@ -19,10 +19,11 @@ Verify and, when drifted, repair the Pi extension bridge that exposes the `ductu
 
 ## Verify-and-repair
 
-1. **Locate the canonical source.** The bridge this project should have is the one its framework source ships, so name the source exactly as `/ductus` does (`.pi/prompts/ductus.md` §Source resolution): `.ductus/config.toml` `[source] ref` when it is set (`main` or a `ductus-v<MAJOR>.<MINOR>.<PATCH>` tag), else the latest release — the tag in the `Location` header of `curl -sSI https://github.com/${DUCTUS_REPO:-stonean/ductus}/releases/latest`. Fetch the bridge at that ref into a fresh `{tempdir}` (`mktemp -d`):
+1. **Locate the canonical source.** The bridge this project should have is the one its framework source ships, so name the source exactly as `/ductus` does (`.pi/prompts/ductus.md` §Source resolution): `.ductus/config.toml` `[source] ref` when it is set (`main` or a `ductus-v<MAJOR>.<MINOR>.<PATCH>` tag), else the latest release — the tag in the `Location` header of `curl --proto '=https' --tlsv1.2 -sSI --connect-timeout {connect-timeout} --max-time {request-timeout} https://github.com/${DUCTUS_REPO:-stonean/ductus}/releases/latest`. Both fetches here carry the TLS flags and the two bounds `/ductus` defines in its Derived paths table (`.pi/prompts/ductus.md`), so a stalled host fails the step rather than hanging it. Fetch the bridge at that ref into a fresh `{tempdir}` (`mktemp -d`):
 
    ```text
-   curl -fsSL "https://raw.githubusercontent.com/${DUCTUS_REPO:-stonean/ductus}/{ref}/framework/bootstrap/pi/ductus-bridge.ts" -o {tempdir}/ductus-bridge.ts
+   curl --proto '=https' --tlsv1.2 -fsSL --connect-timeout {connect-timeout} --max-time {request-timeout} \
+     "https://raw.githubusercontent.com/${DUCTUS_REPO:-stonean/ductus}/{ref}/framework/bootstrap/pi/ductus-bridge.ts" -o {tempdir}/ductus-bridge.ts
    ```
 
    Comparing against any other ref — `main` for a project on a release — would have this command and `/ductus` overwrite each other's bridge on every run.

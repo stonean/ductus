@@ -122,8 +122,8 @@ jobs:
         # certificate and host-name verification left on (BE-DATA-001,
         # BE-DATA-011), and bounded (BE-TIMEOUT-001): a connection gets
         # DOWNLOAD_CONNECT_TIMEOUT_SECONDS and a whole transfer
-        # DOWNLOAD_MAX_TIME_SECONDS, the values the adopter CI template uses
-        # for the same archive.
+        # DOWNLOAD_MAX_TIME_SECONDS, this workflow's own values (the adopter
+        # CI template names its own for the same archive).
         env:
           DOWNLOAD_CONNECT_TIMEOUT_SECONDS: "30"
           DOWNLOAD_MAX_TIME_SECONDS: "300"
