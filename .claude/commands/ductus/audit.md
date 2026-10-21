@@ -26,7 +26,7 @@ See [spec 026](https://github.com/stonean/ductus/blob/main/specs/026-framework-s
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the MCP tools of the ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. Before the server is registered — the window between acquisition and the restart that loads it — walk the same prose using the host file-reading tools (Read, Edit, Write).
+> **For agent runtimes**: the Invoke steps below call the MCP tools of the ductus runtime, except step 1's `run-generator`, which is not one and runs through the CLI; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. Before the server is registered — the window between acquisition and the restart that loads it — walk the same prose using the host file-reading tools (Read, Edit, Write).
 
 1. Invoke `run-generator` against `scripts/audit/run-all.sh` — the orchestrator that runs the check-zero precondition pass followed by the family check scripts. `run-generator` is not an MCP tool, since it runs any project file with `bash` (spec 022 task 14), so on the runtime path invoke it through the CLI, `.ductus/bin/ductus run-generator --script scripts/audit/run-all.sh`; `ductus exec` dispatches it in-process. The script emits findings to stdout under per-family headers and exits 0 (no findings) or 1 (any family produced findings).
 

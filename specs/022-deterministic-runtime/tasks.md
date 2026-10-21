@@ -260,7 +260,7 @@ Recommended: (b). Both reach the same state at the next release, since task 18 i
 Resolved 2026-10-21 by the owner: (b). Applied: `run-generator` is in `CLI_ONLY_PRIMITIVES` (`runtime/src/schema/registry.rs`) and not served; `runtime/tests/mcp.rs` holds the served tools and `runtime-tools.txt` set-equal to the registry less that list, and `run_generator_is_not_an_mcp_tool` fails if it is served again (both mutation-checked); `mcp__ductus__run-generator` is on Claude's retired list; `ductus.md`'s State-A rule, `audit.md` step 1, `analyze.md`'s drift check, 022's `spec.md` (AC2, the primitive library) and plan.md follow; 029 reopens for its scenario's list. The owner added, the same day, that the operator must still be able to waive these prompts with an auto mode, so no part uses an `ask` rule or `anthropic/requiresUserInteraction` (plan.md, Agent reach).
 
 - [x] Measure and write the measured question here
-- [x] The owner answers (a) or (b); apply the answer
+- [ ] The owner answers (a) or (b); apply the answer
 
 ## 15. Disposition three findings from task 11's measurement
 
@@ -305,7 +305,7 @@ Resolved 2026-10-21 by the owner: (b), bounded agent. Recorded in plan.md, Agent
 
 `/ductus`'s Permission Setup seeds, on every run, shell allows whose commands can run or write anything (task 16: the two ductus CLI paths, `awk`, `curl`, `cp`, `tar`, `ln`, `git config`), and `/configure`'s canonical sets allow `make` beside a file writer on Claude, Auggie, OpenCode and Antigravity. Under task 16 (b) each is dropped or narrowed to what a ductus step needs, and the rest goes to the host's prompt.
 
-Constraints from earlier answers: the narrowed ductus CLI allow leaves out `run-generator` and `exec` (task 14 (b)); an entry is narrowed or dropped from an allow list, never turned into an `ask` rule, so an auto mode still waives the prompt (the owner, 2026-10-21). Auggie's configure set keeps no `mcp:ductus:run-generator` entry after task 14, but an Auggie project that ran `/configure` before still holds one, which names no tool; whether Auggie's retired list removes it belongs here.
+Constraints from earlier answers: the narrowed ductus CLI allow leaves out `run-generator` and `exec` (task 14 (b)); an entry is narrowed or dropped from an allow list, never turned into an `ask` rule, so an auto mode still waives the prompt (the owner, 2026-10-21). Auggie's configure set keeps no `mcp:ductus:run-generator` entry after task 14, but an Auggie project that ran `/configure` before still holds one, which names no tool; whether Auggie's retired list removes it belongs here. Narrowing the ductus CLI allow makes 029's `spec.md` untrue where it says "every primitive is reachable as `.ductus/bin/ductus <primitive>`", to be corrected with it; `ductus.md`'s deferred-restart paragraph says "every remaining step's primitives", which stays true if the narrowed allow keeps each step's subcommand.
 
 - [ ] Measure, per agent, which step uses each entry, whether the host's rule grammar can narrow it to that use, and the prompts a bootstrap and a `/configure` run would then show; write the measured question here, and ask the owner after task 17
 - [ ] Apply the answer

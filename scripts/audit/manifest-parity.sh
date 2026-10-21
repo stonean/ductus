@@ -69,6 +69,41 @@ for f in "$claude_file" "$auggie_file"; do
   fi
 done
 
+# Each file's generated block opens and closes exactly once: with its end
+# marker gone, the range above runs to the end of the file and reads the
+# retired entries as canonical ones.
+for f in "$claude_file" "$auggie_file"; do
+  for marker in start end; do
+    n="$(grep -c "<!-- generated:mcp-allow:$marker -->" "$f" || true)"
+    if [ "$n" -ne 1 ]; then
+      emit "$f" "the generated:mcp-allow:$marker marker appears $n times, not once — the generated block cannot be read" \
+        "re-run scripts/gen-configure-mcp.sh, which writes both markers"
+    fi
+  done
+done
+[ "$drift" -eq 0 ] || exit "$drift"
+
+# An MCP entry outside the generated block is a hand-added grant the
+# comparison below cannot see, unless it sits under the retired step,
+# which lists entries to remove (Claude's and Auggie's step 4).
+stray_entries() {
+  awk -v pat="$2" '
+    /<!-- generated:mcp-allow:start -->/ { inblock = 1; next }
+    /<!-- generated:mcp-allow:end -->/ { inblock = 0; next }
+    /^[0-9]+\. / { retired = ($0 ~ /^[0-9]+\. (\*\*)?Retired/) }
+    !inblock && !retired && $0 ~ pat { print FNR }
+  ' "$1"
+}
+for pair in "$claude_file:^ *- .mcp__ductus__" "$auggie_file:^ *- .*toolName.: *.mcp:ductus:"; do
+  f="${pair%%:*}"
+  while IFS= read -r line_no; do
+    [ -n "$line_no" ] || continue
+    emit "$f:$line_no" "an MCP allow entry outside the generated block, which this family does not compare" \
+      "remove it, or add the tool to framework/runtime-tools.txt and re-run scripts/gen-configure-mcp.sh"
+  done < <(stray_entries "$f" "${pair#*:}")
+done
+[ "$drift" -eq 0 ] || exit "$drift"
+
 claude_mcp="$(extract_claude_mcp "$claude_file")"
 auggie_mcp="$(extract_auggie_mcp "$auggie_file")"
 

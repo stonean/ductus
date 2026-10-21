@@ -42,6 +42,7 @@ done < "$MANIFEST"
 # The primitives the MCP server does not serve are named on `# cli-only:`
 # lines of the same manifest; a step naming one is a primitive call too.
 while IFS= read -r name; do
+  name="${name%"${name##*[![:space:]]}"}"
   [ -n "$name" ] && primitives+=("$name")
 done < <(sed -n 's/^# cli-only:[[:space:]]*//p' "$MANIFEST")
 

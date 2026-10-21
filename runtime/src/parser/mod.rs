@@ -977,7 +977,7 @@ mod tests {
     }
 
     #[test]
-    fn primitive_names_match_mcp_tool_names_exactly() {
+    fn primitive_names_are_the_mcp_tool_names_plus_the_cli_only_ones() {
         // Guard against the six-site wiring gap (AGENTS.md gotcha,
         // recorded 2026-06-14 for `resolve-references`): a primitive
         // exposed over MCP must also be recognizable in command prose.
