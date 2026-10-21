@@ -257,7 +257,7 @@ Both options leave the `lint-markdown` route (task 15, item 1): markdownlint-cli
 
 Recommended: (b). Both reach the same state at the next release, since task 18 is decided and applied before it (the release is held). (b) gets there reopening one done spec instead of three, keeps the CLI use 067 sanctions behind the host's prompt, and leaves 026's orchestration decision standing. What it trades is that its CLI closure rests on task 18 narrowing the allow on Claude, Auggie and OpenCode. If task 18's measurement finds an agent where that cannot be done, retiring it as in (a) is the fallback, and task 18's question will say so.
 
-Resolved 2026-10-21 by the owner: (b). Applied: `run-generator` is in `CLI_ONLY_PRIMITIVES` (`runtime/src/schema/registry.rs`) and not served; `runtime/tests/mcp.rs` holds the served tools and `runtime-tools.txt` set-equal to the registry less that list, and `run_generator_is_not_an_mcp_tool` fails if it is served again (both mutation-checked); `mcp__ductus__run-generator` is on Claude's retired list; `ductus.md`'s State-A rule, `audit.md` step 1, `analyze.md`'s drift check, 022's `spec.md` (AC2, the primitive library) and plan.md follow; 029 reopens for its scenario's list. The owner added, the same day, that the operator must still be able to waive these prompts with an auto mode, so no part uses an `ask` rule or `anthropic/requiresUserInteraction` (plan.md, Agent reach).
+Resolved 2026-10-21 by the owner: (b). Applied: `run-generator` is in `CLI_ONLY_PRIMITIVES` (`runtime/src/schema/registry.rs`) and not served; `runtime/tests/mcp.rs` holds the served tools and `runtime-tools.txt` set-equal to the registry less that list, and `run_generator_is_not_an_mcp_tool` fails if it is served again (both mutation-checked); `mcp__ductus__run-generator` is on Claude's retired list; `ductus.md`'s State-A rule, `audit.md` step 1, `analyze.md`'s drift check, 022's `spec.md` (AC2, the primitive library) and plan.md follow; 029 reopens for its scenario's list. The owner added, the same day, that the operator must still be able to waive these prompts with an auto mode, so no part uses an `ask` rule or `anthropic/requiresUserInteraction` (plan.md, Agent reach). The apply box below stays open until 029's review is refreshed, which the option names among its costs ("Review to refresh: 029").
 
 - [x] Measure and write the measured question here
 - [ ] The owner answers (a) or (b); apply the answer
@@ -309,3 +309,24 @@ Constraints from earlier answers: the narrowed ductus CLI allow leaves out `run-
 
 - [ ] Measure, per agent, which step uses each entry, whether the host's rule grammar can narrow it to that use, and the prompts a bootstrap and a `/configure` run would then show; write the measured question here, and ask the owner after task 17
 - [ ] Apply the answer
+
+## 19. Decide: amend the constitution's "MCP is the seam" for a primitive the server does not serve (task 14 (b))
+
+Task 14's answer (b) took `run-generator` off the MCP surface. The constitution's §runtime-boundary principle 5 says "the runtime MUST expose its capabilities as MCP tools so slash commands can call them when they want determinism", the same section says "deviations require their own constitutional amendment", and §runtime-host-integration says "A command's backticked primitive names map to the MCP tools the runtime exposes", which `audit.md` step 1's `run-generator` no longer does. Task 14's question did not put principle 5 in front of the owner. Found by the task 14 review round (both passes); the constitution ships to every adopter, and `CLAUDE.md` imports it here.
+
+Measured 2026-10-21:
+
+- **Where the rule is stated.** `framework/constitution.md` principle 5 and §runtime-host-integration's first sentence; 021's `spec.md` restates principle 5 word for word in its five principles (021 is done, so an edit reopens it for an analysis; its spec body is not in the review digest); 022's `spec.md` says its MCP surface "satisfies §runtime-boundary principle 5". No 050 scenario restates either.
+- **What else could become CLI-only.** Task 16's (b) sends to the host's prompt anything that can run a command or write outside the project. Of the parts still to decide, task 15 item 1 (`lint-markdown` and `check-review-gate` run the project's markdownlint-cli2 and its JavaScript configuration), task 11 (`merge-permissions`, and `apply-manifest` and `enforce-manifest` writing a host's settings) and task 17 (`apply-manifest`'s roots) each have options that keep the tool on MCP and bound it in the runtime, and options that would take it off. No one is decided yet.
+
+Options:
+
+- (a) **A general exception.** Principle 5 gains: a capability that an auto-approved call would turn into something the agent's host gates (running a command, or writing outside the project or into a host's settings) is a `ductus <name>` subcommand and a `ductus exec` step, not an MCP tool; the runtime names each in `CLI_ONLY_PRIMITIVES`. §runtime-host-integration's mapping sentence names the exception. A later task that takes another tool off MCP needs no further amendment, only its own owner question.
+- (b) **A narrow exception.** Principle 5 gains: except `run-generator`, which runs any project file with `bash`. Each later tool taken off MCP needs another amendment.
+
+Both edit `framework/constitution.md` (principle 5 and the mapping sentence), 021's `spec.md` (reopening 021 for an analysis) and 022's `spec.md`'s citation.
+
+Recommended: (a). It states the class task 16's answer already decided, so tasks 15, 11 and 17 can choose to take a tool off MCP without coming back to the constitution, while each such choice still comes to the owner as its own question; (b) records one instance of the class and leaves the rule to fall out of date again the next time.
+
+- [x] Measure and write the measured question here
+- [ ] The owner answers (a) or (b); apply the answer

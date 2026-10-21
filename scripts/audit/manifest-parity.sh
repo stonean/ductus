@@ -69,37 +69,52 @@ for f in "$claude_file" "$auggie_file"; do
   fi
 done
 
-# Each file's generated block opens and closes exactly once: with its end
-# marker gone, the range above runs to the end of the file and reads the
-# retired entries as canonical ones.
+# Each file's generated block opens once, closes once, and closes after it
+# opens: with its end marker gone or misplaced, the range above reads the
+# wrong lines (the retired entries, or nothing) as canonical ones.
 for f in "$claude_file" "$auggie_file"; do
   for marker in start end; do
     n="$(grep -c "<!-- generated:mcp-allow:$marker -->" "$f" || true)"
     if [ "$n" -ne 1 ]; then
       emit "$f" "the generated:mcp-allow:$marker marker appears $n times, not once — the generated block cannot be read" \
-        "re-run scripts/gen-configure-mcp.sh, which writes both markers"
+        "restore exactly one start and one end marker around the generated block by hand (scripts/gen-configure-mcp.sh refuses a file without them and writes no marker), then re-run it"
     fi
   done
+  start_line="$(grep -n '<!-- generated:mcp-allow:start -->' "$f" | head -n 1 | cut -d: -f1)"
+  end_line="$(grep -n '<!-- generated:mcp-allow:end -->' "$f" | head -n 1 | cut -d: -f1)"
+  if [ -n "$start_line" ] && [ -n "$end_line" ] && [ "$start_line" -ge "$end_line" ]; then
+    emit "$f" "the generated:mcp-allow:end marker (line $end_line) comes before the start marker (line $start_line)" \
+      "put the end marker after the generated block by hand, then re-run scripts/gen-configure-mcp.sh"
+  fi
 done
 [ "$drift" -eq 0 ] || exit "$drift"
 
-# An MCP entry outside the generated block is a hand-added grant the
-# comparison below cannot see, unless it sits under the retired step,
-# which lists entries to remove (Claude's and Auggie's step 4).
+# An MCP allow entry outside the generated block is a hand-added grant the
+# comparison below cannot see. Two steps may name an MCP tool outside the
+# block: the retired step (Claude's and Auggie's step 4), which lists
+# entries to remove, and Claude's deny step, whose entries refuse a tool
+# rather than grant it; an Auggie entry of type deny is likewise not a
+# grant. A step ends at the next numbered step or at a heading, and a
+# numbered line inside a fenced block is not a step. The entry is matched
+# by the token the extraction above reads, anywhere on its line.
 stray_entries() {
   awk -v pat="$2" '
+    /^ *(```|~~~)/ { infence = !infence }
     /<!-- generated:mcp-allow:start -->/ { inblock = 1; next }
     /<!-- generated:mcp-allow:end -->/ { inblock = 0; next }
-    /^[0-9]+\. / { retired = ($0 ~ /^[0-9]+\. (\*\*)?Retired/) }
-    !inblock && !retired && $0 ~ pat { print FNR }
+    !infence && /^#/ { exempt = 0 }
+    !infence && /^[0-9]+\. / {
+      exempt = ($0 ~ /^[0-9]+\. (\*\*)?Retired/ || $0 ~ /^[0-9]+\. (\*\*)?Canonical .permissions\.deny/)
+    }
+    !inblock && !exempt && $0 ~ pat && $0 !~ /"type": *"deny"/ { print FNR }
   ' "$1"
 }
-for pair in "$claude_file:^ *- .mcp__ductus__" "$auggie_file:^ *- .*toolName.: *.mcp:ductus:"; do
+for pair in "$claude_file"':`mcp__ductus__[a-z-]+`' "$auggie_file"':"toolName": *"mcp:ductus:'; do
   f="${pair%%:*}"
   while IFS= read -r line_no; do
     [ -n "$line_no" ] || continue
     emit "$f:$line_no" "an MCP allow entry outside the generated block, which this family does not compare" \
-      "remove it, or add the tool to framework/runtime-tools.txt and re-run scripts/gen-configure-mcp.sh"
+      "remove it; a tool the runtime serves belongs in framework/runtime-tools.txt, from which scripts/gen-configure-mcp.sh writes it inside the block"
   done < <(stray_entries "$f" "${pair#*:}")
 done
 [ "$drift" -eq 0 ] || exit "$drift"
