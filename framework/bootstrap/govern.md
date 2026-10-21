@@ -208,7 +208,7 @@ Every fetch this step makes, and the self-update fetch in the **Self-update chec
 
      > Halt: `invalid [source] ref "{value}" in {active config file} — accepted forms are latest, main, or ductus-v<MAJOR>.<MINOR>.<PATCH>. Fix or remove it, or re-run with --ref to replace it.`
 
-   The source is the `--ref` value, else the recorded value, else `latest`, and its origin is `--ref`, `recorded`, or `default` accordingly. A recorded `latest` is never written by `/ductus`, since the record's absence already means it, but reads as the default when present. A floor halt below names where its tag came from as `{tag origin}`: `from --ref`, `recorded as [source] ref in {active config file}`, or `the latest release` — which a tag resolved from `latest` is however `latest` was given, `--ref=latest` included — so a recorded value below a floor names the setting and the file to fix.
+   The source is the `--ref` value, else the recorded value, else `latest`, and its origin is `--ref`, `recorded`, or `default` accordingly. A recorded `latest` is never written by `/ductus`, since the record's absence already means it, but reads as the default when present. A floor halt below, and the 404 halt on a named or recorded tag, name where the tag came from as `{tag origin}`: `from --ref`, `recorded as [source] ref in {active config file}`, or `the latest release` — which a tag resolved from `latest` is however `latest` was given, `--ref=latest` included — so a recorded value below a floor names the setting and the file to fix.
 
 3. **Resolve `latest`.** When the source is `latest`, read GitHub's latest release — never a draft or a prerelease — from the redirect, without following it:
 

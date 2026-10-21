@@ -68,8 +68,9 @@ jobs:
       # BE-DEPS-004: a package pulled from a public registry is verified
       # against a signature before it is used. npm's `audit signatures`
       # checks each installed package's registry signature (npm's key) and
-      # any provenance attestation, and exits non-zero when one is invalid
-      # or missing, so an unsigned package fails the step here.
+      # any provenance attestation, and exits non-zero when a registry
+      # signature is missing or invalid or an attestation fails to verify,
+      # so an unsigned package fails the step here.
       - name: Verify the lint tooling's registry signatures
         run: npm audit signatures
 

@@ -1585,8 +1585,10 @@ pub(crate) fn contained_path(repo: &Path, rel: &str) -> Result<PathBuf> {
 ///   it resolves against its working directory; a leading `!` or `#`, its
 ///   negations; anywhere a `{`, `}`, `(`, `)` or `|`, micromatch's brace
 ///   expansion, extglobs and regex groups, any of which can spell a `..` or
-///   an absolute alternative the lexical screen never sees; and, off
-///   Windows, a `\`, which markdownlint-cli2 reads as `/`.
+///   an absolute alternative the lexical screen never sees; and a `\`,
+///   which markdownlint-cli2 turns into `/` except before one of
+///   `$()*+?[]^`, where fast-glob reads it as an escape on every platform,
+///   while Rust on Windows reads it as a separator.
 /// - A pattern with a `*`, `?` or `[` is checked as a path, and the directory
 ///   before its first such component is walked as a feature directory is
 ///   ([`validate_feature_path`]), the project root when the pattern starts
@@ -1595,8 +1597,8 @@ pub(crate) fn contained_path(repo: &Path, rel: &str) -> Result<PathBuf> {
 ///   set it).
 /// - A path naming an existing directory, `.` among them, is walked the same
 ///   way: globby expands a directory to everything under it
-///   (`expandDirectories` is on unless set), and markdownlint-cli2 reads a
-///   lone `.` as the Markdown files in the directory.
+///   (`expandDirectories` is on unless set), and markdownlint-cli2 reads `.`,
+///   when it is the only argument, as the Markdown files in the directory.
 /// - Any other path is checked as a path.
 ///
 /// # Errors
@@ -1629,9 +1631,9 @@ pub(crate) fn validate_glob_contained(repo: &Path, pattern: &str) -> Result<()> 
             "contains `{syntax}`, glob syntax that can spell a path the check does not see"
         )));
     }
-    if !cfg!(windows) && pattern.contains('\\') {
+    if pattern.contains('\\') {
         return Err(refuse(
-            "contains `\\`, which markdownlint-cli2 reads as `/`".into(),
+            "contains `\\`, which markdownlint-cli2 reads as `/` or as an escape".into(),
         ));
     }
     validate_contained(repo, pattern)?;
@@ -1671,8 +1673,8 @@ pub(crate) fn validate_glob_contained(repo: &Path, pattern: &str) -> Result<()> 
 ///
 /// [`PrimitiveError::InvalidPath`], naming the argument, for a relative
 /// path, a `..` component, a path outside every staging root or naming one,
-/// or a link on it that resolves outside its root or cannot be resolved;
-/// [`PrimitiveError::Io`] when a root itself cannot be resolved.
+/// or a link on it that resolves outside its root or cannot be resolved. A
+/// root that cannot itself be resolved is skipped.
 pub(crate) fn validate_in_temp_dir(path_arg: &str) -> Result<PathBuf> {
     validate_in_staging(staging_roots(), path_arg)
 }
@@ -1688,15 +1690,24 @@ fn staging_roots() -> &'static [PathBuf] {
     static ROOTS: std::sync::OnceLock<Vec<PathBuf>> = std::sync::OnceLock::new();
     ROOTS.get_or_init(|| {
         #[allow(unused_mut)]
-        let mut roots = vec![std::env::temp_dir()];
+        let mut candidates = vec![std::env::temp_dir()];
         #[cfg(target_os = "macos")]
-        if let Some(dir) = darwin_user_temp_dir()
-            && !roots.contains(&dir)
-        {
-            roots.push(dir);
-        }
-        roots
+        candidates.extend(darwin_user_temp_dir());
+        usable_staging_roots(candidates)
     })
+}
+
+/// The staging roots worth keeping, in order: absolute ones, each once. A
+/// `TMPDIR` set but empty makes [`std::env::temp_dir`] return an empty path,
+/// which every candidate would strip as a prefix of itself.
+fn usable_staging_roots(candidates: Vec<PathBuf>) -> Vec<PathBuf> {
+    let mut roots: Vec<PathBuf> = Vec::new();
+    for root in candidates {
+        if root.is_absolute() && !roots.contains(&root) {
+            roots.push(root);
+        }
+    }
+    roots
 }
 
 /// The per-user temp directory macOS keeps whatever `TMPDIR` says, from
@@ -1740,20 +1751,30 @@ fn validate_in_staging(roots: &[PathBuf], path_arg: &str) -> Result<PathBuf> {
             "parent-directory component ('..') not permitted".into(),
         ));
     }
-    for root in roots {
-        let canonical_root = canonical_base(root)?;
+    // A root that cannot be resolved is skipped: a path under it is then
+    // judged by the others, and refused when none holds it.
+    let resolved: Vec<(&PathBuf, PathBuf)> = roots
+        .iter()
+        .filter_map(|root| canonical_base(root).ok().map(|canonical| (root, canonical)))
+        .collect();
+    // Every root is compared before any is matched, so a root inside another
+    // (`TMPDIR` an ancestor of macOS's per-user directory) is still refused.
+    if resolved
+        .iter()
+        .any(|(root, canonical)| candidate == root.as_path() || candidate == canonical)
+    {
+        return Err(refuse(format!(
+            "names the system temp directory itself ({shown}); pass a directory made inside it"
+        )));
+    }
+    for (root, canonical_root) in &resolved {
         let (base, rest) = if let Ok(rest) = candidate.strip_prefix(root) {
             (root.as_path(), rest)
-        } else if let Ok(rest) = candidate.strip_prefix(&canonical_root) {
+        } else if let Ok(rest) = candidate.strip_prefix(canonical_root) {
             (canonical_root.as_path(), rest)
         } else {
             continue;
         };
-        if rest.as_os_str().is_empty() {
-            return Err(refuse(format!(
-                "names the system temp directory itself ({shown}); pass a directory made inside it"
-            )));
-        }
         validate_contained(base, &rest.to_string_lossy()).map_err(|err| match err {
             PrimitiveError::InvalidPath { reason, .. } => refuse(reason),
             other => other,
@@ -4493,6 +4514,21 @@ mod tests {
                 if reason.contains("names the system temp directory itself")),
             "{err:?}"
         );
+        // A root inside another is refused as itself, whichever comes first,
+        // and a root that cannot be resolved is skipped, not fatal.
+        let inner = real.join("inner");
+        std::fs::create_dir_all(&inner).unwrap();
+        let nested = [alias.clone(), inner.clone()];
+        let err = validate_in_staging(&nested, &inner.to_string_lossy()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { reason, .. }
+                if reason.contains("names the system temp directory itself")),
+            "{err:?}"
+        );
+        // A link to itself is a loop, which no resolution gets past.
+        link("loop", alias_parent.path().join("loop"));
+        let unresolvable = [alias_parent.path().join("loop"), alias.clone()];
+        validate_in_staging(&unresolvable, &alias.join("run/a.tar.gz").to_string_lossy()).unwrap();
         link(outside.path().join("dir"), real.join("out"));
         let arg = alias.join("out/a.tar.gz").to_string_lossy().into_owned();
         let err = validate_in_staging(&roots, &arg).unwrap_err();
@@ -4503,19 +4539,39 @@ mod tests {
         );
     }
 
-    /// On macOS the per-user temp directory is among the staging roots, and
-    /// it is where `mktemp -d -t` puts a directory whatever `TMPDIR` says.
+    /// Only absolute staging roots are kept, each once: a `TMPDIR` set but
+    /// empty makes `temp_dir()` return an empty path, a prefix of every path.
+    #[test]
+    fn only_absolute_staging_roots_are_kept() {
+        let absolute = std::env::temp_dir();
+        let roots = usable_staging_roots(vec![
+            PathBuf::new(),
+            PathBuf::from("relative"),
+            absolute.clone(),
+            absolute.clone(),
+        ]);
+        assert_eq!(roots, vec![absolute]);
+    }
+
+    /// `getconf DARWIN_USER_TEMP_DIR` names the directory `mktemp -d -t`
+    /// makes its directory in on macOS, whatever `TMPDIR` says: the one the
+    /// staging roots add beside `temp_dir()`. `TMPDIR` here points under
+    /// `/tmp`, outside the per-user directory, so a `mktemp` that honoured it
+    /// would fail the test.
     #[cfg(target_os = "macos")]
     #[test]
-    fn the_darwin_user_temp_dir_is_a_staging_root() {
+    fn the_darwin_user_temp_dir_is_where_mktemp_t_makes_a_directory() {
         let dir = darwin_user_temp_dir().expect("getconf DARWIN_USER_TEMP_DIR");
-        assert!(staging_roots().contains(&dir), "{dir:?}");
-        let elsewhere = tempfile::tempdir().unwrap();
+        let elsewhere = tempfile::Builder::new()
+            .prefix("ductus-tmpdir-")
+            .tempdir_in("/tmp")
+            .unwrap();
         let made = std::process::Command::new("mktemp")
             .args(["-d", "-t", "ductus-XXXXXX"])
             .env("TMPDIR", elsewhere.path())
             .output()
             .unwrap();
+        assert!(made.status.success(), "mktemp failed: {made:?}");
         let staging = PathBuf::from(String::from_utf8(made.stdout).unwrap().trim());
         let inside = staging.starts_with(&dir) || staging.starts_with(dir.canonicalize().unwrap());
         std::fs::remove_dir(&staging).unwrap();
@@ -4527,9 +4583,10 @@ mod tests {
         );
     }
 
-    /// A glob is checked as a path and its literal prefix walked, because
-    /// markdownlint-cli2 follows a linked directory it meets while expanding
-    /// the glob; a path with no glob character is not walked.
+    /// A glob is checked as a path and its literal prefix walked, and so is a
+    /// directory a path names, because markdownlint-cli2 follows a linked
+    /// directory it meets while expanding either; a file is checked as a
+    /// path, and a link beside it is not walked.
     #[cfg(unix)]
     #[test]
     fn a_glob_walks_its_literal_prefix_for_a_link_out() {
@@ -4578,9 +4635,10 @@ mod tests {
             ("x).md", "`)`"),
             ("a|b.md", "`|`"),
         ];
-        if !cfg!(windows) {
-            refused.push(("link\\x.md", "`\\`"));
-        }
+        // On every platform: before a glob character it is fast-glob's
+        // escape, which Rust on Windows would read as a separator.
+        refused.push(("link\\x.md", "`\\`"));
+        refused.push(("a\\$b.md", "`\\`"));
         for (pattern, named) in refused {
             let err = validate_glob_contained(project.path(), pattern).unwrap_err();
             assert!(
