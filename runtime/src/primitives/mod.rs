@@ -1784,10 +1784,12 @@ fn validate_in_staging(roots: &[PathBuf], path_arg: &str) -> Result<PathBuf> {
             "is not inside the system temp directory ({shown})"
         )));
     };
-    // The root itself is refused however it is spelled, a root inside
-    // another (`TMPDIR` an ancestor of macOS's per-user directory) included:
-    // the candidate's canonical form is compared with every root's. A
-    // candidate that does not exist yet is not an existing root.
+    // The root itself is refused: a candidate that spells the root it
+    // matched, or whose canonical form is any root's, a root inside another
+    // (`TMPDIR` an ancestor of macOS's per-user directory) included. A
+    // candidate that does not exist yet has no canonical form, so one naming
+    // a root not created yet is refused only when that root is the one it
+    // matched; a path accepted that way is still contained by its root.
     let names_a_root = rest.as_os_str().is_empty()
         || candidate
             .canonicalize()
