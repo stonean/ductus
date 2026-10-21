@@ -58,6 +58,10 @@ jobs:
   acquire:
     name: Acquire ${{ matrix.target }}
     runs-on: ${{ matrix.runner }}
+    # Bounds the whole job (BE-TIMEOUT-001), above the most its two downloads'
+    # own bounds allow, so those fire first; 022's plan, Release workflow,
+    # gives the sizing.
+    timeout-minutes: 15
     strategy:
       # Every target's failure must be visible in one run — a partial matrix
       # tells you one platform is broken, not which others also are.

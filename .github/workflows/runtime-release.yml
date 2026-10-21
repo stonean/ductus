@@ -32,6 +32,9 @@ jobs:
   audit:
     name: Framework self-audit
     runs-on: ubuntu-latest
+    # Bounds the whole job (BE-TIMEOUT-001); 022's plan, Release workflow,
+    # gives the sizing.
+    timeout-minutes: 20
     steps:
       # fetch-depth: 0 — the self-audit's Family 19 (review-freshness) resolves
       # each spec's `reviewed-against` sha, from its review.md, against history. A shallow
@@ -62,6 +65,9 @@ jobs:
   cargo-audit:
     name: cargo audit
     runs-on: ubuntu-latest
+    # Bounds the whole job (BE-TIMEOUT-001); 022's plan, Release workflow,
+    # gives the sizing.
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: runtime
@@ -86,6 +92,9 @@ jobs:
   build:
     name: build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
+    # Bounds the whole job (BE-TIMEOUT-001); 022's plan, Release workflow,
+    # gives the sizing.
+    timeout-minutes: 35
     defaults:
       run:
         working-directory: runtime
@@ -270,6 +279,9 @@ jobs:
     name: Acquire ${{ matrix.target }}
     needs: [audit, cargo-audit, build]
     runs-on: ${{ matrix.runner }}
+    # Bounds the whole job (BE-TIMEOUT-001); 022's plan, Release workflow,
+    # gives the sizing.
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -367,6 +379,9 @@ jobs:
     # the release now created last, staging is what keeps that true.
     needs: acquire
     runs-on: ubuntu-latest
+    # Bounds the whole job (BE-TIMEOUT-001); 022's plan, Release workflow,
+    # gives the sizing.
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: runtime
@@ -432,6 +447,9 @@ jobs:
     # log.
     needs: [audit, cargo-audit, build, acquire, sbom]
     runs-on: ubuntu-latest
+    # Bounds the whole job (BE-TIMEOUT-001); 022's plan, Release workflow,
+    # gives the sizing.
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: runtime
@@ -494,6 +512,9 @@ jobs:
     name: Publish release assets (complete set only)
     needs: publish
     runs-on: ubuntu-latest
+    # Bounds the whole job (BE-TIMEOUT-001); 022's plan, Release workflow,
+    # gives the sizing.
+    timeout-minutes: 10
     permissions:
       contents: write
     env:
@@ -608,6 +629,10 @@ jobs:
     name: Verify the published installer
     needs: release-assets
     runs-on: ubuntu-latest
+    # Bounds the whole job (BE-TIMEOUT-001), above the most the fetch step's
+    # own FETCH_* bounds allow, so those fire first; 022's plan, Release
+    # workflow, gives the sizing.
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:

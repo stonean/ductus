@@ -40,6 +40,9 @@ jobs:
   framework-checks:
     name: Framework generators, lints, and self-audit
     runs-on: ubuntu-latest
+    # Bounds the whole job (BE-TIMEOUT-001); 022's plan, Release workflow,
+    # gives the sizing.
+    timeout-minutes: 15
     steps:
       # fetch-depth: 0 — the self-audit's Family 19 (review-freshness) resolves
       # each spec's `reviewed-against` sha, from its review.md, against history. A shallow

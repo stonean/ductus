@@ -1719,13 +1719,22 @@ fn staging_roots_for(temp_dir: PathBuf, darwin: Option<PathBuf>) -> Vec<PathBuf>
     roots
 }
 
+/// How long `getconf DARWIN_USER_TEMP_DIR` may run before it is stopped
+/// (`BE-TIMEOUT-001`). A `getconf` that has not answered by then is treated
+/// as one that could not be read: the per-user directory is a staging root
+/// only when [`std::env::temp_dir`] names it too, so the archive primitives
+/// refuse a staging path that only it would admit rather than wait on it.
+#[cfg(target_os = "macos")]
+const GETCONF_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+
 /// The per-user temp directory macOS keeps whatever `TMPDIR` says, from
-/// `getconf DARWIN_USER_TEMP_DIR`, or `None` when that cannot be read.
+/// `getconf DARWIN_USER_TEMP_DIR`, or `None` when that cannot be read within
+/// [`GETCONF_TIMEOUT`].
 #[cfg(target_os = "macos")]
 fn darwin_user_temp_dir() -> Option<PathBuf> {
     let mut getconf = std::process::Command::new("/usr/bin/getconf");
     getconf.arg("DARWIN_USER_TEMP_DIR");
-    let output = output_within(&mut getconf, std::time::Duration::from_secs(5)).ok()??;
+    let output = output_within(&mut getconf, GETCONF_TIMEOUT).ok()??;
     if !output.status.success() {
         return None;
     }

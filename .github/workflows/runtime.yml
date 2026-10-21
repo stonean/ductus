@@ -52,6 +52,9 @@ jobs:
   build-and-test:
     name: build + test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    # Bounds the whole job (BE-TIMEOUT-001); 022's plan, Release workflow,
+    # gives the sizing.
+    timeout-minutes: 65
     strategy:
       fail-fast: false
       matrix:
@@ -139,6 +142,9 @@ jobs:
   audit:
     name: cargo audit (ubuntu-latest)
     runs-on: ubuntu-latest
+    # Bounds the whole job (BE-TIMEOUT-001); 022's plan, Release workflow,
+    # gives the sizing.
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: runtime
@@ -164,6 +170,9 @@ jobs:
   lint:
     name: fmt + clippy (ubuntu-latest)
     runs-on: ubuntu-latest
+    # Bounds the whole job (BE-TIMEOUT-001); 022's plan, Release workflow,
+    # gives the sizing.
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: runtime
