@@ -95,7 +95,9 @@ use std::time::{Duration, Instant};
 
 use sha2::{Digest, Sha256};
 
-use crate::primitives::{PrimitiveError, Result, flatten_line, resolve_path, write_atomic_bytes};
+use crate::primitives::{
+    PrimitiveError, Result, flatten_line, validate_in_temp_dir, write_atomic_bytes,
+};
 use crate::schema::primitives::{FetchArchiveArgs, FetchArchiveResult};
 
 /// Execute the `fetch-archive` primitive.
@@ -113,8 +115,11 @@ use crate::schema::primitives::{FetchArchiveArgs, FetchArchiveResult};
 /// - [`PrimitiveError::ChecksumMismatch`] when the computed sha differs from
 ///   the sidecar. Raised before the archive is written; the error's `path`
 ///   is the intended destination, which is never created.
-pub fn run(args: &FetchArchiveArgs, repo: &Path) -> Result<FetchArchiveResult> {
-    let dest = resolve_path(repo, &args.archive);
+/// - [`PrimitiveError::InvalidPath`] when `archive` is not an absolute path
+///   inside the system temp directory, or a link on it leaves that directory
+///   ([`validate_in_temp_dir`]); raised before any request is made.
+pub fn run(args: &FetchArchiveArgs, _repo: &Path) -> Result<FetchArchiveResult> {
+    let dest = validate_in_temp_dir(&args.archive)?;
 
     let body = fetch_bytes(&args.url)?;
     let computed = sha256_hex(&body);

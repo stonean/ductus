@@ -50,7 +50,9 @@ use crate::schema::primitives::{
 /// Returns [`PrimitiveError::InvalidArgument`] when `identifier` is empty
 /// or whitespace-only, or [`PrimitiveError::InvalidSlug`] when the optional
 /// `scenario` slug does not match the kebab-case grammar enforced by
-/// [`crate::primitives::validate_slug`].
+/// [`crate::primitives::validate_slug`], and [`PrimitiveError::InvalidPath`]
+/// when the matched feature directory is, or holds, a symlink that resolves
+/// outside the project ([`crate::primitives::validate_feature_argument`]).
 /// Ambiguity and no-match are domain outcomes, not errors; a missing or
 /// unreadable spec root simply yields `not-found`.
 pub fn run(args: &ResolveFeatureArgs, repo: &Path) -> Result<ResolveFeatureResult> {
@@ -70,7 +72,12 @@ pub fn run(args: &ResolveFeatureArgs, repo: &Path) -> Result<ResolveFeatureResul
     let features = list_feature_dirs(&repo.join(&root));
 
     match match_identifier(&features, identifier) {
-        Match::One(feature) => Ok(resolved(repo, &root, &feature, args.scenario.as_deref())),
+        Match::One(feature) => {
+            // The matched directory is read through: its `spec.md` status and
+            // a scenario's section (spec 022 task 9).
+            super::validate_feature_argument(repo, &root, &feature)?;
+            Ok(resolved(repo, &root, &feature, args.scenario.as_deref()))
+        }
         Match::Many(candidates) => Ok(ResolveFeatureResult {
             outcome: ResolveFeatureOutcome::Ambiguous,
             feature: None,

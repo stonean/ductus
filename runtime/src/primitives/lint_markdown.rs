@@ -98,8 +98,11 @@ pub(crate) fn feature_markdown_glob(rel_dir: &str) -> String {
 /// never the thing that was missing. A non-zero markdownlint-cli2 exit code
 /// is not an error — it's recorded in the result alongside the parsed
 /// violations. [`PrimitiveError::InvalidArgument`] is returned for a path
-/// beginning with `-`, and [`PrimitiveError::ToolTimedOut`] when the linter
-/// outlives [`LINT_MARKDOWN_TIMEOUT`] and is stopped.
+/// beginning with `-`, [`PrimitiveError::InvalidPath`] for one that is
+/// absolute, climbs out with `..`, or reaches outside the project through a
+/// symlink ([`super::validate_glob_contained`]), and
+/// [`PrimitiveError::ToolTimedOut`] when the linter outlives
+/// [`LINT_MARKDOWN_TIMEOUT`] and is stopped.
 pub fn run(args: &LintMarkdownArgs, repo: &Path) -> Result<LintMarkdownResult> {
     run_within(args, repo, LINT_MARKDOWN_TIMEOUT)
 }
@@ -125,6 +128,10 @@ pub(crate) fn run_within(
                     .into(),
             });
         }
+        // Inside the project, refusing absolute input, and with no link out
+        // of it under a glob's literal prefix, which markdownlint-cli2's
+        // globbing would follow (spec 022 task 9).
+        super::validate_glob_contained(repo, path)?;
     }
     let (program, via_npx) = resolve_markdownlint(repo);
     let mut cmd = Command::new(&program);

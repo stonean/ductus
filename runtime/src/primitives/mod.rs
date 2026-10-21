@@ -1317,11 +1317,16 @@ fn strip_label_ci<'a>(s: &'a str, label: &str) -> Option<&'a str> {
 /// absolute paths as-is.
 ///
 /// This is the accept-absolute-paths counterpart to
-/// [`validate_no_traversal`]: primitives whose path arguments are
-/// operator/machine-local (fixture specs in temp dirs, downloaded archives,
-/// sibling-service checkouts) resolve through this helper; primitives that must stay inside the repo root
-/// (`merge-managed-block`, `merge-permissions`, …) call
-/// [`validate_contained`] first and never accept absolute input.
+/// [`validate_no_traversal`], for the paths that are bases rather than
+/// arguments a primitive opens: `apply-manifest`'s `source-root` and
+/// `target-root`, which its entries are checked against, and the sibling
+/// checkouts committed config names (`resolve-constitutions`,
+/// `resolve-references`; see **The config-sourced path boundary** on
+/// [`validate_no_traversal`]). `run-generator` passes its script through
+/// [`validate_contained`] first, so it never sees an absolute one. A path a
+/// primitive opens goes through [`contained_path`] (or
+/// [`validate_contained`]), and a staging path through
+/// [`validate_in_temp_dir`], never through this alone.
 /// `enforce-manifest` keeps its own stricter `resolve_contained_dir`
 /// (absolute allowed only under the repo root) because its cleanup loop is
 /// destructive.
@@ -1554,8 +1559,126 @@ pub(crate) fn validate_feature_path(repo: &Path, rel: &str) -> Result<()> {
     validate_no_traversal(rel)?;
     let canonical_base = canonical_base(repo)?;
     check_links_on(repo, &canonical_base, rel)?;
+    walk_for_outward_links(repo, &canonical_base, repo.join(rel), rel)
+}
+
+/// A project-relative path argument a primitive opens, checked by
+/// [`validate_contained`] against the project root and then joined to it.
+/// The readers whose arguments once resolved through [`resolve_path`] take
+/// their paths this way (spec 022 task 9, the owner's answer (a)), so an
+/// absolute path is refused as it is at every other site that opens a path.
+///
+/// # Errors
+///
+/// As [`validate_contained`].
+pub(crate) fn contained_path(repo: &Path, rel: &str) -> Result<PathBuf> {
+    validate_contained(repo, rel)?;
+    Ok(repo.join(rel))
+}
+
+/// [`validate_contained`] for a glob pattern a tool expands itself, as
+/// `lint-markdown` hands its paths to markdownlint-cli2. Its globbing
+/// follows a symlinked directory it meets (fast-glob's `followSymbolicLinks`
+/// is on unless set, and markdownlint-cli2 0.23.2 does not set it), so the
+/// directory before the pattern's first glob character is also walked as a
+/// feature directory is ([`validate_feature_path`]), the project root when
+/// the pattern starts with one. A pattern with no glob character is a path,
+/// and is checked as one.
+///
+/// # Errors
+///
+/// As [`validate_contained`].
+pub(crate) fn validate_glob_contained(repo: &Path, pattern: &str) -> Result<()> {
+    validate_contained(repo, pattern)?;
+    let mut prefix = PathBuf::new();
+    for component in Path::new(pattern).components() {
+        if component
+            .as_os_str()
+            .to_string_lossy()
+            .contains(['*', '?', '[', '{'])
+        {
+            let canonical_base = canonical_base(repo)?;
+            return walk_for_outward_links(repo, &canonical_base, repo.join(prefix), pattern);
+        }
+        prefix.push(component);
+    }
+    Ok(())
+}
+
+/// The containment check for a staging path, which lies in the system temp
+/// directory rather than in the project: `fetch-archive`'s destination and
+/// `extract-archive`'s archive and destination, which `/ductus` passes under
+/// the `{tempdir}` it makes with `mktemp -d` (spec 022 task 9, the owner's
+/// answer (a)). The path must be absolute and lie inside
+/// [`std::env::temp_dir`], spelled as that function returns it or in its
+/// canonical form (macOS's `/var` is `/private/var`); the rest of it goes
+/// through [`validate_contained`] against that directory, so a link on it
+/// that leaves the temp directory is refused. Returns the path as given.
+///
+/// # Errors
+///
+/// [`PrimitiveError::InvalidPath`], naming the argument, for a relative
+/// path, a `..` component, a path outside the temp directory, or a link on
+/// it that resolves outside the temp directory or cannot be resolved;
+/// [`PrimitiveError::Io`] when the temp directory itself cannot be resolved.
+pub(crate) fn validate_in_temp_dir(path_arg: &str) -> Result<PathBuf> {
+    validate_in_staging(&std::env::temp_dir(), path_arg)
+}
+
+/// [`validate_in_temp_dir`] against a named staging directory, the seam a
+/// test uses to hold the check to a directory it controls.
+fn validate_in_staging(staging: &Path, path_arg: &str) -> Result<PathBuf> {
+    let refuse = |reason: String| PrimitiveError::InvalidPath {
+        path: path_arg.into(),
+        reason,
+    };
+    let candidate = Path::new(path_arg);
+    if !candidate.is_absolute() {
+        return Err(refuse(format!(
+            "must be an absolute path inside the system temp directory {}",
+            staging.display()
+        )));
+    }
+    if candidate
+        .components()
+        .any(|c| matches!(c, std::path::Component::ParentDir))
+    {
+        return Err(refuse(
+            "parent-directory component ('..') not permitted".into(),
+        ));
+    }
+    let canonical_staging = canonical_base(staging)?;
+    let (base, rest) = if let Ok(rest) = candidate.strip_prefix(staging) {
+        (staging, rest)
+    } else if let Ok(rest) = candidate.strip_prefix(&canonical_staging) {
+        (canonical_staging.as_path(), rest)
+    } else {
+        return Err(refuse(format!(
+            "is not inside the system temp directory {}",
+            staging.display()
+        )));
+    };
+    if !rest.as_os_str().is_empty() {
+        validate_contained(base, &rest.to_string_lossy()).map_err(|err| match err {
+            PrimitiveError::InvalidPath { reason, .. } => refuse(reason),
+            other => other,
+        })?;
+    }
+    Ok(candidate.to_path_buf())
+}
+
+/// Walk `start` and everything under it, refusing the first symlink that
+/// resolves outside `canonical_base`; `rel` is the argument named in the
+/// error. A linked directory that stays inside is walked too, each directory
+/// once, and a directory the walk cannot list is left to the caller.
+fn walk_for_outward_links(
+    repo: &Path,
+    canonical_base: &Path,
+    start: PathBuf,
+    rel: &str,
+) -> Result<()> {
     let mut visited = std::collections::BTreeSet::new();
-    let mut pending = vec![repo.join(rel)];
+    let mut pending = vec![start];
     while let Some(dir) = pending.pop() {
         let Ok(canonical) = dir.canonicalize() else {
             continue;
@@ -1573,7 +1696,7 @@ pub(crate) fn validate_feature_path(repo: &Path, rel: &str) -> Result<()> {
             };
             let entry_path = entry.path();
             if kind.is_symlink() {
-                refuse_outward_link(&entry_path, repo, &canonical_base, rel)?;
+                refuse_outward_link(&entry_path, repo, canonical_base, rel)?;
                 if entry_path.is_dir() {
                     pending.push(entry_path);
                 }
@@ -4234,6 +4357,66 @@ mod tests {
         link("a/b/c", base.join("deep"));
         link("missing/../deep/../../x.md", base.join("in.md"));
         validate_contained(&base, "in.md").unwrap();
+    }
+
+    /// A staging path is absolute and inside the staging directory, spelled
+    /// as given or canonically (macOS's `/var` is `/private/var`), and a link
+    /// on it that leaves is refused, the error naming the whole argument
+    /// (spec 022 task 9).
+    #[cfg(unix)]
+    #[test]
+    fn a_staging_path_lies_inside_the_staging_directory() {
+        let (staging, outside) = project_and_outside();
+        let real = staging.path().canonicalize().unwrap();
+        let alias_parent = tempfile::tempdir().unwrap();
+        let alias = alias_parent.path().join("alias");
+        link(&real, &alias);
+        validate_in_staging(&alias, &alias.join("run/a.tar.gz").to_string_lossy()).unwrap();
+        validate_in_staging(&alias, &real.join("run/a.tar.gz").to_string_lossy()).unwrap();
+        validate_in_staging(&alias, &alias.to_string_lossy()).unwrap();
+        for arg in [
+            "run/a.tar.gz".to_string(),
+            alias.join("run/../a").to_string_lossy().into_owned(),
+            outside.path().join("a").to_string_lossy().into_owned(),
+        ] {
+            let err = validate_in_staging(&alias, &arg).unwrap_err();
+            assert!(
+                matches!(&err, PrimitiveError::InvalidPath { path, .. } if *path == arg),
+                "{arg}: {err:?}"
+            );
+        }
+        link(outside.path().join("dir"), real.join("out"));
+        let arg = alias.join("out/a.tar.gz").to_string_lossy().into_owned();
+        let err = validate_in_staging(&alias, &arg).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { path, reason }
+                if *path == arg && reason.contains("the symlink `out`")),
+            "{err:?}"
+        );
+    }
+
+    /// A glob is checked as a path and its literal prefix walked, because
+    /// markdownlint-cli2 follows a linked directory it meets while expanding
+    /// the glob; a path with no glob character is not walked.
+    #[cfg(unix)]
+    #[test]
+    fn a_glob_walks_its_literal_prefix_for_a_link_out() {
+        let (project, outside) = project_and_outside();
+        std::fs::create_dir_all(project.path().join("docs/clean")).unwrap();
+        std::fs::create_dir_all(project.path().join("specs/001-x")).unwrap();
+        link(
+            outside.path().join("dir"),
+            project.path().join("specs/001-x/notes"),
+        );
+        for pattern in ["specs/**/*.md", "**/*.md"] {
+            let err = validate_glob_contained(project.path(), pattern).unwrap_err();
+            assert!(
+                refused_through(&err, "specs/001-x/notes"),
+                "{pattern}: {err:?}"
+            );
+        }
+        validate_glob_contained(project.path(), "docs/**/*.md").unwrap();
+        validate_glob_contained(project.path(), "specs/001-x/spec.md").unwrap();
     }
 
     /// After a `..` past a missing directory, the next name can be a link

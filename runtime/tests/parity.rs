@@ -556,6 +556,12 @@ fn stage_fixture(command: &str, fixture: &str) -> tempfile::TempDir {
             ),
         ]);
         substitute_in_session(tmp.path(), "{MOCK_HTTP}", &server.url());
+        // `fetch-archive` and `extract-archive` take a staging path inside the
+        // system temp directory, absolute, as `/ductus` passes its `{tempdir}`
+        // (spec 022 task 9). The fixture stages under a tempdir, so its own
+        // root is one; the seed spells it as a TOML literal string, which
+        // reads a Windows path's backslashes as they are.
+        substitute_in_session(tmp.path(), "{REPO}", &tmp.path().display().to_string());
         // MockHttp's listener-loop thread holds its own Arc clone of
         // the routes and runs detached — `server` falling out of scope
         // here is harmless (the type carries no Drop logic); the thread

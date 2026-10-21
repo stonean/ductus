@@ -36,7 +36,7 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use crate::primitives::{Result, iter_bullets, parse_atx_heading, read_text, resolve_path};
+use crate::primitives::{Result, contained_path, iter_bullets, parse_atx_heading, read_text};
 use crate::schema::primitives::{
     CheckPromotionCoverageArgs, CheckPromotionCoverageResult, PromotionTableState,
 };
@@ -50,8 +50,19 @@ use crate::schema::primitives::{
 /// table is an error rather than the `no-table` state on purpose: treating it
 /// as absent would report full coverage over a file nobody could read, which
 /// is `QUAL-CLAIM-001` on this measurement's own surface.
+/// [`crate::primitives::PrimitiveError::InvalidPath`], before either is read,
+/// when `rules-file` or `table-file` is absolute, climbs out with `..`, or
+/// leaves the project through a symlink
+/// ([`crate::primitives::contained_path`]).
 pub fn run(args: &CheckPromotionCoverageArgs, repo: &Path) -> Result<CheckPromotionCoverageResult> {
-    let rules = read_text(&resolve_path(repo, &args.rules_file))?;
+    // Both paths are checked before either is read.
+    let rules_path = contained_path(repo, &args.rules_file)?;
+    let table_path = args
+        .table_file
+        .as_deref()
+        .map(|table_file| contained_path(repo, table_file))
+        .transpose()?;
+    let rules = read_text(&rules_path)?;
 
     // The sections are a set: naming one twice must not double its bullets.
     let wanted: BTreeSet<&str> = args.sections.iter().map(String::as_str).collect();
@@ -76,8 +87,8 @@ pub fn run(args: &CheckPromotionCoverageArgs, repo: &Path) -> Result<CheckPromot
     let mut table_rows = 0usize;
     let mut table_state = PromotionTableState::NoTable;
 
-    if let Some(table_file) = &args.table_file {
-        let table = read_text(&resolve_path(repo, table_file))?;
+    if let Some(table_path) = &table_path {
+        let table = read_text(table_path)?;
         table_state = PromotionTableState::Read;
         for key in table_keys(&table, args.table_section.as_deref()) {
             table_rows += 1;

@@ -53,7 +53,7 @@ use std::sync::OnceLock;
 
 use regex::Regex;
 
-use crate::primitives::{Result, inline_code_spans, read_text, resolve_path};
+use crate::primitives::{Result, contained_path, inline_code_spans, read_text};
 use crate::schema::primitives::{AnchorReference, ResolveAnchorArgs, ResolveAnchorResult};
 
 /// Execute the `resolve-anchor` primitive.
@@ -61,18 +61,23 @@ use crate::schema::primitives::{AnchorReference, ResolveAnchorArgs, ResolveAncho
 /// # Errors
 ///
 /// Returns [`crate::primitives::PrimitiveError::Io`] when the file cannot
-/// be read.
+/// be read, and [`crate::primitives::PrimitiveError::InvalidPath`], before
+/// anything is read, when `path` or `markers-path` is absolute, climbs out
+/// with `..`, or leaves the project through a symlink
+/// ([`crate::primitives::contained_path`]).
 pub fn run(args: &ResolveAnchorArgs, repo: &Path) -> Result<ResolveAnchorResult> {
-    let path = resolve_path(repo, &args.path);
+    let path = contained_path(repo, &args.path)?;
+    let markers_file = args
+        .markers_path
+        .as_deref()
+        .map(|markers_path| contained_path(repo, markers_path))
+        .transpose()?;
     let content = read_text(&path)?;
 
     // Markers come from `markers-path` when supplied, else from the scanned
     // file itself (same-file self-consistency check).
-    let markers = match &args.markers_path {
-        Some(markers_path) => {
-            let marker_content = read_text(&resolve_path(repo, markers_path))?;
-            collect_markers(&marker_content)
-        }
+    let markers = match &markers_file {
+        Some(markers_file) => collect_markers(&read_text(markers_file)?),
         None => collect_markers(&content),
     };
     let own_headings = collect_headings(&content);
@@ -412,7 +417,11 @@ mod tests {
         std::fs::write(&path, "# only markers\n\n<!-- §foo -->\n<!-- §bar -->\n").unwrap();
         let result = run(
             &ResolveAnchorArgs {
-                path: path.to_string_lossy().into(),
+                path: path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
                 markers_path: None,
             },
             tmp.path(),

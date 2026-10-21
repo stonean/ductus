@@ -9,7 +9,7 @@ use std::path::Path;
 use serde_norway::Value as YamlValue;
 
 use crate::primitives::{
-    FeatureForm, Result, parse_feature_dir, read_text, resolve_path, split_frontmatter,
+    FeatureForm, Result, contained_path, parse_feature_dir, read_text, split_frontmatter,
 };
 use crate::schema::primitives::{
     FrontmatterFinding, ValidateFrontmatterArgs, ValidateFrontmatterResult,
@@ -27,8 +27,11 @@ use crate::schema::status::ALLOWED_STATUSES;
 /// [`crate::primitives::PrimitiveError::UnclosedFrontmatter`] when no closing
 /// one follows it. YAML parse failures surface as
 /// findings, not operational errors.
+/// [`crate::primitives::PrimitiveError::InvalidPath`] when `path` is absolute,
+/// climbs out with `..`, or leaves the project through a symlink
+/// ([`crate::primitives::contained_path`]).
 pub fn run(args: &ValidateFrontmatterArgs, repo: &Path) -> Result<ValidateFrontmatterResult> {
-    let path = resolve_path(repo, &args.path);
+    let path = contained_path(repo, &args.path)?;
     let content = read_text(&path)?;
     let (fm_text, _body) = split_frontmatter(&content, &path)?;
 
@@ -411,7 +414,11 @@ mod tests {
         std::fs::write(&path, "---\nstatus: draft\ndependencies: []\n---\n\n# X\n").unwrap();
         let result = run(
             &ValidateFrontmatterArgs {
-                path: path.to_string_lossy().into(),
+                path: path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
             },
             tmp.path(),
         )
@@ -437,7 +444,11 @@ mod tests {
 
         let result = run(
             &ValidateFrontmatterArgs {
-                path: path.to_string_lossy().into(),
+                path: path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
             },
             tmp.path(),
         )
@@ -474,7 +485,11 @@ mod tests {
         }
         let result = run(
             &ValidateFrontmatterArgs {
-                path: path.to_string_lossy().into(),
+                path: path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
             },
             tmp.path(),
         )
@@ -506,7 +521,11 @@ mod tests {
         .unwrap();
         let result = run(
             &ValidateFrontmatterArgs {
-                path: path.to_string_lossy().into(),
+                path: path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
             },
             tmp.path(),
         )
@@ -527,7 +546,11 @@ mod tests {
         std::fs::write(&path, format!("---\n{frontmatter}---\n\n# X\n")).unwrap();
         run(
             &ValidateFrontmatterArgs {
-                path: path.to_string_lossy().into(),
+                path: path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
             },
             tmp.path(),
         )
@@ -586,7 +609,11 @@ mod tests {
         std::fs::write(&path, "---\nstatus: wibble\ndependencies: []\n---\n\n# X\n").unwrap();
         let result = run(
             &ValidateFrontmatterArgs {
-                path: path.to_string_lossy().into(),
+                path: path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
             },
             tmp.path(),
         )
@@ -603,7 +630,11 @@ mod tests {
         std::fs::write(&path, "---\ndependencies: []\n---\n\n# X\n").unwrap();
         let result = run(
             &ValidateFrontmatterArgs {
-                path: path.to_string_lossy().into(),
+                path: path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
             },
             tmp.path(),
         )
@@ -622,7 +653,11 @@ mod tests {
         std::fs::write(&path, "---\nstatus: draft\n---\n\n# X\n").unwrap();
         let result = run(
             &ValidateFrontmatterArgs {
-                path: path.to_string_lossy().into(),
+                path: path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
             },
             tmp.path(),
         )
@@ -643,7 +678,11 @@ mod tests {
         std::fs::write(&path, "---\n---\n\n# X\n").unwrap();
         let result = run(
             &ValidateFrontmatterArgs {
-                path: path.to_string_lossy().into(),
+                path: path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
             },
             tmp.path(),
         )
@@ -670,7 +709,11 @@ mod tests {
         .unwrap();
         let result = run(
             &ValidateFrontmatterArgs {
-                path: path.to_string_lossy().into(),
+                path: path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
             },
             tmp.path(),
         )

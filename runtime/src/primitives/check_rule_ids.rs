@@ -10,7 +10,7 @@ use std::sync::OnceLock;
 use regex::Regex;
 
 use crate::primitives::rule_sections::heading_id_regex;
-use crate::primitives::{Result, parse_atx_heading, read_text, resolve_path};
+use crate::primitives::{Result, contained_path, parse_atx_heading, read_text};
 use crate::schema::primitives::{CheckRuleIdsArgs, CheckRuleIdsResult, RuleCitation};
 
 /// Execute the `check-rule-ids` primitive.
@@ -18,12 +18,21 @@ use crate::schema::primitives::{CheckRuleIdsArgs, CheckRuleIdsResult, RuleCitati
 /// # Errors
 ///
 /// Returns [`crate::primitives::PrimitiveError::Io`] when the target file
-/// or any rule file cannot be read.
+/// or any rule file cannot be read, and
+/// [`crate::primitives::PrimitiveError::InvalidPath`], before any is read,
+/// when one of them is absolute, climbs out with `..`, or leaves the project
+/// through a symlink ([`crate::primitives::contained_path`]).
 pub fn run(args: &CheckRuleIdsArgs, repo: &Path) -> Result<CheckRuleIdsResult> {
+    // Every path is checked before any is read.
+    let target = contained_path(repo, &args.path)?;
+    let rule_paths = args
+        .rule_files
+        .iter()
+        .map(|rule_file| contained_path(repo, rule_file))
+        .collect::<Result<Vec<_>>>()?;
     let mut known: HashMap<String, bool> = HashMap::new();
-    for rule_file in &args.rule_files {
-        let path = resolve_path(repo, rule_file);
-        let content = read_text(&path)?;
+    for path in &rule_paths {
+        let content = read_text(path)?;
         for cap in heading_id_regex().captures_iter(&content) {
             let Some(whole) = cap.get(0) else { continue };
             let id = cap[1].to_string();
@@ -38,8 +47,7 @@ pub fn run(args: &CheckRuleIdsArgs, repo: &Path) -> Result<CheckRuleIdsResult> {
         }
     }
 
-    let path = resolve_path(repo, &args.path);
-    let content = read_text(&path)?;
+    let content = read_text(&target)?;
     let mut citations: Vec<RuleCitation> = Vec::new();
     let mut seen: HashSet<String> = HashSet::new();
     let mut missing: HashSet<String> = HashSet::new();
@@ -187,7 +195,11 @@ mod tests {
         // `examined: 0` is the field that says why.
         let blind = run(
             &CheckRuleIdsArgs {
-                path: spec_path.to_string_lossy().into(),
+                path: spec_path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
                 rule_files: vec![],
             },
             tmp.path(),
@@ -199,8 +211,18 @@ mod tests {
         // Given the file that defines it: nothing missing, denominator 1.
         let seeing = run(
             &CheckRuleIdsArgs {
-                path: spec_path.to_string_lossy().into(),
-                rule_files: vec![rule_path.to_string_lossy().into()],
+                path: spec_path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
+                rule_files: vec![
+                    rule_path
+                        .strip_prefix(tmp.path())
+                        .unwrap()
+                        .to_string_lossy()
+                        .into(),
+                ],
             },
             tmp.path(),
         )
@@ -226,8 +248,18 @@ mod tests {
         std::fs::write(&rule_path, "# Rules\n\n### BE-AUTHN-001\n\n> Hashed.\n").unwrap();
         let result = run(
             &CheckRuleIdsArgs {
-                path: spec_path.to_string_lossy().into(),
-                rule_files: vec![rule_path.to_string_lossy().into()],
+                path: spec_path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
+                rule_files: vec![
+                    rule_path
+                        .strip_prefix(tmp.path())
+                        .unwrap()
+                        .to_string_lossy()
+                        .into(),
+                ],
             },
             tmp.path(),
         )
@@ -259,8 +291,18 @@ mod tests {
         .unwrap();
         let result = run(
             &CheckRuleIdsArgs {
-                path: spec_path.to_string_lossy().into(),
-                rule_files: vec![rule_path.to_string_lossy().into()],
+                path: spec_path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
+                rule_files: vec![
+                    rule_path
+                        .strip_prefix(tmp.path())
+                        .unwrap()
+                        .to_string_lossy()
+                        .into(),
+                ],
             },
             tmp.path(),
         )
@@ -288,8 +330,18 @@ mod tests {
         .unwrap();
         let result = run(
             &CheckRuleIdsArgs {
-                path: spec_path.to_string_lossy().into(),
-                rule_files: vec![rule_path.to_string_lossy().into()],
+                path: spec_path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
+                rule_files: vec![
+                    rule_path
+                        .strip_prefix(tmp.path())
+                        .unwrap()
+                        .to_string_lossy()
+                        .into(),
+                ],
             },
             tmp.path(),
         )
@@ -334,8 +386,18 @@ mod tests {
         .unwrap();
         let result = run(
             &CheckRuleIdsArgs {
-                path: spec_path.to_string_lossy().into(),
-                rule_files: vec![rule_path.to_string_lossy().into()],
+                path: spec_path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
+                rule_files: vec![
+                    rule_path
+                        .strip_prefix(tmp.path())
+                        .unwrap()
+                        .to_string_lossy()
+                        .into(),
+                ],
             },
             tmp.path(),
         )
@@ -377,8 +439,18 @@ mod tests {
         std::fs::write(&rule_path, &rule_content).unwrap();
         let result = run(
             &CheckRuleIdsArgs {
-                path: spec_path.to_string_lossy().into(),
-                rule_files: vec![rule_path.to_string_lossy().into()],
+                path: spec_path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
+                rule_files: vec![
+                    rule_path
+                        .strip_prefix(tmp.path())
+                        .unwrap()
+                        .to_string_lossy()
+                        .into(),
+                ],
             },
             tmp.path(),
         )
@@ -409,8 +481,18 @@ mod tests {
         .unwrap();
         let result = run(
             &CheckRuleIdsArgs {
-                path: spec_path.to_string_lossy().into(),
-                rule_files: vec![rule_path.to_string_lossy().into()],
+                path: spec_path
+                    .strip_prefix(tmp.path())
+                    .unwrap()
+                    .to_string_lossy()
+                    .into(),
+                rule_files: vec![
+                    rule_path
+                        .strip_prefix(tmp.path())
+                        .unwrap()
+                        .to_string_lossy()
+                        .into(),
+                ],
             },
             tmp.path(),
         )

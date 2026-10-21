@@ -2076,7 +2076,8 @@ pub struct RunGeneratorResult {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct LintMarkdownArgs {
-    /// Paths or globs to lint.
+    /// Repo-relative paths or globs to lint. Each must stay inside the
+    /// project, and a glob's literal prefix may hold no link that leaves it.
     #[arg(long = "path")]
     pub paths: Vec<String>,
     /// Whether to invoke `markdownlint-cli2` in fix mode.
@@ -2465,10 +2466,12 @@ pub struct MergePermissionsResult {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct ExtractArchiveArgs {
-    /// Local path to the archive (`.tar.gz`, `.tgz`, `.zip`).
+    /// Absolute path to the archive (`.tar.gz`, `.tgz`, `.zip`), inside the
+    /// system temp directory.
     #[arg(long)]
     pub archive: String,
-    /// Destination directory; created if missing.
+    /// Destination directory, an absolute path inside the system temp
+    /// directory; created if missing.
     #[arg(long)]
     pub dest: String,
     /// Explicit format override (`tar-gz` / `zip`). Auto-detected from the
@@ -2515,8 +2518,9 @@ pub struct FetchArchiveArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[arg(long)]
     pub sha256_url: Option<String>,
-    /// Local path where the downloaded archive is written. Used as the
-    /// `archive` input by a subsequent `extract-archive` step in the
+    /// Absolute path inside the system temp directory where the downloaded
+    /// archive is written (`/ductus` passes one under its `{tempdir}`). Used
+    /// as the `archive` input by a subsequent `extract-archive` step in the
     /// bootstrap procedure.
     #[arg(long)]
     pub archive: String,

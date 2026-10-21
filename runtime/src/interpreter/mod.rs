@@ -2911,6 +2911,10 @@ mod tests {
             ("read-spec", serde_json::json!({"feature": feature})),
             ("read-tasks", serde_json::json!({"feature": feature})),
             (
+                "resolve-feature",
+                serde_json::json!({"identifier": feature}),
+            ),
+            (
                 "relocate-audit-records",
                 serde_json::json!({"feature": feature}),
             ),
@@ -2972,7 +2976,7 @@ mod tests {
     fn every_feature_argument_site_refuses_an_outward_feature_link() {
         let fixture = escape_fixture();
         let cases = feature_argument_cases("001-out", "003-clean");
-        assert_eq!(cases.len(), 31);
+        assert_eq!(cases.len(), 32);
         for (name, args) in &cases {
             let result = dispatch_primitive(name, &context_of(args), &fixture.repo);
             assert!(
@@ -3076,6 +3080,41 @@ mod tests {
                 "run-generator",
                 serde_json::json!({"script": "link/gen.sh"}),
             ),
+            // The readers and `lint-markdown`, which resolved their paths
+            // without a check until spec 022 task 9.
+            (
+                "validate-frontmatter",
+                serde_json::json!({"path": "link/x.md"}),
+            ),
+            ("resolve-anchor", serde_json::json!({"path": "link/x.md"})),
+            (
+                "resolve-anchor",
+                serde_json::json!({"path": "staging/x.md", "markers-path": "link/x.md"}),
+            ),
+            (
+                "check-rule-ids",
+                serde_json::json!({"path": "link/x.md", "rule-files": []}),
+            ),
+            (
+                "check-rule-ids",
+                serde_json::json!({"path": "staging/x.md", "rule-files": ["link/x.md"]}),
+            ),
+            (
+                "check-promotion-coverage",
+                serde_json::json!({"rules-file": "link/x.md", "sections": [], "pointer-link": "x"}),
+            ),
+            (
+                "check-promotion-coverage",
+                serde_json::json!({"rules-file": "staging/x.md", "sections": [], "pointer-link": "x",
+                    "table-file": "link/x.md"}),
+            ),
+            ("lint-markdown", serde_json::json!({"paths": ["link/x.md"]})),
+            // A glob whose literal prefix holds a link out: markdownlint-cli2
+            // would follow `specs/001-out` while expanding it.
+            (
+                "lint-markdown",
+                serde_json::json!({"paths": ["specs/**/*.md"], "fix": true}),
+            ),
         ];
         for (name, args) in &cases {
             let result = dispatch_primitive(name, &context_of(args), &fixture.repo);
@@ -3086,6 +3125,67 @@ mod tests {
         }
         assert!(!fixture.outside.path().join("dir/x.md").exists());
         assert!(!fixture.outside.path().join("dir/f.md").exists());
+    }
+
+    /// Every staging site takes an absolute path inside the system temp
+    /// directory, as `/ductus` passes its `{tempdir}`, and refuses one that
+    /// leaves the temp directory through a link (spec 022 task 9). The link
+    /// points at the filesystem root, which no temp directory holds. Each is
+    /// refused before anything is fetched, read or written.
+    #[cfg(unix)]
+    #[test]
+    fn every_staging_site_refuses_a_path_outside_the_temp_directory() {
+        let staging = tempfile::tempdir().unwrap();
+        let repo = tempfile::tempdir().unwrap();
+        std::os::unix::fs::symlink("/", staging.path().join("root")).unwrap();
+        let inside = |name: &str| staging.path().join(name).to_string_lossy().into_owned();
+        let cases = [
+            (
+                "fetch-archive",
+                serde_json::json!({"url": "https://example.invalid/a.tar.gz",
+                    "archive": inside("root/a.tar.gz")}),
+            ),
+            (
+                "extract-archive",
+                serde_json::json!({"archive": inside("root/a.tar.gz"), "dest": inside("d")}),
+            ),
+            (
+                "extract-archive",
+                serde_json::json!({"archive": inside("a.tar.gz"), "dest": inside("root/d")}),
+            ),
+        ];
+        for (name, args) in &cases {
+            let result = dispatch_primitive(name, &context_of(args), repo.path());
+            assert!(
+                refused_through_a_symlink(&result),
+                "`{name}` {args} was not refused through its symlink: {result:?}"
+            );
+        }
+        // A relative staging path is not one `/ductus` passes, and is refused
+        // whatever it names.
+        for (name, args) in [
+            (
+                "fetch-archive",
+                serde_json::json!({"url": "https://example.invalid/a.tar.gz", "archive": "a.tar.gz"}),
+            ),
+            (
+                "extract-archive",
+                serde_json::json!({"archive": "a.tar.gz", "dest": inside("d")}),
+            ),
+            (
+                "extract-archive",
+                serde_json::json!({"archive": inside("a.tar.gz"), "dest": "d"}),
+            ),
+        ] {
+            let result = dispatch_primitive(name, &context_of(&args), repo.path());
+            assert!(
+                matches!(&result, Err(DispatchError::Primitive(
+                    primitives::PrimitiveError::InvalidPath { reason, .. }))
+                    if reason.contains("must be an absolute path inside the system temp directory")),
+                "`{name}` {args}: {result:?}"
+            );
+        }
+        assert!(!repo.path().join("d").exists());
     }
 
     /// Walk one `writeCode` step whose response edits `edit_path` under a

@@ -38,7 +38,7 @@ use std::fs;
 use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 
-use crate::primitives::{PrimitiveError, Result, resolve_path};
+use crate::primitives::{PrimitiveError, Result, validate_in_temp_dir};
 use crate::schema::primitives::{ExtractArchiveArgs, ExtractArchiveResult};
 
 /// Execute the `extract-archive` primitive.
@@ -51,9 +51,13 @@ use crate::schema::primitives::{ExtractArchiveArgs, ExtractArchiveResult};
 ///   and no override was supplied.
 /// - [`PrimitiveError::UnsafeArchivePath`] for absolute paths or paths that
 ///   resolve outside `dest`.
-pub fn run(args: &ExtractArchiveArgs, repo: &Path) -> Result<ExtractArchiveResult> {
-    let archive_path = resolve_path(repo, &args.archive);
-    let dest = resolve_path(repo, &args.dest);
+/// - [`PrimitiveError::InvalidPath`] when `archive` or `dest` is not an
+///   absolute path inside the system temp directory, or a link on it leaves
+///   that directory ([`validate_in_temp_dir`]); raised before anything is
+///   read or written.
+pub fn run(args: &ExtractArchiveArgs, _repo: &Path) -> Result<ExtractArchiveResult> {
+    let archive_path = validate_in_temp_dir(&args.archive)?;
+    let dest = validate_in_temp_dir(&args.dest)?;
     let format = detect_format(&archive_path, args.format.as_deref())?;
 
     fs::create_dir_all(&dest).map_err(|source| PrimitiveError::Io {
