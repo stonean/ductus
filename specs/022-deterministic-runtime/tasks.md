@@ -93,3 +93,23 @@ Answered (a) by the owner 2026-10-20, to: (a) bump all three now and let the hel
 State on 2026-10-20: the three pins moved to the commits their tags name (upload-artifact `cf430e03` v7.0.2, download-artifact `9000827c` v8.0.2, checkout `3d3c42e5` v7.0.1), and `scripts/check-runtime-currency.sh pins` reports every pin current. The artifact pair first runs at the held release tag; the template's checkout first runs when an adopter copies the template.
 
 - **Done when**: scripts/check-runtime-currency.sh pins reports no action pin behind, or the owner has decided to hold them
+
+## 8. Disposition the re-review's bootstrap fetch findings (BE-TIMEOUT-001, BE-DATA-001)
+
+022's re-review at `384249de` found four MUST-tier findings in `framework/bootstrap/ductus.md`, which is in 022's review scope because 061 task 24 changed it in this window. None is on a line that window changed, and `e2f4e1b2` fixed the run's other findings:
+
+- `BE-TIMEOUT-001` and `BE-DATA-001` at lines 393-396: the runtime archive and its `.sha256` sidecar, which the host agent downloads in State B or when a live runtime is stale, are fetched with a bare `curl -fsSL`. That follows redirects with no timeout and no `--proto '=https' --tlsv1.2`. They are 048's (runtime acquisition).
+- `BE-TIMEOUT-001` and `BE-DATA-001` at line 860: the per-language `.gitignore` fetch from `raw.githubusercontent.com/github/gitignore` shows no command, so it carries neither, and it runs in every state (lines 325 and 745). It is 003's (AC13); 015's AC11 and 007's plan name it too.
+
+The archive block at lines 752-753 is not among them: it specifies what `fetch-archive` does and is never run as `curl` (line 745). A MUST finding is fixed or waived, never discarded. 061 task 24 counted seven `curl` calls and missed line 860, which shows no code block; the owner's answer (a) there bounded 061's five and left 048's two, because its option (b) reopened 048.
+
+Measured 2026-10-21: the runtime archives are 5.8 to 6.7 MB (`ductus-v0.59.11`'s assets), so the bootstrap's 60 s `{request-timeout}` would fail a download slower than about 112 KB/s. `runtime-acquisition.yml` and the adopter CI template bound the same archive at 30 s to connect and 300 s in all. The `.gitignore` files are small text, which the existing 10 s and 60 s pair covers.
+
+Asked the owner 2026-10-21: (a) fix both in this run: the two archive downloads gain the TLS flags and their own pair of named bounds in the Derived paths table (30 s and 300 s), the `.gitignore` fetch is shown as a `curl` with the TLS flags and the existing `{connect-timeout}` and `{request-timeout}`, and `govern.md` follows. No plan states it, so nothing reopens; 048's and 003's plans then name no timeout or TLS floor for these fetches, which the next analysis of either raises. (b) The same, and state the commitments in 048's and 003's plans, reopening both for an analysis against the rewritten rules before the release; 061's first such analysis found seven findings. (c) Waive the four in 022's review as 048's and 003's surfaces, so the bootstrap ships both fetches unbounded at the held release.
+
+Recommended: (a). The measure is what reaches adopters at the held release and what it costs now. (a) and (b) ship the same bootstrap, in which no `/ductus` run waits without bound on these three fetches or follows a redirect off HTTPS; (b) adds two reopens and two analyses for the plan statements alone. (c) costs nothing now and ships both.
+
+- [ ] The owner answers (a), (b) or (c)
+- [ ] Apply the answer
+
+- **Done when**: 022's review records each of the four findings fixed or waived.
