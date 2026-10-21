@@ -65,6 +65,14 @@ jobs:
       - name: Install pinned lint tooling
         run: npm ci
 
+      # BE-DEPS-004: a package pulled from a public registry is verified
+      # against its publisher's signature before it is used. npm's
+      # `audit signatures` checks each installed package's registry signature
+      # and any provenance attestation, and exits non-zero when one is invalid
+      # or missing, so an unsigned package fails the step here.
+      - name: Verify the lint tooling's registry signatures
+        run: npm audit signatures
+
       # The two frontmatter derivations are runtime primitives since spec
       # 067's adopter-generator-promotion, so this step needs the binary and
       # the toolchain block below has to precede it. Step (f) reuses the same

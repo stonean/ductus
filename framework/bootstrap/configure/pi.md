@@ -8,7 +8,7 @@ Verify and, when drifted, repair the Pi extension bridge that exposes the `ductu
 
 ## Scope Boundaries
 
-- Read `.pi/prompts/` only to confirm trust is granted (`/ductus` scaffolds there), and `.ductus/config.toml` only for its `[source] ref`; read and write only `.pi/extensions/ductus.ts`. Do NOT modify any other file.
+- Read `.pi/prompts/` only to confirm trust is granted (`/ductus` scaffolds there) and, in `.pi/prompts/ductus.md`, for **Source resolution** and the two fetch bounds its **Derived paths** table defines; read `.ductus/config.toml` only for its `[source] ref`; read and write only `.pi/extensions/ductus.ts`. Do NOT modify any other file.
 - The bridge file — the copy of `framework/bootstrap/pi/ductus-bridge.ts` installed by `/ductus` at State-B wire time — is the single persistent artifact this agent's runtime access depends on. A pip-installed adopter's checkout gets the bridge from `/ductus`; this command repairs it between runs.
 - Do NOT scan source code, specs, or git history. This command manages the bridge file and reports the permission/trust facts; it does not manage session state.
 - Reference: no constitution sections apply — this command operates on agent-specific wiring state, not `ductus` artifacts.
@@ -30,7 +30,7 @@ Verify and, when drifted, repair the Pi extension bridge that exposes the `ductu
 
 2. **Compare bytes.** Read the installed `.pi/extensions/ductus.ts` and diff against the canonical source. When they are identical, proceed to step 4 — the bridge is current.
 
-3. **Repair on divergence.** When the installed file differs — whether from a hand edit, an aborted write, or a stale release — overwrite it with the canonical source **byte-for-byte** (no `{project}` / `{cli-config-dir}` substitution; the bridge holds no placeholders). Write atomically (tempfile + rename). Then verify the repair: re-read the installed file and confirm the diff is now empty. If the write cannot be made (permissions, exotic filesystem), report the error and stop — a half-repaired bridge is worse than the stale one.
+3. **Repair on divergence.** When the installed file differs — whether from a hand edit, an aborted write, or a stale release — overwrite it with the canonical source **byte-for-byte**: the bridge holds no placeholders, so nothing in it is substituted. Write atomically (tempfile + rename). Then verify the repair: re-read the installed file and confirm the diff is now empty. If the write cannot be made (permissions, exotic filesystem), report the error and stop — a half-repaired bridge is worse than the stale one.
 
 4. **Report the facts.** State:
    - **Bridge state** — current (and repaired, when step 3 ran) or the error.

@@ -116,8 +116,11 @@ impl Block {
 ///   frontmatter failure.
 ///
 /// Each error writes nothing to the feature it fires on. An applying `all`
-/// walk keeps the reductions it already wrote to the features before it;
-/// each is atomic, so running the walk again resumes.
+/// walk computes every feature's reduction and reads every status before it
+/// writes any, so an error in either, a path check refusing one feature's
+/// directory among them, leaves the whole corpus untouched. Only a write
+/// that fails partway keeps the reductions written before it; each is
+/// atomic, so running the walk again resumes.
 pub fn run(args: &PruneTasksArgs, repo: &Path) -> Result<PruneTasksResult> {
     let root = paths::Paths::load(repo).specs_root;
     let Some(feature) = one_feature_or_all("prune-tasks", args.feature.as_deref(), args.all)?
@@ -174,25 +177,26 @@ pub(crate) fn one_feature_or_all<'a>(
 /// spec's status. A feature with nothing to reduce is examined and left out;
 /// one with no `tasks.md` is skipped with that reason. Under `apply` each
 /// permitted reduction is written, and a `--reset` stays gated per spec.
+/// Every reduction is computed and every status read before the first
+/// write, so a feature that fails either stops the walk with the corpus
+/// untouched (scenario `a-path-argument-resolves-inside-its-base`: such a
+/// walk is refused as a whole).
 fn walk(args: &PruneTasksArgs, repo: &Path, root: &str) -> Result<PruneWalk<PruneTasksLine>> {
     let names = list_feature_dirs(&repo.join(root));
-    let mut features = Vec::new();
+    let mut pending = Vec::new();
     let mut skipped = Vec::new();
     for feature in &names {
         match reduce(feature, args, repo, root) {
             Ok(reduction) if reduction.summary.nothing_to_prune => {}
             Ok(reduction) => {
-                // Read before an apply writes this spec's reduction, so a
-                // status that will not read stops the walk with its file
-                // untouched. A reset read it for its gate; keep-pending did not.
+                // The walk's line carries the status. A reset read it for its
+                // gate; keep-pending did not, so read it here, before any
+                // write, for a status that will not read stops the walk.
                 let status = match &reduction.summary.status {
                     Some(status) => status.clone(),
                     None => read_status(&repo.join(root).join(feature), root, feature)?,
                 };
-                features.push(PruneWalkEntry {
-                    feature: feature.clone(),
-                    summary: PruneTasksLine::new(reduction.write()?, status),
-                });
+                pending.push((feature.clone(), reduction, status));
             }
             Err(PrimitiveError::TasksFileMissing { .. }) => skipped.push(SkippedFeature {
                 feature: feature.clone(),
@@ -200,6 +204,13 @@ fn walk(args: &PruneTasksArgs, repo: &Path, root: &str) -> Result<PruneWalk<Prun
             }),
             Err(other) => return Err(other),
         }
+    }
+    let mut features = Vec::with_capacity(pending.len());
+    for (feature, reduction, status) in pending {
+        features.push(PruneWalkEntry {
+            feature,
+            summary: PruneTasksLine::new(reduction.write()?, status),
+        });
     }
     Ok(PruneWalk {
         examined: u32::try_from(names.len()).unwrap_or(u32::MAX),
@@ -837,6 +848,29 @@ mod tests {
         );
         let after = fs::read_to_string(tmp.path().join("specs/002-first/tasks.md")).unwrap();
         assert_eq!(after, FLAT, "the walk stopped with the file untouched");
+    }
+
+    /// A walk is refused as a whole when one feature fails the path check:
+    /// the feature before it in corpus order keeps its file, though its
+    /// reduction was computed first.
+    #[cfg(unix)]
+    #[test]
+    fn an_applying_walk_refused_by_a_later_feature_writes_nothing() {
+        let tmp = corpus(&[
+            ("002-first", "in-progress", Some(FLAT)),
+            ("003-linked", "in-progress", Some(FLAT)),
+        ]);
+        let outside = tempdir().unwrap();
+        fs::write(outside.path().join("tasks.md"), FLAT).unwrap();
+        let linked = tmp.path().join("specs/003-linked/tasks.md");
+        fs::remove_file(&linked).unwrap();
+        std::os::unix::fs::symlink(outside.path().join("tasks.md"), &linked).unwrap();
+        let err = super::run(&all(false, false, true), tmp.path()).unwrap_err();
+        assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err}");
+        let first = fs::read_to_string(tmp.path().join("specs/002-first/tasks.md")).unwrap();
+        assert_eq!(first, FLAT, "the earlier feature was not written");
+        let outer = fs::read_to_string(outside.path().join("tasks.md")).unwrap();
+        assert_eq!(outer, FLAT, "nothing outside the project was written");
     }
 
     #[test]

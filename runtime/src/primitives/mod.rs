@@ -1318,9 +1318,8 @@ fn strip_label_ci<'a>(s: &'a str, label: &str) -> Option<&'a str> {
 ///
 /// This is the accept-absolute-paths counterpart to
 /// [`validate_no_traversal`]: primitives whose path arguments are
-/// operator/machine-local (fixture specs in temp dirs, generator scripts,
-/// downloaded archives, sibling-service checkouts) resolve through this
-/// helper; primitives that must stay inside the repo root
+/// operator/machine-local (fixture specs in temp dirs, downloaded archives,
+/// sibling-service checkouts) resolve through this helper; primitives that must stay inside the repo root
 /// (`merge-managed-block`, `merge-permissions`, …) call
 /// [`validate_contained`] first and never accept absolute input.
 /// `enforce-manifest` keeps its own stricter `resolve_contained_dir`
@@ -1634,10 +1633,12 @@ fn refuse_outward_link(link: &Path, base: &Path, canonical_base: &Path, rel: &st
 /// parent's resolution with the last component appended — `..` taking the
 /// parent of that resolution, and an appended name that turns out to exist
 /// (reached through a `..` after a missing directory) resolved in turn, since
-/// it may be a link. At most [`MAX_SYMLINK_HOPS`] links are followed across
-/// the whole resolution, as the kernel counts them across one lookup: a count
-/// kept per branch would let a chain of links that each name the next twice
-/// cost time exponential in its length.
+/// it may be a link. The resolver follows at most [`MAX_SYMLINK_HOPS`] links
+/// itself, from one budget for the whole resolution as the kernel keeps one
+/// per lookup: a count kept per branch would let a chain of links that each
+/// name the next twice cost time exponential in its length. Each
+/// `canonicalize` it calls follows links of its own, up to the platform's
+/// limit, and those are not counted here.
 fn resolve_symlinks(path: &Path) -> std::io::Result<PathBuf> {
     let mut hops = 0;
     resolve_symlinks_within(path, &mut hops)
@@ -4206,18 +4207,33 @@ mod tests {
     }
 
     /// A dangling target that climbs through a directory not created yet is
-    /// judged as the kernel would once it exists, not by its text: lexically
-    /// `missing/../..` would stay under the project.
+    /// judged as the kernel would once it exists, not by its text: a `..`
+    /// after a link leaves the link's target, not the link. Each input below
+    /// gets the opposite answer from a textual reading of its target.
     #[cfg(unix)]
     #[test]
     fn a_dangling_target_climbing_through_a_missing_directory_is_judged_physically() {
         let (project, _outside) = project_and_outside();
-        // A canonical base, so a lexical answer cannot be refused merely for
+        // A canonical base, so a textual answer cannot differ merely for
         // spelling the base differently (macOS `/var` against `/private/var`).
         let base = project.path().canonicalize().unwrap();
-        link("missing/../../elsewhere", base.join("out"));
+        // `here` is the base itself, so `here/..` is the base's parent: the
+        // target lands outside, where its text would stay inside.
+        link(".", base.join("here"));
+        link("missing/../here/../escape", base.join("out"));
         let err = validate_contained(&base, "out/x.md").unwrap_err();
-        assert!(refused_through(&err, "out"), "{err:?}");
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { reason, .. }
+                if reason.contains("the symlink `out` resolves to")
+                    && reason.contains(", outside ")),
+            "{err:?}"
+        );
+        // `deep` is three directories down, so two `..` after it stay
+        // inside: the target lands inside, where its text would leave.
+        std::fs::create_dir_all(base.join("a/b/c")).unwrap();
+        link("a/b/c", base.join("deep"));
+        link("missing/../deep/../../x.md", base.join("in.md"));
+        validate_contained(&base, "in.md").unwrap();
     }
 
     /// After a `..` past a missing directory, the next name can be a link

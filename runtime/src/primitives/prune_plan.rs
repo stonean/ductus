@@ -772,6 +772,36 @@ mod tests {
         assert_eq!(walk.examined, 5);
     }
 
+    /// A walk is refused as a whole when one feature fails the path check,
+    /// here a `plan.md` that links outside the project (scenario
+    /// `a-path-argument-resolves-inside-its-base`, the corpus-walk edge case).
+    #[cfg(unix)]
+    #[test]
+    fn a_walk_is_refused_by_a_feature_holding_an_outward_link() {
+        let tmp = tempdir().unwrap();
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        for name in ["002-first", "003-linked"] {
+            let dir = tmp.path().join("specs").join(name);
+            write(
+                &dir.join("spec.md"),
+                "---\nstatus: in-progress\ndependencies: []\n---\n\n# Spec\n",
+            );
+            write(&dir.join("plan.md"), PLAN);
+        }
+        commit_all(&repository, "corpus");
+        let outside = tempdir().unwrap();
+        fs::write(outside.path().join("plan.md"), PLAN).unwrap();
+        let linked = tmp.path().join("specs/003-linked/plan.md");
+        fs::remove_file(&linked).unwrap();
+        std::os::unix::fs::symlink(outside.path().join("plan.md"), &linked).unwrap();
+        let err = super::run(&all(), tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { reason, .. }
+                if reason.contains("plan.md")),
+            "{err:?}"
+        );
+    }
+
     #[test]
     fn a_plan_walk_is_preview_only() {
         let tmp = tempdir().unwrap();

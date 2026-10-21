@@ -1115,6 +1115,31 @@ mod tests {
         std::fs::write(dir.join("spec.md"), content).unwrap();
     }
 
+    /// The dashboard resolves every spec's references through
+    /// `resolve-references`, which checks its feature, so one spec directory
+    /// holding a link that leaves the project refuses the whole view
+    /// (scenario `a-path-argument-resolves-inside-its-base`).
+    #[cfg(unix)]
+    #[test]
+    fn a_spec_directory_holding_an_outward_link_refuses_the_dashboard() {
+        let tmp = TempDir::new().unwrap();
+        write_spec(tmp.path(), "001-a", "status: draft\ndependencies: []\n", "");
+        write_spec(tmp.path(), "002-b", "status: draft\ndependencies: []\n", "");
+        let outside = TempDir::new().unwrap();
+        std::fs::write(outside.path().join("notes.md"), "outside\n").unwrap();
+        std::os::unix::fs::symlink(
+            outside.path().join("notes.md"),
+            tmp.path().join("specs/002-b/notes.md"),
+        )
+        .unwrap();
+        let err = run(&DashboardArgs::default(), tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { reason, .. }
+                if reason.contains("notes.md")),
+            "{err:?}"
+        );
+    }
+
     /// Write a legacy root session TOML at `<repo>/.govern.session.toml` —
     /// the fallback path the resolver reads when `.ductus/session.toml`
     /// is absent, so these tests double as legacy-fallback coverage.

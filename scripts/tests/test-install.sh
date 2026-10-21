@@ -258,6 +258,17 @@ else
   fail "L: latest below the floor (rc=$rc): $(out l-latest-below)"
 fi
 
+# L2. --ref=latest names the same source as no --ref, so a latest release
+# below the floor gets the pre-publication message, never the named-tag one.
+STUB_LOCATION="$TAG_URL/ductus-v0.54.2" run l2-latest-ref-below --ref=latest
+if [ "$rc" -ne 0 ] && wrote_nothing l2-latest-ref-below \
+  && out l2-latest-ref-below | grep -qF "may still be publishing" \
+  && ! out l2-latest-ref-below | grep -qF "(from --ref)"; then
+  pass "L2: --ref=latest below the floor halts with the pre-publication message"
+else
+  fail "L2: --ref=latest below the floor (rc=$rc): $(out l2-latest-ref-below)"
+fi
+
 # M. a named tag below the floor: halt naming both, before fetching anything.
 run m-named-below --ref=ductus-v0.54.2
 if [ "$rc" -ne 0 ] && wrote_nothing m-named-below \
@@ -346,18 +357,21 @@ else
   fail "U: pi agent (rc=$rc): $(out u-pi)"
 fi
 
-# V. every request is bounded (BE-TIMEOUT-001): the default run makes both of
-# the installer's requests, and each carries --connect-timeout and --max-time,
-# in either order, with a positive whole number of seconds (curl reads a zero
-# --max-time as no limit at all).
+# V. every request is bounded (BE-TIMEOUT-001) and held to HTTPS at TLS 1.2
+# or later (BE-DATA-001): the default run makes both of the installer's
+# requests, and each carries --connect-timeout and --max-time, in either
+# order, with a positive whole number of seconds (curl reads a zero
+# --max-time as no limit at all), and --proto =https and --tlsv1.2.
 STUB_LOCATION="$TAG_URL/ductus-v99.0.0" run v-bounded
 argv="$WORK/v-bounded.log.argv"
 if [ "$rc" -eq 0 ] && [ "$(grep -c . "$argv")" -eq 2 ] \
   && [ "$(grep -cE -- '(^| )--connect-timeout [1-9][0-9]*( |$)' "$argv")" -eq 2 ] \
-  && [ "$(grep -cE -- '(^| )--max-time [1-9][0-9]*( |$)' "$argv")" -eq 2 ]; then
-  pass "V: every request carries a connect timeout and a total timeout"
+  && [ "$(grep -cE -- '(^| )--max-time [1-9][0-9]*( |$)' "$argv")" -eq 2 ] \
+  && [ "$(grep -cE -- '(^| )--proto =https( |$)' "$argv")" -eq 2 ] \
+  && [ "$(grep -cE -- '(^| )--tlsv1\.2( |$)' "$argv")" -eq 2 ]; then
+  pass "V: every request is bounded and held to HTTPS at TLS 1.2 or later"
 else
-  fail "V: unbounded request (rc=$rc): $(cat "$argv")"
+  fail "V: unbounded or unpinned request (rc=$rc): $(cat "$argv")"
 fi
 
 echo

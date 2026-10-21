@@ -45,9 +45,10 @@ fi
 # case where the restore-keys fallback in CI brought back an older
 # binary from a prior runtime version (#26342549657 — stale 0.8.1
 # binary failed to parse a 0.9.0 procedure that referenced
-# write-session).
-(cd "$runtime_dir" && cargo build --release --quiet) || {
-  echo "::error::cargo build --release failed" >&2
+# write-session). `--locked` builds from the committed Cargo.lock alone,
+# as every other CI build does (BE-DEPS-002).
+(cd "$runtime_dir" && cargo build --release --locked --quiet) || {
+  echo "::error::cargo build --release --locked failed" >&2
   exit 2
 }
 

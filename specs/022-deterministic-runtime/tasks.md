@@ -77,7 +77,7 @@ Answered (b) by the owner 2026-10-20, to: (a) authorize the task, with all four 
 
 - **Done when**: Every curl in the workflows and install.sh carries a named timeout, and analyze's BE-TIMEOUT-001 assessment of 022's plan passes
 
-State on 2026-10-20: every curl in `.github/workflows/`, the adopter template and `install.sh` carries a named connect and total timeout, and `verify-installer`'s retry is bounded at six attempts with full-jitter exponential backoff, run locally against a stub curl that fails twice and one that never succeeds. `test-install.sh` case V fails against either installer request with its bound removed. The analyze half waits on 022's next analysis, and 061, reopened for its plan, needs an analyze before it returns to `done`.
+State on 2026-10-20: every curl in `.github/workflows/`, the adopter template and `install.sh` carries a named connect and total timeout, and `verify-installer`'s retry is bounded at six attempts with equal-jitter exponential backoff (full jitter until `404db2ac` the same day), run locally against a stub curl that fails twice and one that never succeeds. `test-install.sh` case V fails against either installer request with its bound removed. The analyze half waits on 022's next analysis, and 061, reopened for its plan, needs an analyze before it returns to `done`.
 
 ## 7. Move the three action pins a major release behind
 

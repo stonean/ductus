@@ -159,7 +159,7 @@ pub(crate) fn normalize_description(description: Option<&str>) -> Option<String>
 /// `resolve-references` cites the same statement for `[services]`.
 ///
 /// What that statement obliges of *this* table: `[constitutions.*]` is
-/// registered by hand today (`framework/bootstrap/ductus.md`), so the
+/// registered by hand today (`docs/shared-constitution.md`), so the
 /// operator is the origin of every path here. A future command that
 /// originates the value instead ships the `validate_no_traversal` call with
 /// itself.

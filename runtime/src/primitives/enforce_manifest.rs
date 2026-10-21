@@ -173,8 +173,9 @@ fn list_contains(haystack: &[String], needle: &str) -> bool {
 }
 
 /// Collect every regular file under `directory`. When `recursive` is
-/// false, only the immediate children are returned. Symlinks are
-/// followed for `is_file()` purposes but not traversed as directories.
+/// false, only the immediate children are returned. A symlink is neither
+/// collected nor traversed: both walks read each entry's own type, which
+/// for a link is a link, so the cleanup never removes one.
 fn collect_entries(directory: &Path, recursive: bool) -> Result<Vec<PathBuf>> {
     let mut out = Vec::new();
     if recursive {
@@ -578,6 +579,28 @@ mod tests {
         let err = run(&args, tmp.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::InvalidPath { .. }));
         assert!(tmp.path().join("cmds/stale.md").exists());
+    }
+
+    /// An absolute directory under the repo root is checked like a relative
+    /// one: its remainder goes through the containment check, so a link in
+    /// it that leaves the project is refused before the cleanup runs.
+    #[cfg(unix)]
+    #[test]
+    fn absolute_directory_through_an_outward_link_is_rejected_before_any_removal() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let victim = outside.path().join("innocent.md");
+        touch(&victim);
+        std::os::unix::fs::symlink(outside.path(), tmp.path().join("cmds")).unwrap();
+
+        let args = args_for(&tmp.path().join("cmds"), &[], &[], true, Some("*"));
+        let err = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { reason, .. }
+                if reason.contains("the symlink `cmds`")),
+            "expected the outward link to be named, got {err:?}"
+        );
+        assert!(victim.exists(), "no file outside the repo may be removed");
     }
 
     #[test]

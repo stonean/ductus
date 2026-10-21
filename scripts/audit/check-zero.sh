@@ -31,8 +31,11 @@ audit_family check-zero
 # added to `gen-claude-commands.sh` by spec 026 task 2 to close the gap).
 # Lints already run in read-only mode by design — no flag.
 runtime_bin="runtime/target/release/ductus"
-if ! (cd runtime && cargo build --release --quiet) 2>/dev/null; then
-  emit "runtime/" "cargo build --release failed — the frontmatter derivations cannot run" \
+# `--locked` builds from the committed Cargo.lock alone, as every other CI
+# build does (BE-DEPS-002); run-all.sh runs it in framework-checks.yml and
+# in the release workflow's audit job.
+if ! (cd runtime && cargo build --release --locked --quiet) 2>/dev/null; then
+  emit "runtime/" "cargo build --release --locked failed — the frontmatter derivations cannot run" \
     "fix the build; a precondition that cannot run must not read as a pass"
   exit "$drift"
 fi
