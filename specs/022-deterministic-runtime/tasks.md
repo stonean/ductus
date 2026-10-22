@@ -304,6 +304,22 @@ Resolved 2026-10-21 by the owner: (b), bounded agent. Recorded in plan.md, Agent
 
 `apply-manifest` takes `source-root` and `target-root` as bases that may name any absolute directory, and checks only each entry against its root, by the design `a-path-argument-resolves-inside-its-base` records. Probed 2026-10-21: with an absolute `--target-root` it wrote a file outside the project (re-read 2, and repeated from `/tmp/t11-probe-proj` into `/tmp/t16-outside`). Under task 16 (b) a write outside the project goes to the host's prompt, so the roots need a bound.
 
+Measured 2026-10-22, after task 11's answer (a), whose refusals judge a destination only inside the project:
+
+- **The roots.** `apply-manifest` joins a relative root to the project and takes an absolute one as given (`resolve_path`, `runtime/src/primitives/mod.rs`), then holds each entry inside its root (`validate_contained`). Nothing bounds the roots themselves.
+- **Callers.** One: `/ductus` §Instructions steps 4 and 9, over MCP in State A and over the CLI in State B as `{pointer-path} apply-manifest --source-root {staging} --target-root .` (`ductus.md` §Shared Files). The source root is `{framework-root}`, the one directory `extract-archive` produced in `{tempdir}`, which `/ductus` makes with `mktemp -d -t ductus-XXXXXX` (§Archive fetch and extract); the CLI line's `{staging}` is defined nowhere else in the file. The target root is the project. No command or migration calls it. The `/ductus` parity fixture passes `staging` and `project`, both inside the project, and the unit tests a temp directory and the project.
+- **What the roots reach today.** An absolute `target-root` writes wherever the user can write: probed from `/tmp/t11-probe-proj` into `/tmp/t16-outside` (task 16); by task 11's measurement that includes `~/.claude/settings.json`, `~/.augment/settings.json` and `~/.gemini/antigravity-cli/settings.json`, where Antigravity's CLI reads its rules. An absolute `source-root` copies any file the user can read into the project. Claude Code's own reads need no approval only "within the working directory and additional directories", and "By default, Claude has access to files in the directory where you launched it" (code.claude.com/docs/en/permissions, Permission system and Working directories).
+- **Nothing else writes outside the project.** `fetch-archive` and `extract-archive` are held to the temp directory (`validate_in_temp_dir`), every other writer to the project (`validate_contained`), and the spec root is one `[A-Za-z0-9_-]` name (`validate_specs_root`, `runtime/src/schema/paths.rs`).
+
+Options:
+
+- (a) **Bound both roots.** `target-root` must resolve inside the project; `source-root` inside the project or inside a staging root, the temp directory `validate_in_temp_dir` already accepts for the two archive primitives. Closes writes outside the project and copies into it from anywhere else, on every surface and every agent, with no prompt; `/ductus`'s calls, the parity fixture and the unit tests pass unchanged. Leaves: a source in the temp directory, which `fetch-archive` fills from any public `https` URL, and whose writes into the project task 11's refusals judge.
+- (b) **Bound `target-root` only.** Closes writes outside the project, the same way. Leaves: copying any file the user can read into the project, a read Claude Code's own tools make with a prompt outside its working directories.
+
+Either way the change is `runtime/src/primitives/apply_manifest.rs` and its tests, plan.md (Agent reach) and `ductus.md`'s CLI line, whose `{staging}` becomes `{framework-root}` (with `govern.md`). The scenario `a-path-argument-resolves-inside-its-base` stays true ("A staging directory outside the project is a legitimate `source-root`"), so 022's review digest is untouched. Task 16 (b) names writes outside the project, not reads; (a) goes further for the source.
+
+Recommended: (a). Measured by what each closes and what it costs: both cost no prompt and change no legitimate call, since the one caller passes a temp directory and the project; (a) also closes the read, and nothing passes a source anywhere else.
+
 - [ ] Measure what `/ductus` passes as each root (State A over MCP, State B over the CLI) and which other caller passes one, write the measured question here, and ask the owner after tasks 14 and 11
 - [ ] Apply the answer
 
