@@ -35,13 +35,15 @@ The workflow runs the framework's deterministic checks on every change. Its step
 | Step | Implementation |
 | --- | --- |
 | (b) generators and derived indexes clean | `ductus derive-dependencies`, `ductus derive-references` and `bash scripts/gen-help-tables.sh --dry-run`, each failing on a stale index |
-| (c) markdownlint | `npx markdownlint-cli2` |
+| (c) markdownlint | `npm ci`, then `npm audit signatures`, then `npx markdownlint-cli2` |
 | (d) tool-coverage lint | `bash scripts/lint-tool-coverage.sh` |
 | (e) frontmatter integrity | `bash scripts/lint-frontmatter.sh` |
 
 Workflow trigger is `pull_request` with a `paths` filter that includes `framework/**`, `specs/**` and `.claude/commands/**`. Push to `main` also triggers the workflow to catch direct commits.
 
 The job builds the runtime before step (b), since the two derivations are runtime primitives.
+
+This workflow's supply-chain and time bounds are committed in [022's plan](../022-deterministic-runtime/plan.md), which owns the repository's workflows: every action is pinned by commit SHA, and a weekly check moves the pins (§`runtime.yml` CI workflow, **Pinned inputs** and **Their update process**); `markdownlint-cli2` is installed from `package-lock.json` with `npm ci` and its registry signatures verified with `npm audit signatures` before step (c), and the runtime build runs `--locked` (§Dependency pinning, provenance, and upgrades); and the job is bounded by `timeout-minutes` (§Release workflow).
 
 ### Runtime-tools manifest is a flat text file, initially empty
 
@@ -58,7 +60,7 @@ The manifest is plain text rather than YAML/JSON because (1) the consumers are s
 3. For every match, scans forward up to 20 lines for a fallback marker — case-insensitive matches against the literal tokens `Otherwise`, `Fallback`, `If unavailable`, `markdown-only path`. If none found within the window, emit the file path, line number, and tool name as an error.
 4. Exits non-zero if any error was emitted.
 
-20-line window is a heuristic; revisit when real tools are added in spec 022 and the heuristic can be validated against actual usage. The lint is purely structural — it does not validate that the fallback is *correct*, only that one is present. Correctness is reviewer responsibility.
+The 20-line window is the script's named constant `WINDOW` (`scripts/lint-tool-coverage.sh`), so tuning it is a one-line change. It is a heuristic; revisit when real tools are added in spec 022 and the heuristic can be validated against actual usage. The lint is purely structural — it does not validate that the fallback is *correct*, only that one is present. Correctness is reviewer responsibility.
 
 This trades false-positive risk (a fallback that exists but doesn't match the keywords) for a fully derived check (no author-supplied markers required). False positives are easy to resolve by paraphrasing into one of the four accepted tokens.
 

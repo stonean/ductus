@@ -237,6 +237,8 @@ Either way, the version named in plan.md and in `validate_glob_contained`'s doc 
 
 Recommended: (a). `BE-DEPS-001` asks for a policy on findings, and (a) is the one whose policy acts without anyone remembering to look: a new high or critical advisory fails the run, while the one advisory with no fix is excepted by id, with its reach and the event that ends the exception written down. Its cost is the filter and a test that shows it fails on an advisory not on the list.
 
+Routed here 2026-10-22 by 021's analysis: `BE-DEPS-007` ("Any spec or plan covering dependency management or CI configuration SHOULD commit to an automated scan on dependency changes") fires on 021's plan, which describes `framework-checks.yml`, and nothing scans the npm set (`package.json`, `package-lock.json`) for vulnerabilities; `framework-checks.yml` runs only `npm audit signatures`, and its `pull_request` paths omit both files. Option (a) and (b) both add the scan; whichever is applied answers this route too.
+
 - [x] Measure what (a)'s filter needs and write the measured question here
 - [ ] The owner answers (a) or (b); apply the answer
 
