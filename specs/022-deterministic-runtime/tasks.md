@@ -182,8 +182,10 @@ Each reaches an adopter when its next `/ductus` run acquires the release that sh
 
 Recommended: (a). Measured as routes closed, agents covered, prompts added and dependencies: (a) closes all six inside the project on all five agents, adds no prompt, and waits on nothing but task 17 for the user-level half of route 2; (b) closes them on Claude alone at six prompts per run and waits on task 18; (c) closes what (a) does and adds three prompts per run on Claude to put command bodies behind the prompt, bodies that grant nothing beyond the allow list. The choice between (a) and (c) is whether 16 (b)'s wording binds `/ductus`'s own command-file writes.
 
+Resolved 2026-10-22 by the owner: (a). Applied: `runtime/src/primitives/host_config.rs` holds the config directories, root files and rows; `apply-manifest` and `enforce-manifest` judge every destination before the first write or removal, `merge-managed-block` its path, and `apply-manifest` the frontmatter of the command, skill and prompt files it writes, on the bytes its strategy writes; `migrate-session-file` takes only `<config-dir>/<name>-session.json`; `merge-permissions` refuses an allow entry outside Claude's canonical set, held equal to `configure/claude.md` by a test that `runtime.yml`'s trigger paths now reach. One reading the option left open: a row is matched under a config directory at any depth, not only at the project root, because a manifest's target root may be a subdirectory (the `/ductus` parity fixture's is `project/`); a row grants nothing at any depth, and everything else under a config directory is refused at any depth. Each refusal has a test that fails under the mutation removing it (21 mutations). plan.md, Agent reach, states the refusals and what they leave.
+
 - [x] Measure and write the measured question here
-- [ ] The owner answers (a), (b) or (c); apply the answer
+- [x] The owner answers (a), (b) or (c); apply the answer
 
 ## 12. Decide: malformed session and config files fall back instead of failing fast (CFG-ENV-008, blocking)
 

@@ -1,6 +1,7 @@
 //! `merge-managed-block` — idempotently install or update a
-//! framework-managed block in an arbitrary text file using a
-//! configurable marker shape.
+//! framework-managed block in a project text file using a
+//! configurable marker shape. An agent host's configuration is refused
+//! ([`super::host_config`], spec 022 task 11).
 //!
 //! Generalizes the retired `merge-claude-md` primitive (a thin wrapper
 //! removed by scenario coverage-residue-cleanup once no command invoked
@@ -64,6 +65,12 @@ const STYLE_LINE_PREFIX: &str = "line-prefix";
 ///   resolves outside the project — the BE-INPUT-004 check a primitive
 ///   applies to a path the host supplies, before any filesystem operation. `path` is repo-relative (`.gitignore`,
 ///   `CLAUDE.md`); no caller needs an out-of-repo destination.
+/// - [`PrimitiveError::InvalidPath`] when `path`, resolved, lies in an
+///   agent host's configuration other than a command, skill, rules-mirror
+///   or bridge path `/ductus` writes: a block's marker lines would leave a
+///   settings file that is not JSON, which Claude Code skips with its deny
+///   rules (spec 022 task 11; [`super::host_config`]). No `/ductus` step
+///   writes a block there.
 /// - [`PrimitiveError::Io`] on local filesystem failures.
 /// - [`PrimitiveError::MalformedMarkers`] when an `html-comment` style
 ///   file has a BEGIN marker without an END (or vice versa).
@@ -75,6 +82,7 @@ const STYLE_LINE_PREFIX: &str = "line-prefix";
 pub fn run(args: &MergeManagedBlockArgs, repo: &Path) -> Result<MergeManagedBlockResult> {
     super::validate_contained(repo, &args.path)?;
     let path = repo.join(&args.path);
+    super::host_config::check_destination(repo, &path, &args.path)?;
     let marker = args
         .marker
         .as_deref()
@@ -1715,5 +1723,34 @@ Thumbs.db";
             !tmp.path().join(".ductus").exists(),
             "no partial .ductus/ file created while the legacy config lingers"
         );
+    }
+
+    /// A block is not written into a host's settings file, whose marker
+    /// lines would leave JSON a host skips with its deny rules (spec 022
+    /// task 11).
+    #[test]
+    fn a_block_is_not_written_into_host_configuration() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        fs::create_dir_all(repo.join(".claude")).unwrap();
+        let settings = "{\"permissions\":{\"deny\":[\"Bash(rm *)\"]}}\n";
+        fs::write(repo.join(".claude/settings.json"), settings).unwrap();
+        for path in [".claude/settings.json", ".mcp.json"] {
+            let args = MergeManagedBlockArgs {
+                path: path.into(),
+                block: "x".into(),
+                marker: None,
+                marker_style: Some("line-prefix".into()),
+            };
+            assert!(
+                matches!(run(&args, repo), Err(PrimitiveError::InvalidPath { .. })),
+                "{path}"
+            );
+        }
+        assert_eq!(
+            fs::read_to_string(repo.join(".claude/settings.json")).unwrap(),
+            settings
+        );
+        assert!(!repo.join(".mcp.json").exists());
     }
 }

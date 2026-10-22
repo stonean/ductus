@@ -47,6 +47,15 @@
 //! sweeping both arrays under one argument would invite narrowing the
 //! deny set into holes. See spec 027's `retired-permission-entry-cleanup`
 //! scenario.
+//!
+//! # Ceiling
+//!
+//! An `allow` entry outside Claude's canonical allow set is refused before
+//! anything is read ([`canonical_allow`]), so the primitive grants nothing
+//! `/configure` does not (BE-AUTHZ-004; spec 022 task 11, the owner's answer
+//! (a)). A host auto-approves the runtime's tools, and the agent calling one
+//! could otherwise write any rule into the file its own writes are prompted
+//! for. `deny` and `revoke` need no ceiling: each only takes a grant away.
 
 #![allow(clippy::expect_used)]
 
@@ -61,6 +70,10 @@ use crate::schema::primitives::{MergePermissionsArgs, MergePermissionsResult};
 ///
 /// # Errors
 ///
+/// - [`PrimitiveError::InvalidArgument`] when an `allow` entry is outside
+///   Claude's canonical allow set ([`canonical_allow`], the ceiling).
+///   Checked before any filesystem read, after the `revoke` overlap check
+///   below, so a retired entry passed in `allow` is named as the overlap.
 /// - [`PrimitiveError::InvalidPath`] when `path` is absolute, empty, or
 ///   contains a parent-directory component, or when a symlink on it
 ///   resolves outside the project — the BE-INPUT-004 check a primitive
@@ -78,6 +91,7 @@ use crate::schema::primitives::{MergePermissionsArgs, MergePermissionsResult};
 pub fn run(args: &MergePermissionsArgs, repo: &Path) -> Result<MergePermissionsResult> {
     super::validate_contained(repo, &args.path)?;
     validate_revoke_disjoint(&args.allow, &args.revoke)?;
+    refuse_beyond_ceiling(&args.allow)?;
     let target_path = repo.join(&args.path);
 
     let existing = match target_path.try_exists() {
@@ -132,6 +146,91 @@ pub fn run(args: &MergePermissionsArgs, repo: &Path) -> Result<MergePermissionsR
 /// short-circuit callers rely on for idempotency. Reporting every
 /// conflicting entry at once (rather than the first) means a caller
 /// fixing a retired-entry list sees the whole overlap in one run.
+/// The non-MCP half of Claude's canonical `permissions.allow` set, step 2 of
+/// `framework/bootstrap/configure/claude.md`. The MCP half is derived
+/// ([`canonical_allow`]). `the_ceiling_is_configure_claudes_canonical_allow_set`
+/// holds the two equal to that file, so narrowing the set there (022 task 18)
+/// fails it until this list moves too.
+const CANONICAL_ALLOW_STATIC: &[&str] = &[
+    "Edit",
+    "Write",
+    "Edit(.ductus/session.toml)",
+    "Edit(.ductus/config.toml)",
+    "WebFetch",
+    "WebSearch",
+    "Bash(ls *)",
+    "Bash(git add *)",
+    "Bash(git commit *)",
+    "Bash(git push *)",
+    "Bash(git log *)",
+    "Bash(git diff *)",
+    "Bash(git status *)",
+    "Bash(git show *)",
+    "Bash(curl *)",
+    "Bash(gh api *)",
+    "Bash(mkdir -p *)",
+    "Bash(chmod +x *)",
+    "Bash(command -v *)",
+    "Bash(make *)",
+    "Bash(markdownlint *)",
+    "Bash(markdownlint-cli2 *)",
+    "Bash(npx markdownlint-cli2 *)",
+    "Bash(git config core.hooksPath *)",
+    "Bash(git config --get core.hooksPath)",
+    "Bash(git config --unset core.hooksPath)",
+    "Bash(./.githooks/pre-commit)",
+    "Bash(scripts/install-hooks.sh)",
+    "Bash(./scripts/install-hooks.sh)",
+];
+
+/// Claude's canonical `permissions.allow` set: [`CANONICAL_ALLOW_STATIC`]
+/// and `mcp__ductus__<name>` for every primitive the MCP server serves, the
+/// block `scripts/gen-configure-mcp.sh` generates from
+/// `framework/runtime-tools.txt`, which `runtime/tests/mcp.rs` holds equal to
+/// the served set.
+pub(crate) fn canonical_allow() -> std::collections::BTreeSet<String> {
+    CANONICAL_ALLOW_STATIC
+        .iter()
+        .map(|entry| (*entry).to_string())
+        .chain(
+            crate::schema::registry::served_primitives().map(|name| format!("mcp__ductus__{name}")),
+        )
+        .collect()
+}
+
+/// Refuse any `allow` entry outside [`canonical_allow`] (the ceiling).
+fn refuse_beyond_ceiling(allow: &[String]) -> Result<()> {
+    let canonical = canonical_allow();
+    let beyond: Vec<&str> = allow
+        .iter()
+        .map(String::as_str)
+        .filter(|entry| !canonical.contains(*entry))
+        .collect();
+    if beyond.is_empty() {
+        return Ok(());
+    }
+    Err(PrimitiveError::InvalidArgument {
+        primitive: "merge-permissions".into(),
+        argument: "allow".into(),
+        reason: format!(
+            "{} {} not in Claude's canonical allow set \
+             (framework/bootstrap/configure/claude.md step 2), and the primitive grants \
+             nothing beyond it (spec 022 task 11): {}",
+            beyond.len(),
+            if beyond.len() == 1 {
+                "entry is"
+            } else {
+                "entries are"
+            },
+            beyond
+                .iter()
+                .map(|entry| format!("`{entry}`"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+    })
+}
+
 fn validate_revoke_disjoint(allow: &[String], revoke: &[String]) -> Result<()> {
     // Deduped: a canonical set that repeats an entry would otherwise make
     // the message count one conflict twice and name it twice, reporting a
@@ -537,11 +636,7 @@ mod tests {
             r#"{"permissions":{"allow":["UserA","UserB"],"deny":[]}}"#,
         )
         .unwrap();
-        let result = run(
-            &args("s.json", &["Canonical1", "Canonical2"], &[]),
-            tmp.path(),
-        )
-        .unwrap();
+        let result = run(&args("s.json", &["WebFetch", "WebSearch"], &[]), tmp.path()).unwrap();
         assert_eq!(result.action, "updated");
         assert_eq!(result.allow_added, 2);
         assert_eq!(result.allow_deduped, 0);
@@ -554,7 +649,7 @@ mod tests {
                 .iter()
                 .map(|v| v.as_str().unwrap())
                 .collect::<Vec<_>>(),
-            vec!["UserA", "UserB", "Canonical1", "Canonical2"]
+            vec!["UserA", "UserB", "WebFetch", "WebSearch"]
         );
     }
 
@@ -564,15 +659,11 @@ mod tests {
         let path = tmp.path().join("s.json");
         fs::write(
             &path,
-            r#"{"permissions":{"allow":["Canonical1","UserA"],"deny":[]}}"#,
+            r#"{"permissions":{"allow":["WebFetch","UserA"],"deny":[]}}"#,
         )
         .unwrap();
-        let result = run(
-            &args("s.json", &["Canonical1", "Canonical2"], &[]),
-            tmp.path(),
-        )
-        .unwrap();
-        assert_eq!(result.allow_added, 1, "only Canonical2 was missing");
+        let result = run(&args("s.json", &["WebFetch", "WebSearch"], &[]), tmp.path()).unwrap();
+        assert_eq!(result.allow_added, 1, "only WebSearch was missing");
         assert_eq!(result.allow_deduped, 0);
     }
 
@@ -631,7 +722,7 @@ mod tests {
 }"#,
         )
         .unwrap();
-        let result = run(&args("s.json", &["Canonical1"], &[]), tmp.path()).unwrap();
+        let result = run(&args("s.json", &["WebFetch"], &[]), tmp.path()).unwrap();
         assert_eq!(result.action, "updated");
 
         let body = fs::read_to_string(&path).unwrap();
@@ -1125,5 +1216,55 @@ mod tests {
             "{ not json",
             "a hand-edited file is reported, never silently rewritten"
         );
+    }
+
+    // -- ceiling (spec 022 task 11) --------------------------------------------
+
+    /// An allow entry outside Claude's canonical set is refused before
+    /// anything is written, named in the error.
+    #[test]
+    fn an_allow_entry_beyond_the_canonical_set_is_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        let err = run(&args("s.json", &["Edit", "Bash(*)"], &[]), tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidArgument { argument, reason, .. }
+                if argument == "allow" && reason.contains("`Bash(*)`") && !reason.contains("`Edit`")),
+            "{err}"
+        );
+        assert!(!tmp.path().join("s.json").exists());
+        // A deny entry needs no ceiling: it only takes a grant away.
+        run(&args("s.json", &["Edit"], &["Bash(*)"]), tmp.path()).unwrap();
+    }
+
+    /// The ceiling is the canonical allow set `/configure` installs on
+    /// Claude: step 2 of `framework/bootstrap/configure/claude.md`, its
+    /// generated `mcp__ductus__*` block included. Narrowing that set (022
+    /// task 18) fails this test until `CANONICAL_ALLOW_STATIC` moves with it.
+    #[test]
+    fn the_ceiling_is_configure_claudes_canonical_allow_set() {
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../framework/bootstrap/configure/claude.md"
+        );
+        let text = fs::read_to_string(path).unwrap();
+        let start = text
+            .find("\n2. Canonical `permissions.allow` entries")
+            .expect("step 2 heading");
+        let end = start
+            + text[start..]
+                .find("\n3. Canonical `permissions.deny` entries")
+                .expect("step 3 heading");
+        let documented: std::collections::BTreeSet<String> = text[start..end]
+            .lines()
+            .filter_map(|line| {
+                let item = line.trim().strip_prefix("- `")?.strip_suffix('`')?;
+                (!item.contains('`')).then(|| item.to_string())
+            })
+            .collect();
+        assert!(
+            documented.len() > 60 && documented.iter().any(|e| e.starts_with("mcp__ductus__")),
+            "the parse found the bullets: {documented:?}"
+        );
+        assert_eq!(documented, canonical_allow());
     }
 }

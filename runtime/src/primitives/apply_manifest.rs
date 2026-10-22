@@ -63,6 +63,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
+use crate::primitives::host_config::{self, HostRow};
 use crate::primitives::{PrimitiveError, Result, resolve_path, write_atomic_bytes};
 use crate::schema::primitives::{
     ApplyManifestArgs, ApplyManifestResult, ManifestEntry, ManifestEntryResult,
@@ -87,6 +88,12 @@ const ACTION_SOURCE_MISSING: &str = "source-missing";
 ///   through such a link, would write outside the target root. Every entry is validated
 ///   before any filesystem operation so a bad entry halts the whole walk
 ///   with zero writes. The two *roots* stay absolute-capable as before.
+/// - [`PrimitiveError::InvalidPath`] when an entry's `dest`, resolved, lies
+///   in an agent host's configuration other than a command, skill,
+///   rules-mirror or bridge path `/ductus` writes, and
+///   [`PrimitiveError::InvalidArgument`] when a command or skill file it
+///   would write carries a frontmatter key the shipped files do not (spec
+///   022 task 11; [`host_config`]). Checked for every entry before any write.
 /// - [`PrimitiveError::Io`] on local filesystem failures while reading
 ///   sources or writing destinations.
 /// - [`PrimitiveError::UnknownManifestStrategy`] when an entry's
@@ -109,6 +116,16 @@ pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult>
     }
 
     let pinned: Vec<String> = args.pinned.iter().map(|p| normalize_dest_path(p)).collect();
+    for entry in &args.entries {
+        check_host_destination(
+            entry,
+            repo,
+            &source_root,
+            &target_root,
+            &pinned,
+            &args.substitutions,
+        )?;
+    }
 
     let mut entries_out = Vec::with_capacity(args.entries.len());
     let mut result = ApplyManifestResult::default();
@@ -150,6 +167,50 @@ pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult>
 
     result.entries = entries_out;
     Ok(result)
+}
+
+/// Refuse an entry whose destination is an agent host's configuration, and
+/// one that would write a command or skill file whose frontmatter carries a
+/// key the shipped files do not (spec 022 task 11, the owner's answer (a);
+/// [`host_config`]). Run for every entry before any write, so a refused
+/// entry halts the walk with zero writes, as the traversal checks do. The
+/// frontmatter is judged on the bytes the entry's strategy would write: the
+/// substituted text for `update` and `create`, the source's own bytes for
+/// `skip-if-conflict`. An entry that writes nothing (pinned, or with no
+/// source) has no bytes to judge, and an unknown strategy is left to the
+/// walk, which refuses it.
+fn check_host_destination(
+    entry: &ManifestEntry,
+    repo: &Path,
+    source_root: &Path,
+    target_root: &Path,
+    pinned: &[String],
+    substitutions: &BTreeMap<String, String>,
+) -> Result<()> {
+    let dest = target_root.join(Path::new(&entry.dest));
+    let row = host_config::check_destination(repo, &dest, &entry.dest)?;
+    if row != Some(HostRow::CommandOrSkill) || pinned_match(pinned, &entry.dest) {
+        return Ok(());
+    }
+    let source = source_root.join(Path::new(&entry.source));
+    let source_exists = source.try_exists().map_err(|src| PrimitiveError::Io {
+        path: source.clone(),
+        source: src,
+    })?;
+    if !source_exists {
+        return Ok(());
+    }
+    let bytes = match entry.strategy.as_str() {
+        "skip-if-conflict" => fs::read(&source).map_err(|src| PrimitiveError::Io {
+            path: source.clone(),
+            source: src,
+        })?,
+        "update" | "create" => {
+            read_and_substitute(&source, entry.keep_literals.as_deref(), substitutions)?.0
+        }
+        _ => return Ok(()),
+    };
+    host_config::check_frontmatter("apply-manifest", &entry.dest, &bytes)
 }
 
 fn normalize_dest_path(p: &str) -> String {
@@ -1204,5 +1265,120 @@ mod tests {
             fs::read_to_string(dst.join("framework/commands/status.md")).unwrap(),
             "/acme:status\n"
         );
+    }
+
+    // -- host configuration (spec 022 task 11) ------------------------------
+
+    /// An entry whose destination is a host's settings file halts the walk
+    /// before any write, so an earlier, permitted entry is not written either.
+    #[test]
+    fn a_host_configuration_destination_halts_the_walk_with_zero_writes() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(tmp.path(), &[("notes.md", "n\n"), ("s.json", "{}\n")]);
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(&dst).unwrap();
+        let args = args_for(
+            &src,
+            &dst,
+            vec![
+                entry("notes.md", "notes.md", "update"),
+                entry("s.json", ".claude/settings.local.json", "update"),
+            ],
+            vec![],
+            BTreeMap::new(),
+        );
+        let err = run(&args, &dst).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { path, .. } if path == ".claude/settings.local.json"),
+            "{err}"
+        );
+        assert!(!dst.join("notes.md").exists());
+        assert!(!dst.join(".claude/settings.local.json").exists());
+    }
+
+    /// A command file whose frontmatter grants tools is refused under every
+    /// strategy that writes, judged on the bytes the strategy would write.
+    #[test]
+    fn a_command_file_whose_frontmatter_grants_is_refused() {
+        let granting = "---\ndescription: d\nallowed-tools: Bash(*)\n---\nBody\n";
+        for strategy in ["update", "create", "skip-if-conflict"] {
+            let tmp = tempfile::tempdir().unwrap();
+            let src = write_source(tmp.path(), &[("cmd.md", granting)]);
+            let dst = tmp.path().join("dst");
+            fs::create_dir_all(&dst).unwrap();
+            let args = args_for(
+                &src,
+                &dst,
+                vec![entry("cmd.md", ".claude/commands/acme/cmd.md", strategy)],
+                vec![],
+                BTreeMap::new(),
+            );
+            let err = run(&args, &dst).unwrap_err();
+            assert!(
+                matches!(&err, PrimitiveError::InvalidArgument { reason, .. } if reason.contains("allowed-tools")),
+                "{strategy}: {err}"
+            );
+            assert!(
+                !dst.join(".claude/commands/acme/cmd.md").exists(),
+                "{strategy}"
+            );
+        }
+    }
+
+    /// The frontmatter is judged after substitution: shipped-shape source
+    /// frontmatter whose substitution value adds a granting key is refused.
+    #[test]
+    fn frontmatter_is_judged_after_substitution() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(
+            tmp.path(),
+            &[("cmd.md", "---\ndescription: \"{desc}\"\n---\nBody\n")],
+        );
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(&dst).unwrap();
+        let args = args_for(
+            &src,
+            &dst,
+            vec![entry("cmd.md", ".claude/commands/acme/cmd.md", "update")],
+            vec![],
+            subs(&[("desc", "d\"\nallowed-tools: \"Bash(*)")]),
+        );
+        assert!(matches!(
+            run(&args, &dst),
+            Err(PrimitiveError::InvalidArgument { .. })
+        ));
+    }
+
+    /// A shipped-shape command file is written, and a pinned entry, which
+    /// writes nothing, is not judged on its content.
+    #[test]
+    fn a_shipped_command_file_is_written_and_a_pinned_one_is_not_judged() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(
+            tmp.path(),
+            &[
+                (
+                    "ok.md",
+                    "---\ndescription: d\nargument-hint: \"[x]\"\n---\n/{project}:x\n",
+                ),
+                ("pinned.md", "---\nallowed-tools: Bash\n---\n"),
+            ],
+        );
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(&dst).unwrap();
+        let args = args_for(
+            &src,
+            &dst,
+            vec![
+                entry("ok.md", ".claude/commands/acme/ok.md", "update"),
+                entry("pinned.md", ".claude/commands/acme/pinned.md", "update"),
+            ],
+            vec![".claude/commands/acme/pinned.md".into()],
+            subs(&[("project", "acme")]),
+        );
+        let result = run(&args, &dst).unwrap();
+        assert_eq!(result.created, 1);
+        assert_eq!(result.skipped_pinned, 1);
+        assert!(dst.join(".claude/commands/acme/ok.md").exists());
     }
 }

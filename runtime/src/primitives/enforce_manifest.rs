@@ -8,8 +8,10 @@
 //! owned by the registry-driven `## Pre-run Migrations` loop and the
 //! per-entry procedure files at `framework/migrations/{id}.md` (spec
 //! 027). The primitive itself is generic — it removes whatever files
-//! the caller's `expected` list omits — but the legacy adopter-cleanup
-//! responsibility has moved out of its contract.
+//! the caller's `expected` list omits, except a file in an agent host's
+//! configuration other than the command, skill, rules-mirror and bridge
+//! files `/ductus` writes ([`super::host_config`], spec 022 task 11) — but
+//! the legacy adopter-cleanup responsibility has moved out of its contract.
 //!
 //! Companion to `apply-manifest`: `apply-manifest` writes the files
 //! callers want present; `enforce-manifest` deletes the files no longer
@@ -42,6 +44,7 @@ use std::path::{Path, PathBuf};
 use regex::Regex;
 use walkdir::WalkDir;
 
+use crate::primitives::host_config;
 use crate::primitives::{PrimitiveError, Result, validate_contained};
 use crate::schema::primitives::{EnforceManifestArgs, EnforceManifestResult};
 
@@ -58,6 +61,11 @@ const DEFAULT_GLOB: &str = "*.md";
 ///   the containment check runs before any filesystem operation
 ///   (BE-INPUT-004 defense-in-depth). Legitimate absolute directories
 ///   inside the repo keep working.
+/// - [`PrimitiveError::InvalidPath`] when a file the cleanup would remove
+///   lies, resolved, in an agent host's configuration other than a command,
+///   skill, rules-mirror or bridge path `/ductus` writes (spec 022 task 11;
+///   [`host_config`]). Every removal is judged before the first, so a
+///   refusal removes nothing.
 /// - [`PrimitiveError::Io`] on local filesystem failures while walking
 ///   the directory or removing files.
 pub fn run(args: &EnforceManifestArgs, repo: &Path) -> Result<EnforceManifestResult> {
@@ -90,6 +98,7 @@ pub fn run(args: &EnforceManifestArgs, repo: &Path) -> Result<EnforceManifestRes
     let pinned: Vec<String> = args.pinned.iter().map(|p| normalize(p)).collect();
 
     let entries = collect_entries(&directory, args.recursive)?;
+    let mut to_remove = Vec::new();
     for entry in entries {
         let Ok(rel) = entry.strip_prefix(&directory) else {
             continue;
@@ -109,12 +118,22 @@ pub fn run(args: &EnforceManifestArgs, repo: &Path) -> Result<EnforceManifestRes
         } else if list_contains(&pinned, &rel_str) {
             result.pinned_kept.push(rel_str);
         } else {
-            fs::remove_file(&entry).map_err(|source| PrimitiveError::Io {
-                path: entry.clone(),
-                source,
-            })?;
-            result.removed.push(rel_str);
+            to_remove.push((entry, rel_str));
         }
+    }
+
+    // Every removal is judged before the first one, so a refused file
+    // halts the cleanup with nothing removed (spec 022 task 11).
+    for (entry, rel_str) in &to_remove {
+        let shown = format!("{}/{rel_str}", args.directory.trim_end_matches(['/', '\\']));
+        host_config::check_destination(repo, entry, &shown)?;
+    }
+    for (entry, rel_str) in to_remove {
+        fs::remove_file(&entry).map_err(|source| PrimitiveError::Io {
+            path: entry.clone(),
+            source,
+        })?;
+        result.removed.push(rel_str);
     }
 
     Ok(result)
@@ -614,5 +633,31 @@ mod tests {
         let args = args_for(&dir, &[], &[], false, Some("[bracket].md"));
         let result = run(&args, tmp.path()).unwrap();
         assert_eq!(result.removed, vec!["[bracket].md"]);
+    }
+
+    /// A cleanup that would remove a host's settings file is refused, and
+    /// every removal is judged before the first, so a permitted removal in
+    /// the same call does not happen either (spec 022 task 11).
+    #[test]
+    fn a_cleanup_reaching_host_configuration_removes_nothing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        touch(&repo.join(".claude/commands/acme/old.md"));
+        touch(&repo.join(".claude/settings.local.json"));
+        let mut args = args_for(Path::new(".claude"), &[], &[], true, Some("*"));
+        args.directory = ".claude".into();
+        let err = run(&args, repo).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { path, .. } if path == ".claude/settings.local.json"),
+            "{err}"
+        );
+        assert!(repo.join(".claude/settings.local.json").exists());
+        assert!(repo.join(".claude/commands/acme/old.md").exists());
+
+        // The slash-command cleanup `/ductus` runs is unaffected.
+        let mut args = args_for(Path::new(".claude/commands/acme"), &[], &[], false, None);
+        args.directory = ".claude/commands/acme".into();
+        let result = run(&args, repo).unwrap();
+        assert_eq!(result.removed, vec!["old.md"]);
     }
 }

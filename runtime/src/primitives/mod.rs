@@ -45,6 +45,7 @@ pub mod enforce_manifest;
 pub mod extract_archive;
 pub mod fetch_archive;
 pub mod gate_confirm;
+pub(crate) mod host_config;
 pub(crate) mod inbox_standing;
 pub mod invalidate_review;
 pub mod label_criteria;

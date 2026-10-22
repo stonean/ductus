@@ -30,6 +30,10 @@ on:
       # to the registry of recognized config keys (spec 019), so an edit to
       # that section is an edit to the test's subject.
       - 'framework/bootstrap/ductus.md'
+      # src/primitives/merge_permissions.rs holds merge-permissions' ceiling
+      # to the canonical allow set in this file's step 2 (spec 022 task 11),
+      # so an edit to that set is an edit to the test's subject.
+      - 'framework/bootstrap/configure/claude.md'
   push:
     branches:
       - main
@@ -41,6 +45,7 @@ on:
       - 'scripts/audit/review-freshness.sh'
       - 'framework/rules/**'
       - 'framework/bootstrap/ductus.md'
+      - 'framework/bootstrap/configure/claude.md'
 
 permissions:
   contents: read

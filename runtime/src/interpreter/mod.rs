@@ -2842,6 +2842,9 @@ mod tests {
         std::os::unix::fs::symlink(out.join("tasks.md"), repo.join("specs/002-in/tasks.md"))
             .unwrap();
         std::os::unix::fs::symlink(out.join("dir"), repo.join("link")).unwrap();
+        // `migrate-session-file` takes only `<config-dir>/<name>-session.json`
+        // (spec 022 task 11), so its outward link is a config directory.
+        std::os::unix::fs::symlink(out.join("dir"), repo.join(".claude")).unwrap();
         std::fs::create_dir_all(repo.join("staging")).unwrap();
         std::fs::write(repo.join("staging/x.md"), "x\n").unwrap();
         EscapeFixture {
@@ -3074,7 +3077,7 @@ mod tests {
             ),
             (
                 "migrate-session-file",
-                serde_json::json!({"legacy-path": "link/session.json"}),
+                serde_json::json!({"legacy-path": ".claude/x-session.json"}),
             ),
             (
                 "run-generator",

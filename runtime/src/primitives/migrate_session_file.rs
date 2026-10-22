@@ -30,14 +30,18 @@ use crate::schema::primitives::{MigrateSessionFileArgs, MigrateSessionFileResult
 ///
 /// # Errors
 ///
-/// Returns [`PrimitiveError::InvalidPath`] when `legacy-path` is absolute
-/// or contains a parent-directory component, or a symlink on it resolves
-/// outside the project, [`PrimitiveError::Json`]
+/// Returns [`PrimitiveError::InvalidPath`] when `legacy-path` is not a
+/// `<config-dir>/<name>-session.json` path, the only file the
+/// `session-file-consolidate` migration names (spec 022 task 11: the
+/// primitive deletes the file, so it deletes nothing else), when it is
+/// absolute or contains a parent-directory component, or when a symlink on
+/// it resolves outside the project, [`PrimitiveError::Json`]
 /// when the legacy file is malformed JSON, [`PrimitiveError::JsonSchema`]
 /// when the legacy file's top-level value isn't a JSON object, or
 /// [`PrimitiveError::Io`] for filesystem failures during read, write,
 /// or delete.
 pub fn run(args: &MigrateSessionFileArgs, repo: &Path) -> Result<MigrateSessionFileResult> {
+    super::host_config::check_legacy_session_path(&args.legacy_path)?;
     super::validate_contained(repo, &args.legacy_path)?;
     let legacy_path = repo.join(&args.legacy_path);
     let dest_path = repo.join(SESSION_FILE);
@@ -352,5 +356,19 @@ mod tests {
         // ever renamed, this assertion fails at compile/test time and
         // forces the migration body to be updated in lockstep.
         assert_eq!(SESSION_FILE, ".ductus/session.toml");
+    }
+
+    /// The primitive deletes its legacy file, so it takes only a legacy
+    /// session file: a settings file is refused and survives (spec 022
+    /// task 11).
+    #[test]
+    fn only_a_legacy_session_file_is_deleted() {
+        let dir = tempdir().unwrap();
+        let repo = dir.path();
+        write_legacy(repo, ".ductus/session.toml", "feature = \"001-x\"\n");
+        write_legacy(repo, ".claude/settings.local.json", "{}\n");
+        let err = run(&args(".claude/settings.local.json"), repo).unwrap_err();
+        assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err}");
+        assert!(repo.join(".claude/settings.local.json").exists());
     }
 }

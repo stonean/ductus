@@ -65,19 +65,16 @@ use crate::schema::primitives::{
     TraverseDepsResult, ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteAnalysisArgs,
     WriteAnalysisResult, WriteReviewArgs, WriteReviewResult, WriteSessionArgs, WriteSessionResult,
 };
-use crate::schema::registry::CLI_ONLY_PRIMITIVES;
 
 /// The MCP tool names the server exposes, in registry order: the canonical
 /// registry (`crate::schema::registry::PRIMITIVE_REGISTRY`) less
-/// [`CLI_ONLY_PRIMITIVES`], so it follows the parser's
+/// [`crate::schema::registry::CLI_ONLY_PRIMITIVES`]
+/// ([`crate::schema::registry::served_primitives`]), so it follows the parser's
 /// [`crate::parser::PRIMITIVE_NAMES`] by construction. The `#[tool]` methods
 /// below stay hand-written (the rmcp macro needs literal method items);
 /// `runtime/tests/mcp.rs` asserts the served set equals this one.
 pub fn tool_names() -> impl Iterator<Item = &'static str> {
-    crate::schema::registry::PRIMITIVE_REGISTRY
-        .iter()
-        .copied()
-        .filter(|name| !CLI_ONLY_PRIMITIVES.contains(name))
+    crate::schema::registry::served_primitives()
 }
 
 /// MCP server. Cloned per request by `rmcp`, so all state lives behind

@@ -2403,7 +2403,8 @@ pub struct MergePermissionsArgs {
     /// silently writing to a Claude-shaped location on a non-Claude host.
     #[arg(long)]
     pub path: String,
-    /// Canonical entries to ensure under `permissions.allow`.
+    /// Canonical entries to ensure under `permissions.allow`. An entry
+    /// outside Claude's canonical allow set is refused (spec 022 task 11).
     #[serde(default)]
     #[arg(long, value_delimiter = ',')]
     pub allow: Vec<String>,
@@ -3161,7 +3162,9 @@ pub struct MigrateSessionFileArgs {
     /// from the bootstrap-substituted `{cli-config-dir}/{project}-session.json`
     /// template (e.g., `.claude/gov-session.json`,
     /// `.claude/acme-session.json`, `.augment/acme-session.json`).
-    /// Validated as relative-and-no-`..`.
+    /// Validated as relative-and-no-`..`, and refused unless it is
+    /// `<config-dir>/<name>-session.json`, since the primitive deletes it
+    /// (spec 022 task 11).
     #[arg(long)]
     pub legacy_path: String,
 }

@@ -105,3 +105,13 @@ pub const PRIMITIVE_REGISTRY: &[&str] = &[
 ///   and `exec` forms out of the shell allow `/ductus` seeds; until it is
 ///   applied, that allow reaches them.
 pub const CLI_ONLY_PRIMITIVES: &[&str] = &["run-generator"];
+
+/// The primitives the MCP server serves: [`PRIMITIVE_REGISTRY`] less
+/// [`CLI_ONLY_PRIMITIVES`], in registry order. The server's tool list and
+/// `merge-permissions`' canonical `mcp__ductus__*` entries both follow it.
+pub fn served_primitives() -> impl Iterator<Item = &'static str> {
+    PRIMITIVE_REGISTRY
+        .iter()
+        .copied()
+        .filter(|name| !CLI_ONLY_PRIMITIVES.contains(name))
+}
