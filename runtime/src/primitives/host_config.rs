@@ -603,7 +603,6 @@ mod tests {
             ".mcp.json ",
             ".mcp.json::$DATA",
             ".claude./settings.json",
-            ".claude:x/settings.json",
         ] {
             assert!(
                 refused(&judge(repo, rel)),
@@ -611,6 +610,15 @@ mod tests {
                 judge(repo, rel)
             );
         }
+        // A stream suffix on a directory is refused too: by the fold where
+        // the name is legal, and on Windows, where it is not, by the path
+        // failing to resolve, so nothing is written either way.
+        let streamed = judge(repo, ".claude:x/settings.json");
+        assert!(
+            refused(&streamed)
+                || (cfg!(windows) && matches!(streamed, Err(PrimitiveError::Io { .. }))),
+            "{streamed:?}"
+        );
         assert_eq!(fold(".MCP.J\u{17f}ON. "), ".mcp.json");
         assert_eq!(fold("\u{212a}"), "k");
     }
