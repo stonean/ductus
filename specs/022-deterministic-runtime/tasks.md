@@ -214,6 +214,8 @@ Under (a) and (b) a malformed config halts every command at the first primitive 
 
 Recommended: (b). It meets `CFG-ENV-008` on every read, keeps the repair `/target` gives today, and changes one 022 scenario, where (a) also leaves a malformed session file with no tool to repair it and reopens 000.
 
+Re-verified 2026-10-22 against HEAD: the five readers that halt and the four that fall back (`Host::load` and `Paths::load` with a stderr line, `derive-references`'s `load_registry` and `check-orphaned-references`'s `last_applied` read silently) are unchanged; `Host::load` and `seed_context` still fall back on a malformed session file; `write-session` still names one in `unreadable`; and the quoted sentences (the scenario's bullet and Edge Case, 062's AC22, 000's `target-clear-flag` edge case, 063's plan) still read as quoted. One count was off: `Paths::load` is called at 47 non-test sites in 42 source files, one of them `schema/paths.rs`'s own `specs_dir`, which `check_corpus_links.rs` also calls, so 43 files reach the fallback; the count above left out the defining module. Measured the same way at `4a92a92b` it is 47 and 42 too, so the code has not moved.
+
 - [x] Measure and write the measured question here
 - [ ] The owner answers (a) or (b); apply the answer
 
