@@ -78,23 +78,36 @@ const SHIPPED_FRONTMATTER_KEYS: &[&str] = &["description", "argument-hint", "par
 
 /// Judge `dest`, an absolute path a primitive is about to write or delete.
 ///
-/// Returns `Ok(None)` when the resolved destination lies outside the project
-/// or outside every host's configuration, and `Ok(Some(row))` when it is one
-/// of the rows a `/ductus` step writes.
+/// Two paths are judged, and both must pass: where the write lands, the
+/// parent resolved and the final name as given, since a tempfile-and-rename
+/// write replaces a link there rather than following it; and where the path
+/// leads, every link on it followed. Each is judged inside the project only.
+///
+/// Returns `Ok(None)` when neither lies in a host's configuration, or both
+/// lie outside the project, and `Ok(Some(row))` when one is a row a `/ductus`
+/// step writes.
 ///
 /// # Errors
 ///
 /// [`PrimitiveError::InvalidPath`], naming `shown`, for any other
-/// destination in a host's configuration: under a config directory at any
-/// depth (a host reads the one where its session starts, and a manifest's
-/// target root may be a subdirectory), under a directory the project root's
-/// config directory links to, or an MCP or settings file at any depth. A row
-/// is matched under the first config directory on the path, wherever it
-/// sits. Names compare ASCII-case-insensitively, because macOS and Windows
-/// resolve `.CLAUDE` to `.claude`. A config directory below the project root
-/// that is itself a link is judged by its name only, not by where it leads.
-/// [`PrimitiveError::Io`] when the project root or the destination cannot be
-/// resolved.
+/// destination in a host's configuration:
+///
+/// - under a config directory at any depth (a host reads the one where its
+///   session starts, and a manifest's target root may be a subdirectory), a
+///   row being matched under the first config directory on the path;
+/// - an MCP or settings file at any depth, or the file the project root's
+///   `.mcp.json` or `opencode.json(c)` links to;
+/// - under the directory the project root's config directory links to
+///   (`.claude -> cfg` makes `cfg/settings.local.json` the host's).
+///
+/// Names compare after [`fold`], since a case-insensitive file system finds
+/// `.mcp.json` under `.MCP.JSON` and, on macOS, `.mcp.jſon`.
+///
+/// Not judged: a project file that a link *inside* a config directory points
+/// at (`.claude/settings.local.json -> shared/s.json` leaves `shared/s.json`
+/// writable), and a config directory below the project root that is itself a
+/// link, judged by its name only. [`PrimitiveError::Io`] when the project
+/// root or the destination cannot be resolved.
 pub(crate) fn check_destination(repo: &Path, dest: &Path, shown: &str) -> Result<Option<HostRow>> {
     let resolve = |p: &Path| {
         resolve_symlinks(p).map_err(|source| PrimitiveError::Io {
@@ -103,17 +116,22 @@ pub(crate) fn check_destination(repo: &Path, dest: &Path, shown: &str) -> Result
         })
     };
     let canonical_repo = resolve(repo)?;
-    let resolved = resolve(dest)?;
-    let Ok(rel) = resolved.strip_prefix(&canonical_repo) else {
+    let landing = match (dest.parent(), dest.file_name()) {
+        (Some(parent), Some(name)) => resolve(parent)?.join(name),
+        _ => resolve(dest)?,
+    };
+    let followed = resolve(dest)?;
+    let at_landing = judge(repo, &canonical_repo, &landing, shown)?;
+    let at_followed = judge(repo, &canonical_repo, &followed, shown)?;
+    Ok(at_landing.or(at_followed))
+}
+
+/// One path's verdict, as [`check_destination`] describes.
+fn judge(repo: &Path, canonical_repo: &Path, path: &Path, shown: &str) -> Result<Option<HostRow>> {
+    let Ok(rel) = path.strip_prefix(canonical_repo) else {
         return Ok(None);
     };
-    let names: Vec<String> = rel
-        .components()
-        .filter_map(|c| match c {
-            Component::Normal(n) => Some(n.to_string_lossy().into_owned()),
-            _ => None,
-        })
-        .collect();
+    let names = names_of(rel);
 
     // A config directory a link redirects: `.claude -> cfg` makes
     // `cfg/settings.local.json` the file the host reads.
@@ -121,38 +139,54 @@ pub(crate) fn check_destination(repo: &Path, dest: &Path, shown: &str) -> Result
         let Ok(linked) = resolve_symlinks(&repo.join(dir)) else {
             continue;
         };
-        if let Ok(rest) = resolved.strip_prefix(&linked) {
-            let rest: Vec<String> = rest
-                .components()
-                .map(|c| c.as_os_str().to_string_lossy().into_owned())
-                .collect();
-            return row(layout, &rest)
+        if let Ok(rest) = path.strip_prefix(&linked) {
+            return row(layout, &names_of(rest))
                 .map(Some)
                 .ok_or_else(|| refuse(shown, dir));
         }
     }
     for &file in CONFIG_FILES {
-        if resolve_symlinks(&repo.join(file)).is_ok_and(|linked| linked == resolved) {
+        if resolve_symlinks(&repo.join(file)).is_ok_and(|linked| linked == path) {
             return Err(refuse_file(shown, file));
         }
     }
 
     if let Some(last) = names.last()
-        && let Some(&file) = CONFIG_FILES.iter().find(|f| last.eq_ignore_ascii_case(f))
+        && let Some(&file) = CONFIG_FILES.iter().find(|f| fold(last) == **f)
     {
         return Err(refuse_file(shown, file));
     }
     for (depth, name) in names.iter().enumerate() {
-        if let Some(&(dir, layout)) = CONFIG_DIRS
-            .iter()
-            .find(|(dir, _)| name.eq_ignore_ascii_case(dir))
-        {
+        if let Some(&(dir, layout)) = CONFIG_DIRS.iter().find(|(dir, _)| fold(name) == *dir) {
             return row(layout, &names[depth + 1..])
                 .map(Some)
                 .ok_or_else(|| refuse(shown, dir));
         }
     }
     Ok(None)
+}
+
+/// The normal components of `path`, as strings.
+fn names_of(path: &Path) -> Vec<String> {
+    path.components()
+        .filter_map(|c| match c {
+            Component::Normal(n) => Some(n.to_string_lossy().into_owned()),
+            _ => None,
+        })
+        .collect()
+}
+
+/// A name as a file system that is not case-sensitive may treat it, for
+/// comparing with the lowercase ASCII config names: the part before any `:`
+/// (an NTFS stream, `.mcp.json::$DATA`), less trailing dots and spaces, which
+/// Windows drops, then case-folded through upper case and back, which maps
+/// `ſ` to `s`, `K` (the Kelvin sign) to `k`, `ı` to `i` and `ﬁ` to `fi`, as
+/// APFS's case-insensitive lookup does.
+fn fold(name: &str) -> String {
+    let base = name.split(':').next().unwrap_or(name);
+    base.trim_end_matches(['.', ' '])
+        .to_uppercase()
+        .to_lowercase()
 }
 
 /// The row `rest`, the path under a config directory, is, if any. Rows match
@@ -519,5 +553,65 @@ mod tests {
                 "{bad}"
             );
         }
+    }
+
+    /// A write replaces a link rather than following it, so a destination
+    /// that is a link is judged where the write lands as well as where the
+    /// link leads: a settings file linked to a project file is refused, and a
+    /// command file linked out is still a command row.
+    #[cfg(unix)]
+    #[test]
+    fn a_link_is_judged_where_the_write_lands() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        std::fs::create_dir_all(repo.join(".claude/commands/acme")).unwrap();
+        std::fs::create_dir_all(repo.join("shared")).unwrap();
+        std::fs::write(repo.join("shared/s.json"), "{}").unwrap();
+        std::fs::write(repo.join("shared/cmd.md"), "x").unwrap();
+        std::os::unix::fs::symlink(
+            repo.join("shared/s.json"),
+            repo.join(".claude/settings.local.json"),
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(
+            repo.join("shared/cmd.md"),
+            repo.join(".claude/commands/acme/cmd.md"),
+        )
+        .unwrap();
+        assert!(refused(&judge(repo, ".claude/settings.local.json")));
+        assert_eq!(
+            judge(repo, ".claude/commands/acme/cmd.md").unwrap(),
+            Some(HostRow::CommandOrSkill)
+        );
+    }
+
+    /// A name a case-insensitive file system resolves to a config name is
+    /// judged as that name: Unicode case folding (APFS finds `.mcp.json`
+    /// under `.mcp.jſon`), and Windows' dropped trailing dots and spaces and
+    /// its stream suffix.
+    #[test]
+    fn folded_names_are_judged_as_the_host_reads_them() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        for rel in [
+            ".mcp.j\u{17f}on",
+            "opencode.j\u{17f}on",
+            "sub/.mcp.j\u{17f}on",
+            ".agent\u{17f}/settings.json",
+            ".p\u{131}/settings.json",
+            ".mcp.json.",
+            ".mcp.json ",
+            ".mcp.json::$DATA",
+            ".claude./settings.json",
+            ".claude:x/settings.json",
+        ] {
+            assert!(
+                refused(&judge(repo, rel)),
+                "{rel:?}: {:?}",
+                judge(repo, rel)
+            );
+        }
+        assert_eq!(fold(".MCP.J\u{17f}ON. "), ".mcp.json");
+        assert_eq!(fold("\u{212a}"), "k");
     }
 }

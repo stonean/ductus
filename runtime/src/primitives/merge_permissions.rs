@@ -137,15 +137,6 @@ pub fn run(args: &MergePermissionsArgs, repo: &Path) -> Result<MergePermissionsR
     })
 }
 
-/// Reject a call whose `allow` and `revoke` sets intersect.
-///
-/// The two passes are irreconcilable for such an entry: revoke removes
-/// it, the canonical-presence pass appends it back. Whichever runs last
-/// wins, so the primitive would silently honour half the request and —
-/// worse — could never emit `unchanged`, defeating the mtime-preserving
-/// short-circuit callers rely on for idempotency. Reporting every
-/// conflicting entry at once (rather than the first) means a caller
-/// fixing a retired-entry list sees the whole overlap in one run.
 /// The non-MCP half of Claude's canonical `permissions.allow` set, step 2 of
 /// `framework/bootstrap/configure/claude.md`. The MCP half is derived
 /// ([`canonical_allow`]). `the_ceiling_is_configure_claudes_canonical_allow_set`
@@ -231,6 +222,15 @@ fn refuse_beyond_ceiling(allow: &[String]) -> Result<()> {
     })
 }
 
+/// Reject a call whose `allow` and `revoke` sets intersect.
+///
+/// The two passes are irreconcilable for such an entry: revoke removes
+/// it, the canonical-presence pass appends it back. Whichever runs last
+/// wins, so the primitive would silently honour half the request and —
+/// worse — could never emit `unchanged`, defeating the mtime-preserving
+/// short-circuit callers rely on for idempotency. Reporting every
+/// conflicting entry at once (rather than the first) means a caller
+/// fixing a retired-entry list sees the whole overlap in one run.
 fn validate_revoke_disjoint(allow: &[String], revoke: &[String]) -> Result<()> {
     // Deduped: a canonical set that repeats an entry would otherwise make
     // the message count one conflict twice and name it twice, reporting a

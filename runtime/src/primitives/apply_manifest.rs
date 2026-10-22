@@ -1381,4 +1381,74 @@ mod tests {
         assert_eq!(result.skipped_pinned, 1);
         assert!(dst.join(".claude/commands/acme/ok.md").exists());
     }
+
+    /// A settings file that is a link to a project file is refused: the
+    /// write would replace the link, which the host reads, so it is judged
+    /// where it lands. The link and its target are left as they were.
+    #[cfg(unix)]
+    #[test]
+    fn a_settings_file_that_is_a_link_is_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(tmp.path(), &[("s.json", "{\"permissions\":{}}\n")]);
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(dst.join(".claude")).unwrap();
+        fs::create_dir_all(dst.join("shared")).unwrap();
+        fs::write(dst.join("shared/s.json"), "{}\n").unwrap();
+        std::os::unix::fs::symlink(
+            dst.join("shared/s.json"),
+            dst.join(".claude/settings.local.json"),
+        )
+        .unwrap();
+        let args = args_for(
+            &src,
+            &dst,
+            vec![entry("s.json", ".claude/settings.local.json", "update")],
+            vec![],
+            BTreeMap::new(),
+        );
+        assert!(matches!(
+            run(&args, &dst),
+            Err(PrimitiveError::InvalidPath { .. })
+        ));
+        assert!(
+            fs::symlink_metadata(dst.join(".claude/settings.local.json"))
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+        assert_eq!(
+            fs::read_to_string(dst.join("shared/s.json")).unwrap(),
+            "{}\n"
+        );
+    }
+
+    /// A command row whose source is missing is reported missing, not
+    /// refused, so `/ductus` warns and continues; an unknown strategy on one
+    /// is refused as an unknown strategy, by the walk.
+    #[test]
+    fn a_command_row_without_a_source_or_with_an_unknown_strategy_reaches_the_walk() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(tmp.path(), &[("cmd.md", "---\nallowed-tools: Bash\n---\n")]);
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(&dst).unwrap();
+        let missing = args_for(
+            &src,
+            &dst,
+            vec![entry("gone.md", ".claude/commands/acme/gone.md", "update")],
+            vec![],
+            BTreeMap::new(),
+        );
+        assert_eq!(run(&missing, &dst).unwrap().source_missing, 1);
+        let unknown = args_for(
+            &src,
+            &dst,
+            vec![entry("cmd.md", ".claude/commands/acme/cmd.md", "sideways")],
+            vec![],
+            BTreeMap::new(),
+        );
+        assert!(matches!(
+            run(&unknown, &dst),
+            Err(PrimitiveError::UnknownManifestStrategy { .. })
+        ));
+    }
 }
