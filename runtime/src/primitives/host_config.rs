@@ -81,9 +81,10 @@ const SHIPPED_FRONTMATTER_KEYS: &[&str] = &["description", "argument-hint", "par
 ///
 /// Three paths are judged, and each must pass:
 ///
-/// - the path as given, under the project root, since a host reads through
-///   any link on it (`.claude/commands` linked elsewhere is still where
-///   Claude Code reads commands);
+/// - the path as given, under the project root however the root is spelled
+///   ([`given_names`]), since a host reads through any link on it
+///   (`.claude/commands` linked elsewhere is still where Claude Code reads
+///   commands);
 /// - where the write lands, the parent resolved and the final name as given,
 ///   since a tempfile-and-rename write replaces a link there rather than
 ///   following it;
@@ -94,7 +95,8 @@ const SHIPPED_FRONTMATTER_KEYS: &[&str] = &["description", "argument-hint", "par
 ///
 /// Each is judged inside the project only. Returns `Ok(None)` when none lies
 /// in a host's configuration, and `Ok(Some(row))` when one is a row a
-/// `/ductus` step writes.
+/// `/ductus` step writes: [`HostRow::CommandOrSkill`] when any of the three
+/// is one, so its frontmatter is judged however the others read.
 ///
 /// # Errors
 ///
@@ -114,10 +116,13 @@ const SHIPPED_FRONTMATTER_KEYS: &[&str] = &["description", "argument-hint", "par
 /// case-insensitive file system finds `.mcp.json` under `.MCP.JSON` and, on
 /// macOS, `.mcp.jſon`.
 ///
-/// Not judged: a project file that a link *inside* a config directory points
-/// at, when it is named by its own path (`.claude/settings.local.json ->
-/// shared/s.json` leaves `shared/s.json` writable). [`PrimitiveError::Io`]
-/// when the project root or the destination cannot be resolved.
+/// Not judged, when named by its own path: a project file that a link
+/// *inside* a config directory points at (`.claude/settings.local.json ->
+/// shared/s.json` leaves `shared/s.json` writable), and one that a config
+/// directory or root file *below* the project root links to (`sub/.claude
+/// -> ../elsewhere` leaves `elsewhere/settings.json` writable), since only
+/// the project root's links are followed back. [`PrimitiveError::Io`] when
+/// the project root or the destination cannot be resolved.
 pub(crate) fn check_destination(repo: &Path, dest: &Path, shown: &str) -> Result<Option<HostRow>> {
     let resolve = |p: &Path| {
         resolve_symlinks(p).map_err(|source| PrimitiveError::Io {
@@ -138,20 +143,40 @@ pub(crate) fn check_destination(repo: &Path, dest: &Path, shown: &str) -> Result
     if !std::fs::symlink_metadata(dest).is_ok_and(|meta| meta.file_type().is_symlink()) {
         verdicts.push(judge(repo, &canonical_repo, &resolve(dest)?, shown)?);
     }
-    Ok(verdicts.into_iter().flatten().next())
+    let rows: Vec<HostRow> = verdicts.into_iter().flatten().collect();
+    Ok(rows
+        .iter()
+        .copied()
+        .find(|row| *row == HostRow::CommandOrSkill)
+        .or_else(|| rows.first().copied()))
 }
 
-/// `dest`'s names under the project root as written, when it is spelled
-/// under the root (as given or canonical) with no `..`.
+/// `dest`'s names under the project root as written: what follows the
+/// outermost ancestor of `dest` that resolves to the project root, with no
+/// `..` among them. The root may be spelled otherwise than `repo`: through
+/// the links above it (`/tmp` for macOS's `/private/tmp`), in another letter
+/// case on a file system that is not case-sensitive, or with a `..` that
+/// climbs back to it (`sub/..`), all of which an `apply-manifest` root may
+/// carry. `None` when no ancestor resolves to the root, as for a destination
+/// outside the project.
 fn given_names(repo: &Path, canonical_repo: &Path, dest: &Path) -> Option<Vec<String>> {
-    let rel = dest
+    let no_parent = |rel: &Path| !rel.components().any(|c| matches!(c, Component::ParentDir));
+    if let Ok(rel) = dest
         .strip_prefix(repo)
         .or_else(|_| dest.strip_prefix(canonical_repo))
-        .ok()?;
-    if rel.components().any(|c| matches!(c, Component::ParentDir)) {
-        return None;
+        && no_parent(rel)
+    {
+        return Some(names_of(rel));
     }
-    Some(names_of(rel))
+    let mut ancestors: Vec<&Path> = dest.ancestors().skip(1).collect();
+    ancestors.reverse();
+    ancestors.into_iter().find_map(|ancestor| {
+        let rel = dest.strip_prefix(ancestor).ok()?;
+        let at_root = resolve_symlinks(ancestor).is_ok_and(|resolved| {
+            strip_folded(&resolved, canonical_repo).is_some_and(|rest| rest.is_empty())
+        });
+        (at_root && no_parent(rel)).then(|| names_of(rel))
+    })
 }
 
 /// A resolved path's verdict, as [`check_destination`] describes.
@@ -242,16 +267,19 @@ fn fold(name: &str) -> String {
         .to_lowercase()
 }
 
-/// The row `rest`, the path under a config directory, is, if any. Rows match
-/// exactly, letter case included, since `/ductus` writes them in one case: a
-/// path deeper than its row is not one.
+/// The row `rest`, the path under a config directory, is, if any. Names
+/// compare after [`fold`], as config names do: `/ductus` writes a row in one
+/// case, but a file system that is not case-sensitive finds it under an
+/// existing file or directory of another case, and a path resolved through
+/// that one carries its case. A path deeper than its row is not one.
 fn row(layout: Layout, rest: &[String]) -> Option<HostRow> {
-    let parts: Vec<&str> = rest.iter().map(String::as_str).collect();
+    let folded: Vec<String> = rest.iter().map(|name| fold(name)).collect();
+    let parts: Vec<&str> = folded.iter().map(String::as_str).collect();
     let md = |name: &str| Path::new(name).extension().is_some_and(|ext| ext == "md");
     match (layout, parts.as_slice()) {
         (Layout::ClaudeStyle, ["commands", "ductus.md"])
         | (Layout::OpenCode, ["command", "ductus.md"])
-        | (Layout::Antigravity, ["skills", _, "SKILL.md"]) => Some(HostRow::CommandOrSkill),
+        | (Layout::Antigravity, ["skills", _, "skill.md"]) => Some(HostRow::CommandOrSkill),
         (Layout::ClaudeStyle, ["commands", _, name])
         | (Layout::OpenCode, ["command", _, name])
         | (Layout::Pi, ["prompts", name])
@@ -768,5 +796,82 @@ mod tests {
         std::fs::create_dir_all(&project).unwrap();
         std::os::unix::fs::symlink(outer.path(), project.join(".claude")).unwrap();
         assert_eq!(judge(&project, "specs/001-x/spec.md").unwrap(), None);
+    }
+
+    /// A destination spelled through a `..` back to the project root is
+    /// judged by its names under the root, so a linked commands directory is
+    /// still where the host reads commands.
+    #[cfg(unix)]
+    #[test]
+    fn a_root_spelled_another_way_is_judged_as_given() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        std::fs::create_dir_all(repo.join(".claude")).unwrap();
+        std::fs::create_dir_all(repo.join("sub")).unwrap();
+        std::fs::create_dir_all(repo.join("shared/cmds")).unwrap();
+        std::os::unix::fs::symlink("../shared/cmds", repo.join(".claude/commands")).unwrap();
+        let dest = repo.join("sub/../.claude/commands/acme/g.md");
+        assert_eq!(
+            check_destination(repo, &dest, "g.md").unwrap(),
+            Some(HostRow::CommandOrSkill)
+        );
+    }
+
+    /// When the judgments disagree on a row, a command row wins, so a file
+    /// the host reads as a command has its frontmatter judged.
+    #[cfg(unix)]
+    #[test]
+    fn a_command_verdict_is_preferred() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        std::fs::create_dir_all(repo.join(".agents")).unwrap();
+        std::fs::create_dir_all(repo.join(".claude/commands/acme")).unwrap();
+        std::os::unix::fs::symlink("../.claude/commands/acme", repo.join(".agents/rules")).unwrap();
+        assert_eq!(
+            judge(repo, ".agents/rules/g.md").unwrap(),
+            Some(HostRow::CommandOrSkill)
+        );
+    }
+
+    /// A row is matched whatever the case of its names, since a file system
+    /// that is not case-sensitive resolves a path through an existing file
+    /// or directory to that one's case.
+    #[test]
+    fn rows_match_in_any_case() {
+        let names = |parts: &[&str]| parts.iter().map(|p| (*p).to_owned()).collect::<Vec<_>>();
+        for (layout, parts, kind) in [
+            (
+                Layout::ClaudeStyle,
+                names(&["commands", "DUCTUS.md"]),
+                HostRow::CommandOrSkill,
+            ),
+            (
+                Layout::ClaudeStyle,
+                names(&["Commands", "acme", "Status.MD"]),
+                HostRow::CommandOrSkill,
+            ),
+            (
+                Layout::Antigravity,
+                names(&["skills", "acme-status", "skill.md"]),
+                HostRow::CommandOrSkill,
+            ),
+            (
+                Layout::Antigravity,
+                names(&["Rules", "r.MD"]),
+                HostRow::RulesMirror,
+            ),
+            (
+                Layout::Pi,
+                names(&["prompts", "acme-status.MD"]),
+                HostRow::CommandOrSkill,
+            ),
+            (
+                Layout::Pi,
+                names(&["Extensions", "DUCTUS.ts"]),
+                HostRow::PiBridge,
+            ),
+        ] {
+            assert_eq!(row(layout, &parts), Some(kind), "{parts:?}");
+        }
     }
 }

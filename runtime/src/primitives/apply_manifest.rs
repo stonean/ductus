@@ -93,7 +93,8 @@ const ACTION_SOURCE_MISSING: &str = "source-missing";
 ///   rules-mirror or bridge path `/ductus` writes, and
 ///   [`PrimitiveError::InvalidArgument`] when a command or skill file it
 ///   would write carries a frontmatter key the shipped files do not (spec
-///   022 task 11; [`host_config`]). Checked for every entry before any write.
+///   022 task 11; [`host_config`]). Checked for every entry before any write,
+///   and such a file is written with the bytes judged, never re-read.
 /// - [`PrimitiveError::Io`] on local filesystem failures while reading
 ///   sources or writing destinations.
 /// - [`PrimitiveError::UnknownManifestStrategy`] when an entry's
@@ -116,27 +117,29 @@ pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult>
     }
 
     let pinned: Vec<String> = args.pinned.iter().map(|p| normalize_dest_path(p)).collect();
+    let mut judged = Vec::with_capacity(args.entries.len());
     for entry in &args.entries {
-        check_host_destination(
+        judged.push(check_host_destination(
             entry,
             repo,
             &source_root,
             &target_root,
             &pinned,
             &args.substitutions,
-        )?;
+        )?);
     }
 
     let mut entries_out = Vec::with_capacity(args.entries.len());
     let mut result = ApplyManifestResult::default();
 
-    for entry in &args.entries {
+    for (entry, judged) in args.entries.iter().zip(judged) {
         let (action, substitutions_applied) = process_entry(
             entry,
             &source_root,
             &target_root,
             &pinned,
             &args.substitutions,
+            judged,
         )?;
         if let Some(count) = substitutions_applied {
             result.substitutions_applied = result.substitutions_applied.saturating_add(count);
@@ -169,6 +172,18 @@ pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult>
     Ok(result)
 }
 
+/// What the check pass found for an entry whose content it judged, which the
+/// walk then acts on instead of reading the source again: an earlier entry
+/// may write over a later one's source, and the later one must write what
+/// was judged, not what is there by then.
+enum Judged {
+    /// The bytes the entry's strategy writes, and its substitution count.
+    Content(Vec<u8>, Option<u32>),
+    /// The source did not exist, so the entry writes nothing, whatever an
+    /// earlier entry creates there.
+    NoSource,
+}
+
 /// Refuse an entry whose destination is an agent host's configuration, and
 /// one that would write a command or skill file whose frontmatter carries a
 /// key the shipped files do not (spec 022 task 11, the owner's answer (a);
@@ -176,9 +191,10 @@ pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult>
 /// entry halts the walk with zero writes, as the traversal checks do. The
 /// frontmatter is judged on the bytes the entry's strategy would write: the
 /// substituted text for `update` and `create`, the source's own bytes for
-/// `skip-if-conflict`. An entry that writes nothing (pinned, or with no
-/// source) has no bytes to judge, and an unknown strategy is left to the
-/// walk, which refuses it.
+/// `skip-if-conflict`. Those bytes are returned, and are what the walk
+/// writes ([`Judged`]). A pinned entry writes nothing and has no bytes to
+/// judge; an entry with no source returns [`Judged::NoSource`], and an
+/// unknown strategy is left to the walk, which refuses it.
 fn check_host_destination(
     entry: &ManifestEntry,
     repo: &Path,
@@ -186,11 +202,11 @@ fn check_host_destination(
     target_root: &Path,
     pinned: &[String],
     substitutions: &BTreeMap<String, String>,
-) -> Result<()> {
+) -> Result<Option<Judged>> {
     let dest = target_root.join(Path::new(&entry.dest));
     let row = host_config::check_destination(repo, &dest, &entry.dest)?;
     if row != Some(HostRow::CommandOrSkill) || pinned_match(pinned, &entry.dest) {
-        return Ok(());
+        return Ok(None);
     }
     let source = source_root.join(Path::new(&entry.source));
     let source_exists = source.try_exists().map_err(|src| PrimitiveError::Io {
@@ -198,19 +214,23 @@ fn check_host_destination(
         source: src,
     })?;
     if !source_exists {
-        return Ok(());
+        return Ok(Some(Judged::NoSource));
     }
-    let bytes = match entry.strategy.as_str() {
-        "skip-if-conflict" => fs::read(&source).map_err(|src| PrimitiveError::Io {
-            path: source.clone(),
-            source: src,
-        })?,
-        "update" | "create" => {
-            read_and_substitute(&source, entry.keep_literals.as_deref(), substitutions)?.0
+    let (bytes, applied) = match entry.strategy.as_str() {
+        "skip-if-conflict" => {
+            let bytes = fs::read(&source).map_err(|src| PrimitiveError::Io {
+                path: source.clone(),
+                source: src,
+            })?;
+            (bytes, None)
         }
-        _ => return Ok(()),
+        "update" | "create" => {
+            read_and_substitute(&source, entry.keep_literals.as_deref(), substitutions)?
+        }
+        _ => return Ok(None),
     };
-    host_config::check_frontmatter("apply-manifest", &entry.dest, &bytes)
+    host_config::check_frontmatter("apply-manifest", &entry.dest, &bytes)?;
+    Ok(Some(Judged::Content(bytes, applied)))
 }
 
 fn normalize_dest_path(p: &str) -> String {
@@ -232,13 +252,20 @@ fn process_entry(
     target_root: &Path,
     pinned: &[String],
     substitutions: &BTreeMap<String, String>,
+    judged: Option<Judged>,
 ) -> Result<(&'static str, Option<u32>)> {
     // 1. Pinned short-circuit: do not read, do not write.
     if pinned_match(pinned, &entry.dest) {
         return Ok((ACTION_SKIPPED_PINNED, None));
     }
 
-    // 2. Resolve and probe the source.
+    // 2. Resolve and probe the source. Content the check pass judged is
+    //    written as judged, and a source it found absent stays absent.
+    let content = match judged {
+        Some(Judged::NoSource) => return Ok((ACTION_SOURCE_MISSING, None)),
+        Some(Judged::Content(bytes, applied)) => Some((bytes, applied)),
+        None => None,
+    };
     let source_path = source_root.join(Path::new(&entry.source));
     let source_exists = source_path
         .try_exists()
@@ -261,9 +288,25 @@ fn process_entry(
 
     // 4. Dispatch by strategy.
     match entry.strategy.as_str() {
-        "update" => apply_update(&source_path, &dest_path, dest_exists, entry, substitutions),
-        "create" => apply_create(&source_path, &dest_path, dest_exists, entry, substitutions),
-        "skip-if-conflict" => apply_skip_if_conflict(&source_path, &dest_path, dest_exists),
+        "update" => apply_update(
+            &source_path,
+            &dest_path,
+            dest_exists,
+            entry,
+            substitutions,
+            content,
+        ),
+        "create" => apply_create(
+            &source_path,
+            &dest_path,
+            dest_exists,
+            entry,
+            substitutions,
+            content,
+        ),
+        "skip-if-conflict" => {
+            apply_skip_if_conflict(&source_path, &dest_path, dest_exists, content)
+        }
         other => Err(PrimitiveError::UnknownManifestStrategy {
             strategy: other.to_string(),
             expected: "'update', 'create', or 'skip-if-conflict'".into(),
@@ -277,9 +320,12 @@ fn apply_update(
     dest_exists: bool,
     entry: &ManifestEntry,
     substitutions: &BTreeMap<String, String>,
+    content: Option<(Vec<u8>, Option<u32>)>,
 ) -> Result<(&'static str, Option<u32>)> {
-    let (new_bytes, applied) =
-        read_and_substitute(source, entry.keep_literals.as_deref(), substitutions)?;
+    let (new_bytes, applied) = match content {
+        Some(content) => content,
+        None => read_and_substitute(source, entry.keep_literals.as_deref(), substitutions)?,
+    };
 
     if dest_exists {
         let existing = fs::read(dest).map_err(|source| PrimitiveError::Io {
@@ -305,12 +351,15 @@ fn apply_create(
     dest_exists: bool,
     entry: &ManifestEntry,
     substitutions: &BTreeMap<String, String>,
+    content: Option<(Vec<u8>, Option<u32>)>,
 ) -> Result<(&'static str, Option<u32>)> {
     if dest_exists {
         return Ok((ACTION_SKIPPED_EXISTS, None));
     }
-    let (new_bytes, applied) =
-        read_and_substitute(source, entry.keep_literals.as_deref(), substitutions)?;
+    let (new_bytes, applied) = match content {
+        Some(content) => content,
+        None => read_and_substitute(source, entry.keep_literals.as_deref(), substitutions)?,
+    };
     write_atomic_bytes(dest, &new_bytes)?;
     mirror_source_mode(source, dest)?;
     Ok((ACTION_CREATED, applied))
@@ -323,14 +372,18 @@ fn apply_skip_if_conflict(
     source: &Path,
     dest: &Path,
     dest_exists: bool,
+    content: Option<(Vec<u8>, Option<u32>)>,
 ) -> Result<(&'static str, Option<u32>)> {
     if dest_exists {
         return Ok((ACTION_SKIPPED_EXISTS, None));
     }
-    let bytes = fs::read(source).map_err(|src| PrimitiveError::Io {
-        path: source.into(),
-        source: src,
-    })?;
+    let bytes = match content {
+        Some((bytes, _)) => bytes,
+        None => fs::read(source).map_err(|src| PrimitiveError::Io {
+            path: source.into(),
+            source: src,
+        })?,
+    };
     write_atomic_bytes(dest, &bytes)?;
     mirror_source_mode(source, dest)?;
     Ok((ACTION_CREATED, None))
@@ -1478,5 +1531,91 @@ mod tests {
             Err(PrimitiveError::InvalidArgument { .. })
         ));
         assert!(!dst.join("shared/cmds/acme/g.md").exists());
+    }
+
+    /// The same, through a target root that names the project another way
+    /// (`sub/..`): the destination's names are judged under the project root
+    /// however the root is spelled.
+    #[cfg(unix)]
+    #[test]
+    fn a_target_root_spelled_another_way_is_judged_as_given() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(
+            tmp.path(),
+            &[("g.md", "---\nallowed-tools: Bash(*)\n---\n")],
+        );
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(dst.join(".claude")).unwrap();
+        fs::create_dir_all(dst.join("sub")).unwrap();
+        fs::create_dir_all(dst.join("shared/cmds/acme")).unwrap();
+        std::os::unix::fs::symlink("../shared/cmds", dst.join(".claude/commands")).unwrap();
+        let args = args_for(
+            &src,
+            &dst.join("sub").join(".."),
+            vec![entry("g.md", ".claude/commands/acme/g.md", "update")],
+            vec![],
+            BTreeMap::new(),
+        );
+        assert!(matches!(
+            run(&args, &dst),
+            Err(PrimitiveError::InvalidArgument { .. })
+        ));
+        assert!(!dst.join("shared/cmds/acme/g.md").exists());
+    }
+
+    /// A command file is written with the bytes its frontmatter was judged
+    /// on, even when an earlier entry writes over its source in between.
+    #[test]
+    fn a_judged_source_is_written_as_judged() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dst = tmp.path().join("dst");
+        let benign = "---\ndescription: ok\n---\nBody\n";
+        let granting = "---\ndescription: d\nallowed-tools: Bash(*)\n---\nBody\n";
+        fs::create_dir_all(dst.join("src")).unwrap();
+        fs::write(dst.join("src/x.md"), benign).unwrap();
+        fs::write(dst.join("src/evil.md"), granting).unwrap();
+        let args = args_for(
+            &dst,
+            &dst,
+            vec![
+                entry("src/evil.md", "src/x.md", "update"),
+                entry("src/x.md", ".claude/commands/acme/x.md", "update"),
+            ],
+            vec![],
+            BTreeMap::new(),
+        );
+        run(&args, &dst).unwrap();
+        assert_eq!(fs::read_to_string(dst.join("src/x.md")).unwrap(), granting);
+        assert_eq!(
+            fs::read_to_string(dst.join(".claude/commands/acme/x.md")).unwrap(),
+            benign
+        );
+    }
+
+    /// A command file whose source was absent when judged is not written,
+    /// even when an earlier entry creates that source in between.
+    #[test]
+    fn a_source_absent_when_judged_writes_nothing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(dst.join("src")).unwrap();
+        fs::write(
+            dst.join("src/evil.md"),
+            "---\nallowed-tools: Bash(*)\n---\n",
+        )
+        .unwrap();
+        let args = args_for(
+            &dst,
+            &dst,
+            vec![
+                entry("src/evil.md", "src/x.md", "update"),
+                entry("src/x.md", ".claude/commands/acme/x.md", "create"),
+            ],
+            vec![],
+            BTreeMap::new(),
+        );
+        let result = run(&args, &dst).unwrap();
+        assert_eq!(result.entries[1].action, ACTION_SOURCE_MISSING);
+        assert!(!dst.join(".claude/commands/acme/x.md").exists());
     }
 }
