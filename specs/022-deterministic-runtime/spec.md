@@ -1,6 +1,7 @@
 ---
 status: in-progress
 dependencies: [021-runtime-boundary]
+cross-spec-impact: [021-runtime-boundary]
 next-criterion: 33
 ---
 

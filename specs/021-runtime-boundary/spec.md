@@ -34,7 +34,12 @@ A new subsection containing five elements:
 2. **Determinism only** — the runtime MUST NOT call an LLM. Work requiring semantic judgment (content quality, `/clarify` resolution, `/specify` sketching, per-rule Verification reads, `/groom` routing) stays in slash commands.
 3. **Required, and acquired by the pipeline** — `/{project}` acquires the pinned runtime during adoption, so a bootstrapped project has the binary and pipeline commands may assume determinism. Acquisition failure halts the run rather than degrading. A project may supply its own binary instead, and shell pipelines that parse frontmatter or markdown structure are not a sanctioned substitute for the runtime's primitives. This spec shipped principle 3 as *Opt-in for adopters*: the runtime MUST NOT be a prerequisite for any pipeline gate, and a markdown-only adopter — agent + `Edit`, no binary on `PATH` — must complete every cycle and reach `done` on every spec.
 4. **Schema follows the constitution** — the runtime MUST read frontmatter and artifact structure according to the schemas the constitution declares. Schema changes ship through the constitution, and the runtime MUST update to match. The constitution MUST NOT import runtime types.
-5. **MCP is the seam** — the runtime MUST expose its capabilities as MCP tools, so slash commands can call them when they want determinism. This keeps the runtime accessible to any agent host and prevents `ductus`-specific coupling.
+5. **MCP is the seam** — the runtime MUST expose its capabilities as MCP tools, so slash commands can call them when they want determinism. This keeps the runtime accessible to any agent host and prevents `ductus`-specific coupling. A primitive that, called without a prompt, would run a command the project supplies, write outside the project and its staging directory, or write a host's settings or command files MAY be left off the MCP surface; it stays a `ductus <name>` subcommand and a `ductus exec` step. This spec shipped principle 5 without that exception.
+
+> **Signpost ([022-deterministic-runtime](../022-deterministic-runtime/spec.md)):** principle 5's
+> exception for a primitive left off the MCP surface came from 022's tasks 14 and 19, which took
+> `run-generator` off it because it runs any project file with `bash`. 022 records the obligation
+> in its `cross-spec-impact:` frontmatter; this signpost is its discharge.
 
 **Three eligibility criteria** for moving a capability into the runtime — a capability is runtime-eligible only when **all three** hold:
 

@@ -339,7 +339,7 @@ Not offered: the class worded as a requirement, as the first measurement's (a) w
 
 Recommended: (a). Measured by the amendments each option costs if tasks 11, 15 and 17 take tools off MCP: none under (a), one per tool under (b), up to seven. Under (a) principle 5 still requires every other primitive to be a tool, and each withholding still comes to the owner as its task's own question.
 
-Asked 2026-10-22, as re-measured here; no answer yet.
+Resolved 2026-10-22 by the owner: (a). Applied: principle 5 in `framework/constitution.md` carries the option's sentence after its rationale, and §runtime-host-integration's mapping sentence names the exception ("a step that names one runs it through the runtime's CLI, which `ductus exec` dispatches in-process"); 021's `spec.md` restates principle 5 as amended, notes that 021 shipped it without the exception, and carries a signpost back to 022, which declares `cross-spec-impact: [021-runtime-boundary]` (`check-review-gate` reads it discharged); `AGENTS.md:32` names the exception. 021 reopened (`status(021): done -> in-progress`) for an analysis; its review records `reviewed-digest: {}`. 022's `spec.md:98` needs no edit. 029's review routed its principle-5 observation here; that routed work has now landed, so the route expires at 029's next run.
 
 - [x] Measure and write the measured question here
-- [ ] The owner answers (a) or (b); apply the answer
+- [x] The owner answers (a) or (b); apply the answer
