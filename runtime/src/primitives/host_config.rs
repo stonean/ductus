@@ -19,10 +19,13 @@
 //! bridge (the §Derived values rows). The project name a row carries is not
 //! known here, so a row is matched by its shape.
 //!
-//! A destination that resolves outside the project is not judged: bounding
-//! `apply-manifest`'s roots is task 17's question.
+//! The project, for this check, is the git work tree that holds the working
+//! directory, or the working directory itself when no repository does: a
+//! caller of the CLI chooses the working directory, so it alone does not
+//! bound what is judged. A destination that resolves outside the project is
+//! not judged: bounding `apply-manifest`'s roots is task 17's question.
 
-use std::path::{Component, Path};
+use std::path::{Component, Path, PathBuf};
 
 use super::{PrimitiveError, Result, resolve_symlinks};
 
@@ -93,10 +96,17 @@ const SHIPPED_FRONTMATTER_KEYS: &[&str] = &["description", "argument-hint", "par
 ///   name an existing file answers to, such as a Windows 8.3 short name, to
 ///   the file's own name here.
 ///
-/// Each is judged inside the project only. Returns `Ok(None)` when none lies
-/// in a host's configuration, and `Ok(Some(row))` when one is a row a
-/// `/ductus` step writes: [`HostRow::CommandOrSkill`] when any of the three
-/// is one, so its frontmatter is judged however the others read.
+/// Each is judged inside the project only, and from two places: the project
+/// root `repo`, and above it ([`outer_root`]): from the root of the git work
+/// tree that holds it, every destination inside the work tree, or, when no
+/// repository holds it, a destination inside the project with the project
+/// root's own names in front. The project root is the working directory,
+/// which a caller of the CLI chooses, so a run from inside `.claude/` would
+/// otherwise see no config directory above it.
+/// Returns `Ok(None)` when none lies in a host's configuration, and
+/// `Ok(Some(row))` when one is a row a `/ductus` step writes:
+/// [`HostRow::CommandOrSkill`] when any judgment finds one, so its
+/// frontmatter is judged however the others read.
 ///
 /// # Errors
 ///
@@ -121,8 +131,9 @@ const SHIPPED_FRONTMATTER_KEYS: &[&str] = &["description", "argument-hint", "par
 /// shared/s.json` leaves `shared/s.json` writable), and one that a config
 /// directory or root file *below* the project root links to (`sub/.claude
 /// -> ../elsewhere` leaves `elsewhere/settings.json` writable), since only
-/// the project root's links are followed back. [`PrimitiveError::Io`] when
-/// the project root or the destination cannot be resolved.
+/// the project root's and the work tree root's links are followed back.
+/// [`PrimitiveError::Io`] when the project root or the destination cannot be
+/// resolved.
 pub(crate) fn check_destination(repo: &Path, dest: &Path, shown: &str) -> Result<Option<HostRow>> {
     let resolve = |p: &Path| {
         resolve_symlinks(p).map_err(|source| PrimitiveError::Io {
@@ -131,24 +142,83 @@ pub(crate) fn check_destination(repo: &Path, dest: &Path, shown: &str) -> Result
         })
     };
     let canonical_repo = resolve(repo)?;
-    let mut verdicts = Vec::with_capacity(3);
-    if let Some(names) = given_names(repo, &canonical_repo, dest) {
-        verdicts.push(judge_names(&names, shown)?);
-    }
     let landing = match (dest.parent(), dest.file_name()) {
         (Some(parent), Some(name)) => resolve(parent)?.join(name),
         _ => resolve(dest)?,
     };
-    verdicts.push(judge(repo, &canonical_repo, &landing, shown)?);
-    if !std::fs::symlink_metadata(dest).is_ok_and(|meta| meta.file_type().is_symlink()) {
-        verdicts.push(judge(repo, &canonical_repo, &resolve(dest)?, shown)?);
+    let leads = if std::fs::symlink_metadata(dest).is_ok_and(|meta| meta.file_type().is_symlink()) {
+        None
+    } else {
+        Some(resolve(dest)?)
+    };
+    let mut rows = Vec::new();
+    let mut bases = vec![(repo.to_path_buf(), canonical_repo.clone())];
+    let mut above = Vec::new();
+    match outer_root(&canonical_repo) {
+        Some(Outer::WorkTree(root)) => bases.push((root.clone(), root)),
+        Some(Outer::Ancestors(names)) => above = names,
+        None => {}
     }
-    let rows: Vec<HostRow> = verdicts.into_iter().flatten().collect();
+    for (base, canonical_base) in &bases {
+        if let Some(names) = given_names(base, canonical_base, dest) {
+            rows.extend(judge_names(&names, shown)?);
+        }
+        rows.extend(judge(base, canonical_base, &landing, shown)?);
+        if let Some(leads) = &leads {
+            rows.extend(judge(base, canonical_base, leads, shown)?);
+        }
+    }
+    if !above.is_empty() {
+        let under_root = [
+            given_names(repo, &canonical_repo, dest),
+            strip_folded(&landing, &canonical_repo),
+            leads
+                .as_deref()
+                .and_then(|leads| strip_folded(leads, &canonical_repo)),
+        ];
+        for names in under_root.into_iter().flatten() {
+            rows.extend(judge_names(&[above.as_slice(), &names].concat(), shown)?);
+        }
+    }
     Ok(rows
         .iter()
         .copied()
         .find(|row| *row == HostRow::CommandOrSkill)
         .or_else(|| rows.first().copied()))
+}
+
+/// What lies above the project root for [`check_destination`] to judge.
+enum Outer {
+    /// The root of the git work tree that holds the project root, above it:
+    /// every destination inside the work tree is judged from there.
+    WorkTree(PathBuf),
+    /// The names of the project root's own path, when no repository's work
+    /// tree holds it: a destination inside the project is judged with them
+    /// in front of its own, and one outside the project is not judged
+    /// (bounding `apply-manifest`'s roots is task 17's question).
+    Ancestors(Vec<String>),
+}
+
+/// The second place [`check_destination`] judges from: the root of the git
+/// work tree that holds `canonical_repo`, the project root resolved, when it
+/// lies above it, or the project root's own names when no repository's work
+/// tree holds it. `None` when the project root is the work tree's root. A
+/// Claude Code worktree under `.claude/worktrees/` is a work tree of its own,
+/// so its root is the project root and nothing above it is judged.
+fn outer_root(canonical_repo: &Path) -> Option<Outer> {
+    let work_tree = git2::Repository::discover(canonical_repo)
+        .ok()
+        .and_then(|repository| {
+            repository
+                .workdir()
+                .and_then(|dir| resolve_symlinks(dir).ok())
+        })
+        .filter(|dir| canonical_repo.starts_with(dir));
+    match work_tree {
+        Some(root) if root == canonical_repo => None,
+        Some(root) => Some(Outer::WorkTree(root)),
+        None => Some(Outer::Ancestors(names_of(canonical_repo))),
+    }
 }
 
 /// [`check_destination`] for a primitive that writes no row: every
@@ -894,6 +964,54 @@ mod tests {
         assert_eq!(
             lexical_names(Path::new("a/b/../c")),
             Some(vec!["a".to_owned(), "c".to_owned()])
+        );
+    }
+
+    /// A project root inside a config directory, as a CLI run from
+    /// `.claude/` makes it, is judged from the work tree's root, and so is a
+    /// destination above the project root: the config directory is still
+    /// seen.
+    #[test]
+    fn a_project_root_inside_a_config_directory_is_judged_from_its_work_tree() {
+        let tmp = tempfile::tempdir().unwrap();
+        let tree = tmp.path();
+        git2::Repository::init(tree).unwrap();
+        std::fs::create_dir_all(tree.join(".claude")).unwrap();
+        std::fs::create_dir_all(tree.join("specs")).unwrap();
+        let inside = tree.join(".claude");
+        assert!(refused(&judge(&inside, "settings.local.json")));
+        assert_eq!(
+            judge(&inside, "commands/acme/g.md").unwrap(),
+            Some(HostRow::CommandOrSkill)
+        );
+        let below = tree.join("specs");
+        let dest = below.join("../.claude/settings.local.json");
+        assert!(refused(&check_destination(&below, &dest, "x")));
+    }
+
+    /// With no repository, the whole path is judged, so a project root
+    /// inside a config directory still sees it.
+    #[test]
+    fn a_project_root_outside_any_repository_is_judged_whole() {
+        let tmp = tempfile::tempdir().unwrap();
+        let inside = tmp.path().join("proj/.agents");
+        std::fs::create_dir_all(&inside).unwrap();
+        assert!(refused(&judge(&inside, "settings.json")));
+    }
+
+    /// A Claude Code worktree under `.claude/worktrees/` is a work tree of
+    /// its own, so nothing above its root is judged and its writes pass.
+    #[test]
+    fn a_worktree_under_a_config_directory_is_its_own_project() {
+        let tmp = tempfile::tempdir().unwrap();
+        git2::Repository::init(tmp.path()).unwrap();
+        let worktree = tmp.path().join(".claude/worktrees/wt");
+        std::fs::create_dir_all(&worktree).unwrap();
+        git2::Repository::init(&worktree).unwrap();
+        assert_eq!(judge(&worktree, "specs/001-x/spec.md").unwrap(), None);
+        assert_eq!(
+            judge(&worktree, ".claude/commands/acme/status.md").unwrap(),
+            Some(HostRow::CommandOrSkill)
         );
     }
 

@@ -100,7 +100,10 @@ const ACTION_SOURCE_MISSING: &str = "source-missing";
 ///   sources or writing destinations.
 /// - [`PrimitiveError::UnknownManifestStrategy`] when an entry's
 ///   `strategy` field is not one of `update`, `create`, or
-///   `skip-if-conflict`.
+///   `skip-if-conflict`, raised when the walk reaches that entry, after the
+///   entries before it are written. A pinned entry, and one whose source is
+///   missing, is reported `skipped-pinned` or `source-missing` before its
+///   strategy is read.
 /// - [`PrimitiveError::InvalidSubstitutionKey`] when a substitution key is
 ///   placeholder-shaped (`{project}`) or empty. Checked first, before the
 ///   traversal validation and before any filesystem operation, for the same
@@ -196,8 +199,9 @@ enum Judged {
 /// writes ([`Judged`]). A pinned entry writes nothing and has no bytes to
 /// judge; an entry with no source returns [`Judged::NoSource`]. An unknown
 /// strategy is left to the walk, which refuses it when it reaches the
-/// entry, after the entries before it are written, unless the entry's
-/// source is missing, which the walk reports as `source-missing` first.
+/// entry, after the entries before it are written, unless the entry is
+/// pinned or its source is missing, which the walk reports first as
+/// `skipped-pinned` or `source-missing`.
 fn check_host_destination(
     entry: &ManifestEntry,
     repo: &Path,
