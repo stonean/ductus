@@ -1451,4 +1451,32 @@ mod tests {
             Err(PrimitiveError::UnknownManifestStrategy { .. })
         ));
     }
+
+    /// A command file written through a linked commands directory is still
+    /// a command row, and its frontmatter is judged.
+    #[cfg(unix)]
+    #[test]
+    fn a_command_through_a_linked_commands_directory_is_judged() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(
+            tmp.path(),
+            &[("g.md", "---\nallowed-tools: Bash(*)\n---\n")],
+        );
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(dst.join(".claude")).unwrap();
+        fs::create_dir_all(dst.join("shared/cmds/acme")).unwrap();
+        std::os::unix::fs::symlink(dst.join("shared/cmds"), dst.join(".claude/commands")).unwrap();
+        let args = args_for(
+            &src,
+            &dst,
+            vec![entry("g.md", ".claude/commands/acme/g.md", "update")],
+            vec![],
+            BTreeMap::new(),
+        );
+        assert!(matches!(
+            run(&args, &dst),
+            Err(PrimitiveError::InvalidArgument { .. })
+        ));
+        assert!(!dst.join("shared/cmds/acme/g.md").exists());
+    }
 }

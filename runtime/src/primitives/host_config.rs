@@ -10,13 +10,14 @@
 //! never auto-approved", code.claude.com/docs/en/permission-modes, Protected
 //! paths). 022's plan, Agent reach, states the posture.
 //!
-//! [`check_destination`] refuses a destination, judged after resolving it,
-//! that lies under a host's config directory (the `config_dir` column of the
-//! Agent Registry in `framework/bootstrap/ductus.md`) or is a root MCP or
-//! settings file, unless it is one of the paths a `/ductus` step writes
-//! there: a command or skill file, the `ductus` install file, Antigravity's
-//! rules mirror, or Pi's bridge (the §Derived values rows). The project name
-//! a row carries is not known here, so a row is matched by its shape.
+//! [`check_destination`] refuses a destination that lies under a host's
+//! config directory (the `config_dir` column of the Agent Registry in
+//! `framework/bootstrap/ductus.md`) or is an MCP or settings file, at any
+//! depth, judged as given, where the write lands and where its links lead,
+//! unless it is one of the paths a `/ductus` step writes there: a command or
+//! skill file, the `ductus` install file, Antigravity's rules mirror, or Pi's
+//! bridge (the §Derived values rows). The project name a row carries is not
+//! known here, so a row is matched by its shape.
 //!
 //! A destination that resolves outside the project is not judged: bounding
 //! `apply-manifest`'s roots is task 17's question.
@@ -78,14 +79,22 @@ const SHIPPED_FRONTMATTER_KEYS: &[&str] = &["description", "argument-hint", "par
 
 /// Judge `dest`, an absolute path a primitive is about to write or delete.
 ///
-/// Two paths are judged, and both must pass: where the write lands, the
-/// parent resolved and the final name as given, since a tempfile-and-rename
-/// write replaces a link there rather than following it; and where the path
-/// leads, every link on it followed. Each is judged inside the project only.
+/// Three paths are judged, and each must pass:
 ///
-/// Returns `Ok(None)` when neither lies in a host's configuration, or both
-/// lie outside the project, and `Ok(Some(row))` when one is a row a `/ductus`
-/// step writes.
+/// - the path as given, under the project root, since a host reads through
+///   any link on it (`.claude/commands` linked elsewhere is still where
+///   Claude Code reads commands);
+/// - where the write lands, the parent resolved and the final name as given,
+///   since a tempfile-and-rename write replaces a link there rather than
+///   following it;
+/// - where the path leads, every link on it followed, unless the destination
+///   is itself a link, which the write replaces. A file system resolves a
+///   name an existing file answers to, such as a Windows 8.3 short name, to
+///   the file's own name here.
+///
+/// Each is judged inside the project only. Returns `Ok(None)` when none lies
+/// in a host's configuration, and `Ok(Some(row))` when one is a row a
+/// `/ductus` step writes.
 ///
 /// # Errors
 ///
@@ -98,16 +107,17 @@ const SHIPPED_FRONTMATTER_KEYS: &[&str] = &["description", "argument-hint", "par
 /// - an MCP or settings file at any depth, or the file the project root's
 ///   `.mcp.json` or `opencode.json(c)` links to;
 /// - under the directory the project root's config directory links to
-///   (`.claude -> cfg` makes `cfg/settings.local.json` the host's).
+///   (`.claude -> cfg` makes `cfg/settings.local.json` the host's), unless
+///   that directory holds the project itself.
 ///
-/// Names compare after [`fold`], since a case-insensitive file system finds
-/// `.mcp.json` under `.MCP.JSON` and, on macOS, `.mcp.jſon`.
+/// Names and the paths links lead to compare after [`fold`], since a
+/// case-insensitive file system finds `.mcp.json` under `.MCP.JSON` and, on
+/// macOS, `.mcp.jſon`.
 ///
 /// Not judged: a project file that a link *inside* a config directory points
-/// at (`.claude/settings.local.json -> shared/s.json` leaves `shared/s.json`
-/// writable), and a config directory below the project root that is itself a
-/// link, judged by its name only. [`PrimitiveError::Io`] when the project
-/// root or the destination cannot be resolved.
+/// at, when it is named by its own path (`.claude/settings.local.json ->
+/// shared/s.json` leaves `shared/s.json` writable). [`PrimitiveError::Io`]
+/// when the project root or the destination cannot be resolved.
 pub(crate) fn check_destination(repo: &Path, dest: &Path, shown: &str) -> Result<Option<HostRow>> {
     let resolve = |p: &Path| {
         resolve_symlinks(p).map_err(|source| PrimitiveError::Io {
@@ -116,41 +126,67 @@ pub(crate) fn check_destination(repo: &Path, dest: &Path, shown: &str) -> Result
         })
     };
     let canonical_repo = resolve(repo)?;
+    let mut verdicts = Vec::with_capacity(3);
+    if let Some(names) = given_names(repo, &canonical_repo, dest) {
+        verdicts.push(judge_names(&names, shown)?);
+    }
     let landing = match (dest.parent(), dest.file_name()) {
         (Some(parent), Some(name)) => resolve(parent)?.join(name),
         _ => resolve(dest)?,
     };
-    let followed = resolve(dest)?;
-    let at_landing = judge(repo, &canonical_repo, &landing, shown)?;
-    let at_followed = judge(repo, &canonical_repo, &followed, shown)?;
-    Ok(at_landing.or(at_followed))
+    verdicts.push(judge(repo, &canonical_repo, &landing, shown)?);
+    if !std::fs::symlink_metadata(dest).is_ok_and(|meta| meta.file_type().is_symlink()) {
+        verdicts.push(judge(repo, &canonical_repo, &resolve(dest)?, shown)?);
+    }
+    Ok(verdicts.into_iter().flatten().next())
 }
 
-/// One path's verdict, as [`check_destination`] describes.
+/// `dest`'s names under the project root as written, when it is spelled
+/// under the root (as given or canonical) with no `..`.
+fn given_names(repo: &Path, canonical_repo: &Path, dest: &Path) -> Option<Vec<String>> {
+    let rel = dest
+        .strip_prefix(repo)
+        .or_else(|_| dest.strip_prefix(canonical_repo))
+        .ok()?;
+    if rel.components().any(|c| matches!(c, Component::ParentDir)) {
+        return None;
+    }
+    Some(names_of(rel))
+}
+
+/// A resolved path's verdict, as [`check_destination`] describes.
 fn judge(repo: &Path, canonical_repo: &Path, path: &Path, shown: &str) -> Result<Option<HostRow>> {
-    let Ok(rel) = path.strip_prefix(canonical_repo) else {
+    let Some(names) = strip_folded(path, canonical_repo) else {
         return Ok(None);
     };
-    let names = names_of(rel);
-
     // A config directory a link redirects: `.claude -> cfg` makes
     // `cfg/settings.local.json` the file the host reads.
     for &(dir, layout) in CONFIG_DIRS {
         let Ok(linked) = resolve_symlinks(&repo.join(dir)) else {
             continue;
         };
-        if let Ok(rest) = path.strip_prefix(&linked) {
-            return row(layout, &names_of(rest))
+        if canonical_repo.starts_with(&linked) {
+            continue;
+        }
+        if let Some(rest) = strip_folded(path, &linked) {
+            return row(layout, &rest)
                 .map(Some)
                 .ok_or_else(|| refuse(shown, dir));
         }
     }
     for &file in CONFIG_FILES {
-        if resolve_symlinks(&repo.join(file)).is_ok_and(|linked| linked == path) {
+        if let Ok(linked) = resolve_symlinks(&repo.join(file))
+            && strip_folded(path, &linked).is_some_and(|rest| rest.is_empty())
+        {
             return Err(refuse_file(shown, file));
         }
     }
+    judge_names(&names, shown)
+}
 
+/// The verdict on a path's names under the project root: an MCP or settings
+/// file, or a config directory with the row under it.
+fn judge_names(names: &[String], shown: &str) -> Result<Option<HostRow>> {
     if let Some(last) = names.last()
         && let Some(&file) = CONFIG_FILES.iter().find(|f| fold(last) == **f)
     {
@@ -166,6 +202,21 @@ fn judge(repo: &Path, canonical_repo: &Path, path: &Path, shown: &str) -> Result
     Ok(None)
 }
 
+/// `path` less `prefix`, compared component by component after [`fold`]:
+/// the rest of `path`'s names, or `None` when `prefix` does not begin it. A
+/// link to a directory that does not exist yet keeps the case it was written
+/// in, while the file system finds it under any case.
+fn strip_folded(path: &Path, prefix: &Path) -> Option<Vec<String>> {
+    let mut rest = path.components();
+    for want in prefix.components() {
+        let got = rest.next()?;
+        if fold(&got.as_os_str().to_string_lossy()) != fold(&want.as_os_str().to_string_lossy()) {
+            return None;
+        }
+    }
+    Some(names_of(rest.as_path()))
+}
+
 /// The normal components of `path`, as strings.
 fn names_of(path: &Path) -> Vec<String> {
     path.components()
@@ -179,9 +230,11 @@ fn names_of(path: &Path) -> Vec<String> {
 /// A name as a file system that is not case-sensitive may treat it, for
 /// comparing with the lowercase ASCII config names: the part before any `:`
 /// (an NTFS stream, `.mcp.json::$DATA`), less trailing dots and spaces, which
-/// Windows drops, then case-folded through upper case and back, which maps
-/// `ſ` to `s`, `K` (the Kelvin sign) to `k`, `ı` to `i` and `ﬁ` to `fi`, as
-/// APFS's case-insensitive lookup does.
+/// Windows drops, then case-converted to upper case and back. That maps `ſ`
+/// to `s`, `K` (the Kelvin sign) to `k` and `ﬁ` to `fi`; of the characters
+/// APFS's case-insensitive lookup treats as an ASCII letter, `ſ` is the one a
+/// config name can hold (`.mcp.jſon`). It also maps `ı` to `i`, which APFS
+/// does not, so such a name is refused without being an alias there.
 fn fold(name: &str) -> String {
     let base = name.split(':').next().unwrap_or(name);
     base.trim_end_matches(['.', ' '])
@@ -603,6 +656,10 @@ mod tests {
             ".mcp.json ",
             ".mcp.json::$DATA",
             ".claude./settings.json",
+            // Nested, so only the name fold sees them, not the comparison
+            // with where the project root's config directory leads.
+            "sub/.CLAUDE/settings.json",
+            "sub/.agent\u{17f}/settings.json",
         ] {
             assert!(
                 refused(&judge(repo, rel)),
@@ -621,5 +678,95 @@ mod tests {
         );
         assert_eq!(fold(".MCP.J\u{17f}ON. "), ".mcp.json");
         assert_eq!(fold("\u{212a}"), "k");
+    }
+
+    /// A root link to a path that does not exist yet keeps the case it was
+    /// written in, while a case-insensitive file system finds the target
+    /// under any case, so the comparison folds both sides.
+    #[cfg(unix)]
+    #[test]
+    fn a_dangling_root_link_is_compared_folded() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        std::os::unix::fs::symlink(repo.join("cfg"), repo.join(".claude")).unwrap();
+        assert!(refused(&judge(repo, "CFG/settings.local.json")));
+        std::fs::create_dir_all(repo.join("shared")).unwrap();
+        std::os::unix::fs::symlink(repo.join("shared/m.json"), repo.join(".mcp.json")).unwrap();
+        assert!(refused(&judge(repo, "shared/M.json")));
+    }
+
+    /// The path as given is judged by its names, since a host reads through
+    /// any link on it: a linked nested config directory and a linked
+    /// commands directory are judged where the host reads them.
+    #[cfg(unix)]
+    #[test]
+    fn the_path_as_given_is_judged() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        std::fs::create_dir_all(repo.join("elsewhere")).unwrap();
+        std::fs::create_dir_all(repo.join("sub")).unwrap();
+        std::os::unix::fs::symlink(repo.join("elsewhere"), repo.join("sub/.claude")).unwrap();
+        assert!(refused(&judge(repo, "sub/.claude/settings.json")));
+        assert_eq!(
+            judge(repo, "sub/.claude/commands/acme/g.md").unwrap(),
+            Some(HostRow::CommandOrSkill)
+        );
+
+        std::fs::create_dir_all(repo.join(".claude")).unwrap();
+        std::fs::create_dir_all(repo.join("shared/cmds")).unwrap();
+        std::os::unix::fs::symlink(repo.join("shared/cmds"), repo.join(".claude/commands"))
+            .unwrap();
+        assert_eq!(
+            judge(repo, ".claude/commands/acme/g.md").unwrap(),
+            Some(HostRow::CommandOrSkill)
+        );
+    }
+
+    /// The landing path resolves the destination's parent: a write through a
+    /// link to a config directory lands there even when the file it replaces
+    /// is a link out.
+    #[cfg(unix)]
+    #[test]
+    fn the_landing_parent_is_resolved() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        std::fs::create_dir_all(repo.join(".claude")).unwrap();
+        std::fs::create_dir_all(repo.join("shared")).unwrap();
+        std::fs::write(repo.join("shared/s.json"), "{}").unwrap();
+        std::os::unix::fs::symlink(
+            repo.join("shared/s.json"),
+            repo.join(".claude/settings.local.json"),
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(repo.join(".claude"), repo.join("alias")).unwrap();
+        assert!(refused(&judge(repo, "alias/settings.local.json")));
+    }
+
+    /// A destination that is a link is not judged where it leads, since the
+    /// write replaces it: a root `CLAUDE.md` linked into `.claude/` takes
+    /// `/ductus`'s block, as does a `specs/rules` file that `.claude/rules`
+    /// links to. And a config directory linked to a directory holding the
+    /// project names no configuration of its own.
+    #[cfg(unix)]
+    #[test]
+    fn legitimate_writes_through_links_are_not_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        std::fs::create_dir_all(repo.join(".claude")).unwrap();
+        std::fs::write(repo.join(".claude/CLAUDE.md"), "x").unwrap();
+        std::os::unix::fs::symlink(repo.join(".claude/CLAUDE.md"), repo.join("CLAUDE.md")).unwrap();
+        assert_eq!(judge(repo, "CLAUDE.md").unwrap(), None);
+        std::fs::create_dir_all(repo.join("specs/rules")).unwrap();
+        std::os::unix::fs::symlink(repo.join("specs/rules"), repo.join(".claude/rules")).unwrap();
+        assert_eq!(
+            judge(repo, "specs/rules/security-backend.md").unwrap(),
+            None
+        );
+
+        let outer = tempfile::tempdir().unwrap();
+        let project = outer.path().join("project");
+        std::fs::create_dir_all(&project).unwrap();
+        std::os::unix::fs::symlink(outer.path(), project.join(".claude")).unwrap();
+        assert_eq!(judge(&project, "specs/001-x/spec.md").unwrap(), None);
     }
 }
