@@ -94,7 +94,8 @@ const ACTION_SOURCE_MISSING: &str = "source-missing";
 ///   [`PrimitiveError::InvalidArgument`] when a command or skill file it
 ///   would write carries a frontmatter key the shipped files do not (spec
 ///   022 task 11; [`host_config`]). Checked for every entry before any write,
-///   and such a file is written with the bytes judged, never re-read.
+///   and such a file is written with the bytes judged, never re-read; only
+///   its mode is still mirrored from the source when it is written.
 /// - [`PrimitiveError::Io`] on local filesystem failures while reading
 ///   sources or writing destinations.
 /// - [`PrimitiveError::UnknownManifestStrategy`] when an entry's
@@ -193,8 +194,10 @@ enum Judged {
 /// substituted text for `update` and `create`, the source's own bytes for
 /// `skip-if-conflict`. Those bytes are returned, and are what the walk
 /// writes ([`Judged`]). A pinned entry writes nothing and has no bytes to
-/// judge; an entry with no source returns [`Judged::NoSource`], and an
-/// unknown strategy is left to the walk, which refuses it.
+/// judge; an entry with no source returns [`Judged::NoSource`]. An unknown
+/// strategy is left to the walk, which refuses it when it reaches the
+/// entry, after the entries before it are written, unless the entry's
+/// source is missing, which the walk reports as `source-missing` first.
 fn check_host_destination(
     entry: &ManifestEntry,
     repo: &Path,
@@ -1553,6 +1556,34 @@ mod tests {
             &src,
             &dst.join("sub").join(".."),
             vec![entry("g.md", ".claude/commands/acme/g.md", "update")],
+            vec![],
+            BTreeMap::new(),
+        );
+        assert!(matches!(
+            run(&args, &dst),
+            Err(PrimitiveError::InvalidArgument { .. })
+        ));
+        assert!(!dst.join("shared/cmds/acme/g.md").exists());
+    }
+
+    /// And through a target root that steps out of a linked commands
+    /// directory with `..`: the host still reads the file as a command.
+    #[cfg(unix)]
+    #[test]
+    fn a_target_root_through_a_linked_directory_and_up_is_judged() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(
+            tmp.path(),
+            &[("g.md", "---\nallowed-tools: Bash(*)\n---\n")],
+        );
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(dst.join(".claude")).unwrap();
+        fs::create_dir_all(dst.join("shared/cmds/acme")).unwrap();
+        std::os::unix::fs::symlink("../shared/cmds", dst.join(".claude/commands")).unwrap();
+        let args = args_for(
+            &src,
+            &dst.join(".claude/commands/acme/.."),
+            vec![entry("g.md", "acme/g.md", "update")],
             vec![],
             BTreeMap::new(),
         );

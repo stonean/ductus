@@ -151,14 +151,43 @@ pub(crate) fn check_destination(repo: &Path, dest: &Path, shown: &str) -> Result
         .or_else(|| rows.first().copied()))
 }
 
+/// [`check_destination`] for a primitive that writes no row: every
+/// destination in a host's configuration is refused, the rows included.
+/// `merge-managed-block` is one, since no `/ductus` step writes a block into a
+/// config directory, and a block written into a command file's frontmatter
+/// would grant what the file's own check refused.
+///
+/// # Errors
+///
+/// As [`check_destination`], and [`PrimitiveError::InvalidPath`], naming
+/// `shown`, for a row.
+pub(crate) fn check_no_destination(repo: &Path, dest: &Path, shown: &str) -> Result<()> {
+    match check_destination(repo, dest, shown)? {
+        None => Ok(()),
+        Some(_) => Err(PrimitiveError::InvalidPath {
+            path: shown.into(),
+            reason: "is a command, skill, rules-mirror or bridge file in an agent host's \
+                     configuration, which only `apply-manifest` writes (spec 022 task 11)"
+                .into(),
+        }),
+    }
+}
+
 /// `dest`'s names under the project root as written: what follows the
 /// outermost ancestor of `dest` that resolves to the project root, with no
 /// `..` among them. The root may be spelled otherwise than `repo`: through
 /// the links above it (`/tmp` for macOS's `/private/tmp`), in another letter
 /// case on a file system that is not case-sensitive, or with a `..` that
 /// climbs back to it (`sub/..`), all of which an `apply-manifest` root may
-/// carry. `None` when no ancestor resolves to the root, as for a destination
-/// outside the project.
+/// carry. When every such remainder holds a `..` that does not climb back
+/// to the root, as `.claude/commands/acme/..` does, the outermost one whose
+/// `..`s stay below the root is read lexically, each `..` taking back the
+/// name before it: through a linked `.claude/commands` the file system's
+/// `..` leaves the config directory, while the host still reads the file
+/// under its config name. A `..` read lexically can name a config directory
+/// a write does not reach, which refuses more, never less. `None` when no
+/// ancestor resolves to the root, as for a destination outside the project,
+/// or when every lexical reading climbs above it.
 fn given_names(repo: &Path, canonical_repo: &Path, dest: &Path) -> Option<Vec<String>> {
     let no_parent = |rel: &Path| !rel.components().any(|c| matches!(c, Component::ParentDir));
     if let Ok(rel) = dest
@@ -170,13 +199,41 @@ fn given_names(repo: &Path, canonical_repo: &Path, dest: &Path) -> Option<Vec<St
     }
     let mut ancestors: Vec<&Path> = dest.ancestors().skip(1).collect();
     ancestors.reverse();
-    ancestors.into_iter().find_map(|ancestor| {
-        let rel = dest.strip_prefix(ancestor).ok()?;
+    let mut lexical = None;
+    for ancestor in ancestors {
+        let Ok(rel) = dest.strip_prefix(ancestor) else {
+            continue;
+        };
         let at_root = resolve_symlinks(ancestor).is_ok_and(|resolved| {
             strip_folded(&resolved, canonical_repo).is_some_and(|rest| rest.is_empty())
         });
-        (at_root && no_parent(rel)).then(|| names_of(rel))
-    })
+        if !at_root {
+            continue;
+        }
+        if no_parent(rel) {
+            return Some(names_of(rel));
+        }
+        if lexical.is_none() {
+            lexical = lexical_names(rel);
+        }
+    }
+    lexical
+}
+
+/// `rel`'s names with each `..` taking back the name before it, or `None`
+/// when a `..` has no name to take back.
+fn lexical_names(rel: &Path) -> Option<Vec<String>> {
+    let mut names = Vec::new();
+    for component in rel.components() {
+        match component {
+            Component::Normal(name) => names.push(name.to_string_lossy().into_owned()),
+            Component::ParentDir => {
+                names.pop()?;
+            }
+            _ => {}
+        }
+    }
+    Some(names)
 }
 
 /// A resolved path's verdict, as [`check_destination`] describes.
@@ -814,6 +871,29 @@ mod tests {
         assert_eq!(
             check_destination(repo, &dest, "g.md").unwrap(),
             Some(HostRow::CommandOrSkill)
+        );
+    }
+
+    /// A `..` after a linked config directory leaves it on the file system,
+    /// so the path as given is read lexically and the command row is still
+    /// seen.
+    #[cfg(unix)]
+    #[test]
+    fn a_parent_step_through_a_linked_config_directory_is_read_lexically() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        std::fs::create_dir_all(repo.join(".claude")).unwrap();
+        std::fs::create_dir_all(repo.join("shared/cmds/acme")).unwrap();
+        std::os::unix::fs::symlink("../shared/cmds", repo.join(".claude/commands")).unwrap();
+        let dest = repo.join(".claude/commands/acme/../acme/g.md");
+        assert_eq!(
+            check_destination(repo, &dest, "g.md").unwrap(),
+            Some(HostRow::CommandOrSkill)
+        );
+        assert_eq!(lexical_names(Path::new("a/../../b")), None);
+        assert_eq!(
+            lexical_names(Path::new("a/b/../c")),
+            Some(vec!["a".to_owned(), "c".to_owned()])
         );
     }
 

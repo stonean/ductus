@@ -66,11 +66,12 @@ const STYLE_LINE_PREFIX: &str = "line-prefix";
 ///   applies to a path the host supplies, before any filesystem operation. `path` is repo-relative (`.gitignore`,
 ///   `CLAUDE.md`); no caller needs an out-of-repo destination.
 /// - [`PrimitiveError::InvalidPath`] when `path`, resolved, lies in an
-///   agent host's configuration other than a command, skill, rules-mirror
-///   or bridge path `/ductus` writes: a block's marker lines would leave a
-///   settings file that is not JSON, which Claude Code skips with its deny
-///   rules (spec 022 task 11; [`super::host_config`]). No `/ductus` step
-///   writes a block there.
+///   agent host's configuration, the command, skill, rules-mirror and
+///   bridge paths included: a block's marker lines would leave a settings
+///   file that is not JSON, which Claude Code skips with its deny rules, and
+///   a block placed inside a command file's frontmatter would grant tools
+///   (spec 022 task 11; [`super::host_config::check_no_destination`]). No
+///   `/ductus` step writes a block there.
 /// - [`PrimitiveError::Io`] on local filesystem failures.
 /// - [`PrimitiveError::MalformedMarkers`] when an `html-comment` style
 ///   file has a BEGIN marker without an END (or vice versa).
@@ -82,7 +83,7 @@ const STYLE_LINE_PREFIX: &str = "line-prefix";
 pub fn run(args: &MergeManagedBlockArgs, repo: &Path) -> Result<MergeManagedBlockResult> {
     super::validate_contained(repo, &args.path)?;
     let path = repo.join(&args.path);
-    super::host_config::check_destination(repo, &path, &args.path)?;
+    super::host_config::check_no_destination(repo, &path, &args.path)?;
     let marker = args
         .marker
         .as_deref()
@@ -1752,5 +1753,30 @@ Thumbs.db";
             settings
         );
         assert!(!repo.join(".mcp.json").exists());
+    }
+
+    /// A row is refused too: a block whose marker sits inside a command
+    /// file's frontmatter would put a granting key there.
+    #[test]
+    fn a_block_is_not_written_into_a_command_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        fs::create_dir_all(repo.join(".claude/commands/acme")).unwrap();
+        let command = "---\n# ductus\nparity: a\n\ndescription: Status.\n---\n\nBody\n";
+        fs::write(repo.join(".claude/commands/acme/g.md"), command).unwrap();
+        let args = MergeManagedBlockArgs {
+            path: ".claude/commands/acme/g.md".into(),
+            block: "allowed-tools: Bash(*)".into(),
+            marker: Some("ductus".into()),
+            marker_style: Some("line-prefix".into()),
+        };
+        assert!(matches!(
+            run(&args, repo),
+            Err(PrimitiveError::InvalidPath { .. })
+        ));
+        assert_eq!(
+            fs::read_to_string(repo.join(".claude/commands/acme/g.md")).unwrap(),
+            command
+        );
     }
 }
