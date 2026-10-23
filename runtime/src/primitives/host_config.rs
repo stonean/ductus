@@ -128,7 +128,10 @@ const SHIPPED_FRONTMATTER_KEYS: &[&str] = &["description", "argument-hint", "par
 ///
 /// Names and the paths links lead to compare after [`fold`], since a
 /// case-insensitive file system finds `.mcp.json` under `.MCP.JSON` and, on
-/// macOS, `.mcp.jſon`.
+/// macOS, `.mcp.jſon`. Unicode normalization is not folded: APFS finds a name
+/// under either of its composed and decomposed spellings, so a link to a
+/// missing target spelled one way lets a write spelled the other create the
+/// file the link resolves to.
 ///
 /// Not judged, when named by its own path: a project file that a link
 /// *inside* a config directory points at (`.claude/settings.local.json ->
@@ -597,8 +600,9 @@ mod tests {
     // root-file step refuses alone only through a name the file system folds
     // (`m.json.`) and is held jointly with where links lead; where links lead
     // is held by no test of its own, since it differs from the landing only
-    // through a Windows 8.3 short name or a link behind a missing directory,
-    // both of them refusing more, not less.
+    // through a Windows 8.3 short name, a link behind a missing directory, or
+    // on macOS a name in another Unicode normalization, each of them refusing
+    // more, not less.
     //
     // | Base | Step | Output | Test |
     // | --- | --- | --- | --- |
@@ -621,9 +625,19 @@ mod tests {
     // | A | landing | refusal | `with_no_repository_the_ancestors_judge_where_the_write_lands` |
     // | A | landing | row | `with_no_repository_the_ancestors_name_a_command_where_the_write_lands` |
     //
-    // The two link steps iterate names, each held on its own by
-    // `every_root_config_link_is_followed_back`: the five config directories
-    // and the three root files.
+    // Three steps iterate names, the five config directories and the three
+    // root files, and each name is held in each on its own. The names step
+    // is one function at every base, so one base holds each name's refusal
+    // and each directory's row: `every_config_name_is_judged_by_its_names`.
+    // The link steps' refusals are held per name from P and from W by
+    // `every_root_config_link_is_followed_back`, and the config-directory
+    // step's row per directory by
+    // `every_config_directory_names_a_row_through_its_root`.
+    //
+    // A row naming no command, the rules mirror or Pi's bridge, is a third
+    // kind of output for `merge-managed-block`, which refuses every row
+    // ([`check_no_destination`]): held from the names step and the
+    // config-directory step by `a_block_refuses_the_rows_that_name_no_command`.
 
     fn judge(repo: &Path, rel: &str) -> Result<Option<HostRow>> {
         check_destination(repo, &repo.join(rel), rel)
@@ -1438,6 +1452,10 @@ mod tests {
             std::fs::create_dir_all(tree.join("cfg")).unwrap();
             std::os::unix::fs::symlink("cfg", tree.join(dir)).unwrap();
             assert!(refused(&judge(tree, "cfg/settings.json")), "{dir}");
+            std::fs::create_dir_all(tree.join("specs")).unwrap();
+            let below = tree.join("specs");
+            let dest = below.join("../cfg/settings.json");
+            assert!(refused(&check_destination(&below, &dest, "x")), "{dir}");
         }
         for &file in CONFIG_FILES {
             let tmp = tempfile::tempdir().unwrap();
@@ -1447,7 +1465,112 @@ mod tests {
             std::fs::write(tree.join("shared/x"), "{}\n").unwrap();
             std::os::unix::fs::symlink("shared/x", tree.join(file)).unwrap();
             assert!(refused(&judge(tree, "shared/x")), "{file}");
+            std::fs::create_dir_all(tree.join("specs")).unwrap();
+            let below = tree.join("specs");
+            let dest = below.join("../shared/x");
+            assert!(refused(&check_destination(&below, &dest, "x")), "{file}");
         }
+    }
+
+    /// The rows of each layout, the path to one row's file from its config
+    /// directory, and the directory that file sits in.
+    const LAYOUT_ROWS: &[(&str, &str, &str)] = &[
+        (".claude", "commands/acme/g.md", "commands/acme"),
+        (".augment", "commands/acme/g.md", "commands/acme"),
+        (".agents", "skills/acme-g/SKILL.md", "skills/acme-g"),
+        (".opencode", "command/acme/g.md", "command/acme"),
+        (".pi", "prompts/acme-g.md", "prompts"),
+    ];
+
+    /// Every config directory and root file is judged by its names, each on
+    /// its own, refused and, for a directory, naming its layout's command
+    /// row: under a nested `sub/`, which the root's own link steps never
+    /// see. The names step is one function at every base, so one base holds
+    /// each name.
+    #[test]
+    fn every_config_name_is_judged_by_its_names() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        git2::Repository::init(repo).unwrap();
+        for &(dir, row, _) in LAYOUT_ROWS {
+            assert!(
+                refused(&judge(repo, &format!("sub/{dir}/settings.json"))),
+                "{dir}"
+            );
+            assert_eq!(
+                judge(repo, &format!("sub/{dir}/{row}")).unwrap(),
+                Some(HostRow::CommandOrSkill),
+                "{dir}"
+            );
+        }
+        for &file in CONFIG_FILES {
+            assert!(refused(&judge(repo, &format!("sub/{file}"))), "{file}");
+        }
+    }
+
+    /// Every config directory's step names its layout's command row on its
+    /// own: a row file that is itself a link, reached through a link into
+    /// the root's config directory, is named by that step alone.
+    #[cfg(unix)]
+    #[test]
+    fn every_config_directory_names_a_row_through_its_root() {
+        for &(dir, row, parent) in LAYOUT_ROWS {
+            let tmp = tempfile::tempdir().unwrap();
+            let tree = tmp.path();
+            git2::Repository::init(tree).unwrap();
+            std::fs::create_dir_all(tree.join(dir).join(parent)).unwrap();
+            std::fs::create_dir_all(tree.join("shared")).unwrap();
+            std::fs::write(tree.join("shared/g.md"), "x\n").unwrap();
+            std::os::unix::fs::symlink(tree.join("shared/g.md"), tree.join(dir).join(row)).unwrap();
+            std::os::unix::fs::symlink(tree.join(dir).join(parent), tree.join("alias")).unwrap();
+            let file = Path::new(row).file_name().unwrap().to_string_lossy();
+            assert_eq!(
+                judge(tree, &format!("alias/{file}")).unwrap(),
+                Some(HostRow::CommandOrSkill),
+                "{dir}"
+            );
+        }
+    }
+
+    /// `merge-managed-block` refuses the rows that name no command too, the
+    /// rules mirror and Pi's bridge, whichever step names them: by its names
+    /// at the root and nested, and through the root's config directory.
+    #[cfg(unix)]
+    #[test]
+    fn a_block_refuses_the_rows_that_name_no_command() {
+        let tmp = tempfile::tempdir().unwrap();
+        let tree = tmp.path();
+        git2::Repository::init(tree).unwrap();
+        for rel in [
+            ".agents/rules/x.md",
+            ".pi/extensions/ductus.ts",
+            "sub/.agents/rules/x.md",
+        ] {
+            assert!(
+                check_no_destination(tree, &tree.join(rel), rel).is_err(),
+                "{rel}"
+            );
+        }
+        std::fs::create_dir_all(tree.join(".agents/rules")).unwrap();
+        std::fs::create_dir_all(tree.join("shared")).unwrap();
+        std::fs::write(tree.join("shared/r.md"), "x\n").unwrap();
+        std::os::unix::fs::symlink(tree.join("shared/r.md"), tree.join(".agents/rules/x.md"))
+            .unwrap();
+        std::os::unix::fs::symlink(tree.join(".agents/rules"), tree.join("alias")).unwrap();
+        assert!(check_no_destination(tree, &tree.join("alias/x.md"), "alias/x.md").is_err());
+    }
+
+    /// Through the root's link to another config directory, a `worktrees`
+    /// directory there is that directory's, not a Claude Code worktree.
+    #[cfg(unix)]
+    #[test]
+    fn the_worktree_exception_is_narrow_through_a_linked_config_directory() {
+        let tmp = tempfile::tempdir().unwrap();
+        let tree = tmp.path();
+        git2::Repository::init(tree).unwrap();
+        std::fs::create_dir_all(tree.join("cfg")).unwrap();
+        std::os::unix::fs::symlink("cfg", tree.join(".agents")).unwrap();
+        assert!(refused(&judge(tree, "cfg/worktrees/wt/settings.json")));
     }
 
     /// A worktree's own name is judged as a name under the worktree's root,
