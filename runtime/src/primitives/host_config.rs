@@ -117,10 +117,11 @@ const SHIPPED_FRONTMATTER_KEYS: &[&str] = &["description", "argument-hint", "par
 /// - under a config directory at any depth (a host reads the one where its
 ///   session starts, and a manifest's target root may be a subdirectory), a
 ///   row being matched under the first config directory on the path, or
-///   below a Claude Code worktree the first one under
-///   `.claude/worktrees/<name>/` ([`judge_under`]);
+///   under a Claude Code worktree the first one below `.claude/worktrees/`
+///   ([`judge_under`]);
 /// - an MCP or settings file at any depth, or the file the project root's
-///   `.mcp.json` or `opencode.json(c)` links to;
+///   `.mcp.json` or `opencode.json(c)` finally resolves to (a link between
+///   them in a chain is not followed back);
 /// - under the directory the project root's config directory links to
 ///   (`.claude -> cfg` makes `cfg/settings.local.json` the host's), unless
 ///   that directory holds the project itself.
@@ -573,6 +574,39 @@ mod tests {
 
     use super::*;
 
+    // Which judgment of [`check_destination`] refuses alone, from which base,
+    // and the test that fails when it alone is removed (spec 022 task 11,
+    // re-reads 7 to 9). The bases are the project root; the outermost work
+    // tree's root, when the project root lies below it; and, with no work
+    // tree, the project root's own ancestors. From each, the path is judged
+    // as given and where the write lands, and from the first two the landing
+    // is judged through the root's config-directory and root-file links too.
+    // Each test isolates its cell: a destination that is itself a link turns
+    // off the judgment of where its links lead, a repository at the project
+    // root turns off the ancestors, and a project root below the work tree's
+    // root leaves the project root's own judgments nothing to see. Where
+    // links lead is left untested alone, since it differs from where the
+    // write lands only through a Windows 8.3 short name; and so is the
+    // landing through a root file's link, since a file a root file links to
+    // is itself a link only in a chain of links, which is not followed back.
+    //
+    // - project root, as given: `the_project_root_judges_the_path_as_given`
+    // - project root, landing: `the_landing_is_judged_from_each_base`
+    // - project root, landing through `.claude`'s link:
+    //   `the_landing_follows_the_root_config_directory_link`
+    // - project root, a root file's link: `links_are_resolved_before_judging`
+    // - work tree root, as given: `the_work_tree_root_judges_the_path_as_given`
+    // - work tree root, landing: `the_landing_is_judged_from_each_base`
+    // - work tree root, landing through `.claude`'s link:
+    //   `the_landing_follows_the_root_config_directory_link`, and with where
+    //   its links lead `the_work_tree_root_follows_its_own_links_back`
+    // - work tree root, a root file's link:
+    //   `the_work_tree_root_follows_its_root_files_links_back`
+    // - ancestors, as given:
+    //   `with_no_repository_the_ancestors_judge_the_path_as_given`
+    // - ancestors, landing:
+    //   `with_no_repository_the_ancestors_judge_where_the_write_lands`
+
     fn judge(repo: &Path, rel: &str) -> Result<Option<HostRow>> {
         check_destination(repo, &repo.join(rel), rel)
     }
@@ -675,6 +709,26 @@ mod tests {
             ".claude/commands/acme/.agents/rules/r.md",
             ".CLAUDE/settings.local.json",
             ".Mcp.Json",
+            // Each row's shape, one constraint at a time: its directory, its
+            // file name or extension, and its depth.
+            ".claude/commands/evil.md",
+            ".claude/command/ductus.md",
+            ".claude/command/acme/status.md",
+            ".opencode/command/evil.md",
+            ".opencode/commands/ductus.md",
+            ".opencode/command/acme/sub/status.md",
+            ".opencode/command/acme/status.txt",
+            ".agents/skills/acme/sub/SKILL.md",
+            ".agents/skills/SKILL.md",
+            ".agents/skill/acme-status/SKILL.md",
+            ".agents/rules/security.json",
+            ".agents/rules/sub/security.md",
+            ".agents/rule/security.md",
+            ".pi/prompts/sub/acme-status.md",
+            ".pi/prompts/acme-status.txt",
+            ".pi/prompt/acme-status.md",
+            ".pi/extensions/sub/ductus.ts",
+            ".pi/extension/ductus.ts",
         ] {
             assert!(refused(&judge(repo, rel)), "{rel}: {:?}", judge(repo, rel));
         }
@@ -1127,6 +1181,104 @@ mod tests {
         let below = tree.join("specs");
         let dest = below.join("../shared/m.json");
         assert!(refused(&check_destination(&below, &dest, "x")));
+    }
+
+    /// With a repository at the project root, the only base, a command
+    /// written through a linked commands directory is named a command by the
+    /// path as given alone.
+    #[cfg(unix)]
+    #[test]
+    fn the_project_root_judges_the_path_as_given() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        git2::Repository::init(repo).unwrap();
+        std::fs::create_dir_all(repo.join("shared/cmds/acme")).unwrap();
+        std::fs::create_dir_all(repo.join(".claude")).unwrap();
+        std::os::unix::fs::symlink("../shared/cmds", repo.join(".claude/commands")).unwrap();
+        assert_eq!(
+            judge(repo, ".claude/commands/acme/g.md").unwrap(),
+            Some(HostRow::CommandOrSkill)
+        );
+    }
+
+    /// A destination that is itself a link, reached through a link to
+    /// `.claude`, is refused only where the write lands, from the project
+    /// root and from below the work tree's root.
+    #[cfg(unix)]
+    #[test]
+    fn the_landing_is_judged_from_each_base() {
+        let tmp = tempfile::tempdir().unwrap();
+        let tree = tmp.path();
+        git2::Repository::init(tree).unwrap();
+        std::fs::create_dir_all(tree.join(".claude")).unwrap();
+        std::fs::create_dir_all(tree.join("shared")).unwrap();
+        std::fs::create_dir_all(tree.join("specs")).unwrap();
+        std::fs::write(tree.join("shared/s.json"), "{}\n").unwrap();
+        std::os::unix::fs::symlink("../shared/s.json", tree.join(".claude/settings.local.json"))
+            .unwrap();
+        std::os::unix::fs::symlink(".claude", tree.join("alias")).unwrap();
+        assert!(refused(&judge(tree, "alias/settings.local.json")));
+        let below = tree.join("specs");
+        let dest = below.join("../alias/settings.local.json");
+        assert!(refused(&check_destination(&below, &dest, "x")));
+    }
+
+    /// A destination that is itself a link, under the directory the root's
+    /// `.claude` links to, is refused only by the landing's judgment through
+    /// that link, from the project root and from below the work tree's root.
+    #[cfg(unix)]
+    #[test]
+    fn the_landing_follows_the_root_config_directory_link() {
+        let tmp = tempfile::tempdir().unwrap();
+        let tree = tmp.path();
+        git2::Repository::init(tree).unwrap();
+        std::fs::create_dir_all(tree.join("cfg")).unwrap();
+        std::fs::create_dir_all(tree.join("shared")).unwrap();
+        std::fs::create_dir_all(tree.join("specs")).unwrap();
+        std::fs::write(tree.join("shared/s.json"), "{}\n").unwrap();
+        std::os::unix::fs::symlink("cfg", tree.join(".claude")).unwrap();
+        std::os::unix::fs::symlink("../shared/s.json", tree.join("cfg/settings.local.json"))
+            .unwrap();
+        assert!(refused(&judge(tree, "cfg/settings.local.json")));
+        let below = tree.join("specs");
+        let dest = below.join("../cfg/settings.local.json");
+        assert!(refused(&check_destination(&below, &dest, "x")));
+    }
+
+    /// With no repository and a project root inside `.claude`, a command
+    /// written through a linked commands directory is named a command only
+    /// by the ancestors' judgment of the path as given.
+    #[cfg(unix)]
+    #[test]
+    fn with_no_repository_the_ancestors_judge_the_path_as_given() {
+        let tmp = tempfile::tempdir().unwrap();
+        let tree = tmp.path();
+        std::fs::create_dir_all(tree.join("shared/cmds/acme")).unwrap();
+        std::fs::create_dir_all(tree.join(".claude")).unwrap();
+        std::os::unix::fs::symlink("../shared/cmds", tree.join(".claude/commands")).unwrap();
+        let inside = tree.join(".claude");
+        let dest = inside.join("../.claude/commands/acme/g.md");
+        assert_eq!(
+            check_destination(&inside, &dest, "x").unwrap(),
+            Some(HostRow::CommandOrSkill)
+        );
+    }
+
+    /// With no repository and a project root inside `.claude`, a destination
+    /// that is itself a link, reached through a link into `.claude`, is
+    /// refused only by the ancestors' judgment of where the write lands.
+    #[cfg(unix)]
+    #[test]
+    fn with_no_repository_the_ancestors_judge_where_the_write_lands() {
+        let tmp = tempfile::tempdir().unwrap();
+        let tree = tmp.path();
+        std::fs::create_dir_all(tree.join(".claude/sub")).unwrap();
+        std::fs::write(tree.join(".claude/sub/other.json"), "{}\n").unwrap();
+        std::os::unix::fs::symlink("other.json", tree.join(".claude/sub/settings.json")).unwrap();
+        std::os::unix::fs::symlink(".claude/sub", tree.join("alias")).unwrap();
+        let inside = tree.join(".claude");
+        let dest = inside.join("../alias/settings.json");
+        assert!(refused(&check_destination(&inside, &dest, "x")));
     }
 
     /// A worktree's own name is judged as a name under the worktree's root,
