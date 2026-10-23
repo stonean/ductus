@@ -19,10 +19,11 @@
 //! bridge (the §Derived values rows). The project name a row carries is not
 //! known here, so a row is matched by its shape.
 //!
-//! The project, for this check, is the git work tree that holds the working
-//! directory, or the working directory itself when no repository does: a
-//! caller of the CLI chooses the working directory, so it alone does not
-//! bound what is judged. A destination that resolves outside the project is
+//! The project, for this check, is the outermost git work tree that holds
+//! the working directory, or the working directory itself when no work tree
+//! does: a caller of the CLI chooses the working directory, so it alone does
+//! not bound what is judged. A Claude Code worktree under
+//! `.claude/worktrees/<name>/` is judged as a project of its own. A destination that resolves outside the project is
 //! not judged: bounding `apply-manifest`'s roots is task 17's question.
 
 use std::path::{Component, Path, PathBuf};
@@ -97,10 +98,10 @@ const SHIPPED_FRONTMATTER_KEYS: &[&str] = &["description", "argument-hint", "par
 ///   the file's own name here.
 ///
 /// Each is judged inside the project only, and from two places: the project
-/// root `repo`, and above it ([`outer_root`]): from the root of the git work
-/// tree that holds it, every destination inside the work tree, or, when no
-/// repository holds it, a destination inside the project with the project
-/// root's own names in front. The project root is the working directory,
+/// root `repo`, and above it ([`outer_root`]): from the root of the
+/// outermost git work tree that holds it, every destination inside that work
+/// tree, or, when no work tree holds it, a destination inside the project
+/// with the project root's own names in front. The project root is the working directory,
 /// which a caller of the CLI chooses, so a run from inside `.claude/` would
 /// otherwise see no config directory above it.
 /// Returns `Ok(None)` when none lies in a host's configuration, and
@@ -189,34 +190,36 @@ pub(crate) fn check_destination(repo: &Path, dest: &Path, shown: &str) -> Result
 
 /// What lies above the project root for [`check_destination`] to judge.
 enum Outer {
-    /// The root of the git work tree that holds the project root, above it:
-    /// every destination inside the work tree is judged from there.
+    /// The root of the outermost git work tree that holds the project root,
+    /// above it: every destination inside that work tree is judged from
+    /// there.
     WorkTree(PathBuf),
-    /// The names of the project root's own path, when no repository's work
-    /// tree holds it: a destination inside the project is judged with them
+    /// The names of the project root's own path, when no work tree holds
+    /// it: a destination inside the project is judged with them
     /// in front of its own, and one outside the project is not judged
     /// (bounding `apply-manifest`'s roots is task 17's question).
     Ancestors(Vec<String>),
 }
 
-/// The second place [`check_destination`] judges from: the root of the git
-/// work tree that holds `canonical_repo`, the project root resolved, when it
-/// lies above it, or the project root's own names when no repository's work
-/// tree holds it. `None` when the project root is the work tree's root. A
-/// Claude Code worktree under `.claude/worktrees/` is a work tree of its own,
-/// so its root is the project root and nothing above it is judged.
+/// The second place [`check_destination`] judges from: the root of the
+/// outermost git work tree that holds `canonical_repo`, the project root
+/// resolved, when it lies above it, or the project root's own names when no
+/// work tree holds it. `None` when the project root is that root. A work tree
+/// is a directory holding a `.git` entry, file or directory: found that way
+/// rather than through libgit2, which refuses to open some repositories
+/// (`extensions.refstorage`, for one) and would leave their work tree
+/// unseen. The outermost one is taken (spec 022 task 11, the owner's answer
+/// (a) to its question of 2026-10-22), so a repository nested inside a
+/// config directory hides nothing, and a Claude Code worktree under
+/// `.claude/worktrees/` is judged as a project of its own ([`judge_under`]).
 fn outer_root(canonical_repo: &Path) -> Option<Outer> {
-    let work_tree = git2::Repository::discover(canonical_repo)
-        .ok()
-        .and_then(|repository| {
-            repository
-                .workdir()
-                .and_then(|dir| resolve_symlinks(dir).ok())
-        })
-        .filter(|dir| canonical_repo.starts_with(dir));
+    let work_tree = canonical_repo
+        .ancestors()
+        .filter(|dir| std::fs::symlink_metadata(dir.join(".git")).is_ok())
+        .last();
     match work_tree {
         Some(root) if root == canonical_repo => None,
-        Some(root) => Some(Outer::WorkTree(root)),
+        Some(root) => Some(Outer::WorkTree(root.to_path_buf())),
         None => Some(Outer::Ancestors(names_of(canonical_repo))),
     }
 }
@@ -321,9 +324,7 @@ fn judge(repo: &Path, canonical_repo: &Path, path: &Path, shown: &str) -> Result
             continue;
         }
         if let Some(rest) = strip_folded(path, &linked) {
-            return row(layout, &rest)
-                .map(Some)
-                .ok_or_else(|| refuse(shown, dir));
+            return judge_under(dir, layout, &rest, shown);
         }
     }
     for &file in CONFIG_FILES {
@@ -346,12 +347,26 @@ fn judge_names(names: &[String], shown: &str) -> Result<Option<HostRow>> {
     }
     for (depth, name) in names.iter().enumerate() {
         if let Some(&(dir, layout)) = CONFIG_DIRS.iter().find(|(dir, _)| fold(name) == *dir) {
-            return row(layout, &names[depth + 1..])
-                .map(Some)
-                .ok_or_else(|| refuse(shown, dir));
+            return judge_under(dir, layout, &names[depth + 1..], shown);
         }
     }
     Ok(None)
+}
+
+/// The verdict on `rest`, a path under the config directory `dir`: the row
+/// it is, or a refusal. The one exception is Claude Code's own worktrees,
+/// which it creates "under `.claude/worktrees/<name>/` at your repository
+/// root" (code.claude.com/docs/en/worktrees) and which its protected-path
+/// list exempts from `.claude`: the names below a worktree's directory are a
+/// checkout's, judged afresh as from a project root (spec 022 task 11, the
+/// owner's answer (a) to its question of 2026-10-22).
+fn judge_under(dir: &str, layout: Layout, rest: &[String], shown: &str) -> Result<Option<HostRow>> {
+    if dir == ".claude" && rest.len() > 2 && fold(&rest[0]) == "worktrees" {
+        return judge_names(&rest[2..], shown);
+    }
+    row(layout, rest)
+        .map(Some)
+        .ok_or_else(|| refuse(shown, dir))
 }
 
 /// `path` less `prefix`, compared component by component after [`fold`]:
@@ -999,20 +1014,75 @@ mod tests {
         assert!(refused(&judge(&inside, "settings.json")));
     }
 
-    /// A Claude Code worktree under `.claude/worktrees/` is a work tree of
-    /// its own, so nothing above its root is judged and its writes pass.
+    /// A Claude Code worktree under `.claude/worktrees/<name>/`, whose `.git`
+    /// is a file, is judged as a project of its own from the outermost work
+    /// tree, so its writes pass; a path out of it into the main checkout's
+    /// `.claude/` is still refused.
     #[test]
-    fn a_worktree_under_a_config_directory_is_its_own_project() {
+    fn a_claude_worktree_is_judged_as_a_project_of_its_own() {
         let tmp = tempfile::tempdir().unwrap();
-        git2::Repository::init(tmp.path()).unwrap();
-        let worktree = tmp.path().join(".claude/worktrees/wt");
+        let main = tmp.path();
+        git2::Repository::init(main).unwrap();
+        let worktree = main.join(".claude/worktrees/wt");
         std::fs::create_dir_all(&worktree).unwrap();
-        git2::Repository::init(&worktree).unwrap();
+        std::fs::write(
+            worktree.join(".git"),
+            "gitdir: ../../../.git/worktrees/wt\n",
+        )
+        .unwrap();
         assert_eq!(judge(&worktree, "specs/001-x/spec.md").unwrap(), None);
         assert_eq!(
             judge(&worktree, ".claude/commands/acme/status.md").unwrap(),
             Some(HostRow::CommandOrSkill)
         );
+        assert!(refused(&judge(&worktree, ".claude/settings.local.json")));
+        let out = worktree.join("../../settings.local.json");
+        assert!(refused(&check_destination(&worktree, &out, "x")));
+    }
+
+    /// The same holds with no repository at all: the working directory's own
+    /// names carry the worktree directory, and the names below it are judged
+    /// afresh.
+    #[test]
+    fn a_claude_worktree_outside_any_repository_is_its_own_project() {
+        let tmp = tempfile::tempdir().unwrap();
+        let worktree = tmp.path().join(".claude/worktrees/wt");
+        std::fs::create_dir_all(&worktree).unwrap();
+        assert_eq!(judge(&worktree, "specs/001-x/spec.md").unwrap(), None);
+        assert!(refused(&judge(&worktree, ".claude/settings.json")));
+    }
+
+    /// A repository nested inside a config directory hides nothing: `.claude`
+    /// itself a repository, or a submodule whose `.git` is a file, is judged
+    /// from the outermost work tree.
+    #[test]
+    fn a_repository_inside_a_config_directory_hides_nothing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let main = tmp.path();
+        git2::Repository::init(main).unwrap();
+        let claude = main.join(".claude");
+        std::fs::create_dir_all(&claude).unwrap();
+        git2::Repository::init(&claude).unwrap();
+        assert!(refused(&judge(&claude, "settings.local.json")));
+        let agents = main.join(".agents");
+        std::fs::create_dir_all(&agents).unwrap();
+        std::fs::write(agents.join(".git"), "gitdir: ../.git/modules/agents\n").unwrap();
+        assert!(refused(&judge(&agents, "settings.json")));
+    }
+
+    /// A repository's work tree is found by its `.git` entry, whether or not
+    /// it can be opened: a `.git` file pointing nowhere still marks the work
+    /// tree a run below it is judged from.
+    #[test]
+    fn a_work_tree_is_found_whether_or_not_it_opens() {
+        let tmp = tempfile::tempdir().unwrap();
+        let tree = tmp.path();
+        std::fs::write(tree.join(".git"), "gitdir: /nonexistent\n").unwrap();
+        std::fs::create_dir_all(tree.join("specs")).unwrap();
+        std::fs::create_dir_all(tree.join(".claude")).unwrap();
+        let below = tree.join("specs");
+        let dest = below.join("../.claude/settings.local.json");
+        assert!(refused(&check_destination(&below, &dest, "x")));
     }
 
     /// When the judgments disagree on a row, a command row wins, so a file
