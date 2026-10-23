@@ -205,7 +205,8 @@ enum Outer {
 /// outermost git work tree that holds `canonical_repo`, the project root
 /// resolved, when it lies above it, or the project root's own names when no
 /// work tree holds it. `None` when the project root is that root. A work tree
-/// is a directory holding a `.git` entry, file or directory: found that way
+/// is a directory holding a `.git` entry of any kind, a file, a directory or
+/// a link (one leading nowhere included): found that way
 /// rather than through libgit2, which refuses to open some repositories
 /// (`extensions.refstorage`, for one) and would leave their work tree
 /// unseen. The outermost one is taken (spec 022 task 11, the owner's answer
@@ -359,10 +360,16 @@ fn judge_names(names: &[String], shown: &str) -> Result<Option<HostRow>> {
 /// root" (code.claude.com/docs/en/worktrees) and which its protected-path
 /// list exempts from `.claude`: the names below a worktree's directory are a
 /// checkout's, judged afresh as from a project root (spec 022 task 11, the
-/// owner's answer (a) to its question of 2026-10-22).
+/// owner's answer (a) to its question of 2026-10-22). The worktree's own name
+/// is judged with them, as a name under that root, so a directory there named
+/// for a config directory (`.claude/worktrees/.claude/`) is one: a session
+/// started above a nested `.claude/skills/` loads its skills "once Claude
+/// works on files there" (code.claude.com/docs/en/skills). A name that is
+/// not a config directory's changes no verdict, since a config directory is
+/// matched at any depth and a config file only as the last name.
 fn judge_under(dir: &str, layout: Layout, rest: &[String], shown: &str) -> Result<Option<HostRow>> {
     if dir == ".claude" && rest.len() > 2 && fold(&rest[0]) == "worktrees" {
-        return judge_names(&rest[2..], shown);
+        return judge_names(&rest[1..], shown);
     }
     row(layout, rest)
         .map(Some)
@@ -1038,6 +1045,71 @@ mod tests {
         assert!(refused(&judge(&worktree, ".claude/settings.local.json")));
         let out = worktree.join("../../settings.local.json");
         assert!(refused(&check_destination(&worktree, &out, "x")));
+    }
+
+    /// Judged from the main checkout's root, where only the exception sees a
+    /// worktree, the names below it are still judged: a worktree's settings
+    /// file is refused there, while its rows and its other files pass.
+    #[test]
+    fn a_claude_worktree_is_judged_from_the_main_checkout() {
+        let tmp = tempfile::tempdir().unwrap();
+        let main = tmp.path();
+        git2::Repository::init(main).unwrap();
+        std::fs::create_dir_all(main.join(".claude/worktrees/wt")).unwrap();
+        assert!(refused(&judge(
+            main,
+            ".claude/worktrees/wt/.claude/settings.local.json"
+        )));
+        assert_eq!(
+            judge(main, ".claude/worktrees/wt/.claude/commands/acme/status.md").unwrap(),
+            Some(HostRow::CommandOrSkill)
+        );
+        assert_eq!(
+            judge(main, ".claude/worktrees/wt/specs/001-x/spec.md").unwrap(),
+            None
+        );
+    }
+
+    /// A worktree's own name is judged as a name under the worktree's root,
+    /// so a directory under `.claude/worktrees/` named for a config directory
+    /// is one: its settings file and a skill Claude's layout has no row for
+    /// are refused, and a command is a row, whose frontmatter the caller
+    /// judges.
+    #[test]
+    fn a_worktree_name_is_judged_as_a_name() {
+        let tmp = tempfile::tempdir().unwrap();
+        let main = tmp.path();
+        git2::Repository::init(main).unwrap();
+        std::fs::create_dir_all(main.join(".claude/worktrees")).unwrap();
+        assert!(refused(&judge(
+            main,
+            ".claude/worktrees/.claude/settings.json"
+        )));
+        assert!(refused(&judge(
+            main,
+            ".claude/worktrees/.agents/settings.json"
+        )));
+        assert!(refused(&judge(
+            main,
+            ".claude/worktrees/.claude/skills/x/SKILL.md"
+        )));
+        assert_eq!(
+            judge(main, ".claude/worktrees/.claude/commands/acme/g.md").unwrap(),
+            Some(HostRow::CommandOrSkill)
+        );
+    }
+
+    /// The exception is Claude Code's alone and holds a worktree's contents,
+    /// not a file beside the worktrees: `worktrees` under another config
+    /// directory is that directory's, and a file directly in
+    /// `.claude/worktrees/` is `.claude`'s.
+    #[test]
+    fn the_worktree_exception_is_narrow() {
+        let tmp = tempfile::tempdir().unwrap();
+        let main = tmp.path();
+        git2::Repository::init(main).unwrap();
+        assert!(refused(&judge(main, ".agents/worktrees/wt/notes.md")));
+        assert!(refused(&judge(main, ".claude/worktrees/notes.md")));
     }
 
     /// The same holds with no repository at all: the working directory's own
