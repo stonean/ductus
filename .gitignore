@@ -31,3 +31,7 @@
 # are recorded; the install itself is per-machine. Duplicated here rather
 # than relying on a contributor's global ignore, which not everyone has.
 node_modules/
+
+# Python bytecode the mutation harness (scripts/mutation/) leaves when its
+# modules are imported. Per-machine build output.
+scripts/mutation/__pycache__/
