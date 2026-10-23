@@ -116,7 +116,9 @@ const SHIPPED_FRONTMATTER_KEYS: &[&str] = &["description", "argument-hint", "par
 ///
 /// - under a config directory at any depth (a host reads the one where its
 ///   session starts, and a manifest's target root may be a subdirectory), a
-///   row being matched under the first config directory on the path;
+///   row being matched under the first config directory on the path, or
+///   below a Claude Code worktree the first one under
+///   `.claude/worktrees/<name>/` ([`judge_under`]);
 /// - an MCP or settings file at any depth, or the file the project root's
 ///   `.mcp.json` or `opencode.json(c)` links to;
 /// - under the directory the project root's config directory links to
@@ -1068,6 +1070,63 @@ mod tests {
             judge(main, ".claude/worktrees/wt/specs/001-x/spec.md").unwrap(),
             None
         );
+        assert_eq!(judge(main, ".claude/worktrees/wt/CLAUDE.md").unwrap(), None);
+    }
+
+    /// Run from below the work tree's root, a command written through a
+    /// linked commands directory is named a command only by the work tree's
+    /// root, which judges the path as given, so its frontmatter is judged.
+    #[cfg(unix)]
+    #[test]
+    fn the_work_tree_root_judges_the_path_as_given() {
+        let tmp = tempfile::tempdir().unwrap();
+        let tree = tmp.path();
+        git2::Repository::init(tree).unwrap();
+        std::fs::create_dir_all(tree.join("shared/cmds/acme")).unwrap();
+        std::fs::create_dir_all(tree.join(".claude")).unwrap();
+        std::fs::create_dir_all(tree.join("specs")).unwrap();
+        std::os::unix::fs::symlink("../shared/cmds", tree.join(".claude/commands")).unwrap();
+        let below = tree.join("specs");
+        let dest = below.join("../.claude/commands/acme/g.md");
+        assert_eq!(
+            check_destination(&below, &dest, "x").unwrap(),
+            Some(HostRow::CommandOrSkill)
+        );
+    }
+
+    /// Run from below the work tree's root, a file under the directory the
+    /// root's config directory links to is refused only by the work tree's
+    /// root, which follows its own links back.
+    #[cfg(unix)]
+    #[test]
+    fn the_work_tree_root_follows_its_own_links_back() {
+        let tmp = tempfile::tempdir().unwrap();
+        let tree = tmp.path();
+        git2::Repository::init(tree).unwrap();
+        std::fs::create_dir_all(tree.join("cfg")).unwrap();
+        std::fs::create_dir_all(tree.join("specs")).unwrap();
+        std::os::unix::fs::symlink("cfg", tree.join(".claude")).unwrap();
+        let below = tree.join("specs");
+        let dest = below.join("../cfg/settings.local.json");
+        assert!(refused(&check_destination(&below, &dest, "x")));
+    }
+
+    /// Run from below the work tree's root, the file the root's `.mcp.json`
+    /// links to is refused only by the work tree's root, which follows its
+    /// own root files' links back too.
+    #[cfg(unix)]
+    #[test]
+    fn the_work_tree_root_follows_its_root_files_links_back() {
+        let tmp = tempfile::tempdir().unwrap();
+        let tree = tmp.path();
+        git2::Repository::init(tree).unwrap();
+        std::fs::create_dir_all(tree.join("shared")).unwrap();
+        std::fs::create_dir_all(tree.join("specs")).unwrap();
+        std::fs::write(tree.join("shared/m.json"), "{}\n").unwrap();
+        std::os::unix::fs::symlink("shared/m.json", tree.join(".mcp.json")).unwrap();
+        let below = tree.join("specs");
+        let dest = below.join("../shared/m.json");
+        assert!(refused(&check_destination(&below, &dest, "x")));
     }
 
     /// A worktree's own name is judged as a name under the worktree's root,
