@@ -24,7 +24,8 @@
 //! does: a caller of the CLI chooses the working directory, so it alone does
 //! not bound what is judged. A Claude Code worktree under
 //! `.claude/worktrees/<name>/` is judged as a project of its own. A destination that resolves outside the project is
-//! not judged: bounding `apply-manifest`'s roots is task 17's question.
+//! not judged here; `apply-manifest`'s roots are bounded by the working
+//! directory separately (spec 022 task 17, [`super::resolve_root`]).
 
 use std::path::{Component, Path, PathBuf};
 
@@ -208,8 +209,8 @@ enum Outer {
     WorkTree(PathBuf),
     /// The names of the project root's own path, when no work tree holds
     /// it: a destination inside the project is judged with them
-    /// in front of its own, and one outside the project is not judged
-    /// (bounding `apply-manifest`'s roots is task 17's question).
+    /// in front of its own, and one outside the project is not judged here
+    /// (`apply-manifest`'s roots are bounded separately, spec 022 task 17).
     Ancestors(Vec<String>),
 }
 
@@ -702,7 +703,8 @@ mod tests {
     }
 
     /// A destination outside every host's configuration is not judged, and
-    /// neither is one outside the project (task 17's question).
+    /// neither is one outside the project (`apply-manifest`'s roots are
+    /// bounded separately, spec 022 task 17).
     #[test]
     fn other_destinations_are_not_judged() {
         let tmp = tempfile::tempdir().unwrap();

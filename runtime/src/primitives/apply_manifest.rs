@@ -64,7 +64,7 @@ use std::fs;
 use std::path::Path;
 
 use crate::primitives::host_config::{self, HostRow};
-use crate::primitives::{PrimitiveError, Result, resolve_path, write_atomic_bytes};
+use crate::primitives::{PrimitiveError, Result, write_atomic_bytes};
 use crate::schema::primitives::{
     ApplyManifestArgs, ApplyManifestResult, ManifestEntry, ManifestEntryResult,
 };
@@ -87,7 +87,15 @@ const ACTION_SOURCE_MISSING: &str = "source-missing";
 ///   fetched-artifact-class input (BE-INPUT-004): a `..` entry, or an entry
 ///   through such a link, would write outside the target root. Every entry is validated
 ///   before any filesystem operation so a bad entry halts the whole walk
-///   with zero writes. The two *roots* stay absolute-capable as before.
+///   with zero writes.
+/// - [`PrimitiveError::InvalidPath`] when a *root* resolves outside its
+///   bound. The roots were absolute-capable bases; spec 022 task 17 (the
+///   owner's answer (a)) bounds them by the working directory `repo`:
+///   `target-root` must resolve inside it, `source-root` inside it or
+///   strictly inside a staging directory, as `extract-archive` takes its
+///   paths ([`super::resolve_root`]). An absolute root outside the working
+///   directory, a `..` root, and one through an outward link are all refused,
+///   before any entry is examined.
 /// - [`PrimitiveError::InvalidPath`] when an entry's `dest`, resolved, lies
 ///   in an agent host's configuration other than a command, skill,
 ///   rules-mirror or bridge path `/ductus` writes, and
@@ -113,8 +121,8 @@ pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult>
     for key in args.substitutions.keys() {
         validate_substitution_key(key)?;
     }
-    let source_root = resolve_path(repo, &args.source_root);
-    let target_root = resolve_path(repo, &args.target_root);
+    let source_root = super::resolve_root(repo, "source-root", &args.source_root, true)?;
+    let target_root = super::resolve_root(repo, "target-root", &args.target_root, false)?;
     for entry in &args.entries {
         super::validate_contained(&source_root, &entry.source)?;
         super::validate_contained(&target_root, &entry.dest)?;
@@ -1108,6 +1116,178 @@ mod tests {
         let err = run(&args, tmp.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::InvalidPath { .. }));
         assert!(!dst.join("leaked.md").exists());
+    }
+
+    // --- Root bounds (spec 022 task 17, the owner's answer (a)) ----------
+    //
+    // The roots were absolute-capable bases; task 17 bounds them by the
+    // working directory `repo`. The behaviour has three cells, each with a
+    // test that fails when its judgment is removed, and a mutation in
+    // `scripts/mutation/apply-manifest-roots.py` that removes it alone:
+    //
+    //   B1  a root that resolves outside `repo` is refused (the containment
+    //       check in `resolve_root`). Exercised four ways — an absolute root
+    //       outside `repo`, a `..` root, a root through an outward link, and
+    //       a source outside both `repo` and the staging roots — each a
+    //       different input to the one check, all killed by M1.
+    //   B2  `target-root` gets no staging exception: a staging path that is
+    //       not inside `repo` is still refused for `target-root`
+    //       (`allow_staging` is `false` at its call site). Killed by M2.
+    //   B3  `source-root` gets the staging exception: a staging path outside
+    //       `repo` is accepted for `source-root`, the `{framework-root}`
+    //       `/ductus` passes (`allow_staging` is `true`). Killed by M3.
+    //
+    // A `source-root` is matched against the staging roots as given
+    // (`validate_in_temp_dir` requires an absolute path), so a relative
+    // source that would land in staging through `..` is refused, not
+    // followed — a B1-flavour refusal.
+
+    /// A single valid `update` entry, so a refusal is proven to happen
+    /// before any write rather than by an empty walk.
+    fn one_entry() -> Vec<ManifestEntry> {
+        vec![entry("a.md", "a.md", "update")]
+    }
+
+    #[test]
+    fn target_root_outside_working_directory_is_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_source(tmp.path(), &[("a.md", "x\n")]);
+        // An existing absolute directory outside the working directory. A
+        // sibling tempdir, so that a mutation removing the bound writes into
+        // a throwaway rather than the real tree.
+        let outside = tempfile::tempdir().unwrap();
+        let args = args_for(
+            &tmp.path().join("src"),
+            outside.path(),
+            one_entry(),
+            vec![],
+            BTreeMap::new(),
+        );
+        let err = run(&args, tmp.path()).unwrap_err();
+        assert!(
+            matches!(err, PrimitiveError::InvalidPath { .. }),
+            "expected InvalidPath, got {err:?}"
+        );
+        assert!(!outside.path().join("a.md").exists(), "no write escaped");
+    }
+
+    #[test]
+    fn target_root_climbing_out_with_dotdot_is_refused() {
+        // The working directory is nested under a base tempdir, so `..`
+        // reaches `base/outside` — inside the auto-cleaned base, should a
+        // mutation removing the bound write there.
+        let base = tempfile::tempdir().unwrap();
+        let repo = base.path().join("proj");
+        let src = repo.join("src");
+        fs::create_dir_all(&src).unwrap();
+        fs::write(src.join("a.md"), "x\n").unwrap();
+        let args = args_for(
+            &src,
+            Path::new("../outside"),
+            one_entry(),
+            vec![],
+            BTreeMap::new(),
+        );
+        let err = run(&args, &repo).unwrap_err();
+        assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err:?}");
+        assert!(
+            !base.path().join("outside/a.md").exists(),
+            "no write escaped"
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn target_root_through_an_outward_link_is_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_source(tmp.path(), &[("a.md", "x\n")]);
+        let elsewhere = tempfile::tempdir().unwrap();
+        // A link inside the working directory that points out of it.
+        std::os::unix::fs::symlink(elsewhere.path(), tmp.path().join("out-link")).unwrap();
+        let args = args_for(
+            &tmp.path().join("src"),
+            Path::new("out-link"),
+            one_entry(),
+            vec![],
+            BTreeMap::new(),
+        );
+        let err = run(&args, tmp.path()).unwrap_err();
+        assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err:?}");
+        assert!(!elsewhere.path().join("a.md").exists(), "no write escaped");
+    }
+
+    #[test]
+    fn source_root_outside_working_directory_and_staging_is_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        // Source outside the working directory and not under a staging root.
+        let outside = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let args = args_for(
+            outside,
+            &tmp.path().join("dst"),
+            one_entry(),
+            vec![],
+            BTreeMap::new(),
+        );
+        let err = run(&args, tmp.path()).unwrap_err();
+        assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err:?}");
+    }
+
+    #[test]
+    fn source_root_climbing_into_staging_with_dotdot_is_refused() {
+        // `..` reaches the staging root that holds `tmp`, but the staging arm
+        // judges the argument as given (absolute only), so a relative `..`
+        // source is refused rather than followed into staging.
+        let tmp = tempfile::tempdir().unwrap();
+        let args = args_for(
+            Path::new("../elsewhere"),
+            &tmp.path().join("dst"),
+            one_entry(),
+            vec![],
+            BTreeMap::new(),
+        );
+        let err = run(&args, tmp.path()).unwrap_err();
+        assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err:?}");
+    }
+
+    #[test]
+    fn a_staging_source_root_outside_the_working_directory_is_accepted() {
+        // The `/ductus` shape: `source-root` is the `{framework-root}` under
+        // a staging root, outside the project; `target-root` is the project.
+        let staging = tempfile::tempdir().unwrap();
+        fs::write(staging.path().join("a.md"), "Hello {project}\n").unwrap();
+        let repo = tempfile::tempdir().unwrap();
+        let dst = repo.path().join("project");
+        let args = args_for(
+            staging.path(),
+            &dst,
+            one_entry(),
+            vec![],
+            subs(&[("project", "acme")]),
+        );
+        let result = run(&args, repo.path()).unwrap();
+        assert_eq!(result.created, 1);
+        assert_eq!(
+            fs::read_to_string(dst.join("a.md")).unwrap(),
+            "Hello acme\n"
+        );
+    }
+
+    #[test]
+    fn target_root_in_a_staging_directory_is_refused() {
+        // A staging path is a legitimate `source-root` but never a
+        // `target-root`: the exception is one-sided.
+        let tmp = tempfile::tempdir().unwrap();
+        write_source(tmp.path(), &[("a.md", "x\n")]);
+        let staging_target = tempfile::tempdir().unwrap();
+        let args = args_for(
+            &tmp.path().join("src"),
+            staging_target.path(),
+            one_entry(),
+            vec![],
+            BTreeMap::new(),
+        );
+        let err = run(&args, tmp.path()).unwrap_err();
+        assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err:?}");
     }
 
     #[test]

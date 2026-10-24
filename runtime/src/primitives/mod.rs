@@ -1321,7 +1321,9 @@ fn strip_label_ci<'a>(s: &'a str, label: &str) -> Option<&'a str> {
 /// This is the accept-absolute-paths counterpart to
 /// [`validate_no_traversal`], for the paths that are bases rather than
 /// arguments a primitive opens: `apply-manifest`'s `source-root` and
-/// `target-root`, which its entries are checked against, and the sibling
+/// `target-root`, which its entries are checked against — `apply-manifest`
+/// wraps this in [`resolve_root`] to bound the roots by the working directory
+/// (spec 022 task 17) — and the sibling
 /// checkouts committed config names (`resolve-constitutions`,
 /// `resolve-references`; see **The config-sourced path boundary** on
 /// [`validate_no_traversal`]). `run-generator` passes its script through
@@ -1339,6 +1341,60 @@ pub(crate) fn resolve_path(repo: &Path, path_arg: &str) -> PathBuf {
     } else {
         repo.join(candidate)
     }
+}
+
+/// Resolve and bound a manifest root, `apply-manifest`'s `source-root` or
+/// `target-root`. The roots were absolute-capable bases; spec 022 task 17
+/// (the owner's answer (a)) bounds them by the working directory `repo`, the
+/// base every other path argument is held to. `target-root` (`allow_staging`
+/// false) must resolve inside `repo`; `source-root` (`allow_staging` true)
+/// inside `repo` or strictly inside a staging directory, as `extract-archive`
+/// takes its paths ([`validate_in_temp_dir`]).
+///
+/// The bound is on where the root *resolves*, so an absolute root outside
+/// `repo`, a relative one climbing out with `..`, and one through a symlink
+/// that leaves `repo` are all refused — `resolve_symlinks` resolves the root
+/// (and its existing ancestors) the same way [`validate_contained`] resolves
+/// an entry, and the result is compared whole-component against the resolved
+/// `repo` (`Path::starts_with`). A `source-root` is matched against the
+/// staging roots *as given* ([`validate_in_temp_dir`] requires an absolute
+/// path), so a relative `source-root` that links into a staging directory is
+/// refused rather than followed — the staging arm is for the absolute staging
+/// path `/ductus` passes, not a link into one.
+///
+/// Returns the resolved base (as [`resolve_path`] would), which the caller's
+/// per-entry [`validate_contained`] then re-canonicalizes.
+///
+/// # Errors
+///
+/// [`PrimitiveError::InvalidPath`] when the root resolves outside its allowed
+/// bases; [`PrimitiveError::Io`] when `repo` or the root cannot be resolved.
+pub(crate) fn resolve_root(
+    repo: &Path,
+    label: &str,
+    root_arg: &str,
+    allow_staging: bool,
+) -> Result<PathBuf> {
+    let resolved = resolve_path(repo, root_arg);
+    let canonical_repo = canonical_base(repo)?;
+    let canonical = resolve_symlinks(&resolved).map_err(|source| PrimitiveError::Io {
+        path: resolved.clone(),
+        source,
+    })?;
+    if canonical.starts_with(&canonical_repo) {
+        return Ok(resolved);
+    }
+    if allow_staging && validate_in_temp_dir(root_arg).is_ok() {
+        return Ok(resolved);
+    }
+    Err(PrimitiveError::InvalidPath {
+        path: root_arg.into(),
+        reason: if allow_staging {
+            format!("{label} resolves outside the working directory and is not a staging directory")
+        } else {
+            format!("{label} resolves outside the working directory")
+        },
+    })
 }
 
 /// Run `cmd` to completion with stdout and stderr captured, as
