@@ -34,8 +34,8 @@ MUTATIONS = [
     (
         'M1 root containment check removed (every root resolves "inside")',
         'src/primitives/mod.rs',
-        'if canonical.starts_with(&canonical_repo) {',
-        'if canonical.starts_with(&canonical) {',
+        '    if canonical.starts_with(&canonical_repo) {\n        return Ok(resolved);',
+        '    if canonical.starts_with(&canonical) {\n        return Ok(resolved);',
         'apply_manifest',
     ),
     (

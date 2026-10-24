@@ -1738,6 +1738,51 @@ pub(crate) fn validate_in_temp_dir(path_arg: &str) -> Result<PathBuf> {
     validate_in_staging(staging_roots(), path_arg)
 }
 
+/// [`validate_in_temp_dir`] plus the bound that the staging path lie *outside*
+/// the working directory `repo`: a write destination for the archive
+/// primitives (spec 022 task 17 question 2, the owner's answer (a)).
+///
+/// `fetch-archive`'s output and `extract-archive`'s destination are bounded to
+/// a staging root alone, ignoring the project. When the project itself lies
+/// inside a staging root — a checkout under `/tmp` on Linux, a `TMPDIR`
+/// override, or Windows with `TMP` and `TEMP` both unset — that bound is met
+/// by the project's own files, so the primitive would write them (a granting
+/// `.claude/settings.local.json`, say) with no project bound and no host
+/// prompt. This refuses a destination that resolves inside the working
+/// directory, closing that write.
+///
+/// `/ductus` is untouched: it extracts into `{tempdir}` (a fresh `mktemp -d`
+/// directory) and writes every download there, never inside the project, so a
+/// fresh staging directory outside the working directory passes. The
+/// exclusion is by the working directory, not the outermost git work tree —
+/// the opposite of [`resolve_root`]'s direction and for the opposite reason:
+/// excluding the working directory refuses *less*, and `{tempdir}` is never
+/// inside the project, whereas excluding the outermost work tree would refuse
+/// `{tempdir}` when the temp directory sits under a home work tree.
+///
+/// # Errors
+///
+/// As [`validate_in_temp_dir`]; additionally [`PrimitiveError::InvalidPath`]
+/// when the staging path resolves inside the working directory, and
+/// [`PrimitiveError::Io`] when `repo` cannot be resolved.
+pub(crate) fn validate_staging_outside(repo: &Path, path_arg: &str) -> Result<PathBuf> {
+    let resolved = validate_in_temp_dir(path_arg)?;
+    let canonical_repo = canonical_base(repo)?;
+    let canonical = resolve_symlinks(&resolved).map_err(|source| PrimitiveError::Io {
+        path: resolved.clone(),
+        source,
+    })?;
+    if canonical.starts_with(&canonical_repo) {
+        return Err(PrimitiveError::InvalidPath {
+            path: path_arg.into(),
+            reason: "resolves inside the working directory; an archive staging path must lie \
+                     outside the project"
+                .into(),
+        });
+    }
+    Ok(resolved)
+}
+
 /// The directories a staging path may lie in, read once per process:
 /// [`staging_roots_for`] over [`std::env::temp_dir`] and, on macOS, the
 /// per-user temp directory `getconf DARWIN_USER_TEMP_DIR` names.

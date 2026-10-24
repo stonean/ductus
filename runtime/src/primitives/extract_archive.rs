@@ -40,7 +40,7 @@ use std::fs;
 use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 
-use crate::primitives::{PrimitiveError, Result, validate_in_temp_dir};
+use crate::primitives::{PrimitiveError, Result, validate_in_temp_dir, validate_staging_outside};
 use crate::schema::primitives::{ExtractArchiveArgs, ExtractArchiveResult};
 
 /// Execute the `extract-archive` primitive.
@@ -56,13 +56,17 @@ use crate::schema::primitives::{ExtractArchiveArgs, ExtractArchiveResult};
 ///   entry name that is not UTF-8 fails earlier, as [`PrimitiveError::Io`]).
 /// - [`PrimitiveError::InvalidPath`] for an entry a link already under
 ///   `dest` would carry outside it, naming the link.
-/// - [`PrimitiveError::InvalidPath`] when `archive` or `dest` is not an
-///   absolute path inside the system temp directory, or a link on it leaves
-///   that directory ([`validate_in_temp_dir`]); raised before anything is
-///   read or written.
-pub fn run(args: &ExtractArchiveArgs, _repo: &Path) -> Result<ExtractArchiveResult> {
+/// - [`PrimitiveError::InvalidPath`] when `archive` is not an absolute path
+///   inside the system temp directory, or a link on it leaves that directory
+///   ([`validate_in_temp_dir`]); raised before anything is read.
+/// - [`PrimitiveError::InvalidPath`] when `dest` is not an absolute path
+///   inside the system temp directory **and outside the working directory**
+///   ([`validate_staging_outside`], spec 022 task 17 question 2): a project
+///   that lies inside a staging root must not be written through the staging
+///   bound. Raised before anything is written.
+pub fn run(args: &ExtractArchiveArgs, repo: &Path) -> Result<ExtractArchiveResult> {
     let archive_path = validate_in_temp_dir(&args.archive)?;
-    let dest = validate_in_temp_dir(&args.dest)?;
+    let dest = validate_staging_outside(repo, &args.dest)?;
     let format = detect_format(&archive_path, args.format.as_deref())?;
 
     fs::create_dir_all(&dest).map_err(|source| PrimitiveError::Io {
@@ -430,6 +434,16 @@ mod tests {
         writer.finish().unwrap();
     }
 
+    /// A working directory the extraction tests pass as `repo`. Their staging
+    /// `dest`s live under `tempfile` temp dirs — the system staging root —
+    /// and this is a stable directory that never contains a fresh one, so the
+    /// `validate_staging_outside` bound (a staging dest must lie outside the
+    /// working directory, spec 022 task 17 q2) does not fire on tests that
+    /// exercise extraction itself. The bound has its own tests below.
+    fn behavior_repo() -> &'static std::path::Path {
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+    }
+
     #[test]
     fn extracts_tar_gz_to_dest() {
         let tmp = tempfile::tempdir().unwrap();
@@ -443,7 +457,7 @@ mod tests {
                 dest: dest.to_string_lossy().into_owned(),
                 format: None,
             },
-            tmp.path(),
+            behavior_repo(),
         )
         .unwrap();
 
@@ -473,7 +487,7 @@ mod tests {
                 dest: dest.to_string_lossy().into_owned(),
                 format: None,
             },
-            tmp.path(),
+            behavior_repo(),
         )
         .unwrap_err();
         assert!(
@@ -497,7 +511,7 @@ mod tests {
                 dest: dest.to_string_lossy().into_owned(),
                 format: None,
             },
-            tmp.path(),
+            behavior_repo(),
         )
         .unwrap();
 
@@ -537,7 +551,7 @@ mod tests {
                 dest: tmp.path().join("out").to_string_lossy().into_owned(),
                 format: None,
             },
-            tmp.path(),
+            behavior_repo(),
         )
         .unwrap_err();
         assert!(matches!(err, PrimitiveError::UnknownArchiveFormat { .. }));
@@ -604,7 +618,7 @@ mod tests {
                 dest: dest.to_string_lossy().into_owned(),
                 format: None,
             },
-            tmp.path(),
+            behavior_repo(),
         )
         .unwrap();
         assert_eq!(fs::read(dest.join("a.txt")).unwrap(), b"alpha");
@@ -647,7 +661,7 @@ mod tests {
                 dest: dest.to_string_lossy().into_owned(),
                 format: None,
             },
-            tmp.path(),
+            behavior_repo(),
         )
         .unwrap();
 
@@ -678,7 +692,7 @@ mod tests {
                 dest: dest.to_string_lossy().into_owned(),
                 format: None,
             },
-            tmp.path(),
+            behavior_repo(),
         )
         .unwrap();
 
@@ -713,7 +727,7 @@ mod tests {
                 dest: dest.to_string_lossy().into_owned(),
                 format: None,
             },
-            tmp.path(),
+            behavior_repo(),
         )
         .unwrap();
 
@@ -768,7 +782,7 @@ mod tests {
                 dest: dest.to_string_lossy().into_owned(),
                 format: None,
             },
-            tmp.path(),
+            behavior_repo(),
         )
         .unwrap();
 
@@ -796,7 +810,7 @@ mod tests {
                 dest: dest.to_string_lossy().into_owned(),
                 format: Some("tar-gz".into()),
             },
-            tmp.path(),
+            behavior_repo(),
         )
         .unwrap();
         assert_eq!(result.format, "tar-gz");
@@ -877,5 +891,55 @@ mod tests {
         let dest = tmp.path().join("out");
         let err = extract_zip_capped(&archive, &dest, MAX_EXTRACT_BYTES, 2).unwrap_err();
         assert!(err.to_string().contains("extract cap of 2 entries"));
+    }
+
+    // --- The staging-dest bound (spec 022 task 17 question 2, answer (a)) ---
+    //
+    // `extract-archive`'s `dest` must be a staging path *outside* the working
+    // directory, so a project that itself lies inside a staging root cannot be
+    // written through the staging bound. One cell: `dest` inside the working
+    // directory is refused (mutation M1 in
+    // `scripts/mutation/archive-staging-outside.py`). The acceptance test is
+    // the regression guard for `/ductus`'s own extraction into `{tempdir}`.
+
+    #[test]
+    fn a_dest_inside_the_working_directory_is_refused() {
+        // The working directory is a tempdir, so it is itself under a staging
+        // root — the exposed configuration (a project under `/tmp`). A dest
+        // inside it satisfies the staging bound but is refused by the
+        // outside-the-working-directory check, before the archive is read.
+        let repo = tempfile::tempdir().unwrap();
+        let args = ExtractArchiveArgs {
+            archive: repo.path().join("a.tgz").to_string_lossy().into_owned(),
+            dest: repo.path().join(".claude").to_string_lossy().into_owned(),
+            format: None,
+        };
+        let err = run(&args, repo.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { reason, .. }
+                if reason.contains("working directory")),
+            "{err:?}"
+        );
+        assert!(!repo.path().join(".claude").exists(), "nothing was written");
+    }
+
+    #[test]
+    fn a_staging_dest_outside_the_working_directory_is_accepted() {
+        // The `/ductus` shape: the project (working directory) is under a
+        // staging root, and the extraction dest is a separate staging
+        // directory outside it — the fresh `{tempdir}` `/ductus` makes.
+        let repo = tempfile::tempdir().unwrap();
+        let staging = tempfile::tempdir().unwrap();
+        let archive = staging.path().join("a.tar.gz");
+        make_tar_gz(&archive, &[("README.md", b"hi")]);
+        let dest = staging.path().join("out");
+        let args = ExtractArchiveArgs {
+            archive: archive.to_string_lossy().into_owned(),
+            dest: dest.to_string_lossy().into_owned(),
+            format: None,
+        };
+        let result = run(&args, repo.path()).unwrap();
+        assert_eq!(result.count, 1);
+        assert_eq!(fs::read(dest.join("README.md")).unwrap(), b"hi");
     }
 }

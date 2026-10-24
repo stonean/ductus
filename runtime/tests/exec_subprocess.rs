@@ -316,6 +316,11 @@ fn exec_chains_bootstrap_primitives_extract_apply_merge() {
     // project name. `path` is repo-relative: merge-managed-block rejects
     // absolute paths (BE-INPUT-004) and resolves against the repo root — the
     // exec cwd, i.e. this tempdir.
+    // The extraction dest must lie outside the working directory (cwd = this
+    // tempdir), so it is a sibling staging tempdir, as `/ductus`'s `{tempdir}`
+    // is (spec 022 task 17 q2). The input tarball stays under cwd — reading it
+    // is not the write the bound closes.
+    let staging = tempfile::tempdir().unwrap();
     let session_toml = format!(
         "archive = {archive:?}\n\
          dest = {dest:?}\n\
@@ -332,8 +337,8 @@ fn exec_chains_bootstrap_primitives_extract_apply_merge() {
          dest = \"README.md\"\n\
          strategy = \"update\"\n",
         archive = tarball_path.to_string_lossy().to_string(),
-        dest = tmp.path().join("staging").to_string_lossy().to_string(),
-        source_root = tmp.path().join("staging").to_string_lossy().to_string(),
+        dest = staging.path().to_string_lossy().to_string(),
+        source_root = staging.path().to_string_lossy().to_string(),
         target_root = tmp.path().join("project").to_string_lossy().to_string(),
     );
     let ductus_dir = tmp.path().join(".ductus");
@@ -364,7 +369,7 @@ fn exec_chains_bootstrap_primitives_extract_apply_merge() {
     // - apply-manifest wrote a substituted copy into the project dir
     // - merge-managed-block created CLAUDE.md with the managed block
     //   (html-comment style, `ductus-managed` marker — the defaults)
-    assert!(tmp.path().join("staging/README.md").exists());
+    assert!(staging.path().join("README.md").exists());
     let written = fs::read_to_string(tmp.path().join("project/README.md")).unwrap();
     assert!(
         written.contains("# acme") && written.contains("Project: acme"),

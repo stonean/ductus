@@ -1,8 +1,8 @@
 url = "{MOCK_HTTP}/archive.tar.gz"
 sha256-url = "{MOCK_HTTP}/archive.tar.gz.sha256"
-archive = '{REPO}/downloaded.tar.gz'
-dest = '{REPO}/staging'
-source-root = "staging"
+archive = '{STAGING}/downloaded.tar.gz'
+dest = '{STAGING}'
+source-root = '{STAGING}'
 target-root = "project"
 pinned = ["framework/constitution.md"]
 path = "project/.gitignore"

@@ -562,6 +562,20 @@ fn stage_fixture(command: &str, fixture: &str) -> tempfile::TempDir {
         // root is one; the seed spells it as a TOML literal string, which
         // reads a Windows path's backslashes as they are.
         substitute_in_session(tmp.path(), "{REPO}", &tmp.path().display().to_string());
+        // The archive primitives' write destination must lie OUTSIDE the
+        // working directory (spec 022 task 17 q2): `/ductus` extracts into a
+        // fresh `{tempdir}` separate from the project, never into it. The
+        // fixture's working directory is `{REPO}` (the exec's cwd), so its
+        // staging directory is a sibling tempdir, `{STAGING}`, held alive for
+        // the process (leaked like the MockHttp thread above — the install
+        // case runs once per suite).
+        let staging = tempfile::tempdir().expect("create staging dir");
+        substitute_in_session(
+            tmp.path(),
+            "{STAGING}",
+            &staging.path().display().to_string(),
+        );
+        std::mem::forget(staging);
         // MockHttp's listener-loop thread holds its own Arc clone of
         // the routes and runs detached — `server` falling out of scope
         // here is harmless (the type carries no Drop logic); the thread

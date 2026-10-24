@@ -96,7 +96,7 @@ use std::time::{Duration, Instant};
 use sha2::{Digest, Sha256};
 
 use crate::primitives::{
-    PrimitiveError, Result, flatten_line, validate_in_temp_dir, write_atomic_bytes,
+    PrimitiveError, Result, flatten_line, validate_staging_outside, write_atomic_bytes,
 };
 use crate::schema::primitives::{FetchArchiveArgs, FetchArchiveResult};
 
@@ -115,11 +115,14 @@ use crate::schema::primitives::{FetchArchiveArgs, FetchArchiveResult};
 /// - [`PrimitiveError::ChecksumMismatch`] when the computed sha differs from
 ///   the sidecar. Raised before the archive is written; the error's `path`
 ///   is the intended destination, which is never created.
-/// - [`PrimitiveError::InvalidPath`] when `archive` is not an absolute path
-///   inside the system temp directory, or a link on it leaves that directory
-///   ([`validate_in_temp_dir`]); raised before any request is made.
-pub fn run(args: &FetchArchiveArgs, _repo: &Path) -> Result<FetchArchiveResult> {
-    let dest = validate_in_temp_dir(&args.archive)?;
+/// - [`PrimitiveError::InvalidPath`] when `archive`, the output path, is not
+///   an absolute path inside the system temp directory **and outside the
+///   working directory**, or a link on it leaves the staging directory
+///   ([`validate_staging_outside`], spec 022 task 17 question 2): the download
+///   is a write, so a project that lies inside a staging root must not be
+///   written through the staging bound. Raised before any request is made.
+pub fn run(args: &FetchArchiveArgs, repo: &Path) -> Result<FetchArchiveResult> {
+    let dest = validate_staging_outside(repo, &args.archive)?;
 
     let body = fetch_bytes(&args.url)?;
     let computed = sha256_hex(&body);
@@ -1011,10 +1014,10 @@ mod tests {
     use std::time::{Duration, Instant};
 
     use super::{
-        Deadline, FETCH_DEADLINE, FETCH_TIMEOUT, FetchScreen, MAX_FETCH_BYTES, MAX_FETCH_REDIRECTS,
-        PrimitiveError, ProxyEnv, ProxyScheme, RedirectVerdict, Screen, fetch_bytes_with,
-        is_internal_ip, is_sha256_hex, load_once, parse_sidecar_hex, read_capped, redirect_verdict,
-        roots_from, sha256_hex, validate_fetch_url,
+        Deadline, FETCH_DEADLINE, FETCH_TIMEOUT, FetchArchiveArgs, FetchScreen, MAX_FETCH_BYTES,
+        MAX_FETCH_REDIRECTS, PrimitiveError, ProxyEnv, ProxyScheme, RedirectVerdict, Screen,
+        fetch_bytes_with, is_internal_ip, is_sha256_hex, load_once, parse_sidecar_hex, read_capped,
+        redirect_verdict, roots_from, run, sha256_hex, validate_fetch_url,
     };
     use std::net::ToSocketAddrs;
     use std::sync::Arc;
@@ -1780,5 +1783,34 @@ mod tests {
         assert!(!is_internal_ip(ip("172.32.0.1")));
         assert!(!is_internal_ip(ip("172.15.255.255")));
         assert!(!is_internal_ip(ip("2606:4700:4700::1111")));
+    }
+
+    /// The staging-output bound (spec 022 task 17 question 2, answer (a)): the
+    /// download is a write, so an output path inside the working directory is
+    /// refused — before any request — even when it is also inside a staging
+    /// root (a project under `/tmp`). Killed by M1 in
+    /// `scripts/mutation/archive-staging-outside.py`.
+    #[test]
+    fn an_output_inside_the_working_directory_is_refused() {
+        let repo = tempfile::tempdir().unwrap();
+        let args = FetchArchiveArgs {
+            url: "https://example.invalid/a.tgz".into(),
+            sha256_url: None,
+            archive: repo
+                .path()
+                .join(".claude/settings.json")
+                .to_string_lossy()
+                .into_owned(),
+        };
+        let err = run(&args, repo.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { reason, .. }
+                if reason.contains("working directory")),
+            "{err:?}"
+        );
+        assert!(
+            !repo.path().join(".claude/settings.json").exists(),
+            "nothing was written"
+        );
     }
 }
