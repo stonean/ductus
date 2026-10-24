@@ -1125,11 +1125,12 @@ mod tests {
     // test that fails when its judgment is removed, and a mutation in
     // `scripts/mutation/apply-manifest-roots.py` that removes it alone:
     //
-    //   B1  a root that resolves outside `repo` is refused (the containment
-    //       check in `resolve_root`). Exercised four ways — an absolute root
-    //       outside `repo`, a `..` root, a root through an outward link, and
-    //       a source outside both `repo` and the staging roots — each a
-    //       different input to the one check, all killed by M1.
+    //   B1  a root that resolves outside the working directory is refused
+    //       (the one containment check in `resolve_root`), exercised by
+    //       several inputs — an absolute target outside it, a `..` target, a
+    //       target through an outward link, a source that is a staging root
+    //       itself, and a relative source whose `..` would reach staging —
+    //       each killed by M1.
     //   B2  `target-root` gets no staging exception: a staging path that is
     //       not inside `repo` is still refused for `target-root`
     //       (`allow_staging` is `false` at its call site). Killed by M2.
@@ -1217,12 +1218,20 @@ mod tests {
     }
 
     #[test]
-    fn source_root_outside_working_directory_and_staging_is_refused() {
+    fn source_root_at_a_staging_root_itself_is_refused() {
+        // A `source-root` is accepted strictly inside a staging root, never
+        // when it IS the root. The system temp directory is a staging root on
+        // every platform and is an ancestor of this working directory (which
+        // `tempfile` creates under it), so it exercises both arms together:
+        // not inside the working directory, and not strictly inside a staging
+        // root. Portable, unlike a fixture (e.g. `CARGO_MANIFEST_DIR`) whose
+        // staging-ness depends on where the checkout lives — under a
+        // `/tmp`-based checkout that fixture is itself inside staging, which
+        // the staging arm correctly accepts, so the old test false-redded.
         let tmp = tempfile::tempdir().unwrap();
-        // Source outside the working directory and not under a staging root.
-        let outside = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let outside = std::env::temp_dir();
         let args = args_for(
-            outside,
+            &outside,
             &tmp.path().join("dst"),
             one_entry(),
             vec![],

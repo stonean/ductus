@@ -18,7 +18,7 @@ heading that file's root-bound tests):
   M1  the containment check in `resolve_root`: a root that resolves outside
       the working directory is refused. Killed by every refusal test
       (target absolute outside, target `..`, target through an outward link,
-      source outside both, source `..` into staging).
+      source at a staging root itself, source `..` into staging).
   M2  `target-root` gets no staging exception. Killed by
       `target_root_in_a_staging_directory_is_refused`.
   M3  `source-root` gets the staging exception (the `{framework-root}`
