@@ -580,64 +580,69 @@ mod tests {
 
     use super::*;
 
-    // What each judgment of [`check_destination`] does alone, from which
-    // base, and the test that fails when that judgment alone loses it (spec
-    // 022 task 11, re-reads 7 to 11). The bases: P, the project root; W, the
-    // outermost work tree's root, when the project root lies below it; A,
-    // with no work tree, the project root's own ancestors. The steps: the path
-    // as given, judged by its names; and where the write lands, judged from P
-    // and W through the root's config-directory links, then its root files'
-    // links, then by its names, each step returning before the next, and from
-    // A by its names. Each step has two outputs: a refusal, and a row verdict
-    // naming a command, whose frontmatter the caller then judges; the
-    // root-file step has only the first. A cell's fixture turns the others
-    // off: a destination that is itself a link turns off where its links
-    // lead; a repository at the project root turns off A; a project root
-    // below the work tree's root leaves P nothing to see; and a landing must
-    // pass every earlier step, so a landing meant for the names step lies
-    // under a nested config directory, since the config-directory step
-    // resolves each of the root's own config directories, link or not. The
-    // root-file step refuses alone only through a name the file system folds
-    // (`m.json.`) and is held jointly with where links lead; where links lead
-    // is held by no test of its own, since it differs from the landing only
-    // through a Windows 8.3 short name, a link behind a missing directory, or
-    // on macOS a name in another Unicode normalization, each of them refusing
-    // more, not less.
+    // What each judgment of [`check_destination`] does alone, and the test
+    // that fails when that judgment alone loses it (spec 022 task 11,
+    // re-reads 7 to 13). The cells are the product of four dimensions:
+    //
+    // - base: P, the project root; W, the outermost work tree's root, when the
+    //   project root lies below it; A, with no work tree, the project root's
+    //   own ancestors;
+    // - step: the path as given, judged by its names (G); and where the write
+    //   lands, judged through the root's config-directory links (D), then its
+    //   root files' links (F), then by its names (N), each returning before
+    //   the next, and where its links lead (L), judged the same way;
+    // - output: a refusal (R); a command row (C), whose frontmatter the
+    //   caller judges; a row naming no command (X), the rules mirror or Pi's
+    //   bridge, which `merge-managed-block` refuses ([`check_no_destination`]);
+    // - name: the five config directories and the three root files.
+    //
+    // It collapses, each for a reason the code gives: A runs no link step,
+    // judging the ancestors' names alone, so A has G and the landing by its
+    // names only. F and the root files have no row: a root file is never one.
+    // C lies only under a config directory, and X only under `.agents` (the
+    // rules mirror) and `.pi` (the bridge). G, N and A's landing are one
+    // function, `judge_names`, which reads names and no base, so each name is
+    // held once, at P, while each base's G and N are held per output. L has
+    // no test of its own: it differs from the landing only through a Windows
+    // 8.3 short name, a link behind a missing directory, or on macOS a name in
+    // another Unicode normalization, each refusing more, not less (M28). And
+    // F alone refuses only through a name the file system folds, so F is held
+    // jointly with L (M114, M115). A cell's fixture turns the others off: a
+    // destination that is itself a link turns off L; a repository at the
+    // project root turns off A; a project root below the work tree's root
+    // leaves P nothing to see; and a landing meant for N lies under a nested
+    // config directory, since D resolves each of the root's own config
+    // directories, link or not.
     //
     // | Base | Step | Output | Test |
     // | --- | --- | --- | --- |
-    // | P | as given | refusal | `the_path_as_given_is_judged` |
-    // | P | as given | row | `the_project_root_judges_the_path_as_given` |
-    // | P | landing, config dir | refusal | `the_landing_follows_the_root_config_directory_link` |
-    // | P | landing, config dir | row | `the_landing_names_a_command_through_the_root_config_directory` |
-    // | P | landing, root file | refusal | `links_are_resolved_before_judging`, with where links lead |
-    // | P | landing, names | refusal | `the_landing_is_judged_by_its_names_from_each_base` |
-    // | P | landing, names | row | `the_landing_names_a_command_by_its_names_from_each_base` |
-    // | W | as given | refusal | `the_path_as_given_is_judged` |
-    // | W | as given | row | `the_work_tree_root_judges_the_path_as_given` |
-    // | W | landing, config dir | refusal | `the_landing_follows_the_root_config_directory_link` |
-    // | W | landing, config dir | row | `the_landing_names_a_command_through_the_root_config_directory` |
-    // | W | landing, root file | refusal | `the_work_tree_root_follows_its_root_files_links_back`, with where links lead |
-    // | W | landing, names | refusal | `the_landing_is_judged_by_its_names_from_each_base` |
-    // | W | landing, names | row | `the_landing_names_a_command_by_its_names_from_each_base` |
-    // | A | as given | refusal | `with_no_repository_the_ancestors_refuse_the_path_as_given` |
-    // | A | as given | row | `with_no_repository_the_ancestors_judge_the_path_as_given` |
-    // | A | landing | refusal | `with_no_repository_the_ancestors_judge_where_the_write_lands` |
-    // | A | landing | row | `with_no_repository_the_ancestors_name_a_command_where_the_write_lands` |
+    // | P | G | R | `the_path_as_given_is_judged` |
+    // | P | G | C | `the_project_root_judges_the_path_as_given` |
+    // | P | D | R | `the_landing_follows_the_root_config_directory_link` |
+    // | P | D | C | `the_landing_names_a_command_through_the_root_config_directory` |
+    // | P | F | R | `links_are_resolved_before_judging`, with L |
+    // | P | N | R | `the_landing_is_judged_by_its_names_from_each_base` |
+    // | P | N | C | `the_landing_names_a_command_by_its_names_from_each_base` |
+    // | W | G | R | `the_path_as_given_is_judged` |
+    // | W | G | C | `the_work_tree_root_judges_the_path_as_given` |
+    // | W | D | R | `the_landing_follows_the_root_config_directory_link` |
+    // | W | D | C | `the_landing_names_a_command_through_the_root_config_directory` |
+    // | W | F | R | `the_work_tree_root_follows_its_root_files_links_back`, with L |
+    // | W | N | R | `the_landing_is_judged_by_its_names_from_each_base` |
+    // | W | N | C | `the_landing_names_a_command_by_its_names_from_each_base` |
+    // | A | G | R | `with_no_repository_the_ancestors_refuse_the_path_as_given` |
+    // | A | G | C | `with_no_repository_the_ancestors_judge_the_path_as_given` |
+    // | A | landing | R | `with_no_repository_the_ancestors_judge_where_the_write_lands` |
+    // | A | landing | C | `with_no_repository_the_ancestors_name_a_command_where_the_write_lands` |
+    // | P, W | G, D, N | X | `a_block_refuses_the_rows_that_name_no_command`, each kind |
+    // | A | G, landing | X | `a_block_refuses_the_rows_that_name_no_command`, each kind |
     //
-    // Three steps iterate names, the five config directories and the three
-    // root files, and each name is held in each on its own. The names step
-    // is one function at every base, so one base holds each name's refusal
-    // and each directory's row: `every_config_name_is_judged_by_its_names`.
-    // The link steps' refusals are held per name from P and from W by
-    // `every_root_config_link_is_followed_back`, and the config-directory
-    // step's row per directory by
+    // By name: `judge_names`' R for every name and C for every directory,
+    // held once, by `every_config_name_is_judged_by_its_names`; D's R per
+    // directory, the landing alone, and F's R per root file, with L, each
+    // from P and from W, by `every_root_config_link_is_followed_back`; and D's
+    // C per directory, from P and from W, by
     // `every_config_directory_names_a_row_through_its_root`.
-    //
-    // A row naming no command, the rules mirror or Pi's bridge, is a third
-    // kind of output for `merge-managed-block`, which refuses every row
-    // ([`check_no_destination`]): held from the names step and the
-    // config-directory step by `a_block_refuses_the_rows_that_name_no_command`.
 
     fn judge(repo: &Path, rel: &str) -> Result<Option<HostRow>> {
         check_destination(repo, &repo.join(rel), rel)
@@ -1450,6 +1455,9 @@ mod tests {
             let tree = tmp.path();
             git2::Repository::init(tree).unwrap();
             std::fs::create_dir_all(tree.join("cfg")).unwrap();
+            std::fs::create_dir_all(tree.join("shared")).unwrap();
+            std::fs::write(tree.join("shared/s.json"), "{}\n").unwrap();
+            std::os::unix::fs::symlink("../shared/s.json", tree.join("cfg/settings.json")).unwrap();
             std::os::unix::fs::symlink("cfg", tree.join(dir)).unwrap();
             assert!(refused(&judge(tree, "cfg/settings.json")), "{dir}");
             std::fs::create_dir_all(tree.join("specs")).unwrap();
@@ -1529,35 +1537,95 @@ mod tests {
                 Some(HostRow::CommandOrSkill),
                 "{dir}"
             );
+            std::fs::create_dir_all(tree.join("specs")).unwrap();
+            let below = tree.join("specs");
+            let dest = below.join(format!("../alias/{file}"));
+            assert_eq!(
+                check_destination(&below, &dest, "x").unwrap(),
+                Some(HostRow::CommandOrSkill),
+                "{dir}"
+            );
         }
     }
 
     /// `merge-managed-block` refuses the rows that name no command too, the
-    /// rules mirror and Pi's bridge, whichever step names them: by its names
-    /// at the root and nested, and through the root's config directory.
+    /// rules mirror and Pi's bridge, and each step names them on its own from
+    /// each base it runs at: the path as given through a linked nested config
+    /// directory, the landing through the root's config directory and through
+    /// a nested one (each destination itself a link), from the project root
+    /// and from below the work tree's root; and with no repository and a
+    /// project root inside the config directory, the ancestors' path as given
+    /// and landing.
     #[cfg(unix)]
     #[test]
     fn a_block_refuses_the_rows_that_name_no_command() {
-        let tmp = tempfile::tempdir().unwrap();
-        let tree = tmp.path();
-        git2::Repository::init(tree).unwrap();
-        for rel in [
-            ".agents/rules/x.md",
-            ".pi/extensions/ductus.ts",
-            "sub/.agents/rules/x.md",
+        for (dir, sub, file) in [
+            (".agents", "rules", "x.md"),
+            (".pi", "extensions", "ductus.ts"),
         ] {
+            let tmp = tempfile::tempdir().unwrap();
+            let tree = tmp.path();
+            git2::Repository::init(tree).unwrap();
+            let link = |target: &str, at: &str| {
+                std::os::unix::fs::symlink(tree.join(target), tree.join(at)).unwrap();
+            };
+            for d in ["specs", "shared", "elsewhere", "sub", "n"] {
+                std::fs::create_dir_all(tree.join(d)).unwrap();
+            }
+            std::fs::create_dir_all(tree.join("elsewhere").join(sub)).unwrap();
+            std::fs::create_dir_all(tree.join(dir).join(sub)).unwrap();
+            std::fs::create_dir_all(tree.join("n").join(dir).join(sub)).unwrap();
+            std::fs::write(tree.join("shared/f"), "x\n").unwrap();
+            link("elsewhere", &format!("sub/{dir}"));
+            link("shared/f", &format!("{dir}/{sub}/{file}"));
+            link(&format!("{dir}/{sub}"), "root_alias");
+            link("shared/f", &format!("n/{dir}/{sub}/{file}"));
+            link(&format!("n/{dir}/{sub}"), "nested_alias");
+            let below = tree.join("specs");
+            for rel in [
+                format!("sub/{dir}/{sub}/{file}"),
+                format!("root_alias/{file}"),
+                format!("nested_alias/{file}"),
+            ] {
+                assert!(
+                    check_no_destination(tree, &tree.join(&rel), &rel).is_err(),
+                    "{rel}"
+                );
+                let dest = below.join("..").join(&rel);
+                assert!(
+                    check_no_destination(&below, &dest, &rel).is_err(),
+                    "{rel} from below"
+                );
+            }
+
+            let tmp = tempfile::tempdir().unwrap();
+            let bare = tmp.path();
+            std::fs::create_dir_all(bare.join(dir)).unwrap();
+            std::fs::create_dir_all(bare.join("elsewhere")).unwrap();
+            std::fs::create_dir_all(bare.join("shared")).unwrap();
+            std::fs::write(bare.join("shared/f"), "x\n").unwrap();
+            std::os::unix::fs::symlink(bare.join("elsewhere"), bare.join(dir).join(sub)).unwrap();
+            let inside = bare.join(dir);
+            let given = inside.join(sub).join(file);
             assert!(
-                check_no_destination(tree, &tree.join(rel), rel).is_err(),
-                "{rel}"
+                check_no_destination(&inside, &given, file).is_err(),
+                "{dir} as given"
+            );
+            let tmp = tempfile::tempdir().unwrap();
+            let bare = tmp.path();
+            std::fs::create_dir_all(bare.join(dir).join(sub)).unwrap();
+            std::fs::create_dir_all(bare.join("shared")).unwrap();
+            std::fs::write(bare.join("shared/f"), "x\n").unwrap();
+            std::os::unix::fs::symlink(bare.join("shared/f"), bare.join(dir).join(sub).join(file))
+                .unwrap();
+            std::os::unix::fs::symlink(bare.join(dir).join(sub), bare.join("alias")).unwrap();
+            let inside = bare.join(dir);
+            let landing = inside.join("../alias").join(file);
+            assert!(
+                check_no_destination(&inside, &landing, file).is_err(),
+                "{dir} landing"
             );
         }
-        std::fs::create_dir_all(tree.join(".agents/rules")).unwrap();
-        std::fs::create_dir_all(tree.join("shared")).unwrap();
-        std::fs::write(tree.join("shared/r.md"), "x\n").unwrap();
-        std::os::unix::fs::symlink(tree.join("shared/r.md"), tree.join(".agents/rules/x.md"))
-            .unwrap();
-        std::os::unix::fs::symlink(tree.join(".agents/rules"), tree.join("alias")).unwrap();
-        assert!(check_no_destination(tree, &tree.join("alias/x.md"), "alias/x.md").is_err());
     }
 
     /// Through the root's link to another config directory, a `worktrees`
@@ -1571,6 +1639,10 @@ mod tests {
         std::fs::create_dir_all(tree.join("cfg")).unwrap();
         std::os::unix::fs::symlink("cfg", tree.join(".agents")).unwrap();
         assert!(refused(&judge(tree, "cfg/worktrees/wt/settings.json")));
+        std::fs::create_dir_all(tree.join("specs")).unwrap();
+        let below = tree.join("specs");
+        let dest = below.join("../cfg/worktrees/wt/settings.json");
+        assert!(refused(&check_destination(&below, &dest, "x")));
     }
 
     /// A worktree's own name is judged as a name under the worktree's root,
