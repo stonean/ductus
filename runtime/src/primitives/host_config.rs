@@ -121,7 +121,10 @@ const SHIPPED_FRONTMATTER_KEYS: &[&str] = &["description", "argument-hint", "par
 ///   ([`judge_under`]);
 /// - an MCP or settings file at any depth, or the file the project root's
 ///   `.mcp.json` or `opencode.json(c)` finally resolves to (a link between
-///   them in a chain is not followed back);
+///   them in a chain is not followed back, and a file the config-directory
+///   step names a row comes back as that row first:
+///   `.mcp.json -> .claude/commands/acme/g.md` leaves `g.md` writable as a
+///   command);
 /// - under the directory the project root's config directory links to
 ///   (`.claude -> cfg` makes `cfg/settings.local.json` the host's), unless
 ///   that directory holds the project itself.
