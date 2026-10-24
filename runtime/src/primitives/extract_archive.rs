@@ -907,20 +907,49 @@ mod tests {
         // The working directory is a tempdir, so it is itself under a staging
         // root — the exposed configuration (a project under `/tmp`). A dest
         // inside it satisfies the staging bound but is refused by the
-        // outside-the-working-directory check, before the archive is read.
+        // outside-the-working-directory check. The archive (input) lives in a
+        // SIBLING staging dir outside `repo`, so only `dest` can trigger the
+        // refusal — the assertion that the refused `path` is the dest then
+        // pins that this test fails for the dest, not the input.
         let repo = tempfile::tempdir().unwrap();
+        let staging = tempfile::tempdir().unwrap();
         let args = ExtractArchiveArgs {
-            archive: repo.path().join("a.tgz").to_string_lossy().into_owned(),
+            archive: staging.path().join("a.tgz").to_string_lossy().into_owned(),
             dest: repo.path().join(".claude").to_string_lossy().into_owned(),
             format: None,
         };
         let err = run(&args, repo.path()).unwrap_err();
         assert!(
-            matches!(&err, PrimitiveError::InvalidPath { reason, .. }
-                if reason.contains("working directory")),
+            matches!(&err, PrimitiveError::InvalidPath { reason, path }
+                if reason.contains("working directory") && path.contains(".claude")),
             "{err:?}"
         );
         assert!(!repo.path().join(".claude").exists(), "nothing was written");
+    }
+
+    #[test]
+    fn an_input_archive_inside_the_working_directory_is_read() {
+        // The exclusion is on the write destination only: reading an input
+        // tarball from inside the working directory (a project under a staging
+        // root) is allowed, so `extract-archive`'s `archive` keeps the
+        // staging bound alone. `dest` is a sibling staging dir outside `repo`.
+        // This duplicates, at unit level, what
+        // `exec_subprocess::exec_chains_bootstrap_primitives_extract_apply_merge`
+        // pins at integration level — kept deliberately so the input-stays-read
+        // behaviour has a `--lib` guard; do not delete one as redundant.
+        let repo = tempfile::tempdir().unwrap();
+        let archive = repo.path().join("a.tar.gz");
+        make_tar_gz(&archive, &[("README.md", b"hi")]);
+        let staging = tempfile::tempdir().unwrap();
+        let dest = staging.path().join("out");
+        let args = ExtractArchiveArgs {
+            archive: archive.to_string_lossy().into_owned(),
+            dest: dest.to_string_lossy().into_owned(),
+            format: None,
+        };
+        let result = run(&args, repo.path()).unwrap();
+        assert_eq!(result.count, 1);
+        assert_eq!(fs::read(dest.join("README.md")).unwrap(), b"hi");
     }
 
     #[test]

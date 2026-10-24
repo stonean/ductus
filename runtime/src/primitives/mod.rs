@@ -1751,14 +1751,22 @@ pub(crate) fn validate_in_temp_dir(path_arg: &str) -> Result<PathBuf> {
 /// prompt. This refuses a destination that resolves inside the working
 /// directory, closing that write.
 ///
-/// `/ductus` is untouched: it extracts into `{tempdir}` (a fresh `mktemp -d`
-/// directory) and writes every download there, never inside the project, so a
-/// fresh staging directory outside the working directory passes. The
+/// `/ductus` is untouched in every normal temp configuration: it extracts
+/// into `{tempdir}` (a fresh `mktemp -d -t` directory) and writes every
+/// download there, and under an unset or `/tmp`/per-user `TMPDIR` that
+/// directory is a sibling of the project, outside it, so it passes. The one
+/// configuration this refuses a real `/ductus` call is a `TMPDIR` pointing
+/// *inside* the working tree (a workspace-local temp): `{tempdir}` then lands
+/// inside the project and extraction is refused. That cannot be carved out
+/// without reopening the gap — in that layout `/ductus`'s fresh `{tempdir}`
+/// and a malicious dest are both inside the working directory with nothing to
+/// distinguish them, so any bound that admits one admits the other. The
 /// exclusion is by the working directory, not the outermost git work tree —
 /// the opposite of [`resolve_root`]'s direction and for the opposite reason:
-/// excluding the working directory refuses *less*, and `{tempdir}` is never
-/// inside the project, whereas excluding the outermost work tree would refuse
-/// `{tempdir}` when the temp directory sits under a home work tree.
+/// excluding the working directory refuses *less*, and `{tempdir}` is outside
+/// the project under any normal temp configuration, whereas excluding the
+/// outermost work tree would refuse `{tempdir}` when the temp directory sits
+/// under a home work tree.
 ///
 /// # Errors
 ///
