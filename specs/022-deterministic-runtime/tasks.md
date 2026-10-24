@@ -244,9 +244,11 @@ Options:
 
 Recommended: (b). Measured as refusals left with no test at their base, and time: (a) leaves six at no cost; (b) leaves none for under an hour; (c) leaves none for two to three hours and likely a further question about `judge`'s internals. The tests add no behavior and each is proven by the mutation it kills, so a further re-read would buy the least for its time.
 
+Resolved 2026-10-23 by the owner: (b). Applied: `the_worktree_exception_judges_from_each_base` judges the exception's names below a worktree from below the work tree's root, run from the worktree's `specs/` and from the main checkout's, and with no repository from a project root inside a worktree's own `.claude`; `a_spelled_path_is_judged_as_given_from_each_base` judges `sub/..` and a `..` out of a linked commands directory with a repository at the project root, from below the work tree's root, and with no repository from a project root inside `.claude`. The table at the head of `host_config.rs`'s tests names both, and says `judge`'s own internal branches are not split per base. The six mutations are in the list as M175 to M180 (180 in all), and the harness run of them killed each, by the test written for it; no existing test changed, so every earlier verdict stands. With no further re-read, as the option reads, task 11's fix round closes here.
+
 - [x] Measure and write the measured question here
 - [x] The owner answers (a), (b) or (c); apply the answer
-- [ ] Re-read 14's question: the owner answers (a), (b) or (c); apply the answer
+- [x] Re-read 14's question: the owner answers (a), (b) or (c); apply the answer
 
 ## 12. Decide: malformed session and config files fall back instead of failing fast (CFG-ENV-008, blocking)
 
@@ -398,7 +400,7 @@ Either option costs the same beyond the code: `runtime/src/primitives/apply_mani
 
 Recommended: (a). Measured as writes closed, reads closed, calls refused and prompts added: (a) closes every measured write and the read, refuses none of today's calls and adds no prompt; (b) closes the writes alone at the same cost.
 
-Asked once task 11's fix round closes. Question 2, on `fetch-archive` and `extract-archive` writing into a project that lies inside a staging root, is measured as options and asked after this one is answered and applied.
+Asked 2026-10-23, once task 11's fix round closed; re-checked against the source that day (`apply_manifest.rs`, `mod.rs` and the integration tests unchanged since the question was written, `{staging}` and the scenario's sentence as quoted). Question 2, on `fetch-archive` and `extract-archive` writing into a project that lies inside a staging root, is measured as options and asked after this one is answered and applied.
 
 - [ ] Measure what `/ductus` passes as each root (State A over MCP, State B over the CLI) and which other caller passes one, write the measured question here, and ask the owner after tasks 14 and 11
 - [ ] Apply the answer

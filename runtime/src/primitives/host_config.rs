@@ -646,6 +646,16 @@ mod tests {
     // from P and from W, by `every_root_config_link_is_followed_back`; and D's
     // C per directory, from P and from W, by
     // `every_config_directory_names_a_row_through_its_root`.
+    //
+    // Two branches inside the shared steps are held per base too (re-read
+    // 14, the owner's answer (b) to its question): the Claude Code worktree
+    // exception's judgment of the names below a worktree, from P
+    // (`a_claude_worktree_is_judged_from_the_main_checkout`), from W and from
+    // A (`the_worktree_exception_judges_from_each_base`); and the path as
+    // given under another spelling of the project root and with a `..` read
+    // lexically, from P, W and A (`a_spelled_path_is_judged_as_given_from_each_base`).
+    // `judge`'s own internal branches, the skip of a config directory that
+    // links to an ancestor and the folded comparison, are not split per base.
 
     fn judge(repo: &Path, rel: &str) -> Result<Option<HostRow>> {
         check_destination(repo, &repo.join(rel), rel)
@@ -1629,6 +1639,83 @@ mod tests {
                 "{dir} landing"
             );
         }
+    }
+
+    /// The worktree exception's own judgment of the names below a worktree
+    /// is made from every base: from below the work tree's root, run from the
+    /// worktree's `specs/` and from the main checkout's, and with no
+    /// repository from a project root inside a worktree's own `.claude`.
+    #[test]
+    fn the_worktree_exception_judges_from_each_base() {
+        let tmp = tempfile::tempdir().unwrap();
+        let main = tmp.path();
+        git2::Repository::init(main).unwrap();
+        let worktree = main.join(".claude/worktrees/wt");
+        std::fs::create_dir_all(worktree.join(".claude")).unwrap();
+        std::fs::create_dir_all(worktree.join("specs")).unwrap();
+        std::fs::create_dir_all(main.join("specs")).unwrap();
+        std::fs::write(
+            worktree.join(".git"),
+            "gitdir: ../../../.git/worktrees/wt\n",
+        )
+        .unwrap();
+        let below = worktree.join("specs");
+        let dest = below.join("../.claude/settings.json");
+        assert!(refused(&check_destination(&below, &dest, "x")));
+        let below = main.join("specs");
+        let dest = below.join("../.claude/worktrees/wt/.claude/settings.json");
+        assert!(refused(&check_destination(&below, &dest, "x")));
+
+        let tmp = tempfile::tempdir().unwrap();
+        let inside = tmp.path().join(".claude/worktrees/wt/.claude");
+        std::fs::create_dir_all(&inside).unwrap();
+        assert!(refused(&judge(&inside, "settings.json")));
+    }
+
+    /// A path spelled otherwise than the project root spells it is judged as
+    /// given from every base: through `sub/..` and through a `..` out of a
+    /// linked commands directory, read lexically, with a repository at the
+    /// project root and from below the work tree's root, and with no
+    /// repository from a project root inside `.claude`.
+    #[cfg(unix)]
+    #[test]
+    fn a_spelled_path_is_judged_as_given_from_each_base() {
+        let tmp = tempfile::tempdir().unwrap();
+        let tree = tmp.path();
+        git2::Repository::init(tree).unwrap();
+        std::fs::create_dir_all(tree.join(".claude")).unwrap();
+        std::fs::create_dir_all(tree.join("sub")).unwrap();
+        std::fs::create_dir_all(tree.join("specs")).unwrap();
+        std::fs::create_dir_all(tree.join("shared/cmds/acme")).unwrap();
+        std::os::unix::fs::symlink("../shared/cmds", tree.join(".claude/commands")).unwrap();
+        for rel in [
+            "sub/../.claude/commands/acme/g.md",
+            ".claude/commands/acme/../acme/g.md",
+        ] {
+            assert_eq!(
+                check_destination(tree, &tree.join(rel), rel).unwrap(),
+                Some(HostRow::CommandOrSkill),
+                "{rel}"
+            );
+        }
+        let below = tree.join("specs");
+        let dest = below.join("../.claude/commands/acme/../acme/g.md");
+        assert_eq!(
+            check_destination(&below, &dest, "x").unwrap(),
+            Some(HostRow::CommandOrSkill)
+        );
+
+        let tmp = tempfile::tempdir().unwrap();
+        let bare = tmp.path();
+        std::fs::create_dir_all(bare.join(".claude")).unwrap();
+        std::fs::create_dir_all(bare.join("shared/cmds/acme")).unwrap();
+        std::os::unix::fs::symlink("../shared/cmds", bare.join(".claude/commands")).unwrap();
+        let inside = bare.join(".claude");
+        let dest = inside.join("commands/acme/../acme/g.md");
+        assert_eq!(
+            check_destination(&inside, &dest, "x").unwrap(),
+            Some(HostRow::CommandOrSkill)
+        );
     }
 
     /// Through the root's link to another config directory, a `worktrees`
