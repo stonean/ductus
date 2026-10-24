@@ -402,6 +402,15 @@ Recommended: (a). Measured as writes closed, reads closed, calls refused and pro
 
 Asked 2026-10-23, once task 11's fix round closed; re-checked against the source that day (`apply_manifest.rs`, `mod.rs` and the integration tests unchanged since the question was written, `{staging}` and the scenario's sentence as quoted). Question 2, on `fetch-archive` and `extract-archive` writing into a project that lies inside a staging root, is measured as options and asked after this one is answered and applied.
 
+Handoff, 2026-10-24: question 1 was put to the owner in the session on 2026-10-23, as written above; no answer yet. Apply the answer exactly as its option reads (both options also need the `ductus.md` CLI line `{staging}` -> `{framework-root}`, then `cp framework/bootstrap/ductus.md framework/bootstrap/govern.md`, the scenario sentence's correction with a 022 review refresh, plan.md's Agent reach, tests each proven by a mutation in a `scripts/mutation/` list, the full gate, and a re-read of the fix round), then measure and ask question 2.
+
+Measured toward question 2, 2026-10-23, not yet a question (re-derive before writing it):
+
+- A refusal of any staging path inside the project costs two tests their layout: `runtime/tests/exec_subprocess.rs` and the `/ductus` parity fixture (`runtime/tests/fixtures/ductus-basic/.govern.session.toml`, `dest = '{REPO}/staging'`) both extract into a `staging/` inside their project root, so either moves its staging directory out (the golden may change).
+- Which work tree bounds it matters here, the reverse of question 1: refusing a staging path inside the outermost work tree refuses `/ductus` when that tree holds the temp directory, as on Windows, where the temp directory lies under the user's profile, for a home directory that is a git work tree; the innermost work tree holding the working directory, or the working directory itself, avoids that, but the working directory alone is passed by a run from `specs/` with the store-path CLI allow (`~/.ductus/bin/ductus`).
+- Judging each written file with task 11's check instead of refusing the path refuses `/ductus`'s own extraction in the same layouts, since the framework archive carries `.mcp.json`, `.claude/commands/ductus/`, `.pi/prompts/` and `.pi/extensions/` at its root (`git archive HEAD`); it would also leave other project files writable, an executable `.githooks/pre-commit` among them, since `extract-archive` keeps an archive's mode bits.
+- Leaving it means recording it in plan.md's "What this leaves": a project inside a staging root (under `/tmp` on Linux, under the per-user temp directory on macOS, under `%TEMP%` or, with neither `TMP` nor `TEMP` set, anywhere in the profile on Windows, or wherever `TMPDIR` names) has its files writable by both archive primitives.
+
 - [ ] Measure what `/ductus` passes as each root (State A over MCP, State B over the CLI) and which other caller passes one, write the measured question here, and ask the owner after tasks 14 and 11
 - [ ] Apply the answer
 
