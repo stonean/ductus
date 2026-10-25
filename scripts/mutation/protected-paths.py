@@ -22,13 +22,14 @@ The judgments and the tests that hold them:
       by append_task::a_feature_path_under_a_config_or_protected_directory_is_refused.
   M5  create-scenario routes its feature path through check_no_destination.
       Killed by create_scenario::refuses_a_feature_path_under_a_config_or_protected_directory.
-  M6  check_no_protected refuses a protected directory (merge-permissions'
-      own path, a judgment distinct from judge_names'). Killed by the
-      merge_permissions test (`.git/config`).
-  M7  check_no_protected refuses a protected file. Killed by that test
-      (`.npmrc`).
-  M8  check_no_protected refuses an MCP/settings file. Killed by that test
-      (`.mcp.json`).
+
+`check_no_protected` has no judgment of its own to mutate: it delegates to
+`check_destination` (every base, the links, the followback) and swallows only
+the config-directory-row refusal, so its protected judgment is M1/M2 above and
+its MCP/settings-file judgment is task 11's `destination-checks.py`. The
+`merge_permissions` tests (`a_protected_path_is_refused`, the cwd-inside-a-
+protected-directory case, the root-file-link case, `a_config_dir_settings_file_stays_allowed`)
+exercise that delegation; M3 proves the routing.
 
 No mutation is an expected survivor.
 """
@@ -70,26 +71,5 @@ MUTATIONS = [
         '    super::host_config::check_no_destination(repo, &feature_dir, &args.feature_path)?;',
         '    let _ = &feature_dir;',
         'create_scenario',
-    ),
-    (
-        'M6 check_no_protected protected-directory refusal removed',
-        'src/primitives/host_config.rs',
-        '        if let Some(seq) = protected_dir_in(names) {\n            return Err(refuse_protected_dir(shown, seq));\n        }',
-        '        if let Some(seq) = protected_dir_in(names) {\n            let _ = seq;\n        }',
-        'merge_permissions',
-    ),
-    (
-        'M7 check_no_protected protected-file refusal removed',
-        'src/primitives/host_config.rs',
-        '            if let Some(&file) = PROTECTED_FILES.iter().find(|f| folded == **f) {\n                return Err(refuse_protected_file(shown, file));\n            }',
-        '            if let Some(&file) = PROTECTED_FILES.iter().find(|f| folded == **f) {\n                let _ = file;\n            }',
-        'merge_permissions',
-    ),
-    (
-        'M8 check_no_protected MCP/settings-file refusal removed',
-        'src/primitives/host_config.rs',
-        '            if let Some(&file) = CONFIG_FILES.iter().find(|f| folded == **f) {\n                return Err(refuse_file(shown, file));\n            }',
-        '            if let Some(&file) = CONFIG_FILES.iter().find(|f| folded == **f) {\n                let _ = file;\n            }',
-        'merge_permissions',
     ),
 ]

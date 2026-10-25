@@ -344,62 +344,42 @@ pub(crate) fn check_no_destination(repo: &Path, dest: &Path, shown: &str) -> Res
     }
 }
 
-/// Refuse a destination in the host's protected set alone — the directories
-/// and files Claude Code never auto-approves a write under or to (spec 022
-/// task 20) — judged as given under the project root and as the write lands
-/// and its links lead. Unlike [`check_no_destination`], the agent
-/// config-directory rows are NOT judged: `merge-permissions` writes
-/// `{config-dir}/settings.local.json` legitimately (via `/configure`), so it
-/// is held off the protected set alone, not off the config directories. The
-/// destination is a path already screened by `validate_contained`, so it lies
-/// inside the working directory and a single base suffices; the contrived case
-/// of a protected directory that is itself a link to a target written directly
-/// is left (merge-permissions' content is the capped permission set).
+/// Refuse a destination in the host's protected set — the directories and
+/// files Claude Code never auto-approves a write under or to (spec 022 task
+/// 20) — and the MCP/settings files, but **not** the agent config-directory
+/// rows: `merge-permissions` writes `{config-dir}/settings.local.json`
+/// legitimately (via `/configure`), so it is held off the protected set
+/// alone, not off the config directories.
+///
+/// It delegates to [`check_destination`] so it inherits the full judgment —
+/// every base (the working directory *and* the outermost git work tree above
+/// it, which is what catches a working directory that is itself a protected
+/// subdirectory), the as-given/landing/links-lead forms, and the root-file
+/// link-followback — and keeps only the one allowance: a config-directory
+/// non-row refusal (the `settings.local.json` case) is swallowed, while a
+/// protected directory or file (task 20), an MCP/settings file (task 11), and
+/// any I/O error propagate. A `/ductus` row ([`HostRow`]) and a neutral path
+/// are both allowed.
 ///
 /// # Errors
 ///
-/// [`PrimitiveError::InvalidPath`] for a destination in the protected set;
-/// [`PrimitiveError::Io`] when a path cannot be resolved.
+/// [`PrimitiveError::InvalidPath`] for a destination in the protected set or
+/// an MCP/settings file; [`PrimitiveError::Io`] when a path cannot be resolved.
 pub(crate) fn check_no_protected(repo: &Path, dest: &Path, shown: &str) -> Result<()> {
-    let canonical_repo = resolve_symlinks(repo).map_err(|source| PrimitiveError::Io {
-        path: repo.into(),
-        source,
-    })?;
-    // The path as given under the project root, and where it fully resolves —
-    // `resolve_symlinks` follows `dest`'s own link and any on its existing
-    // ancestors, so a `dest` that is or lies under a link to a protected path
-    // is caught here. `dest` is `validate_contained`-screened (inside the
-    // working directory), so a single base suffices (`merge-permissions`).
-    let resolved = resolve_symlinks(dest).map_err(|source| PrimitiveError::Io {
-        path: dest.into(),
-        source,
-    })?;
-    let mut candidates: Vec<Vec<String>> = Vec::new();
-    if let Some(names) = given_names(repo, &canonical_repo, dest) {
-        candidates.push(names);
-    }
-    if let Some(names) = strip_folded(&resolved, &canonical_repo) {
-        candidates.push(names);
-    }
-    for names in &candidates {
-        if let Some(last) = names.last() {
-            let folded = fold(last);
-            // The MCP/settings files too: `merge-permissions` never writes one
-            // (its config-directory target is `settings.local.json`, which is
-            // not among them), so reaching `.mcp.json` is the task-20 closure
-            // of the route task 11 left open for this writer.
-            if let Some(&file) = CONFIG_FILES.iter().find(|f| folded == **f) {
-                return Err(refuse_file(shown, file));
-            }
-            if let Some(&file) = PROTECTED_FILES.iter().find(|f| folded == **f) {
-                return Err(refuse_protected_file(shown, file));
-            }
+    match check_destination(repo, dest, shown) {
+        Ok(_) => Ok(()),
+        // The config-directory non-row refusal alone is allowed here —
+        // `merge-permissions` writes `settings.local.json` under a config
+        // directory. `refuse` is the only refusal naming "configuration
+        // directory `"; `refuse_file`, `refuse_protected_file` and
+        // `refuse_protected_dir` do not, so they (and `Io`) propagate.
+        Err(PrimitiveError::InvalidPath { reason, .. })
+            if reason.contains("configuration directory `") =>
+        {
+            Ok(())
         }
-        if let Some(seq) = protected_dir_in(names) {
-            return Err(refuse_protected_dir(shown, seq));
-        }
+        Err(other) => Err(other),
     }
-    Ok(())
 }
 
 /// `dest`'s names under the project root as written: what follows the

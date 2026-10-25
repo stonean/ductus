@@ -1304,4 +1304,39 @@ mod tests {
         assert_eq!(result.action, "created");
         assert!(tmp.path().join(".claude/settings.local.json").exists());
     }
+
+    /// The working directory may itself be a protected subdirectory of a git
+    /// work tree, so the protected component is above `repo`; `check_no_protected`
+    /// delegates to `check_destination`, which judges from the outer work-tree
+    /// root too, and refuses (spec 022 task 20, re-read M-1).
+    #[test]
+    fn a_protected_path_above_the_working_directory_is_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        git2::Repository::init(tmp.path()).unwrap();
+        let cwd = tmp.path().join(".cargo");
+        std::fs::create_dir_all(&cwd).unwrap();
+        let err = run(&args("config.toml", &["Edit"], &[]), &cwd).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { reason, .. } if reason.contains("task 20")),
+            "{err:?}"
+        );
+        assert!(!cwd.join("config.toml").exists(), "nothing written");
+    }
+
+    /// A write to the target a root MCP/settings-file link resolves to is
+    /// refused: `check_destination`'s root-file link-followback catches it
+    /// (spec 022 task 20, re-read S-1).
+    #[cfg(unix)]
+    #[test]
+    fn a_write_through_a_root_mcp_link_is_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        git2::Repository::init(tmp.path()).unwrap();
+        std::fs::create_dir_all(tmp.path().join("shared")).unwrap();
+        std::os::unix::fs::symlink("shared/m.json", tmp.path().join(".mcp.json")).unwrap();
+        let err = run(&args("shared/m.json", &["Edit"], &[]), tmp.path()).unwrap_err();
+        assert!(
+            matches!(&err, PrimitiveError::InvalidPath { reason, .. } if reason.contains(".mcp.json")),
+            "{err:?}"
+        );
+    }
 }
