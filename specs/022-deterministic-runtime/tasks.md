@@ -482,8 +482,10 @@ Options:
 
 Recommended: (a). Measured as routes closed, prompts added and cost: (a) and (c) close the seed's two routes and (b) neither, and none of the three closes the pointer's replacement by ductus's own primitives (task 22); (a) adds one prompt to each run that acquires, which already prompts once for the install, at the cost of four seed rows, while (c) adds none at the cost of a runtime primitive and the procedure's rewrite, whose details are not yet measured.
 
+Asked 2026-10-25, once `cd06a227` and `5a371a04` were green. **Resolved 2026-10-25: (a).** Applied: the four exact `cp` and `ln -sf` rules (each with its `.exe` twin) leave the Claude, OpenCode and Antigravity seeds and join their retired lists (Claude's 46 shell entries, OpenCode's 46, Antigravity's 20; retired 17, 10 and 11 there, Auggie's 34 and 10 unchanged), `install.sh`'s copies regenerated, and `ductus.md`'s seed paragraph and §Pointer materialization, plan.md and 048's AC22 annotation say the pointer's link now prompts outside Auggie. 32c checks 63 entries (48 seed-retired, 15 `/configure`-retired) and passes.
+
 - [x] Measure question 1a and write it here
-- [ ] The owner answers question 1a (a), (b) or (c); apply the answer
+- [x] The owner answers question 1a (a), (b) or (c); apply the answer
 
 The questions after this one, each re-measured before it is asked: (2) `curl` and `tar`, which no host's grammar narrows to their step forms, the operands carrying a random `{tempdir}`; (3) the canonical sets' entries no step runs and how existing projects lose them (Claude's set: 29 static entries, 23 shell; 19 used by no command source, 17 of them shell; 15 used by no command source and no bootstrap step, 13 shell; Auggie 16 and 12 of 26, OpenCode 20 and 13 of 29, Antigravity 16 and 13 of 23; retired lists for Claude and Auggie only, Auggie's without `mcp:ductus:run-generator`, which every Auggie project that ran a released `/configure` holds; and `ls` and `command -v`, which Family 15 holds in a seed and its canonical set together); (4) bare `Edit` and `Write`.
 
