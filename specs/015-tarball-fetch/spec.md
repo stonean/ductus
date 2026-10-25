@@ -1,6 +1,6 @@
 ---
 title: "015-tarball-fetch — spec"
-status: done
+status: in-progress
 dependencies: [007-govern-workflow, 012-multi-agent-govern, 029-bootstrap-runtime-autowire]
 tags: [bootstrap, performance]
 next-criterion: 14
