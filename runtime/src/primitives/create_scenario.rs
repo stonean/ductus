@@ -29,6 +29,9 @@ pub fn run(args: &CreateScenarioArgs, repo: &Path) -> Result<CreateScenarioResul
     super::validate_feature_path(repo, &args.feature_path)?;
     validate_slug(&args.slug)?;
     let feature_dir = repo.join(&args.feature_path);
+    // Refuse a feature path under an agent config directory or a host-protected
+    // path, as `append-task` does (spec 022 tasks 11 and 20).
+    super::host_config::check_no_destination(repo, &feature_dir, &args.feature_path)?;
     if !feature_dir.is_dir() {
         return Err(PrimitiveError::FeaturePathNotFound {
             path: PathBuf::from(&args.feature_path),
@@ -278,5 +281,21 @@ mod tests {
         make_feature(tmp.path(), "specs/042-foo");
         let err = run(&args("specs/../target", "x", None), tmp.path()).unwrap_err();
         assert!(matches!(err, PrimitiveError::InvalidPath { .. }));
+    }
+
+    /// A feature path under an agent config directory or a host-protected path
+    /// is refused (spec 022 tasks 11 and 20), as for `append-task`.
+    #[test]
+    fn refuses_a_feature_path_under_a_config_or_protected_directory() {
+        let tmp = tempdir().unwrap();
+        for path in [".claude/commands", ".git", ".vscode"] {
+            make_feature(tmp.path(), path);
+            let err = run(&args(path, "x", None), tmp.path()).unwrap_err();
+            assert!(
+                matches!(&err, PrimitiveError::InvalidPath { reason, .. }
+                    if reason.contains("task 11") || reason.contains("task 20")),
+                "{path}: {err:?}"
+            );
+        }
     }
 }

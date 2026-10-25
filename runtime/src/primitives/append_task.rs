@@ -26,6 +26,15 @@ use crate::schema::primitives::{AppendTaskArgs, AppendTaskResult};
 /// filesystem failures.
 pub fn run(args: &AppendTaskArgs, repo: &Path) -> Result<AppendTaskResult> {
     super::validate_feature_path(repo, &args.feature_path)?;
+    // A feature path may name any directory inside the project, so refuse one
+    // under an agent config directory or a host-protected path — a `tasks.md`
+    // written there could load as a rule or lie in `.git`/`.cargo` (spec 022
+    // tasks 11 and 20).
+    super::host_config::check_no_destination(
+        repo,
+        &repo.join(&args.feature_path),
+        &args.feature_path,
+    )?;
     // Text arguments are interpolated verbatim into tasks.md line
     // templates; an embedded newline would smuggle extra markdown
     // structure (phantom headings, checkboxes, Done-when lines) past the
@@ -1413,5 +1422,22 @@ mod tests {
         let body = fs::read_to_string(&tasks_path).unwrap();
         assert!(body.contains("## 2. Second"));
         assert!(!body.contains("### 2. Second"));
+    }
+
+    /// A feature path under an agent config directory or a host-protected path
+    /// is refused, before the directory is read (spec 022 tasks 11 and 20) —
+    /// a `tasks.md` there could load as a rule (`.claude/rules`) or lie in a
+    /// protected directory (`.git`).
+    #[test]
+    fn a_feature_path_under_a_config_or_protected_directory_is_refused() {
+        let tmp = tempdir().unwrap();
+        for path in [".claude/rules", ".git/hooks", ".cargo"] {
+            let err = run(&args(path, "T", "done"), tmp.path()).unwrap_err();
+            assert!(
+                matches!(&err, PrimitiveError::InvalidPath { reason, .. }
+                    if reason.contains("task 11") || reason.contains("task 20")),
+                "{path}: {err:?}"
+            );
+        }
     }
 }

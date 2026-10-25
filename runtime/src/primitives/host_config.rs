@@ -19,6 +19,21 @@
 //! bridge (the §Derived values rows). The project name a row carries is not
 //! known here, so a row is matched by its shape.
 //!
+//! Spec 022 task 20 (the owner's answer (a)) extends the same check to the
+//! rest of Claude Code's protected set — the directories and files it never
+//! auto-approves a write under or to, beyond the agent config directories
+//! ([`PROTECTED_DIRS`], [`PROTECTED_FILES`]). No `/ductus` row is written under
+//! any of them, so a destination there is refused outright. The six writers
+//! that reach a destination a caller supplies now go through the check:
+//! `apply-manifest`, `enforce-manifest` and `merge-managed-block` (already,
+//! for the config directories), `append-task` and `create-scenario` (their
+//! feature path), and `merge-permissions` through [`check_no_protected`], the
+//! protected set alone, since it writes `settings.local.json` under a config
+//! directory legitimately. `.githooks` is deliberately not in the set: it is
+//! ductus's own hook directory, not one the host protects, so an agent writes
+//! it with its own tools without a prompt and a ductus write there bypasses
+//! none (022's plan, Agent reach, the task-20 residual).
+//!
 //! The project, for this check, is the outermost git work tree that holds
 //! the working directory, or the working directory itself when no work tree
 //! does: a caller of the CLI chooses the working directory, so it alone does
@@ -60,6 +75,75 @@ const CONFIG_DIRS: &[(&str, Layout)] = &[
 /// config directory: Claude Code's `.mcp.json`, and the root config `OpenCode` reads,
 /// which holds both its `mcp` block and its `permission` map.
 const CONFIG_FILES: &[&str] = &[".mcp.json", "opencode.json", "opencode.jsonc"];
+
+/// Directories Claude Code never auto-approves a write under, beyond the agent
+/// config directories above — its protected set less `.claude` (already a
+/// `CONFIG_DIRS` entry): "Protected directories: `.git`, `.config/git`,
+/// `.vscode`, `.idea`, `.husky`, `.cargo`, `.devcontainer`, `.yarn`, `.mvn`,
+/// `.claude`" (code.claude.com/docs/en/permission-modes, Protected paths).
+/// The owner's answer (a) to spec 022 task 20 extends the destination check to
+/// them. Each is a component sequence matched at any depth (`.config/git` is
+/// the one with two components); unlike `CONFIG_DIRS`, no `/ductus` row is
+/// written under any of them, so a destination under one is always refused.
+/// `.githooks` is deliberately absent: it is ductus's own hook directory, not
+/// in the host's protected set, so an agent writes it with its own tools
+/// without a prompt and a ductus write there bypasses none (task 20, the
+/// `.githooks` reasoning in 022's plan).
+const PROTECTED_DIRS: &[&[&str]] = &[
+    &[".git"],
+    &[".config", "git"],
+    &[".vscode"],
+    &[".idea"],
+    &[".husky"],
+    &[".cargo"],
+    &[".devcontainer"],
+    &[".yarn"],
+    &[".mvn"],
+];
+
+/// Files Claude Code never auto-approves a write to, beyond the MCP/settings
+/// files above — its "Protected files" list less `.mcp.json`, already a
+/// `CONFIG_FILES` entry (code.claude.com/docs/en/permission-modes, Protected
+/// files). Matched as the last name. No `/ductus` step writes any of them
+/// (verified against the Shared Files manifest, task 20).
+const PROTECTED_FILES: &[&str] = &[
+    ".gitconfig",
+    ".gitmodules",
+    ".bashrc",
+    ".bash_profile",
+    ".bash_login",
+    ".bash_aliases",
+    ".bash_logout",
+    ".zshrc",
+    ".zprofile",
+    ".zshenv",
+    ".zlogin",
+    ".zlogout",
+    ".profile",
+    ".envrc",
+    ".npmrc",
+    ".yarnrc",
+    ".yarnrc.yml",
+    ".pnp.cjs",
+    ".pnp.loader.mjs",
+    ".pnpmfile.cjs",
+    "bunfig.toml",
+    ".bunfig.toml",
+    ".bazelrc",
+    ".bazelversion",
+    ".bazeliskrc",
+    ".pre-commit-config.yaml",
+    "lefthook.yml",
+    "lefthook.yaml",
+    ".lefthook.yml",
+    ".lefthook.yaml",
+    "gradle-wrapper.properties",
+    "maven-wrapper.properties",
+    ".devcontainer.json",
+    ".ripgreprc",
+    "pyrightconfig.json",
+    ".claude.json",
+];
 
 /// Which of the permitted rows a destination is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -260,6 +344,64 @@ pub(crate) fn check_no_destination(repo: &Path, dest: &Path, shown: &str) -> Res
     }
 }
 
+/// Refuse a destination in the host's protected set alone — the directories
+/// and files Claude Code never auto-approves a write under or to (spec 022
+/// task 20) — judged as given under the project root and as the write lands
+/// and its links lead. Unlike [`check_no_destination`], the agent
+/// config-directory rows are NOT judged: `merge-permissions` writes
+/// `{config-dir}/settings.local.json` legitimately (via `/configure`), so it
+/// is held off the protected set alone, not off the config directories. The
+/// destination is a path already screened by `validate_contained`, so it lies
+/// inside the working directory and a single base suffices; the contrived case
+/// of a protected directory that is itself a link to a target written directly
+/// is left (merge-permissions' content is the capped permission set).
+///
+/// # Errors
+///
+/// [`PrimitiveError::InvalidPath`] for a destination in the protected set;
+/// [`PrimitiveError::Io`] when a path cannot be resolved.
+pub(crate) fn check_no_protected(repo: &Path, dest: &Path, shown: &str) -> Result<()> {
+    let canonical_repo = resolve_symlinks(repo).map_err(|source| PrimitiveError::Io {
+        path: repo.into(),
+        source,
+    })?;
+    // The path as given under the project root, and where it fully resolves —
+    // `resolve_symlinks` follows `dest`'s own link and any on its existing
+    // ancestors, so a `dest` that is or lies under a link to a protected path
+    // is caught here. `dest` is `validate_contained`-screened (inside the
+    // working directory), so a single base suffices (`merge-permissions`).
+    let resolved = resolve_symlinks(dest).map_err(|source| PrimitiveError::Io {
+        path: dest.into(),
+        source,
+    })?;
+    let mut candidates: Vec<Vec<String>> = Vec::new();
+    if let Some(names) = given_names(repo, &canonical_repo, dest) {
+        candidates.push(names);
+    }
+    if let Some(names) = strip_folded(&resolved, &canonical_repo) {
+        candidates.push(names);
+    }
+    for names in &candidates {
+        if let Some(last) = names.last() {
+            let folded = fold(last);
+            // The MCP/settings files too: `merge-permissions` never writes one
+            // (its config-directory target is `settings.local.json`, which is
+            // not among them), so reaching `.mcp.json` is the task-20 closure
+            // of the route task 11 left open for this writer.
+            if let Some(&file) = CONFIG_FILES.iter().find(|f| folded == **f) {
+                return Err(refuse_file(shown, file));
+            }
+            if let Some(&file) = PROTECTED_FILES.iter().find(|f| folded == **f) {
+                return Err(refuse_protected_file(shown, file));
+            }
+        }
+        if let Some(seq) = protected_dir_in(names) {
+            return Err(refuse_protected_dir(shown, seq));
+        }
+    }
+    Ok(())
+}
+
 /// `dest`'s names under the project root as written: what follows the
 /// outermost ancestor of `dest` that resolves to the project root, with no
 /// `..` among them. The root may be spelled otherwise than `repo`: through
@@ -348,6 +490,13 @@ fn judge(repo: &Path, canonical_repo: &Path, path: &Path, shown: &str) -> Result
             return Err(refuse_file(shown, file));
         }
     }
+    // The protected set (task 20) is judged by `judge_names` on the path's
+    // names below, which catches a write to a protected path as given, where
+    // it lands and where its links lead. The config-directory link-redirect
+    // above has no protected analogue: it exists because an attacker can make
+    // `.claude` a link to divert `/ductus`'s own writes, whereas a project
+    // whose `.git` or `.cargo` is itself a link (a write to the target then
+    // read through it) is a case the host itself does not guard and is left.
     judge_names(&names, shown)
 }
 
@@ -359,12 +508,39 @@ fn judge_names(names: &[String], shown: &str) -> Result<Option<HostRow>> {
     {
         return Err(refuse_file(shown, file));
     }
+    // A protected file (task 20), judged beside the MCP/settings files above,
+    // as a parallel check so the config-file let-chain is unchanged.
+    if let Some(last) = names.last()
+        && let Some(&file) = PROTECTED_FILES.iter().find(|f| fold(last) == **f)
+    {
+        return Err(refuse_protected_file(shown, file));
+    }
+    // A protected directory refuses at any depth, before the config-dir rows:
+    // it carries no permitted row (task 20).
+    if let Some(seq) = protected_dir_in(names) {
+        return Err(refuse_protected_dir(shown, seq));
+    }
     for (depth, name) in names.iter().enumerate() {
         if let Some(&(dir, layout)) = CONFIG_DIRS.iter().find(|(dir, _)| fold(name) == *dir) {
             return judge_under(dir, layout, &names[depth + 1..], shown);
         }
     }
     Ok(None)
+}
+
+/// The first `PROTECTED_DIRS` component sequence that appears consecutively in
+/// `names` (compared through [`fold`]), at any depth, or `None`. A
+/// single-component entry (`.git`) matches one name; `.config/git` matches the
+/// pair.
+fn protected_dir_in(names: &[String]) -> Option<&'static [&'static str]> {
+    PROTECTED_DIRS.iter().copied().find(|seq| {
+        names.windows(seq.len()).any(|window| {
+            window
+                .iter()
+                .zip(seq.iter())
+                .all(|(name, want)| fold(name) == *want)
+        })
+    })
 }
 
 /// The verdict on `rest`, a path under the config directory `dir`: the row
@@ -504,6 +680,27 @@ fn refuse_file(shown: &str, file: &str) -> PrimitiveError {
         reason: format!(
             "resolves to `{file}`, an agent host's MCP or permission configuration, which a \
              ductus primitive does not write (spec 022 task 11)"
+        ),
+    }
+}
+
+fn refuse_protected_dir(shown: &str, seq: &[&str]) -> PrimitiveError {
+    PrimitiveError::InvalidPath {
+        path: shown.into(),
+        reason: format!(
+            "resolves into `{}`, a directory the agent host never auto-approves a write under, \
+             which a ductus primitive does not write (spec 022 task 20)",
+            seq.join("/")
+        ),
+    }
+}
+
+fn refuse_protected_file(shown: &str, file: &str) -> PrimitiveError {
+    PrimitiveError::InvalidPath {
+        path: shown.into(),
+        reason: format!(
+            "resolves to `{file}`, a file the agent host never auto-approves a write to, which a \
+             ductus primitive does not write (spec 022 task 20)"
         ),
     }
 }
@@ -1880,5 +2077,76 @@ mod tests {
         ] {
             assert_eq!(row(layout, &parts), Some(kind), "{parts:?}");
         }
+    }
+
+    fn refused_protected(result: &Result<Option<HostRow>>) -> bool {
+        matches!(result, Err(PrimitiveError::InvalidPath { reason, .. }) if reason.contains("task 20"))
+    }
+
+    /// A destination under a protected directory, or that is a protected file,
+    /// is refused — Claude Code's protected set beyond the agent config
+    /// directories (spec 022 task 20). A protected directory is matched at any
+    /// depth; `.config/git` by its two components; a protected file as the
+    /// last name.
+    #[test]
+    fn a_protected_destination_is_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        git2::Repository::init(repo).unwrap();
+        for rel in [
+            ".git/config",
+            ".cargo/config.toml",
+            "sub/.vscode/settings.json",
+            ".config/git/attributes",
+            ".npmrc",
+            "sub/.pre-commit-config.yaml",
+            ".claude.json",
+        ] {
+            assert!(refused_protected(&judge(repo, rel)), "{rel}");
+        }
+    }
+
+    /// `.githooks` is ductus's own hook directory, not in the host's protected
+    /// set, so a write there is not refused; nor is a `.config` subdirectory
+    /// other than `.config/git` (spec 022 task 20).
+    #[test]
+    fn an_unprotected_destination_is_not_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        git2::Repository::init(repo).unwrap();
+        assert_eq!(judge(repo, ".githooks/pre-commit").unwrap(), None);
+        assert_eq!(judge(repo, ".config/nvim/init.lua").unwrap(), None);
+    }
+
+    /// The lists carry Claude Code's documented protected set beyond the agent
+    /// config directories, and do not duplicate `.mcp.json` (a `CONFIG_FILES`
+    /// entry) (spec 022 task 20).
+    #[test]
+    fn the_protected_lists_match_the_documented_set() {
+        for dir in [
+            ".git",
+            ".vscode",
+            ".idea",
+            ".husky",
+            ".cargo",
+            ".devcontainer",
+            ".yarn",
+            ".mvn",
+        ] {
+            assert!(PROTECTED_DIRS.iter().any(|seq| *seq == [dir]), "{dir}");
+        }
+        assert!(PROTECTED_DIRS.iter().any(|seq| *seq == [".config", "git"]));
+        for file in [
+            ".gitconfig",
+            ".gitmodules",
+            ".npmrc",
+            ".pre-commit-config.yaml",
+            "lefthook.yml",
+            ".claude.json",
+            "pyrightconfig.json",
+        ] {
+            assert!(PROTECTED_FILES.contains(&file), "{file}");
+        }
+        assert!(!PROTECTED_FILES.contains(&".mcp.json"));
     }
 }

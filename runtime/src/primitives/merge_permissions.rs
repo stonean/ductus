@@ -90,9 +90,10 @@ use crate::schema::primitives::{MergePermissionsArgs, MergePermissionsResult};
 ///   so a contradictory call never leaves a partial write.
 pub fn run(args: &MergePermissionsArgs, repo: &Path) -> Result<MergePermissionsResult> {
     super::validate_contained(repo, &args.path)?;
+    let target_path = repo.join(&args.path);
+    super::host_config::check_no_protected(repo, &target_path, &args.path)?;
     validate_revoke_disjoint(&args.allow, &args.revoke)?;
     refuse_beyond_ceiling(&args.allow)?;
-    let target_path = repo.join(&args.path);
 
     let existing = match target_path.try_exists() {
         Ok(true) => Some(read_text(&target_path)?),
@@ -1266,5 +1267,41 @@ mod tests {
             "the parse found the bullets: {documented:?}"
         );
         assert_eq!(documented, canonical_allow());
+    }
+
+    /// A path in the host's protected set is refused, before any write (spec
+    /// 022 task 20). A config-directory settings file stays allowed — that is
+    /// `merge-permissions`' own target, covered by the tests above that write
+    /// `.augment/settings.json`; this is the protected-set complement.
+    #[test]
+    fn a_protected_path_is_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        // `.git`/`.cargo`/`.npmrc` are task-20 protected paths; `.mcp.json` is
+        // task 11's MCP file, which `merge-permissions` reaches only because it
+        // was not routed through the check before (task 20 closes it).
+        for path in [".git/config", ".cargo/config.toml", ".npmrc", ".mcp.json"] {
+            let err = run(&args(path, &["Edit"], &[]), tmp.path()).unwrap_err();
+            assert!(
+                matches!(&err, PrimitiveError::InvalidPath { reason, .. }
+                    if reason.contains("task 20") || reason.contains("task 11")),
+                "{path}: {err:?}"
+            );
+            assert!(!tmp.path().join(path).exists(), "{path}: nothing written");
+        }
+    }
+
+    /// A config-directory settings file stays allowed — `merge-permissions`'
+    /// own target — since the protected-set check does not judge the config
+    /// directories (spec 022 task 20, not task 11's row logic).
+    #[test]
+    fn a_config_dir_settings_file_stays_allowed() {
+        let tmp = tempfile::tempdir().unwrap();
+        let result = run(
+            &args(".claude/settings.local.json", &["Edit"], &[]),
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.action, "created");
+        assert!(tmp.path().join(".claude/settings.local.json").exists());
     }
 }
