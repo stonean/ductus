@@ -18,9 +18,14 @@ a different invocation surface (spec 022 AC1 ships both). The abort therefore
 buys nothing the CLI could not already give this run.
 
 The route is even pre-authorized: the Agent Registry's Claude
-`settings_template` already grants `Bash(.ductus/bin/ductus *)` and
-`Bash(~/.ductus/bin/ductus *)`, and the Permission Setup seed writes them before
-the probe. Nothing needs a new grant.
+`settings_template` grants each subcommand a remaining step runs
+(`Bash(.ductus/bin/ductus <subcommand> *)`, one rule per subcommand) and the
+store probe (`Bash(~/.ductus/bin/ductus --version)`), and the Permission Setup
+seed writes them before the probe. Nothing needs a new grant.
+
+> **Signpost ([022-deterministic-runtime](../../022-deterministic-runtime/spec.md)):** until 022's task 18 the seed granted the whole CLI,
+> `Bash(.ductus/bin/ductus *)` and `Bash(~/.ductus/bin/ductus *)`, which reached `run-generator` and
+> `exec`; it now names each subcommand a bootstrap step runs.
 
 Measured 2026-08-16 on the real adopter bootstrap (048 AC10, the adopter project): **three**
 restarts.

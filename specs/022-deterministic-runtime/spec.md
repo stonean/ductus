@@ -1,7 +1,7 @@
 ---
 status: in-progress
 dependencies: [021-runtime-boundary]
-cross-spec-impact: [021-runtime-boundary]
+cross-spec-impact: [012-multi-agent-govern, 015-tarball-fetch, 021-runtime-boundary, 029-bootstrap-runtime-autowire, 048-govern-acquired-runtime, 061-updates-track-the-latest-release-tag]
 next-criterion: 33
 ---
 

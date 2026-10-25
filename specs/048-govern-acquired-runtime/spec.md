@@ -117,6 +117,10 @@ Existing adopters have an MCP entry naming the bare `ductus` command and, usuall
 - **A pinned version whose tag exists but whose asset for this platform does not.** Prevented upstream by the release gate, but an adopter pinned to an older partial release can still meet it. Treated as any unavailable asset: halt, name the store path and the release URL.
 - **The adopter has a `ductus` on `PATH`.** Ignored entirely — not consulted, not warned about, not removed. Removing it is the adopter's call; `/ductus` simply no longer looks there.
 
+> **Signpost ([022-deterministic-runtime](../022-deterministic-runtime/spec.md)):** 022's task 18 narrowed the permission seeds this spec's
+> acquisition relies on to the exact commands each step spells, and left the binary's install to the
+> host's prompt; AC22 records what changed.
+
 ## Acceptance Criteria
 
 - [x] AC1: A `/ductus` run on a machine with no runtime installed downloads the host-platform release asset, verifies its `.sha256` sidecar, and writes an executable `~/.ductus/bin/ductus` (`~/.ductus/bin/ductus.exe` on Windows)
@@ -138,7 +142,7 @@ Existing adopters have an MCP entry naming the bare `ductus` command and, usuall
 - [x] AC19: This repository sets the `[runtime]` key to its own build output, so a maintainer's MCP calls exercise the binary they just compiled rather than the last release
 - [x] AC20: `runtime-release.yml` gates the publish on all five target assets being present, so a tag ships the complete set or fails; the build matrix keeps `fail-fast: false` so every target's failure is reported in one run
 - [x] AC21: `README.md` no longer claims the Windows binary depends on cross-compilation succeeding — it is a native `windows-latest` build, matrix-equal with the other four
-- [x] AC22: Each of the four agent permission seeds grants the full acquisition sequence in its own grammar — `mkdir`, the platform checksum tool, the pointer command, and execution of the store path — so a bootstrap completes acquisition with no permission prompt, including at checksum verification
+- [x] AC22: Each of the four agent permission seeds grants the full acquisition sequence in its own grammar — `mkdir`, the platform checksum tool, the pointer command, and execution of the store path — so a bootstrap completes acquisition with no permission prompt, including at checksum verification. **Never fully true: Antigravity's seed has never carried a store or pointer entry, and no seed admitted the install's rename (`mv`), only a `cp` an agent might use instead. Since 022's task 18 each seed names only the commands a step spells, so the binary's install into the store, whose source is a random temp directory, goes to the host's prompt once per acquisition by design, and the rest of the sequence prompts for nothing on Claude, Auggie and OpenCode.**
 - [x] AC23: The Windows release asset is published as `.tar.gz`, so extraction is `tar` on every platform and `unzip` never enters any agent's permission surface
 - [x] AC17: Every per-step markdown-only fallback instruction ("With no ductus runtime registered, …") is removed from `framework/commands/*.md` and `framework/bootstrap/ductus.md`, while the Markdown-only reference sections that specify check policy and procedure remain
 - [x] AC12: No live artifact under `framework/` or `README.md` documents installing `ductus` onto `PATH` as the supported path, and none registers a bare `ductus` MCP command

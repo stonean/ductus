@@ -46,7 +46,10 @@ A run reports which source it used and the ref it resolved to. An adopter readin
 - **A `--ref` value, or a recorded `[source] ref`, is none of `latest`, `main`, or a `ductus-v*` tag name.** The run halts, naming the value, where it came from, and the accepted forms, before anything is written. An empty value, `--ref=`, is one of these.
 - **`--ref` is given more than once.** The run halts, naming every value given, before anything is written. Picking one would decide silently between two stated intents.
 
-*Before anything is written* is measured from source resolution, the first step that depends on the source. The Permission Setup seed runs before it: that seed is additive, idempotent and identical for every source (`framework/bootstrap/ductus.md`, §Permission Setup).
+*Before anything is written* is measured from source resolution, the first step that depends on the source. The Permission Setup seed runs before it: that seed is idempotent and identical for every source (`framework/bootstrap/ductus.md`, §Permission Setup), adding the seed's entries and retiring the ones an earlier seed carried.
+
+> **Signpost ([022-deterministic-runtime](../022-deterministic-runtime/spec.md)):** the seed stopped being purely additive with 022's task 18,
+> which retires from existing projects the entries an earlier seed carried and the current one replaces.
 
 ## Installer
 
