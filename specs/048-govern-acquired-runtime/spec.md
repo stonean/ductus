@@ -162,7 +162,7 @@ Existing adopters have an MCP entry naming the bare `ductus` command and, usuall
 
 Yes. `/ductus` executes the store binary and compares its reported version against the pin.
 
-The objection the question raised — that this executes an untrusted-until-verified binary on every run — does not survive the acquisition contract. Nothing reaches the store without matching its published digest first; a mismatch halts before anything is written. The binary being probed is therefore one this pipeline verified and installed, and executing it is pre-authorized in every agent's seed.
+The objection the question raised — that this executes an untrusted-until-verified binary on every run — does not survive the acquisition contract. Nothing reaches the store without matching its published digest first; a mismatch halts before anything is written. The binary being probed is therefore one this pipeline verified and installed, and executing it is pre-authorized in every agent's seed. **Antigravity's excepted, whose seed has never carried an entry that runs the binary (AC22).**
 
 What settles the remaining trade is a workflow this spec deliberately creates. Hand-placing a binary into the store is the supported route in three separate cases — the firewalled or air-gapped adopter, an adopter on a platform with no published asset, and the framework's own maintainer running a local build through the `[runtime]` key. A recorded marker would be absent or stale in every one of them, so `/ductus` would either re-download over a deliberate choice or trust a record describing a file that has since been replaced. Asking the binary what it is cannot disagree with the binary.
 
@@ -170,7 +170,7 @@ It also fails usefully. A store entry that exists but will not execute — a tru
 
 **What new permissions does acquisition need?**
 
-The whole acquisition sequence is pre-authorized in every agent's grammar, execution of the acquired binary included.
+The whole acquisition sequence is pre-authorized in every agent's grammar, execution of the acquired binary included. **Since 022's task 18, the binary's install into the store is left to the host's prompt, and Antigravity's seed has never run the binary (AC22).**
 
 The surface is larger than the question assumed, for a structural reason: **acquisition cannot use `fetch-archive` and `extract-archive`, because the runtime is what is being acquired.** Every step is host shell work, expressed four times — Claude's `Bash(…)` patterns, Auggie's `launch-process` regexes, Antigravity's `command(…)` tokens, and OpenCode's `permission.bash` globs.
 

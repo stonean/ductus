@@ -62,7 +62,8 @@
 # objects matched on toolName + shellInputRegex, OpenCode's bash map), and
 # compares allow grants only. A canonical set that parses to nothing, a
 # retired bullet naming no registry key, and a check that exits non-zero are
-# findings; an absent list is reported on stderr as not examined. It also
+# findings, and so is a seeded agent with no bullet (`[]` says it retires
+# nothing); an absent list is reported on stderr as not examined. It also
 # holds each seed disjoint from /configure's own retired list (Claude and
 # Auggie carry one), the cycle Auggie's seeded `^awk ` once ran.
 #
@@ -306,7 +307,19 @@ else:
         i += 1
     while i < len(lines) and not lines[i].strip():  # the blank lines after it
         i += 1
-    while i < len(lines) and lines[i].startswith("- "):
+    seen = set()
+    while i < len(lines):
+        if not lines[i].strip():
+            # A blank line inside the list: keep reading only if a bullet follows.
+            j = i
+            while j < len(lines) and not lines[j].strip():
+                j += 1
+            if j < len(lines) and lines[j].startswith("- "):
+                i = j
+                continue
+            break
+        if not lines[i].startswith("- "):
+            break
         loc = f"{DUCTUS}:{i + 1}"
         m = re.match(r"^- `([a-z]+)`: `([^`]*)`$", lines[i])
         if not m:
@@ -316,12 +329,10 @@ else:
             continue
         key, items = m.group(1), json.loads(m.group(2))
         agents += 1
+        seen.add(key)
         if key not in seeds:
             find(loc, f"retired-seed bullet `{key}` names no Agent Registry row", "name a registry key, or drop the bullet")
-        elif not items:
-            find(loc, f"retired-seed bullet `{key}` holds no entries — the parse is broken, not the list",
-                 "list the entries, or drop the bullet")
-        else:
+        elif items:
             seeded = grants(key, seeds[key][1])
             canon = canonical(key)
             if not canon:
@@ -339,9 +350,13 @@ else:
                     find(loc, f"`{shown}` is retired from the `{key}` seed AND granted by configure/{key}.md — /ductus would remove what /configure adds, on every pair of runs",
                          "leave it off the retired-seed list until the canonical set drops it")
         i += 1
-    if agents == 0:
-        find(f"{DUCTUS}:{header + 1}", "the retired-seed list holds no bullets after its paragraph — the parse is broken, not the list",
-             "follow the paragraph with a blank line and one `- `key`: `[...]`` bullet per agent")
+    # Every agent whose seed grants anything has a bullet, `[]` when nothing
+    # is retired, so a list cut short by a stray line reports rather than
+    # passing over the agents after it.
+    for key in sorted(k for k, (_, seed) in seeds.items() if grants(k, seed)):
+        if key not in seen:
+            find(f"{DUCTUS}:{header + 1}", f"the retired-seed list has no bullet for `{key}`, whose seed grants entries — the parse is broken, or the list stops short",
+                 "give every seeded agent a bullet, `[]` when it retires nothing")
     # /configure's own retired lists (Claude's step 4, Auggie's step 4): a seed
     # entry there is added by /ductus and removed by /configure on every pair
     # of runs, the cycle Auggie's seeded `^awk ` once ran.
@@ -359,7 +374,7 @@ else:
             find(f"{DUCTUS}:{seeds[key][0]}", f"`{entry}` is in the `{key}` settings_template AND retired by configure/{key}.md — /ductus adds what /configure removes, on every pair of runs",
                  "drop it from the settings_template, or from the configure retired list")
         checked += len(retired_there)
-    out.append(f"SUMMARY\t{checked} retired entries checked across {agents} agents' seed lists and Claude's and Auggie's /configure lists, against the seeds and canonical sets")
+    out.append(f"SUMMARY\t{checked} retired entries checked: {agents} agents' seed lists against their seeds and canonical sets, and Claude's and Auggie's /configure lists against their seeds")
 
 print("\n".join(out))
 PY
