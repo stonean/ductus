@@ -444,84 +444,84 @@ JSON
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? fetch-archive( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? fetch-archive( [-A-Za-z0-9_./:,=@+~{}\\[\\]()*?%\"'\\\\ ]*)?$",
       "permission": {
         "type": "allow"
       }
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? extract-archive( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? extract-archive( [-A-Za-z0-9_./:,=@+~{}\\[\\]()*?%\"'\\\\ ]*)?$",
       "permission": {
         "type": "allow"
       }
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? apply-manifest( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? apply-manifest( [-A-Za-z0-9_./:,=@+~{}\\[\\]()*?%\"'\\\\ ]*)?$",
       "permission": {
         "type": "allow"
       }
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? merge-managed-block( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? merge-managed-block( [-A-Za-z0-9_./:,=@+~{}\\[\\]()*?%\"'\\\\ ]*)?$",
       "permission": {
         "type": "allow"
       }
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? write-session( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? write-session( [-A-Za-z0-9_./:,=@+~{}\\[\\]()*?%\"'\\\\ ]*)?$",
       "permission": {
         "type": "allow"
       }
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? enforce-manifest( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? enforce-manifest( [-A-Za-z0-9_./:,=@+~{}\\[\\]()*?%\"'\\\\ ]*)?$",
       "permission": {
         "type": "allow"
       }
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? resolve-constitutions( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? resolve-constitutions( [-A-Za-z0-9_./:,=@+~{}\\[\\]()*?%\"'\\\\ ]*)?$",
       "permission": {
         "type": "allow"
       }
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? migrate-session-file( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? migrate-session-file( [-A-Za-z0-9_./:,=@+~{}\\[\\]()*?%\"'\\\\ ]*)?$",
       "permission": {
         "type": "allow"
       }
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? label-criteria( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? label-criteria( [-A-Za-z0-9_./:,=@+~{}\\[\\]()*?%\"'\\\\ ]*)?$",
       "permission": {
         "type": "allow"
       }
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? relocate-audit-records( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? relocate-audit-records( [-A-Za-z0-9_./:,=@+~{}\\[\\]()*?%\"'\\\\ ]*)?$",
       "permission": {
         "type": "allow"
       }
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? check-orphaned-references( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? check-orphaned-references( [-A-Za-z0-9_./:,=@+~{}\\[\\]()*?%\"'\\\\ ]*)?$",
       "permission": {
         "type": "allow"
       }
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? compute-review-scope( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? compute-review-scope( [-A-Za-z0-9_./:,=@+~{}\\[\\]()*?%\"'\\\\ ]*)?$",
       "permission": {
         "type": "allow"
       }
