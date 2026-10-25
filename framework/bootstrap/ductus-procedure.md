@@ -239,6 +239,7 @@ This section's job is to wire git up to actually run the outer hook without clob
 
 - **`P`** — the project's path from the work tree: `git rev-parse --show-prefix`. Empty at the work tree's root, else ending in `/`.
 - **`H`** — the hooks directory named from the work tree: `{P}.githooks`. At the work tree's root it is `.githooks`, the value every earlier `/ductus` wrote, so a project at its repository's root walks the ladder exactly as before.
+- **The current `core.hooksPath`** — `git config --get core.hooksPath`, empty (exit status 1) when unset.
 
 Detection runs in this order — first match wins:
 

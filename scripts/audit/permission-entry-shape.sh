@@ -50,6 +50,20 @@
 # fix is one edit: retiring an entry means deleting it from step 2 in the
 # same commit that adds it to step 4.
 #
+# 32c — EACH SEED'S RETIRED LIST MUST STAY DISJOINT FROM ITS SEED AND ITS
+# CANONICAL SET. `framework/bootstrap/ductus.md` §Permission Setup removes the
+# entries an earlier seed carried and the current one replaces (022 task 18),
+# before it merges the seed. An entry both retired and seeded is removed and
+# re-added on every /ductus run; one both retired and granted by the agent's
+# `configure/{key}.md` canonical set is removed by /ductus and re-added by
+# /configure, on every pair of runs. The python below reads the registry's
+# settings_template cells, the retired-seed list and each canonical set in
+# its own grammar (Claude's and Antigravity's bullets, Auggie's toolPermissions
+# objects matched on toolName + shellInputRegex, OpenCode's bash map), and
+# compares allow grants only. A canonical set that parses to nothing, a
+# retired bullet naming no registry key, and a check that exits non-zero are
+# findings; an absent list is reported on stderr as not examined.
+#
 # METHOD. One host, because only one can express the shape:
 #
 #   32  configure/claude.md — bullet entries of the form `- `Write(...)``
@@ -198,6 +212,149 @@ if [ "$entry_count" -eq 0 ]; then
     "check the \"- \`Tool(argument)\`\" bullet format inside both sections"
 fi
 
-echo "permission-entry-shape: checked $entry_count claude allow+deny entries for shape; $retired_summary (opencode/auggie/antigravity skipped — none has a path-scoped file-permission form)" >&2
+# 32c — each agent's retired seed list must stay disjoint from that agent's
+# seed and from its canonical allow set. The python prints one finding per
+# line as location<TAB>message<TAB>fix, and a last SUMMARY<TAB>text line.
+seed_summary="the retired-seed check did not run"
+# A function rather than a heredoc inside "$(...)": bash 3.2 (every macOS
+# machine) misparses a heredoc nested in a command substitution when its body
+# holds backticks.
+retired_seed_check() {
+  python3 - <<'PY'
+import json, re
+
+DUCTUS = "framework/bootstrap/ductus.md"
+CONFIGURE = "framework/bootstrap/configure/{}.md"
+out = []
+
+
+def find(where, what, fix):
+    out.append("\t".join((where, what, fix)))
+
+
+text = open(DUCTUS).read()
+lines = text.split("\n")
+
+# Registry seeds, read from the Agent Registry section only.
+seeds = {}
+start = next((i for i, l in enumerate(lines) if l == "## Agent Registry"), None)
+end = next((i for i, l in enumerate(lines) if start is not None and i > start and l == "### Derived values"), None)
+row = re.compile(r"^\| `([a-z]+)` \| [^|]* \| `[^`]*` \| `[^`]*` \| `(\{[^`]*)` \|")
+for i in range(start or 0, end or 0):
+    m = row.match(lines[i])
+    if m:
+        seeds[m.group(1)] = (i + 1, json.loads(m.group(2)))
+
+
+def grants(key, value):
+    """The allow grants a seed or a canonical set holds, normalized per grammar."""
+    if key in ("claude", "antigravity"):
+        return set(value.get("permissions", {}).get("allow", []))
+    if key == "auggie":
+        return {(e.get("toolName"), e.get("shellInputRegex")) for e in value.get("toolPermissions", [])
+                if e.get("permission", {}).get("type") == "allow"}
+    if key == "opencode":
+        return {k for k, v in value.get("permission", {}).get("bash", {}).items() if v == "allow"}
+    return set()
+
+
+def retired_item(key, item):
+    if key == "auggie":
+        return (item.get("toolName"), item.get("shellInputRegex"))
+    return item
+
+
+def bullets(path, start_re, stop_re):
+    body = open(path).read().split("\n")
+    s = next((i for i, l in enumerate(body) if re.match(start_re, l)), None)
+    if s is None:
+        return None
+    e = next((i for i, l in enumerate(body) if i > s and re.match(stop_re, l)), len(body))
+    return [m.group(1) for l in body[s + 1:e] for m in [re.match(r"^\s*- `([^`]*)`", l)] if m]
+
+
+def canonical(key):
+    path = CONFIGURE.format(key)
+    if key in ("claude", "antigravity"):
+        got = bullets(path, r"^\d+\. Canonical `permissions\.allow` entries", r"^\d+\. Canonical `permissions\.deny` entries")
+        return None if got is None else {g for g in got}
+    if key == "auggie":
+        got = bullets(path, r"^\d+\. Ensure the `toolPermissions` array", r"^\d+\. ")
+        if got is None:
+            return None
+        return grants("auggie", {"toolPermissions": [json.loads(g) for g in got if g.startswith("{")]})
+    if key == "opencode":
+        body = open(path).read()
+        m = re.search(r"\*\*`bash` pattern map[^\n]*\n\s*\n\s*```json\n(.*?)\n\s*```", body, re.S)
+        return None if m is None else grants("opencode", {"permission": {"bash": json.loads(m.group(1))}})
+    return None
+
+
+# The retired-seed list: a paragraph opening **Retired seed entries.**, a
+# blank line, then one bullet per agent, `- `key`: `[...]``. A bullet list
+# rather than a table, because `check-artifacts` reads the second column of
+# every table row in ductus.md as an adopter destination path.
+header = next((i for i, l in enumerate(lines) if l.startswith("**Retired seed entries.**")), None)
+if header is None:
+    out.append("SUMMARY\tno retired-seed list present in " + DUCTUS + ", so no overlap was examined")
+else:
+    checked = agents = 0
+    i = header + 2
+    while i < len(lines) and lines[i].startswith("- "):
+        loc = f"{DUCTUS}:{i + 1}"
+        m = re.match(r"^- `([a-z]+)`: `([^`]*)`$", lines[i])
+        if not m:
+            find(loc, "a retired-seed bullet does not parse as `- `key`: `[...]`` — the parse is broken, not the list",
+                 "write each bullet as the key and a JSON array, both in code spans")
+            i += 1
+            continue
+        key, items = m.group(1), json.loads(m.group(2))
+        agents += 1
+        if key not in seeds:
+            find(loc, f"retired-seed bullet `{key}` names no Agent Registry row", "name a registry key, or drop the bullet")
+        elif not items:
+            find(loc, f"retired-seed bullet `{key}` holds no entries — the parse is broken, not the list",
+                 "list the entries, or drop the bullet")
+        else:
+            seeded = grants(key, seeds[key][1])
+            canon = canonical(key)
+            if not canon:
+                find(CONFIGURE.format(key), f"no canonical allow entries extracted for `{key}` — the parse is broken, not the set",
+                     "check the canonical allow section's heading and entry format this family reads")
+                canon = set()
+            for item in items:
+                checked += 1
+                norm = retired_item(key, item)
+                shown = json.dumps(item) if isinstance(item, dict) else item
+                if norm in seeded:
+                    find(loc, f"`{shown}` is retired AND still in the `{key}` settings_template — §Permission Setup would remove it and re-add it on every /ductus run",
+                         "drop it from the settings_template in the same edit that retires it; an entry belongs to exactly one of the two")
+                if norm in canon:
+                    find(loc, f"`{shown}` is retired from the `{key}` seed AND granted by configure/{key}.md — /ductus would remove what /configure adds, on every pair of runs",
+                         "leave it off the retired-seed list until the canonical set drops it")
+        i += 1
+    out.append(f"SUMMARY\t{checked} retired seed entries across {agents} agents checked against their seeds and canonical sets")
+
+print("\n".join(out))
+PY
+}
+seed_findings="$(retired_seed_check)"
+seed_rc=$?
+if [ "$seed_rc" -ne 0 ]; then
+  emit "$0" "the 32c retired-seed check exited $seed_rc — it could not examine its subject, which is not the same as clean" \
+    "run the family by hand and fix the parse it reports"
+fi
+while IFS="$(printf '\t')" read -r where what fix; do
+  [ -n "${where:-}" ] || continue
+  if [ "$where" = "SUMMARY" ]; then
+    seed_summary="$what"
+  else
+    emit "$where" "$what" "$fix"
+  fi
+done <<EOF
+$seed_findings
+EOF
+
+echo "permission-entry-shape: checked $entry_count claude allow+deny entries for shape; $retired_summary (opencode/auggie/antigravity skipped — none has a path-scoped file-permission form); 32c: $seed_summary" >&2
 
 exit "$drift"

@@ -207,7 +207,8 @@ case "$agent" in
     cp "$tmp" "$dest"
     # Pre-seed permissions so the first /ductus run does not prompt for its
     # bootstrap shell commands (see the antigravity arm for the rationale).
-    # Written only when absent — /ductus owns additive merges. Keep in sync with
+    # Written only when absent — /ductus owns the merge (and retires the entries an
+    # earlier seed carried; §Permission Setup). Keep in sync with
     # the claude settings_template in framework/bootstrap/ductus.md (§Agent Registry).
     if [ ! -f .claude/settings.local.json ]; then
       cat > .claude/settings.local.json <<'JSON'
@@ -217,28 +218,55 @@ case "$agent" in
       "Bash(curl *)",
       "Bash(ls *)",
       "Bash(tar *)",
-      "Bash(mktemp *)",
+      "Bash(mktemp -d -t ductus-XXXXXX)",
       "Bash(git status *)",
-      "Bash(git config *)",
+      "Bash(git config --get core.hooksPath)",
+      "Bash(git config core.hooksPath .githooks)",
+      "Bash(git config user.email)",
       "Bash(git rev-parse *)",
-      "Bash(git diff *)",
       "Bash(git ls-files *)",
-      "Bash(chmod *)",
-      "Bash(awk *)",
+      "Bash(chmod +x ~/.ductus/bin/ductus)",
+      "Bash(chmod +x ~/.ductus/bin/ductus.exe)",
+      "Bash(chmod +x .githooks/pre-commit .githooks/ductus-pre-commit)",
+      "Bash(awk 'BEGIN { print ENVIRON[\"DUCTUS_REPO\"] }')",
       "Bash(command -v *)",
-      "Bash(mkdir *)",
+      "Bash(mkdir -p ~/.ductus/bin/)",
+      "Bash(mkdir -p .ductus/bin)",
       "Bash(shasum *)",
       "Bash(sha256sum *)",
-      "Bash(certutil *)",
-      "Bash(ln *)",
-      "Bash(cp *)",
-      "Bash(~/.ductus/bin/ductus *)",
-      "Bash(.ductus/bin/ductus *)",
-      "Read(/private/var/folders/**/T/ductus-*/**)",
+      "Bash(certutil -hashfile * SHA256)",
+      "Bash(ln -sf ~/.ductus/bin/ductus .ductus/bin/ductus)",
+      "Bash(ln -sf ~/.ductus/bin/ductus.exe .ductus/bin/ductus.exe)",
+      "Bash(cp ~/.ductus/bin/ductus .ductus/bin/ductus)",
+      "Bash(cp ~/.ductus/bin/ductus.exe .ductus/bin/ductus.exe)",
+      "Bash(~/.ductus/bin/ductus --version)",
+      "Bash(~/.ductus/bin/ductus.exe --version)",
+      "Bash(.ductus/bin/ductus fetch-archive *)",
+      "Bash(.ductus/bin/ductus.exe fetch-archive *)",
+      "Bash(.ductus/bin/ductus extract-archive *)",
+      "Bash(.ductus/bin/ductus.exe extract-archive *)",
+      "Bash(.ductus/bin/ductus apply-manifest *)",
+      "Bash(.ductus/bin/ductus.exe apply-manifest *)",
+      "Bash(.ductus/bin/ductus merge-managed-block *)",
+      "Bash(.ductus/bin/ductus.exe merge-managed-block *)",
+      "Bash(.ductus/bin/ductus write-session *)",
+      "Bash(.ductus/bin/ductus.exe write-session *)",
+      "Bash(.ductus/bin/ductus enforce-manifest *)",
+      "Bash(.ductus/bin/ductus.exe enforce-manifest *)",
+      "Bash(.ductus/bin/ductus resolve-constitutions *)",
+      "Bash(.ductus/bin/ductus.exe resolve-constitutions *)",
+      "Bash(.ductus/bin/ductus migrate-session-file *)",
+      "Bash(.ductus/bin/ductus.exe migrate-session-file *)",
+      "Bash(.ductus/bin/ductus label-criteria *)",
+      "Bash(.ductus/bin/ductus.exe label-criteria *)",
+      "Bash(.ductus/bin/ductus relocate-audit-records *)",
+      "Bash(.ductus/bin/ductus.exe relocate-audit-records *)",
+      "Bash(.ductus/bin/ductus check-orphaned-references *)",
+      "Bash(.ductus/bin/ductus.exe check-orphaned-references *)",
+      "Bash(.ductus/bin/ductus compute-review-scope *)",
+      "Bash(.ductus/bin/ductus.exe compute-review-scope *)",
       "Read(//private/var/folders/**/T/ductus-*/**)",
-      "Read(/var/folders/**/T/ductus-*/**)",
       "Read(//var/folders/**/T/ductus-*/**)",
-      "Read(/tmp/ductus-*/**)",
       "Read(//tmp/ductus-*/**)"
     ],
     "deny": []
@@ -253,7 +281,8 @@ JSON
     cp "$tmp" "$dest"
     # Pre-seed permissions so the first /ductus run does not prompt for its
     # bootstrap shell commands (see the antigravity arm for the rationale).
-    # Written only when absent — /ductus owns additive merges. Keep in sync with
+    # Written only when absent — /ductus owns the merge (and retires the entries an
+    # earlier seed carried; §Permission Setup). Keep in sync with
     # the auggie settings_template in framework/bootstrap/ductus.md (§Agent Registry).
     if [ ! -f .augment/settings.local.json ]; then
       cat > .augment/settings.local.json <<'JSON'
@@ -282,7 +311,7 @@ JSON
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^mktemp ",
+      "shellInputRegex": "^mktemp -d -t ductus-XXXXXX$",
       "permission": {
         "type": "allow"
       }
@@ -296,7 +325,21 @@ JSON
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^git config ",
+      "shellInputRegex": "^git config --get core\\.hooksPath$",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^git config core\\.hooksPath \\.githooks$",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^git config user\\.email$",
       "permission": {
         "type": "allow"
       }
@@ -310,13 +353,6 @@ JSON
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^git diff ",
-      "permission": {
-        "type": "allow"
-      }
-    },
-    {
-      "toolName": "launch-process",
       "shellInputRegex": "^git ls-files ",
       "permission": {
         "type": "allow"
@@ -324,14 +360,21 @@ JSON
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^chmod ",
+      "shellInputRegex": "^chmod \\+x ~/\\.ductus/bin/ductus(\\.exe)?$",
       "permission": {
         "type": "allow"
       }
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^awk ",
+      "shellInputRegex": "^chmod \\+x \\.githooks/pre-commit \\.githooks/ductus-pre-commit$",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^awk 'BEGIN \\{ print ENVIRON\\[\"DUCTUS_REPO\"\\] \\}'$",
       "permission": {
         "type": "allow"
       }
@@ -345,7 +388,14 @@ JSON
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^mkdir ",
+      "shellInputRegex": "^mkdir -p ~/\\.ductus/bin/$",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^mkdir -p \\.ductus/bin$",
       "permission": {
         "type": "allow"
       }
@@ -366,28 +416,112 @@ JSON
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^certutil ",
+      "shellInputRegex": "^certutil -hashfile [-A-Za-z0-9_./:~\\\\\" ]+ SHA256$",
       "permission": {
         "type": "allow"
       }
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^ln ",
+      "shellInputRegex": "^ln -sf ~/\\.ductus/bin/ductus(\\.exe)? \\.ductus/bin/ductus(\\.exe)?$",
       "permission": {
         "type": "allow"
       }
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^cp ",
+      "shellInputRegex": "^cp ~/\\.ductus/bin/ductus(\\.exe)? \\.ductus/bin/ductus(\\.exe)?$",
       "permission": {
         "type": "allow"
       }
     },
     {
       "toolName": "launch-process",
-      "shellInputRegex": "^[^ ]*\\.ductus/bin/ductus ",
+      "shellInputRegex": "^~/\\.ductus/bin/ductus(\\.exe)? --version$",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? fetch-archive( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? extract-archive( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? apply-manifest( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? merge-managed-block( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? write-session( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? enforce-manifest( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? resolve-constitutions( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? migrate-session-file( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? label-criteria( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? relocate-audit-records( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? check-orphaned-references( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
+      "permission": {
+        "type": "allow"
+      }
+    },
+    {
+      "toolName": "launch-process",
+      "shellInputRegex": "^\\.ductus/bin/ductus(\\.exe)? compute-review-scope( [-A-Za-z0-9_./:,=@+~{}\\[\\]\"'\\\\ ]*)?$",
       "permission": {
         "type": "allow"
       }
@@ -411,8 +545,8 @@ JSON
     # Pre-seed the permission file so the first /ductus run does not prompt for
     # its bootstrap shell commands. Antigravity loads permissions at session
     # start, so ductus.md's in-run Permission Setup seed lands too late for the
-    # first run. Written only when absent — /ductus owns additive merges into an
-    # existing settings.json. Keep this allow-list in sync with the antigravity
+    # first run. Written only when absent — /ductus owns the merge into an
+    # existing settings.json, retiring earlier seeds' entries. Keep this allow-list in sync with the antigravity
     # settings_template in framework/bootstrap/ductus.md (§Agent Registry).
     if [ ! -f .agents/settings.json ]; then
       cat > .agents/settings.json <<'JSON'
@@ -422,21 +556,27 @@ JSON
       "command(curl)",
       "command(ls)",
       "command(tar)",
-      "command(mktemp)",
+      "command(mktemp -d -t ductus-XXXXXX)",
       "command(git status)",
-      "command(git config)",
+      "command(git config --get core.hooksPath)",
+      "command(git config core.hooksPath .githooks)",
+      "command(git config user.email)",
       "command(git rev-parse)",
-      "command(git diff)",
       "command(git ls-files)",
-      "command(chmod)",
-      "command(awk)",
+      "command(chmod +x ~/.ductus/bin/ductus)",
+      "command(chmod +x ~/.ductus/bin/ductus.exe)",
+      "command(chmod +x .githooks/pre-commit .githooks/ductus-pre-commit)",
+      "command(awk 'BEGIN { print ENVIRON[\"DUCTUS_REPO\"] }')",
       "command(which)",
-      "command(mkdir)",
+      "command(mkdir -p ~/.ductus/bin/)",
+      "command(mkdir -p .ductus/bin)",
       "command(shasum)",
       "command(sha256sum)",
-      "command(certutil)",
-      "command(ln)",
-      "command(cp)"
+      "command(certutil -hashfile)",
+      "command(ln -sf ~/.ductus/bin/ductus .ductus/bin/ductus)",
+      "command(ln -sf ~/.ductus/bin/ductus.exe .ductus/bin/ductus.exe)",
+      "command(cp ~/.ductus/bin/ductus .ductus/bin/ductus)",
+      "command(cp ~/.ductus/bin/ductus.exe .ductus/bin/ductus.exe)"
     ],
     "deny": [],
     "ask": []
@@ -452,8 +592,8 @@ JSON
     # Pre-seed permissions so the first /ductus run does not prompt for its
     # bootstrap shell commands. OpenCode keeps both MCP wiring and permissions in
     # one committed opencode.json; this seeds only the permission block, and only
-    # when neither opencode.json nor opencode.jsonc exists — /ductus owns additive
-    # merges. Keep in sync with the opencode settings_template in
+    # when neither opencode.json nor opencode.jsonc exists — /ductus owns the merge
+    # and retires earlier seeds' entries. Keep in sync with the opencode settings_template in
     # framework/bootstrap/ductus.md (§Agent Registry).
     if [ ! -f opencode.json ] && [ ! -f opencode.jsonc ]; then
       cat > opencode.json <<'JSON'
@@ -464,22 +604,53 @@ JSON
       "curl *": "allow",
       "ls *": "allow",
       "tar *": "allow",
-      "mktemp *": "allow",
+      "mktemp -d -t ductus-XXXXXX": "allow",
       "git status *": "allow",
-      "git config *": "allow",
+      "git config --get core.hooksPath": "allow",
+      "git config core.hooksPath .githooks": "allow",
+      "git config user.email": "allow",
       "git rev-parse *": "allow",
-      "git diff *": "allow",
       "git ls-files *": "allow",
-      "chmod *": "allow",
-      "awk *": "allow",
+      "chmod +x ~/.ductus/bin/ductus": "allow",
+      "chmod +x ~/.ductus/bin/ductus.exe": "allow",
+      "chmod +x .githooks/pre-commit .githooks/ductus-pre-commit": "allow",
+      "awk 'BEGIN { print ENVIRON[\"DUCTUS_REPO\"] }'": "allow",
       "command -v *": "allow",
-      "mkdir *": "allow",
+      "mkdir -p ~/.ductus/bin/": "allow",
+      "mkdir -p .ductus/bin": "allow",
       "shasum *": "allow",
       "sha256sum *": "allow",
-      "certutil *": "allow",
-      "ln *": "allow",
-      "cp *": "allow",
-      "*/.ductus/bin/ductus *": "allow"
+      "certutil -hashfile * SHA256": "allow",
+      "ln -sf ~/.ductus/bin/ductus .ductus/bin/ductus": "allow",
+      "ln -sf ~/.ductus/bin/ductus.exe .ductus/bin/ductus.exe": "allow",
+      "cp ~/.ductus/bin/ductus .ductus/bin/ductus": "allow",
+      "cp ~/.ductus/bin/ductus.exe .ductus/bin/ductus.exe": "allow",
+      "~/.ductus/bin/ductus --version": "allow",
+      "~/.ductus/bin/ductus.exe --version": "allow",
+      ".ductus/bin/ductus fetch-archive *": "allow",
+      ".ductus/bin/ductus.exe fetch-archive *": "allow",
+      ".ductus/bin/ductus extract-archive *": "allow",
+      ".ductus/bin/ductus.exe extract-archive *": "allow",
+      ".ductus/bin/ductus apply-manifest *": "allow",
+      ".ductus/bin/ductus.exe apply-manifest *": "allow",
+      ".ductus/bin/ductus merge-managed-block *": "allow",
+      ".ductus/bin/ductus.exe merge-managed-block *": "allow",
+      ".ductus/bin/ductus write-session *": "allow",
+      ".ductus/bin/ductus.exe write-session *": "allow",
+      ".ductus/bin/ductus enforce-manifest *": "allow",
+      ".ductus/bin/ductus.exe enforce-manifest *": "allow",
+      ".ductus/bin/ductus resolve-constitutions *": "allow",
+      ".ductus/bin/ductus.exe resolve-constitutions *": "allow",
+      ".ductus/bin/ductus migrate-session-file *": "allow",
+      ".ductus/bin/ductus.exe migrate-session-file *": "allow",
+      ".ductus/bin/ductus label-criteria *": "allow",
+      ".ductus/bin/ductus.exe label-criteria *": "allow",
+      ".ductus/bin/ductus relocate-audit-records *": "allow",
+      ".ductus/bin/ductus.exe relocate-audit-records *": "allow",
+      ".ductus/bin/ductus check-orphaned-references *": "allow",
+      ".ductus/bin/ductus.exe check-orphaned-references *": "allow",
+      ".ductus/bin/ductus compute-review-scope *": "allow",
+      ".ductus/bin/ductus.exe compute-review-scope *": "allow"
     }
   }
 }
