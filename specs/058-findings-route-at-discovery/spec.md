@@ -538,3 +538,20 @@ spec's links to it. Each also gets the contract change itself:
   a grandfather clause because "an exemption here would be a permanent hole".
   The upgrade cost in this repository was measured at zero: all 55 specs were
   `done` and none `in-progress`.
+- **Why split from code-review:** `020-code-review` owns `/{project}:review`
+  and its gate. This spec changes how every finding from review, analyze and
+  implement is dispositioned, which is one rule across three commands rather
+  than a review behavior. The overlap Family 7 sees, `framework/constitution.md`,
+  is where that shared rule is stated. Its review-side contract change is
+  discharged on 020 through `cross-spec-impact:`.
+- **Why split from deterministic-runtime:** `022-deterministic-runtime` is the
+  runtime's protocol contract as a whole. This spec changes one behavior that
+  several primitives and commands carry. The overlap Family 7 sees,
+  `framework/bootstrap/ductus-procedure.md`, is where the brownfield security
+  audit stopped writing inbox items. Folding the two would bury this behavior
+  inside the record of the whole runtime.
+- **Why split from constitution:** `050-constitution` owns what the
+  constitution holds and how it is organized. Its §Ownership keeps a behavior
+  change, and the amendment of the principle it contradicts, with the spec
+  that owns the behavior. The overlap Family 7 sees, `AGENTS.md` and
+  `framework/constitution.md`, is that amendment and its mirror.
