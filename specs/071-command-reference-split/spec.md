@@ -1,5 +1,5 @@
 ---
-status: planned
+status: in-progress
 dependencies: [056-bootstrap-archive-boundary-split, 067-analyze-and-audit-checks]
 cross-spec-impact: [026-framework-self-audit, 067-analyze-and-audit-checks]
 next-criterion: 25
