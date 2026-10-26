@@ -91,18 +91,18 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 12. Implement scenario: generated-reference-copies-are-excluded
 
-- [ ] Implement the behavior described in `scenarios/generated-reference-copies-are-excluded.md`
-- [ ] Add `.ductus/reference/` to `is_excluded`'s repository arm in `check_corpus_links.rs`, counted like the agent directories, in a tree that carries `framework/reference/`
-- [ ] A test that fails when the exclusion is removed, one showing another `.ductus/` file is still checked, and one showing installed reference files are checked where there are no sources
+- [x] Implement the behavior described in `scenarios/generated-reference-copies-are-excluded.md`
+- [x] Add `.ductus/reference/` to `is_excluded`'s repository arm in `check_corpus_links.rs`, counted like the agent directories, in a tree that carries `framework/reference/`
+- [x] A test that fails when the exclusion is removed, one showing another `.ductus/` file is still checked, and one showing installed reference files are checked where there are no sources
 
 - **Done when**: `check-corpus-links --scope repository` is clean over this repository with the generated reference copies present, and the test fails with the exclusion removed (spec 071 task 10).
 
 ## 13. Implement scenario: pointers-into-shipped-files-are-judged
 
-- [ ] Implement the behavior described in `scenarios/pointers-into-shipped-files-are-judged.md`
-- [ ] Read the destination -> source map from the `## Shared Files` section of `framework/bootstrap/ductus.md`
-- [ ] Add the `cross-document` kind and count to `resolve-anchor`: a mapped source's heading, the citing file's heading, or a marker resolves; anything else is unresolved
-- [ ] Tests for each case, each failing with its behavior removed: heading, own heading, marker, neither, two documents, unmapped document, unreadable source, no map, and an explicit pair judged on a line naming other documents against its document alone
-- [ ] Family 39 reports the `cross-document` count; the data model's `resolve-anchor` section shows the kind and the count
+- [x] Implement the behavior described in `scenarios/pointers-into-shipped-files-are-judged.md`
+- [x] Read the destination -> source map from the `## Shared Files` section of `framework/bootstrap/ductus.md`
+- [x] Add the `cross-document` kind and count to `resolve-anchor`: a mapped source's heading, the citing file's heading, or a marker resolves; anything else is unresolved
+- [x] Tests for each case, each failing with its behavior removed: heading, own heading, marker, neither, two documents, unmapped document, unreadable source, no map, and an explicit pair judged on a line naming other documents against its document alone
+- [x] Family 39 reports the `cross-document` count; the data model's `resolve-anchor` section shows the kind and the count
 
 - **Done when**: the tests pass and fail under mutation, Family 39 passes with every pointer into a reference file judged, and a before/after run over `framework/` and the spec corpus adds no unresolved reference (spec 071 task 11).

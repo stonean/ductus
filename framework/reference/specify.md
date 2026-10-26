@@ -2,7 +2,7 @@
 
 The full new-feature-creation procedure (directory creation, template copy, frontmatter conventions, session write, and next-step prompt) is documented below for the markdown-only path. The numbered steps in `specify.md`'s Instructions invoke the mechanical primitives plus the writeSpecBody extension that automate the deterministic phases.
 
-**Where a named section lives.** This file is read alongside its command, `specify.md`, which is already loaded whenever this one is. A section named below that has no heading in this file is in the command file, along with the numbered Instructions steps this file cites. A bare `§name` is a heading in this file or a constitution marker; a `§name` with another file's path on the same line is a heading in that file.
+**Where a named section lives.** This file is read alongside its command, `specify.md`, which is already loaded whenever this one is. A section named below that has no heading in this file is in the command file, along with the numbered Instructions steps this file cites. A bare `§name` is a heading in this file or a marker in the constitution, `.ductus/constitution.md`; a `§name` with another file's path on the same line is a heading in that file.
 
 ## Route before scaffolding
 

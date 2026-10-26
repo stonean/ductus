@@ -2,7 +2,7 @@
 
 The full set of checks (frontmatter schema, spec integrity, artifact completeness, plan consistency, plan record, task consistency, grounding, scenario consistency, scenario open questions, link-adjacent decision drift, acceptance-criterion path existence, body path existence, acceptance-criterion labels, cross-spec references, cross-service references, review state drift, analyze state drift, disposition drift, rules, project-level consistency, and severity tiers) and the finding dispositions that follow them are documented below for the markdown-only path. The numbered steps of `analyze.md`'s Instructions invoke the mechanical primitives that automate the deterministic checks; the host applies the same checks against the markdown-only path when the runtime is unavailable.
 
-**Where a named section lives.** This file is read alongside its command, `analyze.md`, which is already loaded whenever this one is. A section named below that has no heading in this file is in the command file, along with the numbered Instructions steps this file cites. A bare `§name` is a heading in this file or a constitution marker; a `§name` with another file's path on the same line is a heading in that file.
+**Where a named section lives.** This file is read alongside its command, `analyze.md`, which is already loaded whenever this one is. A section named below that has no heading in this file is in the command file, along with the numbered Instructions steps this file cites. A bare `§name` is a heading in this file or a marker in the constitution, `.ductus/constitution.md`; a `§name` with another file's path on the same line is a heading in that file.
 
 ## Frontmatter schema (hard fail)
 

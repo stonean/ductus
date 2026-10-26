@@ -2,7 +2,7 @@
 
 When the runtime is not on `PATH`, walk the same scripts directly. Each prints findings to stdout and exits `0` (no findings) or `1` (findings present). Aggregate across all families; `/audit`'s exit code is the logical OR.
 
-**Where a named section lives.** This file is read alongside its command, `audit.md`, which is already loaded whenever this one is. A section named below that has no heading in this file is in the command file, along with the numbered Instructions steps this file cites. A bare `§name` is a heading in this file or a constitution marker; a `§name` with another file's path on the same line is a heading in that file.
+**Where a named section lives.** This file is read alongside its command, `audit.md`, which is already loaded whenever this one is. A section named below that has no heading in this file is in the command file, along with the numbered Instructions steps this file cites. A bare `§name` is a heading in this file or a marker in the constitution, `.ductus/constitution.md`; a `§name` with another file's path on the same line is a heading in that file.
 
 1. Run `scripts/audit/check-zero.sh` — generator/lint precondition. Halt on findings; do not run family checks against known-stale generator output.
 2. Run `scripts/audit/cross-doc-consistency.sh` (Family 1).

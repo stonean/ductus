@@ -142,6 +142,12 @@ Blocked on task 9: the change is 067's scenario.
 ## 18. Verify the adopter shape and both paths
 
 - [x] In a scratch project, drive `apply-manifest` and `enforce-manifest` with the manifest `ductus.md` now describes against this checkout as the source root, and confirm `.ductus/reference/*.md` lands with `{project}` substituted, nothing lands in an agent's command directory, and a stale reference file is pruned.
-- [ ] Run `/ductus:analyze` on 071 with the MCP server and walk a command's reference-backed step on the markdown-only path, confirming the agent reads the named sections from `.ductus/reference/`.
+- [x] Run `/ductus:analyze` on 071 with the MCP server and walk a command's reference-backed step on the markdown-only path, confirming the agent reads the named sections from `.ductus/reference/`.
 
 - **Done when**: both verifications have run and their results are recorded in the commit that closes the task.
+
+## 19. Disposition out-of-spec finding: status's markdown-only reference leaves several derivations unstated
+
+- [x] `framework/reference/status.md` — a Read-only walk of `/ductus:status` on 2026-10-25 followed every pointer 071 wrote to its exact heading, but could not derive the Scenarios cell, the scenario-question callout, blocked-by, or the unknown-keys line: the reference does not say where scenarios live or how a scenario question is counted, how blocked-by is derived, which file "the installer" is, or the inbox bullet grammar. The text moved verbatim from `status.md`; 071 changed none of it. — discarded: the gaps predate 071 and lie in text it moved without change; the runtime path, required by §runtime-boundary principle 3, derives every one of those fields through `dashboard`, and the markdown-only path only bridges the window before the restart that loads the server. Completing status's markdown-only reference is its own change, not one to bundle into this split.
+
+- **Done when**: the finding is fixed, routed, or discarded, with a discard's reason written on the task.
