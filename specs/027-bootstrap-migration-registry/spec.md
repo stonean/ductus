@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [026-framework-self-audit]
 next-criterion: 31
 ---
@@ -65,7 +65,7 @@ A new file at `framework/migrations.toml` (location and format are open question
 last_applied = "<entry-id>"
 ```
 
-When the field is absent, bootstrap treats it as "no migrations have been applied" and runs every active entry. When present, bootstrap runs only entries newer than the recorded id (registry order is authoritative; alphabetical or chronological is an open question). After all applicable entries succeed, bootstrap updates the field to the id of the newest entry in the active registry.
+When the field is absent, bootstrap treats it as "no migrations have been applied" and runs every active entry — except on a **greenfield** run, one that began with no config file at any tier and no spec root, which has nothing to migrate: it applies nothing, asks nothing, and seeds the field with the newest active entry's id (`framework/bootstrap/ductus-procedure.md` §Pre-run Migrations, steps 3–4, since spec 071's task 20; until then a brand-new project was prompted to approve every active entry, each a no-op). When present, bootstrap runs only entries newer than the recorded id (registry order is authoritative; alphabetical or chronological is an open question). After all applicable entries succeed, bootstrap updates the field to the id of the newest entry in the active registry.
 
 **Scope: an entry applies once per repository, not once per contributor.** The marker lives in the committed config file, so the first contributor to run `/ductus` applies the pending entries and commits the advanced marker; everyone who pulls afterwards reads it, sees nothing pending, and skips. That is correct for repo-shared state — the edit genuinely happened once, for everyone.
 
@@ -107,7 +107,7 @@ Family 10 extends [spec 026](../026-framework-self-audit/spec.md)'s `/audit` as 
 
 ### Adopter state
 
-- [x] AC6: `.ductus/config.toml` schema documents a `[migrations]` section with a `last_applied` field (string, slug-valued). Absent field means "no migrations applied" — bootstrap runs every active entry.
+- [x] AC6: `.ductus/config.toml` schema documents a `[migrations]` section with a `last_applied` field (string, slug-valued). Absent field means "no migrations applied" — bootstrap runs every active entry. **Since spec 071's task 20, a greenfield run (no config file at any tier and no spec root) is the exception: it seeds the field with the newest active entry's id and runs nothing.**
 - [x] AC7: On `/ductus` re-run against an adopter whose `last_applied` equals the newest active entry's `id`, the migration loop performs zero filesystem reads beyond loading the registry and reports zero migrations applied.
 - [x] AC8: On `/ductus` re-run against an adopter whose `last_applied` is older than the newest entry, only entries newer than `last_applied` (per SemVer comparison on `introduced_in`, lexicographic tie-break on `id`) execute.
 - [x] AC9: After each migration completes successfully, `last_applied` is updated to that entry's `id` before the next entry begins. An aborted batch resumes from the next-pending entry on the following `/ductus` run.

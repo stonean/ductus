@@ -10,7 +10,7 @@ After the `ductus-bootstrap` scenario landed, `/ductus` successfully uses `fetch
 
 1. **update** (overwrite if different, honor pinned-file list) — the bulk of framework files: constitution, rules, templates, hooks.
 2. **create** (write only if destination doesn't already exist) — adopter-seedable files: system.md, errors.md, events.md, scripts.
-3. **skip-if-conflict** — adopter-owned files: AGENTS.md, CLAUDE.md.
+3. **skip-if-conflict** — write only when absent, without substitution. AGENTS.md and CLAUDE.md were first mapped here, but both templates carry placeholders, so the bootstrap now writes them as `create` entries (spec 071 task 20) and no manifest row it builds uses this strategy; the primitive keeps it, and the parity fixture exercises it.
 
 Plus three orthogonal concerns the current primitives don't address:
 
@@ -35,7 +35,7 @@ Three new primitives. Each is thin enough that the bootstrap procedure shrinks t
    - Result: `entries: Vec<ManifestEntryResult>` listing the per-entry action, plus aggregate `created` / `updated` / `unchanged` / `skipped-exists` / `skipped-pinned` / `source-missing` counts.
 
 2. **`enforce-manifest`** — directory cleanup against an expected file list.
-   - Args: `directory: String`, `expected: Vec<String>` (filenames relative to `directory`), `pinned: Vec<String>` (dest paths, relative), `recursive: bool` (default `false` — top-level only, matching the bootstrap's slash-command cleanup behavior), and `glob-include: Option<String>` (default `*.md`).
+   - Args: `directory: String`, `expected: Vec<String>` (filenames relative to `directory`), `pinned: Vec<String>` (relative to `directory`, like `expected` — a caller strips the directory prefix from a project-relative pinned path), `recursive: bool` (default `false` — top-level only, matching the bootstrap's slash-command cleanup behavior), and `glob-include: Option<String>` (default `*.md`).
    - For each file in `directory` matching `glob-include`: if it's in `expected`, keep; if it's in `pinned`, keep with a `pinned-kept` label; otherwise remove.
    - Result: `removed: Vec<String>`, `kept: Vec<String>`, `pinned-kept: Vec<String>`.
    - One primitive call replaces the bootstrap's three cleanup loops (slash-command manifest enforcement, legacy `skills/` directory removal, legacy workflow filename removal).

@@ -25,7 +25,7 @@ runtime being required — a generator that fires on every commit could not
 depend on a binary that might be absent. Spec 048 made the runtime required
 and acquired, which retired that constraint.
 
-## Steps
+## Procedure
 
 1. **Remove the retired scripts.** For each of `.ductus/scripts/gen-spec-deps.sh`,
    `.ductus/scripts/gen-cross-service-refs.sh`, and

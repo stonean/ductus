@@ -133,12 +133,12 @@ The rule tier has a structurally similar gap (a rule file a project authors regi
 The import line in your `CLAUDE.md` or `AGENTS.md` is **navigation, not loading**. `/ductus` maintains it inside a managed block:
 
 ```markdown
-<!-- ductus:constitutions -->
+<!-- BEGIN ductus:constitutions -->
 @import ../governance/constitution.md
-<!-- /ductus:constitutions -->
+<!-- END ductus:constitutions -->
 ```
 
-The block's content is layout-derived, because the file is. Claude-style agents read `CLAUDE.md` and get `@import` lines; Antigravity and OpenCode read `AGENTS.md`, which has **no import directive at all**, so they get plain links. Only the region between the markers is rewritten — the rest of your file is preserved byte-for-byte, and `.ductus/constitution.md` is never touched.
+The block's content is layout-derived, because the file is. Claude-style agents read `CLAUDE.md` and get `@import` lines; Antigravity, OpenCode and Pi read `AGENTS.md`, which has **no import directive at all**, so they get plain links. Only the region between the markers is rewritten — the rest of your file is preserved byte-for-byte, and `.ductus/constitution.md` is never touched.
 
 An adopter whose rules file has no block still gets the rules, because `/ductus:target` is what loads them.
 

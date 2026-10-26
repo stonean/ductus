@@ -17,7 +17,8 @@
 # This family pins the manifest to the source of truth: the set of
 # `framework/commands/*.md` rows in ductus.md must equal the set of
 # framework/commands/*.md files, minus the maintainer-only commands that
-# are intentionally not shipped to adopters (see `excl` below).
+# are intentionally not shipped to adopters (listed in
+# scripts/maintainer-only-commands.txt; see `excl` below).
 #
 # Family 2 (manifest-parity.sh) explicitly deferred the installer file
 # list as out of scope; this family closes that gap for the command
@@ -85,7 +86,7 @@ while IFS= read -r name; do
   [ -z "$name" ] && continue
   emit "$SECTION" \
     "maintainer-only command framework/commands/$name.md appears in the installer manifest — it would be shipped to adopters" \
-    "remove the row, or drop $name from the excl list in this script if it is now adopter-facing"
+    "remove the row, or drop $name from scripts/maintainer-only-commands.txt if it is now adopter-facing"
 done <<< "$(comm -12 <(printf '%s' "$manifest") <(printf '%s' "$excl"))"
 
 # --- Reference arm (spec 071) ----------------------------------------------
@@ -104,7 +105,11 @@ ref_rows="$(grep -oE '^\| `framework/reference/[a-z-]+\.md` \| `[^`]*` \|' "$DUC
 ref_manifest="$(printf '%s\n' "$ref_rows" \
   | sed -nE 's/^\| `framework\/reference\/([a-z-]+)\.md`.*/\1/p' | sort -u)"
 ref_actual="$(for f in "$REF_DIR"/*.md; do [ -f "$f" ] && basename "$f" .md; done | sort -u)"
-ref_expected="$(comm -23 <(printf '%s' "$ref_actual") <(printf '%s' "$excl"))"
+# Expected rows = references whose command exists, minus maintainer-only. A
+# reference with no command is reported once, as an orphan below; expecting a
+# row for it too would also tell the author to add the row the orphan finding
+# tells them to remove.
+ref_expected="$(comm -23 <(comm -12 <(printf '%s' "$ref_actual") <(printf '%s' "$actual")) <(printf '%s' "$excl"))"
 
 # Missing: a shippable reference with no row — its command's pointers would
 # name a file /ductus never installs.

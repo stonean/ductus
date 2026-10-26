@@ -26,10 +26,10 @@ as a move. The ranges are the spec's: `## Markdown-only reference` to end of
 file for every command, except `audit` (it stops before `## Boundary with
 /ductus:analyze`, which stays). `review`'s range runs to end of file and so
 takes its trailing sections, per the spec's What moves. The ranges are cut by
-line, after reading where each ends. `review.md` holds `## Summary` through
-`## Unexamined governance` inside a fenced `markdown` block
-(`framework/commands/review.md:398-447`), so a cut keyed on level-2 headings alone would
-end in the wrong place.
+line, after reading where each ends. `review.md` held `## Summary` through
+`## Unexamined governance` inside a fenced `markdown` block (its record
+skeleton, now in `framework/reference/review.md`), so a cut keyed on level-2
+headings alone would have ended in the wrong place.
 
 ### Shape of a reference file
 
@@ -49,18 +49,21 @@ end in the wrong place.
   ones.
 - Numbered headings lose their number (`### 1. Resolve target and scope` →
   `## Resolve target and scope`). `resolve-anchor`'s reference grammar is
-  `§[A-Za-z]…` (`runtime/src/primitives/resolve_anchor.rs:232-235`), so a
-  heading starting with a digit cannot be named by a `§` pointer.
+  `§[A-Za-z]…` (`reference_regex` in `runtime/src/primitives/resolve_anchor.rs`),
+  so a heading starting with a digit cannot be named by a `§` pointer.
 
 ### How a step points
 
 A pointer names the full heading and the file, as in "apply
-**§Grounding (advisory)** in `.ductus/reference/analyze.md`". The full heading is
-required because the intra-document match is a prefix match of the text after
-`§` against each heading (`resolve_anchor.rs:211-216`). `§Rules` does not match
-the heading `Rules (blocking and advisory)`; the pointer spells the whole
-heading. A pointer line names that one document and no other, so the bounded
-`resolve-anchor` judgment applies to it.
+**§Grounding (advisory)** in `.ductus/reference/analyze.md`". Written that way
+it is an explicit pair, which the bounded `resolve-anchor` judgment resolves,
+whatever else its line names, only when the bold name equals a heading of the
+named file (`Shipped::pairs` in `resolve_anchor.rs`). So `**§Rules**` does not
+resolve to the heading `Rules (blocking and advisory)`, and neither does a
+pointer that outlives a shortened heading; the pointer spells the whole
+heading. A `§` in running prose has nothing marking where its name ends, so
+the line rule and the intra-document rule instead resolve it when the text
+after the `§` begins with a heading (`names_local_heading`).
 
 Every wording counts as a pointer, not only "markdown-only reference below".
 Measured at `a55af0cd`, the kept parts carry 29 occurrences of the phrase
@@ -89,7 +92,8 @@ get no line.
   `$ARGUMENTS` parameter) and keeps it literal; in a reference file a host no
   longer substitutes it, which is the point.
 - **`{cli-config-dir}`.** One occurrence moves, `analyze.md`'s reference
-  (`framework/commands/analyze.md:449`): "the §Agent Registry row with
+  (its *Project-level consistency (advisory)* section, now in
+  `framework/reference/analyze.md`): "the §Agent Registry row with
   `config_dir` `{cli-config-dir}`" becomes the row whose `config_dir` is the
   `cli-config-dir` recorded in `.ductus/session.toml` for the agent running
   the command.
@@ -136,11 +140,16 @@ already (`.claude/commands/ductus/audit.md`). `.githooks/pre-commit` gains
   file and on an empty extraction.
 - **Family 4** (`placeholder-roundtrip.sh`) also scans
   `framework/reference/*.md`, where `{cli-config-dir}` and a hardcoded agent
-  directory are both findings: a shared file has no per-agent value.
+  directory are both findings: a shared file has no per-agent value. So is
+  `$ARGUMENTS`, which no host substitutes outside the command body it loads.
+  The agent directories are derived from the Agent Registry by
+  `agent_config_dirs` in `scripts/audit/lib.sh`, the helper Family 17 reads
+  its own set through, and an empty derivation is a finding.
 - **Family 16** (`installer-command-parity.sh`) gains a reference arm: every
-  `framework/reference/<name>.md` has a Shared Files row unless `<name>` is
-  maintainer-only, every reference row has a source, and a maintainer-only
-  reference has no row.
+  `framework/reference/<name>.md` whose command exists has a Shared Files row
+  unless `<name>` is maintainer-only, every reference row has a source, a
+  maintainer-only reference has no row, and a reference file with no command
+  is reported once, as an orphan.
 - **Family 39** (`shipped-anchor-resolution.sh`) reports the new
   `cross-document` count on stderr with the others.
 - **`lint-tool-coverage.sh`** loses its markdown-only-reference skip, dead once
@@ -149,35 +158,41 @@ already (`.claude/commands/ductus/audit.md`). `.githooks/pre-commit` gains
 ### Runtime
 
 - **`check-corpus-links`.** `.ductus/reference/` joins the repository-scope
-  exclusions in `is_excluded`
-  (`runtime/src/primitives/check_corpus_links.rs:150-178`), counted like the
-  agent directories, when the tree carries `framework/reference/`, the
-  sources the copies are generated from. Without them the files are the
-  installed ones and are checked, which keeps them in Family 35a's synthetic
-  adopter tree.
+  exclusions in `is_excluded` (`runtime/src/primitives/check_corpus_links.rs`),
+  counted like the agent directories, when the tree carries
+  `framework/reference/`, the sources the copies are generated from. Without
+  them the files are the installed ones and are checked, which keeps them in
+  Family 35a's synthetic adopter tree.
 - **`resolve-anchor`.** A line naming exactly one document, where the
   `## Shared Files` section of `framework/bootstrap/ductus.md` maps that
-  document to a source, is judged: each `§` resolves when it names a heading
-  in the source (longest-first prefix, the intra-document rule), a heading in
-  the citing file, or a marker in the markers file, and is unresolved
-  otherwise. Those references get a new
-  kind, `cross-document`, and a count of their own, so `qualified` keeps
-  meaning *counted, not judged*. A pointer written as an explicit pair,
-  `**§X** in` a shipped document, is judged against that document's headings
-  alone, whatever else its line names: 59 of the 100 pointers share a line
-  with `plan.md`, `spec.md` or another file. Otherwise a line naming several
-  documents, an unmapped one, or a mapped source that cannot be read stays
-  `qualified`. The map is
+  document to a source, is judged: each `§` resolves when the text after it
+  begins with a heading in the source (the intra-document rule's prefix
+  match), a heading in the citing file, or a marker in the markers file, and
+  is unresolved otherwise. Those references get a new kind, `cross-document`,
+  and a count of their own, so `qualified` keeps meaning *counted, not judged*.
+  A pointer written as an explicit pair, `**§X** in` a shipped document, is
+  judged first, against that document's headings alone, whatever else its line
+  names, and resolves only when `X` equals one of them: 59 of the 100 pointers
+  share a line with `plan.md`, `spec.md` or another file. A heading is an ATX
+  heading line outside a fenced code block, in a source and in the citing file
+  alike, so the `## Summary` inside review's fenced record skeleton names no
+  section. Otherwise a line naming several documents, an unmapped one, or a
+  mapped source that cannot be read stays `qualified`. The map is
   empty where `framework/bootstrap/ductus.md` is absent, which is every
   adopter, so the rule engages only in a framework checkout. That is the same
   discriminator `adopter_destinations` uses
   (`runtime/src/primitives/check_artifacts.rs:1370-1377`), but this map reads
   the Shared Files section alone and keeps each row's source, which
   `manifest_destinations` discards.
+- **`check-step-references`.** A `step N of §X` reference numbers a step of a
+  named section's list, not the citing command's, so it is qualified like
+  `X's step N`. Found in review: the pointer rewrite put three such references
+  into `implement.md`'s Instructions, and the primitive had resolved them
+  against implement's own step 5.
 - **Doc comments** that place the reference in `analyze.md`
-  (`check_artifacts.rs:9`, `schema/primitives.rs:4417`) and the
-  `check-step-references` description (`mcp/server.rs`,
-  `schema/primitives.rs`) are corrected.
+  (`check_artifacts.rs:9`, and the `ArtifactFinding` doc comment in
+  `schema/primitives.rs`) and the `check-step-references` description
+  (`mcp/server.rs`, `schema/primitives.rs`) are corrected.
 
 ### Ownership
 
@@ -202,10 +217,13 @@ reference sections remain, in another file.
 ### The gate is the whole CI surface
 
 Every command file changes, so the `implement-basic` parity golden's commit
-shas move (`AGENTS.md` Gotchas). It is re-blessed filtered to that test, and
-the diff is confirmed to be shas only. No `## Instructions` step is added or
-removed, so no step number moves and no other golden should. The install
-golden moves with the fixture change and is re-blessed filtered the same way.
+shas move (`AGENTS.md` Gotchas), and so does the prompt its step-15
+`gate-confirm` envelope records, which quotes implement's step 15 and carries a
+pointer the rewrite changed. It is re-blessed filtered to that test, and the
+diff is confirmed to be the two shas and that prompt only. No
+`## Instructions` step is added or removed, so no step number moves and no
+other golden should. The install golden, `ductus-basic`, records progress
+envelopes only, so the fixture change does not move it.
 
 ### Bytes loaded per invocation, measured after the split
 
@@ -248,14 +266,19 @@ leaves to a follow-up.
 | `framework/constitution.md` | Edit | Canonical-sources row; §runtime-host-integration sentence |
 | `framework/bootstrap/ductus.md` | Edit | Shared Files rows; enforce-directories; reference cleanup; review pointers |
 | `framework/bootstrap/govern.md` | Edit | Byte copy of `ductus.md` |
+| `docs/analyze.md` | Edit | Name the reference file beside the command |
+| `README.md` | Edit | Repository layout names `framework/reference/` |
 | `scripts/gen-claude-commands.sh` | Edit | Write, prune and check `.ductus/reference/` |
 | `.githooks/pre-commit` | Edit | Stage `.ductus/reference/` |
 | `.ductus/reference/*.md` | Create | Generated dogfood copies |
 | `scripts/audit/marker-list-parity.sh` | Edit | Family 18 subject |
 | `scripts/audit/audit-family-parity.sh` | Edit | Family 28 subject |
-| `scripts/audit/placeholder-roundtrip.sh` | Edit | Family 4 extends to reference files |
+| `scripts/audit/placeholder-roundtrip.sh` | Edit | Family 4 extends to reference files, with registry-derived agent dirs and an `$ARGUMENTS` check |
+| `scripts/audit/lib.sh` | Edit | `agent_config_dirs`, the Agent Registry derivation Families 4 and 17 share |
+| `scripts/audit/host-namespace-parity.sh` | Edit | Family 17 reads its agent dirs through `agent_config_dirs` |
 | `scripts/audit/installer-command-parity.sh` | Edit | Family 16 reference arm |
 | `scripts/audit/shipped-anchor-resolution.sh` | Edit | Family 39 reports `cross-document` |
+| `scripts/audit/step-reference-integrity.sh` | Edit | Comment |
 | `scripts/audit/sibling-coupling.sh` | Edit | Comment |
 | `scripts/audit/template-alignment.sh` | Edit | Comment |
 | `scripts/audit/README.md` | Edit | Family descriptions |
@@ -266,14 +289,15 @@ leaves to a follow-up.
 | `runtime/src/schema/primitives.rs` | Edit | `cross-document` count; doc comments |
 | `runtime/src/mcp/server.rs` | Edit | Tool descriptions |
 | `runtime/src/primitives/check_artifacts.rs` | Edit | Doc comment |
+| `runtime/src/primitives/check_step_references.rs` | Edit | A `step N of §X` reference is qualified; test; doc comment |
+| `runtime/src/primitives/enforce_manifest.rs` | Edit | Doc comment: the directories the bootstrap enforces |
 | `runtime/tests/parity.rs` | Edit | Install fixture assertions |
 | `runtime/tests/fixtures/ductus-basic/` | Edit | A reference file and a stale one |
-| `runtime/tests/golden/ductus-basic.jsonl` | Edit | Re-blessed |
-| `runtime/tests/golden/implement-basic.jsonl` | Edit | Re-blessed, shas only |
+| `runtime/tests/golden/implement-basic.jsonl` | Edit | Re-blessed: the two shas and step 15's `gate-confirm` prompt |
 | `specs/067-analyze-and-audit-checks/scenarios/*.md` | Create | The two runtime scenarios |
 | `specs/067-analyze-and-audit-checks/data-model.md` | Edit | `resolve-anchor` kind and count |
 | `specs/026-framework-self-audit/scenarios/*.md` | Create | The family-subject scenario |
-| `AGENTS.md` | Edit | The new-slash-command entry |
+| `AGENTS.md` | Edit | The new-slash-command entry; Project Structure; the pre-commit-hook gotcha |
 
 ## Trade-offs
 
@@ -294,8 +318,9 @@ leaves to a follow-up.
   judged.** `audit` is not in the Shared Files manifest, so a `§` pointer
   naming `.ductus/reference/audit.md` would stay `qualified`. None exists: the
   maintainer-only command names its reference file as a whole.
-- **Known limitation: a `§` pointer must spell its heading in full**, because
-  the match is a prefix match. A shortened pointer is reported unresolved,
+- **Known limitation: a `§` pointer must spell its heading exactly**, because
+  a pair resolves only when its bold name equals a heading. A shortened
+  pointer, or one that outlives a shortened heading, is reported unresolved,
   which is the safe direction.
 
 ## Cross-spec impact

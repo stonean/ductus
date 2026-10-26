@@ -104,8 +104,12 @@ the file alone.
 
 Each reference file opens with a **Where a named section lives** paragraph, as
 `ductus-procedure.md` does: a section name with no heading in the reference
-file is in the command file. That direction needs no read, because the command
-is already loaded whenever its reference is.
+file is in the command file. That direction usually needs no read, because a
+command reading its own reference is already loaded. A reader arriving from
+another file — a command routing through groom's decision tree, the
+installer reading review's rule-surface selection — opens the command file
+too when a section it needs is named there; groom's and review's paragraphs
+say so.
 
 The reverse direction does need a pointer. Other documents cite a command's
 sections by file, as `analyze.md` §Rules or `review.md` §Notes for adopters.
@@ -200,6 +204,13 @@ Checked 2026-10-25 by reading each consumer.
   item 5 of the reference's *Resolve target and scope* section, which
   Instructions step 2 carries out through `discover-rule-files`. Each pointer is
   re-pointed at the section that holds it after the move.
+- **`check-step-references`, behind 026's Family 34.** The rewritten pointers
+  put three references of the form `step 5 of **§…**` into `implement.md`'s
+  Instructions, each numbering a step of a section in its reference file, and
+  the primitive resolved them against implement's own step 5 until review
+  caught it, so a `step N of §X` reference is now qualified like `X's step N`:
+  over the 19 command and bootstrap files, `references-out-of-subject` went
+  from 83 to 80 and no other count changed.
 
 ### Checks that would silently stop covering the moved text
 
@@ -218,17 +229,18 @@ Checked 2026-10-25 by reading each consumer.
   manifest maps that document to a framework source, each `§name` on the line
   resolves if it names a heading in that source, a heading in the citing file,
   or a marker in the markers file, and is reported unresolved otherwise. The
-  citing file's own headings count because a pointer line can also cite a
-  section of its own file, as the installer's rule-surface line cites its
-  Shared Files section beside review's reference. A line naming several documents,
-  or one the manifest does not map, stays counted and unjudged, as does a
-  mapped source that cannot be read. The marker fallback is required: measured
-  2026-10-25, the corpus held 16 references on lines naming exactly one mapped
-  document, and every one was a constitution marker beside a path such as
-  `specs/inbox.md`. A headings-only rule would have reported all 16; this one
-  reports none of them.
+  citing file's own headings count so that a pointer line can also cite a
+  section of its own file; no reference needs that today. A line naming
+  several documents, or one the manifest does not map, stays counted and
+  unjudged, as does a mapped source that cannot be read. The marker fallback is
+  required: measured 2026-10-25, the corpus held 16 references on lines naming
+  exactly one mapped document, and every one was a constitution marker beside
+  a path such as `specs/inbox.md`. A headings-only rule would have reported all
+  16; this one reports none of them.
   A pointer written as an explicit pair, `**§X** in` a shipped document, is
   judged against that document's headings alone, whatever else its line names.
+  A pair must name a heading exactly, and a line inside a fenced code block is
+  not a heading, in a source or in the citing file.
   Measured 2026-10-25 after the move, 59 of the 100 pointers in the commands,
   their reference files and the installer sat on a line that also named
   `plan.md`, `spec.md` or another file, so the line rule alone left most of
@@ -239,15 +251,14 @@ Checked 2026-10-25 by reading each consumer.
 - **CI.** `.github/workflows/runtime.yml` triggers on `framework/commands/*.md`
   and gains `framework/reference/*.md`.
 - **The install fixture.** The parity install fixture gains a reference file,
-  to prove both the install to `.ductus/reference/` and the pruning of a stale
-  one.
+  to prove the install to `.ductus/reference/`, and a stale one, which an
+  `enforce-manifest` call against that directory must prune.
 
 ### Consumers checked and unaffected
 
 - Readers of `## Instructions` alone: the parser and `ductus exec`,
-  `check-step-references`, `primitive-promotion-candidates`, and
-  `lint-procedure-parseability`, which globs `framework/commands/` and
-  `framework/bootstrap/` only.
+  `primitive-promotion-candidates`, and `lint-procedure-parseability`, which
+  globs `framework/commands/` and `framework/bootstrap/` only.
 - `check-command-flags` (Family 30): every Flags table is in the kept part.
 - The `writeCode` payload: it reads the command's `Reference:` line, which is
   in the kept part of every command.
@@ -321,10 +332,10 @@ its schema.
 - [ ] AC9: `scripts/gen-claude-commands.sh` writes `.ductus/reference/*.md` from `framework/reference/*.md` with `{project}` substituted and prunes one with no source, its `--check` mode reports drift in either, and the pre-commit hook stages the directory.
 - [ ] AC10: Family 18 reads its marker restatement from `framework/reference/analyze.md` and still reports a finding when the sentence is absent.
 - [ ] AC11: `check-corpus-links` excludes `.ductus/reference/` from the repository scope, and counts the exclusion, only in a tree that carries `framework/reference/`, and checks those files everywhere else, with a test for each case that fails when its behavior is removed.
-- [ ] AC12: `resolve-anchor` judges a `§name` on a line naming exactly one document that the Shared Files manifest maps to a framework source: resolved when it names a heading in that source, a heading in the citing file, or a markers-file marker, unresolved otherwise. A `§` written as an explicit pair, `**§X** in` a shipped document, is judged against that document's headings alone on any line. A line naming several documents or an unmapped one, and a mapped source that cannot be read, otherwise stay counted and unjudged. Each case has a test that fails when its behavior is removed, and the rule reports no unresolved reference in this repository's `framework/` or spec corpus that the previous rule did not.
+- [ ] AC12: `resolve-anchor` judges a `§name` on a line naming exactly one document that the Shared Files manifest maps to a framework source: resolved when it names a heading in that source, a heading in the citing file, or a markers-file marker, unresolved otherwise. A `§` written as an explicit pair, `**§X** in` a shipped document, is judged against that document's headings alone on any line. A pair must name a heading exactly, and a line inside a fenced code block is not a heading, in a source or in the citing file. A line naming several documents or an unmapped one, and a mapped source that cannot be read, otherwise stay counted and unjudged. Each case has a test that fails when its behavior is removed, and the rule reports no unresolved reference in this repository's `framework/` or spec corpus that the previous rule did not.
 - [ ] AC13: The installer's pointers at `review.md` §Behavior step 5 name a section that exists in `.ductus/reference/review.md`.
 - [ ] AC14: `.github/workflows/runtime.yml` triggers on `framework/reference/*.md` wherever it triggers on `framework/commands/*.md`.
-- [ ] AC15: The parity install fixture installs a reference file to `.ductus/reference/` and prunes a stale one there, and the test fails when either step is removed.
+- [ ] AC15: The parity install fixture installs a reference file to `.ductus/reference/` with `{project}` substituted, and `enforce-manifest`, run against that directory with its rows as the expected list, prunes a stale one there; each assertion fails when its step is removed.
 - [ ] AC16: `framework/constitution.md` §drift-prevention's canonical-sources row for pipeline command behavior names `framework/reference/<command>.md`, and §runtime-host-integration says where a command's markdown-only prose lives.
 - [ ] AC17: `AGENTS.md`'s entry on wiring a new slash command names the reference file and its manifest row.
 - [ ] AC18: `scripts/audit/run-all.sh` reports no findings, and the three generators plus `derive-dependencies` and `derive-references` report no drift.

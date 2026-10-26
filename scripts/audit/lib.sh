@@ -87,6 +87,27 @@ maintainer_only_commands() {
   sed -E 's/#.*//; s/[[:space:]]//g' "$file" | grep -v '^$' | sort -u
 }
 
+# agent_config_dirs — echo each registered agent's config dir (`.claude`,
+# `.augment`, ...), one per line, sorted.
+#
+# DERIVED from the Agent Registry table in framework/bootstrap/ductus.md — the
+# canonical source per the constitution's canonical-sources map — rather than
+# listed by each family that needs it. `config_dir` is the table's third
+# column, so with a leading `|` it is awk's field 4. A family holding its own
+# copy keeps exiting 0 when a sixth agent is registered, checking a set that
+# no longer matches the registry (QUAL-GROUND-001).
+#
+# An unreadable or reshaped table echoes nothing, which every caller must
+# treat as a finding: an empty set would check nothing and pass.
+agent_config_dirs() {
+  awk -F'|' '
+    /^\| *`key` *\| *`name` *\| *`config_dir`/ { intable = 1; next }
+    intable && /^\| *-/                        { next }
+    intable && !/^\|/                          { exit }
+    intable { gsub(/[` ]/, "", $4); if ($4 != "") print $4 }
+  ' "$ROOT/framework/bootstrap/ductus.md" 2> /dev/null | sort -u
+}
+
 # spec_corpus BIN — echo `slug<TAB>status` for every feature directory the
 # runtime recognizes, one per line.
 #

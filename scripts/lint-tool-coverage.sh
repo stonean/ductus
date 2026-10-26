@@ -32,7 +32,7 @@ MANIFEST="$ROOT/framework/runtime-tools.txt"
 for arg in "$@"; do
   case "$arg" in
     -h|--help)
-      sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'
       echo
       echo "Usage: $(basename "$0")"
       echo "  Exits 0 when every runtime-tool reference has a fallback within $WINDOW lines."

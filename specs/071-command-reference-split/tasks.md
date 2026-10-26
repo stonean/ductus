@@ -109,12 +109,14 @@ Blocked on task 9: the change is 067's scenario.
 - [x] Add a reference file to the `ductus-basic` staging archive, a manifest entry and an enforce-directory for `.ductus/reference/`, and a stale reference file in the fixture project.
 - [x] Assert the reference file lands with `{project}` substituted and the stale one is removed, then re-bless `ductus-basic` filtered to its test and read the golden's diff.
 - [x] Mutate: drop the manifest entry, then the enforce-directory, and see each assertion fail.
+- **Correction (2026-10-26):** no enforce-directory entry was added to the fixture; the test calls `enforce-manifest` itself against `project/.ductus/reference`, with the reference rows as the expected list (AC15 reworded 2026-10-26 to match). The `ductus-basic` golden did not move: it records progress envelopes only.
 
 - **Done when**: both assertions pass and have been seen to fail under mutation, and the golden diff holds only the new entries.
 
 ## 14. Re-bless the goldens the command edits moved
 
 - [x] Run `cargo test --release --locked --test parity`; re-bless `implement-basic` filtered to its test and confirm its diff is the `first-commit` and `current-head` shas only.
+- **Correction (2026-10-26):** the `implement-basic` diff also carries step 15's `gate-confirm` prompt prose, which quotes implement's step 15 and changed with the pointer the rewrite gave it.
 
 - **Done when**: the parity suite passes and the only golden change from the command edits is those two shas.
 
@@ -143,6 +145,8 @@ Blocked on task 9: the change is 067's scenario.
 
 - [x] In a scratch project, drive `apply-manifest` and `enforce-manifest` with the manifest `ductus.md` now describes against this checkout as the source root, and confirm `.ductus/reference/*.md` lands with `{project}` substituted, nothing lands in an agent's command directory, and a stale reference file is pruned.
 - [x] Run `/ductus:analyze` on 071 with the MCP server and walk a command's reference-backed step on the markdown-only path, confirming the agent reads the named sections from `.ductus/reference/`.
+- **Correction (2026-10-26):** the markdown-only walk verified was `/ductus:status` (commit 85b2e1a5), not `/ductus:analyze`.
+- **Addendum (2026-10-26):** a `--ref=main` scratch adoption of all five agents on 2026-10-26 confirmed that the 12 reference files install with `{project}` substituted, none lands in any agent's command directory, every pointer in each layout's analyze resolves, and a stale reference is pruned on a re-run. Its commits were not made (permission denial), so the installed hook was not exercised.
 
 - **Done when**: both verifications have run and their results are recorded in the commit that closes the task.
 
@@ -151,3 +155,19 @@ Blocked on task 9: the change is 067's scenario.
 - [x] `framework/reference/status.md` — a Read-only walk of `/ductus:status` on 2026-10-25 followed every pointer 071 wrote to its exact heading, but could not derive the Scenarios cell, the scenario-question callout, blocked-by, or the unknown-keys line: the reference does not say where scenarios live or how a scenario question is counted, how blocked-by is derived, which file "the installer" is, or the inbox bullet grammar. The text moved verbatim from `status.md`; 071 changed none of it. — discarded: the gaps predate 071 and lie in text it moved without change; the runtime path, required by §runtime-boundary principle 3, derives every one of those fields through `dashboard`, and the markdown-only path only bridges the window before the restart that loads the server. Completing status's markdown-only reference is its own change, not one to bundle into this split.
 
 - **Done when**: the finding is fixed, routed, or discarded, with a discard's reason written on the task.
+
+## 20. Disposition out-of-spec findings: installer defects from the --ref=main scratch adoption
+
+- [ ] `framework/templates/project/{claude-md,agents}.md` mark the constitutions region `<!-- ductus:constitutions -->`/`<!-- /ductus:constitutions -->` while `ductus.md` §Shared Files "Shared constitution imports" step 3 calls `merge-managed-block` html-comment style, which reads and writes `<!-- BEGIN ductus:constitutions -->`/`<!-- END … -->`, so a fresh adoption appends a second block and never maintains the template's region (eb043505, 055) — owner: fix in this run
+- [ ] AGENTS.md and CLAUDE.md map to `skip-if-conflict` on the runtime path (`ductus.md` §Instructions step 4; 022 scenarios `apply-manifest`, `govern-bootstrap`), which applies no substitution, so they ship with `{project-name}`, `{One-line project description.}` and `{project}` literal although §Shared Files says AGENTS.md is substituted (a3b02b9f, 022) — owner: fix in this run
+- [ ] the Pi bridge is a verbatim copy "from the staging archive" in the State B / MCP wiring step (`ductus.md` §MCP wiring and the registration table), which runs in pre-flight before the archive is fetched; §Pi layout's Bridge step writes it later (2c55c608, 064) — owner: fix in this run
+- [ ] §Instructions step 4's "single call" passes one `cli-config-dir` to every agent's Per-Agent Scaffolding entries, so a claude+auggie run gives each configure file the other's settings path; step 9's "single entry" is one per agent and omits pi's `{config_dir}/prompts/ductus.md` (a3b02b9f, 022; 2c55c608, 064) — owner: fix in this run
+- [ ] the Antigravity skill transform, the `name: ductus` wrap and the `{project}-*/` skill-directory cleanup are covered by no primitive, yet steps 4, 8 and 9 say the primitive calls replace those loops; the text never assigns them to the host (a3b02b9f, 022; 032) — owner: fix in this run
+- [ ] a greenfield project is prompted to apply nine no-op migrations (`ductus-procedure.md` §Pre-run Migrations: null `last_applied` qualifies every entry, no first-run exemption); `inbox-guidance-refresh` prints a line where the procedure says it exits silently; `generator-primitives.md` has `## Steps`, not `## Procedure` (55523e94, 027; 02b4e56f, 058) — owner: fix in this run
+- [ ] `ductus-procedure.md` step 8 says `check-orphaned-references`' `attribution` reads `registry`, but the primitive reads `framework/migrations.toml` from the project tree, so in an adopter it always reads `watermark` (1a5bf19f, 027/067) — owner: fix in this run
+- [ ] the first run's `.gitignore` is not a fixed point: language patterns appended after the managed-block merge repeat canonical lines (`.env`), and the next run's merge removes them from the language section `ductus.md` §Shared Files calls adopter territory (e71bd410, b1c5b4df, 022) — owner: fix in this run
+- [ ] the closing restart notice says "Installed `{version}` to `{store-path}`" and "wired in this run" when the store was already current or the wiring already present (a4a33584, 3103ef68, 048) — owner: fix in this run
+- [ ] the post-write integrity check says the body after the frontmatter "must start with `# ductus`" though every correct copy starts with a blank line (396952eb) — owner: fix in this run
+- [ ] wording: step 5 says the `.gitignore` merge ends at the next blank line; steps 1 and 5 cite `specs/.cache/` where the template has `.ductus-cache/`; Shared constitution imports omit pi; `migrations/ductus-rename.md` registers Auggie with a bare `--command ductus` (a3b02b9f, 022; eb043505, 055; 9da4a7ae, 049) — owner: fix in this run
+
+- **Done when**: every item is fixed, routed, or discarded with the outcome written on it, and a second scratch adoption on the fixed tree proves the fixes

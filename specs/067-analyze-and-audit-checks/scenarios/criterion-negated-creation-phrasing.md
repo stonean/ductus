@@ -150,7 +150,7 @@ restatement only, the canonical section renamed) plus the restored baseline.
   criterion, so an appended annotation suppresses exactly what it suppressed
   before. That decision is unchanged by this scenario.
 - **This is a precision fix, not a recall one.** No criterion that was silently
-  exempted becomes a finding. The family's promotion criterion (045 §Resolved
+  exempted becomes a finding. The family's promotion criterion (045's Resolved
   Questions) requires 5+ findings on two consecutive runs *and* every finding
   confirmed a true positive. The reporting repo met neither half — its single
   finding across seven specs was this false positive — which is that repo's

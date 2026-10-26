@@ -3,12 +3,13 @@
 @import .ductus/constitution.md
 @import AGENTS.md
 
-<!-- ductus:constitutions -->
-<!-- /ductus maintains this region. Registered shared constitutions
-     (.ductus/config.toml [constitutions.*]) are imported here, one line each.
-     Empty when none are registered. Edits inside are overwritten; the rest of
-     this file is preserved byte-for-byte. -->
-<!-- /ductus:constitutions -->
+<!-- /ductus maintains the region between the BEGIN and END markers below.
+     Registered shared constitutions (.ductus/config.toml [constitutions.*])
+     are imported there, one line each. Empty when none are registered. Edits
+     inside it are overwritten; the rest of this file is preserved
+     byte-for-byte. -->
+<!-- BEGIN ductus:constitutions -->
+<!-- END ductus:constitutions -->
 
 ## Auto-Memory Routing
 

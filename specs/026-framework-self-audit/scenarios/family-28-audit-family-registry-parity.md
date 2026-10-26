@@ -68,11 +68,14 @@ is the third place the family set is written down.
   that compares two empty sets reports agreement — the precise false green
   `/audit` exists to prevent, and the reason Families 17, 18, and 23 all fail
   closed on an empty extraction.
-- **`audit.md`'s prose mentions a family number outside its list.** The
-  boundary section and several entries reference other families by number in
-  running prose (Family 23's entry names 042 and 049; the header names Family
-  3). Only the enumerated `(Family N — …)` entries count, so the extraction is
-  anchored to that form rather than to any mention of the digits.
+- **`audit.md`'s prose mentions a family number outside its list.** Several
+  entries reference other families by number in running prose (Family 23's
+  entry names 042 and 049; Family 28's own entry names Families 24, 25 and 26
+  and the spent Family 3). Only the enumerated `(Family N — …)` entries count,
+  so the extraction is anchored to that form rather than to any mention of the
+  digits. The header, whose prose names Families 3 and 28 too, stayed in
+  `framework/commands/audit.md` with the boundary section when 071 moved the
+  list, outside this family's subject.
 - **The generated copy is not a second subject.** `.ductus/reference/audit.md`
   is generator output; auditing it would report the generator rather than a
   defect. The source is the subject, and the generator's own sync is already

@@ -9,8 +9,8 @@
  * runtime release that adds or changes a primitive reaches pi with no edit
  * here.
  *
- * Written to `.pi/extensions/ductus.ts` by /ductus (Shared Files manifest,
- * strategy `update`). Zero npm dependencies — the MCP-over-stdio transport is
+ * Written to `.pi/extensions/ductus.ts` by /ductus (the Pi layout's Bridge
+ * step, strategy `update`). Zero npm dependencies — the MCP-over-stdio transport is
  * newline-delimited JSON-RPC 2.0, which this file speaks directly. Keep it
  * dependency-free: the README promises nothing enters the adopter's
  * dependency manifest, and the live-schema property depends on the bridge

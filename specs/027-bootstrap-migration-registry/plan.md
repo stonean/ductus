@@ -44,7 +44,7 @@ Ordering rule (Q3): by `introduced_in` SemVer ascending, lexicographic tie-break
 last_applied = "rule-files-relocate"
 ```
 
-Absent section is the green-field default for new adopters scaffolded after the registry ships. Their first `/ductus` run applies every active entry (most of which are no-ops because their targets are absent), then writes the section with `last_applied = <newest entry's id>`.
+Absent section is the green-field default for new adopters scaffolded after the registry ships. Their first `/ductus` run applied every active entry (most of which are no-ops because their targets are absent), then wrote the section with `last_applied = <newest entry's id>`. Since spec 071's task 20 a greenfield run — no config file at any tier and no spec root — skips the batch and its prompt and seeds `last_applied` directly, because the prompt asked a brand-new adopter to approve every active entry, and declining it left a warning that was false and a prompt on every later run.
 
 Stale-reference behavior (edge case from spec): if `last_applied` references an id that no longer exists in the active registry (sunsetted since the adopter's last run), bootstrap treats the field as "before the oldest active entry," runs every active entry, and emits a warning naming the retired id with a pointer to `CHANGELOG.md`.
 

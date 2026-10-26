@@ -11,7 +11,7 @@ This migration rewrites the guidance and nothing else. **Items are never touched
 
 ## Procedure
 
-1. **Resolve the inbox.** Read `[paths] specs-root` from the active config file (default `specs`); the inbox is `{specs-root}/inbox.md`. When it does not exist, there is nothing to refresh: report `inbox-guidance-refresh: no {specs-root}/inbox.md — nothing to do` and stop. Do not create one — the Shared Files manifest installs the inbox, not a migration.
+1. **Resolve the inbox.** Read `[paths] specs-root` from the active config file (default `specs`); the inbox is `{specs-root}/inbox.md`. When it does not exist, there is nothing to refresh: stop silently, reporting nothing. Do not create one — the Shared Files manifest installs the inbox, not a migration.
 
 2. **Idempotency check.** Locate the guidance comment: the first HTML comment whose opening line begins `<!-- Rules:`, running to the first `-->` after it. Compare that span, `<!--` through `-->` inclusive, with the same span in the current `framework/templates/project/inbox.md` from the acquired archive, normalizing line endings to `\n` for the comparison only. When they are equal **and** the text between the `# Inbox` heading and the comment is not the pre-058 introduction quoted in step 5, the inbox is converged: report `inbox-guidance-refresh: guidance already current` and stop without writing.
 

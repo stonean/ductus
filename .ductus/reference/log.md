@@ -1,6 +1,6 @@
 # log — markdown-only reference
 
-**Where a named section lives.** This file is read alongside its command, `log.md`, which is already loaded whenever this one is. A section named below that has no heading in this file is in the command file, along with the numbered Instructions steps this file cites. A bare `§name` is a heading in this file or a marker in the constitution, `.ductus/constitution.md`; a `§name` with another file's path on the same line is a heading in that file.
+**Where a named section lives.** This file is read alongside its command, `log.md`, which is already loaded whenever this one is. A section named below that has no heading in this file is in the command file, along with the numbered Instructions steps this file cites. A bare `§name` is a heading in this file or a marker in the constitution, `.ductus/constitution.md`; a `§name` with another file's path on the same line is a heading in that file, unless it is a constitution marker.
 
 With no ductus runtime registered, the host performs the same append with its own file tools (Read, Edit, Write) — no shell-pipeline substitution (§runtime-host-integration):
 

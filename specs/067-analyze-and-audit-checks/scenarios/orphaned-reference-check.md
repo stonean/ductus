@@ -32,13 +32,18 @@ repairs, because the adopter may have hand-edited the reference and a wrong
 rewrite is worse than a precise report.
 
 **Attribution has two modes and the result names which one ran.** When
-`framework/migrations.toml` is readable — the bootstrap call site, where the
-registry sits in staging — each finding carries the entry whose `target_paths`
-covers the missing path, and the result reports `attribution: "registry"`. When
-it is not — the `analyze` call site in an adopter checkout, where the registry
-is not installed — findings carry no entry, the result reports
-`attribution: "watermark"` and echoes `.ductus/config.toml`'s
-`[migrations].last_applied` as the only migration context available. The two
+`framework/migrations.toml` is readable in the project tree — a framework
+checkout — each finding carries the entry whose `target_paths` covers the
+missing path, and the result reports `attribution: "registry"`. When it is not
+— every adopter checkout, at both call sites, since the registry an adopter
+sees sits in the bootstrap's staging directory, which the primitive does not
+read — findings carry no entry, the result reports `attribution: "watermark"`
+and echoes `.ductus/config.toml`'s `[migrations].last_applied` as the only
+migration context available. At the bootstrap call site the host attributes
+each finding against the staging registry itself
+(`framework/bootstrap/ductus-procedure.md` §Pre-run Migrations, step 8; spec
+071's task 20 corrected this paragraph, which had placed the bootstrap call
+site in the `registry` mode). The two
 render differently. Emitting a watermark-only finding in the shape of an
 attributed one would be `QUAL-CLAIM-001` inside the check written to enforce
 that principle.

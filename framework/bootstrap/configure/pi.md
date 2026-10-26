@@ -9,7 +9,7 @@ Verify and, when drifted, repair the Pi extension bridge that exposes the `ductu
 ## Scope Boundaries
 
 - Read `.pi/prompts/` only to confirm trust is granted (`/ductus` scaffolds there) and, in `.pi/prompts/ductus.md`, for **Source resolution** and the `{connect-timeout}` and `{request-timeout}` bounds its **Derived paths** table defines; read `.ductus/config.toml` only for its `[source] ref`; read and write only `.pi/extensions/ductus.ts`. Do NOT modify any other file.
-- The bridge file — the copy of `framework/bootstrap/pi/ductus-bridge.ts` installed by `/ductus` at State-B wire time — is the single persistent artifact this agent's runtime access depends on. A pip-installed adopter's checkout gets the bridge from `/ductus`; this command repairs it between runs.
+- The bridge file — the copy of `framework/bootstrap/pi/ductus-bridge.ts` that `/ductus` writes in its Pi layout's Bridge step, after the framework archive is extracted — is the single persistent artifact this agent's runtime access depends on. A pip-installed adopter's checkout gets the bridge from `/ductus`; this command repairs it between runs.
 - Do NOT scan source code, specs, or git history. This command manages the bridge file and reports the permission/trust facts; it does not manage session state.
 - Reference: no constitution sections apply — this command operates on agent-specific wiring state, not `ductus` artifacts.
 

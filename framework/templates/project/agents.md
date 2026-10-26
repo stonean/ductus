@@ -8,12 +8,13 @@
 
 See [constitution.md](.ductus/constitution.md) — guiding principles, development pipeline, spec lifecycle, and quality standards that govern this project.
 
-<!-- ductus:constitutions -->
-<!-- /ductus maintains this region. Registered shared constitutions
-     (.ductus/config.toml [constitutions.*]) are listed here, one line each.
-     Empty when none are registered. Edits inside are overwritten; the rest of
-     this file is preserved byte-for-byte. -->
-<!-- /ductus:constitutions -->
+<!-- /ductus maintains the region between the BEGIN and END markers below.
+     Registered shared constitutions (.ductus/config.toml [constitutions.*])
+     are listed there, one line each. Empty when none are registered. Edits
+     inside it are overwritten; the rest of this file is preserved
+     byte-for-byte. -->
+<!-- BEGIN ductus:constitutions -->
+<!-- END ductus:constitutions -->
 
 ## Tech Stack
 

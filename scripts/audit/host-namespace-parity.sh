@@ -116,26 +116,18 @@ fi
 # than a silent fallback.
 
 HOST_RS="$ROOT/runtime/src/host.rs"
-REGISTRY_MD="$ROOT/framework/bootstrap/ductus.md"
 
-# The agent config dirs are DERIVED from the Agent Registry table in
-# framework/bootstrap/ductus.md — the canonical source per the constitution's
-# canonical-sources map — rather than listed here. `config_dir` is the table's
-# third column, so with a leading `|` it is awk's field 4.
+# The agent config dirs are DERIVED from the Agent Registry table
+# (`agent_config_dirs` in lib.sh) rather than listed here.
 CLI_DIRS=()
 while IFS= read -r dir; do
   [ -n "$dir" ] && CLI_DIRS+=("$dir")
-done < <(awk -F'|' '
-  /^\| *`key` *\| *`name` *\| *`config_dir`/ { intable = 1; next }
-  intable && /^\| *-/                        { next }
-  intable && !/^\|/                          { exit }
-  intable { gsub(/[` ]/, "", $4); if ($4 != "") print $4 }
-' "$REGISTRY_MD" 2>/dev/null | sort -u)
+done < <(agent_config_dirs)
 
 if [ "${#CLI_DIRS[@]}" -eq 0 ]; then
   emit "framework/bootstrap/ductus.md" \
     "could not derive the agent config-dir set from the Agent Registry table — this family would otherwise check a hardcoded set and pass while ignoring real agents" \
-    "restore the Agent Registry table's \`config_dir\` column, or update this family's derivation to match its new shape"
+    "restore the Agent Registry table's \`config_dir\` column, or update \`agent_config_dirs\` in scripts/audit/lib.sh to match its new shape"
   exit 1
 fi
 

@@ -39,7 +39,7 @@ Three properties this buys, each of which the shape above is load-bearing for:
 - `check-zero.sh` — generator/lint precondition pass. Run before family checks; halts `/audit` on failure to avoid misleading findings against known-stale generator output.
 - `cross-doc-consistency.sh` — Family 1.
 - `manifest-parity.sh` — Family 2.
-- `placeholder-roundtrip.sh` — Family 4. Command sources carry `{project}` and `{cli-config-dir}` placeholders rather than `ductus` and `.claude/` literals; a reference file under `framework/reference/` is held to a stricter rule, since it is installed once for every agent and has no per-agent value, so `{cli-config-dir}` and any agent directory are findings there (spec 071). (Family 3, registry equivalence, was retired with the workflows feature — spec 043; family numbers are stable identifiers, so the gap stands.)
+- `placeholder-roundtrip.sh` — Family 4. Command sources carry `{project}` and `{cli-config-dir}` placeholders rather than `ductus` and `.claude/` literals; a reference file under `framework/reference/` is held to a stricter rule, since it is installed once for every agent and has no per-agent value, so `{cli-config-dir}` and any agent directory are findings there, and so is `$ARGUMENTS`, which a host substitutes only in the command body it loads (spec 071); a line that documents the token takes the `<!-- audit:ignore-placeholders -->` marker on the line above. (Family 3, registry equivalence, was retired with the workflows feature — spec 043; family numbers are stable identifiers, so the gap stands.)
 - `template-alignment.sh` — Family 5.
 - `ssot-invariants.sh` — Family 6.
 - `sibling-coupling.sh` — Family 7.

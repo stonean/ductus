@@ -12,9 +12,16 @@
 # A reference file (spec 071) is held to a stricter rule. It is installed
 # once, at .ductus/reference/, and shared by every agent, so it has no
 # per-agent value to substitute: `{cli-config-dir}` and every agent's config
-# directory (.claude/, .augment/, .agents/, .opencode/, .pi/) are findings
-# there. A command file can name `{cli-config-dir}` because it is copied per
-# agent; its reference cannot.
+# directory are findings there. The directories are derived from the Agent
+# Registry (`agent_config_dirs` in lib.sh), so a newly registered agent is
+# checked without an edit here. A command file can name `{cli-config-dir}`
+# because it is copied per agent; its reference cannot.
+#
+# `$ARGUMENTS` is a finding in a reference file too. A host substitutes the
+# invocation's arguments into the command body it loads and nowhere else, so
+# in a reference the token is never substituted: a sentence using it to name
+# the argument reads the literal token. A line that documents the token
+# rather than using it takes the line-scope marker below.
 #
 # Allowlist (two forms):
 #   1. Line scope: a line preceded by `<!-- audit:ignore-placeholders -->`
@@ -47,6 +54,18 @@ set -uo pipefail
 # shellcheck source-path=SCRIPTDIR source=lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
 audit_family placeholder-roundtrip
+
+# Every agent's config directory, for the reference-file rule below.
+AGENT_DIRS=()
+while IFS= read -r dir; do
+  [ -n "$dir" ] && AGENT_DIRS+=("$dir/")
+done < <(agent_config_dirs)
+if [ "${#AGENT_DIRS[@]}" -eq 0 ]; then
+  emit "framework/bootstrap/ductus.md" \
+    "could not derive the agent config-dir set from the Agent Registry table — the reference-file rule would check no agent directory and pass" \
+    "restore the Agent Registry table's \`config_dir\` column, or update \`agent_config_dirs\` in scripts/audit/lib.sh to match its new shape"
+  exit 1
+fi
 
 # Walk every command source and reference file, looking for the patterns.
 # Per-file: skip lines preceded by the ignore comment.
@@ -91,7 +110,10 @@ for file in framework/commands/*.md framework/reference/*.md; do
       if [[ "$line" == *"{cli-config-dir}"* ]]; then
         emit "$file:$line_no" "\`{cli-config-dir}\` in a reference file — it is shared by every agent, so there is no per-agent value to substitute" "name the agent in words (e.g. the \`cli-config-dir\` recorded in \`.ductus/session.toml\`), or move the sentence into the command file"
       fi
-      for dir in .claude/ .augment/ .agents/ .opencode/ .pi/; do
+      if [[ "$line" == *'$ARGUMENTS'* ]]; then
+        emit "$file:$line_no" "\`\$ARGUMENTS\` in a reference file — a host substitutes it only in the command body it loads, so here it is never substituted" "name the invocation's argument in words, or move the sentence into the command file; add <!-- audit:ignore-placeholders --> on the line above if the line documents the token rather than using it"
+      fi
+      for dir in "${AGENT_DIRS[@]}"; do
         if [[ "$line" == *"$dir"* ]]; then
           emit "$file:$line_no" "hardcoded agent directory \`$dir\` in a reference file — it is shared by every agent" "describe the layout-derived path in words, or add <!-- audit:ignore-placeholders --> if literal is intentional"
         fi

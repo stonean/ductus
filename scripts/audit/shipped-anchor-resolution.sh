@@ -29,17 +29,21 @@
 # the report this family answers is about that one. So its limits are the
 # primitive's, inherited rather than restated as policy: another document is
 # recognised only by a `.md` filename or link on the same line, a line naming
-# one qualifies every `§` on it, and a reference meant for another file can
+# documents the Shared Files manifest does not map qualifies every `§` on it
+# (a line naming exactly one mapped document, or an explicit pair, is judged
+# as cross-document instead), and a reference meant for another file can
 # resolve against a same-named local heading. The scenario states each.
 #
 # Only `markers`- and `cross-document`-kind references can come back
 # unresolved; `qualified` and `intra-document` are counted, never judged,
 # exactly as the primitive reports them. `cross-document` (spec 071) is a
-# command step's pointer into its reference file, **§X** in
-# `.ductus/reference/<command>.md`: the line names one document the Shared
-# Files manifest ships, so the primitive judges it against that document's
-# framework source. The counts go to stderr so a clean exit says what it
-# examined.
+# pointer into a document the Shared Files manifest ships, judged against
+# that document's framework source. Two shapes reach it: an explicit pair, a
+# command step's **§X** in `.ductus/reference/<command>.md`, judged against
+# that document's headings alone whatever else its line names; or any `§` on
+# a line naming exactly one mapped document, which a heading in this file or
+# a constitution marker also resolves. The counts go to stderr so a clean
+# exit says what it examined.
 #
 # An empty enumeration, an unreachable runtime, and a file whose result could
 # not be read or parsed are each findings. A family that examined nothing must
@@ -84,7 +88,33 @@ else
       "build the runtime (cargo build --release --manifest-path runtime/Cargo.toml) or run /ductus to acquire the pinned binary"
   else
     records="$(printf '%s\n' "$files" | python3 -c '
-import json, subprocess, sys
+import json, re, subprocess, sys
+
+PAIR = re.compile(r"\*\*§([^*]+)\*\* in `([^`]+)`")
+WORD = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
+
+
+def pair_document(path, number, anchor):
+    # The document an unresolved reference names as an explicit pair, when
+    # every reference on its line beginning with this anchor is a pair into
+    # one document; else empty. The runtime reports only the anchor first
+    # word and the line, so the pair is re-read from the line text.
+    try:
+        with open(path, encoding="utf-8", errors="replace") as handle:
+            line = handle.read().splitlines()[int(number) - 1]
+    except (OSError, ValueError, IndexError):
+        return ""
+    in_pairs = {}
+    for match in PAIR.finditer(line):
+        word = WORD.match(match.group(1))
+        if word and word.group(0) == anchor:
+            in_pairs[match.start() + 2] = match.group(2)
+    every = [m.start() for m in re.finditer("§" + re.escape(anchor) + "(?![A-Za-z0-9_-])", line)]
+    documents = set(in_pairs.get(at) for at in every)
+    if every and len(documents) == 1 and None not in documents:
+        return documents.pop()
+    return ""
+
 
 binary, markers = sys.argv[1], sys.argv[2]
 examined = refs = qualified = intra = marker_refs = cross = 0
@@ -120,7 +150,9 @@ for path in (line.strip() for line in sys.stdin):
         elif kind == "cross-document":
             cross += 1
             if not ref.get("resolved"):
-                print("unresolved-cross\t%s:%s\t%s" % (path, ref.get("line", ""), ref.get("anchor", "")))
+                anchor = ref.get("anchor", "")
+                document = pair_document(path, ref.get("line", 0), anchor)
+                print("unresolved-cross\t%s:%s\t%s\t%s" % (path, ref.get("line", ""), anchor, document))
         else:
             marker_refs += 1
             if not ref.get("resolved"):
@@ -132,12 +164,21 @@ print("counts\t%d\t%d\t%d\t%d\t%d\t%d" % (examined, refs, qualified, intra, mark
       case "$kind" in
         unresolved)
           emit "$f1" \
-            "\`§$f2\` names no heading in this file and no marker in $MARKERS — resolve-anchor reports it to anyone who runs the check over what ductus ships, and only a ductus release repairs it" \
+            "the § reference beginning \`§$f2\` names no heading in this file and no marker in $MARKERS — resolve-anchor reports it to anyone who runs the check over what ductus ships, and only a ductus release repairs it" \
             "spell a local heading as it reads, name the other markdown document on the same line, or drop the § for a section of a non-markdown document"
           ;;
         unresolved-cross)
+          # The runtime reports only the anchor's first word, so the message
+          # says where the reference begins rather than quoting a name it
+          # may have cut. A pair whose document the line text yields names
+          # it; otherwise the message holds for either shape.
+          if [ -n "$f3" ]; then
+            what="is written as a pair into \`$f3\` and names none of its headings — a pair is judged against that document alone"
+          else
+            what="names no heading of the shipped document it points into (a pair is judged against that document alone; otherwise a heading in this file or a marker in $MARKERS would also resolve it)"
+          fi
           emit "$f1" \
-            "\`§$f2\` names no heading of the shipped document this line points into, no heading in this file, and no marker in $MARKERS" \
+            "the § reference beginning \`§$f2\` $what" \
             "spell the target section's heading in full, as it reads in the framework source the Shared Files manifest maps that document to"
           ;;
         unexamined)

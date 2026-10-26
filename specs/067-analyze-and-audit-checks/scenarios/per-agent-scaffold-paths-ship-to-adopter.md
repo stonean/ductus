@@ -30,13 +30,13 @@ surfaced them the same way. The gap was per-agent, not Pi-specific.
 ## Behavior
 
 `adopter_destinations(repo)` also derives each registered agent's scaffold
-destinations from §Agent Registry. For every registry row it substitutes the
-row's `config_dir` into the layout-derived **`ductus` install path** and
-**Settings file** formulas for the row's `layout`, and takes the agent's **MCP
-target** when its scope is project-scoped (`project-committed` or
-`project-local`). Every registered agent contributes, not only the ones
-dogfooded here: the set describes what this repo ships, not what it happens to
-materialize.
+destinations from the bootstrap's **Agent Registry**. For every registry row
+it substitutes the row's `config_dir` into the layout-derived **`ductus`
+install path** and **Settings file** formulas for the row's `layout`, and
+takes the agent's **MCP target** when its scope is project-scoped
+(`project-committed` or `project-local`). Every registered agent contributes,
+not only the ones dogfooded here: the set describes what this repo ships, not
+what it happens to materialize.
 
 The suppression itself is unchanged — same arm, same position after the
 resolve and `root-absent` arms, same `skipped { reason: "ships-to-adopter" }`
