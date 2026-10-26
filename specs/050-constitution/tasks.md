@@ -307,3 +307,9 @@ Implements `scenarios/a-retired-feature-leaves-no-spec.md`. The constitution sta
 - [ ] Implement the behavior described in `scenarios/the-constitution-fits-one-read.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
+
+## 36. Correct the review record's `scope` description
+
+- [ ] `framework/constitution.md` §text-first-artifacts, review-record table: `scope` is described as "Files the review's scope contained", but `write-review` records `scope.len()` of the plan's Affected Files entries unexpanded (`parse_affected_files` in `runtime/src/primitives/mod.rs`), so a glob row counts once; state what it counts, with the `examined` row beside it. Land it with task 35's cut where the audit-record tables move (routed from 072 task 9, owner 2026-10-26)
+
+- **Done when**: the constitution's `scope` row states what `write-review` records, and the `examined` / `scope` comparison it implies reconciles

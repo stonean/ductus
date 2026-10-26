@@ -73,8 +73,14 @@ Routed 2026-10-26 (owner): `002-project-scaffolding` owns the template, and its 
 
 ## 9. Disposition out-of-spec findings from the AGENTS.md classification
 
-- [ ] `framework/constitution.md` §text-first-artifacts review-record table says `scope` counts "Files the review's scope contained"; `write_review.rs` records `scope.len()` of the plan's Affected Files entries, unexpanded (`parse_affected_files` in `runtime/src/primitives/mod.rs`)
-- [ ] `framework/commands/implement.md` steps 7 and 13 call `diff-cross-spec` with no handling for a failed call (a wide window can exceed the MCP output cap); `review.md` step 1 states the failed-call rule for `compute-review-scope`
-- [ ] Promotion candidates the classification surfaced, each kept as a trimmed `AGENTS.md` entry: the five-passes review rule, *ask whether a ticked criterion was ever true*, *a `path:line` citation is provenance*, *a cross-spec signpost is not rename residue*, *`process-decisions` with an empty `fired`*, *verify a recorded decision still holds*
+- [x] `framework/constitution.md` §text-first-artifacts review-record table says `scope` counts "Files the review's scope contained"; `write_review.rs` records `scope.len()` of the plan's Affected Files entries, unexpanded (`parse_affected_files` in `runtime/src/primitives/mod.rs`)
+- [x] `framework/commands/implement.md` steps 7 and 13 call `diff-cross-spec` with no handling for a failed call (a wide window can exceed the MCP output cap); `review.md` step 1 states the failed-call rule for `compute-review-scope`
+- [x] Promotion candidates the classification surfaced, each kept as a trimmed `AGENTS.md` entry: the five-passes review rule, *ask whether a ticked criterion was ever true*, *a `path:line` citation is provenance*, *a cross-spec signpost is not rename residue*, *`process-decisions` with an empty `fired`*, *verify a recorded decision still holds*
+
+Finding 1 routed 2026-10-26 (owner): `specs/050-constitution/tasks.md` task 36, to land with task 35's cut where the audit-record tables move.
+
+Finding 2 discarded 2026-10-26 (owner). The cross-spec check at steps 7 and 13 is informational and never blocks, so a misread failed call costs a missed heads-up, not a wrong gate. Reading a capped call as empty already breaks §grounding's *A partial read is not a read*, and `AGENTS.md` points at that rule for these two primitives. Fixing it would reopen 066 for a full re-gate and re-bless the `implement-basic` golden.
+
+Finding 3 discarded 2026-10-26. Each candidate stays in `AGENTS.md` as a trimmed entry, so no rule is lost. `/ductus:audit` Family 38 lists every unclassified entry on each run, and that notice is what the next `050-constitution` classification round reads, so routing the candidates separately would duplicate it.
 
 - **Done when**: each finding is fixed, routed, or discarded with its reason recorded on this task
