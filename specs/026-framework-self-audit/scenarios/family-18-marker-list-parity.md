@@ -16,9 +16,11 @@ rather than incidental:
   source, per the constitution's canonical-sources map;
 - `runtime/src/primitives/check_artifacts.rs` — `NON_ASSERTION_MARKERS`, the
   implementation;
-- `framework/commands/analyze.md` — the adopter-facing restatement. This one
-  **cannot** be replaced by a pointer: `analyze.md` ships to adopter projects,
-  which have no copy of 045's data-model;
+- `framework/reference/analyze.md` — the adopter-facing restatement, in
+  `/{project}:analyze`'s markdown-only reference (in `framework/commands/analyze.md`
+  until [071](../../071-command-reference-split/spec.md) moved it). This one **cannot** be replaced by a pointer: it
+  ships to adopter projects as `.ductus/reference/analyze.md`, and they have no
+  copy of 045's data-model;
 - `specs/067-analyze-and-audit-checks/scenarios/criterion-path-existence-family.md`
   — carries the count and the group names, not the phrases.
 

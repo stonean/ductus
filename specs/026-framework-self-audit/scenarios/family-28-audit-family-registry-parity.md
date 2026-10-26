@@ -7,8 +7,10 @@ section: "Check Families"
 ## Context
 
 `/audit` runs the families `scripts/audit/run-all.sh` registers.
-[`framework/commands/audit.md`](../../../framework/commands/audit.md)
-enumerates the families for the maintainer who reads the command. Nothing held
+[`framework/reference/audit.md`](../../../framework/reference/audit.md), the
+command's markdown-only reference (in `framework/commands/audit.md` until
+[071](../../071-command-reference-split/spec.md) moved it), enumerates the families for the maintainer who reads the
+command. Nothing held
 the two together.
 
 They drifted. `run-all.sh` registered 25 families (1–2 and 4–26) while
@@ -71,7 +73,7 @@ is the third place the family set is written down.
   running prose (Family 23's entry names 042 and 049; the header names Family
   3). Only the enumerated `(Family N — …)` entries count, so the extraction is
   anchored to that form rather than to any mention of the digits.
-- **The generated copy is not a second subject.** `.claude/commands/ductus/audit.md`
+- **The generated copy is not a second subject.** `.ductus/reference/audit.md`
   is generator output; auditing it would report the generator rather than a
   defect. The source is the subject, and the generator's own sync is already
   gated by `check-zero` and the generators workflow.

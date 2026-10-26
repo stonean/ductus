@@ -39,3 +39,12 @@ Blocked on task 1: the store tests run against the migrated schema.
 - **Done when**: the README link resolves to the new path.
 
 -->
+
+## 1. Implement scenario: families-follow-the-command-reference-split
+
+- [ ] Implement the behavior described in `scenarios/families-follow-the-command-reference-split.md`
+- [ ] Families 18 and 28 read `framework/reference/analyze.md` and `framework/reference/audit.md`
+- [ ] Family 4 scans `framework/reference/*.md` under the shared-file rule; Family 16 gains its reference arm; Family 39 reports and judges `cross-document` references
+- [ ] Each family seen to fail on its seeded defect
+
+- **Done when**: every changed family passes on the tree and has been seen to report each seeded defect (spec 071 tasks 7 and 11).
