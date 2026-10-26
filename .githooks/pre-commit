@@ -37,6 +37,11 @@
 # Family 26 of /ductus:audit covers the whole repository including
 # maintainer-only files; this covers the spec corpus and is what adopters get.
 #
+# After it, `scripts/lint-governing-size.sh` holds AGENTS.md and the
+# constitution to their size ceilings, measured as staged (spec 072): a lesson
+# added past a ceiling retires, merges or relocates another in the same commit.
+# Unconditional — two `git cat-file -s` calls cost nothing.
+#
 # It then runs the acceptance-criterion labelling pass over each staged spec —
 # `ductus label-criteria`, the backstop for a criterion typed by hand in an
 # editor (spec 013 / criterion-identifiers). That step keeps a swallowed
@@ -222,3 +227,6 @@ fi
 # stdout is the JSON result and is discarded; the citations and fix guidance go
 # to stderr. `git commit --no-verify` is the deliberate bypass.
 "$ductus_bin" check-corpus-links > /dev/null
+
+# The governing documents' size ceilings (spec 072), against the staged blobs.
+scripts/lint-governing-size.sh

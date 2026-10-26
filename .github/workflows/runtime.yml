@@ -80,8 +80,8 @@ jobs:
       # default single-commit checkout has none of those commits, so the test
       # finds nothing to compare and fails its own vacuity guard rather than
       # passing on an empty set. Same requirement Family 19's job carries in
-      # runtime-release.yml, and the same one AGENTS.md records after
-      # gvrn-v0.27.1 blocked its own publish on it.
+      # runtime-release.yml, and the one framework/constitution.md
+      # §design-principles states for any check that reads git history.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0

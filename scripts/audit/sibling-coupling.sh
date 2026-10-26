@@ -72,8 +72,8 @@ fi
 # `parse_feature_dir` (spec 051), and the copy that used to sit here demanded
 # three-or-more digits, so a link to a branch-scoped sibling
 # (`../1234.1-retry-budget/spec.md`) was invisible and the pair went
-# unreported while the family exited 0 — the same defect AGENTS.md records
-# against the two frontmatter derivations, in a third place.
+# unreported while the family exited 0 — the defect AGENTS.md's *a feature
+# directory is not necessarily `NNN-slug`* entry warns of, in a third place.
 #
 # Nothing here has to recognize a feature directory: the caller matches each
 # candidate exactly (`grep -qFx`) against a slug the runtime enumerated, so a

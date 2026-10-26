@@ -28,9 +28,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 4. Add the ceiling check and its test
 
-- [ ] `scripts/lint-governing-size.sh`: the ceiling table (`AGENTS.md` 50000, the constitution at its measured size), index measurement, and the three failure messages
-- [ ] `scripts/tests/test-lint-governing-size.sh`: cases (a)–(f) from the plan
-- [ ] `shellcheck` both scripts
+- [x] `scripts/lint-governing-size.sh`: the ceiling table (`AGENTS.md` 50000, the constitution at its measured size), index measurement, and the three failure messages
+- [x] `scripts/tests/test-lint-governing-size.sh`: cases (a)–(f) from the plan
+- [x] `shellcheck` both scripts
 
 - **Done when**: the test passes all six cases, with (b), (d) and (e) failing the lint as designed
 
@@ -38,9 +38,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 Blocked on task 3: wired before the cut, the check would fail every commit.
 
-- [ ] `.githooks/pre-commit`: run the lint after `check-corpus-links`, and describe it in the header comment
-- [ ] `.github/workflows/framework-checks.yml`: step `(o) Governing-document size ceilings` running the lint and its test
-- [ ] Prove the hook path: a scratch commit that takes the staged `AGENTS.md` over the ceiling is refused with the message, then backed out
+- [x] `.githooks/pre-commit`: run the lint after `check-corpus-links`, and describe it in the header comment
+- [x] `.github/workflows/framework-checks.yml`: step `(o) Governing-document size ceilings` running the lint and its test
+- [x] Prove the hook path: a scratch commit that takes the staged `AGENTS.md` over the ceiling is refused with the message, then backed out
 
 - **Done when**: a commit runs the check and refuses an over-ceiling `AGENTS.md`, and the CI step runs both scripts
 

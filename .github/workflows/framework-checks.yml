@@ -159,6 +159,16 @@ jobs:
       - name: (n) Configure generator
         run: bash scripts/tests/test-gen-configure-mcp.sh
 
+      # (o) AGENTS.md and the constitution have size ceilings (spec 072) so a
+      # lesson added past one retires another instead of growing the rulebook.
+      # The hook runs the lint on staged blobs; this catches a --no-verify
+      # commit. Its test shows the lint fails over a ceiling, on a missing or
+      # unreadable file, and passes at and under one.
+      - name: (o) Governing-document size ceilings
+        run: |
+          bash scripts/lint-governing-size.sh
+          bash scripts/tests/test-lint-governing-size.sh
+
       # (j) The shell surface is the framework's own machinery — the audit
       # families that form the release gate, the generators, the lints, the
       # installer and the hooks. The Rust half has been gated at
@@ -166,7 +176,7 @@ jobs:
       # even though a tuned .shellcheckrc was committed: a green
       # framework-checks run could not distinguish "the scripts are clean"
       # from "the scripts were never examined". That is the exact shape
-      # AGENTS.md's first Design Principle records, and it is how
+      # framework/constitution.md §design-principles forbids, and it is how
       # sibling-coupling.sh shipped a GNU-awk extension that silently
       # disabled a release gate on every macOS machine.
       #
