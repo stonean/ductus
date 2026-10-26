@@ -32,7 +32,7 @@ The reason is stated with the rule, because the rule reads as an exception to ca
 
 The bullet also states what it does **not** license. `tasks.md` does not become a second capture queue: the durable record still lands where [§bug-handling](../../../framework/constitution.md#bug-handling) puts it — a missing requirement becomes a scenario or a spec edit through `/{project}:amend`, with the task as the work item that implements it — and a chore with no feature home stays an inbox item however close to the current work it surfaced.
 
-The section's closing sentence, which promised that discoveries reach the inbox, now names both destinations, so the section does not contradict its own new bullet.
+The section's closing sentence, which promised that discoveries reach the inbox, now names both destinations, so the section does not contradict its own new bullet. **Cut by `the-constitution-fits-one-read`**: the closing sentence went with the section's restatements, and the tiers name both destinations themselves.
 
 ## Edge Cases
 

@@ -183,5 +183,6 @@ Released: `ductus-v0.56.0` at `62cc9490`, with `framework-checks`, `runtime`, `g
 ### 21. A plan edit does not reopen a done spec
 
 - [ ] Implement the behavior described in `scenarios/a-plan-edit-does-not-reopen-a-done-spec.md`
+- [ ] Under the new rule, correct the `done`-spec plan claims about the constitution's layout that `050-constitution`'s cut to one read left stale: `013` plan (the schema table's Allowed values column), `016` plan (§rules carries the three-tier table), `024` plan (Filename suffix names `scripts/lint-rule-filenames.sh`), `036` plan (one canonical-sources row per rule surface), `045` plan (Decision resolution defers to `/{project}:analyze`), `060` plan (the review window as §implement-phase's), `072` plan (the constitution's ceiling as its size when the check landed, and its fix message naming the owed cut) — each a plan edit that leaves its spec `done` (routed from 050 task 35)
 
-- **Done when**: the scenario's described behavior is correctly implemented and tested
+- **Done when**: the scenario's described behavior is correctly implemented and tested, and the routed plan claims are corrected without reopening their specs

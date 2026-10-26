@@ -404,8 +404,8 @@ fn check_scenario_consistency(
 ///
 /// **Fails safe toward the missed finding.** `None` means the history could not
 /// be consulted at all — no git repository, an unreadable walk — and the caller
-/// treats that as *every slug was tasked*, suppressing every finding. §tasks-phase mandates that direction explicitly
-/// (*"a pruned spent task never produces a finding"*), so a check that cannot
+/// treats that as *every slug was tasked*, suppressing every finding. §tasks-phase forbids treating
+/// `tasks.md` as a durable index, so a pruned spent task never produces a finding, and a check that cannot
 /// consult history must not manufacture one from its own blindness. This is the
 /// opposite default from [`crate::primitives::mechanical_sweep`], where an
 /// unreadable diff withholds an *exemption*; there the unprovable thing is a
@@ -2543,7 +2543,8 @@ mod tests {
     }
 
     /// A keep-pending prune dropped `alpha`'s spent task; history still
-    /// names it (§tasks-phase: a pruned spent task never produces a finding).
+    /// names it (§tasks-phase: `tasks.md` is no durable index, so a pruned
+    /// spent task never produces a finding).
     #[test]
     fn a_task_pruned_by_keep_pending_satisfies_the_mapping() {
         let pending = "## 2. Wire CLI\n\n- [ ] sub\n\n- **Done when**: CLI works.\n";

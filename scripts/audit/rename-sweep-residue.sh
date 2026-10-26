@@ -105,7 +105,8 @@ PATTERN="(^|[^[:alnum:]_])($MODALS) $NAME([^[:alnum:]_]|\$)|(^|[^[:alnum:]_])$NA
 # --- Collect the corpus ---------------------------------------------------
 #
 # Tracked markdown only. Untracked drafts are deliberately invisible to the
-# pipeline (§text-first-artifacts, tracked-specs rule), and runtime test
+# pipeline, which reads the git index (§text-first-artifacts: never stage the
+# whole worktree), and runtime test
 # fixtures mirror arbitrary adopter content rather than authored documentation
 # — the same carve-out .markdownlint-cli2.jsonc makes.
 files="$(git ls-files '*.md' 2>/dev/null | grep -v '^runtime/tests/')"

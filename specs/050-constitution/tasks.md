@@ -306,10 +306,12 @@ Implements `scenarios/a-retired-feature-leaves-no-spec.md`. The constitution sta
 
 - [ ] Implement the behavior described in `scenarios/the-constitution-fits-one-read.md`
 
+The cut landed at 53,813 bytes with the ceiling lowered to match; the move to the command references, the restored quoted passages and the measurement are in `plan.md` §The constitution fits one read. What is still owed waits on the scenario's open question: the target size, and with it the `CLAUDE.md` import, the template's constitution line and the adopter migration, all withdrawn while the constitution exceeds 072 AC6's 50,000-byte import bound. AC23 stays unticked until then.
+
 - **Done when**: the scenario's described behavior is correctly implemented and tested
 
 ## 36. Correct the review record's `scope` description
 
-- [ ] `framework/constitution.md` §text-first-artifacts, review-record table: `scope` is described as "Files the review's scope contained", but `write-review` records `scope.len()` of the plan's Affected Files entries unexpanded (`parse_affected_files` in `runtime/src/primitives/mod.rs`), so a glob row counts once; state what it counts, with the `examined` row beside it. Land it with task 35's cut where the audit-record tables move (routed from 072 task 9, owner 2026-10-26)
+- [x] `framework/constitution.md` §text-first-artifacts, review-record table: `scope` is described as "Files the review's scope contained", but `write-review` records `scope.len()` of the plan's Affected Files entries unexpanded (`parse_affected_files` in `runtime/src/primitives/mod.rs`), so a glob row counts once; state what it counts, with the `examined` row beside it. Land it with task 35's cut where the audit-record tables move (routed from 072 task 9, owner 2026-10-26)
 
 - **Done when**: the constitution's `scope` row states what `write-review` records, and the `examined` / `scope` comparison it implies reconciles

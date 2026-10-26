@@ -47,11 +47,14 @@ done
 # fails when the two disagree. It is the default, not `[artifacts]
 # read-size-bytes`: this repository sets no such key.
 #
-# framework/constitution.md: its size when this check landed, so it can shrink
-# but not grow. 050-constitution's the-constitution-fits-one-read scenario
-# lowers it to the read size when the cut lands.
+# framework/constitution.md: the size 050-constitution's cut to one read
+# reached (scenario the-constitution-fits-one-read). Keeping true the passages
+# other specs quote held it above the 50,000-byte read size, so whether the
+# read size or this figure is the target is that scenario's open question for
+# the owner. A rule only one command applies belongs in that command's
+# framework/reference/ file.
 CEILINGS="AGENTS.md|50000|retire, merge, or move an entry to the check that enforces it (spec 072)
-framework/constitution.md|119262|cut it, not the ceiling — the cut to one read is owed by 050-constitution (scenario the-constitution-fits-one-read)"
+framework/constitution.md|53813|cut it, not the ceiling — move a rule only one command applies to its framework/reference/ file, or tighten one (spec 050)"
 
 errors=0
 while IFS='|' read -r path ceiling fix; do

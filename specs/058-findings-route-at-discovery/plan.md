@@ -392,8 +392,9 @@ removed.
     tiers, the disposition task, persisted decisions, and the gate.
 - **The Frontmatter Schema rows** (`:552`, `:574`) replace `captured-issues`
   with `dispositions` and `decisions`.
-- **§pipeline-boundaries** (`:752`) keeps "an inbox item" as a destination,
-  but names `/{project}:log` as its only producer.
+- **§pipeline-boundaries** (`:752`) kept "an inbox item" as a destination,
+  but named `/{project}:log` as its only producer; since `050-constitution`'s
+  cut to one read, §brownfield-inbox names it.
 
 ### The inbox template changes, and a migration carries its guidance to existing adopters
 

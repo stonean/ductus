@@ -120,10 +120,62 @@ substantive risk the checks do *not* cover is AC5 — whether a promoted rule
 truly holds for an adopter — which is why the reword test's recorded reason
 carries that weight.
 
+### The constitution fits one read
+
+`framework/constitution.md` went from 119,262 to 53,813 bytes on disk (`wc -c`), and `scripts/lint-governing-size.sh` now holds it there. That is above the 50,000-byte read size `check-artifact-size` applies (spec 063), so the scenario's edge case applies, and the threshold is its open question for the owner. Measured per anchored section — the bytes from one `<!-- §anchor -->` marker to the next, so a subsection is counted with the marked section above it — before, at the first cut, and after the quoted passages were restored:
+
+| Section | Before | First cut | Final |
+| --- | --- | --- | --- |
+| preamble | 195 | 282 | 187 |
+| §principles | 1,678 | 1,678 | 1,678 |
+| §cost-levers | 639 | 336 | 395 |
+| §design-principles | 4,192 | 2,252 | 2,256 |
+| §grounding | 1,255 | 754 | 704 |
+| §governance-precedence | 2,325 | 963 | 1,062 |
+| §recommendations (with the Grounding rules list) | 7,283 | 3,366 | 3,722 |
+| §pipeline | 202 | 192 | 192 |
+| §spec-phase | 1,734 | 1,209 | 1,209 |
+| §spec-requirements | 2,507 | 1,111 | 1,231 |
+| §spec-lifecycle | 8,701 | 3,882 | 4,413 |
+| §plan-phase | 2,304 | 985 | 985 |
+| §tasks-phase | 1,853 | 749 | 749 |
+| §readiness-check | 664 | 485 | 596 |
+| §implement-phase | 6,792 | 1,528 | 1,525 |
+| §constants, §env-vars | 867 | 316 | 316 |
+| §bug-handling | 2,527 | 1,312 | 1,293 |
+| §scenarios, §scenario-promotion | 3,659 | 1,295 | 1,400 |
+| §rules | 8,382 | 2,238 | 2,729 |
+| §brownfield-inbox | 8,422 | 2,762 | 3,110 |
+| §brownfield-process | 1,571 | 667 | 680 |
+| §text-first-artifacts (with frontmatter schema and severity) | 14,106 | 5,882 | 6,047 |
+| §runtime-boundary (five principles) | 2,449 | 2,449 | 2,449 |
+| §runtime-host-integration (with eligibility, acquisition, versioning, non-scope) | 5,237 | 3,172 | 3,438 |
+| §drift-prevention | 14,459 | 5,959 | 6,442 |
+| §pipeline-boundaries | 3,410 | 1,098 | 1,462 |
+| §concurrent-features | 5,735 | 1,098 | 1,606 |
+| §cross-spec-impact | 3,178 | 779 | 955 |
+| §numbering | 2,097 | 745 | 806 |
+| §markdown-standards | 839 | 307 | 176 |
+| **Total** | **119,262** | **49,851** | **53,813** |
+
+Three kinds of change, by destination:
+
+- **Moved to the command that applies it**, with the constitution keeping a pointer. The review window, coverage and record-age rules (§implement-phase's `examined`, review-window, pre-coverage-record, empty-diff-base, durable-contract and write-time-denominator bullets, 3,475 bytes) went to `framework/reference/review.md` §Window and coverage; the rule that the criteria-path count cannot be measured on an `in-progress` spec went to `framework/reference/analyze.md` §Acceptance-criterion path existence (advisory); the analyze record's per-field meanings to that file's §Record fields; and removing an inbox item by its text to `framework/reference/groom.md` §Inbox upkeep, whose decision tree already held the chore-and-blocked-item rules. Moving the mechanics alone could not reach one read, as the scenario's measurement warned: they came to about 6 KB.
+- **Dropped as restatement**: the three-cycles overview, the three-tiers table, Markdown Standards' copy of the lint rules (`.markdownlint-cli2.jsonc` is canonical), the opt-in invariant's history (specs 021 and 048 record it), the per-check severity list `/{project}:analyze`'s reference already holds, and section glosses and examples nothing cites.
+- **Compressed in place**: every other section, each rule kept with a load-bearing reason. The passages spec 021 quotes — the five principles, the eligibility criteria, the acquisition invariant, versioning, the non-scope list — are byte-identical, as are the Guiding Principles and the six original text-first principle bullets. All 32 anchor markers are byte-identical and in order, and every heading another file links to keeps its slug.
+
+**The first cut reached 49,851 bytes and falsified what other specs quote.** A sweep of the 2,156 live-artifact lines that cite the constitution found 72 false claims at about 86 locations: verbatim quotes the compression reworded, and reasons it dropped. About 30 of those passages sit in the bodies, scenarios and data models of 16 `done` specs, the paused 022 and the draft 070, where correcting them would reopen each. The scenario's edge case — a quoted passage stays verbatim, or its spec takes the back-edge — so they were restored, net of 840 bytes of uncited glosses and examples, which a second pass found to be all the uncited text left. The other findings were corrected where they live: command and reference sources, script and runtime comments, and the in-progress specs. Plan claims in `done` specs about the constitution's former layout (013, 016, 024, 036, 045, 060, 062, 064) are routed to `041-task-pruning`'s task 21, whose rule makes a `done` spec's plan edit mechanical. 013's Resolved Question naming the schema table's former columns is a decision record, and 023 AC3's list of the sections its sweep had to reach is that pass's worklist; both stay as written. Claims the sweep rated borderline, whose substance still holds, were left as written.
+
+**So the ceiling is lowered to the size the cut reached, not to the read size**, and with the constitution over 50,000 bytes it is not imported at startup: `072-governing-documents-stay-within-one-read` AC6 bounds a `CLAUDE.md` import at 50,000 bytes. The template's constitution line, this repository's `CLAUDE.md` and the migration that would bring an adopter's `CLAUDE.md` to the import line wait on the scenario's open question. The import was proved to load with the method 072 used for AC6 before it was withdrawn: `claude -p` asked for the seven Business principles with every tool disallowed answered `NOT IN CONTEXT` without the import and listed them correctly with it, with zero tool calls both times.
+
+The review record's `scope` field now states what `write-review` records (task 36): the plan's Affected Files entries as written, a pattern counting once, united with the paths modified since `diff-base` — the deduplicated set `compute-review-scope` returns. `examined` counts files the review read, so the two are equal on a fully examined review only when no entry is a pattern.
+
 ## Classification
 
 Every rule-bearing entry, one verdict and one reason each (AC1). **23 to promote,
-3 already promoted, 28 project-only — 54 total.**
+3 already promoted, 28 project-only — 54 total**, of which the project-only table
+now holds 25: `072-governing-documents-stay-within-one-read` removed the rows of
+three entries it retired, as the note beside that table says.
 
 **Entries are keyed by their `AGENTS.md` lead phrase, with the survey's positional
 ID kept in parentheses as a historical marker.** The positional ID was the original
@@ -175,7 +227,8 @@ latter and is unchanged. Promotion itself is *not* done by this task; this is th
 worklist, exactly as the first round's classification preceded its promotions.
 
 **Promoted 2026-09-15 by task 23.** All 25 rows in the promote table have their
-canonical text as bullets in `framework/constitution.md`, each under the existing
+canonical text as bullets in `framework/constitution.md` (eight since moved to a
+command reference; see **Relocated to a command reference** below), each under the existing
 section whose subject it shares, and each entry's `AGENTS.md` line is now a
 pointer. The anchor set is byte-identical before and after, so AC10 holds; the
 constitution went 767 → 792 lines and 163 → 188 top-level bullets, and `AGENTS.md`
@@ -286,7 +339,7 @@ The 9 entries the promotion-coverage notice reported unclassified on 2026-09-28,
 
 The 11 entries the promotion-coverage notice reported unclassified on 2026-10-15, judged by the same reword test and recorded the same way (AC1): **2 to promote, 9 project-only.** The verdicts are the operator's, confirmed 2026-10-15. Like the rounds before it, this is a deliberate round rather than a standing requirement, and AC1 is unchanged.
 
-**Promoted the same day by task 31.** Neither promotion needed a section of its own, because each extends a bullet or paragraph that already owns its subject. The review-window entry is the converse of §implement-phase's bullet on the review window: that bullet warns against narrowing a wide window by an override, and this entry covers a window too narrow to hold the fix. The push entry is a consequence of what §concurrent-features' *What stays shared* paragraph says sessions share, which is the branch's commits. Each entry's `AGENTS.md` line is now a pointer, and its lead phrase is byte-identical, so both keys still resolve. The anchor set is unchanged.
+**Promoted the same day by task 31.** Neither promotion needed a section of its own, because each extends a bullet or paragraph that already owns its subject. The review-window entry was the converse of §implement-phase's bullet on the review window: that bullet warned against narrowing a wide window by an override, and this entry covered a window too narrow to hold the fix. The push entry followed from what §concurrent-features' *What stays shared* paragraph said sessions share, which is the branch's commits. Each entry's `AGENTS.md` line is now a pointer, and its lead phrase is byte-identical, so both keys still resolve. The anchor set is unchanged. Since the cut to one read, the review-window bullet lives in `framework/reference/review.md` §Window and coverage, and the push rule in §concurrent-features' second paragraph.
 
 #### Fourth round — promote
 
@@ -402,6 +455,24 @@ clause rather than as a principle in its own right.
 
 Rows for 3 entries since retired from `AGENTS.md` by `072-governing-documents-stay-within-one-read` — moved to the check that reports them, or deleted as obsolete — were removed from this table; 072's plan §Entry dispositions records where each went.
 
+### Relocated to a command reference — 2026-10-26
+
+The cut to one read moved these universal rules' canonical text out of the constitution into the reference of the one command that applies them; the constitution keeps a pointer, and each `AGENTS.md` entry now points at the reference. The classification each row records elsewhere is unchanged; the last row keys an entry that had cited the constitution and no table, so it stays classified.
+
+| Entry | Reason |
+| --- | --- |
+| `examined` counts the in-scope files the passes *read* | `framework/reference/review.md` §Window and coverage |
+| A spec's review diff base moves forward on every reopen | `framework/reference/review.md` §Window and coverage |
+| A review record written before the record gained its coverage and digest fields is unexamined, not clean | `framework/reference/review.md` §Window and coverage |
+| A spec with no recorded `in-progress` transition derives an *empty* diff base | `framework/reference/review.md` §Window and coverage |
+| Only a spec's durable contracts stale its review | `framework/reference/review.md` §Window and coverage |
+| `write-review` derives `scope` itself | `framework/reference/review.md` §Window and coverage |
+| When a scenario is recorded after the fix it describes has landed, review it with `--since` | `framework/reference/review.md` §Window and coverage |
+| `unexamined` cannot be measured while the spec is `in-progress` | `framework/reference/analyze.md` §Acceptance-criterion path existence (advisory) |
+| `remove-inbox-item` takes the bullet text | `framework/reference/groom.md` §Inbox upkeep |
+| When an item routes to a chore, fix it — do not park it | `framework/reference/groom.md` §Groom decision tree |
+| An inbox item blocked on an external event is discarded at `/{project}:groom`, not held | `framework/reference/groom.md` §Groom decision tree |
+
 ## Affected Files
 
 | File | Action | Purpose |
@@ -411,6 +482,14 @@ Rows for 3 entries since retired from `AGENTS.md` by `072-governing-documents-st
 | `specs/050-constitution/plan.md` | Modify | Carries the classification table — the audit trail AC1 requires |
 | `specs/inbox.md` | Modify | The held `045` chore is resolved against the new mechanical-edit test and removed |
 | `specs/045-decision-state-drift-detection/spec.md` | Modify | The one-word sweep-residue repair the chore describes, once the test licenses it |
+| `framework/reference/review.md` | Modify | §Window and coverage receives the review-window and coverage rules |
+| `framework/reference/analyze.md` | Modify | The in-progress measurement rule, and §Record fields for the analyze record's field meanings |
+| `framework/reference/groom.md` | Modify | §Inbox upkeep receives the remove-by-text rule |
+| `framework/commands/groom.md` | Modify | Step 8 points at §Inbox upkeep instead of quoting a constitution sentence that no longer exists |
+| `scripts/lint-governing-size.sh` | Modify | The constitution's ceiling is lowered to the size the cut reached |
+| `framework/commands/amend.md` | Modify | Its quote of §spec-lifecycle's third back-edge matches the text |
+| `runtime/src/primitives/inbox_standing.rs` | Modify | Its doc comment cites what §brownfield-inbox now states |
+| `runtime/src/primitives/check_artifacts.rs` | Modify | Two doc comments cite §tasks-phase as it now reads |
 
 ## Trade-offs
 

@@ -11,7 +11,7 @@ The constitution reached 865 lines and 148,528 bytes, about 37k tokens loaded in
 ## Behavior
 
 - Every rule in the constitution is stated as the rule, one load-bearing reason, and its boundary where it has one. Worked examples, incident accounts, "this is X applied to Y" restatements and repeated enforcement disclaimers are not carried. The story behind a rule lives in the scenario or spec that adopted it, and in git.
-- A concision pass holds byte-identical: every `<!-- §anchor -->` marker, every heading, every table, the pipeline diagram, and every bold rule lead. The RFC 2119 keywords in each section are kept.
+- A concision pass holds byte-identical: every `<!-- §anchor -->` marker, every heading, every table, the pipeline diagram, and every bold rule lead. The RFC 2119 keywords in each section are kept. The 2026-10-26 cut to one read (`the-constitution-fits-one-read`) narrowed this for that cut: the anchors, the diagram, every heading another file links to and every bold lead an `AGENTS.md` entry or another spec cites stayed byte-identical, while a subsection, table or lead that only restated what the document states elsewhere could go.
 - The 2026-10-17 pass took the document from 148,528 to 116,548 bytes (21.5%), with every rule kept. A pilot on §grounding's Rules cut 46%. The whole document cut less, because some sections were already tight and some passages are quoted elsewhere.
 
 ## Edge Cases

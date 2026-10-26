@@ -12,10 +12,9 @@
 //! `dashboard`, because a count of the todos a person has logged has no
 //! bearing on the spec a review or implementation run is working on.
 //!
-//! **A notice, never a gate.** §brownfield-inbox keeps capture free — *"the
-//! honest choice between a growing backlog and a silent one would otherwise
-//! push toward silence"* — so gating `done` or a release on inbox depth would
-//! make logging a todo expensive. The row changes what the operator knows at
+//! **A notice, never a gate.** §brownfield-inbox states the standing count
+//! is a notice, never a gate: capture stays free, so gating `done` or a
+//! release on inbox depth would make logging a todo expensive. The row changes what the operator knows at
 //! the moment they decide, and withholds nothing.
 
 use std::collections::HashMap;
