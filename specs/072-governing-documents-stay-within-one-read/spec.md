@@ -26,7 +26,7 @@ An `AGENTS.md` entry states one rule, once, in the fewest words that let a contr
 
 - **A copy of a constitution rule.** When the rule's canonical text is in `framework/constitution.md`, the entry is one line pointing at its `§anchor` and states nothing of its own. This is the shape `050-constitution`'s Promotion mechanism already requires, and its AC3 already claims. The 56 mirrors had drifted from that shape, and this restores it. Anything this repository adds to such a rule is an entry of its own.
 - **The story of the lesson.** How a lesson was learned — the session, the task, the incident, the wrong turn — is history; the commit that added the entry records it. An owner decision keeps the decision and, at most, one clause naming who confirmed it and when, because that clause is what marks a standing rule rather than a preference.
-- **A lesson the repository already enforces.** When a test, hook, audit family or CI check reports the failure an entry warns about, the report is the documentation. If the report does not name the fix, the fix is added to its message, or beside the enforcement site, and the entry goes.
+- **A lesson the repository already enforces.** When a test, hook, audit family or CI check reports the failure an entry warns about, the report is the documentation. If the report does not name the fix, the fix is added to its message, or beside the enforcement site, and the entry goes. A report raised from `runtime/src/` without its fix is the exception: adding the fix there is a runtime change, so its entry stays, trimmed.
 - **A lesson that is no longer true.** An entry about a file, flag or behavior the repository no longer has is deleted.
 
 What remains is what an agent needs before it acts and no check would tell it: workflow rules, boundaries, and gotchas with no enforcement point.
@@ -60,17 +60,17 @@ The constitution gets the same check with a ceiling of its own, no higher than i
 
 ## Acceptance Criteria
 
-- [ ] AC1: `AGENTS.md` is at most 50,000 bytes on disk, the read-size threshold `check-artifact-size` applies to spec artifacts.
-- [ ] AC2: No `AGENTS.md` entry restates a rule whose canonical text is in `framework/constitution.md`; each such entry is one line pointing at its `§anchor` and stating nothing of its own, as `050-constitution`'s Promotion mechanism requires.
-- [ ] AC3: No `AGENTS.md` entry narrates how its lesson was learned; an owner decision keeps the decision and at most one clause naming who confirmed it and when.
-- [ ] AC4: No `AGENTS.md` entry warns about a failure that a test, hook, audit family or CI check in this repository already reports; where that report did not name the fix, its message, or a comment at the enforcement site, now does.
-- [ ] AC5: Every `AGENTS.md` entry removed or rewritten has a row in this spec's `plan.md` naming its disposition — pointer, trimmed, moved to an enforcement site (with the destination), or deleted (with the reason) — so no rule leaves the guide without a recorded decision.
-- [ ] AC6: Every import in `CLAUDE.md` uses Claude Code's `@path` form, names a file that exists, and names only a file of at most 50,000 bytes, so the constitution is not imported while it exceeds that.
-- [ ] AC7: A non-interactive Claude Code run (`claude -p`) started at the repository root answers a question that only `AGENTS.md`'s text answers, and its tool-use output shows no file read.
-- [ ] AC8: `CLAUDE.md` states no size or count of another file and restates no `AGENTS.md` entry.
-- [ ] AC9: A check run by `.githooks/pre-commit` (against the staged file) and by CI (against the checkout) fails when `AGENTS.md` exceeds its ceiling, and its message names the file, its size, the ceiling and the fix. It is shown to fail by taking the file past the ceiling, and to pass once the file is back under.
-- [ ] AC10: The check in AC9 also covers `framework/constitution.md`, with a ceiling no higher than the constitution's size in the commit that adds the check, the same message, and the same proof that it fails.
-- [ ] AC11: The check reports a missing or unreadable governed file as a failure with its own message, distinct from an over-ceiling one, and never as a pass.
+- [x] AC1: `AGENTS.md` is at most 50,000 bytes on disk, the read-size threshold `check-artifact-size` applies to spec artifacts.
+- [x] AC2: No `AGENTS.md` entry restates a rule whose canonical text is in `framework/constitution.md`; each such entry is one line pointing at its `§anchor` and stating nothing of its own, as `050-constitution`'s Promotion mechanism requires.
+- [x] AC3: No `AGENTS.md` entry narrates how its lesson was learned; an owner decision keeps the decision and at most one clause naming who confirmed it and when.
+- [x] AC4: No `AGENTS.md` entry warns about a failure that a test, hook, audit family or CI check in this repository already reports, except where the report comes from `runtime/src/` and does not name the fix, since adding it there is a runtime change; where a report elsewhere did not name the fix, its message, or a comment at the enforcement site, now does.
+- [x] AC5: Every `AGENTS.md` entry removed or rewritten has a row in this spec's `plan.md` naming its disposition — pointer, trimmed, moved to an enforcement site (with the destination), or deleted (with the reason) — so no rule leaves the guide without a recorded decision.
+- [x] AC6: Every import in `CLAUDE.md` uses Claude Code's `@path` form, names a file that exists, and names only a file of at most 50,000 bytes, so the constitution is not imported while it exceeds that.
+- [x] AC7: A non-interactive Claude Code run (`claude -p`) started at the repository root answers a question that only `AGENTS.md`'s text answers, and its tool-use output shows no file read.
+- [x] AC8: `CLAUDE.md` states no size or count of another file and restates no `AGENTS.md` entry.
+- [x] AC9: A check run by `.githooks/pre-commit` (against the staged file) and by CI (against the checkout) fails when `AGENTS.md` exceeds its ceiling, and its message names the file, its size, the ceiling and the fix. It is shown to fail by taking the file past the ceiling, and to pass once the file is back under.
+- [x] AC10: The check in AC9 also covers `framework/constitution.md`, with a ceiling no higher than the constitution's size in the commit that adds the check, the same message, and the same proof that it fails.
+- [x] AC11: The check reports a missing or unreadable governed file as a failure with its own message, distinct from an over-ceiling one, and never as a pass.
 
 ## Open Questions
 

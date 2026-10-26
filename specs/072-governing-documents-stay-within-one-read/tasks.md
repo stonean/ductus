@@ -66,8 +66,8 @@ Routed 2026-10-26 (owner): `002-project-scaffolding` owns the template, and its 
 
 ## 8. Verify the acceptance criteria against the tree
 
-- [ ] Read each criterion AC1–AC11 against the tree and tick it only when its claim holds
-- [ ] Re-measure `AGENTS.md` and the constitution against the check's ceilings
+- [x] Read each criterion AC1–AC11 against the tree and tick it only when its claim holds
+- [x] Re-measure `AGENTS.md` and the constitution against the check's ceilings
 
 - **Done when**: every criterion is ticked on evidence, and the ceiling check passes on the committed tree
 
