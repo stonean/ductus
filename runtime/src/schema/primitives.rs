@@ -1619,7 +1619,9 @@ pub struct AnchorReference {
     pub anchor: String,
     /// 1-based line of the reference.
     pub line: u32,
-    /// Whether the anchor resolves to a marker.
+    /// Whether the anchor resolves: to a marker for a `markers` reference, to
+    /// a heading (or, under the line rule, a marker) for a `cross-document`
+    /// one.
     ///
     /// A `qualified` or `intra-document` reference is never `false`: the
     /// first is not a claim this primitive can judge, and the second
@@ -1628,12 +1630,14 @@ pub struct AnchorReference {
     /// unresolved one worth reading.
     pub resolved: bool,
     /// How the reference was classified, and therefore what `resolved` means
-    /// for it: `markers` (a claim about the markers file), `cross-document`
-    /// (its line names one shipped document whose source was read — judged
-    /// against that source's headings, the citing file's, and the markers),
-    /// `qualified` (its line names another document this primitive cannot
-    /// read), or `intra-document` (the anchor names a heading in the citing
-    /// file).
+    /// for it: `cross-document` (it points into a shipped document whose
+    /// source was read: an explicit `**§X** in` pair, judged by equality
+    /// against that document's headings alone, or a `§` on a line naming
+    /// exactly one such document, judged against that source's headings, the
+    /// citing file's, and the markers), `qualified` (its line names another
+    /// document this primitive does not judge), `intra-document` (the anchor
+    /// names a heading in the citing file), or `markers` (a claim about the
+    /// markers file).
     #[serde(default = "default_anchor_kind")]
     pub kind: String,
 }
@@ -1651,7 +1655,7 @@ fn default_anchor_kind() -> String {
 pub struct ResolveAnchorResult {
     /// All anchor references found in the file.
     pub references: Vec<AnchorReference>,
-    /// Anchor names with no matching marker.
+    /// Anchor names of the references that did not resolve.
     ///
     /// Only `markers` and `cross-document` references contribute. An empty
     /// list therefore means "every reference that was a claim about the
@@ -1659,7 +1663,8 @@ pub struct ResolveAnchorResult {
     /// "every `§` in this file is fine", which is a claim this primitive
     /// cannot make and the counts below keep it from implying.
     pub unresolved: Vec<String>,
-    /// References excluded because their line names another document.
+    /// References excluded because their line names another document that the
+    /// `cross-document` rule does not judge.
     ///
     /// Reported rather than silently dropped. Excluding them is what makes an
     /// unresolved reference readable — 75 of this corpus's 112 were this kind,
@@ -1670,12 +1675,15 @@ pub struct ResolveAnchorResult {
     /// References resolved against a heading in the citing file rather than
     /// the markers file.
     pub intra_document: u32,
-    /// References judged against the one shipped document their line names
-    /// (spec 067 scenario `pointers-into-shipped-files-are-judged`): the line
-    /// names exactly one document, the **Shared Files** manifest maps it to a
-    /// readable source, and the reference resolves against that source's
-    /// headings, the citing file's, or the markers. Zero wherever the
-    /// installer's manifest is absent, as in every adopter.
+    /// References judged against a shipped document (spec 067 scenario
+    /// `pointers-into-shipped-files-are-judged`), whose source the **Shared
+    /// Files** manifest maps and this primitive read. An explicit `**§X** in`
+    /// pair resolves only when `X` equals a heading of that document, on any
+    /// line; otherwise a `§` on a line naming exactly one such document
+    /// resolves against that source's headings, the citing file's, or the
+    /// markers. A heading inside a fenced block or an HTML comment is not a
+    /// section. Zero wherever the installer's manifest is absent, as in every
+    /// adopter.
     #[serde(default)]
     pub cross_document: u32,
 }
@@ -4962,17 +4970,23 @@ pub struct CheckCorpusLinksResult {
     #[serde(default)]
     pub skipped: Vec<CorpusLinkSkip>,
     /// Files excluded **by construction**, because a link that does not
-    /// resolve here is their correct state: the adopter-facing templates
-    /// under `{specs-root}/templates/`, whose links resolve in a scaffolded
-    /// feature directory rather than in the template's own.
+    /// resolve here is their correct state. On both scopes: the
+    /// adopter-facing templates under `{specs-root}/templates/`, whose links
+    /// resolve in a scaffolded feature directory rather than in the
+    /// template's own. On the repository scope also: every registry agent's
+    /// generated command copies, `framework/templates/project/`,
+    /// `runtime/tests/`, and — in a framework checkout only, where
+    /// `framework/reference/` holds their sources — the generated
+    /// `.ductus/reference/` copies (067 scenario
+    /// `generated-reference-copies-are-excluded`).
     ///
     /// Counted rather than dropped, so the scope of the verdict is legible.
     ///
-    /// Generated command copies (a host's commands directory) are **not**
-    /// counted here and are not an exclusion: they sit outside the spec root
-    /// entirely, so they were never part of this primitive's subject. The
-    /// distinction matters for reading the number — this counts what was in
-    /// scope and deliberately not examined, never everything unexamined.
+    /// On the spec-corpus scope, generated command copies are **not** counted
+    /// here and are not an exclusion: they sit outside the spec root
+    /// entirely, so they were never part of that subject. The distinction
+    /// matters for reading the number — this counts what was in scope and
+    /// deliberately not examined, never everything unexamined.
     pub excluded_by_construction: u32,
     /// Link targets skipped as documentation **shapes** rather than
     /// references — a target carrying `NNN`, a `{placeholder}`, a `*`, or a

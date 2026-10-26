@@ -141,8 +141,9 @@ pub fn run(_args: &CheckStepReferencesArgs, repo: &Path) -> Result<CheckStepRefe
         let lines: Vec<&str> = content.lines().collect();
         let subject: Vec<usize> = section_line_indices(&lines, SUBJECT_SECTION);
 
-        // References outside the subject are counted, never resolved — the
-        // markdown-only sub-procedures restart at 1 and are a different list.
+        // References outside the subject are counted, never resolved — a
+        // numbered list elsewhere in the file restarts at 1 and is a
+        // different list.
         let in_subject: std::collections::HashSet<usize> = subject.iter().copied().collect();
         for (idx, line) in lines.iter().enumerate() {
             if !in_subject.contains(&idx) {
@@ -284,9 +285,10 @@ fn step_numbers(lines: &[&str], subject: &[usize]) -> Vec<(u32, usize)> {
 /// endpoints, not the span — naming an endpoint that does not exist is the
 /// defect, and a range whose interior is missing is the discontinuity finding).
 ///
-/// A **qualified** reference — `groom's step 3` — is excluded: it names
-/// another file's procedure, and resolving it against the citing file's own
-/// step set is how a check like this manufactures findings. A line that opens
+/// A **qualified** reference — `groom's step 3`, or `step 5 of **§Walk
+/// through tasks** in …` — is excluded: it names another procedure's list,
+/// and resolving it against the citing file's own step set is how a check
+/// like this manufactures findings. A line that opens
 /// a numbered step contributes its own leading number as a step, never as a
 /// reference.
 fn step_references(line: &str) -> Vec<u32> {
@@ -321,6 +323,7 @@ fn step_references(line: &str) -> Vec<u32> {
 
         // Collect the number list: digits separated by `and`, `,`, `-`, `–`.
         let mut walk = cursor + consumed;
+        let mut numbers = Vec::new();
         loop {
             let rest = &lower[walk..];
             let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
@@ -328,7 +331,7 @@ fn step_references(line: &str) -> Vec<u32> {
                 break;
             }
             if let Ok(n) = digits.parse::<u32>() {
-                out.push(n);
+                numbers.push(n);
             }
             walk += digits.len();
             let rest = &lower[walk..];
@@ -337,6 +340,12 @@ fn step_references(line: &str) -> Vec<u32> {
                 break;
             };
             walk += found.len();
+        }
+        // `step 5 of **§Walk through tasks** in …` numbers a named section's
+        // own list, so it is qualified like the possessive form.
+        let after = &lower[walk..];
+        if !(after.starts_with(" of §") || after.starts_with(" of **§")) {
+            out.extend(numbers);
         }
         i = walk.max(start + 4);
         let _ = bytes;
@@ -445,5 +454,20 @@ mod tests {
     #[test]
     fn a_qualified_reference_names_another_files_procedure_and_is_excluded() {
         assert_eq!(step_references("as groom's step 3 does"), Vec::<u32>::new());
+    }
+
+    /// A pointer into a reference section numbers that section's own list
+    /// (spec 071): `implement.md` writes "step 5 of **§Walk through tasks (per
+    /// task, in order)** in `.ductus/reference/implement.md`", which is not
+    /// the command's step 5.
+    #[test]
+    fn a_step_of_a_named_section_is_qualified() {
+        assert_eq!(
+            step_references("step 5 of **§Walk through tasks** in `.ductus/reference/x.md`"),
+            Vec::<u32>::new()
+        );
+        assert_eq!(step_references("per step 2 of §Load"), Vec::<u32>::new());
+        // The unqualified form still counts.
+        assert_eq!(step_references("see step 5 of the walk"), vec![5]);
     }
 }

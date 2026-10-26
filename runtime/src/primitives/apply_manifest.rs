@@ -16,9 +16,8 @@
 //! - **create**: substitute placeholders, write only when the
 //!   destination is absent. Actions: `created` / `skipped-exists`.
 //! - **skip-if-conflict**: write only when the destination is absent;
-//!   substitution is NOT applied (these are adopter-owned templates the
-//!   framework seeds but never edits afterward). Actions: `created` /
-//!   `skipped-exists`.
+//!   substitution is NOT applied (the file is written byte for byte and
+//!   never edited afterward). Actions: `created` / `skipped-exists`.
 //!
 //! Cross-cutting concerns:
 //!
@@ -380,9 +379,9 @@ fn apply_create(
     Ok((ACTION_CREATED, applied))
 }
 
-/// `skip-if-conflict` never substitutes — these are adopter-owned templates
-/// the framework seeds and never edits afterward — so its count is `None`
-/// rather than `Some(0)`. The file was copied, not examined for placeholders.
+/// `skip-if-conflict` never substitutes — the file is written byte for byte
+/// when absent and never edited afterward — so its count is `None` rather
+/// than `Some(0)`. The file was copied, not examined for placeholders.
 fn apply_skip_if_conflict(
     source: &Path,
     dest: &Path,

@@ -3,8 +3,9 @@
 //! Walks `directory`, removes files matching `glob-include` whose
 //! relative path is neither in `expected` nor `pinned`, and returns the
 //! per-file outcome split across `removed` / `kept` / `pinned-kept`.
-//! The bootstrap's sole caller is the per-agent slash-command manifest
-//! enforcement loop; adopter cleanup of historical conventions is
+//! The bootstrap calls it once per enforced directory — each agent's
+//! slash-command directory and `.ductus/reference/` (spec 071) — with
+//! `expected` and `pinned` given relative to that directory; adopter cleanup of historical conventions is
 //! owned by the registry-driven `## Pre-run Migrations` loop and the
 //! per-entry procedure files at `framework/migrations/{id}.md` (spec
 //! 027). The primitive itself is generic — it removes whatever files

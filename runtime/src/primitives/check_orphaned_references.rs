@@ -596,8 +596,8 @@ mod tests {
 
     #[test]
     fn the_registry_attributes_the_most_recent_hop() {
-        // At the bootstrap call site the registry is in staging. Two entries
-        // name the constitution; the *rename* is the one that left the
+        // A registry readable in the project tree (a framework checkout).
+        // Two entries name the constitution; the *rename* is the one that left the
         // reference dangling, so the last match wins.
         let tmp = adopter();
         write(

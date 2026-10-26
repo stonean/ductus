@@ -221,9 +221,8 @@ fn ductus_basic_post_run_filesystem_state_matches_expectations() {
     );
     // Legacy `framework/skills/` files survive — adopter-cleanup of
     // historical conventions moved out of enforce-manifest's contract
-    // into the registry-driven Pre-run Migrations loop (spec 027). The
-    // primitive now operates only on the per-agent slash-command
-    // directory; any directory outside that scope is untouched.
+    // into the registry-driven Pre-run Migrations loop (spec 027): a
+    // directory the caller does not name is untouched.
     assert!(
         project.join("framework/skills/old-skill.md").exists(),
         "enforce-manifest must NOT touch framework/skills/old-skill.md \
@@ -234,8 +233,9 @@ fn ductus_basic_post_run_filesystem_state_matches_expectations() {
 }
 
 /// The reference half of `ductus_basic_post_run_filesystem_state_matches_expectations`
-/// (spec 071): the install to `.ductus/reference/`, and the prune of a
-/// reference file no row produces.
+/// (spec 071 AC15): the fixture installs a reference file to
+/// `.ductus/reference/`, and `enforce-manifest`, run against that directory
+/// with its rows as the expected list, prunes one no row produces.
 fn assert_reference_installed_and_pruned(bin: &Path, staged: &Path, project: &Path) {
     // A command's markdown-only reference installs once, to the shared
     // `.ductus/reference/` directory, with `{project}` substituted — the

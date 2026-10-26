@@ -18,53 +18,54 @@
 //! still cited it, and the check had been reporting that correctly for four
 //! specs' worth of history, invisible among 111 lines that were not defects.
 //!
-//! Three kinds, and the classification is what makes an unresolved reference
-//! worth reading:
+//! Four kinds, and the classification is what makes an unresolved reference
+//! worth reading. A reference is classified in this order, the first that
+//! applies winning:
 //!
+//! - **`cross-document`** (spec 071, 067 scenario
+//!   `pointers-into-shipped-files-are-judged`) — the reference points into a
+//!   document the `## Shared Files` section of `framework/bootstrap/ductus.md`
+//!   maps to a source this primitive can read, so it *can* be judged, and is.
+//!   Two shapes reach it. An explicit pair — a bold `§X` followed by `in` and
+//!   a shipped document in a code span, as in **§Grounding (advisory)** in
+//!   `.ductus/reference/analyze.md` — resolves only when `X` *equals* a
+//!   heading of that document: the bold delimits the name, so a pointer that
+//!   outlives a shortened heading is caught rather than prefix-matched.
+//!   Otherwise a line naming **exactly one** document, which the manifest
+//!   maps, judges each `§` on it: resolved when it begins with a heading of
+//!   that source, a heading of the citing file, or names a marker. The marker
+//!   fallback is required — a line naming a shipped document such as
+//!   `specs/inbox.md` usually cites a constitution section beside it; the
+//!   citing-file fallback lets a pointer line also cite a section of its own
+//!   file, and no reference in the corpus needs it today. Pairs exist because
+//!   most command steps name `plan.md` or `spec.md` beside their pointer:
+//!   measured 2026-10-25, 59 of 100 pointers sat on such lines, which the line
+//!   rule leaves unjudged. The manifest bounds all of it — it is the loading
+//!   policy, the source path is the document root, and an unreadable source
+//!   leaves the reference `qualified` — so this is not the general link
+//!   resolver `anchor-reference-kinds` declined to become. Where the
+//!   bootstrap file is absent, as in every adopter, the map is empty and
+//!   nothing is judged this way.
 //! - **`qualified`** — the reference's line names another document (a `.md`
-//!   filename, backticked or bare, or a markdown link to one). It is a claim
-//!   about *that* document's sections, and this primitive holds one file's
-//!   markers, so it cannot be evaluated here. Excluded by construction and
-//!   **counted** — the exclusion is what makes the rest readable, and an
-//!   exclusion nobody counts is indistinguishable from having found nothing.
-//!   Line-scoped rather than immediately-preceding on purpose: the dominant
-//!   real shape is a table row or a clause naming the file once and then
-//!   citing several of its sections (`review.md | edit — §Behavior step 5 and
-//!   §Load`), where every reference after the first would otherwise slip
-//!   through.
+//!   filename, backticked or bare, or a markdown link to one) that the rule
+//!   above does not judge. It is a claim about *that* document's sections,
+//!   and this primitive holds one file's markers, so it is not evaluated
+//!   here. Excluded by construction and **counted** — the exclusion is what
+//!   makes the rest readable, and an exclusion nobody counts is
+//!   indistinguishable from having found nothing. Line-scoped rather than
+//!   immediately-preceding on purpose: the dominant real shape is a table row
+//!   or a clause naming the file once and then citing several of its sections
+//!   (`review.md | edit — §Behavior step 5 and §Load`), where every reference
+//!   after the first would otherwise slip through.
 //! - **`intra-document`** — the anchor names a heading in the citing file
 //!   (`per §Design above`). Resolved against that file's own headings, which
 //!   is the question the author was actually asking.
-//! - **`markers`** — everything else: a genuine claim about the markers file,
-//!   and the only kind that can come back unresolved.
+//! - **`markers`** — everything else: a genuine claim about the markers file.
 //!
-//! - **`cross-document`** — a refinement of `qualified` (spec 071, 067
-//!   scenario `pointers-into-shipped-files-are-judged`): the line names
-//!   **exactly one** document, and the `## Shared Files` section of
-//!   `framework/bootstrap/ductus.md` maps that document to a source this
-//!   primitive can read. Then the reference *can* be judged, so it is:
-//!   resolved when it names a heading of that source, a heading of the citing
-//!   file, or a marker, and unresolved otherwise. Every command step that
-//!   names a section of its installed reference file (**§Grounding (advisory)** in
-//!   `.ductus/reference/analyze.md`) is this shape. The manifest is what
-//!   bounds it — it is the loading policy, the source path is the document
-//!   root, and an unreadable source leaves the reference `qualified` — so this
-//!   is not the general link resolver `anchor-reference-kinds` declined to
-//!   become. Where the bootstrap file is absent, as in every adopter, the map
-//!   is empty and nothing is judged this way. The two fallbacks are required:
-//!   a line naming a shipped document such as `specs/inbox.md` usually cites a
-//!   constitution section beside it, and a pointer line can cite its own
-//!   file's section too.
-//!
-//!   A pointer is also judged when its line names other documents, provided
-//!   it is written as an explicit pair — a bold `§X` followed by `in` and a
-//!   shipped document in a code span: the author has said which document the section belongs to, so there is
-//!   nothing to guess. A pair is judged against that document's headings
-//!   alone. Without this, a command step naming `plan.md` or `spec.md`
-//!   beside its pointer — most of them — would leave the pointer unjudged;
-//!   measured 2026-10-25, 59 of 100 pointers sat on such lines, and widening
-//!   the line rule to "one *shipped* document" instead would have misjudged 9
-//!   references meant for the other document on the line.
+//! Only `cross-document` and `markers` references can come back unresolved.
+//! A heading is an ATX heading line outside a fenced code block: a `## Summary`
+//! inside a fenced example record is content, not a section a pointer can
+//! name.
 //!
 //! What stays reported is deliberate. `the bootstrap's §Derived values` and
 //! `spec 022 §Versioning` name another document in prose without naming the
@@ -81,7 +82,7 @@ use std::sync::OnceLock;
 
 use regex::Regex;
 
-use crate::primitives::{Result, contained_path, inline_code_spans, read_text};
+use crate::primitives::{Result, SkipScanner, contained_path, inline_code_spans, read_text};
 use crate::schema::primitives::{AnchorReference, ResolveAnchorArgs, ResolveAnchorResult};
 
 /// Execute the `resolve-anchor` primitive.
@@ -142,23 +143,23 @@ pub fn run(args: &ResolveAnchorArgs, repo: &Path) -> Result<ResolveAnchorResult>
             if code_spans.iter().any(|span| span.contains(&whole)) {
                 continue;
             }
-            // Order matters: a line that names another document is qualified
-            // even when the anchor happens to match a local heading, because
-            // the author named the document they meant.
+            // Order matters. A reference that points into a shipped document
+            // is judged as cross-document first. Otherwise a line that names
+            // another document is qualified even when the anchor happens to
+            // match a local heading, because the author named the document
+            // they meant.
             let rest = &line[whole..];
-            // An explicit pair is judged against its document alone; a line
-            // naming one shipped document also accepts a local heading or a
-            // marker, since a pointer line can cite either beside it.
-            let cross = pairs
-                .get(&whole)
-                .map(|h| names_local_heading(h, rest))
-                .or_else(|| {
-                    judged_against.as_ref().map(|h| {
-                        names_local_heading(h, rest)
-                            || names_local_heading(&own_headings, rest)
-                            || markers.contains(&anchor)
-                    })
-                });
+            // An explicit pair is judged against its document alone, by
+            // equality; a line naming one shipped document also accepts a
+            // local heading or a marker, since a pointer line can cite either
+            // beside it.
+            let cross = pairs.get(&whole).copied().or_else(|| {
+                judged_against.as_ref().map(|h| {
+                    names_local_heading(h, rest)
+                        || names_local_heading(&own_headings, rest)
+                        || markers.contains(&anchor)
+                })
+            });
             let (kind, resolved) = if let Some(resolved) = cross {
                 cross_document = cross_document.saturating_add(1);
                 if !resolved {
@@ -168,7 +169,7 @@ pub fn run(args: &ResolveAnchorArgs, repo: &Path) -> Result<ResolveAnchorResult>
             } else if line_names_document {
                 qualified = qualified.saturating_add(1);
                 (KIND_QUALIFIED, true)
-            } else if names_local_heading(&own_headings, &line[whole..]) {
+            } else if names_local_heading(&own_headings, rest) {
                 intra_document = intra_document.saturating_add(1);
                 (KIND_INTRA_DOCUMENT, true)
             } else {
@@ -246,17 +247,21 @@ impl<'a> Shipped<'a> {
         self.headings_of(&source)
     }
 
-    /// The explicit pairs on `line`: each pair's `§` offset → the headings
-    /// of the shipped document it names, when that document can be read.
-    fn pairs(&mut self, line: &str) -> HashMap<usize, Vec<String>> {
+    /// The explicit pairs on `line`: each pair's `§` offset → whether its
+    /// bold name equals a heading of the shipped document it names, for
+    /// each pair whose document can be read. Equality, not the line rule's
+    /// prefix match: the bold delimits the name, so a pointer longer than
+    /// any heading — one that outlived a shortened heading — is unresolved.
+    fn pairs(&mut self, line: &str) -> HashMap<usize, bool> {
         let mut pairs = HashMap::new();
         for cap in pair_regex().captures_iter(line) {
-            let Some(source) = self.sources.get(&cap[1]).cloned() else {
+            let Some(source) = self.sources.get(&cap[2]).cloned() else {
                 continue;
             };
             if let (Some(whole), Some(headings)) = (cap.get(0), self.headings_of(&source)) {
+                let name = cap[1].trim();
                 // The pair regex matches from the `**`; the `§` follows it.
-                pairs.insert(whole.start() + 2, headings);
+                pairs.insert(whole.start() + 2, headings.iter().any(|h| h == name));
             }
         }
         pairs
@@ -393,11 +398,15 @@ fn document_regex() -> &'static Regex {
     })
 }
 
-/// ATX heading texts in the citing file, longest first so a `§Hook Installation`
-/// is matched against `Hook Installation` rather than a shorter `Hook`.
+/// ATX heading texts of a document. A line inside a fenced code block or an
+/// HTML comment is content, not structure ([`SkipScanner`]): the fenced
+/// example record in review's reference holds `## Summary`, which names no
+/// section a pointer can reach.
 fn collect_headings(content: &str) -> Vec<String> {
+    let mut skip = SkipScanner::default();
     let mut headings: Vec<String> = content
         .lines()
+        .filter(|line| !skip.skip(line))
         .filter_map(|line| {
             let trimmed = line.trim_start_matches('#');
             (trimmed.len() < line.len() && trimmed.starts_with(' '))
@@ -405,14 +414,17 @@ fn collect_headings(content: &str) -> Vec<String> {
         })
         .filter(|h| !h.is_empty())
         .collect();
-    headings.sort_by_key(|h| std::cmp::Reverse(h.len()));
+    headings.sort_unstable();
     headings.dedup();
     headings
 }
 
-/// Whether the text starting at the `§` names one of the citing file's own
-/// headings. `rest` begins with the `§`, so the heading is compared against
-/// what follows it.
+/// Whether the text starting at the `§` begins with one of `headings` — the
+/// citing file's own, or a shipped source's under the line rule. A `§` in
+/// running prose has nothing marking where its name ends, so any heading the
+/// text begins with resolves it; an explicit pair, whose bold does mark the
+/// end, is compared by equality instead (`Shipped::pairs`). `rest` begins with
+/// the `§`, so the heading is compared against what follows it.
 fn names_local_heading(headings: &[String], rest: &str) -> bool {
     let after = rest.strip_prefix('§').unwrap_or(rest);
     headings.iter().any(|h| after.starts_with(h.as_str()))
@@ -433,10 +445,12 @@ fn marker_regex() -> &'static Regex {
 }
 
 /// An explicit pointer pair — a bold `§X`, then `in`, then a document in a
-/// code span — capturing the document.
+/// code span — capturing the bold name and the document.
 fn pair_regex() -> &'static Regex {
     static R: OnceLock<Regex> = OnceLock::new();
-    R.get_or_init(|| Regex::new(r"\*\*§[^*]+\*\* in `([^`]+)`").expect("hard-coded regex compiles"))
+    R.get_or_init(|| {
+        Regex::new(r"\*\*§([^*]+)\*\* in `([^`]+)`").expect("hard-coded regex compiles")
+    })
 }
 
 fn reference_regex() -> &'static Regex {
@@ -542,7 +556,7 @@ mod tests {
     /// satisfied by a shorter `## Hook` heading elsewhere in the file when
     /// the longer one exists.
     #[test]
-    fn the_longest_matching_heading_wins() {
+    fn a_reference_beginning_with_a_heading_resolves_against_it() {
         let r = classify("## Hook\n\n## Hook Installation\n\nSee §Hook Installation below.\n");
         assert_eq!(r.intra_document, 1);
         assert_eq!(r.unresolved, [] as [String; 0]);
@@ -666,7 +680,7 @@ mod tests {
         }
         std::fs::write(
             root.join("framework/reference/x.md"),
-            "# x\n\n## Grounding\n\n## Rules (blocking and advisory)\n",
+            "# x\n\n## Grounding\n\n## Rules (blocking and advisory)\n\n```markdown\n## Fenced\n```\n",
         )
         .unwrap();
         std::fs::write(root.join("citing.md"), body).unwrap();
@@ -713,8 +727,8 @@ mod tests {
         assert_eq!(r.unresolved, ["Groundng".to_string()]);
     }
 
-    /// The match is a prefix of the text after `§`, never of the heading, so
-    /// a shortened pointer is reported rather than guessed at.
+    /// A pair names its heading exactly, so a shortened pointer is reported
+    /// rather than guessed at.
     #[test]
     fn a_pointer_must_spell_the_whole_heading() {
         let r = judge("See **§Rules** in `.ductus/reference/x.md`.\n");
@@ -733,8 +747,8 @@ mod tests {
         assert_eq!(r.unresolved, [] as [String; 0]);
     }
 
-    /// The installer's rule-surface line cites its own §Shared Files beside a
-    /// pointer into review's reference.
+    /// A pointer line can also cite a section of its own file. No line in the
+    /// corpus needs this today; it keeps the line rule from misreporting one.
     #[test]
     fn a_heading_of_the_citing_file_on_a_pointer_line_resolves() {
         let r = judge(
@@ -764,6 +778,43 @@ mod tests {
         );
         assert_eq!(kinds(&r), ["cross-document", "cross-document"]);
         assert_eq!(r.unresolved, ["Local".to_string(), "known".to_string()]);
+    }
+
+    /// On a line naming only its own document a pair is still judged by its
+    /// document alone — the line rule's marker and local-heading fallbacks
+    /// never reach it.
+    #[test]
+    fn a_pair_on_a_line_naming_only_its_document_takes_no_fallback() {
+        let r = judge("**§known** in `.ductus/reference/x.md`.\n");
+        assert_eq!(kinds(&r), ["cross-document"]);
+        assert_eq!(r.unresolved, ["known".to_string()]);
+        let r = judge("# Doc\n\n## Local\n\n**§Local** in `.ductus/reference/x.md`.\n");
+        assert_eq!(r.unresolved, ["Local".to_string()]);
+    }
+
+    /// The bold delimits a pair's name, so a pointer longer than any heading
+    /// — one that outlived a shortened heading — is not prefix-matched.
+    #[test]
+    fn a_pair_longer_than_its_heading_is_unresolved() {
+        let r = judge("Apply **§Grounding checks** in `.ductus/reference/x.md`.\n");
+        assert_eq!(kinds(&r), ["cross-document"]);
+        assert_eq!(r.unresolved, ["Grounding".to_string()]);
+    }
+
+    /// A heading line inside a fenced block is example content: review's
+    /// reference carries a fenced record holding `## Summary`, which is no
+    /// section a pointer can name.
+    #[test]
+    fn a_heading_inside_a_fenced_block_is_not_a_section() {
+        let r = judge("Apply **§Fenced** in `.ductus/reference/x.md`.\n");
+        assert_eq!(r.unresolved, ["Fenced".to_string()]);
+        let r = judge("See §Fenced, in `.ductus/reference/x.md`.\n");
+        assert_eq!(r.unresolved, ["Fenced".to_string()]);
+        let r = classify("```markdown\n## Hidden\n```\n\nSee §Hidden above.\n");
+        assert_eq!(
+            (r.intra_document, r.unresolved.clone()),
+            (0, vec!["Hidden".to_string()])
+        );
     }
 
     #[test]
