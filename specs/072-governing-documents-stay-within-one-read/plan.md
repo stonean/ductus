@@ -10,7 +10,7 @@ Three changes land in order, and only the last two are enforcement:
 2. **The ceiling.** `scripts/lint-governing-size.sh` measures each governed file as it sits in the git index and fails when one is over its ceiling, missing or unreadable. `.githooks/pre-commit` and CI run it, and a test proves it fails.
 3. **The import.** `CLAUDE.md` imports `AGENTS.md` as `@AGENTS.md` and drops what it copied from the guide. A tool-less `claude -p` run proves the guide loads.
 
-No constitution content, runtime source or shipped file changes, so nothing here needs a release.
+No constitution content or shipped file changes, and the two `runtime/src/` changes are comments only, so nothing here needs a release.
 
 ## Technical Decisions
 
@@ -232,7 +232,7 @@ The table below is filled while the cut is made. The lead column is abridged to 
 
 ### Size target
 
-The ceiling is 50,000 bytes, and the guide lands at 46,555, leaving room for the next few lessons. A ceiling met with zero headroom would force a retirement on the very next commit, before the exit had been exercised once. The landing is above the 45,000 first aimed at because the two security-derived entries (*a destination check judges where a write lands* and *an exact allow rule bounds the command text*) keep their full text, about 650 bytes over the cap. Each enumerates refusals a later check must reproduce, and the cap would have dropped four of them.
+The ceiling is 50,000 bytes, and the guide measures 46,731 bytes at `1ebc2a20`, leaving room for the next few lessons. A ceiling met with zero headroom would force a retirement on the very next commit, before the exit had been exercised once. The landing is above the 45,000 first aimed at because the two security-derived entries (*a destination check judges where a write lands* and *an exact allow rule bounds the command text*) keep their full text, about 650 bytes over the cap. Each enumerates refusals a later check must reproduce, and the cap would have dropped four of them.
 
 ### Fan-out for classification
 
@@ -240,11 +240,11 @@ The 164 entries are independent of one another, so classification fans out to pa
 
 ### Enforcement-site edits stop short of `runtime/src/`
 
-A message or comment added for a **moved** entry lands in `scripts/`, `scripts/tests/`, `.githooks/`, `.github/workflows/` or `runtime/tests/`. When the only enforcement site is in `runtime/src/` and its message lacks the fix, the entry stays **trimmed** instead. Two `runtime/src/` comments that cited `AGENTS.md` text the cut removes (`parser/mod.rs`, `primitives/mechanical_sweep.rs`) are corrected in place, comment-only, because a prose-claim sweep covers doc comments. A change under `runtime/src/` reaches adopters only at a `ductus-v*` release and runs the cargo gate on every commit, and neither cost buys anything for a documentation move.
+A message or comment added for a **moved** entry lands in `scripts/`, `scripts/tests/`, `.githooks/`, `.github/workflows/` or `runtime/tests/`. When the only enforcement site is in `runtime/src/` and its message lacks the fix, the entry stays **trimmed** instead. Two `runtime/src/` comments that cited `AGENTS.md` text the cut removes (`parser/mod.rs`, `primitives/mechanical_sweep.rs`) are corrected in place, comment-only, because a prose-claim sweep covers doc comments (`AGENTS.md`, *a prose-claim sweep reaches past the changed tokens*). A change under `runtime/src/` reaches adopters only at a `ductus-v*` release (`AGENTS.md`, *a change ships via a `ductus-v<version>` tag*) and runs the cargo gate on every commit (`.githooks/pre-commit`, the `runtime/` block), and neither cost buys anything for a documentation move.
 
 ### The ceiling check is a script, not a runtime primitive
 
-`scripts/lint-governing-size.sh` follows `scripts/lint-rule-filenames.sh`: a maintainer lint over this repository's own files, run by CI and never shipped. It parses no markdown, frontmatter or configuration. It reads two blob sizes with `git cat-file -s`, so §runtime-boundary principle 3's prohibition, which covers shell pipelines that parse frontmatter or markdown structure, does not reach it. It also fails eligibility criterion 2 (currently mechanical), because no LLM step or script performs this check today. The nearest primitive, `check-artifact-size`, measures one feature's spec artifacts. Giving it a governing-document subject means new argument and result types, CLI, MCP, registry and exec wiring (063's plan lists about twenty files for the primitive), plus a release, all to replace two `git cat-file` calls.
+`scripts/lint-governing-size.sh` follows `scripts/lint-rule-filenames.sh`: a maintainer lint over this repository's own files, run by CI and never shipped. It parses no markdown, frontmatter or configuration. It reads two blob sizes with `git cat-file -s`, so §runtime-boundary principle 3's prohibition, which covers shell pipelines that parse frontmatter or markdown structure, does not reach it. It also fails eligibility criterion 2 (currently mechanical), because no LLM step or script performed this check: `git grep -n 'AGENTS.md\|constitution.md' 5cb01fdb -- scripts .githooks .github`, filtered for `wc -c`, `cat-file -s`, `size` and `bytes`, returns nothing. The nearest primitive, `check-artifact-size`, measures one feature's spec artifacts. Giving it a governing-document subject means new argument and result types, CLI, MCP, registry and exec wiring (063's plan lists about twenty files for the primitive), plus a release, all to replace two `git cat-file` calls.
 
 - **Ceilings** live in one table at the top of the script: `AGENTS.md 50000`, and `framework/constitution.md` at its byte size in the commit that adds the script. A comment on the `AGENTS.md` row names `DEFAULT_READ_SIZE_BYTES` in `runtime/src/primitives/check_artifact_size.rs` as the source of 50,000. The constitution row says `050-constitution`'s `the-constitution-fits-one-read` lowers it.
 - **What is measured.** `git -C "$ROOT" cat-file -s ":$path"` reads the index. In the hook that is the staged file, so an unstaged edit neither fails nor passes a commit. In CI, the index is the checkout. One code path serves both, as AC9 requires.
@@ -290,7 +290,7 @@ The **Non-negotiables** section goes. Its trunk-based rule is an `AGENTS.md` ent
 
 AC7 is verified with `claude -p` at the repository root and the file tools disallowed (`--disallowedTools Read,Grep,Glob,Bash`), asking a question only `AGENTS.md` answers, with `--output-format stream-json --verbose` so the run's tool use is visible. Because the run has no file tools, a correct answer can only come from the loaded context. The same run against the pre-change `CLAUDE.md` is the negative control: it shows the probe fails when the guide is not loaded. Two things can make the control pass for the wrong reason, and both are checked before it counts:
 
-- Claude Code's **Project instructions** setting, when it is `claude-md-and-agents-md`, loads `AGENTS.md` beside `CLAUDE.md` without any import.
+- Claude Code's **Project instructions** setting, when it is `claude-md-and-agents-md`, loads `AGENTS.md` beside `CLAUDE.md` without any import ([memory documentation](https://code.claude.com/docs/en/memory), *Choose which instruction files load*).
 - A nested `claude -p` that refuses to start says something about the environment, not about the import.
 
 The probe question is picked after the cut, from an entry that survives it.
@@ -325,7 +325,7 @@ The probe question is picked after the cut, from an entry that survives it.
 
 - **A runtime primitive for the ceiling.** Rejected for this spec: see *The ceiling check is a script*. If adopters later want a ceiling on their own guide, extending `check-artifact-size` is the route, and that is a spec of its own.
 - **Deleting the 56 mirrors outright.** Rejected: `050-constitution` resolved that a promoted rule keeps a one-line pointer, so the index of how to work here does not silently lose a rule. A one-line pointer costs about 100 bytes.
-- **Splitting `AGENTS.md` into topic files imported on demand.** Rejected: an import loads its file whole, so a split saves nothing unless the agent chooses what to read, which is a diligence dependency. Claude Code's path-scoped rules load by file path, and most entries here are about workflow rather than a path.
+- **Splitting `AGENTS.md` into topic files imported on demand.** Rejected: an import loads its file whole ([memory documentation](https://code.claude.com/docs/en/memory): imports organise a file but do not reduce its context cost), so a split saves nothing unless the agent chooses what to read, which is a diligence dependency. Claude Code's path-scoped rules load by file path, and most entries here are about workflow rather than a path.
 - **Warning instead of failing at the ceiling.** Rejected: a warning is an exit that depends on someone choosing to take it.
 - **Known limitation.** The ceiling bounds bytes, not quality. A guide can be within its ceiling and still carry a story, and only review catches that. The ceiling makes the cost of a story visible, because every byte competes with a rule.
 - **Known limitation.** Hosts that read `AGENTS.md` natively (Antigravity and OpenCode, per `framework/bootstrap/ductus.md`) get the smaller guide too. That is the intent, and nothing here tests it on those hosts.
