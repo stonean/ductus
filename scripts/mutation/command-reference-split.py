@@ -51,4 +51,11 @@ MUTATIONS = [
         '            true || !tail\n                .chars()',
         'resolve_anchor',
     ),
+    (
+        'M6 an underscore no longer continues a word',
+        'src/primitives/resolve_anchor.rs',
+        ".is_some_and(|c| c.is_alphanumeric() || c == '_' || c == '-')",
+        ".is_some_and(|c| c.is_alphanumeric() || c == '-')",
+        'resolve_anchor',
+    ),
 ]

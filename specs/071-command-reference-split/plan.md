@@ -284,6 +284,7 @@ leaves to a follow-up.
 | `scripts/audit/template-alignment.sh` | Edit | Comment |
 | `scripts/audit/README.md` | Edit | Family descriptions |
 | `scripts/lint-tool-coverage.sh` | Edit | Remove the dead skip |
+| `scripts/mutation/command-reference-split.py` | Create | One mutation per review-round behavior, each killed by the test that names it |
 | `.github/workflows/runtime.yml` | Edit | Path filters |
 | `runtime/src/primitives/check_corpus_links.rs` | Edit | Exclusion and test |
 | `runtime/src/primitives/resolve_anchor.rs` | Edit | Bounded judgment and tests |
@@ -291,7 +292,6 @@ leaves to a follow-up.
 | `runtime/src/mcp/server.rs` | Edit | Tool descriptions |
 | `runtime/src/primitives/check_artifacts.rs` | Edit | Doc comment |
 | `runtime/src/primitives/check_step_references.rs` | Edit | A `step N of §X` reference is qualified; test; doc comment |
-| `scripts/mutation/command-reference-split.py` | Create | One mutation per review-round behavior, each killed by the test that names it |
 | `runtime/src/primitives/enforce_manifest.rs` | Edit | Doc comment: the directories the bootstrap enforces |
 | `runtime/tests/parity.rs` | Edit | Install fixture assertions |
 | `runtime/tests/fixtures/ductus-basic/` | Edit | A reference file and a stale one |

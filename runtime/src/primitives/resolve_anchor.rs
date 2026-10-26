@@ -422,9 +422,10 @@ fn collect_headings(content: &str) -> Vec<String> {
 
 /// Whether the text starting at the `§` begins with one of `headings` — the
 /// citing file's own, or a shipped source's under the line rule. A `§` in
-/// running prose has nothing marking where its name ends, so any heading the
-/// text begins with resolves it; an explicit pair, whose bold does mark the
-/// end, is compared by equality instead (`Shipped::pairs`). `rest` begins with
+/// running prose has nothing marking where its name ends, so a heading the
+/// text begins with resolves it when the heading ends where a word ends; an
+/// explicit pair, whose bold does mark the end, is compared by equality
+/// instead (`Shipped::pairs`). `rest` begins with
 /// the `§`, so the heading is compared against what follows it.
 fn names_local_heading(headings: &[String], rest: &str) -> bool {
     let after = rest.strip_prefix('§').unwrap_or(rest);
@@ -851,6 +852,14 @@ mod tests {
         );
         let r = classify("## Hook\n\nSee §Hook-like reasoning above.\n");
         assert_eq!(r.unresolved, ["Hook-like".to_string()]);
+        let r = classify("## Hook\n\nSee §Hook_two above.\n");
+        assert_eq!(r.unresolved, ["Hook_two".to_string()]);
+        // A heading at the very end of a line still ends a word.
+        let r = classify("## Hook\n\nSee §Hook\n");
+        assert_eq!(
+            (r.intra_document, r.unresolved.clone()),
+            (1, Vec::<String>::new())
+        );
     }
 
     #[test]
