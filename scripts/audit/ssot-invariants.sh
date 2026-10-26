@@ -20,8 +20,8 @@
 #   2. Back-edge ownership: the rule that /amend owns both back-edges
 #      (clarified/planned/in-progress → draft; done → in-progress).
 #      Canonical: framework/constitution.md §spec-lifecycle
-#      Family 1c already checks the back-edge wording in amend.md and
-#      target.md; this check is the SSOT companion.
+#      Family 1c already checks that amend.md and target.md reference each
+#      back-edge (presence, not wording); this check is the SSOT companion.
 #
 #   3. Open-question counting rule: how the framework counts entries in
 #      a ## Open Questions section (top-level list items or
@@ -40,9 +40,9 @@
 #
 # The design-principles tension here is explicit: an empty check looks
 # like a violation of "never depend on human discipline." Accepted for v1
-# because Families 1b and 1c already cover the diagram and back-edge
-# wording invariants from different angles (textual-pattern vs structural-
-# equality). This file's role is to be the named home where the
+# because Families 1b and 1c already cover the diagram's state order and
+# the back-edge references from different angles (presence patterns vs
+# structural equality). This file's role is to be the named home where the
 # *textual-rule* check eventually lives — promotion happens when there's
 # a concrete duplicate to write the pattern against.
 #
