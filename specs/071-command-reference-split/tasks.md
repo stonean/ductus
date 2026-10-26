@@ -188,3 +188,9 @@ Blocked on task 9: the change is 067's scenario.
 - [x] the run's host saw this repository's `ductus` tools as deferred and would have read State A — discarded (owner decision 2026-10-26): (an artifact of a subagent sharing the parent's MCP server, not an adopter shape)
 
 - **Done when**: every item is fixed, routed, or discarded with the owner's decision written on it
+
+## 22. Disposition out-of-spec finding: Antigravity's rules-mirror cleanup has no owner on the runtime path
+
+- [ ] `framework/bootstrap/ductus.md` §Antigravity layout **Rules mirror cleanup** removes `{config_dir}/rules/*.md` files whose basename left `specs/rules/`, but step 8's enforce list excepts Antigravity and the **Host-side work** paragraph names only the skill transform, the `name: ductus` wrap and the `{project}-*/` directory cleanup, so on the runtime path no step owns it (pre-existing; found by re-read 1 of 44c0babe; 117413d6's step 4 made the mirror an apply-manifest call). Options, owner decision pending: (a) add Antigravity's `{config_dir}/rules/` to step 8's enforce list with the mirrored basenames as expected and pinned honored (enforce-manifest removes files, which is all this cleanup does), or (b) add it to the Host-side work list; copy ductus.md to govern.md either way
+
+- **Done when**: the item is fixed, routed, or discarded with the owner's decision written on it

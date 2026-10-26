@@ -106,3 +106,13 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Family 39 reports the `cross-document` count; the data model's `resolve-anchor` section shows the kind and the count
 
 - **Done when**: the tests pass and fail under mutation, Family 39 passes with every pointer into a reference file judged, and a before/after run over `framework/` and the spec corpus adds no unresolved reference (spec 071 task 11).
+
+## 14. Disposition the fix-round re-read's findings on 2be18da6
+
+- [ ] `derive-dependencies` / `derive-references` (re-read rated MUST): a rewrite the re-parse guard refuses lands in `unparseable`, which is not drift, so both exit 0 and the hooks (stdout discarded), this repo's CI and the adopter CI template pass over a stale index; at 2be18da6^ a report-only run on the same input exited 1. Trigger, valid YAML that validate-frontmatter reports clean: `dependencies: [` / `009-old` / `]` (a multi-line flow list closing at column 0). Proposed fix, owner decision pending: the splice skips a multi-line flow value until its brackets balance; a rewrite the guard still refuses goes into a new `unwritable` list (absent when empty), separate from `unparseable` (an unterminated fence); both primitives exit non-zero when it is non-empty, report-only and `--write` alike, with one stderr line per spec naming it and saying to edit that key by hand. Split the 'not drift / an unknown / validate-frontmatter owns it' sentences between the two classes in `schema/primitives.rs` (~1397, ~1473), `data-model.md` (~200) and `scenarios/derive-unparseable-frontmatter-is-reported.md` (~50-70)
+- [ ] `data-model.md` ~200: 'a frontmatter already invalid before the rewrite lands here too' holds only when a rewrite is due (an in-sync spec returns before the guard)
+- [ ] `scenarios/orphaned-reference-check.md` ~74-77: 'an empty `migration` under `watermark` means the same' — say it is not a migration named "" either and means no registry was read
+- [ ] test: nothing pins the guard ahead of the `--staged` filter (moving it after the filter survives the lib and golden suites); add a test and a mutation
+- [ ] wording: the derive-unparseable scenario ~14-15 says `splice_references` anchors on 'the line after `dependencies:`' (it now goes after the whole entry); `derive_dependencies.rs` ~650's fixture comment `# kept for history` is one that gets dropped; `pointers-into-shipped-files-are-judged.md` ~25 omits the bare `name.md` token `document_path` also accepts
+
+- **Done when**: each item is fixed, routed, or discarded with the owner's decision written on it, and an independent re-read of the fix finds no MUST or SHOULD
