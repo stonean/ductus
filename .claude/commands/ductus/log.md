@@ -23,7 +23,9 @@ This command does not require a session target — items in the inbox span the w
 
 ## Instructions
 
-> **For agent runtimes**: the Invoke steps below call the MCP tools of the ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. Before the server is registered — the window between acquisition and the restart that loads it — walk the same prose using the host file-reading tools (Read, Edit, Write) per the Markdown-only reference below.
+> **For agent runtimes**: the Invoke steps below call the MCP tools of the ductus runtime; the host-integration contract — bare↔prefixed tool names, lazy ToolSearch schema fetch, the no-shell-utilities rule, and the two-paths guarantee — lives once in the constitution, §runtime-host-integration. Before the server is registered — the window between acquisition and the restart that loads it — walk the same prose using the host file-reading tools (Read, Edit, Write) per `.ductus/reference/log.md`.
+
+**Where a named section lives.** This command's markdown-only reference — the procedure for the path without the runtime, and the policy these steps apply — is `.ductus/reference/log.md`. A section named here, or cited elsewhere as part of this command, that has no heading in this file is there; read it when a step points at it.
 
 <!-- audit:ignore-promotion -->
 1. Capture the item. If `$ARGUMENTS` is provided, treat it as the item text. Otherwise, ask the user: "What do you want to log?" Optionally ask follow-up questions if the item is so terse it would be unrecoverable later (e.g., "broken" with no context) — one short clarification is enough; do not interrogate.
@@ -34,18 +36,3 @@ This command does not require a session target — items in the inbox span the w
 
 <!-- audit:ignore-promotion -->
 4. Report: the line that was added; the new total item count in the inbox (`append-inbox`'s `item-count` result); and the suggested next step: "Run `/ductus:groom` when you're ready to walk the inbox and route items to their proper homes." **Stop here.** Do not start grooming or implementation. The user invokes `/ductus:groom` explicitly.
-
-## Markdown-only reference
-
-With no ductus runtime registered, the host performs the same append with its own file tools (Read, Edit, Write) — no shell-pipeline substitution (§runtime-host-integration):
-
-1. If `specs/inbox.md` does not exist, create it with a minimal heading (`# Inbox`) followed by a blank line.
-2. Append the item to the inbox list as a new checkbox bullet:
-
-   ```markdown
-   - [ ] {item text}
-   ```
-
-3. Run `npx markdownlint-cli2` on the modified file.
-
-Either path ends with the same report: the line that was added, the new total item count in the inbox, and the `/ductus:groom` pointer — and stops there.

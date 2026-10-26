@@ -88,4 +88,68 @@ while IFS= read -r name; do
     "remove the row, or drop $name from the excl list in this script if it is now adopter-facing"
 done <<< "$(comm -12 <(printf '%s' "$manifest") <(printf '%s' "$excl"))"
 
+# --- Reference arm (spec 071) ----------------------------------------------
+#
+# Each command's markdown-only reference ships as its own file, through a
+# Shared Files row `framework/reference/<name>.md` -> `.ductus/reference/<name>.md`.
+# The same three directions hold as for the command rows, against the same
+# maintainer-only list: a command that is withheld is withheld with its
+# reference. Two more are reference-specific: a row must install the file
+# under its own name in `.ductus/reference/` (the command reads it by that
+# path), and a reference file must belong to a command.
+REF_DIR="framework/reference"
+REF_SECTION="$DUCTUS §Shared Files → \`ductus\`-owned shared files"
+
+ref_rows="$(grep -oE '^\| `framework/reference/[a-z-]+\.md` \| `[^`]*` \|' "$DUCTUS")"
+ref_manifest="$(printf '%s\n' "$ref_rows" \
+  | sed -nE 's/^\| `framework\/reference\/([a-z-]+)\.md`.*/\1/p' | sort -u)"
+ref_actual="$(for f in "$REF_DIR"/*.md; do [ -f "$f" ] && basename "$f" .md; done | sort -u)"
+ref_expected="$(comm -23 <(printf '%s' "$ref_actual") <(printf '%s' "$excl"))"
+
+# Missing: a shippable reference with no row — its command's pointers would
+# name a file /ductus never installs.
+while IFS= read -r name; do
+  [ -z "$name" ] && continue
+  emit "$REF_SECTION" \
+    "framework/reference/$name.md has no Shared Files row — /ductus never installs it, so /{project}:$name's pointers name a missing file" \
+    "add | \`framework/reference/$name.md\` | \`.ductus/reference/$name.md\` | to the ductus-owned shared files table"
+done <<< "$(comm -23 <(printf '%s' "$ref_expected") <(printf '%s' "$ref_manifest"))"
+
+# Stale: a row whose source file no longer exists.
+while IFS= read -r name; do
+  [ -z "$name" ] && continue
+  emit "$REF_SECTION" \
+    "Shared Files row framework/reference/$name.md has no source file under framework/reference/" \
+    "remove the stale row, or restore/rename the source file"
+done <<< "$(comm -23 <(printf '%s' "$ref_manifest") <(printf '%s' "$ref_actual"))"
+
+# Wrongly shipped: a maintainer-only command's reference in the manifest.
+while IFS= read -r name; do
+  [ -z "$name" ] && continue
+  emit "$REF_SECTION" \
+    "maintainer-only reference framework/reference/$name.md appears in the Shared Files manifest — it would be shipped to adopters" \
+    "remove the row; a withheld command is withheld with its reference"
+done <<< "$(comm -12 <(printf '%s' "$ref_manifest") <(printf '%s' "$excl"))"
+
+# Wrong destination: the command reads `.ductus/reference/<name>.md`, so any
+# other destination installs a file nothing reads.
+while IFS= read -r row; do
+  [ -z "$row" ] && continue
+  name="$(printf '%s' "$row" | sed -nE 's/^\| `framework\/reference\/([a-z-]+)\.md`.*/\1/p')"
+  dest="$(printf '%s' "$row" | sed -nE 's/^\| `[^`]*` \| `([^`]*)` \|$/\1/p')"
+  if [ "$dest" != ".ductus/reference/$name.md" ]; then
+    emit "$REF_SECTION" \
+      "Shared Files row framework/reference/$name.md installs to \`$dest\` — its command reads \`.ductus/reference/$name.md\`" \
+      "set the destination to \`.ductus/reference/$name.md\`"
+  fi
+done <<< "$ref_rows"
+
+# Orphan: a reference file whose command does not exist.
+while IFS= read -r name; do
+  [ -z "$name" ] && continue
+  emit "$REF_DIR/$name.md" \
+    "reference file has no command — framework/commands/$name.md does not exist" \
+    "remove the reference file, or restore/rename its command"
+done <<< "$(comm -23 <(printf '%s' "$ref_actual") <(printf '%s' "$actual"))"
+
 exit "$drift"

@@ -34,7 +34,7 @@ Each reference is classified into one of three kinds, and the classification is 
 
 - **`intra-document`** — the anchor names a heading in the citing file. Resolved against that file's own headings, longest first, so `§Hook Installation` is not satisfied by a shorter `§Hook` elsewhere in the file.
 
-- **`markers`** — everything else: a genuine claim about the markers file, and **the only kind that can come back unresolved**.
+- **`markers`** — everything else: a genuine claim about the markers file, and **the only kind that can come back unresolved** — besides `cross-document`, the fourth kind [`pointers-into-shipped-files-are-judged`](pointers-into-shipped-files-are-judged.md) added.
 
 `qualified` and `intra-document` counts ship in the result. An exclusion nobody counts is indistinguishable from a scan that found nothing — `QUAL-CLAIM-001` — and here the exclusion is large enough (136 of 311) that its silence would be the whole story.
 
@@ -58,5 +58,5 @@ Three of the 34 are historical claims in `done` specs — `Delete §lightweight-
 
 ## Resolved Questions
 
-- **Why not resolve qualified references properly, by loading the named document's markers?** Because it changes the primitive from "one file against one marker set" into a link resolver with a file-loading policy, an error surface for unreadable targets, and a question about what counts as a document root. `check-corpus-links` already owns cross-document resolution. This primitive's honest scope is the one marker set it was given, and the fix is to stop pretending references to other documents are within it.
+- **Why not resolve qualified references properly, by loading the named document's markers?** Because it changes the primitive from "one file against one marker set" into a link resolver with a file-loading policy, an error surface for unreadable targets, and a question about what counts as a document root. `check-corpus-links` already owns cross-document resolution. This primitive's honest scope is the one marker set it was given, and the fix is to stop pretending references to other documents are within it. **Reversed in part** for the documents the **Shared Files** manifest ships: [`pointers-into-shipped-files-are-judged`](pointers-into-shipped-files-are-judged.md) judges a reference on a line naming exactly one of them, because the manifest is the loading policy, a mapped source that cannot be read stays unjudged, and the source path is the root. Every other qualified reference is still counted, never judged, for the reasons above (operator decision for [071](../../071-command-reference-split/spec.md), 2026-10-25).
 - **Why report the residue rather than widening the rule until it is empty?** Because the widening would be heuristic — matching `the bootstrap's` or `spec 022` means guessing which document prose meant — and a rule that fires falsely on a correct reference is worse than the silence it replaces, the standard [045](../../045-decision-state-drift-detection/spec.md) set. 34 classified findings that a maintainer can read beats 112 undifferentiated ones, and beats 0 bought by guessing.

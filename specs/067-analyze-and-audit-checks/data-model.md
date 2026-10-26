@@ -128,21 +128,24 @@ Result:
   "references": [
     { "anchor": "runtime-boundary", "line": 459, "resolved": true, "kind": "markers" },
     { "anchor": "Workflow", "line": 51, "resolved": true, "kind": "qualified" },
-    { "anchor": "Design", "line": 106, "resolved": true, "kind": "intra-document" }
+    { "anchor": "Design", "line": 106, "resolved": true, "kind": "intra-document" },
+    { "anchor": "Grounding", "line": 63, "resolved": true, "kind": "cross-document" }
   ],
   "unresolved": [],
   "qualified": 136,
-  "intra-document": 6
+  "intra-document": 6,
+  "cross-document": 29
 }
 ```
 
-Scans `path` for `§<anchor>` references and resolves each against `<!-- §anchor -->` markers — `path`'s own when `markers-path` is omitted (the constitution's self-consistency check), or another file's: `/ductus:analyze` passes the constitution as `markers-path`, since a spec carries no markers of its own. `kind` records which of three a reference is (scenario [`anchor-reference-kinds`](scenarios/anchor-reference-kinds.md)):
+Scans `path` for `§<anchor>` references and resolves each against `<!-- §anchor -->` markers — `path`'s own when `markers-path` is omitted (the constitution's self-consistency check), or another file's: `/ductus:analyze` passes the constitution as `markers-path`, since a spec carries no markers of its own. `kind` records which of four a reference is (scenarios [`anchor-reference-kinds`](scenarios/anchor-reference-kinds.md) and [`pointers-into-shipped-files-are-judged`](scenarios/pointers-into-shipped-files-are-judged.md)):
 
-- **`qualified`** — the reference's line names a markdown document **other than the markers file** (a backticked path, a markdown link target, or a bare `*.md` token). Excluded by construction and **counted**; the match is line-scoped.
+- **`cross-document`** — the reference's line names exactly one document other than the markers file, and the `## Shared Files` section of `framework/bootstrap/ductus.md` maps that document to a readable source. Judged: resolved when the text after `§` begins with a heading of that source or of the citing file, or names a marker; unresolved otherwise. Also any `§` written as an explicit pair, `**§X** in` a shipped document in backticks, on any line, judged against that document's headings alone. Never assigned where `framework/bootstrap/ductus.md` is absent.
+- **`qualified`** — any other line naming a markdown document **other than the markers file** (a backticked path, a markdown link target, or a bare `*.md` token). Excluded by construction and **counted**; the match is line-scoped.
 - **`intra-document`** — the anchor names a heading in the citing file, matched longest first.
-- **`markers`** — a claim about the markers file, and the only kind that can come back unresolved.
+- **`markers`** — a claim about the markers file.
 
-An empty `unresolved` therefore means every claim about the markers file resolved, never that every `§` in the file is fine. Prose naming another document without naming its file (`spec 022 §Versioning`) can be neither verified nor excluded, and stays reported.
+Only `markers` and `cross-document` references can come back unresolved. An empty `unresolved` therefore means every claim about the markers file and about a shipped document's sections resolved, never that every `§` in the file is fine. Prose naming another document without naming its file (`spec 022 §Versioning`) can be neither verified nor excluded, and stays reported.
 
 ## `check-rule-ids` — verify cited rule IDs exist and aren't deprecated
 

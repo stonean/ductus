@@ -93,9 +93,12 @@ split, since rewriting a pointer changes the kept side by a few bytes.
 ### How a step points
 
 Every step that pointed at "the markdown-only reference below" names a section
-in a file instead, for example "apply **§Grounding** in
-`.ductus/reference/analyze.md`". The `§name` is a real heading in the named
-file, so a pointer can be checked by tooling and not only by reading it.
+in a file instead, for example:
+
+> apply **§Grounding (advisory)** in `.ductus/reference/analyze.md`
+
+The `§name` is a real heading in the named file, so a pointer can be checked
+by tooling and not only by reading it.
 
 Each reference file opens with a **Where a named section lives** paragraph, as
 `ductus-procedure.md` does: a section name with no heading in the reference
@@ -205,14 +208,26 @@ Checked 2026-10-25 by reading each consumer.
   qualified reference without judging it. The primitive gains a bounded
   judgment. When a line names exactly one document, and the Shared Files
   manifest maps that document to a framework source, each `§name` on the line
-  resolves if it names a heading in that source or a marker in the markers
-  file, and is reported unresolved otherwise. A line naming several documents,
+  resolves if it names a heading in that source, a heading in the citing file,
+  or a marker in the markers file, and is reported unresolved otherwise. The
+  citing file's own headings count because a pointer line can also cite a
+  section of its own file, as the installer's rule-surface line cites its
+  Shared Files section beside review's reference. A line naming several documents,
   or one the manifest does not map, stays counted and unjudged, as does a
   mapped source that cannot be read. The marker fallback is required: measured
   2026-10-25, the corpus held 16 references on lines naming exactly one mapped
   document, and every one was a constitution marker beside a path such as
   `specs/inbox.md`. A headings-only rule would have reported all 16; this one
   reports none of them.
+  A pointer written as an explicit pair, **§X** in `<shipped document>`, is
+  judged against that document's headings alone, whatever else its line names.
+  Measured 2026-10-25 after the move, 59 of the 100 pointers in the commands,
+  their reference files and the installer sat on a line that also named
+  `plan.md`, `spec.md` or another file, so the line rule alone left most of
+  them unjudged. Widening the line rule to one *shipped* document instead
+  would have judged them, but would also have reported 9 references meant for
+  the other document on their line. The pair form judges all 100 and reported
+  nothing it should not.
 - **CI.** `.github/workflows/runtime.yml` triggers on `framework/commands/*.md`
   and gains `framework/reference/*.md`.
 - **The install fixture.** The parity install fixture gains a reference file,
@@ -234,7 +249,7 @@ Checked 2026-10-25 by reading each consumer.
   `.ductus/reference/…` path then counts as shipped.
 - The name and frontmatter checks: Family 16's command rows,
   `readme-command-parity`, `gen-help-tables`, and `host-namespace-parity`.
-- `ssot-invariants`: clarify's §Gate is in the kept part.
+- `ssot-invariants`: clarify's Gate section is in the kept part.
 - `lint-tool-coverage.sh` skips the reference section. After the move that
   skip has nothing to skip, and it is removed as dead code.
 
@@ -298,7 +313,7 @@ its schema.
 - [ ] AC9: `scripts/gen-claude-commands.sh` writes `.ductus/reference/*.md` from `framework/reference/*.md` with `{project}` substituted and prunes one with no source, its `--check` mode reports drift in either, and the pre-commit hook stages the directory.
 - [ ] AC10: Family 18 reads its marker restatement from `framework/reference/analyze.md` and still reports a finding when the sentence is absent.
 - [ ] AC11: `check-corpus-links` excludes `.ductus/reference/` from the repository scope and counts the exclusion, with a test that fails when the exclusion is removed.
-- [ ] AC12: `resolve-anchor` judges a `§name` on a line naming exactly one document that the Shared Files manifest maps to a framework source: resolved when it names a heading in that source or a markers-file marker, unresolved otherwise. A line naming several documents or an unmapped one, and a mapped source that cannot be read, stay counted and unjudged. Each case has a test that fails when its behavior is removed, and the rule reports no unresolved reference in this repository's `framework/` or spec corpus that the previous rule did not.
+- [ ] AC12: `resolve-anchor` judges a `§name` on a line naming exactly one document that the Shared Files manifest maps to a framework source: resolved when it names a heading in that source, a heading in the citing file, or a markers-file marker, unresolved otherwise. A `§` written as an explicit pair, `**§X** in` a shipped document, is judged against that document's headings alone on any line. A line naming several documents or an unmapped one, and a mapped source that cannot be read, otherwise stay counted and unjudged. Each case has a test that fails when its behavior is removed, and the rule reports no unresolved reference in this repository's `framework/` or spec corpus that the previous rule did not.
 - [ ] AC13: The installer's pointers at `review.md` §Behavior step 5 name a section that exists in `.ductus/reference/review.md`.
 - [ ] AC14: `.github/workflows/runtime.yml` triggers on `framework/reference/*.md` wherever it triggers on `framework/commands/*.md`.
 - [ ] AC15: The parity install fixture installs a reference file to `.ductus/reference/` and prunes a stale one there, and the test fails when either step is removed.

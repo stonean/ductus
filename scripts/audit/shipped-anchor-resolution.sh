@@ -32,9 +32,14 @@
 # one qualifies every `§` on it, and a reference meant for another file can
 # resolve against a same-named local heading. The scenario states each.
 #
-# Only `markers`-kind references can come back unresolved; `qualified` and
-# `intra-document` are counted, never judged, exactly as the primitive reports
-# them. The counts go to stderr so a clean exit says what it examined.
+# Only `markers`- and `cross-document`-kind references can come back
+# unresolved; `qualified` and `intra-document` are counted, never judged,
+# exactly as the primitive reports them. `cross-document` (spec 071) is a
+# command step's pointer into its reference file, **§X** in
+# `.ductus/reference/<command>.md`: the line names one document the Shared
+# Files manifest ships, so the primitive judges it against that document's
+# framework source. The counts go to stderr so a clean exit says what it
+# examined.
 #
 # An empty enumeration, an unreachable runtime, and a file whose result could
 # not be read or parsed are each findings. A family that examined nothing must
@@ -61,6 +66,7 @@ refs=0
 qualified=0
 intra=0
 marker_refs=0
+cross=0
 
 if [ "$count" -eq 0 ]; then
   emit "framework/" \
@@ -81,7 +87,7 @@ else
 import json, subprocess, sys
 
 binary, markers = sys.argv[1], sys.argv[2]
-examined = refs = qualified = intra = marker_refs = 0
+examined = refs = qualified = intra = marker_refs = cross = 0
 for path in (line.strip() for line in sys.stdin):
     if not path:
         continue
@@ -111,19 +117,28 @@ for path in (line.strip() for line in sys.stdin):
             qualified += 1
         elif kind == "intra-document":
             intra += 1
+        elif kind == "cross-document":
+            cross += 1
+            if not ref.get("resolved"):
+                print("unresolved-cross\t%s:%s\t%s" % (path, ref.get("line", ""), ref.get("anchor", "")))
         else:
             marker_refs += 1
             if not ref.get("resolved"):
                 print("unresolved\t%s:%s\t%s" % (path, ref.get("line", ""), ref.get("anchor", "")))
-print("counts\t%d\t%d\t%d\t%d\t%d" % (examined, refs, qualified, intra, marker_refs))
+print("counts\t%d\t%d\t%d\t%d\t%d\t%d" % (examined, refs, qualified, intra, marker_refs, cross))
 ' "$bin" "$MARKERS")"
 
-    while IFS=$'\t' read -r kind f1 f2 f3 f4 f5; do
+    while IFS=$'\t' read -r kind f1 f2 f3 f4 f5 f6; do
       case "$kind" in
         unresolved)
           emit "$f1" \
             "\`§$f2\` names no heading in this file and no marker in $MARKERS — resolve-anchor reports it to anyone who runs the check over what ductus ships, and only a ductus release repairs it" \
             "spell a local heading as it reads, name the other markdown document on the same line, or drop the § for a section of a non-markdown document"
+          ;;
+        unresolved-cross)
+          emit "$f1" \
+            "\`§$f2\` names no heading of the shipped document this line points into, no heading in this file, and no marker in $MARKERS" \
+            "spell the target section's heading in full, as it reads in the framework source the Shared Files manifest maps that document to"
           ;;
         unexamined)
           emit "$f1" \
@@ -136,6 +151,7 @@ print("counts\t%d\t%d\t%d\t%d\t%d" % (examined, refs, qualified, intra, marker_r
           qualified="$f3"
           intra="$f4"
           marker_refs="$f5"
+          cross="$f6"
           ;;
       esac
     done <<< "$records"
@@ -148,6 +164,6 @@ print("counts\t%d\t%d\t%d\t%d\t%d" % (examined, refs, qualified, intra, marker_r
   fi
 fi
 
-echo "shipped-anchors: ${examined} of ${count} framework/ markdown file(s) examined; ${refs} § reference(s) — ${marker_refs} against constitution markers, ${intra} intra-document, ${qualified} qualified (excluded by construction)" >&2
+echo "shipped-anchors: ${examined} of ${count} framework/ markdown file(s) examined; ${refs} § reference(s) — ${marker_refs} against constitution markers, ${cross} cross-document (judged against a shipped document's source), ${intra} intra-document, ${qualified} qualified (excluded by construction)" >&2
 
 exit "$drift"

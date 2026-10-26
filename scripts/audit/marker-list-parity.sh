@@ -14,9 +14,11 @@
 #     source, per the constitution's canonical-sources map;
 #   * `runtime/src/primitives/check_artifacts.rs` — `NON_ASSERTION_MARKERS`,
 #     the implementation;
-#   * `framework/commands/analyze.md` — the adopter-facing restatement. This
-#     one cannot be replaced by a pointer: `analyze.md` ships to adopter
-#     projects, which have no copy of 045's data-model;
+#   * `framework/reference/analyze.md` — the adopter-facing restatement, in
+#     `/{project}:analyze`'s markdown-only reference (spec 071 moved it out of
+#     the command file). This one cannot be replaced by a pointer: it ships to
+#     adopter projects as `.ductus/reference/analyze.md`, and they have no copy
+#     of 045's data-model;
 #   * `specs/067-analyze-and-audit-checks/scenarios/criterion-path-existence-family.md`
 #     — carries the count and the group names, not the phrases.
 #
@@ -78,7 +80,7 @@ fi
 
 CANON_MD="$ROOT/specs/045-decision-state-drift-detection/data-model.md"
 CHECK_RS="$ROOT/runtime/src/primitives/check_artifacts.rs"
-ANALYZE_MD="$ROOT/framework/commands/analyze.md"
+ANALYZE_MD="$ROOT/framework/reference/analyze.md"
 SCENARIO_MD="$ROOT/specs/067-analyze-and-audit-checks/scenarios/criterion-path-existence-family.md"
 BODY_CANON_MD="$ROOT/specs/067-analyze-and-audit-checks/data-model.md"
 BODY_SCENARIO_MD="$ROOT/specs/067-analyze-and-audit-checks/scenarios/body-path-existence-family.md"
@@ -225,7 +227,7 @@ sentence = re.search(
 )
 if not sentence:
     emit(
-        "framework/commands/analyze.md",
+        "framework/reference/analyze.md",
         "could not locate the non-assertion marker restatement",
         "keep the 'A criterion carrying any of <count> closed phrases is "
         "exempted whole' sentence, or update the audit",
@@ -252,7 +254,7 @@ else:
     extra = analyze_set - canonical_set
     if missing:
         emit(
-            "framework/commands/analyze.md",
+            "framework/reference/analyze.md",
             "canonical marker(s) missing from the shipped restatement: "
             + ", ".join(repr(m) for m in sorted(missing)),
             "add them — adopters have no copy of 045's data-model, so this "
@@ -260,7 +262,7 @@ else:
         )
     if extra:
         emit(
-            "framework/commands/analyze.md",
+            "framework/reference/analyze.md",
             "restatement lists marker(s) the canonical table does not: "
             + ", ".join(repr(m) for m in sorted(extra)),
             "reconcile against specs/045-decision-state-drift-detection/data-model.md",
@@ -272,7 +274,7 @@ expected_word = NUMBER_WORDS.get(len(canonical_set))
 for path, label, pattern in (
     (canon_md, "specs/045-decision-state-drift-detection/data-model.md",
      r"any of these (\w+) phrases is exempted whole"),
-    (analyze_md, "framework/commands/analyze.md",
+    (analyze_md, "framework/reference/analyze.md",
      r"carrying any of (\w+) closed phrases is exempted whole"),
     (scenario_md, "specs/067-analyze-and-audit-checks/scenarios/criterion-path-existence-family.md",
      r"(\w+) closed phrases mark a criterion"),
@@ -359,7 +361,7 @@ else:
     analyze_words = set()
     if not bullet:
         emit(
-            "framework/commands/analyze.md",
+            "framework/reference/analyze.md",
             "could not locate the negated-creation restatement",
             "keep the 'A criterion asserting a path was never created is "
             "exempted the same way' bullet, or update the audit",
@@ -384,7 +386,7 @@ else:
             "specs/045-decision-state-drift-detection/data-model.md",
         ),
         (
-            "framework/commands/analyze.md",
+            "framework/reference/analyze.md",
             analyze_words,
             "reconcile the negated-creation bullet against "
             "specs/045-decision-state-drift-detection/data-model.md — adopters "
@@ -470,16 +472,16 @@ else:
                  "reconcile against the table in " + body_label)
     restated = re.search(r"any of (\w+) body phrases \((.*?)\)\.", analyze)
     if not restated:
-        emit("framework/commands/analyze.md",
+        emit("framework/reference/analyze.md",
              "could not locate the body-phrase restatement",
              "keep the 'any of <count> body phrases (…).' clause, or update 18f")
     else:
         if set(all_spans(restated.group(2))) != body_set:
-            emit("framework/commands/analyze.md",
+            emit("framework/reference/analyze.md",
                  "the body-phrase restatement disagrees with the canonical table",
                  "reconcile against " + body_label + " — adopters have no copy of it")
         if restated.group(1).lower() != NUMBER_WORDS.get(len(body_set)):
-            emit("framework/commands/analyze.md",
+            emit("framework/reference/analyze.md",
                  f"states '{restated.group(1)}' body phrases but the table lists {len(body_set)}",
                  "correct the count")
     for path, label, pattern in (

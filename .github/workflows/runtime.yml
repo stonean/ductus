@@ -11,6 +11,11 @@ on:
     paths:
       - 'runtime/**'
       - 'framework/commands/*.md'
+      # src/primitives/resolve_anchor.rs holds a corpus test that every
+      # command step's pointer into its markdown-only reference names a
+      # heading that file has (spec 071), so an edit to a reference file is an
+      # edit to its subject.
+      - 'framework/reference/*.md'
       - '.github/workflows/runtime.yml'
       # A packaging change in the release workflow re-runs the portability
       # check below, which mirrors that sequence (spec 048, task 3).
@@ -40,6 +45,7 @@ on:
     paths:
       - 'runtime/**'
       - 'framework/commands/*.md'
+      - 'framework/reference/*.md'
       - '.github/workflows/runtime.yml'
       - '.github/workflows/runtime-release.yml'
       - 'scripts/audit/review-freshness.sh'

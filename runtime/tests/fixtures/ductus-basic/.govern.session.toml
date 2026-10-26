@@ -23,6 +23,11 @@ dest = "framework/commands/specify.md"
 strategy = "update"
 
 [[entries]]
+source = "framework/reference/specify.md"
+dest = ".ductus/reference/specify.md"
+strategy = "update"
+
+[[entries]]
 source = "framework/templates/feature.md"
 dest = "framework/templates/feature.md"
 strategy = "create"

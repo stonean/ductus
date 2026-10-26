@@ -1622,15 +1622,18 @@ pub struct AnchorReference {
     /// Whether the anchor resolves to a marker.
     ///
     /// A `qualified` or `intra-document` reference is never `false`: the
-    /// first is not a claim about the markers file at all, and the second
-    /// resolved against the citing file. Only a `markers` reference can be
-    /// unresolved, which is what makes an unresolved one worth reading.
+    /// first is not a claim this primitive can judge, and the second
+    /// resolved against the citing file. Only a `markers` or
+    /// `cross-document` reference can be unresolved, which is what makes an
+    /// unresolved one worth reading.
     pub resolved: bool,
     /// How the reference was classified, and therefore what `resolved` means
-    /// for it: `markers` (a claim about the markers file — the only kind that
-    /// can be unresolved), `qualified` (its line names another document, so
-    /// this primitive does not hold the markers it would need), or
-    /// `intra-document` (the anchor names a heading in the citing file).
+    /// for it: `markers` (a claim about the markers file), `cross-document`
+    /// (its line names one shipped document whose source was read — judged
+    /// against that source's headings, the citing file's, and the markers),
+    /// `qualified` (its line names another document this primitive cannot
+    /// read), or `intra-document` (the anchor names a heading in the citing
+    /// file).
     #[serde(default = "default_anchor_kind")]
     pub kind: String,
 }
@@ -1650,10 +1653,11 @@ pub struct ResolveAnchorResult {
     pub references: Vec<AnchorReference>,
     /// Anchor names with no matching marker.
     ///
-    /// Only `markers`-kind references contribute. An empty list therefore
-    /// means "every reference that was a claim about the markers file
-    /// resolved" — never "every `§` in this file is fine", which is a claim
-    /// this primitive cannot make and the counts below keep it from implying.
+    /// Only `markers` and `cross-document` references contribute. An empty
+    /// list therefore means "every reference that was a claim about the
+    /// markers file or about a shipped document's sections resolved" — never
+    /// "every `§` in this file is fine", which is a claim this primitive
+    /// cannot make and the counts below keep it from implying.
     pub unresolved: Vec<String>,
     /// References excluded because their line names another document.
     ///
@@ -1666,6 +1670,14 @@ pub struct ResolveAnchorResult {
     /// References resolved against a heading in the citing file rather than
     /// the markers file.
     pub intra_document: u32,
+    /// References judged against the one shipped document their line names
+    /// (spec 067 scenario `pointers-into-shipped-files-are-judged`): the line
+    /// names exactly one document, the **Shared Files** manifest maps it to a
+    /// readable source, and the reference resolves against that source's
+    /// headings, the citing file's, or the markers. Zero wherever the
+    /// installer's manifest is absent, as in every adopter.
+    #[serde(default)]
+    pub cross_document: u32,
 }
 
 // -- traverse-deps -----------------------------------------------------------
@@ -4414,7 +4426,7 @@ pub struct CheckArtifactsArgs {
 }
 
 /// One deterministic artifact finding. Family names and severity tiers
-/// mirror `framework/commands/analyze.md`'s markdown-only reference —
+/// mirror `framework/reference/analyze.md`, the command's markdown-only reference —
 /// the primitive mechanizes the documented policy, it introduces none.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -5049,8 +5061,10 @@ pub struct CheckStepReferencesResult {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub skipped: Vec<StepReferenceSkip>,
     /// `step N` mentions outside the Instructions section, counted but never
-    /// resolved: the markdown-only sub-procedures restart at 1 and are a
-    /// different list. Present so an empty `findings` is not read as *every
+    /// resolved: a numbered list elsewhere in the file restarts at 1 and is a
+    /// different list. (A command's markdown-only reference, whose
+    /// sub-procedures restart the same way, is its own file under
+    /// `framework/reference/` and outside this subject.) Present so an empty `findings` is not read as *every
     /// reference in the file resolves* (`QUAL-CLAIM-001`).
     #[serde(default)]
     pub references_out_of_subject: u32,
@@ -5947,10 +5961,12 @@ mod tests {
             unresolved: vec![],
             qualified: 1,
             intra_document: 0,
+            cross_document: 0,
         };
         let value: serde_json::Value = serde_json::to_value(&result).unwrap();
         assert_eq!(value["qualified"], 1);
         assert_eq!(value["intra-document"], 0);
+        assert_eq!(value["cross-document"], 0);
         assert_eq!(value["references"][1]["kind"], "qualified");
         assert_eq!(round_trip(&result), result);
     }

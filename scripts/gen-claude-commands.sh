@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 # Regenerate .claude/commands/ductus/*.md from framework/commands/*.md and
-# framework/bootstrap/configure/claude.md.
+# framework/bootstrap/configure/claude.md, and .ductus/reference/*.md from
+# framework/reference/*.md.
 #
 # Substitutes {project} -> ductus and {cli-config-dir} -> .claude.
 # The configure command is sourced from framework/bootstrap/configure/claude.md.
 # Files in .claude/commands/ductus/ that do not correspond to a current source
 # are removed so renames flow through cleanly.
+#
+# Reference pass (spec 071): each command's markdown-only reference is one
+# file shared by every agent, so it lands at .ductus/reference/<name>.md — the
+# path an adopter's /ductus installs it to — with {project} substituted and no
+# per-agent value. A copy with no source is removed, as above.
 #
 # Flags:
 #   --check    Compare generated content against the current destination;
@@ -20,7 +26,7 @@ for arg in "$@"; do
   case "$arg" in
     --check) check_mode=1 ;;
     -h|--help)
-      sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -49,8 +55,16 @@ PI_BRIDGE_SRC="$ROOT/framework/bootstrap/pi/ductus-bridge.ts"
 
 PI_CONFIG_DIR=".pi"
 
+REF_SRC="$ROOT/framework/reference"
+REF_DEST="$ROOT/.ductus/reference"
+
 substitute() {
   sed -e "s/{project}/$PROJECT/g" -e "s|{cli-config-dir}|$1|g"
+}
+
+# A shared file has no per-agent value, so only {project} is substituted.
+substitute_shared() {
+  sed -e "s/{project}/$PROJECT/g"
 }
 
 # Track expected destination filenames so we can prune obsolete generated files.
@@ -85,6 +99,17 @@ if [ "$check_mode" -eq 1 ]; then
   tmp_bridge="$pitmp/ductus.ts"
   cp "$PI_BRIDGE_SRC" "$tmp_bridge"
 
+  # Reference pass: the shared .ductus/reference/ copies.
+  reftmp="$tmpdir/reference"
+  mkdir -p "$reftmp"
+  ref_expected=()
+  for src in "$REF_SRC"/*.md; do
+    [ -f "$src" ] || continue
+    name="$(basename "$src")"
+    substitute_shared < "$src" > "$reftmp/$name"
+    ref_expected+=("$name")
+  done
+
   drift=0
   # Compare every expected file against DEST.
   for name in "${expected[@]}"; do
@@ -107,6 +132,21 @@ if [ "$check_mode" -eq 1 ]; then
     dest_path="$PI_DEST/$name"
     if [ ! -f "$dest_path" ]; then
       echo "missing in $PI_DEST: $name"
+      drift=1
+      continue
+    fi
+    if ! diff -q "$src_path" "$dest_path" >/dev/null 2>&1; then
+      echo "drift in $name:"
+      diff -u "$dest_path" "$src_path" || true
+      drift=1
+    fi
+  done
+  # Compare the reference copies against .ductus/reference/.
+  for name in ${ref_expected[@]+"${ref_expected[@]}"}; do
+    src_path="$reftmp/$name"
+    dest_path="$REF_DEST/$name"
+    if [ ! -f "$dest_path" ]; then
+      echo "missing in $REF_DEST: $name"
       drift=1
       continue
     fi
@@ -153,6 +193,21 @@ if [ "$check_mode" -eq 1 ]; then
       fi
     done
   fi
+  # Detect orphans in the reference directory — copies with no source.
+  if [ -d "$REF_DEST" ]; then
+    for existing in "$REF_DEST"/*.md; do
+      [ -f "$existing" ] || continue
+      name="$(basename "$existing")"
+      keep=0
+      for e in ${ref_expected[@]+"${ref_expected[@]}"}; do
+        if [ "$name" = "$e" ]; then keep=1; break; fi
+      done
+      if [ "$keep" -eq 0 ]; then
+        echo "orphan in $REF_DEST (no source): $name"
+        drift=1
+      fi
+    done
+  fi
   exit "$drift"
 fi
 
@@ -182,6 +237,16 @@ substitute "$PI_CONFIG_DIR" < "$PI_SRC" > "$PI_DEST/$PROJECT-configure.md"
 pi_expected+=("$PROJECT-configure.md")
 cp "$PI_BRIDGE_SRC" "$PI_EXT_DEST"
 
+# Reference pass (write mode): the shared .ductus/reference/ copies.
+mkdir -p "$REF_DEST"
+ref_expected=()
+for src in "$REF_SRC"/*.md; do
+  [ -f "$src" ] || continue
+  name="$(basename "$src")"
+  substitute_shared < "$src" > "$REF_DEST/$name"
+  ref_expected+=("$name")
+done
+
 # Prune any .md files in DEST that are no longer in the expected set.
 for existing in "$DEST"/*.md; do
   name="$(basename "$existing")"
@@ -210,5 +275,20 @@ for existing in "$PI_DEST"/"$PROJECT"-*.md; do
   fi
 done
 
+# Prune reference copies whose source is gone.
+for existing in "$REF_DEST"/*.md; do
+  [ -f "$existing" ] || continue
+  name="$(basename "$existing")"
+  keep=0
+  for e in ${ref_expected[@]+"${ref_expected[@]}"}; do
+    if [ "$name" = "$e" ]; then keep=1; break; fi
+  done
+  if [ "$keep" -eq 0 ]; then
+    rm -- "$existing"
+    echo "Removed obsolete (reference): $name"
+  fi
+done
+
 echo "Regenerated $(ls "$DEST"/*.md | wc -l | tr -d ' ') files in $DEST/"
 echo "Regenerated $(ls "$PI_DEST"/"$PROJECT"-*.md | wc -l | tr -d ' ') files in $PI_DEST/"
+echo "Regenerated ${#ref_expected[@]} files in $REF_DEST/"

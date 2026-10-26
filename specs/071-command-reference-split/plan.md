@@ -55,9 +55,9 @@ end in the wrong place.
 ### How a step points
 
 A pointer names the full heading and the file, as in "apply
-**§Grounding** in `.ductus/reference/analyze.md`". The full heading is
+**§Grounding (advisory)** in `.ductus/reference/analyze.md`". The full heading is
 required because the intra-document match is a prefix match of the text after
-`§` against each heading (`resolve_anchor.rs:211-216`). §Rules does not match
+`§` against each heading (`resolve_anchor.rs:211-216`). `§Rules` does not match
 the heading `Rules (blocking and advisory)`; the pointer spells the whole
 heading. A pointer line names that one document and no other, so the bounded
 `resolve-anchor` judgment applies to it.
@@ -108,10 +108,10 @@ get no line.
   `.ductus/reference/<command>.md`, `audit` withheld per
   `scripts/maintainer-only-commands.txt`.
 - **Cleanup.** `.ductus/reference/` joins the enforce-directories list in
-  §Instructions step 1 and step 8 (`enforce-manifest`, glob `*.md`, expected
+  `ductus.md`'s Instructions step 1 and step 8 (`enforce-manifest`, glob `*.md`, expected
   set the twelve destinations, pinned honored). A **Reference cleanup**
   paragraph under Shared Files gives the markdown-only path's equivalent of
-  §Slash command cleanup.
+  its **Slash command cleanup**.
 - **`govern.md`.** Copied from `ductus.md` in the same change; Family 21 holds
   them byte-identical.
 
@@ -155,11 +155,16 @@ already (`.claude/commands/ductus/audit.md`). `.githooks/pre-commit` gains
 - **`resolve-anchor`.** A line naming exactly one document, where the
   `## Shared Files` section of `framework/bootstrap/ductus.md` maps that
   document to a source, is judged: each `§` resolves when it names a heading
-  in the source (longest-first prefix, the intra-document rule) or a marker in
-  the markers file, and is unresolved otherwise. Those references get a new
+  in the source (longest-first prefix, the intra-document rule), a heading in
+  the citing file, or a marker in the markers file, and is unresolved
+  otherwise. Those references get a new
   kind, `cross-document`, and a count of their own, so `qualified` keeps
-  meaning *counted, not judged*. A line naming several documents, an unmapped
-  one, or a mapped source that cannot be read stays `qualified`. The map is
+  meaning *counted, not judged*. A pointer written as an explicit pair,
+  `**§X** in` a shipped document, is judged against that document's headings
+  alone, whatever else its line names: 59 of the 100 pointers share a line
+  with `plan.md`, `spec.md` or another file. Otherwise a line naming several
+  documents, an unmapped one, or a mapped source that cannot be read stays
+  `qualified`. The map is
   empty where `framework/bootstrap/ductus.md` is absent, which is every
   adopter, so the rule engages only in a framework checkout. That is the same
   discriminator `adopter_destinations` uses
@@ -198,6 +203,38 @@ shas move (`AGENTS.md` Gotchas). It is re-blessed filtered to that test, and
 the diff is confirmed to be shas only. No `## Instructions` step is added or
 removed, so no step number moves and no other golden should. The install
 golden moves with the fixture change and is re-blessed filtered the same way.
+
+### Bytes loaded per invocation, measured after the split
+
+Measured 2026-10-25 over the tree that lands the split, against the spec's
+figures at `bb372676`. *Before* is the whole command file, which every
+invocation loaded; *After* is the command file alone, which is now all an
+invocation loads; *Reference* is read only when a step names a section in it.
+
+| Command | Before | After | Change | Reference |
+| --- | --- | --- | --- | --- |
+| analyze | 111,742 | 38,862 | −65.2% | 75,458 |
+| review | 64,647 | 19,839 | −69.3% | 46,424 |
+| implement | 44,828 | 19,034 | −57.5% | 27,070 |
+| audit | 37,267 | 5,207 | −86.0% | 32,992 |
+| clarify | 30,694 | 19,520 | −36.4% | 12,604 |
+| fold | 22,711 | 16,796 | −26.0% | 6,701 |
+| specify | 21,884 | 13,146 | −39.9% | 9,626 |
+| groom | 20,206 | 11,119 | −45.0% | 10,038 |
+| prune | 19,879 | 15,434 | −22.4% | 5,206 |
+| status | 19,529 | 7,019 | −64.1% | 13,431 |
+| plan | 16,954 | 8,145 | −52.0% | 9,677 |
+| consolidate | 16,141 | 13,264 | −17.8% | 3,659 |
+| log | 4,414 | 4,104 | −7.0% | 1,063 |
+| **Total** | **430,896** | **191,489** | **−55.6%** | **253,949** |
+
+Per invocation the commands load 239,407 fewer bytes in total, 55.6%. The
+spec's estimate kept 183,276; the 8,213-byte difference is what the repair
+added back: the location line in each of the thirteen command files and the
+pointers, each of which names a full heading and a file where it used to say
+"below". `analyze`, the case that motivated the change, drops from 111,742 to
+38,862 bytes. That is still above the ~20KB compaction window, which the spec
+leaves to a follow-up.
 
 ## Affected Files
 
@@ -250,9 +287,10 @@ golden moves with the fixture change and is re-blessed filtered the same way.
 - **Checking pointers in `check-step-references`** would leave the pointers in
   Context, Scope, the Gate table and the installer unchecked. The operator chose
   the bounded `resolve-anchor` judgment instead (spec, Resolved Questions).
-- **Known limitation: `audit`'s pointers are not judged.** `audit` is not in
-  the Shared Files manifest, so a pointer naming `.ductus/reference/audit.md`
-  stays `qualified`. It has one pointer, in a maintainer-only command.
+- **Known limitation: a pointer into `audit`'s reference would not be
+  judged.** `audit` is not in the Shared Files manifest, so a `§` pointer
+  naming `.ductus/reference/audit.md` would stay `qualified`. None exists: the
+  maintainer-only command names its reference file as a whole.
 - **Known limitation: a `§` pointer must spell its heading in full**, because
   the match is a prefix match. A shortened pointer is reported unresolved,
   which is the safe direction.

@@ -40,10 +40,12 @@
 //!
 //! ## Scope: the Instructions section, and that bound is in the result
 //!
-//! Several command files carry a `## Markdown-only reference` whose
-//! sub-procedures restart at 1. Those are separate numbered lists, so
-//! resolving an Instructions reference against them — or the reverse — would
-//! manufacture findings. The subject is therefore the **Instructions**
+//! A command's markdown-only reference carries sub-procedures that restart
+//! at 1. It lives in its own file under `framework/reference/` (spec 071),
+//! so it is outside this subject, but a numbered list can still sit in a
+//! command file outside its Instructions. Those are separate numbered lists,
+//! so resolving an Instructions reference against them — or the reverse —
+//! would manufacture findings. The subject is therefore the **Instructions**
 //! section alone, and [`references_out_of_subject`] counts the `step N`
 //! mentions elsewhere in each file so an empty `findings` is never read as
 //! *every reference in the file resolves* (`QUAL-CLAIM-001`).

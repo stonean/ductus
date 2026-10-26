@@ -2,9 +2,10 @@
 # scripts/audit/template-alignment.sh — Family 5 of /audit.
 #
 # Verify the spec/plan/tasks/scenario templates under framework/templates/spec/
-# scaffold the fields that framework/commands/analyze.md's blocking checks
-# require. v1 covers the canonical invariants explicitly; future extensions
-# parse analyze.md to derive the required-field list automatically.
+# scaffold the fields that /{project}:analyze's blocking checks require, as
+# its markdown-only reference (framework/reference/analyze.md) documents them.
+# v1 covers the canonical invariants explicitly; future extensions parse that
+# file to derive the required-field list automatically.
 #
 # v1 checks (hardcoded canonical invariants):
 #

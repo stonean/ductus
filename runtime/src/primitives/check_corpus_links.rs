@@ -166,6 +166,13 @@ fn is_excluded(relative: &str, specs_root: &str, scope: LinkScope) -> bool {
             AGENT_CONFIG_DIRS
                 .iter()
                 .any(|dir| relative.strip_prefix(dir).is_some_and(|rest| rest.starts_with('/')))
+                // Generated reference copies (spec 071): each command's
+                // markdown-only reference, installed once for every agent.
+                // Their `../constitution.md` links resolve to the
+                // `.ductus/constitution.md` `/ductus` installs beside them,
+                // which a framework checkout does not have; the sources
+                // under `framework/reference/` are checked instead.
+                || relative.starts_with(".ductus/reference/")
                 // Project templates, whose links resolve in the adopter's
                 // repo root after scaffolding rather than here.
                 || relative.starts_with("framework/templates/project/")
@@ -925,6 +932,36 @@ mod tests {
         // Counted, never silently dropped — the count is what makes the
         // verdict's scope legible.
         assert_eq!(result.excluded_by_construction, 3);
+    }
+
+    #[test]
+    fn generated_reference_copies_are_excluded_and_the_rest_of_ductus_dir_is_not() {
+        // A reference copy's `../constitution.md` link resolves only in an
+        // adopter, where `.ductus/constitution.md` is installed beside it;
+        // any other file under `.ductus/` is not generated and stays checked.
+        let tmp = tempdir().unwrap();
+        let repo = git2::Repository::init(tmp.path()).unwrap();
+        let mut index = repo.index().unwrap();
+        for rel in [".ductus/reference/analyze.md", ".ductus/notes.md"] {
+            write(
+                tmp.path(),
+                rel,
+                "# X\n\n[constitution](../constitution.md)\n",
+            );
+            index.add_path(Path::new(rel)).unwrap();
+        }
+        index.write().unwrap();
+
+        let result = run(
+            &CheckCorpusLinksArgs {
+                scope: LinkScope::Repository,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        let broken: Vec<&str> = result.broken.iter().map(|b| b.path.as_str()).collect();
+        assert_eq!(broken, [".ductus/notes.md"]);
+        assert_eq!(result.excluded_by_construction, 1);
     }
 
     #[test]

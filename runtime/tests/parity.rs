@@ -229,6 +229,59 @@ fn ductus_basic_post_run_filesystem_state_matches_expectations() {
         "enforce-manifest must NOT touch framework/skills/old-skill.md \
          (legacy-cleanup is owned by framework/migrations.toml)"
     );
+
+    assert_reference_installed_and_pruned(&bin, staged.path(), &project);
+}
+
+/// The reference half of `ductus_basic_post_run_filesystem_state_matches_expectations`
+/// (spec 071): the install to `.ductus/reference/`, and the prune of a
+/// reference file no row produces.
+fn assert_reference_installed_and_pruned(bin: &Path, staged: &Path, project: &Path) {
+    // A command's markdown-only reference installs once, to the shared
+    // `.ductus/reference/` directory, with `{project}` substituted — the
+    // Shared Files row every agent's copy of the command points at (spec 071).
+    let reference = fs::read_to_string(project.join(".ductus/reference/specify.md"))
+        .unwrap_or_else(|err| panic!("read project/.ductus/reference/specify.md: {err}"));
+    assert!(
+        reference.contains("/acme:specify") && !reference.contains("{project}"),
+        ".ductus/reference/specify.md must install with {{project}} → acme: {reference:?}"
+    );
+
+    // The installer's step 8 also prunes `.ductus/reference/` to its rows, so
+    // a reference a release renamed or retired is not left for an agent to
+    // read. The fixture's single context map gives its own enforce step one
+    // directory (the commands, above), so this runs the same primitive
+    // against the reference directory the way that step does.
+    assert!(
+        project.join(".ductus/reference/stale.md").exists(),
+        "the fixture pre-seeds .ductus/reference/stale.md"
+    );
+    let expected = staged.join("reference-expected.json");
+    fs::write(&expected, r#"["specify.md"]"#).expect("write expected list");
+    let enforce = ductus_command(bin)
+        .args([
+            "enforce-manifest",
+            "--directory",
+            "project/.ductus/reference",
+        ])
+        .arg("--expected-json")
+        .arg(&expected)
+        .current_dir(staged)
+        .output()
+        .expect("spawn enforce-manifest");
+    assert!(
+        enforce.status.success(),
+        "enforce-manifest failed: {}",
+        String::from_utf8_lossy(&enforce.stderr)
+    );
+    assert!(
+        !project.join(".ductus/reference/stale.md").exists(),
+        "enforce-manifest must remove a reference file no row produces"
+    );
+    assert!(
+        project.join(".ductus/reference/specify.md").exists(),
+        "enforce-manifest must keep the reference file its row produces"
+    );
 }
 
 #[test]

@@ -1,0 +1,82 @@
+# plan — markdown-only reference
+
+The full plan-creation procedure (existing-artifact protection, cross-spec context checklist, plan section contents, task breakdown rules, readiness gate, and cross-spec impact check) is documented below for the markdown-only path. The numbered steps in `plan.md`'s Instructions invoke the mechanical primitives that automate the deterministic phases; the host applies the same procedure against the markdown-only path when the runtime is unavailable.
+
+**Where a named section lives.** This file is read alongside its command, `plan.md`, which is already loaded whenever this one is. A section named below that has no heading in this file is in the command file, along with the numbered Instructions steps this file cites. A bare `§name` is a heading in this file or a constitution marker; a `§name` with another file's path on the same line is a heading in that file.
+
+## Recompute dependencies (safety net)
+
+Invoke `derive-dependencies` (report-only by default; it walks every spec — there is no per-spec mode). If it reports drift, the `dependencies:` frontmatter is stale from uncommitted body edits; surface that and recommend committing (the pre-commit hook syncs it) or running `ductus derive-dependencies --write` manually, then evaluate cross-spec context against the current frontmatter. Do not pass `--write` from this command.
+
+## Detect existing artifacts
+
+Before generating any artifacts, check the feature directory for existing plan files. This protects work the user may have already invested — including plans that survived a `/ductus:amend` back-edge cycle.
+
+1. Check the feature directory for `plan.md`, `tasks.md`, and `data-model.md`.
+2. If none of those files exist, skip this section and proceed to the cross-spec context checklist with the standard template-copy flow unchanged.
+3. If any of those files exists, list each one that exists with its last-modified timestamp (stat the file for the mtime — `create-plan-artifacts` reports each pre-existing artifact as `kept` but carries no wall-clock data), then prompt: "Plan artifacts exist from a prior `/ductus:plan` run. Keep them and run the readiness check, or replace with fresh templates?" The default is **keep**.
+4. **Keep** — skip the template copy entirely. Do not overwrite or modify the existing artifacts during this step. Proceed to the cross-spec context checklist; in **Create the plan** and **Create the task breakdown**, skip the "copy template" steps and treat the existing files as the working artifacts. Then run the validation gate. Advance status to planned only if all readiness checks pass; on failure, report the specific failures and exit without advancing.
+5. **Replace** — copy fresh templates over the existing files. The user is responsible for re-applying any kept content.
+
+## Cross-spec context checklist
+
+Before creating the plan, load only the cross-spec context this feature actually needs:
+
+- **Always read:** `specs/system.md` — architecture patterns and shared conventions.
+- **Read if the feature emits or consumes events:** `specs/events.md` — check for naming conflicts and reuse opportunities.
+- **Read if the feature introduces error codes:** `specs/errors.md` — check code ranges and format conventions.
+- **Read if the feature has dependencies:** the spec file (not plan or tasks) of each dependency listed in this spec's frontmatter `dependencies` field — confirm `status` and understand the contracts this feature builds on.
+- **Read if the feature introduces or modifies domain entities or data structures:** `data-model.md` files from related specs — check for structural conflicts.
+- **Read to ground a decision (§grounding):** the specific existing source, schema, or interface a technical decision directly depends on — read narrowly, and cite what you read (`path:line`) in the decision's rationale. A claim about how existing code behaves that you did not read is an assumption and must be labeled one.
+- **Do NOT read** plans, tasks, or scenarios from other features, and do NOT read source code *speculatively* or to browse — the targeted grounding read above is the only sanctioned source read.
+
+## Create the plan
+
+1. **If the user picked "keep" in the existing-artifact prompt above**, skip the template copy — `plan.md` is already on disk and is the working artifact. Otherwise (no prior artifacts, or "replace"), copy `specs/templates/plan.md` into the feature directory as `plan.md`.
+2. Fill in (or, on the keep path, edit/extend the existing content):
+   - **Technical Decisions**: each decision with rationale. Name the code a decision concerns by path, citing `path:line`, rather than reproducing it: a code sketch goes stale the moment the code lands, and it regrows a plan that was trimmed to stay readable in one call. **Ground every claim about existing code, schema, or interfaces in the source — read the specific file (or query the dev database) and cite it (`path:line`), or label the claim an assumption (§grounding). Do not assert how existing code behaves from memory or conversation.**
+   - **Affected Files**: a *planning aid* — list the files you expect to create or modify so reviewers can sanity-check scope. Name one file per row: `/ductus:review` builds its scope from the first path in each row's File cell, so a second path in the same cell is dropped from it.
+   - **Data Model**: data structure definitions. Create `data-model.md` if the feature introduces or modifies domain entities or data structures.
+   - **Trade-offs**: what was considered and rejected, known limitations.
+3. Cross-validate against the files loaded in the checklist above:
+   - Plan must not conflict with `specs/system.md`.
+   - Data model must be consistent with related specs.
+   - Event types must align with `specs/events.md`.
+
+## Create the task breakdown
+
+1. **If the user picked "keep" in the existing-artifact prompt above**, skip the template copy — `tasks.md` is already on disk and is the working artifact. Otherwise (no prior artifacts, or "replace"), copy `specs/templates/tasks.md` into the feature directory as `tasks.md`.
+2. Break the plan into discrete, ordered work items:
+   - Each task is small enough to complete and verify in a single session.
+   - Each task closes with its completion condition written on its own line as `- **Done when**: <condition>` — this exact marker is what `read-tasks`/`check-artifacts` recognize (a checkbox-nested `- [x] Done when: …` or a bulletless `Done when: …` is tolerated on read, but author the canonical bold form).
+   - Tasks respect dependency order.
+   - Tasks are derived from the plan, not invented independently.
+
+## Validation gate
+
+Before proposing the status transition, run the readiness check. The substantive checks must pass — failures block the transition:
+
+- **The spec directory is committed** — at least one commit touches `{specs-root}/{feature}`. `/ductus:implement` derives its write boundary from that history, so a spec that reaches `planned` with an uncommitted directory provably cannot start: the gap would surface one command later, as a failure to begin work rather than a failure to plan. Evaluate it with `derive-boundary` (a result carrying `guidance` is the no-history signal) or, markdown-only, with `git log -1 -- {specs-root}/{feature}`. On failure, report the guidance — commit the spec directory, or seed a `write-boundary` in the session — and do not advance.
+- Acceptance criteria are concrete and testable
+- All open questions are resolved
+- Data model exists if the feature introduces or modifies domain entities or data structures
+- Plan does not conflict with `system.md` or other feature specs
+- Data model is consistent with related specs
+- Event types align with `events.md`
+- Tasks are ordered and each has a clear definition of done
+
+Markdownlint (`npx markdownlint-cli2` over the feature directory's `.md` files) runs as an **advisory** check on both paths — surface any violations for the user to resolve before `/ductus:implement`, but do not block the transition on them (this matches runtime step 11).
+
+The artifact-size check (runtime step 8, `check-artifact-size`) is **advisory** on both paths too. It measures `spec.md`, `plan.md`, `tasks.md`, `data-model.md` and each scenario against `.ductus/config.toml` `[artifacts] read-size-bytes` (50,000 bytes by default) and prints a warning, with the fixes for its kind, for each one an agent may not read in one call. Surface the warnings and do not block the transition on them; a threshold that is not a positive whole number of bytes, or an `artifacts` that is not a table, halts the command instead, as step 8 says.
+
+If any substantive check fails, report the specific failures and do not propose the transition. The user fixes the issues and re-runs the command.
+
+## Cross-spec impact check
+
+After the plan is written and before finalizing, list every sibling spec referenced by inline markdown link in the spec or plan body. Ask: "Do any of these referenced specs need an update because of decisions made here?" If yes, the §cross-spec-impact rule applies — record the change in the affected spec as a new acceptance criterion or scenario, with a back-link to this spec. Informational; does not block.
+
+## Finalize
+
+1. Present a summary of the plan, task breakdown, and validation gate results. Ask the user to approve the transition to planned. Do not update the status until the user confirms.
+2. On confirmation, update the spec's frontmatter `status` field from clarified to planned.
+3. Display the next step: "Run `/ductus:implement` to begin implementation."

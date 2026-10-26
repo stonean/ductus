@@ -6,7 +6,7 @@
 //! body-path-existence-family; spec 022,
 //! scenarios scenario-open-question-signal and criterion-label-assignment;
 //! spec 058 for disposition drift). Each family MIRRORS
-//! `framework/commands/analyze.md`'s markdown-only reference — severity
+//! `framework/reference/analyze.md`, the command's markdown-only reference — severity
 //! tiers and skip rules come from the reference, the primitive introduces
 //! no policy of its own:
 //!

@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
 # scripts/audit/placeholder-roundtrip.sh — Family 4 of /audit.
 #
-# Scan framework/commands/*.md for hardcoded tokens that should be
-# placeholders per spec 012's multi-agent contract. Three patterns:
+# Scan framework/commands/*.md and framework/reference/*.md for hardcoded
+# tokens that should be placeholders per spec 012's multi-agent contract.
+# Three patterns:
 #
 #   .claude/    should be {cli-config-dir}/
 #   /ductus:       should be /{project}:
 #   `ductus:`   should be `{project}:` (backticked command-prefix mentions)
+#
+# A reference file (spec 071) is held to a stricter rule. It is installed
+# once, at .ductus/reference/, and shared by every agent, so it has no
+# per-agent value to substitute: `{cli-config-dir}` and every agent's config
+# directory (.claude/, .augment/, .agents/, .opencode/, .pi/) are findings
+# there. A command file can name `{cli-config-dir}` because it is copied per
+# agent; its reference cannot.
 #
 # Allowlist (two forms):
 #   1. Line scope: a line preceded by `<!-- audit:ignore-placeholders -->`
@@ -14,6 +22,8 @@
 #   2. File scope: a file containing `<!-- audit:ignore-placeholders:file -->`
 #      anywhere is skipped wholesale. Use for maintainer-only command files
 #      that are not scaffolded into adopters (e.g., framework/commands/audit.md).
+#      A reference file inherits its command file's file-scope marker, so the
+#      marker is stated once per command rather than copied beside it.
 #      The line marker doesn't compose with markdown tables — inserting a
 #      comment between table rows breaks the table — so file scope is the
 #      right tool when /ductus: references span a table or are pervasive.
@@ -38,12 +48,22 @@ set -uo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
 audit_family placeholder-roundtrip
 
-# Walk every framework/commands/*.md file, looking for the three patterns.
+# Walk every command source and reference file, looking for the patterns.
 # Per-file: skip lines preceded by the ignore comment.
-for file in framework/commands/*.md; do
-  # File-level skip: bail before walking lines if the marker is present.
+for file in framework/commands/*.md framework/reference/*.md; do
+  [ -f "$file" ] || continue
+  is_ref=0
+  case "$file" in framework/reference/*) is_ref=1 ;; esac
+  # File-level skip: bail before walking lines if the marker is present —
+  # in the file itself or, for a reference file, in its command file.
   if grep -q '<!-- audit:ignore-placeholders:file -->' "$file"; then
     continue
+  fi
+  if [ "$is_ref" -eq 1 ]; then
+    cmd_file="framework/commands/$(basename "$file")"
+    if [ -f "$cmd_file" ] && grep -q '<!-- audit:ignore-placeholders:file -->' "$cmd_file"; then
+      continue
+    fi
   fi
   prev_was_ignore=0
   line_no=0
@@ -67,7 +87,16 @@ for file in framework/commands/*.md; do
     fi
     # Pattern checks. Each token is an inline literal that should have
     # been a placeholder.
-    if [[ "$line" == *".claude/"* ]]; then
+    if [ "$is_ref" -eq 1 ]; then
+      if [[ "$line" == *"{cli-config-dir}"* ]]; then
+        emit "$file:$line_no" "\`{cli-config-dir}\` in a reference file — it is shared by every agent, so there is no per-agent value to substitute" "name the agent in words (e.g. the \`cli-config-dir\` recorded in \`.ductus/session.toml\`), or move the sentence into the command file"
+      fi
+      for dir in .claude/ .augment/ .agents/ .opencode/ .pi/; do
+        if [[ "$line" == *"$dir"* ]]; then
+          emit "$file:$line_no" "hardcoded agent directory \`$dir\` in a reference file — it is shared by every agent" "describe the layout-derived path in words, or add <!-- audit:ignore-placeholders --> if literal is intentional"
+        fi
+      done
+    elif [[ "$line" == *".claude/"* ]]; then
       emit "$file:$line_no" "hardcoded \`.claude/\` should be \`{cli-config-dir}/\`" "replace with the placeholder, or add <!-- audit:ignore-placeholders --> if literal is intentional"
     fi
     if [[ "$line" == *"/ductus:"* ]]; then

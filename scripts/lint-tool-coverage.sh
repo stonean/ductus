@@ -8,9 +8,9 @@
 # markdown-only path. The proximity scan trades false-positive risk for a
 # fully derived check — no author-supplied markers required.
 #
-# Tool references inside the `## Markdown-only reference` section of a
-# command file are skipped — that section *is* the fallback, so any
-# mention there does not require a paired fallback marker.
+# A command's markdown-only reference — the fallback itself — lives in
+# framework/reference/<name>.md (spec 071), outside this scan's subject, so
+# a tool named there needs no paired marker and is never examined.
 #
 # A command that carries the constitution's host-integration pointer
 # (a reference to §runtime-host-integration) is exempt file-wide: the
@@ -68,10 +68,6 @@ fi
 shopt -s nullglob
 errors=0
 for cmd in "$ROOT"/framework/commands/*.md; do
-  # Find the line of the `## Markdown-only reference` heading, if any. Any
-  # tool reference at or after that line is itself part of the fallback
-  # path and does not need a paired fallback marker.
-  md_only_start="$(grep -n '^## Markdown-only reference' "$cmd" | head -n1 | cut -d: -f1 || true)"
   # File-wide exemption: a command that points to the constitution's
   # host-integration contract has declared the markdown-only fallback once
   # for every Invoke step, so no per-reference proximity marker is required.
@@ -81,9 +77,6 @@ for cmd in "$ROOT"/framework/commands/*.md; do
   for tool in "${tools[@]}"; do
     while IFS=: read -r lineno _; do
       [ -z "$lineno" ] && continue
-      if [ -n "$md_only_start" ] && [ "$lineno" -ge "$md_only_start" ]; then
-        continue
-      fi
       end=$((lineno + WINDOW))
       window="$(sed -n "${lineno},${end}p" "$cmd")"
       if ! printf '%s\n' "$window" | grep -qiE 'Otherwise|Fallback|If unavailable|markdown-only path'; then

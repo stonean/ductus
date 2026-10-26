@@ -18,7 +18,9 @@
 #
 # Background from spec 026: 024 (rule-file loader) and 025 (rule-file
 # opt-out) shipped as two specs that should have been one — both touched
-# framework/commands/review.md §Behavior step 5. This check would have
+# review's rule-file selection (then framework/commands/review.md §Behavior
+# step 5; now item 5 of Resolve target and scope in
+# framework/reference/review.md). This check would have
 # surfaced the pair at 025's draft time.
 
 set -uo pipefail

@@ -3,6 +3,7 @@ description: Fixture-only bootstrap procedure — exercises the seven ductus-boo
 parity:
   strict-files:
     - "project/framework/commands/specify.md"
+    - "project/.ductus/reference/specify.md"
     - "project/framework/templates/feature.md"
     - "project/AGENTS.md"
     - "project/.gitignore"
@@ -48,7 +49,7 @@ semantics directly.
 
 3. Invoke `extract-archive` to expand the verified tarball into the staging directory. Otherwise, fall back to `tar -xzf`.
 
-4. Invoke `apply-manifest` to walk the entries list and write the framework files into the project tree. The host's manifest covers every strategy (update / create / skip-if-conflict), the pinned-list short-circuit, and a keep-literals entry for the `.claude/commands/ductus.md` self-install.
+4. Invoke `apply-manifest` to walk the entries list and write the framework files into the project tree. The host's manifest covers every strategy (update / create / skip-if-conflict), the pinned-list short-circuit, a keep-literals entry for the `.claude/commands/ductus.md` self-install, and a command's markdown-only reference installed once to `.ductus/reference/` (spec 071).
 
 5. Invoke `merge-managed-block` against `.gitignore` with `marker-style: "line-prefix"` to install or update the framework-managed block. First-run creates the file; subsequent runs update only the region between the `# ductus` preamble and the next blank line.
 

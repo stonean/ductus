@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # scripts/audit/audit-family-parity.sh — Family 28 of /audit.
 #
-# /audit runs the families run-all.sh registers. framework/commands/audit.md
-# enumerates the families for the maintainer who reads the command.
+# /audit runs the families run-all.sh registers. framework/reference/audit.md,
+# the command's markdown-only reference (spec 071 moved it out of
+# framework/commands/audit.md), enumerates the families for the maintainer who
+# reads the command.
 # scripts/audit/README.md §Scripts lists the scripts. Nothing held the three
 # together, and they drifted: run-all.sh registered 25 families (1-2, 4-26)
 # while audit.md's numbered list stopped at 23, so Families 24, 25, and 26 were
@@ -56,7 +58,7 @@
 # spent; it appears in neither list, so the sets agree and nothing fires. Family
 # numbers are stable identifiers, so a gap is the correct state.
 #
-# NOT a subject: .claude/commands/ductus/audit.md. It is generator output, so
+# NOT a subject: .ductus/reference/audit.md. It is generator output, so
 # auditing it would report the generator rather than a defect; its sync is
 # already gated by check-zero and the generators workflow.
 #
@@ -73,7 +75,7 @@ set -uo pipefail
 audit_family audit-family-parity
 
 RUN_ALL="scripts/audit/run-all.sh"
-AUDIT_MD="framework/commands/audit.md"
+AUDIT_MD="framework/reference/audit.md"
 README="scripts/audit/README.md"
 
 for f in "$RUN_ALL" "$AUDIT_MD" "$README"; do
