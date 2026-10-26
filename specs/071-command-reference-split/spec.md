@@ -1,5 +1,5 @@
 ---
-status: clarified
+status: planned
 dependencies: [056-bootstrap-archive-boundary-split, 067-analyze-and-audit-checks]
 cross-spec-impact: [026-framework-self-audit, 067-analyze-and-audit-checks]
 next-criterion: 25
@@ -303,7 +303,7 @@ its schema.
 - [ ] AC14: `.github/workflows/runtime.yml` triggers on `framework/reference/*.md` wherever it triggers on `framework/commands/*.md`.
 - [ ] AC15: The parity install fixture installs a reference file to `.ductus/reference/` and prunes a stale one there, and the test fails when either step is removed.
 - [ ] AC16: `framework/constitution.md` §drift-prevention's canonical-sources row for pipeline command behavior names `framework/reference/<command>.md`, and §runtime-host-integration says where a command's markdown-only prose lives.
-- [ ] AC17: `AGENTS.md`'s entry on wiring a new slash command names the reference file and its manifest row, and `CHANGELOG.md` records the change.
+- [ ] AC17: `AGENTS.md`'s entry on wiring a new slash command names the reference file and its manifest row.
 - [ ] AC18: `scripts/audit/run-all.sh` reports no findings, and the three generators plus `derive-dependencies` and `derive-references` report no drift.
 - [ ] AC19: The whole local gate passes: `npx markdownlint-cli2`, the six `lint-*.sh` scripts, `scripts/tests/*.sh`, `shellcheck -S warning` over the tracked shell set, and under `runtime/` `cargo fmt --check`, `cargo clippy --release --all-targets --locked -- -D warnings` and `cargo test --release --locked`.
 - [ ] AC20: The bytes each command loads per invocation, before and after the split, are recorded in the plan from a measurement taken after the split.
@@ -366,6 +366,13 @@ its schema.
   file, and 067's `resolve-anchor` judges what it used to only count. Those are
   recorded in 026 and 067, which is the `cross-spec-impact:` this spec
   declares.
+- **Which changelog records the change?** Resolved: the release that ships
+  it, in `runtime/CHANGELOG.md`. The root `CHANGELOG.md` records removed
+  conventions, and nothing is removed here. `runtime/CHANGELOG.md` takes a
+  section per release, and Family 20 holds its newest heading to the version
+  pin, so an entry written ahead of the release would fail the audit. Measured
+  2026-10-25: the pin is 0.59.11 and 238 commits sit unreleased since
+  `ductus-v0.59.11`.
 - **Is the commands' colon-form invocation in prose fixed here?** Resolved: no.
   It is wrong for non-claude layouts today and is unchanged by this move, so it
   is its own change. Trimming `analyze`'s Instructions below the compaction
