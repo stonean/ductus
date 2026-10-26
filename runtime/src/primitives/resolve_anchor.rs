@@ -826,7 +826,9 @@ mod tests {
     /// runtime suite too. The floor keeps it from passing on an empty subject.
     #[test]
     fn every_shipped_pointer_into_a_reference_file_resolves() {
-        let repo = std::fs::canonicalize(Path::new(env!("CARGO_MANIFEST_DIR")).join("..")).unwrap();
+        // The repository root, as `check_artifacts`' corpus test takes it:
+        // the crate's parent, never canonicalized (a Windows verbatim path).
+        let repo = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
         let mut judged = 0u32;
         let mut broken = Vec::new();
         for dir in ["framework/commands", "framework/reference"] {
@@ -844,7 +846,7 @@ mod tests {
                         path: rel.clone(),
                         markers_path: Some("framework/constitution.md".into()),
                     },
-                    &repo,
+                    repo,
                 )
                 .unwrap();
                 judged += r.cross_document;

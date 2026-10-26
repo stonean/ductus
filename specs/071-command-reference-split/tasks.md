@@ -133,15 +133,15 @@ Blocked on task 9: the change is 067's scenario.
 
 ## 17. Run the whole local gate, after committing
 
-- [ ] Commit, then `scripts/gen-claude-commands.sh` → `scripts/audit/run-all.sh`.
-- [ ] `npx markdownlint-cli2`; the six `lint-*.sh`; `scripts/tests/*.sh`; `shellcheck -S warning` over the tracked shell set; `actionlint`; the generators plus `derive-dependencies` and `derive-references` reporting no drift.
-- [ ] Under `runtime/`: `cargo fmt --check`, `cargo clippy --release --all-targets --locked -- -D warnings`, `cargo test --release --locked`, `cargo audit`.
+- [x] Commit, then `scripts/gen-claude-commands.sh` → `scripts/audit/run-all.sh`.
+- [x] `npx markdownlint-cli2`; the six `lint-*.sh`; `scripts/tests/*.sh`; `shellcheck -S warning` over the tracked shell set; `actionlint`; the generators plus `derive-dependencies` and `derive-references` reporting no drift.
+- [x] Under `runtime/`: `cargo fmt --check`, `cargo clippy --release --all-targets --locked -- -D warnings`, `cargo test --release --locked`, `cargo audit`.
 
 - **Done when**: every command has been run with its exit status read directly, and all pass.
 
 ## 18. Verify the adopter shape and both paths
 
-- [ ] In a scratch project, drive `apply-manifest` and `enforce-manifest` with the manifest `ductus.md` now describes against this checkout as the source root, and confirm `.ductus/reference/*.md` lands with `{project}` substituted, nothing lands in an agent's command directory, and a stale reference file is pruned.
+- [x] In a scratch project, drive `apply-manifest` and `enforce-manifest` with the manifest `ductus.md` now describes against this checkout as the source root, and confirm `.ductus/reference/*.md` lands with `{project}` substituted, nothing lands in an agent's command directory, and a stale reference file is pruned.
 - [ ] Run `/ductus:analyze` on 071 with the MCP server and walk a command's reference-backed step on the markdown-only path, confirming the agent reads the named sections from `.ductus/reference/`.
 
 - **Done when**: both verifications have run and their results are recorded in the commit that closes the task.
