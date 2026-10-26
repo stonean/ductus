@@ -174,17 +174,17 @@ Blocked on task 9: the change is 067's scenario.
 
 ## 21. Disposition out-of-spec findings: ambiguities from the second scratch adoption
 
-- [ ] `ductus.md` §Instructions step 7 records `cli-config-dir` as "the agent's resolved config-dir" without saying which agent on a multi-agent run (the run used the running host's) — proposed: fix (name the agent running the bootstrap)
-- [ ] §Instructions step 1 gives the per-agent ductus self-install entry `keep-literals: ["project", "cli-config-dir"]` while step 9 passes an empty substitution map — proposed: fix (step 1 names step 9's empty map)
-- [ ] step 4 says an agent with no other Per-Agent entry needs no call of its own, implying Antigravity's rules mirror is an `apply-manifest` entry, while §Antigravity layout makes its source a walk of the project's own `specs/rules/`, which one archive-rooted call cannot read — proposed: fix (the mirror is its own call rooted at the project)
-- [ ] the Pi bridge rides Pi's substituted per-agent call though §Pi layout says no substitution; it holds no placeholders, so the copy is byte-identical — proposed: discard (no effect)
-- [ ] Antigravity skills drop `argument-hint` (only `name:` and `description:` are carried) — proposed: discard (the Antigravity skill format the layout specifies)
-- [ ] Antigravity's MCP JSON must name the absolute store path, which `{store-path}`'s `~` form is not — proposed: discard (§MCP wiring already says absolute, and the run wrote it so)
-- [ ] Auggie's `mcp:ductus:*` wildcard is written "if Auggie's matcher honors the wildcard", which a run cannot verify — proposed: discard (host behavior this repository cannot test)
-- [ ] step 4 does not say whether the Shared Files call's map carries `cli-config-dir` — proposed: discard (no shared source holds that placeholder)
-- [ ] the Frontmatter Migration's `specs/**/spec.md` walk matches the template `specs/templates/spec.md`, skipped as already frontmatter — proposed: discard (harmless)
-- [ ] a re-run re-links an already-valid pointer, counted neither created nor repaired — proposed: discard (the restart notice correctly reads no files written)
-- [ ] `write-session` creates `.ductus/sessions/` with `.gitignore` and `.lock` and rewrites an unchanged `session.toml` — proposed: discard (062's per-session files, gitignored)
-- [ ] the run's host saw this repository's `ductus` tools as deferred and would have read State A — proposed: discard (an artifact of a subagent sharing the parent's MCP server, not an adopter shape)
+- [x] `ductus.md` §Instructions step 7 records `cli-config-dir` as "the agent's resolved config-dir" without saying which agent on a multi-agent run (the run used the running host's) — fixed (owner decision 2026-10-26) in `framework/bootstrap/ductus.md` and `govern.md`: (name the agent running the bootstrap)
+- [x] §Instructions step 1 gives the per-agent ductus self-install entry `keep-literals: ["project", "cli-config-dir"]` while step 9 passes an empty substitution map — fixed (owner decision 2026-10-26) in `framework/bootstrap/ductus.md` and `govern.md`: (step 1 names step 9's empty map)
+- [x] step 4 says an agent with no other Per-Agent entry needs no call of its own, implying Antigravity's rules mirror is an `apply-manifest` entry, while §Antigravity layout makes its source a walk of the project's own `specs/rules/`, which one archive-rooted call cannot read — fixed (owner decision 2026-10-26) in `framework/bootstrap/ductus.md` and `govern.md`: (the mirror is its own call rooted at the project)
+- [x] the Pi bridge rides Pi's substituted per-agent call though §Pi layout says no substitution; it holds no placeholders, so the copy is byte-identical — discarded (owner decision 2026-10-26): (no effect)
+- [x] Antigravity skills drop `argument-hint` (only `name:` and `description:` are carried) — discarded (owner decision 2026-10-26): (the Antigravity skill format the layout specifies)
+- [x] Antigravity's MCP JSON must name the absolute store path, which `{store-path}`'s `~` form is not — discarded (owner decision 2026-10-26): (§MCP wiring already says absolute, and the run wrote it so)
+- [x] Auggie's `mcp:ductus:*` wildcard is written "if Auggie's matcher honors the wildcard", which a run cannot verify — discarded (owner decision 2026-10-26): (host behavior this repository cannot test)
+- [x] step 4 does not say whether the Shared Files call's map carries `cli-config-dir` — discarded (owner decision 2026-10-26): (no shared source holds that placeholder)
+- [x] the Frontmatter Migration's `specs/**/spec.md` walk matches the template `specs/templates/spec.md`, skipped as already frontmatter — discarded (owner decision 2026-10-26): (harmless)
+- [x] a re-run re-links an already-valid pointer, counted neither created nor repaired — discarded (owner decision 2026-10-26): (the restart notice correctly reads no files written)
+- [x] `write-session` creates `.ductus/sessions/` with `.gitignore` and `.lock` and rewrites an unchanged `session.toml` — discarded (owner decision 2026-10-26): (062's per-session files, gitignored)
+- [x] the run's host saw this repository's `ductus` tools as deferred and would have read State A — discarded (owner decision 2026-10-26): (an artifact of a subagent sharing the parent's MCP server, not an adopter shape)
 
 - **Done when**: every item is fixed, routed, or discarded with the owner's decision written on it
