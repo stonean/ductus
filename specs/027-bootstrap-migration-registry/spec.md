@@ -8,32 +8,6 @@ next-criterion: 31
 
 Replace the monotonically-growing prose-encoded Pre-run Migrations section in [framework/bootstrap/ductus.md](../../framework/bootstrap/ductus.md) with a machine-readable registry of convention removals. Adopters record the last migration they applied; bootstrap runs only newer entries. After a per-entry sunset, migrations drop from the active registry but stay documented in an adopter-facing changelog. A new [`/audit`](../026-framework-self-audit/spec.md) family fails when a removed convention has no registry entry, so future removals can't ship without an adopter path.
 
-## Completion record (2026-08-17)
-
-**Closed.** The spec was reopened `done → in-progress` to carry one scenario,
-`migration-chain-reference-integrity`, and that scenario is now shipped.
-
-Its open question asked whether the check belonged in the bootstrap procedure or
-in an `/{project}:audit` family. **Neither, as posed** — `/{project}:audit` is
-maintainer-only and absent from the Shared Files manifest, so an audit family
-could only ever check this repository, never the adopter whose config both
-motivating instances were found in. The rule lives in
-`framework/commands/analyze.md` §Project-level consistency, the `/{project}:analyze`
-source, which ships to adopters and already exists for this subject, with the bootstrap's migration batch as a second call site because the
-registry it holds is what makes attribution possible. One primitive,
-`check-orphaned-references`, serves both; its attribution degrades from
-`registry` to `watermark` explicitly rather than silently. Released in
-`ductus-v0.29.4`, with two follow-up fixes in `0.29.6` found by this spec's own
-review.
-
-AC6, AC23 and AC24 name `.ductus/config.toml`, where the `[migrations]` section
-lives. The file was moved by `042-consolidate-govern-per-project-files-under-govern-directory`
-and renamed by `049-rename-govern-to-ductus`; the criteria were swept with it,
-because only the filename changed and the behaviour each requires is unchanged
-and shipped. The retired name stays load-bearing inside the migration chain
-itself, since a migration must name the file it migrates *from* — the exemption
-[§drift-prevention](../../framework/constitution.md#drift-prevention) states.
-
 ## Motivation
 
 Every convention removal `ductus` has shipped — `governance` → `ductus` rename, `# Governance` gitignore marker, `spec-and-plan.md` sunset, rule-file relocation, `skills/` → `workflows/` rename, post-005 workflow filename rename, `configuration.md` → `configuration-cross.md` — added a bespoke prose section to `framework/bootstrap/ductus.md`. Each section scans the adopter's filesystem on **every** `/ductus` re-run, forever. A fresh adopter who installed at the latest ductus release still pays the cost of looking for legacy artifacts that have not existed in the framework for months.
