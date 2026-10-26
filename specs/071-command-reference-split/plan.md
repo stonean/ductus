@@ -206,9 +206,10 @@ reference it used to resolve; and `check-corpus-links --scope repository`
 stops reporting `.ductus/reference/` in a framework checkout. The
 `cross-document` count is an added field. The runtime is pre-1.0, so the
 release that carries the change is a minor bump, 0.60.0 and never a patch
-(Cargo's caret requirements make the minor version the compatibility boundary
-below 1.0), which that release already owes for the breaking changes 022, 025
-and 063 have made since `ductus-v0.59.11`. The consumers ship in the same
+(below 1.0 the minor version is the compatibility boundary: the Cargo Book,
+*Specifying Dependencies*, Caret requirements), which that release already
+owes for the breaking changes 025 and 063 have made since `ductus-v0.59.11`,
+each classified in its own `plan.md`. The consumers ship in the same
 release (§runtime-boundary): `/{project}:analyze`'s step 4, and the exec
 walker's `markers-path` binding for it in `runtime/src/interpreter/mod.rs`,
 read `resolve-anchor`; and this repository's audit runs against the new binary
