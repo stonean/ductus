@@ -145,7 +145,7 @@ Scans `path` for `§<anchor>` references and resolves each against `<!-- §ancho
 - **`intra-document`** — the anchor names a heading in the citing file: the text after `§` begins with one of them.
 - **`markers`** — a claim about the markers file.
 
-A heading is an ATX heading line outside a fenced code block, in the citing file and in a mapped source alike. Only `markers` and `cross-document` references can come back unresolved. An empty `unresolved` therefore means every claim about the markers file and about a shipped document's sections resolved, never that every `§` in the file is fine. Prose naming another document without naming its file (`spec 022 §Versioning`) can be neither verified nor excluded, and stays reported.
+A heading is an ATX heading line outside a ` ``` ` fenced block and outside an HTML comment, in the citing file and in a mapped source alike. Outside a pair a reference names a heading its text begins with, the heading ending where a word ends (`§Groundingx` names no `Grounding`). Only `markers` and `cross-document` references can come back unresolved. An empty `unresolved` therefore means every claim about the markers file and about a shipped document's sections resolved, never that every `§` in the file is fine. Prose naming another document without naming its file (`spec 022 §Versioning`) can be neither verified nor excluded, and stays reported.
 
 ## `check-rule-ids` — verify cited rule IDs exist and aren't deprecated
 

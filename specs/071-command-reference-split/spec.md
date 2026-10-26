@@ -208,9 +208,11 @@ Checked 2026-10-25 by reading each consumer.
   put three references of the form `step 5 of **§…**` into `implement.md`'s
   Instructions, each numbering a step of a section in its reference file, and
   the primitive resolved them against implement's own step 5 until review
-  caught it, so a `step N of §X` reference is now qualified like `X's step N`:
-  over the 19 command and bootstrap files, `references-out-of-subject` went
-  from 83 to 80 and no other count changed.
+  caught it, so a `step N of §X` reference is now qualified like `X's step N`.
+  Those three were in the subject, so no count showed them; measured over the
+  19 command and bootstrap files at `e6b43796`, `references-out-of-subject`
+  went from 83 to 80, the three leaving it being the same form outside
+  Instructions (`groom.md:19`, `implement.md:39` and `:50`).
 
 ### Checks that would silently stop covering the moved text
 
@@ -239,8 +241,9 @@ Checked 2026-10-25 by reading each consumer.
   16; this one reports none of them.
   A pointer written as an explicit pair, `**§X** in` a shipped document, is
   judged against that document's headings alone, whatever else its line names.
-  A pair must name a heading exactly, and a line inside a fenced code block is
-  not a heading, in a source or in the citing file.
+  A pair must name a heading exactly; outside a pair a heading must end where
+  a word ends; and a line inside a fenced block or an HTML comment is not a
+  heading, in a source or in the citing file.
   Measured 2026-10-25 after the move, 59 of the 100 pointers in the commands,
   their reference files and the installer sat on a line that also named
   `plan.md`, `spec.md` or another file, so the line rule alone left most of
@@ -332,7 +335,7 @@ its schema.
 - [ ] AC9: `scripts/gen-claude-commands.sh` writes `.ductus/reference/*.md` from `framework/reference/*.md` with `{project}` substituted and prunes one with no source, its `--check` mode reports drift in either, and the pre-commit hook stages the directory.
 - [ ] AC10: Family 18 reads its marker restatement from `framework/reference/analyze.md` and still reports a finding when the sentence is absent.
 - [ ] AC11: `check-corpus-links` excludes `.ductus/reference/` from the repository scope, and counts the exclusion, only in a tree that carries `framework/reference/`, and checks those files everywhere else, with a test for each case that fails when its behavior is removed.
-- [ ] AC12: `resolve-anchor` judges a `§name` on a line naming exactly one document that the Shared Files manifest maps to a framework source: resolved when it names a heading in that source, a heading in the citing file, or a markers-file marker, unresolved otherwise. A `§` written as an explicit pair, `**§X** in` a shipped document, is judged against that document's headings alone on any line. A pair must name a heading exactly, and a line inside a fenced code block is not a heading, in a source or in the citing file. A line naming several documents or an unmapped one, and a mapped source that cannot be read, otherwise stay counted and unjudged. Each case has a test that fails when its behavior is removed, and the rule reports no unresolved reference in this repository's `framework/` or spec corpus that the previous rule did not.
+- [ ] AC12: `resolve-anchor` judges a `§name` on a line naming exactly one document that the Shared Files manifest maps to a framework source: resolved when it names a heading in that source, a heading in the citing file, or a markers-file marker, unresolved otherwise. A `§` written as an explicit pair, `**§X** in` a shipped document, is judged against that document's headings alone on any line. A pair must name a heading exactly; outside a pair a heading must end where a word ends; and a line inside a fenced block or an HTML comment is not a heading, in a source or in the citing file. A line naming several documents or an unmapped one, and a mapped source that cannot be read, otherwise stay counted and unjudged. Each case has a test that fails when its behavior is removed, and the rule reports no unresolved reference in this repository's `framework/` or spec corpus that the previous rule did not.
 - [ ] AC13: The installer's pointers at `review.md` §Behavior step 5 name a section that exists in `.ductus/reference/review.md`.
 - [ ] AC14: `.github/workflows/runtime.yml` triggers on `framework/reference/*.md` wherever it triggers on `framework/commands/*.md`.
 - [ ] AC15: The parity install fixture installs a reference file to `.ductus/reference/` with `{project}` substituted, and `enforce-manifest`, run against that directory with its rows as the expected list, prunes a stale one there; each assertion fails when its step is removed.

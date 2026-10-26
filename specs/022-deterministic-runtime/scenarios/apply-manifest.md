@@ -29,7 +29,7 @@ Three new primitives. Each is thin enough that the bootstrap procedure shrinks t
    - For each entry: resolve `source` against `source-root`, resolve `dest` against `target-root`. Apply the entry's strategy:
      - **update**: substitute placeholders, compare against the existing destination, write only when the result differs (preserve mtime when unchanged), record `created` / `updated` / `unchanged`.
      - **create**: substitute placeholders, write only when the destination is absent, record `created` / `skipped-exists`.
-     - **skip-if-conflict**: write only when the destination is absent; substitution is not applied (these are adopter-owned templates the framework seeds but never edits afterward), record `created` / `skipped-exists`.
+     - **skip-if-conflict**: write only when the destination is absent; substitution is not applied (the file is written byte for byte and never edited afterward; no bootstrap row uses it since spec 071's task 20 mapped AGENTS.md and CLAUDE.md to `create`), record `created` / `skipped-exists`.
    - Pinned entries short-circuit before any read or write and record `skipped-pinned`.
    - `keep-literals` lets a single entry exclude named substitution keys (e.g., `ductus.md` self-install with `keep-literals: ["project", "cli-config-dir"]` keeps those placeholders intact for the next adopter's bootstrap).
    - Result: `entries: Vec<ManifestEntryResult>` listing the per-entry action, plus aggregate `created` / `updated` / `unchanged` / `skipped-exists` / `skipped-pinned` / `source-missing` counts.

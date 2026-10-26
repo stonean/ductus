@@ -174,9 +174,10 @@ already (`.claude/commands/ductus/audit.md`). `.githooks/pre-commit` gains
   judged first, against that document's headings alone, whatever else its line
   names, and resolves only when `X` equals one of them: 59 of the 100 pointers
   share a line with `plan.md`, `spec.md` or another file. A heading is an ATX
-  heading line outside a fenced code block, in a source and in the citing file
-  alike, so the `## Summary` inside review's fenced record skeleton names no
-  section. Otherwise a line naming several documents, an unmapped one, or a
+  heading line outside a ` ``` ` fenced block and outside an HTML comment, in a
+  source and in the citing file alike, so the `## Summary` inside review's
+  fenced record skeleton names no section; outside a pair a heading must end
+  where a word ends. Otherwise a line naming several documents, an unmapped one, or a
   mapped source that cannot be read stays `qualified`. The map is
   empty where `framework/bootstrap/ductus.md` is absent, which is every
   adopter, so the rule engages only in a framework checkout. That is the same
@@ -290,6 +291,7 @@ leaves to a follow-up.
 | `runtime/src/mcp/server.rs` | Edit | Tool descriptions |
 | `runtime/src/primitives/check_artifacts.rs` | Edit | Doc comment |
 | `runtime/src/primitives/check_step_references.rs` | Edit | A `step N of §X` reference is qualified; test; doc comment |
+| `scripts/mutation/command-reference-split.py` | Create | One mutation per review-round behavior, each killed by the test that names it |
 | `runtime/src/primitives/enforce_manifest.rs` | Edit | Doc comment: the directories the bootstrap enforces |
 | `runtime/tests/parity.rs` | Edit | Install fixture assertions |
 | `runtime/tests/fixtures/ductus-basic/` | Edit | A reference file and a stale one |

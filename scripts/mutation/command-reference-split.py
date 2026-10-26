@@ -44,4 +44,11 @@ MUTATIONS = [
         '        let _ = after;\n        out.extend(numbers);',
         'check_step_references',
     ),
+    (
+        'M5 the line rule accepts a heading that ends inside a word',
+        'src/primitives/resolve_anchor.rs',
+        '            !tail\n                .chars()',
+        '            true || !tail\n                .chars()',
+        'resolve_anchor',
+    ),
 ]

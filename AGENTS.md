@@ -17,7 +17,7 @@ The `framework/` directory is ductus's source — everything that ships to adopt
 - `framework/templates/spec/` — templates consumed by an agent during the pipeline (spec, plan, tasks, data-model, research, scenario)
 - `framework/templates/project/` — project document templates consumed once at adoption (agents, claude-md, system, errors, events, project-readme, gitignore, inbox)
 - `framework/commands/` — operational slash command sources only
-- `framework/reference/` — each command's markdown-only reference, read when one of its steps names a section there (lands at `.ductus/reference/` in adopter repos; [071](specs/071-command-reference-split/spec.md))
+- `framework/reference/` — each command's markdown-only reference, read when one of its steps points at it — at a named section, or at the whole file on the markdown-only path (lands at `.ductus/reference/` in adopter repos; [071](specs/071-command-reference-split/spec.md))
 - `framework/bootstrap/` — the `ductus.md` installer plus per-agent permission files at `bootstrap/configure/{key}.md`
 
 When adding files under `framework/`, place them by purpose, not by extension.

@@ -63,9 +63,10 @@
 //! - **`markers`** — everything else: a genuine claim about the markers file.
 //!
 //! Only `cross-document` and `markers` references can come back unresolved.
-//! A heading is an ATX heading line outside a fenced code block: a `## Summary`
-//! inside a fenced example record is content, not a section a pointer can
-//! name.
+//! A heading is an ATX heading line outside a ` ``` ` fenced block and outside
+//! an HTML comment: a `## Summary` inside a fenced example record is content,
+//! not a section a pointer can name. Outside a pair, a reference names a
+//! heading its text begins with, ending where a word ends.
 //!
 //! What stays reported is deliberate. `the bootstrap's §Derived values` and
 //! `spec 022 §Versioning` name another document in prose without naming the
@@ -427,7 +428,17 @@ fn collect_headings(content: &str) -> Vec<String> {
 /// the `§`, so the heading is compared against what follows it.
 fn names_local_heading(headings: &[String], rest: &str) -> bool {
     let after = rest.strip_prefix('§').unwrap_or(rest);
-    headings.iter().any(|h| after.starts_with(h.as_str()))
+    headings.iter().any(|h| {
+        after.strip_prefix(h.as_str()).is_some_and(|tail| {
+            // The heading must end where a word ends: `§Groundingx` does
+            // not name `Grounding`, while `§Hook Installation` may still
+            // name a heading `Hook`, since nothing marks where prose ends.
+            !tail
+                .chars()
+                .next()
+                .is_some_and(|c| c.is_alphanumeric() || c == '_' || c == '-')
+        })
+    })
 }
 
 fn collect_markers(content: &str) -> HashSet<String> {
@@ -552,9 +563,9 @@ mod tests {
         assert_eq!(r.references[0].kind, "intra-document");
     }
 
-    /// Longest-heading-first matching: `§Hook Installation` must not be
-    /// satisfied by a shorter `## Hook` heading elsewhere in the file when
-    /// the longer one exists.
+    /// A `§` in prose resolves against a heading its text begins with:
+    /// nothing marks where the name ends, so `§Hook Installation` resolves
+    /// whichever of `## Hook` and `## Hook Installation` exists.
     #[test]
     fn a_reference_beginning_with_a_heading_resolves_against_it() {
         let r = classify("## Hook\n\n## Hook Installation\n\nSee §Hook Installation below.\n");
@@ -815,6 +826,31 @@ mod tests {
             (r.intra_document, r.unresolved.clone()),
             (0, vec!["Hidden".to_string()])
         );
+    }
+
+    /// A heading inside an HTML comment is no section either.
+    #[test]
+    fn a_heading_inside_an_html_comment_is_not_a_section() {
+        let r = classify("<!--\n## Hidden\n-->\n\nSee §Hidden above.\n");
+        assert_eq!(
+            (r.intra_document, r.unresolved.clone()),
+            (0, vec!["Hidden".to_string()])
+        );
+    }
+
+    /// Outside a pair the heading must end where a word ends: `§Groundingx`
+    /// and `§Hooks` name no heading `Grounding` or `Hook`.
+    #[test]
+    fn a_heading_must_end_where_a_word_ends() {
+        let r = judge("See §Groundingx, in `.ductus/reference/x.md`.\n");
+        assert_eq!(r.unresolved, ["Groundingx".to_string()]);
+        let r = classify("## Hook\n\nSee §Hooks above.\n");
+        assert_eq!(
+            (r.intra_document, r.unresolved.clone()),
+            (0, vec!["Hooks".to_string()])
+        );
+        let r = classify("## Hook\n\nSee §Hook-like reasoning above.\n");
+        assert_eq!(r.unresolved, ["Hook-like".to_string()]);
     }
 
     #[test]
