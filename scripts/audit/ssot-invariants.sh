@@ -45,11 +45,19 @@
 # equality). This file's role is to be the named home where the
 # *textual-rule* check eventually lives — promotion happens when there's
 # a concrete duplicate to write the pattern against.
+#
+# So the family reports that skip on every run: one stderr line saying that
+# detection is not implemented (026 AC8) and that it examined zero rules.
+# The exit status stays 0 (owner decision) — a skip is not a finding — but a
+# clean exit here must never be read as "no duplicated rule text exists", and
+# the stderr line is what keeps the two apart.
 
 set -uo pipefail
 # shellcheck source-path=SCRIPTDIR source=lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh" || exit 1
 audit_family ssot-invariants
 
-# v1: no findings emitted. Header documents the curated list. Exit 0.
+# v1: no findings emitted. Header documents the curated list. Exit 0, with
+# the skip stated rather than silent.
+echo "ssot-invariants: skipped — detection not implemented (026 AC8); 0 rules examined" >&2
 exit 0

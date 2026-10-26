@@ -48,7 +48,16 @@
 #       offset by one — entry `1.` is check-zero, a precondition rather than a
 #       family, so entry `2.` is Family 1 — and the parenthetical is the
 #       authority on both sides.
-#   28c Every registered script appears in README.md §Scripts.
+#   28c Registered pairs against README.md §Scripts, in both directions.
+#       The README pairs come from the `- `x.sh` — Family N.` entry lines
+#       inside the §Scripts section only (from its heading to the next `## `
+#       heading), so a script named in §Contract or in another entry's prose
+#       never stands in for a missing entry — the first form of this check
+#       grepped the whole file and passed Families 10, 14 and 30 on their
+#       §Contract mentions alone. A registered pair with no entry, and an
+#       entry naming a family that is not registered, are separate findings.
+#       `lib.sh` and `check-zero.sh` are listed there without a family number
+#       and are outside the comparison by construction.
 #
 # Comparing pairs rather than bare numbers means a doc entry that names the
 # right family number against the wrong script is caught too.
@@ -134,18 +143,49 @@ done <<EOF
 $only_documented
 EOF
 
-# 28c — every registered script is listed in README.md §Scripts.
-while read -r num script; do
-  [ -n "${script:-}" ] || continue
-  base="$(basename "$script")"
-  if ! grep -qF -- "\`$base\`" "$README"; then
+# 28c — registered pairs against README.md §Scripts, both directions. Pairs
+# are `<family-number> <script-basename>`; registered pairs carry the full
+# path, so they are reduced to the basename before comparing.
+readme_listed="$(
+  awk '
+    /^## Scripts[[:space:]]*$/ { insec = 1; next }
+    insec && /^## /            { exit }
+    insec                      { print }
+  ' "$README" \
+    | sed -n 's/^- `\([a-z0-9-]*\.sh\)` — Family \([0-9][0-9]*\)\..*/\2 \1/p' \
+    | sort -u
+)"
+registered_base="$(
+  printf '%s\n' "$registered" \
+    | while read -r num script; do
+        [ -n "${num:-}" ] || continue
+        printf '%s %s\n' "$num" "$(basename "$script")"
+      done \
+    | sort -u
+)"
+readme_count="$(printf '%s\n' "$readme_listed" | grep -c . || true)"
+
+if [ "$readme_count" -eq 0 ]; then
+  emit "$README" "no \"- \`x.sh\` — Family N.\" entries extracted from §Scripts — the parse is broken, not the list" \
+    "check that README.md keeps a \"## Scripts\" heading and its \"- \`x.sh\` — Family N.\" entry form"
+else
+  while read -r num base; do
+    [ -n "${num:-}" ] || continue
     emit "$README" "Family $num's script $base is registered but not listed in §Scripts" \
-      "add a \"- \`$base\` — Family $num.\" line to $README"
-  fi
-done <<EOF
-$registered
+      "add a \"- \`$base\` — Family $num.\" line to $README §Scripts"
+  done <<EOF
+$(comm -23 <(printf '%s\n' "$registered_base") <(printf '%s\n' "$readme_listed"))
 EOF
 
-echo "audit-family-parity: compared $reg_count registered against $doc_count documented family entries" >&2
+  while read -r num base; do
+    [ -n "${num:-}" ] || continue
+    emit "$README" "§Scripts lists $base as Family $num, which run-all.sh does not register — it reads as running when it does not" \
+      "remove the entry from $README §Scripts, correct its family number or script name, or register the script in $RUN_ALL"
+  done <<EOF
+$(comm -13 <(printf '%s\n' "$registered_base") <(printf '%s\n' "$readme_listed"))
+EOF
+fi
+
+echo "audit-family-parity: compared $reg_count registered against $doc_count documented family entries and $readme_count §Scripts entries" >&2
 
 exit "$drift"

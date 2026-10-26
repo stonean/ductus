@@ -59,7 +59,12 @@
 # carry whatever their source carries, and the repair is a ductus release.
 #
 # An unreachable runtime is a finding, not a silent pass. So is an empty
-# examined set — a family that examined nothing reports clean.
+# examined set — a family that examined nothing reports clean. So is a
+# rendering that cannot run: the findings are rendered by python, and a python
+# that is missing, that crashes on output that is not JSON, or that meets a
+# finding without the fields it reads would otherwise print nothing and leave
+# the examined-set guard above unrun, which reads as clean. Its exit status is
+# tested, and a non-zero one is a finding.
 
 set -uo pipefail
 # shellcheck source-path=SCRIPTDIR source=lib.sh
@@ -67,6 +72,12 @@ set -uo pipefail
 audit_family step-references
 
 drift=0
+
+if ! command -v python3 >/dev/null 2>&1; then
+  emit "(precondition)" "python3 not on PATH — cannot render the check-step-references result" \
+    "install python3 and re-run"
+  exit 1
+fi
 
 bin="$(ductus_bin)"
 if [ -z "$bin" ]; then
@@ -84,11 +95,11 @@ if [ -z "$result" ]; then
   exit 1
 fi
 
-while IFS=$'\t' read -r location message fix; do
-  [ -z "$location" ] && continue
-  emit "$location" "$message" "$fix"
-done <<EOF
-$(printf '%s' "$result" | python3 -c '
+# The render is captured, never streamed into the loop, so its exit status is
+# observable: a substitution inside a heredoc discards it, and a python that
+# died before printing anything would have rendered as zero findings.
+render_findings() {
+  printf '%s' "$result" | python3 -c '
 import json, sys
 
 d = json.load(sys.stdin)
@@ -124,7 +135,21 @@ sys.stderr.write(
         d.get("references-out-of-subject", 0),
     )
 )
-')
+'
+}
+
+if ! rendered="$(render_findings)"; then
+  emit "runtime" \
+    "the check-step-references result could not be rendered (python3 exited non-zero) — nothing was judged, which is not the same as clean" \
+    "run '$bin check-step-references' directly and confirm it prints the JSON this family reads (findings with file, message and kind; examined)"
+  exit 1
+fi
+
+while IFS=$'\t' read -r location message fix; do
+  [ -z "$location" ] && continue
+  emit "$location" "$message" "$fix"
+done <<EOF
+$rendered
 EOF
 
 exit "$drift"

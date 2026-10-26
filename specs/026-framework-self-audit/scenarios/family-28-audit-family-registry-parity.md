@@ -59,7 +59,11 @@ identifiers, so a gap is the correct state and needs no allowance.
 The family also asserts a third binding, since the same drift reaches it: every
 registered family's script is listed in
 [`scripts/audit/README.md`](../../../scripts/audit/README.md) §Scripts, which
-is the third place the family set is written down.
+is the third place the family set is written down. The list is read from that
+section alone, as `(number, script)` pairs, and compared in both directions: a
+registered family missing from it and a listed script `run-all.sh` does not
+register are each a finding (since 2026-10-26; the check had matched a script's
+name anywhere in the README, one way only).
 
 ## Edge Cases
 

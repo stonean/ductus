@@ -40,15 +40,12 @@
 # is created"). When this surfaces, the right fix is the ignore-comment;
 # do NOT widen the regex to match audience-specific prose.
 #
-# Expected: this check fires on /ductus: throughout the framework's command
-# sources today — the framework files are pre-substituted for the ductus
-# project rather than properly templated with /{project}: placeholders.
-# This is a known framework-level drift /audit is designed to surface.
-# The maintainer's next move after /audit ships is either to (a) fix the
-# templating across all command files, or (b) declare /ductus: as the
-# canonical literal and adjust the audit. Both are valid decisions made
-# AFTER /audit exists to surface the gap. v1 of /audit emits the findings;
-# resolution is a follow-on framework refactor.
+# History: when /audit shipped, this check fired across the framework's
+# command sources (43 findings), which were pre-substituted for this project
+# rather than templated with /{project}: placeholders. Commit 1aca7689
+# resolved them by templating the command files and giving the
+# maintainer-only audit.md the file-scope marker. The family is expected to
+# exit 0, so a finding now is a regression, not the known drift it once was.
 
 set -uo pipefail
 # shellcheck source-path=SCRIPTDIR source=lib.sh

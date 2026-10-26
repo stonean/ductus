@@ -82,7 +82,8 @@ fixture_git() {
 
 # scaffold FIXTURE SPECS_DIR [FEATURE] [GIT_ROOT] — lay down an adopter-shaped
 # tree. Returns non-zero when the fixture could not be built (a finding, never a
-# skip).
+# skip): a directory or hook copy it cannot lay down, a repository git did not
+# create, or a seeded spec the add left untracked.
 #
 # GIT_ROOT defaults to FIXTURE. Naming a directory above it makes the project a
 # subdirectory of its repository (spec 059), which is the layout where the work
@@ -128,6 +129,15 @@ SPEC
     git add -A > /dev/null 2>&1
   )
   [ -f "$git_root/.git/HEAD" ] || return 1
+  # A repository alone is not a fixture: every case stages or commits the
+  # seeded spec, so one the add did not track (an ignore rule in the user's
+  # own git config, a failed add) would run each case against nothing. The
+  # path is relative to FIXTURE, which git resolves from inside the work tree
+  # whether FIXTURE is its root or a subdirectory of it.
+  if ! (cd "$fixture" && git ls-files --error-unmatch -- "$specs_dir/$feature/spec.md") > /dev/null 2>&1; then
+    echo "adopter-shell-behavior: $specs_dir/$feature/spec.md is not tracked after git add in $fixture" >&2
+    return 1
+  fi
 }
 
 # install_stub FIXTURE — a runtime that records its invocations and simulates

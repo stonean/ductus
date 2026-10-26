@@ -34,9 +34,18 @@ runtime_bin="runtime/target/release/ductus"
 # `--locked` builds from the committed Cargo.lock alone, as every other CI
 # build does (BE-DEPS-002); run-all.sh runs it in framework-checks.yml and
 # in the release workflow's audit job.
-if ! (cd runtime && cargo build --release --locked --quiet) 2>/dev/null; then
-  emit "runtime/" "cargo build --release --locked failed — the frontmatter derivations cannot run" \
-    "fix the build, or refresh runtime/Cargo.lock if Cargo.toml changed (one build without --locked); a precondition that cannot run must not read as a pass"
+# The build's output is captured and shown on failure, as the loop below does
+# for each check: a lockfile that disagrees with Cargo.toml is one cause among
+# several (a compile error, a missing toolchain, a network failure), and the
+# finding cannot say which without the output.
+build_output="$(cd runtime && cargo build --release --locked --quiet 2>&1)" && build_status=0 || build_status=$?
+if [ "$build_status" -ne 0 ]; then
+  emit "runtime/" "cargo build --release --locked failed (exit $build_status) — the frontmatter derivations cannot run" \
+    "fix what the build output below reports; if it names the lockfile because Cargo.toml changed, refresh runtime/Cargo.lock (one build without --locked); a precondition that cannot run must not read as a pass"
+  # The last 40 lines, so a long warning log cannot bury the finding above.
+  while IFS= read -r line; do
+    echo "             $line"
+  done <<< "$(printf '%s\n' "$build_output" | tail -n 40)"
   exit "$drift"
 fi
 

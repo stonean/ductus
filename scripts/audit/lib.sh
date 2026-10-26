@@ -5,8 +5,12 @@
 # otherwise re-declare: the repo root (plus the `cd` into it), the `drift`
 # accumulator, and the `emit` function that renders the pipe-separated
 # finding line specified in ./README.md §Contract. The finding shape is
-# defined here once so a change to the contract is a one-file edit rather
-# than a sweep across every family.
+# defined here once for every family that renders through `emit`, so a
+# change to the contract is an edit here rather than a sweep across them.
+# Two families are the exception: marker-list-parity.sh and
+# review-freshness.sh build the pipe-separated line in their embedded
+# python (each in its own `emit` there), so a format change is this file
+# plus those two.
 #
 # Usage — the first three lines of a family script:
 #
@@ -50,9 +54,9 @@ emit() {
 # ductus_bin — echo the path to a usable runtime binary, or nothing.
 #
 # The three tiers in preference order: the adopter-owned pointer, this repo's
-# release build, then `PATH`. Declared here because four families now need it
-# and a fourth copy is how the tiers drift — the same reasoning that put the
-# directory-membership rule in one predicate (spec 051).
+# release build, then `PATH`. Declared here because several families need it
+# and a copy per family is how the tiers drift — the same reasoning that put
+# the directory-membership rule in one predicate (spec 051).
 #
 # Returns empty rather than failing: whether an unreachable runtime is a
 # precondition finding or a silent skip is the caller's decision, not this

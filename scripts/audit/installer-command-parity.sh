@@ -24,6 +24,23 @@
 # list as out of scope; this family closes that gap for the command
 # manifest specifically, anchored on the real source files rather than on
 # a second prose list.
+#
+# REFERENCE ARM (spec 071). The Shared Files rows that install each
+# command's markdown-only reference are held to `framework/reference/*.md`
+# the same way: a shippable reference with no row, a row with no source, a
+# maintainer-only command's reference shipped, a row installing anywhere but
+# `.ductus/reference/<name>.md`, and a reference file with no command are
+# each findings.
+#
+# POINTER ARM. The rows are only half of the binding: a command or reference
+# names its reference by path, and a pointer to a `.ductus/reference/` file
+# no row produces names a file /ductus never installs. So every concrete
+# `.ductus/reference/<name>.md` (name `[a-z0-9-]+`) named anywhere in
+# `framework/commands/*.md` or `framework/reference/*.md` must be a Shared
+# Files row destination, or the reference of a maintainer-only command
+# (withheld with its command, so it has no row). A placeholder form such as
+# `.ductus/reference/<name>.md` is not a pointer and never matches. The arm
+# matches the path text anywhere in a file, prose and code spans alike.
 
 set -uo pipefail
 # shellcheck source-path=SCRIPTDIR source=lib.sh
@@ -70,7 +87,7 @@ while IFS= read -r name; do
   [ -z "$name" ] && continue
   emit "$SECTION" \
     "framework/commands/$name.md has no installer manifest row — /ductus never scaffolds it for adopters" \
-    "add | \`framework/commands/$name.md\` | \`{config_dir}/commands/{project}/$name.md\` | to the Slash commands table, then bump the two 'N framework/commands/*.md rows' counts"
+    "add | \`framework/commands/$name.md\` | \`{config_dir}/commands/{project}/$name.md\` | to the Slash commands table, then update every count of \`framework/commands/*.md\` rows that $DUCTUS states"
 done <<< "$(comm -23 <(printf '%s' "$expected") <(printf '%s' "$manifest"))"
 
 # Stale: a manifest row whose source file no longer exists.
@@ -156,5 +173,37 @@ while IFS= read -r name; do
     "reference file has no command — framework/commands/$name.md does not exist" \
     "remove the reference file, or restore/rename its command"
 done <<< "$(comm -23 <(printf '%s' "$ref_actual") <(printf '%s' "$actual"))"
+
+# --- Pointer arm ------------------------------------------------------------
+#
+# Each pointer is one distinct `file:.ductus/reference/<name>.md` hit from
+# grep across the command and reference files. Allowed names: every Shared Files row
+# destination's base name, plus the maintainer-only commands (whose
+# references are withheld with them, so no row produces them).
+ref_destinations="$(printf '%s\n' "$ref_rows" \
+  | sed -nE 's/^\| `[^`]*` \| `\.ductus\/reference\/([a-z0-9-]+)\.md` \|$/\1/p' | sort -u)"
+allowed_pointers="$(printf '%s\n%s\n' "$ref_destinations" "$excl" | grep -v '^$' | sort -u)"
+pointer_count=0
+while IFS= read -r hit; do
+  [ -n "$hit" ] || continue
+  pointer_count=$((pointer_count + 1))
+  file="${hit%%:*}"
+  name="${hit#*:}"
+  name="${name#.ductus/reference/}"
+  name="${name%.md}"
+  if ! printf '%s\n' "$allowed_pointers" | grep -qxF -- "$name"; then
+    emit "$file" \
+      "names .ductus/reference/$name.md, which no Shared Files row installs — the pointer names a file /ductus never ships" \
+      "point it at an installed reference (.ductus/reference/<command>.md), or add the | \`framework/reference/$name.md\` | \`.ductus/reference/$name.md\` | row and its source"
+  fi
+done <<EOF
+$(grep -oE '\.ductus/reference/[a-z0-9-]+\.md' "$SRC_DIR"/*.md "$REF_DIR"/*.md 2> /dev/null | sort -u)
+EOF
+echo "installer-command-parity: $pointer_count distinct (file, .ductus/reference/<name>.md) pointer(s) checked against $(printf '%s\n' "$ref_destinations" | grep -c .) Shared Files destination(s) and the maintainer-only list" >&2
+if [ "$pointer_count" -eq 0 ]; then
+  emit "$SRC_DIR" \
+    "no .ductus/reference/<name>.md pointer found in $SRC_DIR/*.md or $REF_DIR/*.md — the pointer arm examined nothing, which is not the same as clean" \
+    "restore the commands' reference pointers, or update the pointer arm in this script to their new form"
+fi
 
 exit "$drift"

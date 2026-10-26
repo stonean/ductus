@@ -1,36 +1,27 @@
 name: framework-checks
 
-# Framework-wide checks on every PR that touches the framework, the specs,
-# or the installed commands: generators, lints, procedure parseability, and
-# the self-audit.
+# Framework-wide checks on every pull request and every push to main:
+# generators, lints, procedure parseability, shell static analysis, and the
+# self-audit.
+#
+# No `paths:` filter, on purpose: spec 026 runs the self-audit on every pull
+# request. Its families read far past `framework/` and `specs/` — the audit
+# scripts themselves, runtime sources, the README — and step (j) lints every
+# tracked shell script, so a filter naming the files that "matter" is a
+# second list of those subjects, and the change it forgets is the one that
+# merges unchecked.
 #
 # This workflow used to open with the constitution's **opt-in invariant** —
 # a step asserting no runtime binary was on PATH, proving the markdown-only
 # path completed without one. Spec 048 made the runtime required and
 # replaced that invariant with the **acquisition invariant**, which is
 # asserted by runtime-acquisition.yml. The step was removed rather than the
-# file: the other eight checks here were never part of the invariant, and
+# file: the other checks here were never part of the invariant, and
 # deleting the workflow would have dropped markdownlint, frontmatter, the
 # rule lints, parseability, and the self-audit along with it.
 
 on:
   pull_request:
-    paths:
-      - 'framework/**'
-      - 'specs/**'
-      - '.claude/commands/**'
-      - 'scripts/lint-*.sh'
-      - 'install.sh'
-      - 'scripts/tests/test-install.sh'
-      - 'scripts/tests/test-lint-release-ordering.sh'
-      - 'scripts/check-runtime-currency.sh'
-      - 'scripts/tests/test-check-runtime-currency.sh'
-      - 'scripts/gen-configure-mcp.sh'
-      - 'scripts/tests/test-gen-configure-mcp.sh'
-      - '.github/workflows/runtime-release.yml'
-      - '.github/workflows/framework-checks.yml'
-      - 'runtime/legacy-prose-commands.txt'
-      - 'runtime/src/parser/**'
   push:
     branches:
       - main
