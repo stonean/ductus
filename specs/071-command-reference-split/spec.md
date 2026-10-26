@@ -181,11 +181,17 @@ Checked 2026-10-25 by reading each consumer.
 - **`check-corpus-links`.** The moved text holds `](../constitution.md)` links.
   Installed at `.ductus/reference/` they resolve to `.ductus/constitution.md`,
   which is correct in an adopter. This repository's generated copies have no
-  such file, so the links break there. The primitive excludes `.ductus/reference/`
-  from the repository scope the way it excludes every agent's generated
-  copies, because the files are framework-managed and only a release can
-  repair them. Family 39 checks them at the source. This applies to adopters
-  too, which is deliberate.
+  such file, so the links break there. The primitive excludes
+  `.ductus/reference/` from the repository scope, the way it excludes every
+  agent's generated copies, but only in a tree that carries the sources,
+  `framework/reference/`, where the files are generated and the sources are
+  checked instead. Anywhere else, an adopter or the audit's synthetic adopter
+  tree, the files are the installed ones and their links resolve, so they are
+  checked. Excluding them everywhere was measured and rejected: it removed the
+  twelve reference files from Family 35a, the one check that resolves a
+  shipped file's links from where it is installed (35a went from 28 files
+  examined to 16). Adopters' hooks are unaffected either way, because the hook
+  checks the spec-corpus scope, which never reaches `.ductus/`.
 - **The installer's pointers into review.** `framework/bootstrap/ductus.md`
   cites `review.md` §Behavior step 5 for rule-surface selection, four times.
   That heading had already gone before this change. The selection it meant is
@@ -312,7 +318,7 @@ its schema.
 - [ ] AC8: No reference file is written under any agent's commands, command, skills or prompts directory, for any of the five layouts.
 - [ ] AC9: `scripts/gen-claude-commands.sh` writes `.ductus/reference/*.md` from `framework/reference/*.md` with `{project}` substituted and prunes one with no source, its `--check` mode reports drift in either, and the pre-commit hook stages the directory.
 - [ ] AC10: Family 18 reads its marker restatement from `framework/reference/analyze.md` and still reports a finding when the sentence is absent.
-- [ ] AC11: `check-corpus-links` excludes `.ductus/reference/` from the repository scope and counts the exclusion, with a test that fails when the exclusion is removed.
+- [ ] AC11: `check-corpus-links` excludes `.ductus/reference/` from the repository scope, and counts the exclusion, only in a tree that carries `framework/reference/`, and checks those files everywhere else, with a test for each case that fails when its behavior is removed.
 - [ ] AC12: `resolve-anchor` judges a `§name` on a line naming exactly one document that the Shared Files manifest maps to a framework source: resolved when it names a heading in that source, a heading in the citing file, or a markers-file marker, unresolved otherwise. A `§` written as an explicit pair, `**§X** in` a shipped document, is judged against that document's headings alone on any line. A line naming several documents or an unmapped one, and a mapped source that cannot be read, otherwise stay counted and unjudged. Each case has a test that fails when its behavior is removed, and the rule reports no unresolved reference in this repository's `framework/` or spec corpus that the previous rule did not.
 - [ ] AC13: The installer's pointers at `review.md` §Behavior step 5 name a section that exists in `.ductus/reference/review.md`.
 - [ ] AC14: `.github/workflows/runtime.yml` triggers on `framework/reference/*.md` wherever it triggers on `framework/commands/*.md`.

@@ -92,8 +92,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 ## 12. Implement scenario: generated-reference-copies-are-excluded
 
 - [ ] Implement the behavior described in `scenarios/generated-reference-copies-are-excluded.md`
-- [ ] Add `.ductus/reference/` to `is_excluded`'s repository arm in `check_corpus_links.rs`, counted like the agent directories
-- [ ] A test that fails when the exclusion is removed, and one showing another `.ductus/` file is still checked
+- [ ] Add `.ductus/reference/` to `is_excluded`'s repository arm in `check_corpus_links.rs`, counted like the agent directories, in a tree that carries `framework/reference/`
+- [ ] A test that fails when the exclusion is removed, one showing another `.ductus/` file is still checked, and one showing installed reference files are checked where there are no sources
 
 - **Done when**: `check-corpus-links --scope repository` is clean over this repository with the generated reference copies present, and the test fails with the exclusion removed (spec 071 task 10).
 

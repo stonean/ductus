@@ -12,15 +12,16 @@ The moved text carries links to the constitution, `](../constitution.md…)`. Fr
 
 ## Behavior
 
-Under `--scope repository`, a file under `.ductus/reference/` is excluded by construction and counted, as every agent's generated command copies are ([`every-agents-generated-copies-are-excluded`](every-agents-generated-copies-are-excluded.md)). The sources under `framework/reference/` are checked like any other file.
+Under `--scope repository`, in a tree that carries `framework/reference/`, a file under `.ductus/reference/` is a generated copy: it is excluded by construction and counted, as every agent's generated command copies are ([`every-agents-generated-copies-are-excluded`](every-agents-generated-copies-are-excluded.md)), and the sources under `framework/reference/` are checked like any other file.
 
-The exclusion lives in the primitive, so an adopter's repository scope skips those files too. That is deliberate and matches the agent copies: the files are framework-managed, only a release can repair them, and their links are checked at the source, where Family 39 resolves their anchors and Family 35 resolves their links in a synthetic adopter tree.
+In a tree without those sources, an adopter or the audit's synthetic adopter tree (Family 35a), the files under `.ductus/reference/` are the installed ones. Their links resolve there, beside the installed `.ductus/constitution.md`, so they are checked. That is what keeps a link which resolves from `framework/reference/` but dangles once installed, such as `../commands/<command>.md`, inside Family 35a's subject. Excluding the directory in every tree was the first version and was measured and rejected: it took the twelve reference files out of 35a, which went from 28 files examined to 16.
 
 ## Edge Cases
 
 - A file elsewhere under `.ductus/` is still checked; only `reference/` is generated.
 - The spec-corpus scope is unaffected: it never reached `.ductus/`.
-- A hand-written file an adopter puts in `.ductus/reference/` is excluded too. `/ductus` removes it on the next run unless it is pinned, so the exclusion hides it for at most one run.
+- A hand-written file an adopter puts in `.ductus/reference/` is checked like the installed ones, and `/ductus` removes it on the next run unless it is pinned.
+- An adopter's hook is unaffected either way: it checks the spec-corpus scope.
 
 ## Open Questions
 

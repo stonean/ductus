@@ -151,7 +151,10 @@ already (`.claude/commands/ductus/audit.md`). `.githooks/pre-commit` gains
 - **`check-corpus-links`.** `.ductus/reference/` joins the repository-scope
   exclusions in `is_excluded`
   (`runtime/src/primitives/check_corpus_links.rs:150-178`), counted like the
-  agent directories.
+  agent directories, when the tree carries `framework/reference/`, the
+  sources the copies are generated from. Without them the files are the
+  installed ones and are checked, which keeps them in Family 35a's synthetic
+  adopter tree.
 - **`resolve-anchor`.** A line naming exactly one document, where the
   `## Shared Files` section of `framework/bootstrap/ductus.md` maps that
   document to a source, is judged: each `§` resolves when it names a heading

@@ -85,12 +85,15 @@ pub fn run(args: &CheckCorpusLinksArgs, repo: &Path) -> Result<CheckCorpusLinksR
     }
     files.sort();
     result.skipped.append(&mut walk_skips);
+    // A framework checkout carries the sources the `.ductus/reference/`
+    // copies are generated from; anywhere else those files are installed.
+    let generates_references = repo.join(REFERENCE_SOURCES).is_dir();
 
     for path in files {
         let relative = rel_path(&path, repo);
         // Excluded **by construction**, because a link that does not resolve
         // here is the correct state. Counted, never silently dropped.
-        if is_excluded(&relative, &specs_root, args.scope) {
+        if is_excluded(&relative, &specs_root, args.scope, generates_references) {
             result.excluded_by_construction += 1;
             continue;
         }
@@ -147,7 +150,12 @@ fn collect_tracked_markdown(repo: &Path, out: &mut Vec<PathBuf>) -> bool {
 /// Each entry is a path whose links are *correct* to not resolve from where
 /// they sit, and each is counted rather than dropped so the verdict's scope
 /// stays legible.
-fn is_excluded(relative: &str, specs_root: &str, scope: LinkScope) -> bool {
+fn is_excluded(
+    relative: &str,
+    specs_root: &str,
+    scope: LinkScope,
+    generates_references: bool,
+) -> bool {
     // Adopter-facing templates, on both scopes: their links resolve in a
     // scaffolded feature directory, not in the template's own.
     if relative.starts_with(&format!("{specs_root}/templates/")) {
@@ -166,13 +174,16 @@ fn is_excluded(relative: &str, specs_root: &str, scope: LinkScope) -> bool {
             AGENT_CONFIG_DIRS
                 .iter()
                 .any(|dir| relative.strip_prefix(dir).is_some_and(|rest| rest.starts_with('/')))
-                // Generated reference copies (spec 071): each command's
-                // markdown-only reference, installed once for every agent.
-                // Their `../constitution.md` links resolve to the
+                // Generated reference copies (spec 071), in a framework
+                // checkout only: each command's markdown-only reference,
+                // written here from `framework/reference/`. Their
+                // `../constitution.md` links resolve to the
                 // `.ductus/constitution.md` `/ductus` installs beside them,
-                // which a framework checkout does not have; the sources
-                // under `framework/reference/` are checked instead.
-                || relative.starts_with(".ductus/reference/")
+                // which a framework checkout does not have; the sources are
+                // checked instead. Where there are no sources — an adopter,
+                // or the audit's synthetic adopter tree — the files are the
+                // installed ones, their links resolve, and they are checked.
+                || (generates_references && relative.starts_with(".ductus/reference/"))
                 // Project templates, whose links resolve in the adopter's
                 // repo root after scaffolding rather than here.
                 || relative.starts_with("framework/templates/project/")
@@ -184,6 +195,10 @@ fn is_excluded(relative: &str, specs_root: &str, scope: LinkScope) -> bool {
         }
     }
 }
+
+/// Where a framework checkout keeps the sources of the `.ductus/reference/`
+/// copies its generator writes.
+const REFERENCE_SOURCES: &str = "framework/reference";
 
 /// How deep the walk descends before recording a skip and stopping.
 ///
@@ -940,6 +955,7 @@ mod tests {
         // adopter, where `.ductus/constitution.md` is installed beside it;
         // any other file under `.ductus/` is not generated and stays checked.
         let tmp = tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join(REFERENCE_SOURCES)).unwrap();
         let repo = git2::Repository::init(tmp.path()).unwrap();
         let mut index = repo.index().unwrap();
         for rel in [".ductus/reference/analyze.md", ".ductus/notes.md"] {
@@ -962,6 +978,36 @@ mod tests {
         let broken: Vec<&str> = result.broken.iter().map(|b| b.path.as_str()).collect();
         assert_eq!(broken, [".ductus/notes.md"]);
         assert_eq!(result.excluded_by_construction, 1);
+    }
+
+    /// Without the sources, as in an adopter or the audit's synthetic
+    /// adopter tree, the files under `.ductus/reference/` are the installed
+    /// ones, not generated copies, so their links are checked.
+    #[test]
+    fn installed_reference_files_are_checked_where_there_are_no_sources() {
+        let tmp = tempdir().unwrap();
+        let repo = git2::Repository::init(tmp.path()).unwrap();
+        let mut index = repo.index().unwrap();
+        write(
+            tmp.path(),
+            ".ductus/reference/analyze.md",
+            "# X\n\n[gone](../nowhere.md)\n",
+        );
+        index
+            .add_path(Path::new(".ductus/reference/analyze.md"))
+            .unwrap();
+        index.write().unwrap();
+
+        let result = run(
+            &CheckCorpusLinksArgs {
+                scope: LinkScope::Repository,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        let broken: Vec<&str> = result.broken.iter().map(|b| b.path.as_str()).collect();
+        assert_eq!(broken, [".ductus/reference/analyze.md"]);
+        assert_eq!(result.excluded_by_construction, 0);
     }
 
     #[test]
