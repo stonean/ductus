@@ -1,5 +1,5 @@
 ---
-status: clarified
+status: planned
 dependencies: [063-oversized-artifacts-warn-with-a-fix]
 cross-spec-impact: [050-constitution]
 next-criterion: 12
