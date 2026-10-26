@@ -29,10 +29,10 @@ Tasks derived from the [plan](plan.md). Complete in order.
 ## 4. Add the ceiling check and its test
 
 - [x] `scripts/lint-governing-size.sh`: the ceiling table (`AGENTS.md` 50000, the constitution at its measured size), index measurement, and the three failure messages
-- [x] `scripts/tests/test-lint-governing-size.sh`: cases (a)–(f) from the plan
+- [x] `scripts/tests/test-lint-governing-size.sh`: cases (a)–(i) from the plan
 - [x] `shellcheck` both scripts
 
-- **Done when**: the test passes all six cases, with (b), (d) and (e) failing the lint as designed
+- **Done when**: the test passes every case, with (b), (d), (e), (g) and (i) failing the lint as designed
 
 ## 5. Wire the check into the hook and CI
 

@@ -23,7 +23,20 @@
 # than skipping them: they produce derived frontmatter this commit captures, so
 # a silent skip lands values the primitives would have superseded.
 #
-# It then normalizes staged markdown with `markdownlint-cli2 --fix` and
+# It then runs the acceptance-criterion labelling pass over each staged spec —
+# `ductus label-criteria`, the backstop for a criterion typed by hand in an
+# editor (spec 013 / criterion-identifiers). That step keeps a swallowed
+# failure, and the reason is blast radius rather than optionality: a missing
+# AC{n} label is caught by /ductus:analyze and assigned on the next pass, so
+# nothing wrong is committed, while a stale derived index is committed wrong
+# data.
+#
+# When staged files include anything under runtime/, this hook additionally
+# runs `cargo fmt --check`, `cargo clippy --all-targets --all-features
+# -- -D warnings`, and `cargo test` against the runtime crate. Skip the
+# cargo checks for a single commit with DUCTUS_SKIP_RUNTIME_CHECKS=1.
+#
+# Next it normalizes staged markdown with `markdownlint-cli2 --fix` and
 # re-stages it, so a WYSIWYG editor's table padding and emphasis rewriting do
 # not fail the lint CI runs on push. Swallowed on failure — markdownlint is
 # advisory here and a missing npx must not block a commit.
@@ -37,23 +50,10 @@
 # Family 26 of /ductus:audit covers the whole repository including
 # maintainer-only files; this covers the spec corpus and is what adopters get.
 #
-# After it, `scripts/lint-governing-size.sh` holds AGENTS.md and the
-# constitution to their size ceilings, measured as staged (spec 072): a lesson
-# added past a ceiling retires, merges or relocates another in the same commit.
-# Unconditional — two `git cat-file -s` calls cost nothing.
-#
-# It then runs the acceptance-criterion labelling pass over each staged spec —
-# `ductus label-criteria`, the backstop for a criterion typed by hand in an
-# editor (spec 013 / criterion-identifiers). That step keeps a swallowed
-# failure, and the reason is blast radius rather than optionality: a missing
-# AC{n} label is caught by /ductus:analyze and assigned on the next pass, so
-# nothing wrong is committed, while a stale derived index is committed wrong
-# data.
-#
-# When staged files include anything under runtime/, this hook additionally
-# runs `cargo fmt --check`, `cargo clippy --all-targets --all-features
-# -- -D warnings`, and `cargo test` against the runtime crate. Skip the
-# cargo checks for a single commit with DUCTUS_SKIP_RUNTIME_CHECKS=1.
+# Last, `scripts/lint-governing-size.sh` holds AGENTS.md and the constitution
+# to their size ceilings, measured as staged (spec 072): a lesson added past a
+# ceiling retires, merges or relocates another in the same commit.
+# Unconditional — four git calls cost nothing.
 #
 # Installation: scripts/install-hooks.sh sets `git config core.hooksPath .githooks`.
 

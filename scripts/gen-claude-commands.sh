@@ -248,9 +248,10 @@ for src in "$REF_SRC"/*.md; do
 done
 
 # Prune any .md files in DEST that are no longer in the expected set.
-# No exceptions: every file under .claude/commands/ductus/ is generated. A file
-# with no framework/commands/ source is pruned here; never add its name to
-# `expected` to keep a hand-maintained command — give it a source instead.
+# No exceptions: every file under .claude/commands/ductus/ is generated, from
+# framework/commands/ or, for configure.md, from the agent's permission file. A
+# file with no source is pruned here; never add its name to `expected` to keep
+# a hand-maintained command — give it a source instead.
 for existing in "$DEST"/*.md; do
   name="$(basename "$existing")"
   keep=0

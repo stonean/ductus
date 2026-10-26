@@ -115,7 +115,7 @@ The table below is filled while the cut is made. The lead column is abridged to 
 | Workflow | 97 | A finding whose fix lands inside a spec… | trimmed | project-only; owner decision; core is §brownfield-inbox; 022 pricing figures cut |
 | Workflow | 98 | A finding made during implementation bec… | pointer | §brownfield-inbox (scope decides the destination; disposition task) |
 | Workflow | 99 | An inbox item blocked on an external eve… | pointer | §brownfield-inbox (blocked on an external event is discarded) |
-| Workflow | 100 | check-artifacts reports clean: true and… | pointer | §implement-phase (ticked criteria verified against the tree before close) |
+| Workflow | 100 | check-artifacts reports clean: true and… | pointer | §spec-requirements (a short skip list is a fact about backticks; read the criteria yourself) |
 | Workflow | 100+ | (split) never-true arm not in constituti… | trimmed | new entry split from #100 |
 | Workflow | 102 | This repository keeps no per-user agent… | trimmed | project-only; owner decision; quote cut; overlaps planned CLAUDE.md routing (AC8) |
 | Workflow | 103 | Land a correction in a git-tracked artif… | trimmed | project-only; 2026-05-17 heredoc incident cut |
@@ -169,14 +169,14 @@ The table below is filled while the cut is made. The lead column is abridged to 
 | Gotchas | 156 | A feature directory is not necessarily N… | trimmed | project-only (Rust half of §numbering-convention); 051 incident cut |
 | Gotchas | 157 | clap expands {n} in a doc comment as a n… | trimmed | project-only; create-feature incident cut |
 | Gotchas | 158 | Verify that a recorded decision still ho… | trimmed | project-only; 003/000/017 accounts cut (universal: promotion candidate) |
-| Gotchas | 159 | "Record" spans five destinations in this… | pointer | §pipeline-boundaries |
+| Gotchas | 159 | "Record" spans five destinations in this… | pointer | §pipeline-boundaries; the count is dropped from the lead, since the section states none, and 050's row is re-keyed |
 | Gotchas | 160 | Editing framework/commands/implement.md… | moved | runtime/tests/parity.rs:933 (CI runtime.yml); message fix proposed; dup of L121 |
 | Gotchas | 161 | Mutating code to prove a test fails: run… | trimmed | project-only; dated timings and harness history cut |
 | Gotchas | 162 | The .govern.toml residue, and what it me… | pointer | §drift-prevention; lead was a story, replaced by the constitution's own lead |
 | Gotchas | 163 | Piping a gate command's output replaces… | pointer | §grounding |
 | Gotchas | 165 | A § reference resolves by line, and intr… | pointer | §drift-prevention |
 | Gotchas | 166 | A path:line citation in a spec body is p… | trimmed | project-only; measurements and 051 account cut (universal: promotion candidate) |
-| Gotchas | 167 | A review record written before ductus-v0… | pointer | §implement-phase |
+| Gotchas | 167 | A review record written before ductus-v0… | pointer | §implement-phase; the lead's version claim was false (`reviewed-digest` shipped in 0.46.0), so the lead is replaced by the constitution's own and 050's row is re-keyed |
 | Gotchas | 168 | An acceptance criterion's parenthetical… | pointer | §grounding |
 | Gotchas | 169 | A spec with no recorded in-progress tran… | pointer | §implement-phase |
 | Gotchas | 170 | A cross-spec signpost is not rename resi… | trimmed | project-only; 006/011 incident cut (universal: promotion candidate) |
@@ -253,12 +253,12 @@ A message or comment added for a **moved** entry lands in `scripts/`, `scripts/t
   - Missing from the index: `{file}: not in the index, so its size cannot be measured`.
   - Unreadable (`cat-file` fails on a path the index holds): `{file}: could not be read from the index`.
 
-  Exit 1 on any failure and 0 only when every file was measured and is at or under its ceiling (AC11). A file exactly at its ceiling passes.
+  A ceiling that is not a whole number of bytes is a fourth failure, with its own message. Exit 1 on any failure and 0 only when every file was measured and is at or under its ceiling (AC11). A file exactly at its ceiling passes.
 - **Raising a ceiling** means editing the script. The comment above the table says that is an owner decision, recorded in this spec through its back-edge.
 
 ### Wiring
 
-- **`.githooks/pre-commit`** runs `bash scripts/lint-governing-size.sh` unconditionally, after `check-corpus-links`, and its header comment gains a paragraph for it. Two `cat-file` calls cost nothing, so a path filter would buy nothing.
+- **`.githooks/pre-commit`** runs `bash scripts/lint-governing-size.sh` unconditionally, after `check-corpus-links`, and its header comment gains a paragraph for it. Four git calls cost nothing, so a path filter would buy nothing.
 - **`.github/workflows/framework-checks.yml`** gains step `(o) Governing-document size ceilings`. It runs the lint and then `bash scripts/tests/test-lint-governing-size.sh`, following step `(k)`'s pairing of a guard with the test that proves it fails.
 - **The wiring lands after the cut.** Wiring first would fail every commit until the guide fit.
 
@@ -269,9 +269,12 @@ A message or comment added for a **moved** entry lands in `scripts/`, `scripts/t
 - (a) the committed `AGENTS.md` and constitution pass;
 - (b) `AGENTS.md` one byte over fails, and the message names the file, the size, the ceiling and the fix;
 - (c) exactly at the ceiling passes;
-- (d) the constitution over its ceiling fails;
+- (d) the constitution over its ceiling fails, naming its fix;
 - (e) `AGENTS.md` absent from the index fails with the missing message, not a pass;
-- (f) back under the ceiling after (b) passes.
+- (f) back under the ceiling after (b) passes;
+- (g) a file the index holds but whose blob is gone fails as unreadable;
+- (h) the `AGENTS.md` ceiling equals `DEFAULT_READ_SIZE_BYTES` in `runtime/src/primitives/check_artifact_size.rs`, the constant it copies;
+- (i) a ceiling that is not a whole number of bytes fails with its own message. Without that check, `[ -gt ]` errors to stderr, an `if` reads the error as false, and the oversized file passes.
 
 ### `CLAUDE.md`
 

@@ -13,6 +13,8 @@
 #   E. AGENTS.md absent from the index fails rather than passing vacuously
 #   F. B's file brought back under the ceiling passes
 #   G. a file the index holds but whose blob is gone fails as unreadable
+#   H. the AGENTS.md ceiling equals the runtime's DEFAULT_READ_SIZE_BYTES
+#   I. a ceiling that is not a whole number of bytes fails rather than passing
 #
 # Usage: scripts/tests/test-lint-governing-size.sh
 
@@ -99,8 +101,8 @@ sized d AGENTS.md 1000
 sized d framework/constitution.md $((CONSTITUTION_CEILING + 1))
 if run_lint d; then
   fail "D: the constitution over its ceiling passed"
-elif grep -q "^framework/constitution.md: $((CONSTITUTION_CEILING + 1)) bytes, over its $CONSTITUTION_CEILING-byte ceiling" "$WORK/d.out"; then
-  pass "D: the constitution one byte over fails"
+elif grep -q "^framework/constitution.md: $((CONSTITUTION_CEILING + 1)) bytes, over its $CONSTITUTION_CEILING-byte ceiling — cut it, not the ceiling" "$WORK/d.out"; then
+  pass "D: the constitution one byte over fails, naming size, ceiling and fix"
 else
   fail "D: failed with the wrong message: $(cat "$WORK/d.out")"
 fi
@@ -136,6 +138,31 @@ elif grep -q "^AGENTS.md: could not be read from the index$" "$WORK/g.out"; then
   pass "G: an unreadable AGENTS.md fails with its own message"
 else
   fail "G: failed with the wrong message: $(cat "$WORK/g.out")"
+fi
+
+# H. the ceiling is a copy of a runtime constant, so it is held to it here.
+RUNTIME_SRC="$REPO_ROOT/runtime/src/primitives/check_artifact_size.rs"
+runtime_default="$(grep -o 'DEFAULT_READ_SIZE_BYTES: u64 = [0-9_]*' "$RUNTIME_SRC" 2>/dev/null | head -n 1 | sed 's/.*= //; s/_//g')"
+if [ -z "$runtime_default" ]; then
+  fail "H: DEFAULT_READ_SIZE_BYTES not found in $RUNTIME_SRC — nothing to compare the ceiling with"
+elif [ "$runtime_default" = "$AGENTS_CEILING" ]; then
+  pass "H: the AGENTS.md ceiling equals the runtime's DEFAULT_READ_SIZE_BYTES ($runtime_default)"
+else
+  fail "H: the AGENTS.md ceiling ($AGENTS_CEILING) differs from DEFAULT_READ_SIZE_BYTES ($runtime_default)"
+fi
+
+# I. a ceiling typed as `50,000` makes `[ -gt ]` error to stderr, which an
+# `if` reads as false — the over-ceiling file would pass silently.
+new_tree i
+sed "s/^CEILINGS=\"AGENTS.md|$AGENTS_CEILING|/CEILINGS=\"AGENTS.md|50,000|/" "$LINT" > "$WORK/i/scripts/lint-governing-size.sh"
+sized i AGENTS.md $((AGENTS_CEILING + 10000))
+sized i framework/constitution.md 1000
+if run_lint i; then
+  fail "I: a malformed ceiling passed an over-size AGENTS.md"
+elif grep -q "^AGENTS.md: its ceiling '50,000' is not a whole number of bytes" "$WORK/i.out"; then
+  pass "I: a malformed ceiling fails with its own message"
+else
+  fail "I: failed with the wrong message: $(cat "$WORK/i.out")"
 fi
 
 if [ "$failures" -gt 0 ]; then

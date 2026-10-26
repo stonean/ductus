@@ -29,7 +29,8 @@
 #
 # Embedded python passed as `python3 -c '...'` must hold no apostrophe,
 # comments included: one closes the shell string (shellcheck SC1011,
-# framework-checks step (j)). Rephrase rather than escape; `bash -n` confirms.
+# framework-checks step (j)). Rephrase rather than escape; shellcheck confirms,
+# and `bash -n` does not when the apostrophes pair up.
 
 # shellcheck disable=SC2034  # ROOT/drift are read by the sourcing script, not here
 

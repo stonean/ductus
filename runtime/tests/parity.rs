@@ -931,7 +931,7 @@ fn run_parity_case(command: &str, fixture: &str) {
     assert_eq!(
         actual,
         expanded,
-        "stream mismatch for {fixture}.jsonl — an edit to framework/commands/{command}.md alone can move it (goldens record the fixture repo's commit shas and step numbers). Re-bless this golden only: `BLESS=1 cargo test --release --locked --test parity {}_stream_matches_golden`, then confirm the diff is only those fields and the prose you edited; never re-bless every golden at once",
+        "stream mismatch for {fixture}.jsonl — an edit to the `{command}` command's source alone can move it (a golden records step numbers, and implement-basic its fixture repo's commit shas). Re-bless this golden only: `BLESS=1 cargo test --release --locked --test parity {}_stream_matches_golden`, then confirm the diff is only those fields and the prose you edited. A corpus-wide BLESS=1 is for a protocol-level change that moves every golden",
         fixture.replace('-', "_"),
     );
 
