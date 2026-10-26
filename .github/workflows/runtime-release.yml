@@ -147,7 +147,7 @@ jobs:
           printf '%s\n' 'ziglang==0.17.0 --hash=sha256:97079827064a7492cce5541ceb438ae8003ce1e54e399676da2d62fb7a5dc08b' \
             > "$RUNNER_TEMP/zig-requirements.txt"
           pip3 install --require-hashes -r "$RUNNER_TEMP/zig-requirements.txt"
-          cargo install --locked cargo-zigbuild --version 0.23.4
+          cargo install --locked cargo-zigbuild --version 0.24.0
 
       - name: Build (native)
         if: ${{ !matrix.cross }}
