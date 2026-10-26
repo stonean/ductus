@@ -36,3 +36,9 @@ Done when: `framework/templates/project/claude-md.md` exists with both import di
 - [x] Update spec status to `done`
 
 Done when: all templates pass lint (where applicable), placeholders are consistent, and no major gaps compared to the adopter project.
+
+## 5. The CLAUDE.md template's imports load
+
+- [ ] Implement the behavior described in `scenarios/claude-md-template-imports-load.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested
