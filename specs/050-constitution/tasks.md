@@ -301,3 +301,9 @@ Implements `scenarios/a-retired-feature-leaves-no-spec.md`. The constitution sta
 - [x] §governance-precedence's floor names the exception: a rule that names itself a default may be replaced by a project
 
 - **Done when**: The constitution states the rule as a replaceable default and the floor names that exception, and 050 is re-reviewed back to done.
+
+## 35. The constitution fits one read
+
+- [ ] Implement the behavior described in `scenarios/the-constitution-fits-one-read.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested
