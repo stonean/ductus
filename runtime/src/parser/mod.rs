@@ -978,9 +978,10 @@ mod tests {
 
     #[test]
     fn primitive_names_are_the_mcp_tool_names_plus_the_cli_only_ones() {
-        // Guard against the six-site wiring gap (AGENTS.md gotcha,
-        // recorded 2026-06-14 for `resolve-references`): a primitive
-        // exposed over MCP must also be recognizable in command prose.
+        // Guard against a primitive wired at some of its registration sites
+        // but not all (AGENTS.md Gotchas, "Registering a runtime primitive
+        // is five sites"): a primitive exposed over MCP must also be
+        // recognizable in command prose.
         // The parser recognizes every MCP tool plus the CLI-only
         // primitives, which the server deliberately does not serve
         // (`CLI_ONLY_PRIMITIVES`, 022 task 14).

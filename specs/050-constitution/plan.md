@@ -241,16 +241,14 @@ express; this spec declares that obligation in `cross-spec-impact:` so it gates
 | `framework/commands/help.md` is generated — hand-edits to it are reverted on the next commit | Framework build step |
 | Registering a runtime primitive is five sites, and two of them are only found by tests — de-registering one is the same five | Framework build step |
 | `check-artifacts`' `skipped` array names targets that could not be *reached*, never subjects that were empty | About *authoring* a check family; the interpretive half is already §design-principles |
-| A prose-only edit to `framework/commands/*.md` can break a Rust test, so run `cargo test` before calling such a change verified | Framework build step |
 | A new slash command wires into five places outside `framework/commands/`, and two of them are load-bearing for adopters | Framework build step |
 | Never write a literal `ductus-vX.Y.Z` into a `framework/commands/*.md` prose line — `BLESS` will template it into a time bomb | Framework build step, and the trap is this repo's parity goldens |
-| An apostrophe anywhere in an `/audit` family's embedded python closes the shell string holding it | The audit is maintainer-only |
-| `check-orphaned-references` used to report `AGENTS.md` → `specs/rules/` on every run in this repo, and it was never a finding. Fixed in `ductus-v0.49.4` — the primitive now excludes it itself, and this repo reports `findings: 0` | Turns entirely on this repository keeping its rule files outside the adopter-side path |
 | In a `set -e` script, `[ test ] && cmd` as the *last* command of a block exits the script when the test is false | Shell idiom in this project's own tooling rather than pipeline governance |
 | clap expands `{n}` in a doc comment as a newline, so a `#[derive(clap::Args)]` field's docs cannot contain one | Runtime source detail |
-| Editing `framework/commands/implement.md` stales the `implement-basic` parity golden, because the golden records the fixture repo's commit shas | This repo's parity fixture |
 | `cargo` exits 101 from the repo root, and 101 is also what a failing test suite returns — so a mis-rooted probe reads exactly like the failure it was meant to prove | This repo's toolchain and the harness's working-directory behaviour |
 | `grep` here is ugrep, and a bounded-context pattern exceeds its complexity limit — erroring once per file, which reads exactly like a scan that found nothing | This machine's tooling, not the framework's |
+
+Rows for 4 entries since retired from `AGENTS.md` by `072-governing-documents-stay-within-one-read` — moved to the check that reports them, or deleted as obsolete — were removed from this table; 072's plan §Entry dispositions records where each went.
 
 `R` marks a verdict reached through the reword test rather than directly.
 
@@ -306,10 +304,11 @@ The 11 entries the promotion-coverage notice reported unclassified on 2026-10-15
 | Stop your own background tasks before writing a handoff | Concerns the agent's own background tasks and handoff notes, which the pipeline has no step for, like *use repo-relative paths in tool calls* |
 | A CI verdict comes from pushing `main` | This repository's trunk-based flow and release-tag distribution, as W1 and W3 |
 | Pi has no MCP client | Concerns maintaining this framework's Pi bridge |
-| The pre-commit hook regenerates the command mirrors from the working tree and stages them on every commit | This repository's hook and generated mirrors — a framework build step, as G2–G4 |
 | A primitive whose result has two shapes returns one struct with two flattened `Option` halves | Runtime authoring |
 | Since spec 062 the runtime reads a session identity from its own process environment | Runtime and test authoring; an adopter receives the behavior, not the rule |
 | A rule that assumes a deployed service does not fire against the runtime | Applies the rule set's triggers to this repository's runtime; an adopter's own system has its own shape |
+
+Rows for 1 entry since retired from `AGENTS.md` by `072-governing-documents-stay-within-one-read` — moved to the check that reports it, or deleted as obsolete — were removed from this table; 072's plan §Entry dispositions records where each went.
 
 ### Fifth round — classified 2026-10-17
 
@@ -392,17 +391,16 @@ clause rather than as a principle in its own right.
 | Use `npx markdownlint-cli2` to run markdown linting — do not suggest installing it globall (survey G1) | Tooling preference, not a rule |
 | The command generator substitutes `{project}` → `ductus` and `{cli-config-dir}` → `.claude (survey G2) | Framework build step |
 | An edit to `framework/commands/*.md` is invisible to that slash command until the generator re-runs — including to the command you are editing, in the same session (survey G3) | Framework build step |
-| The generator rule has no exceptions — every file under `.claude/commands/ductus/` is generated output, and one with no source is drift for the prune loop rather than a file to hand-maintain (survey G4) | Framework build step |
 | The two frontmatter derivations are runtime primitives, not shipped scripts (survey G6) | Framework authoring |
 | `write_atomic_bytes` (the create-then-rename helper backing every primitive write) lands t (survey G7) | Runtime internals |
 | `runtime/rust-toolchain.toml` pins `components = ["clippy", "rustfmt"]`, and every `cargo` (survey G8) | Runtime build |
-| A new `ductus` runtime primitive wires into more than `primitives/mod.rs` + `mcp/server.rs (survey G9) | Runtime authoring |
 | `<!-- audit:ignore-promotion -->` silences the framework self-audit's Family-9 (primitive- (survey G10) | Framework command authoring |
-| A version bump needs one build without `--locked` (survey G13) | Runtime release |
 | Gitignored adopter state survives a `git` reset, so a "reset" subject is not a fresh one (survey G14) | About testing adopters, not being one |
 | This repo's dogfooded copy of an adopter file is not the copy adopters get — test the shipped one (survey G15) | Structurally impossible for an adopter, who has only the shipped copy |
 | `path` is a reserved array in zsh and clobbering it destroys `PATH` (survey G16) | A shell trap with no pipeline connection |
 | No host-level enforcement of the deterministic (`ductus`) path — it is a deliberate non-goal (survey B1) | A framework design non-goal |
+
+Rows for 3 entries since retired from `AGENTS.md` by `072-governing-documents-stay-within-one-read` — moved to the check that reports them, or deleted as obsolete — were removed from this table; 072's plan §Entry dispositions records where each went.
 
 ## Affected Files
 

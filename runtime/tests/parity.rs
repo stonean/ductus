@@ -929,8 +929,10 @@ fn run_parity_case(command: &str, fixture: &str) {
     let golden = read_golden(fixture);
     let expanded = golden.replace("{{runtime-version}}", env!("CARGO_PKG_VERSION"));
     assert_eq!(
-        actual, expanded,
-        "stream mismatch for {fixture}.jsonl — re-bless by overwriting the golden with the captured stdout (or re-run with BLESS=1 to overwrite all goldens)",
+        actual,
+        expanded,
+        "stream mismatch for {fixture}.jsonl — an edit to framework/commands/{command}.md alone can move it (goldens record the fixture repo's commit shas and step numbers). Re-bless this golden only: `BLESS=1 cargo test --release --locked --test parity {}_stream_matches_golden`, then confirm the diff is only those fields and the prose you edited; never re-bless every golden at once",
+        fixture.replace('-', "_"),
     );
 
     let spec = read_parity_spec(command, fixture);

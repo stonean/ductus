@@ -4,7 +4,7 @@
 # The lint guards a property that fails silently — the crates.io publish must be
 # attempted before the GitHub release is created — so the only evidence it works
 # is that it FAILS on each regression it claims to catch. A guard that cannot
-# fail is the same false green AGENTS.md's first Design Principle records, and
+# fail is the false green framework/constitution.md §design-principles forbids, and
 # is what this file exists to rule out.
 #
 # Coverage:

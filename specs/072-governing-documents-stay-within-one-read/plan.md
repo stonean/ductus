@@ -27,25 +27,220 @@ Four constraints bind every disposition, because existing checks read this file:
 
 - **Bold leads stay verbatim** on every surviving entry. `/ductus:audit` Family 38 (`scripts/audit/promotion-coverage.sh`) matches each row of `050-constitution`'s plan §Classification to an entry by its lead phrase, and reports an unmatched key as a finding. Trimming applies to the body; a lead that is itself a story is re-keyed in 050's table in the same change.
 - **A removed entry's 050 row goes with it.** When a **moved** or **deleted** entry has a row in 050's §Classification table, that row is removed or re-keyed to the entry it merged into, in the same change. 050 is `in-progress` and the table is its record of the guide, so the edit opens nothing.
-- **Content a family reads survives.** The `<!-- audit:sweep-targets:begin -->` … `end` list inside the dead-references entry is Family 23's subject and is kept whole. `unbalanced-inline-markup` scans the file, so markup stays balanced.
+- **Content a family reads survives.** The `<!-- audit:sweep-targets:begin -->` … `end` list is Family 23's subject; it moves out of the dead-references pointer into its own *live-artifact set* entry, and Family 23's fix messages name that entry and is kept whole. `unbalanced-inline-markup` scans the file, so markup stays balanced.
 - **The prose outside entries is held to the same rules.** That is about 9.4 KB of plain bullets, mostly §Gotchas and §Project Structure, and about 2.5 KB of section prose. It counts toward the ceiling, and its stories go too.
 
 The table below is filled while the cut is made. The lead column is abridged to about 40 characters, so the table stays near 25 KB. It has one row per entry, in file order, cited by section and position as the file stood at `5cb01fdb`. Entries added after that commit get rows too, under the spec's *Entries added meanwhile* edge case.
 
 | § | # | Entry (abridged lead) | Disposition | Destination or reason |
 | --- | --- | --- | --- | --- |
+| Header | 3 | The ductus framework — a pipeline-driven… | trimmed | project-only; unchanged |
+| Header | 5 | Agents: this file is the committed home… | trimmed | project-only; routing restated as pointer to §drift-prevention, section rule kept |
+| Constitution | 9 | See [constitution.md](framework/constitu… | trimmed | project-only; unchanged |
+| Project Structure | 13 | The framework/ directory is ductus's sou… | trimmed | project-only; unchanged |
+| Project Structure | 15 | framework/constitution.md — the constitu… | trimmed | project-only; unchanged |
+| Project Structure | 16 | framework/rules/ — domain rule sets adop… | trimmed | project-only; unchanged |
+| Project Structure | 17 | framework/templates/spec/ — templates co… | trimmed | project-only; unchanged |
+| Project Structure | 18 | framework/templates/project/ — project d… | trimmed | project-only; unchanged |
+| Project Structure | 19 | framework/commands/ — operational slash… | trimmed | project-only; unchanged |
+| Project Structure | 20 | framework/reference/ — each command's ma… | trimmed | project-only; 071 provenance link and reference-reading detail cut |
+| Project Structure | 21 | framework/bootstrap/ — the ductus.md ins… | trimmed | project-only; unchanged |
+| Project Structure | 23 | When adding files under framework/, plac… | trimmed | project-only; unchanged |
+| Tech Stack | 27 | ductus is a text-first framework. The im… | trimmed | project-only; unchanged |
+| Tech Stack | 29 | Markdown | trimmed | project-only; durability restatement cut (constitution §tasks-phase states it) |
+| Tech Stack | 30 | Bash scripts | trimmed | project-only; unchanged |
+| Tech Stack | 31 | GitHub Actions YAML | trimmed | project-only; unchanged |
+| Tech Stack | 32 | Node.js / markdownlint-cli2 | trimmed | project-only; pinning rationale and failure list cut, Node-on-PATH rule kept |
+| Tech Stack | 33 | Rust | trimmed | project-only; examples and stale-prone run-generator list cut (runtime-tools.txt) |
+| Tech Stack | 35 | The runtime is required, and acquired by… | trimmed | project-only; §runtime-boundary restatement and five-targets count cut |
+| Tech Stack | 37 | When further tooling-language decisions… | trimmed | project-only; CLI-UX rationale cut |
+| Workflow | 41 | Commit directly to main — this repo uses… | trimmed | project-only; owner decision; incident account and §grounding copy cut |
+| Workflow | 42 | Review an external pull request for corr… | trimmed | project-only; PR #5 incident account cut |
+| Workflow | 43 | Never create a repository named govern u… | trimmed | project-only; reason paragraph cut |
+| Workflow | 44 | A change ships via a ductus-v<version> t… | trimmed | project-only; owner decision; version sites left to Family 20, golden notes obsolete |
+| Workflow | 45 | A pushed tag is not a published release,… | trimmed | project-only; 0.49.1 incident account cut |
+| Workflow | 46 | done is not the same as discharged — the… | trimmed | project-only; gate enumeration and 055 history cut |
+| Workflow | 47 | A spec does not reach done with an outst… | pointer | §implement-phase |
+| Workflow | 48 | Work a recommendation out to its result… | pointer | §recommendations |
+| Workflow | 49 | Never record anything durable in review.… | pointer | §implement-phase |
+| Workflow | 50 | Run scripts/audit/run-all.sh after commi… | pointer | §grounding |
+| Workflow | 51 | When a scenario is recorded after the fi… | pointer | §implement-phase |
+| Workflow | 52 | A review is the five passes, not the wri… | trimmed | project-only; stale no-denominator premise and incident account cut |
+| Workflow | 53 | examined counts the in-scope files the p… | pointer | §implement-phase |
+| Workflow | 54 | When one commit reopens several specs, r… | trimmed | project-only; incident account and review-record chain cut |
+| Workflow | 54+ | (split) fix-round re-read rule is distin… | trimmed | new entry split from #54 |
+| Workflow | 55 | Never record another project's name in t… | trimmed | project-only; owner decision; story cut, dead tests/ path fixed |
+| Workflow | 56 | Read framework/commands/{name}.md before… | trimmed | project-only; unchanged |
+| Workflow | 57 | A .ductus/config.toml change is cross-sp… | pointer | §cross-spec-impact |
+| Workflow | 58 | A retired feature's spec is deleted, not… | pointer | §spec-lifecycle |
+| Workflow | 59 | No dead references in live artifacts. | pointer | §drift-prevention |
+| Workflow | 59+ | (split) Family 23 sweep-target list is r… | trimmed | new entry split from #59 |
+| Workflow | 60 | No dead code — remove what nothing calls… | trimmed | project-only; owner decision; incident account cut |
+| Workflow | 61 | A test must fail when the behavior it na… | pointer | QUAL-TEST-001 |
+| Workflow | 62 | A behavior change needs a prose-claim sw… | pointer | §drift-prevention |
+| Workflow | 62+ | (split) sweep-completeness sub-rules not… | trimmed | new entry split from #62 |
+| Workflow | 63 | A change to an agent-facing surface must… | trimmed | project-only; backfill incident accounts cut |
+| Workflow | 64 | Cross-service reference edits are mechan… | pointer | §spec-lifecycle |
+| Workflow | 65 | Criterion-label assignment is mechanical… | pointer | §spec-lifecycle |
+| Workflow | 66 | Never hand-write an AC{n}: label — add t… | pointer | §spec-requirements |
+| Workflow | 67 | Run /ductus per its spec — no ad-hoc pro… | pointer | installer preamble (framework/bootstrap/ductus.md Procedural fidelity) |
+| Workflow | 68 | Use the Write tool, not Bash redirects,… | pointer | §text-first-artifacts |
+| Workflow | 69 | Use repo-relative paths in tool calls. | trimmed | project-only; incident account cut |
+| Workflow | 70 | Never call specs "frozen archaeology" or… | trimmed | project-only; done-sweep history and file list cut |
+| Workflow | 71 | Re-open a done spec via set-status when… | pointer | §spec-lifecycle |
+| Workflow | 72 | Add a rule to its surface's home spec vi… | pointer | §rules (second Rules heading, #rules-1) |
+| Workflow | 73 | Route shared runtime work to its owning… | trimmed | project-only; owner decision; per-spec primitive lists cut (owner specs name them) |
+| Workflow | 74 | A canonical table living on a done spec… | pointer | §spec-lifecycle (release-gate cost reported by review-freshness.sh:497) |
+| Workflow | 75 | Backtick a primitive in an ## Instructio… | trimmed | project-only; parity goldens cover only some commands; incident account cut |
+| Workflow | 76 | Do not invoke cargo build twice in one s… | trimmed | project-only; incident account cut |
+| Workflow | 77 | The local gate is the whole CI surface,… | pointer | §grounding |
+| Workflow | 77+ | (split) repo gate surface (push workflow… | trimmed | new entry split from #77 |
+| Workflow | 78 | After pushing, read every workflow's run… | pointer | §grounding |
+| Workflow | 79 | The runtime stays current — scripts/chec… | trimmed | project-only; owner decision; drift story and script-reported mechanics cut |
+| Workflow | 80 | A CI check that reads git history needs… | pointer | §design-principles |
+| Workflow | 81 | A new test that reads git history or she… | pointer | §design-principles |
+| Workflow | 82 | When an item routes to a chore, fix it —… | pointer | §brownfield-inbox |
+| Workflow | 83 | git checkout -- specs/{feature}/ silentl… | pointer | §spec-lifecycle |
+| Workflow | 84 | Renaming this repository orphans contrib… | pointer | §drift-prevention |
+| Workflow | 86 | Before reporting that a declarative entr… | pointer | §grounding |
+| Workflow | 87 | A real adopter run is the only test of c… | trimmed | project-only; six-defect incident account cut |
+| Workflow | 88 | A run summary is evidence about what tha… | pointer | §grounding (prefer the source to the recollection) |
+| Workflow | 90 | Verify what a commit actually contains b… | pointer | §grounding |
+| Workflow | 91 | Read what a push carries before pushing… | pointer | §concurrent-features |
+| Workflow | 92 | Stop your own background tasks before wr… | trimmed | project-only; release-poll handoff incident account cut |
+| Workflow | 93 | A CI verdict comes from pushing main — n… | trimmed | project-only; owner decision; draft PR #4 incident and quote cut |
+| Workflow | 94 | Read the clock and read the sha — never… | pointer | §grounding (substitute, never transcribe, a timestamp or commit) |
+| Workflow | 95 | Discard an observation about the pipelin… | trimmed | project-only (050 row); 026 review incident cut |
+| Workflow | 96 | The inbox is a queue to drain, not a led… | trimmed | project-only; owner decision; 2026-09-13/14 measurements and quote cut |
+| Workflow | 97 | A finding whose fix lands inside a spec… | trimmed | project-only; owner decision; core is §brownfield-inbox; 022 pricing figures cut |
+| Workflow | 98 | A finding made during implementation bec… | pointer | §brownfield-inbox (scope decides the destination; disposition task) |
+| Workflow | 99 | An inbox item blocked on an external eve… | pointer | §brownfield-inbox (blocked on an external event is discarded) |
+| Workflow | 100 | check-artifacts reports clean: true and… | pointer | §implement-phase (ticked criteria verified against the tree before close) |
+| Workflow | 100+ | (split) never-true arm not in constituti… | trimmed | new entry split from #100 |
+| Workflow | 102 | This repository keeps no per-user agent… | trimmed | project-only; owner decision; quote cut; overlaps planned CLAUDE.md routing (AC8) |
+| Workflow | 103 | Land a correction in a git-tracked artif… | trimmed | project-only; 2026-05-17 heredoc incident cut |
+| Workflow | 104 | "Confirm every modification" means verif… | trimmed | project-only; owner decision; spec 058 incident cut |
+| Workflow | 105 | "Continue" while decisions are open is n… | trimmed | project-only; README rewrite incident cut |
+| Workflow | 106 | An interrupt followed by a command is th… | trimmed | project-only; re-target incident cut |
+| Workflow | 107 | Trace a surprising state change to your… | trimmed | project-only; release-binary incident and example cut |
+| Workflow | 108 | A requested prompt is one copy-pasteable… | trimmed | project-only; owner decision |
+| Workflow | 109 | Do not relay claude.ai connector-authori… | trimmed | project-only; owner decision |
+| Workflow | 110 | Fan independent work out in parallel; ke… | trimmed | project-only; owner decision; examples, quote and constitution restatements cut |
+| Gotchas | 114 | Pi has no MCP client — its tool surface… | trimmed | project-only; harness header cites this entry; PR #5 incident account cut |
+| Gotchas | 116 | After changing runtime source, verify th… | trimmed | project-only; spec 054/055 incident accounts cut |
+| Gotchas | 117 | framework/commands/help.md is generated… | trimmed | project-only; hook regenerates silently, nothing reports it; incident cut |
+| Gotchas | 118 | Registering a runtime primitive is five… | trimmed | project-only; absorbs L133; runtime/src/parser/mod.rs:993 cites AGENTS.md Gotchas |
+| Gotchas | 119 | check-artifacts' skipped array names tar… | trimmed | project-only; path corrected to framework/reference/analyze.md; incident cut |
+| Gotchas | 120 | Use npx markdownlint-cli2 to run markdow… | trimmed | project-only; unchanged |
+| Gotchas | 121 | A prose-only edit to framework/commands/… | moved | runtime/tests/parity.rs:933 |
+| Gotchas | 122 | An assessSpecQuality step's prose choose… | trimmed | project-only; nothing pins analyze.md step tiers; incident cut |
+| Gotchas | 123 | Two extension points fan out in the exec… | trimmed | project-only; test-authoring rule, no check; incident cut |
+| Gotchas | 124 | The command generator substitutes {proje… | trimmed | project-only; gov-rename history cut |
+| Gotchas | 125 | An edit to framework/commands/.md is inv… | trimmed | project-only; runtime/MCP half duplicates L116; incident cut |
+| Gotchas | 126 | The pre-commit hook regenerates the comm… | moved | .github/workflows/generators.yml:72 |
+| Gotchas | 127 | The pre-commit hook lints and tests the… | trimmed | project-only; failure is clippy output, no repo line names it; incident cut |
+| Gotchas | 128 | The generator rule has no exceptions — e… | moved | scripts/gen-claude-commands.sh:173 |
+| Gotchas | 129 | Never git add -A / git add . in this rep… | pointer | §text-first-artifacts |
+| Gotchas | 130 | The two frontmatter derivations are runt… | pointer | §runtime-boundary (frontmatter schema also names both primitives) |
+| Gotchas | 131 | write_atomic_bytes (the create-then-rena… | trimmed | project-only; corrected: a rewrite now keeps its prior mode; incident cut |
+| Gotchas | 132 | runtime/rust-toolchain.toml pins compone… | trimmed | project-only; nothing reports a workflow missing the input; incident cut |
+| Gotchas | 133 | A new ductus runtime primitive wires int… | deleted | duplicate of L118 (primitive registration sites) |
+| Gotchas | 134 | A new slash command wires into five plac… | trimmed | project-only; parser step-number test list is unreported; incident cut |
+| Gotchas | 135 | <!-- audit:ignore-promotion --> silences… | trimmed | project-only; parser half of Workflow L75; incident cut |
+| Gotchas | 137 | A markdown link in a spec body creates a… | pointer | §text-first-artifacts |
+| Gotchas | 138 | create-scenario appends its own Open/Res… | pointer | §scenarios |
+| Gotchas | 139 | A version bump needs one build without -… | moved | scripts/audit/check-zero.sh:43-44 (names fix); parity-rebuild tail obsolete |
+| Gotchas | 140 | Never write a literal ductus-vX.Y.Z into… | trimmed | project-only; 022 inbox-row incident cut; BLESS caution from L139 kept here |
+| Gotchas | 142 | Gitignored adopter state survives a git… | trimmed | project-only; 048 AC10 incident account cut |
+| Gotchas | 143 | This repo's dogfooded copy of an adopter… | trimmed | project-only; 048/013 adopter-run incident cut |
+| Gotchas | 144 | A spec's review diff base moves forward… | pointer | §implement-phase |
+| Gotchas | 145 | An apostrophe anywhere in an /audit fami… | moved | .github/workflows/framework-checks.yml:196 (shellcheck SC1011); comment proposed |
+| Gotchas | 146 | Replacing a hand-rolled predicate with a… | pointer | QUAL-DELEG-001 (framework/rules/quality-cross.md carries the trust-context point) |
+| Gotchas | 147 | remove-inbox-item takes the bullet text,… | pointer | §brownfield-inbox |
+| Gotchas | 148 | A scenario's link to a sibling spec need… | pointer | §text-first-artifacts (hook check-corpus-links also reports it, names fix) |
+| Gotchas | 149 | path is a reserved array in zsh and clob… | trimmed | project-only; path+status kept, incidents cut; headSha split to L149+ |
+| Gotchas | 149+ | (split) headSha poll filter is a distinc… | trimmed | new entry split from #149 |
+| Gotchas | 150 | An unquoted parameter does not word-spli… | trimmed | project-only; fixed check-rule-ids bug story and routing lesson cut |
+| Gotchas | 151 | A word starting with = is a command look… | trimmed | project-only; handoff-note history cut |
+| Gotchas | 152 | A colon after a parameter is a zsh modif… | trimmed | project-only; 025 recovery incident cut |
+| Gotchas | 153 | check-orphaned-references used to report… | deleted | obsolete: fixed in ductus-v0.49.4 (check_artifacts.rs:1560); findings: 0 |
+| Gotchas | 154 | compute-review-scope and diff-cross-spec… | pointer | §grounding (review.md step 1 states the failed-call branch) |
+| Gotchas | 155 | In a set -e script, [ test ] && cmd as t… | trimmed | project-only; hook and gen-configure-mcp incident history cut |
+| Gotchas | 156 | A feature directory is not necessarily N… | trimmed | project-only (Rust half of §numbering-convention); 051 incident cut |
+| Gotchas | 157 | clap expands {n} in a doc comment as a n… | trimmed | project-only; create-feature incident cut |
+| Gotchas | 158 | Verify that a recorded decision still ho… | trimmed | project-only; 003/000/017 accounts cut (universal: promotion candidate) |
+| Gotchas | 159 | "Record" spans five destinations in this… | pointer | §pipeline-boundaries |
+| Gotchas | 160 | Editing framework/commands/implement.md… | moved | runtime/tests/parity.rs:933 (CI runtime.yml); message fix proposed; dup of L121 |
+| Gotchas | 161 | Mutating code to prove a test fails: run… | trimmed | project-only; dated timings and harness history cut |
+| Gotchas | 162 | The .govern.toml residue, and what it me… | pointer | §drift-prevention; lead was a story, replaced by the constitution's own lead |
+| Gotchas | 163 | Piping a gate command's output replaces… | pointer | §grounding |
+| Gotchas | 165 | A § reference resolves by line, and intr… | pointer | §drift-prevention |
+| Gotchas | 166 | A path:line citation in a spec body is p… | trimmed | project-only; measurements and 051 account cut (universal: promotion candidate) |
+| Gotchas | 167 | A review record written before ductus-v0… | pointer | §implement-phase |
+| Gotchas | 168 | An acceptance criterion's parenthetical… | pointer | §grounding |
+| Gotchas | 169 | A spec with no recorded in-progress tran… | pointer | §implement-phase |
+| Gotchas | 170 | A cross-spec signpost is not rename resi… | trimmed | project-only; 006/011 incident cut (universal: promotion candidate) |
+| Gotchas | 171 | A sweep must not rewrite the record of t… | trimmed | project-only; dated measurements and sweep incidents cut |
+| Gotchas | 172 | A sweep can make a quoted instruction po… | pointer | §drift-prevention |
+| Gotchas | 173 | A spec body must not carry a point-in-ti… | pointer | §spec-requirements |
+| Gotchas | 174 | Only a spec's durable contracts stale it… | pointer | §implement-phase |
+| Gotchas | 175 | criterion-path-existence only sees a pat… | pointer | §spec-requirements |
+| Gotchas | 176 | unexamined cannot be measured while the… | pointer | §implement-phase |
+| Gotchas | 177 | A spec's own completion commit can destr… | pointer | §text-first-artifacts |
+| Gotchas | 179 | process-decisions with an empty fired ex… | trimmed | project-only; incident account cut (universal: promotion candidate) |
+| Gotchas | 181 | append-task has two shapes that both ret… | pointer | §scenarios |
+| Gotchas | 181+ | (split) CLI --body/--parent-heading spel… | trimmed | new entry split from #181 |
+| Gotchas | 182 | A primitive whose result has two shapes… | trimmed | project-only; incident cut; no check for flattened halves sharing a key |
+| Gotchas | 183 | set-status takes --from and --to, not --… | pointer | §spec-lifecycle |
+| Gotchas | 184 | A boolean argument is a valueless flag o… | trimmed | project-only; incident cut; clap refusal is runtime/src and lacks the fix |
+| Gotchas | 185 | A recorded measurement can encode a cons… | pointer | §grounding |
+| Gotchas | 186 | Git's -E is POSIX ERE and does not honou… | trimmed | project-only; incident account cut |
+| Gotchas | 187 | cargo exits 101 from the repo root, and… | trimmed | project-only; incident account cut |
+| Gotchas | 189 | /{project}:consolidate migrates no conte… | trimmed | project-only; incident cut; keeps the hand-correct rule L58's pointer dropped |
+| Gotchas | 190 | grep here is ugrep, and a bounded-contex… | trimmed | project-only; incident account cut |
+| Gotchas | 191 | write-review derives scope itself, so a… | pointer | §implement-phase |
+| Gotchas | 191+ | (split) scope counts entries, not files… | trimmed | new entry split from #191 |
+| Gotchas | 193 | Adding a member to a closed set the chec… | trimmed | project-only; incident cut; Family 18 binds marker lists only |
+| Gotchas | 195 | Relocating a frontmatter field: the read… | pointer | §grounding |
+| Gotchas | 196 | The project root is not the git work tre… | trimmed | project-only; 059 account cut; hook case is Family 22; no Repository lint |
+| Gotchas | 196+ | (split) command-source git output parsin… | trimmed | new entry split from #196 |
+| Gotchas | 198 | Since spec 062 the runtime reads a sessi… | trimmed | project-only; incident cut; no check enforces ductus_command |
+| Gotchas | 200 | A rule that assumes a deployed service d… | trimmed | project-only; 022 analysis account cut |
+| Gotchas | 202 | A new rule category must be registered i… | trimmed | project-only; incident cut; path now framework/reference/analyze.md |
+| Gotchas | 204 | eprintln! panics when stderr is a pipe w… | trimmed | project-only; incident cut; stale list of remaining eprintln sites cut |
+| Gotchas | 205 | An interrupted turn silently kills the b… | trimmed | project-only; incident account cut |
+| Gotchas | 206 | A background agent that launches its own… | trimmed | project-only; incident cut; unlocatable ask-the-owner rule reference cut |
+| Gotchas | 207 | A background agent's hand-back can arriv… | trimmed | project-only; incident account cut |
+| Gotchas | 208 | Invoke the runtime as runtime/target/rel… | trimmed | project-only; rebuilt-binary half left to L116 |
+| Gotchas | 209 | Identify a request to an outside service… | trimmed | project-only; 2026-10-20 and 2026-10-26 incident accounts cut |
+| Gotchas | 210 | A destination check judges where a write… | trimmed | project-only; nine re-read round accounts cut; over budget, several sub-rules |
+| Gotchas | 211 | An exact allow rule bounds the command t… | trimmed | project-only; 022 task 18 account cut; docs quote dropped |
+| Gotchas | 212 | Two traps in this repo's audit scripts a… | trimmed | project-only; incident account and constitution-restating clause cut |
+| Gotchas | 213 | With anything under runtime/ staged, the… | trimmed | project-only; 2026-10-25 incident account cut |
+| Gotchas | 214 | An installer change can be exercised wit… | trimmed | project-only; measurements and dates cut; two rules in one entry, over budget |
+| Boundaries | 218 | No host-level enforcement of the determi… | trimmed | project-only (050 B1); reason paragraph cut |
+| Boundaries | 219 | Never edit an installed command file dir… | pointer | §drift-prevention |
+| Boundaries | 220 | Never end a response with a "worth flagg… | pointer | §design-principles |
+| Design Principles | 224 | Reach for a runtime primitive first; a s… | pointer | §runtime-boundary |
+| Design Principles | 226 | A check that cannot run must never look… | pointer | §design-principles |
+| Design Principles | 228 | Never close work with a caveat attached… | pointer | §design-principles |
+| Design Principles | 229 | Never design framework features that dep… | pointer | §design-principles |
+| Design Principles | 231 | Removing an embedded copy is a corpus sw… | pointer | §drift-prevention |
+| Design Principles | 233 | A data-model.md that claims "authoritati… | pointer | §drift-prevention |
+| Design Principles | 235 | Point at the canonical source — never em… | pointer | §drift-prevention |
+| Design Principles | 237 | A conformance test whose subject is draw… | pointer | §design-principles |
 
 ### Size target
 
-The ceiling is 50,000 bytes. The cut aims for 40,000–45,000, so the first lesson added after this spec closes does not fire the check. A ceiling met with zero headroom would force a retirement on the very next commit, before the exit has been exercised once.
+The ceiling is 50,000 bytes, and the guide lands at 46,555, leaving room for the next few lessons. A ceiling met with zero headroom would force a retirement on the very next commit, before the exit had been exercised once. The landing is above the 45,000 first aimed at because the two security-derived entries (*a destination check judges where a write lands* and *an exact allow rule bounds the command text*) keep their full text, about 650 bytes over the cap. Each enumerates refusals a later check must reproduce, and the cap would have dropped four of them.
 
 ### Fan-out for classification
 
-The 164 entries are independent of one another, so classification fans out to parallel agents by section chunk. Each agent gets the rubric above, the four constraints, its chunk's text, and the byte arithmetic, not an adjective. A pointer is about 250 bytes, because leads run long, so the 56 cost about 14 KB. Headings and prose take about 5 KB. That leaves 21–26 KB for the trimmed set, so a trimmed entry's body is capped at about 350 bytes: the rule, and one sentence of how this repository applies it. Each agent returns a proposed disposition, the replacement text and, for **moved**, the enforcement site and whether its message names the fix. The assembly, the table, every write to `AGENTS.md` and the commit are serial (`AGENTS.md` §Workflow, the fan-out entry). Every **moved** and **deleted** proposal is verified against the tree before it is accepted. An agent's claim that a check covers a failure is a claim, and it is read before it is trusted.
+The 164 entries are independent of one another, so classification fans out to parallel agents by section chunk. Each agent gets the rubric above, the four constraints, its chunk's text, and the byte arithmetic, not an adjective. Pointers keep their long leads, so 71 of them cost about 12 KB. The trimmed set therefore gets a body cap of 200 bytes after its lead, enforced in two passes. The first classified and trimmed. It landed at 57 KB, because a lead averages about 150 bytes on top of a 350-byte body. The second compressed only the bodies still over the cap, again fanned out, with every lead and the sweep-target list held byte-identical by the applying script. Each agent returns a proposed disposition, the replacement text and, for **moved**, the enforcement site and whether its message names the fix. The assembly, the table, every write to `AGENTS.md` and the commit are serial (`AGENTS.md` §Workflow, the fan-out entry). Every **moved** and **deleted** proposal is verified against the tree before it is accepted. An agent's claim that a check covers a failure is a claim, and it is read before it is trusted.
 
 ### Enforcement-site edits stop short of `runtime/src/`
 
-A message or comment added for a **moved** entry lands in `scripts/`, `scripts/tests/`, `.githooks/`, `.github/workflows/` or `runtime/tests/`. When the only enforcement site is in `runtime/src/` and its message lacks the fix, the entry stays **trimmed** instead. A change under `runtime/src/` reaches adopters only at a `ductus-v*` release and runs the cargo gate on every commit, and neither cost buys anything for a documentation move.
+A message or comment added for a **moved** entry lands in `scripts/`, `scripts/tests/`, `.githooks/`, `.github/workflows/` or `runtime/tests/`. When the only enforcement site is in `runtime/src/` and its message lacks the fix, the entry stays **trimmed** instead. Two `runtime/src/` comments that cited `AGENTS.md` text the cut removes (`parser/mod.rs`, `primitives/mechanical_sweep.rs`) are corrected in place, comment-only, because a prose-claim sweep covers doc comments. A change under `runtime/src/` reaches adopters only at a `ductus-v*` release and runs the cargo gate on every commit, and neither cost buys anything for a documentation move.
 
 ### The ceiling check is a script, not a runtime primitive
 
@@ -107,7 +302,9 @@ The probe question is picked after the cut, from an entry that survives it.
 | `scripts/tests/test-lint-governing-size.sh` | Create | Proves the check fails and passes |
 | `.githooks/pre-commit` | Modify | Runs the check on every commit |
 | `.github/workflows/framework-checks.yml` | Modify | Step `(o)`: the check and its test |
-| `scripts/`, `scripts/tests/`, `.githooks/`, `.github/workflows/`, `runtime/tests/` | Modify | Enforcement-site messages or comments for **moved** entries whose report did not name the fix |
+| `runtime/tests/parity.rs`, `.github/workflows/generators.yml`, `scripts/gen-claude-commands.sh`, `scripts/audit/lib.sh` | Modify | Enforcement-site messages or comments for **moved** entries whose report did not name the fix |
+| `scripts/audit/sweep-target-manifest-parity.sh` | Modify | Fix messages name the *live-artifact set* entry the sweep-target list moved to |
+| `scripts/lint-release-ordering.sh`, `scripts/tests/test-lint-release-ordering.sh`, `.github/workflows/runtime-release.yml`, `scripts/audit/lib.sh`, `scripts/audit/introducing-drift.sh`, `runtime/src/parser/mod.rs`, `runtime/src/primitives/mechanical_sweep.rs` | Modify | Comments that cited `AGENTS.md` text the cut removes now cite the constitution or the surviving entry |
 | `specs/072-governing-documents-stay-within-one-read/plan.md` | Modify | The entry-disposition table (AC5) |
 | `specs/050-constitution/plan.md` | Modify | §Classification rows for removed entries removed or re-keyed, so Family 38 still matches |
 

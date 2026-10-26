@@ -631,8 +631,8 @@ jobs:
   # job that runs is worth more than a sentence that accommodates.
   #
   # It calls runtime-acquisition.yml rather than restating it, so the automatic
-  # path and the hand-dispatched one cannot drift apart. AGENTS.md's first
-  # Design Principle is what makes that reuse load-bearing: a second copy of
+  # path and the hand-dispatched one cannot drift apart. framework/constitution.md
+  # §design-principles is what makes that reuse load-bearing: a second copy of
   # this sequence would be a check that could rot without anything saying so.
   verify-published:
     name: Verify the published release is acquirable

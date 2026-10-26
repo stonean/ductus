@@ -34,7 +34,7 @@
 //!
 //! Everything here is derived from the diff. A commit trailer or an opt-out
 //! flag would make correctness depend on an author remembering to set it,
-//! which `AGENTS.md`'s second Design Principle rules out.
+//! which `framework/constitution.md` §design-principles rules out.
 //!
 //! This is the Rust half of a rule with two enforcement moments. Family 19
 //! applies the same rule at release time from `scripts/audit/review-freshness.sh`,

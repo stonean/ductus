@@ -63,7 +63,7 @@ if ! grep -q -- "$BEGIN_MARK" "$LIST_FILE" 2>/dev/null \
   || ! grep -q -- "$END_MARK" "$LIST_FILE" 2>/dev/null; then
   emit "$LIST_FILE" \
     "live-artifact enumeration markers are missing or unbalanced — $BEGIN_MARK and $END_MARK must both be present" \
-    "restore both delimiting comments around the enumeration in $LIST_FILE §Workflow's dead-references entry"
+    "restore both delimiting comments around the enumeration in $LIST_FILE §Workflow's live-artifact-set entry"
   exit "$drift"
 fi
 
@@ -81,7 +81,7 @@ entry_count="$(printf '%s\n' "$entries" | grep -c '[^[:space:]]')"
 if [ "$entry_count" -eq 0 ]; then
   emit "$LIST_FILE" \
     "live-artifact enumeration is empty or its $BEGIN_MARK / $END_MARK markers are missing — nothing to check the manifest against" \
-    "restore the enumeration and its delimiting comments in $LIST_FILE §Workflow's dead-references entry"
+    "restore the enumeration and its delimiting comments in $LIST_FILE §Workflow's live-artifact-set entry"
   exit "$drift"
 fi
 

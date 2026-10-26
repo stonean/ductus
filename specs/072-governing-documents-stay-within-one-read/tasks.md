@@ -4,25 +4,25 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 1. Classify every `AGENTS.md` entry
 
-- [ ] Split the entries into section chunks and fan them out to parallel agents with the plan's disposition rubric; each returns a disposition, replacement text, and for **moved** the enforcement site and whether its message names the fix
-- [ ] Verify every **moved** and **deleted** proposal against the tree: open the check it names, confirm it reports the failure, and confirm a deleted entry's subject is gone or merged
-- [ ] Fill the plan's §Entry dispositions table, one row per entry in file order
+- [x] Split the entries into section chunks and fan them out to parallel agents with the plan's disposition rubric; each returns a disposition, replacement text, and for **moved** the enforcement site and whether its message names the fix
+- [x] Verify every **moved** and **deleted** proposal against the tree: open the check it names, confirm it reports the failure, and confirm a deleted entry's subject is gone or merged
+- [x] Fill the plan's §Entry dispositions table, one row per entry in file order
 
 - **Done when**: every entry in `AGENTS.md` has exactly one row, and every **moved** or **deleted** row names its destination or reason
 
 ## 2. Make the enforcement-site edits
 
-- [ ] For each **moved** entry whose enforcement message does not name the fix, add the fix to the message or as a comment at the site, outside `runtime/src/`
-- [ ] Run each edited script's own test, or the suite that covers the edited test
+- [x] For each **moved** entry whose enforcement message does not name the fix, add the fix to the message or as a comment at the site, outside `runtime/src/`
+- [x] Run each edited script's own test, or the suite that covers the edited test
 
 - **Done when**: every **moved** entry's enforcement site names the fix, and the edited checks still pass
 
 ## 3. Rewrite `AGENTS.md` from the table
 
-- [ ] Apply every disposition: pointers as the verbatim lead plus `§anchor`, trimmed entries without their stories, moved and deleted entries removed; keep the sweep-target marker list whole
-- [ ] Remove or re-key `specs/050-constitution/plan.md` §Classification rows for every removed entry, so Family 38 reports no unmatched key
-- [ ] Measure the file: at most 50,000 bytes, aiming for 40,000–45,000
-- [ ] Run markdownlint, `check-corpus-links` and `bash scripts/audit/run-all.sh`, which includes the families that read `AGENTS.md`
+- [x] Apply every disposition: pointers as the verbatim lead plus `§anchor`, trimmed entries without their stories, moved and deleted entries removed; keep the sweep-target marker list whole
+- [x] Remove or re-key `specs/050-constitution/plan.md` §Classification rows for every removed entry, so Family 38 reports no unmatched key
+- [x] Measure the file: at most 50,000 bytes, aiming for 40,000–45,000
+- [x] Run markdownlint, `check-corpus-links` and `bash scripts/audit/run-all.sh`, which includes the families that read `AGENTS.md`
 
 - **Done when**: `AGENTS.md` is at most 50,000 bytes, AC2–AC4 hold entry by entry against the table, and lint, the link check and the audit pass
 
@@ -48,9 +48,9 @@ Blocked on task 3: wired before the cut, the check would fail every commit.
 
 Blocked on task 3: the import loads the guide whole into every session.
 
-- [ ] Negative control: before editing, run the plan's tool-less `claude -p` probe and confirm it cannot answer
-- [ ] `CLAUDE.md`: `@AGENTS.md`; remove Non-negotiables and the constitution import; reduce Auto-Memory Routing to a pointer plus the no-auto-memory fact
-- [ ] Positive run: the same probe answers correctly with no tool use in its stream
+- [x] Negative control: before editing, run the plan's tool-less `claude -p` probe and confirm it cannot answer
+- [x] `CLAUDE.md`: `@AGENTS.md`; remove Non-negotiables and the constitution import; reduce Auto-Memory Routing to a pointer plus the no-auto-memory fact
+- [x] Positive run: the same probe answers correctly with no tool use in its stream
 
 - **Done when**: AC6, AC7 and AC8 hold, and the probe's negative and positive runs are both recorded in the commit message
 
@@ -68,3 +68,11 @@ Found 2026-10-26 while planning. `framework/templates/project/claude-md.md` line
 - [ ] Re-measure `AGENTS.md` and the constitution against the check's ceilings
 
 - **Done when**: every criterion is ticked on evidence, and the ceiling check passes on the committed tree
+
+## 9. Disposition out-of-spec findings from the AGENTS.md classification
+
+- [ ] `framework/constitution.md` §text-first-artifacts review-record table says `scope` counts "Files the review's scope contained"; `write_review.rs` records `scope.len()` of the plan's Affected Files entries, unexpanded (`parse_affected_files` in `runtime/src/primitives/mod.rs`)
+- [ ] `framework/commands/implement.md` steps 7 and 13 call `diff-cross-spec` with no handling for a failed call (a wide window can exceed the MCP output cap); `review.md` step 1 states the failed-call rule for `compute-review-scope`
+- [ ] Promotion candidates the classification surfaced, each kept as a trimmed `AGENTS.md` entry: the five-passes review rule, *ask whether a ticked criterion was ever true*, *a `path:line` citation is provenance*, *a cross-spec signpost is not rename residue*, *`process-decisions` with an empty `fired`*, *verify a recorded decision still holds*
+
+- **Done when**: each finding is fixed, routed, or discarded with its reason recorded on this task

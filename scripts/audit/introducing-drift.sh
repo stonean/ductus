@@ -71,7 +71,7 @@ RENAMED_TOKENS=(
 # demanded exactly three digits, so a spec numbered past 999 was skipped
 # while the family still exited 0; the awk beside it was another hand-rolled
 # frontmatter reader in a repo whose runtime parses frontmatter for a living
-# (spec 051, AGENTS.md Design Principles).
+# (spec 051, framework/constitution.md §runtime-boundary).
 bin="$(ductus_bin)"
 if [ -z "$bin" ]; then
   emit "(precondition)" \

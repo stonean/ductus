@@ -25,9 +25,9 @@
 #      published assets. The gating `acquire` job runs before the release
 #      exists and so reads staged artifacts; without a post-release check, the
 #      constitution's §runtime-boundary acquisition invariant would be enforced
-#      only by a hand-dispatched workflow. AGENTS.md records that exact shape —
-#      an invariant cited by name and never once executed — as one of this
-#      repo's four most expensive failures.
+#      only by a hand-dispatched workflow: an invariant cited by name and never
+#      once executed, the false green framework/constitution.md
+#      §design-principles forbids.
 #
 # Source of truth: specs/048-govern-acquired-runtime/scenarios/release-halves-publish-together.md
 # Consumed by: .github/workflows/framework-checks.yml

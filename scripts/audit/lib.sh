@@ -26,6 +26,10 @@
 # that exits 0 by design (ssot-invariants) would report clean.
 #
 # Bash 3.2 compatible (macOS system bash): no associative arrays, no `local -n`.
+#
+# Embedded python passed as `python3 -c '...'` must hold no apostrophe,
+# comments included: one closes the shell string (shellcheck SC1011,
+# framework-checks step (j)). Rephrase rather than escape; `bash -n` confirms.
 
 # shellcheck disable=SC2034  # ROOT/drift are read by the sourcing script, not here
 
@@ -120,7 +124,7 @@ agent_config_dirs() {
 # `status:` scan. Both were real defects: a `[0-9][0-9][0-9]-*` glob skips
 # the 1000th spec entirely, and a hand-rolled `\s*`-based scalar read walked
 # past an empty value onto the next line and produced a confidently-wrong
-# finding (AGENTS.md, Design Principles).
+# finding (framework/constitution.md §runtime-boundary).
 #
 # **Exit status, not emptiness, is the failure signal.** A project with no
 # specs at all is a legitimately empty corpus, not a broken run — the python

@@ -70,6 +70,7 @@ jobs:
           dirty="$(git status --porcelain)"
           if [ -n "$dirty" ]; then
             echo "::error::Generator outputs are out of date. Run scripts/install-hooks.sh and re-commit."
+            echo "::error::If a committed generated copy (.claude/commands/, .pi/, .ductus/reference/, the configure files, help.md) is ahead of its source, the pre-commit hook built it from an unstaged source edit — commit that source too."
             printf '%s\n' "$dirty"
             git diff
             exit 1
