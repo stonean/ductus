@@ -87,8 +87,9 @@ split, since rewriting a pointer changes the kept side by a few bytes.
 - **Adopter:** `.ductus/reference/<command>.md`, committed beside
   `.ductus/constitution.md`. One copy serves all five agents.
 - **Never under an agent's commands directory.** Every `.md` file there
-  registers as a command. A reference file installed there would become a
-  command of its own.
+  registers as a command (the Command/skill path and Slash-command cleanup
+  glob rows of Derived values in `framework/bootstrap/ductus.md`). A reference
+  file installed there would become a command of its own.
 
 ### How a step points
 
@@ -124,11 +125,14 @@ A reference file is shared by every agent, so it cannot take a per-agent
 `{cli-config-dir}`. The one occurrence names the agent running the command
 through the `cli-config-dir` recorded in `.ductus/session.toml` instead.
 `{project}` is unaffected: the installer substitutes it in every file it
-copies, shared or not.
+copies, shared or not (`framework/bootstrap/ductus.md`'s Placeholder
+Substitution section: "In every copied file").
 
 `$ARGUMENTS` stays in the command file. A host substitutes the invocation's
 arguments into the command body it loads, and Pi substitutes them nowhere
-else, so an `$ARGUMENTS` that moves stops being substituted. A moved sentence
+else (`specs/064-pi-host-support/spec.md`'s host table: a prompt template's
+body expansion supports `$ARGUMENTS`, and a skill gets no substitution), so an
+`$ARGUMENTS` that moves stops being substituted. A moved sentence
 that used it to name the argument names it in words instead. The move also
 ends a quieter defect: a host substitutes every `$ARGUMENTS` in the body,
 including one that only documents the token, so reference prose describing it
@@ -165,9 +169,11 @@ The repository dogfoods the adopter layout. `scripts/gen-claude-commands.sh`
 writes `.ductus/reference/*.md` from `framework/reference/*.md` with the same
 `{project}` substitution, and its `--check` mode covers them. This repository's
 pointers then resolve to the same paths an adopter's do. The repository has no
-`.ductus/constitution.md` and leans on a runtime fallback for the constitution;
-nothing in the runtime reads a reference file, so there is no fallback to lean
-on, and the files have to exist.
+`.ductus/constitution.md` and leans on a runtime fallback for the constitution,
+`constitution_path` in `runtime/src/schema/paths.rs`, which resolves
+`.ductus/constitution.md` and else `framework/constitution.md`. Nothing in the
+runtime supplies a missing reference file to the agent, so there is no
+fallback to lean on, and the files have to exist.
 
 ## What the split touches
 
@@ -200,7 +206,9 @@ Checked 2026-10-25 by reading each consumer.
   checks the spec-corpus scope, which never reaches `.ductus/`.
 - **The installer's pointers into review.** `framework/bootstrap/ductus.md`
   cites `review.md` §Behavior step 5 for rule-surface selection, four times.
-  That heading had already gone before this change. The selection it meant is
+  That heading had already gone before this change: 4d32d940 (2026-07-06,
+  022's task 45g) renamed review's `## Behavior` to `## Instructions`. The
+  selection it meant is
   item 5 of the reference's *Resolve target and scope* section, which
   Instructions step 2 carries out through `discover-rule-files`. Each pointer is
   re-pointed at the section that holds it after the move.
@@ -411,7 +419,8 @@ its schema.
   2026-10-25: the pin is 0.59.11 and 238 commits sit unreleased since
   `ductus-v0.59.11`.
 - **Is the commands' colon-form invocation in prose fixed here?** Resolved: no.
-  It is wrong for non-claude layouts today and is unchanged by this move, so it
-  is its own change. Trimming `analyze`'s Instructions below the compaction
+  It is wrong for non-claude layouts today (the Invocation row of Derived
+  values in `framework/bootstrap/ductus.md`) and is unchanged by this move, so
+  it is its own change. Trimming `analyze`'s Instructions below the compaction
   window, and splitting `/ductus` further, are out of scope for the same
   reason.

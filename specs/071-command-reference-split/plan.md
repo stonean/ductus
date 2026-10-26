@@ -90,7 +90,9 @@ get no line.
   *Resolve feature number and slug*. It becomes "the command's argument".
   `analyze.md`'s reference documents the token (files whose body documents an
   `$ARGUMENTS` parameter) and keeps it literal; in a reference file a host no
-  longer substitutes it, which is the point.
+  longer substitutes it, which is the point (a host expands only the command
+  body it loads: for Pi, the Command surface row of the host table in
+  `specs/064-pi-host-support/spec.md`).
 - **`{cli-config-dir}`.** One occurrence moves, `analyze.md`'s reference
   (its *Project-level consistency (advisory)* section, now in
   `framework/reference/analyze.md`): "the §Agent Registry row with
@@ -194,6 +196,28 @@ already (`.claude/commands/ductus/audit.md`). `.githooks/pre-commit` gains
   (`check_artifacts.rs:9`, and the `ArtifactFinding` doc comment in
   `schema/primitives.rs`) and the `check-step-references` description
   (`mcp/server.rs`, `schema/primitives.rs`) are corrected.
+
+These change three primitives' results, which `BE-COMPAT-001` asks a plan to
+classify, and the change is **breaking**. `resolve-anchor`'s `kind` gains a
+fourth value, `cross-document`, in a set 067's data model enumerated as three
+and never documented as open, and a reference it counted `qualified` can now
+come back unresolved; `check-step-references` qualifies a `step N of §X`
+reference it used to resolve; and `check-corpus-links --scope repository`
+stops reporting `.ductus/reference/` in a framework checkout. The
+`cross-document` count is an added field. The runtime is pre-1.0, so the
+release that carries the change is a minor bump, 0.60.0 and never a patch
+(Cargo's caret requirements make the minor version the compatibility boundary
+below 1.0), which that release already owes for the breaking changes 022, 025
+and 063 have made since `ductus-v0.59.11`. The consumers ship in the same
+release (§runtime-boundary): `/{project}:analyze`'s step 4, and the exec
+walker's `markers-path` binding for it in `runtime/src/interpreter/mod.rs`,
+read `resolve-anchor`; and this repository's audit runs against the new binary
+at the release gate, where Family 39 reads `resolve-anchor`, Family 34
+`check-step-references`, and Families 26 and 35
+`check-corpus-links --scope repository`. Family 36 and both pre-commit hooks,
+this repository's and the shipped `ductus-pre-commit`, which is the one
+consumer an adopter runs, call `check-corpus-links` on the default spec-corpus
+scope, which this change leaves as it was.
 
 ### Ownership
 
@@ -310,7 +334,9 @@ leaves to a follow-up.
   natively, was out of scope: it changes command names, install paths and
   layouts on five agents.
 - **Installing the reference under each agent's commands directory** was
-  rejected: every `.md` file there registers as a command.
+  rejected: every `.md` file there registers as a command (the Command/skill
+  path and Slash-command cleanup glob rows of Derived values in
+  `framework/bootstrap/ductus.md`).
 - **Reading the reference from the archive, as 056 does,** cannot work: a
   pipeline command runs with no archive present.
 - **Checking pointers in `check-step-references`** would leave the pointers in
