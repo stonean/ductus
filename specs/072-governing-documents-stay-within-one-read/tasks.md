@@ -58,7 +58,9 @@ Blocked on task 3: the import loads the guide whole into every session.
 
 Found 2026-10-26 while planning. `framework/templates/project/claude-md.md` lines 3–4 write `@import .ductus/constitution.md` and `@import AGENTS.md`. The bootstrap writes `@import {document-path}` for shared constitutions (`framework/bootstrap/ductus.md` line 911, and `govern.md`). `check-orphaned-references` and two migrations read that form, and `002-project-scaffolding` AC3 requires it. Claude Code's syntax is `@path`, so an adopter's `CLAUDE.md` loads neither file. Converting the form would also start loading the 119 KB constitution into every adopter session, so the fix is a design decision for the owner.
 
-- [ ] Present the finding and its options to the owner, then fix, route or discard it with the reason
+- [x] Present the finding and its options to the owner, then fix, route or discard it with the reason
+
+Routed 2026-10-26 (owner): `002-project-scaffolding` owns the template, and its §CLAUDE.md template and AC3 are the only spec text that states the form. No spec body for 055 or 027 does. The fix is scenario `specs/002-project-scaffolding/scenarios/claude-md-template-imports-load.md` with its task 5, which reopens 002 `done → in-progress`.
 
 - **Done when**: the finding is fixed, routed to a spec or scenario that a gate reads, or discarded with its reason recorded on this task
 
