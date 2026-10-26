@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [022-deterministic-runtime]
 cross-spec-impact: [052-spec-supersession-and-consolidation]
 next-criterion: 21

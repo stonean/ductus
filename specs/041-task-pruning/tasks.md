@@ -179,3 +179,9 @@ Released: `ductus-v0.56.0` at `62cc9490`, with `framework-checks`, `runtime`, `g
 - [x] Code and tests from the review: CRLF prune tests assert the write; the fenced-H1 reset refusal; the PruneTasksLine mapping test; doc comments on TasksFileMissing, split_blocks, PruneTasksLine, prune-plan's errors and analysis.md's readers
 
 - **Done when**: every correction is on disk, the code changes' tests fail with their behavior reverted, and 041's review and analyze record this reopen
+
+### 21. A plan edit does not reopen a done spec
+
+- [ ] Implement the behavior described in `scenarios/a-plan-edit-does-not-reopen-a-done-spec.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested

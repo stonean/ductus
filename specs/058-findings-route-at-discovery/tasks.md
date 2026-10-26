@@ -39,3 +39,9 @@ Blocked on task 1: the store tests run against the migrated schema.
 - **Done when**: the README link resolves to the new path.
 
 -->
+
+## 1. Findings cost in proportion to risk
+
+- [ ] Implement the behavior described in `scenarios/findings-cost-in-proportion-to-risk.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested
