@@ -301,10 +301,20 @@ The probe question is picked after the cut, from an entry that survives it.
 | `scripts/lint-governing-size.sh` | Create | The ceiling check |
 | `scripts/tests/test-lint-governing-size.sh` | Create | Proves the check fails and passes |
 | `.githooks/pre-commit` | Modify | Runs the check on every commit |
-| `.github/workflows/framework-checks.yml` | Modify | Step `(o)`: the check and its test |
-| `runtime/tests/parity.rs`, `.github/workflows/generators.yml`, `scripts/gen-claude-commands.sh`, `scripts/audit/lib.sh` | Modify | Enforcement-site messages or comments for **moved** entries whose report did not name the fix |
+| `.github/workflows/framework-checks.yml` | Modify | Step `(o)`: the check and its test; step `(j)`'s comment cites the constitution instead of removed `AGENTS.md` text |
+| `runtime/tests/parity.rs` | Modify | Enforcement-site message or comment for a **moved** entry whose report did not name the fix |
+| `.github/workflows/generators.yml` | Modify | Enforcement-site message or comment for a **moved** entry whose report did not name the fix |
+| `scripts/gen-claude-commands.sh` | Modify | Enforcement-site message or comment for a **moved** entry whose report did not name the fix |
+| `scripts/audit/lib.sh` | Modify | Enforcement-site message or comment for a **moved** entry whose report did not name the fix; also a comment that cited `AGENTS.md` text the cut removes now cites the constitution or the surviving entry |
 | `scripts/audit/sweep-target-manifest-parity.sh` | Modify | Fix messages name the *live-artifact set* entry the sweep-target list moved to |
-| `scripts/lint-release-ordering.sh`, `scripts/tests/test-lint-release-ordering.sh`, `.github/workflows/runtime-release.yml`, `scripts/audit/lib.sh`, `scripts/audit/introducing-drift.sh`, `runtime/src/parser/mod.rs`, `runtime/src/primitives/mechanical_sweep.rs` | Modify | Comments that cited `AGENTS.md` text the cut removes now cite the constitution or the surviving entry |
+| `scripts/lint-release-ordering.sh` | Modify | A comment that cited `AGENTS.md` text the cut removes now cites the constitution or the surviving entry |
+| `scripts/tests/test-lint-release-ordering.sh` | Modify | A comment that cited `AGENTS.md` text the cut removes now cites the constitution or the surviving entry |
+| `.github/workflows/runtime-release.yml` | Modify | A comment that cited `AGENTS.md` text the cut removes now cites the constitution or the surviving entry |
+| `.github/workflows/runtime.yml` | Modify | A comment that cited `AGENTS.md` text the cut removes now cites the constitution or the surviving entry |
+| `scripts/audit/introducing-drift.sh` | Modify | A comment that cited `AGENTS.md` text the cut removes now cites the constitution or the surviving entry |
+| `scripts/audit/sibling-coupling.sh` | Modify | A comment that cited `AGENTS.md` text the cut removes now cites the constitution or the surviving entry |
+| `runtime/src/parser/mod.rs` | Modify | A comment that cited `AGENTS.md` text the cut removes now cites the constitution or the surviving entry |
+| `runtime/src/primitives/mechanical_sweep.rs` | Modify | A comment that cited `AGENTS.md` text the cut removes now cites the constitution or the surviving entry |
 | `specs/072-governing-documents-stay-within-one-read/plan.md` | Modify | The entry-disposition table (AC5) |
 | `specs/050-constitution/plan.md` | Modify | §Classification rows for removed entries removed or re-keyed, so Family 38 still matches |
 

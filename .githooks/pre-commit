@@ -28,7 +28,7 @@
 # not fail the lint CI runs on push. Swallowed on failure — markdownlint is
 # advisory here and a missing npx must not block a commit.
 #
-# Last — after every write above has landed and been staged — it runs
+# After every write above has landed and been staged, it runs
 # `ductus check-corpus-links`, which reports every relative
 # markdown link under the spec root that resolves to nothing and exits non-zero
 # on one (spec 067 / adopter-corpus-link-integrity). Corpus-wide rather than
@@ -217,13 +217,14 @@ if [ -n "$staged_md" ]; then
   done
 fi
 
-# Dangling spec-to-spec pointers, checked LAST — after every write above has
+# Dangling spec-to-spec pointers, checked after every write above has
 # landed and been staged. Blocking, for the same reason the cycle check inside
 # derive-dependencies is: a staged edit can break something that is not staged,
-# so a staged-only scope would miss the case it exists for. It runs last
-# because it is the only read-only step here — a blocking read before the
-# staging block would abort the commit with the derived rewrites unstaged, so a
-# blocked commit and a passing one would leave the tree in different states.
+# so a staged-only scope would miss the case it exists for. It runs after the
+# staging block, as the size check below does, because each is read-only: a
+# blocking read before the staging block would abort the commit with the
+# derived rewrites unstaged, so a blocked commit and a passing one would leave
+# the tree in different states.
 # stdout is the JSON result and is discarded; the citations and fix guidance go
 # to stderr. `git commit --no-verify` is the deliberate bypass.
 "$ductus_bin" check-corpus-links > /dev/null
