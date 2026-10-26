@@ -26,8 +26,8 @@
 # and Family 23 (sweep-target manifest parity) already exist for. /audit simply
 # never had one covering *itself*.
 #
-# METHOD. All three sets are derived, never hardcoded — a hardcoded expectation would
-# be a third copy of exactly the fact under test:
+# METHOD. All three sets are derived, never hardcoded — a hardcoded
+# expectation would be another copy of exactly the fact under test:
 #
 #   28a Registered pairs `<family-number> <script-path>` from run-all.sh's
 #       `run_check "Family N — ..." "scripts/audit/x.sh"` lines.
@@ -64,8 +64,8 @@
 #
 # Retired numbers need no special case. Family 3 (registry equivalence) was
 # retired with the workflows feature (spec 043) and its number is permanently
-# spent; it appears in none of the three lists, so the sets agree and nothing fires. Family
-# numbers are stable identifiers, so a gap is the correct state.
+# spent; it appears in none of the three lists, so the sets agree and nothing
+# fires. Family numbers are stable identifiers, so a gap is the correct state.
 #
 # NOT a subject: .ductus/reference/audit.md. It is generator output, so
 # auditing it would report the generator rather than a defect; its sync is

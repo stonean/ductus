@@ -47,7 +47,7 @@ separately because the repairs differ.
 
 Both sets are derived, never hardcoded: the registered set from `run-all.sh`'s
 `run_check "Family N — …"` lines, the documented set from `audit.md`'s
-`(Family N — …)` entries. A hardcoded expectation would be a third copy of
+`(Family N — …)` entries. A hardcoded expectation would be another copy of
 exactly the fact under test.
 
 Retired family numbers are handled by the same derivation rather than a

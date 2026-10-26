@@ -293,7 +293,7 @@ Measured 2026-10-21 with npm 11.17.0, in a scratch copy of `package.json` and `p
 
 Options:
 
-- (a) Bump to 0.24.0. `framework-checks.yml`, which runs on every push to `main` and on every pull request (no `paths:` filter since `44c0babe`), and the weekly `runtime-currency.yml` run `npm audit --json` through that filter and fail on a high or critical advisory not on the exception list. The list holds `GHSA-vfj7-8cjw-p6xm`, documented in plan.md's Provenance bullet with the reach above and its remediation trigger: a braces release that fixes it, or a markdownlint-cli2 release that stops depending on a vulnerable braces. A new high advisory fails a run.
+- (a) Bump to 0.24.0. `framework-checks.yml`, which runs on every push to `main` and on every pull request (no `paths:` filter since `44c0babe`), and the weekly `runtime-currency.yml` run `npm audit --json` through (a)'s advisory filter and fail on a high or critical advisory not on the exception list. The list holds `GHSA-vfj7-8cjw-p6xm`, documented in plan.md's Provenance bullet with the reach above and its remediation trigger: a braces release that fixes it, or a markdownlint-cli2 release that stops depending on a vulnerable braces. A new high advisory fails a run.
 - (b) Bump to 0.24.0, document the same exception in plan.md, and run `npm audit` in the same two places as a report that never fails. A new high advisory is printed in a passing run, and acting on it depends on someone reading the log.
 
 Either way, the version named in plan.md and in `validate_glob_contained`'s doc (`runtime/src/primitives/mod.rs`), 0.23.2 today, moves to 0.24.0.

@@ -41,8 +41,8 @@
 # The design-principles tension here is explicit: an empty check looks
 # like a violation of "never depend on human discipline." Accepted for v1
 # because Families 1b and 1c already cover the diagram's state order and
-# the back-edge references from different angles (presence patterns vs
-# structural equality). This file's role is to be the named home where the
+# the back-edge references from different angles (structural equality and
+# presence patterns, respectively). This file's role is to be the named home where the
 # *textual-rule* check eventually lives — promotion happens when there's
 # a concrete duplicate to write the pattern against.
 #
