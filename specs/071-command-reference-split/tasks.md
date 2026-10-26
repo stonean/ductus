@@ -4,8 +4,8 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 1. Amend the constitution
 
-- [ ] Name `framework/reference/<command>.md` in §drift-prevention's canonical-sources row for pipeline command behavior.
-- [ ] Add the sentence on where a command's markdown-only prose lives to §runtime-host-integration.
+- [x] Name `framework/reference/<command>.md` in §drift-prevention's canonical-sources row for pipeline command behavior.
+- [x] Add the sentence on where a command's markdown-only prose lives to §runtime-host-integration.
 
 - **Done when**: both edits are in `framework/constitution.md` and `resolve-anchor` over it reports no unresolved marker.
 
