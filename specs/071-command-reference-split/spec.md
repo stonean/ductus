@@ -98,7 +98,9 @@ in a file instead, for example:
 > apply **§Grounding (advisory)** in `.ductus/reference/analyze.md`
 
 The `§name` is a real heading in the named file, so a pointer can be checked
-by tooling and not only by reading it.
+by tooling and not only by reading it. A pointer at the reference as a whole,
+such as a step's "walk the same prose … per `.ductus/reference/log.md`", names
+the file alone.
 
 Each reference file opens with a **Where a named section lives** paragraph, as
 `ductus-procedure.md` does: a section name with no heading in the reference
@@ -225,7 +227,7 @@ Checked 2026-10-25 by reading each consumer.
   document, and every one was a constitution marker beside a path such as
   `specs/inbox.md`. A headings-only rule would have reported all 16; this one
   reports none of them.
-  A pointer written as an explicit pair, **§X** in `<shipped document>`, is
+  A pointer written as an explicit pair, `**§X** in` a shipped document, is
   judged against that document's headings alone, whatever else its line names.
   Measured 2026-10-25 after the move, 59 of the 100 pointers in the commands,
   their reference files and the installer sat on a line that also named
@@ -310,7 +312,7 @@ its schema.
 
 - [ ] AC1: No file under `framework/commands/` contains a `## Markdown-only reference` heading.
 - [ ] AC2: Each of the thirteen commands measured above has a `framework/reference/<command>.md` holding its moved sections, `review.md`'s trailing sections included, and opening with a **Where a named section lives** paragraph.
-- [ ] AC3: Every step pointer that read "the markdown-only reference below", in any wording, names a `§` heading and a `.ductus/reference/<command>.md` file, and each named heading exists in that file.
+- [ ] AC3: Every pointer that read "the markdown-only reference below", in any wording, names a `.ductus/reference/<command>.md` file, together with the full `§` heading when it points at one section; each named heading exists in that file.
 - [ ] AC4: No `framework/reference/*.md` file contains `{cli-config-dir}`, a hardcoded agent config directory, or `$ARGUMENTS` used as the argument token, and `placeholder-roundtrip.sh` fails when one is introduced.
 - [ ] AC5: `framework/bootstrap/ductus.md`'s Shared Files manifest carries one `update` row per shipped reference file, mapping `framework/reference/<command>.md` to `.ductus/reference/<command>.md`, with `audit` withheld, and Family 16 fails when a reference file lacks a row or a row lacks a source.
 - [ ] AC6: `.ductus/reference/` is in the installer's enforce-directories list and in its markdown-only cleanup, so a reference file no manifest row produces is removed unless pinned.
