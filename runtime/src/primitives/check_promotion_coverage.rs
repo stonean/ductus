@@ -36,7 +36,9 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use crate::primitives::{Result, contained_path, iter_bullets, parse_atx_heading, read_text};
+use crate::primitives::{
+    PrimitiveError, Result, contained_path, iter_bullets, parse_atx_heading, read_text,
+};
 use crate::schema::primitives::{
     CheckPromotionCoverageArgs, CheckPromotionCoverageResult, PromotionTableState,
 };
@@ -54,14 +56,34 @@ use crate::schema::primitives::{
 /// when `rules-file` or `table-file` is absolute, climbs out with `..`, or
 /// leaves the project through a symlink
 /// ([`crate::primitives::contained_path`]).
+/// [`PrimitiveError::MissingArgument`], after the paths are checked and
+/// before anything is read, when `sections` is empty: with no section named
+/// there is no rule-bearing entry to count, and a run would report a
+/// denominator of zero that measured nothing.
 pub fn run(args: &CheckPromotionCoverageArgs, repo: &Path) -> Result<CheckPromotionCoverageResult> {
-    // Both paths are checked before either is read.
+    // Both paths are checked before either is read, and before the arguments
+    // are judged, so a path leaving the project is refused whatever else the
+    // call carries.
     let rules_path = contained_path(repo, &args.rules_file)?;
     let table_path = args
         .table_file
         .as_deref()
         .map(|table_file| contained_path(repo, table_file))
         .transpose()?;
+    // The set is required, and it is required here rather than only in the
+    // schema: the CLI's `--section` is repeatable, so omitting it parses as an
+    // empty list, and the MCP surface accepts `[]`. Refusing in the primitive
+    // makes both surfaces agree.
+    if args.sections.is_empty() {
+        return Err(PrimitiveError::MissingArgument {
+            primitive: "check-promotion-coverage".into(),
+            argument: "sections".into(),
+            reason: "name at least one level-2 section of rules-file whose top-level bullets \
+                     are rule-bearing (`--section` on the CLI); with none the counts are zero \
+                     by construction, not a measurement"
+                .into(),
+        });
+    }
     let rules = read_text(&rules_path)?;
 
     // The sections are a set: naming one twice must not double its bullets.
@@ -298,6 +320,27 @@ mod tests {
     }
 
     const TABLE: &str = "# Plan\n\n## Classification\n\n| Entry | Reason |\n| --- | --- |\n| A routed rule | promoted |\n";
+
+    /// An empty section set is refused, not measured: it would report zero
+    /// rule-bearing entries over a file nobody counted. Refused before the
+    /// rules file is read, so the refusal does not depend on it existing.
+    /// (A path leaving the project is refused ahead of it: the interpreter's
+    /// `every_file_path_site_refuses_an_outward_link` calls with no sections.)
+    #[test]
+    fn an_empty_section_set_is_refused() {
+        let tmp = tempdir().unwrap();
+        let mut no_sections = args(false);
+        no_sections.sections.clear();
+        let err = run(&no_sections, tmp.path()).unwrap_err();
+        assert!(
+            matches!(
+                &err,
+                PrimitiveError::MissingArgument { primitive, argument, .. }
+                    if primitive == "check-promotion-coverage" && argument == "sections"
+            ),
+            "{err}"
+        );
+    }
 
     #[test]
     fn the_four_terms_and_their_difference_are_reported() {

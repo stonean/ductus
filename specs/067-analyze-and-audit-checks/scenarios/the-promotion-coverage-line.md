@@ -25,7 +25,7 @@ What makes it worth computing rather than re-deriving by hand is that a hand der
 **New primitive: `check-promotion-coverage`.** Project-scoped — it takes no feature argument, like `check-orphaned-references` and `check-unfolded-specs`. Arguments, all repo-relative:
 
 - `rules-file` — the file whose entries are counted (required).
-- `sections` — repeatable (one `--section` per heading on the CLI); the level-2 heading names inside `rules-file` whose top-level bullets are rule-bearing. Required, and there is no default: *which* sections carry rules is a property of the project's own file, and guessing it would make the denominator a claim the primitive is not entitled to.
+- `sections` — repeatable (one `--section` per heading on the CLI); the level-2 heading names inside `rules-file` whose top-level bullets are rule-bearing. Required, and there is no default: *which* sections carry rules is a property of the project's own file, and guessing it would make the denominator a claim the primitive is not entitled to. An empty set is refused with an error, on the CLI and over MCP alike, rather than reported as zero counts.
 - `table-file` — the file carrying the classification table (optional).
 - `table-section` — the level-2 heading inside `table-file` under which the tables live (optional; every markdown table in the file is read when omitted).
 - `pointer-link` — the substring that marks an entry as a pointer rather than a restatement (required), e.g. the constitution's repo-relative path with its anchor separator.

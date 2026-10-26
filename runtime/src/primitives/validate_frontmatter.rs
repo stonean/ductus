@@ -325,7 +325,6 @@ mod tests {
         assert_eq!(result.findings, [] as [FrontmatterFinding; 0]);
     }
 
-    /// Run the validator over a frontmatter block, returning the findings.
     #[test]
     fn a_well_formed_cross_spec_impact_list_is_clean() {
         let findings = findings_for(
@@ -365,6 +364,11 @@ mod tests {
         let findings = findings_for("status: draft\ndependencies: []\ncross-spec-impact: [50]\n");
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].field, "cross-spec-impact");
+        assert_eq!(findings[0].severity, AnalyzeSeverity::Blocking);
+        assert_eq!(
+            findings[0].message,
+            "cross-spec-impact entry must be a string feature name"
+        );
     }
 
     /// A residual `review:` or `analyze:` block is reported, not tolerated.
@@ -540,6 +544,7 @@ mod tests {
         );
     }
 
+    /// Run the validator over a frontmatter block, returning the findings.
     fn findings_for(frontmatter: &str) -> Vec<FrontmatterFinding> {
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join("spec.md");
@@ -587,11 +592,17 @@ mod tests {
             ));
             assert_eq!(findings.len(), 1, "expected one finding for {bad:?}");
             assert_eq!(findings[0].field, "folds-into");
+            assert_eq!(findings[0].severity, AnalyzeSeverity::Blocking, "{bad:?}");
         }
         // Wrong type, not just wrong shape.
         let findings = findings_for("status: draft\ndependencies: []\nfolds-into: [022-a]\n");
         assert_eq!(findings.len(), 1, "got {findings:?}");
         assert_eq!(findings[0].field, "folds-into");
+        assert_eq!(findings[0].severity, AnalyzeSeverity::Blocking);
+        assert_eq!(
+            findings[0].message,
+            "folds-into must be a string feature name"
+        );
     }
 
     #[test]
@@ -603,7 +614,7 @@ mod tests {
     }
 
     #[test]
-    fn unknown_status_is_blocking() {
+    fn unknown_status_is_hard_fail() {
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join("spec.md");
         std::fs::write(&path, "---\nstatus: wibble\ndependencies: []\n---\n\n# X\n").unwrap();
@@ -621,6 +632,12 @@ mod tests {
         assert!(!result.clean);
         assert_eq!(result.findings.len(), 1);
         assert_eq!(result.findings[0].field, "status");
+        assert_eq!(result.findings[0].severity, AnalyzeSeverity::HardFail);
+        assert!(
+            result.findings[0].message.starts_with("status 'wibble'"),
+            "{}",
+            result.findings[0].message
+        );
     }
 
     #[test]
@@ -719,6 +736,61 @@ mod tests {
         )
         .unwrap();
         assert!(!result.clean);
-        assert!(result.findings.iter().any(|f| f.field == "dependencies"));
+        assert_eq!(result.findings.len(), 1, "{:?}", result.findings);
+        assert_eq!(result.findings[0].field, "dependencies");
+        assert_eq!(result.findings[0].severity, AnalyzeSeverity::HardFail);
+        assert_eq!(result.findings[0].message, "dependencies must be a list");
+    }
+
+    /// A block that is not YAML stops the check at the parse: one hard-fail
+    /// naming no field, since no field could be read.
+    #[test]
+    fn frontmatter_that_is_not_valid_yaml_is_hard_fail() {
+        let findings = findings_for("status: [draft\ndependencies: []\n");
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].severity, AnalyzeSeverity::HardFail);
+        assert_eq!(findings[0].field, "");
+        assert!(
+            findings[0]
+                .message
+                .starts_with("frontmatter is not valid YAML: "),
+            "{}",
+            findings[0].message
+        );
+    }
+
+    /// YAML that parses to something other than a mapping (here a sequence)
+    /// has no fields to check, so it is one hard-fail rather than a finding
+    /// per missing field.
+    #[test]
+    fn frontmatter_that_is_not_a_mapping_is_hard_fail() {
+        let findings = findings_for("- status\n- dependencies\n");
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].severity, AnalyzeSeverity::HardFail);
+        assert_eq!(findings[0].field, "");
+        assert_eq!(findings[0].message, "frontmatter must be a mapping");
+    }
+
+    #[test]
+    fn a_non_string_status_is_hard_fail() {
+        let findings = findings_for("status: 3\ndependencies: []\n");
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].severity, AnalyzeSeverity::HardFail);
+        assert_eq!(findings[0].field, "status");
+        assert_eq!(findings[0].message, "status must be a string");
+    }
+
+    /// Each non-string entry is named by its index, so a list holding a good
+    /// entry and a bad one reports the bad one alone.
+    #[test]
+    fn a_non_string_dependency_entry_is_hard_fail() {
+        let findings = findings_for("status: draft\ndependencies: [001-a, 3]\n");
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].severity, AnalyzeSeverity::HardFail);
+        assert_eq!(findings[0].field, "dependencies[1]");
+        assert_eq!(
+            findings[0].message,
+            "dependency entry must be a string feature name"
+        );
     }
 }

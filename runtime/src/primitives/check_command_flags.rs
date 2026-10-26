@@ -547,6 +547,118 @@ mod tests {
         assert!(!hint_names("[--fix]", "--f"));
     }
 
+    /// Write each `(name, content)` under `framework/commands/` in a fresh
+    /// project and run the check over it.
+    fn run_over(files: &[(&str, String)]) -> CheckCommandFlagsResult {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join(COMMANDS_DIR);
+        std::fs::create_dir_all(&dir).unwrap();
+        for (name, content) in files {
+            std::fs::write(dir.join(name), content).unwrap();
+        }
+        run(&CheckCommandFlagsArgs::default(), tmp.path()).unwrap()
+    }
+
+    /// The whole pass over a directory: each direction's finding, from the
+    /// file that alone earns it, and the denominators that say which files
+    /// each direction examined.
+    #[test]
+    fn run_reports_each_direction_with_its_denominator() {
+        const TABLE: &str = "## Flags\n\n| Flag | Behavior |\n| --- | --- |\n\
+                             | `--all` | Everything |\n| `--since=<ref>` | Base |\n";
+        let result = run_over(&[
+            // A tabled flag the hint omits.
+            (
+                "a-omits.md",
+                command(Some("[--all] [feature]"), &format!("$ARGUMENTS\n\n{TABLE}")),
+            ),
+            // A hint and no substitution token, and no Flags table.
+            (
+                "b-tokenless.md",
+                command(Some("[feature]"), "Set the feature."),
+            ),
+            // A Flags table and no argument-hint at all.
+            (
+                "c-no-hint.md",
+                command(None, &format!("$ARGUMENTS\n\n{TABLE}")),
+            ),
+            // Clean on both directions.
+            (
+                "d-clean.md",
+                command(Some("[--all] [--since=<ref>]"), &format!("$1\n\n{TABLE}")),
+            ),
+        ]);
+        let base = "framework/commands";
+        assert_eq!(
+            result.examined,
+            [
+                format!("{base}/a-omits.md"),
+                format!("{base}/b-tokenless.md"),
+                format!("{base}/c-no-hint.md"),
+                format!("{base}/d-clean.md"),
+            ]
+        );
+        assert_eq!(
+            result.with_argument_hint,
+            [
+                format!("{base}/a-omits.md"),
+                format!("{base}/b-tokenless.md"),
+                format!("{base}/d-clean.md"),
+            ]
+        );
+        assert_eq!(
+            result.with_flags_table,
+            [
+                format!("{base}/a-omits.md"),
+                format!("{base}/c-no-hint.md"),
+                format!("{base}/d-clean.md"),
+            ]
+        );
+        let found: Vec<(&str, &str, &str)> = result
+            .findings
+            .iter()
+            .map(|f| (f.command.as_str(), f.direction.as_str(), f.flag.as_str()))
+            .collect();
+        assert_eq!(
+            found,
+            [
+                (
+                    "framework/commands/a-omits.md",
+                    "flag-unsurfaced",
+                    "--since"
+                ),
+                ("framework/commands/b-tokenless.md", "hint-unreachable", ""),
+                ("framework/commands/c-no-hint.md", "flag-unsurfaced", ""),
+            ]
+        );
+        assert!(
+            result.findings[2]
+                .reason
+                .contains("declares no argument-hint"),
+            "{}",
+            result.findings[2].reason
+        );
+        assert_eq!(result.skipped, [] as [CommandFlagSkip; 0]);
+        assert_eq!(result.guidance, "");
+    }
+
+    /// Files examined and not one Flags table among them: the extraction
+    /// broke, and the result says so rather than reading as a clean run.
+    #[test]
+    fn run_with_no_flags_table_anywhere_reports_an_extraction_failure() {
+        let result = run_over(&[
+            ("a.md", command(Some("[feature]"), "$ARGUMENTS")),
+            ("b.md", command(None, "No flags here.")),
+        ]);
+        assert_eq!(result.examined.len(), 2);
+        assert_eq!(result.with_flags_table, [] as [String; 0]);
+        assert_eq!(result.findings, [] as [CommandFlagFinding; 0]);
+        assert_eq!(
+            result.guidance,
+            "no Flags table found in any of 2 command file(s) — treat this as an extraction failure, not a clean result"
+        );
+    }
+
     #[test]
     fn a_repeated_flag_is_reported_once() {
         let content = command(

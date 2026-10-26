@@ -72,7 +72,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use crate::primitives::spec_links::{
-    harvestable_lines, has_unterminated_frontmatter, is_frontmatter_fence,
+    continues_key, frontmatter_parses, harvestable_lines, has_unterminated_frontmatter,
+    is_frontmatter_fence,
 };
 use crate::primitives::{Result, inline_code_spans, read_text, write_atomic};
 use crate::schema::config_keys;
@@ -145,6 +146,13 @@ pub fn run(args: &DeriveReferencesArgs, repo: &Path) -> Result<DeriveReferencesR
         let records = harvest(&content, &registry);
         let rewritten = splice_references(&content, &records);
         if rewritten == content {
+            continue;
+        }
+        if !frontmatter_parses(&rewritten) {
+            // The splice's output is not YAML: a value shape its line rules
+            // do not cover. Never written, and named as an unterminated block
+            // is, before the staged filter, for `derive-dependencies`' reason.
+            unparseable.push(spec.clone());
             continue;
         }
         // Differs. Whether it is written depends on the staged filter.
@@ -390,8 +398,18 @@ fn build_block(records: &[Reference]) -> Option<Vec<String>> {
 }
 
 /// Strip any existing `references:` block from the frontmatter and re-insert
-/// the desired one immediately after `dependencies:`, or before the closing
+/// the desired one after the `dependencies:` entry, or before the closing
 /// fence when there is no `dependencies:` line.
+///
+/// **After the entry, not after its key line.** A block-form value
+/// (`dependencies:` then `  - 002-b`, or the indentless `- 002-b`) continues
+/// on the lines below the key, and inserting straight after the key line put
+/// `references:` between the key and its items: `dependencies:` became null
+/// and each dependency an item of the references list, which still parses,
+/// so nothing downstream noticed. The block goes before the first line that
+/// is not a continuation ([`continues_key`], which counts a blank line an
+/// entry follows as one), the same rule that decides where a stale
+/// `references:` block ends.
 ///
 /// Absent-when-empty: with no records the block is removed and not replaced.
 fn splice_references(content: &str, records: &[Reference]) -> String {
@@ -403,10 +421,15 @@ fn splice_references(content: &str, records: &[Reference]) -> String {
     let mut in_fm = false;
     let mut skipping = false;
     let mut inserted = false;
+    // Inside the `dependencies:` entry, waiting for its last continuation
+    // line to pass before the block goes in.
+    let mut pending = false;
+    let lines: Vec<&str> = content
+        .lines()
+        .map(|raw| raw.strip_suffix('\r').unwrap_or(raw))
+        .collect();
 
-    for (idx, raw) in content.lines().enumerate() {
-        let line = raw.strip_suffix('\r').unwrap_or(raw);
-
+    for (idx, &line) in lines.iter().enumerate() {
         if is_frontmatter_fence(line) {
             if !fm_seen && idx == 0 {
                 fm_seen = true;
@@ -424,6 +447,7 @@ fn splice_references(content: &str, records: &[Reference]) -> String {
                 }
                 in_fm = false;
                 skipping = false;
+                pending = false;
                 out.push(line.to_string());
                 continue;
             }
@@ -433,22 +457,30 @@ fn splice_references(content: &str, records: &[Reference]) -> String {
 
         if in_fm {
             if skipping {
-                if line.starts_with(' ') || line.starts_with('\t') {
+                if continues_key(&lines, idx) {
                     continue;
                 }
                 skipping = false;
+            }
+            if pending {
+                if continues_key(&lines, idx) {
+                    out.push(line.to_string());
+                    continue;
+                }
+                // The `dependencies:` entry ended on the line above.
+                if let Some(block_lines) = &block {
+                    out.extend(block_lines.iter().cloned());
+                }
+                inserted = true;
+                pending = false;
             }
             if line.starts_with("references:") {
                 skipping = true;
                 continue;
             }
-            if !inserted
-                && let Some(block_lines) = &block
-                && line.starts_with("dependencies:")
-            {
+            if !inserted && block.is_some() && line.starts_with("dependencies:") {
                 out.push(line.to_string());
-                out.extend(block_lines.iter().cloned());
-                inserted = true;
+                pending = true;
                 continue;
             }
         }
@@ -675,6 +707,115 @@ mod tests {
         let out = splice_references(content, &[(Some("api".to_string()), "003-u".to_string())]);
         let expected = "---\nstatus: done\ndependencies: [001-a]\nreferences:\n  - service: api\n    spec: 003-u\nnext-criterion: 2\n---\nbody\n";
         assert_eq!(out, expected);
+    }
+
+    /// A block-form `dependencies:` keeps its items: the references block goes
+    /// after the entry's last continuation line, never between the key and
+    /// its items, for the indented and the column-zero form alike. The
+    /// `dependencies:` lines stay byte-identical (spec 030).
+    #[test]
+    fn block_is_inserted_after_a_block_form_dependencies_entry() {
+        let records = [(Some("api".to_string()), "003-u".to_string())];
+        for items in ["  - 002-b\n  - 004-d\n", "- 002-b\n- 004-d\n"] {
+            let content =
+                format!("---\nstatus: done\ndependencies:\n{items}next-criterion: 2\n---\nbody\n");
+            let expected = format!(
+                "---\nstatus: done\ndependencies:\n{items}references:\n  - service: api\n    spec: 003-u\nnext-criterion: 2\n---\nbody\n"
+            );
+            assert_eq!(splice_references(&content, &records), expected, "{items:?}");
+        }
+        // The entry runs to the closing fence: the block goes just before it.
+        let content = "---\nstatus: done\ndependencies:\n  - 002-b\n---\nbody\n";
+        assert_eq!(
+            splice_references(content, &records),
+            "---\nstatus: done\ndependencies:\n  - 002-b\nreferences:\n  - service: api\n    spec: 003-u\n---\nbody\n"
+        );
+    }
+
+    /// Blank lines and column-zero comments inside a block-form
+    /// `dependencies:` belong to it: the references block goes after the last
+    /// entry, never between the key and the items below such a line, and a blank line before the next key
+    /// stays before it. A stale block with a blank line inside is removed
+    /// whole.
+    #[test]
+    fn blank_lines_inside_a_block_stay_with_their_key() {
+        let records = [(Some("api".to_string()), "003-u".to_string())];
+        let block = "references:\n  - service: api\n    spec: 003-u\n";
+        for items in [
+            "\n  - 002-b\n\n  - 004-d\n",
+            "\n- 002-b\n\n\n- 004-d\n",
+            "- 002-b\n# a note\n- 004-d\n",
+        ] {
+            let content = format!(
+                "---\nstatus: done\ndependencies:\n{items}\nnext-criterion: 2\n---\nbody\n"
+            );
+            assert_eq!(
+                splice_references(&content, &records),
+                format!(
+                    "---\nstatus: done\ndependencies:\n{items}{block}\nnext-criterion: 2\n---\nbody\n"
+                ),
+                "{items:?}"
+            );
+        }
+        let stale = "---\nstatus: done\ndependencies: []\nreferences:\n\n  - service: null\n    spec: 003-old\n\nnext-criterion: 2\n---\nbody\n";
+        assert_eq!(
+            splice_references(stale, &records),
+            format!("---\nstatus: done\ndependencies: []\n{block}\nnext-criterion: 2\n---\nbody\n")
+        );
+    }
+
+    /// A stale block in the indentless form (`references:` then `- service:`
+    /// at column zero) is removed whole; an indent-only skip left its entries
+    /// behind the new block as invalid YAML.
+    #[test]
+    fn a_column_zero_references_block_is_replaced_whole() {
+        let content = "---\nstatus: done\ndependencies: []\nreferences:\n- service: null\n  spec: 003-old\nnext-criterion: 2\n---\nbody\n";
+        assert_eq!(
+            splice_references(content, &[(None, "004-new".to_string())]),
+            "---\nstatus: done\ndependencies: []\nreferences:\n  - service: null\n    spec: 004-new\nnext-criterion: 2\n---\nbody\n"
+        );
+        assert_eq!(
+            splice_references(content, &[]),
+            "---\nstatus: done\ndependencies: []\nnext-criterion: 2\n---\nbody\n"
+        );
+    }
+
+    /// A stale block whose rewrite would not parse — a flow sequence closing
+    /// at column zero, which the line rules do not cover — is reported
+    /// `unparseable` and never written, on a dry run and a write alike.
+    #[test]
+    fn a_splice_that_would_not_parse_is_reported_and_never_written() {
+        use crate::primitives::git_fixture;
+        let tmp = tempfile::tempdir().unwrap();
+        let repository = git2::Repository::init(tmp.path()).unwrap();
+        let original = "---\nstatus: done\ndependencies: []\nreferences: [\n  {service: null, spec: 003-old}\n]\n---\n\n[x](https://github.com/other/t/specs/004-new/spec.md)\n";
+        assert!(frontmatter_parses(original), "the fixture starts as YAML");
+        let path = tmp.path().join("specs/001-a/spec.md");
+        git_fixture::write(&path, original);
+        git_fixture::commit_all(&repository, "feat: spec");
+        for write in [false, true] {
+            let result = run(
+                &DeriveReferencesArgs {
+                    write,
+                    staged: false,
+                },
+                tmp.path(),
+            )
+            .unwrap();
+            assert_eq!(
+                result.unparseable,
+                vec!["specs/001-a/spec.md"],
+                "write {write}"
+            );
+            assert_eq!(result.updated, [] as [String; 0], "write {write}");
+            assert!(!result.drift, "write {write}");
+            assert_eq!(result.examined, 1, "write {write}");
+            assert_eq!(
+                std::fs::read_to_string(&path).unwrap(),
+                original,
+                "write {write}"
+            );
+        }
     }
 
     #[test]

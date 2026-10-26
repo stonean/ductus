@@ -415,26 +415,22 @@ mod tests {
         );
     }
 
+    /// Em-dash-dense rule prose (scenario spec-side-parser-hardening) is read
+    /// line by line to the section's end: a label after many lines of
+    /// multibyte text still marks its rule, and the live neighbor below it,
+    /// em-dashes on its own lines, stays live. The scan slices only at line
+    /// boundaries, so no byte offset can land inside a character.
     #[test]
-    fn multibyte_content_at_window_edge_does_not_panic() {
-        // Byte `abs + 256` of the deprecation window must be walked back to
-        // a char boundary when it lands inside a multibyte character
-        // (scenario spec-side-parser-hardening). Padding is sized so the
-        // window edge lands mid-em-dash.
+    fn multibyte_rule_sections_are_scanned_line_by_line() {
+        let dense = "\u{2014} prose \u{2014}\n".repeat(40);
         let rule_content = format!(
-            "### BE-EM-001\n\n{}{}\n",
-            "a".repeat(243),
-            "\u{2014}".repeat(20)
-        );
-        let abs = rule_content.find("BE-EM-001").unwrap();
-        assert!(
-            !rule_content.is_char_boundary(abs + 256),
-            "fixture must place the window edge inside a multibyte char"
+            "### BE-EM-001\n\n{dense}**DEPRECATED in v2.0:** superseded \u{2014} see BE-EM-002.\n\n\
+             ### BE-EM-002\n\n{dense}"
         );
 
         let tmp = tempfile::tempdir().unwrap();
         let spec_path = tmp.path().join("spec.md");
-        std::fs::write(&spec_path, "Cites BE-EM-001.\n").unwrap();
+        std::fs::write(&spec_path, "Cites BE-EM-001 and BE-EM-002.\n").unwrap();
         let rule_path = tmp.path().join("rules.md");
         std::fs::write(&rule_path, &rule_content).unwrap();
         let result = run(
@@ -456,12 +452,21 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result.missing, [] as [String; 0]);
-        assert_eq!(result.deprecated, [] as [String; 0]);
-        assert!(
-            result
-                .citations
-                .iter()
-                .any(|c| c.rule_id == "BE-EM-001" && c.found && !c.deprecated)
+        assert_eq!(result.deprecated, vec!["BE-EM-001".to_string()]);
+        assert_eq!(
+            result.citations,
+            [
+                RuleCitation {
+                    rule_id: "BE-EM-001".into(),
+                    found: true,
+                    deprecated: true,
+                },
+                RuleCitation {
+                    rule_id: "BE-EM-002".into(),
+                    found: true,
+                    deprecated: false,
+                },
+            ]
         );
     }
 

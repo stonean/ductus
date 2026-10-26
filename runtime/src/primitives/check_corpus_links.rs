@@ -954,6 +954,8 @@ mod tests {
         // A reference copy's `../constitution.md` link resolves only in an
         // adopter, where `.ductus/constitution.md` is installed beside it;
         // any other file under `.ductus/` is not generated and stays checked.
+        // The sources under `framework/reference/` are what is checked in the
+        // copies' place, so a broken link there is reported.
         let tmp = tempdir().unwrap();
         std::fs::create_dir_all(tmp.path().join(REFERENCE_SOURCES)).unwrap();
         let repo = git2::Repository::init(tmp.path()).unwrap();
@@ -966,6 +968,9 @@ mod tests {
             );
             index.add_path(Path::new(rel)).unwrap();
         }
+        let source = "framework/reference/analyze.md";
+        write(tmp.path(), source, "# X\n\n[gone](../nowhere.md)\n");
+        index.add_path(Path::new(source)).unwrap();
         index.write().unwrap();
 
         let result = run(
@@ -976,7 +981,11 @@ mod tests {
         )
         .unwrap();
         let broken: Vec<&str> = result.broken.iter().map(|b| b.path.as_str()).collect();
-        assert_eq!(broken, [".ductus/notes.md"]);
+        assert_eq!(broken, [".ductus/notes.md", source]);
+        assert_eq!(
+            result.examined,
+            [".ductus/notes.md".to_string(), source.to_string()]
+        );
         assert_eq!(result.excluded_by_construction, 1);
     }
 

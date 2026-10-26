@@ -626,6 +626,46 @@ mod tests {
         assert_eq!(r.unresolved, vec!["missing".to_string()]);
     }
 
+    /// A markers file below the root is cited from a sibling directory by a
+    /// `../` path, which never contains the repo-relative `markers-path`:
+    /// only its basename identifies the line as citing the markers file, so
+    /// the reference is judged against the markers rather than excused as
+    /// qualified.
+    #[test]
+    fn a_line_citing_a_nested_markers_file_by_a_relative_path_is_not_qualified() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("framework/reference")).unwrap();
+        std::fs::write(
+            tmp.path().join("framework/constitution.md"),
+            "<!-- §known -->\n",
+        )
+        .unwrap();
+        std::fs::write(
+            tmp.path().join("framework/reference/citing.md"),
+            "See [§known](../constitution.md#known) and [§gone](../constitution.md#gone).\n",
+        )
+        .unwrap();
+        let r = run(
+            &ResolveAnchorArgs {
+                path: "framework/reference/citing.md".into(),
+                markers_path: Some("framework/constitution.md".into()),
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(r.qualified, 0, "{:?}", r.references);
+        let judged: Vec<(&str, &str, bool)> = r
+            .references
+            .iter()
+            .map(|x| (x.anchor.as_str(), x.kind.as_str(), x.resolved))
+            .collect();
+        assert_eq!(
+            judged,
+            [("known", "markers", true), ("gone", "markers", false)]
+        );
+        assert_eq!(r.unresolved, vec!["gone".to_string()]);
+    }
+
     /// Prose that names another document without naming the file can be
     /// neither verified nor excluded, so it stays reported. Stated as a test
     /// because it is a deliberate limit, not an oversight.

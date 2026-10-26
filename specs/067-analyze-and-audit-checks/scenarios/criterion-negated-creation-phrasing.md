@@ -135,8 +135,8 @@ restatement only, the canonical section renamed) plus the restored baseline.
   places at an extension point. For a change worth zero findings it also moves
   the splitter toward `;`-plus-em-dash, which is the clause rule 045 measured
   and rejected below. The residual rate is accepted and recorded instead.
-- **This is not the clause-scoped design 045 measured and rejected.** 045
-  §Resolved Questions rejected checking a removal-phrased criterion by
+- **This is not the clause-scoped design 045 measured and rejected.** 045's
+  Resolved Questions rejected checking a removal-phrased criterion by
   *inverting* the assertion, and the implementation it built was also
   clause-scoped — split on `;` and the em dash, 20 findings of which roughly 8
   were false, and it broke the appended-annotation remedy by stopping an

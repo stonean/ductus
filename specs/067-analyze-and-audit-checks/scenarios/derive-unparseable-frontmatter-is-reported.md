@@ -47,7 +47,12 @@ same sense as the other list fields.
 
 A spec lands there when its frontmatter fence is never closed — the condition
 both splices already detect implicitly by never finding their anchor, made
-explicit and reported instead of swallowed.
+explicit and reported instead of swallowed. It lands there too when the
+rewritten frontmatter would not parse as YAML: each primitive re-parses the
+block it is about to write and never writes one that fails, leaving the file
+byte-identical (since 2026-10-26, 071's re-review of 067, after a YAML
+indentless sequence was spliced into invalid frontmatter and reported
+`updated`).
 
 The contract a caller can then rely on: **an empty `updated` means
 examined-and-clean only when `unparseable` is also empty.** That is the same

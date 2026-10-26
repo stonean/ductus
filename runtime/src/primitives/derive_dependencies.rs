@@ -41,7 +41,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use crate::primitives::spec_links::{
-    harvestable_lines, has_unterminated_frontmatter, is_frontmatter_fence,
+    continues_key, frontmatter_parses, harvestable_lines, has_unterminated_frontmatter,
+    is_frontmatter_fence,
 };
 use crate::primitives::{Result, read_text, rel_path, write_atomic};
 use crate::schema::paths;
@@ -101,6 +102,15 @@ pub fn run(args: &DeriveDependenciesArgs, repo: &Path) -> Result<DeriveDependenc
 
         let rewritten = splice_dependencies(&content, &deps);
         if rewritten == content {
+            continue;
+        }
+        if !frontmatter_parses(&rewritten) {
+            // The splice edits lines, and this block held a value shape its
+            // line rules do not cover, so its output is not YAML. Writing it
+            // would corrupt the spec while reporting it updated; it is named
+            // the way an unterminated block is, before the staged filter, so
+            // a dry run, a write and a staged run all say the same thing.
+            unparseable.push(spec.clone());
             continue;
         }
         // Differs. Whether it is written depends on the staged filter.
@@ -240,8 +250,9 @@ fn leading_slug(s: &str) -> Option<&str> {
     super::is_feature_slug(seg).then_some(seg)
 }
 
-/// Replace the frontmatter's `dependencies:` entry — the key line *and* any
-/// indented continuation beneath it — with the derived list.
+/// Replace the frontmatter's `dependencies:` entry — the key line *and* every
+/// continuation line beneath it ([`continues_key`]: indented, a column-zero
+/// `- ` entry, or a blank line an entry follows) — with the derived list.
 ///
 /// Replacing only the key line is correct for the inline flow form
 /// (`dependencies: [a, b]`) but corrupts the equally-valid block form:
@@ -252,7 +263,17 @@ fn leading_slug(s: &str) -> Option<&str> {
 /// ```
 ///
 /// The two shell generators diverged on exactly this; one had the
-/// continuation skip and the other did not.
+/// continuation skip and the other did not. The skip itself then missed the
+/// indentless form, where the entries sit at the key's own column
+/// (`dependencies:` then `- 009-old`, what `PyYAML` and Psych emit), and left
+/// them behind the new value the same way, and so did a blank line or a
+/// column-zero comment inside the list, which ended the skip with entries
+/// still below it. A blank line or comment before the next key is not part of
+/// the list and is kept.
+///
+/// A shape the line rules still do not cover (a flow sequence closing at
+/// column zero) leaves a block that does not parse; [`run`] checks the output and reports such a spec `unparseable`
+/// rather than writing it.
 ///
 /// A spec with no `dependencies:` key is left untouched rather than having
 /// one inserted: where the key belongs in the frontmatter is an authoring
@@ -273,10 +294,12 @@ fn splice_dependencies(content: &str, deps: &BTreeSet<String>) -> String {
     let mut in_fm = false;
     let mut replaced = false;
     let mut skipping = false;
+    let lines: Vec<&str> = content
+        .lines()
+        .map(|raw| raw.strip_suffix('\r').unwrap_or(raw))
+        .collect();
 
-    for (idx, raw) in content.lines().enumerate() {
-        let line = raw.strip_suffix('\r').unwrap_or(raw);
-
+    for (idx, &line) in lines.iter().enumerate() {
         if is_frontmatter_fence(line) {
             if !fm_seen && idx == 0 {
                 in_fm = true;
@@ -293,8 +316,8 @@ fn splice_dependencies(content: &str, deps: &BTreeSet<String>) -> String {
         }
 
         if in_fm && skipping {
-            // Continuation lines of the replaced key are indented.
-            if line.starts_with(' ') || line.starts_with('\t') {
+            // Continuation lines of the replaced key belong to its old value.
+            if continues_key(&lines, idx) {
                 continue;
             }
             skipping = false;
@@ -597,6 +620,172 @@ mod tests {
         assert!(!out.contains("000-stale"), "orphaned continuation survived");
         assert!(!out.contains("001-also"));
         assert!(out.contains("next: 3"), "following key was consumed");
+    }
+
+    /// The indentless block sequence, `PyYAML`'s and Psych's default: the
+    /// entries sit at the key's own column, so an indent-only skip left them
+    /// behind the new value as invalid YAML.
+    #[test]
+    fn splice_replaces_a_column_zero_block_sequence() {
+        let content =
+            "---\nstatus: draft\ndependencies:\n- 009-old\n-\n  010-older\nnext: 3\n---\n\nbody\n";
+        let deps: BTreeSet<String> = ["002-b".to_string()].into_iter().collect();
+        assert_eq!(
+            splice_dependencies(content, &deps),
+            "---\nstatus: draft\ndependencies: [002-b]\nnext: 3\n---\n\nbody\n"
+        );
+    }
+
+    /// Blank lines inside the list belong to it, in the indented and the
+    /// column-zero form alike, and so does a column-zero comment between two
+    /// entries: an end at the first such line left the entries below it
+    /// behind the new value. The blank line before the next key is not part
+    /// of the list and stays.
+    #[test]
+    fn splice_replaces_a_block_sequence_with_blank_lines_inside() {
+        let deps: BTreeSet<String> = ["002-b".to_string()].into_iter().collect();
+        for items in [
+            "\n  - 009-old\n\n  - 010-older\n",
+            "\n- 009-old\n\n\n- 010-older\n",
+            "- 009-old\n# kept for history\n- 010-older\n",
+        ] {
+            let content =
+                format!("---\nstatus: draft\ndependencies:\n{items}\nnext: 3\n---\n\nbody\n");
+            assert_eq!(
+                splice_dependencies(&content, &deps),
+                "---\nstatus: draft\ndependencies: [002-b]\n\nnext: 3\n---\n\nbody\n",
+                "{items:?}"
+            );
+        }
+    }
+
+    /// A tracked repository at `root` holding `specs` (slug, body) pairs.
+    fn tracked_repo(root: &Path, specs: &[(&str, &str)]) -> git2::Repository {
+        use crate::primitives::git_fixture;
+        let repository = git2::Repository::init(root).unwrap();
+        for (slug, body) in specs {
+            git_fixture::write(&root.join(format!("specs/{slug}/spec.md")), body);
+        }
+        git_fixture::commit_all(&repository, "feat: specs");
+        repository
+    }
+
+    /// The reproduction, end to end: a column-zero list is rewritten, written,
+    /// and reported updated, and what lands on disk parses.
+    #[test]
+    fn a_column_zero_dependency_list_is_rewritten_on_disk() {
+        let tmp = tempfile::tempdir().unwrap();
+        tracked_repo(
+            tmp.path(),
+            &[
+                (
+                    "001-a",
+                    "---\nstatus: draft\ndependencies:\n- 009-old\n---\n\n# A\n\nSee [b](../002-b/spec.md).\n",
+                ),
+                (
+                    "002-b",
+                    "---\nstatus: draft\ndependencies: []\n---\n\n# B\n",
+                ),
+                (
+                    "009-old",
+                    "---\nstatus: draft\ndependencies: []\n---\n\n# Old\n",
+                ),
+            ],
+        );
+        let args = DeriveDependenciesArgs {
+            write: true,
+            staged: false,
+        };
+        let result = run(&args, tmp.path()).unwrap();
+        assert_eq!(result.updated, vec!["specs/001-a/spec.md"]);
+        assert_eq!(result.unparseable, [] as [String; 0]);
+        assert_eq!(
+            std::fs::read_to_string(tmp.path().join("specs/001-a/spec.md")).unwrap(),
+            "---\nstatus: draft\ndependencies: [002-b]\n---\n\n# A\n\nSee [b](../002-b/spec.md).\n"
+        );
+    }
+
+    /// A value shape the splice's line rules do not cover — here a flow
+    /// sequence whose `]` closes at column zero — yields a block that does
+    /// not parse. It is reported `unparseable` and never written, on a dry
+    /// run and a write alike, and its body still feeds the cycle check.
+    #[test]
+    fn a_splice_that_would_not_parse_is_reported_and_never_written() {
+        let tmp = tempfile::tempdir().unwrap();
+        let original = "---\nstatus: draft\ndependencies: [\n  009-old\n]\n---\n\n# A\n\nSee [b](../002-b/spec.md).\n";
+        assert!(frontmatter_parses(original), "the fixture starts as YAML");
+        tracked_repo(
+            tmp.path(),
+            &[
+                ("001-a", original),
+                (
+                    "002-b",
+                    "---\nstatus: draft\ndependencies: [001-a]\n---\n\n[a](../001-a/spec.md)\n",
+                ),
+            ],
+        );
+        for write in [false, true] {
+            let result = run(
+                &DeriveDependenciesArgs {
+                    write,
+                    staged: false,
+                },
+                tmp.path(),
+            )
+            .unwrap();
+            assert_eq!(
+                result.unparseable,
+                vec!["specs/001-a/spec.md"],
+                "write {write}"
+            );
+            assert_eq!(result.updated, [] as [String; 0], "write {write}");
+            assert!(!result.drift, "write {write}");
+            assert_eq!(result.examined, 2, "write {write}");
+            assert_eq!(
+                result.cycles,
+                vec![vec!["001-a".to_string(), "002-b".to_string()]]
+            );
+            assert_eq!(
+                std::fs::read_to_string(tmp.path().join("specs/001-a/spec.md")).unwrap(),
+                original,
+                "write {write}"
+            );
+        }
+    }
+
+    /// A spec tracked in the index but deleted from the work tree cannot be
+    /// read, so it is named in `absent` and not counted in `examined`, which
+    /// would assert a subject the run never inspected (`QUAL-CLAIM-001`). The
+    /// unit twin of `derive-references`' integration test of the same name.
+    #[test]
+    fn a_tracked_but_absent_spec_is_named_not_counted() {
+        let tmp = tempfile::tempdir().unwrap();
+        tracked_repo(
+            tmp.path(),
+            &[
+                (
+                    "001-a",
+                    "---\nstatus: done\ndependencies: []\n---\n\nnothing\n",
+                ),
+                (
+                    "002-b",
+                    "---\nstatus: done\ndependencies: []\n---\n\nnothing\n",
+                ),
+            ],
+        );
+        // Deleted without staging the deletion: the index still lists it.
+        std::fs::remove_file(tmp.path().join("specs/002-b/spec.md")).unwrap();
+        let result = run(
+            &DeriveDependenciesArgs {
+                write: false,
+                staged: false,
+            },
+            tmp.path(),
+        )
+        .unwrap();
+        assert_eq!(result.absent, vec!["specs/002-b/spec.md"]);
+        assert_eq!(result.examined, 1);
+        assert!(!result.drift);
     }
 
     #[test]

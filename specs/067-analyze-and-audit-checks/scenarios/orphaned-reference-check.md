@@ -15,7 +15,7 @@ real instances surfaced during the adopter bootstrap 048 AC10 called for: a
 generators two migrations had relocated out from under it.
 
 That scenario settles *what* the rule is and *where* it is surfaced — the
-durable home is `framework/commands/analyze.md` §Project-level consistency, with the
+durable home is **§Project-level consistency (advisory)** in `.ductus/reference/analyze.md`, with the
 bootstrap's migration batch as a second call site. This scenario is the runtime
 half: the primitive both call sites invoke, so one rule has one implementation
 rather than two that can disagree (the Family 19 / `mechanical_sweep` pairing is
@@ -66,13 +66,15 @@ count — an empty `findings` array means *examined and found nothing* only when
   suppression list would be the declared input 027's scenario rules out.
 - **A pinned referrer**: still reported. Pinning opts out of framework *writes*,
   not out of being told the file is broken.
-- **The registry is present but unparseable**: `attribution: "watermark"` with
-  the parse failure in `skipped` — not silently downgraded, since a caller
-  expecting attribution at the bootstrap call site must be able to tell a
-  missing registry from a broken one.
+- **The registry is present but unparseable**: `attribution: "watermark"`,
+  indistinguishable from an absent registry. No `skipped` entry is recorded;
+  in an adopter, where the bootstrap call site runs, the registry is never in
+  the project tree, so that site always reads `watermark` (`ductus-procedure.md`
+  Pre-run Migrations, step 8).
 - **No `[migrations]` section at all** (an adopter who has never run a
-  migration): `last_applied` is null and the result says so; it is not rendered
-  as an empty string that reads like a migration named "".
+  migration): `last-applied` is the empty string, meaning no migration has been
+  applied, and never reads as a migration named ""; an empty `migration` under
+  `watermark` means the same.
 
 ## Open Questions
 

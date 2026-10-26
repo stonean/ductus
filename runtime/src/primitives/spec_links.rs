@@ -61,6 +61,87 @@ pub(crate) fn has_unterminated_frontmatter(content: &str) -> bool {
     !lines.any(is_frontmatter_fence)
 }
 
+/// Whether a frontmatter line continues the value of the key above it rather
+/// than starting a new key: an indented line, or a block-sequence entry at
+/// column zero (`- item`, or `-` alone with the item on the lines below).
+///
+/// The single definition of where a key's value ends, shared by both
+/// splices. Indentation alone is not enough: YAML lets a block sequence under
+/// a mapping key sit at the key's own indentation, and that indentless form is
+/// what `PyYAML` and Ruby's Psych emit by default. Under an indent-only rule the
+/// splice replaced the key line, stopped at the first `- item`, and left the
+/// old items behind the new value, which is invalid YAML. A column-zero `-`
+/// cannot start a key of a mapping, so it can only be a sequence entry.
+///
+/// The frontmatter fence is checked before this in both splices, so `---` is
+/// never mistaken for an entry. A blank line is [`continues_key`]'s question,
+/// since it belongs to whichever side the next non-blank line is on.
+pub(crate) fn is_key_continuation(line: &str) -> bool {
+    line.starts_with(' ') || line.starts_with('\t') || line == "-" || line.starts_with("- ")
+}
+
+/// Whether `lines[idx]` continues the value of the key above it: a line
+/// carrying content that [`is_key_continuation`] accepts, or a line carrying
+/// none (empty, whitespace only, or a comment at column zero) that the next
+/// line carrying content continues.
+///
+/// YAML lets blank lines sit inside a block value (`dependencies:`, a blank
+/// line, then `  - 002-b`), so a rule that ended the value at the first blank
+/// line left the items beyond it behind: `derive-dependencies` wrote them
+/// after the new list, which does not parse, and `derive-references` put its
+/// block between the key and its items, which parses as a null
+/// `dependencies:` and a reference that was a dependency. A blank line the
+/// next key follows stays outside the value, so the spacing an author put
+/// before that key survives the splice. A comment at column zero between two
+/// entries is the same shape: `#` there cannot start a key, so it sits inside
+/// the value when an entry follows and before the next key when one does. (An
+/// indented comment is indented, so [`is_key_continuation`] already holds it.)
+/// `lines` are the file's lines with any `\r` already stripped, as both
+/// splices hold them.
+pub(crate) fn continues_key(lines: &[&str], idx: usize) -> bool {
+    let carries_content = |line: &str| !line.trim().is_empty() && !line.starts_with('#');
+    let Some(line) = lines.get(idx) else {
+        return false;
+    };
+    if carries_content(line) {
+        return is_key_continuation(line);
+    }
+    lines
+        .iter()
+        .skip(idx + 1)
+        .find(|next| carries_content(next))
+        .is_some_and(|next| is_key_continuation(next))
+}
+
+/// Whether the leading frontmatter block of `content` parses as YAML, with
+/// the block's bounds found by [`is_frontmatter_fence`], as both splices find
+/// them.
+///
+/// The check a splice's output passes before it is written. A splice edits
+/// lines, not YAML, so a value shape its line rules do not anticipate leaves a
+/// block that no longer parses: a flow sequence whose closing `]` sits at
+/// column zero, say. Writing that
+/// block would corrupt a spec while reporting it updated. A file with no
+/// frontmatter, or one whose block never closes, has nothing to judge here and
+/// is `true`; the unterminated case is [`has_unterminated_frontmatter`]'s.
+pub(crate) fn frontmatter_parses(content: &str) -> bool {
+    let mut lines = content.lines();
+    match lines.next() {
+        Some(first) if is_frontmatter_fence(first) => {}
+        _ => return true,
+    }
+    let mut block = String::new();
+    for raw in lines {
+        let line = raw.strip_suffix('\r').unwrap_or(raw);
+        if is_frontmatter_fence(line) {
+            return serde_norway::from_str::<serde_norway::Value>(&block).is_ok();
+        }
+        block.push_str(line);
+        block.push('\n');
+    }
+    true
+}
+
 /// A body line that survived every exclusion, with its 1-based line number.
 ///
 /// The line number is carried because a caller reporting a malformed link
@@ -347,5 +428,67 @@ x: 1
     fn crlf_lines_are_normalized_before_matching() {
         let content = "---\r\nx: 1\r\n---\r\n## See also\r\n- ](../001-a/spec.md)\r\n";
         assert_eq!(texts(content), [] as [&str; 0]);
+    }
+
+    #[test]
+    fn indented_lines_and_column_zero_entries_continue_a_key() {
+        for line in ["  - 002-b", "\t- 002-b", "    spec: 003-u", "- 002-b", "-"] {
+            assert!(is_key_continuation(line), "{line:?} continues the key");
+        }
+        for line in ["next: 3", "references:", "-x: 1", "--- ", "# note", ""] {
+            assert!(!is_key_continuation(line), "{line:?} is not a continuation");
+        }
+    }
+
+    /// A blank line, or a comment at column zero, belongs to the side the next
+    /// line carrying content is on: inside the value when an entry follows,
+    /// outside it when a key or the fence does. A whitespace-only line is
+    /// blank, not indented.
+    #[test]
+    fn a_blank_line_continues_a_key_only_when_an_entry_follows_it() {
+        let lines = [
+            "dependencies:", // 0
+            "",              // 1: an indented entry follows
+            "  - 002-b",     // 2
+            "",              // 3: a column-zero entry follows, past two blanks
+            "   ",           // 4
+            "- 004-d",       // 5
+            "# a note",      // 6: a column-zero comment, an entry follows
+            "",              // 7
+            "- 005-e",       // 8
+            "",              // 9: a key follows
+            "  ",            // 10: whitespace only, a key follows
+            "# about next",  // 11: a column-zero comment, a key follows
+            "next: 3",       // 12
+            "",              // 13: the fence follows
+            "---",           // 14
+            "",              // 15: nothing follows
+        ];
+        let continues: Vec<bool> = (0..lines.len()).map(|i| continues_key(&lines, i)).collect();
+        assert_eq!(
+            continues,
+            [
+                false, true, true, true, true, true, true, true, true, false, false, false, false,
+                false, false, false
+            ]
+        );
+        assert!(!continues_key(&lines, lines.len()), "past the end");
+    }
+
+    #[test]
+    fn frontmatter_parses_judges_the_block_between_the_fences() {
+        assert!(frontmatter_parses(
+            "---\nstatus: done\ndependencies: [001-a]\n---\nbody: [\n"
+        ));
+        // The fence rule is the splices': trailing whitespace closes the block,
+        // so the body below it, and the rule `---` further down, are not read.
+        assert!(frontmatter_parses(
+            "---\r\nstatus: done\r\n---   \r\nbody: [\r\n\r\n---\r\n"
+        ));
+        assert!(!frontmatter_parses(
+            "---\nstatus: done\ndependencies: [002-b]\n- 009-old\n---\nbody\n"
+        ));
+        // Nothing to judge: no block at all.
+        assert!(frontmatter_parses("just a body: [\n"));
     }
 }

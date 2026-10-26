@@ -13,10 +13,11 @@
 //! Tarjan's strongly-connected-components algorithm over the resulting
 //! subgraph. Any non-trivial SCC — size ≥ 2, or a self-loop — surfaces in
 //! the result's `cycles` field. Cycle detection is defense-in-depth that
-//! complements spec 017's `gen-spec-deps.sh` generator-side cycle check;
-//! the primitive fires when the upstream generator was bypassed, the
-//! adopter is on an older shipped script, or stale frontmatter edits
-//! re-introduce a cycle outside the generator's purview.
+//! complements the generator-side check in `derive-dependencies`, whose
+//! `cycles` field reports every cycle in the graph it derives from spec
+//! bodies; this primitive fires when that derivation was bypassed (a
+//! commit made without the hook) or stale frontmatter edits re-introduce a
+//! cycle outside its purview.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -476,7 +477,8 @@ mod tests {
         // Per the scenario's edge case: when frontmatter `dependencies`
         // lists an edge no longer present in the body, `traverse-deps`
         // walks the frontmatter and sees the cycle. Resolution path:
-        // re-run `gen-spec-deps.sh` to remove the stale edge. Here we
+        // re-run `derive-dependencies --write` to remove the stale edge, and
+        // read its `cycles` field to confirm none remains. Here we
         // simulate the stale state by writing a frontmatter cycle
         // directly (no body links involved at the primitive layer).
         let tmp = tempfile::tempdir().unwrap();

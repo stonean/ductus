@@ -1395,9 +1395,10 @@ pub struct DeriveDependenciesResult {
     /// outcome**: the caller decides whether it blocks.
     pub cycles: Vec<Vec<String>>,
     /// Specs whose frontmatter opens a block it never closes, so nothing could
-    /// be derived from them. Reported rather than repaired — `validate-frontmatter`
-    /// owns diagnosing a malformed block — and never an error: an unparseable
-    /// spec is an unknown, not drift.
+    /// be derived from them, or whose derived rewrite would leave a block that
+    /// does not parse as YAML, so it was not written. Reported rather than
+    /// repaired — `validate-frontmatter` owns diagnosing a malformed block —
+    /// and never an error: an unparseable spec is an unknown, not drift.
     ///
     /// The contract this completes: an empty `updated` means examined-and-clean
     /// only when `unparseable` is also empty (`QUAL-CLAIM-001`), the same
@@ -1470,9 +1471,10 @@ pub struct DeriveReferencesResult {
     /// config looks identical in `updated` alone.
     pub registered_services: u32,
     /// Specs whose frontmatter opens a block it never closes, so nothing could
-    /// be derived from them. Reported rather than repaired — `validate-frontmatter`
-    /// owns diagnosing a malformed block — and never an error: an unparseable
-    /// spec is an unknown, not drift.
+    /// be derived from them, or whose derived rewrite would leave a block that
+    /// does not parse as YAML, so it was not written. Reported rather than
+    /// repaired — `validate-frontmatter` owns diagnosing a malformed block —
+    /// and never an error: an unparseable spec is an unknown, not drift.
     ///
     /// The contract this completes: an empty `updated` means examined-and-clean
     /// only when `unparseable` is also empty (`QUAL-CLAIM-001`), the same
@@ -1992,7 +1994,8 @@ pub struct CheckPromotionCoverageArgs {
     /// Level-2 heading names inside `rules-file` whose top-level bullets are
     /// rule-bearing. Repeatable, and required: which sections carry rules is a
     /// property of the project's own file, so a default would make the
-    /// denominator a claim this primitive is not entitled to make.
+    /// denominator a claim this primitive is not entitled to make. An empty
+    /// set is refused with an error, on the CLI and over MCP alike.
     #[arg(long = "section")]
     pub sections: Vec<String>,
     /// Repo-relative path to the file carrying the classification table.

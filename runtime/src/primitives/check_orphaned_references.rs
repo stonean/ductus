@@ -364,10 +364,8 @@ struct MigrationsSection {
 /// when it is absent or will not parse.
 ///
 /// `None` is what drives `attribution: "watermark"`. A missing registry and an
-/// unparseable one both land here, but they are distinguished for the caller by
-/// the `skipped` entry the unparseable case adds — a caller at the bootstrap
-/// site expects attribution and must be able to tell "not installed" from
-/// "broken".
+/// unparseable one both land here, and nothing distinguishes them for the
+/// caller: both read `watermark`, and neither adds a `skipped` entry.
 fn read_registry(repo: &Path) -> Option<Vec<RegistryEntry>> {
     let text = std::fs::read_to_string(repo.join("framework/migrations.toml")).ok()?;
     let parsed: RegistryFile = toml::from_str(&text).ok()?;
