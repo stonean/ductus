@@ -28,7 +28,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 4. Add the ceiling check and its test
 
-- [x] `scripts/lint-governing-size.sh`: the ceiling table (`AGENTS.md` 50000, the constitution at its measured size), index measurement, and the three failure messages
+- [x] `scripts/lint-governing-size.sh`: the ceiling table (`AGENTS.md` 50000, the constitution at its measured size), index measurement, and the four failure messages
 - [x] `scripts/tests/test-lint-governing-size.sh`: cases (a)–(i) from the plan
 - [x] `shellcheck` both scripts
 

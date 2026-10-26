@@ -248,7 +248,7 @@ A message or comment added for a **moved** entry lands in `scripts/`, `scripts/t
 
 - **Ceilings** live in one table at the top of the script: `AGENTS.md 50000`, and `framework/constitution.md` at its byte size in the commit that adds the script. A comment on the `AGENTS.md` row names `DEFAULT_READ_SIZE_BYTES` in `runtime/src/primitives/check_artifact_size.rs` as the source of 50,000. The constitution row says `050-constitution`'s `the-constitution-fits-one-read` lowers it.
 - **What is measured.** `git -C "$ROOT" cat-file -s ":$path"` reads the index. In the hook that is the staged file, so an unstaged edit neither fails nor passes a commit. In CI, the index is the checkout. One code path serves both, as AC9 requires.
-- **Three failures, three messages**, each line naming the file:
+- **Four failures, four messages**, each line naming the file:
   - Over the ceiling: `{file}: {size} bytes, over its {ceiling}-byte ceiling — retire, merge, or move an entry to the check that enforces it (spec 072)`. The constitution's line names its fix as the cut `050-constitution` owes.
   - Missing from the index: `{file}: not in the index, so its size cannot be measured`.
   - Unreadable (`cat-file` fails on a path the index holds): `{file}: could not be read from the index`.

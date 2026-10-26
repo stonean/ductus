@@ -28,7 +28,8 @@ for arg in "$@"; do
       echo
       echo "Usage: $(basename "$0")"
       echo "  Exits 0 when every governed file is at or under its ceiling."
-      echo "  Exits 1 when any file is over, missing from the index, or unreadable."
+      echo "  Exits 1 when any file is over, missing from the index, or unreadable,"
+      echo "  or when a ceiling is not a whole number of bytes."
       exit 0
       ;;
     *) echo "Unknown argument: $arg" >&2; exit 2 ;;
