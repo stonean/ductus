@@ -1,26 +1,27 @@
 ---
 spec: 058-findings-route-at-discovery
-last-run: 2026-10-16T19:36:00Z
-reviewed-against: ec72c234476d97f7057f68d83c6e92f9e88eb94b
-diff-base: e8ba124ecaba41a153b486a8a68137a461c4805d
+last-run: 2026-10-27T06:47:55Z
+reviewed-against: 98a2eae0e909d19a50b246d127006f8440535e75
+diff-base: 57f82b22e4ca9d7d78c9d481f82f13e72f28b092
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 1
-scope: 37
+examined: 45
+scope: 81
 skipped-passes: []
 reviewed-digest:
-  data-model.md: eb5f2099c81634ab8f9dc5c7ff3073d2f6323dccf95c39a1cf1ec410d3b9b237
-  scenarios/analysis-drift-judges-the-record-it-writes.md: 33f0948bc3e3b1de7f92abbd822ebb1de03ad08f2aa24c1509236ff7bd0baf7a
+  data-model.md: c7e234cb3bb24c79adb55d9b627fe41f2f346388a8644637c34cacdfa20cdb2c
+  scenarios/analysis-drift-judges-the-record-it-writes.md: 9181d8ef6a4ad54cf2847a1fdac96d42ab509b598079c4901a17471f5b8d6b56
   scenarios/analyze-findings-match-decisions-by-host-judgment.md: d14bea60a4dfdba81edc5180b77367629154699b6808fda0739ab8a902776660
-  scenarios/analyze-state-drift-judges-the-record-it-writes.md: e975a37075b739bcd087c8683f166b6955ce9bcc42c28f64e79bf9f49003f803
-  scenarios/auto-records-disposition-tasks-without-pausing.md: 411e98d379ee2cb76ec7bef380e566ead077d5fa73bb1ecda34cb945ccda652e
+  scenarios/analyze-state-drift-judges-the-record-it-writes.md: 97833e416068dabe61138bc0e644535f9c2bbfdb065a7cce89d0b7a22180a607
+  scenarios/auto-records-disposition-tasks-without-pausing.md: 7d09684e1a17de3c9aee551cada7245b9e1f7b640f643a8c35b7d96166190da0
+  scenarios/findings-cost-in-proportion-to-risk.md: 7ff3dc556498c6147e5e27d651bb181b04d2263e7ddad7ed983dec039329cbba
   scenarios/only-unreadable-targets-retain-decisions.md: 76a12d565f6e1056f780906fed41de7d27e4a23c314232eddca0563026bcc3e1
 blocking: false
 dispositions:
-  fixed: 0
+  fixed: 24
   routed: 0
-  discarded: 0
+  discarded: 6
   undispositioned: 0
 decisions:
   - key: "perf: validate-frontmatter reads each record file twice — `runtime/src/primitives/validate_frontmatter.rs`"
@@ -68,13 +69,43 @@ decisions:
     reason: predates 058; a doc-only omission, and each variant's own message names the file and the defect
     decided-at: 2026-09-26T18:25:59Z
     decided-by: andy@stone.dev
+  - key: "other: review's description and help row say it blocks done on MUST violations, while the gate also blocks an unwaived SHOULD — `framework/commands/review.md`"
+    outcome: discarded
+    reason: true of the review record, whose blocking flag is MUST-only, and 023's AC25 pins the exact text
+    decided-at: 2026-10-27T06:47:44Z
+    decided-by: andy@stone.dev
+  - key: "other: loose \"gets a disposition\" phrasing in 050, 047, 041, 058 and walker.rs — `specs/047-analyze-findings-durability/spec.md`"
+    outcome: discarded
+    reason: none asserts that an undecided finding holds done, and each run still proposes a disposition for every finding
+    decided-at: 2026-10-27T06:47:44Z
+    decided-by: andy@stone.dev
+  - key: "other: the implement reference's \"non-blocking\" counts a SHOULD as blocking where review vocabulary does not — `framework/reference/implement.md`"
+    outcome: discarded
+    reason: the inline definition names exactly which findings it covers, and non-blocking is the scenario's own term
+    decided-at: 2026-10-27T06:47:44Z
+    decided-by: andy@stone.dev
+  - key: "other: 020's data model calls should-violations an advisory severity count rather than a post-waiver one — `specs/020-code-review/data-model.md`"
+    outcome: discarded
+    reason: "pre-existing and not false: the row names the SHOULD count, and §Waivers and the §Expiry rule state the post-waiver exclusion"
+    decided-at: 2026-10-27T06:47:44Z
+    decided-by: andy@stone.dev
+  - key: "other: the analyze-state-drift scenario's Context says only --fix ends the loop, and its close omits the reopen-by-route exit — `specs/058-findings-route-at-discovery/scenarios/analyze-state-drift-judges-the-record-it-writes.md`"
+    outcome: discarded
+    reason: the Context records the state when the scenario was found, and the close is loose, not false
+    decided-at: 2026-10-27T06:47:44Z
+    decided-by: andy@stone.dev
+  - key: "edge: an expired waiver on a low-confidence finding re-counts toward low-confidence, not its severity's count — `framework/reference/review.md`"
+    outcome: discarded
+    reason: "contrived: waiving a finding that counts toward no gate has no effect worth documenting, and step 1's exclusion stays true"
+    decided-at: 2026-10-27T06:47:44Z
+    decided-by: andy@stone.dev
 ---
 
 # Review — 058-findings-route-at-discovery
 
 ## Summary
 
-Scoped re-review, reopened for a cross-spec impact 067 task 7 owed and missed (50c6f693): the retention scenario's two lists of the excluded-by-construction class gain never-existed. examined: 1: only-unreadable-targets-retain-decisions.md in full. It also clears the release gate's Family 19 finding on this spec: the 022 split's pointer rewrite in the same scenario (d852b627) had not been reviewed, and it reads correctly, since 066's data model is where the class table now lives. The nine stored discards are retained. The five passes ran over the files counted as examined, against all eleven rule files and AGENTS.md, and found no finding and no observation. Not read and not counted: every other scope entry - the plan's Affected Files, unchanged in this window, and the files other specs' amendments and 067's tasks 10-11 changed after the base (including runtime/src/primitives/derive_dependencies.rs unless named above), which are the subject of their own reviews.
+Shared-window review of 058's `findings-cost-in-proportion-to-risk` change, `--since 57f82b22` (item 3's close): e38f5c1f, the change, with an independent review of its uncommitted form folded in; 84bb4aa1 and 6cf2bb6e, fix rounds 2 and 3, each re-read by an independent agent, round 3's re-read finding no MUST or SHOULD; and 98a2eae0, round 4, a doc comment, a comma and a discharged inbox item, not re-read as a prose and doc-comment round. Rules: the eleven files `discover-rule-files` selects. No rule fires: the gate reads counts from local records, the wire enum and the `blocked-by` value are unchanged, and each gating term has a test that fails without it (mutations M1-M5 killed). 0 MUST, 0 SHOULD; 30 observations, 24 fixed and 6 discarded. Examined 45: the hand-written files the window changed, read as diffs and, for `disposition_block` and its tests, the 058 scenarios and both owner scenarios, whole. The window's 11 generated copies under `.claude/`, `.pi/` and `.ductus/reference/` were compared byte for byte with their sources, not read. The rest of scope went unread: the plan Affected Files the window left unchanged, which earlier records cover, and the five review records this run writes. Stored decisions from earlier windows are retained, their sources lying outside this window. Its own artifacts were read in the window: spec, plan, data model, tasks and the four scenarios the change edited; the deliverable is the gate, drift tier, disposition-task rule and AGENTS.md entry above.
 
 ## MUST violations (blocking)
 
@@ -94,7 +125,36 @@ Scoped re-review, reopened for a cross-spec impact 067 task 7 owed and missed (5
 
 ## Observations
 
-*None.*
+- bug: write-analysis's summary said a hard-fail or blocking finding holds done until it is fixed or routed — `runtime/src/primitives/write_analysis.rs` — **fixed**
+- other: the constitution's Finding dispositions lead read a review observation as a gating finding — `framework/constitution.md` — **fixed**
+- other: "only a gating finding holds done" was false for an out-of-spec implement finding's disposition task — `framework/constitution.md` — **fixed**
+- other: 047's §Constitution amendment signpost and AC7 said every analyze finding must get a disposition before done — `specs/047-analyze-findings-durability/spec.md` — **fixed**
+- other: the gate's check-11 doc comments still described it as reading the dispositions maps — `runtime/src/primitives/check_review_gate.rs` — **fixed**
+- edge: no --fix trigger reverts a done spec whose own analysis is blocking once disposition drift stopped reverting — `framework/reference/analyze.md` — **fixed**
+- test: the gate's MUST and analysis terms were reachable only from a hand-edited record and no test exercised them — `runtime/src/primitives/check_review_gate.rs` — **fixed**
+- other: 058's first Resolved Question cross-referenced a section that now says the opposite before its supersession note — `specs/058-findings-route-at-discovery/spec.md` — **fixed**
+- convention: --waive was documented for a MUST violation only, while the gate's guidance directs it at a SHOULD — `framework/commands/review.md` — **fixed**
+- other: review's description and help row say it blocks done on MUST violations, while the gate also blocks an unwaived SHOULD — `framework/commands/review.md` — **discarded**: true of the review record, whose blocking flag is MUST-only, and 023's AC25 pins the exact text
+- other: the disposition-drift reference said the report names which findings nobody decided — `framework/reference/analyze.md` — **fixed**
+- other: loose "gets a disposition" phrasing in 050, 047, 041, 058 and walker.rs — `specs/047-analyze-findings-durability/spec.md` — **discarded**: none asserts that an undecided finding holds done, and each run still proposes a disposition for every finding
+- other: 058's spec said an undecided finding's decision persists — `specs/058-findings-route-at-discovery/spec.md` — **fixed**
+- other: the implement reference's "non-blocking" counts a SHOULD as blocking where review vocabulary does not — `framework/reference/implement.md` — **discarded**: the inline definition names exactly which findings it covers, and non-blocking is the scenario's own term
+- other: 058's analyze section said the findings disposition drift counts do not hold done, though analysis.md's count includes gating ones — `specs/058-findings-route-at-discovery/spec.md` — **fixed**
+- other: docs/analyze.md gave the same false reason for --fix not reverting on disposition drift — `docs/analyze.md` — **fixed**
+- other: the scenario's first Resolved Question said the gate reads only should-violations — `specs/058-findings-route-at-discovery/scenarios/findings-cost-in-proportion-to-risk.md` — **fixed**
+- other: the review reference's §Waivers said a waiver drops a finding from must-violations only — `framework/reference/review.md` — **fixed**
+- other: "only an unwaived SHOULD reaches this check" was stated flat, though a hand-edited record reaches it with a MUST — `framework/reference/implement.md` — **fixed**
+- other: the drift report sentence understated analysis.md's undispositioned count — `framework/reference/analyze.md` — **fixed**
+- other: the analyze-state drift reference bullet said routing anywhere clears a blocking record — `framework/reference/analyze.md` — **fixed**
+- other: 020's data model calls should-violations an advisory severity count rather than a post-waiver one — `specs/020-code-review/data-model.md` — **discarded**: pre-existing and not false: the row names the SHOULD count, and §Waivers and the §Expiry rule state the post-waiver exclusion
+- other: the analyze-state-drift scenario's Context says only --fix ends the loop, and its close omits the reopen-by-route exit — `specs/058-findings-route-at-discovery/scenarios/analyze-state-drift-judges-the-record-it-writes.md` — **discarded**: the Context records the state when the scenario was found, and the close is loose, not false
+- other: §Per-run waiver processing said an expired waiver re-counts toward must-violations and flips blocking, false for a SHOULD — `framework/reference/review.md` — **fixed**
+- other: docs/analyze.md's "every other gating count blocks earlier" was the last unscoped sibling — `docs/analyze.md` — **fixed**
+- other: 058's data model read as saying analysis.md's undecided findings do not hold done — `specs/058-findings-route-at-discovery/data-model.md` — **fixed**
+- other: docs/analyze.md's scoped clause parsed as "the runtime writes every other gating count" without its commas — `docs/analyze.md` — **fixed**
+- other: ReviewSeverity::is_blocking's doc comment said a SHOULD never blocks done, and called it the bucketing predicate — `runtime/src/schema/severity.rs` — **fixed**
+- other: the inbox still held "check-review-gate never reads should-violations", which the gate change discharged — `specs/inbox.md` — **fixed**
+- edge: an expired waiver on a low-confidence finding re-counts toward low-confidence, not its severity's count — `framework/reference/review.md` — **discarded**: contrived: waiving a finding that counts toward no gate has no effect worth documenting, and step 1's exclusion stays true
 
 ## Skipped passes
 

@@ -1,20 +1,22 @@
 ---
 spec: 066-audit-records-and-the-completion-gate
-last-run: 2026-10-16T19:38:37Z
-analyzed-against: 2ce89f9d91c5ef1d03f1294506ade742e1aa8ef3
+last-run: 2026-10-27T06:49:21Z
+analyzed-against: 98a2eae0e909d19a50b246d127006f8440535e75
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
-unexamined: 6
+unexamined: 7
 analyzed-digest:
-  data-model.md: 0792044af6c1a393717f2b7f764e9ccadfcbad51af41b47c846fc4ba0c5b1fd8
+  data-model.md: 8851119617356540be9a3fd4434cdf7eecc04bcb9ae5471322a0c5a93ae1ed77
   plan.md: 37373f3b36eb33b8ed39aab86772e265f720670d0ce4728fd9173c1caefd9a23
-  review.md: b42cecf7def5a7fcd7eda789686f767381f708d9fb64e58872b7231af69a4d68
+  review.md: c7db78b58bd3ad145d65c01de171cf64aee5774d8717ba5c1e6759fe689ca22c
   scenarios/a-done-spec-has-no-transition-to-gate.md: d4a9f47277ddcd5e8735be7d13ee7f57606827a5f36db608da3fd70a05aaa39a
+  scenarios/a-done-specs-plan-edit-leaves-its-analysis-current.md: 3d63a66653413cb90127966cf092b984c71d44dad6d9dda77eba08131f6737e6
   scenarios/a-multi-number-renumber-is-one-rewrite.md: 0b0c25fc2e8446f403bff82cff5b0d64c86cfbc45d98bc492fd5fa824c9fdd5a
   scenarios/a-renamed-file-contributes-its-rewrites.md: 52907e92b668e9d100ab339e0d36953cd6d025104b3650174bf7b806b3631490
   scenarios/a-review-states-what-it-read.md: 333ffc663a0d0f471970dbcdad9b010583dd891f651e626741962cad8265da14
   scenarios/an-empty-scope-flag-does-not-decide-the-denominator.md: 4273f4da9ffa9a0b4b02b06dba0b8d05a2c8ceb4780937dc360c1e72153d57fc
+  scenarios/only-gating-findings-hold-done.md: 43012eb89501db9f4abc468448aadf7fc1867f72cd0bb1502bad16f26ea107d0
   scenarios/process-waivers-file-lists.md: 3fb3b9e54f414691d28d984ba76cd48c7e1de4fe2ee67259a44ea8559da447dc
   scenarios/review-base-includes-the-transition-commit.md: 62f1434d3a2d59d62ebbfa37d5c6561d82c4cb343907d7cbe081e0df63801b3f
   scenarios/review-scope-includes-uncommitted-work.md: 49699137b92a8578bb85e00ea0c31f702106b21f1e954ab863e3d9db323a5198
@@ -26,11 +28,11 @@ analyzed-digest:
   scenarios/the-cross-spec-impact-gate.md: b85c2d557733a29beb8084823a9156e13b283090a283203aa14dcaa85afed3c1
   scenarios/write-analysis-and-the-second-gate.md: afaaa2f6957547d1f9dce559426353e58a00da287b1066f7eb0af05d51330397
   scenarios/write-review-known-field-quoting.md: 914954823ee3da52dccbb25749851013d5dd3be442dcc85b09661c27c7bea2a9
-  spec.md: 74c2e726d8f36a85395993964e5d04327f55bda1b73839523db7a04319d5c685
-  tasks.md: e3e71e3f2d6d634bf1dfaa45c375fee6c65c28057843d9bb113925b782f31393
+  spec.md: acdbc6f5ada97ba54258a3197dbc1fafdc1785878deba14451cab532cea4bf5a
+  tasks.md: cc35ef8746f26fbcb525d19b163900714991dd456adaf0f227431a5ac065fa7a
 unexamined-by-reason:
   not-a-live-claim: 3
-  root-absent: 3
+  root-absent: 4
 blocking: false
 dispositions:
   fixed: 0
@@ -43,7 +45,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 6 unexamined target(s). Dispositions: 0 fixed, 0 routed, 0 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 7 unexamined target(s). Dispositions: 0 fixed, 0 routed, 0 discarded, 0 undispositioned.
 
 ## Hard failures
 
@@ -60,7 +62,7 @@ dispositions:
 ## Unexamined targets
 
 - not-a-live-claim: 3
-- root-absent: 3
+- root-absent: 4
 
 ## Fixed in this run
 

@@ -1,7 +1,7 @@
 ---
 spec: 063-oversized-artifacts-warn-with-a-fix
-last-run: 2026-10-27T04:23:55Z
-analyzed-against: 88768fe67738169b56f4f60554eb67b383858398
+last-run: 2026-10-27T06:49:21Z
+analyzed-against: 98a2eae0e909d19a50b246d127006f8440535e75
 hard-fail: 0
 blocking-findings: 0
 advisory: 3
@@ -9,11 +9,11 @@ unexamined: 3
 analyzed-digest:
   data-model.md: 42dc6d741a76d613b5a1424a86725d08c2d7cb52b2f3901ced2cd736559fa426
   plan.md: a9a23c6762a4b832f05386a545bf12d8d03f26464011b400fd8b91477dd06d40
-  review.md: b0a87b69e2a2cfe1a2b2a92c0437dff119442cfca1f75003d3e6b98a29d1b292
+  review.md: d3d1cec4f58be09256ce8088c7d6a55a09e2caec3abbce05aef63a7ee125efd9
   scenarios/a-plan-trim-does-not-reopen-a-done-spec.md: 981fb71fcb69757942c915c7b000474cfbe278bd7b9e89aefbfda7307e1e28fa
   scenarios/an-invalid-threshold-fails-fast.md: 59bceffaed0e278952f69acb4f847a3639b7390314cf212dfbef405624c37f23
   scenarios/an-unknown-artifacts-key-is-named.md: 912ce563e772f628884c9096a8fafb00526379e935c99f40d7ca96090d986e1a
-  spec.md: d813778cf902688d43db3288b48df70adc79747be1d00c23f8d4da5b00f55f4d
+  spec.md: 05d6f082eb0425dfcdc4af9a628c5371b625e392f290d783c20cb3f1fb777a58
   tasks.md: bce08a811fb786c60ff4e72b1de7d637bd0ea324a1214ace33e06e3aa2907b76
 unexamined-by-reason:
   root-absent: 3

@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [008-security-rules, 020-code-review, 022-deterministic-runtime, 047-analyze-findings-durability, 050-constitution, 057-analyze-artifact-and-record-relocation]
 cross-spec-impact:
   - 008-security-rules
@@ -569,7 +569,7 @@ spec's links to it. Each also gets the contract change itself:
   audit stopped writing inbox items. Folding the two would bury this behavior
   inside the record of the whole runtime.
 - **Why split from constitution:** `050-constitution` owns what the
-  constitution holds and how it is organized. Its §Ownership keeps a behavior
+  constitution holds and how it is organized. Its Ownership section keeps a behavior
   change, and the amendment of the principle it contradicts, with the spec
   that owns the behavior. The overlap Family 7 sees, `AGENTS.md` and
   `framework/constitution.md`, is that amendment and its mirror.
