@@ -555,3 +555,9 @@ spec's links to it. Each also gets the contract change itself:
   change, and the amendment of the principle it contradicts, with the spec
   that owns the behavior. The overlap Family 7 sees, `AGENTS.md` and
   `framework/constitution.md`, is that amendment and its mirror.
+- **Why split from analyze-findings-durability:** `047-analyze-findings-durability`
+  owns the analyze record and its freshness, and its inbox-capture half is the
+  behavior this spec reversed, which its own signposts record. This spec owns how
+  every finding is dispositioned across review, analyze and implement. The overlap
+  Family 7 sees, `framework/constitution.md`, holds both rules in separate
+  sections; folding them would bury the disposition rule inside a record format.

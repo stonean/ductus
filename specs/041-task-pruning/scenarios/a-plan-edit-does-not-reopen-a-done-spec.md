@@ -22,6 +22,7 @@ section: "Framework consistency — each artifact by its durability class"
 - **One change that also edits `spec.md`, a scenario or `data-model.md`.** Those parts keep today's rules; only the plan and tasks part is exempt.
 - **A `tasks.md` edit that adds an unchecked task.** It is new work, not a correction, so it still reopens the spec; see Resolved Questions.
 - **A `plan.md` trim `check-artifact-size` proposes for an oversized `done` plan.** It is a plan edit like any other, so its advice says it does not reopen the spec.
+- **`/{project}:amend`'s reconcile offer.** On a `done` spec with an uncommitted `tasks.md` change, amend offers to reopen it and reopens only if the operator confirms. Declining for a change that adds no unchecked task is this rule applied, so the offer is left as it is; `014-reclarify-backedge`'s `reopen-after-informal-edits` owns its delta (decided 2026-10-26, under the owner's pre-authorization).
 
 ## Open Questions
 
