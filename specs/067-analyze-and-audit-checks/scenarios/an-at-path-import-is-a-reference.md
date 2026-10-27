@@ -16,7 +16,7 @@ section: "Link and reference integrity"
 
 ## Edge Cases
 
-- **Punctuation before the `@`.** `(@.ductus/x)` and `"@.ductus/x"` are excluded, because only whitespace or the line start begins a token here. Claude Code reads neither as an import written by the template or the bootstrap, which write the import at the start of a line.
+- **Punctuation before the `@`.** `(@.ductus/x)` and `"@.ductus/x"` are excluded, because only whitespace or the line start begins a token here. Neither is a form the template or the bootstrap writes; both write the import at the start of a line.
 - **A byte-order mark.** A U+FEFF before an `@path` on a file's first line is not whitespace, so that line is excluded. The template carries no BOM.
 
 ## Open Questions

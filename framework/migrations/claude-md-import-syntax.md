@@ -13,13 +13,13 @@ Through ductus 0.59 the `CLAUDE.md` template wrote its imports in the `@import <
 
 1. **Resolve the file.** The file is `CLAUDE.md` at the project root. When it does not exist, stop silently and report nothing. Do not create one; the Shared Files manifest installs `CLAUDE.md`, not a migration.
 
-2. **Find the import lines.** Walk the file line by line, tracking fenced code blocks: a fence opens on a line whose text, after at most three spaces, begins with three or more backticks or tildes, and closes on a later line holding only a run of the same character at least as long, so every line between is code. An import line is a line outside a fence whose text, after any leading whitespace, begins with `@import` followed by at least one space or tab and then a path: the rest of the line with trailing whitespace removed. When quotes (`"` or `'`) wrap the whole path, the path is what they wrap. A line that begins with a backtick holds a code span, not an import, and does not match, so an `@import` written as text stays. Lines inside the `ductus:constitutions` managed block match like any other. The next `/ductus` run re-renders that block in the new form anyway, and converting it here leaves the file correct in between.
+2. **Find the import lines.** Walk the file line by line, tracking fenced code blocks: a fence opens on a line whose text, after at most three spaces, begins with three or more backticks or tildes, and closes on a later line that, after at most three spaces, holds a run of the same character at least as long and nothing else but spaces or tabs, so every line between is code; a fence never closed runs to the end of the file. An import line is a line outside a fence whose text, after any leading whitespace, begins with `@import` followed by at least one space or tab and then a path: the rest of the line with trailing whitespace removed. When quotes (`"` or `'`) wrap the whole path, the path is what they wrap. A line that begins with a backtick holds a code span, not an import, and does not match, so an `@import` written as text stays. Lines inside the `ductus:constitutions` managed block match like any other. Later in the same run, the **Shared constitution imports** step re-renders that block in the new form anyway, and converting it here leaves the file correct in between.
 
 3. **Idempotency check.** When no line matches, the file is converged: report `claude-md-import-syntax: no @import line outside code in CLAUDE.md — left as is` and stop without writing. This covers a file already fixed by hand: a line reading `@AGENTS.md`, or any other `@path` line, is never touched.
 
 4. **Skip a pinned file.** When `CLAUDE.md` is listed in `.ductus/config.toml` `[pinned] files`, write nothing and report one line. Pinning opts a file out of framework writes, and this is one:
 
-   `warning: CLAUDE.md is pinned; leaving its @import lines — delete the .ductus/constitution.md one and rewrite each other as @<path> by hand for Claude Code to load it.`
+   `warning: CLAUDE.md is pinned; leaving its @import lines — delete any .ductus/constitution.md one, and rewrite each remaining one as @<path> (unquoted, each space escaped) by hand for Claude Code to load it.`
 
 5. **Rewrite each import line in place.**
 
@@ -29,7 +29,7 @@ Through ductus 0.59 the `CLAUDE.md` template wrote its imports in the `@import <
 
    Preserve everything else byte for byte: each rewritten line keeps its own line ending, and nothing else in the file is normalized. Write atomically: a temporary file in the same directory, then a rename.
 
-6. **Report** one line naming what changed: `claude-md-import-syntax: rewrote {n} import line(s) to @path`, where `{n}` counts the rewritten lines, and, when step 5 removed one, `; removed the .ductus/constitution.md import`. Then name each rewritten path, so the operator can confirm what loads at the next session start.
+6. **Report** one line naming what changed: `claude-md-import-syntax: rewrote {n} import line(s) to @path`, where `{n}` counts the rewritten lines, and, when step 5 removed one, `; removed the .ductus/constitution.md import`. When `{n}` is 0 the line is `claude-md-import-syntax: removed the .ductus/constitution.md import`. Then name each rewritten path, so the operator can confirm what loads at the next session start.
 
 ## Verification
 

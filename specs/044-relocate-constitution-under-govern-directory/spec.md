@@ -28,7 +28,7 @@ The Shared Files manifest ships `framework/constitution.md` to the adopter repo 
 
 Every shipped artifact that names the constitution's adopter-side location resolves `.ductus/constitution.md`:
 
-- **Project seed templates** — the `CLAUDE.md` seed's `@import constitution.md` line, the `AGENTS.md` seed's constitution links and artifact list, and the `README.md` seed's governance links.
+- **Project seed templates** — the `CLAUDE.md` seed's Auto-Memory Routing line, the `AGENTS.md` seed's constitution links and artifact list, and the `README.md` seed's governance links.
 - **Command bodies** — the commands that load or name the adopter constitution (`target`'s once-per-session read, `specify`'s not-yet-loaded fallback read, and any other body naming the root path). `analyze`'s anchor-resolution rule keeps its dual-path form with the adopter side updated: `framework/constitution.md` in ductus's own repo; `.ductus/constitution.md` at the adopter repo root.
 - **Bootstrap prose** — the Shared Files manifest row and the `[pinned] files` schema example in `ductus.md` that illustrates pinning with `"constitution.md"`.
 - **Framework documentation** — `AGENTS.md`'s description of `framework/constitution.md` as the shipped source (its sync-target wording), and any other live-artifact reference to the adopter-root path, per the no-dead-references rule.
