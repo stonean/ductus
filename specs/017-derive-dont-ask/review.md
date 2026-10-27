@@ -1,13 +1,13 @@
 ---
 spec: 017-derive-dont-ask
-last-run: 2026-10-27T06:47:55Z
-reviewed-against: 98a2eae0e909d19a50b246d127006f8440535e75
-diff-base: 57f82b22e4ca9d7d78c9d481f82f13e72f28b092
+last-run: 2026-10-27T15:08:51Z
+reviewed-against: 751c0cf3915dbf485910fc9cf23715fd00e8762f
+diff-base: 2fadb5a9c1d292e3688b0b6e80e9b58acb67fe84
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 45
-scope: 91
+examined: 41
+scope: 86
 skipped-passes: []
 reviewed-digest:
   data-model.md: 59aa84e8bc06cb7526e20597cbeb672066cfbe1e8fa9e70a0f3db6f97b4a756b
@@ -20,9 +20,9 @@ reviewed-digest:
   scenarios/tracked-specs-not-worktree.md: e3808ab1ae9a4d6b1b2103c85537c6236e99898b7569536eb9ac2bfcdde684bf
 blocking: false
 dispositions:
-  fixed: 24
+  fixed: 18
   routed: 0
-  discarded: 6
+  discarded: 7
   undispositioned: 0
 decisions:
   - key: "other: CFG-ENV-001 does not say whether an empty value on an optional value with a default is absent or malformed — `framework/rules/configuration-cross.md`"
@@ -335,13 +335,48 @@ decisions:
     reason: "contrived: waiving a finding that counts toward no gate has no effect worth documenting, and step 1's exclusion stays true"
     decided-at: 2026-10-27T06:47:44Z
     decided-by: andy@stone.dev
+  - key: "convention: a-status-commit-holds-only-the-transition's Behavior reads as requiring the bullet to say a transition staged alone is lost — `specs/050-constitution/scenarios/a-status-commit-holds-only-the-transition.md`"
+    outcome: discarded
+    reason: the Behavior requires the bullet to state its condition, that the spec file holds nothing but the transition, and its reason, that the pre-commit hook restages the file whole; the bullet states both, and the loss of a transition staged alone is the scenario's own account of the incident
+    decided-at: 2026-10-27T15:08:29Z
+    decided-by: andy@stone.dev
+  - key: "other: claude-md-import-syntax's shared-import bullet contrasts its rewrite with a removal the procedure no longer performs — `framework/migrations/claude-md-import-syntax.md`"
+    outcome: discarded
+    reason: the bullet still guards against de-duplicating an import the adopter added by hand, which removal would drop if the registration were withdrawn; its sense does not depend on the constitution line
+    decided-at: 2026-10-27T15:08:29Z
+    decided-by: andy@stone.dev
+  - key: "other: 017's plan and 072's Affected Files still name the old import form — `specs/017-derive-dont-ask/plan.md`"
+    outcome: discarded
+    reason: each records that spec's own edit at the time, a decision record, not a claim about the tree today
+    decided-at: 2026-10-27T15:08:29Z
+    decided-by: andy@stone.dev
+  - key: "other: a CLAUDE.md symlinked to AGENTS.md becomes a copy when constitution-import writes it by temporary file and rename — `framework/migrations/constitution-import.md`"
+    outcome: discarded
+    reason: every bootstrap write of CLAUDE.md already does this, merge-managed-block's managed-block render on every run included, so the migration adds no new case; a symlinked CLAUDE.md is not a layout the framework supports
+    decided-at: 2026-10-27T15:08:29Z
+    decided-by: andy@stone.dev
+  - key: "other: 022's constitution-excerpts-as-skill-resources says every CLAUDE.md carries the constitution import — `specs/022-deterministic-runtime/scenarios/constitution-excerpts-as-skill-resources.md`"
+    outcome: discarded
+    reason: this change makes the premise true again, the template's third line being @.ductus/constitution.md; 022 is another session's and owes no edit
+    decided-at: 2026-10-27T15:08:29Z
+    decided-by: andy@stone.dev
+  - key: "other: the constitution line naming plan.md carries § references resolve-anchor classes as qualified and does not judge — `framework/constitution.md`"
+    outcome: discarded
+    reason: both targets, §brownfield-inbox and §drift-prevention, carry markers (checked by hand), and citing a subsection's marked section is the constitution's own anchor rule
+    decided-at: 2026-10-27T15:08:29Z
+    decided-by: andy@stone.dev
+  - key: "other: constitution-import accepts a four-space-indented line, misses a match behind a leading byte-order mark, and reports the @import form on a file unpinned after claude-md-import-syntax was skipped — `framework/migrations/constitution-import.md`"
+    outcome: discarded
+    reason: "contrived inputs: claude-md-import-syntax treats indentation the same way, the template writes no byte-order mark, and an operator who unpins a file has the earlier migration's pinned warning in hand"
+    decided-at: 2026-10-27T15:08:29Z
+    decided-by: andy@stone.dev
 ---
 
 # Review — 017-derive-dont-ask
 
 ## Summary
 
-Shared-window review of 058's `findings-cost-in-proportion-to-risk` change, `--since 57f82b22` (item 3's close): e38f5c1f, the change, with an independent review of its uncommitted form folded in; 84bb4aa1 and 6cf2bb6e, fix rounds 2 and 3, each re-read by an independent agent, round 3's re-read finding no MUST or SHOULD; and 98a2eae0, round 4, a doc comment, a comma and a discharged inbox item, not re-read as a prose and doc-comment round. Rules: the eleven files `discover-rule-files` selects. No rule fires: the gate reads counts from local records, the wire enum and the `blocked-by` value are unchanged, and each gating term has a test that fails without it (mutations M1-M5 killed). 0 MUST, 0 SHOULD; 30 observations, 24 fixed and 6 discarded. Examined 45: the hand-written files the window changed, read as diffs and, for `disposition_block` and its tests, the 058 scenarios and both owner scenarios, whole. The window's 11 generated copies under `.claude/`, `.pi/` and `.ductus/reference/` were compared byte for byte with their sources, not read. The rest of scope went unread: the plan Affected Files the window left unchanged, which earlier records cover, and the five review records this run writes. Stored decisions from earlier windows are retained, their sources lying outside this window. Its own change in the window is AC25's annotation, read whole; the spec was reopened for it.
+One in-depth review of the shared window 2fadb5a9..751c0cf3, recorded in each spec the change reopened (002, 017, 021, 050, 051, 062, 064, 066, 072): 7ce72592 cut framework/constitution.md to one read and imported it at startup, ad595280 recorded 051's split from 022, d5de121c, da52bc4c and 1503ca58 are three fix rounds, and a750d8a8 routed a bootstrap finding to 013. The five passes read every file the window modified and applied the eleven rule files discover-rule-files selects. The nine code and service rule files (security-backend, security-frontend, api-backend, concurrency-backend, observability-backend, performance-backend, performance-frontend, reliability-backend, accessibility-frontend) have no subject in a window of markdown, shell and TOML; configuration-cross's CFG-CONST-001 holds, since check H in scripts/tests/test-lint-governing-size.sh ties both ceilings to DEFAULT_READ_SIZE_BYTES; quality-cross applies, and QUAL-TEST-001 holds, check H failing when either ceiling is set to 53,813 or the constant to 51,200. No rule violation. An independent five-pass review found 2 MUST and 7 SHOULD defects outside the rules, fixed in round 1; its re-read found 1 SHOULD, fixed in round 2; the re-read of round 2 found no MUST or SHOULD, and round 3, prose only, was not re-read. The 25 observations below record them: 18 fixed, 7 discarded with their reasons. Examined counts the 41 window files the passes read in full. Not counted: .ductus/reference/groom.md and .ductus/reference/review.md, regenerated by scripts/gen-claude-commands.sh from sources read in full; the audit records this run wrote; and this spec's plan Affected Files the window did not touch, which were not reread. Before the change was committed, three read-only sweeps checked the cut and the import by meaning against the live-artifact set, and their findings were corrected in 7ce72592. Verification: claude -p with every tool disallowed answered NOT IN CONTEXT before the import (2fadb5a9) and quoted the constitution's last sentence verbatim after it (da52bc4c), with no tool call; a real adopter bootstrap on main ran both migrations on a subject adopted at ductus-v0.28.0 and constitution-import alone on one whose last_applied was claude-md-import-syntax.
 
 ## MUST violations (blocking)
 
@@ -361,36 +396,31 @@ Shared-window review of 058's `findings-cost-in-proportion-to-risk` change, `--s
 
 ## Observations
 
-- bug: write-analysis's summary said a hard-fail or blocking finding holds done until it is fixed or routed — `runtime/src/primitives/write_analysis.rs` — **fixed**
-- other: the constitution's Finding dispositions lead read a review observation as a gating finding — `framework/constitution.md` — **fixed**
-- other: "only a gating finding holds done" was false for an out-of-spec implement finding's disposition task — `framework/constitution.md` — **fixed**
-- other: 047's §Constitution amendment signpost and AC7 said every analyze finding must get a disposition before done — `specs/047-analyze-findings-durability/spec.md` — **fixed**
-- other: the gate's check-11 doc comments still described it as reading the dispositions maps — `runtime/src/primitives/check_review_gate.rs` — **fixed**
-- edge: no --fix trigger reverts a done spec whose own analysis is blocking once disposition drift stopped reverting — `framework/reference/analyze.md` — **fixed**
-- test: the gate's MUST and analysis terms were reachable only from a hand-edited record and no test exercised them — `runtime/src/primitives/check_review_gate.rs` — **fixed**
-- other: 058's first Resolved Question cross-referenced a section that now says the opposite before its supersession note — `specs/058-findings-route-at-discovery/spec.md` — **fixed**
-- convention: --waive was documented for a MUST violation only, while the gate's guidance directs it at a SHOULD — `framework/commands/review.md` — **fixed**
-- other: review's description and help row say it blocks done on MUST violations, while the gate also blocks an unwaived SHOULD — `framework/commands/review.md` — **discarded**: true of the review record, whose blocking flag is MUST-only, and 023's AC25 pins the exact text
-- other: the disposition-drift reference said the report names which findings nobody decided — `framework/reference/analyze.md` — **fixed**
-- other: loose "gets a disposition" phrasing in 050, 047, 041, 058 and walker.rs — `specs/047-analyze-findings-durability/spec.md` — **discarded**: none asserts that an undecided finding holds done, and each run still proposes a disposition for every finding
-- other: 058's spec said an undecided finding's decision persists — `specs/058-findings-route-at-discovery/spec.md` — **fixed**
-- other: the implement reference's "non-blocking" counts a SHOULD as blocking where review vocabulary does not — `framework/reference/implement.md` — **discarded**: the inline definition names exactly which findings it covers, and non-blocking is the scenario's own term
-- other: 058's analyze section said the findings disposition drift counts do not hold done, though analysis.md's count includes gating ones — `specs/058-findings-route-at-discovery/spec.md` — **fixed**
-- other: docs/analyze.md gave the same false reason for --fix not reverting on disposition drift — `docs/analyze.md` — **fixed**
-- other: the scenario's first Resolved Question said the gate reads only should-violations — `specs/058-findings-route-at-discovery/scenarios/findings-cost-in-proportion-to-risk.md` — **fixed**
-- other: the review reference's §Waivers said a waiver drops a finding from must-violations only — `framework/reference/review.md` — **fixed**
-- other: "only an unwaived SHOULD reaches this check" was stated flat, though a hand-edited record reaches it with a MUST — `framework/reference/implement.md` — **fixed**
-- other: the drift report sentence understated analysis.md's undispositioned count — `framework/reference/analyze.md` — **fixed**
-- other: the analyze-state drift reference bullet said routing anywhere clears a blocking record — `framework/reference/analyze.md` — **fixed**
-- other: 020's data model calls should-violations an advisory severity count rather than a post-waiver one — `specs/020-code-review/data-model.md` — **discarded**: pre-existing and not false: the row names the SHOULD count, and §Waivers and the §Expiry rule state the post-waiver exclusion
-- other: the analyze-state-drift scenario's Context says only --fix ends the loop, and its close omits the reopen-by-route exit — `specs/058-findings-route-at-discovery/scenarios/analyze-state-drift-judges-the-record-it-writes.md` — **discarded**: the Context records the state when the scenario was found, and the close is loose, not false
-- other: §Per-run waiver processing said an expired waiver re-counts toward must-violations and flips blocking, false for a SHOULD — `framework/reference/review.md` — **fixed**
-- other: docs/analyze.md's "every other gating count blocks earlier" was the last unscoped sibling — `docs/analyze.md` — **fixed**
-- other: 058's data model read as saying analysis.md's undecided findings do not hold done — `specs/058-findings-route-at-discovery/data-model.md` — **fixed**
-- other: docs/analyze.md's scoped clause parsed as "the runtime writes every other gating count" without its commas — `docs/analyze.md` — **fixed**
-- other: ReviewSeverity::is_blocking's doc comment said a SHOULD never blocks done, and called it the bucketing predicate — `runtime/src/schema/severity.rs` — **fixed**
-- other: the inbox still held "check-review-gate never reads should-violations", which the gate change discharged — `specs/inbox.md` — **fixed**
-- edge: an expired waiver on a low-confidence finding re-counts toward low-confidence, not its severity's count — `framework/reference/review.md` — **discarded**: contrived: waiving a finding that counts toward no gate has no effect worth documenting, and step 1's exclusion stays true
+- bug: the cut dropped a requirement, that a CI job's full-depth checkout is commented — `framework/constitution.md` — **fixed**
+- bug: constitution-import step 5 gave the inserted line the anchor line's ending, so a final @AGENTS.md with no newline became one line that loads neither file — `framework/migrations/constitution-import.md` — **fixed**
+- convention: 072's plan stated the constitution's size as 49,921 bytes — `specs/072-governing-documents-stay-within-one-read/plan.md` — **fixed**
+- bug: on a pinned 0.28-0.59 CLAUDE.md, constitution-import's warning told the operator to add a second constitution import beside the one claude-md-import-syntax told them to convert — `framework/migrations/constitution-import.md` — **fixed**
+- convention: constitution-import's Background named two of the three kinds of CLAUDE.md that lack the import, omitting one the adopter wrote before adopting — `framework/migrations/constitution-import.md` — **fixed**
+- convention: 050's plan said spent done-spec tasks keep their wording while the change rewrote two of them — `specs/050-constitution/plan.md` — **fixed**
+- convention: the partial-read rule dropped 'a match-only search', which a-partial-read-is-not-a-read lists — `framework/constitution.md` — **fixed**
+- convention: a-status-commit-holds-only-the-transition's Behavior reads as requiring the bullet to say a transition staged alone is lost — `specs/050-constitution/scenarios/a-status-commit-holds-only-the-transition.md` — **discarded**: the Behavior requires the bullet to state its condition, that the spec file holds nothing but the transition, and its reason, that the pre-commit hook restages the file whole; the bullet states both, and the loss of a transition staged alone is the scenario's own account of the incident
+- convention: cost levers named no platform tooling, which 010 AC11 says the paragraph points at — `framework/constitution.md` — **fixed**
+- convention: 'iterate narrowly but report the project's command' and 'It authorizes nothing destructive' read ambiguously — `framework/constitution.md` — **fixed**
+- bug: constitution-import step 5 matched @AGENTS.md without the whitespace tolerance step 2 applies — `framework/migrations/constitution-import.md` — **fixed**
+- convention: '50,000 bytes' in constitution-import is true of the shipped file only, since an adopter's copy grows with {project} substituted — `framework/migrations/constitution-import.md` — **fixed**
+- convention: constitution-import step 2 both pointed at claude-md-import-syntax's fence rule and restated it — `framework/migrations/constitution-import.md` — **fixed**
+- convention: the cut dropped 'so match the prefix', which 064's spec credits §runtime-host-integration with — `framework/constitution.md` — **fixed**
+- other: claude-md-import-syntax's shared-import bullet contrasts its rewrite with a removal the procedure no longer performs — `framework/migrations/claude-md-import-syntax.md` — **discarded**: the bullet still guards against de-duplicating an import the adopter added by hand, which removal would drop if the registration were withdrawn; its sense does not depend on the constitution line
+- other: 017's plan and 072's Affected Files still name the old import form — `specs/017-derive-dont-ask/plan.md` — **discarded**: each records that spec's own edit at the time, a decision record, not a claim about the tree today
+- other: a CLAUDE.md symlinked to AGENTS.md becomes a copy when constitution-import writes it by temporary file and rename — `framework/migrations/constitution-import.md` — **discarded**: every bootstrap write of CLAUDE.md already does this, merge-managed-block's managed-block render on every run included, so the migration adds no new case; a symlinked CLAUDE.md is not a layout the framework supports
+- other: 022's constitution-excerpts-as-skill-resources says every CLAUDE.md carries the constitution import — `specs/022-deterministic-runtime/scenarios/constitution-excerpts-as-skill-resources.md` — **discarded**: this change makes the premise true again, the template's third line being @.ductus/constitution.md; 022 is another session's and owes no edit
+- bug: constitution-import reported 'already imports the constitution' for a file whose only constitution line is the @import form, which loads nothing — `framework/migrations/constitution-import.md` — **fixed**
+- convention: constitution-import's @import-form match was looser than claude-md-import-syntax's import-line definition — `framework/migrations/constitution-import.md` — **fixed**
+- convention: constitution-import's Verification said line endings are unchanged beside a bullet allowing one to be added — `framework/migrations/constitution-import.md` — **fixed**
+- other: the constitution line naming plan.md carries § references resolve-anchor classes as qualified and does not judge — `framework/constitution.md` — **discarded**: both targets, §brownfield-inbox and §drift-prevention, carry markers (checked by hand), and citing a subsection's marked section is the constitution's own anchor rule
+- convention: constitution-import's @import-form report line read as firing only when the file has a single import line — `framework/migrations/constitution-import.md` — **fixed**
+- convention: constitution-import's Verification said every second run reports 'already imports', which a pinned @import-form file does not — `framework/migrations/constitution-import.md` — **fixed**
+- other: constitution-import accepts a four-space-indented line, misses a match behind a leading byte-order mark, and reports the @import form on a file unpinned after claude-md-import-syntax was skipped — `framework/migrations/constitution-import.md` — **discarded**: contrived inputs: claude-md-import-syntax treats indentation the same way, the template writes no byte-order mark, and an operator who unpins a file has the earlier migration's pinned warning in hand
 
 ## Skipped passes
 
