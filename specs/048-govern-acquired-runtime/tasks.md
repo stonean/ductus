@@ -158,3 +158,9 @@ Phase 1 is independently safe and lands first so later work is written against a
 - [x] Implement the behavior described in `scenarios/fetch-archive-reads-its-proxy-once.md`
 
 - **Done when**: the scenario's open questions are resolved; `fetch-archive` reads no environment variable per call; `docs/runtime.md`'s inventory lists the proxy variables with their effect; the SSRF screen's behavior under a proxy is implemented and stated; an adopter behind a proxy can still fetch; `cargo test` passes. Routed from 062's review (CFG-ENV-001 waived there on `runtime/src/primitives/fetch_archive.rs`).
+
+### 19. fetch-archive identifies itself by the repository URL
+
+- [ ] runtime/src/primitives/fetch_archive.rs — the client sets no User-Agent; send `ductus <version> (https://github.com/stonean/ductus)`, the form AGENTS.md and scripts/check-runtime-currency.sh use (found by 050's task 35 adopter bootstrap, 2026-10-27; routed from 050 task 38)
+
+- **Done when**: every fetch-archive request carries a User-Agent naming ductus, its version and `https://github.com/stonean/ductus`, and a test fails when the header is removed

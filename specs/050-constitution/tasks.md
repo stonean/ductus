@@ -304,9 +304,9 @@ Implements `scenarios/a-retired-feature-leaves-no-spec.md`. The constitution sta
 
 ## 35. The constitution fits one read
 
-- [ ] Implement the behavior described in `scenarios/the-constitution-fits-one-read.md`
+- [x] Implement the behavior described in `scenarios/the-constitution-fits-one-read.md`
 
-The owner answered the scenario's question on 2026-10-27 with (b): the constitution holds the 50,000-byte read size and is imported at startup. The second cut and the moves are `plan.md` §The constitution fits one read. `claude-md-import-syntax` converts an adopter's `@import .ductus/constitution.md` line, and `constitution-import` adds `@.ductus/constitution.md` where nothing imports it. Through their reopens, 002's template passages, 017 AC16 and 072's import edge case state the import, and 021, 051, 062, 064 and 066 no longer quote text the cut removed. 040's `spec-root-rule-stated-once` holds again as written, since `CLAUDE.md:3` is the import. Owed before this task is ticked: the real adopter bootstrap AGENTS.md requires for a migration change, run on `main` after the push, on a subject far enough behind to run both migrations and one whose `last_applied` is already `claude-md-import-syntax`.
+The owner answered the scenario's question on 2026-10-27 with (b): the constitution holds the 50,000-byte read size and is imported at startup. The second cut and the moves are `plan.md` §The constitution fits one read. `claude-md-import-syntax` converts an adopter's `@import .ductus/constitution.md` line, and `constitution-import` adds `@.ductus/constitution.md` where nothing imports it. Through their reopens, 002's template passages, 017 AC16 and 072's import edge case state the import, and 021, 051, 062, 064 and 066 no longer quote text the cut removed. 040's `spec-root-rule-stated-once` holds again as written, since `CLAUDE.md:3` is the import. The real adopter bootstrap AGENTS.md requires for a migration change ran on `main`: at `ad595280`, a subject adopted at `ductus-v0.28.0` ran the whole chain, and one whose `last_applied` was `claude-md-import-syntax` ran `constitution-import` alone. After the review's fix rounds, at `da52bc4c`, the removal form ran again, as did a pinned old-form file and a file ending in `@AGENTS.md` with no final newline. Two out-of-spec findings it surfaced are tasks 37 and 38.
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
 
@@ -319,5 +319,11 @@ The owner answered the scenario's question on 2026-10-27 with (b): the constitut
 ## 37. Disposition out-of-spec finding: the Frontmatter Migration refuses after an earlier migration in the same run writes under specs/
 
 - [x] framework/bootstrap/ductus-procedure.md — §Frontmatter Migration's precheck (git status --porcelain -- specs/) refuses a tree that §Pre-run Migrations dirtied moments earlier in the same /ductus run: inbox-guidance-refresh rewrote specs/inbox.md in the real adopter bootstrap of task 35 (a subject adopted at ductus-v0.28.0, run at --ref=main on ad595280), so an adopter whose inbox carries the pre-0.53 guidance meets the refusal on its first run past 0.53, and the step's 'Exit before any modifications' does not say whether the section or the run exits — routed to `specs/013-text-first-artifacts/scenarios/the-precheck-ignores-what-the-same-run-wrote.md` (013 task 25), reopening 013
+
+- **Done when**: the finding is fixed, routed, or discarded, with a discard's reason written on the task
+
+## 38. Disposition out-of-spec finding: the runtime's fetch-archive sends no User-Agent
+
+- [x] runtime/src/primitives/fetch_archive.rs — the reqwest client sets no User-Agent, so an acquisition fetch from GitHub identifies itself by nothing, where AGENTS.md asks a request to an outside service to name `https://github.com/stonean/ductus`; found by task 35's adopter bootstrap rerun on da52bc4c (2026-10-27) — routed to specs/048-govern-acquired-runtime/tasks.md, which owns fetch-archive
 
 - **Done when**: the finding is fixed, routed, or discarded, with a discard's reason written on the task
