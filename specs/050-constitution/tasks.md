@@ -336,6 +336,7 @@ The owner answered the scenario's question on 2026-10-27 with (b): the constitut
 
 ## 40. Memory routing lives in AGENTS.md
 
-- [ ] Implement the behavior described in `scenarios/memory-routing-lives-in-agents-md.md`
+- [x] Implement the behavior described in `scenarios/memory-routing-lives-in-agents-md.md` (`3b359742`); the fixture walk of the migration passed 18 cases twice, its text tightened between walks
+- [ ] Real adopter bootstrap, once `main` carries this: one subject adopted at `ductus-v0.28.0` and one at `ductus-v0.59.11` with Pi added (which also verifies `064-pi-host-support` task 16), each run with `/ductus --ref=main`. Expected: `memory-routing-leaves-claude-md` removes the 2026-06-18 and 2026-09-15 sections respectively and reports it; `AGENTS.md` gets the `ductus:memory-routing` block appended at its end, and the run says so; a re-run changes nothing. The `ductus-v0.28.0` subject is expected to meet the `013-text-first-artifacts` precheck refusal first (scenario `the-precheck-ignores-what-the-same-run-wrote`): commit and re-run
 
 - **Done when**: the AGENTS.md managed block, both templates, the constitution, this repository's CLAUDE.md and the migration match the scenario, AC20 is rewritten to the new surfaces, a fixture walk proves the migration removes each shipped section and leaves an edited one, a real adopter bootstrap shows the block written and the section removed, and the inbox item it discharges is removed
