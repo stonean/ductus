@@ -358,9 +358,10 @@ pub(crate) fn analyze_freshness(
 ///
 /// A `plan.md` or `tasks.md` edit adding no unchecked task takes no back-edge
 /// on a `done` spec (§spec-lifecycle), so the record is not judged stale for
-/// one: re-running analyze for it cannot reopen the spec. An edit that adds an
-/// unchecked task is the same diff here and is reopened by the commands that
-/// read `tasks.md`, not by this row. A **deleted** `plan.md` or `tasks.md`
+/// one: re-running analyze for it cannot reopen the spec for the edit. An edit
+/// that adds an unchecked task is the same diff here; reopening the spec for
+/// it is `/{project}:amend`'s offer or a `/{project}:prune` run's job, not this
+/// row's. A **deleted** `plan.md` or `tasks.md`
 /// still counts, because analyze reports a missing one at `planned` or later as
 /// blocking. A spec short of `done` keeps both, because the pre-`done` gate
 /// reads its analysis against them (spec 041,

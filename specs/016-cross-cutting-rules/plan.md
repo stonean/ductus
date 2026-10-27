@@ -38,9 +38,9 @@ The intro paragraph is rewritten to mention the three-tier framing (rule / spec 
 The §rules section carries:
 
 1. **Definition** — a rule is an enforceable, citable requirement that applies across multiple features. Rule files ship under `specs/rules/{rule-set}.md`. Specs cite rules by ID.
-2. **Conceptual format summary** — every rule has an ID (e.g., `BE-AUTHN-001`), a Statement (RFC 2119 keywords of one tier: MUST / MUST NOT, SHOULD / SHOULD NOT, or the tierless MAY), a Rationale, and a Verification step. The full schema is canonically declared in [`specs/008-security-rules/data-model.md`](../../specs/008-security-rules/data-model.md). *(Path is from the constitution; in adopting projects the link resolves to `specs/008-security-rules/data-model.md` if 008 was scaffolded — see Edge Case below.)*
+2. **Conceptual format summary** — every rule has an ID (e.g., `BE-AUTHN-001`), a Statement (RFC 2119 keywords of one tier: MUST / MUST NOT, SHOULD / SHOULD NOT, or the tierless MAY), a Rationale, and a Verification step. The full schema is canonically declared in [`specs/008-security-rules/data-model.md`](../../specs/008-security-rules/data-model.md).
 3. **When to write a rule** — the four-indicator promotion checklist (cross-cutting / citable / governance-recognized category / generalizable wording), a rule being justified when "all four" hold.
-4. **When NOT to write a rule** — situational → scenario; feature-wide → acceptance criterion. Cross-references §scenarios and §spec-requirements.
+4. **When NOT to write a rule** — situational → scenario; feature-wide → acceptance criterion.
 5. **Lifecycle** — IDs are permanent; rules are deprecated with a removal target version, not deleted. Cross-reference 008's data-model for the full ID-stability invariants.
 6. **Relationship to specs and scenarios** — selected by scope: a situational concern is a scenario, a feature-wide one an acceptance criterion, a covered one a citation, the selection the three-tier table in 016's spec body states.
 
