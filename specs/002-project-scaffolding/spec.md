@@ -1,6 +1,6 @@
 ---
 title: "002-project-scaffolding — spec"
-status: in-progress
+status: done
 dependencies: [000-slash-commands, 001-system-spec-templates]
 tags: [templates, bootstrap]
 next-criterion: 8
@@ -43,7 +43,7 @@ The template stays minimal — no language-specific patterns. Language-specific 
 
 ### CLAUDE.md template
 
-A minimal file whose imports use Claude Code's `@path` form, the only one it resolves:
+A minimal file whose imports use Claude Code's `@path` form, the only one it resolves (Claude Code's memory documentation, *Import additional files*; measured in scenario `claude-md-template-imports-load`):
 
 - Imports `AGENTS.md` as `@AGENTS.md`
 - Does not import the constitution while it exceeds one read; the pipeline commands read it (scenario `claude-md-template-imports-load`)

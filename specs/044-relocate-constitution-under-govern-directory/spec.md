@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [027-bootstrap-migration-registry, 042-consolidate-govern-per-project-files-under-govern-directory]
 next-criterion: 11
 ---

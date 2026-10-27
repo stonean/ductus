@@ -1,44 +1,76 @@
 ---
 spec: 055-shared-constitution
-diff-base: 3c37c3ba5f288f44e296d79679b3f191bb16c395
-captured-issues: 0
-skipped-passes: []
-last-run: 2026-09-13T21:48:06Z
-reviewed-against: 3c37c3ba5f288f44e296d79679b3f191bb16c395
+last-run: 2026-10-27T01:38:52Z
+reviewed-against: e48df859ac3778879d93557ea4844ff29e6dd444
+diff-base: a717c3e420872b7962aeff48ee459c514cef6906
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 5
-scope: 22
+examined: 31
+scope: 52
+skipped-passes: []
 reviewed-digest:
   data-model.md: 7d54e3ee75399840c7e55932462ed7580b0e3c1f7c29c0ade4c0d1f00641e158
   scenarios/a-registered-source-is-named-with-its-description.md: 0150662e0bebc24665b91b0894dce653054754490b00fca6fb5628ff5c730205
 blocking: false
+dispositions:
+  fixed: 22
+  routed: 1
+  discarded: 8
+  undispositioned: 0
+decisions:
+  - key: "other: the module doc keeps 'a dangling @import yields a constitution that is simply not loaded' — `runtime/src/primitives/check_orphaned_references.rs`"
+    outcome: discarded
+    reason: it recounts the 048 AC10 incident, which was an @import, and 027's migration-chain-reference-integrity scenario keeps the same sentence as its record
+    decided-at: 2026-10-27T01:38:52Z
+    decided-by: andy@stone.dev
+  - key: "other: a BOM, or punctuation such as ( or \" before the `@`, keeps an @path import from being read as a reference — `runtime/src/primitives/check_orphaned_references.rs`"
+    outcome: discarded
+    reason: "contrived: the template and the bootstrap write each import at the start of a line, and 067's an-at-path-import-is-a-reference records both cases as edge cases"
+    decided-at: 2026-10-27T01:38:52Z
+    decided-by: andy@stone.dev
+  - key: "other: --ref=main adopters get the migration before the @path orphan-check fix, which ships only in the runtime — `framework/migrations/claude-md-import-syntax.md`"
+    outcome: discarded
+    reason: a runtime change reaches adopters only through a ductus-v tag, and the next release is the owner's to cut; the gap closes there
+    decided-at: 2026-10-27T01:38:52Z
+    decided-by: andy@stone.dev
+  - key: "other: a legacy root `@import constitution.md` becomes `@constitution.md`, an orphan no check reports — `framework/migrations/claude-md-import-syntax.md`"
+    outcome: discarded
+    reason: the root path is not a managed root, the line was equally silent before, and `@import constitution.md` never loaded anything
+    decided-at: 2026-10-27T01:38:52Z
+    decided-by: andy@stone.dev
+  - key: "other: a Windows absolute document path already holds backslashes, and the space escaping may misread them — `framework/bootstrap/ductus.md`"
+    outcome: discarded
+    reason: resolve-constitutions writes the document path through rel_path, which replaces every backslash with a forward slash, so the block line holds no backslash but the spaces the bootstrap escapes
+    decided-at: 2026-10-27T01:38:52Z
+    decided-by: andy@stone.dev
+  - key: "other: 040's spec-root-rule-stated-once rests a rejected option on the CLAUDE.md premise 017 AC16 states — `specs/040-configurable-specs-dir/scenarios/spec-root-rule-stated-once.md`"
+    outcome: routed
+    target: specs/050-constitution/tasks.md
+    decided-at: 2026-10-27T01:38:52Z
+    decided-by: andy@stone.dev
+  - key: "security: the migration turns @import lines that loaded nothing into live imports — `framework/migrations/claude-md-import-syntax.md`"
+    outcome: discarded
+    reason: step 6 names every rewritten path for the operator, Claude Code asks before loading an import from outside the working directory, and no loaded security rule fires on a local text rewrite
+    decided-at: 2026-10-27T01:38:52Z
+    decided-by: andy@stone.dev
+  - key: "other: the migration's code-span sentence repeats what 'begins with @import' already implies — `framework/migrations/claude-md-import-syntax.md`"
+    outcome: discarded
+    reason: "harmless: it names the edge case the scenario lists"
+    decided-at: 2026-10-27T01:38:52Z
+    decided-by: andy@stone.dev
+  - key: "other: the adopter runs met pre-existing bootstrap behavior: v0.28.0 cannot be walked at its tag, the Frontmatter Migration's clean-tree precheck refuses after a migration writes under specs/, AGENTS.md placeholders an old release left literal are never repaired, and v0.59.11's dead old-form constitutions region survives — `framework/bootstrap/ductus-procedure.md`"
+    outcome: discarded
+    reason: observations about the bootstrap's own machinery made while reviewing this change, none caused by it and none blocking it; the dead region is already an inbox item
+    decided-at: 2026-10-27T01:38:52Z
+    decided-by: andy@stone.dev
 ---
 
 # Review — 055-shared-constitution
 
 ## Summary
 
-Five passes over the resolved scope; 0 MUST, 0 SHOULD, 0 low-confidence, and **one observation** that maps to no loaded rule and is recorded rather than counted.
-
-**Diff base.** Both measured before choosing. Natural base `1f6c6b7` (2026-09-12) — scope **261**, modified-since **255**. `--since HEAD` — scope **22**, modified-since 0. Took `HEAD`. This is the override case AGENTS.md §Gotchas describes: 055 needed no correction this pass, so there are no pass edits to keep inside the window, and the natural base's 255 files are the whole repo's churn since 022's last reopen rather than anything 055 owns. The 22 resolve to exactly the plan's Affected Files.
-
-**examined: 5 of 22, counted strictly.** Read in full and counted: `runtime/src/primitives/resolve_constitutions.rs` (implementation through `classify`; its 260-line test module was not read), `runtime/src/schema/constitutions.rs` (same bound), `specs/055-shared-constitution/data-model.md`, `framework/constitution.md`, `framework/commands/target.md`.
-
-Named rather than counted, with what I relied on instead: `framework/bootstrap/ductus.md` — read by section (§Project Configuration's `constitutions.<alias>` entry, §Validating the registry, §Shared constitution imports), not across 141KB, and every claim below cites one of those sections. `framework/templates/project/claude-md.md` and `agents.md` — their `ductus:constitutions` managed blocks were read and checked against AC9, the rest of each file was not. `framework/bootstrap/govern.md` — the transitional copy audit Family 21 holds byte-identical to `ductus.md`, so reading it would show the same bytes; that is a reason to believe it correct, not a read. `.claude/commands/ductus/*.md` — a glob of generated mirrors whose sources are in scope. The seven remaining runtime files (`main.rs`, `mcp/server.rs`, `interpreter/mod.rs`, `primitives/mod.rs`, `schema/{mod,primitives,registry}.rs`) are the registration sites; I confirmed the primitive is wired by calling it on both the MCP and CLI paths rather than by reading them, which is evidence about the wiring and not about those files.
-
-**All twelve criteria verified against the tree**, not against the review that preceded them. AC1 by construction — an absent config and an absent table both yield an empty registry, so nothing downstream can tell them apart; confirmed live, `resolve-constitutions` returns all-empty in this repo. AC7 by `BTreeMap` alias order plus a `const DOCUMENT_NAME`, both carrying comments naming AC7 as the reason. AC6's halting behaviour is specified in §Validating the registry. AC9's managed block is `merge-managed-block` with marker `ductus:constitutions` into the layout-derived native rules file, which is strategy `skip` — so the file is preserved and only the region rewritten, and `.ductus/constitution.md` is never the target. AC10's precedence is stated once in §governance-precedence, including that nothing enforces it, and README and `docs/shared-constitution.md` point at it rather than restating it.
-
-**One criterion I initially read as false and was wrong about.** AC8 requires a report produced without a registered constitution to say so, and `## Unexamined governance` renders `*None.*` when none are registered — which does not distinguish "none registered" from "all loaded cleanly". The tree settles it the other way: `/{project}:target` step 4 specifies reporting *nothing* when `loaded` and `skipped` are both empty, "so a project without the feature reads exactly as it did before", and AC1 requires that same silence. The two criteria constrain each other and the implementation satisfies both; the reading that would have made AC8 a finding would have made AC1 one instead.
-
-**Security.** No network: `repo` is recorded verbatim and never fetched, which the module doc, the entry doc and the data-model all state, and which removes the transport entirely — "unreachable" collapses to "not checked out" rather than being an error class. Path handling accepts `..` and absolute paths deliberately, with the reasoning cited to `validate_no_traversal`'s config-sourced-path boundary rather than restated, and adjudicated in 022's `config-sourced-paths-and-the-traversal-boundary` scenario; the value originates in committed config, not from an LLM or a host. Registration is not transitive — a registered checkout's own config is never read — so there is no recursion to bound and no cycle to detect. No finding.
-
-**Quality.** `resolve-constitutions` is the strongest QUAL-CLAIM-001 implementation in the corpus I have read: it names the rule in its own module doc, splits `loaded`/`skipped` so a caller "has to drop a field it was handed" to report a clean result over an unreadable source, and carries `examined` as the denominator. The bootstrap's import block extends the same discipline — when `loaded` is empty the block is written **empty rather than omitted**, because "an empty managed region and an absent one differ: the first says `/ductus` looked and found nothing registered, the second says nothing ran." QUAL-GROUND-001 does not fire: the registry is bound through a typed serde structure, which is the compliant form. QUAL-STUB-001 does not fire: every path resolves, reports, or errors.
-
-**Reuse / efficiency / simplicity.** The registry deliberately mirrors `[services]` — `load_services`/`classify` shapes reused, and the missing-checkout-is-a-state posture inherited rather than re-decided — with the module doc saying so and why: "reusing that path keeps the two registries legible to each other." One document per checkout, one filename, no `ref`/`version` field, no fetching. No finding.
-
-**The observation, stated here because a reader of this record should meet it.** The validation §Validating the registry promises is enforced nowhere deterministic. Probed against the release binary: a non-URL `repo` loads silently, and an empty `path` is reported `no-constitution-document` — a confident wrong reason for what is actually a config mistake. It does not falsify AC6, which scopes rejection to configuration time; it is deterministic validation that was specified and never built, so the fix is 022's by the runtime-home rule and carries a release.
+Five passes over the window a717c3e4..e48df859 — 055's diff base, the parent of 96934872, which reopened it with 044 because 002's claude-md-template-imports-load makes the managed block load its documents under claude-style, revising 055's design record that the block is navigation and /target the loader. The window is shared with 002 and 044 and was reviewed once in depth; this record carries that review, read from the same passes, with identical observations and dispositions. An independent reviewer ran security, reuse, quality, efficiency and simplicity over 96934872 against api-, concurrency-, observability-, performance-, reliability- and security-backend plus configuration- and quality-cross: 0 MUST, 0 SHOULD against a loaded rule, and 31 observations across three rounds, none mapping to a loaded rule. For 055 the rounds corrected its Resolved Question on how documents compose, its plan Overview and the plan section now headed "/ductus:target loads what the rules file did not; the managed block imports under claude-style"; the surfaces 055 owns — bootstrap step 3, /target step 4 and docs/shared-constitution.md — were read whole in their changed regions. A real adopter bootstrap with a registered sibling checkout showed the migration's converted block line byte-identical to the renderer's. Round 1 (d1e3ec96) and round 2 (e48df859) were each re-read independently; round 2's re-read found no MUST or SHOULD. Examined: the 31 window files. `scope` counts 52 entries, one of them a pattern: those 31; the 18 plan Affected Files entries untouched since the diff base, not read — the runtime registration sites and resolve-constitutions source (`runtime/src/interpreter/mod.rs`, `main.rs`, `mcp/server.rs`, `primitives/mod.rs` apart from `rel_path`, `resolve_constitutions.rs` apart from its document classification, `write_analysis.rs`, `write_review.rs`, `schema/constitutions.rs`, `schema/mod.rs`, `schema/primitives.rs` apart from `ConstitutionRecord`, `schema/registry.rs`), `framework/runtime-tools.txt`, `framework/constitution.md`, `framework/commands/analyze.md`, `review.md`, `framework/templates/project/agents.md`, `.claude/commands/ductus/*.md` (the pattern) and `specs/055-shared-constitution/data-model.md`; and the three review records this window writes for 002, 044 and 055, which are the passes' output rather than their subject.
 
 ## MUST violations (blocking)
 
@@ -56,13 +88,39 @@ Named rather than counted, with what I relied on instead: `framework/bootstrap/d
 
 *None.*
 
-## Captured issues
-
-*None.*
-
 ## Observations
 
-- convention: the `[constitutions.*]` validation `framework/bootstrap/ductus.md` promises is enforced nowhere deterministic, so `/{project}:target` silently accepts entries the bootstrap would reject. §Validating the registry states that a malformed entry halts the run naming the alias and field — an alias that is not a bare TOML key, a `repo` that is not URL-shaped (a scheme and a host), or an empty `path`. `runtime/src/schema/constitutions.rs`'s `from_toml_str` does TOML parsing and serde required-field enforcement only, and its own doc says so ("the pure shape plus parser"); `resolve_constitutions::classify` reads the filesystem and never inspects the values. Probed 2026-09-13 against the release binary with a two-entry config: `repo = "not-a-url-at-all"` resolved `loaded` with no complaint, and `path = ""` resolved to the repo root and was reported `no-constitution-document` — a confident WRONG reason, telling the operator their checkout lacks the document when the actual mistake is an empty path in their own config. That is the exact conflation 055's Edge Cases forbid between the two failure states ("an operator who cloned the wrong repository must not read the same message as one who cloned nothing"), and §design-principles' bar that a check which cannot run must not be indistinguishable from one that passed. AC6 is NOT falsified — it scopes the rejection to configuration time, and the bootstrap prose does specify it — so this is unimplemented deterministic validation rather than a stale criterion. The checks are pure value inspection, hence runtime-eligible by §runtime-boundary's three criteria, where eligibility is a default rather than a permission. Fix belongs to 022 as a scenario per AGENTS.md §Workflow's runtime-home rule, and lands a `runtime/` change, so it carries the version-bump-and-tag obligation in the same sitting. — `runtime/src/schema/constitutions.rs:70`
+- other: 044 line 36 and AC10 said this repository's CLAUDE.md imports framework/constitution.md, false since 072 — `specs/044-relocate-constitution-under-govern-directory/spec.md` — **fixed**
+- other: 067's revision-qualified scenario said a prefix after `@` never starts a token, and 067 had no owner artifact for the `@` rule — `specs/067-analyze-and-audit-checks/scenarios/a-revision-qualified-path-is-not-a-working-tree-reference.md` — **fixed**
+- other: README, the CLAUDE.md template's routing line and 050's spec said /target is what loads a shared constitution — `README.md` — **fixed**
+- other: the module doc keeps 'a dangling @import yields a constitution that is simply not loaded' — `runtime/src/primitives/check_orphaned_references.rs` — **discarded**: it recounts the 048 AC10 incident, which was an @import, and 027's migration-chain-reference-integrity scenario keeps the same sentence as its record
+- other: the migration's wording on quotes, spaces, fences, line endings, the report count and the converged line could be executed two ways — `framework/migrations/claude-md-import-syntax.md` — **fixed**
+- other: the migration's pin check ran before its idempotency check, and its advice re-imported the constitution — `framework/migrations/claude-md-import-syntax.md` — **fixed**
+- other: a BOM, or punctuation such as ( or " before the `@`, keeps an @path import from being read as a reference — `runtime/src/primitives/check_orphaned_references.rs` — **discarded**: contrived: the template and the bootstrap write each import at the start of a line, and 067's an-at-path-import-is-a-reference records both cases as edge cases
+- other: 002's plan and scenario said every dangling @path import is reported, not only one into a ductus-managed path — `specs/002-project-scaffolding/plan.md` — **fixed**
+- other: 055's plan Overview still called the managed block navigation — `specs/055-shared-constitution/plan.md` — **fixed**
+- other: the shared-constitution doc said AGENTS.md has no import directive, though Claude Code expands @path inside it — `docs/shared-constitution.md` — **fixed**
+- perf: whether a shared constitution imported both by hand and in the managed block loads twice was unmeasured — `specs/002-project-scaffolding/scenarios/claude-md-template-imports-load.md` — **fixed**
+- other: --ref=main adopters get the migration before the @path orphan-check fix, which ships only in the runtime — `framework/migrations/claude-md-import-syntax.md` — **discarded**: a runtime change reaches adopters only through a ductus-v tag, and the next release is the owner's to cut; the gap closes there
+- other: a legacy root `@import constitution.md` becomes `@constitution.md`, an orphan no check reports — `framework/migrations/claude-md-import-syntax.md` — **discarded**: the root path is not a managed root, the line was equally silent before, and `@import constitution.md` never loaded anything
+- other: a Windows absolute document path already holds backslashes, and the space escaping may misread them — `framework/bootstrap/ductus.md` — **discarded**: resolve-constitutions writes the document path through rel_path, which replaces every backslash with a forward slash, so the block line holds no backslash but the spaces the bootstrap escapes
+- other: 040's spec-root-rule-stated-once rests a rejected option on the CLAUDE.md premise 017 AC16 states — `specs/040-configurable-specs-dir/scenarios/spec-root-rule-stated-once.md` — **routed** to `specs/050-constitution/tasks.md`
+- security: the migration turns @import lines that loaded nothing into live imports — `framework/migrations/claude-md-import-syntax.md` — **discarded**: step 6 names every rewritten path for the operator, Claude Code asks before loading an import from outside the working directory, and no loaded security rule fires on a local text rewrite
+- other: 002 task 5 was unticked pending the adopter bootstrap, and 044 and 055 needed a review and an analyze to close — `specs/002-project-scaffolding/tasks.md` — **fixed**
+- other: the migration's code-span sentence repeats what 'begins with @import' already implies — `framework/migrations/claude-md-import-syntax.md` — **discarded**: harmless: it names the edge case the scenario lists
+- other: /target step 4 ordered every shared constitution after the framework one, though an import loads first — `framework/commands/target.md` — **fixed**
+- other: 044's scope still listed the CLAUDE.md seed's `@import constitution.md` line as a shipped reference — `specs/044-relocate-constitution-under-govern-directory/spec.md` — **fixed**
+- other: 050's governance-is-multi-source scenario said /target loads each shared document — `specs/050-constitution/scenarios/governance-is-multi-source.md` — **fixed**
+- other: 050 task 35 named three passages but said two, and did not price 040's reopen — `specs/050-constitution/tasks.md` — **fixed**
+- other: the README said the block loads at startup for every Claude-style agent, unapproved external imports included — `README.md` — **fixed**
+- other: 067's punctuation edge case claimed how Claude Code parses (@path) — `specs/067-analyze-and-audit-checks/scenarios/an-at-path-import-is-a-reference.md` — **fixed**
+- other: the migration's closing-fence rule was narrower than CommonMark and left an unclosed fence undefined — `framework/migrations/claude-md-import-syntax.md` — **fixed**
+- other: the migration's pin warning told the operator to delete a constitution line that may not exist — `framework/migrations/claude-md-import-syntax.md` — **fixed**
+- other: the migration reported 'rewrote 0 import line(s)' when it only removed the constitution line — `framework/migrations/claude-md-import-syntax.md` — **fixed**
+- other: the migration said the next /ductus run re-renders the block, which the same run does — `framework/migrations/claude-md-import-syntax.md` — **fixed**
+- other: 044's plan kept the CLAUDE.md-imports-the-constitution premise in a dated note — `specs/044-relocate-constitution-under-govern-directory/plan.md` — **fixed**
+- other: task 5 was ticked on an adopter run of the migration text the next rounds edited, and its prose said the check skips any @ — `specs/002-project-scaffolding/tasks.md` — **fixed**
+- other: the adopter runs met pre-existing bootstrap behavior: v0.28.0 cannot be walked at its tag, the Frontmatter Migration's clean-tree precheck refuses after a migration writes under specs/, AGENTS.md placeholders an old release left literal are never repaired, and v0.59.11's dead old-form constitutions region survives — `framework/bootstrap/ductus-procedure.md` — **discarded**: observations about the bootstrap's own machinery made while reviewing this change, none caused by it and none blocking it; the dead region is already an inbox item
 
 ## Skipped passes
 

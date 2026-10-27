@@ -77,7 +77,9 @@ line under `claude-style`, which Claude Code expands at session start, and a
 `See [alias](path)` link under the `AGENTS.md` layouts, which loads nothing. Step 4
 skips a document an import already loaded, so none is read twice, and reads one
 whose import loaded nothing — an external import not yet approved, or a host that
-does not resolve `@path`. Treating the import as the only loading mechanism would
+does not resolve `@path`. Claude Code's memory documentation, *Import additional
+files*, describes both the expansion and the one-time approval an external import
+needs. Treating the import as the only loading mechanism would
 leave the `AGENTS.md` layouts loading nothing.
 
 ### The managed block uses `merge-managed-block`
