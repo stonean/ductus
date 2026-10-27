@@ -920,10 +920,10 @@ On the runtime path both are `apply-manifest` `create` entries (§Instructions s
 1. Invoke `merge-managed-block` against `AGENTS.md` with `marker-style: "html-comment"` and `marker: "ductus:memory-routing"`, supplying exactly this one line:
 
    ```text
-   > **Where a learning goes** ([§drift-prevention](.ductus/constitution.md#drift-prevention)). Commit whatever would help a teammate, since an agent's per-user memory holds only personal facts and external pointers. Then file it by who it is true for: every project running the pipeline, the constitution; your organization's projects, the shared constitution it registers; this project alone, this file or a rule file.
+   > **Where a learning goes** ([§drift-prevention](.ductus/constitution.md#drift-prevention)). Commit whatever would help a teammate, since an agent's per-user memory holds only personal facts and external pointers. Then file it by who it is true for: every project running the pipeline, the framework's constitution, which is upstream, so raise it with ductus rather than edit `.ductus/constitution.md`; your organization's projects, the shared constitution it registers; this project alone, this file or a rule file.
    ```
 
-2. When `AGENTS.md` carries no `ductus:memory-routing` markers, the primitive appends the block at the end of the file. Report that it was appended, so the operator can move it under the file's header. The project template ships the empty markers beneath its header.
+2. When `AGENTS.md` carries no `ductus:memory-routing` markers, the primitive appends the block at the end of the file and returns `action: inserted`, which it returns in no other case. Report that it was appended, so the operator can move it under the file's header. The project template ships the empty markers beneath its header.
 3. A pinned `AGENTS.md` still gets the block, as it gets the **Shared constitution imports** block: `[pinned] files` turns a manifest entry's `update` into `skip`, and `AGENTS.md` is already `skip`, while the block is a managed-region merge, not a manifest write.
 
 ## Per-Agent Scaffolding

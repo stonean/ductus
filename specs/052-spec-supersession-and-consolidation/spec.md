@@ -45,7 +45,7 @@ An already-applied step reports that outcome as a domain result rather than a fa
 
 > **AC7 is completed by [051 — Branch-scoped spec numbering](../051-branch-scoped-spec-numbering/spec.md)** (2026-10-27). `rewrite-spec-links`, which `/{project}:consolidate` shares with `/{project}:fold`, re-pointed links only in the `.md` files under the spec root, so a pointer from `README.md`, `AGENTS.md`, `CLAUDE.md` or `.githooks/pre-commit` survived a consolidation. 051's task 29 extends the rewrite to those four files.
 
-- [x] AC7: `/{project}:consolidate <spec> --into <spec>` re-points every inbound pointer to the source directory at the target, then removes the source directory
+- [x] AC7: `/{project}:consolidate <spec> --into <spec>` re-points every inbound pointer to the source directory at the target, then removes the source directory. A referrer `rewrite-spec-links` cannot rewrite safely (a symbolic link, one whose parent resolves outside the project, or one that is not UTF-8 text) is left as it is and named in the result's `skipped`, which the command reports; `check-orphaned-references` reports what it still names, or lists it as unreadable when it is not UTF-8
 - [x] AC8: `/{project}:consolidate` refuses when the target directory holds no `spec.md`, and no pointer is rewritten by the refused run
 - [x] AC9: `/{project}:consolidate` writes nothing to the target spec's body, scenarios, `tasks.md`, `status`, or review record (`review.md`; the `review:` block before spec 057)
 - [x] AC10: The confirmation prompt shown before a consolidation names the loss of the source spec's content, not only the removal of its directory

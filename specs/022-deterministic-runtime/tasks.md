@@ -602,3 +602,11 @@ Found 2026-10-25 measuring task 18's question 1a, outside it. The pointer `.duct
 
 - [ ] Measure which primitives can write, replace or remove `.ductus/bin/` entries and on which surfaces, what a refusal would break (the Pi bridge's spawn, `enforce-manifest`'s directories, the tests), and the options; write the measured question here, and ask the owner after task 18's question 1a
 - [ ] Apply the answer
+
+## 23. Installed files are not group-writable
+
+- [ ] Implement the behavior described in `scenarios/installed-files-are-not-group-writable.md`
+- [ ] `extract-archive` masks each entry's mode to `rwxr-xr-x` (`PERMISSION_MASK` in `runtime/src/primitives/extract_archive.rs`), on the tar and zip paths, with the module doc saying why
+- [ ] Tests show a `0664` entry landing as `0644` and a `0775` one as `0755` on both paths, and each fails when the mask keeps group write (`scripts/mutation/installed-file-modes.py`)
+
+- **Done when**: an archive's `0664` and `0775` entries extract as `0644` and `0755`, the executable bit survives, and the mutation run kills every mutation in `scripts/mutation/installed-file-modes.py`

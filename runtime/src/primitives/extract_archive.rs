@@ -10,12 +10,15 @@
 //! a path that a link already under `dest` would carry outside it yields
 //! [`PrimitiveError::InvalidPath`] naming the link.
 //!
-//! On Unix, file permissions are preserved from the archive's entry
-//! metadata (`tar` header mode bits; zip `unix_mode`), masked to the
-//! `rwxrwxrwx` permission bits — setuid/setgid/sticky bits from an
-//! untrusted archive are never applied. This matters for the bootstrap
-//! path: scripts under `scripts/` need to land with their executable
-//! bit set so the adopter's pre-commit hook can run them. Windows
+//! On Unix, file permissions are taken from the archive's entry metadata
+//! (`tar` header mode bits; zip `unix_mode`), masked to
+//! [`PERMISSION_MASK`] — `rwxr-xr-x`. Setuid/setgid/sticky bits from an
+//! untrusted archive are never applied, and neither is group or other
+//! write: GitHub's tarballs record `0664`/`0775`, and every file
+//! `apply-manifest` installs mirrors the extracted mode, so keeping those
+//! bits made an adopter's pre-commit hook writable by every account in
+//! the file's group. The executable bit is kept: the bootstrap's hook and
+//! scripts need it to run. Windows
 //! ignores the mode bits (NTFS doesn't have a direct analog and
 //! `fs::set_permissions` only toggles the read-only attribute on
 //! that platform).
@@ -324,18 +327,22 @@ const S_IFMT: u32 = 0o170_000;
 /// `mode & S_IFMT == S_IFLNK` is a symbolic link.
 const S_IFLNK: u32 = 0o120_000;
 
-/// Apply Unix permission bits to `path`. No-op on non-Unix platforms.
-/// Mask the mode to the `rwxrwxrwx` permission bits (0o777): the mask
-/// drops both the file-type marker some archives encode in the high
-/// bits and — deliberately — setuid/setgid/sticky (0o7000), which an
-/// untrusted downloaded archive must never be allowed to apply.
-/// Executable bits within 0o777 are preserved (the bootstrap
-/// `scripts/` exec-bit behavior `apply-manifest` depends on).
+/// The permission bits an extracted file may carry: `rwxr-xr-x`. It drops
+/// the file-type marker some archives encode in the high bits,
+/// setuid/setgid/sticky (0o7000), which an untrusted downloaded archive
+/// must never apply, and group and other write (0o022), which the
+/// archive's own modes carry and an installed file must not (spec 022,
+/// scenario `installed-files-are-not-group-writable`).
+const PERMISSION_MASK: u32 = 0o755;
+
+/// Apply Unix permission bits to `path`, masked to [`PERMISSION_MASK`].
+/// No-op on non-Unix platforms. Executable bits are kept (the bootstrap
+/// hook and scripts `apply-manifest` installs need them).
 #[cfg(unix)]
 fn apply_unix_mode(path: &Path, mode: Option<u32>) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
     if let Some(bits) = mode {
-        let masked = bits & 0o777;
+        let masked = bits & PERMISSION_MASK;
         if masked != 0 {
             fs::set_permissions(path, fs::Permissions::from_mode(masked)).map_err(|source| {
                 PrimitiveError::Io {
@@ -702,6 +709,78 @@ mod tests {
             .mode()
             & 0o7777;
         assert_eq!(mode, 0o755, "extracted file lost its executable bit");
+    }
+
+    /// GitHub's tarballs record `0664` and `0775`. Neither group nor other
+    /// write survives extraction, and the executable bit does.
+    #[cfg(unix)]
+    #[test]
+    fn tar_gz_drops_group_and_other_write() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let archive = tmp.path().join("modes.tar.gz");
+        let file = fs::File::create(&archive).unwrap();
+        let encoder = flate2::write::GzEncoder::new(file, flate2::Compression::default());
+        let mut builder = tar::Builder::new(encoder);
+        for (name, mode) in [("doc.md", 0o664), ("hook", 0o775), ("open", 0o666)] {
+            let mut header = tar::Header::new_gnu();
+            header.set_size(1);
+            header.set_mode(mode);
+            header.set_cksum();
+            builder.append_data(&mut header, name, &b"x"[..]).unwrap();
+        }
+        builder.into_inner().unwrap().finish().unwrap();
+
+        let dest = tmp.path().join("out");
+        run(
+            &ExtractArchiveArgs {
+                archive: archive.to_string_lossy().into_owned(),
+                dest: dest.to_string_lossy().into_owned(),
+                format: None,
+            },
+            behavior_repo(),
+        )
+        .unwrap();
+
+        for (name, want) in [("doc.md", 0o644), ("hook", 0o755), ("open", 0o644)] {
+            let mode = fs::metadata(dest.join(name)).unwrap().permissions().mode() & 0o7777;
+            assert_eq!(mode, want, "{name} landed at {mode:o}");
+        }
+    }
+
+    /// The zip path applies the same mask.
+    #[cfg(unix)]
+    #[test]
+    fn zip_drops_group_and_other_write() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let archive = tmp.path().join("modes.zip");
+        let file = fs::File::create(&archive).unwrap();
+        let mut writer = zip::ZipWriter::new(file);
+        for (name, mode) in [("doc.md", 0o664), ("hook", 0o775)] {
+            let options: zip::write::SimpleFileOptions = zip::write::SimpleFileOptions::default()
+                .compression_method(zip::CompressionMethod::Deflated)
+                .unix_permissions(mode);
+            writer.start_file(name, options).unwrap();
+            writer.write_all(b"x").unwrap();
+        }
+        writer.finish().unwrap();
+
+        let dest = tmp.path().join("out");
+        run(
+            &ExtractArchiveArgs {
+                archive: archive.to_string_lossy().into_owned(),
+                dest: dest.to_string_lossy().into_owned(),
+                format: None,
+            },
+            behavior_repo(),
+        )
+        .unwrap();
+
+        for (name, want) in [("doc.md", 0o644), ("hook", 0o755)] {
+            let mode = fs::metadata(dest.join(name)).unwrap().permissions().mode() & 0o7777;
+            assert_eq!(mode, want, "{name} landed at {mode:o}");
+        }
     }
 
     #[cfg(unix)]

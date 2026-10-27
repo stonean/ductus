@@ -75,7 +75,9 @@ An absent key is never a finding on a *sequential* spec, which has no fold targe
 | `from` | in | string | The retiring or renamed feature directory name. |
 | `to` | in | string | The fold target — a feature, optionally with a scenario slug. |
 | `rewritten` | out | list of `{path, count}` | Files whose body links, `folds-into` fields or spec-root paths were re-pointed, the referrers outside the spec root included. |
-| `examined` | out | integer | Files scanned, so an empty `rewritten` is not read as "nothing was checked". |
+| `examined` | out | integer | Files scanned, so an empty `rewritten` is not read as "nothing was checked". A skipped referrer is not counted. |
+| `skipped` | out | list of `{path, reason}` | Referrers outside the spec root left as they are: a symbolic link, one whose parent resolves outside the project, or one that is not UTF-8 text. Every referrer is read before anything is written. |
+| `kept-tails` | out | list of `{path, line, reference}` | References re-pointed at a feature-only target whose kept tail is not empty (the directory itself), `spec.md`, or under `scenarios/`, so they name the target's file of that name, which a fold did not write. |
 
 ### `retire-feature` (new)
 

@@ -137,6 +137,6 @@ Moved out of the completion gate 2026-10-07 by operator decision (spec §Resolve
 
 - [x] `framework/bootstrap/ductus.md` §Pi layout says the completion message carries the trust reminder whenever Pi is among the selected agents, but the First run and Update mode messages in `framework/bootstrap/ductus-procedure.md` §Post-Scaffolding Output carry no such line, and never did (`2c55c608`). Found by the 2026-10-27 criteria verification; the owner chose to add it (2026-10-27).
 - [x] Add the reminder to both messages, shown when Pi is among the selected agents: project-local `.pi/` resources, the bridge included, load only after the project is trusted; interactive start prompts, and a non-interactive run needs `--approve` or `defaultProjectTrust: "always"`.
-- [ ] Verify with a real adopter bootstrap that selects Pi — the `ductus-v0.59.11` subject of `050-constitution` task 40 adds Pi and checks both changes in one run.
+- [x] Verify with a real adopter bootstrap that selects Pi — the `ductus-v0.59.11` subject of `050-constitution` task 40 adds Pi and checks both changes in one run. Run 2026-10-27 on `fb26d602` with `--agents=claude,pi`: the Update mode message listed both agents and carried the reminder, on the re-run too, and `.pi/extensions/ductus.ts` matched `framework/bootstrap/pi/ductus-bridge.ts` byte for byte.
 
 - **Done when**: Both completion messages carry the reminder when Pi is selected, a real adopter bootstrap with Pi selected shows it, and AC5 holds as written

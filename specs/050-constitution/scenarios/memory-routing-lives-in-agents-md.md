@@ -16,12 +16,12 @@ An inbox item logged 2026-10-26 asked for one home, `AGENTS.md`. Both project te
 - **The `AGENTS.md` template ships the empty markers** beneath its header, and the same run fills them. The header keeps what is the file's own: it holds this project's rules, by section.
 - **The `CLAUDE.md` template holds its imports and the `ductus:constitutions` block, and nothing else.** A `claude-style` session gets the routing through `@AGENTS.md` and `@.ductus/constitution.md`.
 - **The constitution names the block** as the pointer that carries the routing.
-- **The migration `memory-routing-leaves-claude-md` removes `CLAUDE.md`'s `## Auto-Memory Routing` section** when the section is byte-identical, after `{project}` is substituted, to one of the versions the template shipped. It leaves an edited section in place and reports one line naming it for the operator to remove. A pinned `CLAUDE.md` gets a warning and no write.
+- **The migration `memory-routing-leaves-claude-md` removes `CLAUDE.md`'s `## Auto-Memory Routing` section** when the section matches one of the versions the template shipped, ignoring line endings, trailing whitespace and trailing blank lines, with `{project}` substituted or as written. It leaves an edited section in place and reports one line naming it for the operator to remove. A pinned `CLAUDE.md` gets a warning and no write.
 - **This repository's `CLAUDE.md` drops its §Auto-Memory Routing.** `AGENTS.md`'s workflow entry on per-user agent memory already governs, and `CLAUDE.md` imports it.
 
 ## Edge Cases
 
-- **A section followed by sections of the adopter's own.** Only the section goes, from its heading to the next second-level heading.
+- **A section followed by sections of the adopter's own.** Only the section goes, from its heading to the next `#` or `##` heading.
 - **A section followed by a block a run appended.** A run that found no `ductus:constitutions` markers in `CLAUDE.md` appended the block at the end of the file, after the section. The section ends at the block's `<!-- BEGIN ductus:` line, so it still matches a shipped version, and the block stays.
 - **An edited section the migration leaves.** The routing then reaches a `claude-style` session twice, once through `@AGENTS.md`, until the operator removes the copy; the warning says so.
 - **A pinned `AGENTS.md`.** It still gets the block, as it gets the `ductus:constitutions` block: pinning turns a manifest `update` into `skip`, and the block is a managed-region merge, not a manifest write.

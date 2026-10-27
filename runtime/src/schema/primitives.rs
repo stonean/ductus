@@ -5250,12 +5250,15 @@ pub struct RewriteSpecLinksArgs {
     /// The fold target: a feature directory name, optionally with a
     /// scenario slug after a `/` — `050-alpha` or `050-alpha/eviction`.
     ///
-    /// Without a scenario the rewrite is a rename and preserves each
-    /// link's tail, so `../<from>/plan.md` becomes `../050-alpha/plan.md`.
-    /// With one, the retiring directory's files did not survive
-    /// individually — their content landed in that single scenario — so
-    /// every inbound link collapses onto
-    /// `<feature>/scenarios/<slug>.md`.
+    /// Without a scenario the rewrite keeps each link's tail, so
+    /// `../<from>/plan.md` becomes `../050-alpha/plan.md` — right for a
+    /// rename, while on a body-edit fold or a consolidation a tail other
+    /// than `spec.md` or one under `scenarios/` names the target's own file,
+    /// which received none of the moved content; the result lists each such
+    /// reference in `kept-tails`. With a scenario, the retiring directory's
+    /// files did not survive individually — their content landed in that
+    /// single scenario — so every inbound link collapses onto
+    /// `<feature>/scenarios/<slug>.md`, and none is listed.
     #[arg(long)]
     pub to: String,
 }
@@ -5272,11 +5275,44 @@ pub struct RewrittenFile {
     pub count: u32,
 }
 
+/// A referrer — one of the files `check-orphaned-references` reads, the spec
+/// root's `system.md` among them — that `rewrite-spec-links` did not read, so
+/// a reference in it to the retiring directory was neither re-pointed nor
+/// ruled out.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ReferrerSkip {
+    /// Repo-relative path of the referrer, as `check-orphaned-references`
+    /// names it.
+    pub path: String,
+    /// Why it was not read: it is a symbolic link, which is not followed; a
+    /// directory on its path is a link resolving outside the project; or it
+    /// is not UTF-8 text, in the words `check-orphaned-references` uses when
+    /// it skips the same file.
+    pub reason: String,
+}
+
+/// A reference re-pointed under a feature-only target whose kept tail names
+/// a file the fold did not write there.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct KeptTail {
+    /// Repo-relative path of the file carrying the reference — a spec-root
+    /// markdown file or a referrer.
+    pub path: String,
+    /// 1-based line number within `path`.
+    pub line: u32,
+    /// The reference as rewritten, e.g. `../050-alpha/plan.md`.
+    pub reference: String,
+}
+
 /// Result for `rewrite-spec-links`.
 ///
-/// An empty `rewritten` with a non-zero `examined` is **examined and
-/// nothing pointed here**; empty with `examined` zero means no file was
-/// scanned at all, which is not the same claim (`QUAL-CLAIM-001`).
+/// An empty `rewritten` with a non-zero `examined` and an empty `skipped` is
+/// **examined and nothing pointed here**. A non-empty `skipped` names
+/// referrers that were not read, which the claim does not cover; and empty
+/// with `examined` zero means no file was scanned at all, which is not the
+/// same claim (`QUAL-CLAIM-001`).
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct RewriteSpecLinksResult {
@@ -5285,11 +5321,32 @@ pub struct RewriteSpecLinksResult {
     /// them.
     #[serde(default)]
     pub rewritten: Vec<RewrittenFile>,
-    /// Files scanned — every markdown file under the spec root outside the
-    /// retiring directory, plus each referrer outside the spec root that
-    /// exists as a regular file. The subject the empty case describes; an
-    /// absent referrer, or one that is a symbolic link, is not counted.
+    /// Files scanned — each markdown file under the spec root outside the
+    /// retiring directory, and each referrer outside the spec root, that was
+    /// read. The subject the empty case describes. A referrer that was not
+    /// read is listed in [`Self::skipped`] rather than counted, and an absent
+    /// one is neither; any other symbolic link under the spec root is
+    /// neither followed nor listed.
     pub examined: u32,
+    /// Referrers that were not read, `system.md` among them, in the order
+    /// `check-orphaned-references` reads them; every referrer is read, or
+    /// listed here, before anything is written. A reference in one is left as
+    /// written; that check reports it once the directory is gone when it can
+    /// read the file, and skips the file itself when it cannot.
+    #[serde(default)]
+    pub skipped: Vec<ReferrerSkip>,
+    /// References re-pointed under a feature-only target whose kept tail is
+    /// neither empty, nor `spec.md`, nor under `scenarios/` —
+    /// `../050-alpha/plan.md`, say. A body-edit fold writes the upstream
+    /// `spec.md` and carries each scenario across under its own slug, so
+    /// those tails land on a file the fold wrote; any other lands on the
+    /// upstream spec's own file of that name, which the fold never wrote,
+    /// and `check-orphaned-references`, which tests existence only, passes
+    /// it. The reference is still re-pointed; it is listed so the caller can
+    /// name it for the operator to judge. A scenario target replaces the
+    /// tail, so it lists none. In the order of `rewritten`, then by line.
+    #[serde(default)]
+    pub kept_tails: Vec<KeptTail>,
 }
 
 // -- retire-feature ------------------------------------------------------------

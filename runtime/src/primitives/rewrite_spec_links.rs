@@ -31,8 +31,10 @@
 //!   qualified path (`git show abc1234:specs/{from}/spec.md`), a pattern, a
 //!   URL — is not rewritten here either. A re-pointed token keeps its tail on
 //!   a rename, as a body link does, so one naming a file the target does not
-//!   hold still dangles, and the check still reports it. `system.md` sits
-//!   under the spec root, so it takes both passes.
+//!   hold still dangles, and the check still reports it; one naming a file
+//!   the target holds under the same name resolves, and the check passes it
+//!   (see *Kept tails* below). `system.md` sits under the spec root, so it
+//!   takes both passes.
 //! - **The `folds-into` frontmatter field** — included deliberately rather
 //!   than left to a later pass. It is the one pointer whose whole job is to
 //!   survive until the merge, so a rename that repaired body links and left
@@ -44,12 +46,54 @@
 //! pre-commit hook, so hand-editing them here would be a second writer for a
 //! value that already has one (AC23).
 //!
-//! A referrer that is a symbolic link is not followed. The atomic write
-//! replaces the file it is given, so writing through `CLAUDE.md` linked to
-//! `AGENTS.md` would turn the link into a copy; the file it names is
-//! rewritten in its own right when it is itself a referrer, and a reference
-//! reached only through a link is left for `check-orphaned-references`, which
-//! reads through it, to report. The spec-root walk skips links the same way.
+//! **Every referrer is read before anything is written**, `system.md`
+//! included, so a referrer that stops the run stops it with the tree
+//! untouched. Each is classified first, and only a readable one is
+//! rewritten — `system.md` by the spec-root walk, from the content read
+//! here, and the rest after it:
+//!
+//! - **Absent** — not every project has every referrer — it is neither
+//!   examined nor reported, as the check ignores it.
+//! - **A symbolic link** is not followed. The atomic write replaces the file
+//!   it is given, so writing through `CLAUDE.md` linked to `AGENTS.md` would
+//!   turn the link into a copy. The file it names is rewritten in its own
+//!   right when it is itself a referrer; the link is listed in `skipped`, so
+//!   a reference reached only through it is reported unexamined rather than
+//!   passed over, and `check-orphaned-references`, which reads through it,
+//!   reports that reference once the directory is gone.
+//! - **Reached through a directory that resolves outside the project** —
+//!   `.githooks` linked to a shared hooks directory — it is listed in
+//!   `skipped` and not written: the write would land in a file this project
+//!   does not hold.
+//! - **Not UTF-8 text** — listed in `skipped` with the reason the check
+//!   gives when it skips the same file
+//!   ([`check_orphaned_references::UNREADABLE_AS_TEXT`]), so the two agree on
+//!   it.
+//! - **Unreadable for any other reason, or not a regular file** — the run
+//!   errors, before any write.
+//!
+//! A referrer under the spec root that is listed in `skipped` is passed over
+//! by the walk, which neither reads nor writes it. Otherwise the walk reads
+//! and writes one file at a time, and skips a symbolic link without listing
+//! it. A referrer outside the spec root is never a file the walk writes, so
+//! its content read beforehand is still its content when it is rewritten:
+//! the walk writes markdown under the spec root, and a referrer outside it
+//! could reach one only through a link — its own, which is skipped, or
+//! `.githooks`, whose `pre-commit` is not markdown.
+//!
+//! **Kept tails.** A feature-only target keeps each reference's tail, which
+//! is right for `spec.md`, where a body-edit fold writes, and for
+//! `scenarios/{slug}.md`, since the fold carries each scenario across under
+//! its own slug. Any other tail — `plan.md`, `tasks.md`, `data-model.md`,
+//! `research.md` — lands on the upstream spec's own file of that name, which
+//! the fold never wrote, and `check-orphaned-references` tests existence
+//! only, so it stays clean. The design stays: such a reference is still
+//! re-pointed, and listed in `kept-tails` with its file and line so the
+//! caller can name it for the operator to judge. A scenario target replaces
+//! the tail, so it lists none. The exclusions are a fold's:
+//! `/{project}:consolidate` carries no scenario across, so under it a kept
+//! `scenarios/` tail resolves only where the target has a scenario of that
+//! slug of its own, and is not listed either.
 //!
 //! Defined by `specs/051-branch-scoped-spec-numbering/spec.md` (AC6, AC22,
 //! AC23, AC33).
@@ -62,7 +106,16 @@ use crate::primitives::{
     PrimitiveError, Result, check_orphaned_references, read_text, spec_links, write_atomic,
 };
 use crate::schema::paths;
-use crate::schema::primitives::{RewriteSpecLinksArgs, RewriteSpecLinksResult, RewrittenFile};
+use crate::schema::primitives::{
+    KeptTail, ReferrerSkip, RewriteSpecLinksArgs, RewriteSpecLinksResult, RewrittenFile,
+};
+
+/// The `skipped` reason for a referrer that is a symbolic link.
+const SKIP_LINK: &str = "symbolic link, not followed";
+
+/// The `skipped` reason for a referrer reached through a directory that
+/// resolves outside the project.
+const SKIP_OUTSIDE: &str = "resolves outside the project through a linked directory, not written";
 
 /// Where the pointers are being sent.
 struct FoldTarget {
@@ -121,6 +174,13 @@ impl Passes {
     }
 }
 
+/// A referrer read before anything is written, and the passes it takes.
+struct PendingReferrer {
+    path: PathBuf,
+    content: String,
+    passes: Passes,
+}
+
 /// One run's rewrite rule and what it has done so far.
 struct Sweep<'a> {
     repo: &'a Path,
@@ -132,24 +192,178 @@ struct Sweep<'a> {
     root: String,
     rewritten: Vec<RewrittenFile>,
     examined: u32,
+    skipped: Vec<ReferrerSkip>,
+    kept_tails: Vec<KeptTail>,
 }
 
 impl Sweep<'_> {
-    /// Rewrite one file in place, recording it when anything in it moved.
-    fn visit(&mut self, path: &Path, passes: Passes) -> Result<()> {
+    /// Rewrite one file's content in place, recording it when anything in it
+    /// moved.
+    fn rewrite(&mut self, path: &Path, content: &str, passes: Passes) -> Result<()> {
         self.examined = self.examined.saturating_add(1);
-        let content = read_text(path)?;
-        let (updated, count) =
-            rewrite_content(&content, self.from, &self.target, &self.root, passes);
-        if count == 0 {
+        let rewrite = rewrite_content(content, self.from, &self.target, &self.root, passes);
+        if rewrite.count == 0 {
             return Ok(());
         }
-        write_atomic(path, &updated)?;
+        write_atomic(path, &rewrite.text)?;
+        let shown = repo_relative(self.repo, path);
+        self.kept_tails.extend(
+            rewrite
+                .kept_tails
+                .into_iter()
+                .map(|(line, reference)| KeptTail {
+                    path: shown.clone(),
+                    line,
+                    reference,
+                }),
+        );
         self.rewritten.push(RewrittenFile {
-            path: repo_relative(self.repo, path),
-            count,
+            path: shown,
+            count: rewrite.count,
         });
         Ok(())
+    }
+
+    /// Walk the spec root, rewriting each markdown file outside the retiring
+    /// directory as it is read. A referrer under the spec root is not read
+    /// here: one in `pending` is taken out of it and rewritten from the
+    /// content read before anything was written, and one that is not there
+    /// was listed in `skipped` and is passed over.
+    fn walk_spec_root(
+        &mut self,
+        specs_dir: &Path,
+        referrers: &[PathBuf],
+        pending: &mut Vec<PendingReferrer>,
+    ) -> Result<()> {
+        // Sorted so `rewritten` is in a stable path order rather than
+        // whatever order the filesystem hands back — the same reason
+        // `list_feature_dirs` sorts. A symbolic link is neither followed nor
+        // listed: `file_type` does not follow one, so it is not `is_file`.
+        let walk = WalkDir::new(specs_dir)
+            .sort_by_file_name()
+            .into_iter()
+            .filter_map(std::result::Result::ok)
+            .filter(|entry| entry.file_type().is_file())
+            .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "md"));
+
+        for entry in walk {
+            let path = entry.path();
+            // The retiring directory's own files are leaving with it.
+            // Rewriting them would write into a tree about to be removed, and
+            // counting them would overstate what was actually repaired. On a
+            // rename the directory is already gone, so this skip is a no-op
+            // there.
+            if path
+                .strip_prefix(specs_dir)
+                .ok()
+                .and_then(|rel| rel.components().next())
+                .is_some_and(|first| first.as_os_str() == self.from)
+            {
+                continue;
+            }
+            if let Some(index) = pending.iter().position(|referrer| referrer.path == path) {
+                let referrer = pending.remove(index);
+                self.rewrite(path, &referrer.content, referrer.passes)?;
+            } else if !referrers.iter().any(|referrer| referrer == path) {
+                // Not a referrer. One that is but is not pending was listed in
+                // `skipped`, and is passed over unread.
+                let content = read_text(path)?;
+                self.rewrite(path, &content, Passes::Links)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Read every referrer, classifying each, before anything is written;
+    /// return the ones read, in the order the check reads them — one under
+    /// the spec root (`system.md`) to take both passes, the rest the token
+    /// pass. See the module doc for the classes.
+    ///
+    /// The outside-project test is [`super::validate_contained`], the
+    /// containment rule the primitives apply to a project-relative path they
+    /// open, rather than a narrow check of its own: it resolves the project
+    /// root and every link on the path (`resolve_symlinks`, so macOS's
+    /// `/tmp` and `/private/tmp` compare alike) and compares them by
+    /// component. What else it enforces by construction is vacuous here — its
+    /// traversal screen (the referrer names are fixed), its refusal of a link
+    /// that cannot be resolved (`symlink_metadata` has already reached the
+    /// file through every one), and its judgment of a final-component link
+    /// (one is skipped above before it runs). `host_config::check_destination`
+    /// does not fit: it judges whether a destination is a host's
+    /// configuration, and its module doc says a destination that resolves
+    /// outside the project is not judged there.
+    fn read_referrers(
+        &mut self,
+        referrers: &[String],
+        specs_dir: &Path,
+    ) -> Result<Vec<PendingReferrer>> {
+        let mut pending = Vec::new();
+        for shown in referrers {
+            let path = self.repo.join(shown);
+            // `symlink_metadata` judges the final component as given, which is
+            // where the atomic write lands, and follows every directory link
+            // before it. A missing directory on the path (`.githooks` absent,
+            // or a file) is as absent as a missing file.
+            let meta = match std::fs::symlink_metadata(&path) {
+                Ok(meta) => meta,
+                Err(err)
+                    if matches!(
+                        err.kind(),
+                        std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory
+                    ) =>
+                {
+                    continue;
+                }
+                Err(source) => return Err(PrimitiveError::Io { path, source }),
+            };
+            if meta.file_type().is_symlink() {
+                self.skip(shown, SKIP_LINK);
+                continue;
+            }
+            match super::validate_contained(self.repo, shown) {
+                Ok(()) => {}
+                Err(PrimitiveError::InvalidPath { .. }) => {
+                    self.skip(shown, SKIP_OUTSIDE);
+                    continue;
+                }
+                Err(other) => return Err(other),
+            }
+            // Refused before it is opened: a FIFO would block the read.
+            if !meta.is_file() {
+                return Err(PrimitiveError::Io {
+                    path,
+                    source: std::io::Error::other("exists but is not a regular file"),
+                });
+            }
+            let bytes = std::fs::read(&path).map_err(|source| PrimitiveError::Io {
+                path: path.clone(),
+                source,
+            })?;
+            let Ok(content) = String::from_utf8(bytes) else {
+                self.skip(shown, check_orphaned_references::UNREADABLE_AS_TEXT);
+                continue;
+            };
+            // Under the spec root (`system.md`), the walk rewrites it, with
+            // its body links as well as its path tokens.
+            let passes = if path.starts_with(specs_dir) {
+                Passes::Both
+            } else {
+                Passes::Tokens
+            };
+            pending.push(PendingReferrer {
+                path,
+                content,
+                passes,
+            });
+        }
+        Ok(pending)
+    }
+
+    fn skip(&mut self, shown: &str, reason: &str) {
+        self.skipped.push(ReferrerSkip {
+            path: shown.to_string(),
+            reason: reason.to_string(),
+        });
     }
 }
 
@@ -158,9 +372,19 @@ impl Sweep<'_> {
 /// # Errors
 ///
 /// Returns [`PrimitiveError::InvalidArgument`] when `from` is empty or `to`
-/// does not parse as a fold target, or [`PrimitiveError::Io`] when a markdown
-/// file under the spec root, or a referrer outside it, cannot be read as
-/// UTF-8 text or written.
+/// does not parse as a fold target, [`PrimitiveError::InvalidPath`] when
+/// either is absolute, climbs with `..`, or has a symbolic link on or under
+/// its directory that resolves outside the project, and
+/// [`PrimitiveError::FeatureNotFound`] when the target holds no `spec.md` —
+/// each before anything is written. Returns [`PrimitiveError::Io`] when a
+/// referrer, `system.md` included, cannot be examined for a reason other
+/// than its absence or its encoding — its metadata or its bytes cannot be
+/// read, or it is not a regular file — before anything is written; when a
+/// markdown file under the spec root that is not a referrer cannot be read
+/// as UTF-8 text, part-way through the walk and so after the files before it
+/// were written; or when a file cannot be written. A referrer that is not
+/// UTF-8 text is not an error: it is listed in `skipped`, as a symbolic link
+/// and a referrer resolving outside the project are.
 pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksResult> {
     if args.from.is_empty() {
         return Err(PrimitiveError::InvalidArgument {
@@ -210,7 +434,8 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
     // The files `check-orphaned-references` reads, from its own list: a
     // reference this leaves behind in one of them is a finding that check
     // reports the moment the directory is retired (AC22).
-    let referrers: Vec<PathBuf> = check_orphaned_references::referrers(&layout)
+    let referrers = check_orphaned_references::referrers(&layout);
+    let referrer_paths: Vec<PathBuf> = referrers
         .iter()
         .map(|referrer| repo.join(referrer))
         .collect();
@@ -221,60 +446,27 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
         root: check_orphaned_references::spec_root_prefix(&layout),
         rewritten: Vec::new(),
         examined: 0,
+        skipped: Vec::new(),
+        kept_tails: Vec::new(),
     };
 
-    // Sorted so `rewritten` is in a stable path order rather than whatever
-    // order the filesystem hands back — the same reason `list_feature_dirs`
-    // sorts.
-    let walk = WalkDir::new(&specs_dir)
-        .sort_by_file_name()
-        .into_iter()
-        .filter_map(std::result::Result::ok)
-        .filter(|entry| entry.file_type().is_file())
-        .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "md"));
-
-    for entry in walk {
-        let path = entry.path();
-        // The retiring directory's own files are leaving with it. Rewriting
-        // them would write into a tree about to be removed, and counting
-        // them would overstate what was actually repaired. On a rename the
-        // directory is already gone, so this skip is a no-op there.
-        if path
-            .strip_prefix(&specs_dir)
-            .ok()
-            .and_then(|rel| rel.components().next())
-            .is_some_and(|first| first.as_os_str() == args.from.as_str())
-        {
-            continue;
-        }
-        let passes = if referrers.iter().any(|referrer| referrer == path) {
-            Passes::Both
-        } else {
-            Passes::Links
-        };
-        sweep.visit(path, passes)?;
-    }
-
-    // The referrers outside the spec root, in the order the check reads them.
-    for referrer in &referrers {
-        // Under the spec root (`system.md`): walked above, with both passes.
-        if referrer.starts_with(&specs_dir) {
-            continue;
-        }
-        // Not every project has every referrer, and an absent one is neither
-        // examined nor rewritten. Nor is a symbolic link followed: the atomic
-        // write would replace the link with a copy of what it names.
-        let regular =
-            std::fs::symlink_metadata(referrer).is_ok_and(|meta| meta.file_type().is_file());
-        if !regular {
-            continue;
-        }
-        sweep.visit(referrer, Passes::Tokens)?;
+    // Every referrer is read first, so one that stops the run stops it
+    // before anything is written. The walk then takes `system.md` out of
+    // `pending` where it meets it, and what is left — the referrers outside
+    // the spec root, and `system.md` only where the walk could not list the
+    // directory holding it — is rewritten after it, each with its own
+    // passes, in the order the check reads them.
+    let mut pending = sweep.read_referrers(&referrers, &specs_dir)?;
+    sweep.walk_spec_root(&specs_dir, &referrer_paths, &mut pending)?;
+    for referrer in pending {
+        sweep.rewrite(&referrer.path, &referrer.content, referrer.passes)?;
     }
 
     Ok(RewriteSpecLinksResult {
         rewritten: sweep.rewritten,
         examined: sweep.examined,
+        skipped: sweep.skipped,
+        kept_tails: sweep.kept_tails,
     })
 }
 
@@ -286,7 +478,27 @@ fn repo_relative(repo: &Path, path: &Path) -> String {
         .replace('\\', "/")
 }
 
-/// Rewrite one file's pointers, returning the new content and how many moved.
+/// One file's content with its pointers re-pointed.
+struct FileRewrite {
+    text: String,
+    /// Pointers moved.
+    count: u32,
+    /// `(line, reference)` for each moved reference whose kept tail names a
+    /// file the fold did not write ([`names_a_file_the_fold_did_not_write`]),
+    /// the line 1-based.
+    kept_tails: Vec<(u32, String)>,
+}
+
+/// One re-pointed reference.
+struct Moved {
+    /// The reference as rewritten.
+    text: String,
+    /// Whether a feature-only target kept a tail naming a file the fold did
+    /// not write.
+    kept_tail: bool,
+}
+
+/// Rewrite one file's pointers.
 ///
 /// The link pass walks the frontmatter block separately from the body: only
 /// `folds-into` moves there, so `dependencies:` and `references:` are left
@@ -298,13 +510,14 @@ fn rewrite_content(
     target: &FoldTarget,
     root: &str,
     passes: Passes,
-) -> (String, u32) {
+) -> FileRewrite {
     // The file's own ending, not a bare `\n`. `lines()` strips a trailing
     // `\r`, so re-joining with `\n` would convert a CRLF checkout's file to
     // LF as a side effect of re-pointing one link.
     let ending = crate::primitives::line_ending_of(content);
     let mut out = String::with_capacity(content.len());
     let mut count = 0;
+    let mut kept_tails = Vec::new();
     // A trailing newline is not a line, and `lines()` drops it; re-add it
     // only if the input had one, so a file's final byte is preserved.
     let ends_with_newline = content.ends_with('\n');
@@ -312,6 +525,7 @@ fn rewrite_content(
     let mut in_frontmatter = false;
     for (index, line) in content.lines().enumerate() {
         let mut current = line.to_string();
+        let mut kept = Vec::new();
         if passes.links() {
             let is_fence = spec_links::is_frontmatter_fence(line);
             if index == 0 && is_fence {
@@ -322,17 +536,19 @@ fn rewrite_content(
                 let (rewritten, moved) = if in_frontmatter {
                     rewrite_folds_into(line, from, &target.feature)
                 } else {
-                    rewrite_body_line(line, from, target)
+                    rewrite_body_line(line, from, target, &mut kept)
                 };
                 count += moved;
                 current = rewritten;
             }
         }
         if passes.tokens() {
-            let (rewritten, moved) = rewrite_path_tokens(&current, from, target, root);
+            let (rewritten, moved) = rewrite_path_tokens(&current, from, target, root, &mut kept);
             count += moved;
             current = rewritten;
         }
+        let line_number = u32::try_from(index + 1).unwrap_or(u32::MAX);
+        kept_tails.extend(kept.into_iter().map(|reference| (line_number, reference)));
         push_line(&mut out, &current, ending);
     }
 
@@ -341,7 +557,11 @@ fn rewrite_content(
         // ending, not one byte, or a CRLF file is left with a stray `\r`.
         out.truncate(out.len() - ending.len());
     }
-    (out, count)
+    FileRewrite {
+        text: out,
+        count,
+        kept_tails,
+    }
 }
 
 /// Append `line` and a newline.
@@ -371,8 +591,13 @@ fn rewrite_folds_into(line: &str, from: &str, to_feature: &str) -> (String, u32)
 }
 
 /// Re-point every markdown link on one body line whose target names `from`
-/// as a whole path segment.
-fn rewrite_body_line(line: &str, from: &str, target: &FoldTarget) -> (String, u32) {
+/// as a whole path segment, pushing each kept-tail reference onto `kept`.
+fn rewrite_body_line(
+    line: &str,
+    from: &str,
+    target: &FoldTarget,
+    kept: &mut Vec<String>,
+) -> (String, u32) {
     let mut out = String::with_capacity(line.len());
     let mut rest = line;
     let mut count = 0;
@@ -389,7 +614,10 @@ fn rewrite_body_line(line: &str, from: &str, target: &FoldTarget) -> (String, u3
         let (target_text, after) = tail.split_at(close);
         match rewrite_link_target(target_text, from, target) {
             Some(moved) => {
-                out.push_str(&moved);
+                out.push_str(&moved.text);
+                if moved.kept_tail {
+                    kept.push(moved.text);
+                }
                 count += 1;
             }
             None => out.push_str(target_text),
@@ -407,12 +635,31 @@ fn rewrite_body_line(line: &str, from: &str, target: &FoldTarget) -> (String, u3
 /// scanner given the spec root as the only managed root, so this rewrites
 /// exactly what that check would report once the directory is gone — the
 /// same reference written as a link, a code span, prose or a shell argument.
-fn rewrite_path_tokens(line: &str, from: &str, target: &FoldTarget, root: &str) -> (String, u32) {
+/// Each kept-tail reference is pushed onto `kept`.
+fn rewrite_path_tokens(
+    line: &str,
+    from: &str,
+    target: &FoldTarget,
+    root: &str,
+    kept: &mut Vec<String>,
+) -> (String, u32) {
     let roots = [root.to_string()];
     let mut out = String::with_capacity(line.len());
     let mut copied = 0;
     let mut count = 0;
     for span in check_orphaned_references::managed_path_spans(line, &roots) {
+        // A span that starts inside the text the previous rewrite consumed.
+        // A heading anchor's characters include none of `/`, so in
+        // `spec.md#specs/{from}/plan.md` the first token takes `#specs`
+        // along and ends inside the second, and splicing the second would
+        // slice backwards. It is left as written. On a rename the kept
+        // fragment restores the `specs` it took, so the token still names the
+        // retiring directory; on a scenario target the dropped fragment joins
+        // the rest to the scenario's path, which names no file. Either way
+        // `check-orphaned-references` reports it once the directory is gone.
+        if span.start < copied {
+            continue;
+        }
         // `#` is not a path character, so a link's fragment sits just past
         // the token. It is taken along so that a fold into a scenario drops
         // it, as it drops a body link's.
@@ -421,7 +668,10 @@ fn rewrite_path_tokens(line: &str, from: &str, target: &FoldTarget, root: &str) 
             continue;
         };
         out.push_str(&line[copied..span.start]);
-        out.push_str(&moved);
+        out.push_str(&moved.text);
+        if moved.kept_tail {
+            kept.push(moved.text);
+        }
         copied = end;
         count += 1;
     }
@@ -448,7 +698,7 @@ fn fragment_len(rest: &str) -> usize {
 ///
 /// Anchored at that segment rather than searched for: `specs/050-a/x/{from}`
 /// names something inside another spec, not the retiring directory.
-fn rewrite_root_token(token: &str, from: &str, target: &FoldTarget) -> Option<String> {
+fn rewrite_root_token(token: &str, from: &str, target: &FoldTarget) -> Option<Moved> {
     let (path, fragment) = split_fragment(token);
     let segments: Vec<&str> = path.split('/').collect();
     // `segments[0]` is the spec root itself: the scanner returns no token
@@ -464,7 +714,7 @@ fn rewrite_root_token(token: &str, from: &str, target: &FoldTarget) -> Option<St
 /// inside `1234.1-widget-cache` — a prefix match here would silently re-point
 /// a link at a different spec, which is worse than leaving it dangling where
 /// the orphan check can see it.
-fn rewrite_link_target(link: &str, from: &str, target: &FoldTarget) -> Option<String> {
+fn rewrite_link_target(link: &str, from: &str, target: &FoldTarget) -> Option<Moved> {
     // A cross-service link names another repository's spec. Its resolution is
     // that repo's business and this rename says nothing about it (spec 030).
     if link.contains("://") {
@@ -486,7 +736,7 @@ fn split_fragment(link: &str) -> (&str, Option<&str>) {
 
 /// `segments` re-pointed at the fold target, the one at `index` being the
 /// retiring directory.
-fn rebuild(segments: &[&str], index: usize, fragment: Option<&str>, target: &FoldTarget) -> String {
+fn rebuild(segments: &[&str], index: usize, fragment: Option<&str>, target: &FoldTarget) -> Moved {
     let mut rebuilt: Vec<String> = segments[..index]
         .iter()
         .map(|segment| (*segment).to_string())
@@ -494,16 +744,24 @@ fn rebuild(segments: &[&str], index: usize, fragment: Option<&str>, target: &Fol
     rebuilt.push(target.feature.clone());
 
     match &target.scenario {
-        // A rename: the directory's files map across one for one, so the
-        // tail — and any fragment naming a heading inside it — survives.
+        // A feature-only target keeps the tail, and any fragment naming a
+        // heading inside it. On a rename the directory's files map across
+        // one for one; a body-edit fold writes only some of them and a
+        // consolidation none, so a kept tail naming a file the target was
+        // not given is flagged for `kept-tails`
+        // (`names_a_file_the_fold_did_not_write`).
         None => {
-            rebuilt.extend(segments[index + 1..].iter().map(|s| (*s).to_string()));
+            let tail = &segments[index + 1..];
+            rebuilt.extend(tail.iter().map(|s| (*s).to_string()));
             let mut out = rebuilt.join("/");
             if let Some(fragment) = fragment {
                 out.push('#');
                 out.push_str(fragment);
             }
-            out
+            Moved {
+                text: out,
+                kept_tail: names_a_file_the_fold_did_not_write(tail),
+            }
         }
         // A fold into a scenario: the retiring directory's files did not
         // survive individually — their content landed in this one scenario —
@@ -514,18 +772,34 @@ fn rebuild(segments: &[&str], index: usize, fragment: Option<&str>, target: &Fol
         Some(slug) => {
             rebuilt.push("scenarios".to_string());
             rebuilt.push(format!("{slug}.md"));
-            rebuilt.join("/")
+            Moved {
+                text: rebuilt.join("/"),
+                kept_tail: false,
+            }
         }
     }
+}
+
+/// Whether `tail`, the segments a feature-only target keeps after the
+/// retiring directory, names a file the fold did not write in the target.
+///
+/// None does when it is empty — the directory itself — or `spec.md`, where a
+/// body-edit fold writes, or under `scenarios/`, since the fold carries each
+/// scenario across under its own slug (`/{project}:fold` step 7). Any other
+/// file is the upstream spec's own of that name, so a reference to it
+/// resolves to content the fold never wrote, and nothing else reports it:
+/// `check-orphaned-references` tests existence only.
+fn names_a_file_the_fold_did_not_write(tail: &[&str]) -> bool {
+    !matches!(tail, [] | ["" | "spec.md"] | ["scenarios", ..])
 }
 
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-    use super::run;
+    use super::{SKIP_LINK, SKIP_OUTSIDE, run};
     use crate::primitives::PrimitiveError;
-    use crate::schema::primitives::RewriteSpecLinksArgs;
+    use crate::schema::primitives::{ReferrerSkip, RewriteSpecLinksArgs};
     use std::fs;
     use std::path::Path;
 
@@ -1171,6 +1445,9 @@ mod tests {
     /// `CLAUDE.md` linked to `AGENTS.md` is a common layout. The atomic write
     /// replaces the path it is given, so following the link would turn it
     /// into a copy; the file it names is rewritten once, in its own right.
+    /// The link is listed in `skipped`, not passed over: a link to a file
+    /// that is not itself a referrer would otherwise hide every reference in
+    /// it behind a clean result.
     #[cfg(unix)]
     #[test]
     fn a_symlinked_referrer_stays_a_link() {
@@ -1182,6 +1459,15 @@ mod tests {
         let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
 
         assert_eq!(rewritten_paths(&result), vec!["AGENTS.md"]);
+        assert_eq!(
+            result.skipped,
+            vec![ReferrerSkip {
+                path: "CLAUDE.md".into(),
+                reason: SKIP_LINK.into(),
+            }]
+        );
+        // The target's `spec.md` and `AGENTS.md`; the link is not counted.
+        assert_eq!(result.examined, 2);
         let claude = fs::symlink_metadata(tmp.path().join("CLAUDE.md")).unwrap();
         assert!(
             claude.file_type().is_symlink(),
@@ -1190,6 +1476,339 @@ mod tests {
         assert_eq!(
             read_root(tmp.path(), "CLAUDE.md"),
             "See specs/050-alpha/spec.md\n"
+        );
+    }
+
+    // -- skipped referrers, kept tails, a fragment over the next token -------
+
+    /// A referrer that is not UTF-8 text is reported, not raised: the rest
+    /// is still rewritten, the spec root among it, and the file is named in
+    /// the words `check-orphaned-references` uses when it skips the same
+    /// one, so the two primitives agree about it. The reason is one shared
+    /// constant, so the comparison holds the rest of that agreement: it
+    /// fails if the rewrite stops skipping the file, spells its path
+    /// differently, or gives a reason of its own.
+    #[test]
+    fn a_non_utf8_referrer_is_skipped_and_the_rest_is_still_rewritten() {
+        use crate::primitives::check_orphaned_references;
+        use crate::schema::primitives::CheckOrphanedReferencesArgs;
+
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        write(
+            tmp.path(),
+            "060-beta/spec.md",
+            "---\nstatus: done\ndependencies: []\n---\n\nSee [s](../1234.1-staged/spec.md).\n",
+        );
+        write_root(tmp.path(), "AGENTS.md", "See specs/1234.1-staged/spec.md\n");
+        // Latin-1 `é` (0xE9) makes the file invalid UTF-8.
+        let latin1: &[u8] = b"Caf\xe9 notes: specs/1234.1-staged/spec.md\n";
+        fs::write(tmp.path().join("README.md"), latin1).unwrap();
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert_eq!(
+            rewritten_paths(&result),
+            vec!["specs/060-beta/spec.md", "AGENTS.md"]
+        );
+        assert!(
+            read(tmp.path(), "060-beta/spec.md").contains("[s](../050-alpha/spec.md)"),
+            "the spec root was not rewritten"
+        );
+        assert_eq!(fs::read(tmp.path().join("README.md")).unwrap(), latin1);
+        // The two spec-root files and `AGENTS.md`; `README.md` is listed in
+        // `skipped`, not counted.
+        assert_eq!(result.examined, 3);
+
+        let check =
+            check_orphaned_references::run(&CheckOrphanedReferencesArgs {}, tmp.path()).unwrap();
+        let theirs: Vec<(&str, &str)> = check
+            .skipped
+            .iter()
+            .map(|s| (s.path.as_str(), s.reason.as_str()))
+            .collect();
+        let ours: Vec<(&str, &str)> = result
+            .skipped
+            .iter()
+            .map(|s| (s.path.as_str(), s.reason.as_str()))
+            .collect();
+        assert_eq!(ours, theirs);
+        assert_eq!(
+            ours.iter().map(|(p, _)| *p).collect::<Vec<_>>(),
+            vec!["README.md"]
+        );
+    }
+
+    /// A referrer that cannot be read for any reason but its encoding stops
+    /// the run, and stops it before anything is written — the spec root, and
+    /// a referrer read before it, alike — because every referrer is read
+    /// before the walk. A directory where `AGENTS.md` should be is the
+    /// portable unreadable file, and it is refused as not a regular file
+    /// before it is opened, which is what keeps a FIFO from blocking the
+    /// read; the error's text is what separates that refusal from the read
+    /// error a directory would raise anyway.
+    #[test]
+    fn an_unreadable_referrer_stops_the_run_before_anything_is_written() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        let beta =
+            "---\nstatus: done\ndependencies: []\n---\n\nSee [s](../1234.1-staged/spec.md).\n";
+        write(tmp.path(), "060-beta/spec.md", beta);
+        let claude = "@specs/1234.1-staged/spec.md\n";
+        write_root(tmp.path(), "CLAUDE.md", claude);
+        fs::create_dir_all(tmp.path().join("AGENTS.md")).unwrap();
+
+        let err = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap_err();
+
+        assert!(
+            matches!(
+                err,
+                PrimitiveError::Io { ref path, ref source }
+                    if path.ends_with("AGENTS.md")
+                        && source.to_string() == "exists but is not a regular file"
+            ),
+            "unexpected error: {err:?}"
+        );
+        assert_eq!(
+            read(tmp.path(), "060-beta/spec.md"),
+            beta,
+            "the spec root was written before the error"
+        );
+        assert_eq!(read_root(tmp.path(), "CLAUDE.md"), claude);
+    }
+
+    /// `.githooks` linked to a directory outside the project: the hook there
+    /// is not this project's file, so it is listed in `skipped` and left
+    /// untouched. The same link to a directory inside the project is
+    /// followed and the hook rewritten — the refusal asserted in both
+    /// directions, which also proves the project root and the link are
+    /// resolved alike (a fixture under macOS's `/var` resolves to
+    /// `/private/var`).
+    #[cfg(unix)]
+    #[test]
+    fn a_referrer_behind_a_directory_linked_outside_the_project_is_not_written() {
+        let tmp = tempfile::tempdir().unwrap();
+        let shared = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        let hook = "#!/bin/sh\ntest -f specs/1234.1-staged/spec.md\n";
+        fs::write(shared.path().join("pre-commit"), hook).unwrap();
+        std::os::unix::fs::symlink(shared.path(), tmp.path().join(".githooks")).unwrap();
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert_eq!(
+            result.skipped,
+            vec![ReferrerSkip {
+                path: ".githooks/pre-commit".into(),
+                reason: SKIP_OUTSIDE.into(),
+            }]
+        );
+        assert_eq!(rewritten_paths(&result), [] as [&str; 0]);
+        assert_eq!(
+            fs::read_to_string(shared.path().join("pre-commit")).unwrap(),
+            hook,
+            "a file outside the project was written"
+        );
+
+        fs::remove_file(tmp.path().join(".githooks")).unwrap();
+        write_root(tmp.path(), "tools/hooks/pre-commit", hook);
+        std::os::unix::fs::symlink("tools/hooks", tmp.path().join(".githooks")).unwrap();
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert_eq!(result.skipped, [] as [ReferrerSkip; 0]);
+        assert_eq!(rewritten_paths(&result), vec![".githooks/pre-commit"]);
+        assert_eq!(
+            read_root(tmp.path(), "tools/hooks/pre-commit"),
+            "#!/bin/sh\ntest -f specs/050-alpha/spec.md\n"
+        );
+    }
+
+    /// A feature-only target keeps each tail. `spec.md`, a scenario and the
+    /// directory itself land on what the fold wrote; `plan.md` and
+    /// `research.md` land on the upstream spec's own files, which the fold
+    /// never wrote and the orphan check, testing existence only, passes — so
+    /// those are listed, with file and line, for body links and referrer
+    /// tokens alike, and still re-pointed. A scenario target replaces every
+    /// tail and lists none.
+    #[test]
+    fn a_kept_tail_naming_a_file_the_fold_did_not_write_is_listed() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        let beta = "---\nstatus: done\ndependencies: []\n---\n\n\
+                    See [s](../1234.1-staged/spec.md), [d](../1234.1-staged),\n\
+                    [x](../1234.1-staged/scenarios/x.md) and [p](../1234.1-staged/plan.md#steps).\n";
+        write(tmp.path(), "060-beta/spec.md", beta);
+        let agents =
+            "Spec: specs/1234.1-staged/spec.md\nResearch: `specs/1234.1-staged/research.md`\n";
+        write_root(tmp.path(), "AGENTS.md", agents);
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        let kept: Vec<(&str, u32, &str)> = result
+            .kept_tails
+            .iter()
+            .map(|k| (k.path.as_str(), k.line, k.reference.as_str()))
+            .collect();
+        assert_eq!(
+            kept,
+            vec![
+                ("specs/060-beta/spec.md", 7, "../050-alpha/plan.md#steps"),
+                ("AGENTS.md", 2, "specs/050-alpha/research.md"),
+            ]
+        );
+        assert!(
+            read(tmp.path(), "060-beta/spec.md").contains("[p](../050-alpha/plan.md#steps)"),
+            "a listed reference must still be re-pointed"
+        );
+
+        write(tmp.path(), "060-beta/spec.md", beta);
+        write_root(tmp.path(), "AGENTS.md", agents);
+        let result = run(&args("1234.1-staged", "050-alpha/eviction"), tmp.path()).unwrap();
+
+        assert_eq!(
+            rewritten_paths(&result),
+            vec!["specs/060-beta/spec.md", "AGENTS.md"]
+        );
+        assert!(result.kept_tails.is_empty(), "{:?}", result.kept_tails);
+    }
+
+    /// A fragment that runs into a second spec-root token on one line
+    /// (`#specs/…`): the first token takes `#specs` along and ends inside
+    /// the second, which is left as written rather than spliced backwards —
+    /// once a panic, raised after the spec root had been written. The token
+    /// left behind still names the retiring directory, and the orphan check
+    /// reports it; the retiring directory is absent here, as once retired.
+    #[test]
+    fn a_fragment_running_into_the_next_token_does_not_panic() {
+        use crate::primitives::check_orphaned_references;
+        use crate::schema::primitives::CheckOrphanedReferencesArgs;
+
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        write_root(
+            tmp.path(),
+            "README.md",
+            "odd: specs/1234.1-staged/spec.md#specs/1234.1-staged/plan.md\n",
+        );
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert_eq!(rewritten_paths(&result), vec!["README.md"]);
+        assert_eq!(result.rewritten[0].count, 1);
+        assert_eq!(
+            read_root(tmp.path(), "README.md"),
+            "odd: specs/050-alpha/spec.md#specs/1234.1-staged/plan.md\n"
+        );
+
+        let check =
+            check_orphaned_references::run(&CheckOrphanedReferencesArgs {}, tmp.path()).unwrap();
+        let targets: Vec<&str> = check.findings.iter().map(|f| f.target.as_str()).collect();
+        assert_eq!(targets, vec!["specs/1234.1-staged/plan.md"]);
+    }
+
+    /// A spec root holding a sibling spec that names the retiring directory,
+    /// for the `system.md` tests: `060-beta`'s link and `AGENTS.md`'s token
+    /// are the rest that must still be rewritten.
+    fn seed_beside_system_md(repo: &Path) {
+        seed_target(repo, "050-alpha");
+        write(
+            repo,
+            "060-beta/spec.md",
+            "---\nstatus: done\ndependencies: []\n---\n\nSee [s](../1234.1-staged/spec.md).\n",
+        );
+        write_root(repo, "AGENTS.md", "See specs/1234.1-staged/spec.md\n");
+    }
+
+    /// `system.md` is a referrer under the spec root, and is classified with
+    /// the others before anything is written: as a symbolic link it is listed
+    /// in `skipped` — where the walk alone would pass over it without a word
+    /// — the link stays a link, the file it names is untouched, and the rest
+    /// is still rewritten.
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_system_md_is_skipped_and_the_rest_is_still_rewritten() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_beside_system_md(tmp.path());
+        let system =
+            "# System\n\nSee [staged](1234.1-staged/spec.md) and `specs/1234.1-staged/plan.md`.\n";
+        write_root(tmp.path(), "docs/system.md", system);
+        std::os::unix::fs::symlink("../docs/system.md", tmp.path().join("specs/system.md"))
+            .unwrap();
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert_eq!(
+            result.skipped,
+            vec![ReferrerSkip {
+                path: "specs/system.md".into(),
+                reason: SKIP_LINK.into(),
+            }]
+        );
+        assert_eq!(
+            rewritten_paths(&result),
+            vec!["specs/060-beta/spec.md", "AGENTS.md"]
+        );
+        // The two spec files and `AGENTS.md`.
+        assert_eq!(result.examined, 3);
+        assert_eq!(read_root(tmp.path(), "docs/system.md"), system);
+        assert!(
+            fs::symlink_metadata(tmp.path().join("specs/system.md"))
+                .unwrap()
+                .file_type()
+                .is_symlink(),
+            "specs/system.md was replaced by a copy"
+        );
+    }
+
+    /// A `system.md` that is not UTF-8 text is listed in `skipped` in the
+    /// check's words, before anything is written, and the walk passes over
+    /// it rather than reading it — which raised an error part-way through
+    /// the walk, after the files before it had been written. Its bytes are
+    /// unchanged and the rest is still rewritten.
+    #[test]
+    fn a_non_utf8_system_md_is_skipped_and_the_rest_is_still_rewritten() {
+        use crate::primitives::check_orphaned_references;
+        use crate::schema::primitives::CheckOrphanedReferencesArgs;
+
+        let tmp = tempfile::tempdir().unwrap();
+        seed_beside_system_md(tmp.path());
+        // Latin-1 `è` (0xE8) makes the file invalid UTF-8.
+        let latin1: &[u8] =
+            b"# Syst\xe8me\n\nSee [staged](1234.1-staged/spec.md) and `specs/1234.1-staged/plan.md`.\n";
+        fs::write(tmp.path().join("specs/system.md"), latin1).unwrap();
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert_eq!(
+            result.skipped,
+            vec![ReferrerSkip {
+                path: "specs/system.md".into(),
+                reason: check_orphaned_references::UNREADABLE_AS_TEXT.into(),
+            }]
+        );
+        assert_eq!(
+            rewritten_paths(&result),
+            vec!["specs/060-beta/spec.md", "AGENTS.md"]
+        );
+        assert_eq!(result.examined, 3);
+        assert_eq!(
+            fs::read(tmp.path().join("specs/system.md")).unwrap(),
+            latin1
+        );
+
+        let check =
+            check_orphaned_references::run(&CheckOrphanedReferencesArgs {}, tmp.path()).unwrap();
+        assert_eq!(check.skipped.len(), 1, "{:?}", check.skipped);
+        assert_eq!(
+            (
+                check.skipped[0].path.as_str(),
+                check.skipped[0].reason.as_str()
+            ),
+            (
+                result.skipped[0].path.as_str(),
+                result.skipped[0].reason.as_str()
+            )
         );
     }
 }

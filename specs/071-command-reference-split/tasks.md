@@ -194,3 +194,11 @@ Blocked on task 9: the change is 067's scenario.
 - [ ] `framework/bootstrap/ductus.md` §Antigravity layout **Rules mirror cleanup** removes `{config_dir}/rules/*.md` files whose basename left `specs/rules/`, but step 8's enforce list excepts Antigravity and the **Host-side work** paragraph names only the skill transform, the `name: ductus` wrap and the `{project}-*/` directory cleanup, so on the runtime path no step owns it (pre-existing; found by re-read 1 of 44c0babe; 117413d6's step 4 made the mirror an apply-manifest call). Options, owner decision pending: (a) add Antigravity's `{config_dir}/rules/` to step 8's enforce list with the mirrored basenames as expected and pinned honored (enforce-manifest removes files, which is all this cleanup does), or (b) add it to the Host-side work list; copy ductus.md to govern.md either way
 
 - **Done when**: the item is fixed, routed, or discarded with the owner's decision written on it
+
+## 23. Existing adopters' unmaintained constitutions region (task 20's first item, for files already installed)
+
+- [ ] Found by `050-constitution` task 40's real adopter bootstrap (2026-10-27): a subject adopted at `ductus-v0.59.11` keeps the template's `<!-- ductus:constitutions -->` region in `CLAUDE.md` and `AGENTS.md`, whose comment says `/ductus` maintains it, beside the `BEGIN`/`END` block the run appended. Task 20 fixed the templates in `b0b1f9d0`, which reaches new adoptions only; every adoption from `ductus-v0.47.0` through `v0.59.11` carries the region. The owner chose to fix it under this spec in that session (2026-10-27).
+- [ ] The migration `legacy-constitutions-region` (0.60.0, `framework/migrations/legacy-constitutions-region.md`) removes the region from each file when it is a shipped version, unedited, and leaves an edited, unclosed or pinned one with a report
+- [ ] A fixture walk of the procedure and a real adopter bootstrap of a `ductus-v0.59.11` subject show both regions removed, the `BEGIN`/`END` blocks intact, and a re-run writing nothing
+
+- **Done when**: the migration is registered, a fixture walk passes every case, and a real adopter bootstrap removes both regions and converges on a re-run

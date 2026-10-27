@@ -276,6 +276,24 @@ target_paths = [
 procedure_file = "framework/migrations/constitution-import.md"
 
 [[migrations]]
+id = "legacy-constitutions-region"
+introduced_in = "0.60.0"
+# No sunset_after. `CLAUDE.md` and `AGENTS.md` are installed once and never
+# rewritten, so an adopter who skips this window keeps a region whose own
+# comment says /ductus maintains it, beside the block /ductus does maintain,
+# and nothing else would ever remove it.
+# Independent of the other 0.60.0 entries: the region is neither an import
+# line nor a heading or block start, so none of them reads it.
+summary = "Remove the unmaintained <!-- ductus:constitutions --> comment region from CLAUDE.md and AGENTS.md when it is the shipped text, unchanged (spec 071, task 23)"
+# Adopter-relative. Nothing under framework/ is removed by this migration, so it
+# declares no framework/ target path.
+target_paths = [
+  "CLAUDE.md",
+  "AGENTS.md",
+]
+procedure_file = "framework/migrations/legacy-constitutions-region.md"
+
+[[migrations]]
 id = "memory-routing-leaves-claude-md"
 introduced_in = "0.60.0"
 # No sunset_after. `CLAUDE.md` is skip-strategy and never rewritten, so an

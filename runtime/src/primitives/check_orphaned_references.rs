@@ -22,8 +22,12 @@
 //! The rewrite walks this check's own referrer list with this check's own
 //! token scanner — [`referrers`] and [`managed_path_spans`] — so a reference
 //! to the retiring directory that this check would report is one the rewrite
-//! re-points, short of a referrer that is a symbolic link: the rewrite does
-//! not follow one, and this check reads through it.
+//! re-points, short of a referrer the rewrite lists in its `skipped` and
+//! leaves as written: a symbolic link, which it does not follow and this
+//! check reads through; one reached through a directory that resolves
+//! outside the project, which this check also reads; and one that is not
+//! UTF-8 text, which this check skips too, in the same words
+//! ([`UNREADABLE_AS_TEXT`]).
 //!
 //! Defined by `specs/067-analyze-and-audit-checks/scenarios/orphaned-reference-check.md`,
 //! required by `specs/027-bootstrap-migration-registry/scenarios/migration-chain-reference-integrity.md`.
@@ -82,10 +86,12 @@ const FIXED_REFERRERS: &[&str] = &[
 /// One class is repaired whoever wrote it: a reference to a feature directory
 /// that `/{project}:fold` or `/{project}:consolidate` is retiring. That command
 /// knows both endpoints, so `rewrite-spec-links` re-points the reference in
-/// every file this list names, `system.md` included, short of a symbolic link
-/// it does not follow. That is why the list is shared rather than copied: a
-/// referrer added here is one the rewrite covers too, and a copy would let
-/// the two drift apart silently.
+/// every file this list names, `system.md` included, short of one it lists in
+/// its `skipped`: a symbolic link, which it does not follow; one reached
+/// through a directory that resolves outside the project, which it does not
+/// write; and one that is not UTF-8 text. That is why the list is shared
+/// rather than copied: a referrer added here is one the rewrite covers too,
+/// and a copy would let the two drift apart silently.
 ///
 /// Resolved through `[paths] specs-root` rather than hardcoded. A literal
 /// `specs/system.md` would silently examine nothing on a project that renamed
@@ -107,6 +113,13 @@ pub(crate) fn referrers(layout: &paths::Paths) -> Vec<String> {
 pub(crate) fn spec_root_prefix(layout: &paths::Paths) -> String {
     format!("{}/", layout.specs_root.trim_end_matches('/'))
 }
+
+/// The `skipped` reason for a referrer that exists but could not be read as
+/// UTF-8 text — here, any failure to read it. `rewrite-spec-links` records the
+/// same reason for a referrer whose bytes are not UTF-8, so the two
+/// primitives name that file in the same words; any other read failure is an
+/// error there, raised before it writes anything.
+pub(crate) const UNREADABLE_AS_TEXT: &str = "file exists but could not be read as UTF-8 text";
 
 /// Attribution modes, reported so a caller can tell one from the other.
 const ATTRIBUTION_REGISTRY: &str = "registry";
@@ -154,7 +167,7 @@ pub fn run(
         let Ok(text) = std::fs::read_to_string(&full) else {
             skipped.push(OrphanedReferenceSkip {
                 path: referrer.clone(),
-                reason: "file exists but could not be read as UTF-8 text".into(),
+                reason: UNREADABLE_AS_TEXT.into(),
             });
             continue;
         };
