@@ -135,8 +135,7 @@ pub struct ReviewBlock {
 ///
 /// Every field is **required**. A map missing one of them makes the whole
 /// record unreadable rather than defaulting the absent count to zero, because
-/// a defaulted `undispositioned: 0` is exactly the value that would let a
-/// hand-trimmed map pass the gate.
+/// a defaulted `undispositioned: 0` would read as every finding decided.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct Dispositions {
@@ -149,8 +148,8 @@ pub struct Dispositions {
     /// Live findings discarded with a recorded reason — this run, or by a
     /// stored decision the run matched.
     pub discarded: u32,
-    /// Live findings with no disposition. The gate blocks `done` while this
-    /// is above zero.
+    /// Live findings with no disposition. Recorded and reported; the gate
+    /// does not read it, since only a gating finding holds `done`.
     pub undispositioned: u32,
 }
 
@@ -4062,10 +4061,12 @@ pub enum ReviewGateBlock {
     /// grandfather clause, for the reason the analyze record has none: the
     /// record is always writable at the moment a spec is being completed.
     RecordPredatesDispositions,
-    /// Either record counts one or more undispositioned findings. The block
-    /// asks for a decision, not a fix: discarding a false positive with its
-    /// reason clears it, so this does not promote advisory checks to blocking
-    /// in the sense their promotion criteria guard against.
+    /// An outstanding gating finding no earlier check caught: in practice an
+    /// unwaived review SHOULD. Only gating findings hold `done` (spec 058,
+    /// `findings-cost-in-proportion-to-risk`); the `dispositions:` maps'
+    /// `undispositioned` counts of advisory findings and observations are
+    /// recorded and never block. The name predates that narrowing and is kept
+    /// as the result's wire value.
     UndispositionedFindings,
 }
 
@@ -4450,11 +4451,11 @@ pub struct ArtifactFinding {
     /// `family:` literals the primitive emits.
     pub family: String,
     /// Severity tier per the reference's assignments: `blocking`
-    /// (artifact completeness, task consistency, review state drift,
-    /// disposition drift, and scenario open questions at `done`) or
-    /// `advisory` (scenario consistency, scenario open questions below
-    /// `done`, link-adjacent drift, criterion path existence, and criterion
-    /// labels reciprocity).
+    /// (artifact completeness, task consistency, review state drift, and
+    /// scenario open questions at `done`) or `advisory` (scenario
+    /// consistency, scenario open questions below `done`, link-adjacent
+    /// drift, criterion and body path existence, criterion labels
+    /// reciprocity, and disposition drift).
     pub severity: AnalyzeSeverity,
     /// Human-readable description of the finding.
     pub message: String,

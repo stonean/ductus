@@ -3858,8 +3858,8 @@ mod tests {
     // --- dispositions (spec 058) ---------------------------------------------
     // Absent and all-zero are two answers: a record that predates dispositions
     // did not disposition anything, while a record whose run found nothing
-    // did. And a partial map is unreadable rather than defaulted, because the
-    // defaulted `undispositioned: 0` is the value that would pass the gate.
+    // did. And a partial map is unreadable rather than defaulted, because a
+    // defaulted `undispositioned: 0` would claim decisions nobody made.
 
     #[test]
     fn a_record_that_predates_dispositions_loads_with_none_and_keeps_parsing() {

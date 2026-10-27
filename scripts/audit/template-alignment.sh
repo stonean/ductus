@@ -93,7 +93,6 @@ Task consistency (blocking if tasks exist) | covered — tasks.md link to plan.m
 Scenario open questions (blocking at `done`, advisory otherwise) | not-template-related — counts the entries a scenario carries; an absent section reads as none
 Review state drift (blocking) | not-template-related — reads review.md, which /review writes and no template scaffolds
 Analyze state drift (blocking) | not-template-related — reads analysis.md, which /analyze writes and no template scaffolds
-Disposition drift (blocking) | not-template-related — reads the records' dispositions maps, which no template scaffolds
 Rules (blocking and advisory) | not-template-related — validates rule files, not spec templates
 JUDGED
 }

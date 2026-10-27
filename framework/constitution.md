@@ -211,7 +211,7 @@ If any item fails, fix the gap before writing code.
 
 - Code matches the spec's contracts and tests verify its criteria; if new work is discovered, add it as a task first, and a refactor that reveals a missing requirement updates the spec or adds a scenario first
 - **A spec's ticked acceptance criteria are verified against the tree before it closes.** A ticked criterion is a claim to re-earn. The artifact check that compares criteria to the tree examines `done` specs only, and proves only that a path *resolves*, not that a claim about its contents holds. A criterion that no longer holds means the spec is edited — reopened and corrected, or consolidated away — not left ticked.
-- **A spec does not reach `done` with an outstanding SHOULD.** This is [§design-principles](#design-principles)' completion filter at the review gate: the gate blocks on MUST alone, but advisory is not ignorable at the gate: a SHOULD is addressed only when **fixed** or waived with its rationale.
+- **A spec does not reach `done` with an outstanding SHOULD.** This is [§design-principles](#design-principles)' completion filter at the review gate, where advisory is not ignorable: it blocks on an unwaived SHOULD as on a MUST; a SHOULD is addressed only when **fixed** or waived with its rationale.
 - **Nothing durable goes in a review record's body.** `/{project}:review` regenerates `review.md` whole, keeping only its waiver and decision lists, so what must survive goes in the spec body; a triage of findings is not a record, and the fixes it plans are tasks.
 - The review's window and coverage counts are `.ductus/reference/review.md` **§Window and coverage**; measuring the criteria-path family before the close is `.ductus/reference/analyze.md` **§Acceptance-criterion path existence (advisory)**.
 
@@ -290,16 +290,15 @@ Rule IDs are never renumbered, and a rule is deprecated with a `**DEPRECATED in 
 
 #### Finding dispositions
 
-Every finding a pipeline run produces MUST get exactly one disposition before its spec can reach `done`: a `/{project}:review` observation, a `/{project}:analyze` finding live when detection ends, and an issue `/{project}:implement` surfaces outside the task in hand.
+Every finding a pipeline run produces (a `/{project}:review` observation, a `/{project}:analyze` finding live when detection ends, an issue `/{project}:implement` surfaces outside the task in hand) gets at most one disposition; a gating one MUST have one before its spec can reach `done`.
 
 - **Three dispositions.** **Fixed** — a chore, fixed in the run and on disk. **Routed** — to an artifact the pre-`done` gate reads, by the Groom decision tree (`.ductus/reference/groom.md` **§Groom decision tree**): a task, scenario or body edit on an existing spec, reopening a `done` one; a new spec via `/{project}:specify`; or an amendment to a project-owned rule file. **Discarded** — with its reason, in the run's own record. The inbox is not a disposition.
 - **Detect, decide, re-check, record.** Detection writes nothing, each write is confirmed first, and the record is written from a re-check; with no operator, nothing is written and undecided findings are recorded undispositioned (`.ductus/reference/analyze.md` **§Finding dispositions**).
 - **Scope decides the destination.** Inside the current **task** → fix it there; inside the current **spec** → a new unchecked task on it, since an in-progress spec is the home its own defects need; outside the spec → one of the three dispositions. `tasks.md` does not thereby become a capture queue or a durable record: a missing requirement still becomes a scenario or spec edit.
-- **Record, do not derail — the disposition task.** `/{project}:implement` records a finding outside its spec as a `Disposition out-of-spec finding: {summary}` task and keeps working; working that task disposes of the finding.
-- **A finding that already gates `done` cannot be discarded.** Analyze hard-fail and blocking findings are fixed or routed; review MUST and SHOULD violations keep their fix-or-waive model.
+- **Record, do not derail — the disposition task.** `/{project}:implement` records a finding outside its spec as a `Disposition out-of-spec finding: {summary}` task and keeps working; working that task disposes of the finding, and a non-blocking one met there goes on that task.
+- **Of a run record's findings, only a gating one holds `done`, and cannot be discarded.** Analyze hard-fail and blocking findings are fixed or routed; review MUST and SHOULD violations keep their fix-or-waive model. The gate also blocks an `in-progress` spec's record with no `dispositions:` map.
 - **Decisions persist** in the record of the command that made them (`decisions:`), so a later run does not ask again.
 - **Severity raises salience, not the routing**: security issues and leaks are surfaced first.
-- **The gate asks for a decision, not a fix.** The pre-`done` gate blocks while either record counts an `undispositioned` finding, or has no `dispositions:` map on an `in-progress` spec.
 
 <!-- §brownfield-process -->
 

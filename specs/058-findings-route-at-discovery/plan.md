@@ -8,7 +8,8 @@ The change has three layers, landed in dependency order:
 
 1. **The runtime.** It stops writing to the inbox, records a disposition for
    every finding, persists routed and discarded decisions across runs, and
-   gates `done` on undispositioned findings.
+   gates `done` on outstanding gating findings — on undispositioned ones
+   until scenario `findings-cost-in-proportion-to-risk`.
 2. **The framework prose.** Commands, the constitution, templates, docs, and
    `AGENTS.md` all change to state the new contract.
 3. **The cross-spec discharge.** Seven `done` specs are reopened, each has the
@@ -24,9 +25,10 @@ that consume the new primitives.
 
 Disposition is a host judgment, and the runtime never makes it. The host picks
 fix, route, or discard by walking the groom decision tree, and confirms each
-write. The runtime does four things with that judgment: it counts the
-dispositions, persists the routed and discarded decisions, renders them, and
-gates on the count.
+write. The runtime does three things with that judgment: it counts the
+dispositions, persists the routed and discarded decisions, and renders them.
+Since scenario `findings-cost-in-proportion-to-risk` the gate no longer reads
+the count; it reads the gating counts the records already carry.
 
 ## Technical Decisions
 
@@ -243,8 +245,12 @@ this order:
 
 1. `review.md` has no `dispositions:` map;
 2. `analysis.md` has no `dispositions:` map;
-3. `review.md` has `undispositioned` above zero;
-4. `analysis.md` has `undispositioned` above zero.
+3. `review.md` has an unwaived MUST or SHOULD violation;
+4. `analysis.md` has a hard-fail or blocking finding.
+
+Checks 3 and 4 read the gating counts since scenario
+`findings-cost-in-proportion-to-risk`; until then each read the record's
+`undispositioned`, which counts every tier.
 
 A missing map comes first, because a count from a record that predates the
 field means nothing.
@@ -252,8 +258,8 @@ field means nothing.
 Two new `ReviewGateBlock` variants (the enum is at `primitives.rs:3129`):
 
 - **`record-predates-dispositions`** names the record and the command to re-run.
-- **`undispositioned-findings`** names the count and the command that
-  dispositions them.
+- **`undispositioned-findings`** names the count per record and the command to
+  re-run. The name predates the narrowing, and is kept as the wire value.
 
 Blocking on a missing field departs from the existing precedent, where a record
 that predates a field is `Undeterminable` and rides a notice on a passing gate
@@ -286,15 +292,16 @@ family instead gives `--fix` a family key to trigger on:
   after it writes that record, from the record it wrote, because a finding
   read from the record a run is about to replace could never clear (scenario
   `analysis-drift-judges-the-record-it-writes`).
-- It is `Blocking`.
+- It is `Advisory`. It was `Blocking` until scenario
+  `findings-cost-in-proportion-to-risk`, when the findings it counts stopped
+  holding `done`.
 - A record without a map produces nothing: it predates the field, and a
   backfilled map would assert dispositions nobody made
   (`check_disposition_drift` in `check_artifacts.rs`).
 
-`--fix` reverts on it through the host's guarded `set-status`, as it does for
-the other two triggers. The revert stays host-side, because `check-artifacts`
-has no write path (`CheckArtifactsArgs` takes only `feature`). `analyze.md`
-gains a markdown-only "Disposition drift" section, and the stale family-order
+`--fix` reverted on it through the host's guarded `set-status` until that
+scenario, and no longer does, so the family key now serves the report and
+the stored decisions only. `analyze.md` gains a markdown-only "Disposition drift" section, and the stale family-order
 doc on `CheckArtifactsResult.findings` is corrected in passing.
 
 ### `append-task` gains an opt-in title dedup, so disposition tasks stay idempotent
@@ -534,7 +541,8 @@ See [data-model.md](data-model.md).
   whose findings went to the inbox unseen.
 - **A separate `disposition-drift` family instead of extending
   `analyze-state-drift`.** One more family name, in exchange for `--fix`
-  triggering on a key rather than a message.
+  triggering on a key rather than a message. `--fix` has since stopped
+  reverting on it.
 - **`process-decisions` as its own primitive rather than a mode of
   `process-waivers`.** Waivers are keyed on `(rule, file)` and applied to
   MUST violations; decisions are keyed on a finding key and carry an outcome.

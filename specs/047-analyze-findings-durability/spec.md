@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: []
 next-criterion: 16
 ---
@@ -27,10 +27,11 @@ survive the session that ran it.
 > still live when detection ends, in any tier, is fixed, routed to an artifact
 > the pre-`done` gate reads, or discarded with its reason, and `analysis.md`
 > records the outcome in a `dispositions:` map and each routed or discarded
-> decision in a `decisions:` list. The problem this spec named stays solved,
-> and more strictly: a finding in the inbox could wait there while its spec
-> reached `done`, because no gate reads the inbox, and an undispositioned
-> finding now blocks it. §Behavior, §Constitution amendment, AC1–AC7, and the
+> decision in a `decisions:` list. The problem this spec named stays solved:
+> a finding in the inbox could wait there while its spec reached `done`,
+> because no gate reads the inbox, while a finding now stays in the record its
+> spec's own runs read, and a gating one blocks `done` (058's
+> `findings-cost-in-proportion-to-risk`). §Behavior, §Constitution amendment, AC1–AC7, and the
 > Resolved Questions that argued for the inbox are annotated in place. The run
 > record, the second gate, and the digest-based freshness check (AC9–AC15) are
 > unchanged.
@@ -138,8 +139,9 @@ are unchanged in substance.
 > subsection is now §brownfield-inbox Finding dispositions, and it has no
 > Surface at completion list. It keeps the scope this amendment widened: a
 > `/{project}:analyze` finding still live when detection ends, in any tier, is
-> one of the findings that must each get a disposition before its spec can
-> reach `done`.
+> one of the findings proposed a disposition in the run that finds it; a gating
+> one must have one before its spec can reach `done` (058's
+> `findings-cost-in-proportion-to-risk`).
 
 ## Acceptance Criteria
 
@@ -149,7 +151,7 @@ are unchanged in substance.
 - [x] AC4: Two findings of the same family citing the same `spec.md` but naming different missing paths are captured as two bullets, not merged into one. **Superseded by 058**, with its reason carried over: nothing is captured, and a stored decision's key is `{family} — {message}`, so two such findings are still two decisions.
 - [x] AC5: A finding resolved by `--fix` within the same run is not captured. **Superseded by 058**: nothing is captured. A finding resolved within the run no longer fires at the re-check, so the record, written after it, does not count it.
 - [x] AC6: Informational entries — the `skipped` unexamined-target list and cross-service reference unknowns — are not captured. **Superseded by 058**, with its distinction carried over: informational entries are still not findings, so they carry no key and get no disposition.
-- [x] AC7: The constitution's **Surface at completion** bullet names `/{project}:analyze` alongside `/{project}:implement` and `/{project}:review`, and the section's scope covers a command whose primary output is findings. **Superseded by 058**: Automatic issue capture and its Surface at completion list are gone. §brownfield-inbox Finding dispositions names `/{project}:analyze` among the commands whose findings each get a disposition, and its scope still covers a command whose primary output is findings.
+- [x] AC7: The constitution's **Surface at completion** bullet names `/{project}:analyze` alongside `/{project}:implement` and `/{project}:review`, and the section's scope covers a command whose primary output is findings. **Superseded by 058**: Automatic issue capture and its Surface at completion list are gone. §brownfield-inbox Finding dispositions names a `/{project}:analyze` finding among those that each get at most one disposition, and its scope still covers a command whose primary output is findings.
 - [x] AC8: The generated `{cli-config-dir}/commands/{project}/analyze.md` mirror matches its source, and the full markdown lint passes.
 - [x] AC9: `/{project}:analyze` records every run in the spec's `analyze:` frontmatter block — `last-run`, `analyzed-against`, the three tier counts, `unexamined`, and a derived `blocking` — including on a clean run and an empty scope, so the record's absence is itself information. A spec whose frontmatter does not parse receives no record. **Relocated by 057**: the record is the frontmatter of `analysis.md`, written on every run. Every clause survives the move — the fields, the write-on-every-run rule, and the refusal to record into an unparseable spec — and one sharpens: *the record's absence is itself information* now means the **file's** absence, which is the never-analyzed state [§text-first-artifacts Frontmatter Schema](../../framework/constitution.md#frontmatter-schema) declares, rather than a missing key inside a file that exists for other reasons.
 - [x] AC10: `/{project}:implement`'s pre-done gate blocks a spec whose `analyze:` block is absent, carries a null `last-run`, reports `blocking: true`, or carries a record gone stale (AC13), ordered after every `review:` check and with no grandfather clause. Advisory findings and unexamined targets are reported in the gate's guidance and never block. **Relocated by 057**: the gate reads the record from `analysis.md` and the review checks it is ordered behind from `review.md`. The block conditions, the ordering and the absence of a grandfather clause are unchanged; 057 added a third state the gate must not collapse — an artifact that exists but carries no parseable record is **undeterminable**, never never-analyzed.

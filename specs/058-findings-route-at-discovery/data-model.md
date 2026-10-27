@@ -20,7 +20,7 @@ dispositions:
 | `fixed` | u32 | Findings fixed in the run. A fixed finding is gone from the re-check, so it is counted from the run's first pass. |
 | `routed` | u32 | Live findings routed this run, plus live findings matching a stored routed decision. |
 | `discarded` | u32 | Live findings discarded this run, plus live findings matching a stored discarded decision. |
-| `undispositioned` | u32 | Live findings with neither. The gate blocks `done` while this is above zero. |
+| `undispositioned` | u32 | Live findings with neither. Recorded and reported; the gate does not read it, since only a gating finding holds `done`. |
 
 **Notes.**
 
@@ -212,19 +212,19 @@ findings sharing a summary apart. A spent section never matches.
 | Variant | When | Message names |
 | --- | --- | --- |
 | `record-predates-dispositions` | An `in-progress` spec's `review.md` or `analysis.md` has no `dispositions:` map | The record, and the command to re-run |
-| `undispositioned-findings` | Either record's `dispositions.undispositioned` is above zero | The count per record, and the command that dispositions them |
+| `undispositioned-findings` | An outstanding gating finding: the review record's unwaived MUST and SHOULD violations, or the analysis's hard-fail and blocking findings, above zero. The wire name predates scenario `findings-cost-in-proportion-to-risk`, when it read `dispositions.undispositioned` | The count per record, and the command to re-run |
 
 Both are checked after every existing review and analyze check, in the order
-predates (review, then analysis), then undispositioned (review, then analysis).
+predates (review, then analysis), then outstanding gating findings (review, then analysis).
 
 ## New `check-artifacts` family — `disposition-drift`
 
-At `done`, `Blocking`, one finding when `review.md`'s `undispositioned` is
+At `done`, `Advisory`, one finding when `review.md`'s `undispositioned` is
 above zero, with `path` = `spec.md`. A record without a `dispositions:` map
 produces nothing. `analysis.md` is not judged here: `/{project}:analyze` judges
 it after writing it, from the record it wrote
-([analysis-drift-judges-the-record-it-writes](scenarios/analysis-drift-judges-the-record-it-writes.md)). `/{project}:analyze --fix` reverts a spec it names from `done` to
-`in-progress`.
+([analysis-drift-judges-the-record-it-writes](scenarios/analysis-drift-judges-the-record-it-writes.md)). `/{project}:analyze --fix` does not revert on it: the findings it
+counts do not hold `done`.
 
 ## `DashboardResult.inbox-standing`
 

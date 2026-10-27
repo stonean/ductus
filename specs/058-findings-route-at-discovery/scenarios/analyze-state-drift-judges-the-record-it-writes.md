@@ -18,7 +18,7 @@ Inside `/{project}:analyze`, analyze-state drift is judged against the record th
 
 - **During detection, `check-artifacts` does not judge `analysis.md`.** Neither its `last-run` nor its `blocking` produces a finding, so the prior record never enters the tier counts step 20 writes.
 - **After step 20 writes the record**, a `done` spec whose new record is `blocking: true` is reported as analyze-state drift from that record, at render time. The hard-fail and blocking findings that made it so are already in the record's tiers. The drift report names the state and is not counted again as a finding, because a record cannot count its own verdict.
-- **`--fix` triggers are unchanged.** A done spec whose new record still carries undispositioned findings reverts through disposition drift, as it does now.
+- **`--fix` does not revert on this check.** A done spec whose new record is blocking still holds the blocking findings; fixing them clears it, and routing one onto this spec reopens it. One whose new record carries undispositioned findings reverted through disposition drift until scenario `findings-cost-in-proportion-to-risk` made that report advisory.
 
 A run that fixes every hard-fail and blocking finding on a `done` spec therefore leaves no drift behind. A run that leaves one live still reports it, and keeps reporting it until the finding stops firing.
 

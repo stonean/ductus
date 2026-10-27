@@ -124,3 +124,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] `data-model.md`'s check-orphaned-references bullets and the `a-revision-qualified-path-is-not-a-working-tree-reference` scenario state the `@` rule
 
 - **Done when**: The scenario's behavior holds in `runtime/src/primitives/check_orphaned_references.rs`, its two tests fail with the behavior removed, and 067's data model and sibling scenario describe the rule as it runs.
+
+## 16. Implement scenario: disposition-drift-is-advisory
+
+- [x] Implement the behavior described in `scenarios/disposition-drift-is-advisory.md`
+- [x] `check_artifacts`' `disposition-drift` family emits `AnalyzeSeverity::Advisory`; `a_done_spec_whose_review_owes_decisions_is_disposition_drift` asserts the tier, and mutation M3 in `scripts/mutation/findings-cost-in-proportion-to-risk.py` kills it (for `058-findings-route-at-discovery`'s `findings-cost-in-proportion-to-risk`)
+- [x] `data-model.md`'s family list gives the tier, and `/ductus:analyze` no longer reverts on it under `--fix`
+
+- **Done when**: The scenario's behavior holds in `runtime/src/primitives/check_artifacts.rs`, its test fails with the tier reverted, and 067's data model gives the family's tier.

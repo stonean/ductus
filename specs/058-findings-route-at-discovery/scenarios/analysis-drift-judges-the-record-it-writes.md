@@ -17,9 +17,9 @@ Found by the 058 review (2026-09-25).
 Inside `/{project}:analyze`, disposition drift is judged per record against the record that will stand after the run.
 
 - **`review.md`**: judged during detection, as now. `/{project}:analyze` does not rewrite that record, so the finding asks for a `/{project}:review` re-run and says so.
-- **`analysis.md`**: not raised during detection. After step 20 writes the record, a `done` spec whose new `dispositions.undispositioned` is above zero is reported as disposition drift from that record, at render time. With `--fix`, the spec is reverted `done → in-progress` through `set-status` with `from: done`, as the other drift triggers are.
+- **`analysis.md`**: not raised during detection. After step 20 writes the record, a `done` spec whose new `dispositions.undispositioned` is above zero is reported as disposition drift from that record, at render time. Since scenario `findings-cost-in-proportion-to-risk` the report is advisory and `--fix` does not revert on it: the undecided findings it counts that hold `done`, the hard-fail and blocking ones, already surface as analyze-state drift, and the rest hold nothing; until then the spec was reverted `done → in-progress`, as the other drift triggers are.
 
-A run that dispositions every live finding therefore leaves no drift behind, and a run that leaves findings undecided still reports it and still reverts under `--fix`. `/{project}:analyze` is the only command that renders this family, so `check-artifacts` judges `review.md` alone, and `/{project}:analyze` judges `analysis.md` itself from `write-analysis`'s returned `dispositions`.
+A run that dispositions every live finding therefore leaves no drift behind, and a run that leaves findings undecided still reports it. `/{project}:analyze` is the only command that renders this family, so `check-artifacts` judges `review.md` alone, and `/{project}:analyze` judges `analysis.md` itself from `write-analysis`'s returned `dispositions`.
 
 ## Edge Cases
 

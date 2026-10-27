@@ -22,7 +22,7 @@ The runtime primitives that record a spec's two audits — `/{project}:review` i
 
 ## The completion gate
 
-`check-review-gate` evaluates `/{project}:implement`'s pre-`done` gate in a documented order, the first failure winning: a spec already `done`, the feature's markdown lint, unresolved scenario questions, an undischarged `cross-spec-impact:` entry, the review record and its freshness, the analyze record and its freshness, a record that predates dispositions, and an undispositioned finding. `diff-cross-spec` reports the sibling specs the feature's own run has changed, for the summary `/{project}:implement` shows beside the gate.
+`check-review-gate` evaluates `/{project}:implement`'s pre-`done` gate in a documented order, the first failure winning: a spec already `done`, the feature's markdown lint, unresolved scenario questions, an undischarged `cross-spec-impact:` entry, the review record and its freshness, the analyze record and its freshness, a record that predates dispositions, and an outstanding gating finding. `diff-cross-spec` reports the sibling specs the feature's own run has changed, for the summary `/{project}:implement` shows beside the gate.
 
 ## Record freshness
 

@@ -460,7 +460,7 @@ fn render_analysis(
     );
     if counts.undispositioned > 0 {
         summary.push_str(
-            " `done` is blocked until each undispositioned finding is fixed, routed, or discarded.",
+            " An undispositioned advisory finding does not hold `done`; a hard-fail or blocking one holds it until the re-check no longer produces it.",
         );
     }
     let _ = writeln!(out, "{summary}\n");
@@ -758,7 +758,10 @@ mod tests {
             "the body must not understate what the frontmatter counts:\n{report}"
         );
         assert!(!report.contains("captured-issues"), "{report}");
-        assert!(report.contains("`done` is blocked"), "{report}");
+        assert!(
+            report.contains("An undispositioned advisory finding does not hold `done`"),
+            "{report}"
+        );
     }
 
     #[test]

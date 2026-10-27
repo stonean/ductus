@@ -52,14 +52,14 @@
 //!   scenario contributed no questions and, as a skip, no finding, so a
 //!   scenario carrying unresolved questions that would not parse passed the
 //!   gate built to catch exactly that. See [`record_unreadable_artifact`].
-//! - **disposition-drift** (blocking) — a `done` spec whose `review.md`
-//!   records one or more undispositioned findings (spec 058). The pre-`done`
-//!   gate blocks on the same count, so a `done` spec carrying one either
-//!   predates the gate or had its record re-run after it closed, and either
-//!   way `done` no longer means done. A record without a `dispositions:` map
-//!   produces nothing here: it predates the field, and a backfilled map would
-//!   assert dispositions nobody made. `/{project}:analyze --fix` reverts on
-//!   this family by name.
+//! - **disposition-drift** (advisory) — a `done` spec whose `review.md`
+//!   records one or more undispositioned observations (spec 058). Only gating
+//!   findings hold `done` (`findings-cost-in-proportion-to-risk`), and an
+//!   outstanding SHOULD on a `done` spec is review-state drift's, so this
+//!   keeps undecided observations visible without reopening the spec:
+//!   `/{project}:analyze --fix` does not revert on it. A record without a
+//!   `dispositions:` map produces nothing here: it predates the field, and a
+//!   backfilled map would assert dispositions nobody made.
 //! - **scenario-open-questions** (blocking at `done`, advisory otherwise)
 //!   — a scenario is an organizational split of the spec, so its
 //!   unresolved questions are the spec's questions for completeness. At
@@ -545,7 +545,8 @@ fn record_unreadable_artifact(
 }
 
 /// (d3) Disposition drift — a `done` spec whose `review.md` counts
-/// undispositioned findings (spec 058), naming the command that decides them.
+/// undispositioned observations (spec 058), named at the advisory tier with
+/// the command that decides them; they do not hold `done`.
 /// A map-less record is silent, and `analysis.md` is judged by
 /// `/{project}:analyze` from the record it writes: see the module doc.
 fn check_disposition_drift(
@@ -566,10 +567,10 @@ fn check_disposition_drift(
     }
     findings.push(ArtifactFinding {
         family: "disposition-drift".into(),
-        severity: AnalyzeSeverity::Blocking,
+        severity: AnalyzeSeverity::Advisory,
         message: format!(
             "disposition drift: done spec's review.md records {} undispositioned finding(s) — \
-             re-run the review command and fix, route, or discard each",
+             re-run the review command to decide each; they do not hold done",
             counts.undispositioned
         ),
         path: rel_path(spec_path, repo),
@@ -616,8 +617,9 @@ fn check_review_drift(
         });
     }
     // An outstanding SHOULD at `done` is the state §implement-phase names
-    // and forbids: "advisory is not ignorable at the gate". A SHOULD is
-    // addressed by being **fixed** — which drops it from the count — or by
+    // and forbids: the review gate "blocks on an unwaived SHOULD as on a
+    // MUST". A SHOULD is addressed by being **fixed** — which drops it from
+    // the count — or by
     // being moved under the review's waived section with its rationale, which
     // also drops it. A non-zero count therefore means neither happened, and
     // the finding is still filed under its original heading.
@@ -2236,8 +2238,16 @@ mod tests {
             "{drift:?}"
         );
         assert!(drift[0].contains("re-run the review command"), "{drift:?}");
+        // Spec 058's findings-cost-in-proportion-to-risk: undecided
+        // observations stay visible on a done spec but no longer hold it.
         assert!(result.findings.iter().any(|f| f.family == "disposition-drift"
-            && f.severity == AnalyzeSeverity::Blocking));
+            && f.severity == AnalyzeSeverity::Advisory));
+        assert!(
+            !result
+                .findings
+                .iter()
+                .any(|f| f.family == "disposition-drift" && f.severity == AnalyzeSeverity::Blocking)
+        );
     }
 
     /// `analysis.md` is the record the calling `/analyze` run is about to

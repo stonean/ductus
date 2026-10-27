@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [041-task-pruning, 052-spec-supersession-and-consolidation, 058-findings-route-at-discovery]
 next-criterion: 18
 ---
@@ -31,7 +31,7 @@ It runs in three places:
 
 - **`/clarify`**, because splitting a spec is cheapest while it is `draft` or `clarified`, before a plan and tasks exist for the part that moves.
 - **`/plan`'s readiness check**, beside the checks it already runs before proposing `planned`.
-- **`/analyze`**, as an advisory finding, so it gets a disposition like any other finding ([058](../058-findings-route-at-discovery/spec.md)): fixed, routed, or discarded with a reason. It never has to be *fixed* to reach `done`, only decided.
+- **`/analyze`**, as an advisory finding, so it is proposed a disposition like any other finding ([058](../058-findings-route-at-discovery/spec.md)): fixed, routed, or discarded with a reason. It never holds `done`, decided or not, since 058's `findings-cost-in-proportion-to-risk`.
 
 At `/clarify` and `/plan` it is a warning in the command's output. Neither command blocks its transition on it.
 

@@ -91,7 +91,7 @@ Report an unrecognized `--flag` and stop. Never absorb it into the feature ident
 | `--quality` | Run only the correctness / bug-detection pass |
 | `--fix` | Apply auto-fixable findings (see **§Auto-fix scope** in `.ductus/reference/review.md`) |
 | `--since=<ref>` | Override the diff base (default: the parent of the commit at which the spec advanced to `in-progress`, so work committed with the transition is inside the window, or `HEAD` when that transition is not committed yet) |
-| `--waive <rule-id> --reason "<text>"` | Record a waiver for a MUST violation (see **§Waivers** in `.ductus/reference/review.md`) |
+| `--waive <rule-id> --reason "<text>"` | Record a waiver for a MUST or SHOULD violation (see **§Waivers** in `.ductus/reference/review.md`) |
 
 ## Pipeline position
 

@@ -9,8 +9,8 @@
 //! undischarged `cross-spec-impact`, then the review record in `review.md`
 //! and whether it is still current, then the analyze record in
 //! `analysis.md` and whether it is still current, and last the two records'
-//! `dispositions:` maps — a record that predates them, then any
-//! undispositioned finding (spec 058). The first failing
+//! `dispositions:` maps — a record that predates them — and an outstanding
+//! gating finding, an unwaived SHOULD in practice (spec 058). The first failing
 //! check wins and produces the canonical `blocked: …` message — with the
 //! adopter's `[host] project` command namespace substituted into the
 //! `/{project}:review` references — plus, on `must-violations`, the
@@ -205,7 +205,8 @@ pub(crate) fn run_with_lint(
         Ok(freshness) => freshness,
     };
 
-    // Gate checks 10 and 11: the records' dispositions (spec 058). Last,
+    // Gate checks 10 and 11: a record with no `dispositions:` map, then an
+    // outstanding gating finding (spec 058). Last,
     // because every check above names a more upstream defect: a record that
     // is missing, failing, or stale has to be re-run before what it says about
     // its findings means anything.
@@ -240,7 +241,8 @@ pub(crate) fn run_with_lint(
     })
 }
 
-/// Gate checks 10 and 11 — the two records' `dispositions:` maps (spec 058).
+/// Gate check 10, a record with no `dispositions:` map, and gate check 11, an
+/// outstanding gating finding (spec 058).
 ///
 /// **A record without the map predates dispositions, and absence is not
 /// zero.** Before 058 a run's findings were captured to the inbox, which no
@@ -250,9 +252,15 @@ pub(crate) fn run_with_lint(
 /// record predating a *digest*, deliberately — a digest-less record says only
 /// that freshness is unknown, while a map-less one may be hiding owed work.
 ///
-/// Then the counts: any undispositioned finding in either record blocks. The
-/// block asks for a decision rather than a fix, so it does not promote
-/// analyze's advisory checks past their published criteria.
+/// Then the gating counts: an unwaived review MUST or SHOULD, or an analyze
+/// hard-fail or blocking finding. Only those hold `done` (spec 058,
+/// `findings-cost-in-proportion-to-risk`). The map's `undispositioned` count
+/// is not read: an undecided advisory finding or review observation is
+/// recorded and visible, and holds nothing. For a record the runtime writes,
+/// every gating count but the SHOULD one is already caught by an earlier
+/// check, so in practice this is where an outstanding SHOULD blocks, as
+/// §implement-phase requires; the other counts stay in the sum as a guard
+/// against a hand-edited record whose `blocking` disagrees with its counts.
 ///
 /// Both classes name every record in them, not just the first, because the
 /// remedy for each record is a different command.
@@ -307,13 +315,23 @@ fn disposition_block(
         ));
     }
 
-    let owed: Vec<(&str, &str, u32)> = records
-        .iter()
-        .filter_map(|(file, command, map)| {
-            map.filter(|counts| counts.undispositioned > 0)
-                .map(|counts| (*file, *command, counts.undispositioned))
-        })
-        .collect();
+    let gating = [
+        (
+            "review.md",
+            "review",
+            review
+                .must_violations
+                .saturating_add(review.should_violations),
+        ),
+        (
+            "analysis.md",
+            "analyze",
+            analyze.map_or(0, |record| {
+                record.hard_fail.saturating_add(record.blocking_findings)
+            }),
+        ),
+    ];
+    let owed: Vec<(&str, &str, u32)> = gating.into_iter().filter(|(_, _, n)| *n > 0).collect();
     if owed.is_empty() {
         return None;
     }
@@ -329,13 +347,13 @@ fn disposition_block(
     Some(blocked(
         ReviewGateBlock::UndispositionedFindings,
         format!(
-            "blocked: {total} undispositioned finding(s) — {}",
+            "blocked: {total} outstanding gating finding(s) — {}",
             detail.join(", ")
         ),
         format!(
-            "Re-run {} and give each finding a disposition: fix it, route it to the artifact \
-             that owns it, or discard it with its reason. Routed and discarded decisions are \
-             stored, so a settled finding is not asked about again.",
+            "Fix each outstanding finding, or waive a review SHOULD with its rationale \
+             (/{project}:review --waive <rule-id> --reason \"...\"), then re-run {}. \
+             Undispositioned advisory findings and observations do not hold `done`.",
             commands.join(" and ")
         ),
     ))
@@ -1001,7 +1019,7 @@ mod tests {
 
     /// A `done` spec, otherwise clean — the state gate check 0 short-circuits.
     const ALREADY_DONE: &str = "---\nstatus: done\ndependencies: []\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n  blocking: false\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 0\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
-    const REVIEWED_CLEAN: &str = "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 0\n  should-violations: 1\n  low-confidence: 0\n  blocking: false\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
+    const REVIEWED_CLEAN: &str = "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n  blocking: false\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
     const REVIEWED_BLOCKING: &str = "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: 2026-07-10T00:00:00Z\n  reviewed-against: abc123\n  must-violations: 3\n  should-violations: 0\n  low-confidence: 0\n  blocking: true\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
     const NEVER_REVIEWED: &str = "---\nstatus: in-progress\ndependencies: []\nreview:\n  last-run: null\n  reviewed-against: null\n  must-violations: 0\n  should-violations: 0\n  low-confidence: 0\n  blocking: false\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
     const NO_REVIEW_BLOCK: &str = "---\nstatus: in-progress\ndependencies: []\nanalyze:\n  last-run: 2026-07-10T00:00:00Z\n  analyzed-against: abc123\n  hard-fail: 0\n  blocking-findings: 0\n  advisory: 2\n  unexamined: 0\n  blocking: false\n---\n\n# 007 — Gate\n";
@@ -2603,12 +2621,55 @@ mod tests {
         );
     }
 
+    /// Spec 058's `findings-cost-in-proportion-to-risk`: a spec whose only
+    /// undecided findings are advisory passes, in both records.
     #[test]
-    fn an_undispositioned_finding_blocks_with_its_count_per_record() {
+    fn undispositioned_advisory_findings_do_not_hold_done() {
         let tmp = tempdir().unwrap();
         seed(tmp.path(), ANALYZE_ADVISORY_ONLY);
         set_undispositioned(tmp.path(), "analysis.md", 2);
         set_undispositioned(tmp.path(), "review.md", 1);
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert!(result.passed, "{:?}", result.message);
+        assert_eq!(result.blocked_by, None);
+    }
+
+    /// The other direction: an outstanding SHOULD, a gating finding no
+    /// earlier check covers, still holds `done`, whatever the map counts.
+    #[test]
+    fn an_outstanding_should_holds_done() {
+        let tmp = tempdir().unwrap();
+        seed(
+            tmp.path(),
+            &ANALYZE_ADVISORY_ONLY.replace("should-violations: 0", "should-violations: 2"),
+        );
+        let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
+        assert_eq!(
+            result.blocked_by,
+            Some(ReviewGateBlock::UndispositionedFindings)
+        );
+        assert_eq!(
+            result.message.as_deref(),
+            Some("blocked: 2 outstanding gating finding(s) — specs/007-gate/review.md: 2")
+        );
+        let guidance = result.guidance.unwrap();
+        assert!(guidance.contains("/ductus:review --waive"), "{guidance}");
+        assert!(guidance.contains("do not hold `done`"), "{guidance}");
+    }
+
+    #[test]
+    fn a_gating_count_beside_a_false_blocking_flag_still_holds_done() {
+        // A hand-edited record whose `blocking` disagrees with its counts
+        // passes the MUST and analyze-findings checks, which read the flag;
+        // the last check's sum is what still holds it.
+        let tmp = tempdir().unwrap();
+        seed(
+            tmp.path(),
+            &ANALYZE_ADVISORY_ONLY
+                .replace("must-violations: 0", "must-violations: 1")
+                .replace("hard-fail: 0", "hard-fail: 1")
+                .replace("blocking-findings: 0", "blocking-findings: 2"),
+        );
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
         assert_eq!(
             result.blocked_by,
@@ -2617,27 +2678,20 @@ mod tests {
         assert_eq!(
             result.message.as_deref(),
             Some(
-                "blocked: 3 undispositioned finding(s) — specs/007-gate/review.md: 1, \
-                 specs/007-gate/analysis.md: 2"
+                "blocked: 4 outstanding gating finding(s) — specs/007-gate/review.md: 1, \
+                 specs/007-gate/analysis.md: 3"
             )
-        );
-        let guidance = result.guidance.unwrap();
-        assert!(
-            guidance.contains("/ductus:review and /ductus:analyze"),
-            "{guidance}"
-        );
-        assert!(
-            guidance.contains("discard it with its reason"),
-            "{guidance}"
         );
     }
 
     #[test]
-    fn a_predating_record_outranks_an_undispositioned_count() {
+    fn a_predating_record_outranks_an_outstanding_should() {
         let tmp = tempdir().unwrap();
-        seed(tmp.path(), ANALYZE_ADVISORY_ONLY);
+        seed(
+            tmp.path(),
+            &ANALYZE_ADVISORY_ONLY.replace("should-violations: 0", "should-violations: 4"),
+        );
         strip_dispositions(tmp.path(), "review.md");
-        set_undispositioned(tmp.path(), "analysis.md", 4);
         let result = run_with_lint(&args(), tmp.path(), clean_lint).unwrap();
         assert_eq!(
             result.blocked_by,

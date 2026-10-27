@@ -654,7 +654,7 @@ fn generate_summary(
     if undispositioned > 0 {
         let _ = write!(
             summary,
-            " {undispositioned} observation(s) undispositioned — `done` is blocked until each is fixed, routed, or discarded."
+            " {undispositioned} observation(s) undispositioned — recorded, and they do not hold `done`."
         );
     }
     summary

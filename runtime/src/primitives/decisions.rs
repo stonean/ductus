@@ -5,7 +5,7 @@
 //! detection is stateless: a routed finding keeps firing until the routed work
 //! lands, and a discarded one keeps firing forever. Without a stored decision
 //! every re-run would ask again, and a routed finding would come back
-//! undispositioned and block `done` again. So each routed or discarded
+//! undispositioned. So each routed or discarded
 //! decision is stored in the record of the command that made it, and a later
 //! run counts a matching finding under the stored outcome without asking.
 //!

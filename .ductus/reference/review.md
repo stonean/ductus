@@ -340,7 +340,7 @@ its own one-line text and, optionally, the path it anchors to. Leading the text
 with a category (`security` / `leak` / `convention` / `bug` / `perf` / `other`)
 helps a reader route it, but nothing parses it.
 
-**Every observation gets a disposition before the record is written**
+**Every observation is proposed a disposition before the record is written**
 (§brownfield-inbox, Finding dispositions), and the section renders it beside
 the observation, the path clause omitted when the observation has none:
 
@@ -376,9 +376,9 @@ the observation, the path clause omitted when the observation has none:
 - **Undispositioned** — nobody decided: the operator declined without a
   reason, a route's write failed, or nobody could be asked. `ductus exec`'s
   walker no-ops steps 9 and 10 of the command's Instructions, so every observation an exec run threads
-  through is recorded undispositioned. The pre-done gate holds `done` while
-  `dispositions.undispositioned` is above zero, until a later review decides
-  each one.
+  through is recorded undispositioned. It stays recorded and visible for a
+  later review to decide, and it does not hold `done`: only a gating finding
+  does, and an observation is never one.
 
 **Nothing reaches the inbox.** Observations were once written through to
 `specs/inbox.md`, the one destination no gate reads, so a spec could reach
@@ -557,8 +557,8 @@ records `blocking: true`. This is enforced as follows:
    an undischarged cross-spec impact — any of which halts before the review
    record is consulted. Behind them run the review staleness check, the
    analyze checks, and — last — the two disposition checks: a `review.md`
-   or `analysis.md` with no `dispositions:` map, then a record whose
-   `undispositioned` is above zero. The two review checks read the
+   or `analysis.md` with no `dispositions:` map, then an outstanding gating
+   finding, which for this record is an unwaived SHOULD. The two review checks read the
    record from `review.md`: a missing/null `last-run` — or **no `review.md` at
    all**, which is the never-run state — halts with
 
@@ -576,8 +576,9 @@ records `blocking: true`. This is enforced as follows:
 
 2. **`/ductus:analyze`** — adds a check to its existing audit: if the spec's
    status is `done` but its `review.md` records `blocking: true` or a missing
-   `last-run`, this is a validation failure, and so is a `done` spec whose
-   `review.md` records undispositioned observations (disposition drift). Composable with `--fix`:
+   `last-run`, this is a validation failure; a `done` spec whose `review.md`
+   records undispositioned observations is reported as advisory disposition
+   drift, which `--fix` does not revert. Composable with `--fix`:
    `/ductus:analyze --fix` reverts `done` → `in-progress` and emits a notice
    (it never silently downgrades; the notice is the point).
 
@@ -615,7 +616,7 @@ to skip this check on future runs after manual reconciliation, add
 
 ## Waivers
 
-A MUST violation can be waived only with explicit, recorded justification:
+A MUST or SHOULD violation can be waived only with explicit, recorded justification:
 
 ```text
 /ductus:review --waive <rule-id> --reason "<text>"
@@ -766,12 +767,12 @@ The row renders on **every** run from the `dispositions` field `write-review`
 returns, as the observation total followed by all four counts — including a
 run with no observations, which renders `observations 0`, because
 examined-and-empty and not-computed must not be the same output. It is
-informational and never affects the exit code, but an `undispositioned` count
-above zero is what the pre-done gate will block on, so the row names it rather
-than leaving the operator to find it at the gate:
+informational and never affects the exit code, and an `undispositioned` count
+above zero does not hold `done`, so the row names it for a later review to
+decide rather than leaving it unseen:
 
 ```text
-  observations 2 — 0 fixed, 1 routed, 0 discarded, 1 undispositioned — the done gate holds until each is decided
+  observations 2 — 0 fixed, 1 routed, 0 discarded, 1 undispositioned — recorded; it does not hold done
 ```
 
 The standing inbox count is not a review row. It is a count of the todos a

@@ -235,8 +235,8 @@ it was the copy every gate actually read.
 > the record counts those outcomes in a `dispositions:` map (`fixed`, `routed`,
 > `discarded`, `undispositioned`) and stores each routed or discarded decision
 > in a `decisions:` list beside `waivers:`. The pre-done gate blocks an
-> `in-progress` spec while `undispositioned` is above zero, and while the record
-> has no map at all. [data-model.md](data-model.md) records both fields.
+> `in-progress` spec while the record has no map at all; an undecided
+> observation does not hold `done` (058's `findings-cost-in-proportion-to-risk`). [data-model.md](data-model.md) records both fields.
 
 When any waiver's `file` no longer exists or `rule` is no longer triggered
 at that location, the waiver is dropped on the next `/ductus:review` run and

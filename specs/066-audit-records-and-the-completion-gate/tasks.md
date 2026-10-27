@@ -34,3 +34,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] §Record freshness and `data-model.md` §Record freshness state the `done` exclusion
 
 - **Done when**: The scenario's behavior holds in `runtime/src/primitives/analyze_subjects.rs`, its tests fail with the behavior removed, and 066's spec and data model describe the comparison as it runs.
+
+## 6. Implement scenario: only-gating-findings-hold-done
+
+- [x] Implement the behavior described in `scenarios/only-gating-findings-hold-done.md`
+- [x] `check_review_gate::disposition_block` blocks on the review record's unwaived MUST and SHOULD counts and the analysis's hard-fail and blocking counts, never on `dispositions.undispositioned`; `undispositioned_advisory_findings_do_not_hold_done`, `an_outstanding_should_holds_done`, `a_gating_count_beside_a_false_blocking_flag_still_holds_done` and `a_predating_record_outranks_an_outstanding_should` hold each direction, and mutations M1, M2, M4 and M5 in `scripts/mutation/findings-cost-in-proportion-to-risk.py` kill them (for `058-findings-route-at-discovery`'s `findings-cost-in-proportion-to-risk`)
+- [x] `data-model.md`'s gate row 11 and §The completion gate describe the check as it runs
+
+- **Done when**: The scenario's behavior holds in `runtime/src/primitives/check_review_gate.rs`, its tests fail with the behavior removed, and 066's spec and data model describe the check as it runs.

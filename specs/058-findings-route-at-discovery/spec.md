@@ -9,15 +9,15 @@ cross-spec-impact:
   - 050-constitution
   - 054-remove-supersession
   - 057-analyze-artifact-and-record-relocation
-next-criterion: 34
+next-criterion: 35
 ---
 
 # 058 — Findings route at discovery
 
 Every finding `/{project}:review`, `/{project}:analyze`, or
-`/{project}:implement` produces gets exactly one disposition before its spec can
-reach `done`: fixed, routed to an artifact the `done` gate reads, or discarded
-with its reason recorded. `specs/inbox.md` stops being a place findings are
+`/{project}:implement` produces is proposed exactly one disposition: fixed,
+routed to an artifact the `done` gate reads, or discarded with its reason
+recorded. A gating one must have one before its spec can reach `done`. `specs/inbox.md` stops being a place findings are
 sent. It holds only the todos a person captures with `/{project}:log`.
 
 ## Motivation
@@ -65,7 +65,7 @@ the work was not complete, and nothing kept it from looking complete.
 
 ### Three dispositions
 
-Each finding below gets exactly one disposition:
+Each finding below is proposed exactly one disposition:
 
 - a `/{project}:review` observation;
 - a `/{project}:analyze` finding still live when detection ends, in any tier;
@@ -148,17 +148,18 @@ records the tier counts after dispositions.
 - **It runs on every invocation, with no flag.** Every write it makes is
   confirmed first, so running by default adds no unasked-for write. A flag
   would make "record everything undispositioned" the default, and every
-  unflagged run would then leave `done` blocked.
-- **`--fix` keeps its meaning and gains a third trigger.** It still reverts a
-  drifted `done` spec to `in-progress` and never edits content. A `done` spec
-  whose `analysis.md` records undispositioned findings is now drift, beside the
-  existing review-state and scenario-question triggers. It is reported on every
-  run and reverted only with `--fix`, matching how an outstanding SHOULD on a
-  `done` spec is already handled.
+  unflagged run would then leave its findings undecided.
+- **`--fix` keeps its meaning.** It still reverts a drifted `done` spec to
+  `in-progress` and never edits content. A `done` spec whose `analysis.md`
+  records undispositioned findings is reported on every run as advisory
+  disposition drift, and never reverted: those findings do not hold `done`
+  (§Only gating findings hold `done`). Until scenario
+  `findings-cost-in-proportion-to-risk` it was a third `--fix` trigger.
 - **With no operator, it writes nothing.** Under `ductus exec`, or on any host
   that cannot confirm, the step proposes nothing. Each live finding that
   matches no stored decision is recorded as undispositioned, so the record stays
-  honest and the gate blocks `done` until an interactive run dispositions it.
+  honest for an interactive run to disposition; a hard-fail or blocking one
+  still holds `done` through the record's `blocking: true`.
   Under `ductus exec` that is every live finding: the walker itemizes no
   finding, so none is matched against the stored decisions either, and every
   stored decision is retained for the next interactive run.
@@ -167,21 +168,26 @@ records the tier counts after dispositions.
   single-finding confirmations.
 
 A newly introduced advisory check that fires across `done` specs shows up as
-drift on each of them until its findings are dispositioned. That is intended:
-either the specs are not finished, or the check is noise, and one stored
-decision per finding quiets it until the finding's message changes.
+advisory drift on each of them until its findings are dispositioned, and
+reopens none of them; one stored decision per finding quiets it until the
+finding's message changes.
 
-### Undispositioned findings block `done`
+### Only gating findings hold `done`
 
-A finding left with no disposition is counted in its run's record, and
-`check-review-gate` blocks `in-progress → done` while that count is above zero
-in either `review.md` or `analysis.md`. The block asks for a decision, not a
-fix: discarding a false positive with that reason clears it. So the block does
-not promote analyze's advisory checks to blocking in the sense their promotion
-criteria guard against. An advisory finding still never has to be *fixed* to
-reach `done`; it has to be dispositioned. The gate reports undispositioned
-findings after every existing review and analyze check, because each of those
-names a more upstream defect.
+A finding left with no disposition is counted in its run's record, and only a
+gating one holds `done` (scenario `findings-cost-in-proportion-to-risk`).
+`check-review-gate`'s last check blocks `in-progress → done` on an outstanding
+review MUST or SHOULD violation, or a hard-fail or blocking analyze finding —
+never on a record's `undispositioned` count, which does not split by tier. An
+undecided advisory finding or review observation stays recorded and visible,
+any decision made on it persists, and it does not block, so analyze's advisory checks are
+not promoted to blocking. The check runs after every existing review and
+analyze check, because each of those names a more upstream defect, so in
+practice it is where an unwaived SHOULD binds.
+
+Until that scenario the gate blocked while either record's `undispositioned`
+count was above zero, asking for a decision rather than a fix. Its cost, in
+disposition work that spawned more of it, is that scenario's Context.
 
 ### Decisions persist across runs
 
@@ -189,7 +195,7 @@ Detection is stateless, so a finding decided in one run fires again in the
 next. That holds for a routed finding as much as a discarded one: a finding
 routed to a scenario or task keeps firing until the routed work lands. Without
 a persisted decision, every re-run would ask again for decisions already made,
-and a routed finding would come back undispositioned and block `done` again.
+and a routed finding would come back undispositioned.
 Each **routed** or **discarded** decision is therefore stored in the record of
 the command that made it. A fixed finding needs no entry, because it stops
 firing.
@@ -238,7 +244,8 @@ the loop.
 
 An incidental issue inside the task in hand is still fixed as part of the task.
 Anything else becomes an unchecked task on the targeted spec's `tasks.md` the
-moment it surfaces, through `append-task`:
+moment it surfaces, through `append-task`, except a non-blocking finding met
+while working a disposition task (below):
 
 - **Inside the targeted spec:** the task implements the fix, as today.
 - **Outside the spec:** a **disposition task**, titled
@@ -247,9 +254,12 @@ moment it surfaces, through `append-task`:
 
 `/{project}:implement` works a disposition task like any other. It fixes the
 finding if it is a chore, routes it with confirmation, or discards it, writing
-the reason onto the task as it is checked off. The completion summary lists
-each disposition task the run appended and each one it worked, with its
-outcome.
+the reason onto the task as it is checked off. A non-blocking finding
+surfaced while working it is recorded on that same task, with its own
+outcome, rather than appended as a new one, so disposition work does not spawn
+disposition work (scenario `findings-cost-in-proportion-to-risk`); a blocking
+one still becomes its own task. The completion summary lists each disposition
+task the run appended and each one it worked, with its outcome.
 
 This keeps each part of the old capture contract:
 
@@ -304,7 +314,7 @@ two new fields:
   `review.md` it counts observations, since MUST and SHOULD violations keep
   their own counts. The map's name says what is being counted, so a `fixed`
   count beside `must-violations` cannot be read as violations fixed. The gate
-  reads `dispositions.undispositioned`.
+  reads only whether the map is present.
 - **`decisions:`** is the list of stored routed and discarded decisions
   (§Decisions persist across runs), beside `review.md`'s existing `waivers:`.
 
@@ -426,7 +436,7 @@ spec's links to it. Each also gets the contract change itself:
   about each finding again, so a malformed list can cost a repeat question but
   never silently waive a finding.
 - **`/{project}:prune`'s default mode never drops an unchecked disposition
-  task.** It removes only spent sections, so an undispositioned finding keeps
+  task.** It removes only spent sections, so an undecided finding's task keeps
   holding its spec out of `done`. `--reset` does drop unchecked tasks, but it
   is refused below `done` without `--force`, and a `done` spec cannot hold an
   unchecked task. A forced reset is the operator discarding the work
@@ -463,15 +473,16 @@ spec's links to it. Each also gets the contract change itself:
 - [x] AC22: The change adds one `framework/migrations.toml` entry, with its `framework/migrations/{id}.md` procedure. The procedure replaces the guidance comment in an adopter's existing inbox with the new template's, leaves every item byte-identical, and is idempotent. The migration-coverage audit (Family 10) passes.
 - [x] AC23: A repo-wide search for the automatic-capture shape — `captured during` bullets, `inbox-additions`, a `Captured issues` section, or an `append-inbox` call outside `/{project}:log` — returns no hit outside this spec, Resolved Questions sections, signposts, and git history.
 - [x] AC24: Full markdown lint passes across every file the change touches.
-- [x] AC25: `check-review-gate` blocks `in-progress → done` while `review.md` or `analysis.md` records one or more undispositioned findings, names the count and the command that dispositions them, and checks this only after every existing review and analyze check has passed.
+- [x] AC25: `check-review-gate` blocks `in-progress → done` on an outstanding gating finding — an unwaived review MUST or SHOULD violation, or a hard-fail or blocking analyze finding — and never on a record's `undispositioned` count, names the count and the record it is in, and checks this only after every existing review and analyze check has passed.
 - [x] AC26: `/{project}:analyze` runs its fix-and-route step on every invocation without a flag. Under `ductus exec` it writes no fix or route, and records each live finding that matches no stored decision as undispositioned.
-- [x] AC27: `/{project}:analyze` reports a `done` spec whose `analysis.md` or `review.md` records undispositioned findings as drift, and with `--fix` reverts it `done → in-progress` through `set-status` with `from: done`.
+- [x] AC27: `/{project}:analyze` reports a `done` spec whose `analysis.md` or `review.md` records undispositioned findings as advisory disposition drift, and `--fix` does not revert it.
 - [x] AC28: `/{project}:analyze --all` groups fix-and-route proposals by spec, and each prompt offers to leave that spec's remaining findings undispositioned.
 - [x] AC29: `check-review-gate` blocks an `in-progress` spec whose `review.md` or `analysis.md` has no `dispositions:` map, and names the command to re-run. A record written before this change that carries `captured-issues` still parses, and `/{project}:analyze` does not report a `done` spec's map-less record as drift.
 - [x] AC30: `/{project}:analyze` offers no discard for a hard-fail or blocking finding. Such a finding is fixed or routed, and it keeps `blocking: true` in the record until the re-check no longer produces it.
 - [x] AC31: A confirmed disposition whose write fails (a refused scenario slug, a chore fix that fails or proves not mechanical) is counted as undispositioned, never as fixed or routed, and the report names the failure beside the finding.
 - [x] AC32: A routed or discarded decision made in one run is stored with its outcome, its target or reason, its time, and its author in the record of the command that made it. A re-run over an unchanged tree counts the finding under its stored outcome without prompting. A re-run in which the finding no longer fires prunes the stored decision, and a run that did not evaluate the finding's source retains it.
 - [x] AC33: `/{project}:implement` working a disposition task fixes, routes with confirmation, or discards the finding, and checks the task off only once one of the three has happened. A discard writes its reason onto the checked task.
+- [x] AC34: A non-blocking finding surfaced while `/{project}:implement` works a disposition task is recorded on that task as a further body item with its own outcome, not appended as a new task, and the task is checked once every finding on it has a disposition; a blocking one becomes its own task.
 
 ## Open Questions
 
@@ -479,10 +490,13 @@ spec's links to it. Each also gets the contract change itself:
 
 ## Resolved Questions
 
-- **Does an undispositioned finding block `done`?** Yes. `check-review-gate`
-  blocks while either record carries an undispositioned finding, and
-  decisions persist across runs (see §Undispositioned findings block `done` and
-  §Decisions persist across runs). Clarify persisted discards only. Planning
+- **Does an undispositioned finding block `done`?** Yes, as first decided.
+  *Superseded in part by scenario `findings-cost-in-proportion-to-risk`
+  (owner pre-authorized 2026-10-26): only a gating finding holds `done`, so an
+  undecided advisory finding or observation no longer blocks; decisions still
+  persist (§Only gating findings hold `done`).* Then, `check-review-gate`
+  blocked while either record carried an undispositioned finding, and
+  decisions persist across runs (§Decisions persist across runs). Clarify persisted discards only. Planning
   generalized that to routed decisions too, because a routed finding keeps
   firing until its routed work lands, and a discard-only list would bring it
   back undispositioned on the next run. Without the block, a declined proposal would
@@ -526,6 +540,9 @@ spec's links to it. Each also gets the contract change itself:
   review-state drift, including an outstanding SHOULD on a `done` spec, and on
   unresolved scenario questions. The new trigger follows the SHOULD precedent,
   where an unresolved decision on a finished spec is drift rather than a notice.
+  *Superseded in part by scenario `findings-cost-in-proportion-to-risk`
+  (owner pre-authorized 2026-10-26): the third trigger was withdrawn, and
+  disposition drift is advisory.*
 - **What are the disposition counts called, and where do they live?** In a
   `dispositions:` map with `fixed`, `routed`, `discarded`, and
   `undispositioned`, identical in both records, with stored decisions in a
