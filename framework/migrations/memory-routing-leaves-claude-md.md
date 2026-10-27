@@ -13,7 +13,7 @@ Through ductus 0.59 the `CLAUDE.md` template carried a `## Auto-Memory Routing` 
 
 1. **Resolve the file.** The file is `CLAUDE.md` at the project root. When it does not exist, stop silently and report nothing.
 
-2. **Find the section.** Here and below, a line's **text** is the line without its ending, `\n` or `\r\n`, and a **blank** line is one whose text is empty or holds only spaces and tabs. A **heading** is a line outside a fence whose text, after at most three spaces, is `#` or `##` alone or followed by a space or tab. Walk the file line by line, tracking fenced code blocks as `claude-md-import-syntax` step 2 defines them, applied to each line's text. The section starts at the first heading whose text, with up to three leading spaces and any trailing spaces and tabs removed, reads `## Auto-Memory Routing`, and runs to the line before the next heading, or to the end of the file.
+2. **Find the section.** Here and below, a line's **text** is the line without its ending, `\n` or `\r\n`, and a **blank** line is one whose text is empty or holds only spaces and tabs. A **heading** is a line outside a fence whose text, after at most three spaces, is `#` or `##` alone or followed by a space or tab. A **block start** is a line outside a fence whose text, with leading spaces and tabs removed, begins `<!-- BEGIN ductus:` — the first line of a block the framework maintains. A run that found no markers appended the `ductus:constitutions` block at the end of the file, after this section. Walk the file line by line, tracking fenced code blocks as `claude-md-import-syntax` step 2 defines them, applied to each line's text. The section starts at the first heading whose text, with up to three leading spaces and any trailing spaces and tabs removed, reads `## Auto-Memory Routing`, and runs to the line before the next heading or block start, or to the end of the file.
 
 3. **Idempotency check.** When no line starts the section, the file is converged: report `memory-routing-leaves-claude-md: CLAUDE.md has no Auto-Memory Routing section — left as is` and stop without writing.
 
@@ -27,7 +27,7 @@ Through ductus 0.59 the `CLAUDE.md` template carried a `## Auto-Memory Routing` 
 
    `memory-routing-leaves-claude-md: CLAUDE.md's ## Auto-Memory Routing section differs from every shipped version — left as is; remove it by hand, since AGENTS.md's ductus:memory-routing block carries the routing and a claude-style session loads both.`
 
-7. **Remove a matching section.** Delete its lines, from the heading through the line before the next heading, or through the end of the file. When it ran to the end of the file, also delete the blank lines before it, so the file ends with the line ending after its last remaining non-blank line, or is empty when none remains. Preserve every other byte, line endings included. Write atomically, keeping the file's mode: a temporary file in the same directory, then a rename.
+7. **Remove a matching section.** Delete its lines, from the heading through the line before the next heading or block start, or through the end of the file. When it ran to the end of the file, also delete the blank lines before it, so the file ends with the line ending after its last remaining non-blank line, or is empty when none remains. Preserve every other byte, line endings included. Write atomically, keeping the file's mode: a temporary file in the same directory, then a rename.
 
 8. **Report** `memory-routing-leaves-claude-md: removed the Auto-Memory Routing section from CLAUDE.md — AGENTS.md's ductus:memory-routing block carries the routing`.
 
@@ -103,7 +103,7 @@ Before saving an auto-memory entry, ask **two** questions, in this order.
 
 ## Verification
 
-- After a removal, `git diff CLAUDE.md` shows only the section's lines removed, and the blank lines before it when it ended the file.
+- After a removal, `git diff CLAUDE.md` shows only the section's lines removed, and the blank lines before it when it ended the file; a `ductus:` block that followed it is unchanged.
 - A `CLAUDE.md` whose section was edited, or that is pinned, is unchanged, and the run reported the one line naming it.
 - After a removal, a second run reports `has no Auto-Memory Routing section` and writes nothing; after a pinned or edited file's report, a second run repeats that report. No run writes to a converged file.
 - The file's line-ending style is unchanged.

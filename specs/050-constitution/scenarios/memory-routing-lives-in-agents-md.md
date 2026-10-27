@@ -22,6 +22,7 @@ An inbox item logged 2026-10-26 asked for one home, `AGENTS.md`. Both project te
 ## Edge Cases
 
 - **A section followed by sections of the adopter's own.** Only the section goes, from its heading to the next second-level heading.
+- **A section followed by a block a run appended.** A run that found no `ductus:constitutions` markers in `CLAUDE.md` appended the block at the end of the file, after the section. The section ends at the block's `<!-- BEGIN ductus:` line, so it still matches a shipped version, and the block stays.
 - **An edited section the migration leaves.** The routing then reaches a `claude-style` session twice, once through `@AGENTS.md`, until the operator removes the copy; the warning says so.
 - **A pinned `AGENTS.md`.** It still gets the block, as it gets the `ductus:constitutions` block: pinning turns a manifest `update` into `skip`, and the block is a managed-region merge, not a manifest write.
 - **A file with CRLF line endings.** The section is compared, and removed, with the file's own line endings.
