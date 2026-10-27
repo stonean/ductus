@@ -664,7 +664,7 @@ expanded, so it names a path that does not exist and expires as one.
 
 On every `/{project}:review` run, after the review passes have produced their
 findings (see **Run review passes**) and before counting them into `must-violations`
-or writing the record, walk the recorded `waivers` and classify each anchor — each
+and `should-violations` or writing the record, walk the recorded `waivers` and classify each anchor — each
 path an entry lists, under its rule — against those findings. A waiver can only be judged against findings that exist — when
 an empty scope skips the passes entirely, leave the waivers untouched; and on
 a dimension-restricted run, waivers anchored to skipped dimensions apply
@@ -672,8 +672,8 @@ unchanged rather than expiring:
 
 1. **Apply** when the file exists at the anchored path AND the rule still
    fires there. The finding appears under **Waived findings** in
-   `review.md` with the waiver's `reason`; it is excluded from
-   `must-violations`.
+   `review.md` with the waiver's `reason`; it is excluded from its
+   severity's count, `must-violations` or `should-violations`.
 2. **Expire** when either the file no longer exists at the anchored path
    (renamed, deleted, moved) or the rule no longer fires there (offending
    code fixed, rule removed, rule renamed — IDs are permanent per
@@ -688,8 +688,9 @@ unchanged rather than expiring:
 
    The notice is the point of the action; expiry MUST NOT be silent. When
    the same rule still fires anywhere in scope after a drop, the finding
-   re-counts toward `must-violations` and `review.blocking` flips to
-   `true` if it was previously `false`.
+   re-counts toward its severity's count: a MUST toward `must-violations`,
+   flipping `review.blocking` to `true` if it was `false`; a SHOULD toward
+   `should-violations`, which holds `done` at the pre-done gate.
 3. **Do not extend** a waiver to a file it does not list. If the same rule
    fires at a path other than the waiver's anchors, that is a separate
    finding; the operator records a fresh `--waive` if it is also intentional.

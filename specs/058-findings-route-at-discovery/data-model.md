@@ -223,8 +223,8 @@ At `done`, `Advisory`, one finding when `review.md`'s `undispositioned` is
 above zero, with `path` = `spec.md`. A record without a `dispositions:` map
 produces nothing. `analysis.md` is not judged here: `/{project}:analyze` judges
 it after writing it, from the record it wrote
-([analysis-drift-judges-the-record-it-writes](scenarios/analysis-drift-judges-the-record-it-writes.md)). `/{project}:analyze --fix` does not revert on it: the findings it
-counts do not hold `done`.
+([analysis-drift-judges-the-record-it-writes](scenarios/analysis-drift-judges-the-record-it-writes.md)). `/{project}:analyze --fix` does not revert on this family: the
+`review.md` observations it counts do not hold `done`.
 
 ## `DashboardResult.inbox-standing`
 

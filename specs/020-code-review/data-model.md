@@ -52,7 +52,7 @@ A waiver anchor expires (its path is dropped from `review.md`'s frontmatter on t
 - The anchored path no longer exists in the repository (renamed or deleted).
 - The named `rule` no longer fires at that path (rule removed, or the violating code was fixed).
 
-When the underlying finding still exists elsewhere in scope after expiry, it re-counts toward `must-violations` and the record's `blocking` flag flips back to `true`. The detailed edge-case behavior is in [`scenarios/waiver-expiry.md`](scenarios/waiver-expiry.md).
+When the underlying finding still exists elsewhere in scope after expiry, it re-counts toward its severity's count: a MUST toward `must-violations`, flipping the record's `blocking` flag back to `true`; a SHOULD toward `should-violations`, which holds `done` at the pre-done gate. The detailed edge-case behavior is in [`scenarios/waiver-expiry.md`](scenarios/waiver-expiry.md).
 
 ## `review.md` artifact
 
