@@ -84,11 +84,13 @@ pub enum ReviewSeverity {
 }
 
 impl ReviewSeverity {
-    /// Whether this tier blocks a spec from reaching `done`.
+    /// Whether this tier sets the review record's `blocking` flag. An unwaived
+    /// `Should` still holds `done`, at the pre-`done` gate's last check.
     ///
-    /// The bucketing predicate, expressed once on the type rather than as an
-    /// `else` arm: a tier that is not `Must` is `Should` by construction, so
-    /// there is no third branch for an unrecognized value to fall into.
+    /// Read by the cross-pass dedup's rank (`finding_rank` in
+    /// `write_review.rs`), and expressed once on the type: a tier that is not
+    /// `Must` is `Should` by construction, so there is no third branch for an
+    /// unrecognized value to fall into.
     #[must_use]
     pub const fn is_blocking(self) -> bool {
         matches!(self, Self::Must)
