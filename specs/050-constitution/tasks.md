@@ -315,3 +315,9 @@ The owner answered the scenario's question on 2026-10-27 with (b): the constitut
 - [x] `framework/constitution.md` §text-first-artifacts, review-record table: `scope` is described as "Files the review's scope contained", but `write-review` records `scope.len()` of the plan's Affected Files entries unexpanded (`parse_affected_files` in `runtime/src/primitives/mod.rs`), so a glob row counts once; state what it counts, with the `examined` row beside it. Land it with task 35's cut where the audit-record tables move (routed from 072 task 9, owner 2026-10-26)
 
 - **Done when**: the constitution's row no longer misstates `scope`, and `framework/reference/review.md` §Window and coverage states what `write-review` records, so the `examined` / `scope` comparison reconciles
+
+## 37. Disposition out-of-spec finding: the Frontmatter Migration refuses after an earlier migration in the same run writes under specs/
+
+- [x] framework/bootstrap/ductus-procedure.md — §Frontmatter Migration's precheck (git status --porcelain -- specs/) refuses a tree that §Pre-run Migrations dirtied moments earlier in the same /ductus run: inbox-guidance-refresh rewrote specs/inbox.md in the real adopter bootstrap of task 35 (a subject adopted at ductus-v0.28.0, run at --ref=main on ad595280), so an adopter whose inbox carries the pre-0.53 guidance meets the refusal on its first run past 0.53, and the step's 'Exit before any modifications' does not say whether the section or the run exits — routed to `specs/013-text-first-artifacts/scenarios/the-precheck-ignores-what-the-same-run-wrote.md` (013 task 25), reopening 013
+
+- **Done when**: the finding is fixed, routed, or discarded, with a discard's reason written on the task

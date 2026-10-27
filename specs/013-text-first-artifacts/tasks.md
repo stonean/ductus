@@ -199,3 +199,9 @@ Tagging is deferred until [048](../048-govern-acquired-runtime/spec.md) ships (o
 - [x] Command sources invoke the pass at its two remaining points: `framework/commands/specify.md` after `writeSpecBody`, and `framework/commands/clarify.md` after the criteria pass. Re-run `scripts/gen-claude-commands.sh` after editing either. Both markdown-only references gained the matching by-hand derivation, so the two paths still share one contract. `specify-basic.jsonl` re-blessed: the walker now dispatches `label-criteria` at step 3, shifting the gate and session-write steps down by one.
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested; an acceptance criterion carries a stable, permanent identifier readable in the artifact and resolvable by tooling, unlabelled criteria still parse and tick via the positional fallback, every spec in the corpus is labelled, adopters receive the same migration, and the runtime-side changes have landed under 022.
+
+### 25. The precheck ignores what the same run wrote
+
+- [ ] Implement the behavior described in `scenarios/the-precheck-ignores-what-the-same-run-wrote.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and verified by a real adopter bootstrap whose Pre-run Migrations write under specs/
