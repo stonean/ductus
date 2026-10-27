@@ -558,7 +558,7 @@ records `blocking: true`. This is enforced as follows:
    record is consulted. Behind them run the review staleness check, the
    analyze checks, and — last — the two disposition checks: a `review.md`
    or `analysis.md` with no `dispositions:` map, then an outstanding gating
-   finding, which for this record is an unwaived SHOULD. The two review checks read the
+   finding, which for a record the runtime writes is an unwaived SHOULD. The two review checks read the
    record from `review.md`: a missing/null `last-run` — or **no `review.md` at
    all**, which is the never-run state — halts with
 
@@ -648,7 +648,7 @@ rather than appending to an existing one, because an entry's `waived-at` and
 entries that share a rule, reason and author by hand; the framework never
 merges them itself.
 
-Waived findings drop out of the `must-violations` count (there is no separate
+Waived findings drop out of the `must-violations` and `should-violations` counts (there is no separate
 `waived-violations` field; `write-review` reports the waived count
 only in its transient result). They appear in `review.md` under the **Waived
 findings** section. They survive across `/{project}:review` runs as long as the

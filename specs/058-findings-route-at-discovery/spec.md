@@ -152,8 +152,9 @@ records the tier counts after dispositions.
 - **`--fix` keeps its meaning.** It still reverts a drifted `done` spec to
   `in-progress` and never edits content. A `done` spec whose `analysis.md`
   records undispositioned findings is reported on every run as advisory
-  disposition drift, and never reverted: those findings do not hold `done`
-  (§Only gating findings hold `done`). Until scenario
+  disposition drift, and never reverted: the undecided ones that hold `done`,
+  the hard-fail and blocking ones, already surface as analyze-state drift, and
+  the rest hold nothing (§Only gating findings hold `done`). Until scenario
   `findings-cost-in-proportion-to-risk` it was a third `--fix` trigger.
 - **With no operator, it writes nothing.** Under `ductus exec`, or on any host
   that cannot confirm, the step proposes nothing. Each live finding that
