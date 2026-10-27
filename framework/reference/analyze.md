@@ -69,7 +69,7 @@ Bytes are a proxy. The runtime has no tokenizer, and the cap differs per host an
 Suggested fix per finding, by the subject's kind, naming on a `done` spec which reopen it (§spec-lifecycle):
 
 - **`tasks.md`** — `/{project}:prune` its spent task sections, which does not reopen a `done` spec. Still over the threshold after pruning means the spec itself is too big, and the `spec.md` fixes apply.
-- **`spec.md`, `plan.md`** — split the spec, when a slice can reach `done` on its own, which reopens it; or trim — for a plan, its code sketches and the Affected Files rows for finished work — which reopens it unless the trim changes no claim. No command splits a spec, so a split is done by hand: create the new spec with `/{project}:specify`, move the content, and link it from the original.
+- **`spec.md`, `plan.md`** — split the spec, when a slice can reach `done` on its own, which reopens it; or trim — for a plan, its code sketches and the Affected Files rows for finished work — which reopens it unless the trim changes no claim, while a plan trim never reopens it, since a plan edit takes no back-edge (§spec-lifecycle). No command splits a spec, so a split is done by hand: create the new spec with `/{project}:specify`, move the content, and link it from the original.
 - **`data-model.md`** — split or trim, as above, but never into sub-files: review staleness tracks `data-model.md` by its exact name, so content moved to a sibling file drops out of the review's subjects.
 - **a scenario** — promote it to its own spec (§scenario-promotion), which reopens the parent.
 - **any subject** — discard the finding with its reason, which reopens nothing.

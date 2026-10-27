@@ -42,7 +42,7 @@ The §rules section carries:
 3. **When to write a rule** — the four-indicator promotion checklist (cross-cutting / citable / governance-recognized category / generalizable wording), framed as "all four should hold."
 4. **When NOT to write a rule** — situational → scenario; feature-wide → acceptance criterion. Cross-references §scenarios and §spec-requirements.
 5. **Lifecycle** — IDs are permanent; rules are deprecated with a removal target version, not deleted. Cross-reference 008's data-model for the full ID-stability invariants.
-6. **Relationship to specs and scenarios** — three-tier table (rule / AC / scenario) selected by scope, mirroring the table in 016's spec body.
+6. **Relationship to specs and scenarios** — selected by scope: a situational concern is a scenario, a feature-wide one an acceptance criterion, a covered one a citation, the selection the three-tier table in 016's spec body states.
 
 The link from the constitution to 008's data-model is a relative markdown link. In ductus itself it resolves; in adopting projects, the link resolves only if 008 was scaffolded (which it always is — both security rule files use `update` strategy). Edge case: an adopter who pins both rule files and never adopts 008's spec directory would have a broken link. Acceptable — pinning has documented consequences.
 

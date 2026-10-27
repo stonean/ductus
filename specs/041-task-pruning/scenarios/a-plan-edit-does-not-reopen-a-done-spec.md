@@ -10,22 +10,25 @@ section: "Framework consistency — each artifact by its durability class"
 
 ## Behavior
 
-- An edit confined to a `done` spec's `plan.md` or `tasks.md` is mechanical. It takes no back-edge and the spec stays `done`, whatever claim the edit corrects.
-- §spec-lifecycle states this as a further mechanical case, and every surface that computes whether an edit reopens a spec agrees with it, `prune-plan`'s `reopen-required` among them.
+- An edit confined to a `done` spec's `plan.md` or `tasks.md` that adds no unchecked task takes no back-edge, and the spec stays `done`, whatever claim the edit corrects.
+- §spec-lifecycle states this beside its three mechanical cases rather than as a fourth, since a plan correction changes a claim and so fails their shared test, and every surface that computes whether an edit reopens a spec agrees with it, `prune-plan`'s `reopen-required` among them.
 - The constitution amendment fits under its size ceiling (`scripts/lint-governing-size.sh`), either by removing as many bytes as it adds or by landing after `050-constitution`'s cut.
 - Replaying the 2026-10-16 plan edits under the new rule reopens none of the 18 specs.
 
 ## Edge Cases
 
 - **A plan edit recording a changed design decision.** The later spec that changed the behavior owns and gates that decision, so the `done` plan's edit records it and still takes no back-edge.
-- **A `done` spec's analyze record that digests the plan.** It goes stale when the plan changes, and that staleness neither reopens the spec nor blocks a release.
+- **A `done` spec's analyze record that digests the plan.** A plan or tasks edit does not stale it, because freshness on a `done` spec compares neither file; see Resolved Questions.
 - **One change that also edits `spec.md`, a scenario or `data-model.md`.** Those parts keep today's rules; only the plan and tasks part is exempt.
+- **A `tasks.md` edit that adds an unchecked task.** It is new work, not a correction, so it still reopens the spec; see Resolved Questions.
+- **A `plan.md` trim `check-artifact-size` proposes for an oversized `done` plan.** It is a plan edit like any other, so its advice says it does not reopen the spec.
 
 ## Open Questions
 
-- Does the exemption cover a plan edit that records a changed design decision, or only a factual correction? Recommended: both, because the later spec owns and gates the behavior change, so re-gating the `done` spec re-verifies nothing.
-- Does a `done` spec's analyze record, stale only because its plan changed, need handling in the release audit or the pre-`done` gate? Recommended: exclude `plan.md` and `tasks.md` from analyze freshness on `done` specs, matching review freshness, which already digests only durable contracts.
+*None.*
 
 ## Resolved Questions
 
-*None yet.*
+- **Does the exemption cover a plan edit that records a changed design decision, or only a factual correction?** Both (owner pre-authorized 2026-10-26). The later spec that changed the behavior owns and gates that change, so re-gating the `done` spec would re-verify nothing.
+- **Does a `done` spec's analyze record, stale only because its plan changed, need handling in the release audit or the pre-`done` gate?** Neither (owner pre-authorized 2026-10-26). Analyze freshness leaves `plan.md` and `tasks.md` out of the comparison on a `done` spec, as review freshness leaves out everything but the durable contracts, so such an edit does not stale the record at all. A spec still in progress keeps both in its comparison, because the pre-`done` gate reads them there.
+- **Does a `tasks.md` edit that adds an unchecked task take no back-edge too?** No (resolved 2026-10-26, under the owner's pre-authorization). An unchecked task on a `done` spec is outstanding work, and a status of `done` beside it would make unfinished work indistinguishable from finished work (§design-principles). So the exemption covers a `tasks.md` edit that adds no unchecked checkbox, and `prune-plan`'s `reopen-required` keeps that one trigger.

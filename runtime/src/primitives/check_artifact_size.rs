@@ -329,7 +329,7 @@ fn oversized_artifact(
         .map(|(fix, text)| ArtifactFix {
             fix,
             text: text.to_string(),
-            on_done: done.then(|| on_done(fix)),
+            on_done: done.then(|| on_done(kind, fix)),
         })
         .collect();
     let listed: Vec<String> = fixes
@@ -418,14 +418,16 @@ fn fix_plan(kind: ArtifactKind) -> Vec<(FixKind, &'static str)> {
     }
 }
 
-/// What `fix` does to a `done` spec (§spec-lifecycle): pruning `tasks.md`
-/// changes no claim; splitting and promoting remove requirements from what the
-/// spec asserts; a trim does only when it changes a claim.
-fn on_done(fix: FixKind) -> OnDone {
-    match fix {
-        FixKind::Prune => OnDone::Never,
-        FixKind::Split | FixKind::Promote => OnDone::Always,
-        FixKind::Trim => OnDone::IfClaimChanges,
+/// What `fix` on `kind` does to a `done` spec (§spec-lifecycle): pruning
+/// `tasks.md` changes no claim; splitting and promoting remove requirements
+/// from what the spec asserts; trimming `plan.md` is a plan edit, which takes
+/// no back-edge whatever it changes (§spec-lifecycle's plan rule); any other trim reopens the spec
+/// only when it changes a claim.
+fn on_done(kind: ArtifactKind, fix: FixKind) -> OnDone {
+    match (kind, fix) {
+        (_, FixKind::Prune) | (ArtifactKind::Plan, FixKind::Trim) => OnDone::Never,
+        (_, FixKind::Split | FixKind::Promote) => OnDone::Always,
+        (_, FixKind::Trim) => OnDone::IfClaimChanges,
     }
 }
 
@@ -1006,12 +1008,17 @@ mod tests {
             effects,
             [
                 (FixKind::Split, Some(OnDone::Always)),
-                (FixKind::Trim, Some(OnDone::IfClaimChanges)),
+                (FixKind::Trim, Some(OnDone::Never)),
                 (FixKind::Prune, Some(OnDone::Never)),
                 (FixKind::Split, Some(OnDone::Always)),
                 (FixKind::Trim, Some(OnDone::IfClaimChanges)),
                 (FixKind::Promote, Some(OnDone::Always)),
             ]
+        );
+        let plan = &result.oversized[0].warning;
+        assert!(
+            plan.contains("for finished work (does not reopen this done spec)"),
+            "a plan trim is a plan edit, which never reopens: {plan}"
         );
         let tasks = &result.oversized[1].warning;
         assert!(

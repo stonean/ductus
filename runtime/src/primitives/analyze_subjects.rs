@@ -78,6 +78,22 @@ pub(crate) fn is_analyze_subject(rel_within_feature: &str) -> bool {
         .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
 }
 
+/// An analyze subject a `done` spec's record is still judged on: every one but
+/// `plan.md` and `tasks.md`.
+///
+/// An edit confined to those two takes no back-edge on a `done` spec
+/// (§spec-lifecycle), so it must not stale the record either: a stale
+/// analysis on a spec nobody may reopen asks for a re-run that re-verifies
+/// nothing, as the review record's narrower set already concluded for every
+/// non-contract artifact. A spec short of `done` keeps both, because the
+/// pre-`done` gate reads its analysis against them (spec 041,
+/// `a-plan-edit-does-not-reopen-a-done-spec`).
+pub(crate) fn is_done_analyze_subject(rel_within_feature: &str) -> bool {
+    is_analyze_subject(rel_within_feature)
+        && rel_within_feature != "plan.md"
+        && rel_within_feature != "tasks.md"
+}
+
 /// A scenario or the data model — the artifacts a **review** reads, and the
 /// subject set of the review record.
 ///
@@ -245,8 +261,9 @@ pub(crate) fn freshness_of(
         }
     }
     // A subject the record covered that is now gone is a change too — a
-    // deleted scenario alters what an analysis would find.
-    for path in recorded.keys() {
+    // deleted scenario alters what an analysis would find. A recorded path the
+    // predicate no longer counts is not a subject, so it is not compared.
+    for path in recorded.keys().filter(|path| is_subject(path)) {
         if !current.digests.contains_key(path) {
             changed.insert(format!("{rel_dir}/{path}"));
         }
@@ -330,6 +347,11 @@ pub(crate) fn analyze_freshness(
     let Some(analyze) = analyze else {
         return RecordFreshness::NeverRun;
     };
+    let spec_path = repo.join(rel_dir).join("spec.md");
+    let done = read_text(&spec_path)
+        .ok()
+        .and_then(|content| crate::primitives::frontmatter_status(&content, &spec_path))
+        .is_some_and(|status| status == "done");
     freshness_of(
         repo,
         rel_dir,
@@ -338,7 +360,11 @@ pub(crate) fn analyze_freshness(
         // Empty is treated as absent here: `spec.md` is always a subject, so
         // an empty analyze digest can only mean the record predates the field.
         Some(&analyze.analyzed_digest).filter(|d| !d.is_empty()),
-        is_analyze_subject,
+        if done {
+            is_done_analyze_subject
+        } else {
+            is_analyze_subject
+        },
         "analyzed-digest",
     )
 }
@@ -548,6 +574,83 @@ mod tests {
             panic!("a changed subject must be stale");
         };
         assert_eq!(paths, vec!["specs/001-x/tasks.md".to_string()]);
+    }
+
+    /// A record taken over `seed`'s artifacts, with the spec at `status`.
+    fn recorded_at(dir: &Path, status: &str) -> AnalyzeBlock {
+        fs::write(
+            dir.join("spec.md"),
+            format!("---\nstatus: {status}\ndependencies: []\n---\n\n# Spec\n"),
+        )
+        .unwrap();
+        fs::write(dir.join("plan.md"), "# Plan\n\n## Overview\n\nA.\n").unwrap();
+        AnalyzeBlock {
+            last_run: Some("2026-10-26T00:00:00Z".into()),
+            analyzed_digest: subject_digest(dir, is_analyze_subject).digests,
+            ..AnalyzeBlock::default()
+        }
+    }
+
+    /// The `done` half of spec 041's `a-plan-edit-does-not-reopen-a-done-spec`:
+    /// a plan or tasks edit takes no back-edge, so it does not stale the record.
+    #[test]
+    fn a_plan_or_tasks_edit_does_not_stale_a_done_specs_record() {
+        let tmp = tempdir().unwrap();
+        let dir = tmp.path().join("specs/001-x");
+        seed(&dir, "");
+        let analyze = recorded_at(&dir, "done");
+        fs::write(dir.join("plan.md"), "# Plan\n\n## Overview\n\nB.\n").unwrap();
+        fs::write(dir.join("tasks.md"), "# Tasks\n").unwrap();
+        let result = analyze_freshness(tmp.path(), "specs/001-x", Some(&analyze));
+        assert!(
+            matches!(result, RecordFreshness::Current { .. }),
+            "{result:?}"
+        );
+    }
+
+    /// The other direction: the same edit on a spec short of `done` stales it,
+    /// and a `done` spec's other subjects still do.
+    #[test]
+    fn a_plan_edit_stales_an_open_spec_and_a_spec_edit_stales_a_done_one() {
+        let tmp = tempdir().unwrap();
+        let dir = tmp.path().join("specs/001-x");
+        seed(&dir, "");
+        let analyze = recorded_at(&dir, "in-progress");
+        fs::write(dir.join("plan.md"), "# Plan\n\n## Overview\n\nB.\n").unwrap();
+        let RecordFreshness::Stale { paths, .. } =
+            analyze_freshness(tmp.path(), "specs/001-x", Some(&analyze))
+        else {
+            panic!("a plan edit on an in-progress spec must stale its record");
+        };
+        assert_eq!(paths, vec!["specs/001-x/plan.md".to_string()]);
+
+        let tmp = tempdir().unwrap();
+        let dir = tmp.path().join("specs/001-x");
+        seed(&dir, "");
+        let analyze = recorded_at(&dir, "done");
+        fs::write(dir.join("scenarios/a.md"), "# A, changed\n").unwrap();
+        let RecordFreshness::Stale { paths, .. } =
+            analyze_freshness(tmp.path(), "specs/001-x", Some(&analyze))
+        else {
+            panic!("a scenario edit on a done spec must stale its record");
+        };
+        assert_eq!(paths, vec!["specs/001-x/scenarios/a.md".to_string()]);
+    }
+
+    /// A recorded `plan.md` the `done` predicate no longer counts is not read as
+    /// a deleted subject.
+    #[test]
+    fn a_done_specs_recorded_plan_is_not_a_deleted_subject() {
+        let tmp = tempdir().unwrap();
+        let dir = tmp.path().join("specs/001-x");
+        seed(&dir, "");
+        let analyze = recorded_at(&dir, "done");
+        fs::remove_file(dir.join("plan.md")).unwrap();
+        let result = analyze_freshness(tmp.path(), "specs/001-x", Some(&analyze));
+        assert!(
+            matches!(result, RecordFreshness::Current { .. }),
+            "{result:?}"
+        );
     }
 
     /// A deleted scenario changes what an analysis would find, so a subject the

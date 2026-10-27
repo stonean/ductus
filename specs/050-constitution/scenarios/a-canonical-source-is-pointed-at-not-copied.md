@@ -25,7 +25,7 @@ The constitution states this under *Canonical sources* with the two reasons it t
 
 Where the copy exists to preserve what something *used to* say, git history already holds it. A document body describes current state ([§spec-lifecycle](../../../framework/constitution.md#spec-lifecycle)), so it never has to carry a frozen duplicate to serve as a record — the same reasoning that retires an obsolete scenario by deleting it rather than annotating it, and that keeps a retired spec out of the corpus rather than parked at `done`.
 
-**Replacing an embedded copy takes the back-edge.** The replacement changes what the document asserts — from *this is the content* to *the content lives there* — so it is a factual correction, not a uniform token substitution, and it does not earn [§spec-lifecycle](../../../framework/constitution.md#spec-lifecycle) case (a)'s mechanical-sweep exemption. A pass that removed several would reopen each spec it touched.
+**Replacing an embedded copy is not a mechanical edit.** The replacement changes what the document asserts — from *this is the content* to *the content lives there* — so it is a factual correction, not a uniform token substitution, and it does not earn [§spec-lifecycle](../../../framework/constitution.md#spec-lifecycle) case (a)'s mechanical-sweep exemption. A pass that removed several would reopen each spec it touched, except where the copy sat in a plan or task list, whose edits take no back-edge.
 
 ## Edge Cases
 

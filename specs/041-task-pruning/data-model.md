@@ -330,16 +330,15 @@ Result (a **compact summary — never a section's text**):
   on an apply, the size written, or `size-before` when it was refused.
 - `reopen-required` — present on every call against a `done` spec, the one
   status prune reopens; absent means not computed, never `false`. It is `true`
-  when any design-record section's text differs from the same section in
-  `plan.md` at HEAD — the sections compared in order by lowercased heading
-  and text — or when `tasks.md` adds an unchecked checkbox: holds an
-  unchecked checkbox line, trimmed and outside fenced blocks and HTML
-  comments, more times than `tasks.md` at HEAD holds that line, so a box
-  moved or re-indented adds nothing and one added or reworded does. An
-  artifact absent at HEAD triggers nothing. A preview answers for the tree as
-  it stands — removing a section outside the record changes no design-record
-  section — so a reopen from edits made before the run is known before the
-  host writes anything. An apply answers for the tree it leaves, whether or
+  when `tasks.md` adds an unchecked checkbox: holds an unchecked checkbox
+  line, trimmed and outside fenced blocks and HTML comments, more times than
+  `tasks.md` at HEAD holds that line, so a box moved or re-indented adds
+  nothing and one added or reworded does. An edit to `plan.md` never sets it,
+  whatever it changes, since §spec-lifecycle gives a plan edit no back-edge
+  on a `done` spec (scenario
+  `a-plan-edit-does-not-reopen-a-done-spec`). A `tasks.md` absent at HEAD
+  triggers nothing. A preview answers for the tree as it stands, so a reopen
+  from edits made before the run is known before the host writes anything. An apply answers for the tree it leaves, whether or
   not the removal was refused, because the host's moves are already on disk,
   and computes it before its own write, so an apply that cannot read HEAD
   writes nothing. HEAD is read through `ProjectRepository::read_at_head`, so

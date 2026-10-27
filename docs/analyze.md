@@ -130,7 +130,7 @@ The field the completion gate reads first. Its *absence* is the signal: a featur
 
 The operational rule is still to **write the record last**, after every edit to the spec is in — which is what the command's own step ordering does (detect → decide → re-check → record → render). A run's own disposition writes therefore never stale its record: they land before it. What changed is the consequence of getting it wrong: a record written before a further edit is now reported as stale by the completion gate rather than standing as a quietly-outdated claim. A record carrying **no** digest — every one written before the field existed — reads `undeterminable`: not current, not stale, and not a sha-diff fallback. It does not block, and it clears on the next run.
 
-The review record in `review.md` works identically over its own narrower subject set (`scenarios/*.md` and `data-model.md`) through `reviewed-digest`. One comparison, two subject sets.
+The review record in `review.md` works identically over its own narrower subject set (`scenarios/*.md` and `data-model.md`) through `reviewed-digest`. One comparison, two subject sets. On a `done` spec the analyze comparison also leaves out `plan.md` and `tasks.md`, which the digest still records: an edit to either takes no back-edge there (the constitution's §spec-lifecycle), so it does not stale the record either.
 
 ### `hard-fail` and `blocking-findings`
 

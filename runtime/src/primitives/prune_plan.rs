@@ -80,8 +80,8 @@ struct Block {
 
 impl Block {
     /// The section's text: its lines from the heading to the last non-blank
-    /// line, joined by `\n`. The digest, the size, and the reopen comparison
-    /// all read this, so a blank line at a seam never changes any of them.
+    /// line, joined by `\n`. The digest and the size both read this, so a
+    /// blank line at a seam never changes either.
     fn text(&self) -> String {
         let end = self
             .lines
@@ -120,21 +120,9 @@ fn segment(content: &str) -> Vec<Block> {
     blocks
 }
 
-/// The design-record sections of `content`, in order, as lowercased heading
-/// and text — the subject of the reopen trigger's plan half.
-fn design_record(content: &str) -> Vec<(String, String)> {
-    segment(content)
-        .iter()
-        .filter_map(|block| {
-            let heading = block.heading.as_deref()?;
-            is_design_record(heading).then(|| (heading.trim().to_ascii_lowercase(), block.text()))
-        })
-        .collect()
-}
-
 /// Each unchecked task-list checkbox line in `content`, outside fenced blocks
 /// and HTML comments, trimmed, with how many times it occurs — the subject of
-/// the reopen trigger's tasks half.
+/// the reopen trigger.
 fn unchecked_lines(content: &str) -> HashMap<&str, usize> {
     let mut skip = SkipScanner::default();
     let mut lines = HashMap::new();
@@ -260,7 +248,6 @@ fn summarize(
     }
     let status = read_status(&feature_dir, root, feature)?;
     let plan_path = feature_dir.join("plan.md");
-    let plan_rel = format!("{root}/{feature}/plan.md");
     let tasks_rel = format!("{root}/{feature}/tasks.md");
 
     let content = if plan_path.is_file() {
@@ -305,12 +292,12 @@ fn summarize(
     };
 
     // Computed before the write, so an apply that cannot read HEAD writes
-    // nothing. A preview reads the tree as it stands — removing sections
-    // outside the record changes no design-record section — so a reopen the
-    // tree already carries, from edits made before the run, is known before
-    // the host writes anything.
+    // nothing. Only `tasks.md` can require one — a plan edit on a `done` spec
+    // takes no back-edge (§spec-lifecycle) — so a reopen the tree already
+    // carries, from edits made before the run, is known before the host
+    // writes anything.
     let reopen_required = if status == "done" {
-        Some(reopen_required(repo, &plan_rel, &tasks_rel, &after)?)
+        Some(reopen_required(repo, &tasks_rel)?)
     } else {
         None
     };
@@ -426,17 +413,13 @@ fn check_removals(args: &PrunePlanArgs) -> Result<()> {
     Ok(())
 }
 
-/// Whether the tree, with `plan` as its plan, takes a `done` spec's back-edge
-/// against HEAD: any design-record section of `plan` differs from HEAD's, or
-/// `tasks.md` adds an unchecked checkbox to HEAD's. An artifact absent at HEAD
-/// triggers nothing — a `done` spec's artifacts are committed.
-fn reopen_required(repo: &Path, plan_rel: &str, tasks_rel: &str, plan: &str) -> Result<bool> {
+/// Whether the tree takes a `done` spec's back-edge against HEAD: `tasks.md`
+/// adds an unchecked checkbox to HEAD's, leaving the spec with work owed. An
+/// edit confined to `plan.md` never does, whatever it corrects
+/// (§spec-lifecycle). A `tasks.md` absent at HEAD triggers nothing — a `done` spec's
+/// artifacts are committed.
+fn reopen_required(repo: &Path, tasks_rel: &str) -> Result<bool> {
     let project = ProjectRepository::discover(repo)?;
-    if let Some(head) = project.read_at_head(plan_rel)?
-        && design_record(plan) != design_record(&head)
-    {
-        return Ok(true);
-    }
     if let Some(head) = project.read_at_head(tasks_rel)? {
         let tasks = repo.join(tasks_rel);
         let now = if tasks.is_file() {
@@ -857,8 +840,9 @@ mod tests {
         write(&tmp.path().join("specs/003-quiet/plan.md"), clean);
         spec("004-draft", "draft");
         commit_all(&repository, "corpus");
-        // Edits made before the run: a design-record change, and owed work on
-        // a spec with no plan. Neither spec has a section to prune.
+        // Edits made before the run: a design-record change, which does not
+        // reopen (§spec-lifecycle), and owed work on a spec with no
+        // plan, which does. Neither spec has a section to prune.
         write(
             &tmp.path().join("specs/001-edited/plan.md"),
             &clean.replace("Why.", "Why, as it now stands."),
@@ -876,10 +860,7 @@ mod tests {
             .iter()
             .map(|f| (f.feature.as_str(), f.summary.reopen_required))
             .collect();
-        assert_eq!(
-            listed,
-            [("001-edited", Some(true)), ("002-no-plan", Some(true))]
-        );
+        assert_eq!(listed, [("002-no-plan", Some(true))]);
         assert_eq!(
             walk.skipped,
             [SkippedFeature {
@@ -982,14 +963,16 @@ mod tests {
     }
 
     #[test]
-    fn a_changed_design_record_section_reopens() {
+    fn a_changed_design_record_section_does_not_reopen() {
+        // The host moves a decision home before the removal: a plan edit,
+        // which takes no back-edge on a `done` spec (§spec-lifecycle).
         let tmp = tempdir().unwrap();
         let _repository = committed_done_spec(tmp.path());
-        // The host moves a decision home before the removal.
         let moved = PLAN.replace("Why.\n", "Why, as it now stands.\n");
         write(&feature_dir(tmp.path()).join("plan.md"), &moved);
         let result = remove_journal(tmp.path());
-        assert_eq!(result.reopen_required, Some(true));
+        assert!(result.applied);
+        assert_eq!(result.reopen_required, Some(false));
     }
 
     #[test]
@@ -1062,13 +1045,15 @@ mod tests {
         let _repository = committed_done_spec(tmp.path());
         let clean = run(&preview(), tmp.path()).unwrap();
         assert_eq!(clean.reopen_required, Some(false));
-        // A design-record edit made before the run is known at the preview.
-        let edited = PLAN.replace("Why.\n", "Why, corrected by hand.\n");
-        write(&feature_dir(tmp.path()).join("plan.md"), &edited);
+        // Owed work added before the run is known at the preview.
+        write(
+            &feature_dir(tmp.path()).join("tasks.md"),
+            "# Tasks\n\n## 1. Done\n\n- [x] a\n\n## 2. Owed\n\n- [ ] b\n",
+        );
         let result = run(&preview(), tmp.path()).unwrap();
         assert_eq!(result.reopen_required, Some(true));
         assert!(!result.applied);
-        assert_eq!(plan_text(tmp.path()), edited, "a preview must not write");
+        assert_eq!(plan_text(tmp.path()), PLAN, "a preview must not write");
     }
 
     #[test]
@@ -1089,9 +1074,15 @@ mod tests {
         let tmp = tempdir().unwrap();
         let (repository, root) = crate::primitives::git_fixture::subdirectory_project(tmp.path());
         project(&root, "done", Some(PLAN));
+        write(
+            &feature_dir(&root).join("tasks.md"),
+            "# Tasks\n\n## 1. Done\n\n- [x] a\n",
+        );
         commit_all(&repository, "done");
-        let moved = PLAN.replace("Why.\n", "Why, as it now stands.\n");
-        write(&feature_dir(&root).join("plan.md"), &moved);
+        write(
+            &feature_dir(&root).join("tasks.md"),
+            "# Tasks\n\n## 1. Done\n\n- [x] a\n\n## 2. Owed\n\n- [ ] b\n",
+        );
         let result = remove_journal(&root);
         assert_eq!(result.reopen_required, Some(true));
     }

@@ -35,7 +35,7 @@ Three back-edges keep the lifecycle honest:
 
 - `/{project}:amend` reverts a `clarified`, `planned`, or `in-progress` spec to `draft` when a new open question surfaces — `draft` is the only status that tolerates open questions. The next `/{project}:clarify` resolves the question and the spec advances forward again.
 - `/{project}:amend` reverts a `done` spec to `in-progress` when a new scenario is added (the scenario route) — the scenario captures the change, the spec evolves with it.
-- A **meaningful body edit** to any artifact under a `done` spec's directory takes the same edge. New scope, changed semantics, or a corrected fact reopens the spec; a uniform rename sweep, a cross-service reference change, and criterion-label assignment are mechanical and do not.
+- A **meaningful body edit** to any artifact under a `done` spec's directory takes the same edge. New scope, changed semantics, or a corrected fact reopens the spec; a uniform rename sweep, a cross-service reference change, and criterion-label assignment are mechanical and do not, and neither does a plan or task-list edit that adds no unchecked task.
 
 Each feature lives in `specs/NNN-feature-name/` and progresses through these states by running the corresponding command.
 

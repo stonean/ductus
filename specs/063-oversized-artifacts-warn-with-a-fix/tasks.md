@@ -101,3 +101,11 @@ Task 5's step-number sync rewrote 058's scenario `only-unreadable-targets-retain
 - [x] A test fails if a mistyped [artifacts] key is dropped without a notice
 
 - **Done when**: A mistyped [artifacts] key is named among check-artifact-size notices on every command that reads it, and 063 is re-reviewed back to done.
+
+## 14. Implement scenario: a-plan-trim-does-not-reopen-a-done-spec
+
+- [x] Implement the behavior described in `scenarios/a-plan-trim-does-not-reopen-a-done-spec.md`
+- [x] `check_artifact_size::on_done` takes the artifact kind and returns `OnDone::Never` for a `plan.md` trim; `the_effect_on_done_is_named_only_at_done` asserts it and the plan warning's text, and mutation M4 in `scripts/mutation/plan-edit-takes-no-back-edge.py` kills it (for `041-task-pruning`'s `a-plan-edit-does-not-reopen-a-done-spec`)
+- [x] §The warning names a fix, AC8 and `data-model.md`'s `on-done` row state the plan-trim effect
+
+- **Done when**: The scenario's behavior holds in `runtime/src/primitives/check_artifact_size.rs`, its test fails with the behavior removed, and 063's spec and data model describe the advice as it runs.

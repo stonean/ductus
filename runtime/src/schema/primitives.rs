@@ -3147,8 +3147,8 @@ pub struct PrunePlanSummary {
     pub size_after: SizeSummary,
     /// On a call against a `done` spec — the one status prune reopens —
     /// whether the change since HEAD takes the `done → in-progress`
-    /// back-edge: a design-record section differs from HEAD's, or `tasks.md`
-    /// adds an unchecked checkbox to HEAD's. A preview answers for the tree as
+    /// back-edge: `tasks.md` adds an unchecked checkbox to HEAD's. A `plan.md`
+    /// edit never does (§spec-lifecycle). A preview answers for the tree as
     /// it stands, so a reopen from edits made before the run is known before
     /// anything is written; an apply answers for the tree it leaves, computed
     /// before its write. Absent on any other status, which means not
@@ -4585,17 +4585,18 @@ pub enum FixKind {
     Promote,
 }
 
-/// What a fix does to a `done` spec, by the test §spec-lifecycle applies to
-/// every edit under a spec.
+/// What a fix does to a `done` spec, by §spec-lifecycle's rules for an edit
+/// under a spec.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum OnDone {
-    /// Never reopens it: pruning `tasks.md`.
+    /// Never reopens it: pruning `tasks.md`, or trimming `plan.md`.
     Never,
     /// Always reopens it: splitting the spec and promoting a scenario each
     /// remove requirements from what it asserts.
     Always,
-    /// Reopens it unless the edit changes no claim: trimming.
+    /// Reopens it unless the edit changes no claim: trimming any other
+    /// artifact.
     IfClaimChanges,
 }
 

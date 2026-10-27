@@ -107,7 +107,7 @@ Acceptance criteria come from `read_spec`'s parsed `acceptance_criteria` (each e
 
 §drift-prevention's **Canonical sources** table gains a row pointing the open-state tell list at this spec's `data-model.md`, matching the existing rows that point rule-ID conventions and the service-registry schema at a spec data-model. Without it the tell list would be a fact described in the constitution, `analyze.md`, and the runtime with no named owner — the drift this section exists to prevent.
 
-The subsection defers to `analyze.md` for the checks themselves rather than naming them, because §drift-prevention's own Canonical sources rule puts command behavior in the command's source. That also keeps the constitution from carrying a forward reference that stays false until task 11 lands.
+The subsection names neither the checks nor `analyze.md`, because §drift-prevention's own Canonical sources rule puts command behavior in the command's source, which documents them. That also keeps the constitution from carrying a forward reference that stays false until task 11 lands.
 
 §drift-prevention's **Template-rule alignment** subsection is not triggered: it binds *blocking* checks to a template element, and both families are advisory at introduction (AC7).
 

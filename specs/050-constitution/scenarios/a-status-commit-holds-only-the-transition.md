@@ -14,7 +14,7 @@ The advice is correct but incomplete: it says to commit the transition separatel
 
 ## Behavior
 
-§spec-lifecycle's bullet on restoring a spec directory, which advises committing a status transition as its own step, states the condition that advice depends on: when the commit is made, the working copy of the spec file holds the transition and nothing else. The pre-commit hook restages each staged spec file whole from the working tree, so a transition staged alone, by an index edit or by hunk staging, commits whatever else the working file holds under the transition's message. It also loses the transition itself when the index was the only place it existed. To separate a transition from body edits already on disk, set the edits aside, commit the transition, then restore them, or make the transition before the edits.
+§spec-lifecycle's bullet on restoring a spec directory, which advises committing a status transition as its own step, states the condition that advice depends on: when the commit is made, the working copy of the spec file holds the transition and nothing else. The pre-commit hook restages each staged spec file whole from the working tree, so a transition staged alone, by an index edit or by hunk staging, commits whatever else the working file holds under the transition's message. It also loses the transition itself when the index was the only place it existed. To separate a transition from body edits already on disk, set the edits aside, commit the transition, then restore them, or make the transition first.
 
 The bullet states the reason with the rule, as the bullet it extends does: the hook's restaging is what makes an apparently separate commit carry more than its message says.
 

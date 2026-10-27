@@ -45,7 +45,7 @@ New `§text-first-artifacts` section placed immediately after `§scenarios` and 
 
 ### Schema declared as a markdown table
 
-Per resolved Q1. The constitution table has columns `Field | Required | Type | Allowed values | Description`. Below the table:
+Per resolved Q1. The constitution table has columns `Field | Required | Type | Description`, a field's allowed values stated in its Description. Below the table:
 
 - An explicit list of artifact kinds the schema applies to (specs, scenarios) and a note that other artifacts MAY include frontmatter when a consumer benefits.
 - The open-schema rule (additional fields permitted, ignored by uninterested consumers).

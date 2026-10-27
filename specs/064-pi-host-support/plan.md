@@ -173,7 +173,7 @@ blocks; pi has none) — stated, not silent, per the check-that-cannot-run rule.
 - `framework/constitution.md` §runtime-host-integration: Pi's spelling in full —
   `ductus__<verb>-<noun>`, supplied by the project's `.pi/extensions/ductus.ts`
   bridge; Pi has no built-in MCP, so the bridge wraps the runtime's own MCP server
-  over stdio and the server remains the single source for names and schemas.
+  over stdio.
 - `README.md`: agent list gains Pi; §Installing (per agent) accepts `pi`
   (`sh -s -- pi`); the invocation paragraph names `/{project}-<name>` for Pi.
 - `AGENTS.md` (this repo's contributor home): the live registry enumeration updates to

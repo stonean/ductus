@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [022-deterministic-runtime]
 next-criterion: 6
 ---
@@ -26,7 +26,7 @@ The runtime primitives that record a spec's two audits — `/{project}:review` i
 
 ## Record freshness
 
-A record is stale when the files it read have changed since, compared by content: each record carries a per-path sha256 of its subjects as the run read them from disk. The review's subjects are the spec's durable contracts, `scenarios/*.md` and `data-model.md`; the analysis's are every markdown file under the feature except `analysis.md`. The recorded commit is provenance, read only to exempt a mechanical rename sweep.
+A record is stale when the files it read have changed since, compared by content: each record carries a per-path sha256 of its subjects as the run read them from disk. The review's subjects are the spec's durable contracts, `scenarios/*.md` and `data-model.md`; the analysis's are every markdown file under the feature except `analysis.md`, and on a `done` spec the comparison also leaves out `plan.md` and `tasks.md`, whose edits take no back-edge there (`scenarios/a-done-specs-plan-edit-leaves-its-analysis-current.md`). The recorded commit is provenance, read only to exempt a mechanical rename sweep.
 
 ## Acceptance Criteria
 

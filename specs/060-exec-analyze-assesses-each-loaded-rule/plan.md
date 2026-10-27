@@ -118,7 +118,7 @@ The edits to 022's data model change a durable contract, and the signpost AC9 re
 
 The signpost goes in 022's body beside the extension-point inventory (`specs/022-deterministic-runtime/spec.md:170`), as a **block-quoted** line linking to this spec. The block quote matters. 060 already depends on 022 through its Motivation's link, and `derive-dependencies` induces no edge from a block-quoted line while `check-review-gate`'s discharge test still reads it (066's AC5). An unquoted link would add a `022 → 060` edge and close a cycle.
 
-022 is then reviewed and analyzed with 022 targeted. Its review window is measured after the reopen's first commit, as §implement-phase requires. `/ductus:implement`'s completion gate returns it to `done`, and 060 is targeted again.
+022 is then reviewed and analyzed with 022 targeted. Its review window is measured after the reopen's first commit, as the review reference's §Window and coverage requires. `/ductus:implement`'s completion gate returns it to `done`, and 060 is targeted again.
 
 ## Affected Files
 

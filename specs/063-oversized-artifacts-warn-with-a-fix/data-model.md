@@ -76,7 +76,7 @@ Subject order is `spec.md`, `plan.md`, `tasks.md`, `data-model.md`, then the sce
 | --- | --- | --- |
 | `fix` | `FixKind` | `prune`, `split`, `trim`, or `promote`. |
 | `text` | string | The fix as the warning words it. A `split` names the manual route and no split command. |
-| `on-done` | `OnDone`, optional | Present only when `status` is `done`: `never` (prune), `always` (split, promote), or `if-claim-changes` (trim). |
+| `on-done` | `OnDone`, optional | Present only when `status` is `done`: `never` (prune, and a `plan.md` trim), `always` (split, promote), or `if-claim-changes` (any other trim). |
 
 Fixes by kind: `tasks` → `prune`, then `split` and `trim` as the fixes that apply if it is still over after pruning; `spec` and `plan` → `split`, `trim`; `data-model` → `split`, `trim` (whose text forbids sub-files); `scenario` → `promote`.
 
