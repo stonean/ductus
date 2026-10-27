@@ -242,7 +242,7 @@ round-trips against `runtime/target/release/ductus`, and `ductus exec` resolves 
 | `framework/bootstrap/configure/pi.md` | Create | Pi's `/{project}:configure` — bridge verify/repair + trust/permissions report |
 | `framework/bootstrap/ductus.md` | Modify | Registry row, derived-values pi column, MCP-registration row, `### Pi layout`, State B / Permission / self-install / staleness prose, gitignore block |
 | `framework/bootstrap/govern.md` | Modify | Byte-identical mirror (Family 21) |
-| `framework/bootstrap/ductus-procedure.md` | Modify | Archive-half prose: invocation list, pinned-divergent row, Directory Creation |
+| `framework/bootstrap/ductus-procedure.md` | Modify | Archive-half prose: invocation list, pinned-divergent row, Directory Creation; the First run and Update mode messages carry the Pi trust reminder |
 | `framework/constitution.md` | Modify | §runtime-host-integration pi spelling |
 | `install.sh` | Modify | `pi` arm (no settings seed) + usage/error lines |
 | `scripts/audit/installer-registry-parity.sh` | Modify | Family 14 pi branch + no-settings assertion |

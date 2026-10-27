@@ -278,11 +278,12 @@ A message or comment added for a **moved** entry lands in `scripts/`, `scripts/t
 
 ### `CLAUDE.md`
 
-The rewritten file has three parts:
+The rewritten file has two parts:
 
 - `# CLAUDE.md`.
 - Two import lines: `@framework/constitution.md`, which `050-constitution`'s `the-constitution-fits-one-read` added once the constitution fit one read, then `@AGENTS.md`.
-- The **Auto-Memory Routing** section `050-constitution` AC20 requires, reduced to a pointer at §drift-prevention's two questions plus the one fact this repository adds: it keeps no auto-memory at all.
+
+Its **Auto-Memory Routing** section went to `AGENTS.md` with `050-constitution`'s `memory-routing-lives-in-agents-md`: the one fact this repository adds, that it keeps no auto-memory at all, is the `AGENTS.md` entry on per-user agent memory, which `@AGENTS.md` loads.
 
 The **Non-negotiables** section goes. Its trunk-based rule is an `AGENTS.md` entry and its truncation rule is §grounding, both now loaded through the import. The `@import framework/constitution.md` line goes rather than being converted, because at 119,262 bytes the constitution is more than one read (AC6). The pipeline commands keep reading it as they do today. Once `050-constitution`'s cut brings it to one read, that spec's `the-constitution-fits-one-read` scenario restores the import, so a session started from a handoff prompt has the constitution too; until then the `AGENTS.md` prompt entry asks a handoff to start with `/ductus:target`. No sentence states another file's size (AC8).
 

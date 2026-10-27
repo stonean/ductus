@@ -274,3 +274,20 @@ target_paths = [
   "CLAUDE.md",
 ]
 procedure_file = "framework/migrations/constitution-import.md"
+
+[[migrations]]
+id = "memory-routing-leaves-claude-md"
+introduced_in = "0.60.0"
+# No sunset_after. `CLAUDE.md` is skip-strategy and never rewritten, so an
+# adopter who skips this window keeps a second, and in its oldest version
+# contradictory, copy of the routing AGENTS.md's ductus:memory-routing block
+# now carries, and nothing else would ever remove it.
+# Independent of claude-md-import-syntax and constitution-import, which touch
+# only import lines; it sorts after both on the id tie-break (spec 027).
+summary = "Remove CLAUDE.md's ## Auto-Memory Routing section when it is a shipped copy, unchanged; AGENTS.md's managed block carries the routing (spec 050, memory-routing-lives-in-agents-md)"
+# Adopter-relative. Nothing under framework/ is removed by this migration, so it
+# declares no framework/ target path.
+target_paths = [
+  "CLAUDE.md",
+]
+procedure_file = "framework/migrations/memory-routing-leaves-claude-md.md"

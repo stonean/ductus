@@ -14,9 +14,9 @@ The refusal's rationale is recorded at `runtime/src/schema/primitives.rs`: the s
 
 Instead the primitive gains an explicit opt-in argument that only `/{project}:consolidate` passes. `/{project}:fold` never passes it, so a mistyped feature name during a fold still meets the refusal unchanged. The anti-stranding guard — the target must hold a `spec.md` — is untouched and applies to both callers.
 
-### `rewrite-spec-links` is reused unchanged
+### `rewrite-spec-links` is reused
 
-Its own documentation already describes it as re-pointing inbound pointers to "a retiring **or renamed**" directory, so consolidation needs no behavioral change there. Matching is by whole path segment, so a directory whose name merely shares a prefix is left alone, and cross-service URLs are never rewritten.
+Its own documentation already describes it as re-pointing inbound pointers to "a retiring **or renamed**" directory, so consolidation needs no behavior of its own there. Since `051-branch-scoped-spec-numbering` task 29 the shared primitive also re-points the spec-root paths in `CLAUDE.md`, `AGENTS.md`, `README.md` and `.githooks/pre-commit`, so a consolidation leaves none of them dangling (AC7). Matching is by whole path segment, so a directory whose name merely shares a prefix is left alone, and cross-service URLs are never rewritten.
 
 `dependencies:` and `references:` are deliberately not touched: both are derived from body links, and their generators regenerate them from the rewritten bodies on the next commit.
 

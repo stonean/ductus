@@ -886,7 +886,7 @@ These files are scaffolded **once per `/ductus` invocation**, regardless of how 
 
 **CLAUDE.md** (strategy: skip, `claude-style` only) — written only when at least one selected agent is `claude-style`. If it exists, leave it alone. Otherwise, when a `claude-style` agent is selected, fetch `framework/templates/project/claude-md.md` from the `ductus` repo and copy it as `CLAUDE.md`. `claude-style` agents read `CLAUDE.md` natively (see each row's `rules_file_note`); the `antigravity`, `opencode`, and `pi` layouts read `AGENTS.md` natively and do not need `CLAUDE.md`, so an **Antigravity-only**, **OpenCode-only**, or **Pi-only** adoption ships no `CLAUDE.md`. (`AGENTS.md` is still written for every adoption, as below.)
 
-On the runtime path both are `apply-manifest` `create` entries (§Instructions step 4): written only when absent, with placeholders substituted — `{project}`, which both templates carry, as well as the two named for `AGENTS.md` above.
+On the runtime path both are `apply-manifest` `create` entries (§Instructions step 4): written only when absent, with the `AGENTS.md` template's placeholders substituted: `{project}` and the two named above. The `CLAUDE.md` template carries none.
 
 **.gitignore** (strategy: merge) — install or update a framework-managed block delimited by a `# ductus` line preamble, then dedup any adopter-area copies of canonical patterns. Mirrors the runtime `merge-managed-block` contract (line-prefix style, marker `ductus`):
 
@@ -914,6 +914,17 @@ On the runtime path both are `apply-manifest` `create` entries (§Instructions s
 5. Report each `skipped` entry by alias and reason (`not-checked-out`, `no-constitution-document`). A skipped source is **not** written into the block: the block lists what an agent can actually read, and listing an unreadable path would put a broken import in an adopter's rules file.
 
 **Under `claude-style` the block loads the documents at startup, and `/{project}:target` step 4 loads whatever is not already in context.** A `claude-style` session starts with each `@{document-path}` line expanded, so a session that runs no command still has the rules. The `AGENTS.md` layouts get links, which load nothing, so for them step 4 is what puts a shared constitution's rules in effect, by reading the documents `resolve-constitutions` resolves. A registered checkout usually sits outside the working directory, which makes its import an *external* one. Claude Code asks once per project, in an interactive session, to approve external imports, and an import that is unapproved, declined, or met in a non-interactive run loads nothing. Step 4's read then loads the document, as it does on a host that does not resolve `@path` imports. An adopter whose rules file has no block still gets the rules, because the command loads them.
+
+**Memory routing** (strategy: merge, every layout) — install or update a framework-managed block in `AGENTS.md` that says where a learning goes, per the constitution's §drift-prevention *Shared knowledge stays in git*. `AGENTS.md` is its one home: Antigravity, OpenCode and Pi read the file natively, and a `claude-style` session reads it through `CLAUDE.md`'s `@AGENTS.md` import. The block is written on every run, whatever agents are selected, so an adopter whose `AGENTS.md` predates it receives it on the next run.
+
+1. Invoke `merge-managed-block` against `AGENTS.md` with `marker-style: "html-comment"` and `marker: "ductus:memory-routing"`, supplying exactly this one line:
+
+   ```text
+   > **Where a learning goes** ([§drift-prevention](.ductus/constitution.md#drift-prevention)). Commit whatever would help a teammate, since an agent's per-user memory holds only personal facts and external pointers. Then file it by who it is true for: every project running the pipeline, the constitution; your organization's projects, the shared constitution it registers; this project alone, this file or a rule file.
+   ```
+
+2. When `AGENTS.md` carries no `ductus:memory-routing` markers, the primitive appends the block at the end of the file. Report that it was appended, so the operator can move it under the file's header. The project template ships the empty markers beneath its header.
+3. A pinned `AGENTS.md` still gets the block, as it gets the **Shared constitution imports** block: `[pinned] files` turns a manifest entry's `update` into `skip`, and `AGENTS.md` is already `skip`, while the block is a managed-region merge, not a manifest write.
 
 ## Per-Agent Scaffolding
 

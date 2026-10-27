@@ -158,7 +158,7 @@ enum Command {
     CheckStepReferences(CheckStepReferencesArgs),
     /// Report branch-scoped specs still in the tree, with the upstream spec each folds into.
     CheckUnfoldedSpecs(CheckUnfoldedSpecsArgs),
-    /// Re-point inbound body links and folds-into fields from a feature directory at its fold target.
+    /// Re-point inbound body links, folds-into fields and root-file references from a feature directory at its fold target.
     RewriteSpecLinks(RewriteSpecLinksArgs),
     /// Remove a folded branch-scoped feature directory, guarded on its fold target existing.
     RetireFeature(RetireFeatureArgs),

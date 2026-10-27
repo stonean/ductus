@@ -418,6 +418,8 @@ Next steps (render each command in **the adopted agent's own invocation form** â
 
 To adopt an additional agent later, re-run `/ductus --add-agent`.
 
+When Pi is among the adopted agents, add: **Pi loads this project's `.pi/` resources, the `ductus` bridge included, only after you trust the project.** An interactive start prompts for it; a non-interactive run needs `--approve`, or `defaultProjectTrust: "always"`.
+
 Tip: `specs/` is plain markdown and works in any PKM tool (Obsidian, Logseq, Foam) or as a published site (Quartz, MkDocs). Pick whichever fits your workflow, or none.
 
 ---
@@ -431,6 +433,8 @@ Tip: `specs/` is plain markdown and works in any PKM tool (Obsidian, Logseq, Foa
 Updated agents: {comma-separated `name` of selected agents}.
 
 Review changes to updated files and commit when ready. To adopt an additional agent, re-run `/ductus --add-agent`.
+
+When Pi is among the updated agents, add: **Pi loads this project's `.pi/` resources, the `ductus` bridge included, only after you trust the project.** An interactive start prompts for it; a non-interactive run needs `--approve`, or `defaultProjectTrust: "always"`.
 
 Tip: `specs/` is plain markdown and works in any PKM tool (Obsidian, Logseq, Foam) or as a published site (Quartz, MkDocs). `/ductus` keeps the deterministic runtime current on every run â€” see [The runtime](https://github.com/stonean/ductus#the-runtime) in the ductus README.
 

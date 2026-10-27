@@ -5235,7 +5235,10 @@ pub struct CheckUnfoldedSpecsResult {
 
 /// Args for `rewrite-spec-links`. Re-points every inbound pointer to a
 /// retiring or renamed feature directory at its fold target — body links
-/// across the corpus and the `folds-into` frontmatter field alike.
+/// across the corpus, the `folds-into` frontmatter field, and the path
+/// references `check-orphaned-references` would report in the files it reads
+/// — the spec root's `system.md` and adopter-owned root files such as
+/// `README.md` and `.githooks/pre-commit` — alike.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
 pub struct RewriteSpecLinksArgs {
@@ -5263,24 +5266,29 @@ pub struct RewriteSpecLinksArgs {
 pub struct RewrittenFile {
     /// Repo-relative path of the rewritten file.
     pub path: String,
-    /// Pointers re-pointed within it — body links plus any `folds-into`
-    /// field. A file appears here only when this is non-zero.
+    /// Pointers re-pointed within it — body links, path references in a
+    /// referrer, plus any `folds-into` field. A file appears here only when
+    /// this is non-zero.
     pub count: u32,
 }
 
 /// Result for `rewrite-spec-links`.
 ///
 /// An empty `rewritten` with a non-zero `examined` is **examined and
-/// nothing pointed here**; empty with `examined` zero means no markdown was
+/// nothing pointed here**; empty with `examined` zero means no file was
 /// scanned at all, which is not the same claim (`QUAL-CLAIM-001`).
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct RewriteSpecLinksResult {
-    /// Files changed, in spec-root path order.
+    /// Files changed: those under the spec root in path order, then the
+    /// referrers outside it in the order `check-orphaned-references` reads
+    /// them.
     #[serde(default)]
     pub rewritten: Vec<RewrittenFile>,
-    /// Markdown files scanned under the spec root — the subject the empty
-    /// case describes.
+    /// Files scanned — every markdown file under the spec root outside the
+    /// retiring directory, plus each referrer outside the spec root that
+    /// exists as a regular file. The subject the empty case describes; an
+    /// absent referrer, or one that is a symbolic link, is not counted.
     pub examined: u32,
 }
 

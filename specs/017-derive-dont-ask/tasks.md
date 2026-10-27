@@ -450,3 +450,13 @@ Done when: this spec's artifacts have no `title:` or `tags:` frontmatter; valida
 - [x] Lints, audit suite, and script tests pass
 
 - **Done when**: The question is resolved and applied, and 017 is re-reviewed and re-analyzed back to done
+
+### 43. /plan and /implement run the dependency safety net on entry again (AC13, AC17)
+
+- [x] Q7 (b) says `/clarify`, `/plan`, `/implement`, `/amend` and `/target` run `derive-dependencies` report-only on entry. `/plan` lost the step in 022 task 16 (`7e0703de`) and `/implement` in 022 task 15 (`feaf7899`); since 071 (`b772a6ac`) the procedure survives only in `framework/reference/plan.md` §Recompute dependencies (safety net) and `framework/reference/implement.md` §Setup details, which no step points at, so neither path runs it. Found by the 2026-10-27 criteria verification.
+- [x] Add the step as sub-step 1.1 of each command (`framework/commands/plan.md`, `framework/commands/implement.md`), pointing at the reference section, so no later step renumbers: 20 files cite these commands' step numbers, among them 022's scenarios and 071. A walked step dispatches one primitive, so it cannot join step 1.
+- [x] Point `framework/reference/plan.md` §Cross-spec impact check at a walked step too, or remove it as unreachable.
+- [x] Regenerate the installed copies (`scripts/gen-claude-commands.sh`), re-bless `runtime/tests/golden/plan-basic.jsonl` and `implement-basic.jsonl` reading every diff, and run `cargo test --locked`, `scripts/lint-procedure-parseability.sh` and `check-step-references`.
+- [x] Annotate AC13's "propose missing entries; the author confirms or removes" clause as the design before Q7, which made the field fully derived.
+
+- **Done when**: Both commands walk `derive-dependencies` report-only before any later step on the runtime and markdown-only paths, AC13 and AC17 hold against the tree, and the goldens and parser tests pass

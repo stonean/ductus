@@ -21,7 +21,7 @@ Everything else in the directory goes too: `plan.md`, `tasks.md`, `review.md`, `
 
 ## Re-pointing and removing
 
-1. **Re-point inbound body links** from the source directory to the target, across the spec root, matching whole path segments only. Leave `dependencies:` and `references:` alone — they are derived from body links, and the pre-commit generators rebuild them from the corrected bodies on the next commit.
+1. **Re-point inbound pointers** from the source directory to the target: body links across the spec root, matching whole path segments only, and the references in the files `check-orphaned-references` reads — the spec root's `system.md` and the root files `CLAUDE.md`, `AGENTS.md`, `README.md` and `.githooks/pre-commit` — by the rule §Re-pointing inbound pointers states in `.ductus/reference/fold.md`. Leave `dependencies:` and `references:` alone — they are derived from body links, and the pre-commit generators rebuild them from the corrected bodies on the next commit.
 2. **Remove the source directory**, but only when the target holds a `spec.md`. That check is what stops a removal from stranding content nothing else holds, and it runs at removal time regardless of having already run during the rewrite.
 3. **A sequential `NNN-slug` directory is removable only here**, through an explicit opt-in that this command passes and `/ductus:fold` does not. The sequential form is otherwise permanent — a spec in it is completed, not retired — and the gate is what keeps an irreversible operation out of reach of a typo.
 4. **An already-absent directory is not a failure.** It means a previous run finished, so a re-run converges instead of halting.

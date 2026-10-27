@@ -15,12 +15,21 @@
 //!
 //! Read-only, and it **reports rather than repairs**: the adopter may have
 //! hand-edited the reference, and a rewrite that guessed wrong is worse than a
-//! report that is precise.
+//! report that is precise. Repair happens elsewhere, where an endpoint is
+//! known: a migration re-points the references it authored, and
+//! `rewrite-spec-links` re-points any reference to a feature directory that a
+//! fold or a consolidation is retiring, since that command knows both ends.
+//! The rewrite walks this check's own referrer list with this check's own
+//! token scanner — [`referrers`] and [`managed_path_spans`] — so a reference
+//! to the retiring directory that this check would report is one the rewrite
+//! re-points, short of a referrer that is a symbolic link: the rewrite does
+//! not follow one, and this check reads through it.
 //!
 //! Defined by `specs/067-analyze-and-audit-checks/scenarios/orphaned-reference-check.md`,
 //! required by `specs/027-bootstrap-migration-registry/scenarios/migration-chain-reference-integrity.md`.
 
 use std::collections::BTreeSet;
+use std::ops::Range;
 use std::path::Path;
 
 use crate::primitives::Result;
@@ -64,25 +73,39 @@ const FIXED_REFERRERS: &[&str] = &[
 /// no longer existed. Found on a live adopter bootstrap by a host reading the
 /// file, which is the only thing that could have found it.
 ///
-/// The asymmetry with the other four is deliberate and stays: the framework
-/// **repairs** only references it authored, so an adopter's own reference is
-/// reported and left alone. Reporting is the whole of the fix — it is what
-/// stops the run looking clean over a reference already known to be broken.
+/// The asymmetry with the other four is deliberate and stays: a **migration**
+/// repairs only references the framework authored, so an adopter's own
+/// reference to a moved framework path is reported and left alone. Reporting
+/// is the whole of the fix — it is what stops the run looking clean over a
+/// reference already known to be broken.
+///
+/// One class is repaired whoever wrote it: a reference to a feature directory
+/// that `/{project}:fold` or `/{project}:consolidate` is retiring. That command
+/// knows both endpoints, so `rewrite-spec-links` re-points the reference in
+/// every file this list names, `system.md` included, short of a symbolic link
+/// it does not follow. That is why the list is shared rather than copied: a
+/// referrer added here is one the rewrite covers too, and a copy would let
+/// the two drift apart silently.
 ///
 /// Resolved through `[paths] specs-root` rather than hardcoded. A literal
 /// `specs/system.md` would silently examine nothing on a project that renamed
 /// its root — the same exit-0-over-a-wrong-path failure `config_path_of`
 /// produced in the shipped `specs-root.sh`.
-fn referrers(layout: &paths::Paths) -> Vec<String> {
+pub(crate) fn referrers(layout: &paths::Paths) -> Vec<String> {
     let mut list: Vec<String> = FIXED_REFERRERS
         .iter()
         .map(|referrer| (*referrer).to_string())
         .collect();
-    list.push(format!(
-        "{}/system.md",
-        layout.specs_root.trim_end_matches('/')
-    ));
+    list.push(format!("{}system.md", spec_root_prefix(layout)));
     list
+}
+
+/// The configured spec root as a path prefix, with its trailing `/` —
+/// `specs/` by default. One spelling for the managed root this check matches,
+/// the `system.md` referrer it reads, and the prefix `rewrite-spec-links`
+/// re-points behind.
+pub(crate) fn spec_root_prefix(layout: &paths::Paths) -> String {
+    format!("{}/", layout.specs_root.trim_end_matches('/'))
 }
 
 /// Attribution modes, reported so a caller can tell one from the other.
@@ -204,14 +227,23 @@ fn managed_roots(layout: &paths::Paths) -> Vec<String> {
         "scripts/gen-".to_string(),
         "scripts/lib/".to_string(),
     ];
-    roots.push(format!("{}/", layout.specs_root.trim_end_matches('/')));
+    roots.push(spec_root_prefix(layout));
     roots.sort();
     roots.dedup();
     roots
 }
 
-/// Every managed path named on one line, deduplicated, in first-appearance
-/// order of the sorted set.
+/// Every managed path named on one line, deduplicated, in the sorted set's
+/// order.
+fn managed_paths_in(line: &str, roots: &[String]) -> BTreeSet<String> {
+    managed_path_spans(line, roots)
+        .into_iter()
+        .map(|span| line[span].to_string())
+        .collect()
+}
+
+/// The byte range of every managed path named on one line, ordered by where
+/// it starts.
 ///
 /// Scans for a managed-root prefix and takes the path-character run that
 /// follows, rather than parsing markdown link / code-span / shell grammars
@@ -219,8 +251,17 @@ fn managed_roots(layout: &paths::Paths) -> Vec<String> {
 /// referrers (`@.ductus/constitution.md`, `[c](.ductus/constitution.md)`,
 /// `bash .ductus/scripts/gen-spec-deps.sh`), and one scan handles them all
 /// without a grammar per host format.
-fn managed_paths_in(line: &str, roots: &[String]) -> BTreeSet<String> {
-    let mut found = BTreeSet::new();
+///
+/// A range rather than the text, so `rewrite-spec-links` can splice a
+/// replacement into the line at the place this check found it — the only way
+/// it can rewrite exactly what this check would report. Replacing the text
+/// instead would lose the token-start rules below and re-point
+/// `specs/1234.1-a-cache/x` on a line that also names `specs/1234.1-a/`.
+/// Ranges from one root never overlap, because a second occurrence inside a
+/// token is preceded by a path character and so is never a reference; two
+/// roots can yield one range twice, which [`managed_paths_in`] deduplicates.
+pub(crate) fn managed_path_spans(line: &str, roots: &[String]) -> Vec<Range<usize>> {
+    let mut found = Vec::new();
     for root in roots {
         let mut from = 0usize;
         while let Some(rel) = line[from..].find(root.as_str()) {
@@ -251,10 +292,11 @@ fn managed_paths_in(line: &str, roots: &[String]) -> BTreeSet<String> {
                     .unwrap_or(0);
             let candidate = trim_trailing_punctuation(&line[start..end]);
             if candidate.len() > root.len() && !is_pattern(candidate) && stays_in_repo(candidate) {
-                found.insert(candidate.to_string());
+                found.push(start..start + candidate.len());
             }
         }
     }
+    found.sort_by_key(|span| span.start);
     found
 }
 

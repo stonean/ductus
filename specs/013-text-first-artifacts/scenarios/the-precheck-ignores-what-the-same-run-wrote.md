@@ -20,6 +20,7 @@ AC14 makes the precheck refuse a dirty tree so that the migration never rewrites
 
 - **The adopter's change and a migration's change in one file.** The file was dirty before the run started, so the precheck refuses.
 - **A migration that writes a file the Frontmatter Migration would also rewrite.** The Frontmatter Migration reads the file as the earlier migration left it, so both changes land.
+- **A refusal that stops the run leaves the new imports pointing at the old files.** Pre-run Migrations run before Shared Files (`framework/bootstrap/ductus.md`). On an upgrade across 0.60.0, `claude-md-import-syntax` has already rewritten `CLAUDE.md`'s imports to the `@path` form Claude Code loads by the time the precheck refuses, while `.ductus/constitution.md` is still the pre-upgrade copy, so every session loads that copy at startup until a re-run completes. A refusal that stops only the Frontmatter Migration lets Shared Files replace the copy in the same run.
 
 ## Open Questions
 

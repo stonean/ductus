@@ -122,7 +122,7 @@ carries that weight.
 
 ### The constitution fits one read
 
-`framework/constitution.md` went from 119,262 to 49,980 bytes on disk (`wc -c`), within the 50,000-byte read size `check-artifact-size` applies (spec 063), and `scripts/lint-governing-size.sh` holds it at that read size. An adopter's installed copy differs by 27 bytes for each character its project name has beyond nine, since `{project}` appears 27 times, so it stays within the 51,200-byte caps for a name of up to 54 characters. The read size is the target because OpenCode's and Pi's read tools return at most 51,200 bytes in one call: at 53,811 bytes, `/{project}:target`'s read on either stopped after line 500 (the scenario's Resolved Question). Measured per anchored section — the bytes from one `<!-- §anchor -->` marker to the next, so a subsection is counted with the marked section above it:
+`framework/constitution.md` went from 119,262 to 49,980 bytes on disk (`wc -c`), and to 49,997 when §recommendations gained a rule (§An answer is applied as chosen), within the 50,000-byte read size `check-artifact-size` applies (spec 063), and `scripts/lint-governing-size.sh` holds it at that read size. An adopter's installed copy differs by 27 bytes for each character its project name has beyond nine, since `{project}` appears 27 times, so it stays within the 51,200-byte caps for a name of up to 53 characters. The read size is the target because OpenCode's and Pi's read tools return at most 51,200 bytes in one call: at 53,811 bytes, `/{project}:target`'s read on either stopped after line 500 (the scenario's Resolved Question). Measured per anchored section — the bytes from one `<!-- §anchor -->` marker to the next, so a subsection is counted with the marked section above it:
 
 | Section | Before | Now |
 | --- | --- | --- |
@@ -132,9 +132,9 @@ carries that weight.
 | §design-principles | 4,192 | 2,128 |
 | §grounding | 1,255 | 671 |
 | §governance-precedence | 2,325 | 1,021 |
-| §recommendations (with the Grounding rules list) | 7,283 | 3,608 |
+| §recommendations (with the Grounding rules list) | 7,283 | 3,721 |
 | §pipeline | 202 | 112 |
-| §spec-phase | 1,734 | 1,099 |
+| §spec-phase | 1,734 | 1,022 |
 | §spec-requirements | 2,507 | 1,180 |
 | §spec-lifecycle | 8,701 | 4,240 |
 | §plan-phase | 2,304 | 835 |
@@ -150,25 +150,35 @@ carries that weight.
 | §text-first-artifacts (with frontmatter schema and severity) | 14,106 | 5,415 |
 | §runtime-boundary (five principles) | 2,449 | 2,415 |
 | §runtime-host-integration (with eligibility, acquisition, versioning, non-scope) | 5,237 | 3,040 |
-| §drift-prevention | 14,459 | 6,239 |
+| §drift-prevention | 14,459 | 6,220 |
 | §pipeline-boundaries | 3,410 | 1,361 |
 | §concurrent-features | 5,735 | 1,424 |
 | §cross-spec-impact | 3,178 | 845 |
 | §numbering | 2,097 | 745 |
 | §markdown-standards | 839 | 176 |
-| **Total** | **119,262** | **49,980** |
+| **Total** | **119,262** | **49,997** |
 
 Three kinds of change, by destination:
 
 - **Moved to the command that applies it**, with the constitution keeping a pointer. The review window, coverage and record-age rules (§implement-phase's `examined`, review-window, pre-coverage-record, empty-diff-base, durable-contract and write-time-denominator bullets, 3,475 bytes) went to `framework/reference/review.md` §Window and coverage; the rule that the criteria-path count cannot be measured on an `in-progress` spec went to `framework/reference/analyze.md` §Acceptance-criterion path existence (advisory); the analyze record's per-field meanings to that file's §Record fields; and removing an inbox item by its text to `framework/reference/groom.md` §Inbox upkeep, whose decision tree already held the chore-and-blocked-item rules. So did the rest of what one command applies: the review record's field meanings, with `scope`'s definition now in `framework/reference/review.md` §Window and coverage; the homes a routed finding lands in, the Groom decision tree's; the disposition task's shape, `framework/reference/implement.md`'s; and `/{project}:groom`'s referral of an item no spec covers to `/{project}:specify`, `framework/reference/groom.md`'s. Moving the mechanics alone could not reach one read, as the scenario's measurement warned: they came to about 6 KB.
 - **Dropped as restatement**: the three-cycles overview, the three-tiers table, Markdown Standards' copy of the lint rules (`.markdownlint-cli2.jsonc` is canonical), the opt-in invariant's history (specs 021 and 048 record it), the per-check severity list `/{project}:analyze`'s reference already holds, a second statement of markdown-by-default, the rule-ID prefix repeated under *Lifecycle*, the closing gloss on the third eligibility criterion, the no-code-without-a-spec sentence §pipeline-boundaries states, the `(spec NNN)` pointers into a corpus an adopter does not have, and glosses, examples and reasons the rule beside them does not need.
-- **Compressed in place**: every other section, each rule kept. The Guiding Principles and the five runtime principles are byte-identical. Spec 021's criteria bind the rest of §runtime-boundary: the three eligibility criteria, the acquisition invariant, the versioning rule, the non-scope list and the forward pointer to spec 022 all remain, as does the canonical-sources row pointing at `framework/constitution.md` §runtime-boundary. All 31 anchor markers, every heading and every bold span are byte-identical and in order.
+- **Compressed in place**: every other section, each rule kept but one. §drift-prevention's host rules file, which had supplied the agent-specific routing that applies both questions, now carries that routing as a pointer. The Guiding Principles and the five runtime principles are byte-identical. Spec 021's criteria bind the rest of §runtime-boundary: the three eligibility criteria, the acquisition invariant, the versioning rule, the non-scope list and the forward pointer to spec 022 all remain, as does the canonical-sources row pointing at `framework/constitution.md` §runtime-boundary. All 31 anchor markers, every heading and every bold span are byte-identical and in order.
 
 **A passage another spec quotes was kept true by meaning, not by bytes.** A first cut reached 49,851 bytes and falsified about 30 passages quoted or relied on in 16 `done` specs, so it was restored to 53,813 until the owner chose the read size (2026-10-27). The second cut was then swept hunk by hunk for what it falsified. A spec that states a rule in its own words is not falsified while the constitution keeps the rule; one that quotes the constitution's words as the constitution's, relies on a clause the cut removed, or carries a criterion naming that clause is. Where the passage bound one of the constitution's own rules, or sat in a spec another session holds open, the text was restored: the Validation Severity conditions 022 and 067 cite, a rule file's header declaring its ID prefix, the sequential spec `folds-into:` names, the closed category list under *When to write a rule*, the partial-read rule's tie to `QUAL-CLAIM-001`, and the reason a finding inside the current spec becomes its task. The rest were corrected where they live. Five `done` specs took the back-edge: 021 AC9, 062 AC25 and 064 AC12 are annotated as superseded in part, and 064's D7 line, 066's `review-scope-includes-uncommitted-work` and 051's `a-pending-fold-never-holds-done` are corrected. 050's own artifacts, `AGENTS.md` and the framework sources were edited in place, and spent `done`-spec tasks keep their wording, except two notes in 041's and 058's whose 53,813-byte ceiling figure was replaced.
 
 **The constitution is imported at startup.** This repository's `CLAUDE.md` imports `@framework/constitution.md` and the template `@.ductus/constitution.md`, each above `@AGENTS.md`, where the template carried it before 072. The method 072 used for AC6 proved the import loads. On 2026-10-27, `claude -p` with every tool disallowed was asked for two sentences only the constitution holds, the second its last line. With `@AGENTS.md` alone it answered `NOT IN CONTEXT`; with the import it quoted both verbatim. Neither run made a tool call, and they took 35,092 and 51,823 input tokens. An adopter's `CLAUDE.md` reaches the same line through two migrations. `claude-md-import-syntax` converts an `@import .ductus/constitution.md` line. `constitution-import`, ordered after it on the `id` tie-break, adds the line where nothing imports the constitution. That includes a `--ref=main` adopter whose `last_applied` is already `claude-md-import-syntax`, whom no edit to that migration would reach. `/{project}:target` still reads the constitution where no import loaded it: on an `AGENTS.md`-layout host, or on one that does not resolve `@path`.
 
+**What Claude Code makes of the import.** Claude Code warns at session start when an instruction file, or their total, passes a recommended size, and loads every file regardless. Read from the installed 2.1.310 binary on 2026-10-27: a file warns over max(40,000, round(W × 0.05 × r)) characters, where W is the session's context window in tokens and r is 3 for current models (4 for a listed set of older ones), so 150,000 on a 1,000,000-token window and 40,000 on a 200,000-token one. The total warns over max(120,000, that per-file figure), summed over the files under the per-file figure. Characters are counted after HTML comments are stripped: an adopter on 0.59.11 whose own `CLAUDE.md` imports its constitution saw it reported as 115.1k, and 0.59.11's constitution is 115,126 characters stripped (115,890 raw). The shipped constitution is 48,890 characters by that count (49,654 raw), so by the formula a session on a 200,000-token window warns about it at every start. On a 1,000,000-token window it is a third of the total figure, and this repository's three files come to 96,902.
+
 The review record's `scope` field (task 36) is defined in `framework/reference/review.md` §Window and coverage: the plan's Affected Files entries as written, a pattern counting once, united with the paths modified since `diff-base`. The constitution's table declares its type, as it does for every audit-record field.
+
+### Memory routing lives in `AGENTS.md`
+
+Where a learning goes is stated once, in the constitution's §drift-prevention, and carried to the file every agent reads by a framework-managed block in `AGENTS.md`, `ductus:memory-routing`, which `/{project}` writes with `merge-managed-block` on every run (`framework/bootstrap/ductus.md` §Shared files with conflict handling). The block is one line: both questions in order and a link to §drift-prevention. A block rather than a template edit because both project templates are `skip` strategy, so only a block reaches an existing adopter, and it stays current. Neither `CLAUDE.md` carries routing: the template keeps its imports and the `ductus:constitutions` block, and this repository's keeps its imports. The migration `memory-routing-leaves-claude-md` removes the template's old section from an existing `CLAUDE.md` only when it matches one of the four shipped versions, embedded in the migration because an adopter's run has the archive and not this repository's history, and leaves an edited one with a report. A fixture walk of its procedure (17 cases, 2026-10-27) found four readings that gave a wrong result; its steps now define a line, a blank line and a heading, and stop after the pinned and edited reports.
+
+### An answer is applied as chosen
+
+§recommendations states that an answer is applied as the chosen option reads and that a refinement the sources suggest is asked as its own question first, in its first paragraph, so it is not part of the one-at-a-time default a project may replace. The constitution held 20 bytes of headroom, so the sentence was paid for in the same edit: §spec-phase lost the bold lead *This is an instruction, not only a fact* and a clause, and §drift-prevention's host-rules-file sentence became `AGENTS.md`'s managed block, which is shorter. The dated "Recorded backfill" sentence under §rules was not cut, since `068-api-backend-rules` and `069-accessibility-frontend-rules` each own its removal as a criterion. Nothing quoted the removed phrases. The constitution is 49,997 bytes.
 
 ## Classification
 
@@ -492,10 +502,17 @@ The cut to one read moved these universal rules' canonical text out of the const
 | `framework/templates/project/claude-md.md` | Modify | Imports `@.ductus/constitution.md` above `@AGENTS.md` |
 | `framework/migrations/claude-md-import-syntax.md` | Modify | Converts the `@import .ductus/constitution.md` line instead of removing it |
 | `framework/migrations/constitution-import.md` | Create | Adds `@.ductus/constitution.md` where nothing imports the constitution |
-| `framework/migrations.toml` | Modify | Registers `constitution-import` and corrects `claude-md-import-syntax`'s summary |
+| `framework/migrations.toml` | Modify | Registers `constitution-import` and `memory-routing-leaves-claude-md`, and corrects `claude-md-import-syntax`'s summary |
 | `framework/commands/amend.md` | Modify | Its quote of §spec-lifecycle's third back-edge matches the text |
 | `runtime/src/primitives/inbox_standing.rs` | Modify | Its doc comment cites what §brownfield-inbox now states |
 | `runtime/src/primitives/check_artifacts.rs` | Modify | Two doc comments cite §tasks-phase as it now reads |
+| `framework/templates/project/agents.md` | Modify | Ships the empty `ductus:memory-routing` markers beneath its header, and names what `CLAUDE.md` holds |
+| `framework/templates/project/claude-md.md` | Modify | Drops §Auto-Memory Routing: imports and the `ductus:constitutions` block only |
+| `framework/bootstrap/ductus.md` | Modify | Writes the `ductus:memory-routing` block into `AGENTS.md` on every run |
+| `framework/bootstrap/govern.md` | Modify | Kept byte-identical to `ductus.md` |
+| `framework/migrations/memory-routing-leaves-claude-md.md` | Create | Removes an unchanged shipped §Auto-Memory Routing from an existing `CLAUDE.md` |
+| `CLAUDE.md` | Modify | Drops §Auto-Memory Routing; `AGENTS.md`'s memory entry governs |
+| `README.md` | Modify | Names the marked regions `/ductus` keeps in `AGENTS.md` and `CLAUDE.md` |
 
 ## Trade-offs
 

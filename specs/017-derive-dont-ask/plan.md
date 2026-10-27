@@ -207,6 +207,7 @@ Both workflows reference their actions by full commit SHA with the release tag i
 | `specs/017-derive-dont-ask/plan.md` | Modify (final task) | Strip `title:` from frontmatter |
 | `specs/017-derive-dont-ask/tasks.md` | Modify (final task) | Strip `title:` from frontmatter |
 | `specs/017-derive-dont-ask/data-model.md` | Modify (final task) | Strip `title:` from frontmatter |
+| `runtime/tests/golden/plan-basic.jsonl`, `runtime/tests/golden/implement-basic.jsonl` | Modify | Re-blessed for the dependency safety net each command walks again as sub-step 1.1 (task 43) |
 
 ## Data Model
 

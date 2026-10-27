@@ -2,20 +2,37 @@
 //! renamed feature directory at its fold target.
 //!
 //! Fold-back moves a branch-scoped spec's content into its upstream home and
-//! then retires the directory (spec 051). Every pointer that named the
-//! retiring directory has to move in the same action, or the retirement
-//! strands them — which is the one failure `check-orphaned-references`
-//! deliberately will not repair, because a migration knows only its own hop
-//! and a rewrite that guessed wrong is worse than a precise report. Fold-back
-//! knows both endpoints, so it rewrites and the check confirms the result is
-//! clean (AC22).
+//! then retires the directory (spec 051), and `/{project}:consolidate` removes
+//! a directory whose content belongs with another (spec 052). Every pointer
+//! that named the retiring directory has to move in the same action, or the
+//! retirement strands them — which is the one failure
+//! `check-orphaned-references` deliberately will not repair, because a
+//! migration knows only its own hop and a rewrite that guessed wrong is worse
+//! than a precise report. Both commands know both endpoints, so this rewrites
+//! and the check confirms the result is clean (AC22).
 //!
-//! Two pointer kinds move together:
+//! Three pointer kinds move together:
 //!
-//! - **Body links** — any markdown link whose target carries the retiring
-//!   directory as a whole path segment, at whatever depth the referring file
-//!   sits (`../050-a/spec.md` from a sibling spec, `../../050-a/spec.md` from
-//!   a scenario, `specs/050-a/spec.md` from a root-level file).
+//! - **Body links** in every markdown file under the spec root — any markdown
+//!   link whose target carries the retiring directory as a whole path
+//!   segment, at whatever depth the referring file sits (`../050-a/spec.md`
+//!   from a sibling spec, `../../050-a/spec.md` from a scenario).
+//! - **Path references in the referrers `check-orphaned-references` reads**
+//!   — `CLAUDE.md`, `AGENTS.md`, `README.md`, `.githooks/pre-commit` and the
+//!   spec root's `system.md`, from that check's own `referrers` list rather
+//!   than a copy. From those files a reference reads
+//!   `{specs-root}/{from}/…` as a markdown link, a code span, prose or a shell
+//!   argument, so they are scanned with that check's own token scanner
+//!   (`managed_path_spans`), anchored at the configured spec root, and a
+//!   token is rewritten exactly when its first segment past the root is the
+//!   retiring directory. Reusing the scanner is what keeps the two in step:
+//!   every token the check would report as naming the retiring directory is
+//!   re-pointed, and what it does not treat as a reference — a revision-
+//!   qualified path (`git show abc1234:specs/{from}/spec.md`), a pattern, a
+//!   URL — is not rewritten here either. A re-pointed token keeps its tail on
+//!   a rename, as a body link does, so one naming a file the target does not
+//!   hold still dangles, and the check still reports it. `system.md` sits
+//!   under the spec root, so it takes both passes.
 //! - **The `folds-into` frontmatter field** — included deliberately rather
 //!   than left to a later pass. It is the one pointer whose whole job is to
 //!   survive until the merge, so a rename that repaired body links and left
@@ -27,14 +44,23 @@
 //! pre-commit hook, so hand-editing them here would be a second writer for a
 //! value that already has one (AC23).
 //!
-//! Defined by `specs/051-branch-scoped-spec-numbering/spec.md` (AC22, AC23,
-//! AC33).
+//! A referrer that is a symbolic link is not followed. The atomic write
+//! replaces the file it is given, so writing through `CLAUDE.md` linked to
+//! `AGENTS.md` would turn the link into a copy; the file it names is
+//! rewritten in its own right when it is itself a referrer, and a reference
+//! reached only through a link is left for `check-orphaned-references`, which
+//! reads through it, to report. The spec-root walk skips links the same way.
+//!
+//! Defined by `specs/051-branch-scoped-spec-numbering/spec.md` (AC6, AC22,
+//! AC23, AC33).
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use walkdir::WalkDir;
 
-use crate::primitives::{PrimitiveError, Result, read_text, spec_links, write_atomic};
+use crate::primitives::{
+    PrimitiveError, Result, check_orphaned_references, read_text, spec_links, write_atomic,
+};
 use crate::schema::paths;
 use crate::schema::primitives::{RewriteSpecLinksArgs, RewriteSpecLinksResult, RewrittenFile};
 
@@ -72,13 +98,69 @@ impl FoldTarget {
     }
 }
 
+/// Which pointer forms one file is rewritten for.
+#[derive(Clone, Copy)]
+enum Passes {
+    /// Markdown under the spec root: body links and `folds-into`.
+    Links,
+    /// A referrer outside the spec root: path tokens behind the spec root.
+    Tokens,
+    /// A referrer under the spec root (`system.md`): both, links first, so a
+    /// link the first pass re-pointed no longer names the retiring directory
+    /// and is not counted again by the second.
+    Both,
+}
+
+impl Passes {
+    fn links(self) -> bool {
+        matches!(self, Self::Links | Self::Both)
+    }
+
+    fn tokens(self) -> bool {
+        matches!(self, Self::Tokens | Self::Both)
+    }
+}
+
+/// One run's rewrite rule and what it has done so far.
+struct Sweep<'a> {
+    repo: &'a Path,
+    /// The retiring or renamed directory.
+    from: &'a str,
+    target: FoldTarget,
+    /// The configured spec root as a prefix, `specs/` by default — the one
+    /// managed root a feature directory can be named behind.
+    root: String,
+    rewritten: Vec<RewrittenFile>,
+    examined: u32,
+}
+
+impl Sweep<'_> {
+    /// Rewrite one file in place, recording it when anything in it moved.
+    fn visit(&mut self, path: &Path, passes: Passes) -> Result<()> {
+        self.examined = self.examined.saturating_add(1);
+        let content = read_text(path)?;
+        let (updated, count) =
+            rewrite_content(&content, self.from, &self.target, &self.root, passes);
+        if count == 0 {
+            return Ok(());
+        }
+        write_atomic(path, &updated)?;
+        self.rewritten.push(RewrittenFile {
+            path: repo_relative(self.repo, path),
+            count,
+        });
+        Ok(())
+    }
+}
+
 /// Execute the `rewrite-spec-links` primitive against the given repo root.
 ///
 /// # Errors
 ///
 /// Returns [`PrimitiveError::InvalidArgument`] when `from` is empty or `to`
 /// does not parse as a fold target, or [`PrimitiveError::Io`] when a markdown
-/// file under the spec root cannot be read or written.
+/// file under the spec root, or a referrer outside it, cannot be read as
+/// UTF-8 text or written.
 pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksResult> {
     if args.from.is_empty() {
         return Err(PrimitiveError::InvalidArgument {
@@ -125,8 +207,21 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
         });
     }
 
-    let mut rewritten: Vec<RewrittenFile> = Vec::new();
-    let mut examined: u32 = 0;
+    // The files `check-orphaned-references` reads, from its own list: a
+    // reference this leaves behind in one of them is a finding that check
+    // reports the moment the directory is retired (AC22).
+    let referrers: Vec<PathBuf> = check_orphaned_references::referrers(&layout)
+        .iter()
+        .map(|referrer| repo.join(referrer))
+        .collect();
+    let mut sweep = Sweep {
+        repo,
+        from: &args.from,
+        target,
+        root: check_orphaned_references::spec_root_prefix(&layout),
+        rewritten: Vec::new(),
+        examined: 0,
+    };
 
     // Sorted so `rewritten` is in a stable path order rather than whatever
     // order the filesystem hands back — the same reason `list_feature_dirs`
@@ -152,23 +247,34 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
         {
             continue;
         }
-        examined = examined.saturating_add(1);
+        let passes = if referrers.iter().any(|referrer| referrer == path) {
+            Passes::Both
+        } else {
+            Passes::Links
+        };
+        sweep.visit(path, passes)?;
+    }
 
-        let content = read_text(path)?;
-        let (updated, count) = rewrite_content(&content, &args.from, &target);
-        if count == 0 {
+    // The referrers outside the spec root, in the order the check reads them.
+    for referrer in &referrers {
+        // Under the spec root (`system.md`): walked above, with both passes.
+        if referrer.starts_with(&specs_dir) {
             continue;
         }
-        write_atomic(path, &updated)?;
-        rewritten.push(RewrittenFile {
-            path: repo_relative(repo, path),
-            count,
-        });
+        // Not every project has every referrer, and an absent one is neither
+        // examined nor rewritten. Nor is a symbolic link followed: the atomic
+        // write would replace the link with a copy of what it names.
+        let regular =
+            std::fs::symlink_metadata(referrer).is_ok_and(|meta| meta.file_type().is_file());
+        if !regular {
+            continue;
+        }
+        sweep.visit(referrer, Passes::Tokens)?;
     }
 
     Ok(RewriteSpecLinksResult {
-        rewritten,
-        examined,
+        rewritten: sweep.rewritten,
+        examined: sweep.examined,
     })
 }
 
@@ -182,10 +288,17 @@ fn repo_relative(repo: &Path, path: &Path) -> String {
 
 /// Rewrite one file's pointers, returning the new content and how many moved.
 ///
-/// The frontmatter block is walked separately from the body: only
+/// The link pass walks the frontmatter block separately from the body: only
 /// `folds-into` moves there, so `dependencies:` and `references:` are left
-/// untouched for the generators that own them.
-fn rewrite_content(content: &str, from: &str, target: &FoldTarget) -> (String, u32) {
+/// untouched for the generators that own them. The token pass reads every
+/// line, frontmatter included, because `check-orphaned-references` does.
+fn rewrite_content(
+    content: &str,
+    from: &str,
+    target: &FoldTarget,
+    root: &str,
+    passes: Passes,
+) -> (String, u32) {
     // The file's own ending, not a bare `\n`. `lines()` strips a trailing
     // `\r`, so re-joining with `\n` would convert a CRLF checkout's file to
     // LF as a side effect of re-pointing one link.
@@ -198,25 +311,29 @@ fn rewrite_content(content: &str, from: &str, target: &FoldTarget) -> (String, u
 
     let mut in_frontmatter = false;
     for (index, line) in content.lines().enumerate() {
-        let is_fence = spec_links::is_frontmatter_fence(line);
-        if index == 0 && is_fence {
-            in_frontmatter = true;
-            push_line(&mut out, line, ending);
-            continue;
+        let mut current = line.to_string();
+        if passes.links() {
+            let is_fence = spec_links::is_frontmatter_fence(line);
+            if index == 0 && is_fence {
+                in_frontmatter = true;
+            } else if in_frontmatter && is_fence {
+                in_frontmatter = false;
+            } else {
+                let (rewritten, moved) = if in_frontmatter {
+                    rewrite_folds_into(line, from, &target.feature)
+                } else {
+                    rewrite_body_line(line, from, target)
+                };
+                count += moved;
+                current = rewritten;
+            }
         }
-        if in_frontmatter && is_fence {
-            in_frontmatter = false;
-            push_line(&mut out, line, ending);
-            continue;
+        if passes.tokens() {
+            let (rewritten, moved) = rewrite_path_tokens(&current, from, target, root);
+            count += moved;
+            current = rewritten;
         }
-
-        let (rewritten, moved) = if in_frontmatter {
-            rewrite_folds_into(line, from, &target.feature)
-        } else {
-            rewrite_body_line(line, from, target)
-        };
-        count += moved;
-        push_line(&mut out, &rewritten, ending);
+        push_line(&mut out, &current, ending);
     }
 
     if !ends_with_newline && out.len() >= ending.len() {
@@ -283,6 +400,63 @@ fn rewrite_body_line(line: &str, from: &str, target: &FoldTarget) -> (String, u3
     (out, count)
 }
 
+/// Re-point every path token on one referrer line that names `from` as its
+/// first segment past the spec root.
+///
+/// The tokens are the ones `check-orphaned-references` finds, by its own
+/// scanner given the spec root as the only managed root, so this rewrites
+/// exactly what that check would report once the directory is gone — the
+/// same reference written as a link, a code span, prose or a shell argument.
+fn rewrite_path_tokens(line: &str, from: &str, target: &FoldTarget, root: &str) -> (String, u32) {
+    let roots = [root.to_string()];
+    let mut out = String::with_capacity(line.len());
+    let mut copied = 0;
+    let mut count = 0;
+    for span in check_orphaned_references::managed_path_spans(line, &roots) {
+        // `#` is not a path character, so a link's fragment sits just past
+        // the token. It is taken along so that a fold into a scenario drops
+        // it, as it drops a body link's.
+        let end = span.end + fragment_len(&line[span.end..]);
+        let Some(moved) = rewrite_root_token(&line[span.start..end], from, target) else {
+            continue;
+        };
+        out.push_str(&line[copied..span.start]);
+        out.push_str(&moved);
+        copied = end;
+        count += 1;
+    }
+    out.push_str(&line[copied..]);
+    (out, count)
+}
+
+/// The byte length of a `#fragment` opening `rest`, or zero when there is
+/// none. A heading anchor is letters, digits, `-` and `_`; anything after it
+/// is prose.
+fn fragment_len(rest: &str) -> usize {
+    let Some(anchor) = rest.strip_prefix('#') else {
+        return 0;
+    };
+    1 + anchor
+        .chars()
+        .take_while(|c| c.is_alphanumeric() || matches!(c, '-' | '_'))
+        .map(char::len_utf8)
+        .sum::<usize>()
+}
+
+/// The rewritten form of one token that starts with the spec root, or `None`
+/// when its first segment past the root is not `from`.
+///
+/// Anchored at that segment rather than searched for: `specs/050-a/x/{from}`
+/// names something inside another spec, not the retiring directory.
+fn rewrite_root_token(token: &str, from: &str, target: &FoldTarget) -> Option<String> {
+    let (path, fragment) = split_fragment(token);
+    let segments: Vec<&str> = path.split('/').collect();
+    // `segments[0]` is the spec root itself: the scanner returns no token
+    // that does not start with it, and the root is one segment, since
+    // `validate_specs_root` refuses a nested one.
+    (segments.get(1) == Some(&from)).then(|| rebuild(&segments, 1, fragment, target))
+}
+
 /// The rewritten form of one link target, or `None` when it does not name
 /// `from`.
 ///
@@ -296,13 +470,23 @@ fn rewrite_link_target(link: &str, from: &str, target: &FoldTarget) -> Option<St
     if link.contains("://") {
         return None;
     }
-    let (path, suffix) = match link.split_once('#') {
-        Some((path, fragment)) => (path, Some(fragment)),
-        None => (link, None),
-    };
+    let (path, fragment) = split_fragment(link);
     let segments: Vec<&str> = path.split('/').collect();
     let index = segments.iter().position(|segment| *segment == from)?;
+    Some(rebuild(&segments, index, fragment, target))
+}
 
+/// A link or token split at its first `#` into the path and the fragment.
+fn split_fragment(link: &str) -> (&str, Option<&str>) {
+    match link.split_once('#') {
+        Some((path, fragment)) => (path, Some(fragment)),
+        None => (link, None),
+    }
+}
+
+/// `segments` re-pointed at the fold target, the one at `index` being the
+/// retiring directory.
+fn rebuild(segments: &[&str], index: usize, fragment: Option<&str>, target: &FoldTarget) -> String {
     let mut rebuilt: Vec<String> = segments[..index]
         .iter()
         .map(|segment| (*segment).to_string())
@@ -315,11 +499,11 @@ fn rewrite_link_target(link: &str, from: &str, target: &FoldTarget) -> Option<St
         None => {
             rebuilt.extend(segments[index + 1..].iter().map(|s| (*s).to_string()));
             let mut out = rebuilt.join("/");
-            if let Some(fragment) = suffix {
+            if let Some(fragment) = fragment {
                 out.push('#');
                 out.push_str(fragment);
             }
-            Some(out)
+            out
         }
         // A fold into a scenario: the retiring directory's files did not
         // survive individually — their content landed in this one scenario —
@@ -330,7 +514,7 @@ fn rewrite_link_target(link: &str, from: &str, target: &FoldTarget) -> Option<St
         Some(slug) => {
             rebuilt.push("scenarios".to_string());
             rebuilt.push(format!("{slug}.md"));
-            Some(rebuilt.join("/"))
+            rebuilt.join("/")
         }
     }
 }
@@ -675,5 +859,337 @@ mod tests {
 
         assert!(run(&args("1234.1-staged", "050-alpha/"), tmp.path()).is_err());
         assert!(read(tmp.path(), "050-alpha/spec.md").contains("../1234.1-staged/spec.md"));
+    }
+
+    // -- referrers outside the spec root (spec 051 task 29) -------------------
+
+    /// Write a file at a repo-relative path — a referrer, not a spec file.
+    fn write_root(repo: &Path, rel: &str, content: &str) {
+        let path = repo.join(rel);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, content).unwrap();
+    }
+
+    fn read_root(repo: &Path, rel: &str) -> String {
+        fs::read_to_string(repo.join(rel)).unwrap()
+    }
+
+    fn rewritten_paths(result: &crate::schema::primitives::RewriteSpecLinksResult) -> Vec<&str> {
+        result.rewritten.iter().map(|f| f.path.as_str()).collect()
+    }
+
+    /// AC6 and AC22: every file `check-orphaned-references` reads is
+    /// re-pointed, in whichever form it names the retiring directory — an
+    /// `@` import, a code span and bare prose, a markdown link, a shell
+    /// argument — and `system.md`, which the spec-root walk already reached,
+    /// gets its code span rewritten as well as its relative link.
+    #[test]
+    fn every_referrer_the_orphan_check_reads_is_re_pointed() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        write_root(
+            tmp.path(),
+            "CLAUDE.md",
+            "# CLAUDE.md\n\n@specs/1234.1-staged/spec.md\n",
+        );
+        write_root(
+            tmp.path(),
+            "AGENTS.md",
+            "See `specs/1234.1-staged/plan.md` and specs/1234.1-staged.\n",
+        );
+        write_root(
+            tmp.path(),
+            "README.md",
+            "Read [the staged spec](specs/1234.1-staged/spec.md).\n",
+        );
+        write_root(
+            tmp.path(),
+            ".githooks/pre-commit",
+            "#!/usr/bin/env bash\nbash specs/1234.1-staged/check.sh --staged\n",
+        );
+        write(
+            tmp.path(),
+            "system.md",
+            "# System\n\nSee [staged](1234.1-staged/spec.md) and `specs/1234.1-staged/plan.md`.\n",
+        );
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        let rewritten: Vec<(&str, u32)> = result
+            .rewritten
+            .iter()
+            .map(|f| (f.path.as_str(), f.count))
+            .collect();
+        assert_eq!(
+            rewritten,
+            vec![
+                ("specs/system.md", 2),
+                ("CLAUDE.md", 1),
+                ("AGENTS.md", 2),
+                ("README.md", 1),
+                (".githooks/pre-commit", 1),
+            ]
+        );
+        // The two spec-root files plus the four referrers outside it.
+        assert_eq!(result.examined, 6);
+
+        assert_eq!(
+            read_root(tmp.path(), "CLAUDE.md"),
+            "# CLAUDE.md\n\n@specs/050-alpha/spec.md\n"
+        );
+        assert_eq!(
+            read_root(tmp.path(), "AGENTS.md"),
+            "See `specs/050-alpha/plan.md` and specs/050-alpha.\n"
+        );
+        assert_eq!(
+            read_root(tmp.path(), "README.md"),
+            "Read [the staged spec](specs/050-alpha/spec.md).\n"
+        );
+        assert_eq!(
+            read_root(tmp.path(), ".githooks/pre-commit"),
+            "#!/usr/bin/env bash\nbash specs/050-alpha/check.sh --staged\n"
+        );
+        assert_eq!(
+            read(tmp.path(), "system.md"),
+            "# System\n\nSee [staged](050-alpha/spec.md) and `specs/050-alpha/plan.md`.\n"
+        );
+    }
+
+    /// AC22 as the check states it: `check-orphaned-references` reports the
+    /// references a retired directory left in every referrer, and after the
+    /// rewrite it reports none. The retiring directory is absent, as it is
+    /// once `retire-feature` has run, because the check tests existence.
+    #[test]
+    fn the_orphan_check_reports_clean_where_it_reported_before() {
+        use crate::primitives::check_orphaned_references;
+        use crate::schema::primitives::CheckOrphanedReferencesArgs;
+
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        for referrer in ["CLAUDE.md", "AGENTS.md", "README.md"] {
+            write_root(
+                tmp.path(),
+                referrer,
+                "See `specs/1234.1-staged/spec.md` and [it](specs/1234.1-staged).\n",
+            );
+        }
+        write_root(
+            tmp.path(),
+            ".githooks/pre-commit",
+            "#!/usr/bin/env bash\ngit add specs/1234.1-staged/spec.md\n",
+        );
+        write(
+            tmp.path(),
+            "system.md",
+            "# System\n\nSee `specs/1234.1-staged/spec.md`.\n",
+        );
+
+        let before =
+            check_orphaned_references::run(&CheckOrphanedReferencesArgs {}, tmp.path()).unwrap();
+        let mut flagged: Vec<&str> = before
+            .findings
+            .iter()
+            .map(|f| f.referrer.as_str())
+            .collect();
+        flagged.dedup();
+        assert_eq!(
+            flagged,
+            vec![
+                "CLAUDE.md",
+                "AGENTS.md",
+                "README.md",
+                ".githooks/pre-commit",
+                "specs/system.md"
+            ],
+            "the fixture must hold a finding in every referrer: {:?}",
+            before.findings
+        );
+
+        run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        let after =
+            check_orphaned_references::run(&CheckOrphanedReferencesArgs {}, tmp.path()).unwrap();
+        assert!(after.findings.is_empty(), "{:?}", after.findings);
+        assert_eq!(after.examined.len(), 5, "{:?}", after.examined);
+    }
+
+    /// Whole-segment matching holds outside the spec root too: a directory
+    /// whose name merely starts with the retiring one is a different spec,
+    /// and so is a directory of that name inside another spec — the match is
+    /// anchored at the first segment past the root.
+    #[test]
+    fn a_referrer_naming_a_directory_sharing_the_prefix_is_left_alone() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        let line = "Not `specs/1234.1-staged-cache/spec.md`, nor specs/060-beta/1234.1-staged/x.md, \
+                    but specs/1234.1-staged/spec.md.\n";
+        write_root(tmp.path(), "README.md", line);
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert_eq!(result.rewritten[0].count, 1, "{:?}", result.rewritten);
+        assert_eq!(
+            read_root(tmp.path(), "README.md"),
+            "Not `specs/1234.1-staged-cache/spec.md`, nor specs/060-beta/1234.1-staged/x.md, \
+             but specs/050-alpha/spec.md.\n"
+        );
+    }
+
+    /// A URL naming another repository's spec is that repository's business,
+    /// in a referrer as in a spec body.
+    #[test]
+    fn a_cross_repository_url_in_a_referrer_is_left_alone() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        let before =
+            "See [api](https://github.com/acme/api/blob/main/specs/1234.1-staged/spec.md).\n";
+        write_root(tmp.path(), "README.md", before);
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert_eq!(rewritten_paths(&result), [] as [&str; 0]);
+        assert_eq!(read_root(tmp.path(), "README.md"), before);
+    }
+
+    /// A revision-qualified path names a blob at that commit, where the
+    /// directory still has its old name; the check does not report it, so
+    /// rewriting it would falsify a record. The bare path beside it moves.
+    #[test]
+    fn a_revision_qualified_path_in_a_referrer_is_left_alone() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        write_root(
+            tmp.path(),
+            "AGENTS.md",
+            "Recover it with `git show abc1234:specs/1234.1-staged/spec.md`.\n\
+             Its home: specs/1234.1-staged/spec.md\n",
+        );
+
+        run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert_eq!(
+            read_root(tmp.path(), "AGENTS.md"),
+            "Recover it with `git show abc1234:specs/1234.1-staged/spec.md`.\n\
+             Its home: specs/050-alpha/spec.md\n"
+        );
+    }
+
+    /// A project without some referrers: the absent ones are neither an
+    /// error nor examined, and the present one is still rewritten.
+    #[test]
+    fn an_absent_referrer_is_skipped() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        write_root(tmp.path(), "AGENTS.md", "See specs/1234.1-staged/spec.md\n");
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert_eq!(rewritten_paths(&result), vec!["AGENTS.md"]);
+        // The target's `spec.md` and the one referrer that exists.
+        assert_eq!(result.examined, 2);
+    }
+
+    /// `[paths] specs-root` decides the prefix a referrer names a feature
+    /// directory behind; `specs/` on a project that renamed its root is not
+    /// a reference to one of its specs.
+    #[test]
+    fn a_referrer_is_matched_behind_the_configured_spec_root() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_root(
+            tmp.path(),
+            ".ductus/config.toml",
+            "[paths]\nspecs-root = \"governance\"\n",
+        );
+        write_root(
+            tmp.path(),
+            "governance/050-alpha/spec.md",
+            "---\nstatus: done\ndependencies: []\n---\n\n# target\n",
+        );
+        write_root(
+            tmp.path(),
+            "README.md",
+            "See governance/1234.1-staged/spec.md, not specs/1234.1-staged/spec.md.\n",
+        );
+
+        run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert_eq!(
+            read_root(tmp.path(), "README.md"),
+            "See governance/050-alpha/spec.md, not specs/1234.1-staged/spec.md.\n"
+        );
+    }
+
+    /// A fold into a scenario collapses a referrer's reference onto it and
+    /// drops the fragment, which named a heading in a file that is gone —
+    /// the rule a body link follows. A rename keeps the fragment.
+    #[test]
+    fn a_referrer_fragment_follows_the_body_link_rule() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        let before = "See [it](specs/1234.1-staged/spec.md#behavior).\n";
+        write_root(tmp.path(), "README.md", before);
+
+        run(&args("1234.1-staged", "050-alpha/eviction"), tmp.path()).unwrap();
+        assert_eq!(
+            read_root(tmp.path(), "README.md"),
+            "See [it](specs/050-alpha/scenarios/eviction.md).\n"
+        );
+
+        write_root(tmp.path(), "README.md", before);
+        run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+        assert_eq!(
+            read_root(tmp.path(), "README.md"),
+            "See [it](specs/050-alpha/spec.md#behavior).\n"
+        );
+    }
+
+    /// The hook is rewritten in place, not recreated: a hook that lost its
+    /// executable bit is one git skips, which is a silent failure at the
+    /// next commit rather than a loud one now.
+    #[cfg(unix)]
+    #[test]
+    fn a_rewritten_hook_keeps_its_executable_bit() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        write_root(
+            tmp.path(),
+            ".githooks/pre-commit",
+            "#!/bin/sh\ngit add specs/1234.1-staged/spec.md\n",
+        );
+        let hook = tmp.path().join(".githooks/pre-commit");
+        fs::set_permissions(&hook, fs::Permissions::from_mode(0o755)).unwrap();
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert_eq!(rewritten_paths(&result), vec![".githooks/pre-commit"]);
+        let mode = fs::metadata(&hook).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o755);
+    }
+
+    /// `CLAUDE.md` linked to `AGENTS.md` is a common layout. The atomic write
+    /// replaces the path it is given, so following the link would turn it
+    /// into a copy; the file it names is rewritten once, in its own right.
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_referrer_stays_a_link() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        write_root(tmp.path(), "AGENTS.md", "See specs/1234.1-staged/spec.md\n");
+        std::os::unix::fs::symlink("AGENTS.md", tmp.path().join("CLAUDE.md")).unwrap();
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert_eq!(rewritten_paths(&result), vec!["AGENTS.md"]);
+        let claude = fs::symlink_metadata(tmp.path().join("CLAUDE.md")).unwrap();
+        assert!(
+            claude.file_type().is_symlink(),
+            "CLAUDE.md was replaced by a copy"
+        );
+        assert_eq!(
+            read_root(tmp.path(), "CLAUDE.md"),
+            "See specs/050-alpha/spec.md\n"
+        );
     }
 }

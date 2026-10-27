@@ -2,7 +2,14 @@
 
 {One-line project description.}
 
-> **Agents:** this file is the committed home for rules true of **this project alone**. Before appending, ask who the learning is true for rather than what kind of learning it is — a rule true for every project running the pipeline belongs in the constitution's *Shared knowledge stays in git* ([§drift-prevention](.ductus/constitution.md#drift-prevention)), and one true across your organization's projects belongs in the shared constitution it registers. When it is project-only, append it to the matching section (Gotchas, Workflow, Boundaries, Code Style, Testing) and add a new section only when none fits.
+> **Agents:** this file is the committed home for rules true of **this project alone**; the block below says where any other learning goes. Append a project-only rule to the matching section (Gotchas, Workflow, Boundaries, Code Style, Testing), and add a new section only when none fits.
+
+<!-- /ductus maintains the region between the BEGIN and END markers below:
+     where a learning goes, from the constitution's §drift-prevention. Edits
+     inside it are overwritten; the rest of this file is preserved
+     byte-for-byte. -->
+<!-- BEGIN ductus:memory-routing -->
+<!-- END ductus:memory-routing -->
 
 ## Constitution
 
@@ -60,7 +67,7 @@ See [constitution.md](.ductus/constitution.md) — guiding principles, developme
 
 - `.ductus/constitution.md` -- Principles, pipeline, quality standards
 - `AGENTS.md` -- Agent rules: tech stack, conventions, workflow, gotchas, boundaries
-- `CLAUDE.md` -- `@.ductus/constitution.md` and `@AGENTS.md` + Claude Code-specific configuration
+- `CLAUDE.md` -- the `@.ductus/constitution.md` and `@AGENTS.md` imports and the `ductus:constitutions` block, for `claude-style` agents
 - `specs/`
   - `system.md` -- Architecture, shared conventions
   - `events.md` -- Global event catalog

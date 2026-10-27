@@ -298,9 +298,10 @@ own session file, so the two compose.
   this spec leaves shared. The two compose, since each worktree already has
   its own gitignored session file. §concurrent-features changes from "a single
   target by design, use worktrees for concurrency" to "each agent process holds
-  its own target; isolate edits with worktrees or the platform when needed",
-  and notes that by default git refuses to check out one branch in two worktrees at once,
-  so the trade-off is explicit.
+  its own target; isolate edits with worktrees or the platform when needed".
+  It also noted that by default git refuses to check out one branch in two
+  worktrees at once; `050-constitution`'s cut to one read dropped that note
+  (scenario `the-constitution-fits-one-read`, 2026-10-27, as AC25 records).
 
 **Why split from agent-autonomy:** [010](../010-agent-autonomy/spec.md) was a
 capability evaluation — it weighed GSD-2's features and declined multi-target

@@ -327,3 +327,15 @@ The owner answered the scenario's question on 2026-10-27 with (b): the constitut
 - [x] runtime/src/primitives/fetch_archive.rs — the reqwest client sets no User-Agent, so an acquisition fetch from GitHub identifies itself by nothing, where AGENTS.md asks a request to an outside service to name `https://github.com/stonean/ductus`; found by task 35's adopter bootstrap rerun on da52bc4c (2026-10-27) — routed to specs/048-govern-acquired-runtime/tasks.md, which owns fetch-archive
 
 - **Done when**: the finding is fixed, routed, or discarded, with a discard's reason written on the task
+
+## 39. An answer is applied as chosen
+
+- [x] Implement the behavior described in `scenarios/an-answer-is-applied-as-chosen.md`
+
+- **Done when**: §recommendations states the rule outside the replaceable default, the constitution stays within 50,000 bytes with its compensating cut swept for quoted passages, and the inbox item it discharges is removed
+
+## 40. Memory routing lives in AGENTS.md
+
+- [ ] Implement the behavior described in `scenarios/memory-routing-lives-in-agents-md.md`
+
+- **Done when**: the AGENTS.md managed block, both templates, the constitution, this repository's CLAUDE.md and the migration match the scenario, AC20 is rewritten to the new surfaces, a fixture walk proves the migration removes each shipped section and leaves an edited one, a real adopter bootstrap shows the block written and the section removed, and the inbox item it discharges is removed

@@ -75,7 +75,7 @@ A tool that elides content — truncation, a saved-output pointer, a line cap, a
 
 ### Recommendations
 
-A recommendation is a claim: the agent MUST work it out to its result **before** presenting it, and MUST compute for **every** option the quantity they differ by — steps, files touched, time, cost — since reasoning from an option's shape to its effect is inference. When that quantity cannot be computed yet, the agent MUST say so and say what would settle it, rather than rank anyway.
+A recommendation is a claim: the agent MUST work it out to its result **before** presenting it, and MUST compute for **every** option the quantity they differ by — steps, files touched, time, cost — since reasoning from an option's shape to its effect is inference. When that quantity cannot be computed yet, the agent MUST say so and say what would settle it, rather than rank anyway. Apply an answer as the chosen option reads; a refinement the sources suggest is asked as its own question first.
 
 **Decisions go to the owner one at a time.** Present one decision per message — the question, its context, the options, a recommendation — and wait for the answer before the next; never a grouped list, and never while work you started is still reporting. This rule is a default a project MAY replace in its `AGENTS.md` (§governance-precedence).
 
@@ -124,7 +124,7 @@ specs/
 
 `specs` is the default name: a project may rename it with `.ductus/config.toml` `[paths] specs-root`, and every command and the runtime use `specs` when that is unset.
 
-**This is an instruction, not only a fact.** Wherever a command acts on a path under the spec root, substitute the configured name for the literal `specs/`; the primitives resolve the key themselves, so on the markdown-only path the substitution is the host's.
+Wherever a command acts on a path under the spec root, substitute the configured name for the literal `specs/`; the primitives resolve it, and on the markdown-only path the host does.
 
 <!-- §spec-requirements -->
 
@@ -476,7 +476,7 @@ A file list several commands distribute or reference lives in one place — a sh
 
 ### Shared knowledge stays in git
 
-Knowledge that would help another contributor belongs in git, never in an agent's per-user memory. Two questions route a learning, in order: **would this help a teammate?** decides whether it is committed, and **who is it true for?** decides where — by *population*, never *kind*: **every project running this pipeline**, this constitution; **one organization's projects**, the shared constitution it registers under `[constitutions.*]`, within the framework-as-floor rule; **this project alone**, its `AGENTS.md` or a rule file. A durable requirement goes in its canonical artifact; per-user memory holds only personal facts and external pointers. **Kind is not population**: a universal rule filed as a gotcha is committed, so nothing re-asks the second question. A host's rules file carries this routing as a pointer here.
+Knowledge that would help another contributor belongs in git, never in an agent's per-user memory. Two questions route a learning, in order: **would this help a teammate?** decides whether it is committed, and **who is it true for?** decides where — by *population*, never *kind*: **every project running this pipeline**, this constitution; **one organization's projects**, the shared constitution it registers under `[constitutions.*]`, within the framework-as-floor rule; **this project alone**, its `AGENTS.md` or a rule file. A durable requirement goes in its canonical artifact; per-user memory holds only personal facts and external pointers. **Kind is not population**: a universal rule filed as a gotcha is committed, so nothing re-asks the second question. `AGENTS.md`'s managed block points here.
 
 <!-- §pipeline-boundaries -->
 

@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [041-task-pruning]
 next-criterion: 46
 ---
@@ -42,6 +42,8 @@ Consolidation writes two specs, and the runtime provides no transaction spanning
 An already-applied step reports that outcome as a domain result rather than a failure, matching `retire-feature`'s already-absent and `invalidate-review`'s already-invalidated.
 
 ## Acceptance Criteria
+
+> **AC7 is completed by [051 — Branch-scoped spec numbering](../051-branch-scoped-spec-numbering/spec.md)** (2026-10-27). `rewrite-spec-links`, which `/{project}:consolidate` shares with `/{project}:fold`, re-pointed links only in the `.md` files under the spec root, so a pointer from `README.md`, `AGENTS.md`, `CLAUDE.md` or `.githooks/pre-commit` survived a consolidation. 051's task 29 extends the rewrite to those four files.
 
 - [x] AC7: `/{project}:consolidate <spec> --into <spec>` re-points every inbound pointer to the source directory at the target, then removes the source directory
 - [x] AC8: `/{project}:consolidate` refuses when the target directory holds no `spec.md`, and no pointer is rewritten by the refused run

@@ -307,8 +307,9 @@ cover:
 
 - per-process targets, identity resolution, and the shared default with pin
   on first resolution (AC10);
-- worktrees kept for isolating edits, and git's one-branch-per-worktree limit
-  (AC25);
+- worktrees kept for isolating edits (AC25); the note on git's
+  one-branch-per-worktree limit was dropped by `050-constitution`'s cut to
+  one read;
 - the two open bounds: unidentified processes collide, and mixed agent CLIs
   share one `cli-config-dir` (AC25);
 - the markdown-only reduction (AC24).

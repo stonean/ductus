@@ -241,7 +241,7 @@ Re-run `/ductus` to update to the latest `ductus` release. Each file is handled 
 | `create` | Created on first run, skipped on re-run | `specs/system.md`, `specs/errors.md`, `specs/events.md` |
 | `skip` | Never overwritten | `AGENTS.md`, `CLAUDE.md` |
 
-`.gitignore` uses a `merge` strategy — `ductus` patterns are appended below a `# ductus` marker. Pin individual files you've customized with `[pinned]` in `.ductus/config.toml` (above). If you'd rather not run `/ductus` at all, the framework files are readable in this repo: diff them and apply changes at your own pace.
+`.gitignore` uses a `merge` strategy — `ductus` patterns are appended below a `# ductus` marker. `AGENTS.md` and `CLAUDE.md` are never overwritten, but `/ductus` keeps a marked region current in each: the shared-constitution block, and in `AGENTS.md` the block saying where a learning goes. Text outside the markers is never touched. Pin individual files you've customized with `[pinned]` in `.ductus/config.toml` (above). If you'd rather not run `/ductus` at all, the framework files are readable in this repo: diff them and apply changes at your own pace.
 
 ### Choosing the source
 
