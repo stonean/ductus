@@ -13,7 +13,7 @@
 
 2. **Find the constitution import.** Walk the file line by line, tracking fenced code blocks: a fence opens on a line whose text, after at most three spaces, begins with three or more backticks or tildes, and closes on a later line that, after at most three spaces, holds a run of the same character at least as long and nothing else but spaces or tabs; a fence never closed runs to the end of the file. The constitution is **imported** when a line outside a fence reads, after any leading whitespace, `@.ductus/constitution.md` or `@./.ductus/constitution.md`, with nothing after it but whitespace. An **`@import`-form** constitution line also counts: an import line as `claude-md-import-syntax` step 2 defines it whose path is `.ductus/constitution.md` or `./.ductus/constitution.md`. That migration, which runs first, converts it, or in a pinned file has already told the operator to, so adding a second line here would import the constitution twice.
 
-3. **Idempotency check.** When the constitution is imported, the file is converged: report `constitution-import: CLAUDE.md already imports the constitution — left as is`, or, when the only import is the `@import`-form line, `constitution-import: CLAUDE.md's constitution line is in the @import form claude-md-import-syntax converts — left as is`, and stop without writing.
+3. **Idempotency check.** When the constitution is imported, the file is converged: report `constitution-import: CLAUDE.md already imports the constitution — left as is`, or, when no `@path`-form line imports the constitution and only its `@import`-form line counts, `constitution-import: CLAUDE.md's constitution line is in the @import form claude-md-import-syntax converts — left as is`, and stop without writing.
 
 4. **Skip a pinned file.** When `CLAUDE.md` is listed in `.ductus/config.toml` `[pinned] files`, write nothing and report one line. Pinning opts a file out of framework writes, and this is one:
 
@@ -27,5 +27,5 @@
 
 - `git diff CLAUDE.md` shows one added line, `@.ductus/constitution.md`, directly above `@AGENTS.md` when the file has that line, and nothing else changed but a line ending given to a first line that had none.
 - The file's line-ending style is unchanged.
-- A second run reports `already imports the constitution` and writes nothing.
+- After an add, a second run reports `already imports the constitution` and writes nothing; no run writes to a converged file.
 - A Claude Code session started in the project with no file tools can answer a question only the constitution answers.
