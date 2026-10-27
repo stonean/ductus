@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [063-oversized-artifacts-warn-with-a-fix]
 cross-spec-impact: [050-constitution]
 next-criterion: 12
@@ -7,7 +7,7 @@ next-criterion: 12
 
 # 072 — Governing documents stay within one read
 
-The documents that govern how an agent works in this repository are bounded. `AGENTS.md` is small enough to be read whole in one call and `CLAUDE.md` actually loads it; the constitution can no longer grow, and its cut to one read is owed by `050-constitution`. Each has an exit: a lesson added past a ceiling retires another in the same change, so the rulebook cannot grow without bound.
+The documents that govern how an agent works in this repository are bounded. `AGENTS.md` is small enough to be read whole in one call and `CLAUDE.md` actually loads it; the constitution, which `050-constitution` cut to one read, can no longer grow past it. Each has an exit: a lesson added past a ceiling retires another in the same change, so the rulebook cannot grow without bound.
 
 ## Motivation
 
@@ -49,7 +49,7 @@ The constitution gets the same check with a ceiling of its own, no higher than i
 - **Order of landing.** The check lands once `AGENTS.md` is already under its ceiling. Landing it first would fail every commit until the cut finished.
 - **Entries added meanwhile.** Other sessions keep adding entries while the guide is cut; 25 `agents:` commits landed in October. Every entry present when the check lands is held to the entry rules and recorded in the plan, not only those present when the work began.
 - **A lesson with nowhere to go.** When a new lesson would take the guide past its ceiling and nothing can be retired, the contributor finds its enforcement point or folds it into an existing entry. Raising a ceiling is an owner decision, recorded in this spec through its back-edge, never a choice made at commit time.
-- **The constitution is not imported.** At its capped size it is still more than one read, so `CLAUDE.md` does not import it. The commands keep reading it as they do today, and that can change once `050-constitution`'s cut lands.
+- **The constitution is imported.** `050-constitution`'s cut brought it within one read, so `CLAUDE.md` imports it as `@framework/constitution.md` above `@AGENTS.md`. The commands still read it where no import loaded it.
 
 ## Out of Scope
 

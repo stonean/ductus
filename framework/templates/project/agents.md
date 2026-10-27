@@ -60,7 +60,7 @@ See [constitution.md](.ductus/constitution.md) — guiding principles, developme
 
 - `.ductus/constitution.md` -- Principles, pipeline, quality standards
 - `AGENTS.md` -- Agent rules: tech stack, conventions, workflow, gotchas, boundaries
-- `CLAUDE.md` -- `@AGENTS.md` + Claude Code-specific configuration
+- `CLAUDE.md` -- `@.ductus/constitution.md` and `@AGENTS.md` + Claude Code-specific configuration
 - `specs/`
   - `system.md` -- Architecture, shared conventions
   - `events.md` -- Global event catalog

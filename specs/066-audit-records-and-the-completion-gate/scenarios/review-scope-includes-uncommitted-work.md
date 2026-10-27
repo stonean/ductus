@@ -7,8 +7,8 @@ section: "The review record"
 ## Context
 
 `/{project}:review` reviews the **working tree**. Its own instructions say so,
-the constitution's `reviewed-against` row calls a commit the same subject "only
-on a clean tree", and
+the constitution's audit-record table types `reviewed-against` as provenance only
+(a commit and the working tree are the same subject only on a clean tree), and
 [`the-committed-tree-horizon`](the-committed-tree-horizon.md) moved review
 staleness to a digest of what the review read for exactly that reason.
 `compute-review-scope` decides what the review reads, and it answers from

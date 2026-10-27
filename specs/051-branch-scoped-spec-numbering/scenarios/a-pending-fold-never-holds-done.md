@@ -19,7 +19,7 @@ A pending fold is therefore not in the category of an unresolved scenario questi
 - **The fold stays owed and visible.** The Status cell is still qualified `(fold pending)` at every status, the outstanding-fold callout still lists every spec carrying `folds-into`, and `check-unfolded-specs` still reports it until fold-back retires the directory, so AC34 holds as written.
 - **`/{project}:fold` still accepts a staging spec at any status, and its writes do not change.** Folding into a `done` upstream spec still reopens it and invalidates its review (AC24, AC25), because the upstream spec gains content its recorded review never saw.
 - **The cross-spec-impact gate is unchanged**, `target-missing` included. Its justification stands on its own reason — nothing but the gate carries an undischarged impact past `done` — rather than on the fold check as precedent.
-- **The rule changes everywhere it is stated**: the constitution's §spec-lifecycle (the `done` row and the branch-scoped paragraph) and §cross-spec-impact; this spec's AC35, §Fold-back on merge, Resolved Questions and the earlier scenario; `/{project}:implement`'s gate text, `/{project}:fold`, `/{project}:status`, and `/{project}:review`'s restatement of the gate order; the user docs; and 066's and 050's records of the gate.
+- **The rule changes everywhere it is stated**: the constitution's §spec-lifecycle (the `done` row and the branch-scoped paragraph); this spec's AC35, §Fold-back on merge, Resolved Questions and the earlier scenario; `/{project}:implement`'s gate text, `/{project}:fold`, `/{project}:status`, and `/{project}:review`'s restatement of the gate order; the user docs; and 066's and 050's records of the gate.
 
 ## Edge Cases
 

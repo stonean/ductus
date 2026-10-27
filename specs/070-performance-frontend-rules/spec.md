@@ -50,7 +50,7 @@ The rules verify **design-time commitments**, meaning what a spec or plan must s
 
 Rule IDs follow `FE-{CATEGORY}-{NNN}`. The grammar, the `[A-Z][A-Z0-9]*` category format, and the ID-stability invariants (never renumbered, never reused) are those of [008's data-model](../008-security-rules/data-model.md). `scripts/lint-rule-ids.sh` checks grammar and per-file uniqueness.
 
-The category abbreviations are governed by the file's own header, per the constitution's §rules: "The specific category abbreviations a given rule file uses are declared in that file's own header." This spec adds no `data-model.md` with a category table. A second table would become a governing copy, competing with the header and drifting from it. The Rule set scope table above describes the header's categories and does not govern them.
+The category abbreviations are governed by the file's own header, per the constitution's §rules: "Each rule file's header declares its ID prefix and the category abbreviations it uses." This spec adds no `data-model.md` with a category table. A second table would become a governing copy, competing with the header and drifting from it. The Rule set scope table above describes the header's categories and does not govern them.
 
 ## Acceptance Criteria
 

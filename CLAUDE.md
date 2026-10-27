@@ -1,5 +1,6 @@
 # CLAUDE.md
 
+@framework/constitution.md
 @AGENTS.md
 
 ## Auto-Memory Routing

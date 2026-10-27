@@ -1,6 +1,6 @@
 ---
 title: "002-project-scaffolding — spec"
-status: done
+status: in-progress
 dependencies: [000-slash-commands, 001-system-spec-templates]
 tags: [templates, bootstrap]
 next-criterion: 8
@@ -45,15 +45,14 @@ The template stays minimal — no language-specific patterns. Language-specific 
 
 A minimal file whose imports use Claude Code's `@path` form, the only one it resolves (Claude Code's memory documentation, *Import additional files*; measured in scenario `claude-md-template-imports-load`):
 
-- Imports `AGENTS.md` as `@AGENTS.md`
-- Does not import the constitution while it exceeds one read; the pipeline commands read it (scenario `claude-md-template-imports-load`)
+- Imports the constitution as `@.ductus/constitution.md`, which fits one read, and `AGENTS.md` as `@AGENTS.md` (scenario `claude-md-template-imports-load`)
 - Carries the `ductus:constitutions` managed block, where `/ductus` imports each registered shared constitution
 
 ## Acceptance Criteria
 
 - [x] AC1: `framework/templates/project/project-readme.md` exists with placeholder sections for project name, quick start, getting started (referencing the configure and status commands), documentation links, feature table, pipeline overview, and slash command reference
 - [x] AC2: `framework/templates/project/gitignore` exists with minimal sections for secrets, claude settings, IDE files, and OS files — no language-specific patterns
-- [x] AC3: `framework/templates/project/claude-md.md` exists, imports `AGENTS.md` as `@AGENTS.md`, holds no `@import` line, and does not import `.ductus/constitution.md`
+- [x] AC3: `framework/templates/project/claude-md.md` exists, imports `.ductus/constitution.md` as `@.ductus/constitution.md` and `AGENTS.md` as `@AGENTS.md`, and holds no `@import` line
 - [x] AC4: Each template uses `{project}` placeholder where the project name appears
 - [x] AC5: The README template includes a feature table matching the format used by constitution's spec numbering convention
 - [x] AC6: The .gitignore preserves `.claude/commands/` while excluding other `.claude/` contents

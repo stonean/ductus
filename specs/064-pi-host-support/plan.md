@@ -68,7 +68,7 @@ byte-identical to `.pi/extensions/ductus.ts`) is a Pi extension that:
   §runtime-boundary principle 3).
 
 The `ductus__` prefix is the Pi spelling of the host-namespace wrap
-(§runtime-host-integration: match the prefix, not a spelling) — it makes State-A
+(§runtime-host-integration names each host by its prefix, not a spelling) — it makes State-A
 detection a `ductus__*` inventory match and prevents collision with Pi built-ins
 (`read`, `bash`, …) or foreign extensions.
 
@@ -170,10 +170,11 @@ blocks; pi has none) — stated, not silent, per the check-that-cannot-run rule.
 
 ### D7 — Constitution, README, AGENTS.md, docs (prose sweep, per AC12/AC13)
 
-- `framework/constitution.md` §runtime-host-integration: Pi's spelling in full —
-  `ductus__<verb>-<noun>`, supplied by the project's `.pi/extensions/ductus.ts`
-  bridge; Pi has no built-in MCP, so the bridge wraps the runtime's own MCP server
-  over stdio.
+- `framework/constitution.md` §runtime-host-integration: Pi's prefix, `ductus__`,
+  through the project's `.pi/extensions/ductus.ts` bridge, since Pi has no MCP
+  client (`050-constitution`'s cut shortened every host's entry to its prefix).
+  `framework/bootstrap/ductus.md`'s Pi layout states that the bridge wraps the
+  runtime's own MCP server over stdio.
 - `README.md`: agent list gains Pi; §Installing (per agent) accepts `pi`
   (`sh -s -- pi`); the invocation paragraph names `/{project}-<name>` for Pi.
 - `AGENTS.md` (this repo's contributor home): the live registry enumeration updates to

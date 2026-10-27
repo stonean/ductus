@@ -1,13 +1,13 @@
 # claude-md-import-syntax
 
 **Introduced in:** ductus 0.60.0
-**Summary:** Rewrite each `@import <path>` line in `CLAUDE.md` to the `@<path>` form Claude Code resolves, and remove the line importing `.ductus/constitution.md`, which exceeds one read.
+**Summary:** Rewrite each `@import <path>` line in `CLAUDE.md`, the `.ductus/constitution.md` one included, to the `@<path>` form Claude Code resolves.
 
 ## Background
 
 Through ductus 0.59 the `CLAUDE.md` template wrote its imports in the `@import <path>` form — since 0.28, `@import .ductus/constitution.md` and `@import AGENTS.md` — and the bootstrap rendered each registered shared constitution into the `ductus:constitutions` block as `@import {document-path}`. Claude Code imports a file only as `@path`: a path ends at the first unescaped space, so `@import AGENTS.md` names a file called `import`, and neither line loaded anything. A `claude-style` session therefore started without the project's `AGENTS.md`. The pipeline commands still read the constitution themselves, so nothing else broke.
 
-`CLAUDE.md` is installed once, with the `skip` strategy (`framework/bootstrap/ductus.md`, **Shared files with conflict handling**), and nothing rewrites it afterwards, so an existing adopter keeps the broken lines until this migration converts them. The constitution line is removed rather than converted. Converting it would begin loading a document larger than one read into every session, and the template no longer carries it. [Spec 002](../../specs/002-project-scaffolding/spec.md)'s `claude-md-template-imports-load` scenario governs.
+`CLAUDE.md` is installed once, with the `skip` strategy (`framework/bootstrap/ductus.md`, **Shared files with conflict handling**), and nothing rewrites it afterwards, so an existing adopter keeps the broken lines until this migration converts them. The constitution line is converted like the others: since `050-constitution`'s cut it fits one read, and the template imports it as `@.ductus/constitution.md`. An earlier form of this migration, which `--ref=main` adopters could run before any release carried it, removed that line instead; `constitution-import`, which runs after this one, adds `@.ductus/constitution.md` to a file where nothing imports the constitution. [Spec 002](../../specs/002-project-scaffolding/spec.md)'s `claude-md-template-imports-load` scenario governs.
 
 ## Procedure
 
@@ -19,22 +19,21 @@ Through ductus 0.59 the `CLAUDE.md` template wrote its imports in the `@import <
 
 4. **Skip a pinned file.** When `CLAUDE.md` is listed in `.ductus/config.toml` `[pinned] files`, write nothing and report one line. Pinning opts a file out of framework writes, and this is one:
 
-   `warning: CLAUDE.md is pinned; leaving its @import lines — delete any .ductus/constitution.md one, and rewrite each remaining one as @<path> (unquoted, each space escaped) by hand for Claude Code to load it.`
+   `warning: CLAUDE.md is pinned; leaving its @import lines — rewrite each one as @<path> (unquoted, each space escaped) by hand for Claude Code to load it.`
 
 5. **Rewrite each import line in place.**
 
-   - A line whose path is `.ductus/constitution.md` (with or without a leading `./`) is **removed**, together with its line ending. The pipeline commands read the constitution when they need it, and `/{project}:target` loads it once per session. A line an adopter wrote as `@.ductus/constitution.md` matched nothing in step 2 and stays: importing the constitution is that adopter's choice.
-   - Every other import line becomes `@` followed by its path, keeping the line's leading whitespace, with a backslash put before each space in the path that does not already follow one. Claude Code imports neither a quoted path nor one with an unescaped space.
+   - Every import line becomes `@` followed by its path, keeping the line's leading whitespace, with a backslash put before each space in the path that does not already follow one. Claude Code imports neither a quoted path nor one with an unescaped space. The `.ductus/constitution.md` line is rewritten like the rest.
    - A shared constitution that an adopter also imports by hand, outside the managed block, is rewritten like any other line, not removed. The adopter added that line. Removing it would drop the import if the registration were later withdrawn.
 
    Preserve everything else byte for byte: each rewritten line keeps its own line ending, and nothing else in the file is normalized. Write atomically: a temporary file in the same directory, then a rename.
 
-6. **Report** one line naming what changed: `claude-md-import-syntax: rewrote {n} import line(s) to @path`, where `{n}` counts the rewritten lines, and, when step 5 removed one, `; removed the .ductus/constitution.md import`. When `{n}` is 0 the line is `claude-md-import-syntax: removed the .ductus/constitution.md import`. Then name each rewritten path, so the operator can confirm what loads at the next session start.
+6. **Report** one line naming what changed: `claude-md-import-syntax: rewrote {n} import line(s) to @path`, where `{n}` counts the rewritten lines. Then name each rewritten path, so the operator can confirm what loads at the next session start.
 
 ## Verification
 
-- `git diff CLAUDE.md` shows only the import lines changing. Each `@import <path>` becomes `@<path>`, the `.ductus/constitution.md` import is gone, and nothing outside those lines moved.
+- `git diff CLAUDE.md` shows only the import lines changing. Each `@import <path>` becomes `@<path>`, the `.ductus/constitution.md` import included, and nothing outside those lines moved.
 - No line outside a fenced code block still begins `@import`, and an `@import` inside a fence or a code span is unchanged.
 - The file's line endings are unchanged.
 - A second run reports `no @import line outside code in CLAUDE.md` and writes nothing.
-- A Claude Code session started in the project with no file tools can answer a question only `AGENTS.md` answers.
+- A Claude Code session started in the project with no file tools can answer a question only `AGENTS.md` answers, and one only the constitution answers.

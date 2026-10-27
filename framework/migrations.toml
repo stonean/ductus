@@ -247,7 +247,7 @@ introduced_in = "0.60.0"
 # `AGENTS.md` at session start — and nothing else would ever correct them.
 # Ordered after constitution-relocate and ductus-rename, which match the
 # `@import` form and must run first in a chain.
-summary = "Rewrite each `@import <path>` line in CLAUDE.md to the `@<path>` form Claude Code resolves, and remove the line importing .ductus/constitution.md, which exceeds one read (spec 002, claude-md-template-imports-load)"
+summary = "Rewrite each `@import <path>` line in CLAUDE.md, the .ductus/constitution.md one included, to the `@<path>` form Claude Code resolves (spec 002, claude-md-template-imports-load)"
 # Adopter-relative. Nothing under framework/ is removed by this migration, so it
 # declares no framework/ target path — Family 10b reads those as paths that
 # must no longer exist, and `framework/templates/project/claude-md.md` still
@@ -256,3 +256,21 @@ target_paths = [
   "CLAUDE.md",
 ]
 procedure_file = "framework/migrations/claude-md-import-syntax.md"
+
+[[migrations]]
+id = "constitution-import"
+introduced_in = "0.60.0"
+# No sunset_after. `CLAUDE.md` is skip-strategy and never rewritten, so an
+# adopter who skips this window starts every Claude Code session without the
+# constitution, and nothing else would ever add the line.
+# Runs after claude-md-import-syntax: the two share introduced_in, and
+# `constitution-import` sorts after it on the id tie-break (spec 027), so a
+# constitution line that migration converted is found here and left alone. An
+# adopter whose last_applied is claude-md-import-syntax still runs this one.
+summary = "Add `@.ductus/constitution.md` to CLAUDE.md when nothing there imports the constitution, which now fits one read (spec 050, the-constitution-fits-one-read)"
+# Adopter-relative. Nothing under framework/ is removed by this migration, so it
+# declares no framework/ target path.
+target_paths = [
+  "CLAUDE.md",
+]
+procedure_file = "framework/migrations/constitution-import.md"

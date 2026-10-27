@@ -1,5 +1,6 @@
 # CLAUDE.md
 
+@.ductus/constitution.md
 @AGENTS.md
 
 <!-- /ductus maintains the region between the BEGIN and END markers below.

@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [010-agent-autonomy]
 cross-spec-impact: [010-agent-autonomy]
 next-criterion: 26
@@ -197,7 +197,7 @@ own session file, so the two compose.
 - [x] AC23: `ductus exec` run from an agent's shell tool resolves that agent's target, and run from a terminal with no identity it resolves the shared default
 - [x] AC24: The markdown-only path states that, having no sanctioned way to read its environment, it resolves and writes the shared default only
 - [x] AC10: The concurrent-features section of `framework/constitution.md` is amended to describe per-process targets in place of a single target by design, in the same change that ships the behavior
-- [x] AC25: The concurrent-features section of `framework/constitution.md` keeps `git worktree` and platform isolation as the answer for isolating working-tree edits, notes that by default git refuses to check out one branch in two worktrees at once, and states the two bounds this spec leaves open: processes with no identity share one target, and with two different agent CLIs in one working tree the runtime reads command files from the agent `/ductus` last recorded
+- [x] AC25: The concurrent-features section of `framework/constitution.md` keeps `git worktree` and platform isolation as the answer for isolating working-tree edits, notes that by default git refuses to check out one branch in two worktrees at once, and states the two bounds this spec leaves open: processes with no identity share one target, and with two different agent CLIs in one working tree the runtime reads command files from the agent `/ductus` last recorded **Superseded in part by `050-constitution`** (scenario `the-constitution-fits-one-read`, 2026-10-27): to fit the constitution to one read, its cut dropped the note that git refuses one branch in two worktrees by default; git still does, and the rest of this criterion holds.
 - [x] AC11: `specs/010-agent-autonomy/spec.md` carries a signpost on its Parallel milestones verdict linking to this spec, discharging the declared cross-spec impact
 
 ## Applicable Rules

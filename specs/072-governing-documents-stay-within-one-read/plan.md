@@ -246,7 +246,7 @@ A message or comment added for a **moved** entry lands in `scripts/`, `scripts/t
 
 `scripts/lint-governing-size.sh` follows `scripts/lint-rule-filenames.sh`: a maintainer lint over this repository's own files, run by CI and never shipped. It parses no markdown, frontmatter or configuration. It reads two blob sizes with `git cat-file -s`, so §runtime-boundary principle 3's prohibition, which covers shell pipelines that parse frontmatter or markdown structure, does not reach it. It also fails eligibility criterion 2 (currently mechanical), because no LLM step or script performed this check: `git grep -n 'AGENTS.md\|constitution.md' 5cb01fdb -- scripts .githooks .github`, filtered for `wc -c`, `cat-file -s`, `size` and `bytes`, returns nothing. The nearest primitive, `check-artifact-size`, measures one feature's spec artifacts. Giving it a governing-document subject means new argument and result types, CLI, MCP, registry and exec wiring (063's plan lists about twenty files for the primitive), plus a release, all to replace two `git cat-file` calls.
 
-- **Ceilings** live in one table at the top of the script: `AGENTS.md 50000`, and `framework/constitution.md` at the size `050-constitution`'s cut to one read reached, which its comment says. A comment on the `AGENTS.md` row names `DEFAULT_READ_SIZE_BYTES` in `runtime/src/primitives/check_artifact_size.rs` as the source of 50,000.
+- **Ceilings** live in one table at the top of the script: `AGENTS.md 50000` and `framework/constitution.md 50000`. A comment above the table names `DEFAULT_READ_SIZE_BYTES` in `runtime/src/primitives/check_artifact_size.rs` as the source of both.
 - **What is measured.** `git -C "$ROOT" cat-file -s ":$path"` reads the index. In the hook that is the staged file, so an unstaged edit neither fails nor passes a commit. In CI, the index is the checkout. One code path serves both, as AC9 requires.
 - **Four failures, four messages**, each line naming the file:
   - Over the ceiling: `{file}: {size} bytes, over its {ceiling}-byte ceiling — retire, merge, or move an entry to the check that enforces it (spec 072)`. The constitution's line names its own fix: cut the file, not the ceiling, by moving a rule only one command applies to its `framework/reference/` file or tightening one (spec 050).
@@ -273,7 +273,7 @@ A message or comment added for a **moved** entry lands in `scripts/`, `scripts/t
 - (e) `AGENTS.md` absent from the index fails with the missing message, not a pass;
 - (f) back under the ceiling after (b) passes;
 - (g) a file the index holds but whose blob is gone fails as unreadable;
-- (h) the `AGENTS.md` ceiling equals `DEFAULT_READ_SIZE_BYTES` in `runtime/src/primitives/check_artifact_size.rs`, the constant it copies;
+- (h) both ceilings equal `DEFAULT_READ_SIZE_BYTES` in `runtime/src/primitives/check_artifact_size.rs`, the constant they copy;
 - (i) a ceiling that is not a whole number of bytes fails with its own message. Without that check, `[ -gt ]` errors to stderr, an `if` reads the error as false, and the oversized file passes.
 
 ### `CLAUDE.md`
@@ -281,7 +281,7 @@ A message or comment added for a **moved** entry lands in `scripts/`, `scripts/t
 The rewritten file has three parts:
 
 - `# CLAUDE.md`.
-- One import line, `@AGENTS.md`.
+- Two import lines: `@framework/constitution.md`, which `050-constitution`'s `the-constitution-fits-one-read` added once the constitution fit one read, then `@AGENTS.md`.
 - The **Auto-Memory Routing** section `050-constitution` AC20 requires, reduced to a pointer at §drift-prevention's two questions plus the one fact this repository adds: it keeps no auto-memory at all.
 
 The **Non-negotiables** section goes. Its trunk-based rule is an `AGENTS.md` entry and its truncation rule is §grounding, both now loaded through the import. The `@import framework/constitution.md` line goes rather than being converted, because at 119,262 bytes the constitution is more than one read (AC6). The pipeline commands keep reading it as they do today. Once `050-constitution`'s cut brings it to one read, that spec's `the-constitution-fits-one-read` scenario restores the import, so a session started from a handoff prompt has the constitution too; until then the `AGENTS.md` prompt entry asks a handoff to start with `/ductus:target`. No sentence states another file's size (AC8).
@@ -332,6 +332,6 @@ The probe question is picked after the cut, from an entry that survives it.
 
 ## Cross-spec impact
 
-- **`050-constitution`** owes the constitution's cut to one read (`scenarios/the-constitution-fits-one-read.md`, task 35). That scenario's link back to this spec discharges the `cross-spec-impact` declaration. The cut landed at 53,813 bytes and lowered this spec's constitution ceiling in `scripts/lint-governing-size.sh` to that size.
+- **`050-constitution`** owed the constitution's cut to one read (`scenarios/the-constitution-fits-one-read.md`, task 35). That scenario's link back to this spec discharges the `cross-spec-impact` declaration. The cut brought the constitution to 49,921 bytes and lowered this spec's constitution ceiling in `scripts/lint-governing-size.sh` to the 50,000-byte read size.
 - **`050-constitution` plan §Classification** loses the rows of entries this spec removes, or re-keys them to the entry they merged into, so Family 38 keeps matching. That is a sync of 050's own record while it is `in-progress`.
 - **`050-constitution` AC3** (each promoted entry's `AGENTS.md` line points without restating) is false against the tree at `5cb01fdb`, and the **pointer** disposition makes it true again. No edit to 050 is owed for that, because the criterion already states the shape this spec restores.

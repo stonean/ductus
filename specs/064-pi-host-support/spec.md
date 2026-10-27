@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [012-multi-agent-govern, 022-deterministic-runtime, 028-antigravity-agent, 029-bootstrap-runtime-autowire, 031-agent-mcp-wiring, 056-bootstrap-archive-boundary-split]
 next-criterion: 17
 ---
@@ -173,8 +173,9 @@ mechanism; nothing in the pipeline depends on either.
   pi copy is **committed**, mirroring the `.claude/commands/` convention. (6)
   `scripts/audit/README.md` family descriptions update accordingly.
 - **D7 — Prose sweep and anti-claim.** README agent list + per-agent install section +
-  invocation paragraph; constitution §runtime-host-integration gains Pi's spelling in
-  full (the canonical source other copies point at); `AGENTS.md`'s live registry
+  invocation paragraph; constitution §runtime-host-integration gains Pi's spelling (the canonical source
+  other copies point at; `050-constitution`'s cut later shortened every host's entry
+  to its prefix, Pi's `ductus__`); `AGENTS.md`'s live registry
   enumeration updates (five agents, four layouts) plus one entry recording the
   bridge architecture (never "fix" Pi by registering an MCP server for it; keep the
   bridge dependency-free — the README promise and the live-schema property both
@@ -202,7 +203,7 @@ mechanism; nothing in the pipeline depends on either.
 - [x] AC9: [022-deterministic-runtime](../022-deterministic-runtime/spec.md) carries the scenario for the third candidate shape back-linking this spec, and its `data-model.md` records the candidate in the result-shape registry
 - [x] AC10: Family 14 passes with the Pi row: the `pi → {config_dir}/prompts/ductus.md` branch resolves, and the settings-seed parity check asserts the Pi arm writes no settings file; Family 15 skips Pi by name on stderr; Family 17 recognizes `.pi/prompts/{ns}-*.md` as an installed namespace
 - [x] AC11: `gen-claude-commands.sh` emits `.pi/prompts/ductus-*.md` and `--check` covers it; the framework repo's `.pi/prompts/` dogfooded copy is committed with the matching `.gitignore` line
-- [x] AC12: Constitution §runtime-host-integration names Pi's tool spelling in full — `ductus__<verb>-<noun>` via the project's `.pi/extensions/ductus.ts` bridge, with the no-built-in-MCP note keeping the runtime's MCP server the single source for names and schemas
+- [x] AC12: Constitution §runtime-host-integration names Pi's tool spelling in full — `ductus__<verb>-<noun>` via the project's `.pi/extensions/ductus.ts` bridge, with the no-built-in-MCP note keeping the runtime's MCP server the single source for names and schemas **Superseded in part by `050-constitution`** (scenario `the-constitution-fits-one-read`, 2026-10-27): to fit the constitution to one read, its cut shortened every host's entry to its prefix, Pi's `ductus__`, ahead of the bare `<verb>-<noun>` name, and kept the bridge with its reason, that Pi has no MCP client. That the bridge wraps the runtime's own MCP server over stdio is stated in `framework/bootstrap/ductus.md`'s Pi layout.
 - [x] AC13: `README.md` names Pi in the agent list, accepts `pi` in the per-agent install section, and the invocation-paragraph names `/{project}-<name>` for Pi
 - [x] AC14: A real `pi` run in a trusted project resolves a `/{project}-…` command from `.pi/prompts/`, registers the `ductus__*` tools, round-trips a live tool call, and `ductus exec` resolves the `.pi/prompts/` candidate — result recorded in this spec's plan as verification evidence
 - [x] AC15: `framework/bootstrap/govern.md` remains byte-identical to `framework/bootstrap/ductus.md` (Family 21)

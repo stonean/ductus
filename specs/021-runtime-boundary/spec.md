@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [020-code-review]
 next-criterion: 12
 ---
@@ -67,7 +67,7 @@ A row is added to the canonical sources table in §drift-prevention naming §run
 - [x] AC6: `framework/constitution.md` §drift-prevention canonical sources table contains a row whose Fact column names "Runtime contract / boundary," pointing at `framework/constitution.md` §runtime-boundary.
 - [x] AC7: A CI workflow exists in this repo that asserts: (a) no runtime binary on `PATH`, (b) all bash generator scripts (`gen-spec-deps.sh`, `gen-readme-table.sh`, `gen-help-tables.sh`) run clean in `--dry-run`, (c) `npx markdownlint-cli2` passes, (d) a tool-coverage lint scans `framework/commands/*.md` and verifies every reference to a runtime tool is wrapped in a graceful-fallback pattern, and (e) frontmatter integrity (status enum and dependencies-list shape) holds across all spec and scenario files. Delivered as written, as `markdown-only-pipeline.yml`. **Superseded in part:** 048 removed check (a) with the opt-in invariant and renamed the workflow `.github/workflows/framework-checks.yml`. Of (b)'s generators, `gen-help-tables.sh` still runs in `--dry-run`; `gen-spec-deps.sh` and `gen-readme-table.sh` were removed, and their derivations are the `derive-dependencies` and `derive-references` primitives, which the workflow runs instead. Checks (c), (d) and (e) still run there.
 - [x] AC8: The CI workflow above runs on every PR that modifies `framework/`, `specs/`, or `.claude/commands/`.
-- [x] AC9: The existing principle bullets in §text-first-artifacts (markdown by default, frontmatter for metadata, relative links not wiki-links, derived views gitignored, exceptions require amendment) are unchanged — only the opening paragraph is edited.
+- [x] AC9: The existing principle bullets in §text-first-artifacts (markdown by default, frontmatter for metadata, relative links not wiki-links, derived views gitignored, exceptions require amendment) are unchanged — only the opening paragraph is edited. **Superseded in part by `050-constitution`** (scenario `the-constitution-fits-one-read`, 2026-10-27): to fit the constitution to one read, its cut dropped the markdown-by-default bullet, which the section's opening paragraph states, and merged the two derived-view bullets into one; every rule they stated holds, and this spec's own edit touched only the opening paragraph.
 - [x] AC10: `/ductus:analyze` against this spec passes (no hard-fail or blocking findings) once acceptance criteria are met.
 - [x] AC11: `npx markdownlint-cli2` against `framework/constitution.md` and the new spec files passes after the edits.
 

@@ -122,53 +122,53 @@ carries that weight.
 
 ### The constitution fits one read
 
-`framework/constitution.md` went from 119,262 to 53,813 bytes on disk (`wc -c`), and `scripts/lint-governing-size.sh` now holds it there. That is above the 50,000-byte read size `check-artifact-size` applies (spec 063), so the scenario's edge case applies, and the threshold is its open question for the owner. Measured per anchored section — the bytes from one `<!-- §anchor -->` marker to the next, so a subsection is counted with the marked section above it — before, at the first cut, and after the quoted passages were restored:
+`framework/constitution.md` went from 119,262 to 49,989 bytes on disk (`wc -c`), within the 50,000-byte read size `check-artifact-size` applies (spec 063), and `scripts/lint-governing-size.sh` holds it at that read size. The read size is the target because OpenCode's and Pi's read tools return at most 51,200 bytes in one call: at 53,811 bytes, `/{project}:target`'s read on either stopped after line 500 (the scenario's Resolved Question). Measured per anchored section — the bytes from one `<!-- §anchor -->` marker to the next, so a subsection is counted with the marked section above it:
 
-| Section | Before | First cut | Final |
-| --- | --- | --- | --- |
-| preamble | 195 | 282 | 187 |
-| §principles | 1,678 | 1,678 | 1,678 |
-| §cost-levers | 639 | 336 | 395 |
-| §design-principles | 4,192 | 2,252 | 2,256 |
-| §grounding | 1,255 | 754 | 704 |
-| §governance-precedence | 2,325 | 963 | 1,062 |
-| §recommendations (with the Grounding rules list) | 7,283 | 3,366 | 3,722 |
-| §pipeline | 202 | 192 | 192 |
-| §spec-phase | 1,734 | 1,209 | 1,209 |
-| §spec-requirements | 2,507 | 1,111 | 1,231 |
-| §spec-lifecycle | 8,701 | 3,882 | 4,413 |
-| §plan-phase | 2,304 | 985 | 985 |
-| §tasks-phase | 1,853 | 749 | 749 |
-| §readiness-check | 664 | 485 | 596 |
-| §implement-phase | 6,792 | 1,528 | 1,525 |
-| §constants, §env-vars | 867 | 316 | 316 |
-| §bug-handling | 2,527 | 1,312 | 1,293 |
-| §scenarios, §scenario-promotion | 3,659 | 1,295 | 1,400 |
-| §rules | 8,382 | 2,238 | 2,729 |
-| §brownfield-inbox | 8,422 | 2,762 | 3,110 |
-| §brownfield-process | 1,571 | 667 | 680 |
-| §text-first-artifacts (with frontmatter schema and severity) | 14,106 | 5,882 | 6,047 |
-| §runtime-boundary (five principles) | 2,449 | 2,449 | 2,449 |
-| §runtime-host-integration (with eligibility, acquisition, versioning, non-scope) | 5,237 | 3,172 | 3,438 |
-| §drift-prevention | 14,459 | 5,959 | 6,442 |
-| §pipeline-boundaries | 3,410 | 1,098 | 1,462 |
-| §concurrent-features | 5,735 | 1,098 | 1,606 |
-| §cross-spec-impact | 3,178 | 779 | 955 |
-| §numbering | 2,097 | 745 | 806 |
-| §markdown-standards | 839 | 307 | 176 |
-| **Total** | **119,262** | **49,851** | **53,813** |
+| Section | Before | Now |
+| --- | --- | --- |
+| preamble | 195 | 187 |
+| §principles | 1,678 | 1,678 |
+| §cost-levers | 639 | 207 |
+| §design-principles | 4,192 | 2,116 |
+| §grounding | 1,255 | 671 |
+| §governance-precedence | 2,325 | 1,000 |
+| §recommendations (with the Grounding rules list) | 7,283 | 3,583 |
+| §pipeline | 202 | 112 |
+| §spec-phase | 1,734 | 1,099 |
+| §spec-requirements | 2,507 | 1,180 |
+| §spec-lifecycle | 8,701 | 4,240 |
+| §plan-phase | 2,304 | 907 |
+| §tasks-phase | 1,853 | 697 |
+| §readiness-check | 664 | 596 |
+| §implement-phase | 6,792 | 1,413 |
+| §constants, §env-vars | 867 | 316 |
+| §bug-handling | 2,527 | 1,195 |
+| §scenarios, §scenario-promotion | 3,659 | 1,274 |
+| §rules | 8,382 | 2,576 |
+| §brownfield-inbox | 8,422 | 2,763 |
+| §brownfield-process | 1,571 | 522 |
+| §text-first-artifacts (with frontmatter schema and severity) | 14,106 | 5,436 |
+| §runtime-boundary (five principles) | 2,449 | 2,415 |
+| §runtime-host-integration (with eligibility, acquisition, versioning, non-scope) | 5,237 | 3,016 |
+| §drift-prevention | 14,459 | 6,239 |
+| §pipeline-boundaries | 3,410 | 1,361 |
+| §concurrent-features | 5,735 | 1,424 |
+| §cross-spec-impact | 3,178 | 845 |
+| §numbering | 2,097 | 745 |
+| §markdown-standards | 839 | 176 |
+| **Total** | **119,262** | **49,989** |
 
 Three kinds of change, by destination:
 
-- **Moved to the command that applies it**, with the constitution keeping a pointer. The review window, coverage and record-age rules (§implement-phase's `examined`, review-window, pre-coverage-record, empty-diff-base, durable-contract and write-time-denominator bullets, 3,475 bytes) went to `framework/reference/review.md` §Window and coverage; the rule that the criteria-path count cannot be measured on an `in-progress` spec went to `framework/reference/analyze.md` §Acceptance-criterion path existence (advisory); the analyze record's per-field meanings to that file's §Record fields; and removing an inbox item by its text to `framework/reference/groom.md` §Inbox upkeep, whose decision tree already held the chore-and-blocked-item rules. Moving the mechanics alone could not reach one read, as the scenario's measurement warned: they came to about 6 KB.
-- **Dropped as restatement**: the three-cycles overview, the three-tiers table, Markdown Standards' copy of the lint rules (`.markdownlint-cli2.jsonc` is canonical), the opt-in invariant's history (specs 021 and 048 record it), the per-check severity list `/{project}:analyze`'s reference already holds, and section glosses and examples nothing cites.
-- **Compressed in place**: every other section, each rule kept with a load-bearing reason. The passages spec 021 quotes — the five principles, the eligibility criteria, the acquisition invariant, versioning, the non-scope list — are byte-identical, as are the Guiding Principles and the six original text-first principle bullets. All 32 anchor markers are byte-identical and in order, and every heading another file links to keeps its slug.
+- **Moved to the command that applies it**, with the constitution keeping a pointer. The review window, coverage and record-age rules (§implement-phase's `examined`, review-window, pre-coverage-record, empty-diff-base, durable-contract and write-time-denominator bullets, 3,475 bytes) went to `framework/reference/review.md` §Window and coverage; the rule that the criteria-path count cannot be measured on an `in-progress` spec went to `framework/reference/analyze.md` §Acceptance-criterion path existence (advisory); the analyze record's per-field meanings to that file's §Record fields; and removing an inbox item by its text to `framework/reference/groom.md` §Inbox upkeep, whose decision tree already held the chore-and-blocked-item rules. So did the rest of what one command applies: the review record's field meanings, with `scope`'s definition now in `framework/reference/review.md` §Window and coverage; the homes a routed finding lands in, the Groom decision tree's; the disposition task's shape, `framework/reference/implement.md`'s; and `/{project}:groom`'s referral of an item no spec covers to `/{project}:specify`, `framework/reference/groom.md`'s. Moving the mechanics alone could not reach one read, as the scenario's measurement warned: they came to about 6 KB.
+- **Dropped as restatement**: the three-cycles overview, the three-tiers table, Markdown Standards' copy of the lint rules (`.markdownlint-cli2.jsonc` is canonical), the opt-in invariant's history (specs 021 and 048 record it), the per-check severity list `/{project}:analyze`'s reference already holds, a second statement of markdown-by-default, the rule-ID prefix repeated under *Lifecycle*, the closing gloss on the third eligibility criterion, the no-code-without-a-spec sentence §pipeline-boundaries states, the `(spec NNN)` pointers into a corpus an adopter does not have, and glosses, examples and reasons the rule beside them does not need.
+- **Compressed in place**: every other section, each rule kept. The Guiding Principles and the five runtime principles are byte-identical. Spec 021's criteria bind the rest of §runtime-boundary: the three eligibility criteria, the acquisition invariant, the versioning rule, the non-scope list and the forward pointer to spec 022 all remain, as does the canonical-sources row pointing at `framework/constitution.md` §runtime-boundary. All 31 anchor markers, every heading and every bold span are byte-identical and in order.
 
-**The first cut reached 49,851 bytes and falsified what other specs quote.** A sweep of the 2,156 live-artifact lines that cite the constitution found 72 false claims at about 86 locations: verbatim quotes the compression reworded, and reasons it dropped. About 30 of those passages sit in the bodies, scenarios and data models of 16 `done` specs, the paused 022 and the draft 070, where correcting them would reopen each. The scenario's edge case — a quoted passage stays verbatim, or its spec takes the back-edge — so they were restored, net of 840 bytes of uncited glosses and examples, which a second pass found to be all the uncited text left. The other findings were corrected where they live: command and reference sources, script and runtime comments, and the in-progress specs. Plan claims in `done` specs about the constitution's former layout (013, 016, 024, 036, 045, 060, 062, 064) are routed to `041-task-pruning`'s task 21, whose rule makes a `done` spec's plan edit mechanical. 013's Resolved Question naming the schema table's former columns is a decision record, and 023 AC3's list of the sections its sweep had to reach is that pass's worklist; both stay as written. Claims the sweep rated borderline, whose substance still holds, were left as written.
+**A passage another spec quotes was kept true by meaning, not by bytes.** A first cut reached 49,851 bytes and falsified about 30 passages quoted or relied on in 16 `done` specs, so it was restored to 53,813 until the owner chose the read size (2026-10-27). The second cut was then swept hunk by hunk for what it falsified. A spec that states a rule in its own words is not falsified while the constitution keeps the rule; one that quotes the constitution's words as the constitution's, relies on a clause the cut removed, or carries a criterion naming that clause is. Where the passage bound one of the constitution's own rules, or sat in a spec another session holds open, the text was restored: the Validation Severity conditions 022 and 067 cite, a rule file's header declaring its ID prefix, the sequential spec `folds-into:` names, the closed category list under *When to write a rule*, the partial-read rule's tie to `QUAL-CLAIM-001`, and the reason a finding inside the current spec becomes its task. The rest were corrected where they live. Five `done` specs took the back-edge: 021 AC9, 062 AC25 and 064 AC12 are annotated as superseded in part, and 064's D7 line, 066's `review-scope-includes-uncommitted-work` and 051's `a-pending-fold-never-holds-done` are corrected. 050's own artifacts, `AGENTS.md` and the framework sources were edited in place, and spent `done`-spec tasks keep their wording.
 
-**So the ceiling is lowered to the size the cut reached, not to the read size**, and with the constitution over 50,000 bytes it is not imported at startup: `072-governing-documents-stay-within-one-read` AC6 bounds a `CLAUDE.md` import at 50,000 bytes. The template's constitution line, this repository's `CLAUDE.md` and the migration that would bring an adopter's `CLAUDE.md` to the import line wait on the scenario's open question. The import was proved to load with the method 072 used for AC6 before it was withdrawn: `claude -p` asked for the seven Business principles with every tool disallowed answered `NOT IN CONTEXT` without the import and listed them correctly with it, with zero tool calls both times.
+**The constitution is imported at startup.** This repository's `CLAUDE.md` imports `@framework/constitution.md` and the template `@.ductus/constitution.md`, each above `@AGENTS.md`, where the template carried it before 072. The method 072 used for AC6 proved the import loads. On 2026-10-27, `claude -p` with every tool disallowed was asked for two sentences only the constitution holds, the second its last line. With `@AGENTS.md` alone it answered `NOT IN CONTEXT`; with the import it quoted both verbatim. Neither run made a tool call, and they took 35,092 and 51,823 input tokens. An adopter's `CLAUDE.md` reaches the same line through two migrations. `claude-md-import-syntax` converts an `@import .ductus/constitution.md` line. `constitution-import`, ordered after it on the `id` tie-break, adds the line where nothing imports the constitution. That includes a `--ref=main` adopter whose `last_applied` is already `claude-md-import-syntax`, whom no edit to that migration would reach. `/{project}:target` still reads the constitution where no import loaded it: on an `AGENTS.md`-layout host, or on one that does not resolve `@path`.
 
-The review record's `scope` field now states what `write-review` records (task 36): the plan's Affected Files entries as written, a pattern counting once, united with the paths modified since `diff-base` — the deduplicated set `compute-review-scope` returns. `examined` counts files the review read, so the two are equal on a fully examined review only when no entry is a pattern.
+The review record's `scope` field (task 36) is defined in `framework/reference/review.md` §Window and coverage: the plan's Affected Files entries as written, a pattern counting once, united with the paths modified since `diff-base`. The constitution's table declares its type, as it does for every audit-record field.
 
 ## Classification
 
@@ -260,7 +260,7 @@ express; this spec declares that obligation in `cross-spec-impact:` so it gates
 | An acceptance criterion's parenthetical enumeration is a claim of its own, and it drifts from what the artifact does | Adopters write criteria carrying enumerations, and the enumeration goes stale while the requirement holds |
 | A spec with no recorded `in-progress` transition derives an *empty* diff base, and `write-review` then resolves `scope: 0` | Both primitives ship; the incoherent `examined`-over-zero record is reachable in any corpus |
 | A sweep can make a quoted instruction point at itself, and the identical sentence may be correct one file over — classify by *who emits it*, never by the string | **R** — classify a swept user-facing string by *who emits it*; adopters rename things too |
-| A spec body must not carry a point-in-time status section — it goes stale silently and then contradicts its own frontmatter | Pure spec-authoring rule; pipeline state is derived everywhere, not only here |
+| A spec body must not carry a point-in-time status section | Pure spec-authoring rule; pipeline state is derived everywhere, not only here |
 | Only a spec's durable contracts stale its review — `scenarios/*.md` and `data-model.md`, nothing else — and that is what prices a corpus sweep | The digest covers `scenarios/*.md` and `data-model.md` for every adopter; this is what prices any corpus sweep |
 | `criterion-path-existence` only sees a path inside backticks — an unbackticked one is not a finding, not a skip, and not a candidate | **R** — stated as how to write a path claim so it is checkable (backticked, interior slash, repo-relative) |
 | `unexamined` cannot be measured while the spec is `in-progress`, and the gate's own ordering is what hides that | The family is `done`-only and the gate ordering is the shipped one, so the trap is identical in any adopter repo |
@@ -281,7 +281,7 @@ express; this spec declares that obligation in `cross-spec-impact:` so it gates
 
 | Entry | Reason |
 | --- | --- |
-| A feature directory is not necessarily `NNN-slug` — ask `parse_feature_dir`, never the first three bytes | §numbering already states that the membership rule is defined in exactly one place and is called rather than restated; what remains here is the Rust function name |
+| A feature directory is not necessarily `NNN-slug` — ask `parse_feature_dir`, never the first three bytes | §numbering already states that one membership rule is called rather than restated; what remains here is the Rust function name |
 | A recorded measurement can encode a constraint you have not found yet — when a fresh derivation disagrees with a recorded one, hunt the constraint before concluding the record is wrong | **Discharged 2026-09-15 by task 22, not by a promotion pass.** AC21 added *a recorded measurement states its method and its units* to §grounding, which states this entry's disposition outright — re-derive at the recorded figure's own commit, then diff the field across its own history — and its diagnosis, that the reflex to trust the newer figure is wrong precisely where the older one was better informed. The `AGENTS.md` entry now points at that bullet, so promoting it again would write a second copy |
 
 #### Second round — project-only
@@ -486,7 +486,13 @@ The cut to one read moved these universal rules' canonical text out of the const
 | `framework/reference/analyze.md` | Modify | The in-progress measurement rule, and §Record fields for the analyze record's field meanings |
 | `framework/reference/groom.md` | Modify | §Inbox upkeep receives the remove-by-text rule |
 | `framework/commands/groom.md` | Modify | Step 8 points at §Inbox upkeep instead of quoting a constitution sentence that no longer exists |
-| `scripts/lint-governing-size.sh` | Modify | The constitution's ceiling is lowered to the size the cut reached |
+| `scripts/lint-governing-size.sh` | Modify | The constitution's ceiling is lowered to the 50,000-byte read size |
+| `scripts/tests/test-lint-governing-size.sh` | Modify | Check H holds both ceilings to `DEFAULT_READ_SIZE_BYTES` |
+| `CLAUDE.md` | Modify | Imports `@framework/constitution.md` above `@AGENTS.md` |
+| `framework/templates/project/claude-md.md` | Modify | Imports `@.ductus/constitution.md` above `@AGENTS.md` |
+| `framework/migrations/claude-md-import-syntax.md` | Modify | Converts the `@import .ductus/constitution.md` line instead of removing it |
+| `framework/migrations/constitution-import.md` | Create | Adds `@.ductus/constitution.md` where nothing imports the constitution |
+| `framework/migrations.toml` | Modify | Registers `constitution-import` and corrects `claude-md-import-syntax`'s summary |
 | `framework/commands/amend.md` | Modify | Its quote of §spec-lifecycle's third back-edge matches the text |
 | `runtime/src/primitives/inbox_standing.rs` | Modify | Its doc comment cites what §brownfield-inbox now states |
 | `runtime/src/primitives/check_artifacts.rs` | Modify | Two doc comments cite §tasks-phase as it now reads |

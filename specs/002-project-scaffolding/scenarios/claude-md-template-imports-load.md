@@ -10,18 +10,17 @@ On 2026-10-26, `072-governing-documents-stay-within-one-read` found that this te
 
 ## Behavior
 
-- The template imports the project's guide as `@AGENTS.md`.
-- The template does not import the constitution while it exceeds the 50,000-byte read size, and the pipeline commands keep reading it when they need it. Removing the line changes nothing an adopter had, because it never loaded. Importing the constitution becomes a choice for the change that lands `050-constitution`'s cut to one read.
+- The template imports the constitution as `@.ductus/constitution.md` and the project's guide as `@AGENTS.md`, the constitution first, where the old template put it. `050-constitution`'s cut brought the constitution to one read, the 50,000-byte read size, so it loads at startup with `AGENTS.md`.
 - For `claude-style` agents, the bootstrap renders each registered shared constitution into the managed block as `@{document-path}`. It then loads at startup with `AGENTS.md`, so a session that starts from a pasted prompt and runs no command still has its rules.
 - `/{project}:target` loads `.ductus/constitution.md` and each shared constitution only when it is not already in context. An imported document counts as loaded, so none is read twice.
-- A migration rewrites an existing adopter's `CLAUDE.md`, which the bootstrap never overwrites because the adopter owns it. Each `@import <path>` line outside code becomes `@<path>`, and the line importing `.ductus/constitution.md` is removed.
+- A migration rewrites an existing adopter's `CLAUDE.md`, which the bootstrap never overwrites because the adopter owns it. Each `@import <path>` line outside code becomes `@<path>`, the line importing `.ductus/constitution.md` included. A second migration, `constitution-import`, adds `@.ductus/constitution.md` where nothing imports the constitution, since a `--ref=main` adopter may already have run the first one's earlier form, which removed that line.
 - This spec's §CLAUDE.md template and AC3 state the form the template now writes, and every framework document that describes the old form is corrected with them.
 
 ## Edge Cases
 
-- **A line already fixed by hand.** An adopter whose `CLAUDE.md` already reads `@AGENTS.md` is left as it is, because the migration rewrites only `@import` lines.
+- **A line already fixed by hand.** A `@AGENTS.md` line, or any other `@path` line, is never rewritten, because `claude-md-import-syntax` rewrites only `@import` lines, and a file that already imports `@.ductus/constitution.md` gains nothing from `constitution-import`.
 - **`@import` inside code.** An `@import` inside a code span or fence is text, not an import, and stays.
-- **No `@import` line.** A `CLAUDE.md` with none is not touched.
+- **No `@import` line.** `claude-md-import-syntax` leaves a `CLAUDE.md` with none untouched; `constitution-import` adds `@.ductus/constitution.md` to it when nothing imports the constitution.
 - **Other agents.** Agents that read `AGENTS.md` natively, without `CLAUDE.md`, are unaffected.
 - **A host that does not resolve `@path`.** Auggie reads `CLAUDE.md` natively. Whether it resolves `@AGENTS.md` and `@path` imports is **unverified**, because Auggie could not be run where this was built (2026-10-26). If it does not, its sessions start without `AGENTS.md`, as they did under `@import`, and `/{project}:target`'s read still loads the constitutions, which is the reason that read stays.
 - **A shared constitution outside the project directory.** Claude Code treats an import whose path leaves the working directory as external: it asks once per project, in an interactive session, to approve it, and loads nothing until then, after a refusal, or in a non-interactive run. Measured 2026-10-26: in a scratch project whose `CLAUDE.md` held only `@../gov/constitution.md`, a `claude -p` run with every file tool disallowed answered `UNKNOWN` to a question only that file answered, with no tool call, while `@AGENTS.md` in a sibling project answered correctly, and `@import AGENTS.md` answered `UNKNOWN`. `/{project}:target` loads such a document, since it is not in context.

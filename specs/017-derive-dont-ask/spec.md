@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: []
 next-criterion: 28
 ---
@@ -143,7 +143,7 @@ Both repos run the generators in CI and fail the build on a non-empty diff — t
 - [x] AC13: `/clarify` and `/plan` scan the target spec body for sibling-spec links and propose missing `dependencies` entries; the author confirms or removes
 - [x] AC14: `/implement` derives the write-boundary check from `git diff` against the spec dir's first commit, not from a manually maintained Affected Files list; the plan's Affected Files section is documented as a planning aid only
 - [x] AC15: `/analyze` no longer offers `--fix` for checkbox state; the Fix Mode section is removed and the checkbox-related entries in the Fixable list are gone
-- [x] AC16: Root `constitution.md` is deleted; `framework/constitution.md` is the sole canonical file; root `CLAUDE.md` imports it via `@import framework/constitution.md`; no root-constitution generator exists
+- [x] AC16: Root `constitution.md` is deleted; `framework/constitution.md` is the sole canonical file; root `CLAUDE.md` imports it as `@framework/constitution.md`; no root-constitution generator exists
 - [x] AC17: `/clarify`, `/plan`, and `/implement` each include a cross-spec scan step that surfaces sibling slugs cited in the body but not in `dependencies`; `/implement` completion additionally surfaces files outside the target spec dir touched during the implementation window
 - [x] AC18: A new rule file `framework/rules/configuration-cross.md` exists with rules covering shared constants, module-local constants, configurable values backed by env vars, env-var defaults, env-var validation, and unit-suffixed time variables; each rule has a Verification step `/analyze` runs; constitution §constants and §env-vars shrink to one-line pointers
 - [x] AC19: `/analyze` runs cleanly on every existing spec (000–016) plus this spec after migration — no new findings introduced by schema changes; stale fields in done specs are silently ignored per the open-schema rule

@@ -13,7 +13,7 @@
 #   E. AGENTS.md absent from the index fails rather than passing vacuously
 #   F. B's file brought back under the ceiling passes
 #   G. a file the index holds but whose blob is gone fails as unreadable
-#   H. the AGENTS.md ceiling equals the runtime's DEFAULT_READ_SIZE_BYTES
+#   H. both ceilings equal the runtime's DEFAULT_READ_SIZE_BYTES
 #   I. a ceiling that is not a whole number of bytes fails rather than passing
 #
 # Usage: scripts/tests/test-lint-governing-size.sh
@@ -140,15 +140,17 @@ else
   fail "G: failed with the wrong message: $(cat "$WORK/g.out")"
 fi
 
-# H. the ceiling is a copy of a runtime constant, so it is held to it here.
+# H. each ceiling is a copy of a runtime constant, so both are held to it here.
 RUNTIME_SRC="$REPO_ROOT/runtime/src/primitives/check_artifact_size.rs"
 runtime_default="$(grep -o 'DEFAULT_READ_SIZE_BYTES: u64 = [0-9_]*' "$RUNTIME_SRC" 2>/dev/null | head -n 1 | sed 's/.*= //; s/_//g')"
 if [ -z "$runtime_default" ]; then
   fail "H: DEFAULT_READ_SIZE_BYTES not found in $RUNTIME_SRC — nothing to compare the ceiling with"
-elif [ "$runtime_default" = "$AGENTS_CEILING" ]; then
-  pass "H: the AGENTS.md ceiling equals the runtime's DEFAULT_READ_SIZE_BYTES ($runtime_default)"
-else
+elif [ "$runtime_default" != "$AGENTS_CEILING" ]; then
   fail "H: the AGENTS.md ceiling ($AGENTS_CEILING) differs from DEFAULT_READ_SIZE_BYTES ($runtime_default)"
+elif [ "$runtime_default" != "$CONSTITUTION_CEILING" ]; then
+  fail "H: the constitution's ceiling ($CONSTITUTION_CEILING) differs from DEFAULT_READ_SIZE_BYTES ($runtime_default)"
+else
+  pass "H: both ceilings equal the runtime's DEFAULT_READ_SIZE_BYTES ($runtime_default)"
 fi
 
 # I. a ceiling typed as `50,000` makes `[ -gt ]` error to stderr, which an
