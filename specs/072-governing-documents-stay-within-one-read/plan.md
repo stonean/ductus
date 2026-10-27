@@ -332,6 +332,6 @@ The probe question is picked after the cut, from an entry that survives it.
 
 ## Cross-spec impact
 
-- **`050-constitution`** owed the constitution's cut to one read (`scenarios/the-constitution-fits-one-read.md`, task 35). That scenario's link back to this spec discharges the `cross-spec-impact` declaration. The cut brought the constitution to 49,956 bytes and lowered this spec's constitution ceiling in `scripts/lint-governing-size.sh` to the 50,000-byte read size.
+- **`050-constitution`** owed the constitution's cut to one read (`scenarios/the-constitution-fits-one-read.md`, task 35). That scenario's link back to this spec discharges the `cross-spec-impact` declaration. The cut brought the constitution to 49,980 bytes and lowered this spec's constitution ceiling in `scripts/lint-governing-size.sh` to the 50,000-byte read size.
 - **`050-constitution` plan §Classification** loses the rows of entries this spec removes, or re-keys them to the entry they merged into, so Family 38 keeps matching. That is a sync of 050's own record while it is `in-progress`.
 - **`050-constitution` AC3** (each promoted entry's `AGENTS.md` line points without restating) is false against the tree at `5cb01fdb`, and the **pointer** disposition makes it true again. No edit to 050 is owed for that, because the criterion already states the shape this spec restores.

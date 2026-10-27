@@ -122,7 +122,7 @@ carries that weight.
 
 ### The constitution fits one read
 
-`framework/constitution.md` went from 119,262 to 49,956 bytes on disk (`wc -c`), within the 50,000-byte read size `check-artifact-size` applies (spec 063), and `scripts/lint-governing-size.sh` holds it at that read size. An adopter's installed copy differs by 27 bytes for each character its project name has beyond nine, since `{project}` appears 27 times, so it stays within the 51,200-byte caps for a name of up to 55 characters. The read size is the target because OpenCode's and Pi's read tools return at most 51,200 bytes in one call: at 53,811 bytes, `/{project}:target`'s read on either stopped after line 500 (the scenario's Resolved Question). Measured per anchored section — the bytes from one `<!-- §anchor -->` marker to the next, so a subsection is counted with the marked section above it:
+`framework/constitution.md` went from 119,262 to 49,980 bytes on disk (`wc -c`), within the 50,000-byte read size `check-artifact-size` applies (spec 063), and `scripts/lint-governing-size.sh` holds it at that read size. An adopter's installed copy differs by 27 bytes for each character its project name has beyond nine, since `{project}` appears 27 times, so it stays within the 51,200-byte caps for a name of up to 54 characters. The read size is the target because OpenCode's and Pi's read tools return at most 51,200 bytes in one call: at 53,811 bytes, `/{project}:target`'s read on either stopped after line 500 (the scenario's Resolved Question). Measured per anchored section — the bytes from one `<!-- §anchor -->` marker to the next, so a subsection is counted with the marked section above it:
 
 | Section | Before | Now |
 | --- | --- | --- |
@@ -149,14 +149,14 @@ carries that weight.
 | §brownfield-process | 1,571 | 522 |
 | §text-first-artifacts (with frontmatter schema and severity) | 14,106 | 5,415 |
 | §runtime-boundary (five principles) | 2,449 | 2,415 |
-| §runtime-host-integration (with eligibility, acquisition, versioning, non-scope) | 5,237 | 3,016 |
+| §runtime-host-integration (with eligibility, acquisition, versioning, non-scope) | 5,237 | 3,040 |
 | §drift-prevention | 14,459 | 6,239 |
 | §pipeline-boundaries | 3,410 | 1,361 |
 | §concurrent-features | 5,735 | 1,424 |
 | §cross-spec-impact | 3,178 | 845 |
 | §numbering | 2,097 | 745 |
 | §markdown-standards | 839 | 176 |
-| **Total** | **119,262** | **49,956** |
+| **Total** | **119,262** | **49,980** |
 
 Three kinds of change, by destination:
 
