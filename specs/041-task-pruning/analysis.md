@@ -1,21 +1,23 @@
 ---
 spec: 041-task-pruning
-last-run: 2026-10-01T22:08:36Z
-analyzed-against: 7f1688a2cbbe12b68d8e541b6f5fe3f029c6e214
+last-run: 2026-10-27T04:23:55Z
+analyzed-against: 88768fe67738169b56f4f60554eb67b383858398
 hard-fail: 0
 blocking-findings: 0
 advisory: 12
-unexamined: 1
+unexamined: 14
 analyzed-digest:
-  data-model.md: d1e04eeaa9f74921b26f7c3b5101c70832e7469dfc590f15e787d24cea604535
-  plan.md: 57401c526f70fe60dfe826c5ab139bf1eef02ac1cc0c14dd2a1a2b5e386b4853
-  review.md: 3762ffcbbce67e89077c57651713fc7844455b4d42583de5a15f80a4a4ffa42f
-  scenarios/plan-records-the-design-as-it-stands.md: a50174ff23b21bc5475d52cb6f289f06085066fae8c7151fbf1be8eaa727221b
+  data-model.md: 618d6ecf7942d79fb7f7d74344e4e29e790e0f7991044fac25b32621d0f8bda9
+  plan.md: 32e671c2ed42e4ca32521e52b34f3ea3b5822bfdd37f44954cf880aefc03e232
+  review.md: ee22173d56ef97323c2fca5ec0e2d697fe50d8b69eec29547eec21357beb5a81
+  scenarios/a-plan-edit-does-not-reopen-a-done-spec.md: 0cb04f76649997738f1c988046a93e9b2e9e2c7d000f6e0f732940c89e79acdc
+  scenarios/plan-records-the-design-as-it-stands.md: d31c168a226de2a29d27b58f1fa9e188c281387cd4340dd5e68ba3eefbc0e30f
   scenarios/prune-all-walks-every-spec.md: 4b605a7c3d07bff5e6a90bd02e982e93f7360d12f3934f9663a0eb44ebc9fc92
-  scenarios/prune-reduces-the-spec-directory.md: 9f59c1ae42c42cc57e4f7a86379aefed593080ddbe40a0bbeea9e11c59bbb604
-  spec.md: 24f644fd65c2b77ca97dcddc57dc0798714dd6e0e4555d0fcb863b83c2825080
-  tasks.md: 827503ba4343c00b59a983a16585d2092d0bcffd70d949458ade8b3da9a0533e
+  scenarios/prune-reduces-the-spec-directory.md: 7a987ae34945c37103ef63ff84756a64c3ca30ce8fd373ee66e88def90e5c8f3
+  spec.md: fe8af8ab096265c5424c867490c037ab50cdc76720279d3fe459a4e559c9fe3e
+  tasks.md: 8fc9ad39147f73127de73b6f5be458fd7839764fc550b6213edf6f8b958e729d
 unexamined-by-reason:
+  root-absent: 13
   ships-to-adopter: 1
 blocking: false
 dispositions:
@@ -90,7 +92,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 12 advisory; not blocking. 1 unexamined target(s). Dispositions: 0 fixed, 0 routed, 12 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 12 advisory; not blocking. 14 unexamined target(s). Dispositions: 0 fixed, 0 routed, 12 discarded, 0 undispositioned.
 
 ## Hard failures
 
@@ -102,7 +104,7 @@ decisions:
 
 ## Advisory findings
 
-- rule-assessment — BE-METRIC-001: the prune-plan MCP handler commits to no rate, error or duration metrics — `specs/041-task-pruning/plan.md` — **discarded**: the runtime is a per-agent stdio process with no metrics pipeline, and no primitive emits metrics; adding the first belongs to a spec about the runtime's observability (as discarded in 062's analysis)
+- rule-assessment — BE-METRIC-001: the prune-plan MCP handler commits to no rate, error or duration metrics — `specs/041-task-pruning/spec.md` — **discarded**: the runtime is a per-agent stdio process with no metrics pipeline, and no primitive emits metrics; adding the first belongs to a spec about the runtime's observability (as discarded in 062's analysis)
 - grounding — plan.md gives 842 sections and 161,841 bytes over 60 specs with no command — `specs/041-task-pruning/plan.md` — **discarded**: a measurement the sentence dates to when the walk was built, kept as the reason the walk lists lines; re-deriving it changes no decision
 - grounding — spec.md says every back-edge, amend and plan/implement cycle appends tasks — `specs/041-task-pruning/spec.md` — **discarded**: motivation describing how task lists grow, not a claim the design rests on
 - grounding — spec.md says ductus has no command to reclaim that space — `specs/041-task-pruning/spec.md` — **discarded**: motivation stating the gap this spec filled; /prune now exists by this spec
@@ -117,6 +119,7 @@ decisions:
 
 ## Unexamined targets
 
+- root-absent: 13
 - ships-to-adopter: 1
 
 ## Fixed in this run
