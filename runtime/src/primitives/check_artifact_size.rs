@@ -1032,6 +1032,26 @@ mod tests {
         );
     }
 
+    /// Only the plan's trim is exempt: trimming any other artifact still
+    /// reopens a `done` spec unless the trim changes no claim (spec 063,
+    /// `a-plan-trim-does-not-reopen-a-done-spec`).
+    #[test]
+    fn a_data_model_trim_still_reopens_a_done_spec_unless_no_claim_changes() {
+        let result = check(&sized("done", &[("data-model.md", 500)])).unwrap();
+        let effects: Vec<(FixKind, Option<OnDone>)> = result.oversized[0]
+            .fixes
+            .iter()
+            .map(|f| (f.fix, f.on_done))
+            .collect();
+        assert_eq!(
+            effects,
+            [
+                (FixKind::Split, Some(OnDone::Always)),
+                (FixKind::Trim, Some(OnDone::IfClaimChanges)),
+            ]
+        );
+    }
+
     #[test]
     fn warnings_say_may_never_will_and_name_only_real_commands() {
         let files = [

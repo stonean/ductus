@@ -811,8 +811,10 @@ commit comparison, which is why this row and the pre-done gate cannot disagree
 record as stale merely because content the analysis already examined has since
 been committed. Writing this review supersedes the record because `review.md`
 is itself an analyze subject, not because `HEAD` moved. On a `done` spec the
-comparison leaves out `plan.md` and `tasks.md`, whose edits take no back-edge
-there (§spec-lifecycle), so a plan correction leaves the row `current`.
+comparison ignores an in-place edit to `plan.md` or `tasks.md` (a deleted one
+still counts), since such an edit adding no unchecked task takes no back-edge
+there (§spec-lifecycle), so a plan correction alone does not supersede the
+record.
 
 The review record works the same way, over its own narrower subject set —
 one comparison, two subject sets. See `reviewed-digest` under

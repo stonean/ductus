@@ -174,20 +174,20 @@ before it proposes the section.
 
 `prune-plan`'s result carries `reopen-required` on every call against a
 `done` spec, and omits it otherwise — absent is not computed, never `false`.
-It is true when any design-record section's text differs from the same
-section in `plan.md` at HEAD, or when `tasks.md` adds an unchecked checkbox —
-holds an unchecked checkbox line, trimmed, more times than it does at HEAD,
-so a box moved or re-indented adds nothing — the two diff-visible triggers
-the scenario fixes. A preview computes it over the tree as it stands:
-removing a section outside the record changes no design-record section, so
-a reopen that edits made before the run already require is known before the
-host writes anything. An apply computes it over the tree it leaves, whether
+It is true when `tasks.md` adds an unchecked checkbox — holds an unchecked
+checkbox line, trimmed, more times than it does at HEAD, so a box moved or
+re-indented adds nothing — the diff-visible trigger the scenario fixes. An
+edit to `plan.md` never sets it, whatever it changes: §spec-lifecycle gives a
+`plan.md` or `tasks.md` edit adding no unchecked task no back-edge
+(`scenarios/a-plan-edit-does-not-reopen-a-done-spec.md`). A preview computes
+it over the tree as it stands, so a reopen that edits made before the run
+already require is known before the host writes anything. An apply computes it over the tree it leaves, whether
 or not the removal was refused, because the host's moves are already on
 disk, and before its own write, so an apply that cannot read HEAD writes
 nothing. Both read HEAD through one shared reader, promoted from the private
 `read_blob_at_head` in `runtime/src/primitives/check_stuck.rs` into `mod.rs`
 and built on `ProjectRepository`, so a project in a repository subdirectory
-resolves correctly (the 059 convention). An artifact absent at HEAD is not a
+resolves correctly (the 059 convention). A `tasks.md` absent at HEAD is not a
 trigger: only a `done` spec is reopened, and a `done` spec's artifacts are
 committed. The command, not the primitive, performs the reopen with
 `set-status` (`from: done`), so status mutation stays in the one primitive
@@ -391,7 +391,9 @@ buys nothing here.
 | `runtime/src/primitives/prune_plan.rs` | Create | Segmentation, classification, finding key, digest-guarded removal, reopen trigger |
 | `runtime/src/primitives/mod.rs` | Edit | `pub mod prune_plan;`, the promoted HEAD-blob reader, the shared block renderer, the hex encoder the section digest uses |
 | `runtime/src/primitives/check_stuck.rs` | Edit | Calls the promoted HEAD-blob reader |
-| `runtime/src/primitives/analyze_subjects.rs` | Edit | Its hex encoder moved to `mod.rs`; `prune-plan` named among `analysis.md`'s readers |
+| `runtime/src/primitives/analyze_subjects.rs` | Edit | Its hex encoder moved to `mod.rs`; `prune-plan` named among `analysis.md`'s readers; a `done` spec's freshness ignores an in-place `plan.md` or `tasks.md` edit |
+| `runtime/src/primitives/check_artifact_size.rs` | Edit | A `plan.md` trim on a `done` spec does not reopen it |
+| `scripts/mutation/plan-edit-takes-no-back-edge.py` | Create | Mutations proving the plan rule's tests |
 | `runtime/src/primitives/write_analysis.rs` | Edit | `finding_key_of`, the key builder `prune-plan` shares |
 | `runtime/src/interpreter/analyze_tally.rs` | Edit | The `plan-record` advisory in an exec analyze record |
 | `runtime/src/schema/status.rs` | Edit | Names the tally as a consumer of the `planned`-onward set |
@@ -403,7 +405,7 @@ buys nothing here.
 | `specs/058-findings-route-at-discovery/review.md` | Refresh | The digest the renumbering stales |
 | `framework/runtime-tools.txt` | Edit | Manifest entry `prune-plan` |
 | `framework/bootstrap/configure/*.md` | Regenerate | MCP allow-blocks (via `gen-configure-mcp.sh`) |
-| `framework/constitution.md` | Edit | §plan-phase rule; §tasks-phase sentence; §implement-phase triage clause |
+| `framework/constitution.md` | Edit | §plan-phase rule; §tasks-phase sentence; §implement-phase triage clause; §spec-lifecycle's plan rule |
 | `framework/templates/spec/plan.md` | Edit | Trade-offs and optional sections; what-stays-out comment |
 | `framework/templates/spec/tasks.md` | Edit | Working-notes guidance |
 | `framework/commands/prune.md` | Edit | Spec-directory scope, discards, reopen, `--all` |

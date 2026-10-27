@@ -78,22 +78,6 @@ pub(crate) fn is_analyze_subject(rel_within_feature: &str) -> bool {
         .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
 }
 
-/// An analyze subject a `done` spec's record is still judged on: every one but
-/// `plan.md` and `tasks.md`.
-///
-/// An edit confined to those two takes no back-edge on a `done` spec
-/// (§spec-lifecycle), so it must not stale the record either: a stale
-/// analysis on a spec nobody may reopen asks for a re-run that re-verifies
-/// nothing, as the review record's narrower set already concluded for every
-/// non-contract artifact. A spec short of `done` keeps both, because the
-/// pre-`done` gate reads its analysis against them (spec 041,
-/// `a-plan-edit-does-not-reopen-a-done-spec`).
-pub(crate) fn is_done_analyze_subject(rel_within_feature: &str) -> bool {
-    is_analyze_subject(rel_within_feature)
-        && rel_within_feature != "plan.md"
-        && rel_within_feature != "tasks.md"
-}
-
 /// A scenario or the data model — the artifacts a **review** reads, and the
 /// subject set of the review record.
 ///
@@ -261,9 +245,8 @@ pub(crate) fn freshness_of(
         }
     }
     // A subject the record covered that is now gone is a change too — a
-    // deleted scenario alters what an analysis would find. A recorded path the
-    // predicate no longer counts is not a subject, so it is not compared.
-    for path in recorded.keys().filter(|path| is_subject(path)) {
+    // deleted scenario alters what an analysis would find.
+    for path in recorded.keys() {
         if !current.digests.contains_key(path) {
             changed.insert(format!("{rel_dir}/{path}"));
         }
@@ -347,12 +330,7 @@ pub(crate) fn analyze_freshness(
     let Some(analyze) = analyze else {
         return RecordFreshness::NeverRun;
     };
-    let spec_path = repo.join(rel_dir).join("spec.md");
-    let done = read_text(&spec_path)
-        .ok()
-        .and_then(|content| crate::primitives::frontmatter_status(&content, &spec_path))
-        .is_some_and(|status| status == "done");
-    freshness_of(
+    let freshness = freshness_of(
         repo,
         rel_dir,
         analyze.last_run.as_deref(),
@@ -360,13 +338,60 @@ pub(crate) fn analyze_freshness(
         // Empty is treated as absent here: `spec.md` is always a subject, so
         // an empty analyze digest can only mean the record predates the field.
         Some(&analyze.analyzed_digest).filter(|d| !d.is_empty()),
-        if done {
-            is_done_analyze_subject
-        } else {
-            is_analyze_subject
-        },
+        is_analyze_subject,
         "analyzed-digest",
-    )
+    );
+    let spec_path = repo.join(rel_dir).join("spec.md");
+    let done = read_text(&spec_path)
+        .ok()
+        .and_then(|content| crate::primitives::frontmatter_status(&content, &spec_path))
+        .is_some_and(|status| status == "done");
+    if done {
+        without_plan_edits(repo, rel_dir, freshness)
+    } else {
+        freshness
+    }
+}
+
+/// A `done` spec's freshness with content edits to `plan.md` and `tasks.md`
+/// dropped.
+///
+/// A `plan.md` or `tasks.md` edit adding no unchecked task takes no back-edge
+/// on a `done` spec (§spec-lifecycle), so the record is not judged stale for
+/// one: re-running analyze for it cannot reopen the spec. An edit that adds an
+/// unchecked task is the same diff here and is reopened by the commands that
+/// read `tasks.md`, not by this row. A **deleted** `plan.md` or `tasks.md`
+/// still counts, because analyze reports a missing one at `planned` or later as
+/// blocking. A spec short of `done` keeps both, because the pre-`done` gate
+/// reads its analysis against them (spec 041,
+/// `a-plan-edit-does-not-reopen-a-done-spec`).
+fn without_plan_edits(repo: &Path, rel_dir: &str, freshness: RecordFreshness) -> RecordFreshness {
+    let RecordFreshness::Stale {
+        last_run,
+        analyzed_against,
+        paths,
+    } = freshness
+    else {
+        return freshness;
+    };
+    let edited_in_place = |path: &String| {
+        ["plan.md", "tasks.md"]
+            .iter()
+            .any(|name| *path == format!("{rel_dir}/{name}") && repo.join(path).is_file())
+    };
+    let paths: Vec<String> = paths.into_iter().filter(|p| !edited_in_place(p)).collect();
+    if paths.is_empty() {
+        RecordFreshness::Current {
+            last_run,
+            analyzed_against,
+        }
+    } else {
+        RecordFreshness::Stale {
+            last_run,
+            analyzed_against,
+            paths,
+        }
+    }
 }
 
 /// The freshness of a spec's `review:` record.
@@ -592,7 +617,8 @@ mod tests {
     }
 
     /// The `done` half of spec 041's `a-plan-edit-does-not-reopen-a-done-spec`:
-    /// a plan or tasks edit takes no back-edge, so it does not stale the record.
+    /// a plan or tasks edit in place, adding no unchecked task, takes no
+    /// back-edge, so it does not stale the record.
     #[test]
     fn a_plan_or_tasks_edit_does_not_stale_a_done_specs_record() {
         let tmp = tempdir().unwrap();
@@ -637,20 +663,22 @@ mod tests {
         assert_eq!(paths, vec!["specs/001-x/scenarios/a.md".to_string()]);
     }
 
-    /// A recorded `plan.md` the `done` predicate no longer counts is not read as
-    /// a deleted subject.
+    /// A deleted `plan.md` on a `done` spec still stales its record: analyze
+    /// reports a missing plan at `planned` or later as blocking, so only an
+    /// edit in place is dropped.
     #[test]
-    fn a_done_specs_recorded_plan_is_not_a_deleted_subject() {
+    fn a_done_specs_deleted_plan_still_stales_its_record() {
         let tmp = tempdir().unwrap();
         let dir = tmp.path().join("specs/001-x");
         seed(&dir, "");
         let analyze = recorded_at(&dir, "done");
         fs::remove_file(dir.join("plan.md")).unwrap();
-        let result = analyze_freshness(tmp.path(), "specs/001-x", Some(&analyze));
-        assert!(
-            matches!(result, RecordFreshness::Current { .. }),
-            "{result:?}"
-        );
+        let RecordFreshness::Stale { paths, .. } =
+            analyze_freshness(tmp.path(), "specs/001-x", Some(&analyze))
+        else {
+            panic!("a deleted plan must stale a done spec's record");
+        };
+        assert_eq!(paths, vec!["specs/001-x/plan.md".to_string()]);
     }
 
     /// A deleted scenario changes what an analysis would find, so a subject the

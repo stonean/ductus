@@ -30,7 +30,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 ## 5. Implement scenario: a-done-specs-plan-edit-leaves-its-analysis-current
 
 - [x] Implement the behavior described in `scenarios/a-done-specs-plan-edit-leaves-its-analysis-current.md`
-- [x] `analyze_subjects::analyze_freshness` judges a `done` spec on `is_done_analyze_subject`, every analyze subject but `plan.md` and `tasks.md`, and `freshness_of` compares only recorded paths its predicate counts; `a_plan_or_tasks_edit_does_not_stale_a_done_specs_record`, `a_plan_edit_stales_an_open_spec_and_a_spec_edit_stales_a_done_one` and `a_done_specs_recorded_plan_is_not_a_deleted_subject` hold each direction, and mutations M2 and M3 in `scripts/mutation/plan-edit-takes-no-back-edge.py` kill them (for `041-task-pruning`'s `a-plan-edit-does-not-reopen-a-done-spec`)
+- [x] `analyze_subjects::analyze_freshness` drops an in-place `plan.md` or `tasks.md` edit from a `done` spec's changed paths (`without_plan_edits`), keeping a deleted one; `a_plan_or_tasks_edit_does_not_stale_a_done_specs_record`, `a_plan_edit_stales_an_open_spec_and_a_spec_edit_stales_a_done_one` and `a_done_specs_deleted_plan_still_stales_its_record` hold each direction, and mutations M2 and M3 in `scripts/mutation/plan-edit-takes-no-back-edge.py` kill them (for `041-task-pruning`'s `a-plan-edit-does-not-reopen-a-done-spec`)
 - [x] §Record freshness and `data-model.md` §Record freshness state the `done` exclusion
 
 - **Done when**: The scenario's behavior holds in `runtime/src/primitives/analyze_subjects.rs`, its tests fail with the behavior removed, and 066's spec and data model describe the comparison as it runs.

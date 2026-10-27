@@ -28,16 +28,16 @@ MUTATIONS = [
     (
         'M2 a done spec is judged on every analyze subject',
         'src/primitives/analyze_subjects.rs',
-        '        if done {\n            is_done_analyze_subject\n        } else {\n            is_analyze_subject\n        },',
-        '        if done || !done {\n            is_analyze_subject\n        } else {\n            is_done_analyze_subject\n        },',
+        '    if done {\n        without_plan_edits(repo, rel_dir, freshness)\n    } else {\n        freshness\n    }',
+        '    let _ = done;\n    freshness',
         'analyze_subjects::tests::a_plan_or_tasks_edit_does_not_stale_a_done_specs_record',
     ),
     (
-        'M3 a recorded path the predicate no longer counts is read as deleted',
+        'M3 a deleted plan on a done spec is dropped like an edit in place',
         'src/primitives/analyze_subjects.rs',
-        '    for path in recorded.keys().filter(|path| is_subject(path)) {',
-        '    for path in recorded.keys() {',
-        'analyze_subjects::tests::a_done_specs_recorded_plan_is_not_a_deleted_subject',
+        '            .any(|name| *path == format!("{rel_dir}/{name}") && repo.join(path).is_file())',
+        '            .any(|name| *path == format!("{rel_dir}/{name}"))',
+        'analyze_subjects::tests::a_done_specs_deleted_plan_still_stales_its_record',
     ),
     (
         'M4 trimming a done spec plan reopens it unless the trim changes no claim',
@@ -45,5 +45,12 @@ MUTATIONS = [
         '        (_, FixKind::Prune) | (ArtifactKind::Plan, FixKind::Trim) => OnDone::Never,',
         '        (_, FixKind::Prune) => OnDone::Never,',
         'check_artifact_size::tests::the_effect_on_done_is_named_only_at_done',
+    ),
+    (
+        'M5 a data-model trim on a done spec is exempt like the plan trim',
+        'src/primitives/check_artifact_size.rs',
+        '        (_, FixKind::Prune) | (ArtifactKind::Plan, FixKind::Trim) => OnDone::Never,',
+        '        (_, FixKind::Prune) | (ArtifactKind::Plan | ArtifactKind::DataModel, FixKind::Trim) => OnDone::Never,',
+        'check_artifact_size::tests::a_data_model_trim_still_reopens_a_done_spec_unless_no_claim_changes',
     ),
 ]

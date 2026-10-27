@@ -41,15 +41,14 @@ Slash commands are markdown the agent reads and follows. The agent parses YAML d
 
 ### Constitution section placement
 
-New `§text-first-artifacts` section placed immediately after `§scenarios` and before `§pipeline-boundaries`. Reasoning: scenarios introduce the last artifact kind covered by the schema, so the principle naturally follows; pipeline-boundaries is a higher-level governance rule that benefits from artifact rules being established first. The HTML comment anchor `<!-- §text-first-artifacts -->` follows existing convention.
+New `§text-first-artifacts` section placed after `§scenarios` (and the rules and brownfield sections that follow it) and before `§pipeline-boundaries`. Reasoning: scenarios introduce the last artifact kind covered by the schema, so the principle naturally follows; pipeline-boundaries is a higher-level governance rule that benefits from artifact rules being established first. The HTML comment anchor `<!-- §text-first-artifacts -->` follows existing convention.
 
 ### Schema declared as a markdown table
 
-Per resolved Q1. The constitution table has columns `Field | Required | Type | Description`, a field's allowed values stated in its Description. Below the table:
+Per resolved Q1. The constitution table has columns `Field | Required | Type | Description`, a field's allowed values stated in its Description. Around the tables:
 
-- An explicit list of artifact kinds the schema applies to (specs, scenarios) and a note that other artifacts MAY include frontmatter when a consumer benefits.
-- The open-schema rule (additional fields permitted, ignored by uninterested consumers).
-- A starter tag vocabulary as guidance, not enforcement.
+- Above them, the artifact kinds the schema applies to (specs, scenarios and the two audit records) and a note that other artifacts MAY include frontmatter when a consumer benefits.
+- Below them, the open-schema rule (additional fields permitted, ignored by uninterested consumers).
 
 Schema details captured in `data-model.md` for cross-reference.
 

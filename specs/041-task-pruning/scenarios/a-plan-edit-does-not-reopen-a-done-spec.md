@@ -18,7 +18,7 @@ section: "Framework consistency — each artifact by its durability class"
 ## Edge Cases
 
 - **A plan edit recording a changed design decision.** The later spec that changed the behavior owns and gates that decision, so the `done` plan's edit records it and still takes no back-edge.
-- **A `done` spec's analyze record that digests the plan.** A plan or tasks edit does not stale it, because freshness on a `done` spec compares neither file; see Resolved Questions.
+- **A `done` spec's analyze record that digests the plan.** A plan or tasks edit in place does not stale it, because freshness on a `done` spec ignores one; a deleted `plan.md` or `tasks.md` still does. See Resolved Questions.
 - **One change that also edits `spec.md`, a scenario or `data-model.md`.** Those parts keep today's rules; only the plan and tasks part is exempt.
 - **A `tasks.md` edit that adds an unchecked task.** It is new work, not a correction, so it still reopens the spec; see Resolved Questions.
 - **A `plan.md` trim `check-artifact-size` proposes for an oversized `done` plan.** It is a plan edit like any other, so its advice says it does not reopen the spec.
@@ -31,5 +31,5 @@ section: "Framework consistency — each artifact by its durability class"
 ## Resolved Questions
 
 - **Does the exemption cover a plan edit that records a changed design decision, or only a factual correction?** Both (owner pre-authorized 2026-10-26). The later spec that changed the behavior owns and gates that change, so re-gating the `done` spec would re-verify nothing.
-- **Does a `done` spec's analyze record, stale only because its plan changed, need handling in the release audit or the pre-`done` gate?** Neither (owner pre-authorized 2026-10-26). Analyze freshness leaves `plan.md` and `tasks.md` out of the comparison on a `done` spec, as review freshness leaves out everything but the durable contracts, so such an edit does not stale the record at all. A spec still in progress keeps both in its comparison, because the pre-`done` gate reads them there.
+- **Does a `done` spec's analyze record, stale only because its plan changed, need handling in the release audit or the pre-`done` gate?** Neither (owner pre-authorized 2026-10-26). Analyze freshness ignores an in-place edit to `plan.md` or `tasks.md` on a `done` spec, as review freshness leaves out everything but the durable contracts, so such an edit does not stale the record at all. A spec still in progress keeps both in its comparison, because the pre-`done` gate reads them there.
 - **Does a `tasks.md` edit that adds an unchecked task take no back-edge too?** No (resolved 2026-10-26, under the owner's pre-authorization). An unchecked task on a `done` spec is outstanding work, and a status of `done` beside it would make unfinished work indistinguishable from finished work (§design-principles). So the exemption covers a `tasks.md` edit that adds no unchecked checkbox, and `prune-plan`'s `reopen-required` keeps that one trigger.

@@ -227,8 +227,8 @@ Preamble and structural blocks are always kept; a `###` or deeper heading
 stays inside the section that holds it.
 
 A section's **text** is its lines from the heading to its last non-blank
-line, joined by `\n`. The digest, the size, and the reopen comparison all
-read the text, so a blank line at a seam changes none of them.
+line, joined by `\n`. The digest and the size both read the text, so a
+blank line at a seam changes neither.
 
 ### Classification
 
