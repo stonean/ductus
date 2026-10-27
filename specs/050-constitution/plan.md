@@ -122,32 +122,32 @@ carries that weight.
 
 ### The constitution fits one read
 
-`framework/constitution.md` went from 119,262 to 49,989 bytes on disk (`wc -c`), within the 50,000-byte read size `check-artifact-size` applies (spec 063), and `scripts/lint-governing-size.sh` holds it at that read size. The read size is the target because OpenCode's and Pi's read tools return at most 51,200 bytes in one call: at 53,811 bytes, `/{project}:target`'s read on either stopped after line 500 (the scenario's Resolved Question). Measured per anchored section — the bytes from one `<!-- §anchor -->` marker to the next, so a subsection is counted with the marked section above it:
+`framework/constitution.md` went from 119,262 to 49,956 bytes on disk (`wc -c`), within the 50,000-byte read size `check-artifact-size` applies (spec 063), and `scripts/lint-governing-size.sh` holds it at that read size. An adopter's installed copy differs by 27 bytes for each character its project name has beyond nine, since `{project}` appears 27 times, so it stays within the 51,200-byte caps for a name of up to 55 characters. The read size is the target because OpenCode's and Pi's read tools return at most 51,200 bytes in one call: at 53,811 bytes, `/{project}:target`'s read on either stopped after line 500 (the scenario's Resolved Question). Measured per anchored section — the bytes from one `<!-- §anchor -->` marker to the next, so a subsection is counted with the marked section above it:
 
 | Section | Before | Now |
 | --- | --- | --- |
 | preamble | 195 | 187 |
 | §principles | 1,678 | 1,678 |
-| §cost-levers | 639 | 207 |
-| §design-principles | 4,192 | 2,116 |
+| §cost-levers | 639 | 236 |
+| §design-principles | 4,192 | 2,128 |
 | §grounding | 1,255 | 671 |
-| §governance-precedence | 2,325 | 1,000 |
-| §recommendations (with the Grounding rules list) | 7,283 | 3,583 |
+| §governance-precedence | 2,325 | 1,021 |
+| §recommendations (with the Grounding rules list) | 7,283 | 3,608 |
 | §pipeline | 202 | 112 |
 | §spec-phase | 1,734 | 1,099 |
 | §spec-requirements | 2,507 | 1,180 |
 | §spec-lifecycle | 8,701 | 4,240 |
-| §plan-phase | 2,304 | 907 |
+| §plan-phase | 2,304 | 835 |
 | §tasks-phase | 1,853 | 697 |
 | §readiness-check | 664 | 596 |
 | §implement-phase | 6,792 | 1,413 |
 | §constants, §env-vars | 867 | 316 |
-| §bug-handling | 2,527 | 1,195 |
+| §bug-handling | 2,527 | 1,168 |
 | §scenarios, §scenario-promotion | 3,659 | 1,274 |
 | §rules | 8,382 | 2,576 |
 | §brownfield-inbox | 8,422 | 2,763 |
 | §brownfield-process | 1,571 | 522 |
-| §text-first-artifacts (with frontmatter schema and severity) | 14,106 | 5,436 |
+| §text-first-artifacts (with frontmatter schema and severity) | 14,106 | 5,415 |
 | §runtime-boundary (five principles) | 2,449 | 2,415 |
 | §runtime-host-integration (with eligibility, acquisition, versioning, non-scope) | 5,237 | 3,016 |
 | §drift-prevention | 14,459 | 6,239 |
@@ -156,7 +156,7 @@ carries that weight.
 | §cross-spec-impact | 3,178 | 845 |
 | §numbering | 2,097 | 745 |
 | §markdown-standards | 839 | 176 |
-| **Total** | **119,262** | **49,989** |
+| **Total** | **119,262** | **49,956** |
 
 Three kinds of change, by destination:
 
@@ -164,7 +164,7 @@ Three kinds of change, by destination:
 - **Dropped as restatement**: the three-cycles overview, the three-tiers table, Markdown Standards' copy of the lint rules (`.markdownlint-cli2.jsonc` is canonical), the opt-in invariant's history (specs 021 and 048 record it), the per-check severity list `/{project}:analyze`'s reference already holds, a second statement of markdown-by-default, the rule-ID prefix repeated under *Lifecycle*, the closing gloss on the third eligibility criterion, the no-code-without-a-spec sentence §pipeline-boundaries states, the `(spec NNN)` pointers into a corpus an adopter does not have, and glosses, examples and reasons the rule beside them does not need.
 - **Compressed in place**: every other section, each rule kept. The Guiding Principles and the five runtime principles are byte-identical. Spec 021's criteria bind the rest of §runtime-boundary: the three eligibility criteria, the acquisition invariant, the versioning rule, the non-scope list and the forward pointer to spec 022 all remain, as does the canonical-sources row pointing at `framework/constitution.md` §runtime-boundary. All 31 anchor markers, every heading and every bold span are byte-identical and in order.
 
-**A passage another spec quotes was kept true by meaning, not by bytes.** A first cut reached 49,851 bytes and falsified about 30 passages quoted or relied on in 16 `done` specs, so it was restored to 53,813 until the owner chose the read size (2026-10-27). The second cut was then swept hunk by hunk for what it falsified. A spec that states a rule in its own words is not falsified while the constitution keeps the rule; one that quotes the constitution's words as the constitution's, relies on a clause the cut removed, or carries a criterion naming that clause is. Where the passage bound one of the constitution's own rules, or sat in a spec another session holds open, the text was restored: the Validation Severity conditions 022 and 067 cite, a rule file's header declaring its ID prefix, the sequential spec `folds-into:` names, the closed category list under *When to write a rule*, the partial-read rule's tie to `QUAL-CLAIM-001`, and the reason a finding inside the current spec becomes its task. The rest were corrected where they live. Five `done` specs took the back-edge: 021 AC9, 062 AC25 and 064 AC12 are annotated as superseded in part, and 064's D7 line, 066's `review-scope-includes-uncommitted-work` and 051's `a-pending-fold-never-holds-done` are corrected. 050's own artifacts, `AGENTS.md` and the framework sources were edited in place, and spent `done`-spec tasks keep their wording.
+**A passage another spec quotes was kept true by meaning, not by bytes.** A first cut reached 49,851 bytes and falsified about 30 passages quoted or relied on in 16 `done` specs, so it was restored to 53,813 until the owner chose the read size (2026-10-27). The second cut was then swept hunk by hunk for what it falsified. A spec that states a rule in its own words is not falsified while the constitution keeps the rule; one that quotes the constitution's words as the constitution's, relies on a clause the cut removed, or carries a criterion naming that clause is. Where the passage bound one of the constitution's own rules, or sat in a spec another session holds open, the text was restored: the Validation Severity conditions 022 and 067 cite, a rule file's header declaring its ID prefix, the sequential spec `folds-into:` names, the closed category list under *When to write a rule*, the partial-read rule's tie to `QUAL-CLAIM-001`, and the reason a finding inside the current spec becomes its task. The rest were corrected where they live. Five `done` specs took the back-edge: 021 AC9, 062 AC25 and 064 AC12 are annotated as superseded in part, and 064's D7 line, 066's `review-scope-includes-uncommitted-work` and 051's `a-pending-fold-never-holds-done` are corrected. 050's own artifacts, `AGENTS.md` and the framework sources were edited in place, and spent `done`-spec tasks keep their wording, except two notes in 041's and 058's whose 53,813-byte ceiling figure was replaced.
 
 **The constitution is imported at startup.** This repository's `CLAUDE.md` imports `@framework/constitution.md` and the template `@.ductus/constitution.md`, each above `@AGENTS.md`, where the template carried it before 072. The method 072 used for AC6 proved the import loads. On 2026-10-27, `claude -p` with every tool disallowed was asked for two sentences only the constitution holds, the second its last line. With `@AGENTS.md` alone it answered `NOT IN CONTEXT`; with the import it quoted both verbatim. Neither run made a tool call, and they took 35,092 and 51,823 input tokens. An adopter's `CLAUDE.md` reaches the same line through two migrations. `claude-md-import-syntax` converts an `@import .ductus/constitution.md` line. `constitution-import`, ordered after it on the `id` tie-break, adds the line where nothing imports the constitution. That includes a `--ref=main` adopter whose `last_applied` is already `claude-md-import-syntax`, whom no edit to that migration would reach. `/{project}:target` still reads the constitution where no import loaded it: on an `AGENTS.md`-layout host, or on one that does not resolve `@path`.
 

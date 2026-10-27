@@ -35,7 +35,7 @@ These are evaluation criteria, not implementation instructions. Use them to iden
 
 ### Cost levers
 
-Token budgets are the AI platform's; `ductus` catches runaway loops with `/{project}:implement`'s stuck detection, and keeps autonomy off unless `--auto` is passed.
+Token budgets are the AI platform's (Claude Code's `/cost`, say); `ductus` catches runaway loops with `/{project}:implement`'s stuck detection, and keeps autonomy off unless `--auto` is passed.
 
 <!-- §design-principles -->
 
@@ -44,7 +44,7 @@ Token budgets are the AI platform's; `ductus` catches runaway loops with `/{proj
 Constraints on anything the pipeline asks an author or a check to do. Each is a hard filter: a design that fails one is redesigned or deferred, not shipped with a note.
 
 - **A check that cannot run MUST never be indistinguishable from a check that passed.** One that skips or cannot reach part of its subject MUST say so — a distinct result, or a count of what *was* examined — as those states are disproportionately the broken ones. Prove a new gate **fails** before trusting that it passes (`QUAL-CLAIM-001`, §rules).
-- **A check that reads git history must be given git history, and a test that reads history or shells out to a project script is a change to the job that runs it.** CI checkouts are shallow by default, so the job needs a full-depth checkout and the script in its trigger paths, or the test cannot run or silently stops; a local pass is no evidence. Prefer a test that fails loudly on a missing input.
+- **A check that reads git history must be given git history, and a test that reads history or shells out to a project script is a change to the job that runs it.** CI checkouts are shallow by default, so the job needs a full-depth checkout, commented, and the script in its trigger paths, or the test cannot run or silently stops; a local pass is no evidence. Prefer a test that fails loudly on a missing input.
 - **Work that is not complete MUST never be indistinguishable from work that is.** Known outstanding work has exactly three dispositions: **fix it**; **record it where the pipeline will surface it again** (a task, scenario, criterion, or waived review finding) and let the status follow that record; or **decide it is out of scope and record the decision with its reason**. The inbox is none of the three, since no gate reads it, and neither is a caveat beside a completion claim. Residue knowable only by measuring is **measured**: an unmeasured gap is a task, not a caveat.
 - **Never design a pipeline feature that depends on human diligence.** What requires an author to *remember* is skipped when it matters most: derive the input from artifacts, frontmatter, or history, or do not ship it.
 - **A check whose subject is drawn from repository state can go vacuous, and a naive vacuity guard will then demand that an unhealthy repository exist.** **Build the subject** — a fixture carrying the condition, asserted in both directions — and let the pass over real state report *nothing to compare* as a distinct, non-failing state.
@@ -69,7 +69,7 @@ A project may load the constitution `ductus` ships and any shared constitution i
 
 ### A partial read is not a read
 
-A tool that elides content — truncation, a saved-output pointer, a line cap, a `head`/`tail` window — returns a fragment, and the rest is unread. **Read the remainder**, or **state what was not examined** where a later reader meets the claim; prefer a reader that reports its subject's size and takes an offset. This is `QUAL-CLAIM-001` turned on the agent's own reading; nothing enforces it.
+A tool that elides content — truncation, a saved-output pointer, a line cap, a `head`/`tail` window, a match-only search — returns a fragment, and the rest is unread. **Read the remainder**, or **state what was not examined** where a later reader meets the claim; prefer a reader that reports its subject's size and takes an offset. This is `QUAL-CLAIM-001` turned on the agent's own reading; nothing enforces it.
 
 <!-- §recommendations -->
 
@@ -83,7 +83,7 @@ A recommendation is a claim: the agent MUST work it out to its result **before**
 
 - **Prefer the source to the recollection.** Open the code, artifact, or command before asserting what it does.
 - **A connected database is a primary source, not a hazard.** Confirm schema and data from dev or read-only state, found through the project's configuration and any live-source pointer its `AGENTS.md` declares; reads need no authorization, writes need the task's.
-- **Run the project's own command — never a hand-rolled equivalent of one.** Its declared scripts, targets and CI steps are the command; a substitute that succeeds proves only itself, so iterate narrowly if you like but report the project's command. A failing one is a finding to dispose of, not route around; if it cannot do the task, say which command you bypassed and why, and propose a declared one for a recurring operation as a task. It authorizes nothing destructive, and nothing enforces this rule.
+- **Run the project's own command — never a hand-rolled equivalent of one.** Its declared scripts, targets and CI steps are the command; a substitute that succeeds proves only itself, so iterate narrowly if you like but report the project's command's result. A failing one is a finding to dispose of, not route around; if it cannot do the task, say which command you bypassed and why, and propose a declared one for a recurring operation as a task. A declared command authorizes nothing destructive, and nothing enforces this rule.
 - **Name the assumption when you must infer** — an Open Question in a spec, a labeled assumption in a plan, a task or open question during implementation.
 - **Cite what you consulted** (`path:line`, the query, the command), so the next reader can re-derive it.
 - **A recorded measurement states its method and its units, or it is not re-derivable.** State the denominator, population and boundary a count was taken over: without them a later reader cannot tell a decayed figure from one taken by a different method, and trusting the newer figure is wrong exactly when the older was better informed. On a disagreement, re-derive at the recorded figure's own commit first, then diff the field across its own history. An unstated method is an unmeasured gap wearing a number.
@@ -178,7 +178,7 @@ Define *how* the feature is built: a plan references its spec, addresses its ope
 
 #### A plan records the design as it stands
 
-`plan.md` records the design **as it currently stands**, never how it got there. Its **design record** is the plan template's own `##` sections, and a changed decision is edited in place. Everything else lives elsewhere: verification evidence in the commit, contributor knowledge per [Shared knowledge stays in git](#shared-knowledge-stays-in-git), a finding per [Finding dispositions](#finding-dispositions), handoff state in its pending task (§tasks-phase), a review triage nowhere (§implement-phase). `/{project}:analyze` reports a section outside the design record; `/{project}:prune` moves it home.
+`plan.md` records the design **as it currently stands**, never how it got there. Its **design record** is the plan template's own `##` sections, and a changed decision is edited in place. Everything else lives elsewhere: verification evidence in the commit, contributor knowledge per §drift-prevention, a finding per §brownfield-inbox, handoff state in its pending task (§tasks-phase), a review triage nowhere (§implement-phase). `/{project}:analyze` reports a section outside the design record; `/{project}:prune` moves it home.
 
 <!-- §tasks-phase -->
 
@@ -233,7 +233,7 @@ If any item fails, fix the gap before writing code.
 
 Bugs are unwritten or violated requirements: each shows a gap in a rule (cross-cutting), spec (feature-wide), or scenario (situational), and the fix makes that requirement more precise.
 
-A **chore** — lint, dependency or repo-hygiene cleanup, a standalone refactor — adds no requirement and belongs to no feature, so it spawns no rule, spec, or scenario. **A chore a run finds is fixed in that run** ([Finding dispositions](#finding-dispositions)); one a person logs stays a checkbox in `specs/inbox.md` until done, then is removed. The test is **durability**: rules, specs and scenarios hold what must stay accurate, while a chore's value is spent once complete. Route requirement gaps through the decision tree below.
+A **chore** — lint, dependency or repo-hygiene cleanup, a standalone refactor — adds no requirement and belongs to no feature, so it spawns no rule, spec, or scenario. **A chore a run finds is fixed in that run** (§brownfield-inbox); one a person logs stays a checkbox in `specs/inbox.md` until done, then is removed. The test is **durability**: rules, specs and scenarios hold what must stay accurate, while a chore's value is spent once complete. Route requirement gaps through the decision tree below.
 
 ### Bug Decision Tree
 
@@ -316,7 +316,7 @@ Brownfield projects adopt `ductus` incrementally: start broad and decompose thro
 
 ## Text-First Artifacts
 
-`ductus` treats every artifact — constitution, specs, plans, tasks, scenarios, rules — as plain markdown the agent can edit with `Edit`. This is load-bearing: the agent's write path stays simple, PRs review glanceably, and merge conflicts stay rare and human-resolvable. The **artifacts** are usable standalone with no tooling beyond the AI agent. The *pipeline* that reads them requires the runtime ([§runtime-boundary](#runtime-boundary)), which parses and writes the same markdown a contributor edits in an editor.
+`ductus` treats every artifact — constitution, specs, plans, tasks, scenarios, rules — as plain markdown the agent can edit with `Edit`. This is load-bearing: the agent's write path stays simple, PRs review glanceably, and merge conflicts stay rare and human-resolvable. The **artifacts** are usable standalone with no tooling beyond the AI agent. The *pipeline* that reads them requires the runtime (§runtime-boundary), which parses and writes the same markdown a contributor edits in an editor.
 
 ### Principles
 
