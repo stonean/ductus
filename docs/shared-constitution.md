@@ -136,7 +136,7 @@ The rule tier has a structurally similar gap (a rule file a project authors regi
 <!-- END ductus:constitutions -->
 ```
 
-The block's content is layout-derived, because the file is. Claude-style agents read `CLAUDE.md` and get `@path` imports, which **load the documents at session start**, so a session that runs no command still has the rules. Antigravity, OpenCode and Pi read `AGENTS.md`, which has **no import directive at all**, so they get plain links, which load nothing. Only the region between the markers is rewritten — the rest of your file is preserved byte-for-byte, and `.ductus/constitution.md` is never touched.
+The block's content is layout-derived, because the file is. Claude-style agents read `CLAUDE.md` and get `@path` imports, which **load the documents at session start**, so a session that runs no command still has the rules. Antigravity, OpenCode and Pi read `AGENTS.md` and resolve **no import directive at all**, so they get plain links, which load nothing. Only the region between the markers is rewritten — the rest of your file is preserved byte-for-byte, and `.ductus/constitution.md` is never touched.
 
 `/ductus:target` loads the shipped constitution and every resolved shared document that is not already in context, **once per session**, so every subsequent command inherits them with no per-command step. A document a `CLAUDE.md` import loaded is not read again. For the `AGENTS.md` layouts, `/ductus:target` is the loading mechanism.
 

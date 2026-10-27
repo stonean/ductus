@@ -266,6 +266,7 @@ The runtime half of [027](../027-bootstrap-migration-registry/spec.md)'s `migrat
 - **`attribution`** says what an empty `migration` means: under `registry` (`framework/migrations.toml` readable) it names the entry whose `target_paths` covers the missing path, latest hop winning, and empty means no entry claims it; under `watermark` no registry was read — absent, or present but unparseable, which this result does not distinguish — and `last-applied` is the only migration context.
 - **A pattern is not a reference** — a candidate containing `*` or `NNN` names a shape — and a path the project declares it *ships* to adopters is not local breakage.
 - **A git object name is not a reference** — a path glued to a preceding `:` whose token is empty or revision-shaped (`git show abc1234:specs/x/spec.md`) names a blob; a variable, a path or a link label before the colon still marks a working-tree reference (scenario [`a-revision-qualified-path-is-not-a-working-tree-reference`](scenarios/a-revision-qualified-path-is-not-a-working-tree-reference.md)).
+- **An `@` that starts a token begins a reference** — at line start or after whitespace, `@.ductus/x` is Claude Code's import form and is checked; `x@.ductus/y` is not (scenario [`an-at-path-import-is-a-reference`](scenarios/an-at-path-import-is-a-reference.md)).
 - `skipped` names the referrers it could not read, so empty `findings` is clean only when `skipped` is empty.
 
 ## `check-command-flags` — a declared interface vs. the body a host substitutes

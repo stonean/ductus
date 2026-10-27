@@ -8,8 +8,9 @@ An alias-keyed `[constitutions.<alias>]` registry in `.ductus/config.toml`, read
 same way `[services]` already is; one new runtime primitive, `resolve-constitutions`,
 that resolves each entry to a document on disk and reports what it could not resolve;
 `/ductus:target`'s existing once-per-session constitution load extended to every
-resolved document; and a layout-derived managed block in the adopter's native rules
-file so the document is also reachable by navigation.
+resolved document not already in context; and a layout-derived managed block in the
+adopter's native rules file, which imports the document at session start under
+`claude-style` and links it under the `AGENTS.md` layouts.
 
 Nothing is fetched, nothing is copied, and `.ductus/constitution.md` is never
 rewritten. The feature is a read of local disk plus a report.

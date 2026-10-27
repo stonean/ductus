@@ -6,7 +6,7 @@ section: "Link and reference integrity"
 
 ## Context
 
-`check-orphaned-references` finds a managed path in a referrer by scanning for a managed-root prefix at the start of a token and taking the run of path characters that follows. A prefix preceded by a path character or `@` does not start a token, so `x.ductus/y` is never read as a reference to `.ductus/y`. A colon was not in that set.
+`check-orphaned-references` finds a managed path in a referrer by scanning for a managed-root prefix at the start of a token and taking the run of path characters that follows. A prefix preceded by a path character, or by an `@` glued to a word, does not start a token, so `x.ductus/y` is never read as a reference to `.ductus/y`. A colon was not in that set.
 
 Git names a file at a revision as `<rev>:<path>` — `git show abc1234:specs/002-auth/spec.md` — and a file in the index as `:<path>`. An adopter that retired a spec directory and kept pointers to its last text wrote exactly that form, in a code span, in its `AGENTS.md`, `README.md` and `specs/system.md`. The check matched the `specs/` root after the colon, took the remainder as a working-tree path, found it absent, and reported three orphaned references. Observed on a live adopter running 0.58.0, and reproduced unchanged on 0.59.0.
 

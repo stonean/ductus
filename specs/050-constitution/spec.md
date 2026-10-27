@@ -90,8 +90,8 @@ Each entry is classified exactly once, with the reason recorded:
 - **shared** — true across one organization's projects and no one else's. Its
   canonical text lives in a constitution document that organization owns and
   registers under `.ductus/config.toml` `[constitutions.*]`
-  (`055-shared-constitution`), which `/{project}:target` loads alongside the
-  shipped `.ductus/constitution.md`. Not promoted to
+  (`055-shared-constitution`), which the native rules file imports or
+  `/{project}:target` loads, alongside the shipped `.ductus/constitution.md`. Not promoted to
   `framework/constitution.md`, and not left as a per-repository `AGENTS.md`
   entry.
 - **project-only** — true because of something particular to this repository:

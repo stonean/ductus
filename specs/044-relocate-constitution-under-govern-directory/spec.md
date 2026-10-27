@@ -33,7 +33,7 @@ Every shipped artifact that names the constitution's adopter-side location resol
 - **Bootstrap prose** — the Shared Files manifest row and the `[pinned] files` schema example in `ductus.md` that illustrates pinning with `"constitution.md"`.
 - **Framework documentation** — `AGENTS.md`'s description of `framework/constitution.md` as the shipped source (its sync-target wording), and any other live-artifact reference to the adopter-root path, per the no-dead-references rule.
 
-ductus's own repository needs no file move: it carries no root `constitution.md` — its `CLAUDE.md` imports `framework/constitution.md` directly, which remains the canonical source shipped to adopters.
+ductus's own repository needs no file move: it carries no root `constitution.md`, and `framework/constitution.md` remains the canonical source shipped to adopters.
 
 ## `/ductus` migration: move an existing adopter's constitution
 
@@ -66,7 +66,7 @@ A new entry in the [bootstrap migration registry](../027-bootstrap-migration-reg
 - [x] AC7: On a destination collision the migration converges: an identical legacy root file is removed silently, a divergent one is removed with a prominent warning naming it, and no stale root copy remains.
 - [x] AC8: The migration is registered in `framework/migrations.toml` with `introduced_in = "0.24.0"` and no `sunset_after`, with a procedure file at `framework/migrations/{id}.md`, and the audit's migration-coverage invariants pass.
 - [x] AC9: The runtime's parity and golden fixtures that encode the shipped constitution destination reflect `.ductus/constitution.md`, and the parity suite passes.
-- [x] AC10: No stale reference to the adopter-root `constitution.md` path remains in live artifacts (`framework/`, `runtime/`, `docs/`, `README.md`, `AGENTS.md`), per the no-dead-references rule; ductus's own repo keeps importing `framework/constitution.md` unchanged.
+- [x] AC10: No stale reference to the adopter-root `constitution.md` path remains in live artifacts (`framework/`, `runtime/`, `docs/`, `README.md`, `AGENTS.md`), per the no-dead-references rule; ductus's own repo carries no root `constitution.md`.
 
 ## Open Questions
 

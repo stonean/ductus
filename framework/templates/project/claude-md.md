@@ -24,5 +24,5 @@ Before saving an auto-memory entry, ask **two** questions, in this order.
 **2. Who is it true for?** This decides *which* committed artifact, and it is a question about the learning's population, never about its kind — a gotcha, a convention and a workflow rule all route by the same test.
 
 - **Every project running the pipeline** → the constitution at `.ductus/constitution.md` is where such a rule is canonically stated. It is upstream of this project, so raise it with the framework rather than restating it here.
-- **Every project in your organization** → the shared constitution your organization registers under `.ductus/config.toml` `[constitutions.*]`, which `/{project}:target` loads alongside the shipped one.
+- **Every project in your organization** → the shared constitution your organization registers under `.ductus/config.toml` `[constitutions.*]`, which this file's managed block imports, or `/{project}:target` loads when the import did not.
 - **This project alone** → `AGENTS.md`, matching section (Gotchas, Workflow, Boundaries, Code Style, Testing), or the relevant spec, scenario, or rule under `specs/` when it is a durable requirement rather than a working convention.

@@ -116,3 +116,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [ ] wording: the derive-unparseable scenario ~14-15 says `splice_references` anchors on 'the line after `dependencies:`' (it now goes after the whole entry); `derive_dependencies.rs` ~650's fixture comment `# kept for history` is one that gets dropped; `pointers-into-shipped-files-are-judged.md` ~25 omits the bare `name.md` token `document_path` also accepts
 
 - **Done when**: each item is fixed, routed, or discarded with the owner's decision written on it, and an independent re-read of the fix finds no MUST or SHOULD
+
+## 15. Implement scenario: an-at-path-import-is-a-reference
+
+- [x] Implement the behavior described in `scenarios/an-at-path-import-is-a-reference.md`
+- [x] `managed_paths_in` reads an `@` at line start or after whitespace as the start of a reference, and an `@` glued to a word as not one; `an_at_path_import_is_a_reference` and `an_at_inside_a_word_is_not_an_import` each fail under their mutation in `scripts/mutation/claude-md-imports.py` (delivered in 96934872 for `002-project-scaffolding`'s `claude-md-template-imports-load`)
+- [x] `data-model.md`'s check-orphaned-references bullets and the `a-revision-qualified-path-is-not-a-working-tree-reference` scenario state the `@` rule
+
+- **Done when**: The scenario's behavior holds in `runtime/src/primitives/check_orphaned_references.rs`, its two tests fail with the behavior removed, and 067's data model and sibling scenario describe the rule as it runs.
