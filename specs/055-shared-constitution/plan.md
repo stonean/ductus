@@ -60,25 +60,24 @@ modelled on `services.rs`) plus its `pub mod` in `schema/mod.rs`;
 `runtime/src/main.rs` (`Command` variant + dispatch); and
 `framework/runtime-tools.txt`.
 
-### `/ductus:target` is the load mechanism; the managed block is navigation
+### `/ductus:target` loads what the rules file did not; the managed block imports under `claude-style`
 
-`framework/commands/target.md:37` already states: "Load the constitution file once
-per session to make its sections available for subsequent commands. (Host
-responsibility — no primitive reads the constitution.)" Every other command's Scope
-Boundaries then says "constitution loaded by `/ductus:target` — do not re-read."
+`framework/commands/target.md` step 4 loads the constitution once per session, and
+every other command's Scope Boundaries then says "constitution loaded by
+`/ductus:target` — do not re-read." Extending that one step to also load each
+`loaded` document satisfies AC2 for every command with no per-command edit, and it
+is agent- and layout-independent — which matters, because the import line is not.
 
-Extending that one step to also load each `loaded` document satisfies AC2 for every
-command with no per-command edit, and it is agent- and layout-independent — which
-matters, because the import line is not.
-
-`framework/templates/project/claude-md.md:3` uses `@import .ductus/constitution.md`,
-but that is a `claude-style` feature. The Agent Registry's derived-values table gives
-`antigravity` and `opencode` a native rules file of `AGENTS.md`, and
-`framework/templates/project/agents.md:9` is a plain link — it points at
-`.ductus/constitution.md` in prose — not an import. So AC9's managed block
-is **layout-derived**: an `@import` line under `claude-style`, a `See [alias](path)`
-link under the `AGENTS.md` layouts. Treating the import as the loading mechanism
-would leave two of the four registered agents loading nothing.
+An import is a `claude-style` feature. The Agent Registry's derived-values table
+gives `antigravity`, `opencode` and `pi` a native rules file of `AGENTS.md`, and
+`framework/templates/project/agents.md` links the constitution in prose rather than
+importing it. So AC9's managed block is **layout-derived**: an `@{document-path}`
+line under `claude-style`, which Claude Code expands at session start, and a
+`See [alias](path)` link under the `AGENTS.md` layouts, which loads nothing. Step 4
+skips a document an import already loaded, so none is read twice, and reads one
+whose import loaded nothing — an external import not yet approved, or a host that
+does not resolve `@path`. Treating the import as the only loading mechanism would
+leave the `AGENTS.md` layouts loading nothing.
 
 ### The managed block uses `merge-managed-block`
 

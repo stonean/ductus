@@ -75,7 +75,7 @@ path = "../governance"
 description = "Acme engineering house rules"
 ```
 
-**4. Run `/ductus` in each project.** That installs or refreshes the managed import block in the project's native rules file. It is not what loads the rules — `/target` does that — so you can skip it and still be governed; you just lose the pointer a contributor sees when they open the file.
+**4. Run `/ductus` in each project.** That installs or refreshes the managed import block in the project's native rules file. Under Claude-style agents the block loads the rules at session start; `/target` loads them for every agent when they are not already loaded, so you can skip it and still be governed. You lose the startup load and the pointer a contributor sees when they open the file.
 
 **5. Verify.** From the project root:
 
@@ -128,19 +128,19 @@ The rule tier has a structurally similar gap (a rule file a project authors regi
 
 ## How it loads
 
-`/ductus:target` loads the shipped constitution and every resolved shared document **once per session**, so every subsequent command inherits them with no per-command step. That is the loading mechanism, and it is the same for every agent and every layout.
-
-The import line in your `CLAUDE.md` or `AGENTS.md` is **navigation, not loading**. `/ductus` maintains it inside a managed block:
+`/ductus` lists each resolved shared document in a managed block in your `CLAUDE.md` or `AGENTS.md`:
 
 ```markdown
 <!-- BEGIN ductus:constitutions -->
-@import ../governance/constitution.md
+@../governance/constitution.md
 <!-- END ductus:constitutions -->
 ```
 
-The block's content is layout-derived, because the file is. Claude-style agents read `CLAUDE.md` and get `@import` lines; Antigravity, OpenCode and Pi read `AGENTS.md`, which has **no import directive at all**, so they get plain links. Only the region between the markers is rewritten — the rest of your file is preserved byte-for-byte, and `.ductus/constitution.md` is never touched.
+The block's content is layout-derived, because the file is. Claude-style agents read `CLAUDE.md` and get `@path` imports, which **load the documents at session start**, so a session that runs no command still has the rules. Antigravity, OpenCode and Pi read `AGENTS.md`, which has **no import directive at all**, so they get plain links, which load nothing. Only the region between the markers is rewritten — the rest of your file is preserved byte-for-byte, and `.ductus/constitution.md` is never touched.
 
-An adopter whose rules file has no block still gets the rules, because `/ductus:target` is what loads them.
+`/ductus:target` loads the shipped constitution and every resolved shared document that is not already in context, **once per session**, so every subsequent command inherits them with no per-command step. A document a `CLAUDE.md` import loaded is not read again. For the `AGENTS.md` layouts, `/ductus:target` is the loading mechanism.
+
+A checkout outside your project directory makes its import an **external** one. Claude Code asks once per project, in an interactive session, to approve external imports. An import that is unapproved, declined, or met in a non-interactive run loads nothing, and `/ductus:target`'s read is what loads the document then. An adopter whose rules file has no block still gets the rules the same way.
 
 ## Which document wins
 

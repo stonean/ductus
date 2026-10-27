@@ -23,9 +23,11 @@ The project README template is based on an adopter project's `README.md` structu
 
 The `.gitignore` template contains only `ductus`-universal entries. No language-specific patterns. The file is named `gitignore` (no dot) in `framework/templates/project/` to avoid it being treated as an active gitignore by git. The init command renames it to `.gitignore` during copy.
 
-### CLAUDE.md is two lines
+### CLAUDE.md imports AGENTS.md in the form Claude Code resolves
 
-The template is deliberately minimal — just the two `@import` directives. Projects may add more configuration later, but the starting point is always the same.
+The template is deliberately minimal: one `@AGENTS.md` import and the empty `ductus:constitutions` managed block. Projects may add more configuration later, but the starting point is always the same. Claude Code imports a file only as `@path`, so `@import AGENTS.md` names a file called `import` and loads nothing; the template writes the `@path` form, and the bootstrap writes each shared constitution in the block the same way. The constitution is not imported while it exceeds one read; the pipeline commands read it, and `/{project}:target` skips a document an import already loaded.
+
+`CLAUDE.md` is `skip`-strategy, so an existing adopter's copy changes only through the `claude-md-import-syntax` migration, which rewrites each `@import <path>` line outside code to `@<path>` and removes the `.ductus/constitution.md` import. `check-orphaned-references` reads an `@` that starts a token as the start of a reference, so a dangling `@path` import is reported.
 
 ## Affected Files
 
@@ -33,7 +35,17 @@ The template is deliberately minimal — just the two `@import` directives. Proj
 | --- | --- | --- |
 | `framework/templates/project/project-readme.md` | Create | Project README with quick start, getting started, docs, feature table, pipeline, slash commands |
 | `framework/templates/project/gitignore` | Create | Minimal .gitignore for secrets, claude settings, IDE, OS files |
-| `framework/templates/project/claude-md.md` | Create | CLAUDE.md with @import directives |
+| `framework/templates/project/claude-md.md` | Create | CLAUDE.md importing `@AGENTS.md`, with the shared-constitution managed block |
+| `framework/migrations.toml` | Modify | `claude-md-import-syntax` registry entry |
+| `framework/migrations/claude-md-import-syntax.md` | Create | Migration procedure rewriting an adopter's `@import` lines |
+| `framework/bootstrap/ductus.md` | Modify | Shared constitution imports render `@{document-path}`; how the block loads |
+| `framework/bootstrap/govern.md` | Modify | Byte-identical copy of `ductus.md` |
+| `framework/bootstrap/ductus-procedure.md` | Modify | Step 8's dangling-import sentence |
+| `framework/commands/target.md` | Modify | Step 4 loads a document only when it is not already in context |
+| `framework/reference/analyze.md` | Modify | Orphaned-references dangling-import sentence |
+| `docs/shared-constitution.md` | Modify | §How it loads |
+| `runtime/src/primitives/check_orphaned_references.rs` | Modify | An `@` starting a token begins a reference |
+| `scripts/mutation/claude-md-imports.py` | Create | Mutations proving the two `@path` tests |
 
 ## Trade-offs
 

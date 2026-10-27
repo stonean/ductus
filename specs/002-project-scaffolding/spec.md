@@ -43,16 +43,17 @@ The template stays minimal — no language-specific patterns. Language-specific 
 
 ### CLAUDE.md template
 
-A minimal file with `@import` directives:
+A minimal file whose imports use Claude Code's `@path` form, the only one it resolves:
 
-- Imports constitution.md
-- Imports AGENTS.md
+- Imports `AGENTS.md` as `@AGENTS.md`
+- Does not import the constitution while it exceeds one read; the pipeline commands read it (scenario `claude-md-template-imports-load`)
+- Carries the `ductus:constitutions` managed block, where `/ductus` imports each registered shared constitution
 
 ## Acceptance Criteria
 
 - [x] AC1: `framework/templates/project/project-readme.md` exists with placeholder sections for project name, quick start, getting started (referencing the configure and status commands), documentation links, feature table, pipeline overview, and slash command reference
 - [x] AC2: `framework/templates/project/gitignore` exists with minimal sections for secrets, claude settings, IDE files, and OS files — no language-specific patterns
-- [x] AC3: `framework/templates/project/claude-md.md` exists with `@import` directives
+- [x] AC3: `framework/templates/project/claude-md.md` exists, imports `AGENTS.md` as `@AGENTS.md`, holds no `@import` line, and does not import `.ductus/constitution.md`
 - [x] AC4: Each template uses `{project}` placeholder where the project name appears
 - [x] AC5: The README template includes a feature table matching the format used by constitution's spec numbering convention
 - [x] AC6: The .gitignore preserves `.claude/commands/` while excluding other `.claude/` contents

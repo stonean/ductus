@@ -215,8 +215,8 @@ fn managed_roots(layout: &paths::Paths) -> Vec<String> {
 ///
 /// Scans for a managed-root prefix and takes the path-character run that
 /// follows, rather than parsing markdown link / code-span / shell grammars
-/// separately: the same reference appears in all three forms across these four
-/// files (`@import .ductus/constitution.md`, `[c](.ductus/constitution.md)`,
+/// separately: the same reference appears in all three forms across the
+/// referrers (`@.ductus/constitution.md`, `[c](.ductus/constitution.md)`,
 /// `bash .ductus/scripts/gen-spec-deps.sh`), and one scan handles them all
 /// without a grammar per host format.
 fn managed_paths_in(line: &str, roots: &[String]) -> BTreeSet<String> {
@@ -226,10 +226,17 @@ fn managed_paths_in(line: &str, roots: &[String]) -> BTreeSet<String> {
         while let Some(rel) = line[from..].find(root.as_str()) {
             let start = from + rel;
             // A prefix must start a token: `x.ductus/y` is not a reference to
-            // `.ductus/y`, and matching inside one would invent paths. A git
+            // `.ductus/y`, and matching inside one would invent paths. An `@`
+            // that itself starts a token is the `@path` import form, so it is
+            // a reference; one glued to a word (`x@.ductus/y`) is not. A git
             // object name is not one either — see `names_a_git_object`.
             let previous = line[..start].chars().next_back();
-            let not_a_reference = previous.is_some_and(|c| is_path_char(c) || c == '@')
+            let not_a_reference = previous.is_some_and(is_path_char)
+                || (previous == Some('@')
+                    && line[..start - 1]
+                        .chars()
+                        .next_back()
+                        .is_some_and(|c| !c.is_whitespace()))
                 || (previous == Some(':') && names_a_git_object(&line[..start - 1]));
             from = start + root.len();
             if not_a_reference {
@@ -778,6 +785,32 @@ mod tests {
         write(
             &tmp.path().join("AGENTS.md"),
             "The path x.ductus/nope.md is not a reference.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(result.findings.is_empty(), "{:?}", result.findings);
+    }
+
+    #[test]
+    fn an_at_path_import_is_a_reference() {
+        // Claude Code's import form is `@path`, at line start or after a
+        // space; a dangling one loads nothing, so it must be reported.
+        let tmp = adopter();
+        write(
+            &tmp.path().join("CLAUDE.md"),
+            "# CLAUDE.md\n\n@.ductus/missing.md\nSee also @.ductus/gone.md\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        let mut targets: Vec<&str> = result.findings.iter().map(|f| f.target.as_str()).collect();
+        targets.sort_unstable();
+        assert_eq!(targets, vec![".ductus/gone.md", ".ductus/missing.md"]);
+    }
+
+    #[test]
+    fn an_at_inside_a_word_is_not_an_import() {
+        let tmp = adopter();
+        write(
+            &tmp.path().join("CLAUDE.md"),
+            "Mail x@.ductus/y about it.\n",
         );
         let result = run(&args(), tmp.path()).unwrap();
         assert!(result.findings.is_empty(), "{:?}", result.findings);

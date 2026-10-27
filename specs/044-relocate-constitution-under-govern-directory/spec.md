@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [027-bootstrap-migration-registry, 042-consolidate-govern-per-project-files-under-govern-directory]
 next-criterion: 11
 ---
@@ -12,7 +12,7 @@ The Shared Files manifest ships `framework/constitution.md` to the adopter repo 
 
 042's principle was that ductus owns one predictable namespace instead of polluting the repo root; its Motivation called the root dotfiles and the `scripts/` intrusion out by name but scoped itself to config, session, and generators. The constitution was left behind: a framework-managed file, overwritten on every `/ductus` run unless pinned, sitting at the top level of the adopter's repo as if it were the project's own content. Root placement litters the adopter's directory with a file the adopter does not author, and it is inconsistent with where every other ductus-owned artifact now lives (`.ductus/` for machinery, `{specs-root}/rules/` and `{specs-root}/templates/` for shipped pipeline content, `.githooks/ductus-pre-commit` for the hook).
 
-**Accepted trade-off — human discoverability.** Unlike 042's machinery, the constitution is human-facing: the shipped `README.md` and `AGENTS.md` seeds link to it as the project's top-level governance document. Moving it into a dot-directory buries it slightly for a human browsing the repo root. Agents are unaffected — the `CLAUDE.md` `@import` follows any path, and the pipeline commands are rewritten to the new location in the same `/ductus` run that moves the file. The shipped seeds keep linking to the constitution at its new path, so the document stays one click away from the README.
+**Accepted trade-off — human discoverability.** Unlike 042's machinery, the constitution is human-facing: the shipped `README.md` and `AGENTS.md` seeds link to it as the project's top-level governance document. Moving it into a dot-directory buries it slightly for a human browsing the repo root. Agents are unaffected — the pipeline commands that read the constitution are rewritten to the new location in the same `/ductus` run that moves the file. The shipped seeds keep linking to the constitution at its new path, so the document stays one click away from the README.
 
 ## New destination
 
@@ -58,7 +58,7 @@ A new entry in the [bootstrap migration registry](../027-bootstrap-migration-reg
 ## Acceptance Criteria
 
 - [x] AC1: A freshly adopted project (first `/ductus` run) has the constitution at `.ductus/constitution.md` (committed, `update` strategy, pinnable); no ductus-owned `update`-strategy file other than the root-anchored `.markdownlint-cli2.jsonc` linter config (kept at root for markdownlint-cli2's config discovery) lands at the adopter repo root.
-- [x] AC2: The shipped `CLAUDE.md` seed imports `.ductus/constitution.md`, and the shipped `AGENTS.md` / `README.md` seeds link the constitution at its new path; no shipped template references a root `constitution.md`.
+- [x] AC2: The shipped `AGENTS.md` / `README.md` seeds link the constitution at its new path, and no shipped template, the `CLAUDE.md` seed included, references a root `constitution.md`.
 - [x] AC3: Every shipped command body that names the adopter constitution path reads `.ductus/constitution.md`; `analyze`'s anchor-resolution rule resolves `framework/constitution.md` in ductus's own repo and `.ductus/constitution.md` at an adopter root.
 - [x] AC4: Running `/ductus` in a project on the old layout moves root `constitution.md` → `.ductus/constitution.md` with history preserved, under the existing batch migration consent with no per-file prompt, and is a no-op on a project already on the new layout.
 - [x] AC5: The migration rewrites the adopter's `CLAUDE.md` `@import` line and `AGENTS.md` / `README.md` constitution links when they match the shipped legacy form; in a seed file that exists, an absent or hand-altered reference it cannot rewrite is left unmodified and named in a warning, while a wholly absent seed file is silently skipped.

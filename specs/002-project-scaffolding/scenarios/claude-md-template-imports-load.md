@@ -23,8 +23,10 @@ On 2026-10-26, `072-governing-documents-stay-within-one-read` found that this te
 - **`@import` inside code.** An `@import` inside a code span or fence is text, not an import, and stays.
 - **No `@import` line.** A `CLAUDE.md` with none is not touched.
 - **Other agents.** Agents that read `AGENTS.md` natively, without `CLAUDE.md`, are unaffected.
-- **A host that does not resolve `@path`.** Auggie reads `CLAUDE.md` natively, and whether it resolves `@AGENTS.md` and `@path` imports is verified before the task closes. A host that does not resolve them falls back to `/{project}:target`'s read for the constitutions, which is the reason that read stays.
-- **The orphaned-reference check.** `check-orphaned-references` reports a dangling import path. It must still recognise a reference written as `@path`, and that is confirmed against the primitive before the task closes.
+- **A host that does not resolve `@path`.** Auggie reads `CLAUDE.md` natively. Whether it resolves `@AGENTS.md` and `@path` imports is **unverified**, because Auggie could not be run where this was built (2026-10-26). If it does not, its sessions start without `AGENTS.md`, as they did under `@import`, and `/{project}:target`'s read still loads the constitutions, which is the reason that read stays.
+- **A shared constitution outside the project directory.** Claude Code treats an import whose path leaves the working directory as external: it asks once per project, in an interactive session, to approve it, and loads nothing until then, after a refusal, or in a non-interactive run. Measured 2026-10-26: in a scratch project whose `CLAUDE.md` held only `@../gov/constitution.md`, a `claude -p` run with every file tool disallowed answered `UNKNOWN` to a question only that file answered, with no tool call, while `@AGENTS.md` in a sibling project answered correctly, and `@import AGENTS.md` answered `UNKNOWN`. `/{project}:target` loads such a document, since it is not in context.
+- **A shared constitution also imported by hand outside the managed block.** The migration rewrites that line like any other rather than removing it. The adopter added it, and removing it would drop the import if the registration were later withdrawn.
+- **The orphaned-reference check.** `check-orphaned-references` reports a dangling import path. It reads an `@` that starts a token, at line start or after whitespace, as the start of a reference, and an `@` glued to a word as not one. A test holds each direction.
 
 ## Open Questions
 

@@ -1,7 +1,6 @@
 # CLAUDE.md
 
-@import .ductus/constitution.md
-@import AGENTS.md
+@AGENTS.md
 
 <!-- /ductus maintains the region between the BEGIN and END markers below.
      Registered shared constitutions (.ductus/config.toml [constitutions.*])

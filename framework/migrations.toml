@@ -238,3 +238,21 @@ target_paths = [
   "specs/inbox.md",
 ]
 procedure_file = "framework/migrations/inbox-guidance-refresh.md"
+
+[[migrations]]
+id = "claude-md-import-syntax"
+introduced_in = "0.60.0"
+# No sunset_after. `CLAUDE.md` is skip-strategy and never rewritten, so an
+# adopter who skips this window keeps `@import` lines that load nothing — no
+# `AGENTS.md` at session start — and nothing else would ever correct them.
+# Ordered after constitution-relocate and ductus-rename, which match the
+# `@import` form and must run first in a chain.
+summary = "Rewrite each `@import <path>` line in CLAUDE.md to the `@<path>` form Claude Code resolves, and remove the line importing .ductus/constitution.md, which exceeds one read (spec 002, claude-md-template-imports-load)"
+# Adopter-relative. Nothing under framework/ is removed by this migration, so it
+# declares no framework/ target path — Family 10b reads those as paths that
+# must no longer exist, and `framework/templates/project/claude-md.md` still
+# does.
+target_paths = [
+  "CLAUDE.md",
+]
+procedure_file = "framework/migrations/claude-md-import-syntax.md"

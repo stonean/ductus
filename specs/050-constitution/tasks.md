@@ -306,7 +306,7 @@ Implements `scenarios/a-retired-feature-leaves-no-spec.md`. The constitution sta
 
 - [ ] Implement the behavior described in `scenarios/the-constitution-fits-one-read.md`
 
-The cut landed at 53,813 bytes with the ceiling lowered to match; the move to the command references, the restored quoted passages and the measurement are in `plan.md` §The constitution fits one read. What is still owed waits on the scenario's open question: the target size, and with it the `CLAUDE.md` import, the template's constitution line and the adopter migration, all withdrawn while the constitution exceeds 072 AC6's 50,000-byte import bound. AC23 stays unticked until then.
+The cut landed at 53,813 bytes with the ceiling lowered to match; the move to the command references, the restored quoted passages and the measurement are in `plan.md` §The constitution fits one read. What is still owed waits on the scenario's open question: the target size, and with it the `CLAUDE.md` import, the template's constitution line and the adopter migration, all withdrawn while the constitution exceeds 072 AC6's 50,000-byte import bound. AC23 stays unticked until then. The same answer settles two passages elsewhere. `017-derive-dont-ask` AC16 still says this repository's `CLAUDE.md` imports the constitution via `@import framework/constitution.md`, false since 072 left it `@AGENTS.md` alone; reopen 017 once and state the import the answer chooses. `002-project-scaffolding`'s §CLAUDE.md template and AC3 say the template does not import the constitution; under (a) or (b) they change with the template line (routed from 002 task 6, 2026-10-26).
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
 
