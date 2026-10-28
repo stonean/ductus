@@ -18,7 +18,7 @@ The owner asked on 2026-10-28 that everything the pipeline writes into an artifa
 
 ## Edge Cases
 
-- **The ceiling.** The bullet is 599 bytes (`wc -c`, newline included, 2026-10-28), and `framework/constitution.md` is 49,997 bytes against the 50,000-byte ceiling `scripts/lint-governing-size.sh` enforces. Landing it cuts at least 596 bytes elsewhere, measured before it is planned, keeping verbatim the passages other specs quote; otherwise the owner reverses `the-constitution-fits-one-read`'s resolution to hold 50,000, recorded in 072.
+- **The ceiling.** The bullet is 599 bytes (`wc -c`, newline included, 2026-10-28), and `framework/constitution.md` was 49,997 bytes against the 50,000-byte ceiling `scripts/lint-governing-size.sh` enforces; it landed at 49,982 (`plan.md` §Artifacts are as short as their required content). Landing it cuts at least 596 bytes elsewhere, measured before it is planned, keeping verbatim the passages other specs quote; otherwise the owner reverses `the-constitution-fits-one-read`'s resolution to hold 50,000, recorded in 072.
 - **No copies.** The constitution loads at startup and every command reads it, so no command or template restates the rule (§drift-prevention).
 - **Existing artifacts are not swept.** The rule governs what is written; it orders no pass over existing artifacts, which meet it when next edited.
 
