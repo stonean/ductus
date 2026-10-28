@@ -56,7 +56,7 @@ MUTATIONS = [
         'M5 system.md rewritten again after the walk, its pre-read copy not taken out',
         'src/primitives/rewrite_spec_links.rs',
         '                let referrer = pending.remove(index);\n',
-        '                let referrer = PendingReferrer {\n                    path: pending[index].path.clone(),\n                    content: pending[index].content.clone(),\n                    passes: pending[index].passes,\n                };\n',
+        '                let referrer = PendingReferrer {\n                    path: pending[index].path.clone(),\n                    content: pending[index].content.clone(),\n                    passes: pending[index].passes,\n                    prefixes: pending[index].prefixes,\n                };\n',
         'rewrite_spec_links',
     ),
     (
@@ -97,7 +97,7 @@ MUTATIONS = [
     (
         'M11 a revision-qualified path read as a reference by the shared scanner',
         'src/primitives/check_orphaned_references.rs',
-        "\n                || (previous == Some(':') && names_a_git_object(&line[..start - 1]));\n",
+        "\n                || (previous == Some(':') && names_a_git_object(&line[..token - 1]));\n",
         ';\n',
         'rewrite_spec_links',
     ),
@@ -111,7 +111,7 @@ MUTATIONS = [
     (
         'M13 the referrers outside the spec root are read but never written',
         'src/primitives/rewrite_spec_links.rs',
-        '    for referrer in pending {\n        sweep.rewrite(&referrer.path, &referrer.content, referrer.passes)?;\n    }\n',
+        '    for referrer in pending {\n        sweep.rewrite(\n            &referrer.path,\n            &referrer.content,\n            referrer.passes,\n            referrer.prefixes,\n        )?;\n    }\n',
         '    let _ = pending;\n',
         'rewrite_spec_links',
     ),

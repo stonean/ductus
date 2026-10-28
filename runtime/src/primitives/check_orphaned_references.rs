@@ -106,6 +106,29 @@ pub(crate) fn referrers(layout: &paths::Paths) -> Vec<String> {
     list
 }
 
+/// The prefixes that name the project root from `referrer`, a project-relative
+/// path from [`referrers`], so that a managed path behind one is the same
+/// reference as the path written bare (`051-branch-scoped-spec-numbering`
+/// task 30).
+///
+/// A markdown file at the project root reaches the root with `./`, and with a
+/// leading `/`, which is how a repository host resolves a link; `../` from
+/// there leaves the project. `system.md`, one level down under the spec root,
+/// reaches it with `../` and a leading `/`; its `./` names the spec root
+/// itself. The hook takes `./`, since git runs a hook from the working tree's
+/// root, where its bare paths resolve too; a leading `/` there is an absolute
+/// file-system path. Every referrer is one of those three kinds.
+pub(crate) fn root_prefixes(referrer: &str) -> &'static [&'static str] {
+    let markdown = Path::new(referrer)
+        .extension()
+        .is_some_and(|ext| ext == "md");
+    match (markdown, referrer.matches('/').count()) {
+        (true, 0) => &["./", "/"],
+        (true, 1) => &["../", "/"],
+        _ => &["./"],
+    }
+}
+
 /// The configured spec root as a path prefix, with its trailing `/` —
 /// `specs/` by default. One spelling for the managed root this check matches,
 /// the `system.md` referrer it reads, and the prefix `rewrite-spec-links`
@@ -172,8 +195,9 @@ pub fn run(
             continue;
         };
         examined.push(referrer.clone());
+        let prefixes = root_prefixes(&referrer);
         for (idx, line) in text.lines().enumerate() {
-            for target in managed_paths_in(line, &roots) {
+            for target in managed_paths_in(line, &roots, prefixes) {
                 if repo.join(target.trim_end_matches('/')).exists() {
                     continue;
                 }
@@ -248,8 +272,8 @@ fn managed_roots(layout: &paths::Paths) -> Vec<String> {
 
 /// Every managed path named on one line, deduplicated, in the sorted set's
 /// order.
-fn managed_paths_in(line: &str, roots: &[String]) -> BTreeSet<String> {
-    managed_path_spans(line, roots)
+fn managed_paths_in(line: &str, roots: &[String], prefixes: &[&str]) -> BTreeSet<String> {
+    managed_path_spans(line, roots, prefixes)
         .into_iter()
         .map(|span| line[span].to_string())
         .collect()
@@ -273,25 +297,38 @@ fn managed_paths_in(line: &str, roots: &[String]) -> BTreeSet<String> {
 /// Ranges from one root never overlap, because a second occurrence inside a
 /// token is preceded by a path character and so is never a reference; two
 /// roots can yield one range twice, which [`managed_paths_in`] deduplicates.
-pub(crate) fn managed_path_spans(line: &str, roots: &[String]) -> Vec<Range<usize>> {
+///
+/// `prefixes` are the ones naming the project root from the referrer the
+/// line comes from ([`root_prefixes`]). A root behind one starts a reference
+/// when the prefix itself starts a token, so the rules below are applied
+/// where the prefix begins; the range still starts at the root, so the
+/// existence test sees the path as if written bare and `rewrite-spec-links`
+/// keeps the prefix as written. Any other text glued before a root —
+/// another prefix, or a word — keeps the root from starting a reference.
+pub(crate) fn managed_path_spans(
+    line: &str,
+    roots: &[String],
+    prefixes: &[&str],
+) -> Vec<Range<usize>> {
     let mut found = Vec::new();
     for root in roots {
         let mut from = 0usize;
         while let Some(rel) = line[from..].find(root.as_str()) {
             let start = from + rel;
-            // A prefix must start a token: `x.ductus/y` is not a reference to
+            let token = start - root_prefix_before(&line[..start], prefixes);
+            // A reference must start a token: `x.ductus/y` is not one to
             // `.ductus/y`, and matching inside one would invent paths. An `@`
             // that itself starts a token is the `@path` import form, so it is
             // a reference; one glued to a word (`x@.ductus/y`) is not. A git
             // object name is not one either — see `names_a_git_object`.
-            let previous = line[..start].chars().next_back();
+            let previous = line[..token].chars().next_back();
             let not_a_reference = previous.is_some_and(is_path_char)
                 || (previous == Some('@')
-                    && line[..start - 1]
+                    && line[..token - 1]
                         .chars()
                         .next_back()
                         .is_some_and(|c| !c.is_whitespace()))
-                || (previous == Some(':') && names_a_git_object(&line[..start - 1]));
+                || (previous == Some(':') && names_a_git_object(&line[..token - 1]));
             from = start + root.len();
             if not_a_reference {
                 continue;
@@ -311,6 +348,18 @@ pub(crate) fn managed_path_spans(line: &str, roots: &[String]) -> Vec<Range<usiz
     }
     found.sort_by_key(|span| span.start);
     found
+}
+
+/// The length of the longest of `prefixes` that `before` ends with, or zero.
+/// The longest, because `../` ends with `./` and `/` — a shorter one would
+/// leave a `.` before it, a path character, and the token unrecognised.
+fn root_prefix_before(before: &str, prefixes: &[&str]) -> usize {
+    prefixes
+        .iter()
+        .filter(|prefix| before.ends_with(**prefix))
+        .map(|prefix| prefix.len())
+        .max()
+        .unwrap_or(0)
 }
 
 /// Whether the colon that ends `before` joins a git revision to the path after
@@ -932,6 +981,97 @@ mod tests {
                 ".ductus/gone-d"
             ],
             "a variable, a path or a link label before the colon is not a revision"
+        );
+    }
+
+    #[test]
+    fn a_path_behind_a_prefix_naming_the_project_root_is_checked() {
+        // 051 task 30: `./` or a leading `/` in a root markdown file, `./` in
+        // the hook, and `../` or a leading `/` in `system.md` each name the
+        // project root, so the path behind one is the same reference as the
+        // path written bare, and is reported as that path.
+        let tmp = adopter();
+        write(
+            &tmp.path().join("README.md"),
+            "See [a](./specs/gone-a/spec.md) and [b](/specs/gone-b/spec.md).\n",
+        );
+        write(
+            &tmp.path().join(".githooks/pre-commit"),
+            "#!/usr/bin/env bash\ngit add ./specs/gone-c/spec.md\n",
+        );
+        write(
+            &tmp.path().join("specs/system.md"),
+            "# System\n\nSee `../specs/gone-d/spec.md` and `/specs/gone-e/spec.md`.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        let found: Vec<(&str, &str)> = result
+            .findings
+            .iter()
+            .map(|f| (f.referrer.as_str(), f.target.as_str()))
+            .collect();
+        assert_eq!(
+            found,
+            vec![
+                ("README.md", "specs/gone-a/spec.md"),
+                ("README.md", "specs/gone-b/spec.md"),
+                (".githooks/pre-commit", "specs/gone-c/spec.md"),
+                ("specs/system.md", "specs/gone-d/spec.md"),
+                ("specs/system.md", "specs/gone-e/spec.md"),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_path_behind_any_other_prefix_is_not_a_reference() {
+        // `../` from a root file leaves the project, a leading `/` in the hook
+        // is an absolute file-system path, `./` in `system.md` names the spec
+        // root itself, and a word glued before a prefix — a directory, a
+        // URL's host — makes the path part of another token.
+        let tmp = adopter();
+        write(
+            &tmp.path().join("README.md"),
+            "See ../specs/gone-a/spec.md, docs/specs/gone-b/spec.md \
+             and https://example.com/specs/gone-c/spec.md.\n",
+        );
+        write(
+            &tmp.path().join(".githooks/pre-commit"),
+            "#!/usr/bin/env bash\ncat /specs/gone-d/spec.md ../specs/gone-e/spec.md\n",
+        );
+        write(
+            &tmp.path().join("specs/system.md"),
+            "# System\n\nSee `./specs/gone-f/spec.md`.\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        assert!(result.findings.is_empty(), "{:?}", result.findings);
+        assert_eq!(result.examined.len(), 3, "{:?}", result.examined);
+    }
+
+    #[test]
+    fn the_import_and_revision_rules_apply_where_the_prefix_begins() {
+        // The character before the root is the prefix's own `/`, so the
+        // token-start rules read the one before the prefix: an `@` starting
+        // a token is an import and one glued to a word is not, and a
+        // revision before a colon names a git object while a link label
+        // before one names a working-tree path.
+        let tmp = adopter();
+        write(
+            &tmp.path().join("CLAUDE.md"),
+            "# CLAUDE.md\n\n@./specs/gone-a/spec.md\nMail x@./specs/gone-b/spec.md\n",
+        );
+        write(
+            &tmp.path().join("README.md"),
+            "Recover it with `git show HEAD:./specs/gone-c/spec.md`.\n\
+             [old]:./specs/gone-d/spec.md\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        let found: Vec<(&str, u32)> = result
+            .findings
+            .iter()
+            .map(|f| (f.target.as_str(), f.line))
+            .collect();
+        assert_eq!(
+            found,
+            vec![("specs/gone-a/spec.md", 3), ("specs/gone-d/spec.md", 2)]
         );
     }
 

@@ -22,10 +22,13 @@
 //!   spec root's `system.md`, from that check's own `referrers` list rather
 //!   than a copy. From those files a reference reads
 //!   `{specs-root}/{from}/…` as a markdown link, a code span, prose or a shell
-//!   argument, so they are scanned with that check's own token scanner
-//!   (`managed_path_spans`), anchored at the configured spec root, and a
-//!   token is rewritten exactly when its first segment past the root is the
-//!   retiring directory. Reusing the scanner is what keeps the two in step:
+//!   argument, bare or behind a prefix that names the project root from that
+//!   file (`./` or a leading `/` in a root markdown file, `./` in the hook,
+//!   `../` or a leading `/` in `system.md`), so they are scanned with that
+//!   check's own token scanner (`managed_path_spans`, given that check's
+//!   `root_prefixes` for the file), anchored at the configured spec root, and
+//!   a token is rewritten, its prefix kept, exactly when its first segment
+//!   past the root is the retiring directory. Reusing the scanner is what keeps the two in step:
 //!   every token the check would report as naming the retiring directory is
 //!   re-pointed, and what it does not treat as a reference — a revision-
 //!   qualified path (`git show abc1234:specs/{from}/spec.md`), a pattern, a
@@ -194,6 +197,9 @@ struct PendingReferrer {
     path: PathBuf,
     content: String,
     passes: Passes,
+    /// The prefixes naming the project root from it, for the token pass
+    /// ([`check_orphaned_references::root_prefixes`]).
+    prefixes: &'static [&'static str],
 }
 
 /// One run's rewrite rule and what it has done so far.
@@ -213,10 +219,24 @@ struct Sweep<'a> {
 
 impl Sweep<'_> {
     /// Rewrite one file's content in place, recording it when anything in it
-    /// moved.
-    fn rewrite(&mut self, path: &Path, content: &str, passes: Passes) -> Result<()> {
+    /// moved. `prefixes` are the token pass's, so none for a file that takes
+    /// only the link pass.
+    fn rewrite(
+        &mut self,
+        path: &Path,
+        content: &str,
+        passes: Passes,
+        prefixes: &[&str],
+    ) -> Result<()> {
         self.examined = self.examined.saturating_add(1);
-        let rewrite = rewrite_content(content, self.from, &self.target, &self.root, passes);
+        let rewrite = rewrite_content(
+            content,
+            self.from,
+            &self.target,
+            &self.root,
+            passes,
+            prefixes,
+        );
         if rewrite.count == 0 {
             return Ok(());
         }
@@ -278,12 +298,12 @@ impl Sweep<'_> {
             }
             if let Some(index) = pending.iter().position(|referrer| referrer.path == path) {
                 let referrer = pending.remove(index);
-                self.rewrite(path, &referrer.content, referrer.passes)?;
+                self.rewrite(path, &referrer.content, referrer.passes, referrer.prefixes)?;
             } else if !referrers.iter().any(|referrer| referrer == path) {
                 // Not a referrer. One that is but is not pending was listed in
                 // `skipped`, and is passed over unread.
                 let content = read_text(path)?;
-                self.rewrite(path, &content, Passes::Links)?;
+                self.rewrite(path, &content, Passes::Links, &[])?;
             }
         }
         Ok(())
@@ -369,6 +389,7 @@ impl Sweep<'_> {
                 path,
                 content,
                 passes,
+                prefixes: check_orphaned_references::root_prefixes(shown),
             });
         }
         Ok(pending)
@@ -475,7 +496,12 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
     let mut pending = sweep.read_referrers(&referrers, &specs_dir)?;
     sweep.walk_spec_root(&specs_dir, &referrer_paths, &mut pending)?;
     for referrer in pending {
-        sweep.rewrite(&referrer.path, &referrer.content, referrer.passes)?;
+        sweep.rewrite(
+            &referrer.path,
+            &referrer.content,
+            referrer.passes,
+            referrer.prefixes,
+        )?;
     }
 
     Ok(RewriteSpecLinksResult {
@@ -526,6 +552,7 @@ fn rewrite_content(
     target: &FoldTarget,
     root: &str,
     passes: Passes,
+    prefixes: &[&str],
 ) -> FileRewrite {
     // The file's own ending, not a bare `\n`. `lines()` strips a trailing
     // `\r`, so re-joining with `\n` would convert a CRLF checkout's file to
@@ -559,7 +586,8 @@ fn rewrite_content(
             }
         }
         if passes.tokens() {
-            let (rewritten, moved) = rewrite_path_tokens(&current, from, target, root, &mut kept);
+            let (rewritten, moved) =
+                rewrite_path_tokens(&current, from, target, root, prefixes, &mut kept);
             count += moved;
             current = rewritten;
         }
@@ -648,22 +676,25 @@ fn rewrite_body_line(
 /// first segment past the spec root.
 ///
 /// The tokens are the ones `check-orphaned-references` finds, by its own
-/// scanner given the spec root as the only managed root, so this rewrites
-/// exactly what that check would report once the directory is gone — the
-/// same reference written as a link, a code span, prose or a shell argument.
+/// scanner given the spec root as the only managed root and the referrer's
+/// own `prefixes`, so this rewrites exactly what that check would report once
+/// the directory is gone — the same reference written as a link, a code
+/// span, prose or a shell argument, bare or behind a prefix naming the
+/// project root. A span starts at the root, so a prefix is kept as written.
 /// Each kept-tail reference is pushed onto `kept`.
 fn rewrite_path_tokens(
     line: &str,
     from: &str,
     target: &FoldTarget,
     root: &str,
+    prefixes: &[&str],
     kept: &mut Vec<String>,
 ) -> (String, u32) {
     let roots = [root.to_string()];
     let mut out = String::with_capacity(line.len());
     let mut copied = 0;
     let mut count = 0;
-    for span in check_orphaned_references::managed_path_spans(line, &roots) {
+    for span in check_orphaned_references::managed_path_spans(line, &roots, prefixes) {
         // A span that starts inside the text the previous rewrite consumed.
         // A heading anchor's characters include none of `/`, so in
         // `spec.md#specs/{from}/plan.md` the first token takes `#specs`
@@ -1448,6 +1479,86 @@ mod tests {
             "Recover it with `git show abc1234:specs/1234.1-staged/spec.md`.\n\
              Its home: specs/050-alpha/spec.md\n"
         );
+    }
+
+    /// 051 task 30: a reference behind a prefix that names the project root
+    /// from its referrer — `./` or a leading `/` in a root markdown file,
+    /// `./` in the hook, `../` or a leading `/` in `system.md` — is the one
+    /// the check reports, so it is re-pointed, and the prefix is kept.
+    #[test]
+    fn a_reference_behind_a_project_root_prefix_is_re_pointed_with_its_prefix() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        write_root(
+            tmp.path(),
+            "README.md",
+            "See [a](./specs/1234.1-staged/spec.md) and [b](/specs/1234.1-staged/spec.md).\n",
+        );
+        write_root(
+            tmp.path(),
+            ".githooks/pre-commit",
+            "#!/usr/bin/env bash\ngit add ./specs/1234.1-staged/spec.md\n",
+        );
+        write(
+            tmp.path(),
+            "system.md",
+            "# System\n\nSee `../specs/1234.1-staged/spec.md` and `/specs/1234.1-staged/spec.md`.\n",
+        );
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        let rewritten: Vec<(&str, u32)> = result
+            .rewritten
+            .iter()
+            .map(|f| (f.path.as_str(), f.count))
+            .collect();
+        assert_eq!(
+            rewritten,
+            vec![
+                ("specs/system.md", 2),
+                ("README.md", 2),
+                (".githooks/pre-commit", 1),
+            ]
+        );
+        assert_eq!(
+            read_root(tmp.path(), "README.md"),
+            "See [a](./specs/050-alpha/spec.md) and [b](/specs/050-alpha/spec.md).\n"
+        );
+        assert_eq!(
+            read_root(tmp.path(), ".githooks/pre-commit"),
+            "#!/usr/bin/env bash\ngit add ./specs/050-alpha/spec.md\n"
+        );
+        assert_eq!(
+            read(tmp.path(), "system.md"),
+            "# System\n\nSee `../specs/050-alpha/spec.md` and `/specs/050-alpha/spec.md`.\n"
+        );
+    }
+
+    /// Any other prefix keeps a path from being a reference to the spec root
+    /// — `../` from a root file leaves the project, a leading `/` in the hook
+    /// is an absolute file-system path, `./` in `system.md` names the spec
+    /// root itself, and a word glued before one makes it part of another
+    /// token — so the check does not report it and it is left as written.
+    #[test]
+    fn a_reference_behind_any_other_prefix_is_left_as_written() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        let readme = "See ../specs/1234.1-staged/spec.md and docs/specs/1234.1-staged/spec.md.\n";
+        let hook = "#!/usr/bin/env bash\ncat /specs/1234.1-staged/spec.md\n";
+        let system = "# System\n\nSee `./specs/1234.1-staged/spec.md`.\n";
+        write_root(tmp.path(), "README.md", readme);
+        write_root(tmp.path(), ".githooks/pre-commit", hook);
+        write(tmp.path(), "system.md", system);
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert!(result.rewritten.is_empty(), "{:?}", result.rewritten);
+        // The target's spec, `system.md`, and the two referrers outside the
+        // spec root.
+        assert_eq!(result.examined, 4);
+        assert_eq!(read_root(tmp.path(), "README.md"), readme);
+        assert_eq!(read_root(tmp.path(), ".githooks/pre-commit"), hook);
+        assert_eq!(read(tmp.path(), "system.md"), system);
     }
 
     /// A project without some referrers: the absent ones are neither an

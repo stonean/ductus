@@ -150,8 +150,9 @@ enum Command {
     RemoveInboxItem(RemoveInboxItemArgs),
     /// Derive the existing homes — specs, rule surfaces — proposed work could belong to.
     DeriveRoutingCandidates(DeriveRoutingCandidatesArgs),
-    /// Report adopter-owned files whose references to ductus-managed paths no longer resolve.
+    /// Report relative markdown links in the spec corpus that resolve to nothing.
     CheckCorpusLinks(CheckCorpusLinksArgs),
+    /// Report adopter-owned files whose references to ductus-managed paths no longer resolve.
     CheckOrphanedReferences(CheckOrphanedReferencesArgs),
     /// Report flags a command's Flags table documents but its `argument-hint` omits.
     CheckCommandFlags(CheckCommandFlagsArgs),

@@ -5269,7 +5269,9 @@ pub struct RewriteSpecLinksArgs {
     /// `../050-alpha/scenarios/inner.md`); the directory's other files did
     /// not survive individually — their content landed in the routed
     /// scenario — so every other inbound link collapses onto
-    /// `<feature>/scenarios/<slug>.md`. Neither is listed.
+    /// `<feature>/scenarios/<slug>.md`. Neither is listed. On either target,
+    /// a `scenarios/<name>` tail the retiring directory does not hold is
+    /// listed in `kept-tails`, since no fold carried that scenario.
     #[arg(long)]
     pub to: String,
 }
