@@ -14,32 +14,30 @@ free number. When the code a mutation anchors on changes, update the anchor
 in the same change; `run.py --check` names every anchor that no longer
 matches exactly once.
 
-The rule lives in the shared scanner, so each mutation of it runs twice:
-M1-M9 and M14 filtered to the check's tests, and M15-M24 the same mutations
-filtered to the rewrite's, so a kill shows that each primitive's own tests
-hold it, as do M25 and M26 (a prefix that continues another path is no
-reference), M32 and M33 (a leading `/` is no prefix below the repository
-root) and M34 and M35 (a prefix after markup or a shell operator is one).
-M10 and M11 (the token-start rules read before the prefix), M12 and M27-M31
-(what ends another path) are the check's alone, M13 the rewrite's.
+The rule lives in the shared scanner, so most mutations of it run twice:
+M1-M9 and M14 filtered to the check's tests and M15-M24 to the rewrite's,
+so a kill shows that each primitive's own tests hold it, as do M25/M26 (a
+leading / that ends another directory's name is no reference), M34/M35 (a
+leading / after markup or a shell operator is one), M37/M38 (the exception
+is the leading /'s alone) and M42/M43 (a prefix at a line's start counts).
+M10 and M11 (the token-start rules read before the prefix), M12, M27-M31,
+M36 and M39-M41 (what ends a directory's name) are the check's alone, M13
+the rewrite's. M32 and M33 tested a rule the re-read of 3fc5755a reverted.
 
 The killing tests are `a_path_behind_a_prefix_naming_the_project_root_is_checked`,
 `a_path_behind_any_other_prefix_is_not_a_reference`,
-`a_prefix_after_markup_or_a_shell_operator_is_a_reference`,
-`a_leading_slash_is_no_prefix_below_the_repository_root` and
+`a_prefix_counts_wherever_the_bare_path_does` and
 `the_import_and_revision_rules_apply_where_the_prefix_begins` in
 check_orphaned_references.rs, and
 `a_reference_behind_a_project_root_prefix_is_re_pointed_with_its_prefix`,
-`a_reference_behind_any_other_prefix_is_left_as_written`,
-`a_reference_after_markup_or_a_shell_operator_is_re_pointed` and
-`a_leading_slash_below_the_repository_root_is_left_alone` in
+`a_reference_behind_any_other_prefix_is_left_as_written` and
+`a_prefixed_reference_is_re_pointed_wherever_the_bare_one_is` in
 rewrite_spec_links.rs.
 """
 
 EXPECTED_SURVIVORS = {}
 
 MUTATIONS = [
-    # -- the check's tests -----------------------------------------------------
     (
         'M1 a root markdown file does not take ./ (check)',
         'src/primitives/check_orphaned_references.rs',
@@ -99,8 +97,8 @@ MUTATIONS = [
     (
         'M9 the shortest matching prefix is taken, not the longest (check)',
         'src/primitives/check_orphaned_references.rs',
-        '        .map(|prefix| prefix.len())\n        .max()\n',
-        '        .map(|prefix| prefix.len())\n        .min()\n',
+        '        .max_by_key(|prefix| prefix.len())\n',
+        '        .min_by_key(|prefix| prefix.len())\n',
         'check_orphaned_references::',
     ),
     (
@@ -120,15 +118,15 @@ MUTATIONS = [
     (
         'M12 the check passes its referrers no prefixes',
         'src/primitives/check_orphaned_references.rs',
-        '        let prefixes = root_prefixes(&referrer, at_work_tree_root);\n',
-        '        let prefixes: Vec<&str> = Vec::new();\n',
+        '        let prefixes = root_prefixes(&referrer);\n',
+        '        let prefixes: &[&str] = &[];\n',
         'check_orphaned_references::',
     ),
     (
         'M13 the rewrite passes its referrers no prefixes',
         'src/primitives/rewrite_spec_links.rs',
-        '                prefixes: check_orphaned_references::root_prefixes(shown, self.at_work_tree_root),\n',
-        '                prefixes: Vec::new(),\n',
+        '                prefixes: check_orphaned_references::root_prefixes(shown),\n',
+        '                prefixes: &[],\n',
         'rewrite_spec_links::',
     ),
     (
@@ -138,7 +136,6 @@ MUTATIONS = [
         '                found.push(token..start + candidate.len());\n',
         'check_orphaned_references::',
     ),
-    # -- the rewrite's tests ---------------------------------------------------
     (
         'M15 a root markdown file does not take ./ (rewrite)',
         'src/primitives/check_orphaned_references.rs',
@@ -198,8 +195,8 @@ MUTATIONS = [
     (
         'M23 the shortest matching prefix is taken, not the longest (rewrite)',
         'src/primitives/check_orphaned_references.rs',
-        '        .map(|prefix| prefix.len())\n        .max()\n',
-        '        .map(|prefix| prefix.len())\n        .min()\n',
+        '        .max_by_key(|prefix| prefix.len())\n',
+        '        .min_by_key(|prefix| prefix.len())\n',
         'rewrite_spec_links::',
     ),
     (
@@ -209,83 +206,123 @@ MUTATIONS = [
         '                found.push(token..start + candidate.len());\n',
         'rewrite_spec_links::',
     ),
-    # -- a prefix starts a reference only where it starts a token ---------------
     (
-        'M25 a prefix that continues another path starts a reference (check)',
+        'M25 a leading / that ends another directory starts a reference (check)',
         'src/primitives/check_orphaned_references.rs',
-        '                || (token < start && continues_another_path(&line[..token]))\n',
+        '                || (prefix == Some("/") && ends_another_directory(&line[..token]))\n',
         '',
         'check_orphaned_references::',
     ),
     (
-        'M26 a prefix that continues another path starts a reference (rewrite)',
+        'M26 a leading / that ends another directory starts a reference (rewrite)',
         'src/primitives/check_orphaned_references.rs',
-        '                || (token < start && continues_another_path(&line[..token]))\n',
+        '                || (prefix == Some("/") && ends_another_directory(&line[..token]))\n',
         '',
         'rewrite_spec_links::',
     ),
-    # -- what ends another path, and the leading `/` below the repository root -
     (
-        'M27 a prefix after ~ starts a reference',
+        'M27 a leading / after ~ starts a reference',
         'src/primitives/check_orphaned_references.rs',
-        "matches!(c, '~' | '}' | '%' | ')')",
-        "matches!(c, '}' | '%' | ')')",
+        "        Some('~') => back.next() != Some('~'),\n",
+        "        Some('~') => false,\n",
         'check_orphaned_references::',
     ),
     (
-        'M28 a prefix after } starts a reference',
+        'M28 a leading / after } starts a reference',
         'src/primitives/check_orphaned_references.rs',
-        "matches!(c, '~' | '}' | '%' | ')')",
-        "matches!(c, '~' | '%' | ')')",
+        "        Some('}' | '%' | ')') => true,\n",
+        "        Some('%' | ')') => true,\n",
         'check_orphaned_references::',
     ),
     (
-        'M29 a prefix after % starts a reference',
+        'M29 a leading / after % starts a reference',
         'src/primitives/check_orphaned_references.rs',
-        "matches!(c, '~' | '}' | '%' | ')')",
-        "matches!(c, '~' | '}' | ')')",
+        "        Some('}' | '%' | ')') => true,\n",
+        "        Some('}' | ')') => true,\n",
         'check_orphaned_references::',
     ),
     (
-        'M30 a prefix after ) starts a reference',
+        'M30 a leading / after ) starts a reference',
         'src/primitives/check_orphaned_references.rs',
-        "matches!(c, '~' | '}' | '%' | ')')",
-        "matches!(c, '~' | '}' | '%')",
+        "        Some('}' | '%' | ')') => true,\n",
+        "        Some('}' | '%') => true,\n",
         'check_orphaned_references::',
     ),
     (
-        'M31 a quote closing a variable path is read as opening a token',
+        'M31 a quote closing a variable before a leading / is read as opening a token',
         'src/primitives/check_orphaned_references.rs',
-        "=> back.next().is_some_and(ends_a_path),",
-        "=> false,",
+        '        Some(\'"\' | \'\\\'\' | \'`\') => back.next().is_some_and(closes_a_name),\n',
+        '        Some(\'"\' | \'\\\'\' | \'`\') => false,\n',
         'check_orphaned_references::',
     ),
     (
-        'M32 a leading / is a prefix below the repository root (check)',
+        'M34 a leading / after markup or a shell operator is refused (check)',
         'src/primitives/check_orphaned_references.rs',
-        '        .filter(|prefix| at_work_tree_root || *prefix != "/")\n',
-        '        .filter(|_| true)\n',
+        '        _ => false,\n',
+        '        _ => true,\n',
         'check_orphaned_references::',
     ),
     (
-        'M33 a leading / is a prefix below the repository root (rewrite)',
+        'M35 a leading / after markup or a shell operator is refused (rewrite)',
         'src/primitives/check_orphaned_references.rs',
-        '        .filter(|prefix| at_work_tree_root || *prefix != "/")\n',
-        '        .filter(|_| true)\n',
+        '        _ => false,\n',
+        '        _ => true,\n',
         'rewrite_spec_links::',
     ),
     (
-        'M34 a prefix after markup or a shell operator is refused (check)',
+        'M36 a leading / after strikethrough ~~ is refused',
         'src/primitives/check_orphaned_references.rs',
-        '        Some(c) => ends_a_path(c),\n',
-        "        Some(c) => ends_a_path(c) || matches!(c, '|' | '>' | '&' | '\\u{201c}'),\n",
+        "        Some('~') => back.next() != Some('~'),\n",
+        "        Some('~') => true,\n",
         'check_orphaned_references::',
     ),
     (
-        'M35 a prefix after markup or a shell operator is refused (rewrite)',
+        'M37 the directory-name exception applies to ./ and ../ too (check)',
         'src/primitives/check_orphaned_references.rs',
-        '        Some(c) => ends_a_path(c),\n',
-        "        Some(c) => ends_a_path(c) || matches!(c, '|' | '>' | '&' | '\\u{201c}'),\n",
+        'prefix == Some("/") && ends_another_directory',
+        'prefix.is_some() && ends_another_directory',
+        'check_orphaned_references::',
+    ),
+    (
+        'M38 the directory-name exception applies to ./ and ../ too (rewrite)',
+        'src/primitives/check_orphaned_references.rs',
+        'prefix == Some("/") && ends_another_directory',
+        'prefix.is_some() && ends_another_directory',
+        'rewrite_spec_links::',
+    ),
+    (
+        'M39 any character before a closing quote ends a directory name',
+        'src/primitives/check_orphaned_references.rs',
+        "    c.is_ascii_alphanumeric() || matches!(c, '}' | ')' | '%')\n",
+        '    true\n',
+        'check_orphaned_references::',
+    ),
+    (
+        'M40 a leading / at the start of a line is refused',
+        'src/primitives/check_orphaned_references.rs',
+        '        _ => false,\n',
+        '        None => true,\n        _ => false,\n',
+        'check_orphaned_references::',
+    ),
+    (
+        'M41 a quote at the start of a line closes a directory name',
+        'src/primitives/check_orphaned_references.rs',
+        '=> back.next().is_some_and(closes_a_name),',
+        '=> back.next().is_none_or(closes_a_name),',
+        'check_orphaned_references::',
+    ),
+    (
+        'M42 a prefix at the start of a line is refused (check)',
+        'src/primitives/check_orphaned_references.rs',
+        '            let not_a_reference = previous.is_some_and(is_path_char)\n',
+        '            let not_a_reference = previous.is_none_or(is_path_char)\n',
+        'check_orphaned_references::',
+    ),
+    (
+        'M43 a prefix at the start of a line is refused (rewrite)',
+        'src/primitives/check_orphaned_references.rs',
+        '            let not_a_reference = previous.is_some_and(is_path_char)\n',
+        '            let not_a_reference = previous.is_none_or(is_path_char)\n',
         'rewrite_spec_links::',
     ),
 ]
