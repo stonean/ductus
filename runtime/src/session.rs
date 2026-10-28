@@ -334,7 +334,7 @@ pub const SESSION_LOCK_TIMEOUT: Duration = Duration::from_secs(10);
 /// later bound doubles, up to [`LOCK_RETRY_CAP`], and each wait is drawn
 /// uniformly from zero to its bound, so contenders that met the lock together
 /// do not retry in step (`BE-RETRY-001`'s backoff with jitter);
-/// [`SESSION_LOCK_TIMEOUT`] bounds the attempts.
+/// [`SESSION_LOCK_TIMEOUT`] and [`LOCK_MAX_ATTEMPTS`] bound the attempts.
 const LOCK_RETRY_FIRST: Duration = Duration::from_millis(1);
 
 /// The largest bound on one wait between attempts. A hold lasts one small
@@ -373,13 +373,15 @@ fn jitter_seed() -> u64 {
 
 /// Take the exclusive advisory lock on `.ductus/sessions/.lock`, creating the
 /// directory first and, once the lock is held, its `.gitignore`. Waits up to
-/// [`SESSION_LOCK_TIMEOUT`] for another holder; the OS releases the lock if
-/// its holder dies, so there is no stale-lock recovery to get wrong.
+/// [`SESSION_LOCK_TIMEOUT`], or [`LOCK_MAX_ATTEMPTS`] attempts, for another
+/// holder; the OS releases the lock if its holder dies, so there is no
+/// stale-lock recovery to get wrong.
 ///
 /// # Errors
 ///
 /// [`PrimitiveError::Io`] naming the lock file when it cannot be opened or
-/// locked, or when another process holds it past the timeout.
+/// locked, or when another process holds it past the timeout or the attempt
+/// bound.
 pub fn lock(repo: &Path) -> Result<SessionLock> {
     lock_within(repo, SESSION_LOCK_TIMEOUT)
 }

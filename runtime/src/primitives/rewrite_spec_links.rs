@@ -93,8 +93,8 @@
 //! only, so it stays clean. The design stays: such a reference is still
 //! re-pointed, and listed in `kept-tails` with its file and line so the
 //! caller can name it for the operator to judge. A scenario target keeps a
-//! tail naming one of the retiring directory's scenarios, fragment and all,
-//! since that scenario crosses over under its own slug on either route, and
+//! `scenarios/{name}` tail, fragment and all, since each of the retiring
+//! directory's scenarios crosses over under its own slug on either route, and
 //! replaces any other tail with the routed scenario. On either target a
 //! `scenarios/{name}` tail the retiring directory does not hold, read before
 //! anything is written, is listed as well: no fold carried that scenario, so
@@ -526,8 +526,9 @@ struct FileRewrite {
     /// Pointers moved.
     count: u32,
     /// `(line, reference)` for each moved reference whose kept tail names a
-    /// file the fold did not write ([`names_a_file_the_fold_did_not_write`]),
-    /// the line 1-based.
+    /// file the fold did not write ([`names_a_file_the_fold_did_not_write`])
+    /// or a scenario the retiring directory does not hold
+    /// ([`FoldTarget::does_not_hold_scenario`]), the line 1-based.
     kept_tails: Vec<(u32, String)>,
 }
 
@@ -535,8 +536,9 @@ struct FileRewrite {
 struct Moved {
     /// The reference as rewritten.
     text: String,
-    /// Whether a feature-only target kept a tail naming a file the fold did
-    /// not write.
+    /// Whether the kept tail names a file the fold did not write, on a
+    /// feature-only target, or, on either target, a scenario the retiring
+    /// directory does not hold.
     kept_tail: bool,
 }
 
@@ -813,11 +815,11 @@ fn rebuild(segments: &[&str], index: usize, fragment: Option<&str>, target: &Fol
         // Otherwise the tail is kept, and any fragment naming a heading
         // inside it.
         //
-        // On a scenario target the tail names one of the retiring
-        // directory's scenarios, which crosses over under its own slug on
-        // either route (`/{project}:fold` step 7, which stops the fold when
-        // that slug is already taken by a file the fold did not write), so
-        // it lands on the carried scenario. Such a tail is never a kept tail.
+        // On a scenario target the tail names a scenario. One the retiring
+        // directory holds crosses over under its own slug on either route
+        // (`/{project}:fold` step 7, which stops the fold when that slug is
+        // already taken by a file the fold did not write), so it lands on the
+        // carried scenario and is not a kept tail.
         //
         // On a feature-only target the directory's files map across one for
         // one on a rename; a body-edit fold writes only some of them and a
@@ -1537,13 +1539,15 @@ mod tests {
     /// Any other prefix keeps a path from being a reference to the spec root
     /// — `../` from a root file leaves the project, a leading `/` in the hook
     /// is an absolute file-system path, `./` in `system.md` names the spec
-    /// root itself, and a word glued before one makes it part of another
-    /// token — so the check does not report it and it is left as written.
+    /// root itself, and a word glued before one, or the end of a home or
+    /// variable path, makes it part of another token — so the check does not
+    /// report it and it is left as written.
     #[test]
     fn a_reference_behind_any_other_prefix_is_left_as_written() {
         let tmp = tempfile::tempdir().unwrap();
         seed_target(tmp.path(), "050-alpha");
-        let readme = "See ../specs/1234.1-staged/spec.md and docs/specs/1234.1-staged/spec.md.\n";
+        let readme = "See ../specs/1234.1-staged/spec.md and docs/specs/1234.1-staged/spec.md.\n\
+                      Not ~/specs/1234.1-staged/spec.md or ${HOME}/specs/1234.1-staged/spec.md.\n";
         let hook = "#!/usr/bin/env bash\ncat /specs/1234.1-staged/spec.md\n";
         let system = "# System\n\nSee `./specs/1234.1-staged/spec.md`.\n";
         write_root(tmp.path(), "README.md", readme);

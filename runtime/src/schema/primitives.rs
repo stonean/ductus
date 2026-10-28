@@ -5262,10 +5262,10 @@ pub struct RewriteSpecLinksArgs {
     /// rename, while on a body-edit fold or a consolidation a tail other
     /// than `spec.md` or one under `scenarios/` names the target's own file,
     /// which received none of the moved content; the result lists each such
-    /// reference in `kept-tails`. With a scenario, a link to one of the
-    /// retiring directory's scenarios keeps its tail and fragment, since the
-    /// fold carries each scenario across under its own slug on either route
-    /// (`../<from>/scenarios/inner.md` becomes
+    /// reference in `kept-tails`. With a scenario, a link with a
+    /// `scenarios/<name>` tail keeps its tail and fragment, since the fold
+    /// carries each of the retiring directory's scenarios across under its
+    /// own slug on either route (`../<from>/scenarios/inner.md` becomes
     /// `../050-alpha/scenarios/inner.md`); the directory's other files did
     /// not survive individually — their content landed in the routed
     /// scenario — so every other inbound link collapses onto

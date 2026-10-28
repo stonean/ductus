@@ -1,6 +1,7 @@
 """Mutation list for spec 051's atomic feature-directory claim (`BE-RACE-003`):
 `create-feature` makes the directory with `create_dir`, so of two processes
-racing for one name exactly one creates it and writes its `spec.md`.
+racing for one name exactly one creates it and writes its `spec.md`; and the
+directory is contained before it is tested or created (`BE-INPUT-004`).
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/create-feature-claim.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -10,13 +11,14 @@ free number. When the code a mutation anchors on changes, update the anchor
 in the same change; `run.py --check` names every anchor that no longer
 matches exactly once.
 
-The killing test is `a_feature_directory_is_claimed_by_exactly_one_racer` in
+The killing tests are `a_feature_directory_is_claimed_by_exactly_one_racer`,
+`a_dangling_link_at_the_derived_name_is_a_lost_claim` (a dangling link inside
+the project passes the existence check and loses the claim, the path a race
+takes) and `a_spec_root_linked_outside_the_project_is_refused` in
 runtime/src/primitives/create_feature.rs.
 """
 
-EXPECTED_SURVIVORS = {
-    'M3': "run's use of a lost claim is reached only when another process creates the directory between run's existence check and its claim, a race no portable test can make happen on demand; the claim itself is killed by M1 and M2",
-}
+EXPECTED_SURVIVORS = {}
 
 MUTATIONS = [
     (
@@ -38,6 +40,13 @@ MUTATIONS = [
         'src/primitives/create_feature.rs',
         '    if !claim_feature_dir(&feature_dir)? {\n',
         '    if claim_feature_dir(&feature_dir).map(|_| false)? {\n',
+        'create_feature',
+    ),
+    (
+        'M4 the derived directory is not contained before it is created',
+        'src/primitives/create_feature.rs',
+        '    super::validate_feature_contained(repo, &root, &feature)?;\n',
+        '',
         'create_feature',
     ),
 ]

@@ -300,11 +300,13 @@ fn managed_paths_in(line: &str, roots: &[String], prefixes: &[&str]) -> BTreeSet
 ///
 /// `prefixes` are the ones naming the project root from the referrer the
 /// line comes from ([`root_prefixes`]). A root behind one starts a reference
-/// when the prefix itself starts a token, so the rules below are applied
+/// when the prefix itself starts a token — at the line's start, or after a
+/// character [`opens_a_token`] accepts — so the rules below are applied
 /// where the prefix begins; the range still starts at the root, so the
 /// existence test sees the path as if written bare and `rewrite-spec-links`
 /// keeps the prefix as written. Any other text glued before a root —
-/// another prefix, or a word — keeps the root from starting a reference.
+/// another prefix, a word, or the end of a home or variable path (`~/`,
+/// `${HOME}/`, `%USERPROFILE%/`) — keeps the root from starting a reference.
 pub(crate) fn managed_path_spans(
     line: &str,
     roots: &[String],
@@ -323,6 +325,7 @@ pub(crate) fn managed_path_spans(
             // object name is not one either — see `names_a_git_object`.
             let previous = line[..token].chars().next_back();
             let not_a_reference = previous.is_some_and(is_path_char)
+                || (token < start && previous.is_some_and(|c| !opens_a_token(c)))
                 || (previous == Some('@')
                     && line[..token - 1]
                         .chars()
@@ -348,6 +351,20 @@ pub(crate) fn managed_path_spans(
     }
     found.sort_by_key(|span| span.start);
     found
+}
+
+/// Whether a prefix after `c` starts a token: whitespace, markup that opens a
+/// path (`(`, `[`, `<`, a backtick or a quote), a shell assignment or list
+/// separator (`=`, `,`, `;`), and the `@` and `:` the rules after it judge.
+/// Anything else ends another path — `~` in `~/`, `}` in `${HOME}/`, `%` in
+/// `%USERPROFILE%/` — whose `/` names a home or variable directory, not the
+/// project root.
+fn opens_a_token(c: char) -> bool {
+    c.is_whitespace()
+        || matches!(
+            c,
+            '(' | '[' | '<' | '`' | '"' | '\'' | '=' | ',' | ';' | '@' | ':'
+        )
 }
 
 /// The length of the longest of `prefixes` that `before` ends with, or zero.
@@ -1026,12 +1043,15 @@ mod tests {
         // `../` from a root file leaves the project, a leading `/` in the hook
         // is an absolute file-system path, `./` in `system.md` names the spec
         // root itself, and a word glued before a prefix — a directory, a
-        // URL's host — makes the path part of another token.
+        // URL's host — makes the path part of another token, as the end of a
+        // home or variable path does (`~/`, `${HOME}/`, `%USERPROFILE%/`).
         let tmp = adopter();
         write(
             &tmp.path().join("README.md"),
             "See ../specs/gone-a/spec.md, docs/specs/gone-b/spec.md \
-             and https://example.com/specs/gone-c/spec.md.\n",
+             and https://example.com/specs/gone-c/spec.md.\n\
+             The pointer is ~/.ductus/bin/ductus, ${HOME}/.ductus/gone-g \
+             or %USERPROFILE%/.ductus/gone-h.\n",
         );
         write(
             &tmp.path().join(".githooks/pre-commit"),

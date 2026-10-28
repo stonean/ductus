@@ -6,7 +6,7 @@ section: "Link and reference integrity"
 
 ## Context
 
-`check-orphaned-references` finds a managed path in a referrer by scanning for a managed-root prefix at the start of a token and taking the run of path characters that follows. A prefix preceded by a path character, or by an `@` glued to a word, does not start a token, so `x.ductus/y` is never read as a reference to `.ductus/y`. A colon was not in that set.
+`check-orphaned-references` finds a managed path in a referrer by scanning for a managed-root prefix at the start of a token and taking the run of path characters that follows. A prefix preceded by a path character, or by an `@` glued to a word, does not start a token, so `x.ductus/y` is never read as a reference to `.ductus/y`; one behind a prefix that names the project root from the referrer (`./.ductus/y` in a root file) does, as `data-model.md` §`check-orphaned-references` states. A colon was not in that set.
 
 Git names a file at a revision as `<rev>:<path>` — `git show abc1234:specs/002-auth/spec.md` — and a file in the index as `:<path>`. An adopter that retired a spec directory and kept pointers to its last text wrote exactly that form, in a code span, in its `AGENTS.md`, `README.md` and `specs/system.md`. The check matched the `specs/` root after the colon, took the remainder as a working-tree path, found it absent, and reported three orphaned references. Observed on a live adopter running 0.58.0, and reproduced unchanged on 0.59.0.
 
@@ -27,7 +27,7 @@ None of the three is an orphan. The path resolves through git's object store at 
 - **A colon followed by a space** — `See: specs/x/spec.md` — leaves the prefix at a token start, and the reference is checked as before. Only a glued colon can exclude.
 - **A list entry after a bare word** — `PATH=bin:.ductus/x` — is excluded. `bin` is a valid branch name and nothing on the line says otherwise, so the shape cannot tell the two apart; the reading that skips is chosen because the revision form is the one observed in adopter prose.
 - **Prose with no space after the colon** — `see:specs/x/spec.md` — reads `see` as a revision and is excluded. It was a finding before; it is now the same silent skip as the bare-word list entry, and for the same reason.
-- **A URL** — `https://host/owner/repo/blob/main/specs/x.md` — was already excluded: the prefix follows `/`, a path character.
+- **A URL** — `https://host/owner/repo/blob/main/specs/x.md` — was already excluded: the prefix follows `/`, a path character, and that `/` follows `n`, so it does not start a token either.
 - **A revision-qualified path under another managed root** — `abc1234:.ductus/constitution.md` — is excluded the same way; the boundary is tested per prefix, not per root.
 
 ## Open Questions

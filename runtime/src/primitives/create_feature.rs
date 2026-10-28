@@ -32,7 +32,9 @@ use crate::schema::primitives::{CreateFeatureArgs, CreateFeatureResult};
 /// # Errors
 ///
 /// Returns [`PrimitiveError::InvalidArgument`] when `title` derives to an
-/// empty slug, [`PrimitiveError::TemplateNotFound`] when no spec template
+/// empty slug, [`PrimitiveError::InvalidPath`] when the derived directory
+/// resolves outside the project through a symbolic link (the spec root's or
+/// its own), [`PrimitiveError::TemplateNotFound`] when no spec template
 /// exists at either candidate location, or [`PrimitiveError::Io`] for
 /// filesystem failures. An already-existing target directory is the
 /// `created: false` **domain outcome** (no overwrite path), not an error.
@@ -56,6 +58,11 @@ pub fn run(args: &CreateFeatureArgs, repo: &Path) -> Result<CreateFeatureResult>
             format!("{}.{n}-{slug}", scope.identifier)
         }
     };
+    // The name derives from the caller's title and identifier, so the
+    // directory it names is contained before it is tested or created: the
+    // lexical screen, then every link on the path resolved and compared by
+    // whole components (`BE-INPUT-004`, 022's plan §Path arguments).
+    super::validate_feature_contained(repo, &root, &feature)?;
     let feature_dir = specs_dir.join(&feature);
     let rel_dir = format!("{root}/{feature}");
     let identifier = branch.as_ref().map(|scope| scope.identifier.clone());
@@ -64,9 +71,10 @@ pub fn run(args: &CreateFeatureArgs, repo: &Path) -> Result<CreateFeatureResult>
     // The counters make this unreachable for well-formed spec roots (max
     // + 1 exceeds every existing number under the same scheme), but a
     // hand-created directory must never be overwritten. Two processes
-    // creating under one identifier at the same moment both compute the
-    // same `n` and can both pass this check; `claim_feature_dir` below is
-    // what refuses the loser.
+    // creating one name at the same moment both compute the same `n` and
+    // can both pass this check; `claim_feature_dir` below is what refuses
+    // the loser. Two creating different names under one identifier at that
+    // moment both succeed, with the same `n`.
     if feature_dir.exists() {
         return Ok(CreateFeatureResult {
             created: false,
@@ -709,6 +717,51 @@ mod tests {
         let file = tmp.path().join("specs/001-a-file");
         fs::write(&file, "x").unwrap();
         assert!(!claim_feature_dir(&file).unwrap(), "a taken file name");
+    }
+
+    /// `BE-INPUT-004`: a spec root linked out of the project would put the
+    /// derived directory outside it, so the call is refused before anything
+    /// is created, and the directory the link names is left empty.
+    #[cfg(unix)]
+    #[test]
+    fn a_spec_root_linked_outside_the_project_is_refused() {
+        let tmp = tempdir().unwrap();
+        let outside = tmp.path().join("outside");
+        fs::create_dir_all(&outside).unwrap();
+        let repo = tmp.path().join("project");
+        fs::create_dir_all(repo.join("framework/templates/spec")).unwrap();
+        fs::write(repo.join("framework/templates/spec/spec.md"), TEMPLATE).unwrap();
+        std::os::unix::fs::symlink(&outside, repo.join("specs")).unwrap();
+
+        let err = run(&args("Escape"), &repo).unwrap_err();
+
+        assert!(matches!(err, PrimitiveError::InvalidPath { .. }), "{err:?}");
+        assert_eq!(fs::read_dir(&outside).unwrap().count(), 0);
+    }
+
+    /// A dangling link inside the project at the derived name passes the
+    /// existence check, since it names nothing, and then loses the claim,
+    /// since the name is taken: the outcome is `created: false`, with no
+    /// `spec.md` written through the link and the link left as it was.
+    #[cfg(unix)]
+    #[test]
+    fn a_dangling_link_at_the_derived_name_is_a_lost_claim() {
+        let tmp = tempdir().unwrap();
+        seed_with_installed_template(tmp.path());
+        let link = tmp.path().join("specs/001-title");
+        std::os::unix::fs::symlink("001-elsewhere", &link).unwrap();
+
+        let result = run(&args("Title"), tmp.path()).unwrap();
+
+        assert!(!result.created);
+        assert!(result.template.is_none());
+        assert!(
+            fs::symlink_metadata(&link)
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+        assert!(!tmp.path().join("specs/001-elsewhere").exists());
     }
 
     #[cfg(unix)]

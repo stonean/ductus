@@ -6,7 +6,7 @@ A rule only one command applies lives in that command's markdown-only reference,
 
 ## Guiding Principles
 
-These are evaluation criteria, not implementation instructions. Use them to identify gaps or violations, not to drive design decisions.
+These are evaluation criteria, not implementation instructions.
 
 ### Technology
 
@@ -152,7 +152,7 @@ Wherever a command acts on a path under the spec root, substitute the configured
 draft ──/clarify──▶ clarified ──/plan──▶ planned ──/implement──▶ in-progress ──[/review gate]──▶ done
 ```
 
-`/implement` MUST NOT write `status: done` while the review record's `last-run` is unset or its `blocking` is `true`; `/review` changes no status. Three back-edges exist:
+`/implement` MUST NOT write `status: done` while the review record's `last-run` is unset or its `blocking` is `true`; `/review` changes no status. The gate composes with `/analyze`, which flags drifted `done` specs, and the shipped CI template. Three back-edges exist:
 
 - **Backward via new questions** — `clarified` / `planned` / `in-progress` → `draft` when `/amend` records a new open question, in the same write; the next `/clarify` resolves it. `draft` is the only status that tolerates open questions in the spec body.
 - **Backward via new scenario** — `done` → `in-progress` when `/amend` records a scenario; its task is implemented and the spec returns to `done`. A scenario carrying open questions takes this edge too, and the spec does not reach `done` while any remain.
@@ -200,8 +200,6 @@ Before implementation begins, a pass/fail gate:
 - [ ] Data model exists if the feature introduces or modifies domain entities or data structures
 - [ ] Plan does not conflict with `system.md` or other feature specs
 - [ ] Tasks are ordered and each has a clear definition of done
-
-If any item fails, fix the gap before writing code.
 
 <!-- §implement-phase -->
 

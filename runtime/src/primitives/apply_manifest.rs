@@ -107,7 +107,8 @@ const ACTION_SOURCE_MISSING: &str = "source-missing";
 /// - [`PrimitiveError::Io`] on local filesystem failures while reading
 ///   sources or writing destinations, setting a written destination's mode
 ///   included, and on Unix when an `unchanged` destination's mode differs
-///   from its source's and cannot be set.
+///   from its source's and cannot be set for a reason other than
+///   `PermissionDenied`, which instead names it in `modes-kept`.
 /// - [`PrimitiveError::UnknownManifestStrategy`] when an entry's
 ///   `strategy` field is not one of `update`, `create`, or
 ///   `skip-if-conflict`, raised when the walk reaches that entry, after the
@@ -1607,9 +1608,6 @@ mod tests {
         );
     }
 
-    /// A destination that is a symbolic link is not chmodded through: the
-    /// bytes compared were the file it names, which the destination check
-    /// does not judge for a link, so its mode is left as it was.
     /// A destination whose mode this run may not change — here flagged
     /// immutable with `chflags uchg`, the one way an unprivileged test can
     /// make its own file refuse a chmod; another user's file refuses the same
@@ -1666,6 +1664,9 @@ mod tests {
         assert_eq!(result.created, 2);
     }
 
+    /// A destination that is a symbolic link is not chmodded through: the
+    /// bytes compared were the file it names, which the destination check
+    /// does not judge for a link, so its mode is left as it was.
     #[cfg(unix)]
     #[test]
     fn an_unchanged_destination_that_is_a_link_is_not_chmodded_through() {

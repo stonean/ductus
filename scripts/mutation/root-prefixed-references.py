@@ -17,7 +17,8 @@ matches exactly once.
 The rule lives in the shared scanner, so each mutation of it runs twice:
 M1-M9 and M14 filtered to the check's tests, and M15-M24 the same mutations
 filtered to the rewrite's, so a kill shows that each primitive's own tests
-hold it. M10 and M11 (the token-start rules read before the prefix) and M12
+hold it, as do M25 and M26 (a prefix starts a reference only where it starts
+a token). M10 and M11 (the token-start rules read before the prefix) and M12
 are the check's alone, M13 the rewrite's.
 
 The killing tests are `a_path_behind_a_prefix_naming_the_project_root_is_checked`,
@@ -200,6 +201,21 @@ MUTATIONS = [
         'src/primitives/check_orphaned_references.rs',
         '                found.push(start..start + candidate.len());\n',
         '                found.push(token..start + candidate.len());\n',
+        'rewrite_spec_links::',
+    ),
+    # -- a prefix starts a reference only where it starts a token ---------------
+    (
+        'M25 a prefix after a home or variable path starts a reference (check)',
+        'src/primitives/check_orphaned_references.rs',
+        '                || (token < start && previous.is_some_and(|c| !opens_a_token(c)))\n',
+        '',
+        'check_orphaned_references::',
+    ),
+    (
+        'M26 a prefix after a home or variable path starts a reference (rewrite)',
+        'src/primitives/check_orphaned_references.rs',
+        '                || (token < start && previous.is_some_and(|c| !opens_a_token(c)))\n',
+        '',
         'rewrite_spec_links::',
     ),
 ]
