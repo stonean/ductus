@@ -1,21 +1,23 @@
 ---
 spec: 062-concurrent-session-targets
-last-run: 2026-10-01T22:08:36Z
-analyzed-against: 7f1688a2cbbe12b68d8e541b6f5fe3f029c6e214
+last-run: 2026-10-28T13:21:06Z
+analyzed-against: 47e6823337874c604176cec2d730a332b3ae8923
 hard-fail: 0
 blocking-findings: 0
 advisory: 1
-unexamined: 0
+unexamined: 2
 analyzed-digest:
   data-model.md: 9ce5458a99a6ba857f8778df877a8b2b0a2708037b23b05319588b4c06aaa10f
-  plan.md: 385e2262d3d3dfd5cd8bfc2a905769c6d8d95d560275d9ae9440bd655d9f1cfb
-  review.md: 07e87c7b0154ca8fb0a3e4c9dc10df28ff0f18e562e47ab9e8894d448090adaa
+  plan.md: 525ef518b003c2a8fceccded7df3e90645b50e19d6dd34e337a3116ed01d8567
+  review.md: 3ab66e43e7236dd19c24acc6fb4236a5cb5ee9bd7f06a6c2722fd87eab335168
   scenarios/first-writers-create-the-ignore-file-once.md: 02149b44fd9c6d76d8e9d97af6235df746bf028cad34e693bb57302dea1b1f15
-  spec.md: c7ce74b6509c4a2a9d131723537af487a4ae19a80c623d6e0036b249c7f02b50
-  tasks.md: 749447d2e70c3c3fa988944d2ecc507b86fe95eebe96d7dfc01922c10dcf3e98
+  spec.md: 8c549249116b45e677a6e0578872ea5a0f8da4a1d03ab55e48e1dc2559c556e4
+  tasks.md: ccd548cbe4bcc459ce510e4081e2a949b30d9f3aee2508e8cfc1fad4f6541d55
+unexamined-by-reason:
+  root-absent: 2
 blocking: false
 dispositions:
-  fixed: 0
+  fixed: 5
   routed: 0
   discarded: 1
   undispositioned: 0
@@ -31,7 +33,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 1 advisory; not blocking. 0 unexamined target(s). Dispositions: 0 fixed, 0 routed, 1 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 1 advisory; not blocking. 2 unexamined target(s). Dispositions: 5 fixed, 0 routed, 1 discarded, 0 undispositioned.
 
 ## Hard failures
 
@@ -47,8 +49,12 @@ decisions:
 
 ## Unexamined targets
 
-*None — every target was examined.*
+- root-absent: 2
 
 ## Fixed in this run
 
-*None.*
+- rule-assessment — BE-RETRY-001: the session lock poll retries at a fixed interval with no exponential backoff or jitter — `specs/062-concurrent-session-targets/plan.md` — **fixed**
+- rule-assessment — BE-RETRY-003: the session lock poll does not name which try_lock failures it retries and which it surfaces immediately — `specs/062-concurrent-session-targets/plan.md` — **fixed**
+- grounding — spec.md says status transitions are guarded on the expected current value, with no source — `specs/062-concurrent-session-targets/spec.md` — **fixed**
+- grounding — plan.md says File::lock is stable from Rust 1.89, with no source, beside a toolchain pin it misstates — `specs/062-concurrent-session-targets/plan.md` — **fixed**
+- grounding — plan.md says an advisory lock is released by the OS when its holder dies, with no source — `specs/062-concurrent-session-targets/plan.md` — **fixed**

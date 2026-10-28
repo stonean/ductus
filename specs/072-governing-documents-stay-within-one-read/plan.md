@@ -329,7 +329,7 @@ The probe question is picked after the cut, from an entry that survives it.
 - **Splitting `AGENTS.md` into topic files imported on demand.** Rejected: an import loads its file whole ([memory documentation](https://code.claude.com/docs/en/memory): imports organise a file but do not reduce its context cost), so a split saves nothing unless the agent chooses what to read, which is a diligence dependency. Claude Code's path-scoped rules load by file path, and most entries here are about workflow rather than a path.
 - **Warning instead of failing at the ceiling.** Rejected: a warning is an exit that depends on someone choosing to take it.
 - **Known limitation.** The ceiling bounds bytes, not quality. A guide can be within its ceiling and still carry a story, and only review catches that. The ceiling makes the cost of a story visible, because every byte competes with a rule.
-- **Known limitation.** Hosts that read `AGENTS.md` natively (Antigravity and OpenCode, per `framework/bootstrap/ductus.md`) get the smaller guide too. That is the intent, and nothing here tests it on those hosts.
+- **Known limitation.** Hosts that read `AGENTS.md` natively (Antigravity, OpenCode and Pi, per `framework/bootstrap/ductus.md`'s Agent Registry) get the smaller guide too. That is the intent, and nothing here tests it on those hosts.
 
 ## Cross-spec impact
 

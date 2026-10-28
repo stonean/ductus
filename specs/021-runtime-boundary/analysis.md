@@ -1,19 +1,21 @@
 ---
 spec: 021-runtime-boundary
-last-run: 2026-10-22T13:16:08Z
-analyzed-against: 9052af26fa71410ec6f8d002959b48a481730b20
+last-run: 2026-10-28T13:21:06Z
+analyzed-against: 47e6823337874c604176cec2d730a332b3ae8923
 hard-fail: 0
 blocking-findings: 0
 advisory: 1
-unexamined: 0
+unexamined: 1
 analyzed-digest:
-  plan.md: 52f08bb8714724326222c6ff90455f2da0f613b8fe1e13e41cbf3c307b092bc6
-  review.md: 50e7f9be3ecb83e0c250d5f4dcbf702b8294ef402cab8f0cfe76dcc8c4129894
-  spec.md: f72d304ae17a05308ca027b51a89b5b90719336535abfd45c79795637bae8a06
+  plan.md: 70ef5c11c308b11b0b41d07775685dde6018979594d1dc23388284ea3f6d3fc6
+  review.md: 36c851aa71f7812fc2081ffcab07a59c81a42f3522d64542816c8111fc709616
+  spec.md: 7492b468640a3005852e47a14df7c0635004bd4ba2b66cf18229b46294f6d25a
   tasks.md: 662afd1f16e77ca2256ec3bcb25d7d074219c6f61fe362a56406a4375be68e05
+unexamined-by-reason:
+  ships-to-adopter: 1
 blocking: false
 dispositions:
-  fixed: 4
+  fixed: 2
   routed: 1
   discarded: 0
   undispositioned: 0
@@ -29,7 +31,7 @@ decisions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 1 advisory; not blocking. 0 unexamined target(s). Dispositions: 4 fixed, 1 routed, 0 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 1 advisory; not blocking. 1 unexamined target(s). Dispositions: 2 fixed, 1 routed, 0 discarded, 0 undispositioned.
 
 ## Hard failures
 
@@ -45,11 +47,9 @@ decisions:
 
 ## Unexamined targets
 
-*None — every target was examined.*
+- ships-to-adopter: 1
 
 ## Fixed in this run
 
-- rule-assessment — BE-DEPS-006: plan.md's framework-checks.yml workflow commits to no immutable pinning of its inputs and no update process for the pins — `specs/021-runtime-boundary/plan.md` — **fixed**
-- rule-assessment — BE-DEPS-004: plan.md's framework-checks.yml workflow names no signature or provenance verification for the markdownlint-cli2 it installs from npm or the crates its runtime build fetches — `specs/021-runtime-boundary/plan.md` — **fixed**
-- rule-assessment — BE-TIMEOUT-001: plan.md's framework-checks.yml workflow names no timeout bounding its registry fetches — `specs/021-runtime-boundary/plan.md` — **fixed**
-- rule-assessment — CFG-CONST-003: plan.md writes the tool-coverage lint's tunable 20-line window as a bare literal and commits to no named constant — `specs/021-runtime-boundary/plan.md` — **fixed**
+- grounding — plan.md says AGENTS.md references a root constitution.md as a sync target, with no source, and AGENTS.md has no such reference — `specs/021-runtime-boundary/plan.md` — **fixed**
+- grounding — plan.md describes lint-tool-coverage.sh's two exemptions with no source, and one of them, the Markdown-only reference section skip, no longer exists — `specs/021-runtime-boundary/plan.md` — **fixed**

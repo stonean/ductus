@@ -12,7 +12,7 @@ The work is intentionally additive in mechanism (add generators and hooks) and s
 
 ### Single canonical constitution at `framework/constitution.md`
 
-Per spec Q2: collapse the twin constitutions. Root `constitution.md` is deleted. Root `CLAUDE.md` updates `@import constitution.md` → `@import framework/constitution.md`. Root `README.md` link to `constitution.md` updates likewise. `/ductus`'s install-time remap (`framework/constitution.md` → `constitution.md` at the adopter root) is unchanged — adopter projects continue to receive `constitution.md` at their root. The AGENTS.md "mirror constitutions" instruction is removed.
+Per spec Q2: collapse the twin constitutions. Root `constitution.md` is deleted. Root `CLAUDE.md` updates `@import constitution.md` → `@import framework/constitution.md`. Root `README.md` link to `constitution.md` updates likewise. `/ductus`'s install-time remap (`framework/constitution.md` → `constitution.md` at the adopter root) was unchanged by this spec; spec 044 later moved the adopter's copy to `.ductus/constitution.md` (`AGENTS.md` §Project Structure). The AGENTS.md "mirror constitutions" instruction is removed.
 
 Alternative considered: generator with section markers — rejected because the historical divergence between the two files was zero at decision time, so the discipline trap was guarding nothing. Pre-emptive scaffolding for hypothetical divergence violates the "don't design for hypothetical future requirements" guidance in the system prompt.
 
@@ -47,7 +47,7 @@ Generators run unconditionally on every commit (no file-change gating). Trades a
 
 Per spec Q7 expansion: `framework/bootstrap/hooks/pre-commit`, an adopter-owned stub, and `framework/bootstrap/hooks/ductus-pre-commit`, which the stub calls, ship with the framework. The shipped hook runs only adopter-relevant derivations — `ductus derive-dependencies` and `derive-references`. Slot is extensible.
 
-`/ductus` adds a new "Hook installation" section between **Per-Agent Scaffolding** and **Post-Scaffolding Output**. On every run it detects state and acts:
+`/ductus` adds a new "Hook installation" section between **Per-Agent Scaffolding** and **Post-Scaffolding Output**. On every run it detects state and acts as below. **Superseded in part by `018-adopter-owned-pre-commit`**: `.githooks/pre-commit` is now an adopter-owned `create`-strategy stub with no sentinel, and the sentinel and the `update` strategy belong to `.githooks/ductus-pre-commit` (this spec's `data-model.md`, *Post-018*).
 
 | Detected state | Action |
 | --- | --- |

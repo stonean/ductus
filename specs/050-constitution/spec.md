@@ -40,9 +40,11 @@ files, the hooks and the templates — but never this repository's `AGENTS.md`.
 So a rule learned here reached no adopter, however universal it was, and the
 only way an adopter could benefit was to independently make the same mistake.
 
-The file had accumulated 56 entries by 2026-08-17. A survey that day put
-roughly 12 of them as strongly universal, about 10 as borderline, and about 24
-as genuinely specific to this project. The universal group was not marginal
+The file had accumulated 56 entries by 2026-08-17, by a rough survey that day,
+which put about 12 of them as strongly universal, about 10 as borderline, and
+about 24 as genuinely specific to this project, and sorted the rest no further.
+The measured classification that followed counts 54 rule-bearing entries
+(`plan.md` §Classification, AC1). The universal group was not marginal
 material: it included both `AGENTS.md` §Design Principles entries, the fact that a markdown
 link in a spec body creates a `dependencies:` edge, that
 `git checkout -- specs/{feature}/` silently reverts uncommitted pipeline state,

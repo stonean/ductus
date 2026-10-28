@@ -57,8 +57,9 @@ the existing section whose subject it shares — a spec-lifecycle rule under
 artifact-integrity rule under §drift-prevention — and a new section only when
 the rule genuinely stands alone, as §recommendations did.
 
-This is also what keeps AC10 cheap. The constitution carries 40-odd anchors of
-the form `<!-- §name -->` that other artifacts cite by name; appending a bullet
+This is also what keeps AC10 cheap. The constitution carries 31 anchors of
+the form `<!-- §name -->` (`grep -o '<!-- §[^>]*-->' framework/constitution.md`,
+2026-10-28) that other artifacts cite by name; appending a bullet
 inside a section moves none of them, while promoting a dozen rules to sections
 would roughly double the top-level surface and put one-paragraph rules at
 section rank.
@@ -88,9 +89,9 @@ blind spot.
 
 **The mechanical-edit test** (AC13) settles what §spec-lifecycle's three
 enumerated cases leave open: whether an edit that changes no claim is mechanical.
-Today the list reads as closed, so a pure typo repair in a `done` spec's body is
-argued to reopen it — which is the disproportion the held `045` chore in
-`specs/inbox.md` is waiting on. The section gains a stated test rather than a
+The list read as closed, so a pure typo repair in a `done` spec's body was
+argued to reopen it — the disproportion a `045` chore held in
+`specs/inbox.md` waited on until task 7 resolved it against AC13's test. The section gains a stated test rather than a
 fourth enumerated case, so the next new case is decidable without another
 constitution change.
 
@@ -178,7 +179,7 @@ Where a learning goes is stated once, in the constitution's §drift-prevention, 
 
 ### An answer is applied as chosen
 
-§recommendations states that an answer is applied as the chosen option reads and that a refinement the sources suggest is asked as its own question first, in its first paragraph, so it is not part of the one-at-a-time default a project may replace. The constitution held 20 bytes of headroom, so the sentence was paid for in the same edit: §spec-phase lost the bold lead *This is an instruction, not only a fact* and a clause, and §drift-prevention's host-rules-file sentence became `AGENTS.md`'s managed block, which is shorter. The dated "Recorded backfill" sentence under §rules was not cut, since `068-api-backend-rules` and `069-accessibility-frontend-rules` each own its removal as a criterion. Nothing quoted the removed phrases. The constitution is 49,997 bytes.
+§recommendations states that an answer is applied as the chosen option reads and that a refinement the sources suggest is asked as its own question first, in its first paragraph, so it is not part of the one-at-a-time default a project may replace. The constitution held 20 bytes of headroom, so the sentence was paid for in the same edit: §spec-phase lost the bold lead *This is an instruction, not only a fact* and a clause, and §drift-prevention's host-rules-file sentence became `AGENTS.md`'s managed block, which is shorter. The dated "Recorded backfill" sentence under §rules was not cut, since `068-api-backend-rules` and `069-accessibility-frontend-rules` each own its removal as a criterion. A `git grep` of the live-artifact set for the removed bold lead finds only this sentence (2026-10-28). The constitution is 49,997 bytes.
 
 ## Classification
 

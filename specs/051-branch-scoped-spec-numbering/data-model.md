@@ -79,6 +79,8 @@ An absent key is never a finding on a *sequential* spec, which has no fold targe
 | `skipped` | out | list of `{path, reason}` | Referrers, the spec root's `system.md` among them, left as they are: a symbolic link, one whose parent resolves outside the project, or one that is not UTF-8 text. Every referrer is read before anything is written. |
 | `kept-tails` | out | list of `{path, line, reference}` | References re-pointed at a feature-only target whose kept tail is not empty (the directory itself), `spec.md`, or under `scenarios/`, so they name the target's file of that name, which a fold did not write. |
 
+Each list holds at most one entry per file, or per reference, under the spec root and in the five referrers, so it is bounded by the project's own tree rather than by history (022 `plan.md`'s `BE-PAYLOAD-001` statement).
+
 ### `retire-feature` (new)
 
 | Field | Direction | Type | Notes |
@@ -114,7 +116,7 @@ Reported separately from `created` because the two answer different questions â€
 
 | Field | Direction | Type | Notes |
 | --- | --- | --- | --- |
-| `unfolded` | out | list of `{feature, identifier, folds-into, status}` | `folds-into` null when the spec declares none. |
+| `unfolded` | out | list of `{feature, identifier, folds-into, status}` | `folds-into` null when the spec declares none. One entry per branch-scoped directory, so the list is bounded by the project's tree (022 `plan.md`'s `BE-PAYLOAD-001` statement). |
 | `examined` | out | integer | Directories scanned. |
 
 ## Notes

@@ -63,10 +63,10 @@ pub fn run(args: &CreateFeatureArgs, repo: &Path) -> Result<CreateFeatureResult>
     // Refusal domain outcome: the derived directory already exists.
     // The counters make this unreachable for well-formed spec roots (max
     // + 1 exceeds every existing number under the same scheme), but a
-    // racing writer or a hand-created directory must never be
-    // overwritten. It is also what makes two contributors creating under
-    // one identifier at the same moment safe: both compute the same `n`,
-    // and the loser is refused rather than clobbering the winner.
+    // hand-created directory must never be overwritten. Two processes
+    // creating under one identifier at the same moment both compute the
+    // same `n` and can both pass this check; `claim_feature_dir` below is
+    // what refuses the loser.
     if feature_dir.exists() {
         return Ok(CreateFeatureResult {
             created: false,
@@ -93,10 +93,15 @@ pub fn run(args: &CreateFeatureArgs, repo: &Path) -> Result<CreateFeatureResult>
         Some(scope) => stamp_fold_target(&template_bytes, &scope.fold_into, &template_rel)?,
     };
 
-    std::fs::create_dir_all(&feature_dir).map_err(|source| PrimitiveError::Io {
-        path: feature_dir.clone(),
-        source,
-    })?;
+    if !claim_feature_dir(&feature_dir)? {
+        return Ok(CreateFeatureResult {
+            created: false,
+            feature,
+            path: rel_dir,
+            template: None,
+            identifier,
+        });
+    }
     let dest = feature_dir.join("spec.md");
     write_atomic_bytes(&dest, &spec_bytes)?;
     mirror_source_mode(&template_abs, &dest)?;
@@ -108,6 +113,27 @@ pub fn run(args: &CreateFeatureArgs, repo: &Path) -> Result<CreateFeatureResult>
         template: Some(template_rel),
         identifier,
     })
+}
+
+/// Create `feature_dir`, its parents as needed, and report whether this call
+/// made it: `false` when it already exists. The directory itself is made with
+/// `create_dir`, which the operating system refuses with `AlreadyExists` when
+/// the name is taken, so of two processes racing for one name exactly one gets
+/// `true` and writes its `spec.md` (`BE-RACE-003`); the other returns the
+/// `created: false` outcome rather than writing over the winner's.
+fn claim_feature_dir(feature_dir: &Path) -> Result<bool> {
+    let io = |source| PrimitiveError::Io {
+        path: feature_dir.to_path_buf(),
+        source,
+    };
+    if let Some(parent) = feature_dir.parent() {
+        std::fs::create_dir_all(parent).map_err(io)?;
+    }
+    match std::fs::create_dir(feature_dir) {
+        Ok(()) => Ok(true),
+        Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => Ok(false),
+        Err(source) => Err(io(source)),
+    }
 }
 
 /// A validated branch-scoped creation request.
@@ -656,6 +682,33 @@ mod tests {
         assert!(result.template.is_none());
         let body = fs::read_to_string(tmp.path().join("specs/001-taken")).unwrap();
         assert_eq!(body, "not a dir\n", "existing path untouched");
+    }
+
+    /// `BE-RACE-003`: the claim is made by the operating system's refusal to
+    /// create a name that exists, so of eight threads racing for one feature
+    /// directory exactly one is told it made it, and a name already taken,
+    /// by a directory or a file, is never claimed.
+    #[test]
+    fn a_feature_directory_is_claimed_by_exactly_one_racer() {
+        let tmp = tempdir().unwrap();
+        let dir = tmp.path().join("specs/1234.1-raced");
+        let racers: Vec<_> = (0..8)
+            .map(|_| {
+                let dir = dir.clone();
+                std::thread::spawn(move || claim_feature_dir(&dir).unwrap())
+            })
+            .collect();
+        let won = racers
+            .into_iter()
+            .map(|racer| racer.join().unwrap())
+            .filter(|claimed| *claimed)
+            .count();
+        assert_eq!(won, 1, "exactly one racer may create the directory");
+        assert!(dir.is_dir());
+        assert!(!claim_feature_dir(&dir).unwrap(), "a taken directory");
+        let file = tmp.path().join("specs/001-a-file");
+        fs::write(&file, "x").unwrap();
+        assert!(!claim_feature_dir(&file).unwrap(), "a taken file name");
     }
 
     #[cfg(unix)]

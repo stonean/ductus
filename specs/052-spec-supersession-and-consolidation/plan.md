@@ -12,7 +12,7 @@ One command over two existing primitives, plus one gated relaxation. Nothing her
 
 The refusal's rationale is recorded at `runtime/src/schema/primitives.rs`: the sequential form is permanent, and "a primitive that could delete one would make an irreversible operation reachable from a typo." Deleting the refusal would discard that protection for every caller.
 
-Instead the primitive gains an explicit opt-in argument that only `/{project}:consolidate` passes. `/{project}:fold` never passes it, so a mistyped feature name during a fold still meets the refusal unchanged. The anti-stranding guard — the target must hold a `spec.md` — is untouched and applies to both callers.
+Instead the primitive gains an explicit opt-in argument that only `/{project}:consolidate` passes. `/{project}:fold` never passes it, so a mistyped feature name during a fold still meets the refusal unchanged. The anti-stranding guard — the target must hold a `spec.md` — is untouched and applies to both callers. Both names `/{project}:consolidate` passes reach the primitives through `validate_feature_argument` before anything is opened or removed: the lexical screen, then canonicalization and whole-component containment, as 022's `plan.md` §Path arguments states for every feature-argument site (`BE-INPUT-004`).
 
 ### `rewrite-spec-links` is reused
 

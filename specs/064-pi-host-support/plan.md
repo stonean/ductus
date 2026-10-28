@@ -53,7 +53,13 @@ byte-identical to `.pi/extensions/ductus.ts`) is a Pi extension that:
   respawns it on the first call after it exits — or after a request times out,
   which retires a runtime that stopped answering. Every request to the runtime is
   bounded by the named constant `REQUEST_TIMEOUT_MS` (120 s), well above what the
-  deterministic server takes to answer (BE-TIMEOUT-001);
+  deterministic server takes to answer: `check-artifacts` and `compute-review-scope`
+  on this repository's largest spec each answered in about 0.3 s (2026-10-28)
+  (BE-TIMEOUT-001). Its state is confined to the extension's event loop: tool
+  calls run one at a time through `DuctusServer`'s `callChain`, and the spawn and
+  handshake are one cached `connection` promise that every call arriving during
+  them awaits, so concurrent calls neither race on the child nor spawn two
+  (`framework/bootstrap/pi/ductus-bridge.ts`; BE-RACE-001, BE-RACE-003);
 - speaks MCP-over-stdio as newline-delimited JSON-RPC 2.0, the child's stdout
   decoded as a UTF-8 stream: `initialize` (protocol handshake, `clientInfo`) and the
   `notifications/initialized` notification once per child, then `tools/list` and
