@@ -5255,10 +5255,14 @@ pub struct RewriteSpecLinksArgs {
     /// rename, while on a body-edit fold or a consolidation a tail other
     /// than `spec.md` or one under `scenarios/` names the target's own file,
     /// which received none of the moved content; the result lists each such
-    /// reference in `kept-tails`. With a scenario, the retiring directory's
-    /// files did not survive individually — their content landed in that
-    /// single scenario — so every inbound link collapses onto
-    /// `<feature>/scenarios/<slug>.md`, and none is listed.
+    /// reference in `kept-tails`. With a scenario, a link to one of the
+    /// retiring directory's scenarios keeps its tail and fragment, since the
+    /// fold carries each scenario across under its own slug on either route
+    /// (`../<from>/scenarios/inner.md` becomes
+    /// `../050-alpha/scenarios/inner.md`); the directory's other files did
+    /// not survive individually — their content landed in the routed
+    /// scenario — so every other inbound link collapses onto
+    /// `<feature>/scenarios/<slug>.md`. Neither is listed.
     #[arg(long)]
     pub to: String,
 }
@@ -5343,8 +5347,9 @@ pub struct RewriteSpecLinksResult {
     /// upstream spec's own file of that name, which the fold never wrote,
     /// and `check-orphaned-references`, which tests existence only, passes
     /// it. The reference is still re-pointed; it is listed so the caller can
-    /// name it for the operator to judge. A scenario target replaces the
-    /// tail, so it lists none. In the order of `rewritten`, then by line.
+    /// name it for the operator to judge. A scenario target keeps only a
+    /// tail naming a carried scenario and replaces the rest, so it lists
+    /// none. In the order of `rewritten`, then by line.
     #[serde(default)]
     pub kept_tails: Vec<KeptTail>,
 }

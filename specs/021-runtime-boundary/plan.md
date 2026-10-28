@@ -16,7 +16,7 @@ The amendment text is fully drafted in the spec body; this plan's job is to spec
 
 ### Constitution source-of-truth is `framework/constitution.md`
 
-`framework/constitution.md` is the canonical constitution. The root `constitution.md` referenced in `AGENTS.md` ("sync target") does not exist in this repo — it describes the relationship in *adopting* projects, where `framework/constitution.md` ships as the root file. All three amendment edits land in `framework/constitution.md`. No second file to sync.
+`framework/constitution.md` is the canonical constitution, and an adopter receives it at `.ductus/constitution.md` (`AGENTS.md` §Project Structure), so this repository holds no second copy to keep in sync. All three amendment edits land in `framework/constitution.md`.
 
 ### Three discrete edits, ordered
 
@@ -64,7 +64,7 @@ The 20-line window is the script's named constant `WINDOW` (`scripts/lint-tool-c
 
 This trades false-positive risk (a fallback that exists but doesn't match the keywords) for a fully derived check (no author-supplied markers required). False positives are easy to resolve by paraphrasing into one of the four accepted tokens.
 
-Two exemptions came later. A reference inside a command's `## Markdown-only reference` section is skipped, since that section is the fallback. A command carrying the constitution's §runtime-host-integration pointer is exempt file-wide, because the pointer declares the fallback contract once for the whole command (022).
+Two changes came later, both in `scripts/lint-tool-coverage.sh`'s header. A command's markdown-only reference, the fallback itself, moved to `framework/reference/<name>.md` (spec 071), outside the scan, so a tool named there is never examined. A command carrying the constitution's §runtime-host-integration pointer is exempt file-wide, because the pointer declares the fallback contract once for the whole command (022).
 
 ### Frontmatter integrity lint is also bash, not Python or yq
 

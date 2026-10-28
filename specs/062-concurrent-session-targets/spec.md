@@ -252,8 +252,10 @@ own session file, so the two compose.
   sides. Refusing would block legitimate parallel work on one feature, such as
   implementing it in one session while reviewing, analyzing or clarifying a
   scenario of it in another. The hazards are already bounded elsewhere: status
-  transitions are guarded on the expected current value, so a transition
-  computed from a stale read fails loudly, and concurrent edits to the same
+  transitions are guarded on the expected current value (`set-status` refuses
+  with `StatusMismatch` when `from` is not what is on disk,
+  `runtime/src/primitives/set_status.rs`), so a transition computed from a
+  stale read fails loudly, and concurrent edits to the same
   files are working-tree sharing, which §Scope leaves out. The session making
   the target write is told at write time which other sessions also target that
   feature and when each last used its target. The session that was already

@@ -11,8 +11,9 @@
 //! - **update**: substitute placeholders, compare against the existing
 //!   destination, write only when the result differs. Actions:
 //!   `created` (dest absent) / `updated` (dest exists & differs) /
-//!   `unchanged` (dest exists & matches — mtime preserved by not
-//!   touching the file).
+//!   `unchanged` (dest exists & matches — its bytes are not rewritten, so
+//!   its mtime is preserved; on Unix a mode that differs from the source's
+//!   is re-applied, which a chmod does without moving the mtime).
 //! - **create**: substitute placeholders, write only when the
 //!   destination is absent. Actions: `created` / `skipped-exists`.
 //! - **skip-if-conflict**: write only when the destination is absent;
@@ -104,7 +105,9 @@ const ACTION_SOURCE_MISSING: &str = "source-missing";
 ///   and such a file is written with the bytes judged, never re-read; only
 ///   its mode is still mirrored from the source when it is written.
 /// - [`PrimitiveError::Io`] on local filesystem failures while reading
-///   sources or writing destinations.
+///   sources or writing destinations, setting a written destination's mode
+///   included, and on Unix when an `unchanged` destination's mode differs
+///   from its source's and cannot be set.
 /// - [`PrimitiveError::UnknownManifestStrategy`] when an entry's
 ///   `strategy` field is not one of `update`, `create`, or
 ///   `skip-if-conflict`, raised when the walk reaches that entry, after the
@@ -347,6 +350,8 @@ fn apply_update(
             source,
         })?;
         if existing == new_bytes {
+            #[cfg(unix)]
+            reapply_source_mode(source, dest)?;
             return Ok((ACTION_UNCHANGED, applied));
         }
         write_atomic_bytes(dest, &new_bytes)?;
@@ -403,9 +408,9 @@ fn apply_skip_if_conflict(
     Ok((ACTION_CREATED, None))
 }
 
-/// Mirror the source file's permission bits onto a freshly-written
-/// destination. `write_atomic_bytes` materializes the destination from a
-/// new tempfile (mode `0600` on Unix), which strips the source's
+/// Mirror the source file's permission bits onto a destination — chiefly a
+/// freshly written one. `write_atomic_bytes` materializes the destination
+/// from a new tempfile (mode `0600` on Unix), which strips the source's
 /// executable bit. That is fatal for the generator scripts shipped via
 /// the Shared Files manifest (`scripts/gen-*.sh`, `update` strategy): the
 /// `ductus-pre-commit` hook must be able to exec them, and on a fresh
@@ -413,9 +418,12 @@ fn apply_skip_if_conflict(
 /// generator. Copying the source's `Permissions` (the readonly flag on
 /// Windows, the full mode on Unix) restores `cp -p`-style fidelity.
 ///
-/// Only called on the write paths (`created` / `updated`); the
-/// `unchanged` path never touches the destination, so its mode — already
-/// correct from the write that created it — is preserved untouched.
+/// Called on the write paths (`created` / `updated`), and on the
+/// `unchanged` path through `reapply_source_mode` (Unix) when the
+/// destination's permission bits differ from the source's: a destination's
+/// mode is not necessarily the one its last write gave it, since a file
+/// installed while the source carried another mode keeps that mode for as
+/// long as its bytes match.
 ///
 /// `pub(crate)` because the template-copying primitives (`create-feature`,
 /// `create-plan-artifacts`) share the same tempfile-mode problem and
@@ -431,6 +439,48 @@ pub(crate) fn mirror_source_mode(source: &Path, dest: &Path) -> Result<()> {
         path: dest.into(),
         source: src,
     })
+}
+
+/// On the `unchanged` path, give the destination the source's permission
+/// bits when they differ, without rewriting it: its bytes and mtime stay as
+/// they are (a chmod moves neither), and the action stays `unchanged`. A file
+/// installed while the source carried another mode — group-writable, from
+/// before `extract-archive` masked modes (spec 022, scenario
+/// `installed-files-are-not-group-writable`) — would otherwise keep that mode
+/// for as long as its bytes match. Bits that already match are left alone,
+/// so the file's ctime does not move and a file whose mode is right but whose
+/// owner is another user, which a chmod would fail on, is not an error.
+///
+/// A destination that is itself a symbolic link is left alone. The bytes
+/// compared were its target's, and a chmod follows the link, so it would
+/// land on a file the destination check did not judge: that check skips
+/// where a destination link leads because the write paths replace the link,
+/// and this path writes nothing to replace it.
+///
+/// Unix only, as the permission bits it compares are; it is not called
+/// elsewhere.
+#[cfg(unix)]
+fn reapply_source_mode(source: &Path, dest: &Path) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dest_meta = fs::symlink_metadata(dest).map_err(|src| PrimitiveError::Io {
+        path: dest.into(),
+        source: src,
+    })?;
+    if dest_meta.file_type().is_symlink() {
+        return Ok(());
+    }
+    let source_mode = fs::metadata(source)
+        .map_err(|src| PrimitiveError::Io {
+            path: source.into(),
+            source: src,
+        })?
+        .permissions()
+        .mode();
+    if source_mode & 0o7777 == dest_meta.permissions().mode() & 0o7777 {
+        return Ok(());
+    }
+    mirror_source_mode(source, dest)
 }
 
 /// Read `source` and, if its bytes decode as UTF-8, apply the
@@ -1455,6 +1505,124 @@ mod tests {
             .permissions()
             .mode();
         assert_ne!(mode & 0o111, 0, "updated dest must keep +x, got {mode:o}");
+    }
+
+    /// A destination installed group-writable (0664) whose bytes already
+    /// match is given the source's 0644 on the `unchanged` path: re-applied
+    /// by a chmod alone, so its bytes and mtime stay as they were and the
+    /// action is still `unchanged`. Without it such a file keeps group write
+    /// for as long as its bytes match (spec 022, scenario
+    /// `installed-files-are-not-group-writable`).
+    #[cfg(unix)]
+    #[test]
+    fn an_unchanged_destination_takes_the_source_mode() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(tmp.path(), &[("a.md", "Hello {project}\n")]);
+        fs::set_permissions(src.join("a.md"), fs::Permissions::from_mode(0o644)).unwrap();
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(dst.join("docs")).unwrap();
+        let installed = dst.join("docs/a.md");
+        fs::write(&installed, "Hello acme\n").unwrap();
+        fs::set_permissions(&installed, fs::Permissions::from_mode(0o664)).unwrap();
+        let mtime = fs::metadata(&installed).unwrap().modified().unwrap();
+
+        let args = args_for(
+            &src,
+            &dst,
+            vec![entry("a.md", "docs/a.md", "update")],
+            vec![],
+            subs(&[("project", "acme")]),
+        );
+        let result = run(&args, tmp.path()).unwrap();
+
+        assert_eq!(result.unchanged, 1);
+        assert_eq!(result.entries[0].action, "unchanged");
+        let meta = fs::metadata(&installed).unwrap();
+        assert_eq!(meta.permissions().mode() & 0o7777, 0o644);
+        assert_eq!(fs::read_to_string(&installed).unwrap(), "Hello acme\n");
+        assert_eq!(meta.modified().unwrap(), mtime, "the bytes were rewritten");
+    }
+
+    /// A destination whose mode already matches the source's is not touched
+    /// at all — no chmod, so its ctime does not move. The 50 ms wait puts a
+    /// needless chmod in a later clock tick than the file's creation: Linux
+    /// stamps ctime from a coarse clock, so without it a chmod could land in
+    /// the same tick and look like no change.
+    #[cfg(unix)]
+    #[test]
+    fn an_unchanged_destination_whose_mode_matches_is_not_touched() {
+        use std::os::unix::fs::{MetadataExt, PermissionsExt};
+
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(tmp.path(), &[("a.md", "Hello {project}\n")]);
+        fs::set_permissions(src.join("a.md"), fs::Permissions::from_mode(0o644)).unwrap();
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(dst.join("docs")).unwrap();
+        let installed = dst.join("docs/a.md");
+        fs::write(&installed, "Hello acme\n").unwrap();
+        fs::set_permissions(&installed, fs::Permissions::from_mode(0o644)).unwrap();
+        let before = fs::metadata(&installed).unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(50));
+
+        let args = args_for(
+            &src,
+            &dst,
+            vec![entry("a.md", "docs/a.md", "update")],
+            vec![],
+            subs(&[("project", "acme")]),
+        );
+        let result = run(&args, tmp.path()).unwrap();
+
+        assert_eq!(result.unchanged, 1);
+        let after = fs::metadata(&installed).unwrap();
+        assert_eq!(
+            (after.ctime(), after.ctime_nsec()),
+            (before.ctime(), before.ctime_nsec()),
+            "a destination whose mode already matched was chmodded"
+        );
+    }
+
+    /// A destination that is a symbolic link is not chmodded through: the
+    /// bytes compared were the file it names, which the destination check
+    /// does not judge for a link, so its mode is left as it was.
+    #[cfg(unix)]
+    #[test]
+    fn an_unchanged_destination_that_is_a_link_is_not_chmodded_through() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(tmp.path(), &[("a.md", "Hello {project}\n")]);
+        fs::set_permissions(src.join("a.md"), fs::Permissions::from_mode(0o644)).unwrap();
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(dst.join("docs")).unwrap();
+        let named = dst.join("docs/real.md");
+        fs::write(&named, "Hello acme\n").unwrap();
+        fs::set_permissions(&named, fs::Permissions::from_mode(0o664)).unwrap();
+        std::os::unix::fs::symlink("real.md", dst.join("docs/a.md")).unwrap();
+
+        let args = args_for(
+            &src,
+            &dst,
+            vec![entry("a.md", "docs/a.md", "update")],
+            vec![],
+            subs(&[("project", "acme")]),
+        );
+        let result = run(&args, tmp.path()).unwrap();
+
+        assert_eq!(result.unchanged, 1);
+        assert_eq!(
+            fs::metadata(&named).unwrap().permissions().mode() & 0o7777,
+            0o664,
+            "the file a destination link names was chmodded"
+        );
+        assert!(
+            fs::symlink_metadata(dst.join("docs/a.md"))
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
     }
 
     #[cfg(unix)]

@@ -42,3 +42,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] `data-model.md`'s gate row 11 and §The completion gate describe the check as it runs
 
 - **Done when**: The scenario's behavior holds in `runtime/src/primitives/check_review_gate.rs`, its tests fail with the behavior removed, and 066's spec and data model describe the check as it runs.
+
+## 7. Scope results have a bounded size (BE-PAYLOAD-001)
+
+- [ ] Implement the behavior described in `scenarios/scope-results-have-a-bounded-size.md`
+- [ ] Resolve the scenario's open question through `/ductus:clarify`, then bound `compute-review-scope` and `diff-cross-spec` by the chosen mechanism, state the maximum in `data-model.md`, and update `framework/commands/review.md` step 1 and every other consumer
+- [ ] A test per primitive shows a result past the bound reaching every entry on the MCP and the exec paths, and fails when the bound is removed
+
+- **Done when**: both results carry a stated maximum, every entry stays reachable on both paths, and the 2026-10-27 analysis's BE-PAYLOAD-001 finding no longer fires

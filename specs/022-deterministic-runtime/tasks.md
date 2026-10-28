@@ -605,8 +605,9 @@ Found 2026-10-25 measuring task 18's question 1a, outside it. The pointer `.duct
 
 ## 23. Installed files are not group-writable
 
-- [ ] Implement the behavior described in `scenarios/installed-files-are-not-group-writable.md`
-- [ ] `extract-archive` masks each entry's mode to `rwxr-xr-x` (`PERMISSION_MASK` in `runtime/src/primitives/extract_archive.rs`), on the tar and zip paths, with the module doc saying why
-- [ ] Tests show a `0664` entry landing as `0644` and a `0775` one as `0755` on both paths, and each fails when the mask keeps group write (`scripts/mutation/installed-file-modes.py`)
+- [x] Implement the behavior described in `scenarios/installed-files-are-not-group-writable.md`
+- [x] `extract-archive` masks each entry's mode to `rwxr-xr-x` (`PERMISSION_MASK` in `runtime/src/primitives/extract_archive.rs`), on the tar and zip paths, with the module doc saying why
+- [x] Tests show a `0664` entry landing as `0644` and a `0775` one as `0755` on both paths, and each fails when the mask keeps group write (`scripts/mutation/installed-file-modes.py`)
+- [x] `apply-manifest` re-applies the extracted mode to an `update`-strategy file whose bytes already match when only its mode differs, leaving bytes and modification time alone, with a test and a mutation in `scripts/mutation/installed-file-modes.py` (owner decision 2026-10-27: reach files already installed)
 
-- **Done when**: an archive's `0664` and `0775` entries extract as `0644` and `0755`, the executable bit survives, and the mutation run kills every mutation in `scripts/mutation/installed-file-modes.py`
+- **Done when**: an archive's `0664` and `0775` entries extract as `0644` and `0755`, the executable bit survives, an already-installed file with matching bytes takes the masked mode on the next run, and the mutation run kills every mutation in `scripts/mutation/installed-file-modes.py`

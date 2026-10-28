@@ -89,8 +89,11 @@
 //! the fold never wrote, and `check-orphaned-references` tests existence
 //! only, so it stays clean. The design stays: such a reference is still
 //! re-pointed, and listed in `kept-tails` with its file and line so the
-//! caller can name it for the operator to judge. A scenario target replaces
-//! the tail, so it lists none. The exclusions are a fold's:
+//! caller can name it for the operator to judge. A scenario target keeps a
+//! tail naming one of the retiring directory's scenarios, fragment and all,
+//! since that scenario crosses over under its own slug on either route, and
+//! replaces any other tail with the routed scenario, so it lists none. The
+//! exclusions are a fold's:
 //! `/{project}:consolidate` carries no scenario across, so under it a kept
 //! `scenarios/` tail resolves only where the target has a scenario of that
 //! slug of its own, and is not listed either.
@@ -742,16 +745,39 @@ fn rebuild(segments: &[&str], index: usize, fragment: Option<&str>, target: &Fol
         .map(|segment| (*segment).to_string())
         .collect();
     rebuilt.push(target.feature.clone());
+    let tail = &segments[index + 1..];
 
     match &target.scenario {
-        // A feature-only target keeps the tail, and any fragment naming a
-        // heading inside it. On a rename the directory's files map across
-        // one for one; a body-edit fold writes only some of them and a
-        // consolidation none, so a kept tail naming a file the target was
-        // not given is flagged for `kept-tails`
+        // A fold into a scenario, and a tail naming no scenario of the
+        // retiring directory: that file did not survive individually — its
+        // content landed in the routed scenario — so the tail names nothing
+        // and is replaced rather than carried. Any fragment goes with it,
+        // because it named a heading in a file that no longer exists;
+        // keeping it would produce a link that resolves to a file and lands
+        // nowhere in it.
+        Some(slug) if !names_a_scenario(tail) => {
+            rebuilt.push("scenarios".to_string());
+            rebuilt.push(format!("{slug}.md"));
+            Moved {
+                text: rebuilt.join("/"),
+                kept_tail: false,
+            }
+        }
+        // Otherwise the tail is kept, and any fragment naming a heading
+        // inside it.
+        //
+        // On a scenario target the tail names one of the retiring
+        // directory's scenarios, which crosses over under its own slug on
+        // either route (`/{project}:fold` step 7, which stops the fold when
+        // that slug is already taken by a file the fold did not write), so
+        // it lands on the carried scenario. Such a tail is never a kept tail.
+        //
+        // On a feature-only target the directory's files map across one for
+        // one on a rename; a body-edit fold writes only some of them and a
+        // consolidation none, so a kept tail naming a file the target was not
+        // given is flagged for `kept-tails`
         // (`names_a_file_the_fold_did_not_write`).
-        None => {
-            let tail = &segments[index + 1..];
+        _ => {
             rebuilt.extend(tail.iter().map(|s| (*s).to_string()));
             let mut out = rebuilt.join("/");
             if let Some(fragment) = fragment {
@@ -763,21 +789,14 @@ fn rebuild(segments: &[&str], index: usize, fragment: Option<&str>, target: &Fol
                 kept_tail: names_a_file_the_fold_did_not_write(tail),
             }
         }
-        // A fold into a scenario: the retiring directory's files did not
-        // survive individually — their content landed in this one scenario —
-        // so the tail names nothing and is replaced rather than carried. Any
-        // fragment goes with it, because it named a heading in a file that no
-        // longer exists; keeping it would produce a link that resolves to a
-        // file and lands nowhere in it.
-        Some(slug) => {
-            rebuilt.push("scenarios".to_string());
-            rebuilt.push(format!("{slug}.md"));
-            Moved {
-                text: rebuilt.join("/"),
-                kept_tail: false,
-            }
-        }
     }
+}
+
+/// Whether `tail`, the segments after the retiring directory, names one of
+/// its scenarios: `scenarios/{name}` with a name. A reference to the
+/// `scenarios` directory itself names none.
+fn names_a_scenario(tail: &[&str]) -> bool {
+    matches!(tail, ["scenarios", name, ..] if !name.is_empty())
 }
 
 /// Whether `tail`, the segments a feature-only target keeps after the
@@ -886,35 +905,51 @@ mod tests {
         );
     }
 
-    /// A link naming a scenario *of* the retiring directory, and a target
-    /// that routes the content into a scenario: both tails are replaced,
-    /// because neither file survives the fold.
+    /// A target that routes the content into a scenario: a link to the
+    /// spec or to any other file of the retiring directory collapses onto the
+    /// routed scenario, because that file does not survive the fold, and so
+    /// does one to its `scenarios` directory, which names no one scenario. A
+    /// link naming a scenario *of* the retiring
+    /// directory keeps its tail and fragment, because the fold carries that
+    /// scenario across under its own slug on either route.
     #[test]
-    fn a_scenario_target_collapses_every_inbound_link_onto_it() {
+    fn a_scenario_target_collapses_the_rest_and_keeps_a_carried_scenario() {
         let tmp = tempfile::tempdir().unwrap();
         write(
             tmp.path(),
             "050-alpha/spec.md",
             "---\nstatus: done\ndependencies: []\n---\n\n\
-             See [spec](../1234.1-staged/spec.md) and \
+             See [spec](../1234.1-staged/spec.md), [plan](../1234.1-staged/plan.md#steps), \
+             [the scenarios](../1234.1-staged/scenarios/) and \
              [a scenario](../1234.1-staged/scenarios/inner.md#behavior).\n",
         );
 
         let result = run(&args("1234.1-staged", "050-alpha/eviction"), tmp.path()).unwrap();
 
-        assert_eq!(result.rewritten[0].count, 2);
+        assert_eq!(result.rewritten[0].count, 4);
         let alpha = read(tmp.path(), "050-alpha/spec.md");
         assert!(
             alpha.contains("[spec](../050-alpha/scenarios/eviction.md)"),
             "{alpha}"
         );
+        // The `scenarios` directory itself names no scenario, so it collapses
+        // with the rest.
+        assert!(
+            alpha.contains("[the scenarios](../050-alpha/scenarios/eviction.md)"),
+            "{alpha}"
+        );
         // The fragment named a heading in a file that no longer exists, so it
         // goes with the tail rather than resolving to nothing.
         assert!(
-            alpha.contains("[a scenario](../050-alpha/scenarios/eviction.md)"),
+            alpha.contains("[plan](../050-alpha/scenarios/eviction.md)"),
             "{alpha}"
         );
-        assert!(!alpha.contains("#behavior"), "{alpha}");
+        assert!(!alpha.contains("#steps"), "{alpha}");
+        assert!(
+            alpha.contains("[a scenario](../050-alpha/scenarios/inner.md#behavior)"),
+            "{alpha}"
+        );
+        assert!(result.kept_tails.is_empty(), "{:?}", result.kept_tails);
     }
 
     /// AC33: the frontmatter pointer moves in the same action as the body
@@ -1363,6 +1398,25 @@ mod tests {
         assert_eq!(result.examined, 2);
     }
 
+    /// A `.githooks` that is a regular file holds no `pre-commit`: the path
+    /// names nothing, as when `.githooks` is absent, so it is neither an
+    /// error nor examined nor skipped, and the rest is still rewritten. The
+    /// check reads it the same way (`exists` is false through a file).
+    #[test]
+    fn a_referrer_under_a_file_where_its_directory_should_be_is_absent() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        write_root(tmp.path(), ".githooks", "not a directory\n");
+        write_root(tmp.path(), "AGENTS.md", "See specs/1234.1-staged/spec.md\n");
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert_eq!(rewritten_paths(&result), vec!["AGENTS.md"]);
+        assert_eq!(result.skipped, [] as [ReferrerSkip; 0]);
+        assert_eq!(result.examined, 2);
+        assert_eq!(read_root(tmp.path(), ".githooks"), "not a directory\n");
+    }
+
     /// `[paths] specs-root` decides the prefix a referrer names a feature
     /// directory behind; `specs/` on a project that renamed its root is not
     /// a reference to one of its specs.
@@ -1442,9 +1496,10 @@ mod tests {
         assert_eq!(mode, 0o755);
     }
 
-    /// `CLAUDE.md` linked to `AGENTS.md` is a common layout. The atomic write
-    /// replaces the path it is given, so following the link would turn it
-    /// into a copy; the file it names is rewritten once, in its own right.
+    /// `CLAUDE.md` linked to `AGENTS.md` is a layout an adopter may choose.
+    /// The atomic write replaces the path it is given, so following the link
+    /// would turn it into a copy; the file it names is rewritten once, in
+    /// its own right.
     /// The link is listed in `skipped`, not passed over: a link to a file
     /// that is not itself a referrer would otherwise hide every reference in
     /// it behind a clean result.
@@ -1629,8 +1684,8 @@ mod tests {
     /// `research.md` land on the upstream spec's own files, which the fold
     /// never wrote and the orphan check, testing existence only, passes — so
     /// those are listed, with file and line, for body links and referrer
-    /// tokens alike, and still re-pointed. A scenario target replaces every
-    /// tail and lists none.
+    /// tokens alike, and still re-pointed. A scenario target keeps only the
+    /// scenario's tail, replaces the rest, and lists none.
     #[test]
     fn a_kept_tail_naming_a_file_the_fold_did_not_write_is_listed() {
         let tmp = tempfile::tempdir().unwrap();

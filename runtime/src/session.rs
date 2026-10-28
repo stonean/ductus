@@ -330,12 +330,40 @@ pub struct SessionLock {
 /// beats hanging every agent behind it.
 pub const SESSION_LOCK_TIMEOUT: Duration = Duration::from_secs(10);
 
-/// The pause between attempts while another process holds the lock. A short
-/// fixed interval rather than the jittered exponential backoff `BE-RETRY-001`
-/// asks of retries: this polls a local advisory lock held for milliseconds,
-/// not a downstream service that synchronized retries could overload, and
+/// The bound on the first wait while another process holds the lock. Each
+/// later bound doubles, up to [`LOCK_RETRY_CAP`], and each wait is drawn
+/// uniformly from zero to its bound, so contenders that met the lock together
+/// do not retry in step (`BE-RETRY-001`'s backoff with jitter);
 /// [`SESSION_LOCK_TIMEOUT`] bounds the attempts.
-const LOCK_RETRY: Duration = Duration::from_millis(10);
+const LOCK_RETRY_FIRST: Duration = Duration::from_millis(1);
+
+/// The largest bound on one wait between attempts. A hold lasts one small
+/// read-modify-write, so a waiter rechecks at least this often.
+const LOCK_RETRY_CAP: Duration = Duration::from_millis(50);
+
+/// The bound on the wait after the `attempt`-th failed `try_lock`, counting
+/// from zero: [`LOCK_RETRY_FIRST`] doubled `attempt` times, never more than
+/// [`LOCK_RETRY_CAP`].
+fn retry_bound(attempt: u32) -> Duration {
+    LOCK_RETRY_FIRST
+        .saturating_mul(1_u32 << attempt.min(16))
+        .min(LOCK_RETRY_CAP)
+}
+
+/// A wait drawn uniformly from zero to `bound` inclusive, from `seed`.
+fn jittered(bound: Duration, seed: u64) -> Duration {
+    let nanos = u64::try_from(bound.as_nanos()).unwrap_or(u64::MAX);
+    Duration::from_nanos(seed % nanos.saturating_add(1))
+}
+
+/// A seed for [`jittered`]: the standard library seeds every `RandomState`
+/// from the operating system's randomness and varies each one after, so two
+/// processes, or two waits in one, draw different values without a
+/// dependency.
+fn jitter_seed() -> u64 {
+    use std::hash::BuildHasher;
+    std::collections::hash_map::RandomState::new().hash_one(0_u8)
+}
 
 /// Take the exclusive advisory lock on `.ductus/sessions/.lock`, creating the
 /// directory first and, once the lock is held, its `.gitignore`. Waits up to
@@ -352,6 +380,16 @@ pub fn lock(repo: &Path) -> Result<SessionLock> {
 
 /// [`lock`], waiting at most `timeout`.
 fn lock_within(repo: &Path, timeout: Duration) -> Result<SessionLock> {
+    lock_waiting(repo, timeout, std::thread::sleep)
+}
+
+/// [`lock_within`], pausing between attempts through `pause`, which a test
+/// replaces to see the waits the loop takes.
+fn lock_waiting(
+    repo: &Path,
+    timeout: Duration,
+    mut pause: impl FnMut(Duration),
+) -> Result<SessionLock> {
     let dir = sessions_dir(repo);
     std::fs::create_dir_all(&dir).map_err(|source| PrimitiveError::Io {
         path: dir.clone(),
@@ -369,6 +407,7 @@ fn lock_within(repo: &Path, timeout: Duration) -> Result<SessionLock> {
         .open(&path)
         .map_err(io)?;
     let deadline = Instant::now() + timeout;
+    let mut attempt: u32 = 0;
     loop {
         match file.try_lock() {
             Ok(()) => {
@@ -376,8 +415,13 @@ fn lock_within(repo: &Path, timeout: Duration) -> Result<SessionLock> {
                 ignore_everything(&dir)?;
                 return Ok(held);
             }
+            // Only a lock another process holds is retried; any other error
+            // is surfaced at once, below (`BE-RETRY-003`). A failed
+            // `try_lock` changes nothing, so the retry is safe.
             Err(TryLockError::WouldBlock) if Instant::now() < deadline => {
-                std::thread::sleep(LOCK_RETRY);
+                let wait = jittered(retry_bound(attempt), jitter_seed());
+                pause(wait.min(deadline.saturating_duration_since(Instant::now())));
+                attempt = attempt.saturating_add(1);
             }
             Err(TryLockError::WouldBlock) => {
                 return Err(io(std::io::Error::new(
@@ -1508,6 +1552,61 @@ mod tests {
         assert_eq!(
             std::fs::read_to_string(dir.join(".gitignore")).unwrap(),
             "*\n!keep.toml\n"
+        );
+    }
+
+    /// `BE-RETRY-001`: the bound on each wait starts at the first value and
+    /// doubles, and it never passes the cap however many attempts fail.
+    #[test]
+    fn the_retry_bound_doubles_from_the_first_wait_to_the_cap() {
+        let bounds: Vec<Duration> = (0..8).map(retry_bound).collect();
+        assert_eq!(
+            bounds,
+            [1, 2, 4, 8, 16, 32, 50, 50].map(Duration::from_millis),
+            "the bound must double from LOCK_RETRY_FIRST and stop at LOCK_RETRY_CAP"
+        );
+        assert_eq!(retry_bound(u32::MAX), LOCK_RETRY_CAP);
+    }
+
+    /// The jitter: every wait lies within its bound, and waits drawn from
+    /// fresh seeds are not all equal, so contenders do not retry in step.
+    #[test]
+    fn a_wait_is_drawn_within_its_bound_and_varies() {
+        let bound = Duration::from_millis(32);
+        let waits: Vec<Duration> = (0..64).map(|_| jittered(bound, jitter_seed())).collect();
+        assert!(waits.iter().all(|wait| *wait <= bound), "{waits:?}");
+        assert!(
+            waits.iter().any(|wait| *wait != waits[0]),
+            "64 waits were all {:?}",
+            waits[0]
+        );
+        assert_eq!(jittered(bound, 0), Duration::ZERO);
+        assert_eq!(jittered(Duration::ZERO, u64::MAX), Duration::ZERO);
+    }
+
+    /// The loop takes its waits from the backoff: each lies within its
+    /// attempt's bound, they are not all one interval, and a later one passes
+    /// the first bound, so the bound grew with the attempts.
+    #[test]
+    fn the_lock_loop_waits_by_the_jittered_backoff() {
+        let tmp = tempdir().unwrap();
+        let _held = lock(tmp.path()).unwrap();
+        let mut waits = Vec::new();
+        let err = lock_waiting(tmp.path(), Duration::from_millis(300), |wait| {
+            waits.push(wait);
+            std::thread::sleep(wait);
+        })
+        .unwrap_err();
+        assert!(err.to_string().contains("held the lock"), "{err}");
+        assert!(waits.len() >= 3, "{waits:?}");
+        for (attempt, wait) in waits.iter().enumerate() {
+            let attempt = u32::try_from(attempt).unwrap();
+            assert!(*wait <= retry_bound(attempt), "{waits:?}");
+        }
+        assert!(waits.iter().any(|wait| *wait != waits[0]), "{waits:?}");
+        assert!(
+            waits.iter().any(|wait| *wait > LOCK_RETRY_FIRST),
+            "{waits:?}"
         );
     }
 

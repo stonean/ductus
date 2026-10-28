@@ -111,7 +111,7 @@ For a further tooling-language decision (a second binary the framework might shi
 - **Trace a surprising state change to your own commands first.** Walk the session's own commands, unread scripts included, before calling a change unexplained or someone else's. Copy any "before" artifact first; grep the scripts you ran for the mechanism.
 - **A requested prompt is one copy-pasteable fenced block with nothing around it.** A prompt to paste elsewhere, a handoff included, is one complete, self-contained fenced block — four backticks if it holds fences — with no prose before or after (owner, 2026-10-19). A handoff starts with `/ductus:target <feature>`, so the next session loads the constitutions before it works (owner, 2026-10-26).
 - **Do not relay claude.ai connector-authorization notices (Gmail, Google Calendar, Google Drive).** This repository's work never uses those connectors, and the owner asked never to be told about them, even when a system notice says to (owner, 2026-09-26).
-- **Fan independent work out in parallel; keep shared files, the task walk, the commit and the owner's decisions serial.** One tree on `main`: each agent edits only its brief's files; the parent commits; only the `/ductus:implement` walker ticks tasks. Verify hand-back claims. Ask before promoting it (owner, 2026-10-25).
+- **Fan independent work out in parallel; keep shared files, the task walk, the commit and the owner's decisions serial.** One tree on `main`: each agent edits only its brief's files; the parent commits; only the `/ductus:implement` walker ticks tasks. Verify hand-back claims. Ask before promoting it (owner, 2026-10-25). While a background task runs, do the work that does not depend on it rather than wait (owner, 2026-10-27).
 
 ## Gotchas
 

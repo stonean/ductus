@@ -222,3 +222,11 @@ The fix and its test landed in `9a256750`. The first item is checked once a `run
 - [x] The constitution's §concurrent-features, fold.md and consolidate.md say the same
 
 - **Done when**: every statement of the rule matches session::retarget, and 062's analyze records this reopen
+
+## 28. The session-lock poll backs off with jitter (BE-RETRY-001)
+
+- [x] Found by the 2026-10-27 analysis: the poll retried `try_lock` at a fixed `LOCK_RETRY` of ten milliseconds, and the plan argued `BE-RETRY-001`'s backoff and jitter away for a local lock, though the rule's Statement has no such scope. Fixed, not routed (owner's delegated disposition, 2026-10-27)
+- [x] `lock_within` (`runtime/src/session.rs`) waits a uniformly drawn time up to a bound that starts at `LOCK_RETRY_FIRST` and doubles to `LOCK_RETRY_CAP`, still stopping at the deadline, and retries only `TryLockError::WouldBlock`; the plan's Synchronization section states it
+- [x] A test shows the bound doubling to the cap and every wait within it, and a mutation per behavior in `scripts/mutation/session-lock-backoff.py` is killed
+
+- **Done when**: the poll backs off exponentially with full jitter up to its cap, stops at SESSION_LOCK_TIMEOUT, retries only a held lock, and its mutations are killed

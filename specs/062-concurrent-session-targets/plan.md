@@ -130,12 +130,15 @@ holds an exclusive advisory lock on `.ductus/sessions/.lock`, taken with
 are a few small reads and one or two atomic writes, so a wait that long means
 the holder is stalled, and the call fails naming the lock file rather than
 hanging every agent behind it. The poll (`BE-RETRY-001`) is bounded by that
-timeout, at most about a thousand attempts at `LOCK_RETRY`'s ten milliseconds,
-and retries only `try_lock`, which changes nothing when it fails. The interval
-is fixed rather than a jittered backoff on purpose: the contenders are a few
-local processes polling a kernel lock held for milliseconds, with no
-downstream for synchronized retries to overload, which is what that rule's
-backoff and jitter exist to prevent. The MCP handlers of the three session tools run
+timeout and backs off exponentially: the bound on each wait starts at
+`LOCK_RETRY_FIRST` (one millisecond) and doubles to `LOCK_RETRY_CAP` (fifty
+milliseconds), and each wait is drawn uniformly from zero to that bound (full
+jitter, from the standard library's randomly seeded hasher, so no dependency),
+so contenders that met the lock together do not retry in step. It retries only
+`TryLockError::WouldBlock`, another process holding the lock, and surfaces any
+other `try_lock` error at once (`BE-RETRY-003`; there is no downstream to send
+a throttling hint). A failed `try_lock` changes nothing, which is the
+idempotency basis. The MCP handlers of the three session tools run
 on the blocking pool, so a wait never holds an async worker. Writes inside the
 lock still use the existing tempfile + rename helper (`write_atomic`,
 `runtime/src/primitives/mod.rs:988`), so a reader outside the lock, such as a
@@ -158,10 +161,9 @@ meaning. The expiry sweep re-reads `used-at` under the same lock that
 resolutions refresh it under, so it cannot remove a target that was used after
 it looked.
 
-`File::lock` is stable from Rust 1.89. The declared `rust-version` is 1.88
-(`runtime/Cargo.toml:5`) and the pinned toolchain is 1.97.0
-(`runtime/rust-toolchain.toml`), so the change is a one-line MSRV bump to
-1.89. It adds no dependency.
+`File::lock` and `File::try_lock` are stable from Rust 1.89.0 (the standard
+library's `std::fs::File` documentation), which is the declared `rust-version`
+(`runtime/Cargo.toml`); this spec raised it from 1.88. It adds no dependency.
 
 ### `resolve-session`: the one read, with its side effects
 
@@ -368,7 +370,9 @@ discharges the declared impact.
 - **A locking crate (`fs2`, `fd-lock`) or a lock file created with
   `create_new`: rejected.** The crate adds a dependency for what the standard
   library now provides. A `create_new` lock file needs stale-lock recovery when
-  a process dies holding it, whereas an advisory lock is released by the OS.
+  a process dies holding it, whereas an advisory lock is released when its
+  file is closed (`std::fs::File::lock`'s documentation), which a process's
+  exit does.
   The cost is the MSRV bump to 1.89.
 - **A side-effect-free `resolve-session`: rejected.** Pinning, once-only
   notices and use-based expiry are all state changes on read. Accepted cost:

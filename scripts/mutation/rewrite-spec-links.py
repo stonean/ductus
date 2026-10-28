@@ -228,4 +228,32 @@ MUTATIONS = [
         '            } else {\n',
         'rewrite_spec_links',
     ),
+    (
+        'M30 a carried scenario collapsed onto the routed one on a scenario target',
+        'src/primitives/rewrite_spec_links.rs',
+        '        Some(slug) if !names_a_scenario(tail) => {\n',
+        '        Some(slug) => {\n',
+        'rewrite_spec_links',
+    ),
+    (
+        'M31 a carried scenario\'s fragment dropped on a scenario target',
+        'src/primitives/rewrite_spec_links.rs',
+        '            if let Some(fragment) = fragment {\n',
+        '            if let Some(fragment) = fragment.filter(|_| target.scenario.is_none()) {\n',
+        'rewrite_spec_links',
+    ),
+    (
+        'M32 the scenarios directory, spelled with a trailing slash, kept as a carried scenario',
+        'src/primitives/rewrite_spec_links.rs',
+        'matches!(tail, ["scenarios", name, ..] if !name.is_empty())',
+        'matches!(tail, ["scenarios", _, ..])',
+        'rewrite_spec_links',
+    ),
+    (
+        'M33 a referrer under a file where its directory should be raised as an error',
+        'src/primitives/rewrite_spec_links.rs',
+        'std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory',
+        'std::io::ErrorKind::NotFound',
+        'rewrite_spec_links',
+    ),
 ]

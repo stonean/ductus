@@ -22,7 +22,7 @@ Spent task sections are pruned per §tasks-phase; git history holds them, and th
 
 ## 30. Disposition: a `./` or `../` path to the spec root is invisible to the fold and the orphan check (AC6)
 
-- [ ] Found by task 29's verification (2026-10-27): the path scanner `check-orphaned-references` and `rewrite-spec-links` share counts a `/` before the spec root as a path character, so `[x](./specs/1234.1-staged/spec.md)` in `README.md` is neither re-pointed by a fold nor reported once the directory is gone (probed through the release binary). Pre-existing and shared by both primitives; AC6 says no reference dangles.
+- [ ] Found by task 29's verification (2026-10-27): the path scanner `check-orphaned-references` and `rewrite-spec-links` share counts a `/` before the spec root as a path character, so `[x](./specs/1234.1-staged/spec.md)` in `README.md` is neither re-pointed by a fold nor reported once the directory is gone (probed through the release binary). A root-absolute `[x](/specs/012-auth/spec.md)` is missed the same way (the 2026-10-27 review's probe). Pre-existing and shared by both primitives; AC6 says no reference dangles.
 - [ ] The scanner is `067-analyze-and-audit-checks`' surface (scenario `orphaned-reference-check`), which another session holds; whether to route it there or fix it here is the owner's decision.
 
 - **Done when**: the finding is fixed, routed, or discarded, with a discard's reason written on the task
