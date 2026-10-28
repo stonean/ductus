@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [063-oversized-artifacts-warn-with-a-fix]
 cross-spec-impact: [050-constitution]
 next-criterion: 12

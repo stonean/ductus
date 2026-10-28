@@ -1,14 +1,14 @@
 ---
 spec: 052-spec-supersession-and-consolidation
-last-run: 2026-10-28T18:53:01Z
-analyzed-against: d1853444f01e2623b1b4bc7b92629fed3dde2825
+last-run: 2026-10-28T20:22:39Z
+analyzed-against: c1cf51ffa655635ef1b56b977023762f596c1aaa
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 0
 analyzed-digest:
   plan.md: 97cd04d754965e3388ce91342ec53cb435afc12401c23680cf6524198d4bab36
-  review.md: 990ec022ad6ccb6366424c019acdfddd6f3aba7792fec219804d84c3be8e1580
+  review.md: 864a5a6cc31f76d534cc7bb5368934d3e61f285fc77bb43841ecff86cbe50277
   scenarios/stranded-session-after-removal.md: 4883250ac10f3dfad056127377b33924382c3e8fb5487e212fc1e2ccbb57b0e0
   spec.md: f1275ecb9c4ef8fb52a8f5040ed03f25405f37d844e984a0379965d0499b22a4
   tasks.md: 93a329748c88095865af6d31efc949d493e417e34370da5215ad0dfd405b63db

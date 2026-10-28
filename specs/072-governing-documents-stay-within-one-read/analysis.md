@@ -1,14 +1,14 @@
 ---
 spec: 072-governing-documents-stay-within-one-read
-last-run: 2026-10-28T18:53:01Z
-analyzed-against: d1853444f01e2623b1b4bc7b92629fed3dde2825
+last-run: 2026-10-28T20:22:39Z
+analyzed-against: c1cf51ffa655635ef1b56b977023762f596c1aaa
 hard-fail: 0
 blocking-findings: 0
 advisory: 4
 unexamined: 4
 analyzed-digest:
   plan.md: c638b765a744e7eefdd3f5a12d634adebd55897e5fb989ba52ace2edc39d5b27
-  review.md: 1012b1ce8132b3021f6d93802f36d537409aa81a04876eee634e4ad11749ac04
+  review.md: 7200ba828e4a456f75be8231e7cc588356d2df719d5f77d664cda2ce7f3a9eb8
   spec.md: 7216860f604d0f2491ecd631ada98ea86173197ca137190c5a403db7e69863c6
   tasks.md: 8de966c99a1186616700cbb3de162464d8915591204d5640f2fdd24a7c70bb8e
 unexamined-by-reason:

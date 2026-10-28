@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 dependencies: [041-task-pruning]
 next-criterion: 46
 ---

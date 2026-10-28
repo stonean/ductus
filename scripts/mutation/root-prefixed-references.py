@@ -3,7 +3,7 @@ names the project root from its referrer is a reference, for
 `check-orphaned-references` and `rewrite-spec-links` alike —
 `./` or a leading `/` in a root markdown file, `./` in `.githooks/pre-commit`,
 `../` or a leading `/` in the spec root's `system.md` — and any other prefix
-is not, short of a leading `/` that ends another directory's name
+is not, nor is a leading `/` that ends another directory's name
 (`root_prefixes`, `root_prefix_before`, `managed_path_spans`,
 `ends_another_directory` and `closes_a_name` in
 runtime/src/primitives/check_orphaned_references.rs).

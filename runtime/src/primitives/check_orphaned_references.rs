@@ -1089,10 +1089,11 @@ mod tests {
     fn a_prefix_counts_wherever_the_bare_path_does() {
         // A path behind a prefix is a reference wherever the same path written
         // bare is one, so each line pairs the two spellings: at a line's
-        // start, prefixed, quoted and bare; after a table bar, an HTML tag, a blockquote
-        // marker, a typographic quote, emphasis around a code span,
-        // strikethrough and a closing parenthesis; and in the hook after a
-        // redirection, a pipe and `&&`.
+        // start, prefixed, quoted and bare; after a table bar, an HTML tag, a
+        // blockquote marker, a typographic quote, emphasis around a code span,
+        // strikethrough and a closing parenthesis; and in the hook at a line's
+        // start, prefixed, quoted and bare, and after a redirection, a pipe
+        // and `&&`.
         let tmp = adopter();
         write(
             &tmp.path().join("README.md"),

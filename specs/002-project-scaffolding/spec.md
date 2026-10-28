@@ -1,6 +1,6 @@
 ---
 title: "002-project-scaffolding — spec"
-status: in-progress
+status: done
 dependencies: [000-slash-commands, 001-system-spec-templates]
 tags: [templates, bootstrap]
 next-criterion: 8

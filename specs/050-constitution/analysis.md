@@ -1,14 +1,14 @@
 ---
 spec: 050-constitution
-last-run: 2026-10-28T18:52:10Z
-analyzed-against: d1853444f01e2623b1b4bc7b92629fed3dde2825
+last-run: 2026-10-28T20:22:39Z
+analyzed-against: c1cf51ffa655635ef1b56b977023762f596c1aaa
 hard-fail: 0
 blocking-findings: 0
 advisory: 2
 unexamined: 5
 analyzed-digest:
   plan.md: b479ada101fb4ab4eb0e644b4004cde6516a37ce4c9e3be824caa362c9ac557f
-  review.md: 637e854aef9d2a3a5e1427eabe427152f9756b7d1ab84aaeef884263eca72b43
+  review.md: 18d5af5797bad3eba614075e4a74a6a947a9152c764c15e92fe98ed4e80034b5
   scenarios/a-canonical-source-is-pointed-at-not-copied.md: c1458fa54c4d7c5d25161f0d858079055be89e82389830938fef4e36281eb456
   scenarios/a-declared-cross-spec-impact-gates-done.md: b4a96bd919b383288cc871adf160804acfc5bc127b1798963810ff391a3ac078
   scenarios/a-measurement-states-its-method-and-units.md: 4c250a480c11e9788058f1012b647daa14aba2036d4a3baa9d0c1ba3c5965b2a

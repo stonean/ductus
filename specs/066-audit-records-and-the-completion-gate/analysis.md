@@ -1,7 +1,7 @@
 ---
 spec: 066-audit-records-and-the-completion-gate
-last-run: 2026-10-28T18:53:01Z
-analyzed-against: d1853444f01e2623b1b4bc7b92629fed3dde2825
+last-run: 2026-10-28T20:22:39Z
+analyzed-against: c1cf51ffa655635ef1b56b977023762f596c1aaa
 hard-fail: 0
 blocking-findings: 1
 advisory: 1

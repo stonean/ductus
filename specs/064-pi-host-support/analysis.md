@@ -1,14 +1,14 @@
 ---
 spec: 064-pi-host-support
-last-run: 2026-10-28T18:53:01Z
-analyzed-against: d1853444f01e2623b1b4bc7b92629fed3dde2825
+last-run: 2026-10-28T20:22:39Z
+analyzed-against: c1cf51ffa655635ef1b56b977023762f596c1aaa
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
 unexamined: 23
 analyzed-digest:
   plan.md: 843d2130db6192377e68a31a964e7b1f66ec502481e7704eed84d5e827fe5010
-  review.md: aee9a043043b1e10117bb137fe1ec4cedb9175efc44fdc08b9005a303be4e28e
+  review.md: b9986d4a274aa3c982b947aa88a3c4aa9b955976dc308205d3cd1448c4dc9ef4
   scenarios/pi-layout-is-dispatched.md: 0d0d2a6867c610e4d55252aa82fdf7a449ab0735ec16f47484a8c8dc332595fc
   scenarios/the-bridge-fails-loudly-and-recovers.md: 67570df65ceffa494936a5282eb62c100f14c125065562038aaa771077b1bf45
   spec.md: 931538568dfbfcecfc38e8e6c18a0ce177ea7b14673dfbecee14f819679ea5b4
