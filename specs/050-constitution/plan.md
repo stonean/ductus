@@ -123,41 +123,41 @@ carries that weight.
 
 ### The constitution fits one read
 
-`framework/constitution.md` went from 119,262 to 49,980 bytes on disk (`wc -c`), and to 49,997 when §recommendations gained a rule (§An answer is applied as chosen), within the 50,000-byte read size `check-artifact-size` applies (spec 063), and `scripts/lint-governing-size.sh` holds it at that read size. An adopter's installed copy differs by 27 bytes for each character its project name has beyond nine, since `{project}` appears 27 times, so it stays within the 51,200-byte caps for a name of up to 53 characters. The read size is the target because OpenCode's and Pi's read tools return at most 51,200 bytes in one call: at 53,811 bytes, `/{project}:target`'s read on either stopped after line 500 (the scenario's Resolved Question). Measured per anchored section — the bytes from one `<!-- §anchor -->` marker to the next, so a subsection is counted with the marked section above it:
+`framework/constitution.md` went from 119,262 to 49,980 bytes on disk (`wc -c`), to 49,997 when §recommendations gained a rule (§An answer is applied as chosen), and to 49,982 when §text-first-artifacts gained one (§Artifacts are as short as their required content), within the 50,000-byte read size `check-artifact-size` applies (spec 063), and `scripts/lint-governing-size.sh` holds it at that read size. An adopter's installed copy differs by 26 bytes for each character its project name has beyond nine, since `{project}` appears 26 times, so it stays within the 51,200-byte caps for a name of up to 55 characters. The read size is the target because OpenCode's and Pi's read tools return at most 51,200 bytes in one call: at 53,811 bytes, `/{project}:target`'s read on either stopped after line 500 (the scenario's Resolved Question). Measured per anchored section — the bytes from one `<!-- §anchor -->` marker to the next, so a subsection is counted with the marked section above it:
 
 | Section | Before | Now |
 | --- | --- | --- |
-| preamble | 195 | 187 |
+| preamble | 195 | 129 |
 | §principles | 1,678 | 1,678 |
 | §cost-levers | 639 | 236 |
 | §design-principles | 4,192 | 2,128 |
-| §grounding | 1,255 | 671 |
+| §grounding | 1,255 | 609 |
 | §governance-precedence | 2,325 | 1,021 |
 | §recommendations (with the Grounding rules list) | 7,283 | 3,721 |
 | §pipeline | 202 | 112 |
-| §spec-phase | 1,734 | 1,022 |
+| §spec-phase | 1,734 | 956 |
 | §spec-requirements | 2,507 | 1,180 |
-| §spec-lifecycle | 8,701 | 4,240 |
+| §spec-lifecycle | 8,701 | 4,142 |
 | §plan-phase | 2,304 | 835 |
 | §tasks-phase | 1,853 | 697 |
 | §readiness-check | 664 | 596 |
 | §implement-phase | 6,792 | 1,413 |
 | §constants, §env-vars | 867 | 316 |
-| §bug-handling | 2,527 | 1,168 |
+| §bug-handling | 2,527 | 1,112 |
 | §scenarios, §scenario-promotion | 3,659 | 1,274 |
 | §rules | 8,382 | 2,576 |
 | §brownfield-inbox | 8,422 | 2,763 |
-| §brownfield-process | 1,571 | 522 |
-| §text-first-artifacts (with frontmatter schema and severity) | 14,106 | 5,415 |
-| §runtime-boundary (five principles) | 2,449 | 2,415 |
-| §runtime-host-integration (with eligibility, acquisition, versioning, non-scope) | 5,237 | 3,040 |
+| §brownfield-process | 1,571 | 426 |
+| §text-first-artifacts (with frontmatter schema and severity) | 14,106 | 6,014 |
+| §runtime-boundary (five principles) | 2,449 | 2,376 |
+| §runtime-host-integration (with eligibility, acquisition, versioning, non-scope) | 5,237 | 2,901 |
 | §drift-prevention | 14,459 | 6,220 |
 | §pipeline-boundaries | 3,410 | 1,361 |
 | §concurrent-features | 5,735 | 1,424 |
 | §cross-spec-impact | 3,178 | 845 |
 | §numbering | 2,097 | 745 |
 | §markdown-standards | 839 | 176 |
-| **Total** | **119,262** | **49,997** |
+| **Total** | **119,262** | **49,982** |
 
 Three kinds of change, by destination:
 
@@ -169,7 +169,7 @@ Three kinds of change, by destination:
 
 **The constitution is imported at startup.** This repository's `CLAUDE.md` imports `@framework/constitution.md` and the template `@.ductus/constitution.md`, each above `@AGENTS.md`, where the template carried it before 072. The method 072 used for AC6 proved the import loads. On 2026-10-27, `claude -p` with every tool disallowed was asked for two sentences only the constitution holds, the second its last line. With `@AGENTS.md` alone it answered `NOT IN CONTEXT`; with the import it quoted both verbatim. Neither run made a tool call, and they took 35,092 and 51,823 input tokens. An adopter's `CLAUDE.md` reaches the same line through two migrations. `claude-md-import-syntax` converts an `@import .ductus/constitution.md` line. `constitution-import`, ordered after it on the `id` tie-break, adds the line where nothing imports the constitution. That includes a `--ref=main` adopter whose `last_applied` is already `claude-md-import-syntax`, whom no edit to that migration would reach. `/{project}:target` still reads the constitution where no import loaded it: on an `AGENTS.md`-layout host, or on one that does not resolve `@path`.
 
-**What Claude Code makes of the import.** Claude Code warns at session start when an instruction file, or their total, passes a recommended size, and loads every file regardless. Read from the installed 2.1.310 binary on 2026-10-27: a file warns over max(40,000, round(W × 0.05 × r)) characters, where W is the session's context window in tokens and r is 3 for current models (4 for a listed set of older ones), so 150,000 on a 1,000,000-token window and 40,000 on a 200,000-token one. The total warns over max(120,000, that per-file figure), summed over the files under the per-file figure. Characters are counted after HTML comments are stripped: an adopter on 0.59.11 whose own `CLAUDE.md` imports its constitution saw it reported as 115.1k, and 0.59.11's constitution is 115,126 characters stripped (115,890 raw). The shipped constitution is 48,907 characters by that count (49,671 raw), so by the formula a session on a 200,000-token window warns about it at every start. On a 1,000,000-token window it is a third of the total figure, and this repository's three files (`CLAUDE.md` 51, `AGENTS.md` 47,997, the constitution 48,907) came to 96,955 at `3b359742`, the commit that last changed the constitution. Each figure is a count of Unicode code points, with HTML comments stripped except the raw one, read from that commit.
+**What Claude Code makes of the import.** Claude Code warns at session start when an instruction file, or their total, passes a recommended size, and loads every file regardless. Read from the installed 2.1.310 binary on 2026-10-27: a file warns over max(40,000, round(W × 0.05 × r)) characters, where W is the session's context window in tokens and r is 3 for current models (4 for a listed set of older ones), so 150,000 on a 1,000,000-token window and 40,000 on a 200,000-token one. The total warns over max(120,000, that per-file figure), summed over the files under the per-file figure. Characters are counted after HTML comments are stripped: an adopter on 0.59.11 whose own `CLAUDE.md` imports its constitution saw it reported as 115.1k, and 0.59.11's constitution is 115,126 characters stripped (115,890 raw). The shipped constitution is 48,889 characters by that count (49,653 raw), read from the tree that added §text-first-artifacts' length rule, so by the formula a session on a 200,000-token window warns about it at every start. On a 1,000,000-token window it is a third of the total figure: this repository's three files (`CLAUDE.md` 51, `AGENTS.md` 47,997, the constitution 48,907) came to 96,955 at `3b359742`. Each figure is a count of Unicode code points, with HTML comments stripped except the raw ones.
 
 The review record's `scope` field (task 36) is defined in `framework/reference/review.md` §Window and coverage: the plan's Affected Files entries as written, a pattern counting once, united with the paths modified since `diff-base`. The constitution's table declares its type, as it does for every audit-record field.
 
@@ -179,7 +179,11 @@ Where a learning goes is stated once, in the constitution's §drift-prevention, 
 
 ### An answer is applied as chosen
 
-§recommendations states that an answer is applied as the chosen option reads and that a refinement the sources suggest is asked as its own question first, in its first paragraph, so it is not part of the one-at-a-time default a project may replace. The constitution held 20 bytes of headroom, so the sentence was paid for in the same edit: §spec-phase lost the bold lead *This is an instruction, not only a fact* and a clause, and §drift-prevention's host-rules-file sentence became `AGENTS.md`'s managed block, which is shorter. The dated "Recorded backfill" sentence under §rules was not cut, since `068-api-backend-rules` and `069-accessibility-frontend-rules` each own its removal as a criterion. A `git grep` of the live-artifact set for the removed bold lead finds only this sentence (2026-10-28). The constitution is 49,997 bytes.
+§recommendations states that an answer is applied as the chosen option reads and that a refinement the sources suggest is asked as its own question first, in its first paragraph, so it is not part of the one-at-a-time default a project may replace. The constitution held 20 bytes of headroom, so the sentence was paid for in the same edit: §spec-phase lost the bold lead *This is an instruction, not only a fact* and a clause, and §drift-prevention's host-rules-file sentence became `AGENTS.md`'s managed block, which is shorter. The dated "Recorded backfill" sentence under §rules was not cut, since `068-api-backend-rules` and `069-accessibility-frontend-rules` each own its removal as a criterion. A `git grep` of the live-artifact set for the removed bold lead finds only this sentence (2026-10-28).
+
+### Artifacts are as short as their required content
+
+§text-first-artifacts **Principles** carries the rule as the owner approved it on 2026-10-28, after the bullet on exceptions to markdown as the source of truth. It defines required content by pointing at §grounding, §design-principles and §drift-prevention rather than restating them, and no command or template restates it. The constitution had 3 bytes of headroom and the bullet is 599, so 614 bytes were cut in the same edit, each a restatement of the rule beside it or of a command's behaviour: the opening tagline; §grounding's lead slogan; the clause saying the default spec-root name applies when the key is unset; the sentence naming the checks the completion gate composes with; §bug-handling's pointer to the decision tree that follows it; §brownfield-process's lead, which its three steps state; §runtime-boundary's acquisition clause, which principle 3 states; and the eligibility paragraph restating that all three criteria must hold. Each came from a sentence no other tracked file quotes, found by matching 36-character windows of every constitution sentence against every tracked file, then by a paraphrase search of every ticked criterion. What that search kept: §cost-levers' `/cost` example, which `010-agent-autonomy` AC11 requires as the pointer at platform tooling; the §runtime-boundary sentences 021, 048 and this spec quote; and the brownfield-backlog sentence five other files quote.
 
 ## Classification
 

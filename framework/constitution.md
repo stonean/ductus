@@ -1,6 +1,6 @@
 # Constitution
 
-The governing rules for spec-driven software development. A rule only one command applies lives in that command's markdown-only reference, which this document points at.
+A rule only one command applies lives in that command's markdown-only reference, which this document points at.
 
 <!-- §principles -->
 
@@ -53,7 +53,7 @@ Constraints on anything the pipeline asks an author or a check to do. Each is a 
 
 ## Grounding
 
-Work from what can be observed, not from what can be guessed. When a reachable source can answer a question, the agent MUST consult it first; reasoning from the conversation alone when a primary source went unread is a defect, even when the guess was right.
+When a reachable source can answer a question, the agent MUST consult it first; reasoning from the conversation alone when a primary source went unread is a defect, even when the guess was right.
 
 ### Sources, in order of authority
 
@@ -122,7 +122,7 @@ specs/
       {slug}.md     # One file per scenario
 ```
 
-`specs` is the default name: a project may rename it with `.ductus/config.toml` `[paths] specs-root`, and every command and the runtime use `specs` when that is unset.
+`specs` is the default name: a project may rename it with `.ductus/config.toml` `[paths] specs-root`.
 
 Wherever a command acts on a path under the spec root, substitute the configured name for the literal `specs/`; the primitives resolve it, and on the markdown-only path the host does.
 
@@ -152,7 +152,7 @@ Wherever a command acts on a path under the spec root, substitute the configured
 draft ──/clarify──▶ clarified ──/plan──▶ planned ──/implement──▶ in-progress ──[/review gate]──▶ done
 ```
 
-`/implement` MUST NOT write `status: done` while the review record's `last-run` is unset or its `blocking` is `true`; `/review` changes no status. The gate composes with `/analyze`, which flags drifted `done` specs, and the shipped CI template. Three back-edges exist:
+`/implement` MUST NOT write `status: done` while the review record's `last-run` is unset or its `blocking` is `true`; `/review` changes no status. Three back-edges exist:
 
 - **Backward via new questions** — `clarified` / `planned` / `in-progress` → `draft` when `/amend` records a new open question, in the same write; the next `/clarify` resolves it. `draft` is the only status that tolerates open questions in the spec body.
 - **Backward via new scenario** — `done` → `in-progress` when `/amend` records a scenario; its task is implemented and the spec returns to `done`. A scenario carrying open questions takes this edge too, and the spec does not reach `done` while any remain.
@@ -233,7 +233,7 @@ If any item fails, fix the gap before writing code.
 
 Bugs are unwritten or violated requirements: each shows a gap in a rule (cross-cutting), spec (feature-wide), or scenario (situational), and the fix makes that requirement more precise.
 
-A **chore** — lint, dependency or repo-hygiene cleanup, a standalone refactor — adds no requirement and belongs to no feature, so it spawns no rule, spec, or scenario. **A chore a run finds is fixed in that run** (§brownfield-inbox); one a person logs stays a checkbox in `specs/inbox.md` until done, then is removed. The test is **durability**: rules, specs and scenarios hold what must stay accurate, while a chore's value is spent once complete. Route requirement gaps through the decision tree below.
+A **chore** — lint, dependency or repo-hygiene cleanup, a standalone refactor — adds no requirement and belongs to no feature, so it spawns no rule, spec, or scenario. **A chore a run finds is fixed in that run** (§brownfield-inbox); one a person logs stays a checkbox in `specs/inbox.md` until done, then is removed. The test is **durability**: rules, specs and scenarios hold what must stay accurate, while a chore's value is spent once complete.
 
 ### Bug Decision Tree
 
@@ -304,8 +304,6 @@ Every finding a pipeline run produces (a `/{project}:review` observation, a `/{p
 
 ### Brownfield Process
 
-Brownfield projects adopt `ductus` incrementally: start broad and decompose through scenarios.
-
 #### Capture → incremental growth → promotion
 
 1. **Capture** — `/specify` with whatever description exists; sparse acceptance criteria are expected and valid for brownfield use.
@@ -324,6 +322,7 @@ Brownfield projects adopt `ductus` incrementally: start broad and decompose thro
 - Cross-artifact references use standard relative markdown links (`[label](../path.md)`), not wiki-links — this keeps PRs reviewable on GitHub and viewers like Quartz/Obsidian still resolve them.
 - Source-of-truth artifacts are markdown. Structured derived views (SQLite caches, JSON indexes, generated graph data, binary artifacts) never become the canonical record: they MUST be gitignored and regenerated on demand by their consumers.
 - Exceptions to text-first source-of-truth require an explicit constitutional amendment with stated rationale.
+- **Write each artifact as short as its required content allows, and no shorter.** Required content is what a gate, a check, or a later reader acting on the artifact needs: every claim with its reason and boundary, its provenance (§grounding), and what is outstanding (§design-principles). Cut the rest: restatement (point at the canonical source, §drift-prevention), how a decision was reached (git keeps it), examples a rule does not need, and hedges. A cut that drops required content is a defect, not a saving. Nothing enforces this beyond `check-artifact-size`'s advisory read-size finding.
 - **A markdown link in a spec body creates a `dependencies:` edge — cite in prose when you mean a citation.**
 - **Write pipeline state files with the file-writing tool, not shell redirects** — their permissions are scoped to those tools.
 - **Never stage the whole worktree in a project running this pipeline** — it sweeps untracked spec drafts into a commit.
@@ -378,7 +377,7 @@ Other fields are permitted and ignored by uninterested consumers, except the res
 
 ### Runtime Boundary
 
-`ductus` ships a runtime binary, acquired by `/{project}` at adoption, that executes the deterministic portions of pipeline commands without an LLM. This subsection defines what the runtime can and cannot do; deviations require their own constitutional amendment.
+`ductus` ships a runtime binary that executes the deterministic portions of pipeline commands without an LLM. This subsection defines what the runtime can and cannot do; deviations require their own constitutional amendment.
 
 #### Five principles
 
@@ -401,8 +400,6 @@ A capability is runtime-eligible only when **all three** hold:
 1. **Deterministic** — no semantic judgment required; the same inputs always produce the same outputs.
 2. **Currently mechanical** — already either (a) executed by an LLM following procedural instructions in a slash command body, or (b) implemented as a bash script the framework invokes (pre-commit hooks, generators, CI).
 3. **Specifiable as prose** — the capability can be stated completely enough that the Markdown-only reference documents it, and a primitive mirrors that reference rather than introducing policy of its own.
-
-A capability that fails any criterion stays out of the runtime. Anything that requires reading prose for intent is permanently LLM-owned.
 
 **Eligibility is a default, not a permission**: a capability meeting all three is a primitive, which hooks, CI and audits call instead of reparsing markdown, and a shell script is the fallback only when a criterion genuinely fails, since each such parser is a copy of a tested parse that drifts.
 

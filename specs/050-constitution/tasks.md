@@ -340,3 +340,9 @@ The owner answered the scenario's question on 2026-10-27 with (b): the constitut
 - [x] Real adopter bootstrap, once `main` carries this: one subject adopted at `ductus-v0.28.0` and one at `ductus-v0.59.11` with Pi added (which also verifies `064-pi-host-support` task 16), each run with `/ductus --ref=main`. Expected: `memory-routing-leaves-claude-md` removes the 2026-06-18 and 2026-09-15 sections respectively and reports it; `AGENTS.md` gets the `ductus:memory-routing` block appended at its end, and the run says so; a re-run changes nothing. The `ductus-v0.28.0` subject is expected to meet the `013-text-first-artifacts` precheck refusal first (scenario `the-precheck-ignores-what-the-same-run-wrote`): commit and re-run. Run 2026-10-27 on `fb26d602`, after reading the `ductus-v0.59.11` subject found the section ending at an appended block (fixed there): both sections removed and reported, the block appended and reported, each re-run unchanged; subject A met the refusal, and its commit failed in the pre-0.30 hook the halted run left (routed to that 013 scenario as an edge case)
 
 - **Done when**: the AGENTS.md managed block, both templates, the constitution, this repository's CLAUDE.md and the migration match the scenario, AC20 is rewritten to the new surfaces, a fixture walk proves the migration removes each shipped section and leaves an edited one, a real adopter bootstrap shows the block written and the section removed, and the inbox item it discharges is removed
+
+## 41. Artifacts are as short as their required content
+
+- [x] Implement the behavior described in `scenarios/artifacts-are-as-short-as-their-required-content.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
