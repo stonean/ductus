@@ -1,6 +1,6 @@
 # 036 — Cross-cutting code-quality rules Data Model
 
-Registers the `QUAL` rule-ID surface and its inaugural `STUB` category. It does not restate the rule-file schema — that is defined once in `specs/008-security-rules/data-model.md` (Statement / Rationale / Verification; `### {ID}` headings; permanent IDs; MUST/SHOULD severity) and `quality-cross.md` follows it, mirroring how `configuration-cross.md` (017) follows the same schema.
+Registers the `QUAL` rule-ID surface and its inaugural `STUB` category. It does not restate the rule-file schema — that is defined once in `specs/008-security-rules/data-model.md` (Statement / Verification; `### {ID}` headings; permanent IDs; MUST/SHOULD severity) and `quality-cross.md` follows it, mirroring how `configuration-cross.md` (017) follows the same schema.
 
 ## `QUAL` surface
 

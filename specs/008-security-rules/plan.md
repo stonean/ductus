@@ -20,14 +20,12 @@ ductus writes both files to `specs/rules/security-backend.md` and `specs/rules/s
 
 ### Rule entry format is heading-anchored markdown
 
-Each rule is a level-3 heading whose text is the Rule ID, followed by a statement (block-quoted), and then bold-prefixed `**Rationale:**` and `**Verification:**` paragraphs. Example, abridged at each `…` from `BE-AUTHN-001` in `framework/rules/security-backend.md`, which holds the full text:
+Each rule is a level-3 heading whose text is the Rule ID, followed by a statement (block-quoted), then a bold-prefixed `**Verification:**` paragraph and an optional `**Source:**` one. Example, abridged at each `…` from `BE-AUTHN-001` in `framework/rules/security-backend.md`, which holds the full text:
 
 ```markdown
 ### BE-AUTHN-001
 
 > Passwords MUST be hashed using a deliberately slow password-hashing algorithm before persistence — never encrypted, never stored in plaintext. …
-
-**Rationale:** Encryption is reversible — a database breach plus key access yields plaintext credentials. One-way hashing is irreversible by design. …
 
 **Verification:** Any spec or plan that introduces credential storage (search keywords: `password`, `credential`, `auth`, `login`) MUST name the hashing algorithm. Salting and cost/iteration parameters MUST be specified or referenced, at or above the OWASP Password Storage Cheat Sheet's minimums: …. … `/{project}:analyze` flags persistence paths that store a password as a plain or salted single-pass digest (…), plain `crypt`, or "encrypted", that choose bcrypt without stating that Argon2id and scrypt are unavailable, that choose PBKDF2 without stating a FIPS 140 requirement, that name parameters meeting none of those configurations, or that omit the algorithm question entirely.
 ```

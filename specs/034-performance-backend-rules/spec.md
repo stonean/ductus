@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [008-security-rules, 016-cross-cutting-rules, 033-rule-surface-setting]
 next-criterion: 10
 ---
@@ -43,7 +43,7 @@ Performance rules default to **SHOULD** (advisory; thresholds are context-depend
 
 ## Acceptance Criteria
 
-- [x] AC1: `framework/rules/performance-backend.md` exists, ends in the `-backend.md` suffix, and follows the canonical rule schema (`### {ID}` headings; Statement / Rationale / Verification; RFC 2119 language) per [008-security-rules](../008-security-rules/spec.md)'s data-model.
+- [x] AC1: `framework/rules/performance-backend.md` exists, ends in the `-backend.md` suffix, and follows the canonical rule schema (`### {ID}` headings; Statement / Verification, no Rationale; RFC 2119 language) per [008-security-rules](../008-security-rules/spec.md)'s data-model.
 - [x] AC2: Every rule ID uses the `BE-{CATEGORY}-{NNN}` format with a performance category (`QUERY`/`CACHE`/`POOL`/`PAYLOAD`/`ASYNC`) disjoint from the `security-backend.md` and `api-backend.md` category sets; `scripts/lint-rule-ids.sh` passes.
 - [x] AC3: The file header declares the five performance category abbreviations (per the constitution's per-file category-declaration policy, as framed in [016-cross-cutting-rules](../016-cross-cutting-rules/spec.md)).
 - [x] AC4: The rule set covers, at minimum, query efficiency (N+1 + indexes + bounded results), caching (TTL/invalidation, scope-complete keys, stampede), connection pooling (pooled + sized + bounded acquisition + release), and payload budgets (size cap + field selection + compression) — each with a Verification clause expressed as a **design-time commitment** the spec/plan must make (not a code-pattern grep), consistent with how `/ductus:analyze` audits artifacts.

@@ -278,3 +278,43 @@ Reopen surfaced upstream from an adopter: an `FE-DEPS` rule was missing for a de
 - [x] Lints, audit suite, and rule-corpus tests pass
 
 - **Done when**: The question is resolved and applied, and 008 is re-reviewed back to done.
+
+## 19. Rules are as short as their required content
+
+- [ ] Implement the behavior described in `scenarios/rules-are-as-short-as-their-required-content.md`
+- [ ] Second pass, per the scenario's Resolved Questions: cut the three listed leftovers from every file in `framework/rules/`, then an independent per-file review, then re-read each fix round until one has no MUST or SHOULD
+
+The first pass is committed: all eleven files cut, each independently reviewed, a cross-file boundary check, and the fix rounds re-read until clean; every artifact describing the old format is corrected, and 016, 034, 036, 037, 038, 039 and 045 were reopened for it. The files went from 509,421 to 324,390 bytes (`wc -c framework/rules/*.md`, summed; `4e82686d` against the first-pass commit). Tick the first item only once the second pass is done.
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 20. Disposition out-of-spec finding: FE-SEMHTML-001 and FE-ARIA-001 both flag a div with a widget role and a click listener
+
+- [ ] framework/rules/accessibility-frontend.md — `FE-SEMHTML-001`'s Verification flags a click listener on a `<div>`/`<span>` whether or not it carries `role`, and `FE-ARIA-001`'s flags an ARIA widget role on a `<div>`/`<span>` where a native element provides the pattern, so `<div role="button" onclick>` is reported under both IDs. The overlap predates task 19's cut; 008's data model §Verification phrasing item 5 now asks a Verification to name the sibling that owns an overlapping defect, and which rule owns this one is undecided (owning spec: 069). Found by task 19's independent re-read, 2026-10-28.
+
+- **Done when**: the finding is fixed, routed, or discarded, with a discard's reason written on the task
+
+## 21. Decide the owner of three overlaps task 19's re-reads found in the security rule files
+
+- [ ] `BE-AUTHN-010` (MUST) and `BE-AUTHN-021` (SHOULD) both flag SMS as a privileged account's only second factor — name one owner in both Verifications, or record the double report as deliberate with its reason
+- [ ] `BE-DATA-003` and `BE-DATA-008` both flag a secret in a `Dockerfile` `ENV` directive or an image layer — name one owner, or record it as deliberate
+- [ ] `BE-DATA-003` and `BE-DATA-012` both flag a secret hardcoded in source (as a secret in source, and as a replacement path that requires editing source) — name one owner, or record it as deliberate
+
+- **Done when**: each overlap names its owner in both rules' Verifications per data-model §Verification phrasing item 5, or is recorded as deliberate with its reason; the overlaps predate task 19, which the re-reads surfaced on 2026-10-28
+
+## 22. Verify the adoption audit's rule-file check with a real adopter bootstrap
+
+- [ ] Task 19 changed `framework/bootstrap/ductus-procedure.md` §Loading rule files (the security-rule audit's integrity check now requires Statement and Verification only). Run `/ductus --ref=main` on an adopter subject that has feature specs and no `specs/rules/security-*.md` yet, so the audit triggers on a newly created rule file; expected: both cut security files load with no `failed to load` line, and a pinned pre-cut copy of either file, still carrying `**Rationale:**` paragraphs, also loads
+
+- **Done when**: the bootstrap ran and its output matches the expected line, recorded on this task with the subject's starting version and the commit it ran against, or the owner waives the run with a reason written on this task
+
+## 23. Disposition out-of-spec findings: NOTE-level gaps in non-security rule files that predate task 19
+
+- [ ] framework/rules/reliability-backend.md — `BE-BREAKER-001` and `BE-BULK-002` both flag an optional, failure-prone dependency with no breaker and no degraded path; neither names the other (owning spec: 039)
+- [ ] framework/rules/api-backend.md — `BE-LRO-001`'s "failure outside the project error envelope" and `BE-ERRENV-001`'s "ad-hoc error formats" can both fire on a status monitor's failure body (owning spec: 068)
+- [ ] framework/rules/accessibility-frontend.md — `FE-A11YMEDIA-002`'s trigger reaches live audio-only media neither Statement obliges; its flag list omits the video-only alternative its Statement requires; its Verification does not name the media-alternative-for-text exemption (owning spec: 069)
+- [ ] framework/rules/accessibility-frontend.md — `FE-KBD-002` routes "too little changed from the unfocused state" to `FE-KBD-005`, whose flag list checks thickness only (owning spec: 069)
+- [ ] framework/rules/concurrency-backend.md — `BE-COORD-003`'s flag sentence names only commit-then-publish, not a write to a second datastore its Statement covers; `BE-COORD-004` routes a dead-lettered ordered message to `BE-RETRY-005`, whose flag list does not name it (owning specs: 038, 039)
+- [ ] framework/rules/observability-backend.md — `BE-HEALTH-001` and `BE-HEALTH-002` can both fire on a combined probe that checks dependencies; and neither `BE-HEALTH-001` nor `BE-BULK-002` flags a dependency critical to some operation but left out of readiness, though `BE-HEALTH-001`'s Statement requires it (owning specs: 037, 039)
+
+- **Done when**: the finding is fixed, routed, or discarded, with a discard's reason written on the task

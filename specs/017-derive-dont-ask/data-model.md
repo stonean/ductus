@@ -9,15 +9,13 @@ A configuration rule file is a markdown document with the following structure (m
 ```markdown
 # Configuration Rules
 
-{Introduction, one short paragraph each: the file's scope; the RFC 2119 severity mapping; the ID format and category list; how the rules are enforced; how a project's configuration selects or excludes the file.}
+{Introduction: the file's scope and how its rules are enforced; the ID format and category list; a pointer to constitution §rules for severity, ID permanence, and how a project excludes the file from review.}
 
 ## {ID prefix} — {Category Name}
 
 ### {Rule ID}
 
 > {Rule statement using RFC 2119 keywords.}
-
-**Rationale:** {Threat the rule mitigates.}
 
 **Verification:** {Instruction to `/{project}:analyze` on how to check the rule.}
 
@@ -60,7 +58,6 @@ The full ID always includes the `CFG-` prefix to disambiguate from the `BE-` (ba
 | --- | --- | --- | --- |
 | Rule ID | yes | Level-3 heading (`### {ID}`) | Matches the format above. The heading contains nothing but the ID. |
 | Statement | yes | Block quote (`> …`) | The rule's obligation, stated with RFC 2119 keywords of one tier — MUST and MUST NOT, or SHOULD and SHOULD NOT — and optionally MAY for a permission or scope boundary. See **Severity classification** below. |
-| Rationale | yes | Paragraph beginning `**Rationale:**` | Brief explanation of the threat or risk the rule mitigates. |
 | Verification | yes | Paragraph beginning `**Verification:**` | Instruction to `/{project}:analyze` — see **Verification phrasing** below. |
 | Source | no | Paragraph beginning `**Source:**` | Citation to authoritative origin (e.g., 12-Factor App, NIST SP 800, ISO 80000-3 for units of time). Optional but recommended. |
 | Deprecated | no | Paragraph beginning `**DEPRECATED in {version}:**` | Present only on deprecated rules. Includes the removal target version. The rule remains in the file with this label until removed. |

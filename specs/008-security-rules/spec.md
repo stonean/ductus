@@ -1,10 +1,10 @@
 ---
 title: "008-security-rules — spec"
-status: done
+status: in-progress
 dependencies: [007-govern-workflow]
 tags: [security, format]
 next-criterion: 29
-cross-spec-impact: [017-derive-dont-ask, 036-quality-cross-rules]
+cross-spec-impact: [016-cross-cutting-rules, 017-derive-dont-ask, 034-performance-backend-rules, 036-quality-cross-rules, 037-observability-backend-rules, 038-concurrency-backend-rules, 039-reliability-backend-rules, 068-api-backend-rules, 069-accessibility-frontend-rules, 070-performance-frontend-rules]
 ---
 
 # 008 — Security Rules
@@ -58,8 +58,9 @@ Each rule within a file follows a consistent structure:
 
 - **Rule ID** — short identifier formatted as `{surface}-{category}-{NNN}` (e.g., `BE-AUTHN-001`, `FE-XSS-001`) for reference in specs, plans, and `/{project}:analyze` output. See **ID stability** below.
 - **Rule statement** — a block quote declaring what must or must not happen, with RFC 2119 keywords of one tier (see `data-model.md` § Severity classification)
-- **Rationale** — why this rule exists (threat it mitigates)
-- **Verification** — how `/{project}:analyze` or a reviewer checks compliance (code pattern, test requirement, configuration check, or documentation commitment — see **Verification phrasing** below)
+- **Verification** — how `/{project}:analyze` or a reviewer checks compliance (code pattern, test requirement, configuration check, or documentation commitment — see **Verification phrasing** below), naming any sibling rule that owns an overlapping defect
+
+A rule carries no rationale: its statement stands alone (scenario [`rules-are-as-short-as-their-required-content`](scenarios/rules-are-as-short-as-their-required-content.md)).
 
 Rules use RFC 2119 language: MUST, MUST NOT, SHOULD, SHOULD NOT. MUST/MUST NOT rules are reported as errors; SHOULD/SHOULD NOT rules are flagged as warnings. MAY may appear beside either tier to state a permission or a scope boundary, and carries no tier of its own.
 
@@ -198,7 +199,7 @@ How `/{project}:analyze` behaves when the inputs are unusual:
 
 - **Neither rule file present.** If a project has no `specs/rules/security-backend.md` and no `specs/rules/security-frontend.md` (e.g., a cross-only `[rules] surfaces = []` kept both from ever being installed, or both were deleted by hand), `/{project}:analyze` applies no security rules and continues. When the rule-file directory holds no rule file of any kind, it also emits an advisory warning — `No rule files found, skipping rule checks`, generalized from this spec's original security-only wording by 016; a project that still has other rule files (the `-cross.md` files a cross-only setting installs, for instance) gets no such warning. The rule check is non-blocking in either case.
 - **Only one file present.** If a project has only one of the two files (e.g., a backend-only project whose `[rules] surfaces` omitted `frontend` before the frontend file was ever installed, or vice versa), `/{project}:analyze` runs over the present file and emits no finding for the missing one. This is the common case for non-fullstack projects.
-- **Malformed rule file.** A rule file is malformed if any rule is missing a required field (ID, statement, rationale, verification), if any rule's ID does not match the `{surface}-{category}-{NNN}` format, or if the file fails to parse. `/{project}:analyze` **blocks** with an error: `Malformed rule file {path} at {location}: {reason}` (generalized from this spec's original `Malformed security rule file` wording by 016). The accompanying file is treated as unloadable; no rules from that file are applied. Rationale: the findings must rest on accurate rule data — partial or guessed-at parsing produces unreliable findings.
+- **Malformed rule file.** A rule file is malformed if any rule is missing a required field (ID, statement, verification), if any rule's ID does not match the `{surface}-{category}-{NNN}` format, or if the file fails to parse. `/{project}:analyze` **blocks** with an error: `Malformed rule file {path} at {location}: {reason}` (generalized from this spec's original `Malformed security rule file` wording by 016). The accompanying file is treated as unloadable; no rules from that file are applied. Rationale: the findings must rest on accurate rule data — partial or guessed-at parsing produces unreliable findings.
 - **Stale rule reference.** A spec or plan references a rule ID that does not exist in the current rule files (the rule was removed upstream after `/ductus` updated the file). `/{project}:analyze` **blocks** with an error: `Spec at {path} references unknown rule {ID}.` The adopter must update or remove the reference before the gate will pass. Rationale: stale references silently rot if tolerated.
 - **Reference to DEPRECATED rule.** A spec or plan references a rule ID that exists but is marked `DEPRECATED`. `/{project}:analyze` emits a warning (not an error): `Spec at {path} references deprecated rule {ID}; targeted for removal in {version}.` The reference still satisfies the rule for the duration of the deprecation window. Rationale: deprecation needs a real grace window between the label landing and references becoming invalid; a hard block at deprecation collapses the window to zero.
 - **Local edits overwritten by `/ductus`.** The ductus command overwrites `specs/rules/security-backend.md` and `specs/rules/security-frontend.md` on every run because they use the `update` strategy. This is normal ductus behavior, not a security-rules-specific concern, but is called out in **Ductus Integration** above so adopters know to use `.ductus/config.toml` pinning rather than local edits when they need to diverge.
@@ -210,7 +211,7 @@ How `/{project}:analyze` behaves when the inputs are unusual:
 
 - [x] AC1: `framework/rules/security-backend.md` exists in the `ductus` framework with categorized, numbered rules
 - [x] AC2: `framework/rules/security-frontend.md` exists in the `ductus` framework with categorized, numbered rules
-- [x] AC3: Every rule has an ID, statement, rationale, and verification method
+- [ ] AC3: Every rule has an ID, a statement, and a verification method, and no rule carries a Rationale paragraph
 - [x] AC4: Rule IDs follow the format `{surface}-{category}-{NNN}` with `{surface}` ∈ `{BE, FE}` and `{NNN}` zero-padded starting at `001`
 - [x] AC5: Rules use RFC 2119 language to distinguish enforced (MUST/MUST NOT) from advisory (SHOULD/SHOULD NOT)
 

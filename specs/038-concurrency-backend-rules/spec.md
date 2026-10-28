@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [008-security-rules, 016-cross-cutting-rules, 024-rule-loader, 033-rule-surface-setting, 034-performance-backend-rules]
 next-criterion: 9
 ---
@@ -42,7 +42,7 @@ Concurrency rules default to **SHOULD** where the right approach is contextual. 
 
 ## Acceptance Criteria
 
-- [x] AC1: `framework/rules/concurrency-backend.md` exists, ends in the `-backend.md` suffix, and follows the canonical rule schema (`### {ID}` headings; Statement / Rationale / Verification; RFC 2119 language) per [008-security-rules](../008-security-rules/spec.md)'s data-model.
+- [x] AC1: `framework/rules/concurrency-backend.md` exists, ends in the `-backend.md` suffix, and follows the canonical rule schema (`### {ID}` headings; Statement / Verification, no Rationale; RFC 2119 language) per [008-security-rules](../008-security-rules/spec.md)'s data-model.
 - [x] AC2: Every rule ID uses the `BE-{CATEGORY}-{NNN}` format with a concurrency category disjoint from the `security-backend.md`, `api-backend.md`, and `performance-backend.md` category sets; `scripts/lint-rule-ids.sh` passes.
 - [x] AC3: The file header declares the concurrency category abbreviations per the per-file category-declaration policy ([016-cross-cutting-rules](../016-cross-cutting-rules/spec.md)).
 - [x] AC4: The rule set covers, at minimum, shared-state races, locking/deadlock avoidance, and transaction isolation — each with a Verification clause expressed as a **design-time commitment** the spec/plan must make (not a code-pattern grep), consistent with how `/ductus:analyze` audits artifacts.

@@ -16,8 +16,8 @@ A project loading both files was told the header was required and advisory at on
 
 The two rule files state one strength for `X-Frame-Options`, SHOULD, and a project that loads both is told the same thing by each.
 
-- `BE-API-001`'s minimum-required header table no longer lists `X-Frame-Options`. Its frame protection is the CSP `frame-ancestors` directive that its CSP row already requires, and its Rationale points at `BE-API-012` for the legacy fallback.
-- `BE-API-012` (SHOULD) states that HTML responses set `X-Frame-Options: DENY`, or `SAMEORIGIN` where same-origin framing is required, as a clickjacking fallback for browsers that do not honor `frame-ancestors`. It carries its own Rationale and Verification and names `FE-CSP-008` as the frontend statement of the same obligation.
+- `BE-API-001`'s minimum-required header table no longer lists `X-Frame-Options`. Its frame protection is the CSP `frame-ancestors` directive that its CSP row already requires, and its Verification leaves a missing `X-Frame-Options` to `BE-API-012`.
+- `BE-API-012` (SHOULD) states that HTML responses set `X-Frame-Options: DENY`, or `SAMEORIGIN` where same-origin framing is required, as a clickjacking fallback for browsers that do not honor `frame-ancestors`. Its Verification names `FE-CSP-008` as the frontend statement of the same obligation.
 - `FE-CSP-008` keeps its SHOULD Statement and names `BE-API-012` as its backend mirror.
 
 ## Edge Cases

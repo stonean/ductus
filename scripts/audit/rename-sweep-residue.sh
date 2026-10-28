@@ -8,7 +8,7 @@
 # sentences like "a class of behavior the framework should ductus at the rules
 # tier".
 #
-# security-frontend.md shows the mechanism inside one sentence — "The other
+# security-frontend.md showed the mechanism inside one sentence — "The other
 # `FE-DEPS` rules ductus what code is loaded ... none governs what a dependency
 # does" — where the inflected form survived only because it never matched the
 # word boundary.

@@ -56,7 +56,7 @@ The waiver is anchored to the `(rule, file)` pair, so code moving within a file 
 
 ## Writing your own
 
-Add a file to the rule-file directory — `rules/` under your spec root, or [`framework/rules/`](../framework/rules/) here — with one of the three suffixes and it is discovered automatically — no registration step, no manifest entry. Give each rule a permanent ID, state it in RFC 2119 language, and record the rationale: a rule whose reasoning is not written down is one nobody can argue with when it is wrong.
+Add a file to the rule-file directory — `rules/` under your spec root, or [`framework/rules/`](../framework/rules/) here — with one of the three suffixes and it is discovered automatically — no registration step, no manifest entry. Give each rule a permanent ID, a Statement in RFC 2119 language, and a Verification saying what a check looks for.
 
 **A rule file you wrote is yours.** `/ductus` only ever rewrites the rule files it ships; it does not touch, move, or delete a file you added, on any upgrade. The one case that needs a decision is a shipped file you have *edited* — that one is overwritten on the next update unless you pin it in `.ductus/config.toml` `[pinned] files`. Upstreaming the change is usually better than pinning: a pinned file stops receiving fixes.
 

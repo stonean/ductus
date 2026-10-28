@@ -1,6 +1,6 @@
 ---
 title: "016-cross-cutting-rules — spec"
-status: done
+status: in-progress
 dependencies: [006-bug-workflow, 008-security-rules]
 tags: [format, process, pipeline]
 next-criterion: 9
@@ -46,7 +46,7 @@ The artifact tier and validate plumbing already exist. This spec generalizes the
 ### Out of scope
 
 - Shipping a non-security rule file (e.g., `rules/observability.md`). The infrastructure should be ready for it, but the first non-security rule file is its own spec.
-- Changing the rule file format. 008's format (ID, Statement, Rationale, Verification, RFC 2119 language) stands.
+- Changing the rule file format, which stays 008's ([data model](../008-security-rules/data-model.md)).
 - Changing validate's enforcement logic. Only the section framing and discovery loop change — per-rule verification, reference-checking, and the brownfield audit hook remain as 008 defined them.
 - Auto-promoting scenarios or acceptance criteria to rules. Promotion is a user decision.
 - Inventing a new ID-prefix scheme for non-security rule sets. Defer to the spec that introduces the first non-security rule file.
@@ -61,7 +61,7 @@ The artifact tier and validate plumbing already exist. This spec generalizes the
 
 ## Acceptance Criteria
 
-- [x] AC1: `framework/constitution.md` contains a `<!-- §rules -->` section that defines what a rule is, when to write one (the four-indicator promotion checklist: cross-cutting, citable, governance-recognized category, generalizable wording), when not to (situational → scenario; feature-wide → AC), the lifecycle (citation by ID, ID stability, deprecation), and the relationship to specs and scenarios. The section carries a short conceptual summary of the rule-file format (ID, Statement, Rationale, Verification; RFC 2119 language) and back-links to `specs/008-security-rules/data-model.md` for the canonical schema rather than duplicating it.
+- [x] AC1: `framework/constitution.md` contains a `<!-- §rules -->` section that defines what a rule is, when to write one (the four-indicator promotion checklist: cross-cutting, citable, governance-recognized category, generalizable wording), when not to (situational → scenario; feature-wide → AC), the lifecycle (citation by ID, ID stability, deprecation), and the relationship to specs and scenarios. The section carries a short conceptual summary of the rule-file format (ID, Statement, Verification; RFC 2119 language) and back-links to `specs/008-security-rules/data-model.md` for the canonical schema rather than duplicating it.
 - [x] AC2: §bug-handling in the constitution includes a fourth decision-tree route covering cross-cutting concerns. The "Three Tiers" framing above (or its equivalent) is reflected in the section.
 - [x] AC3: `framework/commands/analyze.md`'s "Security rules" section is renamed to "Rules." The loading logic discovers any rule file shipped under the manifest, not only `security-backend.md` and `security-frontend.md`. Existing per-rule verification, reference-checking, and severity behavior is unchanged.
 - [x] AC4: `framework/templates/spec/spec.md` includes an optional "Applicable Rules" section with prompt text explaining when to cite rule IDs (e.g., when the spec touches an area covered by a loaded rule file).
@@ -77,10 +77,11 @@ The artifact tier and validate plumbing already exist. This spec generalizes the
 ## Resolved Questions
 
 - **Naming** — keep "rule." These are binding RFC-2119 statements that `/ductus:analyze` enforces, not guidelines. "Policy" reads softer and would understate the enforcement intent; it would also fork vocabulary already established by 008, the `framework/rules/` directory, and the constitution's "Secure" principle reference.
-- **Where does the rule-file format definition live?** — hybrid. The constitution's §rules section carries a short conceptual summary (rules are ID'd, citable, RFC-2119, validate-checked, with the four required fields named) and back-links to `specs/008-security-rules/data-model.md` for the full schema. 008's data-model remains the canonical declaration that validate's integrity check refers to. This avoids the documentation cliff of (a) while preserving canonical-source discipline against (b).
+- **Where does the rule-file format definition live?** — hybrid. The constitution's §rules section carries a short conceptual summary (rules are ID'd, citable, RFC-2119, validate-checked, with the required fields named) and back-links to `specs/008-security-rules/data-model.md` for the full schema. 008's data-model remains the canonical declaration that validate's integrity check refers to. This avoids the documentation cliff of (a) while preserving canonical-source discipline against (b).
 - **Required vs optional "Applicable Rules" slot in the spec template** — optional, surfaced as a comment-prompt section in the template (matching the existing convention used for the scenarios hint and the `## {Section}` placeholder). An optional section traces back to validate's existing unknown-rule-reference check (`analyze.md:136-139`); making it required would imply a stronger validate consistency check that Q4 explicitly defers. Specs that don't touch a ruled area stay clean.
 - **Validate alignment** — defer the stronger check (validate comparing triggered rules against listed Applicable Rules) out of 016's scope. The existing per-rule verification check (`analyze.md:130-134`) already catches rules whose triggers fire against an unaddressing spec, so 016 ships with the optional template section + existing reference check. The deferred work is captured in `specs/inbox.md` so it surfaces in a future `/ductus:groom` pass — keeps 016 focused without losing the follow-up signal.
 - **Promotion threshold** — promotion checklist (mirrors §scenario-promotion's structure). The constitution's §rules section enumerates indicators rather than a numeric bar: (1) the concern applies to multiple existing or anticipated features (cross-cutting test), (2) verification can be expressed as a step a reviewer or validate can check (citable test), (3) the concern belongs to a governance-recognized category (security, performance, concurrency, observability, accessibility, audit/compliance, data handling) rather than a single feature's domain, (4) the same wording would make sense in any spec touching the area. Pure principle is too thin; numeric thresholds are arbitrary and game-able. The checklist still requires judgment, which matches the framework's stance everywhere else.
+- **Why split from 008-security-rules:** 008 delivers the two security rule files and owns the rule schema every rule file follows; 016 delivers the rules tier itself — constitution §rules, the per-file category declaration, and the suffix-based surfaces — for every rule file, so neither spec's criteria cover the other's deliverable. They share files (the constitution, `framework/commands/analyze.md`) because the tier and its first instance meet there, not because one is the other's remainder.
 
 ## References
 

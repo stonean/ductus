@@ -11,15 +11,13 @@ A rule file is a markdown document with the following structure:
 ```markdown
 # Security Rules — {Surface}
 
-{Introduction, one short paragraph each: the file's scope; the RFC 2119 severity mapping; the ID format and category list; how the rules are enforced; how a project without this surface is affected.}
+{Introduction: the file's scope and how its rules are enforced; the ID format and category list; a pointer to constitution §rules for severity, ID permanence, and how review selects or excludes the file.}
 
 ## {ID prefix} — {Category Name}
 
 ### {Rule ID}
 
 > {Rule statement using RFC 2119 keywords.}
-
-**Rationale:** {Threat the rule mitigates.}
 
 **Verification:** {Instruction to `/{project}:analyze` on how to check the rule.}
 
@@ -75,9 +73,8 @@ The table is the category set of the two security files, `security-backend.md` a
 | --- | --- | --- | --- |
 | Rule ID | yes | Level-3 heading (`### {ID}`) | Matches the format above. The heading contains nothing but the ID. |
 | Statement | yes | Block quote (`> …`) | The rule's obligation, stated with RFC 2119 keywords of one tier — MUST and MUST NOT, or SHOULD and SHOULD NOT — and optionally MAY for a permission or scope boundary. See **Severity classification** below. |
-| Rationale | yes | Paragraph beginning `**Rationale:**` | Brief explanation of the threat or risk the rule mitigates. |
 | Verification | yes | Paragraph beginning `**Verification:**` | Instruction to `/{project}:analyze` — see **Verification phrasing** below. |
-| Source | no | Paragraph beginning `**Source:**` | Citation to authoritative origin (e.g., OWASP cheat sheet name, RFC number, NIST publication, CWE entry). Optional but recommended — aids `Learnable` (readers can trace the rule's grounding) and `Verified` (reviewers can audit the citation). Every claim a rule makes about an external standard, specification, or product behavior — in any field, not only Source — is checked against the cited document's current text when the rule is written or amended: fetched, never recalled. A claim that cannot be verified that way is rewritten to what can be, or removed; it is not landed on recall. Nothing enforces this mechanically; it is a discipline for rule authors and for anyone reviewing a rule file. |
+| Source | no | Paragraph beginning `**Source:**` | Citation to authoritative origin (e.g., OWASP cheat sheet name, RFC number, NIST publication, CWE entry), never an account of how the rule came about. Optional but recommended. A constitution section is named in prose (`constitution §grounding`), never linked: a rule file ships to `specs/rules/` and the constitution to `.ductus/constitution.md`, so a repo-relative link dangles in an adopter tree. Every claim a rule makes about an external standard, specification, or product behavior — in any field, not only Source — is checked against the cited document's current text when the rule is written or amended: fetched, never recalled. A claim that cannot be verified that way is rewritten to what can be, or removed; it is not landed on recall. Nothing enforces this mechanically; it is a discipline for rule authors and for anyone reviewing a rule file. |
 | Deprecated | no | Paragraph beginning `**DEPRECATED in {version}:**` | Present only on deprecated rules. Includes the removal target version. The rule remains in the file with this label until removed. |
 
 ## Verification phrasing
@@ -88,6 +85,7 @@ The Verification field is read by `/{project}:analyze` during an analyze run. It
 2. Describe the trigger that makes the rule applicable to a given artifact (e.g., "any spec that introduces credential storage", "any plan that handles file uploads"). A rule whose trigger does not fire for any artifact is silently inert (no finding emitted).
 3. State what the artifact MUST or SHOULD include when the trigger fires (e.g., "specify the hashing algorithm by name", "describe the rate-limit threshold").
 4. Distinguish documentation commitments from code patterns when the rule's enforcement happens outside the repository (runtime config, infrastructure, deployment).
+5. Name the sibling rule that owns an overlapping defect, where one exists, so a finding is reported under one ID.
 
 ### Examples
 
@@ -139,4 +137,4 @@ These invariants are enforced by `/{project}:analyze` (as edge cases in `spec.md
 
 ## Rule file integrity
 
-A rule file is considered well-formed if every rule heading, statement, rationale, and verification field is present and the ID format is satisfied. Missing fields, malformed IDs, or unparseable content cause `/{project}:analyze` to refuse to load the file (per the spec's edge-case decisions). The file is then treated as absent for matching purposes, but the parse failure itself is a hard error.
+A rule file is considered well-formed if every rule heading, statement, and verification field is present and the ID format is satisfied. A rule carries no Rationale: its Statement stands without a stated reason, and a boundary with a sibling rule is stated in its Verification. A `**Rationale:**` paragraph in a project-authored or pinned file is ignored, never malformed. Missing fields, malformed IDs, or unparseable content cause `/{project}:analyze` to refuse to load the file (per the spec's edge-case decisions). The file is then treated as absent for matching purposes, but the parse failure itself is a hard error.

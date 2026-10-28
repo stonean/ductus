@@ -266,7 +266,7 @@ A rule is an enforceable requirement for a **cross-cutting** concern (security, 
 
 #### Rule format (summary)
 
-Each rule has an **ID** (permanent), a **Statement** (a block quote with RFC 2119 keywords of one tier: MUST/MUST NOT blocking, SHOULD/SHOULD NOT advisory, MAY tierless), a **Rationale**, and a **Verification** for `/{project}:analyze`. The schema, ID grammar and Verification phrasing are canonical in `specs/008-security-rules/data-model.md`, which binds every rule to two disciplines: a MUST never requires CI, and a claim about an external standard is fetched, never recalled. Each rule file's header declares its ID prefix and the category abbreviations it uses.
+Each rule has an **ID** (permanent), a **Statement** (a block quote with RFC 2119 keywords of one tier: MUST/MUST NOT blocking, SHOULD/SHOULD NOT advisory, MAY tierless), and a **Verification** for `/{project}:analyze`. The schema, ID grammar and Verification phrasing are canonical in `specs/008-security-rules/data-model.md`, which binds every rule to two disciplines: a MUST never requires CI, and a claim about an external standard is fetched, never recalled. Each rule file's header declares its ID prefix and the category abbreviations it uses.
 
 #### When to write a rule
 

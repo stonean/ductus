@@ -94,7 +94,7 @@ Validate check changes:
 
 Per spec Q5/Q6: a single file at `framework/rules/configuration-cross.md` with `CFG-` prefix and `CONST`/`ENV`/`FLAG` categories — `FLAG` (feature flags) added 2026-10-19 by the rule-file review. Format `CFG-{CONST|ENV|FLAG}-{NNN}`. The first version shipped seven rules (`CFG-CONST-001`–`003`, `CFG-ENV-001`–`004`); the current rule set, with each rule's tier and obligation, is enumerated in `data-model.md` § Rule set rather than repeated here.
 
-Rule format details (Statement, Rationale, Verification, Source, ID stability) declared in `data-model.md` alongside this plan, mirroring the precedent set by `specs/008-security-rules/data-model.md`.
+Rule format details (Statement, Verification, Source, ID stability) declared in `data-model.md` alongside this plan, mirroring the precedent set by `specs/008-security-rules/data-model.md`.
 
 Adopter shipping: added to `framework/bootstrap/ductus.md`'s Shared Files manifest under "ductus-owned shared files (strategy: update)" — alongside the security rule files.
 
@@ -174,7 +174,7 @@ Both workflows reference their actions by full commit SHA with the release tag i
 
 | File | Action | Purpose |
 | --- | --- | --- |
-| `framework/rules/configuration-cross.md` | Create | `CFG-CONST-NNN`, `CFG-ENV-NNN` and `CFG-FLAG-NNN` rules with Statement / Rationale / Verification / Source per data-model |
+| `framework/rules/configuration-cross.md` | Create | `CFG-CONST-NNN`, `CFG-ENV-NNN` and `CFG-FLAG-NNN` rules with Statement / Verification / Source per data-model |
 
 ### Bootstrap installer
 
