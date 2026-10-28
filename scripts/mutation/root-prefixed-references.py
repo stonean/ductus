@@ -3,7 +3,9 @@ names the project root from its referrer is a reference, for
 `check-orphaned-references` and `rewrite-spec-links` alike —
 `./` or a leading `/` in a root markdown file, `./` in `.githooks/pre-commit`,
 `../` or a leading `/` in the spec root's `system.md` — and any other prefix
-is not (`root_prefixes`, `root_prefix_before` and `managed_path_spans` in
+is not, short of a leading `/` that ends another directory's name
+(`root_prefixes`, `root_prefix_before`, `managed_path_spans`,
+`ends_another_directory` and `closes_a_name` in
 runtime/src/primitives/check_orphaned_references.rs).
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/root-prefixed-references.py
@@ -19,19 +21,24 @@ M1-M9 and M14 filtered to the check's tests and M15-M24 to the rewrite's,
 so a kill shows that each primitive's own tests hold it, as do M25/M26 (a
 leading / that ends another directory's name is no reference), M34/M35 (a
 leading / after markup or a shell operator is one), M37/M38 (the exception
-is the leading /'s alone) and M42/M43 (a prefix at a line's start counts).
-M10 and M11 (the token-start rules read before the prefix), M12, M27-M31,
-M36 and M39-M41 (what ends a directory's name) are the check's alone, M13
-the rewrite's. M32 and M33 tested a rule the re-read of 3fc5755a reverted.
+is the leading /'s alone), M42/M43 (a prefix at a line's start counts) and
+M44/M45 (a bare path at a line's start counts). The check's alone are M10
+and M11 (the token-start rules read before the prefix), M12 (the check
+passes its referrers no prefixes), M27-M31, M36, M39-M41, M47 and M48 (what
+ends a directory's name) and M46 (an existence test read from the
+repository's root); the rewrite's alone is M13. M32 and M33 tested a rule the
+re-read of 3fc5755a reverted.
 
-The killing tests are `a_path_behind_a_prefix_naming_the_project_root_is_checked`,
+The killing tests are, among others, `a_path_behind_a_prefix_naming_the_project_root_is_checked`,
 `a_path_behind_any_other_prefix_is_not_a_reference`,
-`a_prefix_counts_wherever_the_bare_path_does` and
+`a_prefix_counts_wherever_the_bare_path_does`,
+`a_leading_slash_is_read_from_the_project_root_below_the_repository_root` and
 `the_import_and_revision_rules_apply_where_the_prefix_begins` in
 check_orphaned_references.rs, and
 `a_reference_behind_a_project_root_prefix_is_re_pointed_with_its_prefix`,
-`a_reference_behind_any_other_prefix_is_left_as_written` and
-`a_prefixed_reference_is_re_pointed_wherever_the_bare_one_is` in
+`a_reference_behind_any_other_prefix_is_left_as_written`,
+`a_prefixed_reference_is_re_pointed_wherever_the_bare_one_is` and
+`a_leading_slash_below_the_repository_root_is_re_pointed` in
 rewrite_spec_links.rs.
 """
 
@@ -324,5 +331,40 @@ MUTATIONS = [
         '            let not_a_reference = previous.is_some_and(is_path_char)\n',
         '            let not_a_reference = previous.is_none_or(is_path_char)\n',
         'rewrite_spec_links::',
+    ),
+    (
+        'M44 a bare path at the start of a line is refused (check)',
+        'src/primitives/check_orphaned_references.rs',
+        '            let not_a_reference = previous.is_some_and(is_path_char)\n',
+        '            let not_a_reference = (if prefix.is_none() { previous.is_none_or(is_path_char) } else { previous.is_some_and(is_path_char) })\n',
+        'check_orphaned_references::',
+    ),
+    (
+        'M45 a bare path at the start of a line is refused (rewrite)',
+        'src/primitives/check_orphaned_references.rs',
+        '            let not_a_reference = previous.is_some_and(is_path_char)\n',
+        '            let not_a_reference = (if prefix.is_none() { previous.is_none_or(is_path_char) } else { previous.is_some_and(is_path_char) })\n',
+        'rewrite_spec_links::',
+    ),
+    (
+        "M46 a managed path is tested for existence from the repository's root",
+        'src/primitives/check_orphaned_references.rs',
+        "                if repo.join(target.trim_end_matches('/')).exists() {\n",
+        "                if super::ProjectRepository::discover(repo).ok().and_then(|p| p.repository.workdir().map(|w| w.join(target.trim_end_matches('/')))).unwrap_or_else(|| repo.join(target.trim_end_matches('/'))).exists() {\n",
+        'check_orphaned_references::',
+    ),
+    (
+        'M47 a quote after % does not close a directory name',
+        'src/primitives/check_orphaned_references.rs',
+        "    c.is_ascii_alphanumeric() || matches!(c, '}' | ')' | '%')\n",
+        "    c.is_ascii_alphanumeric() || matches!(c, '}' | ')')\n",
+        'check_orphaned_references::',
+    ),
+    (
+        'M48 a quote after a digit does not close a directory name',
+        'src/primitives/check_orphaned_references.rs',
+        "    c.is_ascii_alphanumeric() || matches!(c, '}' | ')' | '%')\n",
+        "    c.is_ascii_alphabetic() || matches!(c, '}' | ')' | '%')\n",
+        'check_orphaned_references::',
     ),
 ]

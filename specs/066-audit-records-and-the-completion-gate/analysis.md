@@ -1,7 +1,7 @@
 ---
 spec: 066-audit-records-and-the-completion-gate
-last-run: 2026-10-28T13:21:06Z
-analyzed-against: 47e6823337874c604176cec2d730a332b3ae8923
+last-run: 2026-10-28T18:53:01Z
+analyzed-against: d1853444f01e2623b1b4bc7b92629fed3dde2825
 hard-fail: 0
 blocking-findings: 1
 advisory: 1
@@ -24,13 +24,13 @@ analyzed-digest:
   scenarios/review-scope-union.md: e5fa76ef2b48ea246649338d71d8c0a6988d7e48a9202e677ad593657316c0ae
   scenarios/review-staleness-gate.md: 61427d7c8f1393cf72edeae32fd54502c99641499c429cf33b7368d93e0e7131
   scenarios/review-staleness-on-done-specs.md: 18484a327c18ea44c3cfbe24fc22d1b727c5033cf619aa3760c3652fdc1b66f5
-  scenarios/scope-results-have-a-bounded-size.md: e5b4454d515904cf6ce3e9970913e3d4dfe4228bf4fad432ebe7005dd2f5c57f
+  scenarios/scope-results-have-a-bounded-size.md: ccd58ff881b92b3c075465c570d848a7ba2579b75602c7718cfcea3ebd2ee53d
   scenarios/the-committed-tree-horizon.md: cac65fb842defe0ce0326a76274794d1402d96c10aa02a2f977fd6d326ab3772
   scenarios/the-cross-spec-impact-gate.md: b85c2d557733a29beb8084823a9156e13b283090a283203aa14dcaa85afed3c1
   scenarios/write-analysis-and-the-second-gate.md: afaaa2f6957547d1f9dce559426353e58a00da287b1066f7eb0af05d51330397
   scenarios/write-review-known-field-quoting.md: 914954823ee3da52dccbb25749851013d5dd3be442dcc85b09661c27c7bea2a9
   spec.md: acdbc6f5ada97ba54258a3197dbc1fafdc1785878deba14451cab532cea4bf5a
-  tasks.md: 16ee0efb8b417986d824619d358763a5075076076fd0a405c0c74faebd383e4e
+  tasks.md: 07d97663d484ecc47ad1a51027e70ce3fc00ef374e68b43d2a98722c94f78fe5
 unexamined-by-reason:
   not-a-live-claim: 3
   root-absent: 4

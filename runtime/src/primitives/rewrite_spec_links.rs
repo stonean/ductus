@@ -1537,17 +1537,18 @@ mod tests {
     }
 
     /// A reference behind a prefix is re-pointed wherever the same reference
-    /// written bare is, with the prefix kept: each line pairs the two
-    /// spellings — at a line's start, after a table bar, an HTML tag, a
-    /// typographic quote, emphasis around a code span and a closing parenthesis
-    /// in a root markdown file, and at a line's start and after a redirection
-    /// and `&&` in the
-    /// hook — so every one of them names the target afterwards.
+    /// written bare is, with the prefix kept. Each line pairs the two
+    /// spellings: in a root markdown file at a line's start, either one first,
+    /// and after a table bar, an HTML tag, a typographic quote, emphasis
+    /// around a code span and a closing parenthesis; in the hook at a line's
+    /// start and after a redirection and `&&`. Every one names the target
+    /// afterwards.
     #[test]
     fn a_prefixed_reference_is_re_pointed_wherever_the_bare_one_is() {
         let tmp = tempfile::tempdir().unwrap();
         seed_target(tmp.path(), "050-alpha");
         let readme = "./specs/1234.1-staged/spec.md beside specs/1234.1-staged/spec.md\n\
+                      specs/1234.1-staged/spec.md beside ./specs/1234.1-staged/spec.md\n\
                       |a|specs/1234.1-staged/spec.md|./specs/1234.1-staged/spec.md|\n\
                       <td>specs/1234.1-staged/spec.md</td><td>/specs/1234.1-staged/spec.md</td>\n\
                       \u{201c}specs/1234.1-staged/spec.md\u{201d} \u{201c}./specs/1234.1-staged/spec.md\u{201d}\n\
@@ -1555,6 +1556,7 @@ mod tests {
                       _`/specs/1234.1-staged/spec.md`_\n\
                       (a)specs/1234.1-staged/spec.md (a)./specs/1234.1-staged/spec.md\n";
         let hook = "./specs/1234.1-staged/spec.md beside specs/1234.1-staged/spec.md\n\
+                    specs/1234.1-staged/spec.md beside ./specs/1234.1-staged/spec.md\n\
                     git add 2>specs/1234.1-staged/spec.md 2>./specs/1234.1-staged/spec.md\
                     &&./specs/1234.1-staged/spec.md\n";
         write_root(tmp.path(), "README.md", readme);

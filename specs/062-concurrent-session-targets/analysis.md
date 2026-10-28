@@ -1,18 +1,18 @@
 ---
 spec: 062-concurrent-session-targets
-last-run: 2026-10-28T13:21:06Z
-analyzed-against: 47e6823337874c604176cec2d730a332b3ae8923
+last-run: 2026-10-28T18:53:01Z
+analyzed-against: d1853444f01e2623b1b4bc7b92629fed3dde2825
 hard-fail: 0
 blocking-findings: 0
 advisory: 1
 unexamined: 2
 analyzed-digest:
   data-model.md: 9ce5458a99a6ba857f8778df877a8b2b0a2708037b23b05319588b4c06aaa10f
-  plan.md: 525ef518b003c2a8fceccded7df3e90645b50e19d6dd34e337a3116ed01d8567
+  plan.md: 1a1af13432e0aa2fbecc51866970fde39d22126a44621ac3b63ffa6365aa2132
   review.md: 3ab66e43e7236dd19c24acc6fb4236a5cb5ee9bd7f06a6c2722fd87eab335168
   scenarios/first-writers-create-the-ignore-file-once.md: 02149b44fd9c6d76d8e9d97af6235df746bf028cad34e693bb57302dea1b1f15
   spec.md: 8c549249116b45e677a6e0578872ea5a0f8da4a1d03ab55e48e1dc2559c556e4
-  tasks.md: ccd548cbe4bcc459ce510e4081e2a949b30d9f3aee2508e8cfc1fad4f6541d55
+  tasks.md: fcd240a48b55f24218b9390819226914d55b3992d39cdc4332aa3ab95cd61207
 unexamined-by-reason:
   root-absent: 2
 blocking: false

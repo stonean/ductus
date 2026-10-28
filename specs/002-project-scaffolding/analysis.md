@@ -1,23 +1,23 @@
 ---
 spec: 002-project-scaffolding
-last-run: 2026-10-27T01:47:47Z
-analyzed-against: e48df859ac3778879d93557ea4844ff29e6dd444
+last-run: 2026-10-28T18:52:10Z
+analyzed-against: d1853444f01e2623b1b4bc7b92629fed3dde2825
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
-unexamined: 4
+unexamined: 6
 analyzed-digest:
-  plan.md: 42caffd5e2e0341dcdfd406231502f1883b66e39b34b193d66a1d09cc39ee755
-  review.md: 2fa90c0ededb1876b0771e828dc503b58a8fc7c5e761dc97dcb7a01f96638367
-  scenarios/claude-md-template-imports-load.md: b2057e079fb40dec6c6b0b55a0e2c0b2fd19dcd0107f74562c1ba31e02c0f6e6
-  spec.md: 0de0e4c15b1bc80bb41be9f79349d6081679e65a6bfc6414f51bd2b2c4c03e47
-  tasks.md: 949fedd9b02a8801ee38013199063b47ece590a5446733fdf4e6ef54065e6d20
+  plan.md: 165b5214f179c9a2a0c38085aba6de0e82838953ae63bd2acf4c818112978288
+  review.md: d9d72f304f642c6201d1627f853b7233dae405f8008d3ab6af3f3c7597c254c8
+  scenarios/claude-md-template-imports-load.md: f498c3159cc99c8bcb1a4cc6eead4dbaaf435bd7c8b99f798d336d13b3dc69b7
+  spec.md: 8ba43914aaee31ded84f502dc608895e2327559f71c842033dd083036134110a
+  tasks.md: 7ced7680f3852342af19d64652ba5fb28073642f9488f1d0aeb3c0db22d12c5d
 unexamined-by-reason:
-  root-absent: 2
+  root-absent: 4
   ships-to-adopter: 2
 blocking: false
 dispositions:
-  fixed: 2
+  fixed: 1
   routed: 0
   discarded: 0
   undispositioned: 0
@@ -27,7 +27,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 4 unexamined target(s). Dispositions: 2 fixed, 0 routed, 0 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 6 unexamined target(s). Dispositions: 1 fixed, 0 routed, 0 discarded, 0 undispositioned.
 
 ## Hard failures
 
@@ -43,10 +43,9 @@ dispositions:
 
 ## Unexamined targets
 
-- root-absent: 2
+- root-absent: 4
 - ships-to-adopter: 2
 
 ## Fixed in this run
 
-- grounding — spec.md §CLAUDE.md template: @path is the only import form Claude Code resolves, stated without a source — `specs/002-project-scaffolding/spec.md` — **fixed**
-- grounding — plan.md: @import AGENTS.md names a file called import and loads nothing, stated without a source — `specs/002-project-scaffolding/plan.md` — **fixed**
+- grounding — plan.md says CLAUDE.md is skip-strategy, with no source — `specs/002-project-scaffolding/plan.md` — **fixed**

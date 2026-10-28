@@ -1069,7 +1069,8 @@ mod tests {
              The pointer is ~/.ductus/bin/ductus, ${HOME}/.ductus/gone-g \
              or %USERPROFILE%/.ductus/gone-h, or $(pwd)/.ductus/gone-i.\n\
              Quoted: \"$HOME\"/.ductus/gone-j, '${HOME}'/.ductus/gone-k, \
-             `pwd`/.ductus/gone-l and \"$(pwd)\"/.ductus/gone-m.\n",
+             `pwd`/.ductus/gone-l and \"$(pwd)\"/.ductus/gone-m, \
+             \"%USERPROFILE%\"/.ductus/gone-n and \"$1\"/.ductus/gone-o.\n",
         );
         write(
             &tmp.path().join(".githooks/pre-commit"),
@@ -1088,7 +1089,7 @@ mod tests {
     fn a_prefix_counts_wherever_the_bare_path_does() {
         // A path behind a prefix is a reference wherever the same path written
         // bare is one, so each line pairs the two spellings: at a line's
-        // start, bare and quoted; after a table bar, an HTML tag, a blockquote
+        // start, prefixed, quoted and bare; after a table bar, an HTML tag, a blockquote
         // marker, a typographic quote, emphasis around a code span,
         // strikethrough and a closing parenthesis; and in the hook after a
         // redirection, a pipe and `&&`.
@@ -1105,7 +1106,8 @@ mod tests {
              \u{201c}specs/gone-o/x.md\u{201d} and \u{201c}./specs/gone-p/x.md\u{201d}\n\
              **`specs/gone-q/x.md`** and **`./specs/gone-r/x.md`** and _`/specs/gone-s/x.md`_\n\
              ~~specs/gone-t/x.md~~ and ~~./specs/gone-u/x.md~~ and ~~/specs/gone-v/x.md~~\n\
-             (a)specs/gone-w/x.md and (a)./specs/gone-x/x.md\n",
+             (a)specs/gone-w/x.md and (a)./specs/gone-x/x.md\n\
+             specs/gone-y/x.md beside ./specs/gone-z/x.md\n",
         );
         write(
             &tmp.path().join(".githooks/pre-commit"),
@@ -1113,14 +1115,15 @@ mod tests {
              \"./.ductus/gone-c\" run \".ductus/gone-d\"\n\
              echo x >.ductus/gone-e 2>./.ductus/gone-f\n\
              cat a|.ductus/gone-g|./.ductus/gone-h\n\
-             true&&.ductus/gone-i&&./.ductus/gone-j\n",
+             true&&.ductus/gone-i&&./.ductus/gone-j\n\
+             .ductus/gone-k run ./.ductus/gone-l\n",
         );
         let result = run(&args(), tmp.path()).unwrap();
         let mut targets: Vec<&str> = result.findings.iter().map(|f| f.target.as_str()).collect();
         targets.sort_unstable();
-        let expected: Vec<String> = ('a'..='x')
+        let expected: Vec<String> = ('a'..='z')
             .map(|c| format!("specs/gone-{c}/x.md"))
-            .chain(('a'..='j').map(|c| format!(".ductus/gone-{c}")))
+            .chain(('a'..='l').map(|c| format!(".ductus/gone-{c}")))
             .collect();
         let mut expected: Vec<&str> = expected.iter().map(String::as_str).collect();
         expected.sort_unstable();
@@ -1135,6 +1138,10 @@ mod tests {
         let tmp = tempdir().unwrap();
         let (_repository, project) =
             crate::primitives::git_fixture::subdirectory_project(tmp.path());
+        // The repository's root holds the spec the project does not, so a
+        // reading from the repository's root would find it and drop the
+        // finding.
+        write(&tmp.path().join("specs/gone-a/spec.md"), "# elsewhere\n");
         write(
             &project.join("README.md"),
             "See [a](/specs/gone-a/spec.md) and [b](./specs/gone-b/spec.md).\n",
