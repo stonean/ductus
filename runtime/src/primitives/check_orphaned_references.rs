@@ -118,15 +118,32 @@ pub(crate) fn referrers(layout: &paths::Paths) -> Vec<String> {
 /// itself. The hook takes `./`, since git runs a hook from the working tree's
 /// root, where its bare paths resolve too; a leading `/` there is an absolute
 /// file-system path. Every referrer is one of those three kinds.
-pub(crate) fn root_prefixes(referrer: &str) -> &'static [&'static str] {
+///
+/// A host resolves a leading `/` from the repository's root, so it names the
+/// project root only when the project is its work tree's root
+/// (`at_work_tree_root`, from [`project_is_work_tree_root`]); in a project in a
+/// repository subdirectory (spec 059) it is no prefix.
+pub(crate) fn root_prefixes(referrer: &str, at_work_tree_root: bool) -> Vec<&'static str> {
     let markdown = Path::new(referrer)
         .extension()
         .is_some_and(|ext| ext == "md");
-    match (markdown, referrer.matches('/').count()) {
+    let prefixes: &[&str] = match (markdown, referrer.matches('/').count()) {
         (true, 0) => &["./", "/"],
         (true, 1) => &["../", "/"],
         _ => &["./"],
-    }
+    };
+    prefixes
+        .iter()
+        .copied()
+        .filter(|prefix| at_work_tree_root || *prefix != "/")
+        .collect()
+}
+
+/// Whether `repo`, the project root, is its git work tree's root. A project
+/// in no repository has no host to resolve a leading `/` from another root,
+/// so it counts as one.
+pub(crate) fn project_is_work_tree_root(repo: &Path) -> bool {
+    super::ProjectRepository::discover(repo).map_or(true, |project| project.is_work_tree_root())
 }
 
 /// The configured spec root as a path prefix, with its trailing `/` —
@@ -165,6 +182,7 @@ pub fn run(
     // answer one question is work with no second answer behind it.
     let layout = paths::Paths::load(repo);
     let roots = managed_roots(&layout);
+    let at_work_tree_root = project_is_work_tree_root(repo);
     let registry = read_registry(repo);
     // Paths this repo declares it *ships into* an adopter rather than holds.
     // In an adopter checkout the manifest is not installed, so this is empty
@@ -195,9 +213,9 @@ pub fn run(
             continue;
         };
         examined.push(referrer.clone());
-        let prefixes = root_prefixes(&referrer);
+        let prefixes = root_prefixes(&referrer, at_work_tree_root);
         for (idx, line) in text.lines().enumerate() {
-            for target in managed_paths_in(line, &roots, prefixes) {
+            for target in managed_paths_in(line, &roots, &prefixes) {
                 if repo.join(target.trim_end_matches('/')).exists() {
                     continue;
                 }
@@ -300,13 +318,12 @@ fn managed_paths_in(line: &str, roots: &[String], prefixes: &[&str]) -> BTreeSet
 ///
 /// `prefixes` are the ones naming the project root from the referrer the
 /// line comes from ([`root_prefixes`]). A root behind one starts a reference
-/// when the prefix itself starts a token — at the line's start, or after a
-/// character [`opens_a_token`] accepts — so the rules below are applied
-/// where the prefix begins; the range still starts at the root, so the
-/// existence test sees the path as if written bare and `rewrite-spec-links`
-/// keeps the prefix as written. Any other text glued before a root —
-/// another prefix, a word, or the end of a home or variable path (`~/`,
-/// `${HOME}/`, `%USERPROFILE%/`) — keeps the root from starting a reference.
+/// when the prefix itself starts a token — when it does not continue another
+/// path ([`continues_another_path`]) — so the rules below are applied where
+/// the prefix begins; the range still starts at the root, so the existence
+/// test sees the path as if written bare and `rewrite-spec-links` keeps the
+/// prefix as written. Any other text glued before a root — another prefix,
+/// or a word — keeps the root from starting a reference.
 pub(crate) fn managed_path_spans(
     line: &str,
     roots: &[String],
@@ -325,7 +342,7 @@ pub(crate) fn managed_path_spans(
             // object name is not one either — see `names_a_git_object`.
             let previous = line[..token].chars().next_back();
             let not_a_reference = previous.is_some_and(is_path_char)
-                || (token < start && previous.is_some_and(|c| !opens_a_token(c)))
+                || (token < start && continues_another_path(&line[..token]))
                 || (previous == Some('@')
                     && line[..token - 1]
                         .chars()
@@ -353,18 +370,21 @@ pub(crate) fn managed_path_spans(
     found
 }
 
-/// Whether a prefix after `c` starts a token: whitespace, markup that opens a
-/// path (`(`, `[`, `<`, a backtick or a quote), a shell assignment or list
-/// separator (`=`, `,`, `;`), and the `@` and `:` the rules after it judge.
-/// Anything else ends another path — `~` in `~/`, `}` in `${HOME}/`, `%` in
-/// `%USERPROFILE%/` — whose `/` names a home or variable directory, not the
-/// project root.
-fn opens_a_token(c: char) -> bool {
-    c.is_whitespace()
-        || matches!(
-            c,
-            '(' | '[' | '<' | '`' | '"' | '\'' | '=' | ',' | ';' | '@' | ':'
-        )
+/// Whether `before`, the text ahead of a root prefix, ends another path, so
+/// the prefix continues it rather than naming the project root: a path
+/// character, or the end of a home or variable directory — `~` in `~/`, `}`
+/// in `${HOME}/`, `%` in `%USERPROFILE%/`, `)` in `$(pwd)/` — written bare or
+/// closed by a quote or backtick (`"$HOME"/`, `` `pwd`/ ``). Anything else,
+/// markup and shell operators among it (`|a|./x`, `<td>/x`, `2>./x`), leaves
+/// the prefix starting a token.
+fn continues_another_path(before: &str) -> bool {
+    let ends_a_path = |c: char| is_path_char(c) || matches!(c, '~' | '}' | '%' | ')');
+    let mut back = before.chars().rev();
+    match back.next() {
+        Some('"' | '\'' | '`' | '\u{201d}' | '\u{2019}') => back.next().is_some_and(ends_a_path),
+        Some(c) => ends_a_path(c),
+        None => false,
+    }
 }
 
 /// The length of the longest of `prefixes` that `before` ends with, or zero.
@@ -1044,14 +1064,17 @@ mod tests {
         // is an absolute file-system path, `./` in `system.md` names the spec
         // root itself, and a word glued before a prefix — a directory, a
         // URL's host — makes the path part of another token, as the end of a
-        // home or variable path does (`~/`, `${HOME}/`, `%USERPROFILE%/`).
+        // home or variable path does (`~/`, `${HOME}/`, `%USERPROFILE%/`,
+        // `$(pwd)/`), bare or closed by a quote or backtick.
         let tmp = adopter();
         write(
             &tmp.path().join("README.md"),
             "See ../specs/gone-a/spec.md, docs/specs/gone-b/spec.md \
              and https://example.com/specs/gone-c/spec.md.\n\
              The pointer is ~/.ductus/bin/ductus, ${HOME}/.ductus/gone-g \
-             or %USERPROFILE%/.ductus/gone-h.\n",
+             or %USERPROFILE%/.ductus/gone-h, or $(pwd)/.ductus/gone-i.\n\
+             Quoted: \"$HOME\"/.ductus/gone-j, '${HOME}'/.ductus/gone-k, \
+             `pwd`/.ductus/gone-l and \"$(pwd)\"/.ductus/gone-m.\n",
         );
         write(
             &tmp.path().join(".githooks/pre-commit"),
@@ -1064,6 +1087,57 @@ mod tests {
         let result = run(&args(), tmp.path()).unwrap();
         assert!(result.findings.is_empty(), "{:?}", result.findings);
         assert_eq!(result.examined.len(), 3, "{:?}", result.examined);
+    }
+
+    #[test]
+    fn a_prefix_after_markup_or_a_shell_operator_is_a_reference() {
+        // A prefix counts wherever it starts a token, so a path behind one is
+        // found wherever its bare spelling is: each line carries both, after
+        // a table bar, an HTML tag, a blockquote marker, a typographic quote,
+        // a redirection, a pipe and `&&`.
+        let tmp = adopter();
+        write(
+            &tmp.path().join("README.md"),
+            "|a|specs/gone-a/x.md|./specs/gone-b/x.md|\n\
+             <td>specs/gone-c/x.md</td><td>/specs/gone-d/x.md</td>\n\
+             >specs/gone-e/x.md\n\
+             >./specs/gone-f/x.md\n\
+             \u{201c}specs/gone-g/x.md\u{201d} and \u{201c}./specs/gone-h/x.md\u{201d}\n",
+        );
+        write(
+            &tmp.path().join(".githooks/pre-commit"),
+            "#!/usr/bin/env bash\n\
+             echo x >.ductus/gone-i 2>./.ductus/gone-j\n\
+             cat a|.ductus/gone-k|./.ductus/gone-l\n\
+             true&&.ductus/gone-m&&./.ductus/gone-n\n",
+        );
+        let result = run(&args(), tmp.path()).unwrap();
+        let mut targets: Vec<&str> = result.findings.iter().map(|f| f.target.as_str()).collect();
+        targets.sort_unstable();
+        let expected: Vec<String> = ('a'..='h')
+            .map(|c| format!("specs/gone-{c}/x.md"))
+            .chain(('i'..='n').map(|c| format!(".ductus/gone-{c}")))
+            .collect();
+        let mut expected: Vec<&str> = expected.iter().map(String::as_str).collect();
+        expected.sort_unstable();
+        assert_eq!(targets, expected);
+    }
+
+    #[test]
+    fn a_leading_slash_is_no_prefix_below_the_repository_root() {
+        // Spec 059: a host resolves a leading `/` from the repository's root,
+        // so in a project one directory down it names a `specs/` beside the
+        // project, not the project's own. `./` still names the project root.
+        let tmp = tempdir().unwrap();
+        let (_repository, project) =
+            crate::primitives::git_fixture::subdirectory_project(tmp.path());
+        write(
+            &project.join("README.md"),
+            "See [a](/specs/gone-a/spec.md) and [b](./specs/gone-b/spec.md).\n",
+        );
+        let result = run(&args(), &project).unwrap();
+        let targets: Vec<&str> = result.findings.iter().map(|f| f.target.as_str()).collect();
+        assert_eq!(targets, vec!["specs/gone-b/spec.md"]);
     }
 
     #[test]

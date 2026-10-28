@@ -2200,6 +2200,12 @@ impl ProjectRepository {
         Ok(Self { repository, prefix })
     }
 
+    /// Whether the project is its work tree's root, so a path git names and
+    /// one the project names are the same.
+    pub(crate) fn is_work_tree_root(&self) -> bool {
+        self.prefix.is_empty()
+    }
+
     /// `rel`, a `/`-separated path from the project root, as git names it.
     pub(crate) fn to_git(&self, rel: &str) -> String {
         format!("{}{rel}", self.prefix)

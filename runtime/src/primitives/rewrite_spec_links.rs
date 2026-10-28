@@ -199,7 +199,7 @@ struct PendingReferrer {
     passes: Passes,
     /// The prefixes naming the project root from it, for the token pass
     /// ([`check_orphaned_references::root_prefixes`]).
-    prefixes: &'static [&'static str],
+    prefixes: Vec<&'static str>,
 }
 
 /// One run's rewrite rule and what it has done so far.
@@ -211,6 +211,10 @@ struct Sweep<'a> {
     /// The configured spec root as a prefix, `specs/` by default — the one
     /// managed root a feature directory can be named behind.
     root: String,
+    /// Whether the project is its work tree's root, which decides whether a
+    /// leading `/` is a root prefix
+    /// ([`check_orphaned_references::project_is_work_tree_root`]).
+    at_work_tree_root: bool,
     rewritten: Vec<RewrittenFile>,
     examined: u32,
     skipped: Vec<ReferrerSkip>,
@@ -298,7 +302,7 @@ impl Sweep<'_> {
             }
             if let Some(index) = pending.iter().position(|referrer| referrer.path == path) {
                 let referrer = pending.remove(index);
-                self.rewrite(path, &referrer.content, referrer.passes, referrer.prefixes)?;
+                self.rewrite(path, &referrer.content, referrer.passes, &referrer.prefixes)?;
             } else if !referrers.iter().any(|referrer| referrer == path) {
                 // Not a referrer. One that is but is not pending was listed in
                 // `skipped`, and is passed over unread.
@@ -389,7 +393,7 @@ impl Sweep<'_> {
                 path,
                 content,
                 passes,
-                prefixes: check_orphaned_references::root_prefixes(shown),
+                prefixes: check_orphaned_references::root_prefixes(shown, self.at_work_tree_root),
             });
         }
         Ok(pending)
@@ -481,6 +485,7 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
         from: &args.from,
         target,
         root: check_orphaned_references::spec_root_prefix(&layout),
+        at_work_tree_root: check_orphaned_references::project_is_work_tree_root(repo),
         rewritten: Vec::new(),
         examined: 0,
         skipped: Vec::new(),
@@ -500,7 +505,7 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
             &referrer.path,
             &referrer.content,
             referrer.passes,
-            referrer.prefixes,
+            &referrer.prefixes,
         )?;
     }
 
@@ -1536,6 +1541,62 @@ mod tests {
         );
     }
 
+    /// A prefix after markup or a shell operator starts a token, so the
+    /// reference behind it is re-pointed with the prefix kept: a table bar, an
+    /// HTML tag and a typographic quote in a root markdown file, a
+    /// redirection and `&&` in the hook.
+    #[test]
+    fn a_reference_after_markup_or_a_shell_operator_is_re_pointed() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        write_root(
+            tmp.path(),
+            "README.md",
+            "|a|./specs/1234.1-staged/spec.md| and <td>/specs/1234.1-staged/spec.md</td>\n\
+             \u{201c}./specs/1234.1-staged/spec.md\u{201d}\n",
+        );
+        write_root(
+            tmp.path(),
+            ".githooks/pre-commit",
+            "#!/usr/bin/env bash\ngit add 2>./specs/1234.1-staged/spec.md&&./specs/1234.1-staged/spec.md\n",
+        );
+
+        run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert_eq!(
+            read_root(tmp.path(), "README.md"),
+            "|a|./specs/050-alpha/spec.md| and <td>/specs/050-alpha/spec.md</td>\n\
+             \u{201c}./specs/050-alpha/spec.md\u{201d}\n"
+        );
+        assert_eq!(
+            read_root(tmp.path(), ".githooks/pre-commit"),
+            "#!/usr/bin/env bash\ngit add 2>./specs/050-alpha/spec.md&&./specs/050-alpha/spec.md\n"
+        );
+    }
+
+    /// Spec 059: in a project below its repository's root a leading `/` names
+    /// a path from the repository's root, so it is left as written, while
+    /// `./` is still re-pointed.
+    #[test]
+    fn a_leading_slash_below_the_repository_root_is_left_alone() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (_repository, project) =
+            crate::primitives::git_fixture::subdirectory_project(tmp.path());
+        seed_target(&project, "050-alpha");
+        write_root(
+            &project,
+            "README.md",
+            "See [a](/specs/1234.1-staged/spec.md) and [b](./specs/1234.1-staged/spec.md).\n",
+        );
+
+        run(&args("1234.1-staged", "050-alpha"), &project).unwrap();
+
+        assert_eq!(
+            read_root(&project, "README.md"),
+            "See [a](/specs/1234.1-staged/spec.md) and [b](./specs/050-alpha/spec.md).\n"
+        );
+    }
+
     /// Any other prefix keeps a path from being a reference to the spec root
     /// — `../` from a root file leaves the project, a leading `/` in the hook
     /// is an absolute file-system path, `./` in `system.md` names the spec
@@ -1547,7 +1608,8 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         seed_target(tmp.path(), "050-alpha");
         let readme = "See ../specs/1234.1-staged/spec.md and docs/specs/1234.1-staged/spec.md.\n\
-                      Not ~/specs/1234.1-staged/spec.md or ${HOME}/specs/1234.1-staged/spec.md.\n";
+                      Not ~/specs/1234.1-staged/spec.md or ${HOME}/specs/1234.1-staged/spec.md, \
+                      \"$HOME\"/specs/1234.1-staged/spec.md or $(pwd)/specs/1234.1-staged/spec.md.\n";
         let hook = "#!/usr/bin/env bash\ncat /specs/1234.1-staged/spec.md\n";
         let system = "# System\n\nSee `./specs/1234.1-staged/spec.md`.\n";
         write_root(tmp.path(), "README.md", readme);

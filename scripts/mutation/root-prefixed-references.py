@@ -17,16 +17,22 @@ matches exactly once.
 The rule lives in the shared scanner, so each mutation of it runs twice:
 M1-M9 and M14 filtered to the check's tests, and M15-M24 the same mutations
 filtered to the rewrite's, so a kill shows that each primitive's own tests
-hold it, as do M25 and M26 (a prefix starts a reference only where it starts
-a token). M10 and M11 (the token-start rules read before the prefix) and M12
-are the check's alone, M13 the rewrite's.
+hold it, as do M25 and M26 (a prefix that continues another path is no
+reference), M32 and M33 (a leading `/` is no prefix below the repository
+root) and M34 and M35 (a prefix after markup or a shell operator is one).
+M10 and M11 (the token-start rules read before the prefix), M12 and M27-M31
+(what ends another path) are the check's alone, M13 the rewrite's.
 
 The killing tests are `a_path_behind_a_prefix_naming_the_project_root_is_checked`,
-`a_path_behind_any_other_prefix_is_not_a_reference` and
+`a_path_behind_any_other_prefix_is_not_a_reference`,
+`a_prefix_after_markup_or_a_shell_operator_is_a_reference`,
+`a_leading_slash_is_no_prefix_below_the_repository_root` and
 `the_import_and_revision_rules_apply_where_the_prefix_begins` in
 check_orphaned_references.rs, and
-`a_reference_behind_a_project_root_prefix_is_re_pointed_with_its_prefix` and
-`a_reference_behind_any_other_prefix_is_left_as_written` in
+`a_reference_behind_a_project_root_prefix_is_re_pointed_with_its_prefix`,
+`a_reference_behind_any_other_prefix_is_left_as_written`,
+`a_reference_after_markup_or_a_shell_operator_is_re_pointed` and
+`a_leading_slash_below_the_repository_root_is_left_alone` in
 rewrite_spec_links.rs.
 """
 
@@ -114,15 +120,15 @@ MUTATIONS = [
     (
         'M12 the check passes its referrers no prefixes',
         'src/primitives/check_orphaned_references.rs',
-        '        let prefixes = root_prefixes(&referrer);\n',
-        '        let prefixes: &[&str] = &[];\n',
+        '        let prefixes = root_prefixes(&referrer, at_work_tree_root);\n',
+        '        let prefixes: Vec<&str> = Vec::new();\n',
         'check_orphaned_references::',
     ),
     (
         'M13 the rewrite passes its referrers no prefixes',
         'src/primitives/rewrite_spec_links.rs',
-        '                prefixes: check_orphaned_references::root_prefixes(shown),\n',
-        '                prefixes: &[],\n',
+        '                prefixes: check_orphaned_references::root_prefixes(shown, self.at_work_tree_root),\n',
+        '                prefixes: Vec::new(),\n',
         'rewrite_spec_links::',
     ),
     (
@@ -205,17 +211,81 @@ MUTATIONS = [
     ),
     # -- a prefix starts a reference only where it starts a token ---------------
     (
-        'M25 a prefix after a home or variable path starts a reference (check)',
+        'M25 a prefix that continues another path starts a reference (check)',
         'src/primitives/check_orphaned_references.rs',
-        '                || (token < start && previous.is_some_and(|c| !opens_a_token(c)))\n',
+        '                || (token < start && continues_another_path(&line[..token]))\n',
         '',
         'check_orphaned_references::',
     ),
     (
-        'M26 a prefix after a home or variable path starts a reference (rewrite)',
+        'M26 a prefix that continues another path starts a reference (rewrite)',
         'src/primitives/check_orphaned_references.rs',
-        '                || (token < start && previous.is_some_and(|c| !opens_a_token(c)))\n',
+        '                || (token < start && continues_another_path(&line[..token]))\n',
         '',
+        'rewrite_spec_links::',
+    ),
+    # -- what ends another path, and the leading `/` below the repository root -
+    (
+        'M27 a prefix after ~ starts a reference',
+        'src/primitives/check_orphaned_references.rs',
+        "matches!(c, '~' | '}' | '%' | ')')",
+        "matches!(c, '}' | '%' | ')')",
+        'check_orphaned_references::',
+    ),
+    (
+        'M28 a prefix after } starts a reference',
+        'src/primitives/check_orphaned_references.rs',
+        "matches!(c, '~' | '}' | '%' | ')')",
+        "matches!(c, '~' | '%' | ')')",
+        'check_orphaned_references::',
+    ),
+    (
+        'M29 a prefix after % starts a reference',
+        'src/primitives/check_orphaned_references.rs',
+        "matches!(c, '~' | '}' | '%' | ')')",
+        "matches!(c, '~' | '}' | ')')",
+        'check_orphaned_references::',
+    ),
+    (
+        'M30 a prefix after ) starts a reference',
+        'src/primitives/check_orphaned_references.rs',
+        "matches!(c, '~' | '}' | '%' | ')')",
+        "matches!(c, '~' | '}' | '%')",
+        'check_orphaned_references::',
+    ),
+    (
+        'M31 a quote closing a variable path is read as opening a token',
+        'src/primitives/check_orphaned_references.rs',
+        "=> back.next().is_some_and(ends_a_path),",
+        "=> false,",
+        'check_orphaned_references::',
+    ),
+    (
+        'M32 a leading / is a prefix below the repository root (check)',
+        'src/primitives/check_orphaned_references.rs',
+        '        .filter(|prefix| at_work_tree_root || *prefix != "/")\n',
+        '        .filter(|_| true)\n',
+        'check_orphaned_references::',
+    ),
+    (
+        'M33 a leading / is a prefix below the repository root (rewrite)',
+        'src/primitives/check_orphaned_references.rs',
+        '        .filter(|prefix| at_work_tree_root || *prefix != "/")\n',
+        '        .filter(|_| true)\n',
+        'rewrite_spec_links::',
+    ),
+    (
+        'M34 a prefix after markup or a shell operator is refused (check)',
+        'src/primitives/check_orphaned_references.rs',
+        '        Some(c) => ends_a_path(c),\n',
+        "        Some(c) => ends_a_path(c) || matches!(c, '|' | '>' | '&' | '\\u{201c}'),\n",
+        'check_orphaned_references::',
+    ),
+    (
+        'M35 a prefix after markup or a shell operator is refused (rewrite)',
+        'src/primitives/check_orphaned_references.rs',
+        '        Some(c) => ends_a_path(c),\n',
+        "        Some(c) => ends_a_path(c) || matches!(c, '|' | '>' | '&' | '\\u{201c}'),\n",
         'rewrite_spec_links::',
     ),
 ]
