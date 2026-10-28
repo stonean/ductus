@@ -18,7 +18,8 @@ Found by the real adopter bootstrap of [050-constitution](../../050-constitution
 
 ## Edge Cases
 
-- **A file an earlier run installed.** It drops to `0644` or `0755` on the next run once the release carrying this fix is the adopter's runtime, whether or not its content changed. Git records only the executable bit, so the change shows in no diff. A file `apply-manifest` does not manage (a `create` or `skip` row that already exists, or a pinned file) keeps its mode.
+- **A file an earlier run installed.** It drops to `0644` or `0755` on the next run once the release carrying this fix is the adopter's runtime, whether or not its content changed, when the runner may change its mode. Git records only the executable bit, so the change shows in no diff. A file `apply-manifest` does not manage (a `create` or `skip` row that already exists, or a pinned file) keeps its mode.
+- **A file the runner may not chmod.** One that belongs to another user, or is flagged immutable, keeps its mode: `apply-manifest` names it in the result's `modes-kept`, the bootstrap reports it, and the walk goes on to the entries after it.
 - **An archive entry with no group or other write.** It is unchanged by the mask: a `0600` entry lands as `0600`.
 
 ## Open Questions

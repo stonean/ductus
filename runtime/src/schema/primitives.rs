@@ -2277,6 +2277,13 @@ pub struct ApplyManifestResult {
     /// defect; zero across zero entries that were is a manifest of pinned and
     /// skipped files behaving correctly. One number cannot say which.
     pub entries_substituted: u32,
+    /// Destinations of `update` entries found `unchanged` whose mode differs
+    /// from the source's and that this run could not change — the file
+    /// belongs to another user, or is flagged immutable — so each keeps its
+    /// mode (spec 022, scenario `installed-files-are-not-group-writable`).
+    /// Empty, and omitted, when every such mode was set or already matched.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modes_kept: Vec<String>,
 }
 
 // -- enforce-manifest --------------------------------------------------------
@@ -5348,8 +5355,10 @@ pub struct RewriteSpecLinksResult {
     /// and `check-orphaned-references`, which tests existence only, passes
     /// it. The reference is still re-pointed; it is listed so the caller can
     /// name it for the operator to judge. A scenario target keeps only a
-    /// tail naming a carried scenario and replaces the rest, so it lists
-    /// none. In the order of `rewritten`, then by line.
+    /// tail naming a carried scenario and replaces the rest. On either
+    /// target, a `scenarios/{name}` tail the retiring directory does not hold
+    /// — a scenario renamed before the fold, or never there — is listed too,
+    /// since no fold carried it. In the order of `rewritten`, then by line.
     #[serde(default)]
     pub kept_tails: Vec<KeptTail>,
 }
@@ -6399,8 +6408,12 @@ mod tests {
             source_missing: 0,
             substitutions_applied: 3,
             entries_substituted: 1,
+            modes_kept: vec![],
         };
         let r_value: serde_json::Value = serde_json::to_value(&result).unwrap();
+        // An empty `modes-kept` is omitted, so a result that kept no mode
+        // reads exactly as one written before the field existed.
+        assert!(r_value.get("modes-kept").is_none());
         assert_eq!(r_value["skipped-pinned"], 1);
         assert_eq!(r_value["source-missing"], 0);
         assert_eq!(r_value["entries"][0]["action"], "created");

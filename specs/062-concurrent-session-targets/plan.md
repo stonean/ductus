@@ -130,7 +130,9 @@ holds an exclusive advisory lock on `.ductus/sessions/.lock`, taken with
 are a few small reads and one or two atomic writes, so a wait that long means
 the holder is stalled, and the call fails naming the lock file rather than
 hanging every agent behind it. The poll (`BE-RETRY-001`) is bounded by that
-timeout and backs off exponentially: the bound on each wait starts at
+timeout and by `LOCK_MAX_ATTEMPTS` (one thousand attempts; the backoff below
+makes about four hundred in ten seconds on average), whichever comes first, and
+backs off exponentially: the bound on each wait starts at
 `LOCK_RETRY_FIRST` (one millisecond) and doubles to `LOCK_RETRY_CAP` (fifty
 milliseconds), and each wait is drawn uniformly from zero to that bound (full
 jitter, from the standard library's randomly seeded hasher, so no dependency),

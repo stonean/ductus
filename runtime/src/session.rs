@@ -341,6 +341,12 @@ const LOCK_RETRY_FIRST: Duration = Duration::from_millis(1);
 /// read-modify-write, so a waiter rechecks at least this often.
 const LOCK_RETRY_CAP: Duration = Duration::from_millis(50);
 
+/// The most attempts one wait for the lock makes (`BE-RETRY-001`'s attempt
+/// bound), whichever of it and [`SESSION_LOCK_TIMEOUT`] comes first. The
+/// backoff above makes about 400 attempts in ten seconds on average; a
+/// jittered wait can be zero, so the count needs a bound of its own.
+const LOCK_MAX_ATTEMPTS: u32 = 1_000;
+
 /// The bound on the wait after the `attempt`-th failed `try_lock`, counting
 /// from zero: [`LOCK_RETRY_FIRST`] doubled `attempt` times, never more than
 /// [`LOCK_RETRY_CAP`].
@@ -418,7 +424,9 @@ fn lock_waiting(
             // Only a lock another process holds is retried; any other error
             // is surfaced at once, below (`BE-RETRY-003`). A failed
             // `try_lock` changes nothing, so the retry is safe.
-            Err(TryLockError::WouldBlock) if Instant::now() < deadline => {
+            Err(TryLockError::WouldBlock)
+                if Instant::now() < deadline && attempt + 1 < LOCK_MAX_ATTEMPTS =>
+            {
                 let wait = jittered(retry_bound(attempt), jitter_seed());
                 pause(wait.min(deadline.saturating_duration_since(Instant::now())));
                 attempt = attempt.saturating_add(1);
@@ -427,7 +435,7 @@ fn lock_waiting(
                 return Err(io(std::io::Error::new(
                     std::io::ErrorKind::TimedOut,
                     format!(
-                        "another session held the lock for more than {}s",
+                        "another session held the lock past {}s or {LOCK_MAX_ATTEMPTS} attempts",
                         timeout.as_secs()
                     ),
                 )));
@@ -1607,6 +1615,22 @@ mod tests {
         assert!(
             waits.iter().any(|wait| *wait > LOCK_RETRY_FIRST),
             "{waits:?}"
+        );
+    }
+
+    /// `BE-RETRY-001`'s attempt bound: a wait that never sleeps still stops
+    /// after `LOCK_MAX_ATTEMPTS` attempts, long before its deadline.
+    #[test]
+    fn the_lock_loop_stops_at_its_attempt_bound() {
+        let tmp = tempdir().unwrap();
+        let _held = lock(tmp.path()).unwrap();
+        let mut pauses: u32 = 0;
+        let err = lock_waiting(tmp.path(), Duration::from_secs(2), |_| pauses += 1).unwrap_err();
+        assert!(err.to_string().contains("held the lock"), "{err}");
+        assert_eq!(
+            pauses + 1,
+            LOCK_MAX_ATTEMPTS,
+            "a pause between each two of its attempts"
         );
     }
 

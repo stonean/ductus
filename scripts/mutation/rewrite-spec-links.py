@@ -168,7 +168,7 @@ MUTATIONS = [
     (
         'M21 no kept tail reported',
         'src/primitives/rewrite_spec_links.rs',
-        '                kept_tail: names_a_file_the_fold_did_not_write(tail),\n',
+        '                kept_tail: names_a_file_the_fold_did_not_write(tail)\n                    || target.does_not_hold_scenario(tail),\n',
         '                kept_tail: false,\n',
         'rewrite_spec_links',
     ),
@@ -254,6 +254,20 @@ MUTATIONS = [
         'src/primitives/rewrite_spec_links.rs',
         'std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory',
         'std::io::ErrorKind::NotFound',
+        'rewrite_spec_links',
+    ),
+    (
+        'M34 a scenario tail the retiring directory does not hold is not listed',
+        'src/primitives/rewrite_spec_links.rs',
+        '            (["scenarios", name, ..], Some(held)) if !name.is_empty() => !held.contains(*name),\n',
+        '            (["scenarios", name, ..], Some(held)) if !name.is_empty() => { let _ = (name, held); false }\n',
+        'rewrite_spec_links',
+    ),
+    (
+        'M35 the retiring directory\'s scenarios are never read',
+        'src/primitives/rewrite_spec_links.rs',
+        '    target.retiring_scenarios = retiring_scenarios(&specs_dir.join(&args.from))?;\n',
+        '    let _ = retiring_scenarios;\n',
         'rewrite_spec_links',
     ),
 ]

@@ -19,7 +19,10 @@ for M1-M3, and in runtime/src/primitives/apply_manifest.rs
 `an_unchanged_destination_whose_mode_matches_is_not_touched` (M5, which
 compares ctime after a 50 ms wait, so its kill depends on the file system's
 ctime clock being finer than that) and
-`an_unchanged_destination_that_is_a_link_is_not_chmodded_through` (M6).
+`an_unchanged_destination_that_is_a_link_is_not_chmodded_through` (M6), and
+`an_unchanged_destination_that_refuses_a_chmod_is_named_and_the_walk_goes_on`
+(M7, M8; macOS only, since `chflags uchg` is the one way an unprivileged test
+can make a chmod fail, so on another platform M7 and M8 survive).
 """
 
 EXPECTED_SURVIVORS = {}
@@ -49,21 +52,35 @@ MUTATIONS = [
     (
         'M4 an unchanged destination keeps a mode that differs from the source\'s',
         'src/primitives/apply_manifest.rs',
-        '            #[cfg(unix)]\n            reapply_source_mode(source, dest)?;\n',
-        '',
+        '            if !reapply_source_mode(&source, &dest)? {\n                result.modes_kept.push(entry.dest.clone());\n            }\n',
+        '            let _ = (&source, &dest);\n',
         'apply_manifest',
     ),
     (
         'M5 the source mode re-applied to an unchanged destination whose mode already matches',
         'src/primitives/apply_manifest.rs',
-        '    if source_mode & 0o7777 == dest_meta.permissions().mode() & 0o7777 {\n        return Ok(());\n    }\n',
+        '    if source_mode & 0o7777 == dest_meta.permissions().mode() & 0o7777 {\n        return Ok(true);\n    }\n',
         '',
         'apply_manifest',
     ),
     (
         'M6 an unchanged destination that is a link chmodded through',
         'src/primitives/apply_manifest.rs',
-        '    if dest_meta.file_type().is_symlink() {\n        return Ok(());\n    }\n',
+        '    if dest_meta.file_type().is_symlink() {\n        return Ok(true);\n    }\n',
+        '',
+        'apply_manifest',
+    ),
+    (
+        'M7 a chmod the file system refuses stops the walk',
+        'src/primitives/apply_manifest.rs',
+        '        Err(err) if err.kind() == std::io::ErrorKind::PermissionDenied => Ok(false),\n',
+        '',
+        'apply_manifest',
+    ),
+    (
+        'M8 a refused chmod is not named in modes-kept',
+        'src/primitives/apply_manifest.rs',
+        '                result.modes_kept.push(entry.dest.clone());\n',
         '',
         'apply_manifest',
     ),

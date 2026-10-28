@@ -174,6 +174,19 @@ pub fn run(args: &ApplyManifestArgs, repo: &Path) -> Result<ApplyManifestResult>
             }
             _ => {}
         }
+        // An unchanged `update` destination is not rewritten, so its mode is
+        // re-applied here when it differs from the source's
+        // (`reapply_source_mode`). One this run may not change — another
+        // user's file — keeps its mode and is named in `modes-kept`, and the
+        // walk goes on.
+        #[cfg(unix)]
+        if action == ACTION_UNCHANGED && entry.strategy == "update" {
+            let source = source_root.join(Path::new(&entry.source));
+            let dest = target_root.join(Path::new(&entry.dest));
+            if !reapply_source_mode(&source, &dest)? {
+                result.modes_kept.push(entry.dest.clone());
+            }
+        }
         entries_out.push(ManifestEntryResult {
             source: entry.source.clone(),
             dest: entry.dest.clone(),
@@ -350,8 +363,6 @@ fn apply_update(
             source,
         })?;
         if existing == new_bytes {
-            #[cfg(unix)]
-            reapply_source_mode(source, dest)?;
             return Ok((ACTION_UNCHANGED, applied));
         }
         write_atomic_bytes(dest, &new_bytes)?;
@@ -459,8 +470,13 @@ pub(crate) fn mirror_source_mode(source: &Path, dest: &Path) -> Result<()> {
 ///
 /// Unix only, as the permission bits it compares are; it is not called
 /// elsewhere.
+///
+/// Returns `false` when the mode differs and the file system refuses the
+/// change (`PermissionDenied`: the file belongs to another user, or is
+/// flagged immutable), so the caller names the file and goes on; any other
+/// failure is an error.
 #[cfg(unix)]
-fn reapply_source_mode(source: &Path, dest: &Path) -> Result<()> {
+fn reapply_source_mode(source: &Path, dest: &Path) -> Result<bool> {
     use std::os::unix::fs::PermissionsExt;
 
     let dest_meta = fs::symlink_metadata(dest).map_err(|src| PrimitiveError::Io {
@@ -468,7 +484,7 @@ fn reapply_source_mode(source: &Path, dest: &Path) -> Result<()> {
         source: src,
     })?;
     if dest_meta.file_type().is_symlink() {
-        return Ok(());
+        return Ok(true);
     }
     let source_mode = fs::metadata(source)
         .map_err(|src| PrimitiveError::Io {
@@ -478,9 +494,16 @@ fn reapply_source_mode(source: &Path, dest: &Path) -> Result<()> {
         .permissions()
         .mode();
     if source_mode & 0o7777 == dest_meta.permissions().mode() & 0o7777 {
-        return Ok(());
+        return Ok(true);
     }
-    mirror_source_mode(source, dest)
+    match fs::set_permissions(dest, fs::Permissions::from_mode(source_mode)) {
+        Ok(()) => Ok(true),
+        Err(err) if err.kind() == std::io::ErrorKind::PermissionDenied => Ok(false),
+        Err(src) => Err(PrimitiveError::Io {
+            path: dest.into(),
+            source: src,
+        }),
+    }
 }
 
 /// Read `source` and, if its bytes decode as UTF-8, apply the
@@ -1587,6 +1610,62 @@ mod tests {
     /// A destination that is a symbolic link is not chmodded through: the
     /// bytes compared were the file it names, which the destination check
     /// does not judge for a link, so its mode is left as it was.
+    /// A destination whose mode this run may not change — here flagged
+    /// immutable with `chflags uchg`, the one way an unprivileged test can
+    /// make its own file refuse a chmod; another user's file refuses the same
+    /// way — keeps its mode, is named in `modes-kept`, and the walk goes on to
+    /// the entries after it rather than stopping mid-manifest.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn an_unchanged_destination_that_refuses_a_chmod_is_named_and_the_walk_goes_on() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let src = write_source(
+            tmp.path(),
+            &[("1.md", "one\n"), ("2.md", "two\n"), ("3.md", "three\n")],
+        );
+        for name in ["1.md", "2.md", "3.md"] {
+            fs::set_permissions(src.join(name), fs::Permissions::from_mode(0o644)).unwrap();
+        }
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(&dst).unwrap();
+        let locked = dst.join("2.md");
+        fs::write(&locked, "two\n").unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o664)).unwrap();
+        let flag = |value: &str| {
+            let done = std::process::Command::new("chflags")
+                .arg(value)
+                .arg(&locked)
+                .status()
+                .unwrap();
+            assert!(done.success(), "chflags {value}");
+        };
+        flag("uchg");
+
+        let args = args_for(
+            &src,
+            &dst,
+            vec![
+                entry("1.md", "1.md", "update"),
+                entry("2.md", "2.md", "update"),
+                entry("3.md", "3.md", "update"),
+            ],
+            vec![],
+            subs(&[]),
+        );
+        let result = run(&args, tmp.path());
+        let mode = fs::metadata(&locked).unwrap().permissions().mode() & 0o7777;
+        flag("nouchg");
+        let result = result.unwrap();
+
+        assert_eq!(result.modes_kept, ["2.md"]);
+        assert_eq!(result.entries[1].action, "unchanged");
+        assert_eq!(mode, 0o664, "the refused file keeps its mode");
+        assert_eq!(fs::read_to_string(dst.join("3.md")).unwrap(), "three\n");
+        assert_eq!(result.created, 2);
+    }
+
     #[cfg(unix)]
     #[test]
     fn an_unchanged_destination_that_is_a_link_is_not_chmodded_through() {

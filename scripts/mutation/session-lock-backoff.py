@@ -1,6 +1,8 @@
 """Mutation list for spec 062 task 28: the session-lock poll backs off
-exponentially with full jitter (`BE-RETRY-001`) and retries only a lock another
-process holds (`BE-RETRY-003`), in runtime/src/session.rs.
+exponentially with full jitter and stops at its attempt bound (`BE-RETRY-001`),
+in runtime/src/session.rs. That it retries only a lock another process holds
+(`BE-RETRY-003`) is the code's match arms and has no mutation here: no portable
+test can make `try_lock` fail with an error other than `WouldBlock`.
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/session-lock-backoff.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -11,8 +13,9 @@ in the same change; `run.py --check` names every anchor that no longer
 matches exactly once.
 
 The killing tests are `the_retry_bound_doubles_from_the_first_wait_to_the_cap`,
-`a_wait_is_drawn_within_its_bound_and_varies` and
-`the_lock_loop_waits_by_the_jittered_backoff` in runtime/src/session.rs.
+`a_wait_is_drawn_within_its_bound_and_varies`,
+`the_lock_loop_waits_by_the_jittered_backoff` and
+`the_lock_loop_stops_at_its_attempt_bound` in runtime/src/session.rs.
 """
 
 EXPECTED_SURVIVORS = {}
@@ -65,6 +68,13 @@ MUTATIONS = [
         'src/session.rs',
         '                attempt = attempt.saturating_add(1);\n',
         '',
+        'session::',
+    ),
+    (
+        'M8 the attempt bound is not enforced',
+        'src/session.rs',
+        '                if Instant::now() < deadline && attempt + 1 < LOCK_MAX_ATTEMPTS =>\n',
+        '                if Instant::now() < deadline =>\n',
         'session::',
     ),
 ]

@@ -92,7 +92,10 @@
 //! caller can name it for the operator to judge. A scenario target keeps a
 //! tail naming one of the retiring directory's scenarios, fragment and all,
 //! since that scenario crosses over under its own slug on either route, and
-//! replaces any other tail with the routed scenario, so it lists none. The
+//! replaces any other tail with the routed scenario. On either target a
+//! `scenarios/{name}` tail the retiring directory does not hold, read before
+//! anything is written, is listed as well: no fold carried that scenario, so
+//! the reference lands on whatever the target holds under the name. The
 //! exclusions are a fold's:
 //! `/{project}:consolidate` carries no scenario across, so under it a kept
 //! `scenarios/` tail resolves only where the target has a scenario of that
@@ -101,6 +104,7 @@
 //! Defined by `specs/051-branch-scoped-spec-numbering/spec.md` (AC6, AC22,
 //! AC23, AC33).
 
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use walkdir::WalkDir;
@@ -127,6 +131,13 @@ struct FoldTarget {
     /// The scenario slug within it, when the fold routed the content into
     /// a scenario rather than the spec body.
     scenario: Option<String>,
+    /// The file names under the retiring directory's `scenarios/`, read
+    /// before anything is written, or `None` when the directory is already
+    /// gone (a rename). A kept `scenarios/{name}` tail the directory does not
+    /// hold names a scenario the fold could not carry — one renamed before
+    /// the fold, or never there — so it is listed in `kept-tails` rather than
+    /// landing silently on whatever the target holds under that name.
+    retiring_scenarios: Option<BTreeSet<String>>,
 }
 
 impl FoldTarget {
@@ -150,6 +161,7 @@ impl FoldTarget {
         Ok(Self {
             feature: feature.to_string(),
             scenario: scenario.map(ToString::to_string),
+            retiring_scenarios: None,
         })
     }
 }
@@ -402,8 +414,9 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
     let layout = paths::Paths::load(repo);
     super::validate_feature_argument(repo, &layout.specs_root, &args.from)?;
     super::validate_feature_argument(repo, &layout.specs_root, &args.to)?;
-    let target = FoldTarget::parse(&args.to)?;
+    let mut target = FoldTarget::parse(&args.to)?;
     let specs_dir = repo.join(&layout.specs_root);
+    target.retiring_scenarios = retiring_scenarios(&specs_dir.join(&args.from))?;
 
     // Refuse before writing anything when the destination does not exist.
     //
@@ -657,9 +670,12 @@ fn rewrite_path_tokens(
         // along and ends inside the second, and splicing the second would
         // slice backwards. It is left as written. On a rename the kept
         // fragment restores the `specs` it took, so the token still names the
-        // retiring directory; on a scenario target the dropped fragment joins
-        // the rest to the scenario's path, which names no file. Either way
-        // `check-orphaned-references` reports it once the directory is gone.
+        // retiring directory; on a scenario target the fragment is dropped
+        // when the first token collapses onto the routed scenario, joining the
+        // rest to that scenario's path, which names no file, and kept when the
+        // first token names a carried scenario, which restores the `specs` as
+        // on a rename. Either way `check-orphaned-references` reports it once
+        // the directory is gone.
         if span.start < copied {
             continue;
         }
@@ -777,6 +793,10 @@ fn rebuild(segments: &[&str], index: usize, fragment: Option<&str>, target: &Fol
         // consolidation none, so a kept tail naming a file the target was not
         // given is flagged for `kept-tails`
         // (`names_a_file_the_fold_did_not_write`).
+        //
+        // On either target, a scenario tail the retiring directory does not
+        // hold is flagged too: no fold carried that scenario, so the
+        // reference lands on whatever the target holds under the name.
         _ => {
             rebuilt.extend(tail.iter().map(|s| (*s).to_string()));
             let mut out = rebuilt.join("/");
@@ -786,10 +806,57 @@ fn rebuild(segments: &[&str], index: usize, fragment: Option<&str>, target: &Fol
             }
             Moved {
                 text: out,
-                kept_tail: names_a_file_the_fold_did_not_write(tail),
+                kept_tail: names_a_file_the_fold_did_not_write(tail)
+                    || target.does_not_hold_scenario(tail),
             }
         }
     }
+}
+
+impl FoldTarget {
+    /// Whether `tail` names a scenario the retiring directory, read before
+    /// the run wrote anything, does not hold. Unknown when the directory was
+    /// already gone, and then never flagged.
+    fn does_not_hold_scenario(&self, tail: &[&str]) -> bool {
+        match (tail, &self.retiring_scenarios) {
+            (["scenarios", name, ..], Some(held)) if !name.is_empty() => !held.contains(*name),
+            _ => false,
+        }
+    }
+}
+
+/// The file names under `dir/scenarios/`, or `None` when `dir` does not
+/// exist. A `dir` with no `scenarios/` holds none.
+///
+/// # Errors
+///
+/// [`PrimitiveError::Io`] when `dir/scenarios/` exists and cannot be listed.
+fn retiring_scenarios(dir: &Path) -> Result<Option<BTreeSet<String>>> {
+    if !dir.is_dir() {
+        return Ok(None);
+    }
+    let scenarios = dir.join("scenarios");
+    let entries = match std::fs::read_dir(&scenarios) {
+        Ok(entries) => entries,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(Some(BTreeSet::new()));
+        }
+        Err(source) => {
+            return Err(PrimitiveError::Io {
+                path: scenarios,
+                source,
+            });
+        }
+    };
+    let mut held = BTreeSet::new();
+    for entry in entries {
+        let entry = entry.map_err(|source| PrimitiveError::Io {
+            path: scenarios.clone(),
+            source,
+        })?;
+        held.insert(entry.file_name().to_string_lossy().into_owned());
+    }
+    Ok(Some(held))
 }
 
 /// Whether `tail`, the segments after the retiring directory, names one of
@@ -1726,6 +1793,59 @@ mod tests {
             vec!["specs/060-beta/spec.md", "AGENTS.md"]
         );
         assert!(result.kept_tails.is_empty(), "{:?}", result.kept_tails);
+    }
+
+    /// A reference to a scenario the retiring directory does not hold — one
+    /// renamed before the fold, or never there — is listed on either target,
+    /// and still re-pointed, since no fold carried it and the target's file of
+    /// that name is not its content. A scenario the directory holds is not.
+    #[test]
+    fn a_scenario_the_retiring_directory_does_not_hold_is_listed() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        write(
+            tmp.path(),
+            "1234.1-staged/spec.md",
+            "---\nstatus: done\ndependencies: []\n---\n",
+        );
+        write(
+            tmp.path(),
+            "1234.1-staged/scenarios/inner.md",
+            "---\nsection: x\n---\n",
+        );
+        let beta = "---\nstatus: done\ndependencies: []\n---\n\n\
+                    [held](../1234.1-staged/scenarios/inner.md) and \
+                    [gone](../1234.1-staged/scenarios/edge-cases.md#behavior)\n";
+        let agents = "Old: `specs/1234.1-staged/scenarios/edge-cases.md`\n";
+
+        for to in ["050-alpha", "050-alpha/eviction"] {
+            write(tmp.path(), "060-beta/spec.md", beta);
+            write_root(tmp.path(), "AGENTS.md", agents);
+
+            let result = run(&args("1234.1-staged", to), tmp.path()).unwrap();
+
+            let kept: Vec<(&str, &str)> = result
+                .kept_tails
+                .iter()
+                .map(|k| (k.path.as_str(), k.reference.as_str()))
+                .collect();
+            assert_eq!(
+                kept,
+                vec![
+                    (
+                        "specs/060-beta/spec.md",
+                        "../050-alpha/scenarios/edge-cases.md#behavior"
+                    ),
+                    ("AGENTS.md", "specs/050-alpha/scenarios/edge-cases.md"),
+                ],
+                "target {to}"
+            );
+            let beta_now = read(tmp.path(), "060-beta/spec.md");
+            assert!(
+                beta_now.contains("[held](../050-alpha/scenarios/inner.md)"),
+                "{beta_now}"
+            );
+        }
     }
 
     /// A fragment that runs into a second spec-root token on one line
