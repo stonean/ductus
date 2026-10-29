@@ -35,6 +35,9 @@ Consolidation migrates nothing, so everything in the source directory is destroy
 | `framework/bootstrap/ductus.md` | Modify | Install the command (Family 16 manifest parity) |
 | `README.md` | Modify | Command tables; the one-spec/two-spec distinction |
 | `specs/051-branch-scoped-spec-numbering/spec.md` | Modify | Record that the sequential refusal is gated here |
+| `framework/reference/consolidate.md` | Modify | The markdown-only walk: same-name scenarios in the enumeration, and what the command writes into the target |
+| `docs/slash-commands.md` | Modify | The content move lands in the consolidation's commit |
+| `runtime/tests/consolidate_hook.rs` | Create | The documented order, driven through the shipped pre-commit hook |
 
 ## Trade-offs
 

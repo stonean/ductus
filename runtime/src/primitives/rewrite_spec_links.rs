@@ -129,6 +129,7 @@ use crate::primitives::{
 use crate::schema::paths;
 use crate::schema::primitives::{
     KeptTail, ReferrerSkip, RewriteSpecLinksArgs, RewriteSpecLinksResult, RewrittenFile,
+    SourceMention,
 };
 
 /// The `skipped` reason for a referrer that is a symbolic link.
@@ -223,16 +224,21 @@ struct Sweep<'a> {
     /// The configured spec root as a prefix, `specs/` by default — the one
     /// managed root a feature directory can be named behind.
     root: String,
+    /// The spec root itself, which says whether a file sits inside the fold
+    /// target's directory ([`depth_in_target`]).
+    specs_dir: PathBuf,
     rewritten: Vec<RewrittenFile>,
     examined: u32,
     skipped: Vec<ReferrerSkip>,
     kept_tails: Vec<KeptTail>,
+    mentions: Vec<SourceMention>,
 }
 
 impl Sweep<'_> {
     /// Rewrite one file's content in place, recording it when anything in it
-    /// moved. `prefixes` are the token pass's, so none for a file that takes
-    /// only the link pass.
+    /// moved, and record each line that still names `from` once it has.
+    /// `prefixes` are the token pass's, so none for a file that takes only
+    /// the link pass.
     fn rewrite(
         &mut self,
         path: &Path,
@@ -248,12 +254,26 @@ impl Sweep<'_> {
             &self.root,
             passes,
             prefixes,
+            depth_in_target(&self.specs_dir, path, &self.target.feature),
+        );
+        let shown = repo_relative(self.repo, path);
+        let text = if rewrite.count == 0 {
+            content
+        } else {
+            &rewrite.text
+        };
+        self.mentions.extend(
+            lines_naming(text, self.from)
+                .into_iter()
+                .map(|line| SourceMention {
+                    path: shown.clone(),
+                    line,
+                }),
         );
         if rewrite.count == 0 {
             return Ok(());
         }
         write_atomic(path, &rewrite.text)?;
-        let shown = repo_relative(self.repo, path);
         self.kept_tails.extend(
             rewrite
                 .kept_tails
@@ -544,10 +564,12 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
         from: &args.from,
         target,
         root: check_orphaned_references::spec_root_prefix(&layout),
+        specs_dir: specs_dir.clone(),
         rewritten: Vec::new(),
         examined: 0,
         skipped: Vec::new(),
         kept_tails: Vec::new(),
+        mentions: Vec::new(),
     };
 
     // Every referrer, then every markdown file under the spec root, is read
@@ -579,6 +601,7 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
         examined: sweep.examined,
         skipped: sweep.skipped,
         kept_tails: sweep.kept_tails,
+        mentions: sweep.mentions,
     })
 }
 
@@ -618,6 +641,8 @@ struct Moved {
 /// `folds-into` moves there, so `dependencies:` and `references:` are left
 /// untouched for the generators that own them. The token pass reads every
 /// line, frontmatter included, because `check-orphaned-references` does.
+/// `in_target` is the file's depth inside the fold target's directory, when
+/// it sits there ([`depth_in_target`]), so its links stay local to it.
 fn rewrite_content(
     content: &str,
     from: &str,
@@ -625,6 +650,7 @@ fn rewrite_content(
     root: &str,
     passes: Passes,
     prefixes: &[&str],
+    in_target: Option<usize>,
 ) -> FileRewrite {
     // The file's own ending, not a bare `\n`. `lines()` strips a trailing
     // `\r`, so re-joining with `\n` would convert a CRLF checkout's file to
@@ -651,7 +677,7 @@ fn rewrite_content(
                 let (rewritten, moved) = if in_frontmatter {
                     rewrite_folds_into(line, from, &target.feature)
                 } else {
-                    rewrite_body_line(line, from, target, &mut kept)
+                    rewrite_body_line(line, from, target, in_target, &mut kept)
                 };
                 count += moved;
                 current = rewritten;
@@ -712,6 +738,7 @@ fn rewrite_body_line(
     line: &str,
     from: &str,
     target: &FoldTarget,
+    in_target: Option<usize>,
     kept: &mut Vec<String>,
 ) -> (String, u32) {
     let mut out = String::with_capacity(line.len());
@@ -728,7 +755,7 @@ fn rewrite_body_line(
             break;
         };
         let (target_text, after) = tail.split_at(close);
-        match rewrite_link_target(target_text, from, target) {
+        match rewrite_link_target(target_text, from, target, in_target) {
             Some(moved) => {
                 out.push_str(&moved.text);
                 if moved.kept_tail {
@@ -836,7 +863,21 @@ fn rewrite_root_token(token: &str, from: &str, target: &FoldTarget) -> Option<Mo
 /// inside `1234.1-widget-cache` — a prefix match here would silently re-point
 /// a link at a different spec, which is worse than leaving it dangling where
 /// the orphan check can see it.
-fn rewrite_link_target(link: &str, from: &str, target: &FoldTarget) -> Option<Moved> {
+///
+/// A link in a file `in_target` directories inside the fold target's
+/// directory that climbs to the spec root, one `..` per directory, and then
+/// into `from` is written relative to that file: from `{target}/spec.md`,
+/// `../{from}/scenarios/x.md` becomes `scenarios/x.md`, not
+/// `../{target}/scenarios/x.md`. The second form is a link from a spec to
+/// itself, which `derive-dependencies` records as a 1-cycle, so a target
+/// that linked the retiring directory turned every consolidation into a
+/// commit the pre-commit hook refuses. Any other form is rebuilt as written.
+fn rewrite_link_target(
+    link: &str,
+    from: &str,
+    target: &FoldTarget,
+    in_target: Option<usize>,
+) -> Option<Moved> {
     // A cross-service link names another repository's spec. Its resolution is
     // that repo's business and this rename says nothing about it (spec 030).
     if link.contains("://") {
@@ -845,7 +886,103 @@ fn rewrite_link_target(link: &str, from: &str, target: &FoldTarget) -> Option<Mo
     let (path, fragment) = split_fragment(link);
     let segments: Vec<&str> = path.split('/').collect();
     let index = segments.iter().position(|segment| *segment == from)?;
-    Some(rebuild(&segments, index, fragment, target))
+    let mut moved = rebuild(&segments, index, fragment, target);
+    if let Some(depth) = in_target
+        && index == depth + 1
+        && segments[..index].iter().all(|segment| *segment == "..")
+    {
+        moved.text = localize(&moved.text, index, depth);
+    }
+    Some(moved)
+}
+
+/// `text`, a rebuilt link opening with `climb` `..` segments and the fold
+/// target's directory, written from a file `depth` directories inside that
+/// directory: those segments become `depth` `..` segments. A link naming the
+/// target's directory itself from its top level becomes `./`.
+fn localize(text: &str, climb: usize, depth: usize) -> String {
+    let (path, fragment) = split_fragment(text);
+    let tail = path.split('/').skip(climb + 1);
+    let mut out = std::iter::repeat_n("..", depth)
+        .chain(tail)
+        .collect::<Vec<_>>()
+        .join("/");
+    if out.is_empty() {
+        out.push_str("./");
+    }
+    if let Some(fragment) = fragment {
+        out.push('#');
+        out.push_str(fragment);
+    }
+    out
+}
+
+/// How many directories `path` sits below the fold target's directory — 0
+/// for `{target}/spec.md`, 1 for `{target}/scenarios/{slug}.md` — or `None`
+/// when it is not inside it.
+fn depth_in_target(specs_dir: &Path, path: &Path, feature: &str) -> Option<usize> {
+    let mut components = path.strip_prefix(specs_dir).ok()?.components();
+    (components.next()?.as_os_str() == feature).then(|| components.count().saturating_sub(1))
+}
+
+/// The 1-based number of each line of `text` that still names `from` as a
+/// whole token ([`names_token`]): by its directory name, or by the number a
+/// reader cites it by — the `NNN` of a sequential directory, the
+/// `{identifier}.{n}` of a branch-scoped one. A re-pointed link whose label
+/// named `from` is one such line, and so is prose, a code span, or a
+/// `cross-spec-impact:` entry. The frontmatter's `dependencies:` and
+/// `references:` entries are passed over: they are derived from the body
+/// links, and the pre-commit hook regenerates them from the rewritten ones.
+fn lines_naming(text: &str, from: &str) -> Vec<u32> {
+    let number = match super::parse_feature_dir(from) {
+        Some(super::FeatureForm::Sequential { .. }) => {
+            from.split_once('-').map(|(n, _)| n.to_string())
+        }
+        Some(super::FeatureForm::BranchScoped { identifier, n }) => {
+            Some(format!("{identifier}.{n}"))
+        }
+        None => None,
+    };
+    let lines: Vec<&str> = text.lines().collect();
+    let mut out = Vec::new();
+    let mut in_frontmatter = false;
+    let mut derived_key = false;
+    for (index, line) in lines.iter().enumerate() {
+        let is_fence = spec_links::is_frontmatter_fence(line);
+        if index == 0 && is_fence {
+            in_frontmatter = true;
+            continue;
+        }
+        if in_frontmatter && is_fence {
+            in_frontmatter = false;
+            continue;
+        }
+        if in_frontmatter {
+            if !spec_links::continues_key(&lines, index) {
+                derived_key = line.starts_with("dependencies:") || line.starts_with("references:");
+            }
+            if derived_key {
+                continue;
+            }
+        }
+        if names_token(line, from) || number.as_deref().is_some_and(|n| names_token(line, n)) {
+            out.push(u32::try_from(index + 1).unwrap_or(u32::MAX));
+        }
+    }
+    out
+}
+
+/// Whether `line` holds `token` with nothing on either side that would make
+/// it part of a longer name: no letter, digit or `_` either side, no `-`
+/// either side (`050-alpha-cache` is another spec, `BE-ERR-001` a rule), and
+/// no `.` before it (`0.050`).
+fn names_token(line: &str, token: &str) -> bool {
+    let joins = |c: char| c.is_ascii_alphanumeric() || matches!(c, '_' | '-');
+    line.match_indices(token).any(|(at, _)| {
+        let before = line[..at].chars().next_back();
+        let after = line[at + token.len()..].chars().next();
+        before.is_none_or(|c| !joins(c) && c != '.') && after.is_none_or(|c| !joins(c))
+    })
 }
 
 /// A link or token split at its first `#` into the path and the fragment.
@@ -1025,7 +1162,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         write(
             tmp.path(),
-            "050-alpha/spec.md",
+            "060-beta/spec.md",
             "---\nstatus: done\ndependencies: []\n---\n\n\
              See [staged](../1234.1-staged/spec.md) and [its plan](../1234.1-staged/plan.md).\n",
         );
@@ -1034,22 +1171,20 @@ mod tests {
             "1234.1-staged/spec.md",
             "---\nstatus: in-progress\ndependencies: []\nfolds-into: 050-alpha\n---\n\n# staged\n",
         );
+        seed_target(tmp.path(), "050-alpha");
 
         let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
 
         assert_eq!(result.rewritten.len(), 1);
-        assert_eq!(result.rewritten[0].path, "specs/050-alpha/spec.md");
+        assert_eq!(result.rewritten[0].path, "specs/060-beta/spec.md");
         assert_eq!(result.rewritten[0].count, 2);
         // The retiring directory's own files are not examined: they leave
         // with it, so counting them would overstate the repair.
-        assert_eq!(result.examined, 1);
+        assert_eq!(result.examined, 2);
 
-        let alpha = read(tmp.path(), "050-alpha/spec.md");
-        assert!(alpha.contains("[staged](../050-alpha/spec.md)"), "{alpha}");
-        assert!(
-            alpha.contains("[its plan](../050-alpha/plan.md)"),
-            "{alpha}"
-        );
+        let beta = read(tmp.path(), "060-beta/spec.md");
+        assert!(beta.contains("[staged](../050-alpha/spec.md)"), "{beta}");
+        assert!(beta.contains("[its plan](../050-alpha/plan.md)"), "{beta}");
     }
 
     /// A scenario sits one level deeper, so its sibling links carry `../../`.
@@ -1060,7 +1195,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         write(
             tmp.path(),
-            "050-alpha/scenarios/eviction.md",
+            "060-beta/scenarios/eviction.md",
             "---\nsection: Cache\n---\n\nPer [staged](../../1234.1-staged/spec.md).\n",
         );
         seed_target(tmp.path(), "050-alpha");
@@ -1068,7 +1203,7 @@ mod tests {
         let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
 
         assert_eq!(result.rewritten[0].count, 1);
-        let scenario = read(tmp.path(), "050-alpha/scenarios/eviction.md");
+        let scenario = read(tmp.path(), "060-beta/scenarios/eviction.md");
         assert!(
             scenario.contains("[staged](../../050-alpha/spec.md)"),
             "{scenario}"
@@ -1085,9 +1220,10 @@ mod tests {
     #[test]
     fn a_scenario_target_collapses_the_rest_and_keeps_a_carried_scenario() {
         let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
         write(
             tmp.path(),
-            "050-alpha/spec.md",
+            "060-beta/spec.md",
             "---\nstatus: done\ndependencies: []\n---\n\n\
              See [spec](../1234.1-staged/spec.md), [plan](../1234.1-staged/plan.md#steps), \
              [the scenarios](../1234.1-staged/scenarios/) and \
@@ -1097,7 +1233,7 @@ mod tests {
         let result = run(&args("1234.1-staged", "050-alpha/eviction"), tmp.path()).unwrap();
 
         assert_eq!(result.rewritten[0].count, 4);
-        let alpha = read(tmp.path(), "050-alpha/spec.md");
+        let alpha = read(tmp.path(), "060-beta/spec.md");
         assert!(
             alpha.contains("[spec](../050-alpha/scenarios/eviction.md)"),
             "{alpha}"
@@ -2471,5 +2607,169 @@ mod tests {
                 "specs/{at} was replaced"
             );
         }
+    }
+
+    /// A link inside the target that named the retiring directory is written
+    /// relative to its own file. Re-pointed through `../{target}/` it would be
+    /// a link from the target to itself, which `derive-dependencies` records
+    /// as a 1-cycle, so a target that linked the source made the
+    /// consolidation a commit the pre-commit hook refuses (spec 051, scenario
+    /// `a-link-inside-the-target-stays-inside-it`). A link from any other
+    /// spec is re-pointed through the target as before.
+    #[test]
+    fn a_link_inside_the_target_is_written_relative_to_its_own_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        write(
+            tmp.path(),
+            "020-tgt/spec.md",
+            "---\nstatus: done\ndependencies: [010-src]\n---\n\n\
+             Absorbs [the source](../010-src/spec.md), its [eviction](../010-src/scenarios/eviction.md#edge) \
+             and [directory](../010-src/).\n",
+        );
+        write(
+            tmp.path(),
+            "020-tgt/scenarios/merge.md",
+            "---\nsection: Cache\n---\n\nPer [the source](../../010-src/spec.md) and \
+             [eviction](../../010-src/scenarios/eviction.md).\n",
+        );
+        write(
+            tmp.path(),
+            "030-other/spec.md",
+            "---\nstatus: done\ndependencies: []\n---\n\nSee [eviction](../010-src/scenarios/eviction.md).\n",
+        );
+        write(
+            tmp.path(),
+            "010-src/spec.md",
+            "---\nstatus: done\ndependencies: []\n---\n\n# src\n",
+        );
+
+        run(&args("010-src", "020-tgt"), tmp.path()).unwrap();
+
+        let target = read(tmp.path(), "020-tgt/spec.md");
+        assert!(target.contains("[the source](spec.md)"), "{target}");
+        assert!(
+            target.contains("[eviction](scenarios/eviction.md#edge)"),
+            "{target}"
+        );
+        assert!(target.contains("[directory](./)"), "{target}");
+        assert!(!target.contains("../020-tgt"), "{target}");
+        let scenario = read(tmp.path(), "020-tgt/scenarios/merge.md");
+        assert!(scenario.contains("[the source](../spec.md)"), "{scenario}");
+        assert!(
+            scenario.contains("[eviction](../scenarios/eviction.md)"),
+            "{scenario}"
+        );
+        let other = read(tmp.path(), "030-other/spec.md");
+        assert!(
+            other.contains("[eviction](../020-tgt/scenarios/eviction.md)"),
+            "{other}"
+        );
+    }
+
+    /// On a scenario target the collapsed link is made local too, so an
+    /// upstream spec linking the staging spec it receives does not come out of
+    /// the fold linking itself.
+    #[test]
+    fn a_link_inside_a_scenario_target_collapses_to_a_local_path() {
+        let tmp = tempfile::tempdir().unwrap();
+        write(
+            tmp.path(),
+            "050-alpha/spec.md",
+            "---\nstatus: done\ndependencies: []\n---\n\nStaged in [the staging spec](../1234.1-staged/spec.md).\n",
+        );
+        write(
+            tmp.path(),
+            "050-alpha/scenarios/eviction.md",
+            "---\nsection: Cache\n---\n\n# e\n",
+        );
+
+        run(&args("1234.1-staged", "050-alpha/eviction"), tmp.path()).unwrap();
+
+        let alpha = read(tmp.path(), "050-alpha/spec.md");
+        assert!(
+            alpha.contains("[the staging spec](scenarios/eviction.md)"),
+            "{alpha}"
+        );
+    }
+
+    /// Only the form that climbs to the spec root is made local. A
+    /// root-absolute link names no sibling `derive-dependencies` reads, so it
+    /// is re-pointed as written.
+    #[test]
+    fn a_root_absolute_link_inside_the_target_is_re_pointed_as_written() {
+        let tmp = tempfile::tempdir().unwrap();
+        write(
+            tmp.path(),
+            "020-tgt/spec.md",
+            "---\nstatus: done\ndependencies: []\n---\n\n[s](/specs/010-src/spec.md)\n",
+        );
+
+        run(&args("010-src", "020-tgt"), tmp.path()).unwrap();
+
+        let target = read(tmp.path(), "020-tgt/spec.md");
+        assert!(target.contains("[s](/specs/020-tgt/spec.md)"), "{target}");
+    }
+
+    /// Each line an examined file still names the retiring directory on, by
+    /// its name or its number, is listed — a re-pointed link's label, prose, a
+    /// code span, a `cross-spec-impact:` entry, in a file the run rewrote or
+    /// one it only read — and a longer name, a rule ID, a version or the
+    /// derived `dependencies:` entry is not.
+    #[test]
+    fn lines_still_naming_the_retiring_directory_are_listed_as_mentions() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "020-tgt");
+        write(
+            tmp.path(),
+            "030-other/spec.md",
+            "---\nstatus: done\ndependencies:\n  - 010-src\ncross-spec-impact: [010-src]\n---\n\n\
+             See [010-src](../010-src/spec.md).\n\
+             Spec 010 decided this.\n\
+             Unrelated: `010-src-cache`, BE-ERR-010, version 0.010.\n\
+             Named in `010-src` once.\n",
+        );
+        write(
+            tmp.path(),
+            "040-quiet/spec.md",
+            "---\nstatus: done\ndependencies: []\n---\n\nAs 010's review found.\n",
+        );
+
+        let result = run(&args("010-src", "020-tgt"), tmp.path()).unwrap();
+
+        let found: Vec<(&str, u32)> = result
+            .mentions
+            .iter()
+            .map(|mention| (mention.path.as_str(), mention.line))
+            .collect();
+        assert_eq!(
+            found,
+            [
+                ("specs/030-other/spec.md", 5),
+                ("specs/030-other/spec.md", 8),
+                ("specs/030-other/spec.md", 9),
+                ("specs/030-other/spec.md", 11),
+                ("specs/040-quiet/spec.md", 6),
+            ],
+            "{:#?}",
+            result.mentions
+        );
+    }
+
+    /// A branch-scoped directory is cited by `{identifier}.{n}`, and a longer
+    /// counter is another directory.
+    #[test]
+    fn a_branch_scoped_directory_is_mentioned_by_its_identifier_and_counter() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        write(
+            tmp.path(),
+            "060-beta/spec.md",
+            "---\nstatus: done\ndependencies: []\n---\n\nStaged as 1234.1 first.\nThen 1234.12 replaced it.\n",
+        );
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        let found: Vec<u32> = result.mentions.iter().map(|mention| mention.line).collect();
+        assert_eq!(found, [6], "{:#?}", result.mentions);
     }
 }

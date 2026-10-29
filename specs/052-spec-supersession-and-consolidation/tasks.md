@@ -39,6 +39,12 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 2. AC7 names a symbolic link under the spec root — 048's second re-read round
 
-- [ ] 048's second re-read round (2026-10-29) found `rewrite-spec-links` passing over a symbolic link under the spec root unlisted, so a pointer in it dangled after `/{project}:consolidate` with `skipped: []`. The owner chose to list it in `skipped` (051's `the-spec-root-is-read-before-the-first-write`, edge case on symbolic links), and AC7 was widened to say so, which reopened 052. Owed, in order: review 052's window from its reopen, leaning on 048's review as the in-depth one per AGENTS.md; `/ductus:analyze` 052; the completion gate, verifying AC7 against the tree
+- [ ] 048's second re-read round (2026-10-29) found `rewrite-spec-links` passing over a symbolic link under the spec root unlisted, so a pointer in it dangled after `/{project}:consolidate` with `skipped: []`. The owner chose to list it in `skipped` (051's `the-spec-root-is-read-before-the-first-write`, edge case on symbolic links), and AC7 was widened to say so, which reopened 052. Waits on task 3, whose change lands in the same window and which edits AC9, so one review covers both. Owed, in order: review 052's window from its reopen, leaning on 048's review as the in-depth one per AGENTS.md; `/ductus:analyze` 052; the completion gate, verifying AC7 against the tree
 
 - **Done when**: 052's review and analysis records are current, AC7 holds against the tree, and the completion gate passes
+
+## 3. Implement scenario: the content move and the consolidation commit together
+
+- [x] Implement the behavior described in `scenarios/the-content-move-and-the-consolidation-commit-together.md`
+
+- **Done when**: `consolidate.md` states the order and both checkpoint routes, steps 2 and 7 report what the scenario names, AC9 states what the command writes into the target, and `runtime/tests/consolidate_hook.rs` drives the move-then-consolidate and copy-checkpoint flows through the shipped pre-commit hook and fails against the self-cycle

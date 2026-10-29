@@ -49,3 +49,9 @@ Spent task sections are pruned per §tasks-phase; git history holds them, and th
 - [x] Implement the behavior described in `scenarios/the-spec-root-is-read-before-the-first-write.md`
 
 - **Done when**: `rewrite-spec-links` reads every markdown file under the spec root before its first write and stops before any write on one it cannot read as UTF-8 text or a directory it cannot list; tests show each, and that a pending `system.md` is not written first, failing under M39, M40, M41 and M42 in `scripts/mutation/rewrite-spec-links.py`, with M5 and M16 re-anchored and still killed (M38, which made the stop the mutant, removed); the fold and consolidate resumption rows, the fold reference and the result's `kept-tails` doc say what a mid-run write failure still loses; routed from 048's review, the stop chosen over a skip by its owner after the re-read found a skip left 051 AC6 and 052 AC7 untrue
+
+## 34. Implement scenario: a link inside the target stays inside it
+
+- [x] Implement the behavior described in `scenarios/a-link-inside-the-target-stays-inside-it.md`
+
+- **Done when**: a link inside the target is rewritten relative to its own file and `mentions` is in the result, both covered by tests that fail without them, and `fold.md` step 14 reports `mentions`

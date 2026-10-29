@@ -5552,6 +5552,16 @@ pub struct KeptTail {
     pub reference: String,
 }
 
+/// A line that still names the retiring directory once the rewrite has run.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct SourceMention {
+    /// Repo-relative path of a file the run examined.
+    pub path: String,
+    /// 1-based line number within `path`.
+    pub line: u32,
+}
+
 /// Result for `rewrite-spec-links`.
 ///
 /// An empty `rewritten` with a non-zero `examined` and an empty `skipped` is
@@ -5604,6 +5614,21 @@ pub struct RewriteSpecLinksResult {
     /// cannot list the kept tails of the files it had already re-pointed.
     #[serde(default)]
     pub kept_tails: Vec<KeptTail>,
+    /// Lines of the files counted in [`Self::examined`] that still name the
+    /// retiring directory once the rewrite has run — by its directory name,
+    /// or by the number it is cited by (`050` for `050-alpha`, `1234.1` for
+    /// `1234.1-widget`), as a whole token — in the order of `examined`, then
+    /// by line. The rewrite moves links and path references, so what is left
+    /// is prose, code spans, `cross-spec-impact:` entries, and the label of a
+    /// re-pointed link that named the source: each a sentence about a spec
+    /// that no longer exists, for the operator to keep as history or correct.
+    /// `dependencies:` and `references:` entries are not listed, since the
+    /// pre-commit hook regenerates them from the rewritten links. A token
+    /// match, so a line can name something else that happens to share the
+    /// number; and only the examined files are searched, so docs, code and
+    /// any other file are not.
+    #[serde(default)]
+    pub mentions: Vec<SourceMention>,
 }
 
 // -- retire-feature ------------------------------------------------------------
