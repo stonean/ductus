@@ -373,6 +373,17 @@ Then add `prune-plan` to `framework/runtime-tools.txt` and run
 `runtime/tests/mcp.rs` holds the manifest set-equal to the registry, and
 `main::tests::every_registry_primitive_has_a_clap_subcommand` pins the CLI.
 
+### `prune-project` — the four project files
+
+`/{project}:prune --project` (scenario `prune-walks-the-project-files`, for 075) reduces `AGENTS.md`, `system.md`, `events.md` and `errors.md`. It is split as the plan walk is: a primitive segments, digests, searches and writes, and the host proposes each entry's home by 075's definitions. The entry grammar, the schema and the errors are in `data-model.md` §`prune-project`.
+
+- **A primitive of its own, not a mode of `prune-plan`.** Its unit is an entry in one of four project-level files, not a design-record section of one feature's plan, and it takes no feature.
+- **Never the text.** A preview returns locators, sizes and digests, as `prune-plan` does. An apply refuses the whole write when any listed entry changed since the preview, because the host judged its moves against the text it read.
+- **The literal search runs in the runtime.** Without it, whether a catalog entry is still true would rest on the operator's memory. It reads each tracked file once, outside the spec-root, and reports hits per identifier. A repository that cannot be opened is `unavailable`, never zero hits.
+- **Homes are created from compiled-in templates.** An adopter's tree holds no copy of the project templates, since `/ductus` installs them as the files themselves. So the bodies are constants pinned to `framework/templates/project/*.md` by unit tests, as the `--reset` body is pinned to the tasks template. A template edit and its constant change in one commit.
+- **Seams.** An apply collapses blank lines only at the seams it changed, so the rest of an adopter's `AGENTS.md` is never reformatted.
+- **Host judgment** follows the scenario. A procedure goes to `docs/` or a README, and a skill is named but never written. A one-feature decision goes to a spec's Resolved Questions or an existing scenario, and editing a `done` spec reopens it, named first. An every-adopter entry is checked against the installed framework. Step 8 routes plan-section knowledge the same way.
+
 ### Title and slug
 
 The spec is titled *Spec Directory Pruning*, for its spec-directory scope,
@@ -419,6 +430,9 @@ buys nothing here.
 | `README.md` | Edit | `/prune` line |
 | `AGENTS.md` | Edit | Runtime-ownership routing matches practice |
 | `runtime/CHANGELOG.md`, `runtime/Cargo.toml`, `version` | Edit | Release |
+| `runtime/src/primitives/prune_project.rs` | Create | Project-file segmentation, literal search, digest-guarded apply, compiled-in home templates |
+| `scripts/mutation/prune-project.py` | Create | Mutations proving `prune-project`'s tests |
+| `framework/reference/prune.md` | Edit | Markdown-only project-file walk |
 
 ## Trade-offs
 

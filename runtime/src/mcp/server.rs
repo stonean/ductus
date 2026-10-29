@@ -55,15 +55,16 @@ use crate::schema::primitives::{
     MarkCriterionArgs, MarkTaskArgs, MergeManagedBlockArgs, MergeManagedBlockResult,
     MergePermissionsArgs, MergePermissionsResult, MigrateSessionFileArgs, MigrateSessionFileResult,
     ProcessDecisionsArgs, ProcessDecisionsResult, ProcessWaiversArgs, ProcessWaiversResult,
-    PrunePlanArgs, PrunePlanResult, PruneTasksArgs, PruneTasksResult, ReadSpecArgs, ReadSpecResult,
-    ReadTasksArgs, ReadTasksResult, RelocateAuditRecordsArgs, RelocateAuditRecordsResult,
-    RemoveInboxItemArgs, RemoveInboxItemResult, ResolveAnchorArgs, ResolveAnchorResult,
-    ResolveConstitutionsArgs, ResolveConstitutionsResult, ResolveFeatureArgs, ResolveFeatureResult,
-    ResolveReferencesArgs, ResolveReferencesResult, ResolveSessionArgs, ResolveSessionResult,
-    RetargetSessionsArgs, RetargetSessionsResult, RetireFeatureArgs, RetireFeatureResult,
-    RewriteSpecLinksArgs, RewriteSpecLinksResult, SetStatusArgs, SetStatusResult, TraverseDepsArgs,
-    TraverseDepsResult, ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteAnalysisArgs,
-    WriteAnalysisResult, WriteReviewArgs, WriteReviewResult, WriteSessionArgs, WriteSessionResult,
+    PrunePlanArgs, PrunePlanResult, PruneProjectArgs, PruneProjectResult, PruneTasksArgs,
+    PruneTasksResult, ReadSpecArgs, ReadSpecResult, ReadTasksArgs, ReadTasksResult,
+    RelocateAuditRecordsArgs, RelocateAuditRecordsResult, RemoveInboxItemArgs,
+    RemoveInboxItemResult, ResolveAnchorArgs, ResolveAnchorResult, ResolveConstitutionsArgs,
+    ResolveConstitutionsResult, ResolveFeatureArgs, ResolveFeatureResult, ResolveReferencesArgs,
+    ResolveReferencesResult, ResolveSessionArgs, ResolveSessionResult, RetargetSessionsArgs,
+    RetargetSessionsResult, RetireFeatureArgs, RetireFeatureResult, RewriteSpecLinksArgs,
+    RewriteSpecLinksResult, SetStatusArgs, SetStatusResult, TraverseDepsArgs, TraverseDepsResult,
+    ValidateFrontmatterArgs, ValidateFrontmatterResult, WriteAnalysisArgs, WriteAnalysisResult,
+    WriteReviewArgs, WriteReviewResult, WriteSessionArgs, WriteSessionResult,
 };
 
 /// The MCP tool names the server exposes, in registry order: the canonical
@@ -703,6 +704,19 @@ impl GovRuntimeServer {
         params: Parameters<PrunePlanArgs>,
     ) -> Result<Json<PrunePlanResult>, String> {
         primitives::prune_plan::run(&params.0, self.repo())
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "prune-project",
+        description = "Segment the four project files (AGENTS.md at the project root, and system.md, events.md and errors.md under the spec root) into entries for /{project}:prune --project (spec 041, for spec 075): each file's state (present, absent, unreadable), bytes and whether it is over [artifacts] read-size-bytes, and each entry's path, enclosing ## heading, kind (heading, item, row, block), line range, bytes and digest, never its text. HTML comments and /ductus-managed BEGIN/END regions are never entries. An events.md or errors.md entry carries its identifier (the event type or error code), and a preview searches the project's tracked files outside the spec root for it literally, listing each hit; with no repository the search is unavailable, never zero hits. With apply, remove or replace the listed entries by path and digest, refusing the whole write when any changed since the preview (stale-entries), and create a missing system.md, events.md or errors.md from its compiled-in template."
+    )]
+    async fn prune_project(
+        &self,
+        params: Parameters<PruneProjectArgs>,
+    ) -> Result<Json<PruneProjectResult>, String> {
+        primitives::prune_project::run(&params.0, self.repo())
             .map(Json)
             .map_err(|e| e.to_string())
     }

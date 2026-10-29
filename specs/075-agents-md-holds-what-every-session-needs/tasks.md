@@ -17,6 +17,8 @@ The 050 item waits, by the owner's decision of 2026-10-29: 050's `tasks.md` held
 
 ## 2. Rewrite the memory-routing block
 
+Blocked on `050-constitution`'s task from task 1. The block cites §drift-prevention for its routing, so it ships no earlier than the text it cites.
+
 - [ ] Replace the one line in `framework/bootstrap/ductus.md` §Memory routing, step 1, so it names `AGENTS.md` for what every session needs, and names each other home with when to read it.
 - [ ] Copy the change into `framework/bootstrap/govern.md` byte for byte.
 - [ ] Record each layout's impact in the commit (`claude-style`, `antigravity`, `opencode`, `pi`), walking `framework/bootstrap/ductus.md` §Derived values' Layout-derived rows.
@@ -36,6 +38,8 @@ Blocked on `050-constitution`'s task from task 1, because the `agents.md` header
 - **Done when**: AC3, AC4 and AC9 hold against the tree, and this repository's `AGENTS.md` stays within `scripts/lint-governing-size.sh`'s ceiling.
 
 ## 4. Document the limit's wider scope
+
+Blocked on `063-oversized-artifacts-warn-with-a-fix`'s task 15, since these entries describe the limit that task makes the check apply.
 
 - [ ] Update `README.md`'s `[artifacts]` entry to say `read-size-bytes` also limits the four project files, `AGENTS.md` among them even though it loads in every session rather than through a file read.
 - [ ] Make the same change to the commented schema in `framework/bootstrap/ductus.md` §Project Configuration, and copy it into `framework/bootstrap/govern.md`.

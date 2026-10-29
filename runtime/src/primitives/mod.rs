@@ -59,6 +59,7 @@ pub mod migrate_session_file;
 pub mod process_decisions;
 pub mod process_waivers;
 pub mod prune_plan;
+pub mod prune_project;
 pub mod prune_tasks;
 pub mod read_spec;
 pub mod read_tasks;
@@ -2531,6 +2532,14 @@ impl SkipScanner {
     /// new bullet where the comment/fence-aware read side will count it).
     pub(crate) fn in_region(&self) -> bool {
         self.in_fence || self.in_comment
+    }
+
+    /// `true` while the scanner sits inside an open fenced code block. Lets a
+    /// caller that keeps fenced content, as `prune-project` keeps a fenced
+    /// payload inside its entry, tell it from an HTML comment, which
+    /// [`skip`](Self::skip) reports the same way.
+    pub(crate) fn in_fence(&self) -> bool {
+        self.in_fence
     }
 }
 

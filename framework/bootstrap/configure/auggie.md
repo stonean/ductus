@@ -97,6 +97,7 @@ Configure `{cli-config-dir}/settings.local.json` with the tool permissions neede
    - `{ "toolName": "mcp:ductus:label-criteria", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:prune-tasks", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:prune-plan", "permission": { "type": "allow" } }`
+   - `{ "toolName": "mcp:ductus:prune-project", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:dashboard", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:write-session", "permission": { "type": "allow" } }`
    - `{ "toolName": "mcp:ductus:resolve-session", "permission": { "type": "allow" } }`

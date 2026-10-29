@@ -19,8 +19,8 @@ use ductus::schema::primitives::{
     DiscoverRuleFilesArgs, EnforceManifestArgs, ExtractArchiveArgs, FetchArchiveArgs,
     GateConfirmArgs, InvalidateReviewArgs, LabelCriteriaArgs, LintMarkdownArgs, MarkCriterionArgs,
     MarkTaskArgs, MergeManagedBlockArgs, MergePermissionsArgs, MigrateSessionFileArgs,
-    ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs, PruneTasksArgs, ReadSpecArgs,
-    ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs, ResolveAnchorArgs,
+    ProcessDecisionsArgs, ProcessWaiversArgs, PrunePlanArgs, PruneProjectArgs, PruneTasksArgs,
+    ReadSpecArgs, ReadTasksArgs, RelocateAuditRecordsArgs, RemoveInboxItemArgs, ResolveAnchorArgs,
     ResolveConstitutionsArgs, ResolveFeatureArgs, ResolveReferencesArgs, ResolveSessionArgs,
     RetargetSessionsArgs, RetireFeatureArgs, RewriteSpecLinksArgs, RunGeneratorArgs, SetStatusArgs,
     TraverseDepsArgs, ValidateFrontmatterArgs, WriteAnalysisArgs, WriteReviewArgs,
@@ -177,6 +177,8 @@ enum Command {
     PruneTasks(PruneTasksArgs),
     /// Report a feature's plan.md sections outside the design record; remove the listed ones.
     PrunePlan(PrunePlanArgs),
+    /// Segment the four project files into entries; remove, replace or create the listed ones.
+    PruneProject(PruneProjectArgs),
     /// Emit a `gate-confirm` envelope on stdout and block for a response.
     GateConfirm(GateConfirmArgs),
     /// Single-call pipeline-state surface for `/{project}:status`.
@@ -858,6 +860,7 @@ fn main() -> ExitCode {
         }
         Command::PruneTasks(args) => emit_result(primitives::prune_tasks::run(&args, &repo)),
         Command::PrunePlan(args) => emit_result(primitives::prune_plan::run(&args, &repo)),
+        Command::PruneProject(args) => emit_result(primitives::prune_project::run(&args, &repo)),
         Command::Dashboard(args) => emit_result(primitives::dashboard::run(&args, &repo)),
         Command::WriteSession(args) => emit_result(primitives::write_session::run(&args, &repo)),
         Command::ResolveSession(args) => {

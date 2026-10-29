@@ -64,6 +64,7 @@ append-task
 label-criteria
 prune-tasks
 prune-plan
+prune-project
 dashboard
 write-session
 resolve-session

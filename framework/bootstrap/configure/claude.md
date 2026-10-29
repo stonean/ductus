@@ -109,6 +109,7 @@ Configure `{cli-config-dir}/settings.local.json` with the permissions needed for
    - `mcp__ductus__label-criteria`
    - `mcp__ductus__prune-tasks`
    - `mcp__ductus__prune-plan`
+   - `mcp__ductus__prune-project`
    - `mcp__ductus__dashboard`
    - `mcp__ductus__write-session`
    - `mcp__ductus__resolve-session`

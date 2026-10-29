@@ -428,6 +428,86 @@ both: a summary field named like `examined` would be consumed by the half
 deserialized first and lost to the other, which is why `prune-plan`'s
 section count is `sections-examined`.
 
+## `prune-project`
+
+The deterministic half of `/{project}:prune --project` (scenario `prune-walks-the-project-files`). It takes no feature: its subjects are the four project files 075 defines, in this order — `AGENTS.md` at the project root, then `system.md`, `events.md` and `errors.md` under the spec-root.
+
+### Segmentation
+
+Every line goes through `SkipScanner`, so nothing inside a fenced block or an HTML comment is structure or an entry. The lines between a `<!-- BEGIN {marker} -->` and its `<!-- END {marker} -->`, as `merge-managed-block` writes them, are never an entry either: `/ductus` owns them. A `#` or `##` heading is structure, never an entry. An entry is one of:
+
+- **`heading`** — a `###`-or-deeper heading and every line up to the next heading at its level or above.
+- **`item`** — inside a `##` section's own body (before its first `###`), a top-level list item and every line up to the next top-level item or blank-line-separated block.
+- **`row`** — a table body row. A table's header and delimiter rows are structure.
+- **`block`** — any other blank-line-separated run of lines in a `##` section's own body or the preamble.
+
+An entry's **text** is its lines from its first to its last non-blank line, joined by `\n`. Its `digest` is the lowercase-hex sha256 of that text.
+
+### Catalog identifiers and the literal search
+
+An `events.md` or `errors.md` entry carries an `identifier`. It is the first code span on the entry's first line (for a `row`, in its first cell), or, for a `heading` entry with none, the heading text trimmed. An entry with neither carries no identifier.
+
+The search reads every file the project's repository tracks outside the spec-root, except the four subjects, once per preview, through `ProjectRepository::discover`. It reports each file holding an identifier as a literal byte substring. An identifier built at runtime does not appear literally, which is why the walk words zero hits as *no literal occurrence found*.
+
+### Request/response schema
+
+Args:
+
+```json
+{ "apply": true,
+  "remove":  [{ "path": "AGENTS.md", "digest": "9f2c…" }],
+  "replace": [{ "path": "AGENTS.md", "digest": "4ab1…",
+                "with": "- **Shared knowledge stays in git.** [§drift-prevention](.ductus/constitution.md#drift-prevention)." }],
+  "create":  ["system"] }
+```
+
+- `apply` — `false` (the default) is a preview and writes nothing.
+- `remove` — each entry to delete, by the path and digest a preview reported. On the CLI, one `--remove <digest>:<path>` per entry.
+- `replace` — each entry to replace with the text `with`, which may span lines. MCP only, since the text does not fit a flag.
+- `create` — the homes to create from their template, from `system`, `events` and `errors`. On the CLI, one `--create <kind>` each.
+
+Result (never an entry's text):
+
+```json
+{
+  "threshold": { "bytes": 50000, "source": "default" },
+  "files": [
+    { "path": "AGENTS.md", "kind": "agents", "state": "present",
+      "bytes": 131607, "over-limit": true },
+    { "path": "specs/system.md", "kind": "system", "state": "absent" }
+  ],
+  "entries": [
+    { "path": "AGENTS.md", "section": "Gotchas", "kind": "item",
+      "start-line": 120, "end-line": 123, "bytes": 412, "digest": "9f2c…" },
+    { "path": "specs/events.md", "section": "Event Catalog", "kind": "heading",
+      "start-line": 40, "end-line": 52, "bytes": 380, "digest": "77d0…",
+      "identifier": "order.created", "hits": [] }
+  ],
+  "search": { "state": "ran", "files-searched": 312 },
+  "applied": false,
+  "stale-entries": [],
+  "created": [],
+  "kept": []
+}
+```
+
+- `threshold` — `[artifacts] read-size-bytes`, resolved by the function `check-artifact-size` uses, so an invalid value fails with that primitive's error (`PrimitiveError::InvalidReadSize`).
+- `files` — all four subjects, in subject order. `state` is `present`, `absent` or `unreadable`. `bytes` and `over-limit` are present when the file is `present`, and an `unreadable` file contributes no entries. A file exactly at the threshold is not over it.
+- `entries` — every entry of every present file, in file and line order. `section` is the enclosing `##` heading's text, absent in the preamble. `hits` is present exactly when `identifier` is and the search ran, and lists the files holding the identifier.
+- `search` — on a preview, `ran` with `files-searched`, or `unavailable` with a `reason` when no repository can be opened. In the `unavailable` case no entry carries `hits`, so a search that could not run never reads as zero hits. It is absent on an apply, which reads no source.
+- `stale-entries` — each listed `remove` or `replace` with no entry of that path and digest left to claim. Non-empty is the **`stale-entries` domain outcome**: the whole apply is refused and nothing is written, `create` included. Duplicate digests each claim a distinct entry.
+- `created` and `kept` — the `create` kinds written from their template, and those whose file already existed, which are left as they are.
+
+An apply removes or replaces the listed entries, then collapses the blank lines at each changed seam to at most one, rewriting nothing else in the file and preserving its line endings. It writes each changed file with `write_atomic`. A created home gets the framework template's text, compiled into the primitive as the `--reset` body is and held to `framework/templates/project/{kind}.md` by a unit test. It is written with mode `0644` on Unix, since `write_atomic` leaves a new file at its tempfile's `0600`.
+
+### Operational errors
+
+| Code | Condition |
+| --- | --- |
+| `missing-argument` | `apply` with `remove`, `replace` and `create` all empty |
+| `invalid-argument` | `remove`, `replace` or `create` without `apply`; a listed `path` that is not one of the four subjects |
+| `check-artifact-size`'s invalid-threshold error | `[artifacts] read-size-bytes` is not a positive whole number, or `artifacts` is not a table |
+
 ## Notes
 
 - All paths are repo-relative with `/` separators on every platform.

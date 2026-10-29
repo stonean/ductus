@@ -31,17 +31,7 @@ Each owned surface changes through a scenario on its owner, per `AGENTS.md`'s ru
 
 ### `/prune --project` and a `prune-project` primitive (041)
 
-- **Flag.** `--project` needs no session target. It is refused with `--all`, `--reset` or `--force`, as `--all` refuses `--force` (`framework/reference/prune.md`, `--all`).
-- **Primitive.** `prune-project` takes the deterministic half, as `prune-plan` does for plan sections (041 AC16).
-  - **Preview** segments the four files into entries. Per file it returns state, bytes and over-limit. Per entry it returns its locator (file, enclosing `##` heading, line range, kind), bytes and digest, never the entry's text. For an `events.md` or `errors.md` entry it also returns the identifier, which is the first code span of its `###` heading or of its table row's first cell, and the literal search behind any removal proposal: the files searched (tracked files outside the spec root) and each one containing the identifier.
-  - **Apply** removes or replaces the listed entries by digest. It refuses the whole write when any listed entry changed since the preview, as `prune-plan` does. It can create a missing `system.md`, `events.md` or `errors.md` from its template, compiled into the primitive as `prune-tasks` compiles the tasks body. Writes are atomic and leave no backup.
-- **Entry grammar** (041's `data-model.md`). An entry is a `###`-or-deeper heading section, or, inside a `##` section's own body, a top-level list item with its nested lines, a table body row, or another blank-line-separated block. HTML comments and the `ductus:memory-routing` and `ductus:constitutions` regions are never entries, and `##` headings are structure.
-- **Host judgment.** The host proposes each entry's home by the spec's table, writes the home first, then calls apply (the order `framework/commands/prune.md` step 8 uses for plan sections).
-  - A procedure goes to `docs/` or a README beside the code. A skill is named but never written, since ductus defines no skill location (`framework/templates/project/agents.md`, Skills).
-  - A one-feature decision goes to that spec's Resolved Questions, or an existing scenario the operator names. `/prune` never creates a scenario, because `create-scenario` appends an implement task for behavior already built (063, Out of scope). An edit to a `done` spec reopens it by §spec-lifecycle, and the reopen is named before the write.
-  - An organization rule is named with its shared constitution's `repo`. It leaves `AGENTS.md` only after the operator confirms it has landed there.
-  - An every-adopter entry is checked against `.ductus/constitution.md`, `.ductus/reference/` and the runtime, then becomes a pointer, is deleted with its reason, or is trimmed to one line. In the last case the run's report carries a drafted upstream report with the project's names removed. Nothing is filed or written outside the project.
-  - Step 8's plan-section routing uses the same definitions (AC10).
+041 owns this design. It is recorded in 041's plan, under the `prune-project` decision, in its `data-model.md` §`prune-project`, and in its scenario `prune-walks-the-project-files`.
 
 ### The constitution's text (050)
 
@@ -107,13 +97,9 @@ This spec adds no `data-model.md`: each shape belongs to the primitive's owner. 
 
 - **Measuring project files in `/clarify` and `/plan`** was rejected. The spec places the check in the hook, `/analyze` and `/target`, and neither command reads those files.
 - **A separate, unbackticked `/analyze` step for project files** was rejected. The exec path would never run it, while seeding keeps one call and one decision match.
-- **Extending `prune-plan`** was rejected. Its unit is a design-record section of one feature's plan, while entries have their own grammar and span four project-level files.
 - **Replacing `scripts/lint-governing-size.sh`** with the staged mode was rejected. It holds the constitution, which is no project file, to a hard ceiling, and 072 owns it.
 - **Measuring shared constitutions in `check-artifact-size`** was rejected. They live outside the project and its index, and `/target` already resolves them through `resolve-constitutions`.
-- **Limitations.**
-  - A proposed home is host judgment, proven by a recorded agent run rather than a deterministic test.
-  - A literal search misses an identifier built at runtime. The search says so, and the operator confirms each removal.
-  - On the markdown-only path, a missing home is created with its `#` heading only, because an adopter's tree holds no copy of the project templates (`framework/bootstrap/ductus.md`, Shared Files, installs them as the files themselves). This is the same bound `prune-tasks`' compiled reset body has.
+- **Limitations.** `/prune --project`'s limits (host-judged homes, a literal search, a heading-only home on the markdown-only path) are 041's, in its scenario and `data-model.md`.
 
 ## Open Questions Resolved
 

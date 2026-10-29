@@ -3178,6 +3178,237 @@ pub struct PrunePlanResult {
     pub walk: Option<PruneWalk<PrunePlanSummary>>,
 }
 
+// -- prune-project -----------------------------------------------------------
+
+/// Args for `prune-project`. Segments the four project files — `AGENTS.md`
+/// and the spec root's `system.md`, `events.md` and `errors.md` — into
+/// entries, and on `apply` removes, replaces or creates what the host lists.
+/// Takes no feature. See `specs/041-task-pruning/data-model.md`
+/// §`prune-project`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, clap::Args)]
+#[serde(rename_all = "kebab-case")]
+pub struct PruneProjectArgs {
+    /// Perform the listed removals, replacements and creations. When false
+    /// (the default) the primitive is a pure preview and writes nothing.
+    #[serde(default)]
+    #[arg(long)]
+    pub apply: bool,
+    /// The entries an apply deletes, each named by the path and digest a
+    /// preview reported. On the CLI, one `--remove <digest>:<path>` per entry.
+    #[serde(default)]
+    #[arg(long = "remove", value_parser = parse_entry_removal)]
+    pub remove: Vec<EntryRemoval>,
+    /// The entries an apply replaces, each with the text that takes its
+    /// place. Not on the CLI: the text may span lines.
+    #[serde(default)]
+    #[arg(skip)]
+    pub replace: Vec<EntryReplacement>,
+    /// The homes an apply creates from their template when absent. On the
+    /// CLI, one `--create <kind>` each.
+    #[serde(default)]
+    #[arg(long = "create", value_enum)]
+    pub create: Vec<ProjectHome>,
+}
+
+/// One entry an apply deletes: the path and digest a preview reported.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct EntryRemoval {
+    /// The project file holding the entry, as the preview reported it.
+    pub path: String,
+    /// The entry's digest, as the preview reported it.
+    pub digest: String,
+}
+
+/// One entry an apply replaces, and the text that takes its place.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct EntryReplacement {
+    /// The project file holding the entry, as the preview reported it.
+    pub path: String,
+    /// The entry's digest, as the preview reported it.
+    pub digest: String,
+    /// The replacement text, which may span lines.
+    pub with: String,
+}
+
+/// Parse a CLI `--remove <digest>:<path>`. The digest is hex, so the first
+/// `:` ends it.
+fn parse_entry_removal(raw: &str) -> Result<EntryRemoval, String> {
+    let (digest, path) = raw
+        .split_once(':')
+        .ok_or_else(|| format!("expected <digest>:<path>, got '{raw}'"))?;
+    let (digest, path) = (digest.trim(), path.trim());
+    if digest.is_empty() || path.is_empty() {
+        return Err(format!("expected <digest>:<path>, got '{raw}'"));
+    }
+    Ok(EntryRemoval {
+        path: path.to_string(),
+        digest: digest.to_string(),
+    })
+}
+
+/// A home `prune-project` can create from its template.
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::ValueEnum,
+)]
+#[serde(rename_all = "kebab-case")]
+pub enum ProjectHome {
+    /// `system.md` under the spec root.
+    System,
+    /// `events.md` under the spec root.
+    Events,
+    /// `errors.md` under the spec root.
+    Errors,
+}
+
+/// Which of the four project files a subject is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum ProjectFileKind {
+    /// `AGENTS.md` at the project root.
+    Agents,
+    /// `system.md` under the spec root.
+    System,
+    /// `events.md` under the spec root.
+    Events,
+    /// `errors.md` under the spec root.
+    Errors,
+}
+
+/// Whether a project file could be read.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum ProjectFileState {
+    /// It exists and was read.
+    Present,
+    /// It does not exist — a state, never "clean".
+    Absent,
+    /// It exists but could not be read, so it contributes no entries.
+    Unreadable,
+}
+
+/// One of the four project files, as read.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ProjectFile {
+    /// Project-relative path.
+    pub path: String,
+    /// Which project file it is.
+    pub kind: ProjectFileKind,
+    /// Whether it was read.
+    pub state: ProjectFileState,
+    /// Its length on disk. Present exactly when `state` is `present`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bytes: Option<u64>,
+    /// Whether `bytes` is over the threshold; a file at it is not. Present
+    /// exactly when `state` is `present`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub over_limit: Option<bool>,
+}
+
+/// What shape of markdown an entry is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum EntryKind {
+    /// A `###`-or-deeper heading and its body.
+    Heading,
+    /// A top-level list item and its nested lines.
+    Item,
+    /// A table body row.
+    Row,
+    /// Any other blank-line-separated run of lines.
+    Block,
+}
+
+/// One entry of a project file. Carries its locator, size and digest — never
+/// its text.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ProjectEntry {
+    /// Project-relative path of the file holding it.
+    pub path: String,
+    /// The enclosing `##` heading's text; absent in the preamble.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub section: Option<String>,
+    /// What shape the entry is.
+    pub kind: EntryKind,
+    /// 1-based line of its first line.
+    pub start_line: usize,
+    /// 1-based line of its last non-blank line.
+    pub end_line: usize,
+    /// Bytes in its text: its lines joined by `\n`.
+    pub bytes: usize,
+    /// Lowercase-hex sha256 of its text. An apply names the entry by this,
+    /// and refuses when it no longer matches.
+    pub digest: String,
+    /// The event type or error code an `events.md` or `errors.md` entry
+    /// catalogs; absent elsewhere, and when the entry names none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub identifier: Option<String>,
+    /// Every searched file holding `identifier` literally. Present exactly
+    /// when `identifier` is and the search ran, so a search that could not
+    /// run never reads as zero hits.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hits: Option<Vec<String>>,
+}
+
+/// Whether the literal search ran.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum SearchState {
+    /// The tracked files were read.
+    Ran,
+    /// No repository could be opened, so no file was searched.
+    Unavailable,
+}
+
+/// The literal search behind a catalog entry's removal proposal.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct ProjectSearch {
+    /// Whether it ran.
+    pub state: SearchState,
+    /// Tracked files read: those outside the spec root, the four subjects
+    /// excepted. Present when it ran.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub files_searched: Option<usize>,
+    /// Why it could not run. Present when it did not.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+}
+
+/// Result for `prune-project`. Compact; no entry's text is ever included.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct PruneProjectResult {
+    /// The threshold `over-limit` is judged against.
+    pub threshold: ReadSizeThreshold,
+    /// All four subjects, in subject order, as read before any write.
+    pub files: Vec<ProjectFile>,
+    /// Every entry of every present file, in file and line order, as read
+    /// before any write.
+    pub entries: Vec<ProjectEntry>,
+    /// The literal search. Present on a preview, absent on an apply, which
+    /// reads no source.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub search: Option<ProjectSearch>,
+    /// Whether the apply wrote. `false` on a preview and on a refused apply.
+    pub applied: bool,
+    /// Each listed removal or replacement with no entry of that path and
+    /// digest left to claim. Non-empty means the whole apply was refused and
+    /// nothing was written, creations included.
+    pub stale_entries: Vec<EntryRemoval>,
+    /// The homes created from their template.
+    pub created: Vec<ProjectHome>,
+    /// The homes listed in `create` that already existed, left as they are.
+    pub kept: Vec<ProjectHome>,
+    /// Each key in `[artifacts]` no reader recognizes, named as
+    /// `check-artifact-size` names it (`CFG-ENV-012`).
+    #[serde(default)]
+    pub notices: Vec<String>,
+}
+
 // -- migrate-session-file ----------------------------------------------------
 
 /// Args for `migrate-session-file`. Translates a pre-0.10.0 legacy
@@ -5489,6 +5720,11 @@ mod tests {
         ArtifactFix, ArtifactKind, CheckArtifactSizeArgs, CheckArtifactSizeResult, DecisionsState,
         FixKind, OnDone, OversizedArtifact, ReadSizeThreshold, SkippedTarget, ThresholdSource,
     };
+    use super::{
+        EntryKind, EntryRemoval, EntryReplacement, ProjectEntry, ProjectFile, ProjectFileKind,
+        ProjectFileState, ProjectHome, ProjectSearch, PruneProjectArgs, PruneProjectResult,
+        SearchState,
+    };
 
     fn round_trip<T>(value: &T) -> T
     where
@@ -5845,6 +6081,101 @@ mod tests {
         assert_eq!(value["features"][0]["status"], "done");
         assert_eq!(value["skipped"][0]["reason"], "no-plan-file");
         assert_eq!(round_trip(&walked), walked);
+    }
+
+    #[test]
+    fn prune_project_round_trip() {
+        let args = PruneProjectArgs {
+            apply: true,
+            remove: vec![EntryRemoval {
+                path: "AGENTS.md".into(),
+                digest: "9f2c".into(),
+            }],
+            replace: vec![EntryReplacement {
+                path: "AGENTS.md".into(),
+                digest: "4ab1".into(),
+                with: "- a pointer".into(),
+            }],
+            create: vec![ProjectHome::System],
+        };
+        let value: serde_json::Value = serde_json::to_value(&args).unwrap();
+        assert_eq!(value["create"], serde_json::json!(["system"]));
+        assert_eq!(value["replace"][0]["with"], "- a pointer");
+        assert_eq!(round_trip(&args), args);
+        // A dispatch with no arguments is a preview.
+        let empty: PruneProjectArgs = serde_json::from_value(serde_json::json!({})).unwrap();
+        assert_eq!(empty, PruneProjectArgs::default());
+
+        let result = PruneProjectResult {
+            threshold: ReadSizeThreshold {
+                bytes: 50_000,
+                source: ThresholdSource::Default,
+            },
+            files: vec![
+                ProjectFile {
+                    path: "AGENTS.md".into(),
+                    kind: ProjectFileKind::Agents,
+                    state: ProjectFileState::Present,
+                    bytes: Some(131_607),
+                    over_limit: Some(true),
+                },
+                ProjectFile {
+                    path: "specs/system.md".into(),
+                    kind: ProjectFileKind::System,
+                    state: ProjectFileState::Absent,
+                    bytes: None,
+                    over_limit: None,
+                },
+            ],
+            entries: vec![
+                ProjectEntry {
+                    path: "AGENTS.md".into(),
+                    section: Some("Gotchas".into()),
+                    kind: EntryKind::Item,
+                    start_line: 120,
+                    end_line: 123,
+                    bytes: 412,
+                    digest: "9f2c".into(),
+                    identifier: None,
+                    hits: None,
+                },
+                ProjectEntry {
+                    path: "specs/events.md".into(),
+                    section: Some("Event Catalog".into()),
+                    kind: EntryKind::Heading,
+                    start_line: 40,
+                    end_line: 52,
+                    bytes: 380,
+                    digest: "77d0".into(),
+                    identifier: Some("order.created".into()),
+                    hits: Some(Vec::new()),
+                },
+            ],
+            search: Some(ProjectSearch {
+                state: SearchState::Ran,
+                files_searched: Some(312),
+                reason: None,
+            }),
+            applied: false,
+            stale_entries: Vec::new(),
+            created: Vec::new(),
+            kept: Vec::new(),
+            notices: Vec::new(),
+        };
+        let value: serde_json::Value = serde_json::to_value(&result).unwrap();
+        // An absent file carries no size, never a zero.
+        assert!(!value["files"][1].as_object().unwrap().contains_key("bytes"));
+        assert_eq!(value["files"][0]["over-limit"], true);
+        // Zero hits from a search that ran is present and empty.
+        assert_eq!(value["entries"][1]["hits"], serde_json::json!([]));
+        assert!(
+            !value["entries"][0]
+                .as_object()
+                .unwrap()
+                .contains_key("hits")
+        );
+        assert_eq!(value["search"]["files-searched"], 312);
+        assert_eq!(round_trip(&result), result);
     }
 
     #[test]
