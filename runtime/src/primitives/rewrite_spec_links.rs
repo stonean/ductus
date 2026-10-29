@@ -81,8 +81,12 @@
 //! nor written; any other file that cannot be read as UTF-8 text stops the
 //! run before any write, as a directory the walk cannot list does, since a
 //! file the rewrite cannot read may hold a link it would leave dangling once
-//! the directory is retired. The walk skips a symbolic link without listing
-//! it. Each file is rewritten from the content read, and a referrer
+//! the directory is retired. The walk follows no symbolic link: one to a
+//! markdown file or a directory is listed in `skipped` and left as it is,
+//! since the write would turn it into a copy and a reference in it would
+//! otherwise dangle with nothing naming it; `check-corpus-links`, which
+//! reads through it, reports such a reference once the directory is gone.
+//! Each file is rewritten from the content read, and a referrer
 //! outside the spec root is never a file the walk writes, so its content
 //! read beforehand is still its content when it is rewritten: the walk
 //! writes markdown under the spec root, and a referrer outside it could
@@ -276,17 +280,20 @@ impl Sweep<'_> {
     /// there was listed in `skipped` and is passed over. Any other file that
     /// cannot be read as UTF-8 text, or a directory the walk cannot list,
     /// stops the run: a file the rewrite cannot read may hold a link it would
-    /// leave dangling once the directory is retired.
+    /// leave dangling once the directory is retired. A symbolic link to a
+    /// markdown file or a directory is listed in `skipped` instead and left
+    /// as it is: a link is a layout an adopter may choose, and naming it is
+    /// what keeps a reference in it from dangling unreported.
     fn read_spec_root(
         &mut self,
         specs_dir: &Path,
         referrers: &[PathBuf],
         pending: &mut Vec<PendingFile>,
     ) -> Result<Vec<PendingFile>> {
-        // Sorted so `rewritten` is in a stable path order rather than
-        // whatever order the filesystem hands back — the same reason
-        // `list_feature_dirs` sorts. A symbolic link is neither followed nor
-        // listed: `file_type` does not follow one, so it is not `is_file`.
+        // Sorted so `rewritten` and `skipped` are in a stable path order
+        // rather than whatever order the filesystem hands back — the same
+        // reason `list_feature_dirs` sorts. The walk follows no symbolic
+        // link: `file_type` does not follow one, so it is not `is_file`.
         let mut files = Vec::new();
         for entry in WalkDir::new(specs_dir).sort_by_file_name() {
             let entry = entry.map_err(|err| PrimitiveError::Io {
@@ -297,11 +304,6 @@ impl Sweep<'_> {
                     .into_io_error()
                     .unwrap_or_else(|| std::io::Error::other("the walk could not continue")),
             })?;
-            if !entry.file_type().is_file()
-                || entry.path().extension().is_none_or(|ext| ext != "md")
-            {
-                continue;
-            }
             let path = entry.path();
             // The retiring directory's own files are leaving with it.
             // Rewriting them would write into a tree about to be removed, and
@@ -314,6 +316,23 @@ impl Sweep<'_> {
                 .and_then(|rel| rel.components().next())
                 .is_some_and(|first| first.as_os_str() == self.from)
             {
+                continue;
+            }
+            // A symbolic link is not rewritten, since the atomic write would
+            // turn it into a copy. One that can hold a link to the retiring
+            // directory, a markdown file or a directory, is listed in
+            // `skipped`, so a reference in it is named rather than left to
+            // dangle behind a clean result. A referrer that is a link was
+            // listed when the referrers were read.
+            if entry.file_type().is_symlink() {
+                let holds_markdown =
+                    path.extension().is_some_and(|ext| ext == "md") || path.is_dir();
+                if holds_markdown && !referrers.iter().any(|referrer| referrer == path) {
+                    self.skip(&repo_relative(self.repo, path), SKIP_LINK);
+                }
+                continue;
+            }
+            if !entry.file_type().is_file() || path.extension().is_none_or(|ext| ext != "md") {
                 continue;
             }
             if let Some(index) = pending.iter().position(|referrer| referrer.path == path) {
@@ -453,8 +472,9 @@ impl Sweep<'_> {
 /// listed, each before anything is written; or when a file cannot be
 /// written, part-way through and so after the files before it were written.
 /// A referrer that is not UTF-8 text is not an error: it is listed in
-/// `skipped`, as a symbolic link and a referrer resolving outside the
-/// project are.
+/// `skipped`, as a referrer resolving outside the project is, and as a
+/// symbolic link is, whether a referrer or a markdown file or directory
+/// under the spec root.
 pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksResult> {
     if args.from.is_empty() {
         return Err(PrimitiveError::InvalidArgument {
@@ -2167,9 +2187,9 @@ mod tests {
 
     /// `system.md` is a referrer under the spec root, and is classified with
     /// the others before anything is written: as a symbolic link it is listed
-    /// in `skipped` — where the walk alone would pass over it without a word
-    /// — the link stays a link, the file it names is untouched, and the rest
-    /// is still rewritten.
+    /// in `skipped` once, as a referrer and not again by the walk, the link
+    /// stays a link, the file it names is untouched, and the rest is still
+    /// rewritten.
     #[cfg(unix)]
     #[test]
     fn a_symlinked_system_md_is_skipped_and_the_rest_is_still_rewritten() {
@@ -2320,8 +2340,9 @@ mod tests {
 
     /// The same scenario: a directory under the spec root the walk cannot
     /// list may hold a file linking to the retiring directory, so it stops
-    /// the run before anything is written, as an unreadable file does.
-    /// Killed by M41, which passes over it.
+    /// the run before anything is written, as an unreadable file does, and
+    /// the error names that directory. Killed by M41, which passes over it,
+    /// and M45, which names the spec root instead.
     #[cfg(unix)]
     #[test]
     fn an_unlistable_spec_directory_stops_the_run_before_any_write() {
@@ -2345,10 +2366,14 @@ mod tests {
         let result = run(&args("1234.1-staged", "050-alpha"), tmp.path());
         fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
 
-        assert!(
-            matches!(result, Err(PrimitiveError::Io { .. })),
-            "{result:?}"
-        );
+        match &result {
+            Err(PrimitiveError::Io { path, .. }) => assert!(
+                path.ends_with("specs/070-gamma"),
+                "the error names {}, not the directory it could not list",
+                path.display()
+            ),
+            other => panic!("expected an Io error, got {other:?}"),
+        }
         assert_eq!(
             read(tmp.path(), "060-beta/spec.md"),
             linking,
@@ -2386,5 +2411,65 @@ mod tests {
             linking,
             "a file was written before the run stopped"
         );
+    }
+
+    /// Re-read round 2 of 048's review: a symbolic link under the spec root,
+    /// to a markdown file or to a directory, is listed in `skipped` rather
+    /// than passed over, so a link in it to the retiring directory is named
+    /// instead of dangling behind `skipped: []`. Neither link is followed or
+    /// replaced, the files they name are untouched, and the rest is still
+    /// rewritten. A link that can hold no markdown, and one inside the
+    /// retiring directory, are not listed. Killed by M43, which passes over a
+    /// link again, and M44, which follows it.
+    #[cfg(unix)]
+    #[test]
+    fn a_symbolic_link_under_the_spec_root_is_listed_and_left_as_it_is() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        let linking = "---\nstatus: done\ndependencies: []\n---\n\n[p](../1234.1-staged/plan.md)\n";
+        write(tmp.path(), "060-beta/spec.md", linking);
+        write(tmp.path(), "1234.1-staged/spec.md", "# staged\n");
+        let shared_note = "[s](../1234.1-staged/spec.md)\n";
+        write_root(tmp.path(), "shared/note.md", shared_note);
+        write_root(tmp.path(), "shared/specs/090-shared/spec.md", linking);
+        write_root(tmp.path(), "shared/diagram.svg", "<svg/>\n");
+        let link = |target: &str, at: &str| {
+            std::os::unix::fs::symlink(target, tmp.path().join("specs").join(at)).unwrap();
+        };
+        link("../../shared/note.md", "060-beta/linked.md");
+        link("../shared/specs/090-shared", "090-shared");
+        link("../../shared/diagram.svg", "060-beta/diagram.svg");
+        link("../../shared/note.md", "1234.1-staged/linked.md");
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert_eq!(
+            result.skipped,
+            vec![
+                ReferrerSkip {
+                    path: "specs/060-beta/linked.md".into(),
+                    reason: SKIP_LINK.into(),
+                },
+                ReferrerSkip {
+                    path: "specs/090-shared".into(),
+                    reason: SKIP_LINK.into(),
+                },
+            ]
+        );
+        assert_eq!(rewritten_paths(&result), vec!["specs/060-beta/spec.md"]);
+        assert_eq!(read_root(tmp.path(), "shared/note.md"), shared_note);
+        assert_eq!(
+            read_root(tmp.path(), "shared/specs/090-shared/spec.md"),
+            linking
+        );
+        for at in ["060-beta/linked.md", "090-shared"] {
+            assert!(
+                fs::symlink_metadata(tmp.path().join("specs").join(at))
+                    .unwrap()
+                    .file_type()
+                    .is_symlink(),
+                "specs/{at} was replaced"
+            );
+        }
     }
 }

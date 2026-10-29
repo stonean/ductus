@@ -43,6 +43,12 @@ on:
       # prune_tasks.rs each read a shipped spec template, the shape their
       # primitive parses or resets to, so an edit to one is an edit to theirs.
       - 'framework/templates/spec/*.md'
+      # src/primitives/prune_project.rs compiles in a copy of three project
+      # templates and its compiled_templates_match_the_framework test holds
+      # each copy to its file, so an edit to one is an edit to its subject.
+      - 'framework/templates/project/system.md'
+      - 'framework/templates/project/events.md'
+      - 'framework/templates/project/errors.md'
       # src/primitives/mod.rs's shell-spec-pattern test reads the three files
       # carrying the spec-directory pattern and holds each to the grammar, so
       # an edit to one of them is an edit to its subject.
@@ -76,6 +82,9 @@ on:
       - 'framework/constitution.md'
       - 'framework/runtime-tools.txt'
       - 'framework/templates/spec/*.md'
+      - 'framework/templates/project/system.md'
+      - 'framework/templates/project/events.md'
+      - 'framework/templates/project/errors.md'
       - '.githooks/pre-commit'
       - 'framework/bootstrap/hooks/ductus-pre-commit'
       - 'scripts/lint-frontmatter.sh'

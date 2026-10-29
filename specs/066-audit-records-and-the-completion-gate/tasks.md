@@ -75,3 +75,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [ ] runtime/tests/mechanical_sweep_parity.rs and scenarios/review-staleness-on-done-specs.md — both say Family 19 keeps its own implementation because the self-audit's CI job has no Rust toolchain and no runtime build, so calling the runtime would make the gate depend on the artifact it gates; `runtime-release.yml`'s `audit` job now installs the pinned toolchain and `scripts/audit/check-zero.sh` runs `cargo build --release` there, so the reason no longer holds (048's review, 2026-10-29). Decide under §runtime-boundary's eligibility default whether Family 19 calls the runtime, and rewrite both statements to match the answer
 
 - **Done when**: Family 19's implementation follows a decision recorded in 066's plan, and no artifact gives a reason for it that the audit job contradicts
+
+## 12. The Family 19 parity test fails, rather than passing unrun, outside a git checkout
+
+- [ ] `rust_and_family_19_agree_on_every_done_spec` in `runtime/tests/mechanical_sweep_parity.rs` prints "skipping: not a git checkout" and returns when the tree has no `.git`, so `cargo test` reports it `ok` unrun: 048's second re-read round on 2026-10-29 saw exactly that in a `git archive` export of HEAD (§design-principles: a check that cannot run never looks like one that passed; prefer a test that fails loudly on a missing input). Make it panic naming why, as `rewrite_spec_links.rs`'s permission tests do since 048's review, and check whether any other test in that file skips the same way. The pattern predates 048's window (`db393e03`); CI has `.git`, so CI is unaffected
+
+- **Done when**: Run outside a git checkout, the parity test fails with a message naming why; `cargo test --locked` passes in this repository

@@ -316,4 +316,27 @@ MUTATIONS = [
         '                let referrer = pending.remove(index);\n                self.rewrite(path, &referrer.content, referrer.passes, referrer.prefixes)?;\n',
         'rewrite_spec_links',
     ),
+    # -- the second re-read round: a symbolic link under the spec root is
+    #    listed, and an unlistable directory is named
+    (
+        'M43 a symbolic link under the spec root passed over without being listed',
+        'src/primitives/rewrite_spec_links.rs',
+        '                    self.skip(&repo_relative(self.repo, path), SKIP_LINK);\n',
+        '                    let _ = holds_markdown;\n',
+        'rewrite_spec_links',
+    ),
+    (
+        'M44 the spec-root walk follows symbolic links',
+        'src/primitives/rewrite_spec_links.rs',
+        '        for entry in WalkDir::new(specs_dir).sort_by_file_name() {\n',
+        '        for entry in WalkDir::new(specs_dir).follow_links(true).sort_by_file_name() {\n',
+        'rewrite_spec_links',
+    ),
+    (
+        'M45 a directory the walk cannot list reported as the spec root',
+        'src/primitives/rewrite_spec_links.rs',
+        '                path: err\n                    .path()\n                    .map_or_else(|| specs_dir.to_path_buf(), Path::to_path_buf),\n                source: err\n                    .into_io_error()\n',
+        '                path: specs_dir.to_path_buf(),\n                source: err\n                    .into_io_error()\n',
+        'rewrite_spec_links',
+    ),
 ]

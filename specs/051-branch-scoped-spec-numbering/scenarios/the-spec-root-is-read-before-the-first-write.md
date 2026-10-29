@@ -11,14 +11,14 @@ section: "Fold-back on merge"
 ## Behavior
 
 - Every markdown file under the spec root, outside the retiring directory, is read before anything is written, as every referrer already is.
-- One that is not a referrer and cannot be read as UTF-8 text, or a directory under the spec root that cannot be listed, stops the run before anything is written, naming it. A file the rewrite cannot read may hold a link it would leave dangling once the directory is retired, and the orphan check never reads a file that is not a referrer, so nothing would report it.
+- One that is not a referrer and cannot be read as UTF-8 text, or a directory under the spec root that cannot be listed, stops the run before anything is written, naming it. A file the rewrite cannot read may hold a link it would leave dangling once the directory is retired, so nothing in the fold's result would name it, and the orphan check never reads it.
 - A write that fails part-way still leaves the files before it re-pointed and loses that run's `kept-tails`. The resumption rows of `/{project}:fold` and `/{project}:consolidate` say so, and a run stopped there reports its kept tails as unknown, not as none.
 
 ## Edge Cases
 
 - **A non-UTF-8 file that holds no link to the retiring directory** still stops the run: the rewrite cannot tell, and the fix is to convert or remove the file and re-run.
 - **A non-UTF-8 referrer under the spec root** (`system.md`) is classified with the referrers, as before: listed once in `skipped`, for `check-orphaned-references` to report what it leaves.
-- **A symbolic link under the spec root** is neither followed nor listed, as before.
+- **A symbolic link under the spec root**, to a markdown file or a directory, is not followed: it is listed in `skipped` and left as it is, and the pre-commit hook's `check-corpus-links`, which reads through it, names a link in it that no longer resolves. A link that can hold no markdown is not listed. Found by 048's second re-read round on 2026-10-29: until then such a link was passed over unlisted, and a link in it dangled behind `skipped: []`.
 
 ## Open Questions
 

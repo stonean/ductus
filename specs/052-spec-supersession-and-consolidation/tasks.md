@@ -36,3 +36,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] `spec.md:65` says prune destroys `tasks.md`, which the project classes as ephemeral; since 041 prune also removes `plan.md` sections outside the design record once their durable pieces move home — correct the sentence as 446fbf2d corrected `consolidate.md`'s copy
 
 - **Done when**: 052's review is recorded over the changed files with a Summary that states truthfully what was and was not read, its analysis is current, and 052 is back at `done`.
+
+## 2. AC7 names a symbolic link under the spec root — 048's second re-read round
+
+- [ ] 048's second re-read round (2026-10-29) found `rewrite-spec-links` passing over a symbolic link under the spec root unlisted, so a pointer in it dangled after `/{project}:consolidate` with `skipped: []`. The owner chose to list it in `skipped` (051's `the-spec-root-is-read-before-the-first-write`, edge case on symbolic links), and AC7 was widened to say so, which reopened 052. Owed, in order: review 052's window from its reopen, leaning on 048's review as the in-depth one per AGENTS.md; `/ductus:analyze` 052; the completion gate, verifying AC7 against the tree
+
+- **Done when**: 052's review and analysis records are current, AC7 holds against the tree, and the completion gate passes
