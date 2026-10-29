@@ -3,8 +3,8 @@ name: runtime
 # Per-PR build, test, clippy, and fmt for the deterministic runtime
 # crate. Triggers only on changes that affect the runtime or that its tests
 # read — the command files, the shipped rule files, and the paths listed
-# below. Other spec or framework edits stay on the markdown-only path's
-# workflow.
+# below. Other spec or framework edits are checked by framework-checks.yml,
+# which runs on every pull request and push to main.
 
 on:
   pull_request:
