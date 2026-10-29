@@ -12,7 +12,7 @@ No rule in `security-backend.md` (read 2026-10-25 at HEAD f24c55c6) covers a cre
 
 - `security-backend.md` carries a rule, at the MUST tier, that an outbound HTTP client sending a credential in a header its HTTP library does not treat as sensitive refuses to follow redirects, or follows one only to the same origin with the header re-attached by the caller's own decision.
 - The rule's Verification names what a reviewer checks in the client's construction, phrased per 008's Verification phrasing.
-- The claim about library behavior in the rule's Rationale is fetched from the library's documentation or source at authoring time, never recalled, and cites what it fetched.
+- Every claim the rule makes about library behavior is fetched from the library's documentation or source at authoring time, never recalled, and the rule's Source cites what was fetched.
 
 ## Edge Cases
 
