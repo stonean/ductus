@@ -1,8 +1,8 @@
 # Errors
 
-<!-- This is a living document describing your project's error handling conventions.
-     Establish the core format and conventions early, then add error codes
-     as modules are built. -->
+<!-- The constitution's §spec-phase directory tree (.ductus/constitution.md)
+     defines what this file holds. Establish it early, then extend it as modules
+     are built. -->
 
 ## Error Response Format
 

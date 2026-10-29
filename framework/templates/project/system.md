@@ -1,8 +1,8 @@
 # System
 
-<!-- This is a living document describing your project's architecture.
-     Establish it early with core architecture decisions, then update as shared
-     infrastructure evolves. Include only the sections that apply to your project
+<!-- The constitution's §spec-phase directory tree (.ductus/constitution.md)
+     defines what this file holds. Establish it early, then update it as the
+     architecture evolves. Include only the sections that apply to your project
      and remove the rest. -->
 
 ## Configuration

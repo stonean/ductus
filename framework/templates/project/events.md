@@ -1,8 +1,8 @@
 # Events
 
-<!-- This is a living document serving as a registry of event types in your project.
-     It starts mostly empty and grows as features publish or subscribe to events.
-     Add new entries to the Event Catalog as each feature is built.
+<!-- The constitution's §spec-phase directory tree (.ductus/constitution.md)
+     defines what this file holds. It starts mostly empty and grows as features
+     are built.
 
      Consider specifying retry policy and dead-letter handling as dedicated
      feature specs rather than embedding them here. -->

@@ -2,7 +2,7 @@
 
 {One-line project description.}
 
-> **Agents:** this file is the committed home for rules true of **this project alone**; the block below says where any other learning goes. Append a project-only rule to the matching section (Gotchas, Workflow, Boundaries, Code Style, Testing), and add a new section only when none fits.
+> **Agents:** whether a rule belongs in this file is decided by the test in the constitution's [§drift-prevention](.ductus/constitution.md#drift-prevention); the block below says where any other learning goes.
 
 <!-- /ductus maintains the region between the BEGIN and END markers below:
      where a learning goes, from the constitution's §drift-prevention. Edits
@@ -68,20 +68,7 @@ See [constitution.md](.ductus/constitution.md) — guiding principles, developme
 - `.ductus/constitution.md` -- Principles, pipeline, quality standards
 - `AGENTS.md` -- Agent rules: tech stack, conventions, workflow, gotchas, boundaries
 - `CLAUDE.md` -- the `@.ductus/constitution.md` and `@AGENTS.md` imports and the `ductus:constitutions` block, for `claude-style` agents
-- `specs/`
-  - `system.md` -- Architecture, shared conventions
-  - `events.md` -- Global event catalog
-  - `errors.md` -- Error handling conventions and codes
-  - `inbox.md` -- Temporary inbox for known issues not yet assigned to a spec
-  - `templates/` -- Starter files for spec, plan, tasks, data-model, research, scenario
-  - `{NNN-feature-name}/`
-    - `spec.md` -- Requirements, contracts, acceptance criteria
-    - `research.md` -- *(optional)* Background research, prior art, context
-    - `plan.md` -- Implementation approach, technical decisions
-    - `data-model.md` -- *(optional)* Generated during plan phase
-    - `tasks.md` -- Discrete work items derived from the plan
-    - `scenarios/` -- Bug fixes, edge cases, detailed behavior elaborations
-      - `{slug}.md` -- Individual scenario created via `/{project}:amend` (scenario route)
+- `specs/` -- the spec root, laid out as §spec-phase of `.ductus/constitution.md` states
 
 <!-- Add project-specific directories below (e.g., src/, cmd/, modules/) -->
 

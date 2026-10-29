@@ -23,11 +23,11 @@ Recording a scenario on `063` and `055` takes each from `done` to `in-progress`,
 
 ## 3. Point the templates at the constitution
 
-- [ ] In `framework/templates/project/agents.md`, point the header at the constitution's four-part test, and drop the instruction to append a project-only rule to its matching section.
-- [ ] In `framework/templates/project/agents.md`, replace the Project Structure's `specs/` subtree with a pointer to §spec-phase.
-- [ ] Point the headers of `framework/templates/project/system.md`, `events.md` and `errors.md` at the §spec-phase tree, restating none of it.
-- [ ] Make the same header change in this repository's `AGENTS.md`, which carries the same append instruction.
-- [ ] Record each layout's impact in the commit.
+- [x] In `framework/templates/project/agents.md`, point the header at the constitution's four-part test, and drop the instruction to append a project-only rule to its matching section.
+- [x] In `framework/templates/project/agents.md`, replace the Project Structure's `specs/` subtree with a pointer to §spec-phase.
+- [x] Point the headers of `framework/templates/project/system.md`, `events.md` and `errors.md` at the §spec-phase tree, restating none of it.
+- [x] Make the same header change in this repository's `AGENTS.md`, which carries the same append instruction.
+- [x] Record each layout's impact in the commit.
 
 - **Done when**: AC3, AC4 and AC9 hold against the tree, and this repository's `AGENTS.md` stays within `scripts/lint-governing-size.sh`'s ceiling.
 

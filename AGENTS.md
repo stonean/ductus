@@ -2,7 +2,7 @@
 
 The `ductus` framework — a pipeline-driven spec-to-implementation flow scaffolded into adopted projects.
 
-> **Agents:** this file holds rules true of **this project alone**. Route a learning by who it is true for ([§drift-prevention](framework/constitution.md#drift-prevention)): a rule true for every project goes in the constitution. Append to the matching section; add one only if none fits.
+> **Agents:** whether a rule belongs in this file is decided by the test in [§drift-prevention](framework/constitution.md#drift-prevention), which also routes every other learning: a rule true for every project goes in the constitution.
 
 ## Constitution
 
