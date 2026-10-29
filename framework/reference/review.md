@@ -760,7 +760,7 @@ Stdout summary (always), followed by the path to `review.md`:
   blocking: no
   report:   specs/042-example-feature/review.md
 
-  next: /{project}:analyze, then the spec can advance to done
+  next: fix or waive the 3 SHOULD violations, then /{project}:analyze — the done gate holds on an unwaived SHOULD
 ```
 
 ## The `observations` row
