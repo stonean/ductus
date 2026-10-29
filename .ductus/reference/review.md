@@ -410,13 +410,14 @@ An observation whose subject later becomes a real rule finding needs nothing
 special — the finding counts, and the observation is the reviewer's to drop on
 the next run.
 
-The finding sections reconcile the same way. A SHOULD or low-confidence entry
-whose disposition is "keep as-is" belongs under **Waived findings** with its
-rationale, not under its original heading — an accepted trade-off left filed
-as a violation is indistinguishable from unfinished work. An entry fixed after
-the report was written keeps its place, gains a **Status** line naming the
-commit or scenario that closed it, and drops out of the frontmatter count. The
-counts state what is _outstanding_, so they and the body must agree.
+The finding sections reconcile the same way. A SHOULD kept as-is is waived
+with `--waive` and its rationale ([Waivers](#waivers)), so it renders under
+**Waived findings** rather than its original heading — an accepted trade-off
+left filed as a violation is indistinguishable from unfinished work; a
+low-confidence finding blocks nothing and needs no waiver. A fix is recorded
+by re-running `/ductus:review`, never by editing the report:
+`write-review` regenerates its body and counts whole, so they state what is
+_outstanding_.
 Observation dispositions are recorded in `dispositions:`, which `write-review`
 derives from the observations — there is no need, and no room, for a field of
 your own: `write-review` emits a fixed field set and would drop it on the next
