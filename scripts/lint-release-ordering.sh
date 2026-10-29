@@ -66,7 +66,7 @@ if [ ! -f "$WORKFLOW" ]; then
 fi
 
 # Walk the job blocks with awk rather than a YAML parser: the framework's shell
-# surface has no Python or Node dependency, and the two properties below are
+# surface has no Python or Node dependency, and the properties below are
 # structural enough to read off the indentation. BSD awk (every macOS machine)
 # has to run this verbatim, so: no gensub, no length(array), no /\s/.
 #
@@ -95,6 +95,9 @@ summary="$(
       next
     }
     job == "" { next }
+    # A commented-out line runs nothing, so it counts toward no property: a
+    # step disabled by commenting it out is as absent as a deleted one.
+    /^[[:space:]]*#/ { next }
     # Inline form: `needs: publish` or `needs: [audit, build]`.
     /^    needs:[[:space:]]*[^[:space:]]/ {
       needs = $0

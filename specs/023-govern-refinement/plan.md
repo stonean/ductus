@@ -34,7 +34,7 @@ Per-host format mapping baked into the generator:
 - **Claude**: each `gov-rt:<verb>-<noun>` tool becomes the permission entry `mcp__gov-rt__<verb>-<noun>`.
 - **Auggie**: each tool becomes the entry shape Auggie's `toolPermissions` schema expects (verified against the current `auggie.md` source at implementation time; placeholder pattern documented as `mcp:gov-rt:<verb>-<noun>` until the schema is confirmed by reading the file).
 
-Wired into `.githooks/pre-commit` alongside the existing generators so any change to `runtime-tools.txt` flows through to both agent permission files on the next commit. `scripts/lint-tool-coverage.sh` already verifies `runtime-tools.txt` against command-source references; the new generator adds the third leg (`runtime-tools.txt` → configure sources).
+Wired into `.githooks/pre-commit` alongside the existing generators so any change to `runtime-tools.txt` flows through to both agent permission files on the next commit. `runtime/tests/mcp.rs` holds `runtime-tools.txt` set-equal to the tools the server serves; the new generator adds the leg from `runtime-tools.txt` to the configure sources.
 
 Critically, the generator lands **before** the two new primitives are appended to `runtime-tools.txt` (Phase A task 1 vs. task 5 ordering). This guarantees the configure files are updated in the same commit that adds the tool names — the invariant "every tool in `runtime-tools.txt` is allowed by the canonical configure set" holds at every commit on `main`.
 

@@ -18,7 +18,7 @@ A repo-root file named `version`, containing exactly one line: a SemVer string w
 | Read by | `/ductus`, fetched from `raw.githubusercontent.com/stonean/ductus/{raw-ref}/version` — the ref the run resolved, the latest release by default — into the pre-flight temp directory and read there |
 | Meaning | the runtime version this framework revision requires |
 
-**The agreement invariant.** These four must carry the same value, and a self-audit family asserts it:
+**The agreement invariant.** These four must carry the same value; a self-audit family asserts it for the first three, and the release workflow for the tag:
 
 | Artifact | Location |
 | --- | --- |

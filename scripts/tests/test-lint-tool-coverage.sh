@@ -8,7 +8,8 @@
 #
 # Coverage:
 #   A. the committed tree passes and says how much it examined (control)
-#   B. a command naming a tool without the pointer fails, naming file and tool
+#   B. a command naming a tool without the pointer fails, naming file and tool,
+#      though another command carries it
 #   C. the same command with the pointer passes, and the count says so
 #   D. a command naming no tool needs no pointer
 #   E. a name on a `# cli-only:` line counts as a tool
@@ -57,12 +58,16 @@ else
   fail "A: exit $code: $out"
 fi
 
-echo "B. a tool named without the pointer"
+echo "B. a tool named without the pointer, beside a command that carries it"
 new_tree b
 printf '# x\n\n1. Invoke `read-spec`.\n' > "$case_dir/framework/commands/x.md"
+# A second command carrying the pointer: the rule is per file, so one file's
+# pointer must not excuse another's.
+printf '# y\n\n%s\n\n1. Invoke `read-spec`.\n' "$POINTER" > "$case_dir/framework/commands/y.md"
 run_lint
-if [ "$code" -eq 1 ] && printf '%s' "$out" | grep -q "framework/commands/x.md: names runtime tool 'read-spec'"; then
-  pass "exit 1 naming the file and the tool"
+if [ "$code" -eq 1 ] && printf '%s' "$out" | grep -q "framework/commands/x.md: names runtime tool 'read-spec'" \
+  && ! printf '%s' "$out" | grep -q "framework/commands/y.md:"; then
+  pass "exit 1 naming the file and the tool, and only that file"
 else
   fail "B: exit $code: $out"
 fi
@@ -70,7 +75,7 @@ fi
 echo "C. the same command with the pointer"
 printf '# x\n\n%s\n\n1. Invoke `read-spec`.\n' "$POINTER" > "$case_dir/framework/commands/x.md"
 run_lint
-if [ "$code" -eq 0 ] && printf '%s' "$out" | grep -q '1 command file(s) examined, 1 naming a runtime tool, 1 of them carrying the pointer'; then
+if [ "$code" -eq 0 ] && printf '%s' "$out" | grep -q '2 command file(s) examined, 2 naming a runtime tool, 2 of them carrying the pointer'; then
   pass "exit 0, counted"
 else
   fail "C: exit $code: $out"

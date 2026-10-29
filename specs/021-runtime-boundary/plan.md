@@ -8,7 +8,7 @@ Three distinct deliverables:
 
 1. **Constitutional amendment** to `framework/constitution.md` — three edits: the opening paragraph of §text-first-artifacts, a new §runtime-boundary subsection at the end of §text-first-artifacts, and a row added to the §drift-prevention canonical sources table.
 2. **CI workflow** — `.github/workflows/framework-checks.yml`, which runs the deterministic checks the spec's invariant named on every pull request and every push to `main`. As shipped it opened with the opt-in invariant's own step, asserting no runtime binary on `PATH`, as the tripwire for a PR that introduced a silent runtime dependency. 048 removed that step when it replaced the opt-in invariant with the acquisition invariant, and the workflow's other checks stand.
-3. **Runtime-tools manifest + tool-coverage lint script** — a small bash/grep script under `scripts/` plus a manifest file (initially empty) under `framework/`. The manifest enumerates runtime tools by canonical name; the lint scans `framework/commands/*.md` for references to any tool in the manifest and verifies each is paired with a graceful-fallback marker.
+3. **Runtime-tools manifest + tool-coverage lint script** — a small bash/grep script under `scripts/` plus a manifest file (initially empty) under `framework/`. The manifest enumerates runtime tools by canonical name; the lint scans `framework/commands/*.md` for references to any tool in the manifest and verifies each command naming one carries the constitution's §runtime-host-integration pointer.
 
 The amendment text is fully drafted in the spec body; this plan's job is to specify *where* in the constitution it lands, *how* the CI workflow is structured, and *how* the tool-coverage lint operates concretely.
 
@@ -90,7 +90,7 @@ The tasks order is: (1) constitution amendment → (2) runtime-tools manifest st
 | --- | --- | --- |
 | `framework/constitution.md` | Edit | Three amendments: §text-first-artifacts opening paragraph; new §runtime-boundary subsection; new row in §drift-prevention canonical sources table |
 | `framework/runtime-tools.txt` | Create | Empty (comment-only) manifest of canonical runtime tool names; populated by spec 022 |
-| `scripts/lint-tool-coverage.sh` | Create | Proximity-scan bash script verifying every runtime-tool reference in `framework/commands/*.md` has a fallback marker within 20 lines |
+| `scripts/lint-tool-coverage.sh` | Create | Bash script verifying every `framework/commands/*.md` file naming a runtime tool carries the §runtime-host-integration pointer |
 | `scripts/lint-frontmatter.sh` | Create | Bash script verifying frontmatter shape (delimiters, status enum, dependencies field presence/format) across spec and scenario files |
 | `.github/workflows/framework-checks.yml` | Create | CI workflow running the deterministic checks on every pull request |
 | `specs/021-runtime-boundary/plan.md` | Create | This file |
@@ -101,7 +101,7 @@ The tasks order is: (1) constitution amendment → (2) runtime-tools manifest st
 ### Considered and rejected
 
 - **Storing the runtime-tools manifest as YAML or JSON** — rejected. Consumers are shell scripts; a flat text file is unambiguous in PRs and removes a parsing dependency from CI. Upgrade path remains open if structured metadata is ever needed.
-- **Implementing the tool-coverage lint as a structured-marker check (e.g., `<!-- runtime-tool: name --> ... <!-- /runtime-tool -->`)** — rejected. Structured markers depend on author discipline, exactly the anti-pattern the Design Principles section in `AGENTS.md` forbids. The proximity scan is derived from existing command prose and requires no author markup.
+- **Implementing the tool-coverage lint as a structured-marker check (e.g., `<!-- runtime-tool: name --> ... <!-- /runtime-tool -->`)** — rejected. Structured markers depend on author discipline, exactly the anti-pattern the Design Principles section in `AGENTS.md` forbids. The lint is derived from existing command prose and requires no author markup.
 - **Running the tool-coverage lint as a Rust binary** — rejected for spec 021. The runtime itself is deferred to 022; introducing a binary here contradicts the spec's "no binary in this spec" non-goal. The lint stays bash: it runs in `.github/workflows/framework-checks.yml` and `scripts/audit/check-zero.sh`, where a runtime counterpart would buy nothing — the bash implementation is permanent, not a stepping stone to a binary version.
 - **Splitting the amendment into three separate PRs** — rejected. The three edits are interdependent (the opening-paragraph forward reference, the subsection it points to, and the canonical sources row pointing back at the subsection). They land together or not at all.
 - **A `paths` filter scoping the workflow to `framework/**`, `specs/**` and `.claude/commands/**`** — shipped, then dropped by `026` (commit `44c0babe`, 2026-10-26). It rested on docs-only or release-only PRs being unable to introduce a silent runtime dependency. Once the invariant retired, the remaining checks, the self-audit above all, read far past those directories, so a filter naming the files that matter became a second list of their subjects, and the change it forgot would merge unchecked.
@@ -109,6 +109,6 @@ The tasks order is: (1) constitution amendment → (2) runtime-tools manifest st
 
 ### Known limitations
 
-- The tool-coverage lint's 20-line proximity window is a heuristic. False positives occur when a real fallback uses synonyms outside the accepted token list (`Otherwise`, `Fallback`, `If unavailable`, `markdown-only path`). Resolution is paraphrasing — author cost is low. The window can be tuned when spec 022 introduces real tool references and the heuristic is empirically tested.
+- The tool-coverage lint tests that a command naming a tool carries the pointer somewhere in the file, not that its Instructions open with it, and it matches a tool name as a substring, which errs toward requiring the pointer.
 - The frontmatter lint is shape-only, not a real YAML parser. Adversarial frontmatter (deeply nested, multi-line strings with `---` inside) can defeat it. `/ductus:analyze`'s hard-fail tier remains the rigorous check; this lint is a CI-side smoke test.
 - The workflow does not exercise LLM-driven slash commands. By design — see spec's Q2 resolution. A separate scheduled smoke-test job exercising the LLM path is out of scope for 021.

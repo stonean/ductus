@@ -21,6 +21,7 @@
 #   K. dropping the tag check fails
 #   L. a tag check publish does not wait for fails, even through other jobs
 #   M. a tag check publish reaches only through another job passes
+#   N. a commented-out tag check fails, as a deleted one does
 #
 # Usage: scripts/tests/test-lint-release-ordering.sh
 
@@ -172,9 +173,23 @@ fi
 # M. publish waiting on audit only through acquire is still gated, so the lint
 #    follows needs transitively rather than crying wolf.
 if probe m-tag-check-transitive 's|^    needs: \[audit, cargo-audit, build, acquire, sbom\]$|    needs: [cargo-audit, build, acquire, sbom]|'; then
-  pass "M: a tag check reached through acquire is accepted"
+  if cmp -s "$WORKFLOW" "$WORK/m-tag-check-transitive/.github/workflows/runtime-release.yml"; then
+    fail "M: the edit matched nothing, so the transitive path was not tested"
+  else
+    pass "M: a tag check reached through acquire is accepted"
+  fi
 else
   fail "M: a transitively ordered tag check was rejected: $(cat "$WORK/m-tag-check-transitive/out")"
+fi
+
+# N. commenting the step out is how a gate gets switched off, and it leaves
+#    nothing running the check.
+if probe n-tag-check-commented 's|^      - name: Tag names the version$|      # - name: Tag names the version|;s|^        run: bash scripts/check-release-tag.sh "$GITHUB_REF_NAME"$|      #   run: bash scripts/check-release-tag.sh "$GITHUB_REF_NAME"|'; then
+  fail "N: a commented-out tag check was accepted"
+elif grep -q "no job runs scripts/check-release-tag.sh" "$WORK/n-tag-check-commented/out"; then
+  pass "N: a commented-out tag check is rejected"
+else
+  fail "N: rejected for the wrong reason: $(cat "$WORK/n-tag-check-commented/out")"
 fi
 
 echo

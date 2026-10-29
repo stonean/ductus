@@ -3,8 +3,12 @@ name: runtime
 # Per-PR build, test, clippy, and fmt for the deterministic runtime
 # crate. Triggers only on changes that affect the runtime or that its tests
 # read — the command files, the shipped rule files, and the paths listed
-# below. Other spec or framework edits are checked by framework-checks.yml,
-# which runs on every pull request and push to main.
+# below — except the spec corpus, which tests/mechanical_sweep_parity.rs reads
+# across every done spec to compare Family 19's two implementations: a
+# corpus edit can expose a disagreement between them but not create one, so a
+# spec-only change waits for the next runtime change to be compared. Other
+# spec or framework edits are checked by framework-checks.yml, which runs on
+# every pull request and push to main.
 
 on:
   pull_request:
@@ -28,6 +32,10 @@ on:
       - 'scripts/audit/review-freshness.sh'
       # ...and copies the library it sources, so an edit to that is one too.
       - 'scripts/audit/lib.sh'
+      # src/primitives/resolve_anchor.rs's corpus test takes the constitution as
+      # its markers file, so removing or renaming a cited marker is an edit to
+      # its subject.
+      - 'framework/constitution.md'
       # tests/mcp.rs holds the shipped manifest set-equal to the server's
       # tools, so an edit to the manifest is an edit to its subject.
       - 'framework/runtime-tools.txt'
@@ -65,6 +73,7 @@ on:
       - '.github/workflows/runtime-release.yml'
       - 'scripts/audit/review-freshness.sh'
       - 'scripts/audit/lib.sh'
+      - 'framework/constitution.md'
       - 'framework/runtime-tools.txt'
       - 'framework/templates/spec/*.md'
       - '.githooks/pre-commit'

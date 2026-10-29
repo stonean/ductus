@@ -80,3 +80,9 @@ Done when: the spec status is `done` and the change is committed.
 - [x] Implement the behavior described in [`scenarios/settings-template-bash-allowlist.md`](scenarios/settings-template-bash-allowlist.md).
 
 - **Done when**: Both agent rows' `settings_template` in `framework/bootstrap/ductus.md` include every Bash pattern a routine `/ductus` run invokes (audit pass complete); the additions are mirrored in Auggie's native format; an end-to-end `/ductus` smoke test produces no Bash-permission prompts during routine bootstrap.
+
+## 11. Decide whether the per-agent configure commands carry the host-integration pointer
+
+- [ ] framework/bootstrap/configure/*.md — each configure command's Instructions invoke primitives (`configure/claude.md` step 1: "Invoke `merge-permissions`") without the constitution's §runtime-host-integration pointer, which the constitution has open every command's Instructions; `scripts/lint-tool-coverage.sh`, the only check of that rule, covers `framework/commands/*.md` alone and now says so (048's review, 2026-10-29). Decide whether the configure commands carry the pointer, and if so add it to each and bring them into the lint's scope with a test case
+
+- **Done when**: each configure command either carries the pointer and is in the lint's scope, or 012's plan records why it is exempt

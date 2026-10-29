@@ -31,7 +31,7 @@ This scenario extends the runtime to cover the `/ductus` bootstrap procedure end
 
 The markdown-only path remains unchanged for adopters without `ductus` installed: the LLM walks the same prose, performs the same fetch/extract/substitute steps, and produces the same output tree. The §runtime-boundary invariant holds end-to-end.
 
-> **Signpost:** `048-govern-acquired-runtime` made the runtime required and acquired by `/ductus`; the optional-runtime and markdown-only-path statements above describe the design this scenario shipped under.
+> **Signpost:** `048-govern-acquired-runtime` made the runtime required and acquired by `/ductus`; the optional-runtime and markdown-only-path statements in this scenario, the first edge case's among them, describe the design it shipped under.
 
 ## Edge Cases
 

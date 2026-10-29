@@ -14,7 +14,9 @@
 #
 # Every run prints what it examined, so a clean result says how much it
 # judged; a manifest with no tool names, or no command files, is an error
-# rather than a pass, since either would judge nothing.
+# rather than a pass, since either would judge nothing. Its subject is
+# framework/commands/*.md alone: framework/bootstrap/ductus.md and the
+# per-agent framework/bootstrap/configure/*.md commands are outside it.
 #
 # Source of truth: framework/constitution.md §runtime-host-integration
 # Consumed by: .github/workflows/framework-checks.yml, scripts/audit/check-zero.sh
@@ -28,7 +30,7 @@ MANIFEST="$ROOT/framework/runtime-tools.txt"
 for arg in "$@"; do
   case "$arg" in
     -h|--help)
-      sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'
       echo
       echo "Usage: $(basename "$0")"
       echo "  Exits 0 when every command naming a runtime tool carries the pointer."

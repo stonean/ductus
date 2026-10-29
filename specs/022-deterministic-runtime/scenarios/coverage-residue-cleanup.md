@@ -20,7 +20,7 @@ Two smaller findings from the 2026-07-11 coverage review, distinct from the new-
 
 ## Edge Cases
 
-- Retiring a primitive must pass `lint-tool-coverage` (no command references the retired name) and the MCP `TOOL_NAMES ⊇ runtime-tools.txt` test afterward.
+- Retiring a primitive must leave no command naming it, and must pass the MCP test holding `runtime-tools.txt` set-equal to the served tools afterward; `lint-tool-coverage` reads only the manifest's names, so it cannot see a retired one.
 - If a real future caller for `substitute-templates` / `merge-claude-md` is identified, wiring it in is preferred over retiring — the decision is per-primitive, not blanket.
 - The markdown-only path for clarify keeps performing steps 7–8 regardless of which exec-path option is chosen.
 

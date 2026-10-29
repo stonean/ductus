@@ -28,7 +28,7 @@ One SemVer line. `runtime/Cargo.toml`, the newest `runtime/CHANGELOG.md` heading
 
 As planned, `/ductus` read it from the extracted archive — the same download that carried `framework/`, so the pin could not disagree with the framework revision it describes. Grounding at the time: `framework/bootstrap/ductus.md:484` fetches `codeload.github.com/stonean/ductus/tar.gz/refs/heads/main`, whose top-level directory is `ductus-main/`, so the file resolved at `ductus-main/version` after extraction. **That decision did not survive implementation.** Acquisition runs in the Pre-flight Phase, which precedes the archive fetch, so the file was never on disk when the step read it. Task 16 (`pin-is-readable-when-acquisition-needs-it`) moved the read to a direct fetch of `raw.githubusercontent.com/stonean/ductus/main/version` into `{tempdir}`, and retired `{staging-dir}` from the procedure.
 
-A self-audit family asserts the four artifacts agree (spec AC15). That check is what makes the single-number invariant real rather than a convention someone remembers.
+A self-audit family asserts the three files agree, and the release workflow refuses a tag that names another version before anything is published (`scripts/check-release-tag.sh`, spec AC15). Those two checks are what make the single-number invariant real rather than a convention someone remembers.
 
 ### The pointer: symlink attempted, copy on failure
 
@@ -82,7 +82,7 @@ The `version` file, the publish gate, and the Windows `.tar.gz` asset touch only
 | `framework/commands/*.md` | Modify | Remove the 26 per-step markdown-only fallback instructions |
 | `framework/migrations.toml` | Modify | Adopter migration entry rewriting the MCP command |
 | `framework/migrations/runtime-store-path.md` | Create | That entry's procedure body (planned as `runtime-path-rewrite.md`; shipped under the registry id `runtime-store-path`) |
-| `scripts/audit/version-agreement.sh` | Create | Self-audit family asserting the four version artifacts agree |
+| `scripts/audit/version-agreement.sh` | Create | Self-audit family asserting `version`, `Cargo.toml` and the CHANGELOG agree; the tag is the release workflow's check |
 | `scripts/audit/run-all.sh` | Modify | Register the new family |
 | `README.md` | Modify | Drop the `PATH` install; correct the Windows cross-compilation claim |
 | `.mcp.json` | Modify | This repo's own registration → the pointer |
