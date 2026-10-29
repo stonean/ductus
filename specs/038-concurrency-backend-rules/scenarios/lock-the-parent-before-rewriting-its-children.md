@@ -12,7 +12,7 @@ No rule in `concurrency-backend.md` (read 2026-10-25 at HEAD f24c55c6) covers a 
 
 - `concurrency-backend.md` carries a rule, at the MUST tier, that a transaction which deletes or rewrites a set of child rows as a whole first takes a lock on the parent row that owns the set, so concurrent writers to the same set serialize on one row before touching any child.
 - The rule's Verification names what a reviewer checks in the transaction's statement order.
-- The database-behavior claim in the rule's Rationale is fetched from the database's documentation at authoring time, never recalled, and cites what it fetched.
+- Every claim the rule makes about database behavior is fetched from the database's documentation at authoring time, never recalled, and the rule's Source cites what was fetched.
 
 ## Edge Cases
 

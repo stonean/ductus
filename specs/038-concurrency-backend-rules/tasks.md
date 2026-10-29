@@ -68,4 +68,4 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 - [ ] Implement the behavior described in `scenarios/lock-the-parent-before-rewriting-its-children.md`
 
-- **Done when**: concurrency-backend.md carries the rule with a fetched, cited Rationale for the database behavior, cross-referencing any existing lock-ordering rule, and check-rule-ids accepts the file.
+- **Done when**: concurrency-backend.md carries the rule, every claim it makes about database behavior fetched from the database's documentation and cited in its Source, cross-referencing any existing lock-ordering rule, and check-rule-ids accepts the file.
