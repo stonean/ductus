@@ -8,7 +8,7 @@ With no ductus runtime registered, the host walks the same contract with its own
 
 Read `spec.md`. If it does not exist, stop and report: "Spec does not exist. Run `/{project}:specify` first." Then perform the clarify gate defined in `.ductus/constitution.md` (§spec-requirements, §spec-lifecycle):
 
-0. **Recompute dependencies (safety net).** Run `ductus derive-dependencies` (report-only by default; it walks every spec — there is no per-spec mode). If it reports drift, the `dependencies:` frontmatter is stale from uncommitted body edits; surface that and recommend committing (the pre-commit hook syncs it) or running `ductus derive-dependencies --write` manually. Do not pass `--write` from this command — evaluate dependency readiness against the current frontmatter and note the caveat.
+0. **Recompute dependencies (safety net).** Run `.ductus/bin/ductus derive-dependencies` (report-only by default; it walks every spec — there is no per-spec mode). If it reports drift, the `dependencies:` frontmatter is stale from uncommitted body edits; surface that and recommend committing (the pre-commit hook syncs it) or running `.ductus/bin/ductus derive-dependencies --write` manually. Do not pass `--write` from this command — evaluate dependency readiness against the current frontmatter and note the caveat.
 
 1. **Resolve open questions one at a time** — process each open question individually in sequence:
    1. Display the question with its full context.

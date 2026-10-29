@@ -11,7 +11,7 @@ The full setup, walk-through, completion gate, and stuck-detection details are d
 - Read `specs/{feature}/plan.md` for technical decisions and affected files.
 - Read the spec file for acceptance criteria and contracts.
 - If a scenario is targeted, read the scenario file for scenario-specific context, behavior, and edge cases. The scenario scopes which part of the feature is the primary focus for this implementation session.
-- **Recompute dependencies (safety net).** Invoke `derive-dependencies` (report-only by default; it walks every spec — there is no per-spec mode). If it reports drift, the `dependencies:` frontmatter is stale from uncommitted body edits; surface that and recommend committing (the pre-commit hook syncs it) or running `ductus derive-dependencies --write` manually. Do not pass `--write` from this command.
+- **Recompute dependencies (safety net).** Invoke `derive-dependencies` (report-only by default; it walks every spec — there is no per-spec mode). If it reports drift, the `dependencies:` frontmatter is stale from uncommitted body edits; surface that and recommend committing (the pre-commit hook syncs it) or running `.ductus/bin/ductus derive-dependencies --write` manually. Do not pass `--write` from this command.
 
 ## Stuck-detection details
 
