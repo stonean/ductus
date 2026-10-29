@@ -135,4 +135,6 @@ Look up `introduced_in` per migration via `git log` against the commits that shi
 
 - [ ] Implement the behavior described in `scenarios/a-projects-own-constitution-is-not-relocated.md`
 
+Handoff (2026-10-29). After this task, re-review 027, since the scenario is a durable contract, then re-analyze: the record is at `c0952038`, last `unexamined` not-a-live-claim 4, root-absent 5, ships-to-adopter 1, and its four stored discards still fire. Then verify all 30 ticked criteria against the tree before proposing done.
+
 - **Done when**: The scenario's open question is resolved, a repository with specs/ and its own constitution.md keeps it through a bootstrap run (verified with a real adopter-shaped bootstrap), and a legacy ductus copy still relocates.
