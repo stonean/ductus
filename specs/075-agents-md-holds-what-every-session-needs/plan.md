@@ -103,7 +103,7 @@ This spec adds no `data-model.md`: each shape belongs to the primitive's owner. 
 
 ## Open Questions Resolved
 
-- **Does writing a moved entry into source exceed "the one widening" of `/prune`'s scope?** No. That sentence sits in the spec's paragraph on judging catalog entries and concerns reading source. AC6 requires each confirmed entry to land in its row's home, and one row's home is a comment at the site. So `/prune --project` writes to every home in the table, each only after confirmation.
+- **Does `/prune --project` write into source?** Yes. AC6 requires each confirmed entry to land in its row's home, and one row's home is a comment or test at the site, so it writes to every home in the table, each only after confirmation. The spec names this beside reading source as the two widenings of `/prune`'s scope (owner, 2026-10-29).
 
 ## Cross-spec impact
 
