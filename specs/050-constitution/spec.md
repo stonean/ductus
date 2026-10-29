@@ -1,7 +1,7 @@
 ---
 status: in-progress
 dependencies: []
-cross-spec-impact: [036-quality-cross-rules]
+cross-spec-impact: [036-quality-cross-rules, 068-api-backend-rules, 069-accessibility-frontend-rules, 070-performance-frontend-rules]
 next-criterion: 24
 ---
 
@@ -113,7 +113,7 @@ the original two were testing without having to say so:
 | --- | --- | --- |
 | every ductus project | universal | `framework/constitution.md` |
 | more than one project, but not all | shared | that organization's registered constitution |
-| exactly this repository | project-only | `AGENTS.md` |
+| exactly this repository | project-only | `AGENTS.md`, or the project artifact §drift-prevention names |
 
 The shared tier was not in the original partition, which was exhaustive only
 while a project could receive exactly one governing document.

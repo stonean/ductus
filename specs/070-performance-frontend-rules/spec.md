@@ -14,6 +14,8 @@ The owning spec of `framework/rules/performance-frontend.md`, the enforceable ru
 
 That left the file with no owning spec. Its category set, its MUST/SHOULD split, and its seams with sibling rule files were recorded nowhere. §rules routed a new rule on an existing surface to that surface's owning spec through the back-edge, so a new frontend performance rule had no spec to land in. The first 2026-10-19 review of the file showed the cost. One MUST, `FE-BUNDLE-001`, required the build to fail when a bundle exceeded its budget, which was a CI behavior that no spec or plan could show. There was also no spec in which to record the decision that replaced it, or the new `MAIN` category the review added. The same day, the owner decided that each of the three backfilled files would get its own spec, following the precedent of 034 and its sibling backend rule specs.
 
+> **Signpost:** [050-constitution](../050-constitution/spec.md)'s task 44 removed the recorded-backfill sentence from the constitution's §rules *Lifecycle* on 2026-10-29, by the owner's decision, to offset the routing text 075 adds, so AC10 already holds.
+
 ## Rule set scope
 
 `performance-frontend.md` uses the **frontend** surface (`-frontend.md` suffix, `FE-` ID prefix). Its categories are the six its header declares. They are disjoint from the other `FE-` namespaces: `security-frontend.md` (`XSS`/`CSRF`/`STORAGE`/`AUTHN`/`CSP`/`DEPS`/`PII`) and `accessibility-frontend.md` (`SEMHTML`/`KBD`/`ARIA`/`CONTRAST`/`A11YFORM`/`A11YMEDIA`/`POINTER`/`LAYOUT`/`MOTION`/`TIMING`/`A11YTEST`).

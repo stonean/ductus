@@ -110,9 +110,9 @@ Define *what* the feature does and *why*, not how. Each feature lives in a numbe
 
 ```text
 specs/
-  system.md         # Architecture
-  events.md         # Global event catalog
-  errors.md         # Error handling
+  system.md         # Architecture as it stands
+  events.md         # Event envelope, and each event the code publishes or consumes
+  errors.md         # Error conventions, and each code the code returns
   {NNN-feature}/
     spec.md         # Requirements, contracts, acceptance criteria
     research.md     # (optional) Background research
@@ -279,7 +279,7 @@ Every rule file MUST end in `-backend.md` (backend stacks), `-frontend.md` (fron
 
 #### Lifecycle
 
-Rule IDs are never renumbered, and a rule is deprecated with a `**DEPRECATED in {version}:**` label and a removal target version before removal. A rule file shipped with `ductus` has its own introducing spec; a project's own needs none, since placing it in the rule directory registers it, and no consumer may treat the two differently. **Recorded backfill:** `api-backend.md`, `accessibility-frontend.md` and `performance-frontend.md` shipped in `9ccbd0b` and gained owning specs `068-api-backend-rules`, `069-accessibility-frontend-rules` and `070-performance-frontend-rules` on 2026-10-19.
+Rule IDs are never renumbered, and a rule is deprecated with a `**DEPRECATED in {version}:**` label and a removal target version before removal. A rule file shipped with `ductus` has its own introducing spec; a project's own needs none, since placing it in the rule directory registers it, and no consumer may treat the two differently.
 
 <!-- §brownfield-inbox -->
 
@@ -294,7 +294,7 @@ Every finding a pipeline run produces (a `/{project}:review` observation, a `/{p
 - **Three dispositions.** **Fixed** — a chore, fixed in the run and on disk. **Routed** — to an artifact the pre-`done` gate reads, by the Groom decision tree (`.ductus/reference/groom.md` **§Groom decision tree**), reopening a `done` spec it lands on. **Discarded** — with its reason, in the run's own record. The inbox is not a disposition.
 - **Detect, decide, re-check, record.** Detection writes nothing, each write is confirmed first, and the record is written from a re-check; with no operator, nothing is written and undecided findings are recorded undispositioned (`.ductus/reference/analyze.md` **§Finding dispositions**).
 - **Scope decides the destination.** Inside the current **task** → fix it there; inside the current **spec** → a new unchecked task on it, since an in-progress spec is its defects' home; outside the spec → one of the three dispositions. `tasks.md` does not thereby become a capture queue or a durable record: a missing requirement still becomes a scenario or spec edit.
-- **Record, do not derail — the disposition task.** `/{project}:implement` records a finding outside its spec as a task and keeps working (`.ductus/reference/implement.md`).
+- **Record, do not derail**: `/{project}:implement`'s disposition task (`.ductus/reference/implement.md`).
 - **Of a run record's findings, only a gating one holds `done`, and cannot be discarded.** Analyze hard-fail and blocking findings are fixed or routed; review MUST and SHOULD violations keep their fix-or-waive model. The gate also blocks an `in-progress` spec's record with no `dispositions:` map.
 - **Decisions persist** in the record of the command that made them (`decisions:`), so a later run does not ask again.
 - **Severity raises salience, not the routing**: security issues and leaks are surfaced first.
@@ -330,7 +330,7 @@ Every finding a pipeline run produces (a `/{project}:review` observation, a `/{p
 
 ### Frontmatter Schema
 
-Required on **spec files**, **scenario files**, and the two **audit records** (`review.md`, `analysis.md`), which a gate reads. Other artifacts (`system.md`, `errors.md`, `events.md`, `inbox.md`, plan, tasks, rule and README files) MAY carry frontmatter when a consumer benefits.
+Required on **spec files**, **scenario files**, and the two **audit records** (`review.md`, `analysis.md`), which a gate reads. Other artifacts MAY carry frontmatter when a consumer benefits.
 
 #### Spec files
 
@@ -376,7 +376,7 @@ Other fields are permitted and ignored by uninterested consumers, except the res
 
 ### Runtime Boundary
 
-`ductus` ships a runtime binary that executes the deterministic portions of pipeline commands without an LLM. This subsection defines what the runtime can and cannot do; deviations require their own constitutional amendment.
+`ductus` ships a runtime binary that executes the deterministic portions of pipeline commands without an LLM. Deviations require their own constitutional amendment.
 
 #### Five principles
 
@@ -472,7 +472,7 @@ A file list several commands distribute or reference lives in one place — a sh
 
 ### Shared knowledge stays in git
 
-Knowledge that would help another contributor belongs in git, never in an agent's per-user memory. Two questions route a learning, in order: **would this help a teammate?** decides whether it is committed, and **who is it true for?** decides where — by *population*, never *kind*: **every project running this pipeline**, this constitution; **one organization's projects**, the shared constitution it registers under `[constitutions.*]`, within the framework-as-floor rule; **this project alone**, its `AGENTS.md` or a rule file. A durable requirement goes in its canonical artifact; per-user memory holds only personal facts and external pointers. **Kind is not population**: a universal rule filed as a gotcha is committed, so nothing re-asks the second question. `AGENTS.md`'s managed block points here.
+Knowledge that would help another contributor belongs in git, never in an agent's per-user memory. Two questions route a learning, in order: **would this help a teammate?** decides whether it is committed, and **who is it true for?** decides where — by *population*, never *kind*: **every project running this pipeline**, this constitution; **one organization's projects**, the shared constitution it registers under `[constitutions.*]`, within the framework-as-floor rule; **this project alone**, its own artifacts: `AGENTS.md` only for what an agent needs before acting in any session, that nothing its work reads would say and no check, test or hook reports; architecture to `system.md`, `events.md` or `errors.md`; a feature's decision to its spec; a procedure to `docs/` or a skill; a one-file trap to a comment or test there; how a lesson was learned to its commit. These questions choose among the project's artifacts, never between tiers. Per-user memory holds only personal facts and external pointers. **Kind is not population**: a universal rule filed as a gotcha is committed, so nothing re-asks the second question. `AGENTS.md`'s managed block points here.
 
 <!-- §pipeline-boundaries -->
 

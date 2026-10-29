@@ -14,6 +14,8 @@ next-criterion: 12
 
 What the file lacked was not a category declaration — its header listed its categories from the start — but the record behind one: why those categories and not others, where contract quality ended and the HTTP-surface security of `security-backend.md` began, and what made one rule MUST and another SHOULD. A new contract rule had no owning spec to land in, and a change to the file — such as the two 2026-10-19 reviews, which took it from 15 rules in seven categories to 23 in eleven and changed the policy of several rules — had no spec in which to record its decisions.
 
+> **Signpost:** [050-constitution](../050-constitution/spec.md)'s task 44 removed the recorded-backfill sentence from the constitution's §rules *Lifecycle* on 2026-10-29, by the owner's decision, to offset the routing text 075 adds, so AC11's first half already holds; pointing §rules at this spec is still this spec's to do.
+
 ## Rule set scope
 
 `api-backend.md` uses the **backend** surface (`-backend.md` suffix, `BE-` ID prefix). Its rules apply to any project that exposes a programmatic interface — REST, JSON-RPC, gRPC, GraphQL — to clients outside its own process, and they govern **contract quality**: what a client can rely on. A rule phrased in HTTP methods, status codes, or headers reaches an RPC protocol carried over HTTP only as far as its own text says, as the file's header states; `BE-APIVER-002`, `BE-STATUS-001`, `BE-IDEMP-001`, and `BE-COND-001` each say how far. The categories are exactly those the file's header declares:

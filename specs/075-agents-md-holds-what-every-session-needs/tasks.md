@@ -15,8 +15,6 @@ Recording a scenario on `063` and `055` takes each from `done` to `in-progress`,
 
 ## 2. Rewrite the memory-routing block
 
-Blocked on `050-constitution`'s task 44. The block cites §drift-prevention for its routing, so it ships no earlier than the text it cites.
-
 - [ ] Replace the one line in `framework/bootstrap/ductus.md` §Memory routing, step 1, so it names `AGENTS.md` for what every session needs, and names each other home with when to read it.
 - [ ] Copy the change into `framework/bootstrap/govern.md` byte for byte.
 - [ ] Record each layout's impact in the commit (`claude-style`, `antigravity`, `opencode`, `pi`), walking `framework/bootstrap/ductus.md` §Derived values' Layout-derived rows.
@@ -24,8 +22,6 @@ Blocked on `050-constitution`'s task 44. The block cites §drift-prevention for 
 - **Done when**: AC2 holds, `scripts/audit/transitional-bootstrap-parity.sh` reports the two installers identical, and markdownlint passes on both.
 
 ## 3. Point the templates at the constitution
-
-Blocked on `050-constitution`'s task 44, because the `agents.md` header points at the test that task writes into §drift-prevention.
 
 - [ ] In `framework/templates/project/agents.md`, point the header at the constitution's four-part test, and drop the instruction to append a project-only rule to its matching section.
 - [ ] In `framework/templates/project/agents.md`, replace the Project Structure's `specs/` subtree with a pointer to §spec-phase.

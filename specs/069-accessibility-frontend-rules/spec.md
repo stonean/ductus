@@ -16,6 +16,8 @@ Without an owning spec there was no record of the file's scope, which standard i
 
 A first review in October 2026 grew the file from 13 rules in six categories to 34 in eleven, rewrote the header's baseline paragraph, and moved the §2.4.13 bar to SHOULD. A second review on 2026-10-19 added five MUST rules, bringing the file to 39 rules in the same eleven categories, 35 MUST and 4 SHOULD. It also corrected the header's regime claims from fetched sources, regrounded `FE-ARIA-001` and `FE-SEMHTML-001` after W3C discontinued *Using ARIA*, loosened four rules and tightened one to match the exceptions of the criteria and patterns they cite, and corrected success-criterion titles to WCAG 2.2's exact forms. The owner's decisions from the first review, and the questions the second answered, are under Resolved Questions.
 
+> **Signpost:** [050-constitution](../050-constitution/spec.md)'s task 44 removed the recorded-backfill sentence from the constitution's §rules *Lifecycle* on 2026-10-29, by the owner's decision, to offset the routing text 075 adds, so AC10 already holds.
+
 ## Standard baseline
 
 The file's header is the canonical statement of the baseline. This section records what it commits to; each claim about an external source below was checked against that source on 2026-10-19.
