@@ -163,3 +163,9 @@ Then analyze 067 and run its gate, re-verifying its four ticked criteria.
 - [ ] Update `framework/commands/analyze.md` step 4 and `framework/reference/analyze.md` to match
 
 - **Done when**: The scenario's open questions are resolved, references into a registered shared constitution classify consistently and are judged against it, /analyze distinguishes unchecked references from checked ones, and the constitution and analyze reference say so.
+
+## 20. The plan's Overview describes the runtime work 067 did
+
+- [ ] specs/067-analyze-and-audit-checks/plan.md — the Overview says "No runtime behavior changes", while 18 commits to `runtime/src` carry 067's number, tasks 5–11 and its review rounds among them (048's review, 2026-10-29). Restate the Overview, and classify each primitive interface those commits changed as additive or breaking under BE-COMPAT-001, as the Technical Decisions section now does for `check-promotion-coverage`'s empty-`sections` refusal
+
+- **Done when**: the Overview states the runtime work 067 did, and every primitive interface change in it is classified additive or breaking
