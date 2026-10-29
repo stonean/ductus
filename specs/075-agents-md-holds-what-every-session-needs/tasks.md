@@ -6,18 +6,16 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 Recording a scenario on `063` and `055` takes each from `done` to `in-progress`, and that transition needs the owner's approval first.
 
-The 050 item waits, by the owner's decision of 2026-10-29: 050's `tasks.md` held another session's uncommitted task 43 (the `succinctness-is-a-guiding-principle` scenario, with a constitution edit), and `.githooks/pre-commit` stages a staged markdown file whole, so a 050 scenario recorded beside it could not be committed apart from that work. Record it once `git status -- specs/050-constitution/` is clean.
-
 - [x] Run `/ductus:amend` on `063-oversized-artifacts-warn-with-a-fix`, recording a scenario for the project subject set, the staged mode, and the `/analyze` advisory for project files, as the plan's `check-artifact-size` decision states. Link it to this spec. Its appended task waits on `041`'s, because the advisory names `/prune --project`, and `--ref=main` adopters run whatever is on `main`.
 - [x] Run `/ductus:amend` on `041-task-pruning`, recording a scenario for `/prune --project`, the `prune-project` primitive, and step 8's routing, as the plan's `/prune --project` decision states. Link it to this spec.
 - [x] Run `/ductus:amend` on `055-shared-constitution`, recording a scenario for `/target`'s size report and the measuring wrapper. Link it to this spec.
-- [ ] Run `/ductus:amend` on `050-constitution`, recording a scenario for AC1's routing text and AC13's tree lines, the byte cut that offsets them, and the rewrite of `artifacts-are-as-short-as-their-required-content`. Link it to this spec.
+- [x] Run `/ductus:amend` on `050-constitution`, recording a scenario for AC1's routing text and AC13's tree lines, the byte cut that offsets them, and the rewrite of `artifacts-are-as-short-as-their-required-content`. Link it to this spec.
 
 - **Done when**: each of the four specs has a scenario that links `../../075-agents-md-holds-what-every-session-needs/spec.md`, each scenario's task is appended to its spec's `tasks.md`, and `063` and `055` are `in-progress`.
 
 ## 2. Rewrite the memory-routing block
 
-Blocked on `050-constitution`'s task from task 1. The block cites §drift-prevention for its routing, so it ships no earlier than the text it cites.
+Blocked on `050-constitution`'s task 44. The block cites §drift-prevention for its routing, so it ships no earlier than the text it cites.
 
 - [ ] Replace the one line in `framework/bootstrap/ductus.md` §Memory routing, step 1, so it names `AGENTS.md` for what every session needs, and names each other home with when to read it.
 - [ ] Copy the change into `framework/bootstrap/govern.md` byte for byte.
@@ -27,7 +25,7 @@ Blocked on `050-constitution`'s task from task 1. The block cites §drift-preven
 
 ## 3. Point the templates at the constitution
 
-Blocked on `050-constitution`'s task from task 1, because the `agents.md` header points at the test that task writes into §drift-prevention.
+Blocked on `050-constitution`'s task 44, because the `agents.md` header points at the test that task writes into §drift-prevention.
 
 - [ ] In `framework/templates/project/agents.md`, point the header at the constitution's four-part test, and drop the instruction to append a project-only rule to its matching section.
 - [ ] In `framework/templates/project/agents.md`, replace the Project Structure's `specs/` subtree with a pointer to §spec-phase.
@@ -68,7 +66,7 @@ Blocked on `063-oversized-artifacts-warn-with-a-fix`'s task from task 1, because
 
 ## 7. Verify the criteria
 
-Blocked on the tasks task 1 appends to `063`, `041`, `055` and `050`, and on tasks 2–6. Those tasks are `063` task 15, `041` task 23 and `055` task 14; `050`'s is appended when task 1's last item runs.
+Blocked on the tasks task 1 appends to `063`, `041`, `055` and `050`, and on tasks 2–6. Those tasks are `063` task 15, `041` task 23, `055` task 14 and `050` task 44.
 
 - [ ] Read each of this spec's criteria against the tree, including AC6, AC11 and AC12's recorded `claude -p` run over a fixture project under `/tmp`.
 - [ ] For AC7, confirm that `041`'s walk landed on `main` no later than the size check and the hook step. Confirm with `git tag --contains` that no `ductus-v*` tag holds either commit without the other.

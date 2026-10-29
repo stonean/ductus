@@ -197,7 +197,7 @@ Start with `/ductus:target 041-task-pruning/a-plan-edit-does-not-reopen-a-done-s
 
 ### 23. Implement scenario: prune-walks-the-project-files
 
-The command item waits on `050-constitution`'s task for 075 (not yet recorded; see 075's task 1). The walk proposes homes by the four-part test and the file definitions that task writes into §drift-prevention and §spec-phase, and the prose points at them there, so it ships no earlier than the text it cites. The runtime half, items 2–5, landed in `2f61d67d`, and `runtime/target/release/ductus` carries `prune-project`. Item 7's mutation proof has already run for that half: `scripts/mutation/prune-project.py`, 13 run, 13 killed, on 2026-10-29. Its `claude -p` run and the full local gate wait on the command item.
+The command item waits on `050-constitution`'s task 44. The walk proposes homes by the four-part test and the file definitions that task writes into §drift-prevention and §spec-phase, and the prose points at them there, so it ships no earlier than the text it cites. The runtime half, items 2–5, landed in `2f61d67d`, and `runtime/target/release/ductus` carries `prune-project`. Item 7's mutation proof has already run for that half: `scripts/mutation/prune-project.py`, 13 run, 13 killed, on 2026-10-29. Its `claude -p` run and the full local gate wait on the command item.
 
 - [ ] Implement the behavior described in `scenarios/prune-walks-the-project-files.md`
 - [x] Record the design: a `prune-project` decision and its Affected Files rows in 041's `plan.md`, and its entry grammar, request/response schema and errors in `data-model.md`. Reduce 075's plan entry to a pointer at it.

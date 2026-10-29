@@ -358,3 +358,11 @@ The owner answered the scenario's question on 2026-10-27 with (b): the constitut
 - [x] Implement the behavior described in `scenarios/succinctness-is-a-guiding-principle.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 44. AGENTS.md holds only what every session needs
+
+The routing text and the tree definitions land first, because 075's tasks 2 and 3 point at them. The enforcement sentence's rewording waits on 075's task 5 and lands in the same change as the hook step. The owner decides which bytes each change cuts.
+
+- [ ] Implement the behavior described in `scenarios/agents-md-holds-only-what-every-session-needs.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.
