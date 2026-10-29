@@ -2282,6 +2282,8 @@ pub struct ApplyManifestResult {
     /// belongs to another user, or is flagged immutable — so each keeps its
     /// mode (spec 022, scenario `installed-files-are-not-group-writable`).
     /// Empty, and omitted, when every such mode was set or already matched.
+    /// A destination that is itself a symbolic link is left alone and not
+    /// listed (`reapply_source_mode`).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub modes_kept: Vec<String>,
 }
