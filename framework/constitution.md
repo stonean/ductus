@@ -20,6 +20,7 @@ These are evaluation criteria, not implementation instructions.
 - **Testable:** design for security, unit, functional, and load testing
 - **Consumable:** simple and intuitive interfaces into our systems
 - **Verified:** nothing reaches production without validation
+- **Succinct:** artifacts hold all their readers need, and no more
 
 ### Business
 
@@ -312,7 +313,7 @@ Every finding a pipeline run produces (a `/{project}:review` observation, a `/{p
 
 ## Text-First Artifacts
 
-`ductus` treats every artifact — constitution, specs, plans, tasks, scenarios, rules — as plain markdown the agent can edit with `Edit`. This is load-bearing: the agent's write path stays simple, PRs review glanceably, and merge conflicts stay rare and human-resolvable. The **artifacts** are usable standalone with no tooling beyond the AI agent. The *pipeline* that reads them requires the runtime (§runtime-boundary), which parses and writes the same markdown a contributor edits in an editor.
+`ductus` treats every artifact — constitution, specs, plans, tasks, scenarios, rules — as plain markdown the agent can edit. This is load-bearing: the agent's write path stays simple, PRs review glanceably, and merge conflicts stay rare and human-resolvable. The **artifacts** are usable standalone with no tooling beyond the AI agent. The *pipeline* that reads them requires the runtime (§runtime-boundary), which parses and writes the same markdown a contributor edits in an editor.
 
 ### Principles
 
