@@ -55,3 +55,14 @@ Spent task sections are pruned per §tasks-phase; git history holds them, and th
 - [x] Implement the behavior described in `scenarios/a-link-inside-the-target-stays-inside-it.md`
 
 - **Done when**: a link inside the target is rewritten relative to its own file and `mentions` is in the result, both covered by tests that fail without them, and `fold.md` step 14 reports `mentions`
+
+## 35. Fix 048's third re-read round of ced8c7ca: a linked spec root, AC22's third case, and the symlink wording
+
+- [ ] Found by 048's review, third independent re-read round (2026-10-29), of `ced8c7ca`; routed here by the owner because this spec's work was rewriting the same files. Each item is a correctness defect or a sentence that round wrote or left untrue.
+- [ ] `read_spec_root`'s symbolic-link branch, added by `ced8c7ca`, also runs on the walk's depth-0 entry. walkdir follows a root link but still reports that entry as a symlink, so when `specs` is itself a link, `skipped` lists `specs` as "symbolic link, not followed" while the files under it are rewritten, and *examined and nothing pointed here* can never be reported. Exclude depth 0 (`entry.depth() > 0`, or `min_depth(1)`); add a test on a linked spec root asserting `skipped: []` with its files rewritten, and a mutation that removes the guard; the module doc and `read_spec_root`'s comment say the walk follows no symbolic link below the spec root
+- [ ] AC22 counts "two cases the result names" and misses the exception `ced8c7ca` added: a symbolic link under the spec root in `skipped`, whose broken links `check-corpus-links` reports. Add it or state the cases without a count; spec.md's "re-points every in-repo link" sentences (§Motivation and the fold-back section) are untrue for any skipped file too
+- [ ] The stated reason "the write would turn it into a copy" (module doc and `read_spec_root`'s comment) holds for a link to a file only: following a linked directory would write into the tree it names
+- [ ] `framework/reference/fold.md` line 39's "one that cannot be read as UTF-8 text, or a directory that cannot be listed, stops the run" now reads as being about a symbolic link; say a markdown file there that cannot be read as UTF-8 text
+- [ ] The code lists a link whose own name ends in `.md` or that resolves to a directory, while AC6, 052's AC7, the scenario `the-spec-root-is-read-before-the-first-write`, plan.md, data-model.md, the fold and consolidate steps, the result docs in `schema/primitives.rs` and the MCP description say "a symbolic link to a markdown file or a directory": say a symbolic link named `*.md`, or one to a directory
+
+- **Done when**: A linked spec root yields an empty `skipped` and is rewritten, with a test that fails when the depth-0 guard is removed; AC22 and every sentence named above match the code; an independent re-read of the change reports no MUST or SHOULD
