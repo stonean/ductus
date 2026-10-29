@@ -361,7 +361,7 @@ The owner answered the scenario's question on 2026-10-27 with (b): the constitut
 
 ## 44. AGENTS.md holds only what every session needs
 
-The routing text, the tree definitions, and the corrections to §Classification and `knowledge-routes-by-population-not-by-kind` landed on 2026-10-29. They are offset by the five cuts the owner chose: the backfill sentence, which 068, 069 and 070 now signpost, the disposition-task bullet, the frontmatter list, the requirement clause and the runtime intro's first clause. The constitution measured 49,972 bytes (`wc -c`). Two parts remain, each in the change that makes its claim untrue. `artifacts-are-as-short-as-their-required-content`'s *Existing artifacts are not swept* goes with 041 task 23's command item. The enforcement sentence, and that scenario's quoted bullet, go with 075's task 5. Each needs its own cut, which the owner chooses.
+The routing text, the tree definitions, and the corrections to §Classification and `knowledge-routes-by-population-not-by-kind` landed on 2026-10-29. They are offset by the five cuts the owner chose: the backfill sentence, which 068, 069 and 070 now signpost, the disposition-task bullet, the frontmatter list, the requirement clause and the runtime intro's first clause. The constitution measured 49,972 bytes (`wc -c`). `artifacts-are-as-short-as-their-required-content`'s *Existing artifacts are not swept* now excepts the four project files, landed with 041 task 23's command item. One part remains: the enforcement sentence and that scenario's quoted bullet, which go with 075's task 5 and need a constitution cut the owner chooses.
 
 - [ ] Implement the behavior described in `scenarios/agents-md-holds-only-what-every-session-needs.md`
 

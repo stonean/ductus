@@ -197,7 +197,7 @@ Start with `/ductus:target 041-task-pruning/a-plan-edit-does-not-reopen-a-done-s
 
 ### 23. Implement scenario: prune-walks-the-project-files
 
-The walk proposes homes by the four-part test and the file definitions `050-constitution`'s task 44 wrote into §drift-prevention and §spec-phase, and the prose points at them there. The runtime half, items 2–5, landed in `2f61d67d`, and `runtime/target/release/ductus` carries `prune-project`. Item 7's mutation proof has already run for that half: `scripts/mutation/prune-project.py`, 13 run, 13 killed, on 2026-10-29. Its `claude -p` run and the full local gate wait on the command item.
+The walk proposes homes by the four-part test and the file definitions `050-constitution`'s task 44 wrote into §drift-prevention and §spec-phase, and the prose points at them there. The runtime half, items 2–5, landed in `2f61d67d`, and `runtime/target/release/ductus` carries `prune-project`. Item 7's mutation proof has already run for that half: `scripts/mutation/prune-project.py`, 13 run, 13 killed, on 2026-10-29. Its `claude -p` run and the full local gate remain.
 
 - [ ] Implement the behavior described in `scenarios/prune-walks-the-project-files.md`
 - [x] Record the design: a `prune-project` decision and its Affected Files rows in 041's `plan.md`, and its entry grammar, request/response schema and errors in `data-model.md`. Reduce 075's plan entry to a pointer at it.
@@ -205,7 +205,7 @@ The walk proposes homes by the four-part test and the file definitions `050-cons
 - [x] Preview in `runtime/src/primitives/prune_project.rs`: segment through `SkipScanner` and `parse_atx_heading`, digest each entry, exclude the managed regions, extract catalog identifiers, and run the literal search over tracked files outside the spec root, with unit tests.
 - [x] Apply: remove or replace entries by digest, refuse a stale list whole, create a missing home from the compiled-in template, and write atomically, with unit tests.
 - [x] Wire all seven registration sites and `framework/runtime-tools.txt`, then regenerate the configure files.
-- [ ] Command: add `--project` to `framework/commands/prune.md` (argument-hint, Purpose, Scope Boundaries, steps, refused combinations), make step 8 route by 075's definitions, add the markdown-only walk to `framework/reference/prune.md`, and update the help entry.
+- [x] Command: add `--project` to `framework/commands/prune.md` (argument-hint, Purpose, Scope Boundaries, steps, refused combinations), make step 8 route by 075's definitions, add the markdown-only walk to `framework/reference/prune.md`, and update the help entry.
 - [ ] Verify: run `claude -p` of `/ductus:prune --project` over a `/tmp` fixture project (cited in the commit), show each test fails with its behavior removed, and run the full local gate.
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
