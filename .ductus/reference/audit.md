@@ -27,7 +27,7 @@ When the runtime is not on `PATH`, walk the same scripts directly. Each prints f
 
 19. Run `scripts/audit/review-freshness.sh` (Family 19 — no `done` spec ships with a review that predates its own code: a spec whose durable contracts changed since the `reviewed-against` sha in its `review.md` is stale, which every other check passes because they assert only that a review exists and does not block).
 
-20. Run `scripts/audit/version-agreement.sh` (Family 20 — the repo-root `version` pin, `runtime/Cargo.toml`, and the newest `runtime/CHANGELOG.md` heading carry the same SemVer. The release tag is deliberately not compared: the release commit precedes the tag push, so asserting it here would fail every release mid-flight).
+20. Run `scripts/audit/version-agreement.sh` (Family 20 — the repo-root `version` pin, `runtime/Cargo.toml`, and the newest `runtime/CHANGELOG.md` heading carry the same SemVer. The release tag is deliberately not compared: the release commit precedes the tag push, so asserting it here would fail every release mid-flight; the release workflow checks it instead, with `scripts/check-release-tag.sh`, before the crate is published).
 
 21. Run `scripts/audit/transitional-bootstrap-parity.sh` (Family 21 — the retired `framework/bootstrap/govern.md` path stays byte-identical to `framework/bootstrap/ductus.md`. Every pre-rename adopter's self-update fetch resolves to the retired path, so drift there ships stale content to them verbatim and a deletion 404s their run before migrations).
 

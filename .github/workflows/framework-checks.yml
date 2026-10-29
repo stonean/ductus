@@ -135,10 +135,13 @@ jobs:
       # half out the door — which is exactly the case for asserting it on every
       # PR instead. Its own test suite runs alongside, because a guard for a
       # silent failure is worth nothing unless it is shown to fail.
+      # The tag check that ordering places before the publish (spec 048, AC15)
+      # also runs only on a tag, so its test runs here too.
       - name: (k) Release ordering
         run: |
           bash scripts/lint-release-ordering.sh
           bash scripts/tests/test-lint-release-ordering.sh
+          bash scripts/tests/test-check-release-tag.sh
 
       # (l) The installer is piped to `sh` by people who cannot see its logic,
       # and each check it makes on the source (spec 061) guards a silent

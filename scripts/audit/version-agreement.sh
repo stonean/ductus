@@ -26,9 +26,10 @@
 # order is bump + commit + push, then tag — so between those steps the three
 # files legitimately name a version with no tag yet, and asserting the tag
 # here would fail every release at exactly the moment the maintainer is
-# mid-release. The tag is verified by the release pipeline itself, which runs
-# after tagging and therefore can see it. Spec 048 records this split; it is
-# a scope decision, not an oversight.
+# mid-release. The tag is checked by scripts/check-release-tag.sh, which the
+# release workflow's `audit` job runs after tagging, where it can see the tag,
+# and which `publish` waits for. Spec 048 records this split (AC15); it is a
+# scope decision, not an oversight.
 #
 # Bash 3.2 compatible (macOS system bash).
 

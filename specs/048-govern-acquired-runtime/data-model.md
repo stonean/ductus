@@ -27,7 +27,7 @@ A repo-root file named `version`, containing exactly one line: a SemVer string w
 | `runtime/CHANGELOG.md` | the newest `## [X.Y.Z]` heading |
 | the release tag | newest `ductus-v*` by SemVer |
 
-A pre-tag window exists by construction: the release commit advances the first three, and the tag follows moments later. The audit family runs against the working tree, so it compares the first three strictly and treats a newest-tag lag as expected rather than as a finding.
+A pre-tag window exists by construction: the release commit advances the first three, and the tag follows moments later. The audit family runs against the working tree, so it compares the first three strictly and treats a newest-tag lag as expected rather than as a finding. The tag is checked where it exists: the release workflow's `audit` job runs `scripts/check-release-tag.sh`, and `publish` waits for that job, so a tag naming another version stops the release before anything is published.
 
 ## The `[runtime]` config section
 

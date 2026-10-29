@@ -52,6 +52,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      # The tag must name `version` (spec 048, AC15). Family 20 holds version,
+      # Cargo.toml and the CHANGELOG together but cannot see a tag pushed after
+      # them, and `publish`, the irreversible half, needs this job, so a tag
+      # naming another version stops here with nothing published.
+      # scripts/lint-release-ordering.sh asserts that `publish` needs the job
+      # running this check.
+      - name: Tag names the version
+        run: bash scripts/check-release-tag.sh "$GITHUB_REF_NAME"
+
       # run-all.sh's check-zero pass runs `cargo build` under runtime/, so this
       # job needs the toolchain the build jobs pin.
       # Pinned — keep in sync with runtime/rust-toolchain.toml.

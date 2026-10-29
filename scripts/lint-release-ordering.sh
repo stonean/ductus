@@ -28,6 +28,11 @@
 #      only by a hand-dispatched workflow: an invariant cited by name and never
 #      once executed, the false green framework/constitution.md
 #      §design-principles forbids.
+#   4. `publish` needs, directly or through other jobs, a job that runs
+#      scripts/check-release-tag.sh, so a tag naming another version than the
+#      repo-root `version` file stops the release before the half that cannot
+#      be undone (spec 048, AC15). Family 20 cannot see a tag, and the step
+#      runs only on a tag push, so its placement is asserted here.
 #
 # Source of truth: specs/048-govern-acquired-runtime/scenarios/release-halves-publish-together.md
 # Consumed by: .github/workflows/framework-checks.yml
@@ -38,11 +43,11 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 for arg in "$@"; do
   case "$arg" in
     -h|--help)
-      sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,35p' "$0" | sed 's/^# \{0,1\}//'
       echo
       echo "Usage: $(basename "$0")"
-      echo "  Exits 0 when the release job runs after the crates.io publish."
-      echo "  Exits 1 when the ordering is broken (errors printed to stdout)."
+      echo "  Exits 0 when all four properties hold."
+      echo "  Exits 1 when one is broken (errors printed to stdout)."
       exit 0
       ;;
     *) echo "Unknown argument: $arg" >&2; exit 2 ;;
@@ -53,6 +58,7 @@ WORKFLOW="$ROOT/.github/workflows/runtime-release.yml"
 REL="${WORKFLOW#"$ROOT"/}"
 RELEASE_ACTION="softprops/action-gh-release"
 ACQUISITION_WORKFLOW="runtime-acquisition.yml"
+TAG_CHECK="scripts/check-release-tag.sh"
 
 if [ ! -f "$WORKFLOW" ]; then
   echo "$REL: not found — this lint cannot examine its subject, which is not the same as clean"
@@ -64,13 +70,13 @@ fi
 # structural enough to read off the indentation. BSD awk (every macOS machine)
 # has to run this verbatim, so: no gensub, no length(array), no /\s/.
 #
-# Emits one `<job> <needs-csv> <uses-release-action> <calls-acquisition>` line
-# per job.
+# Emits one `<job> <needs-csv> <uses-release-action> <calls-acquisition>
+# <checks-tag>` line per job.
 summary="$(
   awk '
     function flush() {
-      if (job != "") print job, (needs == "" ? "-" : needs), uploads, verifies
-      job = ""; needs = ""; uploads = "no"; verifies = "no"; in_needs = 0
+      if (job != "") print job, (needs == "" ? "-" : needs), uploads, verifies, checks
+      job = ""; needs = ""; uploads = "no"; verifies = "no"; checks = "no"; in_needs = 0
     }
     # Job keys are only recognized inside the top-level `jobs:` mapping. `on:`
     # has two-space children too (`  push:`), and reading one of those as a job
@@ -112,9 +118,10 @@ summary="$(
     /^    [A-Za-z0-9_-]+:/ { in_needs = 0 }
     index($0, RELEASE_ACTION) > 0 { uploads = "yes" }
     index($0, ACQUISITION_WORKFLOW) > 0 { verifies = "yes" }
+    index($0, TAG_CHECK) > 0 { checks = "yes" }
     END { flush() }
   ' RELEASE_ACTION="$RELEASE_ACTION" \
-    ACQUISITION_WORKFLOW="$ACQUISITION_WORKFLOW" "$WORKFLOW"
+    ACQUISITION_WORKFLOW="$ACQUISITION_WORKFLOW" TAG_CHECK="$TAG_CHECK" "$WORKFLOW"
 )"
 
 if [ -z "$summary" ]; then
@@ -128,14 +135,17 @@ release_needs=""
 found_release_job=0
 found_publish_job=0
 found_published_check=0
-while read -r job needs uploads verifies; do
+tag_checkers=""
+while read -r job needs uploads verifies checks; do
   [ -n "$job" ] || continue
   case "$job" in
     release-assets)
       found_release_job=1
       release_needs="$needs"
       ;;
-    publish) found_publish_job=1 ;;
+    publish)
+      found_publish_job=1
+      ;;
     *)
       if [ "$uploads" = "yes" ]; then
         echo "$REL: job '$job' uses $RELEASE_ACTION — only release-assets may, or the release object can be created ahead of the publish that gates it"
@@ -153,6 +163,9 @@ while read -r job needs uploads verifies; do
       fi
       ;;
   esac
+  if [ "$checks" = "yes" ]; then
+    tag_checkers="$tag_checkers $job"
+  fi
 done <<EOF
 $summary
 EOF
@@ -183,6 +196,45 @@ fi
 if [ "$found_published_check" -eq 0 ]; then
   echo "$REL: no job runs after release-assets and calls $ACQUISITION_WORKFLOW — nothing would exercise acquisition against the published assets, leaving the constitution's acquisition invariant to a hand-dispatched workflow"
   errors=$((errors + 1))
+fi
+
+# Property 4: the jobs `publish` waits for, followed through every `needs:`.
+# Bash 3.2 has no associative arrays, so each job's needs are looked up in the
+# summary line by line.
+needs_of() {
+  printf '%s\n' "$summary" | awk -v j="$1" '$1 == j && $2 != "-" { gsub(/,/, " ", $2); print $2 }'
+}
+upstream=""
+frontier="publish"
+while [ -n "$frontier" ]; do
+  next_frontier=""
+  for job in $frontier; do
+    for dep in $(needs_of "$job"); do
+      case " $upstream " in
+        *" $dep "*) ;;
+        *)
+          upstream="$upstream $dep"
+          next_frontier="$next_frontier $dep"
+          ;;
+      esac
+    done
+  done
+  frontier="$next_frontier"
+done
+if [ -z "$tag_checkers" ]; then
+  echo "$REL: no job runs $TAG_CHECK — a tag naming another version than \`version\` would publish the crate before anything compared them"
+  errors=$((errors + 1))
+elif [ "$found_publish_job" -eq 1 ]; then
+  gated=0
+  for job in $tag_checkers; do
+    case " $upstream " in
+      *" $job "*) gated=1 ;;
+    esac
+  done
+  if [ "$gated" -eq 0 ]; then
+    echo "$REL: publish does not wait for the job that runs $TAG_CHECK (${tag_checkers# }) — a mistyped tag could publish the crate before the check fails"
+    errors=$((errors + 1))
+  fi
 fi
 
 if [ "$errors" -gt 0 ]; then

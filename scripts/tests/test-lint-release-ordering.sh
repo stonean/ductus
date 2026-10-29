@@ -18,6 +18,9 @@
 #   H. `on:`'s two-space children are not read as jobs
 #   I. dropping the post-release acquisition check fails
 #   J. moving that check ahead of the release fails
+#   K. dropping the tag check fails
+#   L. a tag check publish does not wait for fails, even through other jobs
+#   M. a tag check publish reaches only through another job passes
 #
 # Usage: scripts/tests/test-lint-release-ordering.sh
 
@@ -143,6 +146,35 @@ elif grep -q "no job runs after release-assets" "$WORK/j-check-too-early/out"; t
   pass "J: an acquisition check ahead of the release is rejected"
 else
   fail "J: rejected for the wrong reason: $(cat "$WORK/j-check-too-early/out")"
+fi
+
+# K. the tag check is the only comparison of the pushed tag with `version`
+#    before the crates.io publish (spec 048, AC15).
+if probe k-no-tag-check 's|bash scripts/check-release-tag.sh "$GITHUB_REF_NAME"|true|'; then
+  fail "K: a workflow with no tag check was accepted"
+elif grep -q "no job runs scripts/check-release-tag.sh" "$WORK/k-no-tag-check/out"; then
+  pass "K: a missing tag check is rejected"
+else
+  fail "K: rejected for the wrong reason: $(cat "$WORK/k-no-tag-check/out")"
+fi
+
+# L. a check publish does not wait for runs too late to stop it: here audit is
+#    dropped from acquire's and publish's needs, so nothing upstream of
+#    publish reaches it.
+if probe l-tag-check-unordered 's|^    needs: \[audit, cargo-audit, build\]$|    needs: [cargo-audit, build]|;s|^    needs: \[audit, cargo-audit, build, acquire, sbom\]$|    needs: [cargo-audit, build, acquire, sbom]|'; then
+  fail "L: a tag check publish does not wait for was accepted"
+elif grep -q "publish does not wait for the job that runs" "$WORK/l-tag-check-unordered/out"; then
+  pass "L: a tag check publish does not wait for is rejected"
+else
+  fail "L: rejected for the wrong reason: $(cat "$WORK/l-tag-check-unordered/out")"
+fi
+
+# M. publish waiting on audit only through acquire is still gated, so the lint
+#    follows needs transitively rather than crying wolf.
+if probe m-tag-check-transitive 's|^    needs: \[audit, cargo-audit, build, acquire, sbom\]$|    needs: [cargo-audit, build, acquire, sbom]|'; then
+  pass "M: a tag check reached through acquire is accepted"
+else
+  fail "M: a transitively ordered tag check was rejected: $(cat "$WORK/m-tag-check-transitive/out")"
 fi
 
 echo
