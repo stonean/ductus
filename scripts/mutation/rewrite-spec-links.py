@@ -56,7 +56,7 @@ MUTATIONS = [
         'M5 system.md rewritten again after the walk, its pre-read copy not taken out',
         'src/primitives/rewrite_spec_links.rs',
         '                let referrer = pending.remove(index);\n',
-        '                let referrer = PendingReferrer {\n                    path: pending[index].path.clone(),\n                    content: pending[index].content.clone(),\n                    passes: pending[index].passes,\n                    prefixes: pending[index].prefixes,\n                };\n',
+        '                let referrer = PendingFile {\n                    path: pending[index].path.clone(),\n                    content: pending[index].content.clone(),\n                    passes: pending[index].passes,\n                    prefixes: pending[index].prefixes,\n                };\n',
         'rewrite_spec_links',
     ),
     (
@@ -131,10 +131,10 @@ MUTATIONS = [
         'rewrite_spec_links',
     ),
     (
-        'M16 the referrers read after the spec-root walk has written',
+        'M16 the referrers read after the spec-root files are written',
         'src/primitives/rewrite_spec_links.rs',
-        '    let mut pending = sweep.read_referrers(&referrers, &specs_dir)?;\n    sweep.walk_spec_root(&specs_dir, &referrer_paths, &mut pending)?;\n',
-        '    let mut pending = Vec::new();\n    sweep.walk_spec_root(&specs_dir, &referrer_paths, &mut pending)?;\n    pending.extend(sweep.read_referrers(&referrers, &specs_dir)?);\n',
+        '    let mut pending = sweep.read_referrers(&referrers, &specs_dir)?;\n    let under_root = sweep.read_spec_root(&specs_dir, &referrer_paths, &mut pending)?;\n    for file in under_root {\n        sweep.rewrite(&file.path, &file.content, file.passes, file.prefixes)?;\n    }\n',
+        '    let mut pending = Vec::new();\n    let under_root = sweep.read_spec_root(&specs_dir, &referrer_paths, &mut pending)?;\n    for file in under_root {\n        sweep.rewrite(&file.path, &file.content, file.passes, file.prefixes)?;\n    }\n    pending.extend(sweep.read_referrers(&referrers, &specs_dir)?);\n',
         'rewrite_spec_links',
     ),
     (
@@ -283,6 +283,21 @@ MUTATIONS = [
         'src/primitives/rewrite_spec_links.rs',
         '        super::validate_session_scenario("rewrite-spec-links", "to", slug)?;\n',
         '        let _ = slug;\n',
+        'rewrite_spec_links',
+    ),
+    # -- 051 scenario the-spec-root-is-read-before-the-first-write (048's review)
+    (
+        'M38 a non-UTF-8 markdown file under the spec root raised as an error, not skipped',
+        'src/primitives/rewrite_spec_links.rs',
+        '                let Ok(content) = String::from_utf8(bytes) else {\n                    let shown = repo_relative(self.repo, path);\n                    self.skip(&shown, check_orphaned_references::UNREADABLE_AS_TEXT);\n                    continue;\n                };\n',
+        '                let content = String::from_utf8(bytes).map_err(|err| PrimitiveError::Io {\n                    path: path.to_path_buf(),\n                    source: std::io::Error::new(std::io::ErrorKind::InvalidData, err),\n                })?;\n',
+        'rewrite_spec_links',
+    ),
+    (
+        'M39 each markdown file under the spec root written as it is read',
+        'src/primitives/rewrite_spec_links.rs',
+        '                files.push(PendingFile {\n                    path: path.to_path_buf(),\n                    content,\n                    passes: Passes::Links,\n                    prefixes: &[],\n                });\n',
+        '                self.rewrite(path, &content, Passes::Links, &[])?;\n',
         'rewrite_spec_links',
     ),
 ]

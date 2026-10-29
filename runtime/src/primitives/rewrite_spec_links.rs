@@ -75,14 +75,20 @@
 //! - **Unreadable for any other reason, or not a regular file** — the run
 //!   errors, before any write.
 //!
-//! A referrer under the spec root that is listed in `skipped` is passed over
-//! by the walk, which neither reads nor writes it. Otherwise the walk reads
-//! and writes one file at a time, and skips a symbolic link without listing
-//! it. A referrer outside the spec root is never a file the walk writes, so
-//! its content read beforehand is still its content when it is rewritten:
-//! the walk writes markdown under the spec root, and a referrer outside it
-//! could reach one only through a link — its own, which is skipped, or
-//! `.githooks`, whose `pre-commit` is not markdown.
+//! **Every markdown file under the spec root is read before anything is
+//! written, too** (051 scenario `the-spec-root-is-read-before-the-first-write`).
+//! A referrer there that is listed in `skipped` is passed over, neither read
+//! nor written; any other file that is not UTF-8 text is listed in `skipped`
+//! with the same reason and left as it is; one unreadable for any other
+//! reason errors, before any write. The walk skips a symbolic link without
+//! listing it. Each file is rewritten from the content read, and a referrer
+//! outside the spec root is never a file the walk writes, so its content
+//! read beforehand is still its content when it is rewritten: the walk
+//! writes markdown under the spec root, and a referrer outside it could
+//! reach one only through a link — its own, which is skipped, or
+//! `.githooks`, whose `pre-commit` is not markdown. A write that fails
+//! part-way still leaves the files before it rewritten, and that run's
+//! `kept-tails` are lost with it.
 //!
 //! **Kept tails.** A feature-only target keeps each reference's tail, which
 //! is right for `spec.md`, where a body-edit fold writes, and for
@@ -113,7 +119,7 @@ use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
 use crate::primitives::{
-    PrimitiveError, Result, check_orphaned_references, read_text, spec_links, write_atomic,
+    PrimitiveError, Result, check_orphaned_references, spec_links, write_atomic,
 };
 use crate::schema::paths;
 use crate::schema::primitives::{
@@ -192,8 +198,9 @@ impl Passes {
     }
 }
 
-/// A referrer read before anything is written, and the passes it takes.
-struct PendingReferrer {
+/// A file read before anything is written — a referrer, or a markdown file
+/// under the spec root — and the passes it takes.
+struct PendingFile {
     path: PathBuf,
     content: String,
     passes: Passes,
@@ -259,17 +266,21 @@ impl Sweep<'_> {
         Ok(())
     }
 
-    /// Walk the spec root, rewriting each markdown file outside the retiring
-    /// directory as it is read. A referrer under the spec root is not read
-    /// here: one in `pending` is taken out of it and rewritten from the
-    /// content read before anything was written, and one that is not there
-    /// was listed in `skipped` and is passed over.
-    fn walk_spec_root(
+    /// Walk the spec root and read each markdown file outside the retiring
+    /// directory, returning them in path order to be rewritten once all are
+    /// read, so a file that stops the run stops it before anything is
+    /// written (051 scenario `the-spec-root-is-read-before-the-first-write`).
+    /// A referrer under the spec root is not read here: one in `pending` is
+    /// taken out of it with the content read before, and one that is not
+    /// there was listed in `skipped` and is passed over. A file that is not
+    /// UTF-8 text is listed in `skipped` with a referrer's reason and left as
+    /// it is.
+    fn read_spec_root(
         &mut self,
         specs_dir: &Path,
         referrers: &[PathBuf],
-        pending: &mut Vec<PendingReferrer>,
-    ) -> Result<()> {
+        pending: &mut Vec<PendingFile>,
+    ) -> Result<Vec<PendingFile>> {
         // Sorted so `rewritten` is in a stable path order rather than
         // whatever order the filesystem hands back — the same reason
         // `list_feature_dirs` sorts. A symbolic link is neither followed nor
@@ -281,6 +292,7 @@ impl Sweep<'_> {
             .filter(|entry| entry.file_type().is_file())
             .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "md"));
 
+        let mut files = Vec::new();
         for entry in walk {
             let path = entry.path();
             // The retiring directory's own files are leaving with it.
@@ -298,15 +310,28 @@ impl Sweep<'_> {
             }
             if let Some(index) = pending.iter().position(|referrer| referrer.path == path) {
                 let referrer = pending.remove(index);
-                self.rewrite(path, &referrer.content, referrer.passes, referrer.prefixes)?;
+                files.push(referrer);
             } else if !referrers.iter().any(|referrer| referrer == path) {
                 // Not a referrer. One that is but is not pending was listed in
                 // `skipped`, and is passed over unread.
-                let content = read_text(path)?;
-                self.rewrite(path, &content, Passes::Links, &[])?;
+                let bytes = std::fs::read(path).map_err(|source| PrimitiveError::Io {
+                    path: path.to_path_buf(),
+                    source,
+                })?;
+                let Ok(content) = String::from_utf8(bytes) else {
+                    let shown = repo_relative(self.repo, path);
+                    self.skip(&shown, check_orphaned_references::UNREADABLE_AS_TEXT);
+                    continue;
+                };
+                files.push(PendingFile {
+                    path: path.to_path_buf(),
+                    content,
+                    passes: Passes::Links,
+                    prefixes: &[],
+                });
             }
         }
-        Ok(())
+        Ok(files)
     }
 
     /// Read every referrer, classifying each, before anything is written;
@@ -331,7 +356,7 @@ impl Sweep<'_> {
         &mut self,
         referrers: &[String],
         specs_dir: &Path,
-    ) -> Result<Vec<PendingReferrer>> {
+    ) -> Result<Vec<PendingFile>> {
         let mut pending = Vec::new();
         for shown in referrers {
             let path = self.repo.join(shown);
@@ -385,7 +410,7 @@ impl Sweep<'_> {
             } else {
                 Passes::Tokens
             };
-            pending.push(PendingReferrer {
+            pending.push(PendingFile {
                 path,
                 content,
                 passes,
@@ -416,12 +441,12 @@ impl Sweep<'_> {
 /// each before anything is written. Returns [`PrimitiveError::Io`] when a
 /// referrer, `system.md` included, cannot be examined for a reason other
 /// than its absence or its encoding — its metadata or its bytes cannot be
-/// read, or it is not a regular file — before anything is written; when a
-/// markdown file under the spec root that is not a referrer cannot be read
-/// as UTF-8 text, part-way through the walk and so after the files before it
-/// were written; or when a file cannot be written. A referrer that is not
-/// UTF-8 text is not an error: it is listed in `skipped`, as a symbolic link
-/// and a referrer resolving outside the project are.
+/// read, or it is not a regular file — or a markdown file under the spec
+/// root cannot be read, each before anything is written; or when a file
+/// cannot be written, part-way through and so after the files before it were
+/// written. A file that is not UTF-8 text, referrer or not, is not an error:
+/// it is listed in `skipped`, as a symbolic link and a referrer resolving
+/// outside the project are.
 pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksResult> {
     if args.from.is_empty() {
         return Err(PrimitiveError::InvalidArgument {
@@ -497,14 +522,21 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
         kept_tails: Vec::new(),
     };
 
-    // Every referrer is read first, so one that stops the run stops it
-    // before anything is written. The walk then takes `system.md` out of
-    // `pending` where it meets it, and what is left — the referrers outside
-    // the spec root, and `system.md` only where the walk could not list the
-    // directory holding it — is rewritten after it, each with its own
-    // passes, in the order the check reads them.
+    // Every referrer, then every markdown file under the spec root, is read
+    // before anything is written, so a file that stops the run stops it with
+    // the tree untouched. The spec-root read takes `system.md` out of
+    // `pending` where it meets it. The spec root's files are rewritten in
+    // path order, and what is left — the referrers outside the spec root, and
+    // `system.md` only where the walk could not list the directory holding it
+    // — after them, each with its own passes, in the order the check reads
+    // them. A write that fails part-way leaves the files before it rewritten
+    // and returns no `kept-tails`, and a re-run finds nothing naming `from`,
+    // so it cannot report them either.
     let mut pending = sweep.read_referrers(&referrers, &specs_dir)?;
-    sweep.walk_spec_root(&specs_dir, &referrer_paths, &mut pending)?;
+    let under_root = sweep.read_spec_root(&specs_dir, &referrer_paths, &mut pending)?;
+    for file in under_root {
+        sweep.rewrite(&file.path, &file.content, file.passes, file.prefixes)?;
+    }
     for referrer in pending {
         sweep.rewrite(
             &referrer.path,
@@ -2214,6 +2246,78 @@ mod tests {
                 result.skipped[0].path.as_str(),
                 result.skipped[0].reason.as_str()
             )
+        );
+    }
+
+    /// 051 scenario `the-spec-root-is-read-before-the-first-write`: a
+    /// markdown file under the spec root that is not UTF-8 text is listed in
+    /// `skipped` with a referrer's reason and left as it is, and the walk goes
+    /// on past it — where reading it raised an error part-way through, after
+    /// the files before it were written, losing their `kept-tails`. Killed by
+    /// M38 in `scripts/mutation/rewrite-spec-links.py`.
+    #[test]
+    fn a_non_utf8_spec_file_is_skipped_and_the_rest_is_still_rewritten() {
+        use crate::primitives::check_orphaned_references;
+
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        let linking = "---\nstatus: done\ndependencies: []\n---\n\n[p](../1234.1-staged/plan.md)\n";
+        write(tmp.path(), "060-beta/spec.md", linking);
+        write(tmp.path(), "080-delta/spec.md", linking);
+        // Latin-1 `é` (0xE9) makes the file invalid UTF-8.
+        let latin1: &[u8] = b"Caf\xe9 [s](../1234.1-staged/spec.md)\n";
+        fs::create_dir_all(tmp.path().join("specs/070-gamma")).unwrap();
+        fs::write(tmp.path().join("specs/070-gamma/notes.md"), latin1).unwrap();
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert_eq!(
+            result.skipped,
+            vec![ReferrerSkip {
+                path: "specs/070-gamma/notes.md".into(),
+                reason: check_orphaned_references::UNREADABLE_AS_TEXT.into(),
+            }]
+        );
+        assert_eq!(
+            rewritten_paths(&result),
+            vec!["specs/060-beta/spec.md", "specs/080-delta/spec.md"]
+        );
+        assert_eq!(result.kept_tails.len(), 2, "{:?}", result.kept_tails);
+        assert_eq!(result.examined, 3);
+        assert_eq!(
+            fs::read(tmp.path().join("specs/070-gamma/notes.md")).unwrap(),
+            latin1
+        );
+    }
+
+    /// The same scenario: a markdown file under the spec root that cannot be
+    /// read at all stops the run before anything is written, so the file
+    /// before it in path order is untouched rather than re-pointed by a run
+    /// that then fails. Killed by M39, which writes each file as it is read.
+    #[cfg(unix)]
+    #[test]
+    fn an_unreadable_spec_file_stops_the_run_before_any_write() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        let linking = "---\nstatus: done\ndependencies: []\n---\n\n[p](../1234.1-staged/plan.md)\n";
+        write(tmp.path(), "060-beta/spec.md", linking);
+        write(tmp.path(), "070-gamma/spec.md", linking);
+        let locked = tmp.path().join("specs/070-gamma/spec.md");
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000)).unwrap();
+        if fs::File::open(&locked).is_ok() {
+            return; // running as root: permissions do not bind
+        }
+
+        let err = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap_err();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o644)).unwrap();
+
+        assert!(matches!(err, PrimitiveError::Io { .. }), "{err:?}");
+        assert_eq!(
+            read(tmp.path(), "060-beta/spec.md"),
+            linking,
+            "a file was written before the run stopped"
         );
     }
 }

@@ -43,3 +43,9 @@ Spent task sections are pruned per §tasks-phase; git history holds them, and th
 - [x] Implement the behavior described in `scenarios/a-fold-target-is-held-to-the-name-grammar.md`
 
 - **Done when**: `rewrite-spec-links` refuses a `to` whose feature half is not a feature directory name or whose scenario half is not a scenario slug, before any file is read or written, leaving the corpus byte-identical; a test refuses `templates` and a scenario half holding a space, a further `/`, `$(...)` or a capital letter, and fails without the check, with its mutation in `scripts/mutation/rewrite-spec-links.py` killed; routed from 048's review (BE-INPUT-002)
+
+## 33. Implement scenario: the spec root is read before the first write
+
+- [x] Implement the behavior described in `scenarios/the-spec-root-is-read-before-the-first-write.md`
+
+- **Done when**: `rewrite-spec-links` reads every markdown file under the spec root before its first write, lists a non-UTF-8 one in `skipped` and goes on, and stops before any write on one it cannot read; tests show both and fail under M38 and M39 in `scripts/mutation/rewrite-spec-links.py`, with M5 and M16 re-anchored and still killed; the fold and consolidate resumption rows, the fold reference, the data model and the result's field docs say what a mid-run write failure still loses; routed from 048's review

@@ -57,7 +57,7 @@ Adding `--into` to `/{project}:fold` instead was considered and rejected: fold's
 
 | Step | What makes a re-run safe |
 | --- | --- |
-| 4 — `rewrite-spec-links` | Idempotent by construction: once re-pointed, no pointer names the source, so a second pass rewrites nothing. It refuses an absent target *before* writing, which is what keeps that idempotence from becoming a trap — a rewrite that ran against nothing could not be undone by re-running. |
+| 4 — `rewrite-spec-links` | Idempotent by construction: once re-pointed, no pointer names the source, so a second pass rewrites nothing. It refuses an absent target *before* writing, which is what keeps that idempotence from becoming a trap — a rewrite that ran against nothing could not be undone by re-running — and reads every file before its first write, so one it cannot read stops it with the tree untouched. A write that fails part-way is the gap: the files before it stay re-pointed and that run's `kept-tails` are lost, and a re-run, finding nothing that names the source, lists none. So a run stopped here says in its report that its kept tails are unknown, not that there are none. |
 | 5 — `retire-feature` | Already-absent is `retired: false`, a domain outcome rather than a failure: the previous run finished, and this one converges. |
 
 An interruption *before* the rewrite leaves the corpus exactly as it was. One *between* the two leaves pointers re-pointed and the directory present, which the second run finishes.
