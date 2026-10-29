@@ -182,3 +182,9 @@ Phase 1 is independently safe and lands first so later work is written against a
 - [x] .github/workflows/runtime-release.yml — AC15 said a self-audit family asserts that `version` matches the newest `ductus-v*` tag, but Family 20 deliberately leaves the tag out and deferred it to the release pipeline, where no step compared them: a mistyped tag published the crate, the irreversible half, before anything failed (048's review, 2026-10-29). `scripts/check-release-tag.sh <ref-name>` now exits 1 unless the ref is `ductus-v` plus `version`, the release `audit` job runs it first, and `publish` waits for that job; `scripts/lint-release-ordering.sh` property 4 asserts that ordering through every `needs:`, and its test (K, L, M) and `scripts/tests/test-check-release-tag.sh` run in `framework-checks.yml` step (k). AC15, the data model, the resolved question on the version file, `version-agreement.sh` and the audit docs say where the tag is checked
 
 - **Done when**: a tag naming another version than `version` fails the release before `publish`, the check's test and the ordering lint's test each fail when what they assert is removed, and no artifact says a self-audit family compares the tag
+
+### 23. AC9 says it has never been true for Antigravity
+
+- [x] specs/048-govern-acquired-runtime/spec.md — AC9 said the §Permission Setup seed grants exactly what the store probe needs, but Antigravity's seed has never carried `~/.ductus/bin/ductus --version` and keeps the pre-048 `command(which)`, which `ductus.md:291` already discloses (048's review, 2026-10-29; owner chose the annotation). AC9 now carries a never-true annotation like AC22's; the seed itself stays 022's
+
+- **Done when**: AC9 states what holds for each of the four seeds, matching `ductus.md` §Permission Setup and the store-probe paragraph
