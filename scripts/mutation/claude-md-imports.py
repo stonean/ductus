@@ -1,6 +1,6 @@
 """Mutation list for spec 002's `claude-md-template-imports-load` scenario: how
 `check-orphaned-references` reads an `@path` import
-(`runtime/src/primitives/check_orphaned_references.rs`, `managed_paths_in`).
+(`runtime/src/primitives/check_orphaned_references.rs`, `managed_path_spans`).
 
 Run with `python3 scripts/mutation/run.py scripts/mutation/claude-md-imports.py
 [ID ...]`; see run.py for the format. This file is data, read with
@@ -17,14 +17,14 @@ MUTATIONS = [
     (
         'M1 every `@` before a managed root skips the path, as before the fix',
         'src/primitives/check_orphaned_references.rs',
-        "                || (previous == Some('@')\n                    && line[..start - 1]\n                        .chars()\n                        .next_back()\n                        .is_some_and(|c| !c.is_whitespace()))\n",
+        "                || (previous == Some('@')\n                    && line[..token - 1]\n                        .chars()\n                        .next_back()\n                        .is_some_and(|c| !c.is_whitespace()))\n",
         "                || previous == Some('@')\n",
         'check_orphaned_references',
     ),
     (
         'M2 an `@` glued to a word is read as an import',
         'src/primitives/check_orphaned_references.rs',
-        "                || (previous == Some('@')\n                    && line[..start - 1]\n                        .chars()\n                        .next_back()\n                        .is_some_and(|c| !c.is_whitespace()))\n",
+        "                || (previous == Some('@')\n                    && line[..token - 1]\n                        .chars()\n                        .next_back()\n                        .is_some_and(|c| !c.is_whitespace()))\n",
         '',
         'check_orphaned_references',
     ),
