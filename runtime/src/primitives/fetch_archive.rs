@@ -35,6 +35,10 @@
 //! one stall, and `FETCH_DEADLINE` the whole fetch. A fetch past its deadline
 //! raises an operational error naming it, and the archive is not written.
 //!
+//! Every request — the archive, its sidecar, and each redirect hop — carries
+//! [`USER_AGENT`], naming the runtime, its version and this repository's URL,
+//! so a service identifies the client by its project rather than by a person.
+//!
 //! The primitive is blocking — it spins reqwest's blocking client per
 //! call rather than dragging an async runtime through the primitive
 //! surface. Network failures map to [`PrimitiveError::Http`] (transport)
@@ -200,6 +204,7 @@ fn fetch_bytes_with(
     let policy_screen = Arc::clone(&screen);
     let mut builder = reqwest::blocking::Client::builder()
         .timeout(timeout)
+        .user_agent(USER_AGENT)
         .redirect(reqwest::redirect::Policy::custom(
             move |attempt| match redirect_verdict(
                 attempt.url().as_str(),
@@ -1005,6 +1010,16 @@ const FETCH_TIMEOUT: Duration = Duration::from_secs(30);
 /// own deadline.
 const FETCH_DEADLINE: Duration = Duration::from_secs(600);
 
+/// The User-Agent every request [`fetch_bytes`] makes sends, in the form
+/// `scripts/check-runtime-currency.sh` sends: reqwest sends none unless one is
+/// set, and a service identifies the client by this repository's URL, never by
+/// a person's address.
+const USER_AGENT: &str = concat!(
+    "ductus ",
+    env!("CARGO_PKG_VERSION"),
+    " (https://github.com/stonean/ductus)"
+);
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -1718,6 +1733,71 @@ mod tests {
             !message.contains('\u{1b}') && !message.contains('\n'),
             "{message:?}"
         );
+    }
+
+    /// Spec 048 task 19: every request a fetch makes, the first and each
+    /// redirect hop, names ductus, its version and the repository URL in its
+    /// User-Agent. A local server the screen allowlists redirects once to
+    /// itself, then answers, recording each request's User-Agent headers.
+    /// Without the builder's `user_agent`, reqwest sends none.
+    #[test]
+    fn every_request_names_ductus_its_version_and_the_repository() {
+        use std::io::{BufRead, BufReader, Write};
+
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let start = format!("{base}/start");
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            for response in [
+                format!(
+                    "HTTP/1.1 302 Found\r\nLocation: {base}/archive\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                ),
+                "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok".to_owned(),
+            ] {
+                let (stream, _) = listener.accept().unwrap();
+                let mut reader = BufReader::new(stream.try_clone().unwrap());
+                let mut agents = Vec::new();
+                let mut line = String::new();
+                while reader.read_line(&mut line).unwrap() > 2 {
+                    if let Some((_, value)) = line
+                        .split_once(':')
+                        .filter(|(name, _)| name.eq_ignore_ascii_case("user-agent"))
+                    {
+                        agents.push(value.trim().to_owned());
+                    }
+                    line.clear();
+                }
+                let mut stream = stream;
+                stream.write_all(response.as_bytes()).unwrap();
+                tx.send(agents).unwrap();
+            }
+        });
+        let screen = Screen::new(
+            Box::new(|host, port| (host, port).to_socket_addrs().map(Iterator::collect)),
+            vec!["127.0.0.1".into()],
+            &ProxyEnv::NONE,
+        );
+        let body = fetch_bytes_with(
+            &start,
+            &ProxyEnv::NONE,
+            FETCH_TIMEOUT,
+            FETCH_DEADLINE,
+            Arc::new(screen),
+        )
+        .unwrap();
+        assert_eq!(body, b"ok");
+
+        let expected = format!(
+            "ductus {} (https://github.com/stonean/ductus)",
+            env!("CARGO_PKG_VERSION")
+        );
+        for request in ["the first request", "the redirect hop"] {
+            let agents = rx
+                .recv_timeout(Duration::from_secs(5))
+                .unwrap_or_else(|_| panic!("{request} never reached the server"));
+            assert_eq!(agents, [expected.as_str()], "{request}");
+        }
     }
 
     #[test]

@@ -161,6 +161,12 @@ Phase 1 is independently safe and lands first so later work is written against a
 
 ### 19. fetch-archive identifies itself by the repository URL
 
-- [ ] runtime/src/primitives/fetch_archive.rs — the client sets no User-Agent; send `ductus <version> (https://github.com/stonean/ductus)`, the form AGENTS.md and scripts/check-runtime-currency.sh use (found by 050's task 35 adopter bootstrap, 2026-10-27; routed from 050 task 38)
+- [x] runtime/src/primitives/fetch_archive.rs — the client sets no User-Agent; send `ductus <version> (https://github.com/stonean/ductus)`, the form AGENTS.md and scripts/check-runtime-currency.sh use (found by 050's task 35 adopter bootstrap, 2026-10-27; routed from 050 task 38)
 
 - **Done when**: every fetch-archive request carries a User-Agent naming ductus, its version and `https://github.com/stonean/ductus`, and a test fails when the header is removed
+
+### 20. Disposition out-of-spec finding: claude-md-imports.py's mutation anchors no longer occur in the code
+
+- [ ] scripts/mutation/claude-md-imports.py — `run.py --check` reports both M1 and M2 with an invalid anchor: the `previous == Some('@')` block they replace no longer occurs in `runtime/src/primitives/check_orphaned_references.rs`, which the 051/067 re-read rounds of 2026-10-28 rewrote after the list landed in 96934872 (002, 044, 055), so the list can no longer prove its tests fail (found by task 19's `--check` over every list, 2026-10-29)
+
+- **Done when**: the finding is fixed, routed, or discarded, with a discard's reason written on the task
