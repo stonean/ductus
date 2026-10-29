@@ -31,13 +31,15 @@ This scenario extends the runtime to cover the `/ductus` bootstrap procedure end
 
 The markdown-only path remains unchanged for adopters without `ductus` installed: the LLM walks the same prose, performs the same fetch/extract/substitute steps, and produces the same output tree. The §runtime-boundary invariant holds end-to-end.
 
+> **Signpost:** `048-govern-acquired-runtime` made the runtime required and acquired by `/ductus`; the optional-runtime and markdown-only-path statements above describe the design this scenario shipped under.
+
 ## Edge Cases
 
 - **Adopter installed `ductus` after `/ductus` started.** Not supported; the runtime is detected at invocation, not mid-procedure. Adopters re-run `/ductus` to pick up the acceleration on subsequent passes.
 - **First-run vs update-mode CLAUDE.md merge.** `CLAUDE.md` is a `create` `apply-manifest` entry, written only when absent, with its placeholders substituted, and never overwritten; the managed block inside it is merged by `merge-managed-block`, which reports `created`, `inserted`, `updated`, or `unchanged` (scenario `apply-manifest`).
 - **Partial extraction failure.** If `extract-archive` errors mid-extract, the staging tempdir is left behind for inspection; the primitive surfaces the partial state via the `error` envelope (operational failure, not domain finding). The adopter's target tree is never written to with partial state — substitution and write are a separate step on a fully-extracted staging tree.
 - **Template substitution with literal `{project}` content.** Adopters may legitimately have `{project}` as literal text in their source files (e.g., docs that describe templating). `apply-manifest` substitutes only the entries it reads from the staging tree the framework just extracted, never the adopter's pre-existing files, so the collision is bounded to framework content. Framework content that carries a placeholder name as literal text is protected per entry: `keep-literals` exempts named keys, `skip-if-conflict` entries are never substituted, and the `ductus.md` self-install passes an empty substitutions map.
-- **Cross-platform tar/zip handling.** The release ships `ductus-<TARGET>.tar.gz` on Unix and `.zip` on Windows. `extract-archive` chooses the format by extension; the primitive returns an operational error for unknown extensions rather than guessing.
+- **Cross-platform tar/zip handling.** The release shipped `.zip` on Windows until 048's AC23; it now ships `ductus-<TARGET>.tar.gz` on every platform. `extract-archive` still chooses the format by extension and reads both; the primitive returns an operational error for unknown extensions rather than guessing.
 
 ## Open Questions
 
