@@ -30,7 +30,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 ### FE-XSS-004
 
-> Inline `<script>` blocks and inline event-handler attributes (`onclick`, `onerror`, `onload`, etc.) SHOULD NOT be used; JavaScript SHOULD be loaded from external files or inlined behind a CSP nonce/hash so a strict Content Security Policy can be enforced.
+> Inline `<script>` blocks and inline event-handler attributes (`onclick`, `onerror`, `onload`, etc.) SHOULD NOT be used; JavaScript SHOULD be loaded from external files or inlined behind a CSP nonce/hash.
 
 **Verification:** Any spec or plan that describes UI rendering or HTML response composition SHOULD commit to externalizing scripts and event handlers. `/{project}:analyze` emits a warning when a frontend-rendering spec proposes inline scripts or HTML-attribute event handlers without naming a CSP nonce/hash strategy.
 
@@ -70,11 +70,11 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 ### FE-XSS-009
 
-> Applications that render dynamic HTML in the browser SHOULD adopt the Trusted Types API as a defense in depth against DOM XSS.
+> Applications that render dynamic HTML in the browser SHOULD adopt the Trusted Types API.
 
 **Verification:** Any spec or plan covering rendering of dynamic HTML in the browser SHOULD commit to adopting Trusted Types. `/{project}:analyze` emits a warning when a frontend rendering spec omits the adoption discussion. This rule governs whether Trusted Types is adopted: an adoption missing its CSP directives or feeding raw strings to sinks is `FE-XSS-008`'s.
 
-**Source:** W3C Trusted Types specification, MDN Trusted Types API documentation (including browser compatibility)
+**Source:** W3C Trusted Types specification, MDN Trusted Types API documentation
 
 ### FE-XSS-010
 
@@ -90,9 +90,9 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 > Every state-changing request authenticated by a credential the browser attaches automatically (session cookie, HTTP Basic, TLS client certificate) MUST be protected by at least one of: a synchronizer token or signed double-submit cookie token, transmitted in a request body field or custom header and validated server-side; a required custom request header on requests the client sends via `fetch`/`XMLHttpRequest`, under a CORS policy that does not admit that header from other origins; or server-side `Sec-Fetch-Site` validation, under which a state-changing request that lacks the header is either rejected (failing closed) or checked against its `Origin` as the fallback. A design that falls back to a CSRF token instead complies through the token defense. `SameSite` cookies and `Origin`/`Referer` checks MUST NOT be the sole defense.
 
-**Verification:** Any spec or plan that introduces state-changing endpoints authenticated by a cookie or other ambient credential MUST name the CSRF defense the Statement requires, and for `Sec-Fetch-Site` validation its treatment of a request that lacks the header (rejection, an `Origin` fallback, or a fallback to the token defense). `/{project}:analyze` flags state-changing endpoint specs that omit the CSRF question, that name `SameSite` or `Origin`/`Referer` checks as the only defense, that propose an unsigned double-submit cookie, or that validate `Sec-Fetch-Site` without stating what happens to a request that lacks it. The OWASP CSRF Prevention Cheat Sheet lets `SameSite` stand alone in narrow deployments that meet five conditions, one of them an `Origin` or `Referer` check anyway; this rule does not adopt that exception. `BE-API-011` states the same defenses as server-side enforcement in the backend rule set.
+**Verification:** Any spec or plan that introduces state-changing endpoints authenticated by a cookie or other ambient credential MUST name the CSRF defense the Statement requires. `/{project}:analyze` flags state-changing endpoint specs that omit the CSRF question, that name `SameSite` or `Origin`/`Referer` checks as the only defense, that propose an unsigned double-submit cookie, or that validate `Sec-Fetch-Site` without stating what happens to a request that lacks it. The OWASP CSRF Prevention Cheat Sheet lets `SameSite` stand alone in narrow deployments that meet five conditions, one of them an `Origin` or `Referer` check anyway; this rule does not adopt that exception. `BE-API-011` states the same defenses as server-side enforcement in the backend rule set.
 
-**Source:** OWASP Cross-Site Request Forgery Prevention Cheat Sheet, W3C Fetch Metadata Request Headers, MDN Set-Cookie documentation (browser compatibility: `SameSite` defaults to `Lax`)
+**Source:** OWASP Cross-Site Request Forgery Prevention Cheat Sheet, W3C Fetch Metadata Request Headers
 
 ### FE-CSRF-002
 
@@ -100,7 +100,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 **Verification:** Any spec or plan that introduces session cookies or auth cookies MUST name the `SameSite` value and, if `None`, MUST justify the cross-site requirement and confirm both `Secure` and the CSRF defense `FE-CSRF-001` requires. `/{project}:analyze` flags cookie-issuing specs that omit the `SameSite` attribute, that propose `SameSite=None` without justification, or that propose `SameSite=None` without `Secure`.
 
-**Source:** OWASP CSRF Prevention Cheat Sheet, OWASP Session Management Cheat Sheet, MDN Set-Cookie documentation (including browser compatibility)
+**Source:** OWASP CSRF Prevention Cheat Sheet, OWASP Session Management Cheat Sheet, MDN Set-Cookie documentation
 
 ### FE-CSRF-003
 
@@ -130,7 +130,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 ### FE-STORAGE-002
 
-> Session and authentication cookies MUST set `HttpOnly` (denies JavaScript access), `Secure` (requires HTTPS transit), and `SameSite=Lax` or `Strict` (limits cross-site transmission); `SameSite=None` MAY replace `Lax`/`Strict` only under the conditions `FE-CSRF-002` sets.
+> Session and authentication cookies MUST set `HttpOnly`, `Secure`, and `SameSite=Lax` or `Strict`; `SameSite=None` MAY replace `Lax`/`Strict` only under the conditions `FE-CSRF-002` sets.
 
 **Verification:** Any spec or plan that introduces a session, authentication, or other privileged cookie MUST commit to setting all three required attributes. `/{project}:analyze` flags cookie-issuing specs that omit `HttpOnly`, `Secure`, or `SameSite`. **Not flagged:** a wrong or unjustified `SameSite` value, which `FE-CSRF-002` owns.
 
@@ -142,7 +142,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 **Verification:** Any spec or plan that describes how the client transmits sensitive values to the server MUST commit to request bodies or headers, not URL components. `/{project}:analyze` flags client-server specs that bind tokens, credentials, session IDs, or PII into URL paths, query strings, or fragments outside the two carve-outs, flags a URL-delivered single-use token whose spec omits first-use invalidation, expiry, or the landing page's `Referrer-Policy: no-referrer`, and flags a pre-signed URL whose spec states no expiry or whose scope reaches more than one object or method.
 
-**Source:** OWASP REST Security Cheat Sheet, OWASP Session Management Cheat Sheet, OWASP Forgot Password Cheat Sheet, RFC 9700 (OAuth 2.0 Security Best Current Practice), MDN Referer and URI fragment documentation, Apache HTTP Server "Log Files" and nginx `ngx_http_log_module` documentation, Amazon S3 User Guide (Download and upload objects with presigned URLs)
+**Source:** OWASP REST Security Cheat Sheet, OWASP Session Management Cheat Sheet, OWASP Forgot Password Cheat Sheet, RFC 9700 (OAuth 2.0 Security Best Current Practice), MDN Referer and URI fragment documentation, Amazon S3 User Guide (Download and upload objects with presigned URLs)
 
 ### FE-STORAGE-004
 
@@ -208,7 +208,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 > The CSP policy MUST use nonce-based or hash-based script restrictions. The policy MUST NOT include `'unsafe-inline'` or `'unsafe-eval'` in `script-src`, MUST NOT include `'unsafe-inline'` in `style-src` (nonce/hash or `'self'` only), and MUST include `object-src 'none'` and `base-uri 'none'` (or `'self'`).
 
-**Verification:** Any spec or plan that defines a CSP policy MUST name the nonce/hash strategy for scripts and the `style-src` strategy (a nonce or hash, or `'self'`) and MUST commit to the Statement's exclusions and its `object-src` and `base-uri` lockdown. `/{project}:analyze` flags CSP specs that include a keyword the Statement excludes — even beside a nonce or hash, as a fallback for older browsers — or that omit `object-src` or `base-uri`.
+**Verification:** Any spec or plan that defines a CSP policy MUST name the nonce/hash strategy for scripts and a `style-src` strategy the Statement allows and MUST commit to the Statement's exclusions and its `object-src` and `base-uri` lockdown. `/{project}:analyze` flags CSP specs that include a keyword the Statement excludes — even beside a nonce or hash, as a fallback for older browsers — or that omit `object-src` or `base-uri`.
 
 **Source:** OWASP CSP Cheat Sheet, W3C Content Security Policy Level 3, MDN CSP documentation, XS-Leaks Wiki (CSS Injection)
 
@@ -222,23 +222,23 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 ### FE-CSP-004
 
-> The CSP policy SHOULD include `form-action 'self'` (or an explicit destination allowlist) to restrict where the browser will submit forms.
+> The CSP policy SHOULD include `form-action 'self'` (or an explicit destination allowlist).
 
-**Verification:** Any spec or plan that defines a CSP policy SHOULD include a `form-action` directive scoped to `'self'` or an explicit destination allowlist. `/{project}:analyze` emits a warning when CSP specs omit `form-action`, which does not fall back to `default-src`.
+**Verification:** Any spec or plan that defines a CSP policy SHOULD commit to a `form-action` value the Statement allows. `/{project}:analyze` emits a warning when CSP specs omit `form-action`, which does not fall back to `default-src`.
 
 **Source:** OWASP CSP Cheat Sheet, MDN CSP `form-action` documentation
 
 ### FE-CSP-005
 
-> The CSP policy MUST include a reporting directive — `report-to` (preferred) with a matching `Reporting-Endpoints` header, and/or `report-uri` for backwards compatibility — pointing to an endpoint that ingests CSP violation reports. The endpoint MUST keep the reports where the team responsible for the CSP can review them, not discard them on receipt.
+> The CSP policy MUST include a reporting directive — `report-to` (preferred) with a matching `Reporting-Endpoints` header, and/or `report-uri` — pointing to an endpoint that ingests CSP violation reports. The endpoint MUST keep the reports where the team responsible for the CSP can review them, not discard them on receipt.
 
 **Verification:** Any spec or plan that defines a CSP policy MUST commit to a reporting directive and to an ingest path that keeps the reports reviewable by the responsible team. `/{project}:analyze` flags CSP specs that omit both `report-to` and `report-uri`, and reporting-endpoint specs that describe discarding reports on receipt (to `/dev/null`, for example) or that name no place the reports are kept. **Not flagged:** how the team watches the kept reports, which is its own operational choice.
 
-**Source:** W3C Content Security Policy Level 3, OWASP CSP Cheat Sheet, MDN Reporting API, MDN Content-Security-Policy-Report-Only documentation
+**Source:** W3C Content Security Policy Level 3, OWASP CSP Cheat Sheet, MDN Reporting API
 
 ### FE-CSP-006
 
-> Iframes embedding content the application does not fully control (third-party widgets, social-media embeds, user-supplied URLs, payment forms hosted elsewhere) MUST set the `sandbox` attribute with the minimum capabilities required for the embed to function. `sandbox=""` (full restrictions) is the floor; each token added (`allow-scripts`, `allow-same-origin`, `allow-forms`, etc.) MUST be justified. `allow-scripts` plus `allow-same-origin` together MUST NOT be used on a frame whose document is served from the embedding page's own origin (user-authored or user-uploaded HTML, for example) — that combination lets the framed document remove its own sandbox.
+> Iframes embedding content the application does not fully control (third-party widgets, social-media embeds, user-supplied URLs, payment forms hosted elsewhere) MUST set the `sandbox` attribute with the minimum capabilities required for the embed to function. `sandbox=""` (full restrictions) is the floor; each token added (`allow-scripts`, `allow-same-origin`, `allow-forms`, etc.) MUST be justified. `allow-scripts` plus `allow-same-origin` together MUST NOT be used on a frame whose document is served from the embedding page's own origin (user-authored or user-uploaded HTML, for example).
 
 **Verification:** Any spec or plan that introduces iframes embedding non-fully-controlled content MUST commit to a `sandbox` value and MUST justify each token included. `/{project}:analyze` flags iframe specs that omit `sandbox`, that use it without naming the included tokens, or that combine `allow-scripts` with `allow-same-origin` on a frame whose content is served from the embedding page's origin. **Not flagged:** `allow-scripts` with `allow-same-origin`, each justified, on a frame served from another origin.
 
@@ -250,7 +250,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 **Verification:** Any spec or plan that describes serving HTML responses MUST commit to a `Permissions-Policy` header naming the denied and allowed features. `/{project}:analyze` flags HTML-serving specs that omit `Permissions-Policy`, that leave privacy-sensitive features unrestricted, or that grant features without an origin scope. **Not flagged:** a policy without `interest-cohort=()`, a privacy opt-out, not a powerful feature a script can prompt the user for.
 
-**Source:** W3C Permissions Policy specification, OWASP HTTP Headers Cheat Sheet, MDN Permissions-Policy documentation (including browser compatibility), Topics API explainer
+**Source:** W3C Permissions Policy specification, OWASP HTTP Headers Cheat Sheet, MDN Permissions-Policy documentation, Topics API explainer
 
 ### FE-CSP-008
 
@@ -296,7 +296,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 ### FE-DEPS-004
 
-> Production frontend dependencies MUST be pinned to specific versions (or version + integrity hash) in the lockfile used for production builds; floating versions (`latest`, `^`, `~`, range constraints) MUST NOT determine what ships to production.
+> Production frontend dependencies MUST be pinned to specific versions (or version + integrity hash) in the lockfile used for production builds; floating versions (`latest`, `^`, `~`, range constraints) MUST NOT determine what ships to production. A pinned version MUST change only through a documented upgrade process.
 
 **Verification:** Any spec or plan covering frontend builds, deployment, or `system.md` MUST commit to (a) an authoritative lockfile (`package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`) included in the deployment artifact and (b) a documented upgrade process. `/{project}:analyze` flags deployment specs that allow floating dependency ranges in production builds, that omit the lockfile question, or that describe a production install able to rewrite the lockfile: `npm install` rather than `npm ci`, `pnpm install` without `--frozen-lockfile`, or a Yarn install without `--immutable` (Yarn 1: `--frozen-lockfile`), except where pnpm or Yarn 3+ already applies that behavior by default because it detects a CI environment.
 
@@ -304,7 +304,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 ### FE-DEPS-005
 
-> A frontend dependency MUST NOT originate network requests to third-party origins as a side effect of being used. Telemetry, usage analytics, license checks, and update polling performed by a dependency MUST be disabled at build time through the opt-out the dependency provides, and the opt-out MUST apply to every build configuration the team runs, not only to production builds. An intentional third-party integration is exempt only when it is a declared part of the application's design, permitted explicitly by the CSP `connect-src` directive, and vendor reviewed. Verification that no unintended egress occurs MUST be performed against a production build, since a dependency's network behavior may differ by build configuration.
+> A frontend dependency MUST NOT originate network requests to third-party origins as a side effect of being used. Telemetry, usage analytics, license checks, and update polling performed by a dependency MUST be disabled at build time through the opt-out the dependency provides, and the opt-out MUST apply to every build configuration the team runs, not only to production builds. An intentional third-party integration is exempt only when it is a declared part of the application's design, permitted explicitly by the CSP `connect-src` directive, and vendor reviewed. Verification that no unintended egress occurs MUST be performed against a production build.
 
 **Verification:** Any spec or plan that introduces or upgrades a frontend dependency shipping to the browser MUST state whether that dependency performs network egress of its own and, where it does, name the documented opt-out and the build configurations the opt-out covers. `/{project}:analyze` flags specs adopting UI component libraries, analytics-capable SDKs, error/crash reporters, font or icon providers, and map or media embeds without addressing dependency egress, and flags a verification commitment that names only a development-server check. This rule governs what a dependency does on the network once it runs: what code is loaded, and from where, is the other `FE-DEPS` rules'.
 
@@ -312,7 +312,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 ### FE-DEPS-006
 
-> The vulnerability scan of `FE-DEPS-001` SHOULD also run automatically on every change that alters the frontend dependency set — the manifest or the lockfile — so a vulnerable package is caught on the change that introduces it.
+> The vulnerability scan of `FE-DEPS-001` SHOULD also run automatically on every change that alters the frontend dependency set — the manifest or the lockfile.
 
 **Verification:** Any spec or plan covering frontend dependency management or CI configuration SHOULD commit to an automated scan on dependency changes. `/{project}:analyze` emits a warning when such a spec omits it. **Not flagged:** where the scan runs — CI, a pre-commit hook, a dependency bot — which is the project's choice.
 
@@ -330,7 +330,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 ### FE-PII-002
 
-> Forms collecting credentials, multi-factor codes, and payment data MUST set the appropriate `autocomplete` token (`current-password`, `new-password`, `cc-number`, `one-time-code`, etc.) so browsers and password managers can offer autofill and generated passwords; blanket `autocomplete="off"` on credential and payment fields MUST NOT be used as the default posture.
+> Forms collecting credentials, multi-factor codes, and payment data MUST set the appropriate `autocomplete` token (`current-password`, `new-password`, `cc-number`, `one-time-code`, etc.); blanket `autocomplete="off"` on credential and payment fields MUST NOT be used as the default posture.
 
 **Verification:** Any spec or plan that introduces credential, MFA, or payment forms MUST name the `autocomplete` token per field. `/{project}:analyze` flags form specs that set `autocomplete="off"` blanketly across credential or payment inputs without justification, and flags credential forms that omit the `autocomplete` question entirely.
 
@@ -338,7 +338,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 ### FE-PII-003
 
-> Pages displaying sensitive data MUST set `Cache-Control: no-store` to prevent browser, intermediate, and shared caching.
+> Pages displaying sensitive data MUST set `Cache-Control: no-store`.
 
 **Verification:** Any spec or plan that describes authenticated pages MUST commit to `Cache-Control: no-store` on sensitive responses. `/{project}:analyze` flags authenticated-page specs that omit `Cache-Control: no-store`. **Not flagged:** a sensitive response a service worker stores in the Cache API, which `FE-STORAGE-006` owns.
 
@@ -346,7 +346,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 ### FE-PII-004
 
-> The logout response SHOULD include `Clear-Site-Data: "cache", "cookies", "storage"` to evict client-side artifacts. A deployment that shares its registrable domain with other applications SHOULD either name the effect of `"cookies"` on them or omit `"cookies"` and rely on server-side invalidation (`FE-AUTHN-003`).
+> The logout response SHOULD include `Clear-Site-Data: "cache", "cookies", "storage"`. A deployment that shares its registrable domain with other applications SHOULD either name the effect of `"cookies"` on them or omit `"cookies"` and rely on server-side invalidation (`FE-AUTHN-003`).
 
 **Verification:** Any spec or plan that describes logout flows SHOULD commit to `Clear-Site-Data` on the logout response. `/{project}:analyze` emits a warning when logout flows omit `Clear-Site-Data`, or when a deployment sharing its domain with other applications sends `"cookies"` without naming its effect on them. The `"cookies"` directive clears cookies for the entire registrable domain, subdomains included, so a logout on one subdomain also ends sessions held by sibling applications on that domain.
 

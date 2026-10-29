@@ -24,7 +24,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > Session IDs MUST be generated using a cryptographically secure pseudorandom generator (CSPRNG) with at least 128 bits of entropy and MUST NOT contain user data, role information, or any meaningful identifier.
 
-**Verification:** Any spec or plan that introduces sessions MUST commit to (a) a CSPRNG source for ID generation and (b) opaque, content-free IDs. `/{project}:analyze` flags specs that propose deriving session IDs from user attributes, timestamps, or sequential counters, and flags specs silent on the ID generation source.
+**Verification:** Any spec or plan that introduces sessions MUST commit to a CSPRNG source for ID generation and to opaque, content-free IDs. `/{project}:analyze` flags specs that propose deriving session IDs from user attributes, timestamps, or sequential counters, and flags specs silent on the ID generation source.
 
 **Source:** OWASP Session Management Cheat Sheet
 
@@ -54,7 +54,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 ### BE-AUTHN-007
 
-> The system MUST throttle authentication attempts (account lockout, exponential back-off, or rate limiting). Throttling MUST be account-scoped so distributed attacks against a single account cannot bypass IP-only limits.
+> The system MUST throttle authentication attempts (account lockout, exponential back-off, or rate limiting). Throttling MUST be account-scoped.
 
 **Verification:** Any spec or plan covering login, password reset, or token-issuance endpoints MUST commit to a throttling mechanism, name its account scope, and describe legitimate-recovery paths during lockout. `/{project}:analyze` flags auth specs without a documented throttle, and flags specs whose only documented throttle scope is per-IP.
 
@@ -94,7 +94,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 ### BE-AUTHN-012
 
-> JWT-based authentication MUST (a) declare an explicit algorithm allowlist on the verifier and reject any token whose `alg` header is not in the allowlist; (b) reject the `none` algorithm unconditionally; (c) reject tokens whose `alg` does not match the key type expected for the `kid` (preventing HS/RS confusion attacks); (d) validate `iss`, `aud`, `exp`, and `nbf` claims on every verification; and (e) keep access-token lifetimes short (≤15 minutes for typical web sessions) with refresh-token rotation for longer-lived access.
+> JWT-based authentication MUST (a) declare an explicit algorithm allowlist on the verifier and reject any token whose `alg` header is not in the allowlist; (b) reject the `none` algorithm unconditionally; (c) reject tokens whose `alg` does not match the key type expected for the `kid`; (d) validate `iss`, `aud`, `exp`, and `nbf` claims on every verification; and (e) keep access-token lifetimes short (≤15 minutes for typical web sessions) with refresh-token rotation for longer-lived access.
 
 **Verification:** Any spec or plan that introduces JWT issuance or verification MUST commit to all five requirements. `/{project}:analyze` flags JWT specs that accept tokens without naming an algorithm allowlist, that omit `kid`-to-alg binding, that skip `iss`/`aud`/`exp`/`nbf` validation, or that propose long-lived access tokens without refresh-token rotation.
 
@@ -102,7 +102,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 ### BE-AUTHN-013
 
-> OAuth 2.0 and OIDC client flows MUST (a) include and verify a unique `state` parameter on every authorization request to defeat CSRF; (b) use PKCE (`code_challenge` / `code_verifier`) for every authorization-code flow, including confidential clients; (c) validate the `nonce` claim on OIDC ID tokens; and (d) validate redirect URIs against an exact-match allowlist registered with the authorization server.
+> OAuth 2.0 and OIDC client flows MUST (a) include and verify a unique `state` parameter on every authorization request; (b) use PKCE (`code_challenge` / `code_verifier`) for every authorization-code flow, including confidential clients; (c) validate the `nonce` claim on OIDC ID tokens; and (d) validate redirect URIs against an exact-match allowlist registered with the authorization server.
 
 **Verification:** Any spec or plan that introduces an OAuth client, OIDC client, or third-party login integration MUST commit to all four requirements. `/{project}:analyze` flags OAuth/OIDC specs that omit `state` (neither PKCE nor the OIDC `nonce` stands in for it), that limit PKCE to public clients, that omit ID-token `nonce` validation, or that describe redirect-URI matching using `startsWith`/`contains`/regex instead of exact equality. **Not flagged:** a forbidden grant type or the `plain` PKCE method, which `BE-AUTHN-020` owns.
 
@@ -118,7 +118,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 ### BE-AUTHN-015
 
-> Authentication throttling SHOULD layer per-IP and per-device limits on top of the account-scoped limit `BE-AUTHN-007` requires, as defense in depth.
+> Authentication throttling SHOULD layer per-IP and per-device limits on top of the account-scoped limit `BE-AUTHN-007` requires.
 
 **Verification:** Any spec or plan covering login, password reset, or token-issuance endpoints SHOULD name per-IP and per-device limits alongside the account-scoped throttle. `/{project}:analyze` emits a warning when an auth spec's only documented throttle scope is per-account.
 
@@ -168,13 +168,13 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > Multi-factor authentication for privileged accounts SHOULD require a phishing-resistant authenticator — WebAuthn/passkeys, FIDO2 hardware security keys, or PKI-based smart cards — rather than one-time codes or push approvals.
 
-**Verification:** Any spec or plan that introduces administrative, role-management, billing, or security-operator capabilities SHOULD commit to phishing-resistant authenticators for those accounts. `/{project}:analyze` emits a warning when a privileged-feature spec accepts only one-time-code, push, or SMS factors for privileged accounts.
+**Verification:** Any spec or plan that introduces administrative, role-management, billing, or security-operator capabilities SHOULD commit to phishing-resistant authenticators for those accounts. `/{project}:analyze` emits a warning when a privileged-feature spec accepts only one-time-code, push, or SMS factors for privileged accounts. An SMS-only privileged account is also `BE-AUTHN-010`'s, a separate defect: the SMS dependence, where this rule's is the missing phishing-resistant authenticator.
 
 **Source:** NIST SP 800-63B-4 §2.2.2, §3.2.5, OWASP Multifactor Authentication Cheat Sheet
 
 ### BE-AUTHN-022
 
-> Changing an account's password or other authenticator, its email address or other recovery or notification contact, or its multi-factor settings (enrolling, replacing, or removing a factor, or turning MFA off) MUST require the user to re-authenticate within that change flow with an authenticator already bound to the account — the current password, or a fresh second-factor or passkey verification (step-up) — rather than relying on the existing session alone, subject to the next sentence. A change to the multi-factor settings of an account that already has a second factor enrolled — enrolling another factor, replacing or removing one, or turning MFA off — MUST require a fresh verification with an enrolled second factor or passkey; the current password alone does not authorize it. Enrolling a second factor on an account that has none needs only the re-authentication the first sentence requires, which the current password satisfies. A password reset through the recovery flow `BE-AUTHN-018` governs MAY proceed on its reset token instead, since the user has lost the credential it replaces. A user who has lost every enrolled second factor MAY likewise bind a replacement through account recovery, when that recovery takes two recovery codes obtained by different methods (saved in advance, issued to a recovery address, or sent to a recovery contact), one such code together with a single-factor authenticator bound to the account (the current password, for example), or repeated identity proofing; notifies the user through a channel independent of the recovery; and generates and stores each recovery code as `BE-AUTHN-018` requires of its tokens — from a CSPRNG, persisted only as a hash, and invalidated once used — with every code issued to a recovery address or sent to a recovery contact expiring within a bounded window.
+> Changing an account's password or other authenticator, its email address or other recovery or notification contact, or its multi-factor settings (enrolling, replacing, or removing a factor, or turning MFA off) MUST require the user to re-authenticate within that change flow with an authenticator already bound to the account — the current password, or a fresh second-factor or passkey verification (step-up) — rather than relying on the existing session alone, subject to the next sentence. A change to the multi-factor settings of an account that already has a second factor enrolled — enrolling another factor, replacing or removing one, or turning MFA off — MUST require a fresh verification with an enrolled second factor or passkey; the current password alone does not authorize it. Enrolling a second factor on an account that has none needs only the re-authentication the first sentence requires, which the current password satisfies. A password reset through the recovery flow `BE-AUTHN-018` governs MAY proceed on its reset token instead. A user who has lost every enrolled second factor MAY likewise bind a replacement through account recovery, when that recovery takes two recovery codes obtained by different methods (saved in advance, issued to a recovery address, or sent to a recovery contact), one such code together with a single-factor authenticator bound to the account (the current password, for example), or repeated identity proofing; notifies the user through a channel independent of the recovery; and generates and stores each recovery code as `BE-AUTHN-018` requires of its tokens — from a CSPRNG, persisted only as a hash, and invalidated once used — with every code issued to a recovery address or sent to a recovery contact expiring within a bounded window.
 
 **Verification:** Any spec or plan that introduces a password change, an email or recovery-contact change, or MFA enrollment, replacement, removal, or disablement MUST name the re-authentication each of those changes requires (current password, second factor, or passkey), and a spec that lets a user who has lost every second factor bind a replacement MUST name the recovery that authorizes it. `/{project}:analyze` flags account-settings specs that allow any of those changes on the strength of the existing session alone, that accept a security question as the re-authentication, or that let the current password alone enroll another factor beside an enrolled one, replace or remove an enrolled factor, or turn MFA off, and flags a lost-factor recovery that binds a replacement on less than the Statement's recovery (the password alone, or one recovery code alone), that does not notify the user, or whose recovery codes are not generated, stored, invalidated, replaced and expired as the Statement and `BE-AUTHN-018` require. **Not flagged:** a session not regenerated after a step-up, which `BE-AUTHN-004` owns, and a password-reset token's lifetime or reuse, a reset link built from the request's host, sessions left valid after a reset, or security questions as the only recovery path, which `BE-AUTHN-018` owns.
 
@@ -266,9 +266,9 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 ### BE-INPUT-003
 
-> Queries and commands sent to external interpreters (SQL databases, NoSQL stores, shell processes, OS command runners, search-engine query strings) MUST be built so that user input cannot alter the structure of the request. SQL and NoSQL access MUST use parameterized statements, prepared statements, or an ORM/driver that parameterizes by default. Shell or OS command execution MUST pass arguments as a vector (e.g., `execve`-style argument arrays, `subprocess.run([...], shell=False)`) rather than constructing a shell command string. Query strings, NoSQL operator documents (MongoDB `$where`, `$regex`, `$expr`), and command lines MUST NOT be constructed via string concatenation, interpolation, or template literals containing user input.
+> Queries and commands sent to external interpreters (SQL databases, NoSQL stores, shell processes, OS command runners, search-engine query strings) MUST be built so that user input cannot alter the structure of the request. SQL and NoSQL access MUST use parameterized statements, prepared statements, or an ORM/driver that parameterizes by default. Shell or OS command execution MUST pass arguments as a vector (e.g., `execve`-style argument arrays, `subprocess.run([...], shell=False)`) rather than constructing a shell command string. Query strings, NoSQL operator documents (MongoDB `$where`, `$regex`, `$expr`), and command lines MUST NOT be constructed via string concatenation, interpolation, or template literals containing user input. A request value placed in a NoSQL query MUST first be checked to be the expected scalar type.
 
-**Verification:** Any spec or plan that introduces database access, shell-out, or command execution MUST describe the safe-invocation mechanism (parameterized statements, prepared statements, ORM defaults, argument-vector exec, type-checked NoSQL query values). `/{project}:analyze` flags any commitment to building queries via concatenation, `f-string`/`.format()`, template literals interpolating request fields, dynamic NoSQL operator construction from client input, NoSQL filters that take request values without checking that each is the expected scalar type, or shell invocation with `shell=True`/string-concatenated command lines.
+**Verification:** Any spec or plan that introduces database access, shell-out, or command execution MUST describe the safe-invocation mechanism the Statement requires and, for NoSQL, how query values are type-checked. `/{project}:analyze` flags any commitment to building queries via concatenation, `f-string`/`.format()`, template literals interpolating request fields, dynamic NoSQL operator construction from client input, NoSQL filters that take request values without checking that each is the expected scalar type, or shell invocation with `shell=True`/string-concatenated command lines.
 
 **Source:** OWASP SQL Injection Prevention Cheat Sheet, OWASP OS Command Injection Defense Cheat Sheet, OWASP NoSQL Security Cheat Sheet
 
@@ -302,7 +302,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 **Verification:** Any spec or plan that includes server-side URL fetching, webhook callbacks, image proxies, RSS pulls, or any user-supplied URL retrieval MUST commit to (a) host or scheme allowlisting, AND (b) outbound network restrictions or DNS-resolution-time blocks for internal address ranges. `/{project}:analyze` flags outbound-fetch features without both commitments. Cloud metadata-address denial MUST be named explicitly when the project deploys to a cloud provider. **Not flagged:** a check on the submitted URL that a redirect, DNS rebinding, or an alternative address encoding bypasses, which `BE-INPUT-016` owns.
 
-**Source:** OWASP Server-Side Request Forgery Prevention Cheat Sheet, OWASP API Security Top 10 (API7:2023), OWASP Top 10:2025 (A01)
+**Source:** OWASP Server-Side Request Forgery Prevention Cheat Sheet
 
 ### BE-INPUT-008
 
@@ -330,9 +330,9 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 ### BE-INPUT-011
 
-> User-supplied values written to logs MUST be sanitized for control characters (`\r`, `\n`, `\t`, ANSI escape sequences) before being emitted, OR the log emitter MUST encode each field as a structured value (JSON, key-value pairs with quoted strings) so that embedded newlines cannot forge new log lines.
+> User-supplied values written to logs MUST be sanitized for control characters (`\r`, `\n`, `\t`, ANSI escape sequences) before being emitted, OR the log emitter MUST encode each field as a structured value (JSON, key-value pairs with quoted strings).
 
-**Verification:** Any spec or plan that introduces logging of user-controlled values (request paths, headers, body fragments, usernames) MUST commit to either structured-log emission or pre-emission sanitization of control characters. `/{project}:analyze` flags logging specs that string-concatenate user-controlled values into a plain-text logger without a sanitization step.
+**Verification:** Any spec or plan that introduces logging of user-controlled values (request paths, headers, body fragments, usernames) MUST commit to one of the Statement's two safeguards. `/{project}:analyze` flags logging specs that string-concatenate user-controlled values into a plain-text logger without a sanitization step.
 
 **Source:** OWASP Logging Cheat Sheet, CWE-117 (Improper Output Neutralization for Logs)
 
@@ -366,7 +366,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 **Verification:** Any spec or plan that introduces LDAP queries (directory lookups, AD authentication, group membership checks) MUST commit to parameterized filter/DN construction or to escape-per-field. `/{project}:analyze` flags LDAP specs that concatenate user input into filter strings without naming an escape function or parameterized API.
 
-**Source:** OWASP LDAP Injection Prevention Cheat Sheet, OWASP Web Security Testing Guide v4.2 — Testing for LDAP Injection (WSTG-INPV-06), RFC 4514, RFC 4515
+**Source:** OWASP LDAP Injection Prevention Cheat Sheet, RFC 4514, RFC 4515
 
 ### BE-INPUT-016
 
@@ -384,7 +384,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 **Verification:** Any spec or plan covering network communication, edge configuration, or `system.md` MUST commit to TLS 1.2+ across all host-crossing surfaces (HTTPS, gRPC, message brokers, database connections). `/{project}:analyze` flags specs that allow plaintext protocols for host-to-host traffic, that name TLS 1.0/1.1, or that omit the TLS version question entirely. Plaintext loopback exceptions MUST be named explicitly with the sidecar/proxy that provides the encrypted host-boundary leg.
 
-**Source:** OWASP Transport Layer Security Cheat Sheet, RFC 8996, NIST SP 800-52r2, Istio documentation — Security (Mutual TLS authentication)
+**Source:** OWASP Transport Layer Security Cheat Sheet, RFC 8996, NIST SP 800-52r2
 
 ### BE-DATA-002
 
@@ -398,7 +398,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > Secrets (API keys, database credentials, encryption keys, signing keys, third-party tokens) MUST NOT be hardcoded in source code, committed to version control, embedded in container images, or stored in environment-variable defaults shipped with the application. Secrets MUST be sourced at runtime from a secrets management system or runtime injection by the orchestrator.
 
-**Verification:** Any spec or plan that introduces secrets MUST describe how they are sourced at runtime (vault/secret manager, mounted file, runtime environment variable injected by the orchestrator). `/{project}:analyze` flags any commitment to embedding secrets in `.env` files committed to git, `Dockerfile` `ENV` directives, default config files in the repo, or container image layers.
+**Verification:** Any spec or plan that introduces secrets MUST describe how they are sourced at runtime (vault/secret manager, mounted file, runtime environment variable injected by the orchestrator). `/{project}:analyze` flags any commitment to embedding secrets in `.env` files committed to git or default config files in the repo. A secret given an in-application default value — a fallback the code supplies when the configured value is absent — is `configuration-cross.md` `CFG-ENV-001`'s; any other the build injects into an artifact delivered to end users, wherever it sits before the build, is `configuration-cross.md` `CFG-ENV-010`'s; and any other embedded in a container image or container-build manifest is `BE-DATA-008`'s.
 
 **Source:** OWASP Secrets Management Cheat Sheet
 
@@ -438,7 +438,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > Secrets MUST NOT be embedded in container images, Dockerfiles, or container-build manifests. Secrets MUST be injected at runtime via environment variables sourced from a secrets manager, mounted secret volumes, or platform-native secret APIs.
 
-**Verification:** Any spec or plan that describes containerization or container deployment MUST commit to runtime secret injection. `/{project}:analyze` flags `Dockerfile` content (or equivalent build manifests) that includes `ENV SECRET=...`, `ARG SECRET=...` baked into layers, or `COPY` of secret files into the image.
+**Verification:** Any spec or plan that describes containerization or container deployment MUST commit to runtime secret injection. `/{project}:analyze` flags `Dockerfile` content (or equivalent build manifests) that includes `ENV SECRET=...`, `ARG SECRET=...` baked into layers, or `COPY` of secret files into the image. A secret the build injects into an artifact delivered to end users, including through a build stage, is `configuration-cross.md` `CFG-ENV-010`'s.
 
 **Source:** OWASP Secrets Management Cheat Sheet, Docker documentation — Build variables, NIST SP 800-190 (Application Container Security Guide) §3.1.4, §4.1.4
 
@@ -454,7 +454,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > Backups containing sensitive data MUST be encrypted with keys distinct from the keys protecting the live data, and the backup keys MUST be stored separately from both the backup media and the production data plane. Restore procedures MUST be tested on a documented cadence and the test result recorded.
 
-**Verification:** Any spec or plan that introduces backups, snapshots, or long-term data retention MUST commit to (a) encryption with a backup-specific key, (b) key custody separate from both the backup storage and the production data plane, and (c) a documented restore-test cadence. `/{project}:analyze` flags backup specs that omit any of these, and flags specs that propose using the production encryption key directly for backup encryption.
+**Verification:** Any spec or plan that introduces backups, snapshots, or long-term data retention MUST commit to the Statement's distinct backup key, separate key custody and restore-test cadence. `/{project}:analyze` flags backup specs that omit any of these, and flags specs that propose using the production encryption key directly for backup encryption.
 
 **Source:** NIST SP 800-209 (Security Guidelines for Storage Infrastructure), OWASP Cryptographic Storage Cheat Sheet
 
@@ -470,7 +470,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > Every secret the application uses other than the encryption and signing keys `BE-DATA-005` governs (database credentials, third-party API keys, service tokens, OAuth client secrets) MUST be revocable and replaceable without a source-code change or an artifact rebuild, and the procedure for revoking and replacing a leaked secret MUST be documented.
 
-**Verification:** Any spec or plan that introduces a secret, or `specs/system.md` where secrets are inventoried, MUST name for each secret where it is revoked (the issuing system) and how a replacement reaches the running application (secret-manager update, re-injection by the orchestrator, restart). `/{project}:analyze` flags secret-introducing specs that omit the revocation path or give a restart as one, or whose replacement path requires editing source or rebuilding an image. This rule governs every secret but encryption and signing keys: an encryption or signing key with no rotation procedure is `BE-DATA-005`'s.
+**Verification:** Any spec or plan that introduces a secret, or `specs/system.md` where secrets are inventoried, MUST name for each secret where it is revoked (the issuing system) and how a replacement reaches the running application (secret-manager update, re-injection by the orchestrator, restart). `/{project}:analyze` flags secret-introducing specs that omit the revocation path or give a restart as one, or whose replacement path requires editing source or rebuilding an image. A replacement path that needs a source edit or a rebuild only because the secret is itself embedded is the embedding rule's defect: `configuration-cross.md` `CFG-ENV-001`'s for a secret given an in-application default value, `configuration-cross.md` `CFG-ENV-010`'s for any other the build injects into an artifact delivered to end users, `BE-DATA-008`'s for any other in a container image or container-build manifest, and `BE-DATA-003`'s for any other secret in source or version control or placed into a build artifact rather than sourced at runtime. The revocation-path flags apply to every secret. This rule governs every secret but encryption and signing keys: an encryption or signing key with no rotation procedure is `BE-DATA-005`'s.
 
 **Source:** OWASP Secrets Management Cheat Sheet
 
@@ -519,7 +519,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 ### BE-API-005
 
-> The application MUST accept only documented HTTP methods per endpoint. Undocumented methods MUST return `405 Method Not Allowed` with an `Allow` header enumerating the methods that are supported on that resource (per RFC 9110 §15.5.6).
+> The application MUST accept only documented HTTP methods per endpoint. Undocumented methods MUST return `405 Method Not Allowed` with an `Allow` header enumerating the methods that are supported on that resource.
 
 **Verification:** Any spec or plan that introduces HTTP endpoints MUST commit to method allowlisting and to emitting the `Allow` header on every 405 response. `/{project}:analyze` flags endpoint specs that allow arbitrary methods, that omit the method-restriction question, or that describe 405 responses without the `Allow` header.
 
@@ -527,7 +527,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 ### BE-API-006
 
-> The application MUST validate the `Content-Type` header on incoming requests. Mismatched or unexpected content types MUST be rejected with `415 Unsupported Media Type`.
+> The application MUST validate the `Content-Type` header on incoming requests. Mismatched or unexpected content types MUST be rejected with `415 Unsupported Media Type`. An endpoint that accepts more than one unrelated format MUST harden the parsing of each.
 
 **Verification:** Any spec or plan that introduces request-accepting endpoints MUST commit to content-type validation. `/{project}:analyze` flags endpoint specs that accept multiple unrelated formats without explicit per-format hardening.
 
@@ -553,7 +553,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > Backend redirect endpoints (e.g., `/redirect?url=...`, post-login redirects, OAuth callbacks, share-link expansions, any user-controlled destination URL) MUST validate the destination against an allowlist of acceptable hosts or paths. Open redirects are forbidden.
 
-**Verification:** Any spec or plan that includes a redirect endpoint, OAuth callback, post-login next-URL, share link, or user-controlled destination URL MUST commit to validating the destination against an allowlist (host allowlist, path allowlist, signed URL parameter). `/{project}:analyze` flags redirect features without this commitment.
+**Verification:** Any spec or plan that includes a redirect endpoint the Statement names or any other user-controlled destination URL MUST commit to validating the destination against the Statement's allowlist or by a signed URL parameter. `/{project}:analyze` flags redirect features without this commitment.
 
 **Source:** OWASP Unvalidated Redirects and Forwards Cheat Sheet
 
@@ -569,7 +569,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > State-changing requests authenticated by an ambient credential the browser attaches automatically (session cookie, HTTP Basic, TLS client certificate) MUST be validated server-side against a CSRF defense before the state change is applied: a synchronizer token or a signed (session-bound HMAC) double-submit cookie token verified on the server; a required custom request header, under a CORS policy that does not admit that header from other origins; or `Sec-Fetch-Site` validation, under which a state-changing request that lacks the header is either rejected (failing closed) or checked against its `Origin` as the fallback. A design that falls back to a CSRF token instead complies through the token defense. `SameSite` cookies and `Origin`/`Referer` checks MUST NOT be the sole defense. Token comparison MUST be constant-time per `BE-AUTHN-009`. Requests that fail the check MUST be rejected with `403`. Endpoints authenticated solely by a non-ambient bearer token (e.g., `Authorization: Bearer`, not stored in a cookie) are exempt.
 
-**Verification:** Any spec or plan that introduces cookie-authenticated (or otherwise ambient-credential) state-changing endpoints MUST name the server-side CSRF check and its rejection behavior, and a `Sec-Fetch-Site` check MUST state how it treats a request that lacks the header (rejection, the `Origin` fallback, or a fallback to the token defense). `/{project}:analyze` flags state-changing endpoints that rely on an ambient credential without a documented server-side token, custom-header, or `Sec-Fetch-Site` check, that name `SameSite` or `Origin`/`Referer` checks as the only defense, that propose an unsigned double-submit cookie, or that validate `Sec-Fetch-Site` without stating what happens to a request that lacks it, and flags token checks that are not constant-time. This rule does not adopt the narrow deployments in which the OWASP CSRF Prevention Cheat Sheet lets `SameSite` stand alone. On the fallback path, a missing or `null` `Origin` is not evidence of a same-origin request; the fallback is a different check that completes, not a skipped one, so `BE-ERR-005`'s deny-on-failure does not rule it out. `FE-CSRF-001` states the same defenses from the client side; this rule is their server-side enforcement, which applies without the frontend rule set.
+**Verification:** Any spec or plan that introduces cookie-authenticated (or otherwise ambient-credential) state-changing endpoints MUST name the server-side CSRF check and its rejection behavior. `/{project}:analyze` flags state-changing endpoints that rely on an ambient credential without a documented server-side token, custom-header, or `Sec-Fetch-Site` check, that name `SameSite` or `Origin`/`Referer` checks as the only defense, that propose an unsigned double-submit cookie, or that validate `Sec-Fetch-Site` without stating what happens to a request that lacks it, and flags token checks that are not constant-time. This rule does not adopt the narrow deployments in which the OWASP CSRF Prevention Cheat Sheet lets `SameSite` stand alone. On the fallback path, a missing or `null` `Origin` is not evidence of a same-origin request; the fallback is a different check that completes, not a skipped one, so `BE-ERR-005`'s deny-on-failure does not rule it out. `FE-CSRF-001` states the same defenses from the client side; this rule is their server-side enforcement, which applies without the frontend rule set.
 
 **Source:** OWASP Cross-Site Request Forgery Prevention Cheat Sheet, W3C Fetch Metadata Request Headers
 
@@ -585,7 +585,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > Passwords, session identifiers, access and refresh tokens, and API keys MUST NOT be accepted in URL query parameters or path segments; the server MUST accept them only in request headers (e.g., `Authorization`, `Cookie`) or the request body. Single-use, short-lived values that a protocol carries in the URL by design — OAuth authorization codes, password-reset and email-verification tokens (`BE-AUTHN-018`) — MAY appear in URLs, in a query parameter or a path segment. A pre-signed object-storage URL MAY carry its authorization in the URL when it is scoped to one object and one method and expires within a lifetime the spec states. Neither carve-out reaches a WebSocket opening handshake: `BE-API-015` keeps every token out of the handshake URL, a single-use ticket included.
 
-**Verification:** Any spec or plan that introduces an authenticated endpoint, an API-key scheme, or a token transport MUST name where the credential is carried (header, cookie, or body). `/{project}:analyze` flags specs that accept passwords, session IDs, bearer tokens, or API keys as query parameters (`?token=`, `?api_key=`, `?access_token=`) or path segments, other than the values either carve-out allows, and flags a pre-signed URL whose spec states no expiry or whose scope reaches more than one object or method. **Not flagged:** client code that puts sensitive data in a URL, which `FE-STORAGE-003` owns.
+**Verification:** Any spec or plan that introduces an authenticated endpoint, an API-key scheme, or a token transport MUST name where the credential is carried. `/{project}:analyze` flags specs that accept passwords, session IDs, bearer tokens, or API keys as query parameters (`?token=`, `?api_key=`, `?access_token=`) or path segments, other than the values either carve-out allows, and flags a pre-signed URL whose spec states no expiry or whose scope reaches more than one object or method. **Not flagged:** client code that puts sensitive data in a URL, which `FE-STORAGE-003` owns.
 
 **Source:** OWASP REST Security Cheat Sheet (Sensitive information in HTTP requests), RFC 9700 §4.3.2, Amazon S3 User Guide (Download and upload objects with presigned URLs)
 
@@ -611,7 +611,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > Production error responses MUST NOT include stack traces, file paths, database error messages, framework versions, or any internal implementation detail. Verbose errors MUST appear only in non-production environments or behind authentication.
 
-**Verification:** Any spec or plan that describes error handling MUST commit to environment-conditional error formatting — verbose in dev, sanitized in production. `/{project}:analyze` flags error-handling specs that do not distinguish environments or that emit internal-detail responses in production paths.
+**Verification:** Any spec or plan that describes error handling MUST commit to environment-conditional error formatting. `/{project}:analyze` flags error-handling specs that do not distinguish environments or that emit internal-detail responses in production paths.
 
 **Source:** OWASP Error Handling Cheat Sheet
 
@@ -669,7 +669,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > Log storage MUST be separate from application data storage. Log access MUST be restricted and monitored.
 
-**Verification:** Any spec or plan covering logging infrastructure or `system.md` MUST commit to log storage separation, restricted access, and monitoring of access to the logs. `/{project}:analyze` flags logging-infrastructure specs that store logs with application data, leave log access unrestricted, or omit how access to the logs is monitored.
+**Verification:** Any spec or plan covering logging infrastructure or `system.md` MUST commit to each obligation in the Statement. `/{project}:analyze` flags logging-infrastructure specs that store logs with application data, leave log access unrestricted, or omit how access to the logs is monitored.
 
 **Source:** OWASP Logging Cheat Sheet
 
@@ -691,7 +691,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 ### BE-LOG-006
 
-> Every request entering the system MUST carry (or be assigned) a correlation ID that propagates through every log line, downstream service call, queue message, and audit-trail entry generated as a result of that request. The correlation ID MUST be present in error responses returned to clients so users can quote it back to support without exposing internal details.
+> Every request entering the system MUST carry (or be assigned) a correlation ID that propagates through every log line, downstream service call, queue message, and audit-trail entry generated as a result of that request. The correlation ID MUST be present in error responses returned to clients.
 
 **Verification:** Any spec or plan that introduces request handling, inter-service calls, queue producers/consumers, or background-job dispatch MUST commit to correlation-ID generation at the edge, propagation across hops, and inclusion in every log line. `/{project}:analyze` flags request-handling specs that omit correlation-ID propagation, and flags error-response specs (per `BE-ERR-002`) that do not surface the correlation ID to the client. **Not flagged:** the choice of carrier — such as the W3C Trace Context `traceparent` header, an opaque `X-Request-ID` header, or the trace ID itself — provided every component on the request path emits it.
 
@@ -725,9 +725,9 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 ### BE-DEPS-002
 
-> Production dependencies MUST be pinned to specific versions (or version + integrity hash) in the lockfile or manifest used for production builds. Floating versions (`latest`, `^`, `~`, range constraints) MUST NOT determine what ships to production.
+> Production dependencies MUST be pinned to specific versions (or version + integrity hash) in the lockfile or manifest used for production builds. Floating versions (`latest`, `^`, `~`, range constraints) MUST NOT determine what ships to production. A pinned version MUST change only through a documented upgrade process.
 
-**Verification:** Any spec or plan covering build artifacts or deployment MUST commit to (a) pinned versions in lockfiles or pinned-version manifests for production builds, and (b) a documented upgrade process. `/{project}:analyze` flags deployment specs that allow floating dependencies in production or that omit the lockfile question.
+**Verification:** Any spec or plan covering build artifacts or deployment MUST commit to the Statement's pinning and to a documented upgrade process. `/{project}:analyze` flags deployment specs that allow floating dependencies in production or that omit the lockfile question.
 
 **Source:** OWASP Top 10:2025 (A03 — Software Supply Chain Failures), npm documentation — package-lock.json, OpenSSF Scorecard (Pinned-Dependencies check)
 
@@ -737,19 +737,19 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 **Verification:** Any spec or plan covering build pipelines, release artifacts, or `system.md` MUST name the SBOM tool and format and commit to per-build generation and retention. `/{project}:analyze` flags build/release specs that omit SBOM generation or that describe one-off SBOM exports separate from the build.
 
-**Source:** US Executive Order 14028 §4(e)(vii), Regulation (EU) 2024/2847 (Cyber Resilience Act) Annex I Part II point (1) and Article 71, OWASP Dependency Graph & SBOM Best Practices Cheat Sheet, CycloneDX / SPDX specifications
+**Source:** US Executive Order 14028 §4(e)(vii), Regulation (EU) 2024/2847 (Cyber Resilience Act) Annex I Part II point (1), OWASP Dependency Graph & SBOM Best Practices Cheat Sheet, CycloneDX / SPDX specifications
 
 ### BE-DEPS-004
 
 > Dependencies pulled from public registries MUST be verified against a publisher signature or attested provenance — or, for Go modules, against the public checksum database, a transparency log of module hashes — as part of installation, before they are built into or shipped with an artifact. Acceptable verification mechanisms include npm package provenance (sigstore-backed) and registry signatures, both checked with `npm audit signatures`, PyPI digital attestations (PEP 740, sigstore-backed) checked by a verifier the install step runs, such as the `pypi-attestations` tool, Go module checksums verified against `sum.golang.org`, Maven Central GPG signatures, or registry-signed attestations. Unsigned packages from public registries MUST be either replaced, vendored, or accompanied by a documented exception with a remediation plan. A project whose ecosystem's standard installer provides no signature or provenance verification (pip, for one) MAY, in place of the verification step, document that gap — naming the installer and the verification it lacks — and install with the integrity checking the ecosystem does offer, which for pip is hash-checking mode (`--require-hashes`) against the hashes `BE-DEPS-005` commits to the repository.
 
-**Verification:** Any spec or plan covering dependency management, build pipelines, or `system.md` MUST commit to a signature/provenance verification step in install, or, for an ecosystem whose standard installer provides none, document that gap and commit to hash-checked installs. A lockfile integrity hash, which `BE-DEPS-005` (b) requires, is not such a verification step except under the Statement's documented installer gap. `/{project}:analyze` flags dependency specs that pull from public registries without naming a verification mechanism or a documented installer gap, flags a claimed gap with no hash-checked install (`pip --require-hashes`), and flags a gap claimed for an ecosystem whose standard installer does verify (the npm CLI ships `npm audit signatures`; the `go` command checks `sum.golang.org` by default).
+**Verification:** Any spec or plan covering dependency management, build pipelines, or `system.md` MUST commit to the Statement's verification step in install, or to its documented installer gap with hash-checked installs. A lockfile integrity hash, which `BE-DEPS-005` (b) requires, is not such a verification step except under the Statement's documented installer gap. `/{project}:analyze` flags dependency specs that pull from public registries without naming a verification mechanism or a documented installer gap, flags a claimed gap with no hash-checked install (`pip --require-hashes`), and flags a gap claimed for an ecosystem whose standard installer does verify (the npm CLI ships `npm audit signatures`; the `go` command checks `sum.golang.org` by default).
 
 **Source:** npm documentation — Generating provenance statements and `npm audit` (Audit Signatures), PEP 740 (Index support for digital attestations), PyPI documentation — Attestations: Security Model and Considerations and Consuming attestations, pip documentation — Secure installs (Hash-checking mode) and Changelog, Go Modules Reference (checksum database), Maven Central publishing requirements (Sign Files with GPG/PGP)
 
 ### BE-DEPS-005
 
-> Builds MUST be configured to prevent dependency-confusion and typosquatting attacks. Specifically, (a) when private packages share a namespace with public registries, the resolver MUST be configured so a private package name resolves only from the private registry (npm scope-to-registry mapping in `.npmrc`; for pip, a single `--index-url` that serves the private packages and proxies the public index, never `--extra-index-url` for private names, or a resolver that pins a package to one index, such as uv's `tool.uv.sources`; Maven repository ordering); (b) where the package manager supports it, builds MUST install with integrity verification against hashes committed to the repository (npm `package-lock.json` `integrity`, pip `--require-hashes`, Go `go.sum`, Gradle `verification-metadata.xml`), so a same-named package from another registry fails the install instead of replacing the locked one; (c) new dependency additions MUST be reviewed against a known-typo list for the project's hot dependencies.
+> Builds MUST be configured to prevent dependency-confusion and typosquatting attacks. Specifically, (a) when private packages share a namespace with public registries, the resolver MUST be configured so a private package name resolves only from the private registry (npm scope-to-registry mapping in `.npmrc`; for pip, a single `--index-url` that serves the private packages and proxies the public index, never `--extra-index-url` for private names, or a resolver that pins a package to one index, such as uv's `tool.uv.sources`; Maven repository ordering); (b) where the package manager supports it, builds MUST install with integrity verification against hashes committed to the repository (npm `package-lock.json` `integrity`, pip `--require-hashes`, Go `go.sum`, Gradle `verification-metadata.xml`); (c) new dependency additions MUST be reviewed against a known-typo list for the project's hot dependencies.
 
 **Verification:** Any spec or plan covering dependency management or build configuration MUST commit to the Statement's (a) when private packages exist, (b), and (c). `/{project}:analyze` flags dependency-management specs that omit any of these when the project uses private packages or has a high dependency-churn rate, and flags pip configurations that reach private packages through `--extra-index-url`.
 
@@ -757,15 +757,15 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 ### BE-DEPS-006
 
-> Build and release inputs that the package lockfile does not cover — CI/CD actions and reusable workflows, container base images, and tools or scripts downloaded during the build — MUST be pinned to an immutable reference: a full commit SHA, an image digest, or a checksum the build verifies. Mutable references (branch names, version tags, `latest`) MUST NOT select what runs in the build.
+> Build and release inputs that the package lockfile does not cover — CI/CD actions and reusable workflows, container base images, and tools or scripts downloaded during the build — MUST be pinned to an immutable reference: a full commit SHA, an image digest, or a checksum the build verifies. Mutable references (branch names, version tags, `latest`) MUST NOT select what runs in the build. A pinned reference MUST change only through a documented update process.
 
 **Verification:** Any spec or plan covering CI/CD pipelines, container builds, or build tooling MUST commit to immutable pinning for each of these input kinds and to an update process for the pins (e.g., Dependabot or Renovate digest updates). `/{project}:analyze` flags build specs that reference actions by tag or branch (`uses: org/action@v4`), base images by tag alone (`FROM node:22`), or download-and-execute steps without checksum verification. **Not flagged:** a floating version of a dependency the lockfile covers, which `BE-DEPS-002` owns.
 
-**Source:** OpenSSF Scorecard (Pinned-Dependencies check), GitHub Docs — Secure use reference (GitHub Actions), CVE-2025-30066, OWASP Top 10:2025 (A03 — Software Supply Chain Failures)
+**Source:** OpenSSF Scorecard (Pinned-Dependencies check), GitHub Docs — Secure use reference (GitHub Actions), OWASP Top 10:2025 (A03 — Software Supply Chain Failures)
 
 ### BE-DEPS-007
 
-> The vulnerability scan of `BE-DEPS-001` SHOULD also run automatically on every change that alters the dependency set — the manifest or the lockfile — so a vulnerable dependency is caught on the change that introduces it.
+> The vulnerability scan of `BE-DEPS-001` SHOULD also run automatically on every change that alters the dependency set — the manifest or the lockfile.
 
 **Verification:** Any spec or plan covering dependency management or CI configuration SHOULD commit to an automated scan on dependency changes. `/{project}:analyze` emits a warning when such a spec omits it. **Not flagged:** where the scan runs — CI, a pre-commit hook, a dependency bot — which is the project's choice.
 

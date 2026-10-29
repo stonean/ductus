@@ -50,7 +50,7 @@ Contract-quality rules — the shape, stability, and documentation of HTTP and R
 
 > Deprecated endpoints MUST emit the `Deprecation` (RFC 9745) and `Sunset` (RFC 8594) HTTP response headers. `Deprecation` MUST carry the date the endpoint is or was deprecated, as a Structured Field Date (`Deprecation: @1735689600`). `Sunset` MUST carry, as an HTTP-date, a future date past which the endpoint will be removed, and MUST NOT be earlier than the `Deprecation` date. The corresponding schema definition MUST mark the operation deprecated (OpenAPI `deprecated: true` on the operation, GraphQL `@deprecated` on the field, protobuf `option deprecated = true` on the method, OpenRPC `deprecated: true` on the method). A deprecated GraphQL root field served from an endpoint that is not itself deprecated MAY carry the schema mark alone.
 
-**Verification:** Any spec or plan that removes or deprecates an endpoint MUST commit to (a) `Deprecation` + `Sunset` headers with concrete dates in their respective formats, `Sunset` no earlier than `Deprecation`, and (b) the schema-level deprecation annotation; one that deprecates a GraphQL root field on an endpoint that stays may commit to (b) alone. `/{project}:analyze` flags deprecation specs that omit a required commitment, and a `Sunset` date earlier than the `Deprecation` date.
+**Verification:** Any spec or plan that removes or deprecates an endpoint MUST commit to the `Deprecation` and `Sunset` headers, with concrete dates in the formats the Statement names, and the schema mark; one that deprecates a GraphQL root field on an endpoint that stays may commit to the mark alone. `/{project}:analyze` flags deprecation specs that omit a required commitment, and a `Sunset` date earlier than the `Deprecation` date.
 
 **Source:** RFC 8594 §3; RFC 9745 §2.1, §2.2, and §4; RFC 9651 §3.3.7; RFC 9110 §5.6.7; OpenAPI Specification (Operation Object `deprecated`); GraphQL Specification (September 2025) §3.13.3; Protocol Buffers `descriptor.proto` (`MethodOptions.deprecated`); OpenRPC Specification (Method Object `deprecated`)
 
@@ -132,7 +132,7 @@ Contract-quality rules — the shape, stability, and documentation of HTTP and R
 
 **Verification:** Any spec or plan that introduces a side-effecting `POST` endpoint — including a side-effecting RPC method carried over HTTP — or a `PATCH` endpoint whose patch is not idempotent, MUST commit to the Statement's key carrier, persistence window, and two rejection responses. `/{project}:analyze` flags such specs that omit idempotency support or either response, and persistence windows shorter than the documented client retry policy.
 
-**Source:** Stripe API idempotency documentation (API v1); IETF draft-ietf-httpapi-idempotency-key-header-07 §2.4, §2.6–§2.7, §4, and §5 (an Internet-Draft that expired in April 2026 without RFC publication); Google AIP-155 (Request identification); gRPC *PROTOCOL-HTTP2*; GraphQL over HTTP (working draft)
+**Source:** Stripe API idempotency documentation (API v1); IETF draft-ietf-httpapi-idempotency-key-header-07 §2.4, §2.6–§2.7, §4, and §5 (an Internet-Draft that expired in April 2026 without RFC publication); Google AIP-155 (Request identification)
 
 ### BE-IDEMP-002
 
@@ -190,7 +190,7 @@ Contract-quality rules — the shape, stability, and documentation of HTTP and R
 
 **Verification:** Any spec or plan that introduces a timestamp field in an API request or response MUST name its representation, and `specs/system.md` MUST declare the API-wide one. `/{project}:analyze` flags timestamp fields described without a representation, with an offset-less date-time format, or with a representation that differs from the one `specs/system.md` declares.
 
-**Source:** RFC 3339 §5.6, Microsoft REST API Guidelines (Azure, *JSON*), Google AIP-142 (Time and duration), POSIX.1-2024 Base Definitions 3.125 (*Epoch*), Protocol Buffers `timestamp.proto` and *ProtoJSON Format*
+**Source:** RFC 3339 §5.6, Microsoft REST API Guidelines (Azure, *JSON*), Google AIP-142 (Time and duration), POSIX.1-2024 Base Definitions 3.125 (*Epoch*), Protocol Buffers `timestamp.proto`
 
 ### BE-REPR-002
 
@@ -206,4 +206,4 @@ Contract-quality rules — the shape, stability, and documentation of HTTP and R
 
 **Verification:** Any spec or plan that introduces a JSON API field holding a number a binary64 parser cannot hold exactly SHOULD encode and document it as the Statement requires. `/{project}:analyze` emits a warning when a spec declares such a field — an `int64` or `uint64` identifier, a high-precision decimal — as a JSON number.
 
-**Source:** RFC 7493 §2.2, RFC 8259 §6, Protocol Buffers *ProtoJSON Format*
+**Source:** RFC 7493 §2.2, RFC 8259 §6

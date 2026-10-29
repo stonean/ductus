@@ -6,15 +6,15 @@ Concurrency-correctness rules for server-side shared state, locking, transaction
 
 ### BE-RACE-001
 
-> Shared mutable state reachable from more than one concurrent execution context MUST be protected by a synchronization mechanism — a lock, an atomic primitive, single-owner/actor confinement, or serialized access; unsynchronized concurrent access in which at least one access is a write is a data race.
+> Shared mutable state reachable from more than one concurrent execution context MUST be protected by a synchronization mechanism — a lock, an atomic primitive, single-owner/actor confinement, or serialized access.
 
 **Verification:** Any spec or plan that introduces state shared across threads, goroutines, async tasks, or request handlers MUST name how that state is synchronized. `/{project}:analyze` flags plans that introduce concurrent access to shared mutable state without a stated synchronization mechanism. This rule governs each access: a compound check-then-act left non-atomic, though each access is synchronized, is `BE-RACE-003`'s.
 
-**Source:** The Go Memory Model (a data race is a write concurrent with another read or write of the same location); Java Language Specification §17.4.5 (happens-before order and data races) and §17.4.1 (conflicting accesses).
+**Source:** The Go Memory Model; Java Language Specification §17.4.5 (happens-before order and data races) and §17.4.1 (conflicting accesses).
 
 ### BE-RACE-002
 
-> Designs SHOULD prefer eliminating shared mutable state — immutability, confinement to a single owner, or message-passing — over guarding it, to shrink the surface that can race.
+> Designs SHOULD prefer eliminating shared mutable state — immutability, confinement to a single owner, or message-passing — over guarding it.
 
 **Verification:** Any spec or plan that introduces shared mutable state SHOULD justify why it is shared rather than confined or immutable. `/{project}:analyze` flags plans that add shared mutable state where confinement or immutability would serve.
 
@@ -26,7 +26,7 @@ Concurrency-correctness rules for server-side shared state, locking, transaction
 
 **Verification:** Any spec or plan that acts on the result of a check against shared state — creating something if absent, initializing on first use, enforcing a uniqueness or existence rule — MUST name the mechanism that makes the check and the act atomic, or state that repeating the act is harmless, and for a uniqueness or existence rule on persisted data MUST name the constraint or conditional write that enforces it. `/{project}:analyze` flags plans that describe a check followed by a separate act with no atomicity mechanism and no statement that repeating the act is harmless, and plans that enforce uniqueness with a lookup before the insert. Wrapping a check-then-insert in a transaction does not make it atomic: an ordinary read at the default isolation level of PostgreSQL, MySQL/InnoDB, SQL Server, or Oracle locks no row that does not yet exist. **Not flagged:** a stampede of concurrent misses on an expensive cache entry, which `performance-backend.md` `BE-CACHE-003` owns; a lost update in a read-modify-write of an existing persisted record, which `BE-TXN-002` owns; and write skew on an invariant over a set of rows, which `BE-TXN-003` owns.
 
-**Source:** CWE-367, Time-of-check Time-of-use (TOCTOU) Race Condition (its shared resources include "variables in multithreaded programs"); Goetz et al., *Java Concurrency in Practice* (2006), ch. 2 "Thread Safety", 2.2 "Atomicity"; PostgreSQL documentation, *INSERT* — `ON CONFLICT`.
+**Source:** CWE-367, Time-of-check Time-of-use (TOCTOU) Race Condition; Goetz et al., *Java Concurrency in Practice* (2006), ch. 2 "Thread Safety", 2.2 "Atomicity"; PostgreSQL documentation, *INSERT* — `ON CONFLICT`.
 
 ## BE-LOCK — Locking and deadlock avoidance
 
@@ -40,7 +40,7 @@ Concurrency-correctness rules for server-side shared state, locking, transaction
 
 ### BE-LOCK-002
 
-> When more than one lock is held at once, locks SHOULD be acquired in a single consistent global order, each acquisition SHOULD wait no longer than a bounded lock timeout, and each lock SHOULD be released within a bounded hold time, to avoid deadlock and unbounded waits.
+> When more than one lock is held at once, locks SHOULD be acquired in a single consistent global order, each acquisition SHOULD wait no longer than a bounded lock timeout, and each lock SHOULD be released within a bounded hold time.
 
 **Verification:** Any spec or plan that acquires more than one lock SHOULD state the global acquisition order, the acquisition timeout, and the hold-time bound. `/{project}:analyze` flags multi-lock plans with no stated ordering, timeout, or hold bound. **Not flagged:** a lock timeout or hold bound written as a bare literal, which `configuration-cross.md` `CFG-CONST-003` owns.
 
@@ -50,7 +50,7 @@ Concurrency-correctness rules for server-side shared state, locking, transaction
 
 ### BE-TXN-001
 
-> Each transaction SHOULD state its isolation level explicitly rather than relying on the engine's default, which varies by database and is often weaker than assumed.
+> Each transaction SHOULD state its isolation level explicitly rather than relying on the engine's default.
 
 **Verification:** Any spec or plan that introduces a multi-statement transaction SHOULD name the isolation level it requires and the anomalies that level prevents on the chosen engine. `/{project}:analyze` flags transactional plans that do not state an isolation level.
 
@@ -58,9 +58,9 @@ Concurrency-correctness rules for server-side shared state, locking, transaction
 
 ### BE-TXN-002
 
-> A concurrent read-modify-write of persisted state MUST prevent lost updates — via an optimistic version/ETag check, a `SELECT … FOR UPDATE` row lock, an atomic in-place or conditional write (`UPDATE … SET n = n + 1`, compare-and-set), or an isolation level that detects the conflict and aborts one writer; a bare read-then-write under concurrency is silent data corruption.
+> A concurrent read-modify-write of persisted state MUST prevent lost updates — via an optimistic version/ETag check, a `SELECT … FOR UPDATE` row lock, an atomic in-place or conditional write (`UPDATE … SET n = n + 1`, compare-and-set), or an isolation level that detects the conflict and aborts one writer.
 
-**Verification:** Any spec or plan that introduces a concurrent update to shared persisted state MUST name its lost-update guard (version check, row lock, atomic update, or a conflict-detecting isolation level on the named engine). `/{project}:analyze` flags read-modify-write plans that commit to none. An isolation level is a guard only on an engine where that level detects the conflict — PostgreSQL's REPEATABLE READ and SERIALIZABLE do; MySQL/InnoDB's REPEATABLE READ does not. **Not flagged:** a conflict abort with no handling path, which `BE-TXN-004` owns; and a lost update across a read-modify-write spanning two HTTP requests — a client's read, then its write — which `api-backend.md` `BE-COND-001` owns.
+**Verification:** Any spec or plan that introduces a concurrent update to shared persisted state MUST name which of the Statement's lost-update guards it uses and, for an isolation level, the engine. `/{project}:analyze` flags read-modify-write plans that commit to none. An isolation level is a guard only on an engine where that level detects the conflict — PostgreSQL's REPEATABLE READ and SERIALIZABLE do; MySQL/InnoDB's REPEATABLE READ does not. **Not flagged:** a conflict abort with no handling path, which `BE-TXN-004` owns; and a lost update across a read-modify-write spanning two HTTP requests — a client's read, then its write — which `api-backend.md` `BE-COND-001` owns.
 
 **Source:** Berenson et al., "A Critique of ANSI SQL Isolation Levels" (SIGMOD 1995) — lost update (P4); PostgreSQL documentation, *Transaction Isolation* ("could not serialize access due to concurrent update"); Jepsen, *MySQL 8.0.34* ("MySQL Repeatable Read transactions cannot safely read a value and then write it").
 
@@ -68,23 +68,23 @@ Concurrency-correctness rules for server-side shared state, locking, transaction
 
 > A transaction that reads a set of rows, decides on the basis of that read, and then writes — enforcing an invariant across rows such as "at least one on call", "no overlapping bookings", or "total within a limit" — MUST guard against write skew and phantoms: by running every transaction that reads or writes the invariant's rows at an isolation level that is serializable on the chosen engine, by locking every row the decision read (materializing a lock row when the decision rests on the absence of rows), or by a database constraint that enforces the invariant; snapshot isolation, including PostgreSQL's REPEATABLE READ, does not prevent write skew.
 
-**Verification:** Any spec or plan whose transaction enforces an invariant spanning more than one row, or conditions a write on the absence of matching rows, MUST name its write-skew guard — the serializable isolation level on the named engine for every transaction that reads or writes the invariant's rows, the rows locked (or the materialized lock row), or the enforcing constraint. `/{project}:analyze` flags multi-row-invariant plans that rely on a default or snapshot isolation level with no lock or constraint. The commitment is to serializable behavior on the chosen engine, not to the keyword: Oracle documents its SERIALIZABLE as reading a transaction-start snapshot and raising `ORA-08177` when a transaction updates a row another transaction changed and committed after it began — the snapshot-isolation behavior under which Fekete et al. observed non-serializable executions on Oracle. A lost-update guard on the row being written (`BE-TXN-002`) is not a write-skew guard, because the two transactions write different rows. This rule governs invariants across rows: a check-then-insert enforcing uniqueness on a single key is `BE-RACE-003`'s.
+**Verification:** Any spec or plan whose transaction enforces an invariant spanning more than one row, or conditions a write on the absence of matching rows, MUST name which of the Statement's write-skew guards it uses — for an isolation level, the engine; for locking, the rows locked or the materialized lock row; for a constraint, the constraint. `/{project}:analyze` flags multi-row-invariant plans that rely on a default or snapshot isolation level with no lock or constraint. The commitment is to serializable behavior on the chosen engine, not to the keyword: Oracle documents its SERIALIZABLE as reading a transaction-start snapshot and raising `ORA-08177` when a transaction updates a row another transaction changed and committed after it began — the snapshot-isolation behavior under which Fekete et al. observed non-serializable executions on Oracle. A lost-update guard on the row being written (`BE-TXN-002`) is not a write-skew guard, because the two transactions write different rows. This rule governs invariants across rows: a check-then-insert enforcing uniqueness on a single key is `BE-RACE-003`'s.
 
 **Source:** Berenson et al., "A Critique of ANSI SQL Isolation Levels" (SIGMOD 1995) — phantom (P3), which snapshot isolation does not preclude, and write skew (A5B), which it permits; Fekete et al., "Making Snapshot Isolation Serializable" (ACM TODS 30(2), 2005) — Oracle's SERIALIZABLE as a form of snapshot isolation, and materializing a conflict or promoting a read with `SELECT FOR UPDATE` to prevent write skew; PostgreSQL documentation, *Transaction Isolation*; MySQL documentation, *Transaction Isolation Levels*; Oracle *Database Concepts* — Data Concurrency and Consistency.
 
 ### BE-TXN-004
 
-> A transaction that can abort on a concurrency conflict — a serialization failure (SQLSTATE `40001`), a deadlock victim, or a failed optimistic version check — SHOULD treat that abort as an expected outcome with a stated handling path: retry the whole transaction from its start, re-reading its inputs, under a bounded retry policy, or report the conflict to the caller.
+> A transaction that can abort on a concurrency conflict — a serialization failure (SQLSTATE `40001`), a deadlock victim, or a failed optimistic version check — SHOULD treat that abort as an expected outcome with a stated handling path: retry the whole transaction from its start, re-reading its inputs, under a bounded retry policy, or report the conflict to the caller. A whole-transaction retry SHOULD first roll the transaction back explicitly rather than re-issue the failed statement.
 
-**Verification:** Any spec or plan that runs transactions at an isolation level that aborts on conflict on the chosen engine (PostgreSQL REPEATABLE READ or SERIALIZABLE, for example), relies on deadlock detection, or uses optimistic version checks SHOULD state how a conflict abort is handled — whole-transaction retry, or the conflict response returned to the caller. `/{project}:analyze` flags plans that adopt a conflict-aborting guard with no stated abort handling. A whole-transaction retry rolls back explicitly first rather than re-issuing the failed statement — Oracle rolls back only the statement that hit a deadlock, leaving the transaction open with its earlier work. **Not flagged:** a retry missing its attempt bound, backoff, or jitter, or repeating a side effect outside the database with no idempotency basis, which `reliability-backend.md` `BE-RETRY-001` owns.
+**Verification:** Any spec or plan that runs transactions at an isolation level that aborts on conflict on the chosen engine (PostgreSQL REPEATABLE READ or SERIALIZABLE, for example), relies on deadlock detection, or uses optimistic version checks SHOULD state which of the Statement's handling paths a conflict abort takes. `/{project}:analyze` flags plans that adopt a conflict-aborting guard with no stated abort handling. A whole-transaction retry rolls back explicitly first rather than re-issuing the failed statement — Oracle rolls back only the statement that hit a deadlock, leaving the transaction open with its earlier work. **Not flagged:** a retry missing its attempt bound, backoff, or jitter, or repeating a side effect outside the database with no idempotency basis, which `reliability-backend.md` `BE-RETRY-001` owns.
 
-**Source:** PostgreSQL documentation, *Transaction Isolation* ("applications using this level must be prepared to retry transactions due to serialization failures") and *Serialization Failure Handling*; Microsoft, SQL Server *Deadlocks guide* (the victim's transaction is rolled back with error 1205); MySQL documentation, InnoDB deadlocks; Oracle *Database Concepts* — Data Concurrency and Consistency (statement-level rollback on deadlock).
+**Source:** PostgreSQL documentation, *Transaction Isolation* ("applications using this level must be prepared to retry transactions due to serialization failures") and *Serialization Failure Handling*; Microsoft, SQL Server *Deadlocks guide*; MySQL documentation, InnoDB deadlocks; Oracle *Database Concepts* — Data Concurrency and Consistency (statement-level rollback on deadlock).
 
 ## BE-COORD — Distributed coordination
 
 ### BE-COORD-001
 
-> A distributed lock, lease, or leader election relied on for correctness — where two simultaneous holders would corrupt state — MUST carry a fencing token that the protected resource validates, rejecting stale holders; a lease or lock alone is insufficient, because a paused holder, a delayed request, or a clock that jumps can let a holder act after its lease has expired. A lock taken only for efficiency, where a second holder merely duplicates work, MAY omit fencing.
+> A distributed lock, lease, or leader election relied on for correctness — where two simultaneous holders would corrupt state — MUST carry a fencing token that the protected resource validates, rejecting stale holders. A lock taken only for efficiency, where a second holder merely duplicates work, MAY omit fencing.
 
 **Verification:** Any spec or plan that introduces a distributed lock or leader election MUST state whether it guards correctness or only efficiency, and for a correctness lock MUST commit to a monotonic fencing token enforced at the protected resource. `/{project}:analyze` flags distributed-lock plans that rely on lease expiry alone without stating that the lock guards efficiency only.
 
@@ -104,7 +104,7 @@ Concurrency-correctness rules for server-side shared state, locking, transaction
 
 **Verification:** Any spec or plan in which one operation both writes to a database and publishes to a broker, or writes to a second datastore or search index that must stay consistent with it, MUST name the mechanism that makes the two atomic. `/{project}:analyze` flags plans that commit a transaction and then publish, or publish and then commit, as separate steps with no outbox, change-data capture, or single source of truth. **Not flagged:** a consumer that double-applies a message the relay published more than once, which `BE-COORD-002` owns.
 
-**Source:** Richardson, microservices.io, "Pattern: Transactional outbox" ("2PC is not an option"; "The Message relay might publish a message more than once"); Kleppmann, "Using logs to build a solid data infrastructure (or: why dual writes are a bad idea)".
+**Source:** Richardson, microservices.io, "Pattern: Transactional outbox" ("The Message relay might publish a message more than once"); Kleppmann, "Using logs to build a solid data infrastructure (or: why dual writes are a bad idea)".
 
 ### BE-COORD-004
 

@@ -28,13 +28,13 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 **Verification:** Any spec or plan that introduces a page, a client-side route, or the application shell MUST commit to the document language and a per-page title pattern. `/{project}:analyze` flags affected-files snippets whose root `<html>` element lacks a `lang` attribute, and flags client-side routing specs that do not update `document.title` on navigation.
 
-**Source:** WCAG 2.2 §2.4.2 (Page Titled), §3.1.1 (Language of Page), §3.1.2 (Language of Parts), W3C Understanding 2.4.2 and 3.1.1, W3C Internationalization "Why use the language attribute?", HTML Living Standard (the `lang` attribute)
+**Source:** WCAG 2.2 §2.4.2 (Page Titled), §3.1.1 (Language of Page), §3.1.2 (Language of Parts), W3C Understanding 2.4.2 and 3.1.1, HTML Living Standard (the `lang` attribute)
 
 ## FE-KBD — Keyboard Navigation and Focus
 
 ### FE-KBD-001
 
-> All interactive UI MUST be operable by keyboard alone. Every interactive element MUST be reachable by keyboard — via `Tab` for a standalone control, or via arrow keys inside a composite widget (menu, tablist, listbox, grid, tree) whose single tab stop is reachable via `Tab` — and operable via documented key bindings (`Enter`/`Space` for buttons, arrow keys within composite widgets per the WAI-ARIA Authoring Practices Guide). Mouse-only or pointer-only interactions MUST NOT exist, except where the underlying function depends on the path of the user's movement (freehand drawing, watercolor painting), which §2.1.1 exempts.
+> All interactive UI MUST be operable by keyboard alone. Every interactive element MUST be reachable by keyboard — via `Tab` for a standalone control, or via arrow keys inside a composite widget (menu, tablist, listbox, grid, tree) whose single tab stop is reachable via `Tab` — and operable via documented key bindings (`Enter`/`Space` for buttons, arrow keys within composite widgets per the WAI-ARIA Authoring Practices Guide). Mouse-only or pointer-only interactions MUST NOT exist, except where the underlying function depends on the path of the user's movement (freehand drawing, watercolor painting).
 
 **Verification:** Any spec or plan that introduces interactive UI MUST commit to keyboard operability and name the key bindings for any non-default interaction (menus, dialogs, custom widgets). `/{project}:analyze` flags interactive-UI specs that describe drag-and-drop, hover-reveal, or pointer-only flows without a keyboard equivalent.
 
@@ -50,7 +50,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-KBD-003
 
-> Modal dialogs and disclosure UI that take over the page MUST trap focus while open (Tab and Shift+Tab cycle within the dialog) and MUST return focus to the triggering element on close. Pressing `Escape` MUST close the dialog. A native `<dialog>` opened with `showModal()`, which makes the rest of the document inert, or a page whose content outside the dialog is made `inert`, MAY satisfy the trap provided focus never reaches the page beneath, whether or not it can reach the browser's own controls. Where the triggering element no longer exists, or the dialog's task leads directly to a next step elsewhere in the workflow, focus MAY move on close to the element that continues that workflow instead.
+> Modal dialogs and disclosure UI that take over the page MUST trap focus while open (Tab and Shift+Tab cycle within the dialog) and MUST return focus to the triggering element on close. Pressing `Escape` MUST close the dialog. A native `<dialog>` opened with `showModal()`, or a page whose content outside the dialog is made `inert`, MAY satisfy the trap provided focus never reaches the page beneath, whether or not it can reach the browser's own controls. Where the triggering element no longer exists, or the dialog's task leads directly to a next step elsewhere in the workflow, focus MAY move on close to the element that continues that workflow instead.
 
 **Verification:** Any spec or plan that introduces modal dialogs, drawers, or full-screen overlays MUST commit to focus-trap, focus-restoration, and Escape-key dismissal. `/{project}:analyze` flags modal-UI specs that omit any of the three.
 
@@ -100,9 +100,9 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-ARIA-001
 
-> ARIA roles, states, and properties MUST be used to fill gaps in native HTML semantics — not to override them. A native HTML element with the needed semantics and behavior built in MUST take precedence over an ARIA role: `role="button"` on a `<div>` is forbidden when a `<button>` would serve. ARIA roles MUST be added only when no native element exists for the pattern (tabs, comboboxes, treeviews, custom listboxes, etc.), only on a host element that ARIA in HTML allows the role on (`role="tab"` on a `<button>` is allowed; `role="heading"` on a `<button>` is not), and MUST NOT restate an element's implicit role (`<button role="button">`). A list whose markers are removed by styling MAY restate `role="list"`, because some browsers otherwise stop exposing it as a list. ARIA states and properties MAY be added to native elements to expose state or relationships HTML cannot express (`aria-expanded`, `aria-current`, `aria-describedby`, `aria-invalid`).
+> ARIA roles, states, and properties MUST be used to fill gaps in native HTML semantics — not to override them. A native HTML element with the needed semantics and behavior built in MUST take precedence over an ARIA role: `role="button"` on a `<div>` is forbidden when a `<button>` would serve. ARIA roles MUST be added only when no native element exists for the pattern (tabs, comboboxes, treeviews, custom listboxes, etc.), only on a host element that ARIA in HTML allows the role on (`role="tab"` on a `<button>` is allowed; `role="heading"` on a `<button>` is not), and MUST NOT restate an element's implicit role (`<button role="button">`). A list whose markers are removed by styling MAY restate `role="list"`. ARIA states and properties MAY be added to native elements to expose state or relationships HTML cannot express (`aria-expanded`, `aria-current`, `aria-describedby`, `aria-invalid`).
 
-**Verification:** Any spec or plan that introduces custom widgets MUST justify each ARIA role/state/property against the WAI-ARIA Authoring Practices Guide pattern it implements. `/{project}:analyze` flags affected-files snippets that restate an element's implicit role (`<button role="button">`, `<a href role="link">`) other than the Statement's styled-list case, that apply a role ARIA in HTML does not allow on its host element, that put an ARIA widget role on a `<div>`/`<span>` where a native element provides the pattern, or that apply `aria-hidden="true"` to focusable elements.
+**Verification:** Any spec or plan that introduces custom widgets MUST justify each ARIA role/state/property against the WAI-ARIA Authoring Practices Guide pattern it implements. `/{project}:analyze` flags affected-files snippets that restate an element's implicit role (`<button role="button">`, `<a href role="link">`) other than the Statement's styled-list case, that apply a role ARIA in HTML does not allow on its host element, that put an ARIA widget role on a `<div>`/`<span>` where a native element provides the pattern, other than a click-listening `<div>`/`<span>` that a native `<button>` or `<a href>` would serve, which `FE-SEMHTML-001` owns, or that apply `aria-hidden="true"` to focusable elements.
 
 **Source:** WAI-ARIA 1.2 §1.4 (Co-Evolution of WAI-ARIA and Host Languages), W3C ARIA in HTML §1 (Author requirements for use of ARIA in HTML), §3.1 (Avoid overriding interactive elements with non-interactive roles), §3.2 (Avoid specifying redundant roles), W3C ACT rule 6cfa84 "Element with aria-hidden has no content in sequential focus navigation" (mapped to WCAG 2.2 §4.1.2), WAI-ARIA Authoring Practices Guide "Read Me First"
 
@@ -124,7 +124,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-ARIA-004
 
-> Status messages that appear without moving focus — the result of an action (saved, submitted, added to cart), progress and completion of asynchronous work, search-result counts, toasts, and error summaries shown on submit — MUST be exposed through a live region (`role="status"`, `role="alert"`, `role="log"`, `<output>`, or `aria-live`) that is present before the message is added, so assistive technology announces them without the message receiving focus. A `role="alert"` container MAY be inserted together with its message.
+> Status messages that appear without moving focus — the result of an action (saved, submitted, added to cart), progress and completion of asynchronous work, search-result counts, toasts, and error summaries shown on submit — MUST be exposed through a live region (`role="status"`, `role="alert"`, `role="log"`, `<output>`, or `aria-live`) that is present before the message is added. A `role="alert"` container MAY be inserted together with its message.
 
 **Verification:** Any spec or plan that introduces asynchronous feedback, toasts, inline save states, or result counts MUST name the live-region role per message type (`status` for advisory messages, `alert` for urgent errors). `/{project}:analyze` flags async-feedback specs with no live-region commitment, and flags affected-files snippets that inject toast or status text into a container lacking a live-region role or `aria-live`, or that insert a live-region container other than `role="alert"` together with its message rather than rendering it before the message is added.
 
@@ -134,7 +134,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-CONTRAST-001
 
-> Text and functional graphics MUST meet the WCAG 2.2 AA contrast ratios against adjacent colors: 4.5:1 for normal text; 3:1 for large text (≥18pt, or ≥14pt bold — W3C's Understanding 1.4.3 gives these as approximately 24 and 18.5 CSS pixels); and 3:1 for the visual information needed to identify UI components and their states and for graphics needed to understand content (form-field borders, focus indicators, status indicators, icons that convey information). Inactive (disabled) components, purely decorative text and graphics, logotypes, and components whose appearance the browser determines and the author has not modified MAY fall below these ratios, per the criteria's own exceptions.
+> Text and functional graphics MUST meet the WCAG 2.2 AA contrast ratios against adjacent colors: 4.5:1 for normal text; 3:1 for large text (≥18pt, or ≥14pt bold — W3C's Understanding 1.4.3 gives these as approximately 24 and 18.5 CSS pixels); and 3:1 for the visual information needed to identify UI components and their states and for graphics needed to understand content (form-field borders, focus indicators, status indicators, icons that convey information). Inactive (disabled) components, purely decorative text and graphics, logotypes, and components whose appearance the browser determines and the author has not modified MAY fall below these ratios.
 
 **Verification:** Any spec or plan that introduces a color palette, theme, or text-on-color UI element MUST commit to AA contrast across all foreground/background pairs in use. `/{project}:analyze` runs against the project's documented palette and flags pair combinations below threshold, and flags foreground/background pairs hard-coded in affected-files snippets that fall below threshold. A documented focus-indicator color below 3:1 against adjacent colors is `FE-KBD-002`'s.
 
@@ -146,7 +146,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 **Verification:** Any spec or plan that introduces state indicators (errors, warnings, success, selection, required) MUST commit to a non-color cue per state. `/{project}:analyze` flags spec descriptions that describe state via color only ("the field turns red"), and flags affected-files snippets that style validation state without an accompanying icon or text node.
 
-**Source:** WCAG 2.2 §1.4.1 (Use of Color), Colour Blind Awareness "About Colour Blindness", US National Eye Institute "Color Blindness"
+**Source:** WCAG 2.2 §1.4.1 (Use of Color)
 
 ## FE-A11YFORM — Accessible Forms
 
@@ -176,7 +176,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-A11YFORM-004
 
-> Authentication flows (sign-in, sign-up, multi-factor, account recovery) MUST NOT require a cognitive function test at any step — remembering a password, transcribing a code, solving a puzzle, performing a calculation — unless that step also offers an alternative method without one or a mechanism that assists the user with it. Password and one-time-code fields MUST permit paste and password-manager autofill. A CAPTCHA MUST NOT be the only path through a step when it requires text transcription or puzzle solving; object-recognition and personal-content checks MAY be used, per the criterion's exceptions.
+> Authentication flows (sign-in, sign-up, multi-factor, account recovery) MUST NOT require a cognitive function test at any step — remembering a password, transcribing a code, solving a puzzle, performing a calculation — unless that step also offers an alternative method without one or a mechanism that assists the user with it. Password and one-time-code fields MUST permit paste and password-manager autofill. A CAPTCHA MUST NOT be the only path through a step when it requires text transcription or puzzle solving; object-recognition and personal-content checks MAY be used.
 
 **Verification:** Any spec or plan that introduces sign-in, sign-up, multi-factor, account recovery, or a CAPTCHA MUST commit to paste and autofill support on credential and code fields and name the non-cognitive alternative for any puzzle or transcription step. `/{project}:analyze` flags affected-files snippets that block paste on credential or code inputs (`onpaste` handlers that call `preventDefault`), split one-time codes across per-digit inputs that do not accept a pasted code, and flags authentication specs whose only bot check is a text-transcription or puzzle CAPTCHA.
 
@@ -210,7 +210,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-A11YMEDIA-001
 
-> Every `<img>` element MUST have an `alt` attribute. Informational images MUST have descriptive alt text; purely decorative images MUST have `alt=""` (empty string) so screen readers skip them. SVG icons used as interactive triggers MUST give the control an accessible name by one of the means `FE-ARIA-002` lists.
+> Every `<img>` element MUST have an `alt` attribute. Informational images MUST have descriptive alt text; purely decorative images MUST have `alt=""` (empty string). SVG icons used as interactive triggers MUST give the control an accessible name by one of the means `FE-ARIA-002` lists.
 
 **Verification:** Any spec or plan that introduces image rendering MUST commit to an alt-text policy. `/{project}:analyze` flags affected-files snippets with `<img>` elements lacking an `alt` attribute; an unnamed SVG-only control is flagged under `FE-ARIA-002`.
 
@@ -218,7 +218,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 ### FE-A11YMEDIA-002
 
-> Prerecorded video with audio MUST provide synchronized captions; prerecorded audio-only content MUST provide a transcript; prerecorded video-only content MUST provide a text alternative or an audio track that conveys the same information. Captions and transcripts for content authored by the application MUST be human-edited (not solely auto-generated). Audio or video that is a media alternative for text and is clearly labeled as such MAY omit these alternatives, as both criteria except it.
+> Prerecorded video with audio MUST provide synchronized captions; prerecorded audio-only content MUST provide a transcript; prerecorded video-only content MUST provide a text alternative or an audio track that conveys the same information. Captions and transcripts for content authored by the application MUST be human-edited (not solely auto-generated). Audio or video that is a media alternative for text and is clearly labeled as such MAY omit these alternatives.
 
 **Verification:** Any spec or plan that introduces video or audio media MUST commit to captions/transcripts and to the editorial pipeline that produces them. `/{project}:analyze` flags media-introducing specs that omit caption/transcript commitments or that rely solely on auto-generation for application-authored content. Live video, and audio description of prerecorded synchronized media, are `FE-A11YMEDIA-003`'s.
 
@@ -228,7 +228,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 > All prerecorded video content in synchronized media that the application's pages present — whether the application produces it, embeds it from another source, or accepts it from users — MUST have audio description of the important visual details that cannot be understood from the main soundtrack alone. All live audio content in synchronized media those pages present MUST have captions; a two-way multimedia call between individuals made through the application MAY be left without application-provided captions. A video showing only a speaker MAY meet the audio-description obligation with a static text alternative that describes the speaker's visual details (W3C technique G203). Media that is a media alternative for text and is clearly labeled as such is not synchronized media under WCAG 2.2's definition and is outside both obligations; where the existing audio already provides all of the video information, no additional audio description is necessary.
 
-**Verification:** Any spec or plan that introduces pages presenting prerecorded video in synchronized media, whether produced, embedded, or user-contributed, MUST commit to an audio-description approach for it or record which of the Statement's audio-description exceptions applies. Any spec or plan that introduces pages presenting live synchronized media broadcast to viewers, such as a live stream or web cast, MUST commit to a real-time captioning mechanism. Where media under either commitment comes from a source outside the application's control, the spec or plan MUST state how the obligation is met, such as requiring the contributor to supply it or monitoring and repairing within two business days as §5.4 describes; a statement of partial conformance records that the obligation is not met and does not meet it. `/{project}:analyze` flags media-introducing specs that omit the applicable commitment, including specs that commit to it only for the application's own media.
+**Verification:** Any spec or plan that introduces pages presenting prerecorded video in synchronized media MUST commit to an audio-description approach for it or record which of the Statement's audio-description exceptions applies. Any spec or plan that introduces pages presenting live synchronized media broadcast to viewers, such as a live stream or web cast, MUST commit to a real-time captioning mechanism. Where media under either commitment comes from a source outside the application's control, the spec or plan MUST state how the obligation is met, such as requiring the contributor to supply it or monitoring and repairing within two business days as §5.4 describes; a statement of partial conformance records that the obligation is not met and does not meet it. `/{project}:analyze` flags media-introducing specs that omit the applicable commitment, including specs that commit to it only for the application's own media.
 
 **Source:** WCAG 2.2 §1.2.5 (Audio Description (Prerecorded)), §1.2.3 (Audio Description or Media Alternative (Prerecorded)), §1.2.4 (Captions (Live)), the WCAG 2.2 definitions of synchronized media, audio description (Note 3), and web page (Example 1), §5.2.2 (Full pages), §5.4 (Statement of Partial Conformance - Third Party Content), W3C Understanding 1.2.5 (sufficient techniques G78, G173, G226, and G203), W3C Understanding 1.2.4, W3C Understanding Conformance ("Partial conformance claims due to third party content")
 
@@ -240,7 +240,7 @@ These rules verify **design-time commitments** — what a spec or plan must stat
 
 **Verification:** Any spec or plan that introduces interactive controls (icon buttons, toolbars, pagination, close buttons, chips, table-row actions) MUST commit to a minimum target size of 24×24 CSS pixels or to the spacing alternative. `/{project}:analyze` flags affected-files snippets that size interactive elements below 24 CSS pixels in width or height — including icon buttons whose only box is a sub-24px icon with no padding — without spacing that satisfies the 24-pixel-circle test.
 
-**Source:** WCAG 2.2 §2.5.8 (Target Size (Minimum)), §2.5.5 (Target Size (Enhanced), Level AAA), W3C Understanding 2.5.8
+**Source:** WCAG 2.2 §2.5.8 (Target Size (Minimum)), W3C Understanding 2.5.8
 
 ### FE-POINTER-002
 

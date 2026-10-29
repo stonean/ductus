@@ -10,15 +10,15 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 **Verification:** Any spec or plan that introduces or modifies user-facing UI MUST commit to maintaining the documented Web Vitals budgets. `/{project}:analyze` flags a frontend-UI spec that omits that commitment, a spec proposing looser thresholds without a `specs/system.md` justification reference, and budgets that name First Input Delay (FID) in place of INP.
 
-**Source:** web.dev "Web Vitals", web.dev "Defining the Core Web Vitals metrics thresholds", web.dev "Interaction to Next Paint becomes a Core Web Vital on March 12", web.dev "The business impact of Core Web Vitals", Google Search Central "Understanding Core Web Vitals and Google search results"
+**Source:** web.dev "Web Vitals", web.dev "Defining the Core Web Vitals metrics thresholds", web.dev "Interaction to Next Paint becomes a Core Web Vital on March 12"
 
 ### FE-VITALS-002
 
 > Web Vitals MUST be measured continuously on real users (RUM), not only via synthetic CI runs. The application MUST emit `web-vitals` (or equivalent) measurements to a backend the team monitors. Synthetic Lighthouse runs in CI are complementary but MUST NOT be the sole measurement source.
 
-**Verification:** Any spec or plan covering frontend instrumentation, observability, or CI performance MUST commit to (a) RUM emission of Web Vitals and (b) a monitored backend for them. `/{project}:analyze` flags performance specs that describe only synthetic measurement without a RUM commitment.
+**Verification:** Any spec or plan covering frontend instrumentation, observability, or CI performance MUST commit to each obligation in the Statement. `/{project}:analyze` flags performance specs that describe only synthetic measurement without a RUM commitment.
 
-**Source:** web.dev "Why lab and field data can be different (and what to do about it)", web.dev "Web Vitals", web.dev "Total Blocking Time (TBT)", Lighthouse throttling documentation, `web-vitals` JavaScript library documentation
+**Source:** web.dev "Why lab and field data can be different (and what to do about it)", web.dev "Web Vitals", `web-vitals` JavaScript library documentation
 
 ## FE-BUNDLE — Bundle Size
 
@@ -28,7 +28,7 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 **Verification:** Any spec or plan that introduces frontend code, dependencies, or build configuration MUST commit to the Statement's budgets and to how exceedance is caught before the change ships. `/{project}:analyze` flags frontend projects with no budgets published in `specs/system.md`, and flags dependency-adding specs that omit a bundle-impact estimate against the budget. **Not flagged:** a budget's figure, which the rule leaves to the project; and a means of catching exceedance that is not automated — a missing automated budget check is `FE-BUNDLE-003`'s.
 
-**Source:** Addy Osmani, "Start Performance Budgeting" (addyosmani.com, 2018); web.dev "Performance budgets 101"; web.dev "Your first performance budget"; V8 blog "The cost of JavaScript in 2019"; web.dev "Render-blocking CSS"
+**Source:** Addy Osmani, "Start Performance Budgeting" (addyosmani.com, 2018); web.dev "Performance budgets 101"; web.dev "Your first performance budget"
 
 ### FE-BUNDLE-002
 
@@ -36,7 +36,7 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 **Verification:** Any spec or plan that introduces a multi-route SPA or that adds a new route MUST commit to per-route code-splitting. `/{project}:analyze` flags SPA build specs that produce a single monolithic bundle and flags new-route specs that statically import the route module from the entry point. **Not flagged:** a route's chunk prefetched after the initial render, through a framework's route prefetching or `<link rel="prefetch">`.
 
-**Source:** web.dev "Reduce JavaScript payloads with code splitting", React `lazy` reference, Vue Router "Lazy Loading Routes", Angular "Route loading strategies", Next.js `<Link>` reference, MDN `rel=prefetch` and Speculation Rules API documentation
+**Source:** web.dev "Reduce JavaScript payloads with code splitting", React `lazy` reference, Vue Router "Lazy Loading Routes", Angular "Route loading strategies", Next.js `<Link>` reference, MDN `rel=prefetch` documentation
 
 ### FE-BUNDLE-003
 
@@ -54,11 +54,11 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 **Verification:** Any spec or plan that introduces image-bearing UI MUST commit to modern-format delivery and state whether its supported-browser policy requires a JPEG/PNG fallback. `/{project}:analyze` flags affected-files snippets with `<img src="*.jpg">` or `<img src="*.png">` for content imagery without an accompanying `<picture>` element, `Accept`-negotiating image pipeline, or other modern-format pipeline.
 
-**Source:** web.dev "Use WebP images", web.dev "Using AVIF to compress images on your site", HTTP Archive Web Almanac 2025 "Page Weight", MDN `<picture>` documentation, Baseline (web-features) status for AVIF and WebP
+**Source:** web.dev "Use WebP images", web.dev "Using AVIF to compress images on your site", MDN `<picture>` documentation, Baseline (web-features) status for AVIF and WebP
 
 ### FE-IMAGE-002
 
-> Images MUST declare their intrinsic dimensions via `width` and `height` attributes (or via CSS `aspect-ratio`) so the browser can reserve layout space before the image loads.
+> Images MUST declare their intrinsic dimensions via `width` and `height` attributes (or via CSS `aspect-ratio`).
 
 **Verification:** Any spec or plan that introduces image-bearing UI MUST commit to declared intrinsic dimensions per image. `/{project}:analyze` flags affected-files snippets with `<img>` elements lacking `width` and `height` attributes (or a corresponding `aspect-ratio` rule).
 
@@ -84,7 +84,7 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 ### FE-LOAD-002
 
-> The critical rendering path MUST be defined and documented per route — the minimum set of CSS and JavaScript required to render above-the-fold content. Render-blocking JavaScript MUST be minimized: every external classic script (`<script src>`) MUST use `defer` or `async`, or be a module script (`type="module"`, which defers by default), unless parser-blocking execution is required for correctness, with the reason documented.
+> The critical rendering path MUST be defined and documented per route — the minimum set of CSS and JavaScript required to render above-the-fold content. Render-blocking JavaScript MUST be minimized: every external classic script (`<script src>`) MUST use `defer` or `async`, or be a module script (`type="module"`), unless parser-blocking execution is required for correctness, with the reason documented.
 
 **Verification:** Any spec or plan that introduces a new route or that modifies the document `<head>` MUST commit to a documented critical rendering path and to `defer`/`async` (or module scripts) for every external classic script not documented as requiring parser-blocking execution. `/{project}:analyze` flags affected-files snippets with external classic `<script src>` tags lacking `defer`, `async`, or `type="module"`, other than documented parser-blocking scripts. An inline classic script in the `<head>` belongs in the documented critical path.
 
@@ -120,7 +120,7 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 **Verification:** Any spec or plan that introduces or modifies a route's above-the-fold content SHOULD state how its LCP resource is discovered and prioritized. `/{project}:analyze` emits a warning when a spec's LCP image is injected by client-side script or referenced only from CSS with no preload, and when affected-files snippets preload a font without `crossorigin`.
 
-**Source:** web.dev "Optimize Largest Contentful Paint", web.dev "Optimize resource loading with the Fetch Priority API", web.dev "Preload critical assets to improve loading speed", MDN `rel=preload` documentation, Baseline (web-features) status for Fetch priority
+**Source:** web.dev "Optimize Largest Contentful Paint", web.dev "Optimize resource loading with the Fetch Priority API", web.dev "Preload critical assets to improve loading speed", MDN `rel=preload` documentation
 
 ### FE-LOAD-007
 
@@ -128,7 +128,7 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 **Verification:** Any spec or plan that introduces or modifies a frontend build, CDN, or static-asset serving configuration SHOULD state the cache policy for hashed assets and for HTML documents. `/{project}:analyze` emits a warning when such a spec omits the cache policy, or applies a long-lived `max-age` to unhashed asset URLs or to HTML documents. **Not flagged:** HTML that displays sensitive data served `no-store`, as `FE-PII-003` (`security-frontend.md`) requires. An uncompressed asset is `BE-PAYLOAD-003`'s, and the cache policy of any other server response `BE-CACHE-004`'s (`performance-backend.md`).
 
-**Source:** web.dev "Prevent unnecessary network requests with the HTTP Cache", MDN `Cache-Control` documentation and browser compatibility data, RFC 9111 (HTTP Caching), RFC 8246 (HTTP Immutable Responses)
+**Source:** web.dev "Prevent unnecessary network requests with the HTTP Cache", MDN `Cache-Control` documentation, RFC 9111 (HTTP Caching), RFC 8246 (HTTP Immutable Responses)
 
 ### FE-LOAD-008
 
@@ -150,11 +150,11 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 ### FE-FONT-001
 
-> Web fonts MUST be loaded with a documented fallback strategy. `@font-face` declarations MUST use `font-display: swap`, `fallback`, or `optional` so text remains visible during font load — `swap` where the web font must eventually render (branding), `fallback` or `optional` where speed and layout stability come first. `font-display: auto` (the default) and `block` produce Flash of Invisible Text (FOIT) and MUST NOT be relied on.
+> Web fonts MUST be loaded with a documented fallback strategy. `@font-face` declarations MUST use `font-display: swap`, `fallback`, or `optional` — `swap` where the web font must eventually render (branding), `fallback` or `optional` where speed and layout stability come first. `font-display: auto` (the default) and `block` MUST NOT be relied on.
 
 **Verification:** Any spec or plan that introduces web fonts MUST commit to `font-display: swap`, `fallback`, or `optional` on every `@font-face` declaration. `/{project}:analyze` flags CSS in affected files containing `@font-face` rules without a `font-display` declaration or with `font-display: auto`/`block`.
 
-**Source:** web.dev "Best practices for fonts", web.dev "Optimize Cumulative Layout Shift", MDN `font-display` documentation, MDN browser compatibility data for the `@font-face` metric descriptors
+**Source:** web.dev "Best practices for fonts", web.dev "Optimize Cumulative Layout Shift", MDN `font-display` documentation
 
 ### FE-FONT-002
 
@@ -162,7 +162,7 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 **Verification:** Any spec or plan that introduces self-hosted fonts MUST commit to WOFF2 delivery. `/{project}:analyze` flags affected-files snippets with `@font-face` rules that load `.ttf`/`.otf`/`.eot`/`.woff` (not `.woff2`) URLs as the primary source.
 
-**Source:** web.dev "Best practices for fonts", web.dev "Reduce web font size", MDN browser compatibility data for `@font-face` WOFF 2
+**Source:** web.dev "Best practices for fonts", web.dev "Reduce web font size"
 
 ### FE-FONT-003
 
@@ -180,7 +180,7 @@ Performance rules for browser-rendered UI, for any project with a web frontend. 
 
 **Verification:** Any spec or plan that introduces client-side processing of large or unbounded data, or other CPU-heavy work in the browser, SHOULD state where that work runs — a Web Worker, or chunked with yields to the main thread. `/{project}:analyze` emits a warning when such a spec describes synchronous processing of a user-controlled or unbounded dataset in an event handler or on page load with no off-main-thread or chunking commitment.
 
-**Source:** web.dev "Optimize long tasks", web.dev "Interaction to Next Paint (INP)", web.dev "Total Blocking Time (TBT)", W3C Long Tasks API, MDN Web Workers API, MDN browser compatibility data for `Scheduler.yield()`
+**Source:** web.dev "Optimize long tasks", W3C Long Tasks API, MDN Web Workers API, MDN browser compatibility data for `Scheduler.yield()`
 
 ### FE-MAIN-002
 
