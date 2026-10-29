@@ -194,3 +194,15 @@ Phase 1 is independently safe and lands first so later work is written against a
 - [x] framework/bootstrap/ductus-procedure.md — §ductus runtime tip, and its Post-Scaffolding Output bullet, rendered only on a failed acquisition, which halts in pre-flight before this file is read, so it could never appear; 048's spec said the tip is reserved for that case (048's review, 2026-10-29; owner chose deletion). Both are removed, and spec.md's Detection states bullet says the tip is gone and that the halt names the recovery; the Reference migration list, the record of 048's sweep, is unchanged
 
 - **Done when**: no artifact specifies output for a run that halts before it is read, and 048's spec describes the failed-acquisition path as it is
+
+### 25. The seed paragraph states 022's narrowing rule, not a broader one
+
+- [x] framework/bootstrap/ductus.md — §Permission Setup's bold lead said each seed entry grants only what a step runs, while every seed but Pi's keeps `ls` and `command -v` (`which` on Antigravity), which no step runs; 022's task 18 answer (a) narrowed only the entries that can run another command or write outside the project (048's review, 2026-10-29; owner chose the narrower lead). The lead now states that rule and names the two it keeps, in `ductus.md` and the byte-identical `govern.md`
+
+- **Done when**: the paragraph's lead describes every seed entry truthfully and `govern.md` is byte-identical to `ductus.md`
+
+### 26. State A's version check names the probe each branch runs and what the seed covers
+
+- [x] framework/bootstrap/ductus.md — State A's version check said its probe is Runtime acquisition step 2's and that the Permission Setup seed pre-authorizes it; for a `[runtime] path` the probe is Branch 1 step 3 and prompts, as §Permission Setup itself says (048's review, 2026-10-29; owner chose the correction). The sentence now names both branches' probes and that only the store form is seeded, in `ductus.md` and the byte-identical `govern.md`
+
+- **Done when**: the sentence agrees with §Permission Setup and with both acquisition branches, and `govern.md` is byte-identical to `ductus.md`
