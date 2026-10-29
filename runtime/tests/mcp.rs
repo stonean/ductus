@@ -127,8 +127,7 @@ async fn lists_every_manifest_tool_and_canonical_set() {
 
     // The shipped manifest must be set-EQUAL to the same set: a manifest
     // entry with no tool is a phantom, and a tool missing from the manifest
-    // escapes the markdown-only pipeline's PATH assertion and the
-    // graceful-fallback lint.
+    // escapes the host-integration pointer lint (scripts/lint-tool-coverage.sh).
     let manifest = fs::read_to_string(workspace_root().join("framework/runtime-tools.txt"))
         .expect("framework/runtime-tools.txt must exist (canonical manifest)");
     let manifest_names: std::collections::BTreeSet<&str> = manifest

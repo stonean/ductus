@@ -78,10 +78,11 @@
 //! **Every markdown file under the spec root is read before anything is
 //! written, too** (051 scenario `the-spec-root-is-read-before-the-first-write`).
 //! A referrer there that is listed in `skipped` is passed over, neither read
-//! nor written; any other file that is not UTF-8 text is listed in `skipped`
-//! with the same reason and left as it is; one unreadable for any other
-//! reason errors, before any write. The walk skips a symbolic link without
-//! listing it. Each file is rewritten from the content read, and a referrer
+//! nor written; any other file that cannot be read as UTF-8 text stops the
+//! run before any write, as a directory the walk cannot list does, since a
+//! file the rewrite cannot read may hold a link it would leave dangling once
+//! the directory is retired. The walk skips a symbolic link without listing
+//! it. Each file is rewritten from the content read, and a referrer
 //! outside the spec root is never a file the walk writes, so its content
 //! read beforehand is still its content when it is rewritten: the walk
 //! writes markdown under the spec root, and a referrer outside it could
@@ -272,9 +273,10 @@ impl Sweep<'_> {
     /// written (051 scenario `the-spec-root-is-read-before-the-first-write`).
     /// A referrer under the spec root is not read here: one in `pending` is
     /// taken out of it with the content read before, and one that is not
-    /// there was listed in `skipped` and is passed over. A file that is not
-    /// UTF-8 text is listed in `skipped` with a referrer's reason and left as
-    /// it is.
+    /// there was listed in `skipped` and is passed over. Any other file that
+    /// cannot be read as UTF-8 text, or a directory the walk cannot list,
+    /// stops the run: a file the rewrite cannot read may hold a link it would
+    /// leave dangling once the directory is retired.
     fn read_spec_root(
         &mut self,
         specs_dir: &Path,
@@ -285,15 +287,21 @@ impl Sweep<'_> {
         // whatever order the filesystem hands back — the same reason
         // `list_feature_dirs` sorts. A symbolic link is neither followed nor
         // listed: `file_type` does not follow one, so it is not `is_file`.
-        let walk = WalkDir::new(specs_dir)
-            .sort_by_file_name()
-            .into_iter()
-            .filter_map(std::result::Result::ok)
-            .filter(|entry| entry.file_type().is_file())
-            .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "md"));
-
         let mut files = Vec::new();
-        for entry in walk {
+        for entry in WalkDir::new(specs_dir).sort_by_file_name() {
+            let entry = entry.map_err(|err| PrimitiveError::Io {
+                path: err
+                    .path()
+                    .map_or_else(|| specs_dir.to_path_buf(), Path::to_path_buf),
+                source: err
+                    .into_io_error()
+                    .unwrap_or_else(|| std::io::Error::other("the walk could not continue")),
+            })?;
+            if !entry.file_type().is_file()
+                || entry.path().extension().is_none_or(|ext| ext != "md")
+            {
+                continue;
+            }
             let path = entry.path();
             // The retiring directory's own files are leaving with it.
             // Rewriting them would write into a tree about to be removed, and
@@ -318,11 +326,10 @@ impl Sweep<'_> {
                     path: path.to_path_buf(),
                     source,
                 })?;
-                let Ok(content) = String::from_utf8(bytes) else {
-                    let shown = repo_relative(self.repo, path);
-                    self.skip(&shown, check_orphaned_references::UNREADABLE_AS_TEXT);
-                    continue;
-                };
+                let content = String::from_utf8(bytes).map_err(|err| PrimitiveError::Io {
+                    path: path.to_path_buf(),
+                    source: std::io::Error::new(std::io::ErrorKind::InvalidData, err),
+                })?;
                 files.push(PendingFile {
                     path: path.to_path_buf(),
                     content,
@@ -433,8 +440,8 @@ impl Sweep<'_> {
 /// # Errors
 ///
 /// Returns [`PrimitiveError::InvalidArgument`] when `from` is empty, or `to`
-/// does not parse as a fold target, names no feature directory, or names a
-/// scenario that is not a slug, [`PrimitiveError::InvalidPath`] when
+/// does not parse as a fold target, names no feature directory in visible
+/// ASCII with no path separator, or names a scenario that is not a slug, [`PrimitiveError::InvalidPath`] when
 /// either is absolute, climbs with `..`, or has a symbolic link on or under
 /// its directory that resolves outside the project, and
 /// [`PrimitiveError::FeatureNotFound`] when the target holds no `spec.md` —
@@ -442,11 +449,12 @@ impl Sweep<'_> {
 /// referrer, `system.md` included, cannot be examined for a reason other
 /// than its absence or its encoding — its metadata or its bytes cannot be
 /// read, or it is not a regular file — or a markdown file under the spec
-/// root cannot be read, each before anything is written; or when a file
-/// cannot be written, part-way through and so after the files before it were
-/// written. A file that is not UTF-8 text, referrer or not, is not an error:
-/// it is listed in `skipped`, as a symbolic link and a referrer resolving
-/// outside the project are.
+/// root cannot be read as UTF-8 text, or a directory under it cannot be
+/// listed, each before anything is written; or when a file cannot be
+/// written, part-way through and so after the files before it were written.
+/// A referrer that is not UTF-8 text is not an error: it is listed in
+/// `skipped`, as a symbolic link and a referrer resolving outside the
+/// project are.
 pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksResult> {
     if args.from.is_empty() {
         return Err(PrimitiveError::InvalidArgument {
@@ -530,8 +538,8 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
     // `system.md` only where the walk could not list the directory holding it
     // — after them, each with its own passes, in the order the check reads
     // them. A write that fails part-way leaves the files before it rewritten
-    // and returns no `kept-tails`, and a re-run finds nothing naming `from`,
-    // so it cannot report them either.
+    // and returns no `kept-tails`, and a re-run cannot report those files'
+    // kept tails either, since nothing in them names `from` any more.
     let mut pending = sweep.read_referrers(&referrers, &specs_dir)?;
     let under_root = sweep.read_spec_root(&specs_dir, &referrer_paths, &mut pending)?;
     for file in under_root {
@@ -2250,15 +2258,14 @@ mod tests {
     }
 
     /// 051 scenario `the-spec-root-is-read-before-the-first-write`: a
-    /// markdown file under the spec root that is not UTF-8 text is listed in
-    /// `skipped` with a referrer's reason and left as it is, and the walk goes
-    /// on past it — where reading it raised an error part-way through, after
-    /// the files before it were written, losing their `kept-tails`. Killed by
-    /// M38 in `scripts/mutation/rewrite-spec-links.py`.
+    /// markdown file under the spec root that is not UTF-8 text stops the run
+    /// before anything is written, since the rewrite cannot judge whether it
+    /// links to the retiring directory. It used to raise the error part-way
+    /// through the walk, after the files before it were re-pointed, losing
+    /// their `kept-tails`. Killed by M40 in
+    /// `scripts/mutation/rewrite-spec-links.py`, which skips the file instead.
     #[test]
-    fn a_non_utf8_spec_file_is_skipped_and_the_rest_is_still_rewritten() {
-        use crate::primitives::check_orphaned_references;
-
+    fn a_non_utf8_spec_file_stops_the_run_before_any_write() {
         let tmp = tempfile::tempdir().unwrap();
         seed_target(tmp.path(), "050-alpha");
         let linking = "---\nstatus: done\ndependencies: []\n---\n\n[p](../1234.1-staged/plan.md)\n";
@@ -2269,24 +2276,80 @@ mod tests {
         fs::create_dir_all(tmp.path().join("specs/070-gamma")).unwrap();
         fs::write(tmp.path().join("specs/070-gamma/notes.md"), latin1).unwrap();
 
-        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+        let err = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap_err();
 
-        assert_eq!(
-            result.skipped,
-            vec![ReferrerSkip {
-                path: "specs/070-gamma/notes.md".into(),
-                reason: check_orphaned_references::UNREADABLE_AS_TEXT.into(),
-            }]
+        assert!(
+            matches!(&err, PrimitiveError::Io { path, .. } if path.ends_with("specs/070-gamma/notes.md")),
+            "{err:?}"
         );
         assert_eq!(
-            rewritten_paths(&result),
-            vec!["specs/060-beta/spec.md", "specs/080-delta/spec.md"]
+            read(tmp.path(), "060-beta/spec.md"),
+            linking,
+            "written before the stop"
         );
-        assert_eq!(result.kept_tails.len(), 2, "{:?}", result.kept_tails);
-        assert_eq!(result.examined, 3);
+        assert_eq!(read(tmp.path(), "080-delta/spec.md"), linking);
         assert_eq!(
             fs::read(tmp.path().join("specs/070-gamma/notes.md")).unwrap(),
             latin1
+        );
+    }
+
+    /// The same scenario: a `system.md` read ahead with the referrers is
+    /// written with the rest of the spec root, not when the walk meets it, so
+    /// a file after it in path order that stops the run leaves it untouched.
+    /// Killed by M42, which writes it as it is met.
+    #[test]
+    fn a_pending_referrer_is_not_written_before_a_later_file_stops_the_run() {
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        let system = "# System\n\nSee [staged](1234.1-staged/spec.md).\n";
+        fs::create_dir_all(tmp.path().join("specs")).unwrap();
+        fs::write(tmp.path().join("specs/system.md"), system).unwrap();
+        // After `system.md` in path order, and not UTF-8.
+        fs::write(tmp.path().join("specs/zz-notes.md"), b"Caf\xe9\n").unwrap();
+
+        let err = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap_err();
+
+        assert!(matches!(err, PrimitiveError::Io { .. }), "{err:?}");
+        assert_eq!(
+            fs::read_to_string(tmp.path().join("specs/system.md")).unwrap(),
+            system,
+            "system.md was written before the run stopped"
+        );
+    }
+
+    /// The same scenario: a directory under the spec root the walk cannot
+    /// list may hold a file linking to the retiring directory, so it stops
+    /// the run before anything is written, as an unreadable file does.
+    /// Killed by M41, which passes over it.
+    #[cfg(unix)]
+    #[test]
+    fn an_unlistable_spec_directory_stops_the_run_before_any_write() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempfile::tempdir().unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        let linking = "---\nstatus: done\ndependencies: []\n---\n\n[p](../1234.1-staged/plan.md)\n";
+        write(tmp.path(), "060-beta/spec.md", linking);
+        write(tmp.path(), "070-gamma/spec.md", linking);
+        let locked = tmp.path().join("specs/070-gamma");
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000)).unwrap();
+        if fs::read_dir(&locked).is_ok() {
+            fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
+            return; // running as root: permissions do not bind
+        }
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path());
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
+
+        assert!(
+            matches!(result, Err(PrimitiveError::Io { .. })),
+            "{result:?}"
+        );
+        assert_eq!(
+            read(tmp.path(), "060-beta/spec.md"),
+            linking,
+            "a file was written before the run stopped"
         );
     }
 

@@ -12,7 +12,7 @@ section: "Fold-back on merge"
 
 ## Behavior
 
-- The feature half of `to` is a feature directory name by the shared membership rule, and its scenario half, when present, matches the scenario slug grammar: the two checks `retarget-sessions` applies. Anything else is refused as an invalid `to`, naming the grammar, before any file is read or written.
+- The feature half of `to` is a feature directory name by the shared membership rule, in visible ASCII with no path separator, and its scenario half, when present, matches the scenario slug grammar: the two checks `retarget-sessions` applies. A legacy sequential slug is otherwise unchecked, as it is for a session, so a hand-made directory whose name carries a shell metacharacter still passes; it must also hold a `spec.md`. Anything else is refused as an invalid `to`, naming the grammar, before any file is read or written.
 - `from` is unchanged: it is compared against path segments and never written.
 
 ## Edge Cases

@@ -5325,7 +5325,7 @@ pub struct KeptTail {
 ///
 /// An empty `rewritten` with a non-zero `examined` and an empty `skipped` is
 /// **examined and nothing pointed here**. A non-empty `skipped` names
-/// files that were not read, which the claim does not cover; and empty
+/// referrers that were not read, which the claim does not cover; and empty
 /// with `examined` zero means no file was scanned at all, which is not the
 /// same claim (`QUAL-CLAIM-001`).
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -5338,18 +5338,18 @@ pub struct RewriteSpecLinksResult {
     pub rewritten: Vec<RewrittenFile>,
     /// Files scanned — each markdown file under the spec root outside the
     /// retiring directory, and each referrer outside the spec root, that was
-    /// read. The subject the empty case describes. A file that was not read
-    /// as text is listed in [`Self::skipped`] rather than counted, and an
-    /// absent referrer is neither; any other symbolic link under the spec
-    /// root is neither followed nor listed.
+    /// read. The subject the empty case describes. A referrer that was not
+    /// read is listed in [`Self::skipped`] rather than counted, and an absent
+    /// one is neither; any other symbolic link under the spec root is
+    /// neither followed nor listed.
     pub examined: u32,
     /// Referrers that were not read, `system.md` among them, in the order
-    /// `check-orphaned-references` reads them, then the other markdown files
-    /// under the spec root that are not UTF-8 text, in path order; every
-    /// file is read, or listed here, before anything is written. A reference
-    /// in one is left as written; that check reports one in a referrer once
-    /// the directory is gone when it can read the file, and skips the file
-    /// itself when it cannot.
+    /// `check-orphaned-references` reads them; every referrer is read, or
+    /// listed here, before anything is written, and every other markdown
+    /// file under the spec root is read then too, one that cannot be read as
+    /// UTF-8 text stopping the run. A reference in a listed referrer is left
+    /// as written; that check reports it once the directory is gone when it
+    /// can read the file, and skips the file itself when it cannot.
     #[serde(default)]
     pub skipped: Vec<ReferrerSkip>,
     /// References re-pointed under a feature-only target whose kept tail is
@@ -5365,6 +5365,8 @@ pub struct RewriteSpecLinksResult {
     /// target, a `scenarios/{name}` tail the retiring directory does not hold
     /// — a scenario renamed before the fold, or never there — is listed too,
     /// since no fold carried it. In the order of `rewritten`, then by line.
+    /// A run that fails part-way, on a write, returns none, and a re-run
+    /// cannot list the kept tails of the files it had already re-pointed.
     #[serde(default)]
     pub kept_tails: Vec<KeptTail>,
 }

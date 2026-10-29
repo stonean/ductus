@@ -287,17 +287,33 @@ MUTATIONS = [
     ),
     # -- 051 scenario the-spec-root-is-read-before-the-first-write (048's review)
     (
-        'M38 a non-UTF-8 markdown file under the spec root raised as an error, not skipped',
-        'src/primitives/rewrite_spec_links.rs',
-        '                let Ok(content) = String::from_utf8(bytes) else {\n                    let shown = repo_relative(self.repo, path);\n                    self.skip(&shown, check_orphaned_references::UNREADABLE_AS_TEXT);\n                    continue;\n                };\n',
-        '                let content = String::from_utf8(bytes).map_err(|err| PrimitiveError::Io {\n                    path: path.to_path_buf(),\n                    source: std::io::Error::new(std::io::ErrorKind::InvalidData, err),\n                })?;\n',
-        'rewrite_spec_links',
-    ),
-    (
         'M39 each markdown file under the spec root written as it is read',
         'src/primitives/rewrite_spec_links.rs',
         '                files.push(PendingFile {\n                    path: path.to_path_buf(),\n                    content,\n                    passes: Passes::Links,\n                    prefixes: &[],\n                });\n',
         '                self.rewrite(path, &content, Passes::Links, &[])?;\n',
+        'rewrite_spec_links',
+    ),
+    # -- the same scenario's re-read round: a file the rewrite cannot read stops
+    #    the run (M38 removed: it made the stop the mutant)
+    (
+        'M40 a non-UTF-8 markdown file under the spec root skipped instead of stopping the run',
+        'src/primitives/rewrite_spec_links.rs',
+        '                let content = String::from_utf8(bytes).map_err(|err| PrimitiveError::Io {\n                    path: path.to_path_buf(),\n                    source: std::io::Error::new(std::io::ErrorKind::InvalidData, err),\n                })?;\n',
+        '                let Ok(content) = String::from_utf8(bytes) else {\n                    continue;\n                };\n',
+        'rewrite_spec_links',
+    ),
+    (
+        'M41 a directory under the spec root the walk cannot list passed over',
+        'src/primitives/rewrite_spec_links.rs',
+        '            let entry = entry.map_err(|err| PrimitiveError::Io {\n                path: err\n                    .path()\n                    .map_or_else(|| specs_dir.to_path_buf(), Path::to_path_buf),\n                source: err\n                    .into_io_error()\n                    .unwrap_or_else(|| std::io::Error::other("the walk could not continue")),\n            })?;\n',
+        '            let Ok(entry) = entry else {\n                continue;\n            };\n',
+        'rewrite_spec_links',
+    ),
+    (
+        'M42 a pending referrer under the spec root written as the walk meets it',
+        'src/primitives/rewrite_spec_links.rs',
+        '                let referrer = pending.remove(index);\n                files.push(referrer);\n',
+        '                let referrer = pending.remove(index);\n                self.rewrite(path, &referrer.content, referrer.passes, referrer.prefixes)?;\n',
         'rewrite_spec_links',
     ),
 ]
