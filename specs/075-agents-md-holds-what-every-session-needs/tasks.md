@@ -68,7 +68,7 @@ Blocked on `063-oversized-artifacts-warn-with-a-fix`'s task from task 1, because
 
 ## 7. Verify the criteria
 
-Blocked on the tasks task 1 appends to `063`, `041`, `055` and `050`, and on tasks 2–6.
+Blocked on the tasks task 1 appends to `063`, `041`, `055` and `050`, and on tasks 2–6. Those tasks are `063` task 15, `041` task 23 and `055` task 14; `050`'s is appended when task 1's last item runs.
 
 - [ ] Read each of this spec's criteria against the tree, including AC6, AC11 and AC12's recorded `claude -p` run over a fixture project under `/tmp`.
 - [ ] For AC7, confirm that `041`'s walk landed on `main` no later than the size check and the hook step. Confirm with `git tag --contains` that no `ductus-v*` tag holds either commit without the other.
