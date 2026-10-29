@@ -345,7 +345,6 @@ After scaffolding, display:
 - Unknown config keys (if any) — one line per key outside what `ductus.md` §Project Configuration documents, in each section this run read: `unknown config key: [{section}] {key} (.ductus/config.toml) — this version of ductus does not read it` (§Project Configuration → **Unknown keys**)
 - Pinned `ductus.md` advisory (if applicable — see below)
 - Security audit summary (if applicable — see below)
-- ductus runtime tip (failed acquisition only — see below)
 - Next steps (varies by mode):
 
 ### Closing restart
@@ -364,14 +363,6 @@ Four variants:
 - **State A, live but stale**: the set holds the acquisition alone. Say the work above is complete, that the runtime was updated to `{version}`, and that a new session restarts the server on it.
 
 Nothing is emitted when a State A run leaves the set empty — a current, live runtime has no restart to announce, and a line saying so would be noise on every run.
-
-### ductus runtime tip
-
-When acquisition was attempted and **failed** (the run halts, so this line accompanies the halt rather than a completed scaffold), append one line after the file summary:
-
-> Tip: acquisition failed, so this run halted before the deterministic path was available — there is no markdown-only mode to degrade into. Recover either by placing the pinned binary into the store by hand (the halt message above names the store path and the release URL) or by setting `[runtime] path` in `.ductus/config.toml` to a binary you supply, then re-run `/ductus`. Your `PATH` is not consulted. See [The runtime](https://github.com/stonean/ductus#the-runtime) in the ductus README.
-
-Omit the tip in **State A** (the runtime is already live) and in a successful **State B** (the runtime is on disk and the run completed through it, so there is nothing to tip about). State B's file disclosure rides the **Closing restart**, not this output.
 
 ### Pinned `ductus.md` advisory
 

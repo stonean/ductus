@@ -188,3 +188,9 @@ Phase 1 is independently safe and lands first so later work is written against a
 - [x] specs/048-govern-acquired-runtime/spec.md — AC9 said the §Permission Setup seed grants exactly what the store probe needs, but Antigravity's seed has never carried `~/.ductus/bin/ductus --version` and keeps the pre-048 `command(which)`, which `ductus.md:291` already discloses (048's review, 2026-10-29; owner chose the annotation). AC9 now carries a never-true annotation like AC22's; the seed itself stays 022's
 
 - **Done when**: AC9 states what holds for each of the four seeds, matching `ductus.md` §Permission Setup and the store-probe paragraph
+
+### 24. The runtime tip that could never render is gone
+
+- [x] framework/bootstrap/ductus-procedure.md — §ductus runtime tip, and its Post-Scaffolding Output bullet, rendered only on a failed acquisition, which halts in pre-flight before this file is read, so it could never appear; 048's spec said the tip is reserved for that case (048's review, 2026-10-29; owner chose deletion). Both are removed, and spec.md's Detection states bullet says the tip is gone and that the halt names the recovery; the Reference migration list, the record of 048's sweep, is unchanged
+
+- **Done when**: no artifact specifies output for a run that halts before it is read, and 048's spec describes the failed-acquisition path as it is

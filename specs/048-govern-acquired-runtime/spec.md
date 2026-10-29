@@ -87,7 +87,7 @@ This is what removes the asymmetry the home-level agents used to carry. Their co
 - The **binary probe** changes from a `PATH` lookup (`command -v ductus` / `which ductus`) to a filesystem check for the store, plus the pointer for this project. Its permission-seed entry in `framework/bootstrap/ductus.md` §Permission Setup changes with it.
 - **State A** (a `ductus`-namespaced MCP tool is in the session's inventory) is unchanged, including its binding execution contract.
 - The former **State C** path acquires the binary, then wires and permissions it exactly as State B does, joining the same **deferred-restart set** and the same single **Closing restart**. This spec's own scenario `state-b-continues-in-session` moved that restart to the end of the run: State B no longer aborts in pre-flight — the binary is on disk and permission-seeded, so the run continues, invoking every remaining primitive through the CLI at the pointer path, and stops only once the scaffolding is done. An adopter with no runtime at all reaches the deterministic path after one `/ductus` run and one restart, with no manual install step in between — which is what AC10 states.
-- The **State C tip** in `framework/bootstrap/ductus.md` §Post-Scaffolding Output ("installing `ductus` cuts token use") loses its audience on the happy path and is reserved for the degraded case — acquisition was attempted and failed.
+- The **State C tip** ("installing `ductus` cuts token use") is gone. Its happy-path audience went with State C, and the one case left for it, acquisition attempted and failed, halts in pre-flight before the post-scaffolding output is read, with a halt message that names the store path, the `[runtime]` key and the release URL.
 
 ## Reference migration
 
