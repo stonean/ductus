@@ -1,42 +1,39 @@
 #!/usr/bin/env bash
-# Verify every reference to a runtime tool in framework/commands/*.md
-# is paired with a graceful-fallback marker within 20 lines.
+# Verify that every framework/commands/*.md file naming a runtime tool
+# carries the constitution's host-integration pointer: a reference to
+# §runtime-host-integration, the one line that says how the command's Invoke
+# steps reach the runtime and what the host walks before its server is
+# registered. The pointer replaced the per-step markdown-only fallback this
+# lint once paired with each tool reference (spec 048, AC17).
 #
-# Tool names are read from framework/runtime-tools.txt (one per non-blank,
-# non-comment line; case-sensitive exact match). Fallback markers are
-# any case-insensitive occurrence of: Otherwise, Fallback, If unavailable,
-# markdown-only path. The proximity scan trades false-positive risk for a
-# fully derived check — no author-supplied markers required.
+# Tool names are read from framework/runtime-tools.txt: each non-blank,
+# non-comment line, and each name on a `# cli-only:` line. A command names a
+# tool when the name occurs in it (case-sensitive substring, so a longer word
+# containing one counts too, which errs toward requiring the pointer). A
+# command naming none, such as help.md, needs no pointer.
 #
-# A command's markdown-only reference — the fallback itself — lives in
-# framework/reference/<name>.md (spec 071), outside this scan's subject, so
-# a tool named there needs no paired marker and is never examined.
+# Every run prints what it examined, so a clean result says how much it
+# judged; a manifest with no tool names, or no command files, is an error
+# rather than a pass, since either would judge nothing.
 #
-# A command that carries the constitution's host-integration pointer
-# (a reference to §runtime-host-integration) is exempt file-wide: the
-# pointer declares the markdown-only fallback contract once for the whole
-# command instead of restating it per Invoke step (constitution
-# §runtime-host-integration; spec 022 scenario review-runtime-acceleration
-# #3/#4 prose tightening). Legacy commands without the pointer keep the
-# per-reference proximity check below.
-#
-# Source of truth: framework/constitution.md §runtime-boundary
-# Consumed by: .github/workflows/framework-checks.yml
+# Source of truth: framework/constitution.md §runtime-host-integration
+# Consumed by: .github/workflows/framework-checks.yml, scripts/audit/check-zero.sh
+# Tested by: scripts/tests/test-lint-tool-coverage.sh
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
-WINDOW=20
 MANIFEST="$ROOT/framework/runtime-tools.txt"
 
 for arg in "$@"; do
   case "$arg" in
     -h|--help)
-      sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'
       echo
       echo "Usage: $(basename "$0")"
-      echo "  Exits 0 when every runtime-tool reference has a fallback within $WINDOW lines."
-      echo "  Exits 1 when any reference lacks a fallback (errors printed to stdout)."
+      echo "  Exits 0 when every command naming a runtime tool carries the pointer."
+      echo "  Exits 1 when one does not (each printed to stdout)."
+      echo "  Exits 2 when the manifest is missing or names no tool, or no command file exists."
       exit 0
       ;;
     *) echo "Unknown argument: $arg" >&2; exit 2 ;;
@@ -48,13 +45,16 @@ if [ ! -f "$MANIFEST" ]; then
   exit 2
 fi
 
-# Load tool names: skip blank lines and lines starting with '#'.
-# Strip a full run of leading/trailing whitespace (spaces or tabs) so a
-# stray indent in the manifest can't slip through with embedded
+# Load tool names: a `# cli-only:` line's name, and every other line up to its
+# first '#'. Strip a full run of leading/trailing whitespace (spaces or tabs)
+# so a stray indent in the manifest can't slip through with embedded
 # whitespace that would silently fail to match in prose.
 tools=()
 while IFS= read -r raw; do
-  line="${raw%%#*}"
+  case "$raw" in
+    '# cli-only:'*) line="${raw#'# cli-only:'}" ;;
+    *) line="${raw%%#*}" ;;
+  esac
   line="${line#"${line%%[![:space:]]*}"}"
   line="${line%"${line##*[![:space:]]}"}"
   [ -z "$line" ] && continue
@@ -62,31 +62,39 @@ while IFS= read -r raw; do
 done < "$MANIFEST"
 
 if [ "${#tools[@]}" -eq 0 ]; then
-  exit 0
+  echo "No tool names in ${MANIFEST#"$ROOT"/}: nothing to examine" >&2
+  exit 2
 fi
 
 shopt -s nullglob
+examined=0
+naming=0
 errors=0
 for cmd in "$ROOT"/framework/commands/*.md; do
-  # File-wide exemption: a command that points to the constitution's
-  # host-integration contract has declared the markdown-only fallback once
-  # for every Invoke step, so no per-reference proximity marker is required.
-  if grep -q 'runtime-host-integration' "$cmd"; then
+  examined=$((examined + 1))
+  named=""
+  for tool in "${tools[@]}"; do
+    if grep -qF -- "$tool" "$cmd"; then
+      named="$tool"
+      break
+    fi
+  done
+  if [ -z "$named" ]; then
     continue
   fi
-  for tool in "${tools[@]}"; do
-    while IFS=: read -r lineno _; do
-      [ -z "$lineno" ] && continue
-      end=$((lineno + WINDOW))
-      window="$(sed -n "${lineno},${end}p" "$cmd")"
-      if ! printf '%s\n' "$window" | grep -qiE 'Otherwise|Fallback|If unavailable|markdown-only path'; then
-        echo "${cmd#"$ROOT"/}:${lineno}: missing fallback for tool '${tool}'"
-        errors=$((errors + 1))
-      fi
-    done < <(grep -nF -- "$tool" "$cmd" || true)
-  done
+  naming=$((naming + 1))
+  if ! grep -q 'runtime-host-integration' "$cmd"; then
+    echo "${cmd#"$ROOT"/}: names runtime tool '${named}' but carries no §runtime-host-integration pointer"
+    errors=$((errors + 1))
+  fi
 done
 
+if [ "$examined" -eq 0 ]; then
+  echo "No framework/commands/*.md file found: nothing to examine" >&2
+  exit 2
+fi
+
+echo "lint-tool-coverage: ${examined} command file(s) examined, ${naming} naming a runtime tool, $((naming - errors)) of them carrying the pointer"
 if [ "$errors" -gt 0 ]; then
   exit 1
 fi

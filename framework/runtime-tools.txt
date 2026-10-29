@@ -5,9 +5,10 @@
 # Each non-blank, non-comment line is one tool name (matching MCP tool names
 # or runtime binary names). The list is consumed by:
 #
-#   - scripts/lint-tool-coverage.sh (verifies every name referenced in
-#                                     framework/commands/*.md resolves to a
-#                                     tool the runtime actually exposes)
+#   - scripts/lint-tool-coverage.sh (requires every framework/commands/*.md
+#                                     file naming one of these tools, or a
+#                                     `# cli-only:` name, to carry the
+#                                     §runtime-host-integration pointer)
 #
 # Tool names are case-sensitive exact-match strings. Names are bare
 # `<verb>-<noun>` strings — server-level namespacing (`ductus`) is

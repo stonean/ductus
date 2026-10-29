@@ -170,3 +170,9 @@ Phase 1 is independently safe and lands first so later work is written against a
 - [x] scripts/mutation/claude-md-imports.py — `run.py --check` reports both M1 and M2 with an invalid anchor: the `previous == Some('@')` block they replace no longer occurs in `runtime/src/primitives/check_orphaned_references.rs`, which the 051/067 re-read rounds of 2026-10-28 rewrote after the list landed in 96934872 (002, 044, 055), so the list can no longer prove its tests fail (found by task 19's `--check` over every list, 2026-10-29) — fixed: `38fc39f6` (051 task 30) changed the anchored `line[..start - 1]` to `line[..token - 1]` with the behavior unchanged; both anchors now spell `token - 1`, `--check` reports none invalid, and both mutations are killed
 
 - **Done when**: the finding is fixed, routed, or discarded, with a discard's reason written on the task
+
+### 21. lint-tool-coverage checks the host-integration pointer, not the retired fallback
+
+- [x] scripts/lint-tool-coverage.sh — still paired each tool reference with the per-step markdown-only fallback AC17 removed, exempted every command carrying the §runtime-host-integration pointer, and so judged 0 references and exited 0 silently on the real tree, as it did on an empty manifest (048's review, 2026-10-29: SHOULD QUAL-CLAIM-001 and an observation). It now requires every command naming a runtime tool, a `# cli-only:` name included, to carry the pointer, prints what it examined, and exits 2 when it could examine nothing; `scripts/tests/test-lint-tool-coverage.sh` runs beside it in `framework-checks.yml` step (d), and 021's and 022's plans and the manifest comment describe it
+
+- **Done when**: the lint judges the pointer rule on the real tree and reports its counts, its test fails when the pointer check or the empty-manifest refusal is removed, and no artifact describes the fallback-marker check as current

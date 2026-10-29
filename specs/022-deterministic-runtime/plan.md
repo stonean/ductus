@@ -274,7 +274,7 @@ The `gen-*.sh` scripts under `scripts/` that build this repository's own artifac
 
 `framework/runtime-tools.txt` lists every MCP tool name the binary exposes, one bare `<verb>-<noun>` name per line under the comment header spec 021 gave it. `runtime/tests/mcp.rs` holds it set-equal to the server's `tool_names()`, the registry less `CLI_ONLY_PRIMITIVES`, so a missing entry and a phantom one both fail the suite; a primitive the server does not serve is named on a `# cli-only:` line instead, which the suite holds equal to `CLI_ONLY_PRIMITIVES` (task 14).
 
-`scripts/lint-tool-coverage.sh` (from spec 021) verifies that every reference to a name in this manifest appears within 20 lines of a fallback marker, except in a command carrying the §runtime-host-integration pointer, which declares the fallback once for the whole file.
+`scripts/lint-tool-coverage.sh` (from spec 021) requires every command that names a tool in this manifest, a `# cli-only:` name included, to carry the §runtime-host-integration pointer, and reports how many commands it examined.
 
 ### No data persistence outside session file + markdown
 

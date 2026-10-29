@@ -36,7 +36,7 @@ The workflow runs the framework's deterministic checks on every change. Its step
 | --- | --- |
 | (b) generators and derived indexes clean | `ductus derive-dependencies`, `ductus derive-references` and `bash scripts/gen-help-tables.sh --dry-run`, each failing on a stale index |
 | (c) markdownlint | `npm ci`, then `npm audit signatures`, then `npx markdownlint-cli2` |
-| (d) tool-coverage lint | `bash scripts/lint-tool-coverage.sh` |
+| (d) tool-coverage lint | `bash scripts/lint-tool-coverage.sh`, then its test `bash scripts/tests/test-lint-tool-coverage.sh` |
 | (e) frontmatter integrity | `bash scripts/lint-frontmatter.sh` |
 
 Workflow trigger is `pull_request`, with no `paths` filter. Push to `main` also triggers the workflow to catch direct commits.
@@ -51,20 +51,16 @@ This workflow's supply-chain and time bounds are committed in [022's plan](../02
 
 The manifest is plain text rather than YAML/JSON because (1) the consumers are shell scripts, (2) it's a flat list, (3) editing it is unambiguous in PRs.
 
-### Tool-coverage lint operates by proximity scan
+### Tool-coverage lint checks the host-integration pointer
 
 `scripts/lint-tool-coverage.sh` is a bash script that:
 
-1. Reads `framework/runtime-tools.txt` and builds a list of tool names (one per line, ignoring blank lines and `#` comments).
-2. Greps each tool name across `framework/commands/*.md` (including any deferred-tool MCP names — full string match, not regex).
-3. For every match, scans forward up to 20 lines for a fallback marker — case-insensitive matches against the literal tokens `Otherwise`, `Fallback`, `If unavailable`, `markdown-only path`. If none found within the window, emit the file path, line number, and tool name as an error.
-4. Exits non-zero if any error was emitted.
+1. Reads `framework/runtime-tools.txt` and builds a list of tool names: each non-blank, non-comment line, and each name on a `# cli-only:` line.
+2. Tests each `framework/commands/*.md` file for any tool name (a case-sensitive substring match).
+3. Requires each file that names one to carry the constitution's §runtime-host-integration pointer, and emits the file and the tool when it does not.
+4. Prints how many command files it examined, how many name a tool, and how many of those carry the pointer; exits 1 on any miss, and 2 when the manifest is missing or names no tool or no command file exists, so a run that judged nothing never reads as a pass (`QUAL-CLAIM-001`).
 
-The 20-line window is the script's named constant `WINDOW` (`scripts/lint-tool-coverage.sh`), so tuning it is a one-line change. It is a heuristic; revisit when real tools are added in spec 022 and the heuristic can be validated against actual usage. The lint is purely structural — it does not validate that the fallback is *correct*, only that one is present. Correctness is reviewer responsibility.
-
-This trades false-positive risk (a fallback that exists but doesn't match the keywords) for a fully derived check (no author-supplied markers required). False positives are easy to resolve by paraphrasing into one of the four accepted tokens.
-
-Two changes came later, both in `scripts/lint-tool-coverage.sh`'s header. A command's markdown-only reference, the fallback itself, moved to `framework/reference/<name>.md` (spec 071), outside the scan, so a tool named there is never examined. A command carrying the constitution's §runtime-host-integration pointer is exempt file-wide, because the pointer declares the fallback contract once for the whole command (022).
+The pointer is what replaced the per-step markdown-only fallbacks ([048](../048-govern-acquired-runtime/spec.md) AC17), so it is the contract a command naming a tool states. The lint is purely structural — it checks that the contract is stated, not that the command follows it — and fully derived from command prose, with no author-supplied markers. `scripts/tests/test-lint-tool-coverage.sh` shows it fails on each case it claims to catch.
 
 ### Frontmatter integrity lint is also bash, not Python or yq
 

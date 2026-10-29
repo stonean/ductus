@@ -107,8 +107,14 @@ jobs:
       - name: (c) markdownlint passes
         run: npx markdownlint-cli2
 
+      # (d) Every command that names a runtime tool carries the
+      # §runtime-host-integration pointer (spec 021, repurposed by 048). The lint
+      # is the only check of that rule, so its test runs beside it and shows it
+      # fails on each case it claims to catch.
       - name: (d) Tool-coverage lint passes
-        run: bash scripts/lint-tool-coverage.sh
+        run: |
+          bash scripts/lint-tool-coverage.sh
+          bash scripts/tests/test-lint-tool-coverage.sh
 
       - name: (e) Frontmatter integrity
         run: bash scripts/lint-frontmatter.sh
