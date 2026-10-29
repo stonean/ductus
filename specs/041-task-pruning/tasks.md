@@ -188,3 +188,9 @@ Released: `ductus-v0.56.0` at `62cc9490`, with `framework-checks`, `runtime`, `g
 Start with `/ductus:target 041-task-pruning/a-plan-edit-does-not-reopen-a-done-spec` and `/ductus:clarify`: the scenario's open questions block `done`, and the owner pre-authorized their `Recommended:` answers (2026-10-26). The §spec-lifecycle case must fit under the constitution's ceiling in `scripts/lint-governing-size.sh` (then the file's exact size), so the amendment removes as many bytes as it adds. The proof replays the 2026-10-16 `amend(NNN)` plan commits ending at `8191e695`.
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested, and the routed plan claims are corrected without reopening their specs
+
+### 22. Implement scenario: a-pruned-task-number-is-never-reissued
+
+- [ ] Implement the behavior described in `scenarios/a-pruned-task-number-is-never-reissued.md`
+
+- **Done when**: The scenario's open question is resolved, AC13 is amended or confirmed to match, and a fixture test proves a number pruned from the top of tasks.md is not reissued by the next append (or the chosen citation rule is stated where citations are written).

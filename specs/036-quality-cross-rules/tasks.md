@@ -111,3 +111,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Verify: `npx markdownlint-cli2` on the changed spec files and `scripts/lint-frontmatter.sh` pass
 
 - **Done when**: 036's spec, plan and data model describe `quality-cross.md` as it stands after the second 2026-10-19 rule-file review: `QUAL-GROUND-001` covers in-repo contracts and cedes configuration to `CFG`, `BE-SCHEMA-002` is cited for the API-schema case, and no criterion claims an unassessed instance. The rule IDs and tiers are unchanged. Re-run `/ductus:review` before 036 returns to `done`, since the data-model edit stales its completed review.
+
+## 14. Implement scenario: a-bound-test-pins-the-stated-figure
+
+- [ ] Implement the behavior described in `scenarios/a-bound-test-pins-the-stated-figure.md`
+
+- **Done when**: The scenario's open question is resolved and quality-cross.md states the requirement in the chosen form, with check-rule-ids accepting the file.

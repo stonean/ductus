@@ -346,3 +346,9 @@ The owner answered the scenario's question on 2026-10-27 with (b): the constitut
 - [x] Implement the behavior described in `scenarios/artifacts-are-as-short-as-their-required-content.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 42. Implement scenario: adopter-practices-classified-for-promotion
+
+- [ ] Implement the behavior described in `scenarios/adopter-practices-classified-for-promotion.md`
+
+- **Done when**: The scenario's open question is resolved, each practice's destination and reason is recorded, each promoted one has one normative statement with any AGENTS.md mirror pointing at it, and the constitution's size is measured within 072's bound.

@@ -132,3 +132,24 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] `data-model.md`'s family list gives the tier, and `/ductus:analyze` no longer reverts on it under `--fix`
 
 - **Done when**: The scenario's behavior holds in `runtime/src/primitives/check_artifacts.rs`, its test fails with the tier reverted, and 067's data model gives the family's tier.
+
+## 17. Implement scenario: status-gated-families-are-not-silent
+
+- [ ] Implement the behavior described in `scenarios/status-gated-families-are-not-silent.md`
+
+- **Done when**: The scenario's open question is resolved, an in-progress check-artifacts run is distinguishable from a done run whose path families found nothing, and a fixture test asserts both directions.
+
+## 18. Implement scenario: a-scenario-file-is-checked-against-the-scenario-schema
+
+- [ ] Implement the behavior described in `scenarios/a-scenario-file-is-checked-against-the-scenario-schema.md`
+
+- **Done when**: The scenario's open question is resolved, validate-frontmatter checks a scenario against the scenario row, and fixture tests cover a section-only scenario (clean), a scenario missing section (hard fail) and a spec.md (unchanged).
+
+## 19. Implement scenario: shared-constitution-references-are-judged
+
+- [ ] Implement the behavior described in `scenarios/shared-constitution-references-are-judged.md`
+- [ ] Build the minimal fixture (a shared constitution with `§a-b` and `§a-b-c`, one spec citing both) and prove the same-classification test fails against the current resolver before fixing
+- [ ] Correct the constitution's Cross-document references bullet: shared constitutions, unchecked qualified references, and the stale longest-first claim
+- [ ] Update `framework/commands/analyze.md` step 4 and `framework/reference/analyze.md` to match
+
+- **Done when**: The scenario's open questions are resolved, references into a registered shared constitution classify consistently and are judged against it, /analyze distinguishes unchecked references from checked ones, and the constitution and analyze reference say so.

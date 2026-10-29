@@ -612,3 +612,33 @@ Found 2026-10-25 measuring task 18's question 1a, outside it. The pointer `.duct
 - [ ] A destination whose mode the runner may not change keeps its mode and is named in `apply-manifest`'s `modes-kept`, and the walk goes on rather than stopping mid-manifest; `framework/bootstrap/ductus.md` step 4 names it in the completion message (found by the independent re-read of `47e68233`). Written 2026-10-28 and its macOS-only test passes; `python3 scripts/mutation/run.py scripts/mutation/installed-file-modes.py` ran whole on macOS at `77fff147` on 2026-10-28, 8 of 8 killed (M7 and M8 are this item's). Still owed: once a release carries this runtime, a real adopter bootstrap that shows the completion message naming a `modes-kept` file
 
 - **Done when**: an archive's `0664` and `0775` entries extract as `0644` and `0755`, the executable bit survives, an already-installed file with matching bytes takes the masked mode on the next run, and the mutation run kills every mutation in `scripts/mutation/installed-file-modes.py`
+
+## 24. Implement scenario: every-mcp-argument-has-a-cli-form
+
+- [ ] Implement the behavior described in `scenarios/every-mcp-argument-has-a-cli-form.md`
+
+- **Done when**: The scenario's open question is resolved, write-review, write-analysis, process-waivers and process-decisions accept their structured arguments on the CLI, and a test fails when an MCP argument has no CLI form.
+
+## 25. Implement scenario: a-done-when-clause-reads-to-its-end
+
+- [ ] Implement the behavior described in `scenarios/a-done-when-clause-reads-to-its-end.md`
+
+- **Done when**: read-tasks returns a wrapped Done when clause whole, mark-task's subtask indices are unchanged by continuation lines, and a fixture test proves both and fails with the first-line reading restored.
+
+## 26. Implement scenario: an-unsubstituted-placeholder-is-not-a-clean-run
+
+- [ ] Implement the behavior described in `scenarios/an-unsubstituted-placeholder-is-not-a-clean-run.md`
+
+- **Done when**: The scenario's open question is resolved, a fixture reproduces the literal-placeholder write (or shows it does not occur), and a test proves a map missing a key is no longer reported as a clean run while keep-literals are honored.
+
+## 27. Implement scenario: a-closed-stdout-is-a-quiet-exit
+
+- [ ] Implement the behavior described in `scenarios/a-closed-stdout-is-a-quiet-exit.md`
+
+- **Done when**: No CLI subcommand panics on a closed stdout, its exit status is distinct from a failure, the mcp server's transport handling is unchanged, and a dropped-reader pipe test proves it and fails with println! restored.
+
+## 28. Implement scenario: lint-markdown-lints-only-what-it-is-given
+
+- [ ] Implement the behavior described in `scenarios/lint-markdown-lints-only-what-it-is-given.md`
+
+- **Done when**: lint-markdown given paths reports violations only in them, check-review-gate's lint ignores violations outside the feature directory, and a two-file fixture test proves both and fails with the config globs re-appended.

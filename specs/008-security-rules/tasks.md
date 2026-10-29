@@ -373,3 +373,15 @@ After the answer, re-read the whole round until one has no MUST or SHOULD, then 
 The same reviews found 31 rules whose flag list checks less than the Statement while the Verification's commitment sentence still asks for everything; they are discarded, not recorded as items (owner, 2026-10-28). The commitment sentence already binds the artifact to each obligation, and data-model §Verification phrasing does not require a flag list to enumerate them. 21 are in 008's files, 4 in 068's, 3 in 037's, 2 in 017's and 1 in 038's. Discarded with them, for the same reason: `FE-STORAGE-002` and `FE-CSRF-002` do not name `BE-AUTHN-014` back.
 
 - **Done when**: the finding is fixed, routed, or discarded, with a discard's reason written on the task
+
+## 26. Implement scenario: a-custom-credential-header-does-not-follow-a-redirect
+
+- [ ] Implement the behavior described in `scenarios/a-custom-credential-header-does-not-follow-a-redirect.md`
+
+- **Done when**: security-backend.md carries the rule with a fetched, cited Rationale for the library behavior, its ID registered under 008's data-model conventions, and check-rule-ids accepts the file.
+
+## 27. Implement scenario: single-host-appliance-rule-fit
+
+- [ ] Implement the behavior described in `scenarios/single-host-appliance-rule-fit.md`
+
+- **Done when**: The scenario's open questions are resolved, BE-DATA-003, BE-DATA-010 and (per the policy call) BE-DATA-011 are amended in place in framework/rules/security-backend.md with their IDs kept, and check-rule-ids accepts the file.

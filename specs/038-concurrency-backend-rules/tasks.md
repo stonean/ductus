@@ -63,3 +63,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Verify: `npx markdownlint-cli2` on the changed spec files and `scripts/lint-frontmatter.sh` pass, and a read-only `derive-dependencies` reports no cycle
 
 - **Done when**: 038's spec and plan describe `framework/rules/concurrency-backend.md` as it stands after the second 2026-10-19 rule-file review: thirteen rules, eight MUST, every rule with a Source, `BE-RACE-003`'s harmless-to-repeat MAY recorded as a decision update, and `BE-CACHE-003` cited. No rule ID, category, or tier changed. Re-run `/ductus:review` before 038 returns to `done`.
+
+## 7. Implement scenario: lock-the-parent-before-rewriting-its-children
+
+- [ ] Implement the behavior described in `scenarios/lock-the-parent-before-rewriting-its-children.md`
+
+- **Done when**: concurrency-backend.md carries the rule with a fetched, cited Rationale for the database behavior, cross-referencing any existing lock-ordering rule, and check-rule-ids accepts the file.

@@ -57,3 +57,15 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [ ] Clear GIT_DIR, GIT_WORK_TREE and GIT_INDEX_FILE on every Command that test file spawns, with a test that sets GIT_DIR to another repository
 
 - **Done when**: the four tests pass when GIT_DIR names another repository, as they do with it unset, and each fails when its clearing is removed
+
+## 9. Implement scenario: checkbox-state-is-outside-the-analysis-digest
+
+- [ ] Implement the behavior described in `scenarios/checkbox-state-is-outside-the-analysis-digest.md`
+
+- **Done when**: The scenario's open question is resolved, a criterion tick after the analyze run no longer surprises the gate by the chosen design, and a fixture test proves the gate's answer in both directions (a tick, and any other spec.md edit).
+
+## 10. Implement scenario: review-scope-reads-every-cell-path-and-sets-deleted-files-apart
+
+- [ ] Implement the behavior described in `scenarios/review-scope-reads-every-cell-path-and-sets-deleted-files-apart.md`
+
+- **Done when**: The scenario's open question is resolved, review-scope-includes-uncommitted-work is amended to match, and fixture tests cover a two-path Affected Files cell and a file deleted since the base.

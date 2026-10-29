@@ -130,3 +130,9 @@ Look up `introduced_in` per migration via `git log` against the commits that shi
 - [x] Note that `{config_dir}/commands/` is repo-shared despite living under `.claude/` (the shipped `.gitignore` excepts it), so `workflows-sunset` is not a counter-example
 
 - **Done when**: 027's spec and `framework/migrations.toml`'s header both state that the registry applies an entry once per repository, and that a migration must not be the sole remedy for a per-contributor defect — with the self-healing precedent named so the rule is not over-read. The `target_paths` question raised when the permission retirement was first routed here is recorded as resolved by existing precedent rather than by a new field. `npx markdownlint-cli2` clean.
+
+## 14. Implement scenario: a-projects-own-constitution-is-not-relocated
+
+- [ ] Implement the behavior described in `scenarios/a-projects-own-constitution-is-not-relocated.md`
+
+- **Done when**: The scenario's open question is resolved, a repository with specs/ and its own constitution.md keeps it through a bootstrap run (verified with a real adopter-shaped bootstrap), and a legacy ductus copy still relocates.
