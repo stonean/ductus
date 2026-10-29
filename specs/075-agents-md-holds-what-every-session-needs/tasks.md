@@ -15,9 +15,9 @@ Recording a scenario on `063` and `055` takes each from `done` to `in-progress`,
 
 ## 2. Rewrite the memory-routing block
 
-- [ ] Replace the one line in `framework/bootstrap/ductus.md` §Memory routing, step 1, so it names `AGENTS.md` for what every session needs, and names each other home with when to read it.
-- [ ] Copy the change into `framework/bootstrap/govern.md` byte for byte.
-- [ ] Record each layout's impact in the commit (`claude-style`, `antigravity`, `opencode`, `pi`), walking `framework/bootstrap/ductus.md` §Derived values' Layout-derived rows.
+- [x] Replace the one line in `framework/bootstrap/ductus.md` §Memory routing, step 1, so it names `AGENTS.md` for what every session needs, and names each other home with when to read it.
+- [x] Copy the change into `framework/bootstrap/govern.md` byte for byte.
+- [x] Record each layout's impact in the commit (`claude-style`, `antigravity`, `opencode`, `pi`), walking `framework/bootstrap/ductus.md` §Derived values' Layout-derived rows.
 
 - **Done when**: AC2 holds, `scripts/audit/transitional-bootstrap-parity.sh` reports the two installers identical, and markdownlint passes on both.
 
