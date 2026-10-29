@@ -111,3 +111,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Implement the behavior described in `scenarios/a-registered-source-is-named-with-its-description.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 14. Report each shared constitution's size
+
+- [ ] Implement the behavior described in `scenarios/target-reports-each-constitutions-size.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.

@@ -6,9 +6,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 Recording a scenario on `063` and `055` takes each from `done` to `in-progress`, and that transition needs the owner's approval first.
 
-- [ ] Run `/ductus:amend` on `063-oversized-artifacts-warn-with-a-fix`, recording a scenario for the project subject set, the staged mode, and the `/analyze` advisory for project files, as the plan's `check-artifact-size` decision states. Link it to this spec. Its appended task waits on `041`'s, because the advisory names `/prune --project`, and `--ref=main` adopters run whatever is on `main`.
-- [ ] Run `/ductus:amend` on `041-task-pruning`, recording a scenario for `/prune --project`, the `prune-project` primitive, and step 8's routing, as the plan's `/prune --project` decision states. Link it to this spec.
-- [ ] Run `/ductus:amend` on `055-shared-constitution`, recording a scenario for `/target`'s size report and the measuring wrapper. Link it to this spec.
+The 050 item waits, by the owner's decision of 2026-10-29: 050's `tasks.md` held another session's uncommitted task 43 (the `succinctness-is-a-guiding-principle` scenario, with a constitution edit), and `.githooks/pre-commit` stages a staged markdown file whole, so a 050 scenario recorded beside it could not be committed apart from that work. Record it once `git status -- specs/050-constitution/` is clean.
+
+- [x] Run `/ductus:amend` on `063-oversized-artifacts-warn-with-a-fix`, recording a scenario for the project subject set, the staged mode, and the `/analyze` advisory for project files, as the plan's `check-artifact-size` decision states. Link it to this spec. Its appended task waits on `041`'s, because the advisory names `/prune --project`, and `--ref=main` adopters run whatever is on `main`.
+- [x] Run `/ductus:amend` on `041-task-pruning`, recording a scenario for `/prune --project`, the `prune-project` primitive, and step 8's routing, as the plan's `/prune --project` decision states. Link it to this spec.
+- [x] Run `/ductus:amend` on `055-shared-constitution`, recording a scenario for `/target`'s size report and the measuring wrapper. Link it to this spec.
 - [ ] Run `/ductus:amend` on `050-constitution`, recording a scenario for AC1's routing text and AC13's tree lines, the byte cut that offsets them, and the rewrite of `artifacts-are-as-short-as-their-required-content`. Link it to this spec.
 
 - **Done when**: each of the four specs has a scenario that links `../../075-agents-md-holds-what-every-session-needs/spec.md`, each scenario's task is appended to its spec's `tasks.md`, and `063` and `055` are `in-progress`.

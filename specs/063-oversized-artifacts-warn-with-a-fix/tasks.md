@@ -109,3 +109,11 @@ Task 5's step-number sync rewrote 058's scenario `only-unreadable-targets-retain
 - [x] §The warning names a fix, AC8 and `data-model.md`'s `on-done` row state the plan-trim effect
 
 - **Done when**: The scenario's behavior holds in `runtime/src/primitives/check_artifact_size.rs`, its test fails with the behavior removed, and 063's spec and data model describe the advice as it runs.
+
+## 15. Measure the project files
+
+Blocked on `041-task-pruning`'s `/prune --project` task, because every message this task adds names that command.
+
+- [ ] Implement the behavior described in `scenarios/project-files-are-measured.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.

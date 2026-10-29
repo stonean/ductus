@@ -194,3 +194,9 @@ Start with `/ductus:target 041-task-pruning/a-plan-edit-does-not-reopen-a-done-s
 - [ ] Implement the behavior described in `scenarios/a-pruned-task-number-is-never-reissued.md`
 
 - **Done when**: The scenario's open question is resolved, AC13 is amended or confirmed to match, and a fixture test proves a number pruned from the top of tasks.md is not reissued by the next append (or the chosen citation rule is stated where citations are written).
+
+### 23. Implement scenario: prune-walks-the-project-files
+
+- [ ] Implement the behavior described in `scenarios/prune-walks-the-project-files.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and tested.

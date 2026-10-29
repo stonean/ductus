@@ -1,5 +1,5 @@
 ---
-status: planned
+status: in-progress
 dependencies: [063-oversized-artifacts-warn-with-a-fix, 072-governing-documents-stay-within-one-read]
 cross-spec-impact: [041-task-pruning, 050-constitution, 055-shared-constitution, 063-oversized-artifacts-warn-with-a-fix]
 next-criterion: 17
