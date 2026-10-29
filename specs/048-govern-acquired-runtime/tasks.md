@@ -206,3 +206,9 @@ Phase 1 is independently safe and lands first so later work is written against a
 - [x] framework/bootstrap/ductus.md — State A's version check said its probe is Runtime acquisition step 2's and that the Permission Setup seed pre-authorizes it; for a `[runtime] path` the probe is Branch 1 step 3 and prompts, as §Permission Setup itself says (048's review, 2026-10-29; owner chose the correction). The sentence now names both branches' probes and that only the store form is seeded, in `ductus.md` and the byte-identical `govern.md`
 
 - **Done when**: the sentence agrees with §Permission Setup and with both acquisition branches, and `govern.md` is byte-identical to `ductus.md`
+
+### 27. The pointer's prompt on OpenCode is stated with the condition that makes it true
+
+- [x] framework/bootstrap/ductus.md — §Pointer materialization and AC22's annotation said the pointer's link prompts on Claude, OpenCode and Antigravity, while OpenCode, by its documentation as 022 task 18 reads it, allows an unmatched command until `/configure` adds its catch-all `ask`, so a first bootstrap does not prompt there (048's review, 2026-10-29, low confidence, no live probe; owner chose the qualification). Both now state the condition, in `ductus.md`, the byte-identical `govern.md` and spec.md
+
+- **Done when**: no artifact claims a prompt on OpenCode before `/configure` has added its catch-all `ask`
