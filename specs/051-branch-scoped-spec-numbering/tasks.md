@@ -37,3 +37,9 @@ Spent task sections are pruned per §tasks-phase; git history holds them, and th
 - [x] An independent re-read covers `f33096a5`, the round-4 commit after it and task 30's commit, per `AGENTS.md`'s review entries, before 051's review record is written. Rounds (2026-10-28), each commit's message listing its findings and their dispositions: the re-read of `f33096a5`, `77fff147`, `38fc39f6` and `4e82686d`/`db6ae819` found 10 SHOULD, fixed in `54715126`; of `54715126`, 1 SHOULD, fixed in `3fc5755a`; of `3fc5755a`, 3 SHOULD, fixed in `d1853444`; of `d1853444`, 0 MUST and 2 SHOULD, both gaps in its tests, fixed in `c1cf51ff`; of `c1cf51ff`, 0 MUST and 0 SHOULD, its 4 NOTE disposed of in the commit after it, a prose-only round that is not re-read
 
 - **Done when**: every mutation in the three lists is killed or is its list's declared survivor, and the independent re-read of those commits reports no MUST or SHOULD
+
+## 32. Implement scenario: a fold target is held to the name grammar
+
+- [x] Implement the behavior described in `scenarios/a-fold-target-is-held-to-the-name-grammar.md`
+
+- **Done when**: `rewrite-spec-links` refuses a `to` whose feature half is not a feature directory name or whose scenario half is not a scenario slug, before any file is read or written, leaving the corpus byte-identical; a test refuses `templates` and a scenario half holding a space, a further `/`, `$(...)` or a capital letter, and fails without the check, with its mutation in `scripts/mutation/rewrite-spec-links.py` killed; routed from 048's review (BE-INPUT-002)

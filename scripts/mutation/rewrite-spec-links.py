@@ -270,4 +270,19 @@ MUTATIONS = [
         '    let _ = retiring_scenarios;\n',
         'rewrite_spec_links',
     ),
+    # -- 051 scenario a-fold-target-is-held-to-the-name-grammar (048's review) -
+    (
+        'M36 the feature half of `to` is not held to the feature grammar',
+        'src/primitives/rewrite_spec_links.rs',
+        '    super::validate_session_feature("rewrite-spec-links", "to", &target.feature)?;\n',
+        '',
+        'rewrite_spec_links',
+    ),
+    (
+        'M37 the scenario half of `to` is not held to the slug grammar',
+        'src/primitives/rewrite_spec_links.rs',
+        '        super::validate_session_scenario("rewrite-spec-links", "to", slug)?;\n',
+        '        let _ = slug;\n',
+        'rewrite_spec_links',
+    ),
 ]

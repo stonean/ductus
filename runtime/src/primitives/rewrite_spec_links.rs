@@ -407,8 +407,9 @@ impl Sweep<'_> {
 ///
 /// # Errors
 ///
-/// Returns [`PrimitiveError::InvalidArgument`] when `from` is empty or `to`
-/// does not parse as a fold target, [`PrimitiveError::InvalidPath`] when
+/// Returns [`PrimitiveError::InvalidArgument`] when `from` is empty, or `to`
+/// does not parse as a fold target, names no feature directory, or names a
+/// scenario that is not a slug, [`PrimitiveError::InvalidPath`] when
 /// either is absolute, climbs with `..`, or has a symbolic link on or under
 /// its directory that resolves outside the project, and
 /// [`PrimitiveError::FeatureNotFound`] when the target holds no `spec.md` —
@@ -436,6 +437,15 @@ pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksR
     super::validate_feature_argument(repo, &layout.specs_root, &args.from)?;
     super::validate_feature_argument(repo, &layout.specs_root, &args.to)?;
     let mut target = FoldTarget::parse(&args.to)?;
+    // Both halves of `to` are written into every referrer, the executable
+    // hook and `CLAUDE.md`'s imports among them, so each is held to its
+    // grammar rather than only kept from escaping (`BE-INPUT-002`; spec 051,
+    // scenario `a-fold-target-is-held-to-the-name-grammar`): the checks
+    // `retarget-sessions` applies to the same `{feature}/{scenario}`.
+    super::validate_session_feature("rewrite-spec-links", "to", &target.feature)?;
+    if let Some(slug) = &target.scenario {
+        super::validate_session_scenario("rewrite-spec-links", "to", slug)?;
+    }
     let specs_dir = repo.join(&layout.specs_root);
     target.retiring_scenarios = retiring_scenarios(&specs_dir.join(&args.from))?;
 
@@ -1132,6 +1142,49 @@ mod tests {
         let err = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap_err();
 
         assert!(matches!(err, PrimitiveError::FeatureNotFound { .. }));
+    }
+
+    /// Scenario `a-fold-target-is-held-to-the-name-grammar`: both halves of
+    /// `to` are written into every referrer, the executable hook included,
+    /// so each is held to its grammar (`BE-INPUT-002`). Every target here
+    /// holds a `spec.md`, so only the grammar refuses it, and the corpus is
+    /// left byte-identical. Killed by M36 (feature) and M37 (scenario) in
+    /// `scripts/mutation/rewrite-spec-links.py`.
+    #[test]
+    fn a_fold_target_outside_the_name_grammar_is_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        let before = "---\nstatus: draft\ndependencies: []\n---\n\n[x](../1234.1-staged/plan.md)\n";
+        write(tmp.path(), "060-beta/spec.md", before);
+        seed_target(tmp.path(), "050-alpha");
+        seed_target(tmp.path(), "templates");
+        seed_target(tmp.path(), "1234.2-cache");
+
+        for to in [
+            "templates",
+            "050-alpha/x y",
+            "050-alpha/a/b",
+            "050-alpha/x$(id)",
+            "050-alpha/Upper",
+        ] {
+            let err = run(&args("1234.1-staged", to), tmp.path()).unwrap_err();
+            assert!(
+                matches!(&err, PrimitiveError::InvalidArgument { argument, .. } if argument == "to"),
+                "{to:?}: {err:?}"
+            );
+            assert_eq!(
+                read(tmp.path(), "060-beta/spec.md"),
+                before,
+                "{to:?} moved the link"
+            );
+        }
+
+        // What a fold names passes: a branch-scoped feature, and a slug.
+        run(&args("1234.1-staged", "1234.2-cache"), tmp.path()).unwrap();
+        assert!(read(tmp.path(), "060-beta/spec.md").contains("../1234.2-cache/plan.md"));
+        run(&args("1234.2-cache", "050-alpha/eviction"), tmp.path()).unwrap();
+        assert!(
+            read(tmp.path(), "060-beta/spec.md").contains("../050-alpha/scenarios/eviction.md")
+        );
     }
 
     /// A scenario-targeted `to` is checked on its **feature** half — that is
