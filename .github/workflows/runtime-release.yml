@@ -7,9 +7,9 @@ name: runtime-release
 # The release notes are sourced from runtime/CHANGELOG.md.
 #
 # Job order is load-bearing and reads top to bottom:
-#   audit ─┐
-#          ├─→ acquire ─→ sbom ─→ publish ─→ release-assets
-#   build ─┘
+#   audit ───────┐
+#   cargo-audit ─┼─→ acquire ─→ sbom ─→ publish ─→ release-assets
+#   build ───────┘
 # The crate publishes BEFORE the GitHub release is created. See the
 # release-assets comment at the bottom for why that direction and not the
 # other one (spec 048, scenarios/release-halves-publish-together.md).
