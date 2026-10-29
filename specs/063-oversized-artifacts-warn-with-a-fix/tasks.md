@@ -117,3 +117,9 @@ Blocked on `041-task-pruning`'s `/prune --project` task, because every message t
 - [ ] Implement the behavior described in `scenarios/project-files-are-measured.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 16. A permission test that cannot run as root fails instead of passing
+
+- [ ] `an_unreadable_subject_is_skipped_never_clean` and `an_unlistable_scenarios_directory_is_skipped` in `runtime/src/primitives/check_artifact_size.rs` `return` when the 0o000 subject can still be opened or listed, so a run as root reports both `ok` without exercising either (§design-principles: a check that cannot run never looks like one that passed; prefer a test that fails loudly on a missing input). Make each panic naming why, as `rewrite_spec_links.rs`'s two permission tests do since 048's 2026-10-29 review. Found by that review; the pattern predates its window (`5b575782`)
+
+- **Done when**: Neither test can pass without exercising its unreadable subject: a run where permissions do not bind fails with a message naming that, and `cargo test` passes as a non-root user

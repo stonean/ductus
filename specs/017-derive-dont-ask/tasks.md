@@ -466,3 +466,11 @@ Done when: this spec's artifacts have no `title:` or `tags:` frontmatter; valida
 - [x] Implement the behavior described in `scenarios/a-secret-at-rest-is-flagged-in-every-project-shape.md`
 
 - **Done when**: `framework/rules/configuration-cross.md` carries `CFG-ENV-013` with a Statement, a Verification and a fetched Source; `CFG-ENV-001`, `009` and `010` and `security-backend.md` `BE-DATA-003`, `008` and `012` route as the scenario's Behavior reads; `data-model.md` § Rule set enumerates it with its tier; the new acceptance criterion is labelled by `label-criteria`; a fresh agent's re-read of the changed rules finds no MUST or SHOULD; `npx markdownlint-cli2` passes.
+
+### 45. Implement scenario: [a-commit-stages-only-its-own-generated-files](scenarios/a-commit-stages-only-its-own-generated-files.md)
+
+- [ ] Implement the behavior described in `scenarios/a-commit-stages-only-its-own-generated-files.md`
+- [ ] Choose the mechanism and record it with its reason in plan.md §Technical Decisions (for example, run the generators over the index's sources, or stage an output only when its sources are staged)
+- [ ] Change `.githooks/pre-commit`, correct spec.md §ductus repo's pre-commit hook's "stages any changes", and test each Behavior and Edge Case line in an adopter-free fixture tree with a second session's unstaged source and output present, each test failing with the behavior removed
+
+- **Done when**: A commit in a tree holding another session's unstaged generator sources and outputs carries only outputs derived from its own staged sources, leaves the other session's files byte-identical, and still carries a regenerated output its staged sources change; `generators.yml`'s steps pass locally

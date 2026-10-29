@@ -2334,9 +2334,12 @@ mod tests {
         write(tmp.path(), "070-gamma/spec.md", linking);
         let locked = tmp.path().join("specs/070-gamma");
         fs::set_permissions(&locked, fs::Permissions::from_mode(0o000)).unwrap();
+        // A test that cannot make its subject must fail, never pass unrun.
         if fs::read_dir(&locked).is_ok() {
             fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
-            return; // running as root: permissions do not bind
+            panic!(
+                "permissions do not bind (running as root?): no directory can be made unlistable"
+            );
         }
 
         let result = run(&args("1234.1-staged", "050-alpha"), tmp.path());
@@ -2370,7 +2373,8 @@ mod tests {
         let locked = tmp.path().join("specs/070-gamma/spec.md");
         fs::set_permissions(&locked, fs::Permissions::from_mode(0o000)).unwrap();
         if fs::File::open(&locked).is_ok() {
-            return; // running as root: permissions do not bind
+            fs::set_permissions(&locked, fs::Permissions::from_mode(0o644)).unwrap();
+            panic!("permissions do not bind (running as root?): no file can be made unreadable");
         }
 
         let err = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap_err();
