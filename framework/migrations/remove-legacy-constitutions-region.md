@@ -1,4 +1,4 @@
-# legacy-constitutions-region
+# remove-legacy-constitutions-region
 
 **Introduced in:** ductus 0.60.0
 **Summary:** Remove the `<!-- ductus:constitutions -->` … `<!-- /ductus:constitutions -->` comment region from `CLAUDE.md` and `AGENTS.md` when it is the empty region the template shipped, unchanged, since `/{project}` maintains a `BEGIN`/`END` block instead.
@@ -17,7 +17,7 @@ Apply steps 1–7 to `CLAUDE.md`, then to `AGENTS.md`, each at the project root.
 
 2. **Find the region.** Here and below, a line's **text** is the line without its ending, `\n` or `\r\n`, and a **blank** line is one whose text is empty or holds only spaces and tabs. Walk the file line by line, tracking fenced code blocks as `claude-md-import-syntax` step 2 defines them, applied to each line's text. The region starts at the first line outside a fence whose text, with leading and trailing spaces and tabs removed, is `<!-- ductus:constitutions -->`, and ends at the first later line outside a fence whose text, trimmed the same way, is `<!-- /ductus:constitutions -->`.
 
-3. **Idempotency check.** When no line starts the region, the file is converged: report `legacy-constitutions-region: {file} has no unmaintained constitutions region — left as is` and stop without writing. When a line starts the region but no line ends it, report `legacy-constitutions-region: {file} opens a ductus:constitutions comment region that never closes — left as is; remove it by hand` and stop without writing.
+3. **Idempotency check.** When no line starts the region, the file is converged: report `remove-legacy-constitutions-region: {file} has no unmaintained constitutions region — left as is` and stop without writing. When a line starts the region but no line ends it, report `remove-legacy-constitutions-region: {file} opens a ductus:constitutions comment region that never closes — left as is; remove it by hand` and stop without writing.
 
 4. **Skip a pinned file.** When the file is listed in `.ductus/config.toml` `[pinned] files`, report one line and stop without writing:
 
@@ -27,9 +27,9 @@ Apply steps 1–7 to `CLAUDE.md`, then to `AGENTS.md`, each at the project root.
 
 6. **Leave an edited region.** When it matches neither, report one line and stop without writing:
 
-   `legacy-constitutions-region: {file}'s <!-- ductus:constitutions --> comment region differs from every shipped version — left as is; /ductus never maintained it, so move anything you added there out of it and remove the region by hand.`
+   `remove-legacy-constitutions-region: {file}'s <!-- ductus:constitutions --> comment region differs from every shipped version — left as is; /ductus never maintained it, so move anything you added there out of it and remove the region by hand.`
 
-7. **Remove a matching region.** Delete its lines, from the start line through the end line. When nothing but blank lines follows the end line, the region ends the file: delete those blank lines and the run of blank lines immediately before the start line too, so the file ends with the line ending after its last remaining non-blank line, or is empty when none remains. Otherwise, when the line after the end line is blank, and the line before the start line is blank or there is none, delete that following blank line too, so the region does not leave two blank lines where it stood. Preserve every other byte, line endings included. Write atomically, keeping the file's mode: a temporary file in the same directory, then a rename. Report `legacy-constitutions-region: removed the unmaintained ductus:constitutions comment region from {file} — /ductus maintains a BEGIN/END block in each selected agent's rules file instead`.
+7. **Remove a matching region.** Delete its lines, from the start line through the end line. When nothing but blank lines follows the end line, the region ends the file: delete those blank lines and the run of blank lines immediately before the start line too, so the file ends with the line ending after its last remaining non-blank line, or is empty when none remains. Otherwise, when the line after the end line is blank, and the line before the start line is blank or there is none, delete that following blank line too, so the region does not leave two blank lines where it stood. Preserve every other byte, line endings included. Write atomically, keeping the file's mode: a temporary file in the same directory, then a rename. Report `remove-legacy-constitutions-region: removed the unmaintained ductus:constitutions comment region from {file} — /ductus maintains a BEGIN/END block in each selected agent's rules file instead`.
 
 `{file}` is `CLAUDE.md` or `AGENTS.md`, as walked.
 
