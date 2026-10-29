@@ -50,7 +50,7 @@ Concurrency-correctness rules for server-side shared state, locking, transaction
 
 ### BE-TXN-001
 
-> Each transaction SHOULD state its isolation level explicitly rather than relying on the engine's default.
+> Each transaction SHOULD state its isolation level explicitly, and the anomalies that level prevents on the chosen engine, rather than relying on the engine's default.
 
 **Verification:** Any spec or plan that introduces a multi-statement transaction SHOULD name the isolation level it requires and the anomalies that level prevents on the chosen engine. `/{project}:analyze` flags transactional plans that do not state an isolation level.
 

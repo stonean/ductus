@@ -98,7 +98,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 > Session and authentication cookies MUST set the `SameSite` attribute to `Lax` or `Strict`. `SameSite=None` MUST only be used when cross-site cookie transmission is explicitly required and, when used, MUST be combined with `Secure`. Use of `SameSite=None` MUST be justified in the spec.
 
-**Verification:** Any spec or plan that introduces session cookies or auth cookies MUST name the `SameSite` value and, if `None`, MUST justify the cross-site requirement and confirm both `Secure` and the CSRF defense `FE-CSRF-001` requires. `/{project}:analyze` flags cookie-issuing specs that omit the `SameSite` attribute, that propose `SameSite=None` without justification, or that propose `SameSite=None` without `Secure`.
+**Verification:** Any spec or plan that introduces session cookies or auth cookies MUST name the `SameSite` value and, if `None`, MUST justify the cross-site requirement and confirm the CSRF defense `FE-CSRF-001` requires. `/{project}:analyze` flags specs that issue a session or authentication cookie without a `SameSite` attribute, or with `SameSite=None` and no justification. **Not flagged:** a missing `Secure`, which `FE-STORAGE-002` owns.
 
 **Source:** OWASP CSRF Prevention Cheat Sheet, OWASP Session Management Cheat Sheet, MDN Set-Cookie documentation
 
@@ -132,7 +132,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 > Session and authentication cookies MUST set `HttpOnly`, `Secure`, and `SameSite=Lax` or `Strict`; `SameSite=None` MAY replace `Lax`/`Strict` only under the conditions `FE-CSRF-002` sets.
 
-**Verification:** Any spec or plan that introduces a session, authentication, or other privileged cookie MUST commit to setting all three required attributes. `/{project}:analyze` flags cookie-issuing specs that omit `HttpOnly`, `Secure`, or `SameSite`. **Not flagged:** a wrong or unjustified `SameSite` value, which `FE-CSRF-002` owns.
+**Verification:** Any spec or plan that introduces a session or authentication cookie MUST commit to setting all three required attributes. `/{project}:analyze` flags specs that issue a session or authentication cookie without `HttpOnly` or `Secure`. **Not flagged:** a missing, wrong or unjustified `SameSite` value, which `FE-CSRF-002` owns.
 
 **Source:** OWASP Session Management Cheat Sheet
 
@@ -148,7 +148,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 > The `Domain` attribute SHOULD NOT be set on session and authentication cookies unless cross-subdomain sharing is explicitly required.
 
-**Verification:** Any spec or plan that introduces a session, authentication, or other privileged cookie SHOULD leave `Domain` unset, or justify cross-subdomain sharing where it sets one. `/{project}:analyze` emits a warning when a cookie-issuing spec sets `Domain` without justification.
+**Verification:** Any spec or plan that introduces a session or authentication cookie SHOULD leave `Domain` unset, or justify cross-subdomain sharing where it sets one. `/{project}:analyze` emits a warning when a spec sets `Domain` on a session or authentication cookie without justification.
 
 **Source:** OWASP Session Management Cheat Sheet
 
@@ -156,7 +156,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 > Session and authentication cookies SHOULD use the `__Host-` name prefix.
 
-**Verification:** Any spec or plan that introduces a session, authentication, or other privileged cookie SHOULD name it with the `__Host-` prefix, or state why the cookie needs a `Domain` attribute or a narrower `Path`. `/{project}:analyze` emits a warning when a cookie-issuing spec names a privileged cookie without the `__Host-` prefix and without that justification.
+**Verification:** Any spec or plan that introduces a session or authentication cookie SHOULD name it with the `__Host-` prefix, or state why the cookie needs a `Domain` attribute or a narrower `Path`. `/{project}:analyze` emits a warning when a cookie-issuing spec names a session or authentication cookie without the `__Host-` prefix and without that justification.
 
 **Source:** OWASP Session Management Cheat Sheet, OWASP Cross-Site Request Forgery Prevention Cheat Sheet, MDN Set-Cookie documentation (cookie prefixes)
 
@@ -174,7 +174,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 > Post-authentication redirect destinations MUST be validated against an allowlist of internal application paths or hosts; open redirects (any user-controlled redirect target accepted without validation) MUST NOT be permitted.
 
-**Verification:** Any spec or plan that describes post-login redirects, "return to" URLs, OAuth callback handling, or any feature that accepts a destination URL from request parameters MUST name the allowlist (paths, hosts, signed-token validation). `/{project}:analyze` flags login or OAuth flows that pass through a `next`/`return_to`/`redirect_uri` value without naming an allowlist or signature check.
+**Verification:** Any spec or plan that describes post-login redirects, "return to" URLs, OAuth callback handling, or any feature that accepts a destination URL from request parameters MUST name the allowlist (paths or hosts). `/{project}:analyze` flags login or OAuth flows that pass through a `next`/`return_to`/`redirect_uri` value without naming an allowlist.
 
 **Source:** OWASP Unvalidated Redirects and Forwards Cheat Sheet
 
@@ -182,7 +182,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 > When the user's session expires or is revoked, the application MUST surface a clear re-authentication prompt or redirect to the login page; the application MUST NOT silently fail, retry indefinitely, or leave the UI in a broken state.
 
-**Verification:** Any spec or plan that describes authenticated UI flows MUST name the session-expiration UX (redirect, modal prompt, banner with re-auth) and the data-preservation behavior for in-progress work. `/{project}:analyze` flags authenticated-UI specs that omit session-expiration handling or that describe error states (e.g., "request fails") without naming the recovery path.
+**Verification:** Any spec or plan that describes authenticated UI flows MUST name the session-expiration UX (redirect, modal prompt, banner with re-auth). `/{project}:analyze` flags authenticated-UI specs that omit session-expiration handling or that describe error states (e.g., "request fails") without naming the recovery path.
 
 **Source:** OWASP Session Management Cheat Sheet
 
@@ -298,7 +298,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 > Production frontend dependencies MUST be pinned to specific versions (or version + integrity hash) in the lockfile used for production builds; floating versions (`latest`, `^`, `~`, range constraints) MUST NOT determine what ships to production. A pinned version MUST change only through a documented upgrade process.
 
-**Verification:** Any spec or plan covering frontend builds, deployment, or `system.md` MUST commit to (a) an authoritative lockfile (`package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`) included in the deployment artifact and (b) a documented upgrade process. `/{project}:analyze` flags deployment specs that allow floating dependency ranges in production builds, that omit the lockfile question, or that describe a production install able to rewrite the lockfile: `npm install` rather than `npm ci`, `pnpm install` without `--frozen-lockfile`, or a Yarn install without `--immutable` (Yarn 1: `--frozen-lockfile`), except where pnpm or Yarn 3+ already applies that behavior by default because it detects a CI environment.
+**Verification:** Any spec or plan covering frontend builds, deployment, or `system.md` MUST commit to (a) an authoritative lockfile (`package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`) that the production build installs from and (b) a documented upgrade process. `/{project}:analyze` flags deployment specs that allow floating dependency ranges in production builds, that omit the lockfile question, or that describe a production install able to rewrite the lockfile: `npm install` rather than `npm ci`, `pnpm install` without `--frozen-lockfile`, or a Yarn install without `--immutable` (Yarn 1: `--frozen-lockfile`), except where pnpm or Yarn 3+ already applies that behavior by default because it detects a CI environment.
 
 **Source:** OWASP Top 10:2025 (A03:2025 — Software Supply Chain Failures), npm `ci` documentation, pnpm `install` documentation, Yarn `install` documentation
 
@@ -340,7 +340,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 > Pages displaying sensitive data MUST set `Cache-Control: no-store`.
 
-**Verification:** Any spec or plan that describes authenticated pages MUST commit to `Cache-Control: no-store` on sensitive responses. `/{project}:analyze` flags authenticated-page specs that omit `Cache-Control: no-store`. **Not flagged:** a sensitive response a service worker stores in the Cache API, which `FE-STORAGE-006` owns.
+**Verification:** Any spec or plan that describes pages displaying sensitive data MUST commit to `Cache-Control: no-store` on them. `/{project}:analyze` flags specs describing such a page that omit `Cache-Control: no-store`. **Not flagged:** a sensitive response a service worker stores in the Cache API, which `FE-STORAGE-006` owns.
 
 **Source:** OWASP Session Management Cheat Sheet, MDN Cache-Control documentation
 

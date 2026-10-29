@@ -81,8 +81,7 @@ host-crossing surfaces (HTTPS, gRPC, message brokers, database
 connections). /{project}:analyze flags specs that allow plaintext
 protocols for host-to-host traffic, that name TLS 1.0/1.1, or that omit
 the TLS version question entirely. Plaintext loopback exceptions MUST be
-named explicitly with the sidecar/proxy that provides the encrypted
-host-boundary leg.
+documented in specs/system.md.
 ```
 
 > **Signpost:** this example cited `BE-API-002` from the spec's first draft until 2026-09-13. It never matched: `BE-API-002` has been the `Server` / `X-Powered-By` version-header suppression rule since the file was written, so a reader following the ID landed on an unrelated rule. The example now quotes `BE-DATA-001`'s shipped Verification verbatim, so it can be checked against `framework/rules/security-backend.md`.

@@ -1,7 +1,7 @@
 ---
 status: in-progress
 dependencies: []
-next-criterion: 28
+next-criterion: 29
 ---
 
 # 017 — Derive, Don't Ask
@@ -155,6 +155,7 @@ Both repos run the generators in CI and fail the build on a non-empty diff — t
 - [x] AC25: Capturing a review finding that maps to no loaded rule does not depend on the reviewer remembering a separate step: recording it in the report is what writes it to the inbox, so the two cannot diverge and an uncaptured observation is not a reachable state. Delivered as written; **the inbox half is superseded** — `058-findings-route-at-discovery` stopped writing observations to the inbox, the one destination no gate reads. Recording an observation in the report now puts it in front of the review's fix-and-route step, and the record counts it undispositioned until it is fixed, routed, or discarded; since 058's `findings-cost-in-proportion-to-risk` an undecided observation no longer holds the spec out of `done`. The guarantee this criterion names — no separate step to remember, no uncaptured observation — holds unchanged
 - [x] AC26: The routing rules that decide whether work becomes a new spec, a scenario on an existing spec, or a rule-file amendment bind wherever work enters — not only when it arrives through the inbox, where `/{project}:groom`'s decision tree happens to run
 - [x] AC27: `framework/rules/configuration-cross.md` declares a third category, `FLAG` (feature flags), in its header, and `data-model.md` registers it in the ID-prefix and Category-name bullets and the category-abbreviation table; `CFG-FLAG-001` (MUST) and `CFG-FLAG-002` (SHOULD) are present, as are `CFG-ENV-008` (MUST), `CFG-ENV-009` (SHOULD), `CFG-ENV-010` (MUST), `CFG-ENV-011` (MUST) and `CFG-ENV-012` (SHOULD), each with a Statement, a Verification and a Source; and `data-model.md` § Rule set enumerates every rule in the file with its tier
+- [ ] AC28: `framework/rules/configuration-cross.md` carries `CFG-ENV-013` (MUST), with a Statement, a Verification and a Source, owning a secret written in source or a container-build manifest, committed to version control, passed to a container build, or placed into a container image or other build artifact; `CFG-ENV-009`, `CFG-ENV-010` and `framework/rules/security-backend.md` `BE-DATA-003`, `BE-DATA-008` and `BE-DATA-012` leave that case to it; and `data-model.md` § Rule set enumerates it with its tier
 
 ## Open Questions
 

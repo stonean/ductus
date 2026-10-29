@@ -26,4 +26,4 @@ No rule in `security-backend.md` (read 2026-10-25 at HEAD f24c55c6) covers a cre
 
 ## Resolved Questions
 
-*None yet.*
+- **Does the rule cover `Authorization` on a same-host redirect to another scheme or port?** Yes (owner, 2026-10-29): the rule is scoped by origin — scheme, host and port — for every credential header, `Authorization` included, since Go's `net/http` compares hostnames only and so keeps `Authorization` on a same-host `https`-to-`http` redirect. The rule is `BE-DATA-013`.

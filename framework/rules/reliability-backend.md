@@ -48,7 +48,7 @@ Reliability rules for server-side resilience under partial failure — timeouts 
 
 ### BE-RETRY-003
 
-> Automatic retries SHOULD be limited to failures classified as transient — timeouts, connection failures, and overload or unavailability responses such as `429` and `503` — and SHOULD wait at least the delay a server-supplied `Retry-After` names before the next attempt; permanent errors, malformed requests, and an overload response the downstream marks as not worth retrying SHOULD NOT be retried.
+> Automatic retries SHOULD be limited to failures classified as transient — timeouts, connection failures, and overload or unavailability responses such as `429` and `503` — and SHOULD wait at least the delay a server-supplied `Retry-After`, or the downstream's equivalent throttling hint, names before the next attempt; permanent errors, malformed requests, and an overload response the downstream marks as not worth retrying SHOULD NOT be retried.
 
 **Verification:** Any spec or plan that introduces automatic retries SHOULD name which failures it retries and which it surfaces immediately, and state that a `Retry-After` (or the downstream's equivalent throttling hint) sets the minimum delay before the next attempt; `/{project}:analyze` flags a retry plan that retries every failure indiscriminately, ignores a downstream's throttling signal, or retries an overload the downstream marks as not worth retrying. This rule decides which failures earn a retry and when: the attempt bound and backoff are `BE-RETRY-001`'s, a rate-limited response sent without `429` and `Retry-After` is `security-backend.md`'s `BE-API-004`, and a status code used against its registered semantics is `api-backend.md`'s `BE-STATUS-001`.
 
@@ -76,7 +76,7 @@ Reliability rules for server-side resilience under partial failure — timeouts 
 
 > Calls to a failure-prone downstream SHOULD be guarded by a circuit breaker that opens on a failure threshold (a count or rate of failures), fails fast (or falls back) while open, and half-opens to probe recovery.
 
-**Verification:** Any spec or plan that calls a downstream with a meaningful failure rate SHOULD state whether a circuit breaker guards it and the open/half-open policy, with its thresholds as named constants or environment variables per `configuration-cross.md` `CFG-CONST-003`; `/{project}:analyze` flags an integration with a failure-prone downstream that commits to no breaker or fallback.
+**Verification:** Any spec or plan that calls a downstream with a meaningful failure rate SHOULD state whether a circuit breaker guards it and the open/half-open policy, with its thresholds as named constants or environment variables per `configuration-cross.md` `CFG-CONST-003`; `/{project}:analyze` flags an integration with a failure-prone downstream that commits to no breaker or fallback. An optional failure-prone dependency with neither a breaker nor a degraded path is also `BE-BULK-002`'s, a separate defect: the operation failing with it, where this rule's is the calls continuing while it is down.
 
 **Source:** Nygard, *Release It!* — Circuit Breaker; Martin Fowler, "CircuitBreaker" (bliki).
 

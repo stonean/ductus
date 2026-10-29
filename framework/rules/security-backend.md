@@ -46,9 +46,9 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 ### BE-AUTHN-006
 
-> Authentication failure responses MUST NOT reveal which credential component was invalid. The response for invalid username, invalid password, and disabled account MUST be indistinguishable in body, status code, and timing.
+> Authentication failure responses MUST NOT reveal which credential component was invalid, and password-reset responses MUST NOT reveal whether the account exists. The login responses for an invalid username, an invalid password, and a disabled account MUST be indistinguishable in body, status code, and timing, as MUST the password-reset responses for an existing and an unknown account.
 
-**Verification:** Any spec or plan that describes login or password-reset endpoints MUST commit to a generic failure response and to constant-time handling that does not differ across failure modes. `/{project}:analyze` flags auth-flow specs that propose different messages or status codes for "user not found" vs. "wrong password."
+**Verification:** Any spec or plan that describes login or password-reset endpoints MUST commit to a generic login failure response, one password-reset response whether or not the account exists, and constant-time handling across those cases. `/{project}:analyze` flags auth-flow specs that propose different messages or status codes for "user not found" vs. "wrong password," or a reset response that differs for an unknown account.
 
 **Source:** OWASP Authentication Cheat Sheet
 
@@ -382,7 +382,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > All network communication that crosses a host boundary MUST use TLS 1.2 or later. Plaintext protocols MUST NOT be used for any host-to-host data exchange in production. Loopback (`127.0.0.0/8`, `::1`) traffic between cooperating processes on the same host MAY use plaintext when those processes share the host's trust boundary (e.g., a sidecar proxy that terminates mTLS at the loopback edge); the use of loopback plaintext MUST be documented in `specs/system.md`.
 
-**Verification:** Any spec or plan covering network communication, edge configuration, or `system.md` MUST commit to TLS 1.2+ across all host-crossing surfaces (HTTPS, gRPC, message brokers, database connections). `/{project}:analyze` flags specs that allow plaintext protocols for host-to-host traffic, that name TLS 1.0/1.1, or that omit the TLS version question entirely. Plaintext loopback exceptions MUST be named explicitly with the sidecar/proxy that provides the encrypted host-boundary leg.
+**Verification:** Any spec or plan covering network communication, edge configuration, or `system.md` MUST commit to TLS 1.2+ across all host-crossing surfaces (HTTPS, gRPC, message brokers, database connections). `/{project}:analyze` flags specs that allow plaintext protocols for host-to-host traffic, that name TLS 1.0/1.1, or that omit the TLS version question entirely. Plaintext loopback exceptions MUST be documented in `specs/system.md`.
 
 **Source:** OWASP Transport Layer Security Cheat Sheet, RFC 8996, NIST SP 800-52r2
 
@@ -396,9 +396,9 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 ### BE-DATA-003
 
-> Secrets (API keys, database credentials, encryption keys, signing keys, third-party tokens) MUST NOT be hardcoded in source code, committed to version control, embedded in container images, or stored in environment-variable defaults shipped with the application. Secrets MUST be sourced at runtime from a secrets management system or runtime injection by the orchestrator.
+> Secrets (API keys, database credentials, encryption keys, signing keys, third-party tokens) that the running application uses MUST be sourced at runtime — from a secrets management system, by the orchestrator's runtime injection (an environment variable or a secret volume), or from a file on the host, however it is placed there (mounted, placed at deploy, or generated at install), that no account but the application's and the host administrator's can read.
 
-**Verification:** Any spec or plan that introduces secrets MUST describe how they are sourced at runtime (vault/secret manager, mounted file, runtime environment variable injected by the orchestrator). `/{project}:analyze` flags any commitment to embedding secrets in `.env` files committed to git or default config files in the repo. A secret given an in-application default value — a fallback the code supplies when the configured value is absent — is `configuration-cross.md` `CFG-ENV-001`'s; any other that reaches an artifact delivered to end users, wherever it sits before the build, is `configuration-cross.md` `CFG-ENV-010`'s; and any other written in a container-build manifest, or placed into a container image by its build from outside source and version control, is `BE-DATA-008`'s.
+**Verification:** Any spec or plan that introduces secrets the running application uses MUST describe how they are sourced at runtime (vault/secret manager, runtime injection by the orchestrator as an environment variable or a secret volume, a file on the host and the accounts that can read it). `/{project}:analyze` flags secret-introducing specs and plans that do not say how each such secret is sourced at runtime, that name a secret file on the host, other than an orchestrator's secret volume, without the accounts that can read it, or whose such file an account other than the application's and the host administrator's can read. Where a running container that the spec or plan describes uses the secret, an unnamed injection into that container is `BE-DATA-008`'s; an unnamed runtime source for anything else that uses the secret stays this rule's. A secret kept somewhere a runtime source should replace is that placement's defect: `configuration-cross.md` `CFG-ENV-001`'s for an in-application default value (a fallback the application's own code supplies when the configured value is absent), `CFG-ENV-010`'s for one that reaches a client artifact (a browser bundle, a mobile app binary, or a distributed desktop or CLI build), and `CFG-ENV-013`'s for any other in source, version control, a container build or a build artifact.
 
 **Source:** OWASP Secrets Management Cheat Sheet
 
@@ -422,13 +422,13 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > Personally Identifiable Information (PII) MUST be minimized at collection, scoped to a documented purpose, and deletable on user request. Data retention periods MUST be defined for each PII field.
 
-**Verification:** Any spec or plan that collects PII (names, emails, addresses, phone numbers, government IDs, biometrics, geolocation) MUST describe (a) the minimum data set required, (b) the documented purpose for each field, (c) the deletion path, and (d) the retention period. `/{project}:analyze` flags PII-collecting specs that omit any of these.
+**Verification:** Any spec or plan that collects PII (names, emails, addresses, phone numbers, government IDs, biometrics, geolocation) MUST describe (a) the minimum data set required, (b) the documented purpose, (c) the deletion path, and (d) the retention period. `/{project}:analyze` flags PII-collecting specs that omit any of these.
 
 **Source:** GDPR Article 5(1)(b), (c), (e) (purpose limitation, data minimisation, storage limitation), GDPR Article 17 (right to erasure), CCPA (Cal. Civ. Code §1798.105, right to delete)
 
 ### BE-DATA-007
 
-> Application-to-database accounts MUST follow least privilege. Application accounts MUST NOT have DBA, superuser, or schema-modification privileges in production.
+> Application-to-database accounts MUST follow least privilege. Application accounts MUST NOT have DBA, superuser, or schema-modification privileges in production. Each environment MUST have its own application accounts, and schema migrations MUST run under an account the application does not use.
 
 **Verification:** Any spec or plan covering database access, deployment configuration, or `system.md` MUST commit to (a) separate application accounts per environment, (b) the minimum privilege set the application requires (typically `SELECT`/`INSERT`/`UPDATE`/`DELETE` on its own schema, no `CREATE`/`DROP`/`ALTER`), and (c) a separate account for migrations with elevated privileges that the application itself does not use. `/{project}:analyze` flags database access specs that omit the privilege question or that name a `root`/`admin`/`postgres` account for application use.
 
@@ -436,11 +436,11 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 ### BE-DATA-008
 
-> Secrets MUST NOT be embedded in container images, Dockerfiles, or container-build manifests. Secrets MUST be injected at runtime via environment variables sourced from a secrets manager, mounted secret volumes, or platform-native secret APIs.
+> Secrets a running container uses MUST be injected at runtime via environment variables sourced from a secrets manager, mounted secret volumes, or platform-native secret APIs.
 
-**Verification:** Any spec or plan that describes containerization or container deployment MUST commit to runtime secret injection. `/{project}:analyze` flags `Dockerfile` content (or equivalent build manifests) that includes `ENV SECRET=...`, `ARG SECRET=...` baked into layers, or `COPY` of secret files into the image. A secret given an in-application default value is `configuration-cross.md` `CFG-ENV-001`'s; any other that reaches an artifact delivered to end users, including through a build stage, is `configuration-cross.md` `CFG-ENV-010`'s; and any other written in source or committed to version control, outside a container-build manifest, is `BE-DATA-003`'s, even when the build copies it into the image.
+**Verification:** Any spec or plan that describes containerization, container deployment, or a running container that uses a secret MUST commit to runtime injection for each secret a running container uses. `/{project}:analyze` flags specs and plans that describe a running container using a secret without naming how it is injected into it at runtime. **Not flagged:** a secret only a build step uses. A secret kept somewhere runtime injection should replace is that placement's defect: `configuration-cross.md` `CFG-ENV-001`'s for an in-application default value, `CFG-ENV-010`'s for one that reaches a client artifact (a browser bundle, a mobile app binary, or a distributed desktop or CLI build), including through a build stage, and `CFG-ENV-013`'s for any other in source or version control (a committed deployment manifest or `.env` file included), written in a container-build manifest, passed to the container build, or placed into the image.
 
-**Source:** OWASP Secrets Management Cheat Sheet, Docker documentation — Build variables, NIST SP 800-190 (Application Container Security Guide) §3.1.4, §4.1.4
+**Source:** OWASP Secrets Management Cheat Sheet, NIST SP 800-190 (Application Container Security Guide) §3.1.4, §4.1.4
 
 ### BE-DATA-009
 
@@ -452,17 +452,17 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 ### BE-DATA-010
 
-> Backups containing sensitive data MUST be encrypted with keys distinct from the keys protecting the live data, and the backup keys MUST be stored separately from both the backup media and the production data plane. Restore procedures MUST be tested on a documented cadence and the test result recorded.
+> Backups containing sensitive data MUST be encrypted with keys distinct from the keys protecting the live data, and the backup keys MUST be stored separately from both the backup media and the production data plane — the hosts, services and accounts that hold or can read the live data. Restore procedures MUST be tested on a documented cadence and the test result recorded. A deployment that `specs/system.md` declares single-host MAY keep the key for a backup kept on that host on the host itself, outside the backup stream and outside the reach of the database's accounts; a backup sent off the host, and any key that also encrypts one, keeps the custody above.
 
-**Verification:** Any spec or plan that introduces backups, snapshots, or long-term data retention MUST commit to the Statement's distinct backup key, separate key custody and restore-test cadence. `/{project}:analyze` flags backup specs that omit any of these, and flags specs that propose using the production encryption key directly for backup encryption.
+**Verification:** Any spec or plan that introduces backups, snapshots, or long-term data retention MUST commit to the Statement's distinct backup key, separate key custody (or, for an on-host backup of a deployment `specs/system.md` declares single-host, the on-host custody its MAY allows) and restore-test cadence. `/{project}:analyze` flags backup specs that omit any of these, and flags specs that propose using the production encryption key directly for backup encryption.
 
 **Source:** NIST SP 800-209 (Security Guidelines for Storage Infrastructure), OWASP Cryptographic Storage Cheat Sheet
 
 ### BE-DATA-011
 
-> Outbound TLS connections the application initiates (third-party APIs, internal services, databases, message brokers) MUST validate the server's certificate chain and hostname against a trusted CA set. Certificate or hostname verification MUST NOT be disabled in production. Certificate pinning or a private CA is acceptable when the trust anchor is documented; any non-production deviation MUST be explicitly justified and MUST NOT ship to production.
+> Outbound TLS connections the application initiates (third-party APIs, internal services, databases, message brokers) MUST validate the server's certificate chain and hostname against a trusted CA set. Certificate or hostname verification MUST NOT be disabled in production. Certificate pinning or a private CA is acceptable when the trust anchor is documented; any non-production deviation MUST be explicitly justified and MUST NOT ship to production. For a server the product does not control, a trust anchor the operator supplies at configuration time — that server's CA certificate or a pinned fingerprint of its certificate — MAY stand in for the trusted CA set.
 
-**Verification:** Any spec or plan that introduces outbound TLS connections MUST commit to full certificate and hostname validation. `/{project}:analyze` flags any commitment to `verify=False`, `rejectUnauthorized: false`, `InsecureSkipVerify`, `curl -k`/`--insecure`, or any other trust-all certificate or hostname handler on a production path.
+**Verification:** Any spec or plan that introduces outbound TLS connections MUST commit to full certificate and hostname validation. `/{project}:analyze` flags any commitment to `verify=False`, `rejectUnauthorized: false`, `InsecureSkipVerify`, `curl -k`/`--insecure`, or any other trust-all certificate or hostname handler on a production path, an operator setting that turns verification off included. **Not flagged:** validation of the certificate and hostname against a trusted CA set, a documented pin or private CA, or, for a server the product does not control, an operator-supplied trust anchor, by the library or by a custom verifier that replaces the library's own (Go's `VerifyPeerCertificate` or `VerifyConnection` under `InsecureSkipVerify`); a verifier that skips the hostname is flagged.
 
 **Source:** CWE-295 (Improper Certificate Validation), Go `crypto/tls` documentation (`InsecureSkipVerify`), Requests documentation — SSL Cert Verification
 
@@ -470,9 +470,17 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > Every secret the application uses other than the encryption and signing keys `BE-DATA-005` governs (database credentials, third-party API keys, service tokens, OAuth client secrets) MUST be revocable and replaceable without a source-code change or an artifact rebuild, and the procedure for revoking and replacing a leaked secret MUST be documented.
 
-**Verification:** Any spec or plan that introduces a secret, or `specs/system.md` where secrets are inventoried, MUST name for each secret where it is revoked (the issuing system) and how a replacement reaches the running application (secret-manager update, re-injection by the orchestrator, restart). `/{project}:analyze` flags secret-introducing specs that omit the revocation path or give a restart as one, or whose replacement path requires editing source or rebuilding an image. A replacement path that needs a source edit or a rebuild only because the secret is itself embedded is the embedding rule's defect: `configuration-cross.md` `CFG-ENV-001`'s for a secret given an in-application default value, `configuration-cross.md` `CFG-ENV-010`'s for any other that reaches an artifact delivered to end users, `BE-DATA-008`'s for any other written in a container-build manifest or placed into a container image by its build from outside source and version control, and `BE-DATA-003`'s for any other secret in source or version control or placed into a build artifact rather than sourced at runtime. The revocation-path flags apply to every secret. This rule governs every secret but encryption and signing keys: an encryption or signing key with no rotation procedure is `BE-DATA-005`'s.
+**Verification:** Any spec or plan that introduces a secret, or `specs/system.md` where secrets are inventoried, MUST name for each secret where it is revoked (the issuing system) and how a replacement reaches the running application (secret-manager update, re-injection by the orchestrator, restart). `/{project}:analyze` flags secret-introducing specs that omit the revocation path or give a restart as one, or whose replacement path requires editing source or rebuilding an image. A replacement path that needs a source edit or a rebuild only because the secret is itself embedded is the embedding rule's defect: `configuration-cross.md` `CFG-ENV-001`'s for an in-application default value, `CFG-ENV-010`'s for a secret that reaches a client artifact (a browser bundle, a mobile app binary, or a distributed desktop or CLI build), and `CFG-ENV-013`'s for any other in source, version control, a container build or a build artifact. The revocation-path flags apply to every secret. This rule governs every secret but encryption and signing keys: an encryption or signing key with no rotation procedure is `BE-DATA-005`'s.
 
 **Source:** OWASP Secrets Management Cheat Sheet
+
+### BE-DATA-013
+
+> An outbound HTTP client that sends a credential in a request header — `Authorization`, a cookie, or a header of the application's own such as an API-key header — MUST NOT let a redirect carry that header to a different origin (scheme, host and port). It MUST either refuse to follow redirects or follow only a redirect to the same origin, the credential reaching it by the client's own decision; a client library that never sends the header on a redirect to a different origin MAY be relied on for that header.
+
+**Verification:** Any spec or plan that introduces an outbound HTTP client sending a credential in a request header, a redirect loop of its own included, MUST name the client's redirect policy for that credential: redirects refused, only same-origin redirects followed, or reliance on a library that never sends the header on a redirect to a different origin. `/{project}:analyze` flags such a client whose spec or plan names no redirect policy for that credential; that relies on a library without showing, citing its documentation or source, that the library never sends the header on a redirect to a different origin — Go's `net/http` client, for one, forwards a header of the application's own to any host and keeps `Authorization` and `Cookie` on a redirect to the same hostname or a subdomain whatever the scheme or port; or that follows a redirect to another origin by any other means, a redirect loop of its own, a hook that removes the header itself, or a same-host comparison that ignores scheme or port included. **Not flagged:** a header the spec or plan shows, citing the library's documentation or source, that its library never sends on a redirect to a different origin.
+
+**Source:** Go `net/http` documentation (`Client`: headers forwarded on redirect, `CheckRedirect`, `ErrUseLastResponse`; `Client.Do`) and source (`client.go`, `shouldCopyHeaderOnRedirect`); RFC 6454 §4 (an origin is the triple of scheme, host and port)
 
 ## BE-API — API Security
 
@@ -529,7 +537,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > The application MUST validate the `Content-Type` header on incoming requests. Mismatched or unexpected content types MUST be rejected with `415 Unsupported Media Type`. An endpoint that accepts more than one unrelated format MUST harden the parsing of each.
 
-**Verification:** Any spec or plan that introduces request-accepting endpoints MUST commit to content-type validation. `/{project}:analyze` flags endpoint specs that accept multiple unrelated formats without explicit per-format hardening.
+**Verification:** Any spec or plan that introduces request-accepting endpoints MUST commit to content-type validation. `/{project}:analyze` flags endpoint specs that accept multiple unrelated formats without explicit per-format hardening. An unhardened XML parser is `BE-INPUT-009`'s, and any deserialization `BE-INPUT-008` flags (a format that can execute code as it parses, polymorphic typing driven by type names, or YAML without a safe-loading mode) is `BE-INPUT-008`'s.
 
 **Source:** OWASP REST Security Cheat Sheet
 
@@ -553,7 +561,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > Backend redirect endpoints (e.g., `/redirect?url=...`, post-login redirects, OAuth callbacks, share-link expansions, any user-controlled destination URL) MUST validate the destination against an allowlist of acceptable hosts or paths. Open redirects are forbidden.
 
-**Verification:** Any spec or plan that includes a redirect endpoint the Statement names or any other user-controlled destination URL MUST commit to validating the destination against the Statement's allowlist or by a signed URL parameter. `/{project}:analyze` flags redirect features without this commitment.
+**Verification:** Any spec or plan that includes a redirect endpoint the Statement names or any other user-controlled destination URL MUST commit to validating the destination against the Statement's allowlist. `/{project}:analyze` flags redirect features without this commitment.
 
 **Source:** OWASP Unvalidated Redirects and Forwards Cheat Sheet
 
@@ -601,7 +609,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > A WebSocket endpoint that serves non-public data or accepts state-changing messages MUST (a) check the `Origin` header of each opening handshake against an explicit allowlist of trusted origins, matched exactly, and refuse with `403 Forbidden` a handshake whose `Origin` is absent or not on the list; (b) authenticate the connection before it sends protected data or acts on a message — during the handshake, or with a token in the first message, accepting nothing else until that token validates — and close the connection when authentication fails; and (c) treat every message as a request subject to the schema validation of `BE-INPUT-001`, the size bounds of `BE-INPUT-006`, and the per-request, object-level authorization of `BE-AUTHZ-003` and `BE-AUTHZ-005`. Such an endpoint MUST NOT accept a token carried in the handshake URL, not even a single-use ticket `BE-API-013`'s first carve-out would allow elsewhere. A handshake without an `Origin` header MAY be accepted when the connection is authenticated by a credential the browser does not attach automatically.
 
-**Verification:** Any spec or plan that introduces a WebSocket endpoint MUST name (a) the handshake's `Origin` allowlist, (b) how and when the connection is authenticated, and (c) the validation, size limit, and authorization applied to each message type. `/{project}:analyze` flags WebSocket specs that accept any `Origin` (e.g., a Gorilla WebSocket `CheckOrigin` that returns `true`), that match origins by wildcard or substring or allowlist `null`, that send protected data or act on messages before authentication completes, that carry a token in the handshake URL, or that authorize only when the connection opens rather than per message. A CORS policy does not satisfy (a): WebSocket connections are not restricted by the same-origin policy or CORS (CWE-1385), so `BE-API-003`'s CORS allowlist does not protect them. `BE-API-011`'s custom-header defense cannot be applied to a WebSocket. The `Origin` check does not replace authentication: a non-browser client can send any `Origin` it likes, so a spec that authenticates the connection by its `Origin` fails (b). **Not flagged:** a connection without TLS (`ws` rather than `wss`), which `BE-DATA-001` owns.
+**Verification:** Any spec or plan that introduces a WebSocket endpoint that serves non-public data or accepts state-changing messages MUST name (a) the handshake's `Origin` allowlist, (b) how and when the connection is authenticated, and (c) the validation, size limit, and authorization applied to each message type. `/{project}:analyze` flags such an endpoint that accepts any `Origin` (e.g., a Gorilla WebSocket `CheckOrigin` that returns `true`), that matches origins by wildcard or substring or allowlists `null`, that sends protected data or acts on messages before authentication completes, that carries a token in the handshake URL, or that authorizes only when the connection opens rather than per message. A CORS policy does not satisfy (a): WebSocket connections are not restricted by the same-origin policy or CORS (CWE-1385), so `BE-API-003`'s CORS allowlist does not protect them. `BE-API-011`'s custom-header defense cannot be applied to a WebSocket. The `Origin` check does not replace authentication: a non-browser client can send any `Origin` it likes, so a spec that authenticates the connection by its `Origin` fails (b). **Not flagged:** a connection without TLS (`ws` rather than `wss`), which `BE-DATA-001` owns.
 
 **Source:** OWASP WebSocket Security Cheat Sheet, RFC 6455 §4.1, §4.2.1, §10.1, §10.2, §10.5 (The WebSocket Protocol), CWE-1385 (Missing Origin Validation in WebSockets), PortSwigger Web Security Academy — Cross-site WebSocket hijacking, MDN Web Docs — `WebSocket()` constructor
 
@@ -609,7 +617,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 ### BE-ERR-001
 
-> Production error responses MUST NOT include stack traces, file paths, database error messages, framework versions, or any internal implementation detail. Verbose errors MUST appear only in non-production environments or behind authentication.
+> Production error responses MUST NOT include stack traces, file paths, database error messages, framework versions, or any internal implementation detail. Verbose errors MUST appear only in non-production environments.
 
 **Verification:** Any spec or plan that describes error handling MUST commit to environment-conditional error formatting. `/{project}:analyze` flags error-handling specs that do not distinguish environments or that emit internal-detail responses in production paths.
 
@@ -619,7 +627,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 > Error responses MUST use a consistent, structured format with a stable error code, a human-readable message, and a request correlation ID.
 
-**Verification:** Any spec or plan that describes error responses MUST commit to the structured format with code + message + correlation ID. `/{project}:analyze` flags error-response specs that emit only a string message or a raw exception name. **Not flagged:** an error code missing from the published schema, unstable across versions, or parsed from the human-readable message, which `api-backend.md`'s `BE-ERRENV-002` owns.
+**Verification:** Any spec or plan that describes error responses MUST commit to the structured format with code + message + correlation ID. `/{project}:analyze` flags error-response specs that emit only a string message or a raw exception name. **Not flagged:** an error code missing from the published schema, unstable across versions, or parsed from the human-readable message, which `api-backend.md`'s `BE-ERRENV-002` owns; and a failed long-running operation that a success response from its status monitor reports outside the project envelope, which `api-backend.md`'s `BE-LRO-001` owns.
 
 **Source:** OWASP Error Handling Cheat Sheet
 
@@ -633,7 +641,7 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 ### BE-ERR-004
 
-> The structured error format SHOULD follow RFC 9457 (Problem Details for HTTP APIs, which obsoletes RFC 7807).
+> The structured error format SHOULD follow RFC 9457 (Problem Details for HTTP APIs, which obsoletes RFC 7807). A structured format documented in `specs/system.md` and used uniformly MAY replace it.
 
 **Verification:** Any spec or plan that describes error responses SHOULD commit to RFC 9457 as the structured format, or name the documented format that replaces it. `/{project}:analyze` emits a warning when an error-response spec defines a structured format that is neither RFC 9457 nor documented in `specs/system.md`. `api-backend.md`'s `BE-ERRENV-003` states the same preference for the error envelope.
 

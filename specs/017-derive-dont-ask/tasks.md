@@ -460,3 +460,9 @@ Done when: this spec's artifacts have no `title:` or `tags:` frontmatter; valida
 - [x] Annotate AC13's "propose missing entries; the author confirms or removes" clause as the design before Q7, which made the field fully derived.
 
 - **Done when**: Both commands walk `derive-dependencies` report-only before any later step on the runtime and markdown-only paths, AC13 and AC17 hold against the tree, and the goldens and parser tests pass
+
+### 44. Implement scenario: [a-secret-at-rest-is-flagged-in-every-project-shape](scenarios/a-secret-at-rest-is-flagged-in-every-project-shape.md)
+
+- [x] Implement the behavior described in `scenarios/a-secret-at-rest-is-flagged-in-every-project-shape.md`
+
+- **Done when**: `framework/rules/configuration-cross.md` carries `CFG-ENV-013` with a Statement, a Verification and a fetched Source; `CFG-ENV-001`, `009` and `010` and `security-backend.md` `BE-DATA-003`, `008` and `012` route as the scenario's Behavior reads; `data-model.md` § Rule set enumerates it with its tier; the new acceptance criterion is labelled by `label-criteria`; a fresh agent's re-read of the changed rules finds no MUST or SHOULD; `npx markdownlint-cli2` passes.
