@@ -26,6 +26,21 @@ on:
       # comparison and nothing notices until an unrelated runtime commit
       # happens to trigger the workflow.
       - 'scripts/audit/review-freshness.sh'
+      # ...and copies the library it sources, so an edit to that is one too.
+      - 'scripts/audit/lib.sh'
+      # tests/mcp.rs holds the shipped manifest set-equal to the server's
+      # tools, so an edit to the manifest is an edit to its subject.
+      - 'framework/runtime-tools.txt'
+      # src/primitives/mark_criterion.rs, read_spec.rs, prune_plan.rs and
+      # prune_tasks.rs each read a shipped spec template, the shape their
+      # primitive parses or resets to, so an edit to one is an edit to theirs.
+      - 'framework/templates/spec/*.md'
+      # src/primitives/mod.rs's shell-spec-pattern test reads the three files
+      # carrying the spec-directory pattern and holds each to the grammar, so
+      # an edit to one of them is an edit to its subject.
+      - '.githooks/pre-commit'
+      - 'framework/bootstrap/hooks/ductus-pre-commit'
+      - 'scripts/lint-frontmatter.sh'
       # src/primitives/rule_sections.rs holds corpus tests over the shipped
       # rule files (every rule assessable, no Statement mixing tiers), so an
       # edit to a rule file is an edit to their subject. Without this path a
@@ -49,6 +64,12 @@ on:
       - '.github/workflows/runtime.yml'
       - '.github/workflows/runtime-release.yml'
       - 'scripts/audit/review-freshness.sh'
+      - 'scripts/audit/lib.sh'
+      - 'framework/runtime-tools.txt'
+      - 'framework/templates/spec/*.md'
+      - '.githooks/pre-commit'
+      - 'framework/bootstrap/hooks/ductus-pre-commit'
+      - 'scripts/lint-frontmatter.sh'
       - 'framework/rules/**'
       - 'framework/bootstrap/ductus.md'
       - 'framework/bootstrap/configure/claude.md'
