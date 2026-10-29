@@ -112,7 +112,7 @@ jobs:
 
       # Prebuilt binary — a cargo install would recompile cargo-audit on every
       # cold cache and dominate the job's wall-clock.
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
         with:
           tool: cargo-audit@0.22.2
 
