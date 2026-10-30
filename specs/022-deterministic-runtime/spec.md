@@ -139,7 +139,7 @@ The extension point inventory across the initial release and follow-on scenarios
 
 **Shipped in the initial release** (single-shot — one `llm-request` / `llm-response` round-trip):
 
-- `assessSpecQuality` — `/ductus:analyze`'s per-rule Verification reads. Request: spec content + a rule's Verification phrase. Response: pass/fail + finding text.
+- `assessSpecQuality` — `/ductus:analyze`'s per-rule Verification reads. Request: spec content, a rule's Verification phrase, and the rule files the run loaded. Response: pass/fail + finding text.
 - `writeCode` — `/ductus:implement` walk-through-tasks step 4. Request: task description, plan-relevant files, write boundary. Response: list of file edits.
 - `writeSpecBody` — `/ductus:specify` and `/ductus:plan` template-fill moments. Request: template + feature description + section name. Response: filled-in section content.
 

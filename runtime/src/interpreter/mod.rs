@@ -427,7 +427,8 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
     /// the step's tier, one `assessSpecQuality` request per rule, so every
     /// rule is asked about once and in the tier its own Statement carries
     /// (spec 060). The step's prose selects the tier; each request carries
-    /// the rule's.
+    /// the rule's, and the basenames of the rule files the walk loaded, so
+    /// the host can evaluate a load-conditioned yield.
     ///
     /// A step that asks about nothing says so in the stream. With no rule
     /// loaded at all, or with prose naming no MUST or SHOULD tier, it also
@@ -442,18 +443,20 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
         let step = Some(format_step_number(number));
         self.load_rules_once();
         let tier = payload::severity_from_step_prose(prose);
-        let (loaded_none, asked): (bool, Vec<AssessSpecQualityRule>) = match &self.rules {
-            Some(rules) => (
-                rules.is_empty(),
-                rules
-                    .assessable
-                    .iter()
-                    .filter(|rule| rule.severity == tier)
-                    .cloned()
-                    .collect(),
-            ),
-            None => (true, Vec::new()),
-        };
+        let (loaded_none, asked, loaded_files): (bool, Vec<AssessSpecQualityRule>, Vec<Value>) =
+            match &self.rules {
+                Some(rules) => (
+                    rules.is_empty(),
+                    rules
+                        .assessable
+                        .iter()
+                        .filter(|rule| rule.severity == tier)
+                        .cloned()
+                        .collect(),
+                    rules.files.iter().cloned().map(Value::String).collect(),
+                ),
+                None => (true, Vec::new(), Vec::new()),
+            };
         if loaded_none || !matches!(tier, RuleSeverity::Must | RuleSeverity::Should) {
             if let Some(tally) = &mut self.analyze_tally {
                 tally.record_step_asking_nothing();
@@ -482,8 +485,13 @@ impl<'a, R: BufRead, W: Write> Walker<'a, R, W> {
             let seeded = serde_json::to_value(&rule).map_err(std::io::Error::other)?;
             self.context
                 .insert(payload::ASSESSED_RULE_KEY.into(), seeded);
+            self.context.insert(
+                payload::LOADED_RULE_FILES_KEY.into(),
+                Value::Array(loaded_files.clone()),
+            );
             let exchanged = self.exchange(ASSESS_SPEC_QUALITY, prose);
             self.context.remove(payload::ASSESSED_RULE_KEY);
+            self.context.remove(payload::LOADED_RULE_FILES_KEY);
             let response = match exchanged? {
                 Ok(response) => response,
                 Err(outcome) => return Ok(Some(outcome)),
@@ -1916,6 +1924,14 @@ mod tests {
             assert_ne!(
                 request["request"]["rule"]["verification"].as_str().unwrap(),
                 ""
+            );
+            // Every request names the files the walk loaded, so the host can
+            // evaluate a "where `{file}` is also loaded" yield; the file it
+            // could not read is not among them (scenario
+            // `an-assessment-sees-the-loaded-rule-files`).
+            assert_eq!(
+                request["request"]["loaded-rule-files"],
+                serde_json::json!(["quality-cross.md"])
             );
         }
         let analysis =

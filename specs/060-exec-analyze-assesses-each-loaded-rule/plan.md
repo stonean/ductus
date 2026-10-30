@@ -65,7 +65,7 @@ Loading records its own gaps in the tally once per walk rather than once per ste
 
 ### One request per rule of the step's tier
 
-`handle_extension` (`runtime/src/interpreter/mod.rs:364`) builds one request per step today. For `assessSpecQuality` it builds a list: one `AssessSpecQualityRequest` for each assessable rule whose tier matches the step's, each carrying that rule's ID, Verification and tier in the unchanged typed shape (`runtime/src/schema/extensions.rs:28`). It then emits, awaits, validates and records each in turn. Every other extension point builds its single request exactly as before. The step's tier still comes from `severity_from_step_prose` (`runtime/src/interpreter/payload.rs:867`), but it now selects which rules a step asks about, and never assigns a tier to a rule. That is AC1's distinction.
+`handle_extension` (`runtime/src/interpreter/mod.rs:364`) builds one request per step today. For `assessSpecQuality` it builds a list: one `AssessSpecQualityRequest` for each assessable rule whose tier matches the step's, each carrying that rule's ID, Verification and tier in its `rule` object (`runtime/src/schema/extensions.rs:28`), beside `loaded-rule-files`, the basenames of the rule files the walk read, against which the host evaluates a Verification's "where `{file}` is also loaded" yield (scenario `an-assessment-sees-the-loaded-rule-files`). It then emits, awaits, validates and records each in turn. Every other extension point builds its single request exactly as before. The step's tier still comes from `severity_from_step_prose` (`runtime/src/interpreter/payload.rs:867`), but it now selects which rules a step asks about, and never assigns a tier to a rule. That is AC1's distinction.
 
 Requests go out in rule-file order, then heading order, with `fresh_request_id` numbering them as it does today, so request ids and goldens are reproducible. Each response is validated as any extension response is. A failure halts the walk with `error: schema-mismatch` before `write-analysis` at step 20, so no record is written (`runtime/src/interpreter/mod.rs:600`). The `llm:assessSpecQuality` context key keeps the last response, as before. No step reads it: `llm:*` keys are read only by `verifyCriteria`'s gate (`runtime/src/interpreter/mod.rs:772`) and filtered out of every outbound request (`runtime/src/interpreter/payload.rs:193`).
 
@@ -128,16 +128,17 @@ The signpost goes in 022's body beside the extension-point inventory (`specs/022
 | `runtime/src/primitives/mod.rs` | Modify | Register `rule_sections` |
 | `runtime/src/primitives/check_rule_ids.rs` | Modify | Import `heading_id_regex` from `rule_sections` |
 | `runtime/src/interpreter/mod.rs` | Modify | Lazy rule-set load, per-rule request loop, empty-step progress, tests |
-| `runtime/src/interpreter/payload.rs` | Modify | Per-rule request builder; remove the single-rule resolver and its parsers; doc comment |
+| `runtime/src/interpreter/payload.rs` | Modify | Per-rule request builder carrying the loaded rule files; remove the single-rule resolver and its parsers; doc comment |
+| `runtime/src/schema/extensions.rs` | Modify | `AssessSpecQualityRequest` gains `loaded-rule-files` |
 | `runtime/src/interpreter/analyze_tally.rs` | Modify | Tier from the asked rule; rule-set and empty-step records; tests |
 | `runtime/src/schema/primitives.rs` | Modify | `unexamined_by_reason` doc: new and redefined reasons |
 | `runtime/tests/fixtures/analyze-basic/framework/rules/configuration.md` | Modify | Statement gains MUST |
 | `runtime/tests/fixtures/analyze-basic/stdin.jsonl` | Modify | Drop the `req-2` response |
 | `runtime/tests/golden/analyze-basic.jsonl` | Modify | Re-blessed: one request, no step-12 request |
 | `runtime/tests/parity.rs` | Modify | One request, one blocking, no advisory |
-| `framework/commands/analyze.md` | Modify | Steps 11–12 exec note; §Unexamined targets reasons |
+| `framework/commands/analyze.md` | Modify | Steps 11–12 exec note and load-conditioned yield; §Unexamined targets reasons |
 | `.claude/commands/ductus/analyze.md` | Generated | Rewritten by the pre-commit hook |
-| `specs/022-deterministic-runtime/data-model.md` | Modify | Reason table and prose; `assessSpecQuality` exec note |
+| `specs/022-deterministic-runtime/data-model.md` | Modify | Reason table and prose; `assessSpecQuality` exec note and `loaded-rule-files` |
 | `specs/022-deterministic-runtime/spec.md` | Modify | Status flips; block-quoted signpost linking 060 |
 | `version`, `runtime/Cargo.toml`, `runtime/Cargo.lock`, `runtime/CHANGELOG.md` | Modify | Release `0.54.2` |
 

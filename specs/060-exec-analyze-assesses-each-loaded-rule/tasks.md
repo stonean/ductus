@@ -91,6 +91,6 @@ Operator-approved (2026-09-27, with the `cross-spec-impact:` declaration): this 
 
 ## 11. An assessment sees the loaded rule files
 
-- [ ] Implement the behavior described in `scenarios/an-assessment-sees-the-loaded-rule-files.md`
+- [x] Implement the behavior described in `scenarios/an-assessment-sees-the-loaded-rule-files.md`
 
 - **Done when**: every `assessSpecQuality` request carries the loaded rule files, a test proved to fail without the field covers it, the 022 data-model section and `framework/commands/analyze.md` steps 11–12 describe the load-conditioned yield, AC5's "existing typed shape" is reworded to say the rule stays in the `rule` object beside the new field, and the parity goldens are re-blessed with each diff read

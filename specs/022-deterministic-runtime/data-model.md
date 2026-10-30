@@ -616,6 +616,8 @@ Used by `/ductus:analyze`'s per-rule Verification reads.
 
 One request carries one rule. The exec walker sends one per loaded rule of the asking step's tier — step 11 asks about MUST-tier rules, step 12 about SHOULD-tier ones — so each rule is asked about once (spec 060). `rule.severity` is the tier the rule's Statement states through its RFC 2119 keyword, MUST winning when a Statement carries both; the step's prose only selects which rules it asks about. The walker evaluates no Verification trigger: the host judges whether the rule's trigger fires against the spec, and answers `passed: true` with a `null` finding when it does not. A rule with no keyword or no Verification is never sent, and is recorded under `rule-assessments-not-checked` instead.
 
+`loaded-rule-files` lists the basenames of the rule files the walk loaded, in its `rule-files` order; a listed file it could not read is absent, so the list names exactly the files whose rules the walk assessed. A Verification that yields a case "where `{file}` is also loaded" (`specs/008-security-rules/data-model.md` §Verification phrasing item 6) yields it only when `{file}` is in the list; a file it names that the list lacks, and a request carrying no list, which a runtime predating the field sends, make the condition false, so the yielding rule keeps the case (spec 060, scenario `an-assessment-sees-the-loaded-rule-files`).
+
 Request payload:
 
 ```json
@@ -626,7 +628,8 @@ Request payload:
     "id": "QUAL-CLARITY-001",
     "verification": "Acceptance criteria are concrete and testable",
     "severity": "must"
-  }
+  },
+  "loaded-rule-files": ["configuration-cross.md", "quality-cross.md"]
 }
 ```
 

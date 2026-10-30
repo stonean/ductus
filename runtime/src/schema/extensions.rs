@@ -48,6 +48,13 @@ pub struct AssessSpecQualityRequest {
     pub spec_content: String,
     /// Rule whose Verification clause is being assessed.
     pub rule: AssessSpecQualityRule,
+    /// Basenames of the rule files the walk loaded, in its `rule-files`
+    /// order; a listed file it could not read is absent. A Verification's
+    /// "where `{file}` is also loaded" yield holds only when `{file}` is
+    /// listed here, so the host applies it as the markdown-only path does
+    /// from the files it loaded (spec 060, scenario
+    /// `an-assessment-sees-the-loaded-rule-files`).
+    pub loaded_rule_files: Vec<String>,
 }
 
 /// Location annotation inside a finding.
@@ -872,6 +879,7 @@ mod tests {
                 verification: "Acceptance criteria are concrete and testable".into(),
                 severity: crate::schema::severity::RuleSeverity::Must,
             },
+            loaded_rule_files: vec!["quality-cross.md".into()],
         };
         let value: serde_json::Value = serde_json::to_value(&request).unwrap();
         assert_eq!(
@@ -879,6 +887,7 @@ mod tests {
             "specs/022-deterministic-runtime/spec.md"
         );
         assert_eq!(value["spec-content"], "# spec");
+        assert_eq!(value["loaded-rule-files"][0], "quality-cross.md");
         assert_eq!(round_trip(&request), request);
 
         let response = AssessSpecQualityResponse {

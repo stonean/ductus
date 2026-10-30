@@ -123,8 +123,9 @@ impl PayloadError {
 /// - `assessSpecQuality` — builds [`AssessSpecQualityRequest`] from the
 ///   walker context's `path` (the spec under review, read off disk for
 ///   `spec-content`) and the one rule the walker seeded under
-///   [`ASSESSED_RULE_KEY`], carrying the tier its own Statement states. The
-///   walker sends one such request per loaded rule of a step's tier.
+///   [`ASSESSED_RULE_KEY`], carrying the tier its own Statement states,
+///   beside the loaded rule files it seeded under [`LOADED_RULE_FILES_KEY`].
+///   The walker sends one such request per loaded rule of a step's tier.
 ///   Emits the documented typed shape only — the data model sanctions no
 ///   legacy context dump here.
 /// - `askClarifyQuestion` — builds [`AskClarifyQuestionRequest`] from the
@@ -822,6 +823,11 @@ fn build_verify_criteria_request(context: &Map<String, Value>, repo: &Path) -> V
 /// a clarify loop seeds one `question` per round trip, then removes the key.
 pub(crate) const ASSESSED_RULE_KEY: &str = "assessed-rule";
 
+/// Walker context key the walker seeds beside [`ASSESSED_RULE_KEY`] for each
+/// `assessSpecQuality` round trip: the basenames of the rule files the walk
+/// loaded ([`LoadedRules::files`]), removed with the rule (spec 060).
+pub(crate) const LOADED_RULE_FILES_KEY: &str = "loaded-rule-files";
+
 /// Build the `assessSpecQuality` request for one rule's Verification read
 /// (`/ductus:analyze` steps 11–12). Typed fields sourced from the walker
 /// context and disk:
@@ -836,6 +842,9 @@ pub(crate) const ASSESSED_RULE_KEY: &str = "assessed-rule";
 ///   [`load_rules`]). The walker seeds one for every request it sends, so an
 ///   unseeded context yields the empty rule only when this builder is
 ///   called outside a walk.
+/// - `loaded-rule-files` — the basenames the walker seeded under
+///   [`LOADED_RULE_FILES_KEY`], against which the host evaluates a
+///   Verification's "where `{file}` is also loaded" yield.
 ///
 /// Unlike `writeCode`, no legacy context fields are appended: the data
 /// model documents the bare typed shape for this point, and the previous
@@ -859,6 +868,7 @@ fn build_assess_spec_quality_request(context: &Map<String, Value>, repo: &Path) 
         spec_path,
         spec_content,
         rule,
+        loaded_rule_files: string_array(context, LOADED_RULE_FILES_KEY),
     };
     typed_only(&typed)
 }
@@ -906,6 +916,10 @@ pub(crate) struct LoadedRules {
     /// Listed rule files that could not be read, whose rules cannot even be
     /// counted.
     pub(crate) unreadable_files: u32,
+    /// Basenames of the listed rule files that were read, in `rule-files`
+    /// order: the files whose rules the walk assessed, and so the only ones
+    /// a load-conditioned yield may name as loaded.
+    pub(crate) files: Vec<String>,
 }
 
 impl LoadedRules {
@@ -927,6 +941,9 @@ pub(crate) fn load_rules(context: &Map<String, Value>, repo: &Path) -> LoadedRul
             loaded.unreadable_files += 1;
             continue;
         };
+        if let Some(name) = Path::new(&rel).file_name().and_then(|name| name.to_str()) {
+            loaded.files.push(name.to_string());
+        }
         for section in parse_rule_sections(&rule_file) {
             let tier = section.tier();
             match (tier, section.verification) {
@@ -2328,6 +2345,10 @@ mod tests {
                 "severity": "must"
             }),
         );
+        ctx.insert(
+            LOADED_RULE_FILES_KEY.into(),
+            serde_json::json!(["configuration-cross.md", "security-backend.md"]),
+        );
         // A legacy dump key that must NOT leak into the typed payload.
         ctx.insert("stdout".into(), Value::String("noise".into()));
         ctx
@@ -2346,7 +2367,10 @@ mod tests {
             .collect();
         // The typed fields lead — and, per the data model, are the entire
         // payload: no raw walker-context dump trails them.
-        assert_eq!(keys, vec!["spec-path", "spec-content", "rule"]);
+        assert_eq!(
+            keys,
+            vec!["spec-path", "spec-content", "rule", "loaded-rule-files"]
+        );
         assert_eq!(value["spec-path"], "specs/003-analyze/spec.md");
         assert_eq!(value["spec-content"], "# Spec body\n");
         assert_eq!(value["rule"]["id"], "CFG-CONST-001");
@@ -2354,6 +2378,10 @@ mod tests {
         assert_eq!(
             value["rule"]["verification"],
             "Every constant is sourced from the central module."
+        );
+        assert_eq!(
+            value["loaded-rule-files"],
+            serde_json::json!(["configuration-cross.md", "security-backend.md"])
         );
     }
 
@@ -2385,10 +2413,14 @@ mod tests {
             .keys()
             .map(String::as_str)
             .collect();
-        assert_eq!(keys, vec!["spec-path", "spec-content", "rule"]);
+        assert_eq!(
+            keys,
+            vec!["spec-path", "spec-content", "rule", "loaded-rule-files"]
+        );
         assert_eq!(value["spec-content"], "");
         assert_eq!(value["rule"]["id"], "");
         assert_eq!(value["rule"]["severity"], "");
+        assert_eq!(value["loaded-rule-files"], serde_json::json!([]));
     }
 
     #[test]
@@ -2483,6 +2515,9 @@ mod tests {
         assert_eq!(loaded.assessable[0].verification, "a must.");
         assert_eq!(loaded.unassessable, 2);
         assert_eq!(loaded.unreadable_files, 2);
+        // Only the files read are loaded, by basename and in listed order:
+        // a load-conditioned yield never names a file nobody assessed.
+        assert_eq!(loaded.files, ["a.md", "b.md"]);
         assert!(!loaded.is_empty());
     }
 
