@@ -54,15 +54,19 @@ Schema details captured in `data-model.md` for cross-reference.
 
 ### Migration logic in `framework/bootstrap/ductus.md`
 
-Embedded as a new step in the existing ductus.md flow, between the agent-selection phase and the file-manifest fetch phase. Migration step does:
+The step is the Frontmatter Migration section of the archive half, `framework/bootstrap/ductus-procedure.md`, which `056-bootstrap-archive-boundary-split` moved out of `ductus.md`; it runs after Pre-run Migrations. It does:
 
-1. Run `git status --porcelain -- specs/` (project-relative; the project has no `framework/templates/spec/` of its own — that was governance's path, not the adopter's). If output is non-empty, refuse with a clear message and exit.
+1. Judge the **pre-run status**: the output of `git status --porcelain -- specs/` (project-relative; the project has no `framework/templates/spec/` of its own — that was governance's path, not the adopter's), taken once at the start of Pre-run Migrations, before any entry writes. If it is non-empty, refuse with a message naming its paths, write nothing, and skip to the next section: the refusal stops this section, never the run.
 2. Walk `specs/**/spec.md` and `specs/**/scenarios/*.md`.
 3. For each file, check whether the first non-blank line is `---`. If yes, skip (already migrated). If no and bold-prefix lines (`**Status:**`, `**Dependencies:**`, `**spec-ref:**`) are present, convert: insert a frontmatter block at the top, remove the now-redundant bold-prefix lines from the body.
 4. Print a per-file summary (`migrated`, `skipped (already frontmatter)`, `skipped (pinned)`, `skipped (no metadata to migrate)`).
-5. Exit; the user reviews via `git diff` and commits or restores.
+5. End the section; the user reviews via `git diff` and commits or restores.
 
 Idempotency falls out of the `---`-check on re-run. The clean-tree precheck makes the migration diff atomic and reviewable.
+
+**The precheck judges the tree as the run found it** (scenario `the-precheck-ignores-what-the-same-run-wrote`). A Pre-run Migration that writes under `specs/` — `inbox-guidance-refresh`, `criterion-label-backfill` — is not uncommitted adopter work, which is what AC14 protects, so the status is taken before Pre-run Migrations apply any entry, and nothing the run writes afterwards is in it. A file the adopter had dirtied before the run is in it, migration write or not, so the precheck still refuses. Pre-run Migrations take the status a second time after their loop: each path the second lists and the pre-run status does not is one they made dirty, and Post-Scaffolding Output lists it for the adopter to commit with the rest of the run's changes. A path the pre-run status already lists is the adopter's own to commit, and the refusal names it.
+
+**A refusal stops this section alone** (owner, 2026-10-30). Pre-run Migrations run before Shared Files, so a run that stopped here would leave a migrated `CLAUDE.md` importing a pre-upgrade `.ductus/constitution.md`, and a pre-0.30 hook calling the generator scripts `generator-primitives` deleted, failing the very commit the refusal asks for. Continuing lets Shared Files replace both in the same run. Shared Files then overwrites uncommitted edits to its update-strategy files under `specs/` (`specs/rules/`, `specs/templates/`), as it does on any run; `[pinned] files` is the opt-out, as `ductus.md`'s Procedural fidelity paragraph states, and the Frontmatter Migration's place relative to Shared Files is 056's to settle, not this precheck's. The refusal is repeated in Post-Scaffolding Output, so the operator reads it at the end of the run.
 
 ### Self-migration of `ductus`'s own specs
 
@@ -117,6 +121,7 @@ Phases 2 and 3 can run in parallel within the same session; everything else is s
 | `framework/commands/log.md` | Audit | Likely no change (inbox.md is out of frontmatter scope) |
 | `framework/commands/help.md` | No change | Fixed text, no metadata parsing |
 | `framework/bootstrap/ductus.md` | Modify | Add migration step (git precheck, walk, convert); add `npx quartz specs/` to post-run tip output |
+| `framework/bootstrap/ductus-procedure.md` | Modify | Pre-run Migrations take the pre-run status and the post-loop status; the Frontmatter Migration precheck judges the first and stops only its section; Post-Scaffolding Output lists what Pre-run Migrations made dirty under `specs/` and repeats a refusal |
 | `.claude/commands/ductus/*.md` | Regenerate | Run `scripts/gen-claude-commands.sh` after framework command sources are updated |
 | `specs/000-slash-commands/spec.md` | Migrate | Self-migration to frontmatter |
 | `specs/001-system-spec-templates/spec.md` | Migrate | Self-migration |

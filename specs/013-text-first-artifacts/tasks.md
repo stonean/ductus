@@ -204,4 +204,6 @@ Tagging is deferred until [048](../048-govern-acquired-runtime/spec.md) ships (o
 
 - [ ] Implement the behavior described in `scenarios/the-precheck-ignores-what-the-same-run-wrote.md`
 
+The fix goes out in one push with `058-findings-route-at-discovery` task 2's `strip-inbox-guidance` migration, which needs it. One real adopter bootstrap from a subject adopted before 0.53.0 verifies both: its Pre-run Migrations write `specs/inbox.md`. To exercise the refusal too, leave an uncommitted change under `specs/` in a second run; the Frontmatter Migration is skipped and the run still reaches Shared Files.
+
 - **Done when**: the scenario's described behavior is correctly implemented and verified by a real adopter bootstrap whose Pre-run Migrations write under specs/

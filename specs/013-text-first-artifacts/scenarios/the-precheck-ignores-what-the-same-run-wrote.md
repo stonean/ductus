@@ -13,7 +13,7 @@ AC14 makes the precheck refuse a dirty tree so that the migration never rewrites
 ## Behavior
 
 - A path under `specs/` that this run's Pre-run Migrations wrote does not make the tree dirty for the Frontmatter Migration's precheck. An uncommitted change the adopter made there still does, and the precheck refuses exactly as AC14 requires.
-- The refusal says what it stops: the Frontmatter Migration alone, with the rest of the run continuing, or the run. The procedure names one, so every host walks it the same way.
+- The refusal stops the Frontmatter Migration alone, and the rest of the run continues. The procedure and the refusal both say so, so every host walks it the same way.
 - The run's closing report lists what Pre-run Migrations changed under `specs/`, so the adopter commits those changes with the rest of the run's.
 
 ## Edge Cases
@@ -30,4 +30,4 @@ AC14 makes the precheck refuse a dirty tree so that the migration never rewrites
 
 ## Resolved Questions
 
-*None yet.*
+- **Does a refusal stop the Frontmatter Migration alone, or the run?** The Frontmatter Migration alone (owner, 2026-10-30). It closes the two run-stop edge cases above for every refusal, the adopter's own uncommitted change included. Shared Files then overwrites uncommitted edits to its update-strategy files under `specs/`, as it does on any run, with `[pinned] files` as the opt-out; a run that stopped here would spare them only on a host placing this section before Shared Files, the order `056-bootstrap-archive-boundary-split` leaves open.

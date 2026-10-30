@@ -43,6 +43,8 @@ Adopter-side cleanup for conventions that have been removed or renamed since the
 
 ### Procedure
 
+**Take the pre-run status first.** Before step 1, run `git status --porcelain -- specs/` (project-relative) and keep its output for the rest of the run. Nothing earlier in the run writes under `specs/`, so it is the tree as the adopter left it, and the **Frontmatter Migration**'s precheck judges it rather than a fresh status. When this section ends, whichever step ends it, run the same command again: each path that second output lists and the pre-run status does not is one this run's migrations made dirty, which **Post-Scaffolding Output** lists.
+
 1. Read `framework/migrations.toml` from the fetched archive. If the file is missing or malformed (TOML parse error), abort with `Failed to read framework/migrations.toml; cannot run pre-run migrations.` and do not continue.
 2. Resolve the **active config file** once for this run (write policy: **Project Configuration**) and read its `[migrations].last_applied` (treat an absent `[migrations]` section as null). Every marker write-back in step 7 targets this same resolved file, so the read and the write-backs agree even though the config file is itself a migration target; the one step that changes the resolution mid-run is the `govern-dir-consolidate` procedure, whose config move makes `.ductus/config.toml` the active file for every later step (its procedure file says so).
 3. Filter the registry to entries where both:
@@ -88,11 +90,11 @@ This section runs **after the Pre-flight Phase** so that a stale-ductus abort ca
 
 ### Precheck
 
-Run `git status --porcelain -- specs/` (project-relative). If the output is non-empty, refuse with:
+Judge the **pre-run status** that **Pre-run Migrations** took before applying any entry, not a fresh `git status`. A file this run's migrations wrote is not in it, so it never makes the tree dirty; a file the adopter had changed is, whatever a migration did to it since. If it is non-empty, refuse with:
 
-> Migration requires a clean working tree under `specs/`. Commit or stash your changes, then re-run.
+> Frontmatter Migration skipped: `specs/` had uncommitted changes before this run began ({paths}). Commit or stash them, then re-run `/ductus` to migrate. The rest of this run continues.
 
-Exit before any modifications. Unrelated in-flight work outside `specs/` does not block migration.
+`{paths}` is the pre-run status's paths, comma-separated. Write nothing in this section and continue with the next: the refusal stops the Frontmatter Migration, never the run, so the sections after it still replace what this run's migrations left half-upgraded, such as a hook calling scripts a migration deleted. Unrelated in-flight work outside `specs/` does not block migration.
 
 ### Walk
 
@@ -342,6 +344,8 @@ After scaffolding, display:
 - For each scaffolded agent, the agent's `rules_file_note` from the registry
 - Hook installation status — one line: `pre-commit hook installed`, `pre-commit hook already wired up`, `pre-commit hook rewired: .githooks → {H}`, `pre-commit hook not wired: …` (the pre-059 outer-stub precondition, with its replacement line), `pre-commit hook skipped — .githooks/pre-commit does not invoke ductus-pre-commit; see manual integration snippet above`, or `pre-commit hook skipped — existing {husky|lefthook|pre-commit-py|core.hooksPath} detected; see manual integration snippet above`. When the spec-017 → spec-018 migration ran, append the migration summary line described in §Hook Installation > Migration from spec-017 hook (or the relevant recovery-branch warning if the rename was skipped or failed).
 - Any fetch failures encountered
+- Each path under `specs/` this run's migrations made dirty (§Pre-run Migrations), one line apiece: `changed by a migration: {path} — commit it with this run's other changes`
+- The Frontmatter Migration's refusal, repeated verbatim, when its precheck refused (§Frontmatter Migration)
 - Unknown config keys (if any) — one line per key outside what `ductus.md` §Project Configuration documents, in each section this run read: `unknown config key: [{section}] {key} (.ductus/config.toml) — this version of ductus does not read it` (§Project Configuration → **Unknown keys**)
 - Pinned `ductus.md` advisory (if applicable — see below)
 - Security audit summary (if applicable — see below)

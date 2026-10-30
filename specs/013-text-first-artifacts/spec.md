@@ -73,7 +73,7 @@ Templates (`framework/templates/spec/spec.md`, and `spec-and-plan.md` until `023
 
 The next `/ductus` run in any adopted project performs the migration:
 
-1. Precheck `git status --porcelain` scoped to `specs/` and `framework/templates/spec/` (or the project's equivalent). If dirty, refuse with a clear message instructing the user to commit or stash their in-flight changes, then exit. Unrelated in-flight work elsewhere in the tree does not block migration.
+1. Precheck `git status --porcelain` scoped to `specs/` and `framework/templates/spec/` (or the project's equivalent), as the tree stood before the run's Pre-run Migrations wrote anything, so a change the same run made never counts (scenario `the-precheck-ignores-what-the-same-run-wrote`). If dirty, refuse with a clear message instructing the user to commit or stash their in-flight changes, and skip the migration; the rest of the run continues. Unrelated in-flight work elsewhere in the tree does not block migration.
 2. Walk the project's `specs/` directory and detect spec files (`spec.md`, `spec-and-plan.md`) and scenario files (`scenarios/{slug}.md`) using bold-prefix metadata (no frontmatter block present at the top of the file).
 3. Convert bold-prefix lines (`**Status:**`, `**Dependencies:**` for specs; `**spec-ref:**` for scenarios; any other recognized fields) to YAML frontmatter at the top of the file.
 4. Strip the now-redundant bold-prefix lines from the document body.
