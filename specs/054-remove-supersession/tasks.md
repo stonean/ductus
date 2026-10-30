@@ -114,3 +114,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Grep the whole tree for `/{project}:supersede`, `--supersedes`, `supersedes:`, `§supersession-annotations`, `write-supersession-annotation`, and `read-supersession-pair`, and confirm every remaining hit is ordinary English
 
 - **Done when**: `/{project}:audit` reports zero findings, both link checks are clean, and no live artifact names a removed capability.
+
+## 13. Close the 2026-10-29 reopen
+
+- [ ] Reopened done → in-progress by 3297fbd6, the fix round of 051's 2026-10-29 review, which bounded §Motivation's claim that consolidation re-points every inbound pointer: it now reads "re-points every inbound pointer it reads first, lest it dangle". That sentence is the whole reopen. 051's review read it in depth: the sweep was that review's fix round, the first round was re-read independently, and "lest it dangle" came in the second, prose-only round. So `check-review-gate` holds 054's review current — spec.md is outside the review digest — and only the analysis is stale. Owed, in order: `/ductus:analyze 054`; `/ductus:implement 054`, which verifies the criteria against the tree and asks before `done`
+
+- **Done when**: 054's analysis is current, the completion gate passes, and 054 is back at `done`
