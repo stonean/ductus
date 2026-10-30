@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [050-constitution, 052-spec-supersession-and-consolidation]
 next-criterion: 27
 ---
@@ -14,7 +14,7 @@ Supersession answered a real question — how a reader tells a live decision fro
 
 An annotated spec is still a spec. It is still indexed, still linked, still harvested into `dependencies:`, and still read by an agent that opens it looking for current behavior. A banner at the top is a single line of prose asking every future reader — human and agent — to notice it and to carry it down through several hundred lines of body that describes something which no longer exists. The framework's own [constitution](../050-constitution/spec.md) states that a spec body is a living document describing current state; supersession created a class of spec that is exempt from that, and every exempt spec is a set of references pointing at behavior nobody can act on. Multiply that across a corpus and the drift the framework exists to prevent is the drift it manufactures.
 
-The two operations that keep the corpus honest already existed before supersession did. **Editing the earlier spec in place** is what the `done → in-progress` back-edge is for, and it leaves one true description where there were two. **Consolidation** removes a spec that was never a separate concern and re-points every inbound pointer first, so nothing is stranded. Supersession was the third option, and it is the only one of the three that ends with a document asserting things that are false.
+The two operations that keep the corpus honest already existed before supersession did. **Editing the earlier spec in place** is what the `done → in-progress` back-edge is for, and it leaves one true description where there were two. **Consolidation** removes a spec that was never a separate concern and re-points every inbound pointer it reads first, lest it dangle. Supersession was the third option, and it is the only one of the three that ends with a document asserting things that are false.
 
 The cost of carrying it was real and had barely begun to be paid: a command, a flag on a second command, a hand-authored frontmatter key with its own validator, a constitution section defining three annotation granularities and the blockquote rule that keeps them out of the dependency graph, two runtime primitives across five registration sites each, an extension point with a four-outcome classification vocabulary, a check family whose own documentation has to state at length what its silence does *not* mean, and a shared already-present predicate binding the annotation writer to `check-artifacts`.
 

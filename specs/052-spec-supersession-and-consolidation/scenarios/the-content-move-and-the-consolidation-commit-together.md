@@ -31,7 +31,7 @@ The same report found three smaller gaps:
 - Step 7 reports `rewrite-spec-links`' `mentions`, meaning each line that still names the source by its directory name or its number, as the sweep the operator owes: a present-tense pointer to the removed spec is corrected, and a past-tense record of it stays. It also reports two kinds of `kept-tails` reference:
   - one into `tasks.md`, whose task number now means one of the target's tasks, to re-point at the right task or turn into prose;
   - one naming a file the target does not hold, which the hook refuses until it is fixed.
-- AC9 says what the command writes into the target: the links the target held to the source, re-pointed relative to the file that holds them, and nothing else.
+- AC9 says what the command writes into the target: the links the target held to the source, re-pointed relative to the file that holds them when they climb to the spec root, and nothing else.
 
 ## Edge Cases
 

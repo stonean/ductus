@@ -20,7 +20,7 @@ It surfaced on 2026-09-05 through an error rather than a defect. `/{project}:sta
 
 The cost is not confined to the retired spec. A reader cannot tell a live spec from a retired one by looking, so **one retired spec left at `done` puts every other spec's status in question**. That is the same asymmetry `QUAL-CLAIM-001` names for results: the reassuring reading is the one a reader takes, and here it is taken about the whole corpus.
 
-- **Content that belongs with another spec** goes through `/{project}:consolidate`, which re-points every inbound pointer **before** removing the directory. Pointer-first is not politeness: a deleted spec with live inbound references trades one durability problem for a worse one — dangling links that `check-corpus-links` will then block commits on.
+- **Content that belongs with another spec** goes through `/{project}:consolidate`, which re-points every inbound pointer it reads **before** removing the directory. Pointer-first is not politeness: a deleted spec with live inbound references trades one durability problem for a worse one — dangling links that `check-corpus-links` will then block commits on.
 - **Content that survives nowhere** takes the spec with it. 053 is the worked example.
 - **Partial retirement is an ordinary body edit.** The spec stays and describes what remains. 052 is that example, and the distinction is the one the mis-summary blurred: 054 removed a *half*, so 052 was edited down and kept, and its H1 was narrowed to name consolidation alone.
 

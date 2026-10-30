@@ -2618,11 +2618,12 @@ mod tests {
         }
     }
 
-    /// A link inside the target that named the retiring directory is written
-    /// relative to its own file. Re-pointed through `../{target}/` it would be
-    /// a link from the target to itself, which `derive-dependencies` records
-    /// as a 1-cycle, so a target that linked the source made the
-    /// consolidation a commit the pre-commit hook refuses (spec 051, scenario
+    /// A link inside the target that named the retiring directory by climbing
+    /// to the spec root is written relative to its own file. Re-pointed
+    /// through `../{target}/` it would be a link from the target to itself,
+    /// which `derive-dependencies` records as a 1-cycle, so a target that
+    /// linked the source made the consolidation a commit the pre-commit hook
+    /// refuses (spec 051, scenario
     /// `a-link-inside-the-target-stays-inside-it`). A link from any other
     /// spec is re-pointed through the target as before.
     #[test]
@@ -2717,6 +2718,41 @@ mod tests {
 
         let target = read(tmp.path(), "020-tgt/spec.md");
         assert!(target.contains("[s](/specs/020-tgt/spec.md)"), "{target}");
+    }
+
+    /// Only a link that climbs exactly to the spec root, one `..` per
+    /// directory between its file and the root, is made local. One that
+    /// climbs too far or not far enough, or that names the retiring directory
+    /// below another one, was broken before the run, and is re-pointed as
+    /// written (scenario
+    /// `a-link-inside-the-target-stays-inside-it`, Edge Cases). Killed by M54,
+    /// which drops the depth comparison, and M55, which drops the `..` test.
+    #[test]
+    fn a_link_inside_the_target_at_the_wrong_depth_is_re_pointed_as_written() {
+        let tmp = tempfile::tempdir().unwrap();
+        write(
+            tmp.path(),
+            "020-tgt/spec.md",
+            "---\nstatus: done\ndependencies: []\n---\n\n\
+             [far](../../010-src/spec.md) and [none](x/010-src/spec.md)\n",
+        );
+        write(
+            tmp.path(),
+            "020-tgt/scenarios/y.md",
+            "---\nsection: Cache\n---\n\n[near](../010-src/spec.md)\n",
+        );
+        write(tmp.path(), "010-src/spec.md", "# src\n");
+
+        run(&args("010-src", "020-tgt"), tmp.path()).unwrap();
+
+        let target = read(tmp.path(), "020-tgt/spec.md");
+        assert!(target.contains("[far](../../020-tgt/spec.md)"), "{target}");
+        assert!(target.contains("[none](x/020-tgt/spec.md)"), "{target}");
+        let scenario = read(tmp.path(), "020-tgt/scenarios/y.md");
+        assert!(
+            scenario.contains("[near](../020-tgt/spec.md)"),
+            "{scenario}"
+        );
     }
 
     /// Each line an examined file still names the retiring directory on, by

@@ -54,7 +54,7 @@ Tasks derived from the [plan](plan.md). Complete in order.
 ## 8. Disposition: the Family 19 parity tests run git in their fixtures under the hook's GIT_DIR
 
 - [ ] Found 2026-10-28 by 051's round-4 commit, made from a linked worktree: git exports GIT_DIR to a hook, absolute in a linked worktree, and runtime/tests/mechanical_sweep_parity.rs spawns git and scripts/audit/review-freshness.sh in fixture repositories without clearing it, so they act on the outer repository. Reproduced: with GIT_DIR set to the worktree's git directory, cargo test --test mechanical_sweep_parity fails rust_and_family_19_agree_on_a_built_sweep, rust_and_family_19_agree_on_a_renumbered_directory, rust_and_family_19_refuse_an_over_limit_window_alike and family_19s_proxy_arm_lists_both_sides_of_a_move_under_any_config; unset, 7 of 7 pass. The main checkout's hook passed them on 38fc39f6, so only a commit from a linked worktree meets it
-- [ ] Clear GIT_DIR, GIT_WORK_TREE and GIT_INDEX_FILE on every Command that test file spawns, with a test that sets GIT_DIR to another repository
+- [ ] Clear GIT_DIR, GIT_WORK_TREE and GIT_INDEX_FILE on every Command that test file spawns — its git commands through `git_command` in `runtime/tests/common/mod.rs`, added by 051's 2026-10-29 review for `consolidate_hook.rs`, and the same three on the `review-freshness.sh` command — with a test that sets GIT_DIR to another repository
 
 - **Done when**: the four tests pass when GIT_DIR names another repository, as they do with it unset, and each fails when its clearing is removed
 

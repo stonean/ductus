@@ -22,9 +22,9 @@ mod common;
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::Output;
 
-use common::ductus_command;
+use common::{ductus_command, git_command};
 
 fn workspace_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -34,10 +34,11 @@ fn workspace_root() -> PathBuf {
 }
 
 /// `git` in `dir`, blind to the user's global and system config so a
-/// `commit.gpgsign` or a hook setting there cannot decide a case, and with no
-/// session identity for the runtime the hook spawns.
+/// `commit.gpgsign` or a hook setting there cannot decide a case, to the
+/// repository whose hook may be running this suite ([`git_command`]), and
+/// with no session identity for the runtime the hook spawns.
 fn git(dir: &Path, args: &[&str]) -> Output {
-    Command::new("git")
+    git_command()
         .current_dir(dir)
         .env("GIT_CONFIG_GLOBAL", "/dev/null")
         .env("GIT_CONFIG_NOSYSTEM", "1")

@@ -51,7 +51,9 @@ on:
       - 'framework/templates/project/errors.md'
       # src/primitives/mod.rs's shell-spec-pattern test reads the three files
       # carrying the spec-directory pattern and holds each to the grammar, so
-      # an edit to one of them is an edit to its subject.
+      # an edit to one of them is an edit to its subject. tests/consolidate_hook.rs
+      # also commits through the shipped hook, so an edit to the shipped hook
+      # is an edit to its subject too.
       - '.githooks/pre-commit'
       - 'framework/bootstrap/hooks/ductus-pre-commit'
       - 'scripts/lint-frontmatter.sh'

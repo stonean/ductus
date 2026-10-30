@@ -65,7 +65,7 @@ Each feature lives in `specs/NNN-feature-name/` and progresses through these sta
 | `/{project}:amend` | Add a question or a scenario to the targeted spec (classifier-driven). |
 | `/{project}:prune` | Prune a feature's spec directory — drop spent task sections or reset tasks.md, and move plan sections outside the design record home before removing them — or, with --project, move each project-file entry to its home. |
 | `/{project}:fold` | Fold a branch-scoped spec into its upstream home and retire the staging directory. |
-| `/{project}:consolidate` | Merge a spec into another and remove its directory, re-pointing every inbound pointer first. |
+| `/{project}:consolidate` | Merge a spec into another and remove its directory, first re-pointing the inbound pointers it reads. |
 
 <!-- generated:commands-refine:end -->
 

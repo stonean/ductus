@@ -1,26 +1,29 @@
 ---
 spec: 051-branch-scoped-spec-numbering
-last-run: 2026-10-28T20:22:24Z
-reviewed-against: c1cf51ffa655635ef1b56b977023762f596c1aaa
-diff-base: af99793c0593bbf1e7915b7ee96e131e3d558750
+last-run: 2026-10-30T01:31:06Z
+reviewed-against: d4b75e66692903e91ebc19036650362bf64e6cf7
+diff-base: 6573844b830c4997101896095b72b6039b4c64f7
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 25
-scope: 156
+examined: 8
+scope: 208
 skipped-passes: []
 reviewed-digest:
-  data-model.md: 0c6bb89482f5cb6b361a487471de563db41f13f31f8de867cee50161b52b4ee9
+  data-model.md: c20019d89348ccca1008dacbf028c328aa0836c93eec6042f5f5c37c7ba9448e
   scenarios/a-fold-owed-to-another-tree-does-not-hold-done.md: 6ae5b1d58174acda9aadcc1d96024e65f28eea998dd2fc857a84616991c9bc5b
+  scenarios/a-fold-target-is-held-to-the-name-grammar.md: d2f77d8a21f7353c434f5f29cf9e47a144581ccc3ee49787bb9a505a6461dc5b
+  scenarios/a-link-inside-the-target-stays-inside-it.md: a367c3a7c1e260f98b27eb73a87958625422a4e458b758399fd5fa526eb2e1a4
   scenarios/a-pending-fold-never-holds-done.md: 602c9f86e24d0a2cfa9cdebf78bf3d32e09255b00b189cd882d89d99e433e4b2
   scenarios/fold-target-checked-before-the-rewrite.md: 40bfa2011fb9af497ae85dac6f23f2ad8719dddcc8c5f5654dda7560aade7f32
   scenarios/rewrites-preserve-line-endings.md: 1ab09161757ade0d1f4a3959f574e54d68dab19f275ec84b345b8d16a75ccd26
   scenarios/the-numbering-grammar-reaches-every-surface.md: d4f11334754c65e3cf73346d224aaf8d782f5385a266a2bf22d3339a1079089a
+  scenarios/the-spec-root-is-read-before-the-first-write.md: cd12facf1f7af5a4d7a241a909fe34f69fd1bc02984e066e80bc55e7b3be9106
 blocking: false
 dispositions:
-  fixed: 76
-  routed: 4
-  discarded: 27
+  fixed: 21
+  routed: 0
+  discarded: 4
   undispositioned: 0
 decisions:
   - key: "convention: a-status-commit-holds-only-the-transition's Behavior reads as requiring the bullet to say a transition staged alone is lost — `specs/050-constitution/scenarios/a-status-commit-holds-only-the-transition.md`"
@@ -213,13 +216,33 @@ decisions:
     reason: tasks.md is ephemeral work tracking whose ticked items record what was built then (§tasks-phase); the format's canonical statement, 017's data-model.md, is current
     decided-at: 2026-10-28T20:13:41Z
     decided-by: andy@stone.dev
+  - key: "claim: fold.md step 11's never records a dependency on itself fails for a repo-root-relative specs/ link inside the upstream — `framework/commands/fold.md`"
+    outcome: discarded
+    reason: the only form that breaks it is a repo-root-relative specs/ link inside a spec, which check-corpus-links reports broken and the hook refuses, so no committed corpus holds one
+    decided-at: 2026-10-30T01:31:06Z
+    decided-by: andy@stone.dev
+  - key: "edge: git_command leaves GIT_CONFIG_PARAMETERS and GIT_CONFIG_COUNT, so an outer git -c commit passes its config to a fixture — `runtime/tests/common/mod.rs`"
+    outcome: discarded
+    reason: an outer git -c commit whose config changes a fixture's outcome is contrived; the helper clears what a hook exports to locate a repository, the defect 066 task 8 records, and the fixture already blanks global and system config
+    decided-at: 2026-10-30T01:31:06Z
+    decided-by: andy@stone.dev
+  - key: "errors: rewrite-spec-links checks the path escape before the name grammar, so a `to` failing both is refused as InvalidPath — `runtime/src/primitives/rewrite_spec_links.rs`"
+    outcome: discarded
+    reason: contrived input; refused before any write either way, and the error names the more serious defect, the escape
+    decided-at: 2026-10-30T01:31:06Z
+    decided-by: andy@stone.dev
+  - key: "concurrency: the read-all-then-write phase widens the window in which another session's edit between read and write is overwritten — `runtime/src/primitives/rewrite_spec_links.rs`"
+    outcome: discarded
+    reason: "contrived timing: reading the 656 spec-root markdown files takes about 0.02 s; BE-TXN-002 concerns a service's persisted state, and §concurrent-features says sessions in one tree are not isolated from each other's edits"
+    decided-at: 2026-10-30T01:31:06Z
+    decided-by: andy@stone.dev
 ---
 
 # Review — 051-branch-scoped-spec-numbering
 
 ## Summary
 
-One in-depth review of the window af99793c..c1cf51ff, recorded in each spec it touched. An independent five-pass review read af99793c..fb26d602 (3b359742, 55220b20, 5471eb02, fb26d602) in full against the eleven rule files discover-rule-files selects, and its findings were fixed in f056b209. Independent re-reads followed each fix round that changed code or a durable contract, each re-running the earlier probes: of f056b209 (5 SHOULD, 11 NOTE, fixed in 47e68233); of 47e68233 (5 SHOULD, 9 NOTE, fixed in 77fff147 beside f33096a5's analysis-round fixes); of f33096a5, 77fff147, 38fc39f6 (051 task 30) and 4e82686d with db6ae819 (050 task 41), 10 SHOULD and 8 NOTE, fixed in 54715126; of 54715126 (1 SHOULD, fixed in 3fc5755a); of 3fc5755a (3 SHOULD, fixed in d1853444); of d1853444 (2 SHOULD, both test gaps, fixed in c1cf51ff); and of c1cf51ff, 0 MUST, 0 SHOULD and 4 NOTE: the two comment sentences it left unclear or incomplete were fixed in a prose-only round that was not re-read, and its two test gaps were discarded as contrived. The 107 observations below are those findings and the reviewers' notes: 76 fixed, 4 routed, 27 discarded with their reasons. Mutation lists for the window's runtime changes ran whole and every mutation was killed. Examined counts the 25 in-scope files the passes read in full, of 156 in scope. Not counted: files read in part, among them the large runtime modules' test sections and the 021, 062 and 066 analysis records; the generated .claude/, .pi/ and .ductus/ copies, checked only against their sources; another session's rules sweep, 70bb4af5, inside this window, whose files the passes did not read; and plan Affected Files the window did not touch. Stored decisions are carried byte-identical through process-decisions' restricted mode: this window's passes did not re-read the artifacts they concern.
+Review of 051's reopen window from 6573844b, the parent of the reopen 2f79a9ee (task 32), to d4b75e66. 048's review and its three re-read rounds already covered 2f79a9ee, c1ca45b5, 2741fb12, f395900f and ced8c7ca; this review read in depth what no review had: edd08387 (task 34, with 052 task 3), c8314288 and ea859f7c (task 35), and 051's artifacts. The five passes ran against the eleven selected rule files: quality-cross.md read in full; the backend rules applied through the statements the code and earlier records cite (BE-INPUT-002, BE-INPUT-004, BE-PAYLOAD-001, BE-TXN-002), the files not read whole; the three frontend files have no subject in a Rust CLI and markdown. No rule fired, so the counts are zero; 25 observations are listed below. Examined counts the 8 in-scope files read in full: consolidate_hook.rs, the three 051 scenarios the window changed, 051's data-model.md, 052's content-move scenario, framework/commands/consolidate.md and framework/reference/consolidate.md. Read only as the window's diffs and their surroundings, so not counted: rewrite_spec_links.rs, schema/primitives.rs, mcp/server.rs, create_feature.rs, the mutation list, fold.md, framework/reference/fold.md, docs/slash-commands.md, runtime.yml, tests/common/mod.rs, and 051's spec, plan and tasks (the criteria through read-spec). Not read: every other in-scope entry, which is other sessions' work in the window, committed or not (041, 048, 055, 075 and others); the generated .claude/, .pi/ and .ductus/ copies, checked with gen-claude-commands.sh --check. Two fix rounds, uncommitted at this write. An independent re-read of round 1 found 1 MUST (050 AC16 lost its reason), 3 SHOULD (the helper's doc, two unswept copies) and 6 NOTE, all dispositioned below; round 2 changed prose and doc comments only and was not re-read. Proof, in a /tmp tree of HEAD plus round 1: fmt, clippy --release --all-targets -D warnings, and the full release suite, 2249 tests in 24 binaries, pass; after round 2, clippy, the 2071 unit tests and consolidate_hook pass. With GIT_DIR naming a scratch repository the fixed consolidate_hook passes and leaves it untouched, while HEAD's version fails both cases and leaves it with core.hooksPath set, 5 index entries and 2 commits. Mutations M46 to M55 ran: 10 of 10 killed; M1 to M45 were not re-run. process-decisions ran restricted and retained all 38 stored decisions, whose subjects this window's passes did not re-read; two of 048's decisions on rewrite_spec_links.rs are carried with their text and reasons.
 
 ## MUST violations (blocking)
 
@@ -239,113 +262,31 @@ One in-depth review of the window af99793c..c1cf51ff, recorded in each spec it t
 
 ## Observations
 
-- bug: a referrer that is not UTF-8 text stopped rewrite-spec-links after the spec-root walk had written files, where check-orphaned-references skips the same file — `runtime/src/primitives/rewrite_spec_links.rs` — **fixed**
-- bug: a referrer that is a symbolic link was skipped with nothing in the result naming it (QUAL-CLAIM-001) — `runtime/src/primitives/rewrite_spec_links.rs` — **fixed**
-- bug: a referrer reached through a directory linked outside the project was rewritten there — `runtime/src/primitives/rewrite_spec_links.rs` — **fixed**
-- bug: a reference re-pointed at a feature-only target kept a tail such as plan.md and landed on the target's file of that name, which the fold never wrote, while the orphan check stayed clean, and fold step 11 said inbound links land on the file the content reached — `framework/commands/fold.md` — **fixed**
-- bug: a referrer line whose first token's fragment ran into a second token panicked rewrite-spec-links after the spec root was written — `runtime/src/primitives/rewrite_spec_links.rs` — **fixed**
-- bug: the ductus:memory-routing block no longer said the framework's constitution is upstream, so an agent could file a learning into .ductus/constitution.md, which the next run replaces — `framework/bootstrap/ductus.md` — **fixed**
-- stale: knowledge-routes-by-population-not-by-kind said the corrected routing reaches new adoptions only, and named four places where its table lists two — `specs/050-constitution/scenarios/knowledge-routes-by-population-not-by-kind.md` — **fixed**
-- stale: 051's plan said the rewrite is scoped to markdown under the spec root, though it now rewrites the root referrers too — `specs/051-branch-scoped-spec-numbering/plan.md` — **fixed**
-- convention: a #fragment containing a dot is cut at the dot on a fold into a scenario — `runtime/src/primitives/rewrite_spec_links.rs` — **discarded**: GitHub's heading slugs carry no dots, so such a fragment names no heading a link in this corpus can reach; a contrived input
-- stale: 050's plan recorded the window base's constitution character counts and a total matching neither commit — `specs/050-constitution/plan.md` — **fixed**
-- stale: memory-routing-lives-in-agents-md described the migration's match as byte-identical and its bound as the next second-level heading — `specs/050-constitution/scenarios/memory-routing-lives-in-agents-md.md` — **fixed**
-- convention: no numbered step of the bootstrap names the two managed-block merges — `framework/bootstrap/ductus.md` — **discarded**: Instructions step 4 lists what apply-manifest replaces, not every Shared Files step, and two real adopter bootstraps on this text wrote both blocks from Shared Files
-- convention: whether Auggie resolves CLAUDE.md's @AGENTS.md import, and so reads the routing block, is unverified — `framework/templates/project/claude-md.md` — **discarded**: the rule's canonical statement is the constitution's drift-prevention section, which target step 4 loads whenever an import did not, so an Auggie session holds it either way
-- bug: 3b359742's mutations were never registered, so its 11-of-11 claim could not be re-run — `scripts/mutation/rewrite-spec-links.py` — **fixed**
-- bug: memory-routing-leaves-claude-md ran the section to the end of the file, so a ductus:constitutions block an earlier run appended after it made every shipped section read as edited — `framework/migrations/memory-routing-leaves-claude-md.md` — **fixed**
-- bug: every file apply-manifest installs landed group-writable, the pre-commit hook and Pi's bridge among them, because extract-archive kept the tarball's 0664 and 0775 — `runtime/src/primitives/extract_archive.rs` — **fixed**
-- bug: adopters from v0.47.0 to v0.59.11 keep a ductus:constitutions comment region whose comment says ductus maintains it, beside the block ductus does maintain — `framework/migrations/legacy-constitutions-region.md` — **fixed**
-- bug: a run the Frontmatter Migration precheck halts after generator-primitives leaves a pre-0.30 hook calling the scripts that migration deleted, so the commit the refusal asks for fails — `framework/bootstrap/ductus-procedure.md` — **routed** to `specs/013-text-first-artifacts/scenarios/the-precheck-ignores-what-the-same-run-wrote.md`
-- convention: the bootstrap's memory-routing step left the host to tell an append from a fill — `framework/bootstrap/ductus.md` — **fixed**
-- convention: a language with no github/gitignore template, such as markdown, prints a fetch failure on every run — `framework/bootstrap/ductus.md` — **discarded**: the run names the failed URL and writes nothing for it, which is the procedure's stated outcome; the subject's markdown language is an input no project has a template for
-- convention: generator-primitives and audit-record-relocate state no report line for their no-op cases — `framework/migrations/generator-primitives.md` — **discarded**: an observation about the migration machinery outside this window; the host's own wording reported each outcome truthfully
-- convention: the Closing restart gives no single form for Pi wired in the run beside Claude already registered — `framework/bootstrap/ductus-procedure.md` — **discarded**: the per-agent forms compose into an accurate notice, as the subject's run shows, so no host reads it wrong
-- convention: the Pi Bridge step says verbatim while the per-agent apply-manifest call carries a substitutions map — `framework/bootstrap/ductus.md` — **discarded**: the Bridge step's verbatim copy is its own call, and the subject's bridge matched the framework source byte for byte
-- convention: the detection step counts deferred mcp__ductus__ tool names as State A — `framework/bootstrap/ductus.md` — **discarded**: an artifact of the test harness, whose tool list belonged to another project's session; a real adopter session lists only its own
-- convention: the Frontmatter Migration's specs/**/spec.md walk reports specs/templates/spec.md as already frontmatter on every run — `framework/bootstrap/ductus-procedure.md` — **discarded**: the template has frontmatter, so the walk skips it with a report line and writes nothing
-- convention: fetch-archive sends no User-Agent — `runtime/src/primitives/fetch_archive.rs` — **routed** to `specs/048-govern-acquired-runtime/tasks.md`
-- convention: a .githooks linked into a host configuration directory inside the project is not judged by host_config::check_destination — `runtime/src/primitives/rewrite_spec_links.rs` — **discarded**: a contrived layout; the write stays inside the project, and the referrer list is fixed to five files none of which is a host's configuration
-- bug: a scenario-route fold re-pointed a reference to one of the staged spec's carried scenarios at the routed scenario, listing nothing — `runtime/src/primitives/rewrite_spec_links.rs` — **fixed**
-- stale: 051 AC22 said the orphan check reports clean afterwards save for skipped referrers, though a kept tail naming a file the target lacks is reported — `specs/051-branch-scoped-spec-numbering/spec.md` — **fixed**
-- stale: 051's data-model said skipped holds referrers outside the spec root, though system.md is listed too — `specs/051-branch-scoped-spec-numbering/data-model.md` — **fixed**
-- stale: legacy-constitutions-region's report and Background said the BEGIN/END block carries the imports in AGENTS.md, which a claude-only project never gets — `framework/migrations/legacy-constitutions-region.md` — **fixed**
-- bug: the mode fix reached only files a run rewrote, since apply-manifest returned unchanged before re-applying the mode, so an installed hook stayed group-writable — `runtime/src/primitives/apply_manifest.rs` — **fixed**
-- bug: a carried scenario whose slug was already taken upstream was reported and the fold went on, so step 11 re-pointed its references at an unrelated scenario and step 12 deleted the only copy — `framework/commands/fold.md` — **fixed**
-- convention: fold's resumption row for step 11 says a re-run rewrites nothing, which a fragment running into a second token contradicts — `framework/commands/fold.md` — **discarded**: a contrived input: a fragment that is itself a second spec-root path, which the rewrite now leaves for the orphan check to report
-- edge: legacy-constitutions-region did not decide a region followed only by blank lines — `framework/migrations/legacy-constitutions-region.md` — **fixed**
-- stale: a rewrite-spec-links test doc called a CLAUDE.md symlinked to AGENTS.md a common layout — `runtime/src/primitives/rewrite_spec_links.rs` — **fixed**
-- stale: fold step 14 said the orphan check reports what a skipped referrer still names, untrue of a file that is not UTF-8 — `framework/commands/fold.md` — **fixed**
-- stale: installed-files-are-not-group-writable described the old rwxrwxrwx mask in the present tense — `specs/022-deterministic-runtime/scenarios/installed-files-are-not-group-writable.md` — **fixed**
-- test: the read_referrers arm for a referrer behind a path component that is a regular file had no test — `runtime/src/primitives/rewrite_spec_links.rs` — **fixed**
-- edge: the spec-root walk drops a directory it cannot list, so it is neither counted nor skipped — `runtime/src/primitives/rewrite_spec_links.rs` — **discarded**: a directory the process cannot list inside a repository it writes is contrived, and the walk's filter predates this window
-- edge: a root-absolute /specs/ link is neither re-pointed nor reported — `runtime/src/primitives/check_orphaned_references.rs` — **routed** to `specs/051-branch-scoped-spec-numbering/tasks.md`
-- edge: an archive entry whose only mode bits are group or other write lands at the umask default — `runtime/src/primitives/extract_archive.rs` — **discarded**: a contrived entry: no archive the framework ships carries a file with neither owner read nor owner write
-- stale: 050's plan dated its character figures to the last commit to change the three files, which the next AGENTS.md edit ends — `specs/050-constitution/plan.md` — **fixed**
-- bug: apply-manifest's re-applied mode was fatal on a file the runner may not chmod, stopping the walk mid-manifest — `runtime/src/primitives/apply_manifest.rs` — **fixed**
-- bug: fold step 7's recovery, renaming one of two colliding scenarios, re-pointed the old slug's links silently at the unrelated upstream scenario — `framework/commands/fold.md` — **fixed**
-- stale: the rewrite-spec-links MCP tool description said a scenario target replaces every tail — `runtime/src/mcp/server.rs` — **fixed**
-- stale: 051 AC22's kept-tails clause held only for the root referrers, and AC6 named only the skipped exception — `specs/051-branch-scoped-spec-numbering/spec.md` — **fixed**
-- bug: the session-lock poll and 062's plan stated no maximum attempt count, which BE-RETRY-001's Statement asks for beside the deadline — `runtime/src/session.rs` — **fixed**
-- stale: scope-results-have-a-bounded-size credited the review reference with the redirect instruction the review command's step 1 gives — `specs/066-audit-records-and-the-completion-gate/scenarios/scope-results-have-a-bounded-size.md` — **fixed**
-- stale: session-lock-backoff.py claimed mutation coverage of the WouldBlock-only retry it has no mutation for — `scripts/mutation/session-lock-backoff.py` — **fixed**
-- stale: 071 task 23's evidence named the 12-case walk after the 15-case re-walk — `specs/071-command-reference-split/tasks.md` — **fixed**
-- edge: legacy-constitutions-region was edited in place after a --ref=main push, so an adopter who ran the earlier text keeps its trailing blank lines — `framework/migrations/legacy-constitutions-region.md` — **discarded**: the migration is unreleased, reached only --ref=main adopters for the hours between f056b209 and 47e68233, and the residue is trailing blank lines after a removed comment region, which change no behavior
-- convention: legacy-constitutions-region step 7 said the blank lines before the start line, meaning the adjacent run — `framework/migrations/legacy-constitutions-region.md` — **fixed**
-- stale: legacy-constitutions-region's Background said a file no selected agent reads keeps no block, untrue after another agent's run wrote one — `framework/migrations/legacy-constitutions-region.md` — **fixed**
-- stale: 062 task 23's checked item still gives the fixed-interval rationale for the lock poll — `specs/062-concurrent-session-targets/tasks.md` — **discarded**: a ticked task records the decision as it was taken, task 28 records its reversal, and tasks.md is ephemeral work tracking that prune may drop
-- stale: rewrite_spec_links's panic-guard comment said a scenario target always drops the fragment — `runtime/src/primitives/rewrite_spec_links.rs` — **fixed**
-- test: installed-file-modes M5's kill depends on ctime resolution finer than 50 ms — `scripts/mutation/installed-file-modes.py` — **discarded**: disclosed in the list's docstring; APFS and ext4 stamp ctime in nanoseconds, and the test itself passes on any file system
-- stale: the rewrite-spec-links `to` argument doc said a scenario target lists nothing, which 77fff147's listing of an unheld scenario tail made false — `runtime/src/schema/primitives.rs` — **fixed**
-- stale: the check-orphaned-references MCP description listed four referrers where the check reads five — `runtime/src/mcp/server.rs` — **fixed**
-- bug: the CLI help gave check-corpus-links the orphan check's line and check-orphaned-references its Args doc, since a variant was inserted between that doc comment and its own — `runtime/src/main.rs` — **fixed**
-- edge: a leading / after ~, } or % was read as naming the project root, so ~/.ductus/bin/ductus was checked and re-pointed as a project path — `runtime/src/primitives/check_orphaned_references.rs` — **fixed**
-- security: create-feature did not contain its derived directory, so a spec root linked outside the project received the new spec (BE-INPUT-004), though 051's plan said it was validated — `runtime/src/primitives/create_feature.rs` — **fixed**
-- test: create-feature-claim M3 was declared a survivor reached only by a race, though a dangling link at the derived name reaches the lost claim every time (QUAL-TEST-001) — `scripts/mutation/create-feature-claim.py` — **fixed**
-- stale: the cut sentence naming the checks the completion gate composes with is one 046's Resolved Question rests on, though the plan said no tracked file quoted a cut — `framework/constitution.md` — **fixed**
-- stale: apply-manifest's Errors doc said an unchangeable mode is an Io error, where PermissionDenied names the file in modes-kept — `runtime/src/primitives/apply_manifest.rs` — **fixed**
-- convention: the completion message's list had no modes-kept line, which bootstrap step 4 promises — `framework/bootstrap/ductus-procedure.md` — **fixed**
-- stale: five shipped statements said every tail but a held scenario's collapses on a scenario target, where any scenarios/{name} tail is kept — `framework/reference/fold.md` — **fixed**
-- stale: rewrite-spec-links' kept-tail comments named only the feature-target predicate — `runtime/src/primitives/rewrite_spec_links.rs` — **fixed**
-- convention: a test's doc comment was split from its test by an inserted test — `runtime/src/primitives/apply_manifest.rs` — **fixed**
-- stale: the revision-qualified-path scenario stated the token rule without the root-prefix exception — `specs/067-analyze-and-audit-checks/scenarios/a-revision-qualified-path-is-not-a-working-tree-reference.md` — **fixed**
-- stale: create-feature's comment and 051's plan said concurrent creation under one identifier refuses the loser, which holds for one name only — `specs/051-branch-scoped-spec-numbering/plan.md` — **fixed**
-- edge: an @/specs/x import in CLAUDE.md is read as project-relative, where Claude Code reads an absolute path — `runtime/src/primitives/check_orphaned_references.rs` — **discarded**: an absolute import of a top-level /specs directory is a contrived input
-- convention: a kept-tails entry gives the reference from the spec root, without a prefix kept on the line — `runtime/src/primitives/rewrite_spec_links.rs` — **discarded**: its path and line locate the reference, and the check reports the same span from the root
-- edge: a ./ prefix in the hook or a root markdown file assumes the project root is the work-tree root, which a project in a repository subdirectory breaks — `specs/067-analyze-and-audit-checks/data-model.md` — **discarded**: a ./ resolves as the bare paths in those files already do, the assumption every bare reference carries, not one task 30 adds
-- stale: 062 task 28's ticked item still said its mutation run was owed — `specs/062-concurrent-session-targets/tasks.md` — **fixed**
-- stale: the session lock's docs named only the timeout as a bound on the attempts — `runtime/src/session.rs` — **fixed**
-- convention: 050's plan narrated the search behind the cut, verification evidence the commit holds — `specs/050-constitution/plan.md` — **fixed**
-- stale: the analyze reference listed the managed roots without the historical .govern/, scripts/gen- and scripts/lib/ — `framework/reference/analyze.md` — **fixed**
-- test: the Family 19 parity tests run git in their fixtures under a hook's inherited GIT_DIR, so a commit from a linked worktree fails four of them — `runtime/tests/mechanical_sweep_parity.rs` — **routed** to `specs/066-audit-records-and-the-completion-gate/tasks.md`
-- edge: the round-3 fix's opener allowlist refused a prefix after |, >, & or a typographic quote, though the bare spelling is found, so a fold left such a reference dangling and the check silent — `runtime/src/primitives/check_orphaned_references.rs` — **fixed**
-- edge: a quoted or backticked variable before a prefix ("$HOME"/, `pwd`/) was read as the project root — `runtime/src/primitives/check_orphaned_references.rs` — **fixed**
-- test: seven of the eleven opener characters had no test, and removing any one passed both modules — `runtime/src/primitives/check_orphaned_references.rs` — **fixed**
-- edge: a leading / was read from the project root in a project below its repository's root, where a host resolves it from the repository's root — `runtime/src/primitives/check_orphaned_references.rs` — **discarded**: the framework reads a root-absolute path from the project root, as check-corpus-links reads a root-absolute link (spec 059); reading it from the repository's root here alone split the fold's link and token passes, so 3fc5755a's gate was reverted
-- stale: 051 task 31's ticked items recorded the mutation lists before round 4 changed them — `specs/051-branch-scoped-spec-numbering/tasks.md` — **fixed**
-- stale: 050's plan attributed the round-4 constitution figures to the tree that added the length rule — `specs/050-constitution/plan.md` — **fixed**
-- edge: 3fc5755a's closing-quote rule read an opening backtick after emphasis or strikethrough as closing a variable, so **`./specs/x`** was missed though **`specs/x`** is found — `runtime/src/primitives/check_orphaned_references.rs` — **fixed**
-- test: a prefix at the start of a line had no test, so the arms deciding it survived their mutations (QUAL-TEST-001) — `runtime/src/primitives/check_orphaned_references.rs` — **fixed**
-- stale: the shipped references, the module doc and the mutation list listed a leading / unconditionally while 3fc5755a dropped it below the repository root — `framework/reference/fold.md` — **fixed**
-- edge: ~~./specs/x~~ and (a)./specs/x were missed though their bare spellings are found — `runtime/src/primitives/check_orphaned_references.rs` — **fixed**
-- edge: in a project below its repository's root, system.md's link pass re-pointed a leading / that its token pass left — `runtime/src/primitives/rewrite_spec_links.rs` — **fixed**
-- edge: in a project below its repository's root, /proj/specs/x, the project's own path spelled from the repository's root, is neither checked nor re-pointed — `runtime/src/primitives/check_orphaned_references.rs` — **discarded**: a project's README spelling its own spec from the repository's root is a contrived input, and the project-root reading names it nothing
-- test: two members of 3fc5755a's rule, the typographic closing quotes and the prefixed-only guard, had no killing test — `runtime/src/primitives/check_orphaned_references.rs` — **fixed**
-- stale: 051 task 31 did not record 3fc5755a's runs — `specs/051-branch-scoped-spec-numbering/tasks.md` — **fixed**
-- test: the rewrite test for markup and shell forms carried only prefixed spellings, and the check's blockquote pair sat on two lines — `runtime/src/primitives/rewrite_spec_links.rs` — **fixed**
-- edge: in a project below its repository's root the hook runs from the repository's root, so its ./ and bare paths resolve there — `specs/067-analyze-and-audit-checks/data-model.md` — **discarded**: the same assumption every bare reference in the hook carries, which task 30 does not add; prefixed and bare agree
-- edge: bare-rule cases outside task 30 — ~/".ductus/x", "$X"specs/x and ${X}specs/x in the hook, ${X:-./specs/x}, *specs/x*, and @/specs/x in CLAUDE.md — `runtime/src/primitives/check_orphaned_references.rs` — **discarded**: the bare rule predates task 30 and prefixed and bare agree on each; every input is contrived
-- test: no test had a bare managed path at a line's start, so a mutant refusing only that survived (QUAL-TEST-001) — `runtime/src/primitives/check_orphaned_references.rs` — **fixed**
-- test: the subdirectory test held its spec at neither root, so it could not tell a project-root reading from a repository-root one — `runtime/src/primitives/check_orphaned_references.rs` — **fixed**
-- test: no fixture put % or a digit before a closing quote — `runtime/src/primitives/check_orphaned_references.rs` — **fixed**
-- edge: the leading-/ exception also covers (a)/specs/x, x~/specs/x and a quote after a letter — `runtime/src/primitives/check_orphaned_references.rs` — **discarded**: contrived text; requiring $( before ) would add a parser for no real input
-- stale: the root-prefixed mutation list's docstring omitted two functions and two killing tests and misgrouped M12 — `scripts/mutation/root-prefixed-references.py` — **fixed**
-- convention: a rewrite test's doc comment broke mid-phrase onto a one-word line — `runtime/src/primitives/rewrite_spec_links.rs` — **fixed**
-- unclear: the root-prefixed mutation list's docstring could read as if a leading / ending another directory's name were a reference — `scripts/mutation/root-prefixed-references.py` — **fixed**
-- stale: the agreement test's comment omitted the hook's line-start lines, among them the bare-first line the round added — `runtime/src/primitives/check_orphaned_references.rs` — **fixed**
-- test gap: no agreement test puts a path at column 0 in system.md, so a mutant refusing a line-start path only there survives, in the check's tests and the rewrite's — `runtime/src/primitives/check_orphaned_references.rs` — **discarded**: the scanner has no per-referrer branch, so a defect of that shape is contrived; the binary reports a bare, ../ and / path at column 0 in system.md
-- test gap: the subdirectory test asserts that a spec only the repository's root holds is reported, not that one only the project holds is not — `runtime/src/primitives/check_orphaned_references.rs` — **discarded**: the realistic regression, reading existence from the repository's root, is killed by M46; skipping only a path present at both roots is contrived, and the binary does not report the project-only spec
-- stale: two ticked items in 017's tasks.md name a rule's Rationale, which 70bb4af5 removed from the format — `specs/017-derive-dont-ask/tasks.md` — **discarded**: tasks.md is ephemeral work tracking whose ticked items record what was built then (§tasks-phase); the format's canonical statement, 017's data-model.md, is current
+- bug: since ced8c7ca a linked spec root was listed in `skipped` as not followed while its files were rewritten, so examined-and-nothing-pointed-here could never be reported — fixed ea859f7c, 051 task 35 — `runtime/src/primitives/rewrite_spec_links.rs` — **fixed**
+- claim: 051 AC22 counted two cases the result names and missed the spec-root symbolic link ced8c7ca added to `skipped` — fixed ea859f7c, 051 task 35 — `specs/051-branch-scoped-spec-numbering/spec.md` — **fixed**
+- doc: the reason a spec-root link is not rewritten, that the write would turn it into a copy, held for a file link only — fixed ea859f7c, 051 task 35 — `runtime/src/primitives/rewrite_spec_links.rs` — **fixed**
+- doc: the fold reference's stop clause after the symlink sentence read as being about a symbolic link — fixed ea859f7c, 051 task 35 — `framework/reference/fold.md` — **fixed**
+- claim: the docs said a symbolic link to a markdown file is listed, while the code tests the link's own name for `.md` — fixed ea859f7c, 051 task 35 — `specs/051-branch-scoped-spec-numbering/scenarios/the-spec-root-is-read-before-the-first-write.md` — **fixed**
+- claim: spec.md's every-in-repo-link sentences and AC6's no-reference-dangles were untrue for files the rewrite does not read — fixed ea859f7c, its re-read's MUST — `specs/051-branch-scoped-spec-numbering/spec.md` — **fixed**
+- claim: create_feature.rs's next_branch_number doc comment carried the same every-in-repo-link claim — fixed ea859f7c, its re-read's MUST — `runtime/src/primitives/create_feature.rs` — **fixed**
+- claim: AC22 said the orphan check does not read the spec root, though it reads system.md there — fixed ea859f7c, its re-read's SHOULD — `specs/051-branch-scoped-spec-numbering/spec.md` — **fixed**
+- convention: two content-framed sentences, in a code comment and in the walk scenario — fixed ea859f7c — `runtime/src/primitives/rewrite_spec_links.rs` — **fixed**
+- convention: the fold reference counted its three lists — fixed ea859f7c — `framework/reference/fold.md` — **fixed**
+- stale: the help copies ab5eaa49 left ungenerated — fixed ea859f7c, whose hook regenerated them — `.claude/commands/ductus/help.md` — **fixed**
+- generated: ea859f7c committed target.md's generated copies from another session's staged source edit, so HEAD's copies did not match framework/commands/target.md — fixed c6a0dca2, which committed that source — `.claude/commands/ductus/target.md` — **fixed**
+- test: consolidate_hook.rs ran git in its fixtures without clearing GIT_DIR, GIT_WORK_TREE and GIT_INDEX_FILE, so under an inherited GIT_DIR its cases committed into the outer repository — fixed by a shared git_command helper, proved with GIT_DIR naming a scratch repository — `runtime/tests/consolidate_hook.rs` — **fixed**
+- claim: the constitution and consolidate.md's description and opening line said consolidate re-points every inbound pointer so none dangles, though it re-points only those in the files it reads — bounded, the constitution 1 byte over HEAD — `framework/constitution.md` — **fixed**
+- claim: the first bound dropped the reason 050 AC16 requires §spec-lifecycle to state, why pointers are re-pointed first — restored as lest it dangle — `framework/constitution.md` — **fixed**
+- claim: ten more copies of the every-pointer claim — specs/README.md, 000, 052's summary, Motivation and AC7, 050's a-retired-feature-leaves-no-spec, 054's Motivation, README.md and two in docs/slash-commands.md — bounded; 054 reopened done to in-progress — `specs/052-spec-supersession-and-consolidation/spec.md` — **fixed**
+- claim: nine sentences said a link inside the target is written relative to its file, though a root-absolute one is re-pointed as written — in consolidate.md, its reference, fold.md step 11, 052's AC9 and scenario, the MCP description and a test doc; each qualified to a link that climbs to the spec root — `framework/commands/consolidate.md` — **fixed**
+- test gap: no test held the scenario's edge case that a link inside the target at the wrong depth is re-pointed as written, so dropping either localization condition survived — a test with M54 and M55, both killed — `runtime/src/primitives/rewrite_spec_links.rs` — **fixed**
+- ci: runtime.yml's comment for the shipped hook's path named only mod.rs's shell-pattern test, though consolidate_hook.rs commits through that hook — `.github/workflows/runtime.yml` — **fixed**
+- claim: the new git_command doc said every test that spawns git builds its command there, though mechanical_sweep_parity.rs does not — the exception named, and 066 task 8 pointed at the helper — `runtime/tests/common/mod.rs` — **fixed**
+- convention: three sentences the first fix round wrote read ambiguously — consolidate's description, runtime.yml's that file, and the new test's not at all — `framework/commands/consolidate.md` — **fixed**
+- claim: fold.md step 11's never records a dependency on itself fails for a repo-root-relative specs/ link inside the upstream — `framework/commands/fold.md` — **discarded**: the only form that breaks it is a repo-root-relative specs/ link inside a spec, which check-corpus-links reports broken and the hook refuses, so no committed corpus holds one
+- edge: git_command leaves GIT_CONFIG_PARAMETERS and GIT_CONFIG_COUNT, so an outer git -c commit passes its config to a fixture — `runtime/tests/common/mod.rs` — **discarded**: an outer git -c commit whose config changes a fixture's outcome is contrived; the helper clears what a hook exports to locate a repository, the defect 066 task 8 records, and the fixture already blanks global and system config
+- errors: rewrite-spec-links checks the path escape before the name grammar, so a `to` failing both is refused as InvalidPath — `runtime/src/primitives/rewrite_spec_links.rs` — **discarded**: contrived input; refused before any write either way, and the error names the more serious defect, the escape
+- concurrency: the read-all-then-write phase widens the window in which another session's edit between read and write is overwritten — `runtime/src/primitives/rewrite_spec_links.rs` — **discarded**: contrived timing: reading the 656 spec-root markdown files takes about 0.02 s; BE-TXN-002 concerns a service's persisted state, and §concurrent-features says sessions in one tree are not isolated from each other's edits
 
 ## Skipped passes
 

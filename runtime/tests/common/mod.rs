@@ -29,6 +29,25 @@ pub fn ductus_command(bin: impl AsRef<std::ffi::OsStr>) -> Command {
     command
 }
 
+/// A `git` command with the variables a git hook exports removed, so a test
+/// that runs git in a fixture repository acts on the fixture and never on the
+/// repository whose hook is running the suite. A commit from a linked
+/// worktree hands its pre-commit hook an absolute `GIT_DIR` and
+/// `GIT_INDEX_FILE`, and this repository's hook runs `cargo test`: inherited,
+/// they make a fixture's `git init` re-initialise the outer repository, its
+/// `git config` write the outer config, and its `git add` stage into the
+/// outer index. A test that spawns git builds its command here, as one that
+/// spawns the runtime builds it with [`ductus_command`];
+/// `mechanical_sweep_parity.rs` does not yet, which spec 066's task 8 owns.
+pub fn git_command() -> Command {
+    let mut command = Command::new("git");
+    command
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE");
+    command
+}
+
 /// Recursively copy `src` into `dst`. Creates `dst` (and any missing
 /// parents for nested files) as needed. Used to stage fixtures from
 /// `runtime/tests/fixtures/<name>/` into a tempdir for write-side

@@ -102,7 +102,7 @@ Each entry below says what the command **does**; the section it links to says wh
 - **Destructive — these remove content**
   - [`/prune`](docs/slash-commands.md#prune--spent-tasks-and-plan-sections-outside-the-design-record) — drop completed task sections from `tasks.md`, or with `--reset` reset it to template state, pending tasks included; move the durable pieces of each plan section outside the design record home, then remove the section; `--all` repeats it for every spec
   - [`/fold`](docs/slash-commands.md#fold--the-branch-scoped-staging-directory-after-migrating-its-content) — merge a branch-scoped spec into its durable home and remove the staging directory
-  - [`/consolidate`](docs/slash-commands.md#consolidate--an-entire-spec-directory) — re-point every reference to a replaced spec, then remove it
+  - [`/consolidate`](docs/slash-commands.md#consolidate--an-entire-spec-directory) — re-point every reference to a replaced spec in the files it reads, then remove it
 - **Brownfield — absorb existing reality**
   - [`/log`](docs/slash-commands.md#log--one-raw-line-in-specsinboxmd) — add a todo you capture by hand to `specs/inbox.md`, to be picked up later with `/groom`
   - [`/groom`](docs/slash-commands.md#groom--every-inbox-item-routed-to-its-real-home) — walk the inbox and route each item to a rule, a spec, a scenario, a chore done in the pass, or discard

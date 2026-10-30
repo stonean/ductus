@@ -397,4 +397,19 @@ MUTATIONS = [
         '            if entry.file_type().is_symlink() {\n',
         'rewrite_spec_links',
     ),
+    # -- 051's 2026-10-29 review: a link at the wrong depth is not made local
+    (
+        'M54 a link inside the target made local whatever its depth',
+        'src/primitives/rewrite_spec_links.rs',
+        '        && index == depth + 1\n',
+        '',
+        'rewrite_spec_links',
+    ),
+    (
+        'M55 a link inside the target made local though it does not climb',
+        'src/primitives/rewrite_spec_links.rs',
+        '        && segments[..index].iter().all(|segment| *segment == "..")\n',
+        '',
+        'rewrite_spec_links',
+    ),
 ]
