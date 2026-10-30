@@ -195,6 +195,50 @@ check_halts_without_runtime() {
   rm -rf "$fixture"
 }
 
+# --- Case 1b: a too-old runtime is named without its own control output -----
+#
+# The capability guard echoes the binary's `--version` output, which this hook
+# does not control. It must reach the terminal as printable text on one line:
+# an escape sequence or a forged second line in it would otherwise be written
+# to the operator's terminal as is (048's analysis, BE-INPUT-011).
+check_too_old_runtime_echo_is_printable() {
+  local fixture out status esc
+  fixture="$(mktemp -d 2>/dev/null)" || fixture=""
+  if [ -z "$fixture" ] || ! scaffold "$fixture" specs; then
+    fixture_failed "the too-old-runtime fixture" "$fixture"
+    return
+  fi
+  cat > "$fixture/.ductus/bin/ductus" <<'STUB'
+#!/usr/bin/env bash
+if [ "${1:-}" = "--version" ]; then
+  printf 'ductus 0.1.0\033[31m-red\nFORGED second line\n'
+  exit 0
+fi
+exit 2
+STUB
+  chmod +x "$fixture/.ductus/bin/ductus"
+  out="$(cd "$fixture" && PATH=/usr/bin:/bin bash .githooks/ductus-pre-commit 2>&1)"
+  status=$?
+  esc="$(printf '\033')"
+  if [ "$status" -eq 0 ]; then
+    emit "framework/bootstrap/hooks/ductus-pre-commit" \
+      "the hook exited 0 over a runtime lacking the subcommands it calls" \
+      "halt naming the installed version and the missing subcommand"
+  fi
+  case "$out" in
+    *"reports: ductus 0.1.0[31m-red"*) ;;
+    *) emit "framework/bootstrap/hooks/ductus-pre-commit" \
+         "the too-old halt did not name the installed version as printable text: ${out:-<no output>}" \
+         "echo the binary's first --version line with its control characters removed" ;;
+  esac
+  case "$out" in
+    *"$esc"*|*FORGED*) emit "framework/bootstrap/hooks/ductus-pre-commit" \
+         "the too-old halt echoed the binary's control output to the terminal" \
+         "keep the echoed version to one line of printable characters" ;;
+  esac
+  rm -rf "$fixture"
+}
+
 # --- Case 2: the hook orchestrates correctly at a given spec root ------------
 #
 # Run at BOTH the default and a non-default root: with the default, a scoping
@@ -380,6 +424,7 @@ check_subdirectory_project() {
 }
 
 check_halts_without_runtime
+check_too_old_runtime_echo_is_printable
 build_and_run specs      # default root — isolates runtime resolution
 build_and_run features   # configured root (spec 040) — isolates scoping
 # Both directory forms the runtime recognizes, against the shipped hook.

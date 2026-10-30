@@ -16,9 +16,11 @@ The ordering constraint that shapes everything else: **acquisition cannot use th
 
 ### Acquisition is host shell work, and that is not a workaround
 
-The runtime exposes `fetch-archive` (checksum-verified download) and `extract-archive` (traversal-safe expansion), and both are exactly what acquisition needs. Neither can be used: the pre-flight phase that acquires the binary runs when the binary is, by definition, absent.
+The runtime exposes `fetch-archive` (checksum-verified download) and `extract-archive` (traversal-safe expansion), both 022's (its plan states each guarantee), and both are exactly what acquisition needs. Neither can be used: the pre-flight phase that acquires the binary runs when the binary is, by definition, absent.
 
 So acquisition is a shell sequence in `ductus.md`'s markdown procedure — `curl`, a checksum tool, `tar`, `mkdir`, `chmod`, the pointer command — and the security properties `fetch-archive` provides in code are restated as procedure steps that the four agent permission seeds pre-authorize. This is the one place in the framework where a security-relevant sequence has no primitive backing it, and it is worth naming rather than discovering later.
+
+**What each command interpolates** (`BE-INPUT-003`). A host's shell tool takes a command line, so no argument vector is available, and what keeps an operand from changing a command's structure is what the operand can hold. `{pin}` is one line of `MAJOR.MINOR.PATCH` in ASCII digits or the run halts (Source resolution step 5); `{triple}` comes from the closed table in Runtime acquisition step 3; `{tempdir}` is `mktemp`'s output; `${DUCTUS_REPO:-…}` is expanded by the shell inside double quotes, and an expansion is never re-parsed as shell syntax; the store and pointer paths are the fixed derived paths. The one operand from configuration, the `[runtime] path`, names a binary the project chose to execute, so a value that altered the command would grant nothing the key does not.
 
 The bootstrap already contains the precedent: `ductus.md:484` fetches the framework archive with a direct `curl` to `codeload.github.com`, chosen over the redirect form because a cross-host redirect defeats a pre-granted `curl` permission. Acquisition follows the same shape and the same reasoning.
 
@@ -32,13 +34,13 @@ A self-audit family asserts the three files agree, and the release workflow refu
 
 ### The pointer: symlink attempted, copy on failure
 
-`.ductus/bin/ductus` must resolve to the store without elevated privileges on any supported platform. Rather than branching on OS, `/ductus` attempts a symlink and falls back to a copy when creation fails. Windows without developer mode lands on the copy; Windows *with* it, and every Unix platform, gets the symlink.
+`.ductus/bin/ductus` must resolve to the store without elevated privileges on any supported platform. Rather than branching on OS, `/ductus` attempts a symlink and falls back to a copy when creation fails. Windows without developer mode lands on the copy, since an unelevated process creates a symlink only once Developer Mode is enabled ([Microsoft's `CreateSymbolicLinkW` reference](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createsymboliclinkw)); Windows *with* it, and every Unix platform, gets the symlink.
 
 One code path, self-adapting, and no platform detection to keep in sync with the target-triple table. The cost is that a Windows copy consumes disk per project — accepted, since the store's primary win is one *download* per machine, and the fallback is invisible to every other surface.
 
 ### The version probe executes the binary
 
-`{store}/ductus --version` prints `ductus {version}` (verified when this was planned, against a pre-rename binary that emitted `gvrn 0.27.2`). `/ductus` parses it and compares against the pin.
+`{store}/ductus --version` prints `ductus {version}` (verified 2026-10-30: `runtime/target/release/ductus --version` printed `ductus 0.59.11`). `/ductus` parses it and compares against the pin.
 
 A recorded marker file was rejected in the spec: this feature *sanctions* hand-placing a binary into the store, so a marker would be stale or absent in exactly the supported cases. Executing the binary also fails usefully — a store entry that will not run reports no version, reads as "no usable runtime", and re-acquires.
 
@@ -53,11 +55,11 @@ A recorded marker file was rejected in the spec: this feature *sanctions* hand-p
 
 As planned this set was inspected in the Pre-flight abort and State B stopped there. Task 13 (`state-b-continues-in-session`) moved State B's restart to the **Closing restart** at the end of the run, so State B acquires, wires, and then continues through the CLI rather than stopping.
 
-Former State C's tip in `framework/bootstrap/ductus.md` §Post-Scaffolding Output loses its audience rather than its section: with the runtime required there is no degraded-but-working outcome left to advertise, so the tip is reserved for the one degraded outcome that remains — acquisition was attempted and failed, and the run halted. It is omitted in State A and in a successful State B. As planned this read *deleted, not repurposed*, which is the reverse of what shipped.
+Former State C's tip in `framework/bootstrap/ductus-procedure.md` §Post-Scaffolding Output is deleted, as planned: with the runtime required there is no degraded-but-working outcome left to advertise, and the one case left for it, a failed acquisition, halts in pre-flight before that output is read, with a halt naming every recovery the tip offered (task 24).
 
 ### The amendment and the sweep land together
 
-`framework/constitution.md` §runtime-boundary principle 3 and the Opt-in invariant are replaced; §text-first-artifacts' "usable standalone" narrows to the artifacts. Landing that ahead of the reference sweep would leave the constitution declaring a requirement while 26 per-step fallback sentences still tell hosts what to do without a runtime — a window in which the canonical source and the commands disagree.
+`framework/constitution.md` §runtime-boundary principle 3 and the Opt-in invariant are replaced; §text-first-artifacts' "usable standalone" narrows to the artifacts. Landing that ahead of the reference sweep would leave the constitution declaring a requirement while the per-step fallback sentences still tell hosts what to do without a runtime — a window in which the canonical source and the commands disagree.
 
 Per §cross-spec-impact, [021](../021-runtime-boundary/spec.md) (which owns the opt-in invariant, its AC1 and AC2) and [029](../029-bootstrap-runtime-autowire/spec.md) (which owns the detection states) record the change in their own bodies and reopen to `in-progress` in the same commit.
 
@@ -67,7 +69,7 @@ The `version` file, the publish gate, and the Windows `.tar.gz` asset touch only
 
 ### `fetch-archive`'s HTTP configuration is read once
 
-`fetch-archive` still builds a client per call, because the SSRF pin is per URL (`resolve_to_addrs`, 022's `fetch-archive-dns-rebinding`). What that client reads is fixed at startup instead. `main` captures `ALL_PROXY`, `HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY` and whether `REQUEST_METHOD` is set, beside the insecure-host allowlist, and each build applies them as explicit reqwest proxies or turns proxies off, which stops reqwest's per-build environment read. On Linux and other non-Apple Unix the system certificate roots are loaded once per process, at the first fetch, and passed through `tls_certs_only`, so `SSL_CERT_FILE` and `SSL_CERT_DIR` are read once; there the platform verifier was WebPKI over those same roots, so what is trusted does not change. Through a proxy, the operator's proxy is the documented trust boundary. The decisions and their grounding in the locked sources are the scenario's (`scenarios/fetch-archive-reads-its-proxy-once.md`).
+`fetch-archive` still builds a client per call, because the SSRF pin is per URL (`resolve_to_addrs`, 022's `fetch-archive-dns-rebinding`). What that client reads is fixed at startup instead. `main` captures `ALL_PROXY`, `HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY` and whether `REQUEST_METHOD` is set, beside the insecure-host allowlist, into `ProxyEnv`, which implements no `Debug` and is never formatted, since a proxy URL can carry credentials (022's plan names it `CFG-ENV-006`'s one sensitive value), and each build applies them as explicit reqwest proxies or turns proxies off, which stops reqwest's per-build environment read. Each captured proxy value is parsed when it is captured, and one that does not parse, or names a scheme other than `http` or `https`, refuses every fetch naming its variable with any credentials shown as `***` (`CFG-ENV-008`). On Linux and other non-Apple Unix, `main` captures `SSL_CERT_FILE` and `SSL_CERT_DIR` too, split as rustls-native-certs splits them, and the roots are loaded once per process, at the first fetch, from the captured paths (`load_certs_from_paths`) or, when neither is set, from the platform store through `load_native_certs`, which re-reads the two and finds them unset as the capture did (`CFG-ENV-001`), then passed through `tls_certs_only`; there the platform verifier was WebPKI over those same roots, so what is trusted does not change. The roots are held in a `OnceLock` (`SYSTEM_ROOTS`), whose `get_or_init` runs the load at most once even when fetches race, and every later fetch reads the same value. The rest of the transport is 022's: reqwest is built on rustls alone (`runtime/Cargo.toml`), which negotiates TLS 1.2 or 1.3 only, and the certificate and host name are validated (against those roots on Linux, by the operating system's verifier on Apple platforms and Windows); a URL that is not `https` is refused unless the operator lists its host in `DUCTUS_FETCH_ALLOW_INSECURE_HOSTS`, empty by default; and each fetch waits at most `FETCH_TIMEOUT` (30 s) for a response or any one read of its body, and `FETCH_DEADLINE` (600 s) in all. Through a proxy, the operator's proxy is the documented trust boundary. The decisions and their grounding in the locked sources are the scenario's (`scenarios/fetch-archive-reads-its-proxy-once.md`).
 
 ## Affected Files
 
@@ -79,7 +81,7 @@ The `version` file, the publish gate, and the Windows `.tar.gz` asset touch only
 | `.github/workflows/runtime-acquisition.yml` | Create | Replacement: end-to-end acquisition on each runner platform |
 | `framework/constitution.md` | Modify | §runtime-boundary principle 3 + Opt-in invariant; §text-first-artifacts narrowing |
 | `framework/bootstrap/ductus.md` | Modify | Acquisition procedure, MCP shapes, detection states, permission seeds, gitignore block, Shared Files note |
-| `framework/commands/*.md` | Modify | Remove the 26 per-step markdown-only fallback instructions |
+| `framework/commands/*.md` | Modify | Remove every per-step markdown-only fallback instruction |
 | `framework/migrations.toml` | Modify | Adopter migration entry rewriting the MCP command |
 | `framework/migrations/runtime-store-path.md` | Create | That entry's procedure body (planned as `runtime-path-rewrite.md`; shipped under the registry id `runtime-store-path`) |
 | `scripts/audit/version-agreement.sh` | Create | Self-audit family asserting `version`, `Cargo.toml` and the CHANGELOG agree; the tag is the release workflow's check |
@@ -93,7 +95,7 @@ The `version` file, the publish gate, and the Windows `.tar.gz` asset touch only
 | `AGENTS.md` | Modify | Replace the stale-binary gotcha with the `[runtime]` key workflow |
 | `runtime/src/primitives/fetch_archive.rs` | Modify | Proxy variables applied from the startup capture; Linux roots loaded once; the proxy trust boundary stated (task 18) |
 | `runtime/src/main.rs` | Modify | Capture the proxy variables at startup (task 18) |
-| `runtime/Cargo.toml`, `runtime/Cargo.lock` | Modify | `rustls` and `rustls-native-certs` as direct dependencies, `webpki-root-certs` for tests (task 18) |
+| `runtime/Cargo.toml`, `runtime/Cargo.lock` | Modify | `rustls` and `rustls-native-certs` as direct dependencies, `webpki-root-certs` for tests (task 18). They and this plan's workflow changes come under the supply-chain commitments 022's plan states in its sections *Dependency pinning, provenance, and upgrades* and *`runtime.yml` CI workflow* (`BE-DEPS-001` to `004`, `006` and `007`) |
 | `docs/runtime.md` | Modify | The environment-variable inventory: when each variable is read, and the proxy trust boundary (task 18) |
 
 ## Trade-offs

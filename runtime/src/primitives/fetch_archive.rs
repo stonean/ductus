@@ -65,11 +65,15 @@
 //!
 //! The HTTP client reads no environment variable per fetch (`CFG-ENV-001`;
 //! spec 048, scenario `fetch-archive-reads-its-proxy-once`). The proxy
-//! variables are captured once at startup ([`init_proxy_env`]) and applied as
-//! explicit proxies, which turns off reqwest's own per-build read of them. On
-//! Linux and other non-Apple Unix, where the certificate verifier would read
-//! `SSL_CERT_FILE` and `SSL_CERT_DIR` on every build, the system roots are
-//! loaded once, at the process's first fetch, and handed to every build.
+//! variables are captured once at startup ([`init_proxy_env`]), parsed there,
+//! and applied as explicit proxies, which turns off reqwest's own per-build
+//! read of them; a value that does not parse refuses every fetch, naming the
+//! variable with any credentials redacted, rather than letting that scheme's
+//! fetches go direct (`CFG-ENV-008`). On Linux and other non-Apple Unix, where
+//! the certificate verifier would read `SSL_CERT_FILE` and `SSL_CERT_DIR` on
+//! every build, those two are captured at startup too, and the system roots
+//! are loaded once, at the process's first fetch, from the paths they name
+//! (or the platform store when neither is set), and handed to every build.
 //!
 //! **Through a proxy, the operator's proxy is the trust boundary.** The
 //! screen above still runs on the first URL and every redirect hop, so
@@ -193,6 +197,14 @@ fn fetch_bytes_with(
     // cannot forge a second line of the message (`BE-INPUT-011`). The fetch
     // itself uses the URL as given.
     let shown = flatten_line(url);
+    // A proxy value that did not parse at startup refuses the fetch before
+    // anything is resolved or sent (`CFG-ENV-008`).
+    let parsed = proxies.parsed.as_deref().map_err(|(variable, reason)| {
+        PrimitiveError::InvalidEnvironmentVariable {
+            variable: (*variable).to_string(),
+            reason: reason.clone(),
+        }
+    })?;
     let pin = validate_fetch_url(url, &screen)?;
     // The default reqwest client follows up to 10 redirects with no
     // re-validation, so a `302 Location:` pointing at `http://` or an
@@ -230,7 +242,7 @@ fn fetch_bytes_with(
     if let FetchScreen::Pinned { host, addrs } = &pin {
         builder = builder.resolve_to_addrs(host, &pin_addresses(addrs));
     }
-    builder = apply_proxies(builder, proxies);
+    builder = apply_proxies(builder, parsed);
     if VERIFIER_READS_CERT_ENV {
         let roots = system_roots().map_err(|reason| fetch_refused(url, reason))?;
         builder = builder.tls_certs_only(roots.iter().cloned());
@@ -630,6 +642,10 @@ struct ProxyEnv {
     https: String,
     /// `NO_PROXY` / `no_proxy`: hosts reached directly.
     no: String,
+    /// Each proxy [`Self::proxies`] names, parsed when the variables were
+    /// captured, with its `NO_PROXY` exemptions applied — or the variable
+    /// whose value did not parse and why, its credentials redacted.
+    parsed: std::result::Result<Vec<reqwest::Proxy>, (&'static str, String)>,
 }
 
 impl ProxyEnv {
@@ -641,20 +657,79 @@ impl ProxyEnv {
         http: String::new(),
         https: String::new(),
         no: String::new(),
+        parsed: Ok(Vec::new()),
     };
 
-    /// Build from a variable `lookup` and whether `REQUEST_METHOD` is set.
-    /// Each variable is its uppercase name if set — even to an empty value —
-    /// else its lowercase one, which is the matcher's `get_first_env` order.
+    /// Build from a variable `lookup` and whether `REQUEST_METHOD` is set,
+    /// parsing each proxy the variables name. Each variable is its uppercase
+    /// name if set — even to an empty value — else its lowercase one, which is
+    /// the matcher's `get_first_env` order.
     fn capture(lookup: impl Fn(&str) -> Option<String>, cgi: bool) -> Self {
-        let first = |names: [&str; 2]| names.iter().find_map(|name| lookup(name));
-        Self {
+        let first = |names: [&'static str; 2]| {
+            names
+                .iter()
+                .find_map(|name| lookup(name).map(|value| (*name, value)))
+                .unwrap_or((names[0], String::new()))
+        };
+        let (name_all, all) = first(["ALL_PROXY", "all_proxy"]);
+        let (name_http, http) = first(["HTTP_PROXY", "http_proxy"]);
+        let (name_tls, https) = first(["HTTPS_PROXY", "https_proxy"]);
+        let (_, no) = first(["NO_PROXY", "no_proxy"]);
+        let mut env = Self {
             cgi,
-            all: first(["ALL_PROXY", "all_proxy"]).unwrap_or_default(),
-            http: first(["HTTP_PROXY", "http_proxy"]).unwrap_or_default(),
-            https: first(["HTTPS_PROXY", "https_proxy"]).unwrap_or_default(),
-            no: first(["NO_PROXY", "no_proxy"]).unwrap_or_default(),
-        }
+            all,
+            http,
+            https,
+            no,
+            parsed: Ok(Vec::new()),
+        };
+        env.parsed = env.parse(|scheme| match scheme {
+            ProxyScheme::Http => name_http,
+            ProxyScheme::Https => name_tls,
+            ProxyScheme::All => name_all,
+        });
+        env
+    }
+
+    /// Each proxy [`Self::proxies`] names as the reqwest proxy that carries a
+    /// fetch, or the first value that is not one, named by the variable
+    /// `variable` says it came from (`CFG-ENV-008`). A value reqwest rejects —
+    /// a malformed URL — is the error rather than skipped, since skipping it
+    /// sends that scheme's fetches direct, past the proxy the operator
+    /// configured. So is a URL naming a scheme other than `http` or `https`,
+    /// such as `socks5`, which this build cannot speak: reqwest accepts one
+    /// and fails only at connect, naming the scheme rather than the variable.
+    /// A value with no scheme (`proxy.corp:3128`) is reqwest's `http`.
+    fn parse(
+        &self,
+        variable: impl Fn(ProxyScheme) -> &'static str,
+    ) -> std::result::Result<Vec<reqwest::Proxy>, (&'static str, String)> {
+        self.proxies()
+            .into_iter()
+            .map(|(scheme, value)| {
+                let speakable = reqwest::Url::parse(value)
+                    .ok()
+                    .filter(reqwest::Url::has_host)
+                    .is_none_or(|url| matches!(url.scheme(), "http" | "https"));
+                let proxy = match scheme {
+                    _ if !speakable => Err(()),
+                    ProxyScheme::Http => reqwest::Proxy::http(value).map_err(drop),
+                    ProxyScheme::Https => reqwest::Proxy::https(value).map_err(drop),
+                    ProxyScheme::All => reqwest::Proxy::all(value).map_err(drop),
+                };
+                proxy
+                    .map(|proxy| proxy.no_proxy(reqwest::NoProxy::from_string(&self.no)))
+                    .map_err(|()| {
+                        (
+                            variable(scheme),
+                            format!(
+                                "`{}` is not a proxy URL this runtime can use; set an http or https proxy URL, such as `http://proxy.example:3128`, or unset it",
+                                redact_proxy(value)
+                            ),
+                        )
+                    })
+            })
+            .collect()
     }
 
     /// The proxies a fetch applies, in the order reqwest tries them, each as
@@ -688,9 +763,12 @@ enum ProxyScheme {
 /// The proxy variables captured at startup by [`init_proxy_env`].
 static PROXY_ENV: OnceLock<ProxyEnv> = OnceLock::new();
 
-/// Capture the proxy variables and whether `REQUEST_METHOD` is set from this
-/// process's environment — once, at startup (`CFG-ENV-001`). The binary's
-/// `main` calls this before it dispatches anything; a later call is a no-op.
+/// Capture the variables `fetch-archive`'s client honors from this process's
+/// environment — once, at startup (`CFG-ENV-001`): the proxy variables and
+/// whether `REQUEST_METHOD` is set, parsed there (`CFG-ENV-008`), and, where
+/// the certificate verifier would read them, `SSL_CERT_FILE` and
+/// `SSL_CERT_DIR`. The binary's `main` calls this before it dispatches
+/// anything; a later call is a no-op.
 pub fn init_proxy_env() {
     PROXY_ENV.get_or_init(|| {
         ProxyEnv::capture(
@@ -698,29 +776,36 @@ pub fn init_proxy_env() {
             std::env::var_os("REQUEST_METHOD").is_some(),
         )
     });
+    if VERIFIER_READS_CERT_ENV {
+        CERT_ENV.get_or_init(|| CertEnv::capture(|name| std::env::var_os(name)));
+    }
 }
 
-/// Apply `env` to a client under construction: every proxy it names, each
-/// with its `NO_PROXY` exemptions, or none. Either way reqwest's system proxy
-/// is off — `no_proxy` and `proxy` both clear its `auto_sys_proxy` (reqwest
-/// 0.13.4, `async_impl/client.rs`) — so the build reads no environment
-/// variable. `Proxy::http`, `https` and `all` compile to the matcher the
-/// system proxy would have built (`proxy.rs`, `into_matcher`); a value reqwest
-/// cannot parse is skipped, as the matcher skips one it cannot.
+/// `value` on one line with any credentials before its host shown as `***`
+/// (`CFG-ENV-006`, `BE-INPUT-011`): a proxy URL can carry `user:password@`,
+/// and the error naming a value that did not parse must not print them.
+fn redact_proxy(value: &str) -> String {
+    let start = value.find("://").map_or(0, |scheme| scheme + 3);
+    let shown = match value[start..].rfind('@') {
+        Some(at) => format!("{}***{}", &value[..start], &value[start + at..]),
+        None => value.to_string(),
+    };
+    flatten_line(&shown)
+}
+
+/// Apply `proxies` — those [`ProxyEnv::parse`] built — to a client under
+/// construction, or none. Either way reqwest's system proxy is off —
+/// `no_proxy` and `proxy` both clear its `auto_sys_proxy` (reqwest 0.13.4,
+/// `async_impl/client.rs`) — so the build reads no environment variable.
+/// `Proxy::http`, `https` and `all` compile to the matcher the system proxy
+/// would have built (`proxy.rs`, `into_matcher`).
 fn apply_proxies(
     builder: reqwest::blocking::ClientBuilder,
-    env: &ProxyEnv,
+    proxies: &[reqwest::Proxy],
 ) -> reqwest::blocking::ClientBuilder {
     let mut builder = builder.no_proxy();
-    for (scheme, value) in env.proxies() {
-        let proxy = match scheme {
-            ProxyScheme::Http => reqwest::Proxy::http(value),
-            ProxyScheme::Https => reqwest::Proxy::https(value),
-            ProxyScheme::All => reqwest::Proxy::all(value),
-        };
-        if let Ok(proxy) = proxy {
-            builder = builder.proxy(proxy.no_proxy(reqwest::NoProxy::from_string(&env.no)));
-        }
+    for proxy in proxies {
+        builder = builder.proxy(proxy.clone());
     }
     builder
 }
@@ -737,6 +822,38 @@ const VERIFIER_READS_CERT_ENV: bool = cfg!(all(
     not(target_vendor = "apple"),
     not(target_os = "android")
 ));
+
+/// `SSL_CERT_FILE` and `SSL_CERT_DIR` as this process's environment held them
+/// at startup, split as rustls-native-certs splits them (0.8.5, `CertPaths::
+/// from_env`): the file as given, the directory list on the platform's path
+/// separator with empty entries dropped.
+struct CertEnv {
+    file: Option<PathBuf>,
+    dirs: Vec<PathBuf>,
+}
+
+impl CertEnv {
+    /// Build from a variable `lookup`.
+    fn capture(lookup: impl Fn(&str) -> Option<std::ffi::OsString>) -> Self {
+        Self {
+            file: lookup("SSL_CERT_FILE").map(PathBuf::from),
+            dirs: lookup("SSL_CERT_DIR").map_or_else(Vec::new, |dirs| {
+                std::env::split_paths(&dirs)
+                    .filter(|dir| !dir.as_os_str().is_empty())
+                    .collect()
+            }),
+        }
+    }
+
+    /// Whether either variable named a path, which is when rustls-native-certs
+    /// reads the paths instead of the platform store.
+    fn is_set(&self) -> bool {
+        self.file.is_some() || !self.dirs.is_empty()
+    }
+}
+
+/// The certificate variables captured at startup by [`init_proxy_env`].
+static CERT_ENV: OnceLock<CertEnv> = OnceLock::new();
 
 /// The system roots, loaded at the process's first fetch and kept.
 static SYSTEM_ROOTS: OnceLock<std::result::Result<Vec<reqwest::Certificate>, String>> =
@@ -755,8 +872,39 @@ static SYSTEM_ROOTS: OnceLock<std::result::Result<Vec<reqwest::Certificate>, Str
 /// verifier refuses an empty store.
 fn system_roots() -> std::result::Result<&'static [reqwest::Certificate], &'static str> {
     load_once(&SYSTEM_ROOTS, || {
-        roots_from(rustls_native_certs::load_native_certs().certs)
+        roots_from(native_certs(
+            CERT_ENV.get(),
+            rustls_native_certs::load_certs_from_paths,
+            || rustls_native_certs::load_native_certs().certs,
+        ))
     })
+}
+
+/// The certificates the first fetch trusts: those the paths `captured` at
+/// startup name, read with `from_paths` as rustls-native-certs reads them,
+/// when either variable named one; otherwise the platform store, through
+/// `platform`. The platform store is reachable only through
+/// `load_native_certs`, which reads both variables itself; it runs only when
+/// the capture found both unset, so it reads what the capture did. A process
+/// that never captured — an in-process test — takes `platform`, as before.
+fn native_certs(
+    captured: Option<&CertEnv>,
+    from_paths: impl Fn(Option<&Path>, Option<&Path>) -> rustls_native_certs::CertificateResult,
+    platform: impl FnOnce() -> Vec<rustls::pki_types::CertificateDer<'static>>,
+) -> Vec<rustls::pki_types::CertificateDer<'static>> {
+    match captured {
+        Some(env) if env.is_set() => {
+            let mut certs = env
+                .file
+                .as_deref()
+                .map_or_else(Vec::new, |file| from_paths(Some(file), None).certs);
+            for dir in &env.dirs {
+                certs.extend(from_paths(None, Some(dir)).certs);
+            }
+            certs
+        }
+        _ => platform(),
+    }
 }
 
 /// `cell`'s value, computing it with `load` the first time only.
@@ -1028,11 +1176,14 @@ mod tests {
     use std::net::IpAddr;
     use std::time::{Duration, Instant};
 
+    use std::path::{Path, PathBuf};
+
     use super::{
-        Deadline, FETCH_DEADLINE, FETCH_TIMEOUT, FetchArchiveArgs, FetchScreen, MAX_FETCH_BYTES,
-        MAX_FETCH_REDIRECTS, PrimitiveError, ProxyEnv, ProxyScheme, RedirectVerdict, Screen,
-        fetch_bytes_with, is_internal_ip, is_sha256_hex, load_once, parse_sidecar_hex, read_capped,
-        redirect_verdict, roots_from, run, sha256_hex, validate_fetch_url,
+        CertEnv, Deadline, FETCH_DEADLINE, FETCH_TIMEOUT, FetchArchiveArgs, FetchScreen,
+        MAX_FETCH_BYTES, MAX_FETCH_REDIRECTS, PrimitiveError, ProxyEnv, ProxyScheme,
+        RedirectVerdict, Screen, fetch_bytes_with, is_internal_ip, is_sha256_hex, load_once,
+        native_certs, parse_sidecar_hex, read_capped, redirect_verdict, roots_from, run,
+        sha256_hex, validate_fetch_url,
     };
     use std::net::ToSocketAddrs;
     use std::sync::Arc;
@@ -1665,6 +1816,106 @@ mod tests {
             Screen::new(Box::new(internal), Vec::new(), &literal).proxy_hosts,
             [] as [String; 0]
         );
+    }
+
+    /// A proxy value this build cannot use refuses every fetch, naming the
+    /// variable it came from with its credentials redacted, before anything
+    /// is resolved or sent, rather than sending that scheme's fetches direct
+    /// past the operator's proxy (`CFG-ENV-008`; 048's analysis, 2026-10-29).
+    /// Killed by M1, which skips the value, and M2, which prints it raw.
+    #[test]
+    fn a_proxy_value_that_does_not_parse_refuses_every_fetch() {
+        for (name, value) in [
+            ("HTTPS_PROXY", "http://ops:hunter2@proxy.corp:99999"),
+            ("https_proxy", "socks5://ops:hunter2@proxy.corp:1080"),
+        ] {
+            let env = ProxyEnv::capture(lookup(&[(name, value)]), false);
+            let err = fetch_bytes_with(
+                "https://192.0.2.1/main.tar.gz",
+                &env,
+                FETCH_TIMEOUT,
+                FETCH_DEADLINE,
+                Arc::new(Screen::system(&env).unwrap()),
+            )
+            .unwrap_err();
+            match err {
+                PrimitiveError::InvalidEnvironmentVariable { variable, reason } => {
+                    assert_eq!(variable, name);
+                    assert!(reason.contains("://***@proxy.corp"), "{reason}");
+                    assert!(!reason.contains("hunter2"), "credentials shown: {reason}");
+                }
+                other => panic!("{name}={value}: expected the variable named, got {other:?}"),
+            }
+        }
+    }
+
+    /// Where either certificate variable was set at startup, the first fetch
+    /// loads the roots from the captured paths, each read the way
+    /// rustls-native-certs reads them, and never from the platform store,
+    /// whose loader reads the environment itself (`CFG-ENV-001`). Killed by
+    /// M3, which ignores the capture.
+    #[test]
+    fn captured_cert_paths_are_read_instead_of_the_platform_store() {
+        let env = CertEnv {
+            file: Some(PathBuf::from("/certs/bundle.pem")),
+            dirs: vec![PathBuf::from("/certs/a"), PathBuf::from("/certs/b")],
+        };
+        let calls = std::cell::RefCell::new(Vec::new());
+        native_certs(
+            Some(&env),
+            |file, dir| {
+                calls
+                    .borrow_mut()
+                    .push((file.map(Path::to_path_buf), dir.map(Path::to_path_buf)));
+                rustls_native_certs::CertificateResult::default()
+            },
+            || panic!("the platform store was read"),
+        );
+        assert_eq!(
+            calls.into_inner(),
+            [
+                (Some(PathBuf::from("/certs/bundle.pem")), None),
+                (None, Some(PathBuf::from("/certs/a"))),
+                (None, Some(PathBuf::from("/certs/b"))),
+            ]
+        );
+    }
+
+    /// With neither variable set at startup, or nothing captured at all, the
+    /// platform store is read and no path is.
+    #[test]
+    fn with_no_cert_path_captured_the_platform_store_is_read() {
+        let unset = CertEnv {
+            file: None,
+            dirs: Vec::new(),
+        };
+        for captured in [Some(&unset), None] {
+            let mut platform = 0;
+            native_certs(
+                captured,
+                |_, _| panic!("a certificate path was read"),
+                || {
+                    platform += 1;
+                    Vec::new()
+                },
+            );
+            assert_eq!(platform, 1);
+        }
+    }
+
+    /// The capture reads `SSL_CERT_DIR` as rustls-native-certs does: split on
+    /// the platform's path separator, empty entries dropped. Killed by M4.
+    #[test]
+    fn the_cert_capture_splits_the_directory_list() {
+        let joined = std::env::join_paths(["/certs/a", "", "/certs/b"]).unwrap();
+        let env = CertEnv::capture(|name| (name == "SSL_CERT_DIR").then(|| joined.clone()));
+        assert_eq!(env.file, None);
+        assert_eq!(
+            env.dirs,
+            [PathBuf::from("/certs/a"), PathBuf::from("/certs/b")]
+        );
+        assert!(env.is_set());
+        assert!(!CertEnv::capture(|_| None).is_set());
     }
 
     #[test]

@@ -217,8 +217,7 @@ fn emit_protocol_schema() -> ExitCode {
 /// nothing and report success. Every failure here is therefore an error, never
 /// a default: the silent-empty path is the whole thing this guards against.
 fn load_json_arg<T: serde::de::DeserializeOwned>(flag: &str, path: &str) -> Result<T, String> {
-    let text = std::fs::read_to_string(path)
-        .map_err(|err| format!("--{flag}: cannot read `{path}`: {err}"))?;
+    let text = ductus::primitives::read_cli_json_file(flag, path)?;
     serde_json::from_str(&text)
         .map_err(|err| format!("--{flag}: `{path}` is not valid JSON for this field: {err}"))
 }

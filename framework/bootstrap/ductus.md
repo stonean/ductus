@@ -251,7 +251,7 @@ Every fetch this step makes, and the self-update fetch in the **Self-update chec
 
    > Halt (404 on a named or recorded tag): `tag {tag} ({tag origin}) does not exist — https://raw.githubusercontent.com/${DUCTUS_REPO:-stonean/ductus}/{tag}/version returned 404.`
 
-   Any other failure, or a file that is **absent or unparseable**, halts naming the URL: guessing a version or falling through to another source silently installs a runtime the framework was never tested against.
+   Any other failure, or a file that is **absent or unparseable** — anything but one line of `MAJOR.MINOR.PATCH` in ASCII digits, which is all `{pin}` may hold since later steps interpolate it into URLs and file names — halts naming the URL: guessing a version or falling through to another source silently installs a runtime the framework was never tested against.
 
    > Halt: `could not read the runtime version pin from https://raw.githubusercontent.com/${DUCTUS_REPO:-stonean/ductus}/{raw-ref}/version — /ductus cannot state which runtime this framework revision requires.`
 
@@ -316,6 +316,9 @@ The reason is not tidiness. A retired-namespace server is a *different runtime a
 | `{request-timeout}` | `60` — the seconds such a fetch may take in all (`curl --max-time`); the files it fetches are small: a header, a version line, a migration registry, this bootstrap, a `.gitignore`, and Pi's bridge |
 | `{download-connect-timeout}` | `30` — the seconds a runtime archive or sidecar download in **Runtime acquisition** waits for its connection (`curl --connect-timeout`) |
 | `{download-timeout}` | `300` — the seconds such a download may take in all (`curl --max-time`); an archive is several megabytes, too large for `{request-timeout}` on a slow link |
+| `{probe-timeout}` | `10` — the seconds a `--version` probe of the store or of a `[runtime] path` may run, set as the host shell tool's timeout |
+
+**Every `--version` probe is bounded by `{probe-timeout}`** — the store probe, State A's version check, Branch 1's probe of a `[runtime] path`, and Branch 2's probe and re-probe. Run each with the host shell tool's own timeout set to it. A probe still running when it expires did not execute, and takes that branch: State B or a re-acquisition for the store, a halt for a `[runtime] path` or for the re-probe.
 
 #### State A — runtime live this session
 
@@ -828,7 +831,7 @@ needs that file — which is the same set of sections that branch already skips.
 
 These files are scaffolded **once per `/ductus` invocation**, regardless of how many agents are selected. They are unaffected by the agent registry.
 
-**Invoking `apply-manifest` on the State B (CLI) path.** `entries`, `pinned`, and `substitutions` are arrays and maps of objects, so they are not clap flags — on the MCP and interpreter paths they arrive through the JSON context. From the CLI, write each to a temp file and pass its path: `{pointer-path} apply-manifest --source-root {framework-root} --target-root . --entries-json {file} --pinned-json {file} --substitutions-json {file}`. **Slash command cleanup**'s `enforce-manifest` takes `--expected-json` and `--pinned-json` the same way. An unreadable or malformed file is an **error**, never an empty default: an empty manifest is a legal manifest, so a silent fallback would copy nothing and report success — the adopter would end the run with none of the shared files and no indication why.
+**Invoking `apply-manifest` on the State B (CLI) path.** `entries`, `pinned`, and `substitutions` are arrays and maps of objects, so they are not clap flags — on the MCP and interpreter paths they arrive through the JSON context. From the CLI, write each to a file in `{tempdir}` and pass its path, which must lie inside a staging directory or the CLI refuses it naming the flag: `{pointer-path} apply-manifest --source-root {framework-root} --target-root . --entries-json {file} --pinned-json {file} --substitutions-json {file}`. **Slash command cleanup**'s `enforce-manifest` takes `--expected-json` and `--pinned-json` the same way. An unreadable or malformed file is an **error**, never an empty default: an empty manifest is a legal manifest, so a silent fallback would copy nothing and report success — the adopter would end the run with none of the shared files and no indication why.
 
 **Rule-file surface filter.** The `framework/rules/*.md → specs/rules/*.md` entries below are filtered by `[rules] surfaces` (§Project Configuration) before the manifest is applied: an entry is kept when its suffix matches a configured surface (`*-backend.md` for `backend`, `*-frontend.md` for `frontend`), and every `*-cross.md` entry is kept unconditionally. When `surfaces` is the **empty list** (`[]`), no surface-suffixed entry matches, so only the `*-cross.md` entries are kept (cross-only). When `surfaces` is unset, all rule files are kept (pre-033 behavior). (A degenerate `surfaces` value — an unrecognized member or a non-list — has already halted the run at §Collect Project Inputs item 4 before this filter runs.) Entries the filter omits are simply not applied — never pruned — so a rule file already on disk for a now-unconfigured surface is left in place (rule files are not in `enforce-directories`); it just stops receiving updates.
 

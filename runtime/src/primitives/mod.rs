@@ -1739,6 +1739,24 @@ pub(crate) fn validate_in_temp_dir(path_arg: &str) -> Result<PathBuf> {
     validate_in_staging(staging_roots(), path_arg)
 }
 
+/// The text of the file a CLI `--{field}-json` flag names (048 scenario
+/// `state-b-continues-in-session`): `apply-manifest`'s and
+/// `enforce-manifest`'s array and map arguments, which `/ductus` writes into
+/// its `{tempdir}` on the CLI path. The path is held to a staging directory,
+/// as `extract-archive`'s archive is ([`validate_in_temp_dir`], `BE-INPUT-004`),
+/// before it is opened.
+///
+/// # Errors
+///
+/// A message naming `--{flag}`: the path is not inside a staging directory,
+/// or the file cannot be read. An unreadable file is never an empty default.
+pub fn read_cli_json_file(flag: &str, path: &str) -> std::result::Result<String, String> {
+    let shown = flatten_line(path);
+    let resolved = validate_in_temp_dir(path).map_err(|err| format!("--{flag}: {err}"))?;
+    std::fs::read_to_string(&resolved)
+        .map_err(|err| format!("--{flag}: cannot read `{shown}`: {err}"))
+}
+
 /// [`validate_in_temp_dir`] plus the bound that the staging path lie *outside*
 /// the working directory `repo`: a write destination for the archive
 /// primitives (spec 022 task 17 question 2, the owner's answer (a)).
@@ -4708,6 +4726,28 @@ mod tests {
                 if *path == arg && reason.contains("the symlink `out`")),
             "{err:?}"
         );
+    }
+
+    /// 048's analysis (2026-10-29, `BE-INPUT-004`): a `--{field}-json` file
+    /// is read only from a staging directory, and a path outside one is
+    /// refused naming the flag before it is opened. Killed by M5.
+    #[test]
+    fn a_cli_json_file_is_read_only_from_a_staging_directory() {
+        let staging = tempfile::tempdir().unwrap();
+        let inside = staging.path().join("entries.json");
+        std::fs::write(&inside, "[]").unwrap();
+        assert_eq!(
+            read_cli_json_file("entries-json", &inside.to_string_lossy()).unwrap(),
+            "[]"
+        );
+        let outside = Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
+        for arg in [
+            outside.to_string_lossy().into_owned(),
+            "entries.json".into(),
+        ] {
+            let err = read_cli_json_file("entries-json", &arg).unwrap_err();
+            assert!(err.starts_with("--entries-json: "), "{arg}: {err}");
+        }
     }
 
     /// The staging roots follow `temp_dir`, each once. Off macOS on Unix an

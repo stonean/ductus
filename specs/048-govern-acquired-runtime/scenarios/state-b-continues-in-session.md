@@ -71,7 +71,10 @@ carried the run **past Shared Files having written nothing** — silently, since
 an empty manifest is a legal manifest and the primitive reports success over
 it. Each field gains a sibling `--{field}-json PATH` flag, `serde(skip)` so the
 MCP tool contract is unchanged. An unreadable or malformed file is an error,
-never an empty default: the silent-empty path is the entire hazard.
+never an empty default: the silent-empty path is the entire hazard. The path
+must lie inside a staging directory, as `extract-archive`'s archive must, or
+the CLI refuses it naming the flag; `/ductus` writes each file into its
+`{tempdir}` (`BE-INPUT-004`; 048's analysis, 2026-10-29).
 
 **The self-update restart is untouched.** A stale `ductus.md` still aborts
 before anything else, because the run must not proceed on instructions it is

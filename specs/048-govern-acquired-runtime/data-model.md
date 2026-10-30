@@ -38,7 +38,9 @@ path = "runtime/target/release/ductus"
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `path` | string | no | A binary the project supplies itself, relative to the repo root or absolute. When set, `/ductus` performs no download and resolves the pointer to this path. |
+| `path` | string | no | A binary the project supplies itself, relative to the repo root or absolute. It has no base directory to be held to, by design: it names a binary the project chose to execute. When set, `/ductus` performs no download and resolves the pointer to this path. |
+
+A key in `[runtime]` other than `path` is reported by name in `/ductus`'s summary and the run continues, as for every section it reads (`framework/bootstrap/ductus.md` §Project Configuration, **Unknown keys**; 019's scenario `an-unknown-config-key-is-named`, `CFG-ENV-012`).
 
 Absent (the normal case) means `/ductus` acquires the pinned version into the store. Present means the project has taken responsibility for supplying the runtime — the supported route for building from source, for an air-gapped or firewalled checkout, and for a platform with no published asset.
 

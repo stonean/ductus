@@ -73,6 +73,10 @@ same reason.
   reaching the check requires running `/ductus`. So the shipped pre-commit hook
   gains its own guard: before calling a primitive it probes that the binary
   carries it, and halts naming the installed version and the missing subcommand.
+  The version it names is the binary's first `--version` line kept to printable
+  characters, so the binary's own output cannot write an escape sequence or a
+  second line to the terminal (`BE-INPUT-011`); the bootstrap's own halts are
+  the host agent's messages in its session, not a log.
   It asks **capability**, not version — there is no pin for the hook to drift
   from, and a hand-placed binary or a future primitive is covered by the same
   question.

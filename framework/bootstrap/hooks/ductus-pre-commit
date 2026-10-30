@@ -107,7 +107,11 @@ fi
 # means there is no pin for the hook to get out of sync with.
 for primitive in derive-dependencies derive-references check-corpus-links; do
   if ! "$ductus_bin" "$primitive" --help > /dev/null 2>&1; then
+    # The binary's own output, echoed to the terminal: kept to printable
+    # characters and one short line, so it cannot carry an escape sequence or
+    # a forged line into the message (048's analysis, BE-INPUT-011).
     installed="$("$ductus_bin" --version 2>/dev/null || echo 'version unknown')"
+    installed="$(printf '%s' "$installed" | head -n 1 | LC_ALL=C tr -cd '[:print:]' | cut -c1-80)"
     echo "ductus: pre-commit halted — the installed runtime is too old." >&2
     echo "  $ductus_bin reports: $installed" >&2
     echo "  It has no \`$primitive\` subcommand, which this hook calls to derive" >&2

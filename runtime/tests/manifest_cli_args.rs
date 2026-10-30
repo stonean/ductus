@@ -73,6 +73,10 @@ fn entries_json_supplies_the_manifest_the_cli_cannot_express() {
     .unwrap();
     let subs = tmp.path().join("subs.json");
     fs::write(&subs, r#"{"name":"Acme"}"#).unwrap();
+    // Absolute, as `/ductus` passes them from its `{tempdir}`: the CLI reads a
+    // `--*-json` file only from a staging directory (048's analysis,
+    // `BE-INPUT-004`).
+    let (entries, subs) = (entries.to_string_lossy(), subs.to_string_lossy());
 
     let out = run(
         tmp.path(),
@@ -83,9 +87,9 @@ fn entries_json_supplies_the_manifest_the_cli_cannot_express() {
             "--target-root",
             "project",
             "--entries-json",
-            "entries.json",
+            &entries,
             "--substitutions-json",
-            "subs.json",
+            &subs,
         ],
     );
     assert!(
@@ -110,6 +114,7 @@ fn an_unreadable_entries_file_fails_loudly_instead_of_applying_nothing() {
     ensure_binary_built();
     let tmp = tempfile::tempdir().unwrap();
     let (_src, dst) = staged(tmp.path());
+    let absent = tmp.path().join("absent.json");
 
     let out = run(
         tmp.path(),
@@ -120,7 +125,7 @@ fn an_unreadable_entries_file_fails_loudly_instead_of_applying_nothing() {
             "--target-root",
             "project",
             "--entries-json",
-            "absent.json",
+            &absent.to_string_lossy(),
         ],
     );
     assert!(!out.status.success(), "a missing manifest must not succeed");
@@ -152,7 +157,7 @@ fn malformed_json_fails_loudly_rather_than_defaulting_to_empty() {
             "--target-root",
             "project",
             "--entries-json",
-            "entries.json",
+            &entries.to_string_lossy(),
         ],
     );
     assert!(!out.status.success());
@@ -184,9 +189,9 @@ fn enforce_manifest_expected_json_drives_the_cleanup() {
             "--directory",
             "commands",
             "--expected-json",
-            "expected.json",
+            &expected.to_string_lossy(),
             "--pinned-json",
-            "pinned.json",
+            &pinned.to_string_lossy(),
         ],
     );
     assert!(
