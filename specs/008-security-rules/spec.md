@@ -33,7 +33,7 @@ Rules for server-side code, APIs, data persistence, and infrastructure integrati
 - **Authorization** — permission enforcement, privilege escalation prevention, default-deny posture, mass-assignment / over-posting prevention
 - **Input validation** — sanitization at system boundaries, reject-by-default, allowlisting over denylisting, explicit size and count limits on input, parameterized queries (SQL/NoSQL/command) with each NoSQL query value type-checked so an object cannot inject an operator, safe deserialization, path-traversal prevention through a containment check on whole path components, XXE/SSTI prevention, formula escaping in CSV and spreadsheet exports, HTTP request smuggling prevention at the edge (ambiguous framing rejected, `Content-Length` values that differ included, identical repeats collapsed to one value), SSRF prevention on outbound URL fetches — checked on the connection actually made, not only on the submitted URL
 - **Data protection** — encryption at rest and in transit, secrets management, revocation and replacement of leaked secrets, PII handling, key rotation
-- **API security** — security headers (HSTS / HTTPS enforcement, CSP, frame protection, referrer policy, cache-control for sensitive responses, an explicit content type) and suppression of version-revealing headers, CORS policy, rate limiting, HTTP method and `Content-Type` restriction, infrastructure management interfaces and database ports kept off public networks, the application's own management and diagnostic endpoints (metrics, profiling, dumps, framework management endpoints) kept off them unless every request is authenticated, redirect validation, signed and replay-protected webhooks, server-side CSRF enforcement for ambient credentials (a synchronizer or signed double-submit token, a required custom header, or a `Sec-Fetch-Site` check rejecting a request that lacks the header or falling back to `Origin`), no credentials in URLs, WebSocket endpoints with an allowlisted handshake `Origin`, an authenticated connection, and every message validated and authorized as an HTTP request would be
+- **API security** — security headers (HSTS / HTTPS enforcement, CSP, frame protection, referrer policy, cache-control for sensitive responses, an explicit content type) and suppression of version-revealing headers, CORS policy, rate limiting, HTTP method and `Content-Type` restriction, infrastructure management interfaces and database ports kept off public networks, the application's connections to a database server authenticated, each leg through a pooler or proxy and a local one included, the application's own management and diagnostic endpoints (metrics, profiling, dumps, framework management endpoints) kept off public networks unless every request is authenticated, redirect validation, signed and replay-protected webhooks, server-side CSRF enforcement for ambient credentials (a synchronizer or signed double-submit token, a required custom header, or a `Sec-Fetch-Site` check rejecting a request that lacks the header or falling back to `Origin`), no credentials in URLs, WebSocket endpoints with an allowlisted handshake `Origin`, an authenticated connection, and every message validated and authorized as an HTTP request would be
 - **Logging and audit** — security-relevant events must be logged, sensitive data must never appear in logs, in other telemetry (trace attributes, metric labels, error reports), or in propagated trace context (`tracestate`, baggage), audit trails for access control changes
 - **Dependency management** — known-vulnerability scanning before release and on a schedule, pinned versions, a build-time SBOM, signature, provenance, or (for Go modules) checksum-database verification of registry packages as part of installation — or, where the ecosystem's standard installer provides no verification (pip), a documented gap and hash-checked installs — dependency-confusion and typosquatting defenses including integrity-verified installs against committed hashes, immutable pinning of build inputs the lockfile does not cover (CI actions, base images, downloaded tools)
 - **Error handling** — no stack traces or internal details in production responses, structured error codes, security controls that fail closed when their check cannot complete
@@ -75,13 +75,25 @@ Rules whose enforcement happens *outside* the code repository (runtime configura
 ```text
 BE-DATA-001 — TLS for host-crossing traffic
 
-Verification: Any spec or plan covering network communication, edge
-configuration, or system.md MUST commit to TLS 1.2+ across all
-host-crossing surfaces (HTTPS, gRPC, message brokers, database
-connections). /{project}:analyze flags specs that allow plaintext
-protocols for host-to-host traffic, that name TLS 1.0/1.1, or that omit
-the TLS version question entirely. Plaintext loopback exceptions MUST be
-documented in specs/system.md.
+Verification: Any spec or plan covering network communication (a
+database connection included), edge configuration, or system.md MUST
+commit to TLS 1.2+ across all host-crossing surfaces (HTTPS, gRPC,
+message brokers, database connections). /{project}:analyze flags specs
+that allow plaintext protocols for host-to-host traffic, that name TLS
+1.0/1.1, or that omit the TLS version question entirely. Plaintext
+loopback exceptions MUST be documented in specs/system.md. Not flagged:
+a leg that stays on the host: a loopback connection whose plaintext is
+documented in specs/system.md, one whose spec names no TLS included; a
+connection over a Unix-domain socket, or over a named pipe on the same
+host; and an in-process database, unless its spec places its data on a
+network file system or at a remote URL. Each leg is judged on its own:
+where an exchange goes on to another host, through a named pipe to
+another host, through a proxy behind a loopback connection, socket or
+pipe, or to an in-process database's data on a network file system or
+at a remote URL, the leg that reaches the other host is judged like any
+other, and the leg on the host keeps its exemption. A loopback
+connection whose plaintext is not documented in specs/system.md is
+flagged, one whose spec names no TLS included.
 ```
 
 > **Signpost:** this example cited `BE-API-002` from the spec's first draft until 2026-09-13. It never matched: `BE-API-002` has been the `Server` / `X-Powered-By` version-header suppression rule since the file was written, so a reader following the ID landed on an unrelated rule. The example now quotes `BE-DATA-001`'s shipped Verification verbatim, so it can be checked against `framework/rules/security-backend.md`.
