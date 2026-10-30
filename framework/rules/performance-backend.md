@@ -66,7 +66,7 @@ Performance rules for server-side request handling, data access, caching, and re
 
 > A response to a safe request (`GET`, `HEAD`) that `BE-API-001` (security-backend.md) does not already require to be `no-store` SHOULD declare its caching policy explicitly in `Cache-Control` — a freshness lifetime (`max-age`, or `s-maxage` for shared caches) or `no-cache` to require revalidation — and a cacheable response SHOULD carry a validator (`ETag` or `Last-Modified`) so a client can revalidate with a conditional request answered by `304 Not Modified`.
 
-**Verification:** Any spec or plan that introduces a `GET` endpoint SHOULD state each response's `Cache-Control` policy (or that it is `no-store` per `BE-API-001`) and, for a cacheable response, its validator and conditional-request (`304`) support; `/{project}:analyze` flags a `GET`-serving design that states no caching policy, or a cacheable policy with no validator. **Not flagged:** where `performance-frontend.md` is also loaded, the cache policy of build-emitted frontend static assets and of the HTML documents that reference them, which its `FE-LOAD-007` owns.
+**Verification:** Any spec or plan that introduces a `GET` endpoint SHOULD state each response's `Cache-Control` policy (or that it is `no-store` per `BE-API-001`) and, for a cacheable response, its validator and conditional-request (`304`) support; `/{project}:analyze` flags a `GET`-serving design that states no caching policy, or a cacheable policy with no validator. **Not flagged:** an authenticated or sensitive-data response, which `security-backend.md` `BE-API-001` requires to be `no-store` and owns; and, where `performance-frontend.md` is also loaded, the cache policy of build-emitted frontend static assets and of the HTML documents that reference them, which its `FE-LOAD-007` owns.
 
 **Source:** RFC 9111 §4.3 (validation), §5.2 (Cache-Control); RFC 9110 §8.8.2–8.8.3 (Last-Modified, ETag), §13.1.2 (If-None-Match), §15.4.5 (304 Not Modified)
 
@@ -76,7 +76,7 @@ Performance rules for server-side request handling, data access, caching, and re
 
 > Connections to databases, caches, and external services MUST be obtained from a pool, or from a shared long-lived client that multiplexes requests over its connections, not opened per request. A pool MUST have a bounded maximum size, set by a named constant (per `CFG-CONST-003`) rather than a bare literal.
 
-**Verification:** Any spec or plan that connects to a database, cache, or external service MUST commit to each obligation in the Statement; `/{project}:analyze` flags one that describes per-request connection creation, a pool with no maximum size, or an unnamed or bare-literal pool size.
+**Verification:** Any spec or plan that connects to a database, cache, or external service MUST commit to each obligation in the Statement; `/{project}:analyze` flags one that describes per-request connection creation or a pool with no maximum size. **Not flagged:** a pool size written as a bare literal, which `configuration-cross.md` `CFG-CONST-003` owns.
 
 **Source:** Microsoft, *SQL Server Connection Pooling (ADO.NET)*; gRPC documentation, Performance Best Practices; `configuration-cross.md` §CFG-CONST
 

@@ -76,7 +76,7 @@ Contract-quality rules — the shape, stability, and documentation of HTTP and R
 
 > The error envelope SHOULD be RFC 9457 `application/problem+json`, with at least the `type`, `title`, `status`, and `detail` fields. A project-specific envelope is acceptable when it is documented in `specs/system.md` and used uniformly.
 
-**Verification:** Any spec or plan that defines the project's error envelope SHOULD commit to RFC 9457 `application/problem+json` or name the project-specific envelope documented in `specs/system.md` that replaces it. `/{project}:analyze` emits a warning when an envelope definition is neither.
+**Verification:** Any spec or plan that defines the project's error envelope SHOULD commit to RFC 9457 `application/problem+json` with at least its `type`, `title`, `status`, and `detail` fields, or name the project-specific envelope documented in `specs/system.md` that replaces it. `/{project}:analyze` emits a warning when an envelope definition is neither, an RFC 9457 envelope missing one of those fields included. **Not flagged:** a project-specific envelope defined outside `specs/system.md`, which `BE-ERRENV-001` owns.
 
 **Source:** RFC 9457 (Problem Details for HTTP APIs, obsoletes RFC 7807)
 

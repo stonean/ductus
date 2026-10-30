@@ -78,22 +78,33 @@ BE-DATA-001 — TLS for host-crossing traffic
 Verification: Any spec or plan covering network communication (a
 database connection included), edge configuration, or system.md MUST
 commit to TLS 1.2+ across all host-crossing surfaces (HTTPS, gRPC,
-message brokers, database connections). /{project}:analyze flags specs
-that allow plaintext protocols for host-to-host traffic, that name TLS
-1.0/1.1, or that omit the TLS version question entirely. Plaintext
-loopback exceptions MUST be documented in specs/system.md. Not flagged:
-a leg that stays on the host: a loopback connection whose plaintext is
-documented in specs/system.md, one whose spec names no TLS included; a
-connection over a Unix-domain socket, or over a named pipe on the same
-host; and an in-process database, unless its spec places its data on a
-network file system or at a remote URL. Each leg is judged on its own:
-where an exchange goes on to another host, through a named pipe to
-another host, through a proxy behind a loopback connection, socket or
-pipe, or to an in-process database's data on a network file system or
-at a remote URL, the leg that reaches the other host is judged like any
-other, and the leg on the host keeps its exemption. A loopback
-connection whose plaintext is not documented in specs/system.md is
-flagged, one whose spec names no TLS included.
+message brokers, database connections), and one that places data on
+network-attached block storage (an iSCSI volume, or a block volume a
+cloud platform attaches) MUST name that storage path's in-transit
+protection: TLS 1.2+, IPsec, or the platform's in-transit encryption.
+/{project}:analyze flags specs that allow plaintext protocols for
+host-to-host traffic, that name TLS 1.0/1.1, or that omit the TLS
+version question entirely, and flags a spec placing data on
+network-attached block storage that names no in-transit protection for
+it. Plaintext loopback exceptions MUST be documented in
+specs/system.md. Not flagged: a client's plaintext access to an
+authentication or credential-change endpoint at its edge, plain HTTP,
+an HTTP fallback, a redirect to HTTPS or a spec silent on that
+endpoint's transport included, which BE-AUTHN-008 owns, a leg past that
+edge, behind a TLS-terminating proxy or onward to a directory, staying
+this rule's; a leg that stays on the host: a loopback connection whose
+plaintext is documented in specs/system.md, one whose spec names no TLS
+included; a connection over a Unix-domain socket, or over a named pipe
+on the same host; and an in-process database, unless its spec places
+its data on a network file system, on network-attached block storage or
+at a remote URL. Each leg is judged on its own: where an exchange goes
+on to another host, through a named pipe to another host, through a
+proxy behind a loopback connection, socket or pipe, or to an in-process
+database's data on a network file system, on network-attached block
+storage or at a remote URL, the leg that reaches the other host is
+judged like any other, and the leg on the host keeps its exemption. A
+loopback connection whose plaintext is not documented in
+specs/system.md is flagged, one whose spec names no TLS included.
 ```
 
 > **Signpost:** this example cited `BE-API-002` from the spec's first draft until 2026-09-13. It never matched: `BE-API-002` has been the `Server` / `X-Powered-By` version-header suppression rule since the file was written, so a reader following the ID landed on an unrelated rule. The example now quotes `BE-DATA-001`'s shipped Verification verbatim, so it can be checked against `framework/rules/security-backend.md`.
