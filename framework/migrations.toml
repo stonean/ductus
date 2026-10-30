@@ -313,3 +313,27 @@ target_paths = [
   "AGENTS.md",
 ]
 procedure_file = "framework/migrations/remove-legacy-constitutions-region.md"
+
+[[migrations]]
+id = "strip-inbox-guidance"
+introduced_in = "0.60.0"
+# The id sorts after remove-legacy-constitutions-region on the tie-break, and
+# must: this entry was pushed after that one, so a --ref=main adopter who ran
+# /ductus between the two recorded that id as last_applied, and an id sorting
+# before it would never run for them.
+# Runs after inbox-guidance-refresh (0.53.0), which removes a pre-0.53 inbox's
+# comment against the current template; this one then finds no comment and
+# removes the placeholder alone. An adopter who ran that entry before 0.60.0
+# received the comment the template then carried, and this removes it.
+# No sunset_after. The inbox is installed once with the `create` strategy and
+# never rewritten, so an adopter who skips this window keeps a placeholder
+# every inbox primitive counts as an outstanding item, and nothing else would
+# ever remove it.
+summary = "Remove the guidance comment, whatever its text, and the template's former placeholder item, only as that exact line, from an existing inbox; the template has carried neither since 0.60.0 (spec 058). Every other item is left byte-identical."
+# Adopter-relative. Nothing under framework/ is removed by this migration, so it
+# declares no framework/ target path — Family 10b reads those as paths that
+# must no longer exist, and `framework/templates/project/inbox.md` still does.
+target_paths = [
+  "specs/inbox.md",
+]
+procedure_file = "framework/migrations/strip-inbox-guidance.md"
