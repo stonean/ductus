@@ -112,7 +112,7 @@ Task 5's step-number sync rewrote 058's scenario `only-unreadable-targets-retain
 
 ## 15. Measure the project files
 
-Every message this task adds names `/prune --project`, which `041-task-pruning`'s task 23 landed on 2026-10-29, so this task no longer waits on it.
+Every message this task adds names `/prune --project`, which `041-task-pruning`'s task 23 landed on 2026-10-29, so this task no longer waits on it. The design is `075-agents-md-holds-what-every-session-needs`'s plan, §`check-artifact-size` measures the project files (063): arguments, the two-half result, staged mode, and `/analyze`'s seed. The result's project half goes in this spec's `data-model.md`. `075`'s tasks 4 and 5 wait on this task.
 
 - [ ] Implement the behavior described in `scenarios/project-files-are-measured.md`
 

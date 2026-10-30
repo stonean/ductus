@@ -33,7 +33,7 @@ Recording a scenario on `063` and `055` takes each from `done` to `in-progress`,
 
 ## 4. Document the limit's wider scope
 
-Blocked on `063-oversized-artifacts-warn-with-a-fix`'s task 15, since these entries describe the limit that task makes the check apply.
+Blocked on `063-oversized-artifacts-warn-with-a-fix`'s task 15, since these entries describe the limit that task makes the check apply. Both lines already name `/target`'s shared-constitution report (`c6a0dca2`); this task adds the four project files to them.
 
 - [ ] Update `README.md`'s `[artifacts]` entry to say `read-size-bytes` also limits the four project files, `AGENTS.md` among them even though it loads in every session rather than through a file read.
 - [ ] Make the same change to the commented schema in `framework/bootstrap/ductus.md` §Project Configuration, and copy it into `framework/bootstrap/govern.md`.
@@ -42,7 +42,7 @@ Blocked on `063-oversized-artifacts-warn-with-a-fix`'s task 15, since these entr
 
 ## 5. Refuse growth in the shipped hook
 
-Blocked on `063-oversized-artifacts-warn-with-a-fix`'s task from task 1, because the hook calls the staged mode that task builds.
+Blocked on `063-oversized-artifacts-warn-with-a-fix`'s task 15, because the hook calls the staged mode that task builds. It lands in one commit with `050-constitution` task 44's last part: the closing sentence of §text-first-artifacts' length bullet, and the bullet `artifacts-are-as-short-as-their-required-content` quotes, reworded to name this refusal. That commit also cuts at least as many constitution bytes as it adds; the owner chooses which, from candidates measured with `wc -c framework/constitution.md` against `scripts/lint-governing-size.sh`'s 50,000-byte ceiling.
 
 - [ ] Add `check-artifact-size --project-files --staged` to `framework/bootstrap/hooks/ductus-pre-commit` after the re-stage block, beside `check-corpus-links`.
 - [ ] Add a capability probe for the flag: capture `check-artifact-size --help` into a variable, check it for `--project-files`, and halt with the too-old message when the flag is missing.
@@ -62,7 +62,11 @@ Blocked on `063-oversized-artifacts-warn-with-a-fix`'s task from task 1, because
 
 ## 7. Verify the criteria
 
-Blocked on the tasks task 1 appends to `063`, `041`, `055` and `050`, and on tasks 2–6. Those tasks are `063` task 15, `041` task 23, `055` task 14 and `050` task 44.
+Blocked on `063` task 15, on `050` task 44's last part, and on tasks 4–6. `041` task 23 and `055` tasks 14 and 15 are done.
+
+Where the evidence already is: AC6, AC11 and AC12's `claude -p` run is recorded in `b4f4d724`'s message, so the `/tmp` fixture need not survive; rebuild it from that message to re-run it. Read the criteria against these delivering commits: AC1 and AC13 `73f21fc9`; AC2 `cb30b333`; AC3, AC4 and AC9 `b763977c`; AC10 `ab5eaa49`; AC15 `c6a0dca2` and `e8ed5d62`. AC8's layout records are in `cb30b333` and `b763977c`; the size check (`063` task 15) and the hook step (task 5) still owe theirs.
+
+After this task, `041` (task 22 pending, another line of work), `050` (tasks 42 and 44), `055` (no task pending), `063` and this spec each need `/ductus:review`, `/ductus:analyze` and the owner's approval to reach `done`. The release tag follows.
 
 - [ ] Read each of this spec's criteria against the tree, including AC6, AC11 and AC12's recorded `claude -p` run over a fixture project under `/tmp`.
 - [ ] For AC7, confirm that `041`'s walk landed on `main` no later than the size check and the hook step. Confirm with `git tag --contains` that no `ductus-v*` tag holds either commit without the other.
