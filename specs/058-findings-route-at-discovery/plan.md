@@ -431,11 +431,11 @@ received.
   6. replaces the introduction paragraph too, but only when it is the pre-058
      template's text verbatim. That paragraph also described incidental
      capture, and a customized one is the adopter's.
-- **The later migration.** A `framework/migrations.toml` entry at
-  `introduced_in = "0.60.0"`, with an id sorting after
-  `remove-legacy-constitutions-region` on the tie-break so a `--ref=main`
-  adopter that recorded that id still runs it, and `target_paths =
-  ["specs/inbox.md"]`. Its procedure removes the first `<!-- Rules:` comment
+- **The later migration.** A `framework/migrations.toml` entry whose
+  `introduced_in` is the version of the release that ships it. When other
+  entries already carry that version, its id sorts after the newest of them
+  on the tie-break, so a `--ref=main` adopter that recorded that id still runs
+  it. `target_paths = ["specs/inbox.md"]`. Its procedure removes the first `<!-- Rules:` comment
   whatever its text, as `inbox-guidance-refresh` replaced one whatever its
   text, and each line outside a comment or fence that is exactly the former
   placeholder, `- [ ] {Brief description of the issue and any relevant

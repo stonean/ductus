@@ -15,9 +15,9 @@
 //!
 //! Form: entries are written as checkboxes — `- [ ] {text}` — matching the
 //! constitution's §bug-handling ("one a person logs stays a checkbox in
-//! `specs/inbox.md` until done, then is removed"). A caller-supplied leading marker is stripped so it cannot
-//! double, and removal strips the checkbox marker too, so both forms compare
-//! by content.
+//! `specs/inbox.md` until done, then is removed"). A caller-supplied leading
+//! marker is stripped so it cannot double, and removal strips the checkbox
+//! marker too, so both forms compare by content.
 //!
 //! Counting is comment/fence-aware: an older inbox's `<!-- Rules: … -->`
 //! guidance embeds `- ` lines that are not items, so `item-count` uses the

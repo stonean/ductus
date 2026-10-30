@@ -39,7 +39,7 @@ New sections are added to the constitution for bug handling and scenario lifecyc
 | File | Action | Purpose |
 | --- | --- | --- |
 | `framework/templates/spec/scenario.md` | Create | Scenario document starter with a `section` frontmatter field, Context, Behavior, Edge Cases |
-| `framework/templates/project/inbox.md` | Create | Inbox format with migration rules |
+| `framework/templates/project/inbox.md` | Create | Inbox heading and introduction, pointing at §brownfield-inbox for the rules that migrate its items |
 | `framework/templates/spec/spec.md` | Modify | Add reference to scenarios directory convention |
 | `framework/constitution.md` | Modify | Add bug handling section with decision tree, scenario lifecycle, scenario directory convention |
 | `framework/commands/amend.md` | Create | `/amend` command template for creating scenario files |

@@ -2383,10 +2383,9 @@ pub(crate) fn strip_bullet_marker(text: &str) -> String {
 /// An inbox's HTML comments can hold `- ` lines, as the `<!-- Rules: … -->`
 /// guidance block older inboxes carry does; without comment-awareness those
 /// would be miscounted as items and could even be matched for removal.
-/// Shared by the inbox count
-/// `append-inbox` reports, `remove-inbox-item`'s removal, the dashboard's
-/// inbox row, and `check-promotion-coverage`'s entry walk, so all agree on
-/// which lines are real bullets.
+/// Shared by the inbox count `append-inbox` reports, `remove-inbox-item`'s
+/// removal, the dashboard's inbox row, and `check-promotion-coverage`'s entry
+/// walk, so all agree on which lines are real bullets.
 pub(crate) fn iter_bullets(content: &str) -> impl Iterator<Item = (usize, String)> + '_ {
     let mut skip = SkipScanner::default();
     content.lines().enumerate().filter_map(move |(idx, line)| {
