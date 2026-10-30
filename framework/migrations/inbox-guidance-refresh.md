@@ -36,7 +36,7 @@ This migration rewrites the guidance and nothing else. **Items are never touched
    §brownfield-inbox).
    ```
 
-6. **Report** one line naming what changed — `inbox-guidance-refresh: refreshed the guidance comment`, or `inbox-guidance-refresh: removed the guidance comment` when the template carries none, followed by `and the introduction` when step 5 replaced it — and the item count, unchanged, so the operator can see that nothing below the header moved.
+6. **Report** one line naming what changed — `inbox-guidance-refresh: refreshed the guidance comment`, or `inbox-guidance-refresh: removed the guidance comment` when the template carries none, followed by `and replaced the introduction` when step 5 replaced it — and the item count, unchanged, so the operator can see that nothing below the header moved.
 
 ## Verification
 
