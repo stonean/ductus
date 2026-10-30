@@ -117,3 +117,11 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Implement the behavior described in `scenarios/target-reports-each-constitutions-size.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
+
+## 15. /ductus resolves shared constitutions without measuring them
+
+- [x] Give `resolve-constitutions` an `unmeasured` argument (`--unmeasured` on the CLI, `unmeasured: true` over MCP) under which `run_measured` returns the unmeasured resolution and reads no `[artifacts]` setting; record it in `data-model.md`.
+- [x] Pass it from `framework/bootstrap/ductus.md` §Shared constitution imports step 1, and copy the change into `framework/bootstrap/govern.md`.
+- [x] Test that an unmeasured call with a malformed `read-size-bytes` and a registered entry does not halt and carries no `threshold` or size, and show the test fails with the argument ignored.
+
+- **Done when**: a malformed `[artifacts] read-size-bytes` never halts `/ductus`, `/target` still measures and still halts on it, and the test fails with the argument ignored. Found in task 14's change: `/ductus` called the measured entry; the owner chose on 2026-10-29 to keep it unmeasured (`QUAL-DELEG-001`).

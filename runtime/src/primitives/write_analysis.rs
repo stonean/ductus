@@ -176,7 +176,7 @@ pub fn run(args: &WriteAnalysisArgs, repo: &Path) -> Result<WriteAnalysisResult>
     // own reason instead, which is the honest answer: nothing registered was
     // loaded, and the run cannot say how many sources that was.
     match crate::primitives::resolve_constitutions::run(
-        &crate::schema::primitives::ResolveConstitutionsArgs {},
+        &crate::schema::primitives::ResolveConstitutionsArgs::default(),
         repo,
     ) {
         Ok(governance) if !governance.skipped.is_empty() => {

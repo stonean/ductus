@@ -909,7 +909,7 @@ On the runtime path both are `apply-manifest` `create` entries (§Instructions s
 
 **Shared constitution imports** (strategy: merge, layout-derived) — install or update a framework-managed block in each selected layout's **native rules file**, listing the shared constitutions registered in `[constitutions.*]` (§Project Configuration, spec 055).
 
-1. Invoke `resolve-constitutions` to get the registered entries split into `loaded` and `skipped`.
+1. Invoke `resolve-constitutions` with `unmeasured: true` (`--unmeasured` on the CLI) to get the registered entries split into `loaded` and `skipped`. Unmeasured, it reads no `[artifacts]` setting, which this step does not use, so a malformed one never halts `/ductus`; `/{project}:target` is where each source's size is reported.
 2. Determine the target file from the Agent Registry's derived **Native rules file** value — `CLAUDE.md` for `claude-style`, `AGENTS.md` for the `antigravity`, `opencode` and `pi` layouts. When both kinds of agent are selected, both files get a block. The file itself is strategy `skip` and is never overwritten; only the managed region is rewritten.
 3. Invoke `merge-managed-block` against that file with `marker-style: "html-comment"` and `marker: "ductus:constitutions"`, supplying one line per entry in `loaded`, in the order returned:
    - **`claude-style`** → `@{document-path}`, the import form Claude Code resolves and the template's `@AGENTS.md` line uses, with a backslash before each space in the path.

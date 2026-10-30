@@ -40,6 +40,8 @@ and empty `skipped` — indistinguishable by design (AC1).
 
 ## Primitive result shape
 
+`resolve-constitutions` takes one argument, `unmeasured` (boolean, default `false`; `--unmeasured` on the CLI). Set, the call returns the resolution without measuring: no `[artifacts]` setting is read, and no record carries a size or `threshold`. `/ductus` sets it, since it writes the imports block and uses no size.
+
 `resolve-constitutions` returns:
 
 | Field | Type | Meaning |
@@ -65,10 +67,11 @@ Each `loaded` record also carries its measurement (scenario
 | `over-limit` | boolean | Whether `bytes` is over `threshold`; a document at it is not. Present exactly when `bytes` is |
 | `warning` | string | The runtime's wording: alias, size, limit, and the fix, a cut in the repository `repo` names. Present exactly when `over-limit` is true |
 
-**The primitive entry measures; `write-review` and `write-analysis` do not.** The MCP
-tool, the CLI subcommand and `ductus exec` measure, and a malformed `read-size-bytes`
-halts them once an entry is registered. The two record writers resolve unmeasured, so
-the setting never halts them. With nothing registered nothing new is read: no
+**The primitive entry measures; `write-review`, `write-analysis` and `/ductus` do not.**
+The MCP tool, the CLI subcommand and `ductus exec` measure unless `unmeasured` is set, and
+a malformed `read-size-bytes` halts them once an entry is registered. The two record
+writers resolve through the unmeasured function and `/ductus` passes `unmeasured`, so
+the setting never halts any of the three. With nothing registered nothing new is read: no
 `threshold`, and no halt (AC1).
 
 ## Notes

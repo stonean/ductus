@@ -73,6 +73,28 @@ fn the_cli_subcommand_measures_each_loaded_document() {
     assert_measured(&serde_json::from_slice(&output.stdout).expect("a JSON result"));
 }
 
+/// `--unmeasured` is how `/ductus` resolves the registry: a malformed read
+/// size, which halts the measured subcommand, does not halt it, and no record
+/// carries a size (spec 055 task 15).
+#[test]
+fn the_cli_subcommand_resolves_unmeasured_on_request() {
+    let dir = project("read-size-bytes = \"lots\"", 101);
+    assert!(
+        !cli(dir.path()).status.success(),
+        "the measured subcommand halts on a malformed read size"
+    );
+    let output = ductus_command(env!("CARGO_BIN_EXE_ductus"))
+        .args(["resolve-constitutions", "--unmeasured"])
+        .current_dir(dir.path())
+        .output()
+        .expect("binary runs");
+    assert!(output.status.success(), "{output:?}");
+    let result: Value = serde_json::from_slice(&output.stdout).expect("a JSON result");
+    assert_eq!(result.get("threshold"), None, "{result}");
+    assert_eq!(result["loaded"][0]["alias"], "acme", "{result}");
+    assert_eq!(result["loaded"][0].get("bytes"), None, "{result}");
+}
+
 /// The measured entry reads `[artifacts]`, so it names an unknown key there,
 /// as every reader of a section names the unknown keys of the section it
 /// reads (spec 019) — and only once it measures, since with nothing

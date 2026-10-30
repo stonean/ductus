@@ -118,7 +118,9 @@ pub fn run(_args: &ResolveConstitutionsArgs, repo: &Path) -> Result<ResolveConst
 /// With nothing registered nothing new is read — the threshold is not
 /// resolved and the result is [`run`]'s, with no `threshold` — so a project
 /// without the feature reads exactly what it did before (AC1), and a
-/// malformed read size halts only a run that has something to measure.
+/// malformed read size halts only a run that has something to measure. The
+/// `unmeasured` argument returns [`run`]'s result the same way, for `/ductus`,
+/// which writes the imports block and uses no size.
 ///
 /// # Errors
 ///
@@ -131,7 +133,7 @@ pub fn run_measured(
     repo: &Path,
 ) -> Result<ResolveConstitutionsResult> {
     let mut result = run(args, repo)?;
-    if result.examined == 0 {
+    if args.unmeasured || result.examined == 0 {
         return Ok(result);
     }
     let (threshold, notices) = resolve_threshold(repo)?;
@@ -302,7 +304,7 @@ mod tests {
     }
 
     fn run_in(dir: &TempDir) -> ResolveConstitutionsResult {
-        run(&ResolveConstitutionsArgs {}, dir.path()).unwrap()
+        run(&ResolveConstitutionsArgs::default(), dir.path()).unwrap()
     }
 
     /// The description reaches the record rather than stopping at the parser —
@@ -531,7 +533,7 @@ mod tests {
         // A config that does not parse must not read as "nothing registered" —
         // that would silently drop every rule the project declared.
         let dir = repo_with_config(Some("[constitutions.acme]\nrepo = \n"));
-        let err = run(&ResolveConstitutionsArgs {}, dir.path());
+        let err = run(&ResolveConstitutionsArgs::default(), dir.path());
         assert!(err.is_err());
     }
 
@@ -540,7 +542,7 @@ mod tests {
         let dir = repo_with_config(Some(
             "[constitutions.acme]\nrepo = \"https://example.test/g\"\n",
         ));
-        assert!(run(&ResolveConstitutionsArgs {}, dir.path()).is_err());
+        assert!(run(&ResolveConstitutionsArgs::default(), dir.path()).is_err());
     }
 
     /// The bug this validation closes, first half. Reproduced against the
@@ -556,7 +558,7 @@ mod tests {
         fs::create_dir_all(&checkout).unwrap();
         fs::write(checkout.join("constitution.md"), "# House rules\n").unwrap();
 
-        let err = run(&ResolveConstitutionsArgs {}, dir.path()).expect_err("halts");
+        let err = run(&ResolveConstitutionsArgs::default(), dir.path()).expect_err("halts");
         assert!(
             matches!(
                 &err,
@@ -578,7 +580,7 @@ mod tests {
         let dir = repo_with_config(Some(
             "[constitutions.acme]\nrepo = \"https://example.test/g\"\npath = \"\"\n",
         ));
-        let err = run(&ResolveConstitutionsArgs {}, dir.path()).expect_err("halts");
+        let err = run(&ResolveConstitutionsArgs::default(), dir.path()).expect_err("halts");
         let PrimitiveError::InvalidConstitutionEntry { alias, field, .. } = &err else {
             panic!("expected a value rejection, got: {err}");
         };
@@ -612,7 +614,7 @@ mod tests {
         let dir = repo_with_config(Some(
             "[constitutions.\"my org\"]\nrepo = \"https://example.test/g\"\npath = \"gov\"\n",
         ));
-        let err = run(&ResolveConstitutionsArgs {}, dir.path()).expect_err("halts");
+        let err = run(&ResolveConstitutionsArgs::default(), dir.path()).expect_err("halts");
         let PrimitiveError::InvalidConstitutionEntry { alias, field, .. } = &err else {
             panic!("expected a value rejection, got: {err}");
         };
@@ -625,7 +627,7 @@ mod tests {
     #[test]
     fn an_unparseable_config_stays_a_toml_error_not_a_value_rejection() {
         let dir = repo_with_config(Some("[constitutions.acme]\nrepo = \n"));
-        let err = run(&ResolveConstitutionsArgs {}, dir.path()).expect_err("halts");
+        let err = run(&ResolveConstitutionsArgs::default(), dir.path()).expect_err("halts");
         assert!(
             matches!(err, PrimitiveError::Toml { .. }),
             "unparseable is not a value rejection: {err}"
@@ -643,7 +645,7 @@ mod tests {
     }
 
     fn measured_in(dir: &TempDir) -> Result<ResolveConstitutionsResult> {
-        run_measured(&ResolveConstitutionsArgs {}, dir.path())
+        run_measured(&ResolveConstitutionsArgs::default(), dir.path())
     }
 
     /// The scenario's runtime test: a document one byte over the limit is
@@ -776,6 +778,24 @@ mod tests {
             ),
             "{err}"
         );
+    }
+
+    /// `/ductus` passes `unmeasured`, so a malformed read size that halts the
+    /// measured entry never halts it, and nothing is measured (task 15).
+    #[test]
+    fn an_unmeasured_call_reads_no_read_size() {
+        let dir = repo_with_config(Some(
+            "[artifacts]\nread-size-bytes = \"lots\"\n\
+             [constitutions.acme]\nrepo = \"https://example.test/g\"\npath = \"gov\"\n",
+        ));
+        checkout_of_size(&dir, "gov", 10);
+        let args = ResolveConstitutionsArgs { unmeasured: true };
+        let result = run_measured(&args, dir.path()).expect("an unmeasured call never halts");
+        assert_eq!(result.threshold, None, "{result:?}");
+        let [acme] = result.loaded.as_slice() else {
+            panic!("the entry still resolves: {result:?}");
+        };
+        assert_eq!((acme.bytes, acme.over_limit), (None, None), "{acme:?}");
     }
 
     /// `write-review` and `write-analysis` resolve through [`run`], so a

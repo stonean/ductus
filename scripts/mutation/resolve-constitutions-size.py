@@ -79,7 +79,7 @@ MUTATIONS = [
     (
         'M8 a project with nothing registered still resolves the read size',
         'src/primitives/resolve_constitutions.rs',
-        '    if result.examined == 0 {\n        return Ok(result);\n    }\n',
+        '    if args.unmeasured || result.examined == 0 {\n        return Ok(result);\n    }\n',
         '',
         'resolve_constitutions::tests::with_nothing_registered_the_result_carries_no_new_key',
     ),
@@ -110,5 +110,12 @@ MUTATIONS = [
         '    for record in &mut result.loaded {',
         '    for record in result.loaded.iter_mut().take(1) {',
         'resolve_constitutions::tests::two_aliases_on_one_checkout_both_report_its_size',
+    ),
+    (
+        'M13 an unmeasured call still measures',
+        'src/primitives/resolve_constitutions.rs',
+        '    if args.unmeasured || result.examined == 0 {',
+        '    if result.examined == 0 {',
+        'resolve_constitutions::tests::an_unmeasured_call_reads_no_read_size',
     ),
 ]

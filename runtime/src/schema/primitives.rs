@@ -3823,14 +3823,21 @@ pub struct ResolveReferencesResult {
 
 // -- resolve-constitutions ----------------------------------------------------
 
-/// Args for `resolve-constitutions`. Takes nothing: the registry is read from
-/// the project config at the repo root, which the runtime supplies. There is
-/// no per-call selection because a run either loads what the project declared
-/// or loads nothing — a caller choosing a subset would be choosing which rules
-/// bind it.
+/// Args for `resolve-constitutions`. The registry is read from the project
+/// config at the repo root, which the runtime supplies. There is no per-call
+/// selection because a run either loads what the project declared or loads
+/// nothing — a caller choosing a subset would be choosing which rules bind it.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::Args)]
 #[serde(rename_all = "kebab-case")]
-pub struct ResolveConstitutionsArgs {}
+pub struct ResolveConstitutionsArgs {
+    /// Resolve without measuring: no `[artifacts]` setting is read, so a
+    /// malformed read size cannot halt the call, and no record carries a size.
+    /// `/ductus` passes it, since it writes the imports block and uses no size
+    /// (spec 055). Off by default, so `/{project}:target` measures.
+    #[serde(default)]
+    #[arg(long)]
+    pub unmeasured: bool,
+}
 
 /// Closed outcome enum for one registered shared constitution (spec 055).
 /// The two failure outcomes are distinct because the spec requires distinct

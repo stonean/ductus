@@ -763,7 +763,7 @@ fn truncate(text: &str, budget: usize) -> String {
 /// went unexamined. The distinction that matters here is unexamined vs not.
 fn render_unexamined_governance(repo: &Path) -> String {
     let governance = match crate::primitives::resolve_constitutions::run(
-        &crate::schema::primitives::ResolveConstitutionsArgs {},
+        &crate::schema::primitives::ResolveConstitutionsArgs::default(),
         repo,
     ) {
         Ok(result) => result,
