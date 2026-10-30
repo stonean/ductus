@@ -20,6 +20,7 @@ section: "Generators and Hooks"
 - A commit stages a hand edit to `framework/bootstrap/configure/claude.md` while another session's `framework/runtime-tools.txt` entry is unstaged: the committed allow block and `.claude/commands/ductus/configure.md` reflect the staged `runtime-tools.txt`, not the working tree's.
 - A generated output staged by hand that disagrees with the staged sources: the hook stages the regenerated output, so the commit's outputs still agree with its sources.
 - A commit staging no generator source: the hook stages no generated file.
+- A markdown file staged in part, from a patch applied to the index while another session's hunks stay in the working tree: the hook's markdown normalization fixes and re-stages only the staged text, so the unstaged hunks never reach the commit. Today it runs `markdownlint-cli2 --fix` on the working copy and `git add`s the whole file, which on 2026-10-29 put another session's uncommitted `framework/bootstrap/ductus.md` and `govern.md` hunks into `9565f306`, rebuilt without them as `c6a0dca2`.
 
 ## Open Questions
 
