@@ -672,7 +672,8 @@ last_applied = "rule-files-relocate"
 # path = "tools/ductus"
 
 # Consumed by /{project}:clarify, /{project}:plan and /{project}:analyze (spec
-# 063), through the check-artifact-size primitive. The size, in bytes, above
+# 063), through the check-artifact-size primitive, and by /{project}:target's
+# report of each loaded shared constitution's size (spec 055). The size, in bytes, above
 # which a spec artifact (spec.md, plan.md, tasks.md, data-model.md, each
 # scenario) may not be read in one call by an agent's file reader; each
 # command warns on every artifact over it and names the fixes. A whole number

@@ -48,6 +48,7 @@ and empty `skipped` — indistinguishable by design (AC1).
 | `skipped` | array | Entries that did not, each with its `reason` |
 | `examined` | integer | Total entries considered — the denominator for `loaded` |
 | `duplicate-paths` | array | Aliases sharing a checkout `path`, if any — `{path, aliases}` groups |
+| `threshold` | object | `{bytes, source}`: the read size each `loaded` document was measured against, `[artifacts] read-size-bytes` or the 50,000-byte default (`source` `config` or `default`). Present only when `examined` is above 0 |
 
 The `loaded` / `skipped` split is the `QUAL-CLAIM-001` shape: a caller cannot report a
 clean result over a source in `skipped` without dropping a field it was handed. Empty
@@ -55,13 +56,29 @@ clean result over a source in `skipped` without dropping a field it was handed. 
 with a non-empty `skipped` means "registered and could not be read" — different answers,
 never collapsed.
 
+Each `loaded` record also carries its measurement (scenario
+`target-reports-each-constitutions-size`). A `skipped` record carries none of these fields:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `bytes` | integer | The document's length on disk. Absent when it could not be opened: *not measured*, never under the limit |
+| `over-limit` | boolean | Whether `bytes` is over `threshold`; a document at it is not. Present exactly when `bytes` is |
+| `warning` | string | The runtime's wording: alias, size, limit, and the fix, a cut in the repository `repo` names. Present exactly when `over-limit` is true |
+
+**The primitive entry measures; `write-review` and `write-analysis` do not.** The MCP
+tool, the CLI subcommand and `ductus exec` measure, and a malformed `read-size-bytes`
+halts them once an entry is registered. The two record writers resolve unmeasured, so
+the setting never halts them. With nothing registered nothing new is read: no
+`threshold`, and no halt (AC1).
+
 ## Notes
 
 - Ordering is **alias order**, from the registry's `BTreeMap`. AC7 requires two projects
   with the same entries over the same checkout content to load the same documents in the
   same order on any machine. Alias order delivers that; config order would not, because
   it does not survive a TOML reformat — and hash-map traversal order would not either.
-- Two entries naming the same `path` are warned and allowed; the document loads once.
-  This matches `/ductus:link`'s duplicate-`repo` posture (warn, do not block).
+- Two entries naming the same `path` are warned and allowed; the document loads once,
+  and each entry reports its size. This matches `/ductus:link`'s duplicate-`repo`
+  posture (warn, do not block).
 - No `ref`, `version`, or revision field exists. The checkout's own git state is the
   version, and ductus never fetches — see the spec's Resolved Questions.

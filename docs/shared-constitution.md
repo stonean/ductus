@@ -83,10 +83,12 @@ description = "Acme engineering house rules"
 $ ductus resolve-constitutions
 {"loaded":[{"alias":"acme","repo":"https://github.com/acme/governance",
   "path":"../governance","document":"../governance/constitution.md",
-  "outcome":"loaded"}],"skipped":[],"examined":1,"duplicate-paths":[]}
+  "description":"Acme engineering house rules","outcome":"loaded",
+  "bytes":57,"over-limit":false}],"skipped":[],"examined":1,
+  "duplicate-paths":[],"threshold":{"bytes":50000,"source":"default"}}
 ```
 
-`examined` is the count of registered entries; anything in `skipped` carries the reason it did not resolve. `/target` reports the same at the start of a session.
+`examined` is the count of registered entries; anything in `skipped` carries the reason it did not resolve. Each loaded document carries its `bytes` against `[artifacts] read-size-bytes`, the `threshold`, and a `warning` naming its own repository as the fix when it is over. `/target` reports the same at the start of a session, and never blocks on the size.
 
 **6. Updating.** Pull the governance repo. There is no pin and no notification — see [Nothing is fetched](#nothing-is-fetched) for why, and for the skew this accepts. If your organization cares about contributors converging, the practical lever is a periodic reminder or a shared setup script, not a `ductus` setting.
 

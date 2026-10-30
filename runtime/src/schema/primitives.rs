@@ -3886,6 +3886,23 @@ pub struct ConstitutionRecord {
     pub description: Option<String>,
     /// Classified outcome.
     pub outcome: ConstitutionOutcome,
+    /// The document's length on disk, in bytes (spec 055, scenario
+    /// `target-reports-each-constitutions-size`). Present only on a `loaded`
+    /// record whose document could be opened, and only from the primitive
+    /// entry: `write-review` and `write-analysis` resolve without measuring.
+    /// Absent means **not measured**, never under the limit — a `skipped`
+    /// record never carries it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bytes: Option<u64>,
+    /// Whether `bytes` is over the result's `threshold`; a document at it is
+    /// not. Present exactly when `bytes` is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub over_limit: Option<bool>,
+    /// The runtime-worded warning for a document over the limit: the alias,
+    /// the size, the limit, and the fix, a cut in the repository `repo`
+    /// names. Present exactly when `over-limit` is true.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub warning: Option<String>,
 }
 
 /// Two or more aliases naming the same checkout. Warned and allowed — the
@@ -3917,6 +3934,13 @@ pub struct ResolveConstitutionsResult {
     pub examined: usize,
     /// Aliases sharing a checkout path, if any.
     pub duplicate_paths: Vec<DuplicateConstitutionPath>,
+    /// The read size each `loaded` document was measured against —
+    /// `[artifacts] read-size-bytes`, or the 50,000-byte default. Present
+    /// only when `examined` is above 0, so a project with no registry reads
+    /// no new key (spec 055, AC1), and never from the resolution
+    /// `write-review` and `write-analysis` run, which measures nothing.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub threshold: Option<ReadSizeThreshold>,
 }
 
 // -- resolve-feature ----------------------------------------------------------

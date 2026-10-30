@@ -1055,7 +1055,14 @@ fn dispatch_primitive(
         "resolve-anchor" => call!(ResolveAnchorArgs, resolve_anchor),
         "resolve-feature" => call!(ResolveFeatureArgs, resolve_feature),
         "resolve-references" => call!(ResolveReferencesArgs, resolve_references),
-        "resolve-constitutions" => call!(ResolveConstitutionsArgs, resolve_constitutions),
+        // The measured entry, not `run`: `write-review` and `write-analysis`
+        // keep the unmeasured resolution (spec 055).
+        "resolve-constitutions" => {
+            let args: ResolveConstitutionsArgs =
+                serde_json::from_value(value).map_err(DispatchError::BadArgs)?;
+            let result = primitives::resolve_constitutions::run_measured(&args, repo)?;
+            Ok(serde_json::to_value(result).unwrap_or(Value::Null))
+        }
         "traverse-deps" => call!(TraverseDepsArgs, traverse_deps),
         "check-rule-ids" => call!(CheckRuleIdsArgs, check_rule_ids),
         "check-promotion-coverage" => {

@@ -723,9 +723,9 @@ fn main() -> ExitCode {
         Command::ResolveReferences(args) => {
             emit_result(primitives::resolve_references::run(&args, &repo))
         }
-        Command::ResolveConstitutions(args) => {
-            emit_result(primitives::resolve_constitutions::run(&args, &repo))
-        }
+        Command::ResolveConstitutions(args) => emit_result(
+            primitives::resolve_constitutions::run_measured(&args, &repo),
+        ),
         Command::TraverseDeps(args) => emit_result(primitives::traverse_deps::run(&args, &repo)),
         Command::CheckRuleIds(args) => emit_result(primitives::check_rule_ids::run(&args, &repo)),
         Command::CheckPromotionCoverage(args) => {

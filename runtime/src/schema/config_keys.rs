@@ -81,7 +81,8 @@ const SECTIONS: &[Section] = &[
     Section::keys("pinned", &["files"]),
     // `/ductus` and `check-orphaned-references`.
     Section::keys("migrations", &["last_applied"]),
-    // `check-artifact-size` (spec 063).
+    // `check-artifact-size` (spec 063), `prune-project` (spec 041) and
+    // `resolve-constitutions`' measured entry (spec 055).
     Section::keys("artifacts", &["read-size-bytes"]),
     // `tech-stack-verified`: `/{project}:review` by hand (spec 020).
     // `disabled-rule-files`: `discover-rule-files` and `dashboard` (spec 025).

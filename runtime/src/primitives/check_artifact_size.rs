@@ -450,7 +450,9 @@ fn effect_text(effect: OnDone) -> &'static str {
 /// with [`PrimitiveError::InvalidReadSize`], and so does a non-table
 /// `artifacts`, since it cannot hold the key. Only an unset key, or an absent
 /// file, means the default (`CFG-ENV-008`). `prune-project` judges the
-/// project files' `over-limit` by it too, so both read one limit one way.
+/// project files' `over-limit` by it too, and `resolve-constitutions`'
+/// measured entry each loaded shared constitution's, so all three read one
+/// limit one way.
 pub(crate) fn resolve_threshold(repo: &Path) -> Result<(ReadSizeThreshold, Vec<String>)> {
     let (path, name) = paths::resolve_config(repo);
     if !path.is_file() {

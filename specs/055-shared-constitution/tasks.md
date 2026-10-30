@@ -114,6 +114,6 @@ Tasks derived from the [plan](plan.md). Complete in order.
 
 ## 14. Report each shared constitution's size
 
-- [ ] Implement the behavior described in `scenarios/target-reports-each-constitutions-size.md`
+- [x] Implement the behavior described in `scenarios/target-reports-each-constitutions-size.md`
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested.
