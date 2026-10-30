@@ -112,7 +112,7 @@ Task 5's step-number sync rewrote 058's scenario `only-unreadable-targets-retain
 
 ## 15. Measure the project files
 
-Blocked on `041-task-pruning`'s `/prune --project` task, because every message this task adds names that command.
+Every message this task adds names `/prune --project`, which `041-task-pruning`'s task 23 landed on 2026-10-29, so this task no longer waits on it.
 
 - [ ] Implement the behavior described in `scenarios/project-files-are-measured.md`
 

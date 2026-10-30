@@ -42,7 +42,7 @@ Blocked on `063-oversized-artifacts-warn-with-a-fix`'s task 15, since these entr
 
 ## 5. Refuse growth in the shipped hook
 
-Blocked on `063-oversized-artifacts-warn-with-a-fix`'s task from task 1, because the hook calls the staged mode that task builds. Also blocked on `041-task-pruning`'s task, because the refusal names `/prune --project`.
+Blocked on `063-oversized-artifacts-warn-with-a-fix`'s task from task 1, because the hook calls the staged mode that task builds.
 
 - [ ] Add `check-artifact-size --project-files --staged` to `framework/bootstrap/hooks/ductus-pre-commit` after the re-stage block, beside `check-corpus-links`.
 - [ ] Add a capability probe for the flag: capture `check-artifact-size --help` into a variable, check it for `--project-files`, and halt with the too-old message when the flag is missing.
