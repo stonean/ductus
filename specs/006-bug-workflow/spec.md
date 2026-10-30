@@ -1,6 +1,6 @@
 ---
 title: "006-bug-workflow — spec"
-status: done
+status: in-progress
 dependencies: []
 tags: [process, scenarios, brownfield]
 next-criterion: 20
@@ -112,7 +112,7 @@ This feature produces the following changes to the framework:
 ## Acceptance Criteria
 
 - [x] AC1: `framework/templates/spec/scenario.md` exists with a `section` frontmatter field, Context, Behavior, and Edge Cases sections
-- [x] AC2: `framework/templates/project/inbox.md` exists with a flat inbox format and migration rules
+- [x] AC2: `framework/templates/project/inbox.md` exists, introduces the inbox as the queue `/log` fills and `/groom` empties, and points at constitution §brownfield-inbox for the rules that migrate its items
 - [x] AC3: `framework/templates/spec/spec.md` references the scenarios directory convention
 - [x] AC4: `framework/constitution.md` includes a bug handling section with the decision tree
 - [x] AC5: `framework/constitution.md` defines scenarios as part of the spec lifecycle

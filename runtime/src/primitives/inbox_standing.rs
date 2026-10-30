@@ -47,7 +47,7 @@ pub(crate) fn standing(repo: &Path) -> InboxStanding {
     };
 
     // The shared comment- and fence-aware bullet grammar, not a second parser:
-    // the inbox template embeds `- ` lines inside its `<!-- Rules: … -->`
+    // an older inbox embeds `- ` lines inside its `<!-- Rules: … -->`
     // guidance block, and counting those once reported ~30 phantom items.
     let bullets: Vec<usize> = super::iter_bullets(&content).map(|(idx, _)| idx).collect();
     if bullets.is_empty() {

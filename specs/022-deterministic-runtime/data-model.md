@@ -545,7 +545,7 @@ Result:
 { "path": "specs/inbox.md", "created": false, "item-count": 4 }
 ```
 
-Appends `- [ ] {text}` (the checkbox inbox form the inbox template and constitution §bug-handling document) atomically to `{specs-root}/inbox.md`, creating the file when missing (from `framework/templates/project/inbox.md` when that file exists on disk — the framework source repo — else a bare `# Inbox` heading). Bullet scanning, for the count, is comment/fence-aware — a `-` line inside the template's `<!-- Rules: … -->` guidance is not an item. `item-count` reports the total inbox bullets after the call. Embedded newlines in `text` are rejected as an operational error (structure injection), matching `append-task`'s single-line rule.
+Appends `- [ ] {text}` (the checkbox inbox form constitution §bug-handling documents) atomically to `{specs-root}/inbox.md`, creating the file when missing (from `framework/templates/project/inbox.md` when that file exists on disk — the framework source repo — else a bare `# Inbox` heading). Bullet scanning, for the count, is comment/fence-aware — a `-` line inside an HTML comment, such as the `<!-- Rules: … -->` guidance block older inboxes carry, is not an item. `item-count` reports the total inbox bullets after the call. Embedded newlines in `text` are rejected as an operational error (structure injection), matching `append-task`'s single-line rule.
 
 ### `derive-routing-candidates` — the homes proposed work could already have
 

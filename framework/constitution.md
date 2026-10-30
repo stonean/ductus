@@ -285,7 +285,7 @@ Rule IDs are never renumbered, and a rule is deprecated with a `**DEPRECATED in 
 
 ### Brownfield Inbox
 
-`specs/inbox.md` captures todos a person has not yet assigned to a spec: `/log` is its only producer, and `/groom` routes each item home. Its standing use is **brownfield migration** — parking known issues until a spec absorbs them — so do not frontfill bugs nobody is working on. When an item routes to a chore, fix it, leaving it only when the fix is blocked or proves not to be mechanical. The brownfield backlog drains toward empty as adoption completes; the file persists while people log todos. **The standing count is a notice, never a gate**: `/{project}:status` renders it on every run, so capture stays free. Grooming follows `.ductus/reference/groom.md` **§Inbox upkeep**.
+`specs/inbox.md` captures todos a person has not yet assigned to a spec: `/log` is its only producer, and `/groom` routes each item home. An item is a todo, never a status or handoff note: handoff state is prose in its pending task (§tasks-phase). Its standing use is **brownfield migration** — parking known issues until a spec absorbs them — so do not frontfill bugs nobody is working on. The brownfield backlog drains toward empty as adoption completes; the file persists while people log todos. **The standing count is a notice, never a gate**: `/{project}:status` renders it on every run, so capture stays free. Grooming follows `.ductus/reference/groom.md` **§Inbox upkeep**.
 
 #### Finding dispositions
 

@@ -2380,9 +2380,10 @@ pub(crate) fn strip_bullet_marker(text: &str) -> String {
 
 /// Iterate the real inbox/list bullets of `content` as `(line_index, text)`,
 /// skipping fenced code blocks and HTML-comment regions via [`SkipScanner`].
-/// The inbox template embeds `- ` lines inside its `<!-- Rules: … -->`
-/// guidance comment; without comment-awareness those would be miscounted as
-/// items and could even be matched for removal. Shared by the inbox count
+/// An inbox's HTML comments can hold `- ` lines, as the `<!-- Rules: … -->`
+/// guidance block older inboxes carry does; without comment-awareness those
+/// would be miscounted as items and could even be matched for removal.
+/// Shared by the inbox count
 /// `append-inbox` reports, `remove-inbox-item`'s removal, the dashboard's
 /// inbox row, and `check-promotion-coverage`'s entry walk, so all agree on
 /// which lines are real bullets.

@@ -1,5 +1,5 @@
 ---
-status: done
+status: in-progress
 dependencies: [008-security-rules, 020-code-review, 022-deterministic-runtime, 047-analyze-findings-durability, 050-constitution, 057-analyze-artifact-and-record-relocation]
 cross-spec-impact:
   - 008-security-rules
@@ -9,7 +9,7 @@ cross-spec-impact:
   - 050-constitution
   - 054-remove-supersession
   - 057-analyze-artifact-and-record-relocation
-next-criterion: 35
+next-criterion: 36
 ---
 
 # 058 — Findings route at discovery
@@ -445,8 +445,11 @@ spec's links to it. Each also gets the contract change itself:
 - **An adopter inbox keeps its original guidance comment.** The inbox is
   installed once and never updated, so the header in an existing adopter's
   inbox still describes automatic capture. A registry migration replaces that
-  comment block with the new template's, and the introduction too when it is
-  the old template's text unchanged, and leaves every item untouched.
+  comment block with the current template's, or removes it now that the
+  template carries none, and the introduction too when it is the old
+  template's text unchanged, and leaves every item untouched. An inbox that
+  ran it while the template carried a comment keeps that comment, and the
+  template's former placeholder item, until a later entry removes both.
 
 ## Acceptance Criteria
 
@@ -471,7 +474,8 @@ spec's links to it. Each also gets the contract change itself:
 - [x] AC19: `docs/analyze.md`, `docs/slash-commands.md`, and `README.md` describe the new behavior, and none of them states that review, analyze, or implement writes to the inbox.
 - [x] AC20: `AGENTS.md` entries that describe automatic inbox capture as current behavior are updated or retired in the same change.
 - [x] AC21: The generated per-agent command mirrors match their updated sources, and the command-parity audit passes.
-- [x] AC22: The change adds one `framework/migrations.toml` entry, with its `framework/migrations/{id}.md` procedure. The procedure replaces the guidance comment in an adopter's existing inbox with the new template's, leaves every item byte-identical, and is idempotent. The migration-coverage audit (Family 10) passes.
+- [ ] AC22: The change adds one `framework/migrations.toml` entry, with its `framework/migrations/{id}.md` procedure. The procedure replaces the guidance comment in an adopter's existing inbox with the current template's, or removes it when the template carries none, leaves every item byte-identical, and is idempotent. The migration-coverage audit (Family 10) passes.
+- [ ] AC35: A later `framework/migrations.toml` entry removes the guidance comment, whatever its text, and the template's former placeholder item, only as that exact text, from an adopter's existing inbox that already ran `inbox-guidance-refresh` against a template carrying the comment. It leaves every other item byte-identical and is idempotent.
 - [x] AC23: A repo-wide search for the automatic-capture shape — `captured during` bullets, `inbox-additions`, a `Captured issues` section, or an `append-inbox` call outside `/{project}:log` — returns no hit outside this spec, Resolved Questions sections, signposts, and git history.
 - [x] AC24: Full markdown lint passes across every file the change touches.
 - [x] AC25: `check-review-gate` blocks `in-progress → done` on an outstanding gating finding — an unwaived review MUST or SHOULD violation, or a hard-fail or blocking analyze finding — and never on a record's `undispositioned` count, names the count and the record it is in, and checks this only after every existing review and analyze check has passed.
@@ -579,3 +583,11 @@ spec's links to it. Each also gets the contract change itself:
   every finding is dispositioned across review, analyze and implement. The overlap
   Family 7 sees, `framework/constitution.md`, holds both rules in separate
   sections; folding them would bury the disposition rule inside a record format.
+- **Why split from security-rules:** `008-security-rules` owns the security
+  rule files and the rule-file format every rule surface follows. This spec
+  owns how a finding is dispositioned once a run produces one, 008's brownfield
+  security audit included, which reports its findings by this spec's rule
+  rather than writing inbox items. The overlap Family 7 sees,
+  `framework/constitution.md`, holds the rules tier and the disposition rule in
+  separate sections; folding them would bury the disposition rule inside a
+  rule-file format.

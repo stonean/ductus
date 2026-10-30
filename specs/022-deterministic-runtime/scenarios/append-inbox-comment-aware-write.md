@@ -8,7 +8,7 @@ section: "Follow-on scenarios"
 
 `append-inbox`'s `append_bullet` (`runtime/src/primitives/append_inbox.rs`) writes the new `- [ ] {text}` bullet **comment-blind** — it appends at the file's end without regard for HTML comments or code fences — while the inbox *read* side counts and dedups **comment-aware** (`iter_bullets` / `count_inbox_bullets` in `primitives/mod.rs`, the shared inbox grammar that ignores bullets inside `<!-- … -->`). The write and read disagree about what counts as inbox content.
 
-If `inbox.md` ends inside an *unclosed* `<!--` HTML comment (no closing `-->` — malformed input), the appended bullet lands inside the comment region, and `count_inbox_bullets` then skips it: the item is both invisible to the reader and undercounted. The shipped template closes its comment before the trailing bullet, so this requires malformed input and is low priority — the latent smell is the asymmetry itself (comment-aware read, comment-blind write). Surfaced 2026-07-12 during the command-runtime alignment review (gvrn 0.20.0).
+If `inbox.md` ends inside an *unclosed* `<!--` HTML comment (no closing `-->` — malformed input), the appended bullet lands inside the comment region, and `count_inbox_bullets` then skips it: the item is both invisible to the reader and undercounted. The shipped template carries no comment, so this requires malformed input and is low priority — the latent smell is the asymmetry itself (comment-aware read, comment-blind write). Surfaced 2026-07-12 during the command-runtime alignment review (gvrn 0.20.0).
 
 ## Behavior
 

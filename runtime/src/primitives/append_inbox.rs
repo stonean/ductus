@@ -14,13 +14,12 @@
 //! adoption — so the heading fallback is the common adopter-side create.
 //!
 //! Form: entries are written as checkboxes — `- [ ] {text}` — matching the
-//! inbox template's documented entry form and the constitution's
-//! §bug-handling ("tracked as a checkbox … resolved by being done, then
-//! removed"). A caller-supplied leading marker is stripped so it cannot
+//! constitution's §bug-handling ("one a person logs stays a checkbox in
+//! `specs/inbox.md` until done, then is removed"). A caller-supplied leading marker is stripped so it cannot
 //! double, and removal strips the checkbox marker too, so both forms compare
 //! by content.
 //!
-//! Counting is comment/fence-aware: the inbox template's `<!-- Rules: … -->`
+//! Counting is comment/fence-aware: an older inbox's `<!-- Rules: … -->`
 //! guidance embeds `- ` lines that are not items, so `item-count` uses the
 //! shared bullet grammar rather than counting list markers.
 
@@ -223,7 +222,7 @@ mod tests {
 
     #[test]
     fn item_count_ignores_bullets_inside_comment_regions() {
-        // The inbox template embeds `- ` lines inside a multi-line
+        // An older inbox embeds `- ` lines inside a multi-line
         // `<!-- Rules: … -->` comment; those are not real items. Only the
         // one real appended bullet is counted.
         let tmp = tempdir().unwrap();

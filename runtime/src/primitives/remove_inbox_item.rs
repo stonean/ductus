@@ -69,8 +69,9 @@ pub fn run(args: &RemoveInboxItemArgs, repo: &Path) -> Result<RemoveInboxItemRes
 
 /// Remove the first real (comment/fence-aware) bullet line whose text equals
 /// `target`, returning the rewritten content, or `None` when no bullet
-/// matches. A `- ` line inside the template's `<!-- Rules: … -->` guidance is
-/// never a match, so it can never be removed by content collision.
+/// matches. A `- ` line inside an HTML comment, such as an older inbox's
+/// `<!-- Rules: … -->` guidance, is never a match, so it can never be removed
+/// by content collision.
 fn remove_bullet(content: &str, target: &str) -> Option<String> {
     let lines: Vec<&str> = content.lines().collect();
     let idx = iter_bullets(content).find_map(|(idx, text)| (text == target).then_some(idx))?;
@@ -236,7 +237,7 @@ mod tests {
 
     #[test]
     fn comment_embedded_bullets_are_not_counted_or_removed() {
-        // The template guidance comment holds `- ` lines that are not items.
+        // An older inbox's guidance comment holds `- ` lines that are not items.
         // They must not be counted, and a content collision with one must not
         // remove it.
         let tmp = tempdir().unwrap();

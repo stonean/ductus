@@ -47,3 +47,12 @@ Blocked on task 1: the store tests run against the migrated schema.
 Start with `/ductus:target 058-findings-route-at-discovery/findings-cost-in-proportion-to-risk` and `/ductus:clarify`; the owner pre-authorized the scenario's `Recommended:` answers (2026-10-26). A record's `dispositions:` map does not split its counts by tier, but the gating findings already gate through other checks — an analyze hard-fail or blocking finding keeps `blocking: true` until the re-check no longer produces it, and review MUST and SHOULD violations have their own counts — so read `check-review-gate`'s undispositioned check against that before changing it, and keep every other gate check as is. The constitution text to change is §brownfield-inbox Finding dispositions (the gate bullet) and the §implement-phase outstanding-SHOULD bullet, within the ceiling in `scripts/lint-governing-size.sh` (then the file's exact size), so it removes as many bytes as it adds; `AGENTS.md` (about 3 KB under its 50,000 ceiling) gets the fix-round entry's scope.
 
 - **Done when**: the scenario's described behavior is correctly implemented and tested
+
+## 2. Remove the guidance comment and placeholder from inboxes that kept them
+
+- [ ] Add the later `framework/migrations.toml` entry and its `framework/migrations/{id}.md` procedure as the plan's **The later migration** describes, satisfying AC35
+- [ ] Verify it and `inbox-guidance-refresh`'s removal branch with a real adopter bootstrap from a subject adopted before 0.53.0, then tick AC22 and AC35
+
+Waits on `013-text-first-artifacts`' task for `scenarios/the-precheck-ignores-what-the-same-run-wrote.md`, and must not be pushed before it lands: the Frontmatter Migration's precheck refuses a tree a Pre-run Migration dirtied under `specs/`, and no entry after 0.53.0 writes there, so this one would put every adopter past 0.53.0 in front of that refusal, a `--ref=main` adopter on the push. Its id must sort after the newest 0.60.0 entry's when it lands, not only after `remove-legacy-constitutions-region`. A subject adopted before 0.53.0 crosses both inbox entries, so one bootstrap verifies both; it meets the same refusal until 013's task lands.
+
+- **Done when**: a real adopter bootstrap from a pre-0.53.0 subject leaves an inbox with no guidance comment and no placeholder, every other item byte-identical, and a second run writes nothing

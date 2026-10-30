@@ -410,10 +410,12 @@ removed.
 and no migration targets it. So an adopter keeps whatever header it first
 received.
 
-- **The template.** `framework/templates/project/inbox.md` drops the intro's
-  incidental-capture role (`:3-6`), the "chores… left in place" line
-  (`:16-18`), and forms 2 and 3 (`:27-41`). This repository's own
-  `specs/inbox.md` header follows.
+- **The template.** `framework/templates/project/inbox.md` is its heading and
+  an introduction naming `/log` and `/groom` and pointing at
+  §brownfield-inbox. It carries no guidance comment, since those rules are the
+  constitution's and a copy drifts, and no placeholder item, which every inbox
+  primitive would count as outstanding. This repository's own `specs/inbox.md`
+  matches it.
 - **The migration.** A `framework/migrations.toml` entry, `inbox-guidance-refresh`
   (`introduced_in = "0.53.0"`, `target_paths = ["specs/inbox.md"]`, an
   adopter-relative path, so Family 10b does not apply), gets a procedure file
@@ -424,10 +426,21 @@ received.
      the template's;
   4. skips a pinned inbox with a warning;
   5. otherwise replaces the first `<!-- Rules:` comment block with the
-     template's, preserving line endings and leaving every item byte-identical;
+     template's, or removes it when the template carries none, preserving
+     line endings and leaving every item byte-identical;
   6. replaces the introduction paragraph too, but only when it is the pre-058
      template's text verbatim. That paragraph also described incidental
      capture, and a customized one is the adopter's.
+- **The later migration.** A `framework/migrations.toml` entry at
+  `introduced_in = "0.60.0"`, with an id sorting after
+  `remove-legacy-constitutions-region` on the tie-break so a `--ref=main`
+  adopter that recorded that id still runs it, and `target_paths =
+  ["specs/inbox.md"]`. Its procedure removes the first `<!-- Rules:` comment
+  whatever its text, as `inbox-guidance-refresh` replaced one whatever its
+  text, and each line outside a comment or fence that is exactly the former
+  placeholder, `- [ ] {Brief description of the issue and any relevant
+  context}`. It skips a pinned inbox with a warning, preserves line endings,
+  and leaves every other item byte-identical.
 
 ### The adoption security audit reports instead of capturing
 
@@ -521,7 +534,8 @@ gain it too (`framework/bootstrap/configure/claude.md:119-120`, `auggie.md:107-1
 | `.claude/commands/ductus/*.md` | Regenerate | Mirrors, via the pre-commit hook |
 | `framework/constitution.md` | Modify | The rule, stated once |
 | `framework/templates/project/inbox.md`, `specs/inbox.md` | Modify | Manual-capture guidance |
-| `framework/migrations.toml`, `framework/migrations/inbox-guidance-refresh.md` | Create/Modify | Carry the guidance to adopter inboxes |
+| `framework/migrations.toml`, `framework/migrations/inbox-guidance-refresh.md` | Create/Modify | Carry the guidance to adopter inboxes, or remove it once the template carries none |
+| `framework/migrations.toml`, `framework/migrations/{id}.md` for the later entry | Create | Remove the comment and placeholder from inboxes that kept them |
 | `framework/bootstrap/ductus-procedure.md` | Modify | The audit reports instead of capturing |
 | `docs/analyze.md`, `docs/slash-commands.md`, `README.md` | Modify | User-facing descriptions |
 | `AGENTS.md` | Modify | Retire or rewrite the capture-era entries |

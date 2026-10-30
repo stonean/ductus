@@ -229,7 +229,7 @@ introduced_in = "0.53.0"
 # never rewritten, so an adopter who skips this window keeps a header telling
 # every reader that review, analyze, and implement write findings there — the
 # opposite of what the pipeline does — and nothing else would ever correct it.
-summary = "Replace the guidance comment at the top of an existing inbox with the current template's, which documents manual capture only — no command writes findings there any more (spec 058). Every item is left byte-identical."
+summary = "Replace the guidance comment at the top of an existing inbox with the current template's, or remove it when the template carries none, as it has since 0.60.0 (spec 058). Every item is left byte-identical."
 # Adopter-relative: the inbox under the configured spec root. Nothing under
 # framework/ is removed by this migration, so it declares no framework/ target
 # path — Family 10b reads those as paths that must no longer exist, and
