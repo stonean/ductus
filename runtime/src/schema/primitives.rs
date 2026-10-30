@@ -5581,13 +5581,14 @@ pub struct RewriteSpecLinksResult {
     /// retiring directory, and each referrer outside the spec root, that was
     /// read. The subject the empty case describes. A referrer that was not
     /// read is listed in [`Self::skipped`] rather than counted, as a symbolic
-    /// link under the spec root to a markdown file or a directory is, and an
+    /// link under the spec root named `*.md` or to a directory is, and an
     /// absent referrer is neither.
     pub examined: u32,
     /// Referrers that were not read, `system.md` among them, in the order
     /// `check-orphaned-references` reads them, then each other symbolic link
-    /// under the spec root to a markdown file or a directory, in path order,
-    /// which is not followed; every referrer is read, or listed here, before
+    /// under the spec root named `*.md` or to a directory, in path order,
+    /// which is not followed — a spec root that is itself a link is followed
+    /// and not listed; every referrer is read, or listed here, before
     /// anything is written, and every other markdown file under the spec root
     /// is read then too, one that cannot be read as UTF-8 text stopping the
     /// run. A reference in a listed referrer is left as written; that check

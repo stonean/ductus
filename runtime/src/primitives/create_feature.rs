@@ -260,8 +260,9 @@ fn stamp_fold_target(template: &[u8], target: &str, template_rel: &str) -> Resul
 /// Scoped to the identifier, so counters under different identifiers are
 /// independent and two branches cannot collide. The rule is `max + 1`,
 /// the same one the sequential counter uses — which means a retired
-/// number is reusable, accepted because fold-back re-points every in-repo
-/// link before a directory is retired.
+/// number is reusable, accepted because fold-back re-points every link in
+/// the spec root and the root files it reads before a directory is retired,
+/// and names in `skipped` each of those it cannot rewrite (spec 051).
 fn next_branch_number(specs_dir: &Path, identifier: &str) -> u32 {
     list_feature_dirs(specs_dir)
         .iter()

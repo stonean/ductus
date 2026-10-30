@@ -18,7 +18,8 @@ section: "Fold-back on merge"
 
 - **A non-UTF-8 file that holds no link to the retiring directory** still stops the run: the rewrite cannot tell, and the fix is to convert or remove the file and re-run.
 - **A non-UTF-8 referrer under the spec root** (`system.md`) is classified with the referrers, as before: listed once in `skipped`, for `check-orphaned-references` to report what it leaves.
-- **A symbolic link under the spec root**, to a markdown file or a directory, is not followed: it is listed in `skipped` and left as it is, and the pre-commit hook's `check-corpus-links`, which reads through it, names a link in it that no longer resolves. A link that can hold no markdown is not listed. Found by 048's second re-read round on 2026-10-29: until then such a link was passed over unlisted, and a link in it dangled behind `skipped: []`.
+- **A symbolic link under the spec root**, named `*.md` or to a directory, is not followed: it is listed in `skipped` and left as it is, and the pre-commit hook's `check-corpus-links`, which reads through it, names a link in it that no longer resolves. A link to a file under any other name is not listed: neither the rewrite nor `check-corpus-links` reads a file not named `*.md`. Found by 048's second re-read round on 2026-10-29: until then such a link was passed over unlisted, and a link in it dangled behind `skipped: []`.
+- **The spec root is itself a symbolic link**: it is followed, and it is not listed in `skipped`; only a link below it is. Found by 048's third re-read round on 2026-10-29: the walk reports its root as a link even while following it, so the fix of the round before listed the spec root as "not followed" while it rewrote every file under it.
 
 ## Open Questions
 

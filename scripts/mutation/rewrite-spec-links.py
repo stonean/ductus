@@ -389,4 +389,12 @@ MUTATIONS = [
         '        if rewrite.count == 0 {\n            return Ok(());\n        }\n        self.mentions.extend(\n',
         'rewrite_spec_links',
     ),
+    # -- 048's third re-read round: a spec root that is a link is followed
+    (
+        'M53 the spec root itself listed as a symbolic link not followed',
+        'src/primitives/rewrite_spec_links.rs',
+        '            if entry.depth() > 0 && entry.file_type().is_symlink() {\n',
+        '            if entry.file_type().is_symlink() {\n',
+        'rewrite_spec_links',
+    ),
 ]

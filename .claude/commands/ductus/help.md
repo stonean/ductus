@@ -63,7 +63,7 @@ Each feature lives in `specs/NNN-feature-name/` and progresses through these sta
 | Command | Description |
 | --- | --- |
 | `/ductus:amend` | Add a question or a scenario to the targeted spec (classifier-driven). |
-| `/ductus:prune` | Prune a feature's spec directory — drop spent task sections or reset tasks.md, and move plan sections outside the design record home before removing them. |
+| `/ductus:prune` | Prune a feature's spec directory — drop spent task sections or reset tasks.md, and move plan sections outside the design record home before removing them — or, with --project, move each project-file entry to its home. |
 | `/ductus:fold` | Fold a branch-scoped spec into its upstream home and retire the staging directory. |
 | `/ductus:consolidate` | Merge a spec into another and remove its directory, re-pointing every inbound pointer first. |
 

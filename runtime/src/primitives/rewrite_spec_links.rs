@@ -81,11 +81,14 @@
 //! nor written; any other file that cannot be read as UTF-8 text stops the
 //! run before any write, as a directory the walk cannot list does, since a
 //! file the rewrite cannot read may hold a link it would leave dangling once
-//! the directory is retired. The walk follows no symbolic link: one to a
-//! markdown file or a directory is listed in `skipped` and left as it is,
-//! since the write would turn it into a copy and a reference in it would
-//! otherwise dangle with nothing naming it; `check-corpus-links`, which
-//! reads through it, reports such a reference once the directory is gone.
+//! the directory is retired. The walk follows no symbolic link below the
+//! spec root, which may itself be one and is followed: one named `*.md`, or
+//! one to a directory, is listed in `skipped` and left as it is. Writing
+//! through a link to a file would turn it into a copy, and following a
+//! linked directory would write into the tree it names, while a reference in
+//! either would otherwise dangle with nothing naming it; `check-corpus-links`,
+//! which reads through both, reports such a reference once the directory is
+//! gone.
 //! Each file is rewritten from the content read, and a referrer
 //! outside the spec root is never a file the walk writes, so its content
 //! read beforehand is still its content when it is rewritten: the walk
@@ -300,10 +303,11 @@ impl Sweep<'_> {
     /// there was listed in `skipped` and is passed over. Any other file that
     /// cannot be read as UTF-8 text, or a directory the walk cannot list,
     /// stops the run: a file the rewrite cannot read may hold a link it would
-    /// leave dangling once the directory is retired. A symbolic link to a
-    /// markdown file or a directory is listed in `skipped` instead and left
-    /// as it is: a link is a layout an adopter may choose, and naming it is
-    /// what keeps a reference in it from dangling unreported.
+    /// leave dangling once the directory is retired. A symbolic link below
+    /// the spec root named `*.md`, or one to a directory, is listed in
+    /// `skipped` instead and left as it is: a link is a layout an adopter may
+    /// choose, and naming it is what keeps a reference in it from dangling
+    /// unreported. The spec root itself may be a link, and is followed.
     fn read_spec_root(
         &mut self,
         specs_dir: &Path,
@@ -313,7 +317,10 @@ impl Sweep<'_> {
         // Sorted so `rewritten` and `skipped` are in a stable path order
         // rather than whatever order the filesystem hands back — the same
         // reason `list_feature_dirs` sorts. The walk follows no symbolic
-        // link: `file_type` does not follow one, so it is not `is_file`.
+        // link below the root: `file_type` does not follow one, so it is not
+        // `is_file`. walkdir follows a root that is a link, and still reports
+        // that depth-0 entry as one, which is why the link branch below starts
+        // at depth 1.
         let mut files = Vec::new();
         for entry in WalkDir::new(specs_dir).sort_by_file_name() {
             let entry = entry.map_err(|err| PrimitiveError::Io {
@@ -338,13 +345,15 @@ impl Sweep<'_> {
             {
                 continue;
             }
-            // A symbolic link is not rewritten, since the atomic write would
-            // turn it into a copy. One that can hold a link to the retiring
-            // directory, a markdown file or a directory, is listed in
-            // `skipped`, so a reference in it is named rather than left to
-            // dangle behind a clean result. A referrer that is a link was
-            // listed when the referrers were read.
-            if entry.file_type().is_symlink() {
+            // A symbolic link below the root is not rewritten: through a link
+            // to a file the atomic write would turn it into a copy, and
+            // following a linked directory would write into the tree it
+            // names. One named `*.md`, or one to a directory — what
+            // `check-corpus-links` reads through — is listed in `skipped`, so
+            // a reference in it is named rather than left to dangle behind a
+            // clean result. A referrer that is a link was listed when the
+            // referrers were read.
+            if entry.depth() > 0 && entry.file_type().is_symlink() {
                 let holds_markdown =
                     path.extension().is_some_and(|ext| ext == "md") || path.is_dir();
                 if holds_markdown && !referrers.iter().any(|referrer| referrer == path) {
@@ -493,8 +502,8 @@ impl Sweep<'_> {
 /// written, part-way through and so after the files before it were written.
 /// A referrer that is not UTF-8 text is not an error: it is listed in
 /// `skipped`, as a referrer resolving outside the project is, and as a
-/// symbolic link is, whether a referrer or a markdown file or directory
-/// under the spec root.
+/// symbolic link is, whether a referrer or one below the spec root named
+/// `*.md` or to a directory; a spec root that is itself a link is followed.
 pub fn run(args: &RewriteSpecLinksArgs, repo: &Path) -> Result<RewriteSpecLinksResult> {
     if args.from.is_empty() {
         return Err(PrimitiveError::InvalidArgument {
@@ -2550,7 +2559,7 @@ mod tests {
     }
 
     /// Re-read round 2 of 048's review: a symbolic link under the spec root,
-    /// to a markdown file or to a directory, is listed in `skipped` rather
+    /// named `*.md` or to a directory, is listed in `skipped` rather
     /// than passed over, so a link in it to the retiring directory is named
     /// instead of dangling behind `skipped: []`. Neither link is followed or
     /// replaced, the files they name are untouched, and the rest is still
@@ -2771,5 +2780,41 @@ mod tests {
 
         let found: Vec<u32> = result.mentions.iter().map(|mention| mention.line).collect();
         assert_eq!(found, [6], "{:#?}", result.mentions);
+    }
+
+    /// Re-read round 3 of 048's review: the spec root may itself be a
+    /// symbolic link. walkdir follows it and still reports that depth-0 entry
+    /// as a link, so without the depth guard `skipped` named the spec root as
+    /// "not followed" while the files under it were rewritten, and a run
+    /// with nothing pointing at the retiring directory could never report
+    /// *examined and nothing pointed here*. Killed by M53, which removes the
+    /// guard.
+    #[cfg(unix)]
+    #[test]
+    fn a_spec_root_that_is_a_link_is_followed_and_not_listed() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("real")).unwrap();
+        std::os::unix::fs::symlink("real", tmp.path().join("specs")).unwrap();
+        seed_target(tmp.path(), "050-alpha");
+        write(tmp.path(), "1234.1-staged/spec.md", "# staged\n");
+        write(
+            tmp.path(),
+            "060-beta/spec.md",
+            "---\nstatus: done\ndependencies: []\n---\n\n[s](../1234.1-staged/spec.md)\n",
+        );
+
+        let result = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+
+        assert!(result.skipped.is_empty(), "{:?}", result.skipped);
+        assert_eq!(result.rewritten.len(), 1, "{:?}", result.rewritten);
+        assert_eq!(result.rewritten[0].path, "specs/060-beta/spec.md");
+        assert!(
+            read_root(tmp.path(), "real/060-beta/spec.md").contains("[s](../050-alpha/spec.md)")
+        );
+
+        let quiet = run(&args("1234.1-staged", "050-alpha"), tmp.path()).unwrap();
+        assert!(quiet.rewritten.is_empty(), "{:?}", quiet.rewritten);
+        assert!(quiet.skipped.is_empty(), "{:?}", quiet.skipped);
+        assert_eq!(quiet.examined, 2);
     }
 }
