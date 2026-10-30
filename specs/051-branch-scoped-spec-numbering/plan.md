@@ -134,7 +134,7 @@ Adding a directory form and a command touches the framework's own registries, an
 
 ### Known limitations
 
-- **A retired `.{n}` number is reusable.** In-repo links are re-pointed before retirement, so the exposure is references outside the repository — a pull-request comment, a commit message, a ticket. Accepted; no in-repo counter can govern those.
+- **A retired `.{n}` number is reusable.** Links in the files fold-back reads — the spec root and the root files `check-orphaned-references` reads — are re-pointed before retirement, as AC6 states, and each it cannot rewrite is named in `skipped`, so the exposure is those named files, files it does not read (a doc, a code comment), and references outside the repository — a pull-request comment, a commit message, a ticket. Accepted; no in-repo counter can govern those.
 - **A fold target is unverifiable until the merge.** Nothing before fold-back can tell a correct target from a typo, because the tree that would settle it is on another branch. A mistyped target survives the whole branch and surfaces as a fold-back refusal.
 - **Fold-back is not automatic at merge.** Nothing runs on the merge itself; the detection check reports surviving branch-scoped directories after the fact. This is deliberate — fold-back is a reviewed step — but it means an un-folded spec is visible only once someone runs the check.
 - **Phase 1 ships a form the framework can hold but not yet discharge.** Between phases 1 and 3, fold-back is a manual procedure. Sequencing the phases the other way is not possible, since fold-back's writes depend on the grammar and the field.
