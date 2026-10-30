@@ -64,12 +64,7 @@ The full ID always includes the `CFG-` prefix to disambiguate from the `BE-` (ba
 
 ## Verification phrasing
 
-Same rules as the security-rule file (see `specs/008-security-rules/data-model.md` § Verification phrasing). The Verification field must:
-
-1. Identify the project artifacts in scope (typically: feature plans, source code via spec-stated affected files, `specs/system.md` configuration sections).
-2. Describe the trigger that makes the rule applicable to a given artifact.
-3. State what the artifact MUST or SHOULD include when the trigger fires.
-4. Distinguish documentation commitments from code patterns when the rule's enforcement happens outside the repository.
+Same rules as the security-rule file: `specs/008-security-rules/data-model.md` § Verification phrasing. The artifacts in scope are typically feature plans, source code via spec-stated affected files, and `specs/system.md` configuration sections.
 
 ## Severity classification
 

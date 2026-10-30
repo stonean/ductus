@@ -13,7 +13,7 @@ The framework's own corpus was swept when the primitive landed. Without this ent
 
 ## Procedure
 
-1. **Idempotency check.** Run the labelling pass in its reporting form across the project's spec root. If every criterion in every spec already carries a label and every counter is current, exit silently — the pass is idempotent by construction, so a converged project produces no writes.
+1. **Idempotency.** There is no separate check to run first: `label-criteria` has no reporting form, and it is idempotent by construction, so step 2 leaves a spec whose every criterion already carries a label, with a current counter, byte-identical. On a converged project the pass writes nothing and step 5 emits nothing.
 
 2. **Run the pass, one spec at a time.** For each spec directory under the configured spec root (`[paths] specs-root`, default `specs`), invoke `label-criteria` against the feature. The primitive:
    - assigns `AC{n}:` between the checkbox and the text of each unlabelled criterion, in body order;

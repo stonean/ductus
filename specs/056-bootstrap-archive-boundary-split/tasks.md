@@ -64,3 +64,9 @@ Tasks derived from the [plan](plan.md). Complete in order.
 - [x] Retire the inbox item this spec discharges, matching it by a distinctive substring of its own text rather than by line number.
 
 - **Done when**: every criterion is verified against the tree, the `skipped` array has been walked entry by entry, and the inbox item is removed.
+
+## 9. The walker places every archive-half section
+
+- [ ] Implement the behavior described in `scenarios/the-walker-places-every-archive-half-section.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented and verified by a real adopter bootstrap walked in the stated order

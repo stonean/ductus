@@ -132,7 +132,7 @@ enum Command {
     RelocateAuditRecords(RelocateAuditRecordsArgs),
     /// Write a new scenarios/{slug}.md file under a feature with frontmatter and body.
     CreateScenario(CreateScenarioArgs),
-    /// Assign stable AC{n} labels to a spec's acceptance criteria (idempotent).
+    /// Assign stable AC<n> labels to a spec's acceptance criteria (idempotent).
     LabelCriteria(LabelCriteriaArgs),
     /// Scaffold the next {specs-root}/{NNN-slug}/ directory with a spec-template copy.
     CreateFeature(CreateFeatureArgs),
@@ -897,6 +897,38 @@ mod tests {
     use ductus::session::Identity;
 
     use super::{Cli, seed_context};
+
+    /// Every subcommand's summary and every argument's short help prints on
+    /// one line. clap's help renderer replaces a brace-wrapped `n` with a
+    /// newline (`StyledStr::replace_newline_var`), so a doc comment naming a
+    /// criterion label that way once split `label-criteria`'s summary in two
+    /// in both `ductus --help` and `ductus label-criteria --help`.
+    #[test]
+    fn every_short_help_prints_on_one_line() {
+        fn splits(text: &str) -> bool {
+            text.contains('\n') || text.contains("{n}")
+        }
+        fn walk(cmd: &clap::Command, path: &str, split: &mut Vec<String>) {
+            if let Some(about) = cmd.get_about().map(ToString::to_string)
+                && splits(&about)
+            {
+                split.push(format!("{path}: {about:?}"));
+            }
+            for arg in cmd.get_arguments() {
+                if let Some(help) = arg.get_help().map(ToString::to_string)
+                    && splits(&help)
+                {
+                    split.push(format!("{path} {}: {help:?}", arg.get_id()));
+                }
+            }
+            for sub in cmd.get_subcommands() {
+                walk(sub, &format!("{path} {}", sub.get_name()), split);
+            }
+        }
+        let mut split = Vec::new();
+        walk(&Cli::command(), "ductus", &mut split);
+        assert!(split.is_empty(), "short help spanning lines: {split:#?}");
+    }
 
     fn repo_with_default(body: &str) -> tempfile::TempDir {
         let tmp = tempfile::tempdir().unwrap();

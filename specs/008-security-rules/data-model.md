@@ -86,6 +86,7 @@ The Verification field is read by `/{project}:analyze` during an analyze run. It
 3. State what the artifact MUST or SHOULD include when the trigger fires (e.g., "specify the hashing algorithm by name", "describe the rate-limit threshold").
 4. Distinguish documentation commitments from code patterns when the rule's enforcement happens outside the repository (runtime config, infrastructure, deployment).
 5. Name the sibling rule that owns an overlapping defect, where one exists, so a finding is reported under one ID.
+6. When that owner sits in a `-backend.md` or `-frontend.md` file and the yielding rule does not sit on the owner's surface (a `-backend.md` owner for a `-frontend.md` or `-cross.md` rule, or the reverse), condition the yield on the owner's file being loaded — "where `security-backend.md` is also loaded" — so the yielding rule keeps the case in a project that does not load it. An assessment reads the condition from the list of rule files the run loaded, and one that cannot see that list treats the condition as false, so the yielding rule keeps the case; a yield to a `-cross.md` owner, or to one in the same file or on the same surface, needs no condition.
 
 ### Examples
 

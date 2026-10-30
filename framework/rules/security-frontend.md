@@ -98,7 +98,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 > Session and authentication cookies MUST set the `SameSite` attribute to `Lax` or `Strict`. `SameSite=None` MUST only be used when cross-site cookie transmission is explicitly required and, when used, MUST be combined with `Secure`. Use of `SameSite=None` MUST be justified in the spec.
 
-**Verification:** Any spec or plan that introduces session cookies or auth cookies MUST name the `SameSite` value and, if `None`, MUST justify the cross-site requirement and confirm the CSRF defense `FE-CSRF-001` requires. `/{project}:analyze` flags specs that issue a session or authentication cookie without a `SameSite` attribute, or with `SameSite=None` and no justification. **Not flagged:** a missing `Secure`, which `FE-STORAGE-002` owns.
+**Verification:** Any spec or plan that introduces session cookies or auth cookies MUST name the `SameSite` value and, if `None`, MUST justify the cross-site requirement and confirm the CSRF defense `FE-CSRF-001` requires. `/{project}:analyze` flags specs that issue a session or authentication cookie without a `SameSite` attribute, or with `SameSite=None` and no justification. **Not flagged:** the CSRF defense a `SameSite=None` cookie needs, which `FE-CSRF-001` owns; a missing `Secure`, which `FE-STORAGE-002` owns or, where `security-backend.md` is also loaded, its `BE-AUTHN-014`; and, where `security-backend.md` is also loaded, a missing, wrong or unjustified `SameSite` value, which its `BE-AUTHN-014` owns.
 
 **Source:** OWASP CSRF Prevention Cheat Sheet, OWASP Session Management Cheat Sheet, MDN Set-Cookie documentation
 
@@ -132,7 +132,7 @@ Security rules for browser-side code, UI rendering, and client-server interactio
 
 > Session and authentication cookies MUST set `HttpOnly`, `Secure`, and `SameSite=Lax` or `Strict`; `SameSite=None` MAY replace `Lax`/`Strict` only under the conditions `FE-CSRF-002` sets.
 
-**Verification:** Any spec or plan that introduces a session or authentication cookie MUST commit to setting all three required attributes. `/{project}:analyze` flags specs that issue a session or authentication cookie without `HttpOnly` or `Secure`. **Not flagged:** a missing, wrong or unjustified `SameSite` value, which `FE-CSRF-002` owns.
+**Verification:** Any spec or plan that introduces a session or authentication cookie MUST commit to setting all three required attributes. `/{project}:analyze` flags specs that issue a session or authentication cookie without `HttpOnly` or `Secure`. **Not flagged:** a missing, wrong or unjustified `SameSite` value, which `FE-CSRF-002` owns or, where `security-backend.md` is also loaded, its `BE-AUTHN-014`; and, where `security-backend.md` is also loaded, a missing `HttpOnly` or `Secure`, which its `BE-AUTHN-014` owns.
 
 **Source:** OWASP Session Management Cheat Sheet
 

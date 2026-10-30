@@ -88,3 +88,9 @@ Operator-approved (2026-09-27, with the `cross-spec-impact:` declaration): this 
 - [x] spec.md's edge case states the property (no shipped rule lacks a Verification or a tier, held by every_shipped_rule_is_assessable) instead of the 192-rule count the corpus has outgrown
 
 - **Done when**: spec.md makes no count claim about the shipped rule corpus that the tree contradicts, and 060 is re-reviewed back to done.
+
+## 11. An assessment sees the loaded rule files
+
+- [ ] Implement the behavior described in `scenarios/an-assessment-sees-the-loaded-rule-files.md`
+
+- **Done when**: every `assessSpecQuality` request carries the loaded rule files, a test proved to fail without the field covers it, the 022 data-model section and `framework/commands/analyze.md` steps 11–12 describe the load-conditioned yield, AC5's "existing typed shape" is reworded to say the rule stays in the `rule` object beside the new field, and the parity goldens are re-blessed with each diff read

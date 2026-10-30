@@ -41,7 +41,7 @@ Primary source for actionable security rules. Each cheat sheet is maintained by 
 | OWASP Top 10 (2021; the rules now cite the 2025 edition) | Threat categorization and priority ordering |
 | OWASP API Security Top 10 (2023) | API-specific threat categorization |
 | RFC 2119 | Requirement level keywords (MUST, SHOULD, etc.) |
-| RFC 9457 | Problem Details for HTTP APIs (error response format; obsoletes RFC 7807, which this table named until 2026-09-13 — `BE-ERR-004` cites 9457) |
+| RFC 9457 | Problem Details for HTTP APIs (error response format; obsoletes RFC 7807, which this table named until 2026-09-13 — `api-backend.md` `BE-ERRENV-003` cites 9457; `BE-ERR-004`, which governs an API that is not an HTTP API, cites JSON-RPC 2.0 and gRPC's error model instead) |
 | NIST SP 800-63B-4 | Digital Identity Guidelines — password and authenticator requirements |
 | W3C Fetch Metadata Request Headers (added 2026-10-19) | The `Sec-Fetch-Site` request header behind the Fetch Metadata CSRF defense (`BE-API-011`, `FE-CSRF-001`) |
 | XS-Leaks Wiki (added 2026-10-19) | Cross-site leak attacks and their defenses: CSS-selector exfiltration through an injected style (`FE-CSP-002`), and the leaks through window references that `Cross-Origin-Opener-Policy` prevents (`FE-CSP-009`) |

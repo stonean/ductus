@@ -24,7 +24,7 @@ Observability rules for server-side metrics, distributed tracing, and health sig
 
 > Metric label/tag sets SHOULD be bounded-cardinality — no unbounded or caller-controlled value (user ID, request ID, raw URL path, email) used as a label.
 
-**Verification:** Any spec or plan that introduces metric labels SHOULD confirm each label is drawn from a bounded set — a request path is labelled by its route template (`/users/{id}`), not the raw path. `/{project}:analyze` flags plans that propose high-cardinality identifiers (user/request IDs, raw paths) as label values. This rule governs cardinality only: a sensitive value used as a label, such as an email address, is `security-backend.md` `BE-LOG-008`'s whatever its cardinality.
+**Verification:** Any spec or plan that introduces metric labels SHOULD confirm each label is drawn from a bounded set — a request path is labelled by its route template (`/users/{id}`), not the raw path. `/{project}:analyze` flags plans that propose high-cardinality identifiers (user/request IDs, raw paths) as label values. This rule governs cardinality only: a sensitive value used as a label, such as an email address, is `security-backend.md` `BE-LOG-008`'s whatever its cardinality, or `configuration-cross.md` `CFG-ENV-006`'s when it is a configuration value.
 
 **Source:** Prometheus documentation — *Metric and label naming* and *Instrumentation* (do not overuse labels); OpenTelemetry HTTP semantic conventions (Stable) — `http.route`.
 
@@ -58,7 +58,7 @@ Observability rules for server-side metrics, distributed tracing, and health sig
 
 > Significant units of work — outbound calls, database queries, expensive computation — SHOULD be wrapped in a span with a low-cardinality name (the operation or route template, never an embedded ID) carrying meaningful attributes (target, operation, result).
 
-**Verification:** Any spec or plan that introduces significant units of work SHOULD name the spans it creates and their key attributes. `/{project}:analyze` flags plans for externally-dependent or compute-heavy work that commit to no spans, and span names that interpolate per-request values. **Not flagged:** a sensitive value in a span attribute, which `security-backend.md` `BE-LOG-008` owns.
+**Verification:** Any spec or plan that introduces significant units of work SHOULD name the spans it creates and their key attributes. `/{project}:analyze` flags plans for externally-dependent or compute-heavy work that commit to no spans, and span names that interpolate per-request values. **Not flagged:** a sensitive value in a span attribute, which `security-backend.md` `BE-LOG-008` owns, or `configuration-cross.md` `CFG-ENV-006` when it is a configuration value.
 
 **Source:** OpenTelemetry Trace API — span names (`get_user`, not `get_user/314159`); OpenTelemetry HTTP semantic conventions (Stable) — span name `{method} {target}`, with `http.route` as a server span's target; OpenTelemetry Semantic Conventions, *Recording errors* (Development status) — span status `Error` on a failed operation.
 

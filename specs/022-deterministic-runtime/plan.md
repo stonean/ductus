@@ -55,7 +55,7 @@ Each pick has a one-line rationale; cargo-version pins go into `Cargo.toml`.
 
 No `tracing`, no `log`, no async logging crates. Human-readable stderr output uses `eprintln!`; structured `progress` JSON messages over stdout are emitted by the interpreter directly. Observability is a single function in `src/io.rs` that writes one JSON object per line. Keeping the dependency surface tight matters because every new crate is supply-chain surface for a tool that runs in every adopter's environment.
 
-Nothing secret reaches stderr (`BE-LOG-002`). Its lines are diagnostics: paths, parse errors, and guidance. The one value the runtime holds that can carry a credential is a proxy URL, and `ProxyEnv` in `runtime/src/primitives/fetch_archive.rs` deliberately implements no `Debug`, so it is never formatted. The one raw echo, an unparseable stdin line under `ductus exec` (`runtime/src/io.rs`), returns the host's own input to the host's own stderr.
+Nothing secret reaches stderr (`BE-LOG-002`). Its lines are diagnostics: paths, parse errors, and guidance. The one value the runtime holds that can carry a credential is a proxy URL, a configuration value and so `configuration-cross.md` `CFG-ENV-006`'s, and `ProxyEnv` in `runtime/src/primitives/fetch_archive.rs` deliberately implements no `Debug`, so it is never formatted. The one raw echo, an unparseable stdin line under `ductus exec` (`runtime/src/io.rs`), returns the host's own input to the host's own stderr.
 
 ### Dependency pinning, provenance, and upgrades
 

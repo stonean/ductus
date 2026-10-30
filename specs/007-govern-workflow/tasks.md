@@ -43,3 +43,9 @@ Done when: spec status is `done`, all modified files pass markdownlint.
 - [x] Implement the behavior described in `scenarios/ductus-self-update-precheck.md`
 
 Done when: the scenario's described behavior is correctly implemented and tested.
+
+## 7. A first adoption with existing specs is not an update
+
+- [ ] Implement the behavior described in `scenarios/a-first-adoption-with-existing-specs-is-not-an-update.md`
+
+- **Done when**: the scenario's described behavior is correctly implemented, the spec's §Pre-flight Checks no longer reads an existing spec root as adoption, and a real adopter bootstrap of a first-adoption subject with existing specs shows the first-run next steps

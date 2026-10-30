@@ -23,7 +23,7 @@ The two rule files state one strength for `X-Frame-Options`, SHOULD, and a proje
 ## Edge Cases
 
 - **A backend-only project.** It loads `security-backend.md` without `security-frontend.md`, so the backend file has to state the header's strength itself, not leave it to the frontend rule. `BE-API-012` is where it does.
-- **A project loading both files.** It gets an advisory finding under each mirror when the header is missing, the same pairing `BE-AUTHN-014` and `FE-STORAGE-002` already produce for cookie attributes. Both are advisory, so neither blocks, and waiving either one silences no blocking clause.
+- **A project loading both files.** It gets an advisory finding under each mirror when the header is missing. Both are advisory, so neither blocks, and waiving either one silences no blocking clause.
 - **Non-HTML responses.** OWASP notes the header does nothing for a redirect or a JSON API response. `BE-API-012` is scoped to HTML responses, as `BE-API-001`'s table row was, so an API-only backend gets no finding.
 - **Adopter copies.** Both files ship with the `update` strategy. An unpinned copy receives the change on the next `/ductus` run, and a pinned copy keeps the disagreement until its owner acts.
 
