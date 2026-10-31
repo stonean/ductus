@@ -437,9 +437,10 @@ received.
   on the tie-break, so a `--ref=main` adopter that recorded that id still runs
   it. `target_paths = ["specs/inbox.md"]`. Its procedure removes the first `<!-- Rules:` comment
   whatever its text, as `inbox-guidance-refresh` replaced one whatever its
-  text, and each line outside a comment or fence that is exactly the former
-  placeholder, `- [ ] {Brief description of the issue and any relevant
-  context}`. It skips a pinned inbox with a warning, preserves line endings,
+  text, and each line outside a comment or fence that is exactly a former
+  placeholder: `- [ ] {Brief description of the issue and any relevant
+  context}`, or the form without the checkbox the bootstrap installed from
+  `main` before `ef2b0cf2`. It skips a pinned inbox with a warning, preserves line endings,
   and leaves every other item byte-identical.
 
 ### The adoption security audit reports instead of capturing

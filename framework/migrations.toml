@@ -329,7 +329,7 @@ introduced_in = "0.60.0"
 # never rewritten, so an adopter who skips this window keeps a placeholder
 # every inbox primitive counts as an outstanding item, and nothing else would
 # ever remove it.
-summary = "Remove the guidance comment, whatever its text, and the template's former placeholder item, only as that exact line, from an existing inbox; the template has carried neither since 0.60.0 (spec 058). Every other item is left byte-identical."
+summary = "Remove the guidance comment, whatever its text, and the template's former placeholder item, only as a line the template shipped, from an existing inbox; the template has carried neither since 0.60.0 (spec 058). Every other item is left byte-identical."
 # Adopter-relative. Nothing under framework/ is removed by this migration, so it
 # declares no framework/ target path — Family 10b reads those as paths that
 # must no longer exist, and `framework/templates/project/inbox.md` still does.

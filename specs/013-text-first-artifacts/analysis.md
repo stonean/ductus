@@ -1,19 +1,24 @@
 ---
 spec: 013-text-first-artifacts
-last-run: 2026-10-16T15:28:46Z
-analyzed-against: 18c1de7ddb5573a4b782842c5506819ef0d56117
+last-run: 2026-10-31T01:21:53Z
+analyzed-against: afb8a865b3d62ef7a02ff52fa64b3234bb7cefe6
 hard-fail: 0
 blocking-findings: 0
 advisory: 0
-unexamined: 0
+unexamined: 6
 analyzed-digest:
-  data-model.md: 468afe039e4b5a3dcf90022109af22bab18b63ed7508aca3cd00cab1a55029b3
-  plan.md: 1b8e4b0e0310e70790b99c5f7b7af0084c92592a5d513fdaac18a1d3cc045123
-  review.md: 8dcce517bc85ea7d29513b6da20aec8b84730929001f3b2890bf72a2fa2ddeb1
+  data-model.md: 351907a6128e8e325f6685f7bfedeed26efff4b46b3f76918a8bbca74e180dd8
+  plan.md: 72c42668a7c51dc0b81d886f63a0c212fa406b32e8ef7f98ca48dc70cdb44f64
+  review.md: d0bd15a2a3e186ed0ebddd6602710669e05a9bd6d129fa8a4eeb099b95ba667d
   scenarios/criterion-identifiers.md: 2a6b871e588d7abb6f4ba6bb5a38e81562e30b82c611d2e3f36ba72da86be931
   scenarios/past-tense-motivation-convention.md: 04b9583c6f2f4d56efa0cd7b544afd9811bd7925121ede083fbed9b6f2cdc1d4
-  spec.md: 34941296176c6b1aac4c076e6433bd2fd53d2d2dea2e0677757b0419ae5472a9
-  tasks.md: 561d69bebeb9657bc10a67451dbff669c4570d5aa51443e51a412402abef1717
+  scenarios/the-precheck-ignores-what-the-same-run-wrote.md: f2bae94f49334f88d3b9889eefb40f2b7e19df126a7e64e0edba73ed8ce155d6
+  spec.md: ddcc9e5750057c8fe0f1be1487f050507157b7d0d09c649304866d8233bb9372
+  tasks.md: 91a67143ce0081a68c3fe6c2cce3fdd7fec5069fa4aca822db3ace251fa27cf6
+unexamined-by-reason:
+  not-a-live-claim: 1
+  root-absent: 1
+  ships-to-adopter: 4
 blocking: false
 dispositions:
   fixed: 0
@@ -26,7 +31,7 @@ dispositions:
 
 ## Summary
 
-0 hard-fail, 0 blocking, 0 advisory; not blocking. 0 unexamined target(s). Dispositions: 0 fixed, 0 routed, 0 discarded, 0 undispositioned.
+0 hard-fail, 0 blocking, 0 advisory; not blocking. 6 unexamined target(s). Dispositions: 0 fixed, 0 routed, 0 discarded, 0 undispositioned.
 
 ## Hard failures
 
@@ -42,7 +47,9 @@ dispositions:
 
 ## Unexamined targets
 
-*None — every target was examined.*
+- not-a-live-claim: 1
+- root-absent: 1
+- ships-to-adopter: 4
 
 ## Fixed in this run
 

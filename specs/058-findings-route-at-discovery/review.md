@@ -1,13 +1,13 @@
 ---
 spec: 058-findings-route-at-discovery
-last-run: 2026-10-27T06:47:55Z
-reviewed-against: 98a2eae0e909d19a50b246d127006f8440535e75
-diff-base: 57f82b22e4ca9d7d78c9d481f82f13e72f28b092
+last-run: 2026-10-31T01:16:01Z
+reviewed-against: afb8a865b3d62ef7a02ff52fa64b3234bb7cefe6
+diff-base: 797799ba1b61a055d662fab06ef5a7d51965d65c
 must-violations: 0
 should-violations: 0
 low-confidence: 0
-examined: 45
-scope: 81
+examined: 13
+scope: 56
 skipped-passes: []
 reviewed-digest:
   data-model.md: c7e234cb3bb24c79adb55d9b627fe41f2f346388a8644637c34cacdfa20cdb2c
@@ -19,24 +19,14 @@ reviewed-digest:
   scenarios/only-unreadable-targets-retain-decisions.md: 76a12d565f6e1056f780906fed41de7d27e4a23c314232eddca0563026bcc3e1
 blocking: false
 dispositions:
-  fixed: 24
+  fixed: 0
   routed: 0
-  discarded: 6
+  discarded: 15
   undispositioned: 0
 decisions:
   - key: "perf: validate-frontmatter reads each record file twice — `runtime/src/primitives/validate_frontmatter.rs`"
     outcome: discarded
     reason: bounded to two small files per spec; the decisions list is read apart from the record by design
-    decided-at: 2026-09-25T20:05:21Z
-    decided-by: andy@stone.dev
-  - key: "convention: a duplicate-key decision is pruned when its key expires or is decided again — `runtime/src/primitives/decisions.rs`"
-    outcome: discarded
-    reason: mirrors the waiver list's expiry, and process-decisions still reports each duplicate before it goes
-    decided-at: 2026-09-25T20:05:21Z
-    decided-by: andy@stone.dev
-  - key: "convention: an all-empty decision entry is dropped on re-render — `runtime/src/primitives/decisions.rs`"
-    outcome: discarded
-    reason: an entry with no fields carries no decision to lose; render_waivers_at behaves the same
     decided-at: 2026-09-25T20:05:21Z
     decided-by: andy@stone.dev
   - key: "reuse: write_analysis::plain re-implements the shared bullet-marker stripping — `runtime/src/primitives/write_analysis.rs`"
@@ -52,11 +42,6 @@ decisions:
   - key: "simplicity: describe and disposition_suffix fall back on a companion already validated — `runtime/src/primitives/process_decisions.rs`"
     outcome: discarded
     reason: DecisionRef is a wire type; carrying the companion inside the outcome variant would change its schema
-    decided-at: 2026-09-26T13:34:14Z
-    decided-by: andy@stone.dev
-  - key: "perf: check-artifacts' history revwalk runs on the async worker, contrary to server.rs's module doc (predates 058) — `runtime/src/mcp/server.rs`"
-    outcome: discarded
-    reason: predates 058 (ccdd3ac6), not introduced by it
     decided-at: 2026-09-26T13:34:14Z
     decided-by: andy@stone.dev
   - key: "reuse: append_task.rs parses a task heading two ways; the slug guard's grammar predates 058 — `runtime/src/primitives/append_task.rs`"
@@ -79,11 +64,6 @@ decisions:
     reason: none asserts that an undecided finding holds done, and each run still proposes a disposition for every finding
     decided-at: 2026-10-27T06:47:44Z
     decided-by: andy@stone.dev
-  - key: "other: the implement reference's \"non-blocking\" counts a SHOULD as blocking where review vocabulary does not — `framework/reference/implement.md`"
-    outcome: discarded
-    reason: the inline definition names exactly which findings it covers, and non-blocking is the scenario's own term
-    decided-at: 2026-10-27T06:47:44Z
-    decided-by: andy@stone.dev
   - key: "other: 020's data model calls should-violations an advisory severity count rather than a post-waiver one — `specs/020-code-review/data-model.md`"
     outcome: discarded
     reason: "pre-existing and not false: the row names the SHOULD count, and §Waivers and the §Expiry rule state the post-waiver exclusion"
@@ -94,10 +74,30 @@ decisions:
     reason: the Context records the state when the scenario was found, and the close is loose, not false
     decided-at: 2026-10-27T06:47:44Z
     decided-by: andy@stone.dev
-  - key: "edge: an expired waiver on a low-confidence finding re-counts toward low-confidence, not its severity's count — `framework/reference/review.md`"
+  - key: "reuse: the blank-line removal rule is written out four times, in inbox-guidance-refresh step 4, remove-legacy-constitutions-region step 7 and strip-inbox-guidance steps 5 and 6 — `framework/migrations/strip-inbox-guidance.md`"
     outcome: discarded
-    reason: "contrived: waiving a finding that counts toward no gate has no effect worth documenting, and step 1's exclusion stays true"
-    decided-at: 2026-10-27T06:47:44Z
+    reason: each procedure is applied once per repository from one archive, and editing an applied procedure reaches no adopter, so the copies cannot drift in effect
+    decided-at: 2026-10-31T01:16:01Z
+    decided-by: andy@stone.dev
+  - key: "edge: a `~~~` fence would hide a placeholder from the removal while iter_bullets, which knows only backtick fences, still counts it — `framework/migrations/strip-inbox-guidance.md`"
+    outcome: discarded
+    reason: "contrived: no template ever put the placeholder in a fence"
+    decided-at: 2026-10-31T01:16:01Z
+    decided-by: andy@stone.dev
+  - key: "edge: step 8's item count may treat nested or tab-separated bullets differently from iter_bullets — `framework/migrations/strip-inbox-guidance.md`"
+    outcome: discarded
+    reason: it feeds only the report line, and nothing gates on it
+    decided-at: 2026-10-31T01:16:01Z
+    decided-by: andy@stone.dev
+  - key: "quality: a deterministic, byte-exact rewrite stays prose for the host to walk although it meets §runtime-boundary's eligibility test — `framework/migrations/strip-inbox-guidance.md`"
+    outcome: discarded
+    reason: "pipeline machinery: 027's registry contract defines prose procedures, every sibling entry is prose, and a real adopter bootstrap verified this one on three subjects"
+    decided-at: 2026-10-31T01:16:01Z
+    decided-by: andy@stone.dev
+  - key: "other: AC35 names the former placeholder item in the singular while the procedure removes two forms — `specs/058-findings-route-at-discovery/spec.md`"
+    outcome: discarded
+    reason: "the criterion stays true: each form is still removed only as its exact text"
+    decided-at: 2026-10-31T01:16:01Z
     decided-by: andy@stone.dev
 ---
 
@@ -105,7 +105,15 @@ decisions:
 
 ## Summary
 
-Shared-window review of 058's `findings-cost-in-proportion-to-risk` change, `--since 57f82b22` (item 3's close): e38f5c1f, the change, with an independent review of its uncommitted form folded in; 84bb4aa1 and 6cf2bb6e, fix rounds 2 and 3, each re-read by an independent agent, round 3's re-read finding no MUST or SHOULD; and 98a2eae0, round 4, a doc comment, a comma and a discharged inbox item, not re-read as a prose and doc-comment round. Rules: the eleven files `discover-rule-files` selects. No rule fires: the gate reads counts from local records, the wire enum and the `blocked-by` value are unchanged, and each gating term has a test that fails without it (mutations M1-M5 killed). 0 MUST, 0 SHOULD; 30 observations, 24 fixed and 6 discarded. Examined 45: the hand-written files the window changed, read as diffs and, for `disposition_block` and its tests, the 058 scenarios and both owner scenarios, whole. The window's 11 generated copies under `.claude/`, `.pi/` and `.ductus/reference/` were compared byte for byte with their sources, not read. The rest of scope went unread: the plan Affected Files the window left unchanged, which earlier records cover, and the five review records this run writes. Stored decisions from earlier windows are retained, their sources lying outside this window. Its own artifacts were read in the window: spec, plan, data model, tasks and the four scenarios the change edited; the deliverable is the gate, drift tier, disposition-task rule and AGENTS.md entry above.
+Five passes over 058's window since `797799ba`, passed as `--since`: `bca9a2fd` reopened 006 and 058 together, and `specs/006-bug-workflow/review.md` reviewed that shared window in depth at `797799ba`, so this run reads only what changed since, plus 058's own artifacts and deliverable (AGENTS.md). An independent agent did the passes and re-read the fix round; its claims were re-checked here.
+
+Examined 13 of 56 scope entries: `framework/migrations/strip-inbox-guidance.md`, `framework/migrations/inbox-guidance-refresh.md`, `framework/bootstrap/ductus-procedure.md` and 058's `spec.md`, `plan.md` and `tasks.md` in full; `framework/migrations.toml` (lines 1-41 and 225 onward as text, every entry's id, `introduced_in`, `sunset_after` and `target_paths` parsed); `specs/006-bug-workflow/spec.md` (`4bf2e236`'s status line only); and 013's `plan.md`, `spec.md`, `data-model.md`, `tasks.md` and scenario `the-precheck-ignores-what-the-same-run-wrote`, whose passes are 013's record. 058's `data-model.md` and six scenarios were read too and sit outside the scope. Not read, 43 entries: 26 unchanged since the base (`git diff --quiet 797799ba` per entry), among them all 18 `runtime/` entries, `.claude/commands/ductus/*.md`, `AGENTS.md`, `docs/analyze.md`, the `framework/commands/` glob, `framework/constitution.md`, `framework/runtime-tools.txt`, `framework/templates/project/inbox.md` and `version`; 7 rule files, loaded as this run's rules rather than reviewed (accessibility-frontend, api-backend, configuration-cross, performance-backend, performance-frontend, security-backend, security-frontend); 7 entries of other specs' work in `9b067399`, `224d63f5` and `afb8a865` (008's `spec.md` and `tasks.md`, 017's `data-model.md`, 034's, 068's and 070's `spec.md`, and the `specs/{008,020,022,047,050,054,057}-*/` glob, changed only under 008); the two review records this pass writes, 058's own and 013's; and `resume.txt`, an untracked file another session left at the root.
+
+Rules: every rule in the eleven files was loaded by heading, Statement and trigger; `quality-cross.md`, BE-INPUT-003 and BE-INPUT-004 were read in full as the ones whose triggers reach a host-walked migration procedure, and none fires.
+
+Fixed in the run: `strip-inbox-guidance` removed the former placeholder only in its checkbox form, while the bootstrap installed `- {Brief description of the issue and any relevant context}` from `main` between `7b22162c` and `ef2b0cf2`, before any release, and every inbox primitive counts that line as an item; step 2 now removes both exact forms (a correctness defect, no rule). The re-read of that fix found the Background's "Since then" pointing at 2026-05-02 rather than 0.60.0, also fixed; that round was prose-only and is not re-read. A model of both inbox migrations over all ten template shapes the repository shipped, with LF and CRLF endings, with and without a logged item and a final newline, converges and is idempotent; the real adopter bootstrap at `89e6f02b` (`09b2a408`) verified the released shapes on three subjects.
+
+Observations: five new, each discarded with the operator's confirmation; ten stored decisions carried with their text and disposition, each re-checked against the current tree, the analyze-state-drift scenario's among them because 058's artifacts were read; five expired because their paths are outside this run's scope (`decisions.rs` twice, `server.rs`, `framework/reference/implement.md`, `framework/reference/review.md`).
 
 ## MUST violations (blocking)
 
@@ -125,36 +133,21 @@ Shared-window review of 058's `findings-cost-in-proportion-to-risk` change, `--s
 
 ## Observations
 
-- bug: write-analysis's summary said a hard-fail or blocking finding holds done until it is fixed or routed — `runtime/src/primitives/write_analysis.rs` — **fixed**
-- other: the constitution's Finding dispositions lead read a review observation as a gating finding — `framework/constitution.md` — **fixed**
-- other: "only a gating finding holds done" was false for an out-of-spec implement finding's disposition task — `framework/constitution.md` — **fixed**
-- other: 047's §Constitution amendment signpost and AC7 said every analyze finding must get a disposition before done — `specs/047-analyze-findings-durability/spec.md` — **fixed**
-- other: the gate's check-11 doc comments still described it as reading the dispositions maps — `runtime/src/primitives/check_review_gate.rs` — **fixed**
-- edge: no --fix trigger reverts a done spec whose own analysis is blocking once disposition drift stopped reverting — `framework/reference/analyze.md` — **fixed**
-- test: the gate's MUST and analysis terms were reachable only from a hand-edited record and no test exercised them — `runtime/src/primitives/check_review_gate.rs` — **fixed**
-- other: 058's first Resolved Question cross-referenced a section that now says the opposite before its supersession note — `specs/058-findings-route-at-discovery/spec.md` — **fixed**
-- convention: --waive was documented for a MUST violation only, while the gate's guidance directs it at a SHOULD — `framework/commands/review.md` — **fixed**
+- perf: validate-frontmatter reads each record file twice — `runtime/src/primitives/validate_frontmatter.rs` — **discarded**: bounded to two small files per spec; the decisions list is read apart from the record by design
+- reuse: write_analysis::plain re-implements the shared bullet-marker stripping — `runtime/src/primitives/write_analysis.rs` — **discarded**: predates 058: moved from render_captured_plain, not introduced by it
+- simplicity: render_list_entry takes a base indent every caller passes empty — `runtime/src/primitives/write_review.rs` — **discarded**: predates 058 on render_waivers_at; no behavior depends on it
+- simplicity: describe and disposition_suffix fall back on a companion already validated — `runtime/src/primitives/process_decisions.rs` — **discarded**: DecisionRef is a wire type; carrying the companion inside the outcome variant would change its schema
+- reuse: append_task.rs parses a task heading two ways; the slug guard's grammar predates 058 — `runtime/src/primitives/append_task.rs` — **discarded**: predates 058, not introduced by it
+- convention: check-review-gate, check-unfolded-specs, dashboard, and prune-tasks return MissingFrontmatter and UnclosedFrontmatter without naming either under # Errors (predates 058) — `runtime/src/primitives/check_review_gate.rs` — **discarded**: predates 058; a doc-only omission, and each variant's own message names the file and the defect
 - other: review's description and help row say it blocks done on MUST violations, while the gate also blocks an unwaived SHOULD — `framework/commands/review.md` — **discarded**: true of the review record, whose blocking flag is MUST-only, and 023's AC25 pins the exact text
-- other: the disposition-drift reference said the report names which findings nobody decided — `framework/reference/analyze.md` — **fixed**
 - other: loose "gets a disposition" phrasing in 050, 047, 041, 058 and walker.rs — `specs/047-analyze-findings-durability/spec.md` — **discarded**: none asserts that an undecided finding holds done, and each run still proposes a disposition for every finding
-- other: 058's spec said an undecided finding's decision persists — `specs/058-findings-route-at-discovery/spec.md` — **fixed**
-- other: the implement reference's "non-blocking" counts a SHOULD as blocking where review vocabulary does not — `framework/reference/implement.md` — **discarded**: the inline definition names exactly which findings it covers, and non-blocking is the scenario's own term
-- other: 058's analyze section said the findings disposition drift counts do not hold done, though analysis.md's count includes gating ones — `specs/058-findings-route-at-discovery/spec.md` — **fixed**
-- other: docs/analyze.md gave the same false reason for --fix not reverting on disposition drift — `docs/analyze.md` — **fixed**
-- other: the scenario's first Resolved Question said the gate reads only should-violations — `specs/058-findings-route-at-discovery/scenarios/findings-cost-in-proportion-to-risk.md` — **fixed**
-- other: the review reference's §Waivers said a waiver drops a finding from must-violations only — `framework/reference/review.md` — **fixed**
-- other: "only an unwaived SHOULD reaches this check" was stated flat, though a hand-edited record reaches it with a MUST — `framework/reference/implement.md` — **fixed**
-- other: the drift report sentence understated analysis.md's undispositioned count — `framework/reference/analyze.md` — **fixed**
-- other: the analyze-state drift reference bullet said routing anywhere clears a blocking record — `framework/reference/analyze.md` — **fixed**
 - other: 020's data model calls should-violations an advisory severity count rather than a post-waiver one — `specs/020-code-review/data-model.md` — **discarded**: pre-existing and not false: the row names the SHOULD count, and §Waivers and the §Expiry rule state the post-waiver exclusion
 - other: the analyze-state-drift scenario's Context says only --fix ends the loop, and its close omits the reopen-by-route exit — `specs/058-findings-route-at-discovery/scenarios/analyze-state-drift-judges-the-record-it-writes.md` — **discarded**: the Context records the state when the scenario was found, and the close is loose, not false
-- other: §Per-run waiver processing said an expired waiver re-counts toward must-violations and flips blocking, false for a SHOULD — `framework/reference/review.md` — **fixed**
-- other: docs/analyze.md's "every other gating count blocks earlier" was the last unscoped sibling — `docs/analyze.md` — **fixed**
-- other: 058's data model read as saying analysis.md's undecided findings do not hold done — `specs/058-findings-route-at-discovery/data-model.md` — **fixed**
-- other: docs/analyze.md's scoped clause parsed as "the runtime writes every other gating count" without its commas — `docs/analyze.md` — **fixed**
-- other: ReviewSeverity::is_blocking's doc comment said a SHOULD never blocks done, and called it the bucketing predicate — `runtime/src/schema/severity.rs` — **fixed**
-- other: the inbox still held "check-review-gate never reads should-violations", which the gate change discharged — `specs/inbox.md` — **fixed**
-- edge: an expired waiver on a low-confidence finding re-counts toward low-confidence, not its severity's count — `framework/reference/review.md` — **discarded**: contrived: waiving a finding that counts toward no gate has no effect worth documenting, and step 1's exclusion stays true
+- reuse: the blank-line removal rule is written out four times, in inbox-guidance-refresh step 4, remove-legacy-constitutions-region step 7 and strip-inbox-guidance steps 5 and 6 — `framework/migrations/strip-inbox-guidance.md` — **discarded**: each procedure is applied once per repository from one archive, and editing an applied procedure reaches no adopter, so the copies cannot drift in effect
+- edge: a `~~~` fence would hide a placeholder from the removal while iter_bullets, which knows only backtick fences, still counts it — `framework/migrations/strip-inbox-guidance.md` — **discarded**: contrived: no template ever put the placeholder in a fence
+- edge: step 8's item count may treat nested or tab-separated bullets differently from iter_bullets — `framework/migrations/strip-inbox-guidance.md` — **discarded**: it feeds only the report line, and nothing gates on it
+- quality: a deterministic, byte-exact rewrite stays prose for the host to walk although it meets §runtime-boundary's eligibility test — `framework/migrations/strip-inbox-guidance.md` — **discarded**: pipeline machinery: 027's registry contract defines prose procedures, every sibling entry is prose, and a real adopter bootstrap verified this one on three subjects
+- other: AC35 names the former placeholder item in the singular while the procedure removes two forms — `specs/058-findings-route-at-discovery/spec.md` — **discarded**: the criterion stays true: each form is still removed only as its exact text
 
 ## Skipped passes
 

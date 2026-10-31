@@ -6,7 +6,7 @@ title: "013-text-first-artifacts — plan"
 
 ## Overview
 
-Land the principle in the constitution, update the templates and the slash command sources to read/write YAML frontmatter, and make migration the responsibility of the existing `/ductus` bootstrap. Migration logic lives in `framework/bootstrap/ductus.md` (no new command, no new download surface, no new failure mode). Governance dogfoods by self-migrating its own specs as a manual implementation task — there is no `/ductus` to run on this repo.
+Land the principle in the constitution, update the templates and the slash command sources to read/write YAML frontmatter, and make migration the responsibility of the existing `/ductus` bootstrap. Migration logic lives in the archive half of the bootstrap, `framework/bootstrap/ductus-procedure.md` since 056 (no new command, no new download surface, no new failure mode). Governance dogfoods by self-migrating its own specs as a manual implementation task — there is no `/ductus` to run on this repo.
 
 The work is mostly textual: editing markdown source files. There is no library to add, no parser to write, no migration script in code form. The slash commands are markdown executed by an agent, so "update the parser" means rewriting the prose instructions in each command file from "read the `**Status:**` line" to "read `status` from the YAML frontmatter."
 
@@ -120,8 +120,8 @@ Phases 2 and 3 can run in parallel within the same session; everything else is s
 | `framework/commands/amend.md` | Audit/Modify | Update only if it reads spec/scenario metadata to identify the target |
 | `framework/commands/log.md` | Audit | Likely no change (inbox.md is out of frontmatter scope) |
 | `framework/commands/help.md` | No change | Fixed text, no metadata parsing |
-| `framework/bootstrap/ductus.md` | Modify | Add migration step (git precheck, walk, convert); add `npx quartz specs/` to post-run tip output |
-| `framework/bootstrap/ductus-procedure.md` | Modify | Pre-run Migrations take the pre-run status and the post-loop status; the Frontmatter Migration precheck judges the first and stops only its section; Post-Scaffolding Output lists what Pre-run Migrations made dirty under `specs/` and repeats a refusal |
+| `framework/bootstrap/ductus.md` | Modify | Held the migration step (git precheck, walk, convert) and the post-run viewer tip until 056 moved both to `ductus-procedure.md` |
+| `framework/bootstrap/ductus-procedure.md` | Modify | Pre-run Migrations take the pre-run status and the post-loop status; the Frontmatter Migration precheck judges the first and stops only its section; Post-Scaffolding Output lists what Pre-run Migrations made dirty under `specs/` and repeats a refusal; holds the Frontmatter Migration and the post-run viewer tip since 056 |
 | `.claude/commands/ductus/*.md` | Regenerate | Run `scripts/gen-claude-commands.sh` after framework command sources are updated |
 | `specs/000-slash-commands/spec.md` | Migrate | Self-migration to frontmatter |
 | `specs/001-system-spec-templates/spec.md` | Migrate | Self-migration |
@@ -166,6 +166,6 @@ All eight resolved during `/ductus:clarify`. Resolutions of record live in `spec
 - **Field naming for dependencies** — flat list of slugs; defer object form.
 - **Validation strictness** — hard fail on required-field violations; advisory on rest.
 - **Migration scope for non-spec artifacts** — schema covers specs and scenarios only.
-- **Quartz recommendation scope** — this repo's README only; one-line tip in ductus.md post-run output.
+- **Quartz recommendation scope** — this repo's README only; one-line tip in the bootstrap's post-run output (`ductus-procedure.md` since 056).
 - **Code-location-index scenario interaction** — scenario stays parked under 000; resolutions derive from 013.
 - **Migration safety net** — rely on git; clean-tree precheck scoped to `specs/`.

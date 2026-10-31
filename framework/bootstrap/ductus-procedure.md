@@ -94,7 +94,7 @@ Judge the **pre-run status** that **Pre-run Migrations** took before applying an
 
 > Frontmatter Migration skipped: `specs/` had uncommitted changes before this run began ({paths}). Commit or stash them, then re-run `/ductus` to migrate. The rest of this run continues.
 
-`{paths}` is the pre-run status's paths, comma-separated. Write nothing in this section and continue with the next: the refusal stops the Frontmatter Migration, never the run, so the sections after it still replace what this run's migrations left half-upgraded, such as a hook calling scripts a migration deleted. Unrelated in-flight work outside `specs/` does not block migration.
+`{paths}` is the pre-run status's paths, project-relative and comma-separated (`git status --porcelain` prints them from the repository root, which a project in a subdirectory of its repository does not share). Write nothing in this section and continue with the next: the refusal stops the Frontmatter Migration, never the run, so the sections after it still replace what this run's migrations left half-upgraded, such as a hook calling scripts a migration deleted. Unrelated in-flight work outside `specs/` does not block migration.
 
 ### Walk
 
@@ -158,7 +158,7 @@ For each file that needs migration:
 
 ### Edge cases
 
-- **Partially migrated file** (frontmatter present and bold-prefix lines also present in body): the precheck above treats this as "already frontmatter" and skips. The user may run a manual cleanup pass; the migration does not attempt mixed-state recovery.
+- **Partially migrated file** (frontmatter present and bold-prefix lines also present in body): the walk above treats this as "already frontmatter" and skips. The user may run a manual cleanup pass; the migration does not attempt mixed-state recovery.
 - **Malformed bold-prefix metadata** (e.g., missing `**Status:**` line, typo in field name, unparseable value): log a warning to the summary as `skipped (malformed metadata): {file path}` with a brief reason. The user repairs manually before re-running.
 - **Bold-prefix metadata with custom fields**: preserved as additional frontmatter fields under the open-schema rule.
 
@@ -344,7 +344,7 @@ After scaffolding, display:
 - For each scaffolded agent, the agent's `rules_file_note` from the registry
 - Hook installation status — one line: `pre-commit hook installed`, `pre-commit hook already wired up`, `pre-commit hook rewired: .githooks → {H}`, `pre-commit hook not wired: …` (the pre-059 outer-stub precondition, with its replacement line), `pre-commit hook skipped — .githooks/pre-commit does not invoke ductus-pre-commit; see manual integration snippet above`, or `pre-commit hook skipped — existing {husky|lefthook|pre-commit-py|core.hooksPath} detected; see manual integration snippet above`. When the spec-017 → spec-018 migration ran, append the migration summary line described in §Hook Installation > Migration from spec-017 hook (or the relevant recovery-branch warning if the rename was skipped or failed).
 - Any fetch failures encountered
-- Each path under `specs/` this run's migrations made dirty (§Pre-run Migrations), one line apiece: `changed by a migration: {path} — commit it with this run's other changes`
+- Each path under `specs/` this run's migrations made dirty (§Pre-run Migrations), project-relative, one line apiece: `changed by a migration: {path} — commit it with this run's other changes`
 - The Frontmatter Migration's refusal, repeated verbatim, when its precheck refused (§Frontmatter Migration)
 - Unknown config keys (if any) — one line per key outside what `ductus.md` §Project Configuration documents, in each section this run read: `unknown config key: [{section}] {key} (.ductus/config.toml) — this version of ductus does not read it` (§Project Configuration → **Unknown keys**)
 - Pinned `ductus.md` advisory (if applicable — see below)

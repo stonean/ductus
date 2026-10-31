@@ -60,6 +60,6 @@ and remain true:
 
 ## Notes
 
-- **The frontmatter block is the unit the migration converts.** `framework/bootstrap/ductus.md` §Frontmatter Migration
+- **The frontmatter block is the unit the migration converts.** `framework/bootstrap/ductus-procedure.md` §Frontmatter Migration
   is the procedure, and it is the live description of the conversion; the steps
   enumerated in this spec's body record what 013 specified.
