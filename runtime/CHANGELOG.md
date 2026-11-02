@@ -19,6 +19,21 @@ its version and date.
   since `gvrn-v0.5.1`, meets `BE-ERRENV-001` on its endpoint specs until it
   moves the section to `specs/errors.md`, and a non-HTTP format left there
   draws `BE-ERR-004`'s warning. Spec 008, task 34; spec 068.
+- **`security-cross.md`: security rules for every project shape.** A new rule
+  file, installed whatever `[rules] surfaces` says. `SEC-LOG-001` keeps
+  passwords, tokens, session IDs, keys, one-time and recovery codes, PII and
+  other sensitive field values out of logs, error reports and telemetry in
+  every shape; where `security-backend.md` is also loaded, `BE-LOG-002` and
+  `BE-LOG-008` keep reporting those cases. `BE-DEPS-006` (build-input pinning)
+  moves to `SEC-DEPS-001`, deprecated in 0.59.12 and removed in 0.61.0: a spec
+  citing `BE-DEPS-006` draws an Advisory finding until then and a Blocking one
+  after, so re-point it to `SEC-DEPS-001`. `/review` reports a moved case under
+  both IDs until spec 020's owner routing lands, so a waiver recorded under
+  `BE-DEPS-006` needs a counterpart under `SEC-DEPS-001`, and expires with the
+  old ID. A project that pins `specs/rules/security-backend.md` keeps the
+  undeprecated `BE-DEPS-006` beside `SEC-DEPS-001`, so `/analyze` reports each
+  such case under both IDs until it re-syncs the file. Spec 077; spec 008,
+  tasks 32, 40 and 42.
 
 ## [0.59.11] — 2026-10-17
 

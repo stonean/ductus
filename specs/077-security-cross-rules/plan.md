@@ -113,6 +113,7 @@ The local gate is a fresh clone of HEAD plus the patch, running `cargo test --re
 | `framework/reference/analyze.md` | Modify | Name 077's data-model as `SEC`'s format source |
 | `specs/008-security-rules/data-model.md` | Modify | Name the `SEC` prefix; sweep `BE-DEPS-006` |
 | `framework/bootstrap/ductus.md` | Modify | Manifest row |
+| `framework/bootstrap/govern.md` | Modify | Byte copy of `ductus.md`, which audit family `transitional-bootstrap-parity` requires |
 | `docs/rules.md` | Modify | "What ships" row |
 | `README.md` | Modify | Security bullet |
 | `runtime/CHANGELOG.md` | Modify | `## [Unreleased]` entry |

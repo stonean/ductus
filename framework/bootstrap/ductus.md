@@ -862,6 +862,7 @@ These files are scaffolded **once per `/ductus` invocation**, regardless of how 
 | `framework/rules/quality-cross.md` | `specs/rules/quality-cross.md` |
 | `framework/rules/reliability-backend.md` | `specs/rules/reliability-backend.md` |
 | `framework/rules/security-backend.md` | `specs/rules/security-backend.md` |
+| `framework/rules/security-cross.md` | `specs/rules/security-cross.md` |
 | `framework/rules/security-frontend.md` | `specs/rules/security-frontend.md` |
 | `framework/bootstrap/hooks/ductus-pre-commit` | `.githooks/ductus-pre-commit` |
 | `.markdownlint-cli2.jsonc` | `.markdownlint-cli2.jsonc` |

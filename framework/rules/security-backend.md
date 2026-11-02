@@ -766,9 +766,11 @@ Enforceable security rules for server-side code, APIs, data persistence, and int
 
 ### BE-DEPS-006
 
+**DEPRECATED in 0.59.12:** moved to `security-cross.md` `SEC-DEPS-001`, which installs in every project shape; removed in 0.61.0.
+
 > Build and release inputs that the package lockfile does not cover — CI/CD actions and reusable workflows, container base images, and tools or scripts downloaded during the build — MUST be pinned to an immutable reference: a full commit SHA, an image digest, or a checksum the build verifies. An action in a workflow onboarded to a GitHub Actions workflow dependency lockfile (`.github/workflows/actions.lock`) is pinned by the commit the lockfile records for it; a reusable workflow call is not, and takes a full commit SHA, and nor is a container image a workflow runs (`uses: docker://…`, a job's `container:` or `services:` image), which takes an image digest. Mutable references (branch names, version tags, `latest`) MUST NOT select what runs in the build. A pinned reference MUST change only through a documented update process.
 
-**Verification:** Any spec or plan covering CI/CD pipelines, container builds, or build tooling MUST commit to immutable pinning for each of these input kinds and to an update process for the pins (e.g., Dependabot or Renovate digest updates). `/{project}:analyze` flags build specs that reference actions by tag or branch (`uses: org/action@v4`) outside a workflow onboarded to a workflow dependency lockfile, a tag an immutable release backs included since nothing in the repository shows one, that call a reusable workflow by tag or branch in any workflow, that run a container image by tag alone in any workflow (`uses: docker://hadolint/hadolint:v2.12.0`, a job's `container: node:22`), that reference base images by tag alone (`FROM node:22`), or that run download-and-execute steps without checksum verification. **Not flagged:** a floating version of a dependency the lockfile covers, which `BE-DEPS-002` owns or, for a frontend production build where `security-frontend.md` is also loaded, its `FE-DEPS-004`.
+**Verification:** This rule is deprecated. **Not flagged:** every case it governs, which `security-cross.md` `SEC-DEPS-001` owns.
 
 **Source:** OpenSSF Scorecard (Pinned-Dependencies check), GitHub Docs — Secure use reference (GitHub Actions) and Workflow dependency lockfiles, `github/gh-actions-lock` README (Limitations), OWASP Top 10:2025 (A03 — Software Supply Chain Failures)
 
